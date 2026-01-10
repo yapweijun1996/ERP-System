@@ -1,27 +1,51 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Search, Plus, User, Briefcase, Mail, Filter } from 'lucide-react';
+import { hrApi } from '../../api/hr';
+import { Employee, Department, ModuleId } from '../../types';
+import { Search, Plus, User, Briefcase, Mail, Filter, Loader } from 'lucide-react';
 import { StatusBadge } from '../../components/UI/StatusBadge';
 import { FeatureGuard } from '../../components/UI/FeatureGuard';
-import { ModuleId } from '../../types';
 
 interface EmployeeListProps {
     onNavigate: (page: string, id?: string) => void;
 }
 
 export const EmployeeList: React.FC<EmployeeListProps> = ({ onNavigate }) => {
-    const { employees, departments } = useApp();
+    const { currentCompany } = useApp();
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDept, setFilterDept] = useState<string>('ALL');
 
+    useEffect(() => {
+        const fetchData = async () => {
+            if (currentCompany?.id) {
+                setIsLoading(true);
+                try {
+                    const [emps, depts] = await Promise.all([
+                        hrApi.getEmployees(currentCompany.id),
+                        hrApi.getDepartments(currentCompany.id)
+                    ]);
+                    setEmployees(emps);
+                    setDepartments(depts);
+                } catch (error) {
+                    console.error("Failed to load HR data", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            }
+        };
+        fetchData();
+    }, [currentCompany?.id]);
+
     const filteredEmployees = useMemo(() => {
         return employees.filter(emp => {
-            const matchesSearch = 
-                emp.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            const matchesSearch =
+                emp.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 emp.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 emp.email.toLowerCase().includes(searchTerm.toLowerCase());
-            
+
             const matchesDept = filterDept === 'ALL' || emp.departmentId === filterDept;
 
             return matchesSearch && matchesDept;
@@ -29,6 +53,14 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({ onNavigate }) => {
     }, [employees, searchTerm, filterDept]);
 
     const getDepartmentName = (id: string) => departments.find(d => d.id === id)?.name || id;
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Loader className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
 
     return (
         <FeatureGuard moduleId={ModuleId.ORGANIZATION}>
@@ -38,7 +70,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({ onNavigate }) => {
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Directory</h1>
                         <p className="text-slate-500 dark:text-slate-400 text-sm">Organization people and structure</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => onNavigate('employee-detail', 'new')}
                         className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm"
                     >
@@ -50,15 +82,15 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({ onNavigate }) => {
                 <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row gap-2 shrink-0">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Search people..." 
+                        <input
+                            type="text"
+                            placeholder="Search people..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-transparent rounded-lg focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm transition-all"
                         />
                     </div>
-                    <select 
+                    <select
                         value={filterDept}
                         onChange={(e) => setFilterDept(e.target.value)}
                         className="p-2 bg-slate-50 dark:bg-slate-800 border-transparent rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-600 dark:text-slate-300"
@@ -71,8 +103,8 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({ onNavigate }) => {
                 <div className="flex-1 overflow-y-auto min-h-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredEmployees.map(emp => (
-                            <div 
-                                key={emp.id} 
+                            <div
+                                key={emp.id}
                                 onClick={() => onNavigate('employee-detail', emp.id)}
                                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md transition-all cursor-pointer group"
                             >
@@ -88,7 +120,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({ onNavigate }) => {
                                     </div>
                                     <StatusBadge status={emp.status} />
                                 </div>
-                                
+
                                 <div className="space-y-2 text-sm">
                                     <div className="flex items-center text-slate-600 dark:text-slate-400">
                                         <Briefcase className="w-4 h-4 mr-2 opacity-70" />
@@ -114,6 +146,11 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({ onNavigate }) => {
                                 </div>
                             </div>
                         ))}
+                        {filteredEmployees.length === 0 && (
+                            <div className="col-span-full text-center py-10 text-slate-500">
+                                No employees found.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

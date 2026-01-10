@@ -9,6 +9,87 @@ const router = express.Router();
  * POST /api/auth/login
  * User login
  */
+// Helper to get full user context
+async function getUserContext(userId) {
+    // Get user data with roles and company associations
+    const userResult = await query(
+        `SELECT u.id, u.email, u.name, u.status, u.tenant_id, u.default_company_id,
+              array_agg(DISTINCT ur.role_id) as role_ids,
+              array_agg(DISTINCT uc.company_id) as company_ids
+       FROM users u
+       LEFT JOIN user_roles ur ON u.id = ur.user_id
+       LEFT JOIN user_companies uc ON u.id = uc.user_id
+       WHERE u.id = $1 AND u.deleted_at IS NULL
+       GROUP BY u.id`,
+        [userId]
+    );
+
+    if (userResult.rows.length === 0) return null;
+    const user = userResult.rows[0];
+
+    // Get Tenant details
+    let tenant = null;
+    if (user.tenant_id) {
+        const tenantResult = await query(
+            'SELECT id, name, status, subscription_tier, features FROM tenants WHERE id = $1',
+            [user.tenant_id]
+        );
+        if (tenantResult.rows.length > 0) {
+            tenant = tenantResult.rows[0];
+            // Normalize features structure
+            if (!tenant.features) tenant.features = {};
+        }
+    }
+
+    // Get Default Company details
+    let company = null;
+    if (user.default_company_id) {
+        const companyResult = await query(
+            'SELECT id, name, currency, timezone, country, features, status FROM companies WHERE id = $1',
+            [user.default_company_id]
+        );
+        if (companyResult.rows.length > 0) {
+            company = companyResult.rows[0];
+            // Normalize features structure
+            if (!company.features) company.features = {};
+        }
+    }
+
+    // Get Roles detailed info
+    let roles = [];
+    if (user.role_ids && user.role_ids.length > 0 && user.role_ids[0] !== null) {
+        const rolesResult = await query(
+            `SELECT r.id, r.name, array_agg(p.code) as permissions
+             FROM roles r
+             LEFT JOIN role_permissions rp ON r.id = rp.role_id
+             LEFT JOIN permissions p ON rp.permission_id = p.id
+             WHERE r.id = ANY($1)
+             GROUP BY r.id`,
+            [user.role_ids]
+        );
+        roles = rolesResult.rows;
+    }
+
+    return {
+        user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            status: user.status,
+            tenantId: user.tenant_id,
+            defaultCompanyId: user.default_company_id,
+            roles,
+            allowedCompanyIds: user.company_ids ? user.company_ids.filter(id => id !== null) : []
+        },
+        tenant,
+        company
+    };
+}
+
+/**
+ * POST /api/auth/login
+ * User login
+ */
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -20,39 +101,29 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // Find user by email
-        const userResult = await query(
-            `SELECT u.*, 
-              array_agg(DISTINCT ur.role_id) as role_ids,
-              array_agg(DISTINCT uc.company_id) as company_ids
-       FROM users u
-       LEFT JOIN user_roles ur ON u.id = ur.user_id
-       LEFT JOIN user_companies uc ON u.id = uc.user_id
-       WHERE u.email = $1 AND u.deleted_at IS NULL
-       GROUP BY u.id`,
+        // 1. Validate credentials first (minimal query)
+        const authResult = await query(
+            'SELECT id, password_hash, status FROM users WHERE email = $1 AND deleted_at IS NULL',
             [email.toLowerCase()]
         );
 
-        if (userResult.rows.length === 0) {
+        if (authResult.rows.length === 0) {
             return res.status(401).json({
                 error: 'Authentication Failed',
                 message: 'Invalid email or password'
             });
         }
 
-        const user = userResult.rows[0];
+        const authUser = authResult.rows[0];
 
-        // Check if user is active
-        if (user.status !== 'Active') {
+        if (authUser.status !== 'Active') {
             return res.status(403).json({
                 error: 'Account Inactive',
-                message: 'Your account has been suspended. Please contact support.'
+                message: 'Your account has been suspended.'
             });
         }
 
-        // Verify password
-        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
+        const isPasswordValid = await bcrypt.compare(password, authUser.password_hash);
         if (!isPasswordValid) {
             return res.status(401).json({
                 error: 'Authentication Failed',
@@ -60,48 +131,30 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        // 2. Credentials valid, get full context
+        const context = await getUserContext(authUser.id);
+
         // Update last login
         await query(
             'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-            [user.id]
+            [authUser.id]
         );
 
-        // Get user roles with permissions
-        const rolesResult = await query(
-            `SELECT r.id, r.name, array_agg(p.code) as permissions
-       FROM roles r
-       LEFT JOIN role_permissions rp ON r.id = rp.role_id
-       LEFT JOIN permissions p ON rp.permission_id = p.id
-       WHERE r.id = ANY($1)
-       GROUP BY r.id, r.name`,
-            [user.role_ids]
-        );
-
-        // Generate JWT token
+        // Generate Token
         const token = jwt.sign(
             {
-                userId: user.id,
-                email: user.email,
-                tenantId: user.tenant_id,
-                roles: user.role_ids
+                userId: context.user.id,
+                email: context.user.email,
+                tenantId: context.user.tenantId,
+                roles: context.user.roles.map(r => r.id)
             },
             process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '24h' }
         );
 
-        // Return user data (excluding password)
         res.json({
             token,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                status: user.status,
-                tenantId: user.tenant_id,
-                defaultCompanyId: user.default_company_id,
-                roles: rolesResult.rows,
-                allowedCompanyIds: user.company_ids.filter(id => id !== null)
-            }
+            ...context
         });
 
     } catch (error) {
@@ -110,6 +163,39 @@ router.post('/login', async (req, res) => {
             error: 'Server Error',
             message: 'An error occurred during login'
         });
+    }
+});
+
+// ... register endpoint remains same ...
+
+/**
+ * GET /api/auth/me
+ * Get current user info with context
+ */
+router.get('/me', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Unauthorized', message: 'No token' });
+        }
+
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
+        const context = await getUserContext(decoded.userId);
+
+        if (!context) {
+            return res.status(404).json({ error: 'Not Found', message: 'User not found' });
+        }
+
+        res.json(context);
+
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
+        }
+        console.error('Get user error:', error);
+        res.status(500).json({ error: 'Server Error', message: error.message });
     }
 });
 

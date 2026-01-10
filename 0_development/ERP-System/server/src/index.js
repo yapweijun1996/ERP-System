@@ -105,7 +105,9 @@ app.use('/api/users', userRoutes);
 
 // Sales routes
 import salesRoutes from './routes/sales.js';
+import hrRoutes from './routes/hr.js';
 app.use('/api/sales', salesRoutes);
+app.use('/api/hr', hrRoutes);
 
 // ============================================
 // ERROR HANDLING

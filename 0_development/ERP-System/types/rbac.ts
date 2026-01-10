@@ -1,9 +1,16 @@
 
 import { ScopedEntity } from './core';
 
-export type Permission = 
+export enum AccessLevel {
+  PLATFORM_ADMIN = 'PLATFORM_ADMIN',
+  CLIENT_ADMIN = 'CLIENT_ADMIN',
+  USER = 'USER',
+  GUEST = 'GUEST'
+}
+
+export type Permission =
   | 'SALES_VIEW' | 'SALES_CREATE' | 'SALES_EDIT' | 'SALES_POST' | 'SALES_VOID' | 'SALES_DISCOUNT_APPROVE'
-  | 'INV_VIEW' | 'INV_ADJUST' 
+  | 'INV_VIEW' | 'INV_ADJUST'
   | 'FIN_VIEW' | 'FIN_POST'
   | 'ORG_MANAGE_EMPLOYEES' | 'ORG_MANAGE_ROLES';
 
@@ -37,15 +44,15 @@ export interface Employee extends ScopedEntity {
   email: string;
   departmentId: string;
   jobTitle: string;
-  managerId?: string; 
+  managerId?: string;
   status: 'Active' | 'OnLeave' | 'Terminated';
   joinDate: string;
   avatar?: string;
-  userId?: string; 
+  userId?: string;
 }
 
 export interface Department extends ScopedEntity {
   id: string;
   name: string;
-  managerId?: string; 
+  managerId?: string;
 }
