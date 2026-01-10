@@ -49,14 +49,14 @@ SELECT 'role-user-001', id FROM permissions WHERE code LIKE '%_VIEW';
 -- Password: "password" hashed with bcrypt
 -- Hash: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 
-INSERT INTO users (id, tenant_id, email, password_hash, name, status, default_company_id) VALUES
-('user-super-001', NULL, 'super@nexuserp.io', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 
+INSERT INTO users (id, tenant_id, username, email, password_hash, name, status, default_company_id) VALUES
+('user-super-001', NULL, 'superadmin', 'super@nexuserp.io', '$2a$10$6rF/9Fuqml6QhpgSBSfjU.cik7Lm6iXR/8VDGnGaHLDWvyos/BxXy', 
  'Super Admin', 'Active', NULL),
-('user-alice-001', 'tenant-demo-001', 'alice@techflow.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+('user-alice-001', 'tenant-demo-001', 'alice', 'alice@techflow.com', '$2a$10$6rF/9Fuqml6QhpgSBSfjU.cik7Lm6iXR/8VDGnGaHLDWvyos/BxXy',
  'Alice Johnson', 'Active', 'comp-us-001'),
-('user-bob-001', 'tenant-demo-001', 'bob@techflow.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+('user-bob-001', 'tenant-demo-001', 'bob', 'bob@techflow.com', '$2a$10$6rF/9Fuqml6QhpgSBSfjU.cik7Lm6iXR/8VDGnGaHLDWvyos/BxXy',
  'Bob Smith', 'Active', 'comp-us-001'),
-('user-carol-001', 'tenant-demo-001', 'carol@techflow.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+('user-carol-001', 'tenant-demo-001', 'carol', 'carol@techflow.com', '$2a$10$6rF/9Fuqml6QhpgSBSfjU.cik7Lm6iXR/8VDGnGaHLDWvyos/BxXy',
  'Carol Davis', 'Active', 'comp-us-001');
 
 -- 6. Assign Roles to Users

@@ -5,68 +5,54 @@ const router = express.Router();
 
 /**
  * GET /api/companies
- * Get companies for a tenant
+ * List all companies for a tenant
  */
 router.get('/', async (req, res) => {
     try {
         const { tenantId } = req.query;
 
-        let sql = `SELECT id, tenant_id, name, currency, country, timezone, status, features, created_at
-               FROM companies
-               WHERE deleted_at IS NULL`;
-        const params = [];
-
-        if (tenantId) {
-            sql += ' AND tenant_id = $1';
-            params.push(tenantId);
+        if (!tenantId) {
+            return res.status(400).json({ error: 'Tenant ID required' });
         }
 
-        sql += ' ORDER BY created_at DESC';
+        const result = await query(
+            `SELECT * FROM companies WHERE tenant_id = $1 ORDER BY name ASC`,
+            [tenantId]
+        );
 
-        const result = await query(sql, params);
-
-        res.json({
-            companies: result.rows,
-            total: result.rowCount
-        });
+        res.json(result.rows);
     } catch (error) {
         console.error('Get companies error:', error);
-        res.status(500).json({
-            error: 'Server Error',
-            message: 'Failed to fetch companies'
-        });
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
 /**
- * GET /api/companies/:id
- * Get company by ID
+ * POST /api/companies
+ * Create a new company
  */
-router.get('/:id', async (req, res) => {
+router.post('/', async (req, res) => {
     try {
-        const { id } = req.params;
+        const { tenantId, name, currency, timezone, country, features } = req.body;
+
+        if (!tenantId || !name) {
+            return res.status(400).json({ error: 'Tenant ID and Name are required' });
+        }
+
+        // Generate ID (Simple timestamp based for now)
+        const id = `comp-${Date.now()}`;
 
         const result = await query(
-            `SELECT id, tenant_id, name, currency, country, timezone, status, features, created_at
-       FROM companies
-       WHERE id = $1 AND deleted_at IS NULL`,
-            [id]
+            `INSERT INTO companies (id, tenant_id, name, currency, timezone, country, features, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active')
+             RETURNING *`,
+            [id, tenantId, name, currency || 'USD', timezone || 'UTC', country || 'US', JSON.stringify(features || {})]
         );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: 'Not Found',
-                message: 'Company not found'
-            });
-        }
 
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Get company error:', error);
-        res.status(500).json({
-            error: 'Server Error',
-            message: 'Failed to fetch company'
-        });
+        console.error('Create company error:', error);
+        res.status(500).json({ error: 'Server error: ' + error.message });
     }
 });
 

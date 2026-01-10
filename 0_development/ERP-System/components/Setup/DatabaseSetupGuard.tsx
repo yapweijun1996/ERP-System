@@ -11,7 +11,7 @@ export const DatabaseSetupGuard: React.FC<DatabaseSetupGuardProps> = ({ children
     useEffect(() => {
         const checkDatabaseSetup = async () => {
             try {
-                const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+                const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:6601';
                 const response = await fetch(`${API_URL}/api/setup/status`);
                 const data = await response.json();
 

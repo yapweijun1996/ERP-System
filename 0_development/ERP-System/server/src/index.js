@@ -22,6 +22,7 @@ app.use(helmet());
 const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
+    'http://localhost:6600',
     process.env.CORS_ORIGIN
 ].filter(Boolean);
 
@@ -104,10 +105,12 @@ import userRoutes from './routes/users.js';
 app.use('/api/users', userRoutes);
 
 // Sales routes
+// Sales routes
 import salesRoutes from './routes/sales.js';
 import hrRoutes from './routes/hr.js';
 app.use('/api/sales', salesRoutes);
 app.use('/api/hr', hrRoutes);
+
 
 // ============================================
 // ERROR HANDLING

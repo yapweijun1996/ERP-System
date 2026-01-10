@@ -76,7 +76,8 @@ CREATE INDEX idx_companies_tenant ON companies(tenant_id);
 CREATE TABLE users (
     id VARCHAR(50) PRIMARY KEY,
     tenant_id VARCHAR(50) REFERENCES tenants(id) ON DELETE CASCADE,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(255),
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     status VARCHAR(20) DEFAULT 'Active', -- Active, Inactive, Suspended
@@ -88,6 +89,8 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_tenant ON users(tenant_id);
+CREATE INDEX idx_users_tenant ON users(tenant_id);
+CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 ```
 

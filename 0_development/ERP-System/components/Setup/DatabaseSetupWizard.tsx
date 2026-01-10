@@ -22,7 +22,7 @@ export const DatabaseSetupWizard: React.FC<DatabaseSetupWizardProps> = ({ onComp
     const [availableDatabases, setAvailableDatabases] = useState<string[]>([]);
     const [selectedDb, setSelectedDb] = useState('');
 
-    const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+    const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:6601';
 
     // Check database status on mount
     useEffect(() => {
