@@ -1,0 +1,35 @@
+{
+    "name": "nexus-erp-server",
+    "version": "1.0.0",
+    "description": "Backend API server for Nexus ERP",
+    "type": "module",
+    "main": "src/index.js",
+    "scripts": {
+        "dev": "nodemon src/index.js",
+        "start": "node src/index.js",
+        "db:setup": "cd ../.database && bash setup.sh",
+        "db:migrate": "node src/db/migrate.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "erp",
+        "api",
+        "postgresql"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "express": "^4.21.2",
+        "pg": "^8.13.1",
+        "dotenv": "^16.4.7",
+        "cors": "^2.8.5",
+        "bcryptjs": "^2.4.3",
+        "jsonwebtoken": "^9.0.2",
+        "helmet": "^8.0.0",
+        "express-rate-limit": "^7.5.0",
+        "morgan": "^1.10.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.9"
+    }
+}
