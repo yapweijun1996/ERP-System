@@ -1,0 +1,62 @@
+
+import React, { useState } from 'react';
+import { AppProvider, useApp } from './context/AppContext';
+import { MainLayout } from './components/Layout/MainLayout';
+import { PageRouter } from './components/Router/PageRouter';
+import { LoginPage } from './pages/auth/LoginPage';
+import { OnboardingWizard } from './pages/auth/OnboardingWizard';
+import { ToastContainer } from './components/UI/Toast';
+import { OfflineIndicator } from './components/UI/OfflineIndicator';
+
+const AppContent: React.FC = () => {
+  const { isAuthenticated, activeClient } = useApp();
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  const handleNavigate = (page: string, id?: string) => {
+    setCurrentPage(page);
+    if (id !== undefined) setDetailId(id);
+    else if (!page.includes('detail')) setDetailId(null); 
+  };
+
+  if (!isAuthenticated) {
+    return (
+        <>
+            <LoginPage />
+            <ToastContainer />
+            <OfflineIndicator />
+        </>
+    );
+  }
+
+  // New Onboarding Interceptor
+  if (activeClient?.status === 'Onboarding') {
+      return (
+          <>
+            <OnboardingWizard />
+            <ToastContainer />
+            <OfflineIndicator />
+          </>
+      );
+  }
+
+  return (
+    <MainLayout currentPage={currentPage} onNavigate={handleNavigate}>
+        <PageRouter 
+            currentPage={currentPage} 
+            detailId={detailId} 
+            onNavigate={handleNavigate} 
+        />
+    </MainLayout>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  );
+};
+
+export default App;

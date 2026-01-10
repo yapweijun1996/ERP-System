@@ -1,0 +1,5 @@
+{
+  "name": "ERP v2.1.17",
+  "description": "A high-fidelity, responsive ERP prototype featuring multi-tenant hierarchy (Platform, Client, Company) and robust feature flag management.",
+  "requestFramePermissions": []
+}
