@@ -163,7 +163,6 @@ ERP-System/
 │   │   ├── db/                # 数据库连接
 │   │   └── routes/            # API 路由
 │   ├── package.json
-│   ├── ecosystem.config.js    # PM2 配置
 │   └── .env                   # 环境变量
 │
 ├── components/                 # React 组件

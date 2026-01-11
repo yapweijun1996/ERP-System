@@ -1,9 +1,13 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { query } from '../db/index.js';
-import { getUserContext } from '../services/authService.js';
+import { getUserContext, registerTenant, loginUser } from '../services/authService.js';
 import { getCurrentDatabaseName } from '../db/context.js';
+import { authenticate } from '../middleware/auth.js';
+import {
+    clearAuthCookies,
+    issueCsrfToken,
+    setAuthCookies,
+    shouldUseCookieAuth,
+} from '../services/authCookieService.js';
 
 const router = express.Router();
 
@@ -30,62 +34,42 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // 1. Validate credentials (minimal query)
-        const authResult = await query(
-            'SELECT id, password_hash, status FROM users WHERE username = $1 AND deleted_at IS NULL',
-            [username]
-        );
-
-        if (authResult.rows.length === 0) {
-            return res.status(401).json({
-                error: 'Authentication Failed',
-                message: 'User not found'
+        try {
+            const { token, context } = await loginUser({
+                username,
+                password,
+                companyId
             });
-        }
 
-        const authUser = authResult.rows[0];
+            const cookieMode = shouldUseCookieAuth(req);
 
-        if (authUser.status !== 'Active') {
-            return res.status(403).json({
-                error: 'Account Inactive',
-                message: 'Your account has been suspended.'
+            let csrfToken = null;
+            if (cookieMode) {
+                csrfToken = issueCsrfToken();
+                setAuthCookies(res, { token, csrfToken });
+            }
+
+            res.json({
+                token: cookieMode ? undefined : token,
+                csrfToken,
+                ...context
             });
+
+        } catch (error) {
+            if (error.code === 'USER_NOT_FOUND' || error.code === 'INVALID_PASSWORD') {
+                return res.status(401).json({
+                    error: 'Authentication Failed',
+                    message: error.message
+                });
+            }
+            if (error.code === 'ACCOUNT_INACTIVE') {
+                return res.status(403).json({
+                    error: 'Account Inactive',
+                    message: error.message
+                });
+            }
+            throw error; // Re-throw to be caught by outer catch block for database errors
         }
-
-        const isPasswordValid = await bcrypt.compare(password, authUser.password_hash);
-        if (!isPasswordValid) {
-            return res.status(401).json({
-                error: 'Authentication Failed',
-                message: 'Invalid password'
-            });
-        }
-
-        // 2. Credentials valid, get full context
-        const context = await getUserContext(authUser.id);
-
-        // Update last login
-        await query(
-            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-            [authUser.id]
-        );
-
-        // Generate Token
-        const token = jwt.sign(
-            {
-                userId: context.user.id,
-                username: context.user.username,
-                tenantId: context.user.tenantId,
-                companyId,
-                roles: context.user.roles.map(r => r.id)
-            },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '24h' }
-        );
-
-        res.json({
-            token,
-            ...context
-        });
 
     } catch (error) {
         console.error('Login error:', error);
@@ -135,75 +119,29 @@ router.post('/register', async (req, res) => {
         }
 
         // Check availability
-        const existingUser = await query(
-            'SELECT id FROM users WHERE username = $1',
-            [username]
-        );
-
-        if (existingUser.rows.length > 0) {
-            return res.status(409).json({
-                error: 'Conflict',
-                message: 'Username already taken'
-            });
-        }
-
-        // Hash password
-        const passwordHash = await bcrypt.hash(password, 10);
-
-        // Create tenant
-        const tenantId = `tenant-${Date.now()}`;
-        await query(
-            `INSERT INTO tenants (id, name, status, features)
-       VALUES ($1, $2, 'Onboarding', '{"SALES": true, "FINANCE": true, "INVENTORY": true}')`,
-            [tenantId, companyName]
-        );
-
-        // Create user
-        const userId = `user-${Date.now()}`;
-        await query(
-            `INSERT INTO users (id, tenant_id, username, email, password_hash, name, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'Active')`,
-            [userId, tenantId, username, email || null, passwordHash, name]
-        );
-
-        // Assign admin role
-        const roleId = `role-admin-${tenantId}`;
-        await query(
-            `INSERT INTO roles (id, tenant_id, name, description, is_system_role)
-       VALUES ($1, $2, 'Administrator', 'Tenant administrator', false)
-       ON CONFLICT (id) DO NOTHING`,
-            [roleId, tenantId]
-        );
-
-        await query(
-            'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)',
-            [userId, roleId]
-        );
-
-        // Generate token
-        const token = jwt.sign(
-            {
-                userId,
-                username,
-                tenantId,
-                companyId,
-                roles: [roleId]
-            },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '24h' }
-        );
-
-        res.status(201).json({
-            token,
-            user: {
-                id: userId,
+        try {
+            const { token, user } = await registerTenant({
                 username,
                 email,
+                password,
                 name,
-                tenantId,
-                status: 'Active'
+                companyName,
+                routeCompanyId: companyId
+            });
+
+            res.status(201).json({
+                token,
+                user
+            });
+        } catch (error) {
+            if (error.code === 'USERNAME_TAKEN') {
+                return res.status(409).json({
+                    error: 'Conflict',
+                    message: 'Username already taken'
+                });
             }
-        });
+            throw error;
+        }
 
     } catch (error) {
         console.error('Registration error:', error);
@@ -218,31 +156,17 @@ router.post('/register', async (req, res) => {
  * GET /api/auth/me
  * Get current user info with context
  */
-router.get('/me', async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ error: 'Unauthorized', message: 'No token' });
-        }
+router.get('/me', authenticate(), (req, res) => {
+    res.json(req.auth.context);
+});
 
-        const token = authHeader.substring(7);
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-
-        const context = await getUserContext(decoded.userId);
-
-        if (!context) {
-            return res.status(404).json({ error: 'Not Found', message: 'User not found' });
-        }
-
-        res.json(context);
-
-    } catch (error) {
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
-        }
-        console.error('Get user error:', error);
-        res.status(500).json({ error: 'Server Error', message: error.message });
-    }
+/**
+ * POST /api/auth/logout
+ * Clear auth cookies (cookie mode)
+ */
+router.post('/logout', authenticate({ enforceAllowedCompanies: false }), (req, res) => {
+    clearAuthCookies(res);
+    res.json({ success: true });
 });
 
 export default router;

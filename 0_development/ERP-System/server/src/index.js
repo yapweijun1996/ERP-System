@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { testConnection } from './db/index.js';
 import { companyDbContextMiddleware } from './middleware/companyDbContext.js';
+import { authenticate } from './middleware/auth.js';
+import { csrfProtection } from './middleware/csrf.js';
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +49,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Per-request DB selection (by login url ?company=... or token companyId)
 app.use(companyDbContextMiddleware);
+
+// CSRF protection (only enforced when auth token is sent via cookie)
+app.use(csrfProtection);
 
 // Logging
 app.use(morgan('dev'));
@@ -98,22 +103,23 @@ app.use('/api/auth', authRoutes);
 
 // Tenant routes
 import tenantRoutes from './routes/tenants.js';
-app.use('/api/tenants', tenantRoutes);
+app.use('/api/tenants', authenticate(), tenantRoutes);
 
 // Company routes
 import companyRoutes from './routes/companies.js';
-app.use('/api/companies', companyRoutes);
+app.use('/api/companies', authenticate(), companyRoutes);
 
 // User routes
 import userRoutes from './routes/users.js';
-app.use('/api/users', userRoutes);
+app.use('/api/users', authenticate(), userRoutes);
 
-// Sales routes
 // Sales routes
 import salesRoutes from './routes/sales.js';
 import hrRoutes from './routes/hr.js';
-app.use('/api/sales', salesRoutes);
-app.use('/api/hr', hrRoutes);
+import inventoryRoutes from './routes/inventory.js';
+app.use('/api/sales', authenticate(), salesRoutes);
+app.use('/api/hr', authenticate(), hrRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 
 // ============================================

@@ -1,4 +1,134 @@
 import { query } from '../db/index.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+export async function registerTenant({ username, email, password, name, companyName, routeCompanyId }) {
+    // Check availability
+    const existingUser = await query(
+        'SELECT id FROM users WHERE username = $1',
+        [username]
+    );
+
+    if (existingUser.rows.length > 0) {
+        const error = new Error('Username already taken');
+        error.code = 'USERNAME_TAKEN';
+        throw error;
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create tenant
+    const tenantId = `tenant-${Date.now()}`;
+    await query(
+        `INSERT INTO tenants (id, name, status, features)
+       VALUES ($1, $2, 'Onboarding', '{"SALES": true, "FINANCE": true, "INVENTORY": true}')`,
+        [tenantId, companyName]
+    );
+
+    // Create user
+    const userId = `user-${Date.now()}`;
+    await query(
+        `INSERT INTO users (id, tenant_id, username, email, password_hash, name, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'Active')`,
+        [userId, tenantId, username, email || null, passwordHash, name]
+    );
+
+    // Assign admin role
+    const roleId = `role-admin-${tenantId}`;
+    await query(
+        `INSERT INTO roles (id, tenant_id, name, description, is_system_role)
+       VALUES ($1, $2, 'Administrator', 'Tenant administrator', false)
+       ON CONFLICT (id) DO NOTHING`,
+        [roleId, tenantId]
+    );
+
+    await query(
+        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)',
+        [userId, roleId]
+    );
+
+    // Generate token
+    const token = jwt.sign(
+        {
+            userId,
+            username,
+            tenantId,
+            companyId: routeCompanyId,
+            roles: [roleId]
+        },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
+    );
+
+    return {
+        token,
+        user: {
+            id: userId,
+            username,
+            email,
+            name,
+            tenantId,
+            status: 'Active'
+        }
+    };
+}
+
+export async function loginUser({ username, password, companyId }) {
+    // 1. Validate credentials (minimal query)
+    const authResult = await query(
+        'SELECT id, password_hash, status FROM users WHERE username = $1 AND deleted_at IS NULL',
+        [username]
+    );
+
+    if (authResult.rows.length === 0) {
+        const error = new Error('User not found');
+        error.code = 'USER_NOT_FOUND';
+        throw error;
+    }
+
+    const authUser = authResult.rows[0];
+
+    if (authUser.status !== 'Active') {
+        const error = new Error('Your account has been suspended.');
+        error.code = 'ACCOUNT_INACTIVE';
+        throw error;
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, authUser.password_hash);
+    if (!isPasswordValid) {
+        const error = new Error('Invalid password');
+        error.code = 'INVALID_PASSWORD';
+        throw error;
+    }
+
+    // 2. Credentials valid, get full context
+    const context = await getUserContext(authUser.id);
+
+    // Update last login
+    await query(
+        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+        [authUser.id]
+    );
+
+    // Generate Token
+    const token = jwt.sign(
+        {
+            userId: context.user.id,
+            username: context.user.username,
+            tenantId: context.user.tenantId,
+            companyId,
+            roles: context.user.roles.map(r => r.id)
+        },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
+    );
+
+    return {
+        token,
+        context
+    };
+}
 
 export async function getUserContext(userId) {
     // Get user data with roles and company associations

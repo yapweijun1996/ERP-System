@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db/index.js';
+import { requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -7,9 +8,9 @@ const router = express.Router();
  * GET /api/hr/employees
  * List employees for a company
  */
-router.get('/employees', async (req, res) => {
+router.get('/employees', requirePermission('ADMIN_USERS'), async (req, res) => {
     try {
-        const { companyId } = req.query;
+        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
 
         if (!companyId) {
             return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });

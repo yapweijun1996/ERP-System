@@ -2,10 +2,31 @@ import jwt from 'jsonwebtoken';
 import { runWithDbContext } from '../db/context.js';
 import { resolveDatabaseNameForCompanyId } from '../db/companyDbMap.js';
 
+function parseCookieHeader(headerValue) {
+    const raw = String(headerValue || '');
+    if (!raw) return {};
+    const out = {};
+    for (const part of raw.split(';')) {
+        const idx = part.indexOf('=');
+        if (idx <= 0) continue;
+        const key = part.slice(0, idx).trim();
+        const value = part.slice(idx + 1).trim();
+        if (!key) continue;
+        out[key] = decodeURIComponent(value);
+    }
+    return out;
+}
+
 function tryGetCompanyIdFromToken(req) {
     const auth = req.headers?.authorization;
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
+    let token = null;
+    if (auth && auth.startsWith('Bearer ')) token = auth.slice(7);
+    if (!token) {
+        const cookieName = process.env.AUTH_COOKIE_NAME || 'auth_token';
+        const cookies = parseCookieHeader(req.headers?.cookie);
+        token = cookies?.[cookieName] || null;
+    }
+    if (!token) return null;
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
         return decoded?.companyId || null;

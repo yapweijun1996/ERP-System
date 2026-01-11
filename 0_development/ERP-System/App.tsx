@@ -12,7 +12,7 @@ import { OfflineIndicator } from './components/UI/OfflineIndicator';
 
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, activeClient } = useApp();
+  const { isAuthenticated, isLoading, activeClient } = useApp();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -21,6 +21,18 @@ const AppContent: React.FC = () => {
     if (id !== undefined) setDetailId(id);
     else if (!page.includes('detail')) setDetailId(null);
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <div className="min-h-screen flex items-center justify-center text-slate-500">
+          正在恢复登录状态...
+        </div>
+        <ToastContainer />
+        <OfflineIndicator />
+      </>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db/index.js';
+import { requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -7,9 +8,13 @@ const router = express.Router();
  * GET /api/sales/documents
  * Get sales documents
  */
-router.get('/documents', async (req, res) => {
+router.get('/documents', requirePermission('SALES_VIEW'), async (req, res) => {
     try {
-        const { companyId, status, docType } = req.query;
+        const { status, docType } = req.query;
+        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
+        if (!companyId) {
+            return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });
+        }
 
         let sql = `SELECT id, tenant_id, company_id, doc_type, doc_number, customer_id, customer_name,
                       doc_date, due_date, status, currency, subtotal, tax_amount, total_amount,
@@ -58,14 +63,18 @@ router.get('/documents', async (req, res) => {
  * GET /api/sales/documents/:id
  * Get sales document by ID with lines
  */
-router.get('/documents/:id', async (req, res) => {
+router.get('/documents/:id', requirePermission('SALES_VIEW'), async (req, res) => {
     try {
         const { id } = req.params;
+        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
+        if (!companyId) {
+            return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });
+        }
 
         // Get document header
         const docResult = await query(
-            `SELECT * FROM sales_documents WHERE id = $1 AND deleted_at IS NULL`,
-            [id]
+            `SELECT * FROM sales_documents WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL`,
+            [id, companyId]
         );
 
         if (docResult.rows.length === 0) {
@@ -98,9 +107,12 @@ router.get('/documents/:id', async (req, res) => {
  * GET /api/sales/customers
  * Get customers
  */
-router.get('/customers', async (req, res) => {
+router.get('/customers', requirePermission('SALES_VIEW'), async (req, res) => {
     try {
-        const { companyId } = req.query;
+        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
+        if (!companyId) {
+            return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });
+        }
 
         let sql = `SELECT id, tenant_id, company_id, code, name, email, phone, country, 
                       credit_limit, payment_terms, status, created_at
@@ -108,10 +120,8 @@ router.get('/customers', async (req, res) => {
                WHERE deleted_at IS NULL`;
         const params = [];
 
-        if (companyId) {
-            sql += ' AND company_id = $1';
-            params.push(companyId);
-        }
+        sql += ' AND company_id = $1';
+        params.push(companyId);
 
         sql += ' ORDER BY name';
 

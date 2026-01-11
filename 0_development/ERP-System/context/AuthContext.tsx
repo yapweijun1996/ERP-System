@@ -74,6 +74,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [users, setUsers] = useState<User[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
 
+    const getCookie = useCallback((name: string) => {
+        try {
+            if (typeof document === 'undefined') return null;
+            const parts = document.cookie.split(';').map(p => p.trim());
+            for (const p of parts) {
+                if (!p) continue;
+                const idx = p.indexOf('=');
+                if (idx <= 0) continue;
+                const k = p.slice(0, idx).trim();
+                const v = p.slice(idx + 1).trim();
+                if (k === name) return decodeURIComponent(v);
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    }, []);
+
     // --- Helper Methods ---
     const hasModule = useCallback((module: ModuleId): boolean => {
         if (!currentCompany) return false;
@@ -85,16 +103,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return !!currentCompany.features?.[feature];
     }, [currentCompany]);
 
-
     // Authorization Initialization
     useEffect(() => {
         const initAuth = async () => {
-            const token = localStorage.getItem('auth_token');
-            if (!token) {
-                setIsLoading(false);
-                return;
-            }
             try {
+                const token = localStorage.getItem('auth_token');
+                const hasCsrfCookie = !!getCookie('csrf_token');
+                if (!token && !hasCsrfCookie) {
+                    setIsLoading(false);
+                    return;
+                }
+
                 const response = await authApi.getCurrentUser();
                 const { user } = response as any;
                 setCurrentUser(user);
@@ -134,14 +153,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         };
         initAuth();
-    }, []);
+    }, [getCookie]);
 
     // --- Auth Methods ---
     const login = async (username: string, password: string): Promise<boolean> => {
         setIsLoading(true);
         try {
             const response = await authApi.login({ username, password });
-            localStorage.setItem('auth_token', response.token);
+            if (response?.token) localStorage.setItem('auth_token', response.token);
+            else localStorage.removeItem('auth_token');
 
             const contextData = response as any;
             setCurrentUser(contextData.user);

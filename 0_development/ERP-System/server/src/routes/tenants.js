@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db/index.js';
+import { requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -7,7 +8,7 @@ const router = express.Router();
  * GET /api/tenants
  * Get all tenants (Platform admin only)
  */
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('PLATFORM_ADMIN'), async (req, res) => {
     try {
         const result = await query(
             `SELECT id, name, status, subscription_tier, features, created_at, updated_at
@@ -33,7 +34,7 @@ router.get('/', async (req, res) => {
  * GET /api/tenants/:id
  * Get tenant by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePermission('PLATFORM_ADMIN'), async (req, res) => {
     try {
         const { id } = req.params;
 

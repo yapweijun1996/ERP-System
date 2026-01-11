@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db/index.js';
+import { requireAnyPermission, requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -7,17 +8,24 @@ const router = express.Router();
  * GET /api/companies
  * List all companies for a tenant
  */
-router.get('/', async (req, res) => {
+router.get(
+    '/',
+    requireAnyPermission(['ADMIN_SETTINGS', 'ADMIN_USERS', 'SALES_VIEW', 'FINANCE_VIEW', 'INVENTORY_VIEW']),
+    async (req, res) => {
     try {
-        const { tenantId } = req.query;
+        const tenantIdFromRequest = req.query?.tenantId;
+        const tenantIdFromToken = req.auth?.context?.user?.tenantId || null;
 
-        if (!tenantId) {
+        if (!tenantIdFromToken) {
             return res.status(400).json({ error: 'Tenant ID required' });
+        }
+        if (tenantIdFromRequest && String(tenantIdFromRequest) !== String(tenantIdFromToken)) {
+            return res.status(403).json({ error: 'Forbidden', message: 'tenantId mismatch' });
         }
 
         const result = await query(
             `SELECT * FROM companies WHERE tenant_id = $1 ORDER BY name ASC`,
-            [tenantId]
+            [tenantIdFromToken]
         );
 
         res.json(result.rows);
@@ -31,12 +39,16 @@ router.get('/', async (req, res) => {
  * POST /api/companies
  * Create a new company
  */
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('ADMIN_SETTINGS'), async (req, res) => {
     try {
         const { tenantId, name, currency, timezone, country, features } = req.body;
+        const tenantIdFromToken = req.auth?.context?.user?.tenantId || null;
 
-        if (!tenantId || !name) {
+        if (!tenantIdFromToken || !name) {
             return res.status(400).json({ error: 'Tenant ID and Name are required' });
+        }
+        if (tenantId && String(tenantId) !== String(tenantIdFromToken)) {
+            return res.status(403).json({ error: 'Forbidden', message: 'tenantId mismatch' });
         }
 
         // Generate ID (Simple timestamp based for now)
@@ -46,7 +58,7 @@ router.post('/', async (req, res) => {
             `INSERT INTO companies (id, tenant_id, name, currency, timezone, country, features, status)
              VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active')
              RETURNING *`,
-            [id, tenantId, name, currency || 'USD', timezone || 'UTC', country || 'US', JSON.stringify(features || {})]
+            [id, tenantIdFromToken, name, currency || 'USD', timezone || 'UTC', country || 'US', JSON.stringify(features || {})]
         );
 
         res.json(result.rows[0]);
