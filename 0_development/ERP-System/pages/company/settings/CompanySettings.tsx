@@ -33,8 +33,8 @@ export const CompanySettings: React.FC = () => {
     const ActiveComponent = navItems.find(i => i.id === activeTab)?.comp || CompanyProfileSettings;
 
     return (
-        <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-8rem)] pb-4 md:pb-6 pr-4 md:pr-6">
-            <div className="w-full md:w-64 flex-shrink-0 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col max-h-[calc(100vh-10rem)]">
+        <div className="flex flex-col md:flex-row gap-6 h-full p-4 md:p-6 pb-20 md:pb-6">
+            <div className="w-full md:w-64 flex-shrink-0 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-slate-800 dark:text-slate-100 bg-slate-50/50 dark:bg-slate-800/20">
                     {t('settings.title', 'Settings')}
                 </div>
