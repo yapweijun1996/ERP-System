@@ -1,0 +1,44 @@
+{
+    "sections": {
+        "Tenant Ops": "租户运营",
+        "Debug & Observability": "调试与监控",
+        "Control Plane": "控制平面",
+        "Support": "客户支持",
+        "Tenant": "租户",
+        "Configuration": "配置",
+        "System": "系统",
+        "Workspaces": "工作台",
+        "Operations": "运营管理",
+        "Finance": "财务管理",
+        "Utilities": "实用工具",
+        "HR": "人力资源",
+        "Analytics": "数据分析",
+        "Data": "主数据",
+        "Config": "设置"
+    },
+    "menu": {
+        "dashboard": "仪表盘",
+        "companies": "公司列表",
+        "users": "用户管理",
+        "features": "功能开关",
+        "sales": "销售管理",
+        "sales-quotes": "报价单",
+        "sales-orders": "销售订单",
+        "sales-delivery": "发货单",
+        "sales-invoices": "销售发票",
+        "purchasing": "采购管理",
+        "inventory": "库存管理",
+        "inventory-stock": "现有库存"
+    },
+    "common": {
+        "sign_out": "退出登录",
+        "collapse": "收起",
+        "expand": "展开",
+        "user": "用户",
+        "signed_in_as": "登录身份",
+        "performance": "性能模式",
+        "performance_tooltip": "降低视觉特效（模糊、动画）以提高低端设备上的运行速度。",
+        "language": "语言 / Language",
+        "debug_switch_user": "调试：切换用户"
+    }
+}

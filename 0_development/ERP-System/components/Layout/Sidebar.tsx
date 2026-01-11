@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { PanelLeftClose, PanelLeftOpen, X, LogOut, ChevronDown, ChevronRight, Circle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getMenuItems, MenuItemConfig } from '../../config/menuConfig';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
   currentPage: string;
@@ -10,6 +11,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => {
+  const { t } = useTranslation();
   const {
     isModuleEnabled, viewLevel,
     isSidebarCollapsed, toggleSidebarCollapse,
@@ -94,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
                     `}
           >
             <item.icon className="w-5 h-5 flex-shrink-0 mr-3 text-slate-500" strokeWidth={2} />
-            <span className="text-sm font-medium flex-1 text-left truncate">{item.label}</span>
+            <span className="text-sm font-medium flex-1 text-left truncate">{t(`menu.${item.id}`, item.label)}</span>
             {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
           </button>
           {isExpanded && (
@@ -136,11 +138,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
           )
         )}
 
-        <span className={`text-sm font-medium truncate ${isSidebarCollapsed ? 'hidden' : 'block'}`}>{item.label}</span>
+        <span className={`text-sm font-medium truncate ${isSidebarCollapsed ? 'hidden' : 'block'}`}>{t(`menu.${item.id}`, item.label)}</span>
 
         {isSidebarCollapsed && !performanceMode && (
           <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 z-[60] pointer-events-none whitespace-nowrap shadow-xl hidden md:block">
-            {item.label}
+            {t(`menu.${item.id}`, item.label)}
             <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-transparent border-r-slate-900"></div>
           </div>
         )}
@@ -203,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
             <div key={section} className="mb-4">
               {!isSidebarCollapsed && (
                 <div className="px-6 mb-2 text-[11px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-wider truncate">
-                  {section}
+                  {t(`sections.${section}`, section)}
                 </div>
               )}
               {isSidebarCollapsed && (
@@ -222,7 +224,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
             className={`w-full p-4 flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isSidebarCollapsed ? 'justify-center' : 'space-x-3'}`}
           >
             <LogOut className="w-5 h-5 text-slate-400" />
-            {!isSidebarCollapsed && <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Sign Out</span>}
+            {!isSidebarCollapsed && <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('common.sign_out', 'Sign Out')}</span>}
           </button>
         </div>
       </aside>

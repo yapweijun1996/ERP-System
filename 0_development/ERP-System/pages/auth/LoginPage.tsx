@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { MOCK_CLIENTS } from '../../constants';
 import { LoginInput } from '../../components/auth/LoginInput';
+import metadata from '../../metadata.json';
 
 export const LoginPage: React.FC = () => {
   const { login } = useApp();
@@ -109,25 +110,35 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-8 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 flex flex-col justify-center py-8 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
       {isPlatformLogin && (
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 z-50"></div>
       )}
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8 px-4 relative z-10">
-        <div className={`inline-flex items-center justify-center p-3 rounded-2xl shadow-lg mb-6 transform transition-transform hover:scale-105 ${isPlatformLogin ? 'bg-slate-900 shadow-slate-900/30' : 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-blue-500/20'}`}>
-          {isPlatformLogin ? <Server className="w-8 h-8 text-white" /> : <ShieldCheck className="w-8 h-8 text-white" />}
+        <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+          <div className={`h-10 w-10 rounded-xl text-white flex items-center justify-center font-semibold ${isPlatformLogin ? 'bg-slate-900' : 'bg-slate-900'}`}>
+            ERP
+          </div>
+          <div className="text-left">
+            <div className="text-slate-900 dark:text-white font-semibold leading-tight">
+              {isPlatformLogin ? 'Platform Console' : (metadata?.name || 'Nexus ERP')}
+            </div>
+            <div className="text-slate-500 dark:text-slate-400 text-sm leading-tight">
+              {isPlatformLogin ? 'Super Admin Access' : 'Secure Enterprise Gateway'}
+            </div>
+          </div>
+          <div className="ml-2">
+            {isPlatformLogin
+              ? <Server className="w-5 h-5 text-orange-500" />
+              : <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            }
+          </div>
         </div>
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-          {isPlatformLogin ? 'Platform Console' : 'Nexus ERP'}
-        </h2>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          {isPlatformLogin ? 'Super Admin Access' : 'Secure Enterprise Gateway'}
-        </p>
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-[420px] relative z-10">
-        <div className={`bg-white dark:bg-slate-900 sm:rounded-2xl shadow-xl border-y sm:border overflow-hidden transition-colors duration-500 ${isPlatformLogin ? 'border-orange-500/30 shadow-orange-500/10' : 'shadow-slate-200/50 dark:shadow-none border-slate-100 dark:border-slate-800'}`}>
+        <div className={`bg-white dark:bg-slate-900 sm:rounded-2xl shadow-sm border overflow-hidden transition-colors duration-500 ${isPlatformLogin ? 'border-orange-500/30' : 'border-slate-200 dark:border-slate-800'}`}>
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/30 p-4 flex gap-3 animate-in slide-in-from-top-2">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
@@ -264,4 +275,3 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
-

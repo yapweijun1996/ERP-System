@@ -9,6 +9,8 @@ import { OnboardingWizard } from './pages/auth/OnboardingWizard';
 import { DatabaseSetupGuard } from './components/Setup/DatabaseSetupGuard';
 import { ToastContainer } from './components/UI/Toast';
 import { OfflineIndicator } from './components/UI/OfflineIndicator';
+import { AppSplash } from './components/UI/AppSplash';
+import metadata from './metadata.json';
 
 
 const AppContent: React.FC = () => {
@@ -25,9 +27,11 @@ const AppContent: React.FC = () => {
   if (isLoading) {
     return (
       <>
-        <div className="min-h-screen flex items-center justify-center text-slate-500">
-          正在恢复登录状态...
-        </div>
+        <AppSplash
+          appName={metadata?.name || 'Nexus ERP'}
+          subtitle="系统启动中"
+          message="正在恢复登录状态..."
+        />
         <ToastContainer />
         <OfflineIndicator />
       </>

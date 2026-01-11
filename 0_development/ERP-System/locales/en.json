@@ -1,0 +1,44 @@
+{
+    "sections": {
+        "Tenant Ops": "Tenant Ops",
+        "Debug & Observability": "Debug & Observability",
+        "Control Plane": "Control Plane",
+        "Support": "Support",
+        "Tenant": "Tenant",
+        "Configuration": "Configuration",
+        "System": "System",
+        "Workspaces": "Workspaces",
+        "Operations": "Operations",
+        "Finance": "Finance",
+        "Utilities": "Utilities",
+        "HR": "HR",
+        "Analytics": "Analytics",
+        "Data": "Data",
+        "Config": "Config"
+    },
+    "menu": {
+        "dashboard": "Dashboard",
+        "companies": "Companies",
+        "users": "Users",
+        "features": "Features",
+        "sales": "Sales",
+        "sales-quotes": "Quotations",
+        "sales-orders": "Sales Orders",
+        "sales-delivery": "Deliveries",
+        "sales-invoices": "Invoices",
+        "purchasing": "Purchasing",
+        "inventory": "Inventory",
+        "inventory-stock": "Stock On Hand"
+    },
+    "common": {
+        "sign_out": "Sign Out",
+        "collapse": "Collapse",
+        "expand": "Expand",
+        "user": "User",
+        "signed_in_as": "Signed in as",
+        "performance": "Performance",
+        "performance_tooltip": "Reduces visual effects (blur, animations) to improve speed on slower devices.",
+        "language": "Language",
+        "debug_switch_user": "Debug: Switch User"
+    }
+}
