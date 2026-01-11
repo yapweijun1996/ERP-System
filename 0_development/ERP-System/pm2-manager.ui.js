@@ -13,7 +13,7 @@ export function renderSimpleMenu({ rows, lastMessage, clearScreen }) {
   console.log('PM2 Manager');
   if (lastMessage) console.log(`上次操作：${lastMessage}`);
   console.log('');
-  console.log('指令：a=start all | s=stop all | d=delete all(确认) | q=quit');
+  console.log('指令：a=start all | s=stop all | r=restart all | d=delete all(确认) | q=quit');
   console.log('');
   console.log(`${pad('#', 3, 'right')} ${pad('name', 20)} ${pad('status', 10)} ${pad('说明', 10)}`);
   rows.forEach((r, idx) => {

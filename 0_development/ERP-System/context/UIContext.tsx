@@ -33,6 +33,14 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const togglePerformanceMode = useCallback(() => setPerformanceMode(prev => !prev), []);
     const toggleTheme = useCallback(() => setTheme(prev => prev === 'light' ? 'dark' : 'light'), []);
 
+    React.useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [theme]);
+
     const switchUser = useCallback((userId: string) => {
         console.log('Switch user:', userId);
     }, []);

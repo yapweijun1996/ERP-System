@@ -64,6 +64,7 @@ export const OnboardingWizard: React.FC = () => {
       { id: 3, label: 'Team', desc: 'Invite Users' },
       { id: 4, label: 'Review', desc: 'Go Live' },
   ];
+  const progressPct = ((step - 1) / (steps.length - 1)) * 100;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
@@ -77,31 +78,66 @@ export const OnboardingWizard: React.FC = () => {
                 <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">Cancel & Logout</button>
             </div>
             
-            {/* Stepper */}
-            <div className="flex items-center justify-between relative">
-                <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 dark:bg-slate-800 -z-0"></div>
-                <div className="absolute top-1/2 left-0 h-1 bg-blue-600 transition-all duration-500 -z-0" style={{ width: `${((step - 1) / (steps.length - 1)) * 100}%` }}></div>
-                
-                {steps.map((s) => {
-                    const isActive = s.id === step;
-                    const isCompleted = s.id < step;
-                    return (
-                        <div key={s.id} className="relative z-10 flex flex-col items-center">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
-                                isCompleted ? 'bg-blue-600 text-white' : 
-                                isActive ? 'bg-white dark:bg-slate-900 border-2 border-blue-600 text-blue-600' : 
-                                'bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-400'
-                            }`}>
-                                {isCompleted ? <CheckCircle className="w-6 h-6" /> : s.id}
-                            </div>
-                            <div className="mt-2 text-center hidden sm:block">
-                                <p className={`text-xs font-bold ${isActive ? 'text-blue-600' : 'text-slate-500'}`}>{s.label}</p>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+	            {/* Stepper (不可跳步) */}
+	            <div className="relative">
+	                {/* Dots row */}
+	                <div className="relative flex items-center justify-between px-5">
+	                    {/* Track */}
+	                    <div className="absolute inset-x-5 top-1/2 h-1 -translate-y-1/2 bg-slate-200 dark:bg-slate-800 rounded-full z-0"></div>
+	                    {/* Progress */}
+	                    <div className="absolute inset-x-5 top-1/2 h-1 -translate-y-1/2 z-0">
+	                        <div
+	                            className="h-1 bg-blue-600 rounded-full transition-[width] duration-500 ease-out"
+	                            style={{ width: `${progressPct}%` }}
+	                        />
+	                    </div>
+	
+	                    {steps.map((s) => {
+	                        const isActive = s.id === step;
+	                        const isCompleted = s.id < step;
+	                        return (
+	                            <div key={s.id} className="relative z-10">
+	                                <div
+	                                    className={[
+	                                        'w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors',
+	                                        isCompleted ? 'bg-blue-600 text-white' : '',
+	                                        isActive ? 'bg-white dark:bg-slate-900 border-2 border-blue-600 text-blue-600' : '',
+	                                        !isActive && !isCompleted
+	                                            ? 'bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-400'
+	                                            : '',
+	                                    ].join(' ')}
+	                                    aria-current={isActive ? 'step' : undefined}
+	                                >
+	                                    {isCompleted ? <CheckCircle className="w-6 h-6" /> : s.id}
+	                                </div>
+	                            </div>
+	                        );
+	                    })}
+	                </div>
+	
+	                {/* Labels row */}
+	                <div className="mt-3 flex justify-between px-5">
+	                    {steps.map((s) => {
+	                        const isActive = s.id === step;
+	                        const isCompleted = s.id < step;
+	                        return (
+	                            <div key={s.id} className="w-10 text-center hidden sm:block">
+	                                <p
+	                                    className={[
+	                                        'text-xs font-bold',
+	                                        isActive ? 'text-blue-600' : '',
+	                                        isCompleted ? 'text-slate-600 dark:text-slate-300' : '',
+	                                        !isActive && !isCompleted ? 'text-slate-400' : '',
+	                                    ].join(' ')}
+	                                >
+	                                    {s.label}
+	                                </p>
+	                            </div>
+	                        );
+	                    })}
+	                </div>
+	            </div>
+	        </div>
 
         {/* Content Card */}
         <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 min-h-[400px] flex flex-col justify-between">

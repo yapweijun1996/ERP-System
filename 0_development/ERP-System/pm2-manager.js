@@ -8,6 +8,7 @@ import {
   buildRowsFromTargets,
   startAll,
   stopAll,
+  restartAll,
 } from './pm2-manager.logic.js';
 import { renderSimpleMenu } from './pm2-manager.ui.js';
 
@@ -65,6 +66,7 @@ function parseMainInput(raw) {
   if (['q', 'quit', 'exit', '退出'].includes(lower)) return { type: 'quit' };
   if (lower === 'a') return { type: 'startAll' };
   if (lower === 's') return { type: 'stopAll' };
+  if (lower === 'r') return { type: 'restartAll' };
   if (lower === 'd') return { type: 'deleteAll' };
   return { type: 'unknown', input };
 }
@@ -112,6 +114,9 @@ async function main() {
       } else if (cmd.type === 'stopAll') {
         await stopAll(targets);
         lastMessage = 'stop all';
+      } else if (cmd.type === 'restartAll') {
+        await restartAll(targets);
+        lastMessage = 'restart all';
       } else if (cmd.type === 'deleteAll') {
         const ok = await confirm('确认 delete all（只移除本工具列出的进程）？');
         if (ok) {

@@ -40,6 +40,7 @@ export interface AuthContextType {
     // Methods
     login: (username: string, password: string) => Promise<boolean>;
     logout: () => void;
+    completeOnboarding: (clientId: string, companyData: Partial<Company>) => void;
 
     // Navigation Methods
     navigateToPlatform: () => void;
@@ -183,6 +184,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const completeOnboarding = (clientId: string, companyData: Partial<Company>) => {
+        if (!currentClient || currentClient.id !== clientId) {
+            addToast('error', 'Onboarding Failed', 'Client not found in current session');
+            return;
+        }
+
+        const newCompany: Company = {
+            id: `comp-${Date.now()}`,
+            clientId,
+            name: companyData.name || 'My Company',
+            currency: companyData.currency || 'USD',
+            timezone: companyData.timezone || 'UTC',
+            country: companyData.country || 'USA',
+            status: 'Active',
+            features: (companyData.features as any) || {},
+        };
+
+        setCurrentClient({
+            ...currentClient,
+            status: 'Active',
+            companies: [newCompany],
+        } as Client);
+        setCurrentCompany(newCompany);
+        setViewLevel('COMPANY');
+
+        if (currentUser) {
+            setCurrentUser({
+                ...currentUser,
+                status: 'Active',
+                allowedCompanyIds: Array.from(new Set([...(currentUser.allowedCompanyIds || []), newCompany.id])),
+                defaultCompanyId: newCompany.id,
+            } as User);
+        }
+
+        addToast('success', 'Onboarding Completed', 'Workspace is now active');
+    };
+
     const logout = () => {
         localStorage.removeItem('auth_token');
         setIsAuthenticated(false);
@@ -218,6 +256,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         companies,
         login,
         logout,
+        completeOnboarding,
         navigateToPlatform,
         navigateToClient,
         navigateToCompany,
