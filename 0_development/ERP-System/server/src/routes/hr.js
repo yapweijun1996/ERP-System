@@ -10,7 +10,7 @@ const router = express.Router();
  */
 router.get('/employees', requirePermission('ADMIN_USERS'), async (req, res) => {
     try {
-        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
+        const companyId = req.query?.companyId || req.auth?.companyDbId;
 
         if (!companyId) {
             return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });

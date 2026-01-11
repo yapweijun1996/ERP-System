@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import i18n from '../config/i18n';
+import { WorkspaceType } from '../types';
 
 interface UIContextType {
     isSidebarCollapsed: boolean;
     toggleSidebarCollapse: () => void;
     isMobileMenuOpen: boolean;
     setMobileMenuOpen: (isOpen: boolean) => void;
+    currentWorkspace: WorkspaceType;
+    setCurrentWorkspace: (workspace: WorkspaceType) => void;
     performanceMode: boolean;
     togglePerformanceMode: () => void;
     notifications: any[];
@@ -27,6 +30,7 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceType>('EXECUTIVE');
     const [performanceMode, setPerformanceMode] = useState(false);
     const [notifications, setNotifications] = useState<any[]>([]); // Mock notifications
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -80,6 +84,8 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             toggleSidebarCollapse,
             isMobileMenuOpen,
             setMobileMenuOpen,
+            currentWorkspace,
+            setCurrentWorkspace,
             performanceMode,
             togglePerformanceMode,
             notifications,

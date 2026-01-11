@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/documents', requirePermission('SALES_VIEW'), async (req, res) => {
     try {
         const { status, docType } = req.query;
-        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
+        const companyId = req.query?.companyId || req.auth?.companyDbId;
         if (!companyId) {
             return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });
         }
@@ -66,7 +66,7 @@ router.get('/documents', requirePermission('SALES_VIEW'), async (req, res) => {
 router.get('/documents/:id', requirePermission('SALES_VIEW'), async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
+        const companyId = req.query?.companyId || req.auth?.companyDbId;
         if (!companyId) {
             return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });
         }
@@ -109,7 +109,7 @@ router.get('/documents/:id', requirePermission('SALES_VIEW'), async (req, res) =
  */
 router.get('/customers', requirePermission('SALES_VIEW'), async (req, res) => {
     try {
-        const companyId = req.query?.companyId || req.auth?.decoded?.companyId;
+        const companyId = req.query?.companyId || req.auth?.companyDbId;
         if (!companyId) {
             return res.status(400).json({ error: 'Validation Error', message: 'companyId is required' });
         }

@@ -55,6 +55,8 @@ export async function registerTenant({ username, email, password, name, companyN
             username,
             tenantId,
             companyId: routeCompanyId,
+            companyKey: routeCompanyId,
+            companyDbId: null,
             roles: [roleId]
         },
         process.env.JWT_SECRET || 'your-secret-key',
@@ -118,6 +120,8 @@ export async function loginUser({ username, password, companyId }) {
             username: context.user.username,
             tenantId: context.user.tenantId,
             companyId,
+            companyKey: companyId,
+            companyDbId: context.user.defaultCompanyId || null,
             roles: context.user.roles.map(r => r.id)
         },
         process.env.JWT_SECRET || 'your-secret-key',

@@ -46,12 +46,16 @@ function normalizeCompanyId(value) {
     return v ? v : null;
 }
 
-function getCompanyIdFromRequest(req) {
+function getCompanyKeyFromRequest(req) {
     const fromHeader = normalizeCompanyId(req.headers?.['x-company-id']);
     const fromQuery = normalizeCompanyId(req.query?.company);
-    const fromQueryAlt = normalizeCompanyId(req.query?.companyId);
+    return fromHeader || fromQuery || null;
+}
+
+function getCompanyDbIdFromRequest(req) {
+    const fromQuery = normalizeCompanyId(req.query?.companyId);
     const fromBody = normalizeCompanyId(req.body?.companyId);
-    return fromHeader || fromQuery || fromQueryAlt || fromBody || null;
+    return fromQuery || fromBody || null;
 }
 
 function toPermissionSet(roles) {
@@ -117,14 +121,14 @@ export function authenticate(options = {}) {
                 return res.status(401).json({ error: 'Unauthorized', message: e?.message || 'Invalid token' });
             }
 
-            const tokenCompanyId = normalizeCompanyId(decoded?.companyId);
-            const requestCompanyId = getCompanyIdFromRequest(req);
+            const tokenCompanyKey = normalizeCompanyId(decoded?.companyKey ?? decoded?.companyId);
+            const requestCompanyKey = getCompanyKeyFromRequest(req);
 
             if (
                 requireCompanyMatch &&
-                tokenCompanyId &&
-                requestCompanyId &&
-                tokenCompanyId !== requestCompanyId
+                tokenCompanyKey &&
+                requestCompanyKey &&
+                tokenCompanyKey !== requestCompanyKey
             ) {
                 return res.status(403).json({
                     error: 'Forbidden',
@@ -132,7 +136,7 @@ export function authenticate(options = {}) {
                 });
             }
 
-            const context = await getUserContextCached(decoded.userId, tokenCompanyId);
+            const context = await getUserContextCached(decoded.userId, tokenCompanyKey);
             if (!context?.user?.id) {
                 return res.status(401).json({ error: 'Unauthorized', message: 'User not found' });
             }
@@ -154,14 +158,22 @@ export function authenticate(options = {}) {
             const platformAdmin = isPlatformAdmin(permissions);
             const tenantAdmin = context.user.roles.some(r => r.name === 'Administrator');
 
+            const requestCompanyDbId = getCompanyDbIdFromRequest(req);
+            const tokenCompanyDbId = normalizeCompanyId(decoded?.companyDbId);
+            const effectiveCompanyDbId =
+                requestCompanyDbId ||
+                tokenCompanyDbId ||
+                normalizeCompanyId(context.user.defaultCompanyId) ||
+                null;
+
             if (enforceAllowedCompanies && !platformAdmin && !tenantAdmin) {
                 const allowed = Array.isArray(context.user.allowedCompanyIds)
                     ? context.user.allowedCompanyIds.map(String)
                     : [];
-                if (tokenCompanyId && allowed.length > 0 && !allowed.includes(String(tokenCompanyId))) {
+                if (effectiveCompanyDbId && allowed.length > 0 && !allowed.includes(String(effectiveCompanyDbId))) {
                     return res.status(403).json({
                         error: 'Forbidden',
-                        message: `No access to company '${tokenCompanyId}'`,
+                        message: `No access to company '${effectiveCompanyDbId}'`,
                     });
                 }
             }
@@ -172,6 +184,8 @@ export function authenticate(options = {}) {
                 decoded,
                 permissions,
                 context,
+                companyKey: tokenCompanyKey,
+                companyDbId: effectiveCompanyDbId,
             };
 
             return next();

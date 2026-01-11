@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { Modal } from '../../components/UI/Modal';
 import { Building, MapPin, Globe, CreditCard, Mail, ShieldCheck, Check, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { DEFAULT_FEATURES } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 interface CreateClientWizardProps {
     isOpen: boolean;
@@ -12,6 +13,7 @@ interface CreateClientWizardProps {
 
 export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, onClose }) => {
     const { createClient } = useApp();
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -40,7 +42,7 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
         setIsLoading(true);
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         await createClient({
             name: formData.name,
             code: formData.code,
@@ -49,7 +51,7 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
             currency: formData.currency,
             features: DEFAULT_FEATURES
         }, formData.adminEmail);
-        
+
         setIsLoading(false);
         onClose();
         setStep(1); // Reset
@@ -60,10 +62,10 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
     const StepIdentity = () => (
         <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Client Name</label>
-                <input 
+                <label className="text-xs font-bold text-slate-500 uppercase">{t('admin.client_name', 'Client Name')}</label>
+                <input
                     autoFocus
-                    type="text" 
+                    type="text"
                     value={formData.name}
                     onChange={e => updateField('name', e.target.value)}
                     className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
@@ -71,10 +73,10 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
                 />
             </div>
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Tenant Code / Subdomain</label>
+                <label className="text-xs font-bold text-slate-500 uppercase">{t('admin.tenant_code', 'Tenant Code / Subdomain')}</label>
                 <div className="flex items-center">
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         value={formData.code}
                         onChange={e => updateField('code', e.target.value.toLowerCase().replace(/\s/g, '-'))}
                         className="flex-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-l-lg bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
@@ -84,7 +86,7 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
                         .nexuserp.io
                     </div>
                 </div>
-                <p className="text-[10px] text-slate-400">Unique identifier for system routing.</p>
+                <p className="text-[10px] text-slate-400">{t('admin.tenant_code_hint', 'Unique identifier for system routing.')}</p>
             </div>
         </div>
     );
@@ -93,10 +95,10 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
         <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Country</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase">{t('admin.country', 'Country')}</label>
                     <div className="relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <select 
+                        <select
                             value={formData.country}
                             onChange={e => updateField('country', e.target.value)}
                             className="w-full pl-10 p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
@@ -109,10 +111,10 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
                     </div>
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Timezone</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase">{t('admin.timezone', 'Timezone')}</label>
                     <div className="relative">
                         <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <select 
+                        <select
                             value={formData.timezone}
                             onChange={e => updateField('timezone', e.target.value)}
                             className="w-full pl-10 p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
@@ -126,10 +128,10 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
                 </div>
             </div>
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Base Currency</label>
+                <label className="text-xs font-bold text-slate-500 uppercase">{t('admin.currency', 'Base Currency')}</label>
                 <div className="relative">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <select 
+                    <select
                         value={formData.currency}
                         onChange={e => updateField('currency', e.target.value)}
                         className="w-full pl-10 p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
@@ -148,24 +150,24 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg flex gap-3">
                 <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
                 <div>
-                    <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100">Plan Assignment</h4>
-                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Defaulting to <strong>Enterprise Trial</strong>. Quotas: 50 Users, 10GB Storage.</p>
+                    <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100">{t('admin.plan_assignment', 'Plan Assignment')}</h4>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">{t('admin.plan_desc', 'Defaulting to Enterprise Trial. Quotas: 50 Users, 10GB Storage.')}</p>
                 </div>
             </div>
 
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Client Admin Email</label>
+                <label className="text-xs font-bold text-slate-500 uppercase">{t('admin.admin_email', 'Client Admin Email')}</label>
                 <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                        type="email" 
+                    <input
+                        type="email"
                         value={formData.adminEmail}
                         onChange={e => updateField('adminEmail', e.target.value)}
                         className="w-full pl-10 p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="admin@client-domain.com"
                     />
                 </div>
-                <p className="text-[10px] text-slate-400">An invitation will be sent to this user to set up their password.</p>
+                <p className="text-[10px] text-slate-400">{t('admin.invite_hint', 'An invitation will be sent to this user to set up their password.')}</p>
             </div>
         </div>
     );
@@ -178,17 +180,16 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Provision New Tenant">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('admin.provision_new_tenant', 'Provision New Tenant')}>
             <div className="flex flex-col h-[400px]">
                 {/* Stepper */}
                 <div className="flex items-center justify-between mb-8 px-8">
                     {[1, 2, 3].map(s => (
                         <div key={s} className="flex items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-                                s === step ? 'bg-blue-600 text-white' : 
-                                s < step ? 'bg-emerald-500 text-white' : 
-                                'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                            }`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${s === step ? 'bg-blue-600 text-white' :
+                                    s < step ? 'bg-emerald-500 text-white' :
+                                        'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                }`}>
                                 {s < step ? <Check className="w-4 h-4" /> : s}
                             </div>
                             {s < 3 && <div className={`w-16 h-0.5 mx-2 ${s < step ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}></div>}
@@ -203,21 +204,21 @@ export const CreateClientWizard: React.FC<CreateClientWizardProps> = ({ isOpen, 
                 </div>
 
                 <div className="pt-6 mt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between">
-                    <button 
+                    <button
                         onClick={handleBack}
                         disabled={step === 1 || isLoading}
                         className="flex items-center text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                        <ArrowLeft className="w-4 h-4 mr-2" /> {t('common.back', 'Back')}
                     </button>
-                    <button 
+                    <button
                         onClick={handleNext}
                         disabled={!isStepValid() || isLoading}
                         className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                             <>
-                                {step === 3 ? 'Provision Client' : 'Next Step'}
+                                {step === 3 ? t('admin.provision_client', 'Provision Client') : t('common.next_step', 'Next Step')}
                                 {step !== 3 && <ArrowRight className="w-4 h-4 ml-2" />}
                             </>
                         )}

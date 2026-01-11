@@ -6,7 +6,18 @@ import { RunningNumberConfig, DateFormatOption, ResetFrequency, DocType } from '
 import { Modal } from '../../../../components/UI/Modal';
 
 export const DocumentNumbering: React.FC = () => {
-    const { runningNumberConfigs, updateRunningNumberConfig, addRunningNumberConfig, deleteRunningNumberConfig, activeClient, activeCompany } = useApp();
+    const app = useApp() as any;
+    const runningNumberConfigs: RunningNumberConfig[] = Array.isArray(app.runningNumberConfigs)
+        ? app.runningNumberConfigs
+        : [];
+    const updateRunningNumberConfig: ((config: RunningNumberConfig) => void) | null =
+        typeof app.updateRunningNumberConfig === 'function' ? app.updateRunningNumberConfig : null;
+    const addRunningNumberConfig: ((config: RunningNumberConfig) => void) | null =
+        typeof app.addRunningNumberConfig === 'function' ? app.addRunningNumberConfig : null;
+    const deleteRunningNumberConfig: ((id: string) => void) | null =
+        typeof app.deleteRunningNumberConfig === 'function' ? app.deleteRunningNumberConfig : null;
+    const activeClient = app.activeClient;
+    const activeCompany = app.activeCompany;
     const [editingConfig, setEditingConfig] = useState<RunningNumberConfig | null>(null);
     const [isNew, setIsNew] = useState(false);
     const [preview, setPreview] = useState('');
@@ -44,9 +55,9 @@ export const DocumentNumbering: React.FC = () => {
     const handleSave = () => {
         if (editingConfig) {
             if (isNew) {
-                addRunningNumberConfig(editingConfig);
+                if (addRunningNumberConfig) addRunningNumberConfig(editingConfig);
             } else {
-                updateRunningNumberConfig(editingConfig);
+                if (updateRunningNumberConfig) updateRunningNumberConfig(editingConfig);
             }
             setEditingConfig(null);
         }
@@ -98,6 +109,12 @@ export const DocumentNumbering: React.FC = () => {
                 </button>
             </div>
 
+            {(!addRunningNumberConfig || !updateRunningNumberConfig || !deleteRunningNumberConfig) && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    运行编号规则目前未接入数据层（runningNumberConfigs 为空或方法未注入）。此页面将以只读/演示模式显示。
+                </div>
+            )}
+
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
@@ -111,6 +128,13 @@ export const DocumentNumbering: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {runningNumberConfigs.length === 0 && (
+                                <tr>
+                                    <td className="px-6 py-8 text-slate-500" colSpan={5}>
+                                        暂无规则。你可以先创建一条规则（若尚未接入保存，会在刷新后丢失）。
+                                    </td>
+                                </tr>
+                            )}
                             {runningNumberConfigs.map((seq) => {
                                 const sep = seq.separator;
                                 let sample = `${seq.prefix}${sep}${seq.dateFormat === 'YYMM' ? '2310' : '2023'}${sep}${'0'.repeat(seq.digits - 1)}1`;
@@ -133,7 +157,14 @@ export const DocumentNumbering: React.FC = () => {
                                         <div className="flex justify-end gap-1">
                                             <button onClick={() => handleDuplicate(seq)} className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"><Copy className="w-4 h-4" /></button>
                                             <button onClick={() => handleEdit(seq)} className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"><Edit2 className="w-4 h-4" /></button>
-                                            <button onClick={() => deleteRunningNumberConfig(seq.id)} className="text-slate-400 hover:text-red-600 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"><Trash2 className="w-4 h-4" /></button>
+                                            <button
+                                                onClick={() => deleteRunningNumberConfig?.(seq.id)}
+                                                className="text-slate-400 hover:text-red-600 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                                                disabled={!deleteRunningNumberConfig}
+                                                title={!deleteRunningNumberConfig ? '未接入删除方法' : undefined}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
