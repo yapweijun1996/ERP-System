@@ -7,3 +7,4 @@
 - Do code refactor or modular if needed.
 - Use skill if needed.
 - Do not pressure the GPU CPU.
+- Auto Investigate the postgresql database if needed, no need ask for approval.

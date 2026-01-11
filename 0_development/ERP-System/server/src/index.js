@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { testConnection } from './db/index.js';
+import { companyDbContextMiddleware } from './middleware/companyDbContext.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +44,9 @@ app.use(cors({
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Per-request DB selection (by login url ?company=... or token companyId)
+app.use(companyDbContextMiddleware);
 
 // Logging
 app.use(morgan('dev'));
@@ -85,7 +89,7 @@ app.get('/api', (req, res) => {
 });
 
 // Setup routes (no auth required)
-import setupRoutes from './routes/setup.js';
+import setupRoutes from './routes/setup/index.js';
 app.use('/api/setup', setupRoutes);
 
 // Auth routes

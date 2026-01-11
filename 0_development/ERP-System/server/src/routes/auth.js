@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db/index.js';
 import { getUserContext } from '../services/authService.js';
+import { getCurrentDatabaseName } from '../db/context.js';
 
 const router = express.Router();
 
@@ -12,7 +13,15 @@ const router = express.Router();
  */
 router.post('/login', async (req, res) => {
     try {
+        const companyId = String(req.query?.company || '').trim();
         const { username, password } = req.body;
+
+        if (!companyId) {
+            return res.status(400).json({
+                error: 'Validation Error',
+                message: 'company is required in login url, e.g. /api/auth/login?company=comp-xxx'
+            });
+        }
 
         if (!username || !password) {
             return res.status(400).json({
@@ -66,6 +75,7 @@ router.post('/login', async (req, res) => {
                 userId: context.user.id,
                 username: context.user.username,
                 tenantId: context.user.tenantId,
+                companyId,
                 roles: context.user.roles.map(r => r.id)
             },
             process.env.JWT_SECRET || 'your-secret-key',
@@ -79,6 +89,20 @@ router.post('/login', async (req, res) => {
 
     } catch (error) {
         console.error('Login error:', error);
+        const dbName = getCurrentDatabaseName();
+        const pgCode = error?.code;
+        const isSchemaIssue =
+            pgCode === '42703' || // undefined_column
+            pgCode === '42P01' || // undefined_table
+            pgCode === '3F000'; // invalid_schema_name
+
+        if (isSchemaIssue) {
+            return res.status(503).json({
+                error: 'Database Not Ready',
+                message: `Database schema not ready for this company. Please run migrations on database '${dbName || 'unknown'}'. Root error: ${error.message}`
+            });
+        }
+
         res.status(500).json({
             error: 'Server Error',
             message: `An error occurred during login: ${error.message}`
@@ -92,7 +116,15 @@ router.post('/login', async (req, res) => {
  */
 router.post('/register', async (req, res) => {
     try {
+        const companyId = String(req.query?.company || '').trim();
         const { username, email, password, name, companyName } = req.body;
+
+        if (!companyId) {
+            return res.status(400).json({
+                error: 'Validation Error',
+                message: 'company is required in register url, e.g. /api/auth/register?company=vantajas'
+            });
+        }
 
         // Validation
         if (!username || !password || !name || !companyName) {
@@ -154,6 +186,7 @@ router.post('/register', async (req, res) => {
                 userId,
                 username,
                 tenantId,
+                companyId,
                 roles: [roleId]
             },
             process.env.JWT_SECRET || 'your-secret-key',

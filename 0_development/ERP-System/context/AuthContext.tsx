@@ -175,7 +175,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return true;
         } catch (error) {
             console.error('Login error:', error);
-            addToast('error', 'Login Failed', 'Invalid username or password');
+            const message = error instanceof Error ? error.message : 'Login failed';
+            addToast('error', 'Login Failed', message);
             return false;
         } finally {
             setIsLoading(false);
