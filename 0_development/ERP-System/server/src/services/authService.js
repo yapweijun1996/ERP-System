@@ -43,6 +43,15 @@ export async function registerTenant({ username, email, password, name, companyN
         [roleId, tenantId]
     );
 
+    // Auto-assign all permissions to admin role (except PLATFORM_ADMIN)
+    // This ensures new tenants have full access to all modules without manual setup
+    await query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT $1, id FROM permissions WHERE code != 'PLATFORM_ADMIN'
+         ON CONFLICT DO NOTHING`,
+        [roleId]
+    );
+
     await query(
         'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)',
         [userId, roleId]

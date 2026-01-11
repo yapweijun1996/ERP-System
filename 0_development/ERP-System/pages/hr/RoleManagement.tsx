@@ -123,8 +123,8 @@ export const RoleManagement: React.FC = () => {
                 <button
                     onClick={() => setActiveView('roles')}
                     className={`px-4 py-2 border-b-2 text-sm font-medium transition-colors ${activeView === 'roles'
-                            ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                            : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                         }`}
                 >
                     <Shield className="w-4 h-4 inline mr-2" />
@@ -133,8 +133,8 @@ export const RoleManagement: React.FC = () => {
                 <button
                     onClick={() => setActiveView('users')}
                     className={`px-4 py-2 border-b-2 text-sm font-medium transition-colors ${activeView === 'users'
-                            ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                            : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                         }`}
                 >
                     <UsersIcon className="w-4 h-4 inline mr-2" />
@@ -155,8 +155,8 @@ export const RoleManagement: React.FC = () => {
                                     key={role.id}
                                     onClick={() => handleRoleSelect(role)}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${selectedRole?.id === role.id
-                                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium'
-                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                                         }`}
                                 >
                                     <div className="flex justify-between items-center">
@@ -205,21 +205,21 @@ export const RoleManagement: React.FC = () => {
                                         <div key={module}>
                                             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">{module}</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                {perms.map(perm => {
+                                                {(perms as Permission[]).map(perm => {
                                                     const isEnabled = selectedPermissions.includes(perm.code);
                                                     return (
                                                         <div
                                                             key={perm.code}
                                                             onClick={() => togglePermission(perm.code)}
                                                             className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${isEnabled
-                                                                    ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 shadow-sm'
-                                                                    : 'bg-slate-50 dark:bg-slate-800/50 border-transparent opacity-60 hover:opacity-100'
+                                                                ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 shadow-sm'
+                                                                : 'bg-slate-50 dark:bg-slate-800/50 border-transparent opacity-60 hover:opacity-100'
                                                                 } ${selectedRole.is_system_role ? 'cursor-not-allowed' : ''}`}
                                                         >
                                                             <div
                                                                 className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${isEnabled
-                                                                        ? 'bg-blue-600 border-blue-600'
-                                                                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
+                                                                    ? 'bg-blue-600 border-blue-600'
+                                                                    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
                                                                     }`}
                                                             >
                                                                 {isEnabled && <Check className="w-3 h-3 text-white" />}
@@ -254,11 +254,11 @@ export const RoleManagement: React.FC = () => {
                                     <p className="text-sm text-slate-500">@{user.username}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    {user.role_names?.map((roleName, idx) => (
+                                    {(user.role_names as string[] | undefined)?.map((roleName, idx) => (
                                         <span key={idx} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded">
                                             {roleName}
                                         </span>
-                                    ))}
+                                    )) || <span className="text-sm text-slate-400">No roles assigned</span>}
                                 </div>
                             </div>
                         ))}

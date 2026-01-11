@@ -163,7 +163,7 @@ const startServer = async () => {
 
         if (!dbConnected) {
             console.warn('⚠️  Database not connected. Setup wizard will be available.');
-            console.warn('⚠️  Please configure database using the frontend setup wizard or run: cd .database && ./setup.sh');
+            console.warn('⚠️  Please configure database using the frontend setup wizard.');
         }
 
         // Start server regardless of database status
