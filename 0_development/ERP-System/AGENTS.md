@@ -8,3 +8,5 @@
 - Use skill if needed.
 - Do not pressure the GPU CPU.
 - Auto Investigate the postgresql database if needed, no need ask for approval.
+- Provide summary of the code changes.
+- Provide next action suggestion in A,B,C.

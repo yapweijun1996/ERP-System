@@ -8,6 +8,7 @@ import testConnectionRoute from './testConnection.js';
 import initSchemaRoute from './initSchema.js';
 import dbStatusRoute from './dbStatus.js';
 import userStatusRoute from './userStatus.js';
+import completeOnboardingRoute from './completeOnboarding.js';
 
 const router = express.Router();
 
@@ -19,5 +20,6 @@ router.use('/test-connection', testConnectionRoute);
 router.use('/init-schema', initSchemaRoute);
 router.use('/db-status', dbStatusRoute);
 router.use('/user-status', userStatusRoute);
+router.use('/complete-onboarding', completeOnboardingRoute);
 
 export default router;

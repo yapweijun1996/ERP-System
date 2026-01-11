@@ -6,7 +6,7 @@ import { StepCompanyBasics, StepModules, StepTeam } from '../../components/Onboa
 import { DEFAULT_FEATURES, MOCK_RUNNING_NUMBERS } from '../../constants';
 
 export const OnboardingWizard: React.FC = () => {
-  const { currentUser, activeClient, completeOnboarding, logout } = useApp();
+  const { currentUser, activeClient, logout } = useApp();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -42,19 +42,43 @@ export const OnboardingWizard: React.FC = () => {
 
   const handleFinish = async () => {
     setLoading(true);
-    // Simulate Processing
-    setTimeout(() => {
-        if (activeClient) {
-            completeOnboarding(activeClient.id, {
-                name: formData.company.name,
-                currency: formData.company.currency,
-                timezone: formData.company.timezone,
-                country: 'USA', // Simplified for demo
-                features: formData.features
-            });
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const company = params.get('company')?.trim();
+        if (!company) throw new Error('缺少 company 参数（例如 ?company=vantajas）');
+
+        const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:6601';
+        const token = localStorage.getItem('auth_token');
+        if (!token) throw new Error('未登录（缺少 auth_token）');
+
+        const res = await fetch(
+            `${API_URL}/api/setup/complete-onboarding?company=${encodeURIComponent(company)}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    name: formData.company.name,
+                    currency: formData.company.currency,
+                    timezone: formData.company.timezone,
+                    country: 'USA',
+                    features: formData.features,
+                }),
+            },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data?.message || data?.error || 'Go Live 失败');
         }
+
+        window.location.reload();
+    } catch (e) {
+        console.error('Complete onboarding failed:', e);
+        alert(e instanceof Error ? e.message : 'Go Live 失败');
         setLoading(false);
-    }, 1500);
+    }
   };
 
   // Steps Configuration
