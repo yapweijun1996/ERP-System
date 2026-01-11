@@ -117,9 +117,11 @@ app.use('/api/users', authenticate(), userRoutes);
 import salesRoutes from './routes/sales.js';
 import hrRoutes from './routes/hr.js';
 import inventoryRoutes from './routes/inventory.js';
+import adminRoutes from './routes/admin.js';
 app.use('/api/sales', authenticate(), salesRoutes);
 app.use('/api/hr', authenticate(), hrRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/admin', authenticate(), adminRoutes);
 
 
 // ============================================

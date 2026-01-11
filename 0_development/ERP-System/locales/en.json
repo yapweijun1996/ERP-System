@@ -46,7 +46,13 @@
         "error": "Error",
         "success": "Success",
         "cancel": "Cancel",
-        "create": "Create"
+        "create": "Create",
+        "save_changes": "Save Changes",
+        "discard": "Discard",
+        "unsaved_changes": "You have unsaved changes.",
+        "unsaved_confirm": "You have unsaved changes. Are you sure you want to discard them?",
+        "validation_error": "Validation Error",
+        "updates_affect_docs": "Updates will affect all generated documents immediately."
     },
     "admin": {
         "client_tenant": "Client / Tenant",
@@ -98,5 +104,33 @@
         "item_cost": "Cost Price",
         "create_success": "Item Created",
         "create_success_msg": "New inventory item has been added successfully."
+    },
+    "settings": {
+        "title": "Settings",
+        "subtitle": "Manage operational configurations for this entity.",
+        "profile": "Company Profile",
+        "fiscal": "Fiscal & Tax",
+        "numbering": "Document Numbering",
+        "warehouse": "Locations / Warehouses",
+        "approvals": "Approval Rules",
+        "payment": "Payment Methods",
+        "identity": "Identity",
+        "upload_logo": "Upload Logo",
+        "company_name": "Company Name",
+        "code_abbr": "Code / Abbreviation",
+        "code_hint": "For document prefixes",
+        "tax_id": "Tax / Registration ID",
+        "locale_regional": "Locale & Regional",
+        "registered_address": "Registered Address",
+        "street_address": "Street Address",
+        "city": "City",
+        "state_province": "State / Province",
+        "zip_code": "Zip / Postal Code",
+        "contact_info": "Contact Information",
+        "general_email": "General Email",
+        "phone_number": "Phone Number",
+        "website": "Website",
+        "profile_saved": "Profile Saved",
+        "profile_saved_msg": "Company settings updated successfully."
     }
 }

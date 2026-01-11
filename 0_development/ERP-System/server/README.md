@@ -34,13 +34,13 @@
 ## 3) companyId / 多公司数据库切换
 
 后端有按请求切换数据库的中间件（`src/middleware/companyDbContext.js`）：
-- 优先从 JWT token 里的 `companyId`
+- 优先从 JWT token 里的 `companyKey` / `companyId`
 - 其次从请求头 `x-company-id`
 - 再其次从 URL query `?company=...`
 
 当 `DB_REQUIRE_COMPANY_DB_MAP=true`：
 - 除了公开接口（如 `/api/auth/login`、`/api/auth/register` 等），其余 `/api/*` 请求必须带 company 标识
-- 且 companyId 必须能在 `DB_COMPANY_DB_MAP` 中找到映射
+- 且 companyKey 必须能在 `DB_COMPANY_DB_MAP` 中找到映射
 
 ## 4) 登录方式（Bearer JWT / Cookie JWT）与 CSRF
 

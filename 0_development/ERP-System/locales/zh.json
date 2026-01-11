@@ -46,7 +46,13 @@
         "error": "错误",
         "success": "成功",
         "cancel": "取消",
-        "create": "创建"
+        "create": "创建",
+        "save_changes": "保存更改",
+        "discard": "放弃",
+        "unsaved_changes": "您有未保存的更改。",
+        "unsaved_confirm": "您有未保存的更改。确定要放弃它们吗？",
+        "validation_error": "验证错误",
+        "updates_affect_docs": "更新将立即影响所有生成的文档。"
     },
     "admin": {
         "client_tenant": "客户 / 租户",
@@ -98,5 +104,33 @@
         "item_cost": "成本价格",
         "create_success": "商品已创建",
         "create_success_msg": "新库存商品已成功添加。"
+    },
+    "settings": {
+        "title": "设置",
+        "subtitle": "管理此实体的运营配置。",
+        "profile": "公司资料",
+        "fiscal": "财务与税务",
+        "numbering": "文档编号",
+        "warehouse": "地点 / 仓库",
+        "approvals": "审批规则",
+        "payment": "付款方式",
+        "identity": "身份信息",
+        "upload_logo": "上传 Logo",
+        "company_name": "公司名称",
+        "code_abbr": "代码 / 缩写",
+        "code_hint": "用于文档前缀",
+        "tax_id": "税务 / 登记 ID",
+        "locale_regional": "区域设置",
+        "registered_address": "注册地址",
+        "street_address": "街道地址",
+        "city": "城市",
+        "state_province": "州 / 省",
+        "zip_code": "邮政编码",
+        "contact_info": "联系信息",
+        "general_email": "通用邮箱",
+        "phone_number": "电话号码",
+        "website": "官方网站",
+        "profile_saved": "资料已保存",
+        "profile_saved_msg": "公司设置更新成功。"
     }
 }
