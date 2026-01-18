@@ -1,0 +1,11 @@
+{
+  "name": "Nexus ERP",
+  "short_name": "ERP",
+  "description": "Nexus ERP - High performance enterprise management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": []
+}
+

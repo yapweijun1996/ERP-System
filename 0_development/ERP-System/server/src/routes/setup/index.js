@@ -9,6 +9,10 @@ import initSchemaRoute from './initSchema.js';
 import dbStatusRoute from './dbStatus.js';
 import userStatusRoute from './userStatus.js';
 import completeOnboardingRoute from './completeOnboarding.js';
+import superadminStatusRoute from './superadminStatus.js';
+import bootstrapSuperadminRoute from './bootstrapSuperadmin.js';
+import superadminUserStatusRoute from './superadminUserStatus.js';
+import superadminInitAccountRoute from './superadminInitAccount.js';
 
 const router = express.Router();
 
@@ -21,5 +25,9 @@ router.use('/init-schema', initSchemaRoute);
 router.use('/db-status', dbStatusRoute);
 router.use('/user-status', userStatusRoute);
 router.use('/complete-onboarding', completeOnboardingRoute);
+router.use('/superadmin-status', superadminStatusRoute);
+router.use('/bootstrap-superadmin', bootstrapSuperadminRoute);
+router.use('/superadmin-user-status', superadminUserStatusRoute);
+router.use('/superadmin-init-account', superadminInitAccountRoute);
 
 export default router;

@@ -14,7 +14,7 @@ import metadata from './metadata.json';
 
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading, activeClient } = useApp();
+  const { isAuthenticated, isLoading, activeClient, isSuperadmin } = useApp();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -23,6 +23,13 @@ const AppContent: React.FC = () => {
     if (id !== undefined) setDetailId(id);
     else if (!page.includes('detail')) setDetailId(null);
   };
+
+  useEffect(() => {
+    if (isAuthenticated && isSuperadmin) {
+      setCurrentPage('superadmin-console');
+      setDetailId(null);
+    }
+  }, [isAuthenticated, isSuperadmin]);
 
   if (isLoading) {
     return (

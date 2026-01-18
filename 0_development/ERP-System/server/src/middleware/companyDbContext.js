@@ -37,6 +37,7 @@ function tryGetCompanyIdFromToken(req) {
 
 export function companyDbContextMiddleware(req, res, next) {
     if (req.path?.startsWith('/api/setup')) return next();
+    if (req.path?.startsWith('/api/superadmin')) return next();
 
     const requireMap = String(process.env.DB_REQUIRE_COMPANY_DB_MAP || '')
         .trim()

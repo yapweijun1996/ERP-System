@@ -18,21 +18,37 @@ const rl = readline.createInterface({
 });
 
 const CONFIG_PATH = path.join(process.cwd(), 'pm2-manager.config.json');
+
+function parseModeArg(argv) {
+  const args = Array.isArray(argv) ? argv : [];
+  const idx = args.indexOf('--mode');
+  if (idx >= 0 && args[idx + 1]) return String(args[idx + 1]).trim();
+  return null;
+}
+
 function loadConfig() {
   if (!fs.existsSync(CONFIG_PATH)) return null;
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
-    if (!Array.isArray(parsed.targets)) return null;
-    const targets = parsed.targets
-      .filter((t) => t && typeof t === 'object' && typeof t.name === 'string')
-      .map((t) => ({
-        name: t.name,
-        startArgs: Array.isArray(t.startArgs) ? t.startArgs.map(String) : null,
-      }));
+
+    const normalizeTargets = (list) =>
+      (Array.isArray(list) ? list : [])
+        .filter((t) => t && typeof t === 'object' && typeof t.name === 'string')
+        .map((t) => ({
+          name: t.name,
+          url: t.url,
+          preStart: Array.isArray(t.preStart) ? t.preStart.map(String) : null,
+          startArgs: Array.isArray(t.startArgs) ? t.startArgs.map(String) : null,
+        }));
+
+    const profiles =
+      parsed.profiles && typeof parsed.profiles === 'object' ? parsed.profiles : null;
+    const targets = Array.isArray(parsed.targets) ? normalizeTargets(parsed.targets) : null;
+
     const resurrectOnEmpty = parsed.resurrectOnStartAllWhenEmpty !== false;
-    return { targets, resurrectOnEmpty };
+    return { targets, profiles, resurrectOnEmpty };
   } catch {
     return null;
   }
@@ -68,7 +84,19 @@ function parseMainInput(raw) {
   if (lower === 's') return { type: 'stopAll' };
   if (lower === 'r') return { type: 'restartAll' };
   if (lower === 'd') return { type: 'deleteAll' };
+  if (lower === 'm') return { type: 'toggleMode' };
   return { type: 'unknown', input };
+}
+
+function getTargetsForMode(config, mode) {
+  const m = String(mode || '').trim().toLowerCase();
+  const profiles = config?.profiles;
+  if (profiles && typeof profiles === 'object') {
+    const selected = profiles[m] || profiles.prod || profiles.dev || null;
+    if (Array.isArray(selected) && selected.length) return selected;
+  }
+  if (Array.isArray(config?.targets) && config.targets.length) return config.targets;
+  return null;
 }
 
 async function main() {
@@ -81,11 +109,17 @@ async function main() {
 
   // 主循环
   const config = loadConfig();
+  let mode =
+    parseModeArg(process.argv) ||
+    String(process.env.PM2_MANAGER_MODE || '').trim() ||
+    'prod';
+  mode = String(mode).trim().toLowerCase();
   const defaultTargets = [
     { name: 'ERP-backend', startArgs: null },
     { name: 'ERP-frontend', startArgs: null },
   ];
-  const targets = config?.targets?.length ? config.targets : defaultTargets;
+  const selectedTargets = getTargetsForMode(config, mode);
+  let targets = selectedTargets?.length ? selectedTargets : defaultTargets;
   let lastMessage = '';
   const clearScreen = true;
 
@@ -100,7 +134,7 @@ async function main() {
 
     const rows = buildRowsFromTargets(targets, processes);
     try {
-      renderSimpleMenu({ rows, lastMessage, clearScreen });
+      renderSimpleMenu({ rows, lastMessage, clearScreen, mode });
       const answer = await safeQuestion('> ');
       if (answer === null) break;
       const cmd = parseMainInput(answer);
@@ -132,7 +166,12 @@ async function main() {
           lastMessage = '已取消 delete all';
         }
       } else if (cmd.type === 'unknown') {
-        lastMessage = `未知指令：${cmd.input}（只支持 a/s/d/q）`;
+          lastMessage = `未知指令：${cmd.input}（只支持 a/s/d/q）`;
+      } else if (cmd.type === 'toggleMode') {
+        mode = mode === 'dev' ? 'prod' : 'dev';
+        const nextTargets = getTargetsForMode(config, mode);
+        targets = nextTargets?.length ? nextTargets : defaultTargets;
+        lastMessage = `切换为 ${mode}（如需切换启动命令：请先 d delete all，再 a start all）`;
       }
     } catch (e) {
       console.log('执行失败：', e?.message || e);

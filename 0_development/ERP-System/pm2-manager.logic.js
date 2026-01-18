@@ -1,6 +1,45 @@
 import { formatBytes, formatDuration } from './pm2-manager.format.js';
 import { getProcessList, pm2, statusLabel } from './pm2-manager.pm2.js';
 import { actionHint } from './pm2-manager.ui.js';
+import fs from 'node:fs';
+import { spawn } from 'node:child_process';
+
+function fileExists(p) {
+  try {
+    return fs.existsSync(p);
+  } catch {
+    return false;
+  }
+}
+
+function runShell(command, cwd = process.cwd()) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, {
+      cwd,
+      stdio: 'inherit',
+      shell: true,
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Command failed (${code}): ${command}`));
+    });
+  });
+}
+
+async function runPreStart(target) {
+  const cmds = Array.isArray(target?.preStart) ? target.preStart : [];
+  if (cmds.length === 0) return;
+
+  for (const cmd of cmds) {
+    const normalized = String(cmd || '').trim();
+    if (!normalized) continue;
+
+    // Avoid re-building if production assets already exist.
+    if (normalized === 'npm run build' && fileExists('dist/index.html')) continue;
+    await runShell(normalized);
+  }
+}
 
 export function buildRowsFromTargets(targets, processes) {
   const byName = new Map();
@@ -25,6 +64,7 @@ export function buildRowsFromTargets(targets, processes) {
         mem: '-',
         hint: actionHint({ status: 'missing', hasStartArgs }),
         hasStartArgs,
+        url: t.url || '-',
         note: null,
       };
     }
@@ -46,6 +86,7 @@ export function buildRowsFromTargets(targets, processes) {
       mem,
       hint: actionHint({ status, hasStartArgs }),
       hasStartArgs,
+      url: t.url || '-',
       note:
         count > 1
           ? `PM2 内同名进程有 ${count} 个；本工具仅显示/操作其中一个（建议改成唯一 name）`
@@ -57,6 +98,7 @@ export function buildRowsFromTargets(targets, processes) {
 export async function startTarget({ target, row, configPath }) {
   if (row.status === 'online' || row.status === 'launching') return { ok: true, msg: null };
   if (target.startArgs && target.startArgs.length > 0) {
+    await runPreStart(target);
     await pm2(target.startArgs);
     return { ok: true, msg: null };
   }

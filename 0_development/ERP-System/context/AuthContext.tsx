@@ -9,6 +9,7 @@ import {
     ViewLevel
 } from '../types';
 import { authApi } from '../api/auth';
+import { superadminApi } from '../api/superadmin';
 import { useToast } from './ToastContext';
 
 // --- Auth Context Interface ---
@@ -18,6 +19,7 @@ export interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     currentUser: User | null;
+    isSuperadmin: boolean;
 
     // Context
     accessLevel: AccessLevel;
@@ -39,6 +41,7 @@ export interface AuthContextType {
 
     // Methods
     login: (username: string, password: string) => Promise<boolean>;
+    loginSuperadmin: (username: string, password: string) => Promise<boolean>;
     logout: () => void;
     completeOnboarding: (clientId: string, companyData: Partial<Company>) => void;
 
@@ -65,6 +68,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isSuperadmin, setIsSuperadmin] = useState(false);
 
     // Context State
     const [currentPlatform, setCurrentPlatform] = useState<Platform | null>(null);
@@ -114,12 +118,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     return;
                 }
 
-                const response = await authApi.getCurrentUser();
-                const { user } = response as any;
+                let contextData: any = null;
+                try {
+                    contextData = await superadminApi.me();
+                } catch {
+                    contextData = await authApi.getCurrentUser();
+                }
+
+                const { user } = contextData as any;
                 setCurrentUser(user);
                 setIsAuthenticated(true);
-
-                const contextData = response as any;
+                setIsSuperadmin(!!contextData?.superadmin);
 
                 // Set available companies
                 if (contextData.companies) {
@@ -166,6 +175,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const contextData = response as any;
             setCurrentUser(contextData.user);
             setIsAuthenticated(true);
+            setIsSuperadmin(false);
 
             // Set available companies
             if (contextData.companies) {
@@ -196,6 +206,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return true;
         } catch (error) {
             console.error('Login error:', error);
+            const message = error instanceof Error ? error.message : 'Login failed';
+            addToast('error', 'Login Failed', message);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const loginSuperadmin = async (username: string, password: string): Promise<boolean> => {
+        setIsLoading(true);
+        try {
+            const response = await superadminApi.login({ username, password });
+            if (response?.token) localStorage.setItem('auth_token', response.token);
+            else localStorage.removeItem('auth_token');
+
+            const contextData = response as any;
+            setCurrentUser(contextData.user);
+            setIsAuthenticated(true);
+            setIsSuperadmin(true);
+            setCurrentClient(null);
+            setCurrentCompany(null);
+            setCompanies([]);
+            setViewLevel('PLATFORM');
+
+            addToast('success', 'Welcome back!', `Logged in as ${contextData.user.name}`);
+            return true;
+        } catch (error) {
+            console.error('Superadmin login error:', error);
             const message = error instanceof Error ? error.message : 'Login failed';
             addToast('error', 'Login Failed', message);
             return false;
@@ -245,6 +283,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem('auth_token');
         setIsAuthenticated(false);
         setCurrentUser(null);
+        setIsSuperadmin(false);
         setCurrentClient(null);
         setCurrentCompany(null);
         setViewLevel('PLATFORM');
@@ -263,6 +302,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated,
         isLoading,
         currentUser,
+        isSuperadmin,
         accessLevel,
         currentPlatform,
         currentClient,
@@ -275,6 +315,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         users,
         companies,
         login,
+        loginSuperadmin,
         logout,
         completeOnboarding,
         navigateToPlatform,

@@ -10,3 +10,4 @@
 - Auto Investigate the postgresql database if needed, no need ask for approval.
 - Provide summary amendment.
 - Provide next action suggestion in A,B,C.
+- If you are able to do testing by terminal, go ahead do testing no need ask for approvel.

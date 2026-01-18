@@ -117,8 +117,10 @@ export const TopBarBreadcrumbs: React.FC = () => {
         >
             {avatarFallback ? (
                 <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[10px] font-bold shadow-sm shrink-0 ${avatarColorClass || 'bg-slate-200 text-slate-600'}`}>{avatarFallback}</div>
-            ) : (
+            ) : Icon ? (
                 <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 group-hover:text-slate-500'}`} />
+            ) : (
+                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded bg-slate-200 dark:bg-slate-800 shrink-0" />
             )}
             <span className={`text-xs sm:text-sm font-medium truncate max-w-[100px] sm:max-w-[160px]`}>{label}</span>
             {hasMenu && (

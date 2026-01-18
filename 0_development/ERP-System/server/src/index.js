@@ -25,6 +25,7 @@ app.use(helmet());
 const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
+    'http://localhost:4173',
     'http://localhost:6600',
     process.env.CORS_ORIGIN
 ].filter(Boolean);
@@ -96,6 +97,10 @@ app.get('/api', (req, res) => {
 // Setup routes (no auth required)
 import setupRoutes from './routes/setup/index.js';
 app.use('/api/setup', setupRoutes);
+
+// Superadmin routes (no company routing; self-auth)
+import superadminRoutes from './routes/superadmin/index.js';
+app.use('/api/superadmin', superadminRoutes);
 
 // Auth routes
 import authRoutes from './routes/auth.js';
