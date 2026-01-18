@@ -44,20 +44,29 @@ async function runPreStart(target) {
 export function buildRowsFromTargets(targets, processes) {
   const byName = new Map();
   const nameCount = new Map();
+  const nameIds = new Map();
   for (const p of processes) {
     const { name } = statusLabel(p);
     nameCount.set(name, (nameCount.get(name) || 0) + 1);
+    const { id } = statusLabel(p);
+    const ids = nameIds.get(name) || [];
+    ids.push(id);
+    nameIds.set(name, ids);
     if (!byName.has(name)) byName.set(name, p);
   }
 
   return targets.map((t) => {
     const proc = byName.get(t.name);
     const hasStartArgs = !!(t.startArgs && t.startArgs.length);
+    const matchIds = nameIds.get(t.name) || [];
+    const matchCount = matchIds.length;
     if (!proc) {
       return {
         name: t.name,
         status: 'missing',
         id: null,
+        matchIds,
+        matchCount,
         uptime: '-',
         restarts: '-',
         cpu: '-',
@@ -80,6 +89,8 @@ export function buildRowsFromTargets(targets, processes) {
       name,
       status,
       id,
+      matchIds,
+      matchCount: count,
       uptime: uptimeMs ? formatDuration(uptimeMs) : '-',
       restarts: String(restarts),
       cpu,
@@ -107,12 +118,15 @@ export async function startTarget({ target, row, configPath }) {
   return { ok: false, msg: `未配置 startArgs：${target.name}` };
 }
 
-export async function startAll({ config, targets, rows, configPath }) {
+export async function startAll({ config, targets, rows, configPath, confirmResurrect }) {
   if (config?.resurrectOnEmpty && rows.every((r) => r.status === 'missing')) {
-    try {
-      await pm2(['resurrect']);
-    } catch {
-      // ignore
+    const ok = typeof confirmResurrect === 'function' ? await confirmResurrect() : false;
+    if (ok) {
+      try {
+        await pm2(['resurrect']);
+      } catch {
+        // ignore
+      }
     }
   }
 
@@ -123,20 +137,36 @@ export async function startAll({ config, targets, rows, configPath }) {
   }
 }
 
-export async function stopAll(targets) {
-  for (const t of targets) {
+export async function stopAll({ targets, rows, confirmOnDuplicateName }) {
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    const row = rows?.[i];
+    const matchCount = Number(row?.matchCount || 0);
+    if (matchCount > 1) {
+      const ok = confirmOnDuplicateName ? await confirmOnDuplicateName(t.name, matchCount) : false;
+      if (!ok) continue;
+    }
+    const selector = row?.id != null ? String(row.id) : t.name;
     try {
-      await pm2(['stop', t.name]);
+      await pm2(['stop', selector]);
     } catch {
       // ignore
     }
   }
 }
 
-export async function restartAll(targets) {
-  for (const t of targets) {
+export async function restartAll({ targets, rows, confirmOnDuplicateName }) {
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    const row = rows?.[i];
+    const matchCount = Number(row?.matchCount || 0);
+    if (matchCount > 1) {
+      const ok = confirmOnDuplicateName ? await confirmOnDuplicateName(t.name, matchCount) : false;
+      if (!ok) continue;
+    }
+    const selector = row?.id != null ? String(row.id) : t.name;
     try {
-      await pm2(['restart', t.name]);
+      await pm2(['restart', selector]);
     } catch {
       // ignore
     }

@@ -109,6 +109,14 @@ async function main() {
 
   // 主循环
   const config = loadConfig();
+  const confirmResurrect = () =>
+    confirm(
+      '检测到本工具列出的目标进程全部不存在。pm2 resurrect 会启动所有已保存的进程（可能包含其他服务），确认执行？',
+    );
+  const confirmOnDuplicateName = (name, count) =>
+    confirm(
+      `检测到 PM2 内存在 ${count} 个同名进程：${name}。继续操作可能影响同名的其他服务，确认继续？`,
+    );
   let mode =
     parseModeArg(process.argv) ||
     String(process.env.PM2_MANAGER_MODE || '').trim() ||
@@ -143,20 +151,30 @@ async function main() {
       if (cmd.type === 'refresh') {
         // do nothing
       } else if (cmd.type === 'startAll') {
-        await startAll({ config, targets, rows, configPath: CONFIG_PATH });
+        await startAll({ config, targets, rows, configPath: CONFIG_PATH, confirmResurrect });
         lastMessage = 'start all';
       } else if (cmd.type === 'stopAll') {
-        await stopAll(targets);
+        await stopAll({ targets, rows, confirmOnDuplicateName });
         lastMessage = 'stop all';
       } else if (cmd.type === 'restartAll') {
-        await restartAll(targets);
+        await restartAll({ targets, rows, confirmOnDuplicateName });
         lastMessage = 'restart all';
       } else if (cmd.type === 'deleteAll') {
         const ok = await confirm('确认 delete all（只移除本工具列出的进程）？');
         if (ok) {
-          for (const t of targets) {
+          const refreshed = await getProcessList();
+          const refreshedRows = buildRowsFromTargets(targets, refreshed);
+          for (let i = 0; i < targets.length; i++) {
+            const t = targets[i];
+            const row = refreshedRows[i];
+            const matchCount = Number(row?.matchCount || 0);
+            if (matchCount > 1) {
+              const okDup = await confirmOnDuplicateName(t.name, matchCount);
+              if (!okDup) continue;
+            }
+            const selector = row?.id != null ? String(row.id) : t.name;
             try {
-              await pm2(['delete', t.name]);
+              await pm2(['delete', selector]);
             } catch {
               // ignore
             }
@@ -166,7 +184,7 @@ async function main() {
           lastMessage = '已取消 delete all';
         }
       } else if (cmd.type === 'unknown') {
-          lastMessage = `未知指令：${cmd.input}（只支持 a/s/d/q）`;
+          lastMessage = `未知指令：${cmd.input}（支持 a/s/r/d/m/q 或直接回车刷新）`;
       } else if (cmd.type === 'toggleMode') {
         mode = mode === 'dev' ? 'prod' : 'dev';
         const nextTargets = getTargetsForMode(config, mode);

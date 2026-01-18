@@ -8,7 +8,7 @@ function getSuperadminDbName() {
     return String(process.env.SUPERADMIN_DB_NAME || 'nexus_superadmin').trim() || 'nexus_superadmin';
 }
 
-// Same bcrypt hash as `.database/migrations/002_seed_data.sql` demo password ("password").
+// Same bcrypt hash as `.database/migrations/002_seed_superadmin.sql` default password ("password").
 const DEFAULT_SEED_PASSWORD_HASH =
     '$2a$10$6rF/9Fuqml6QhpgSBSfjU.cik7Lm6iXR/8VDGnGaHLDWvyos/BxXy';
 
@@ -71,4 +71,3 @@ router.get('/', async (req, res) => {
 });
 
 export default router;
-

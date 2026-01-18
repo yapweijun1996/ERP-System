@@ -37,7 +37,7 @@ async function applySchemaAndSeed(dbName) {
         }
 
         const schemaPath = path.join(__dirname, '../../../../.database/migrations/001_init_schema.sql');
-        const seedPath = path.join(__dirname, '../../../../.database/migrations/002_seed_data.sql');
+        const seedPath = path.join(__dirname, '../../../../.database/migrations/002_seed_superadmin.sql');
 
         const schemaSql = await fs.readFile(schemaPath, 'utf8');
         await client.query(schemaSql);
@@ -136,4 +136,3 @@ router.post('/', async (req, res) => {
 });
 
 export default router;
-
