@@ -23,8 +23,25 @@ npm install
 | `npm run migrate` | Apply Drizzle migrations to PostgreSQL (production mode) |
 | `npm run generate` | Generate a Drizzle migration from schema changes |
 | `npm run seed` | Seed sample data (demo dataset) |
+| `npm run typecheck` | `tsc --noEmit` over the schema + data layer |
+| `npm run demo` | **Dual-adapter proof** — same repo code on PGlite (and PostgreSQL if `POSTGRES_URL` set) |
 | `npm test` | Run the test suite |
 | `npm run lint` | Lint |
+
+### Dual-adapter demo
+
+`npm run demo` runs the same seed + [repo](../src/data/repo.ts) code against PGlite and,
+when `POSTGRES_URL` is set, PostgreSQL — then asserts the results are identical. This is
+the runtime proof that one codebase serves both modes. To verify against real PostgreSQL:
+
+```bash
+docker run -d --name pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=erp -p 55432:5432 postgres:16
+POSTGRES_URL="postgres://postgres:test@localhost:55432/erp" npm run demo
+# → IDENTICAL ACROSS BOTH ADAPTERS ✅
+docker rm -f pg
+```
+
+The demo expects a fresh database (it seeds on run); PGlite is always fresh (in-memory).
 
 > These scripts are the intended contract. As modules land, keep this table in sync — it
 > is referenced by [DEPLOYMENT.md](DEPLOYMENT.md) and CI.
