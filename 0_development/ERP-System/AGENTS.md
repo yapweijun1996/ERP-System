@@ -1,6 +1,7 @@
 # Rules
 
 - Reply me mandarin.
+- Explain logic by diagram mermaid.
 - Proceed Reasoning Chain.
 - Proceed Step-by-Step with small moves.
 - Each files no more than 300 lines.
