@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Env / secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Database / local data
+*.sqlite
+pgdata/
+/backup/
+
+# Odoo study material — NEVER commit (LGPL contamination risk; see docs/STUDYING_ODOO.md)
+/odoo/
+/vendor-study/
+/reference/odoo/
