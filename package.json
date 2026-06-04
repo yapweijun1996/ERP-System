@@ -1,0 +1,21 @@
+{
+  "name": "erp-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dual-mode multi-tenant ERP — PGlite demo + PostgreSQL production",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "drizzle-kit": "^0.28.1",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.1",
+    "drizzle-orm": "^0.36.4"
+  }
+}

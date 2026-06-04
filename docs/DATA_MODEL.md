@@ -102,18 +102,121 @@ Drizzle migrations live in `drizzle/` and run identically in both modes:
 Never hand-edit the live schema — change the Drizzle schema, generate a migration, apply
 it. This keeps demo and production schemas in lockstep.
 
-## 9. ER overview (textual)
+## 9. ER diagram — implemented schema
+
+The Drizzle schema lives in [`src/data/schema/`](../src/data/schema/) and is the single
+source of truth. The diagram below reflects the **implemented** tables (tenancy,
+localization, inventory).
+
+**Referential-integrity rule (consistent across the model):**
+- The **tenancy tables** (`master`/`company`/`app_user`/`role`/`user_company`) form a real
+  FK hierarchy, plus reference-data FKs to `currency`.
+- Every **business table** (`product`, `warehouse`, `stock_*`, `tax_rule`) carries
+  `master_fn` + `company_fn` as **scope columns that are NOT FK-bound** to `company` —
+  tenancy is enforced at the **app + production-RLS layer**, not by composite FKs (which
+  would add write overhead at 800 GB). Intra-tenant entity links (`stock_*` → `product` /
+  `warehouse`) and reference-data links (`currency`) remain real FKs.
+- `currency` / `fx_rate` are **global** reference/market data (no tenant columns).
+
+```mermaid
+erDiagram
+    master       ||--o{ company       : has
+    master       ||--o{ app_user      : has
+    master       ||--o{ role          : defines
+    app_user     ||--o{ user_company  : "granted via"
+    company      ||--o{ user_company  : "granted via"
+    role         ||--o{ user_company  : "granted via"
+    currency     ||--o{ company       : "base ccy"
+    currency     ||--o{ fx_rate       : "from/to"
+    company      ||--o{ tax_rule      : "rates (dated)"
+    company      ||--o{ product       : "scopes"
+    company      ||--o{ warehouse     : "scopes"
+    product      ||--o{ stock_level   : "on hand"
+    warehouse    ||--o{ stock_level   : "on hand"
+    product      ||--o{ stock_movement: "in/out"
+    warehouse    ||--o{ stock_movement: "in/out"
+
+    master {
+        text master_fn PK
+        text name
+    }
+    company {
+        text company_fn PK
+        text master_fn FK
+        text country
+        text currency FK
+        text tax_regime
+        text locale
+    }
+    app_user {
+        bigint user_id PK
+        text master_fn FK
+        text email
+        text language "i18n pref"
+    }
+    role {
+        bigint role_id PK
+        text master_fn FK
+        bool is_superadmin
+    }
+    user_company {
+        bigint user_id PK,FK
+        text company_fn PK,FK
+        bigint role_id FK
+    }
+    currency {
+        text code PK
+    }
+    fx_rate {
+        bigint id PK
+        text from_ccy FK
+        text to_ccy FK
+        numeric rate
+        date valid_from
+    }
+    tax_rule {
+        bigint id PK
+        text company_fn FK
+        text tax_regime
+        text tax_code
+        numeric rate
+        date valid_from
+        date valid_to
+    }
+    product {
+        bigint id PK
+        text master_fn
+        text company_fn
+        text sku
+    }
+    warehouse {
+        bigint id PK
+        text master_fn
+        text company_fn
+        text code
+    }
+    stock_level {
+        bigint id PK
+        bigint product_id FK
+        bigint warehouse_id FK
+        numeric qty
+    }
+    stock_movement {
+        bigint id PK
+        bigint product_id FK
+        bigint warehouse_id FK
+        text direction
+        timestamptz moved_at
+    }
+```
+
+### Future modules (not yet implemented)
+
+Sales, purchasing, and finance follow the same conventions and will extend this diagram:
 
 ```
-master 1───* company 1───* (all business data below, scoped by master_fn + company_fn)
-master 1───* app_user *───* company   (via user_company junction, with role)
-company 1───* product 1───* stock_level *───1 warehouse
-company 1───* customer 1───* sales_order 1───* sales_order_line *───1 product
-                                  │
-                                  ├──* delivery
-                                  ├──* invoice 1───* payment
-                                  └──* gl_entry
-company 1───* supplier 1───* purchase_order 1───* purchase_order_line *───1 product
+company ||--o{ customer ||--o{ sales_order ||--o{ sales_order_line }o--|| product
+sales_order ||--o{ delivery / invoice ||--o{ payment / gl_entry
+company ||--o{ supplier ||--o{ purchase_order ||--o{ purchase_order_line }o--|| product
 ```
 
-A diagram (`docs/er-diagram.png`) will be added once the schema stabilizes.
