@@ -61,6 +61,16 @@ Confirm Sales Order
 If any step fails, the whole transaction rolls back. This is the single source of truth
 in action — one user action, consistent state across four modules.
 
+**Implemented & verified:** the first step of this flow — stock issue — lives in
+[`src/modules/inventory/stock.ts`](../src/modules/inventory/stock.ts) (`issueStock`). It
+deducts `stock_level` and appends `stock_movement` in one `db.transaction`, taking a
+`SELECT … FOR UPDATE` row lock so concurrent issuers cannot over-sell. `npm run demo`
+proves on both engines: atomic commit, rollback on insufficient stock (no partial write),
+and — on PostgreSQL — that two concurrent issues of 8 from a stock of 10 yield exactly one
+success and a final stock of 2 (never −6). PGlite is single-connection (single-user), so
+true concurrency is a PostgreSQL-only guarantee — which is correct, since the demo/browser
+is single-user.
+
 ## 5. Big tables (partitioned — see SCALABILITY.md)
 
 These are expected to dominate the 800 GB footprint and are **range-partitioned by date**:
