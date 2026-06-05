@@ -61,15 +61,25 @@ Confirm Sales Order
 If any step fails, the whole transaction rolls back. This is the single source of truth
 in action — one user action, consistent state across four modules.
 
-**Implemented & verified:** the first step of this flow — stock issue — lives in
-[`src/modules/inventory/stock.ts`](../src/modules/inventory/stock.ts) (`issueStock`). It
-deducts `stock_level` and appends `stock_movement` in one `db.transaction`, taking a
-`SELECT … FOR UPDATE` row lock so concurrent issuers cannot over-sell. `npm run demo`
-proves on both engines: atomic commit, rollback on insufficient stock (no partial write),
-and — on PostgreSQL — that two concurrent issues of 8 from a stock of 10 yield exactly one
-success and a final stock of 2 (never −6). PGlite is single-connection (single-user), so
-true concurrency is a PostgreSQL-only guarantee — which is correct, since the demo/browser
-is single-user.
+**Implemented & verified — the full chain.** `confirmSalesOrder`
+([`src/modules/sales/confirmOrder.ts`](../src/modules/sales/confirmOrder.ts)) runs the
+entire flow in one `db.transaction`: insert `sales_order` + lines → `issueStockWithin`
+per line (the composable stock-issue unit from
+[`src/modules/inventory/stock.ts`](../src/modules/inventory/stock.ts), `SELECT … FOR
+UPDATE` row lock) → `invoice` → balanced double-entry `gl_entry` (Dr AR, Cr Revenue, Cr
+output tax). `npm run demo` proves on **both** engines:
+
+- **Happy path:** 2-line order → net 110 + 9% GST 9.90 = 119.90; 2 stock movements; ledger
+  balanced (Dr 119.90 = Cr 119.90); stock reduced.
+- **Whole-chain rollback:** an order whose line 2 exceeds stock throws and rolls back
+  *everything* — **including line 1's valid stock deduction** (widget stays 95, not 90);
+  no order, invoice, movement, or ledger row persists.
+- **Cross-engine equality:** repo + stock-tx + sales results are byte-identical on PGlite
+  and PostgreSQL.
+- **Concurrency (PostgreSQL only):** two concurrent issues of 8 from stock 10 → exactly one
+  succeeds, final stock 2 (never −6). PGlite is single-connection (single-user), so true
+  concurrency is a PostgreSQL-only guarantee — correct, since the demo/browser is
+  single-user.
 
 ## 5. Big tables (partitioned — see SCALABILITY.md)
 
@@ -145,6 +155,14 @@ erDiagram
     warehouse    ||--o{ stock_level   : "on hand"
     product      ||--o{ stock_movement: "in/out"
     warehouse    ||--o{ stock_movement: "in/out"
+    company      ||--o{ customer       : "scopes"
+    customer     ||--o{ sales_order    : places
+    sales_order  ||--o{ sales_order_line: contains
+    product      ||--o{ sales_order_line: "ordered"
+    sales_order  ||--o{ invoice        : bills
+    customer     ||--o{ invoice        : "billed to"
+    company      ||--o{ account        : "chart of"
+    account      ||--o{ gl_entry       : posts
 
     master {
         text master_fn PK
@@ -186,7 +204,7 @@ erDiagram
     }
     tax_rule {
         bigint id PK
-        text company_fn FK
+        text company_fn
         text tax_regime
         text tax_code
         numeric rate
@@ -218,15 +236,56 @@ erDiagram
         text direction
         timestamptz moved_at
     }
+    customer {
+        bigint id PK
+        text master_fn
+        text company_fn
+        text code
+    }
+    sales_order {
+        bigint id PK
+        text doc_no
+        bigint customer_id FK
+        text status
+        numeric total_amount
+    }
+    sales_order_line {
+        bigint id PK
+        bigint order_id FK
+        bigint product_id FK
+        numeric qty
+        numeric tax_rate
+    }
+    invoice {
+        bigint id PK
+        text doc_no
+        bigint order_id FK
+        bigint customer_id FK
+        text status
+    }
+    account {
+        bigint id PK
+        text code
+        text type
+    }
+    gl_entry {
+        bigint id PK
+        text journal_ref
+        bigint account_id FK
+        numeric debit
+        numeric credit
+    }
 ```
 
 ### Future modules (not yet implemented)
 
-Sales, purchasing, and finance follow the same conventions and will extend this diagram:
+**Purchasing** (supplier, purchase_order, goods_receipt) follows the same conventions and
+will extend this diagram:
 
 ```
-company ||--o{ customer ||--o{ sales_order ||--o{ sales_order_line }o--|| product
-sales_order ||--o{ delivery / invoice ||--o{ payment / gl_entry
 company ||--o{ supplier ||--o{ purchase_order ||--o{ purchase_order_line }o--|| product
+purchase_order ||--o{ goods_receipt   (receive stock → stock_movement 'in')
 ```
+
+Also planned: `delivery` and `payment` to extend the sales flow.
 

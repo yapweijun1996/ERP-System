@@ -4,18 +4,44 @@
 //     over-sell) is proven only here — PGlite is single-connection (single-user), so a
 //     real two-transaction race cannot exist in the demo/browser anyway.
 // Run: npm run demo   (or: POSTGRES_URL=postgres://… npm run demo)
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
 import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { createPgliteDb, createPostgresDb, type DB } from './data/db';
 import { seedDemo } from './data/seed';
 import { listCompanies, listProducts, addProduct, getEffectiveTaxRate, type Scope } from './data/repo';
-import { product, warehouse, stockLevel } from './data/schema';
+import { product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry } from './data/schema';
 import {
   issueStock, getStockQty, countMovements, setStockQty, InsufficientStockError,
 } from './modules/inventory/stock';
+import { confirmSalesOrder } from './modules/sales/confirmOrder';
 
 const SCOPE: Scope = { masterFn: 'M1', companyFn: 'C-SG' };
+
+// --- small count/lookup helpers for the sales scenario ---
+async function getProductId(db: DB, sku: string): Promise<number> {
+  const [p] = await db.select({ id: product.id }).from(product)
+    .where(and(eq(product.masterFn, SCOPE.masterFn), eq(product.companyFn, SCOPE.companyFn), eq(product.sku, sku)));
+  return p.id;
+}
+async function countOrders(db: DB): Promise<number> {
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(salesOrder)
+    .where(and(eq(salesOrder.masterFn, SCOPE.masterFn), eq(salesOrder.companyFn, SCOPE.companyFn)));
+  return r.n;
+}
+async function countInvoices(db: DB): Promise<number> {
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(invoice)
+    .where(and(eq(invoice.masterFn, SCOPE.masterFn), eq(invoice.companyFn, SCOPE.companyFn)));
+  return r.n;
+}
+async function glBalance(db: DB, journalRef: string) {
+  const [r] = await db.select({
+    debit: sql<number>`coalesce(sum(debit),0)::float`,
+    credit: sql<number>`coalesce(sum(credit),0)::float`,
+  }).from(glEntry)
+    .where(and(eq(glEntry.masterFn, SCOPE.masterFn), eq(glEntry.companyFn, SCOPE.companyFn), eq(glEntry.journalRef, journalRef)));
+  return { debit: r.debit, credit: r.credit };
+}
 
 /** Repo read/write/dated-tax scenario (unchanged). */
 async function runRepoScenario(db: DB) {
@@ -89,13 +115,69 @@ async function runConcurrencyTest(db: DB, fx: { productId: number; warehouseId: 
   };
 }
 
+/** Full chain (both engines): confirm order → issue stock → invoice → balanced GL, with
+ *  whole-chain rollback when a later line fails (and an EARLIER valid line is undone too). */
+async function runSalesScenario(db: DB) {
+  const widgetId = await getProductId(db, 'SG-WIDGET');
+  const gadgetId = await getProductId(db, 'SG-GADGET');
+  const [wh] = await db.insert(warehouse)
+    .values({ masterFn: 'M1', companyFn: 'C-SG', code: 'WH-SALES', name: 'Sales Warehouse' })
+    .returning({ id: warehouse.id });
+  await db.insert(stockLevel).values([
+    { masterFn: 'M1', companyFn: 'C-SG', productId: widgetId, warehouseId: wh.id, qty: '100' },
+    { masterFn: 'M1', companyFn: 'C-SG', productId: gadgetId, warehouseId: wh.id, qty: '100' },
+  ]);
+  const [cust] = await db.select({ id: customer.id }).from(customer)
+    .where(and(eq(customer.masterFn, 'M1'), eq(customer.companyFn, 'C-SG'), eq(customer.code, 'CUST1')));
+
+  // Valid order: 2 lines @ 9% GST (2024). net = 5*10 + 3*20 = 110; tax = 9.90; total 119.90.
+  const res = await confirmSalesOrder(db, SCOPE, {
+    docNo: 'SO-1', customerId: cust.id, orderDate: '2024-06-01', currency: 'SGD',
+    lines: [
+      { productId: widgetId, warehouseId: wh.id, qty: 5, unitPrice: 10, taxCode: 'SR' },
+      { productId: gadgetId, warehouseId: wh.id, qty: 3, unitPrice: 20, taxCode: 'SR' },
+    ],
+  });
+  const gl = await glBalance(db, res.invDocNo);
+  const widgetAfter = await getStockQty(db, SCOPE, widgetId, wh.id); // 95
+  const gadgetAfter = await getStockQty(db, SCOPE, gadgetId, wh.id); // 97
+  const ordersAfterValid = await countOrders(db);                    // 1
+
+  // Rollback order: line 1 (widget) is valid, line 2 (gadget) exceeds stock → whole order
+  // rolls back, INCLUDING line 1's stock deduction. Nothing persists.
+  let rollbackErr = '';
+  try {
+    await confirmSalesOrder(db, SCOPE, {
+      docNo: 'SO-2', customerId: cust.id, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [
+        { productId: widgetId, warehouseId: wh.id, qty: 5, unitPrice: 10, taxCode: 'SR' },   // ok alone
+        { productId: gadgetId, warehouseId: wh.id, qty: 99999, unitPrice: 20, taxCode: 'SR' }, // fails
+      ],
+    });
+  } catch (e) {
+    rollbackErr = (e as Error).name;
+  }
+
+  return {
+    order: { net: res.net, tax: res.tax, total: res.total, lines: res.lines, movements: res.movementIds.length },
+    glDebit: gl.debit, glCredit: gl.credit, glBalanced: gl.debit === gl.credit,
+    widgetAfter, gadgetAfter, ordersAfterValid,
+    rollbackErr,                                                    // 'InsufficientStockError'
+    ordersAfterRollback: await countOrders(db),                    // still 1
+    invoicesAfterRollback: await countInvoices(db),                // still 1
+    widgetAfterRollback: await getStockQty(db, SCOPE, widgetId, wh.id), // still 95 (line-1 undone)
+    gadgetMovements: await countMovements(db, SCOPE, gadgetId, wh.id),  // 1 (only the valid order)
+  };
+}
+
 async function runEngine(db: DB, withConcurrency: boolean) {
   await seedDemo(db);
   const repo = await runRepoScenario(db);
   const fx = await setupStockFixture(db);
   const tx = await runTxScenario(db, fx);
+  const sales = await runSalesScenario(db);
   const concurrency = withConcurrency ? await runConcurrencyTest(db, fx) : null;
-  return { repo, tx, concurrency };
+  return { repo, tx, sales, concurrency };
 }
 
 const out: Record<string, Awaited<ReturnType<typeof runEngine>>> = {};
@@ -124,14 +206,23 @@ function check(label: string, cond: boolean) {
 }
 
 let ok = true;
-ok = check('PGlite: issue 8 → remaining 2', out.pglite.tx.issued8_remaining === 2) && ok;
+const p = out.pglite;
+ok = check('PGlite: issue 8 → remaining 2', p.tx.issued8_remaining === 2) && ok;
 ok = check('PGlite: rollback on insufficient (stock stays 2, movements stay 1)',
-  out.pglite.tx.rolledBack && out.pglite.tx.stockAfterB_unchanged === 2 && out.pglite.tx.movementsAfterB_unchanged === 1) && ok;
+  p.tx.rolledBack && p.tx.stockAfterB_unchanged === 2 && p.tx.movementsAfterB_unchanged === 1) && ok;
+ok = check('PGlite sales chain: order net=110 tax=9.9 total=119.9, 2 movements',
+  p.sales.order.net === 110 && p.sales.order.tax === 9.9 && p.sales.order.total === 119.9 && p.sales.order.movements === 2) && ok;
+ok = check('PGlite sales chain: ledger balanced (Dr 119.9 = Cr 119.9), stock 95/97',
+  p.sales.glBalanced && p.sales.glDebit === 119.9 && p.sales.widgetAfter === 95 && p.sales.gadgetAfter === 97) && ok;
+ok = check('PGlite sales rollback: whole order undone — incl. valid line 1 (widget stays 95, orders=1, invoices=1)',
+  p.sales.rollbackErr === 'InsufficientStockError' && p.sales.ordersAfterRollback === 1
+  && p.sales.invoicesAfterRollback === 1 && p.sales.widgetAfterRollback === 95 && p.sales.gadgetMovements === 1) && ok;
 
 if (out.postgres) {
   const sameRepo = JSON.stringify(out.pglite.repo) === JSON.stringify(out.postgres.repo);
   const sameTx = JSON.stringify(out.pglite.tx) === JSON.stringify(out.postgres.tx);
-  ok = check('repo+tx identical across PGlite and PostgreSQL', sameRepo && sameTx) && ok;
+  const sameSales = JSON.stringify(out.pglite.sales) === JSON.stringify(out.postgres.sales);
+  ok = check('repo+tx+sales identical across PGlite and PostgreSQL', sameRepo && sameTx && sameSales) && ok;
   const c = out.postgres.concurrency!;
   ok = check('Postgres concurrency: exactly 1 of 2 races wins (no over-sell)',
     c.fulfilled === 1 && c.rejected === 1 && c.finalStock === 2 && c.movementsDelta === 1) && ok;

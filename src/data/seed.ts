@@ -3,7 +3,7 @@
 // change so the dated lookup is demonstrable). Same code runs on both adapters.
 import { sql } from 'drizzle-orm';
 import type { DB } from './db';
-import { master, company, currency, appUser, product, taxRule } from './schema';
+import { master, company, currency, appUser, product, taxRule, customer, account } from './schema';
 
 export async function seedDemo(db: DB): Promise<void> {
   await db.insert(master).values({ masterFn: 'M1', name: 'Acme Group' });
@@ -32,6 +32,16 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', taxRegime: 'GST', taxCode: 'SR', rate: '9.000', validFrom: '2024-01-01', validTo: null },
     // MY SST service tax 8%.
     { masterFn: 'M1', companyFn: 'C-MY', taxRegime: 'SST', taxCode: 'SV', rate: '8.000', validFrom: '2025-07-01', validTo: null },
+  ]);
+
+  // A customer for the SG company.
+  await db.insert(customer).values({ masterFn: 'M1', companyFn: 'C-SG', code: 'CUST1', name: 'Beta Pte Ltd' });
+
+  // Minimal chart of accounts for the SG company (used by sales-order posting).
+  await db.insert(account).values([
+    { masterFn: 'M1', companyFn: 'C-SG', code: '1100', name: 'Accounts Receivable', type: 'asset' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '4000', name: 'Revenue', type: 'income' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '2200', name: 'GST Output Tax', type: 'liability' },
   ]);
 }
 

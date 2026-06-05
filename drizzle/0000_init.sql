@@ -124,6 +124,91 @@ CREATE TABLE IF NOT EXISTS "warehouse" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "customer" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "customer_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"code" text NOT NULL,
+	"name" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "invoice" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "invoice_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"doc_no" text NOT NULL,
+	"order_id" bigint NOT NULL,
+	"customer_id" bigint NOT NULL,
+	"status" text DEFAULT 'unpaid' NOT NULL,
+	"invoice_date" date NOT NULL,
+	"currency" text NOT NULL,
+	"net_amount" numeric(18, 2) NOT NULL,
+	"tax_amount" numeric(18, 2) NOT NULL,
+	"total_amount" numeric(18, 2) NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "sales_order" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "sales_order_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"doc_no" text NOT NULL,
+	"customer_id" bigint NOT NULL,
+	"status" text DEFAULT 'draft' NOT NULL,
+	"order_date" date NOT NULL,
+	"currency" text NOT NULL,
+	"net_amount" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"tax_amount" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"total_amount" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "sales_order_line" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "sales_order_line_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"order_id" bigint NOT NULL,
+	"line_no" integer NOT NULL,
+	"product_id" bigint NOT NULL,
+	"qty" numeric(18, 4) NOT NULL,
+	"unit_price" numeric(18, 4) NOT NULL,
+	"net_amount" numeric(18, 2) NOT NULL,
+	"tax_code" text NOT NULL,
+	"tax_rate" numeric(6, 3) NOT NULL,
+	"tax_amount" numeric(18, 2) NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "account" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "account_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"code" text NOT NULL,
+	"name" text NOT NULL,
+	"type" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "gl_entry" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "gl_entry_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"posted_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"journal_ref" text NOT NULL,
+	"account_id" bigint NOT NULL,
+	"debit" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"credit" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"memo" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "app_user" ADD CONSTRAINT "app_user_master_fn_master_master_fn_fk" FOREIGN KEY ("master_fn") REFERENCES "public"."master"("master_fn") ON DELETE no action ON UPDATE no action;
 EXCEPTION
@@ -202,6 +287,42 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "invoice" ADD CONSTRAINT "invoice_order_id_sales_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."sales_order"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "invoice" ADD CONSTRAINT "invoice_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "sales_order" ADD CONSTRAINT "sales_order_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "sales_order_line" ADD CONSTRAINT "sales_order_line_order_id_sales_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."sales_order"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "sales_order_line" ADD CONSTRAINT "sales_order_line_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "gl_entry" ADD CONSTRAINT "gl_entry_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."account"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "uq_user_master_email" ON "app_user" USING btree ("master_fn","email");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_company_master" ON "company" USING btree ("master_fn");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "uq_role_master_name" ON "role" USING btree ("master_fn","name");--> statement-breakpoint
@@ -213,4 +334,13 @@ CREATE INDEX IF NOT EXISTS "idx_product_name" ON "product" USING btree ("master_
 CREATE UNIQUE INDEX IF NOT EXISTS "uq_stock_level" ON "stock_level" USING btree ("master_fn","company_fn","product_id","warehouse_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_movement_tenant_moved" ON "stock_movement" USING btree ("master_fn","company_fn","moved_at","id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_movement_product" ON "stock_movement" USING btree ("master_fn","company_fn","product_id","moved_at");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_warehouse_code" ON "warehouse" USING btree ("master_fn","company_fn","code");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_warehouse_code" ON "warehouse" USING btree ("master_fn","company_fn","code");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_customer_code" ON "customer" USING btree ("master_fn","company_fn","code");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_invoice_docno" ON "invoice" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_invoice_order" ON "invoice" USING btree ("master_fn","company_fn","order_id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_so_docno" ON "sales_order" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_so_tenant_date" ON "sales_order" USING btree ("master_fn","company_fn","order_date","id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_sol_order" ON "sales_order_line" USING btree ("master_fn","company_fn","order_id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_account_code" ON "account" USING btree ("master_fn","company_fn","code");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_gl_tenant_posted" ON "gl_entry" USING btree ("master_fn","company_fn","posted_at","id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_gl_journal" ON "gl_entry" USING btree ("master_fn","company_fn","journal_ref");
