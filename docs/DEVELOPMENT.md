@@ -17,9 +17,9 @@ npm install
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Vite dev server (demo data adapter by default) |
-| `npm run build:demo` | `VITE_DATA_MODE=demo` → static `dist/` (PGlite) |
-| `npm run build` | `VITE_DATA_MODE=api` → `dist/` for the Docker `web` image |
-| `npm run preview` | Serve the built `dist/` locally |
+| `npm run build:demo` | `VITE_DATA_MODE=demo` → static `web/dist/` (PGlite) |
+| `npm run build` | `VITE_DATA_MODE=api` → `web/dist/` for the Docker `web` image |
+| `npm run preview` | Serve the built `web/dist/` locally |
 | `npm run migrate` | Apply Drizzle migrations to PostgreSQL (production mode) |
 | `npm run generate` | Generate a Drizzle migration from schema changes |
 | `npm run seed` | Seed sample data (demo dataset) |
@@ -72,11 +72,19 @@ src/
   shared/          # isomorphic business logic (cross-module flows)
   modules/
     inventory/  sales/  purchasing/  finance/  settings/
-api/               # Node + Express server (production mode only)
 drizzle/           # generated migrations
-db/init/           # Postgres init scripts (run once on first boot)
 docs/              # this documentation
+web/               # real frontend app source
+references/ui/     # reference prototypes and design studies
+api/               # planned: Node + Express server (production mode only)
+infra/             # planned: Docker/deployment assets
+db/init/           # planned: Postgres init scripts (run once on first boot)
 ```
+
+See [FRONTEND_PLAN.md](FRONTEND_PLAN.md) before adding frontend code. The current
+`references/ui/aria-erp/` folder is the user's Aria ERP visual baseline. Clone the layout
+and component look, but do not copy unrelated mock data, duplicate schemas, or static
+screens outside the current milestone.
 
 ## 6. Adding a module (the golden path)
 
@@ -97,6 +105,9 @@ docs/              # this documentation
 Before any change is considered done:
 - `npm run build:demo` exits 0 and the demo renders.
 - `npm test` passes.
+- frontend milestones pass desktop and mobile layout checks.
+- demo mode runs without a backend and persists sample data through PGlite/IndexedDB.
+- production mode runs through Docker with API/PostgreSQL for stock and finance writes.
 - For large-table queries, run the [SCALABILITY checklist](SCALABILITY.md#10-checklist-before-any-large-table-feature-ships).
 - Production transaction flows tested against Dockerized PostgreSQL, not just the demo.
 

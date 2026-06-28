@@ -1,0 +1,19 @@
+{
+  "name": "@erp-system/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "build:demo": "tsc --noEmit && VITE_DATA_MODE=demo vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.1",
+    "vite": "^6.0.7",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {}
+}

@@ -2,7 +2,7 @@
 
 Two independent deploy targets from one repo:
 
-1. **Demo** → static `dist/` → GitHub Pages (public showcase, no backend).
+1. **Demo** → static `web/dist/` → GitHub Pages (public showcase, no backend).
 2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), sized for 100–800 GB.
 
 ---
@@ -44,6 +44,16 @@ services:
 volumes:
   pgdata:
 ```
+
+This shape is a target contract. The repository must include real Docker assets before
+production is considered supported:
+
+- `docker-compose.yml`
+- API Dockerfile
+- web Dockerfile or static web image build
+- Postgres volume and init directory
+- health checks for `web`, `api`, and `db`
+- scripts for migrate, seed, backup, and reset
 
 ### First-run setup — ONE command
 
@@ -136,8 +146,15 @@ At 800 GB, `pg_dump` through the app is **not** a backup strategy. Use physical 
 ### Build
 
 ```bash
-npm run build:demo            # VITE_DATA_MODE=demo → dist/
+npm run build:demo            # VITE_DATA_MODE=demo → web/dist/
 ```
+
+The GitHub Pages demo is static only. It must not require Docker, the API container,
+PostgreSQL, or any private environment variable.
+
+The repository includes `.github/workflows/deploy-pages.yml`, which builds the demo and
+deploys `web/dist` to GitHub Pages on every push to `main` and on manual
+`workflow_dispatch`.
 
 ### Vite config requirements (Pages-specific)
 
@@ -153,7 +170,35 @@ export default defineConfig({
   correct `base`, every asset 404s.
 - **Client-side routing fallback:** Pages has no server rewrite. Add a `404.html` that
   loads the app (SPA fallback), or use hash routing, or deep links break.
-- **SPA fallback file:** copy `dist/index.html` to `dist/404.html` in the build step.
+- **SPA fallback file:** copy `web/dist/index.html` to `web/dist/404.html` in the build
+  step.
+
+### CI/CD — deploy to this repo's GitHub Pages
+
+For the normal same-repository Pages deploy, use the checked-in workflow:
+
+```yaml
+# .github/workflows/deploy-pages.yml
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+```
+
+It uses GitHub's official Pages actions:
+
+- `actions/configure-pages`
+- `actions/upload-pages-artifact`
+- `actions/deploy-pages`
+
+GitHub setup:
+
+1. Push the workflow to `main`.
+2. Open repository **Settings → Pages**.
+3. Set **Build and deployment → Source** to **GitHub Actions**.
+4. Run the workflow or push to `main`.
+
+No PAT is required for same-repository Pages deployment.
 
 ### CI/CD — deploy to a *different* public repo
 
@@ -172,21 +217,22 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci
+      - run: npm ci --prefix web
       - run: npm run build:demo
-      - run: cp dist/index.html dist/404.html      # SPA fallback
+      - run: cp web/dist/index.html web/dist/404.html      # SPA fallback
       - name: Push to public Pages repo
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.DEPLOY_PAT }}   # PAT, NOT GITHUB_TOKEN
           external_repository: <user>/<public-demo-repo>
           publish_branch: gh-pages
-          publish_dir: ./dist
+          publish_dir: ./web/dist
 ```
 
 > ⚠️ **Cross-repo deploy needs a PAT.** The default `GITHUB_TOKEN` can only write to the
-> repo running the workflow. Pushing `dist/` to *another* public repo requires a Personal
-> Access Token (or deploy key) with write access to that target repo, stored as a secret
-> (`DEPLOY_PAT`).
+> repo running the workflow. Pushing `web/dist/` to *another* public repo requires a
+> Personal Access Token (or deploy key) with write access to that target repo, stored as
+> a secret (`DEPLOY_PAT`).
 
 ---
 
@@ -200,3 +246,21 @@ jobs:
 | `DEPLOY_PAT` | CI | token to push demo to the public Pages repo |
 
 Never commit `.env`. See `.env.example`.
+
+## 6. Deployment readiness checklist
+
+Demo is ready when:
+
+- GitHub Actions can build the frontend and publish `web/dist`.
+- the published page boots with PGlite and seed data.
+- refresh/deep-link behavior works on GitHub Pages.
+- no production credentials or customer data are bundled.
+
+Production is ready when:
+
+- `docker compose up -d` starts `web`, `api`, and `db`.
+- API migrations apply successfully against PostgreSQL.
+- first-run setup wizard can create the initial master, company, admin user, tax rules,
+  and base chart of accounts.
+- stock and finance writes run through the API, not directly from the browser.
+- PostgreSQL transaction/concurrency tests pass, including no stock over-sell.

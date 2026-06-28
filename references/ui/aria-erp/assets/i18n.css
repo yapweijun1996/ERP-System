@@ -1,0 +1,11 @@
+/* ============================================================
+   ARIA ERP — i18n: language switcher menu
+   ============================================================ */
+.langmenu .lang-item{ display:flex; align-items:center; gap:10px; }
+.langmenu .lang-name{ display:flex; flex-direction:column; line-height:1.25; flex:1; min-width:0; }
+.langmenu .lang-name b{ font-weight:600; }
+.langmenu .lang-name small{ color:var(--muted); font-size:11px; }
+.langmenu .lang-item .meta{ color:var(--accent); display:flex; align-items:center; }
+.langmenu .lang-item .meta .ico{ width:16px; height:16px; }
+/* keep the multilingual shell from wrapping awkwardly in the sidebar */
+.sidebar .navlabel{ overflow:hidden; text-overflow:ellipsis; }

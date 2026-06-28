@@ -5,7 +5,12 @@
   "type": "module",
   "description": "Dual-mode multi-tenant ERP — PGlite demo + PostgreSQL production",
   "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "build:demo": "npm --prefix web run build:demo",
+    "preview": "npm --prefix web run preview",
     "typecheck": "tsc --noEmit",
+    "typecheck:web": "npm --prefix web run typecheck",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "demo": "tsx src/demo.ts"

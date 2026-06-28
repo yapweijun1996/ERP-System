@@ -5,7 +5,7 @@ A modular, full-stack ERP (Enterprise Resource Planning) system designed to run 
 
 | Mode | Runtime | Data store | Purpose |
 | --- | --- | --- | --- |
-| **Demo** | Static `dist/` (GitHub Pages) | **PGlite → IndexedDB** + mock data | Public, zero-backend showcase |
+| **Demo** | Static `web/dist/` (GitHub Pages) | **PGlite → IndexedDB** + mock data | Public, zero-backend showcase |
 | **Production** | Docker (`web` + `api` + `db`) | **PostgreSQL (100 GB – 800 GB+)** | Real multi-user deployment |
 
 The two modes share the **same SQL schema, the same migrations, and the same business
@@ -35,12 +35,12 @@ environment variable (`VITE_DATA_MODE`).
 
 ## Quick start
 
-### Demo mode (no backend, builds to `dist/`)
+### Demo mode (no backend, builds to `web/dist/`)
 
 ```bash
 npm install
-npm run build:demo        # VITE_DATA_MODE=demo → dist/
-npm run preview           # serve dist/ locally
+npm run build:demo        # VITE_DATA_MODE=demo → web/dist/
+npm run preview           # serve web/dist locally
 ```
 
 The demo seeds mock data into PGlite (persisted in the browser's IndexedDB) on first
@@ -84,6 +84,9 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 | Doc | What's inside |
 | --- | --- |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layers, dual-mode seam, where business logic runs, reference systems (SAP/Odoo) |
+| [docs/FRONTEND_PLAN.md](docs/FRONTEND_PLAN.md) | Frontend structure, Aria ERP UI baseline, demo/production UI contract |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Build phases from frontend foundation to production operations |
+| [docs/EPICS.md](docs/EPICS.md) | Epic-level scope and acceptance criteria |
 | [docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md) | **`master_fn`/`company_fn`/`user_id`** hierarchy, app-level scoping vs prod RLS, M:N user↔company |
 | [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | **Singapore + Malaysia**: GST vs SST pluggable effective-dated tax, currency |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Modules, core tables, multi-tenant scoping, indexing conventions |
@@ -103,12 +106,12 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ## Tech stack
 
-- **Frontend:** React + Vite → static `dist/`
+- **Frontend:** Vite web app → static `web/dist/`
 - **Backend:** Node.js + Express (production mode only)
 - **ORM:** Drizzle (one schema, two drivers: `node-postgres` and PGlite)
 - **Database:** PostgreSQL 16+ (production) · PGlite/IndexedDB (demo)
 - **Container:** Docker Compose
-- **CI/CD:** GitHub Actions (builds `dist/`, deploys demo to a public Pages repo)
+- **CI/CD:** GitHub Actions (builds `web/dist`, deploys demo to GitHub Pages)
 
 ## Status
 

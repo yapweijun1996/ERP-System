@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Aria ERP — Database Workbench</title>
+<style>
+  :root{
+    --bg:#F5F5F7; --surface:#fff; --surface-2:#FAFBFC; --surface-3:#F1F3F6;
+    --ink:#13161B; --fg:#2B313B; --muted:#69727F; --faint:#97A0AD;
+    --hairline:#E8EBEF; --border:#D7DCE3;
+    --accent:#3457D5; --accent-tint:#EAEEFB; --ok:#1B7F4B; --ok-t:#E5F3EB;
+    --warn:#9A6712; --danger:#BE372D; --danger-t:#FAE9E7; --violet:#6536BE; --teal:#0B6E7C;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    --r:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;}
+  .top{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--hairline);flex:none;}
+  .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;box-shadow:0 1px 3px rgba(52,87,213,.4);}
+  .top b{font-size:15px;color:var(--ink);letter-spacing:-.01em;}
+  .top small{color:var(--muted);font-size:12px;}
+  .pill{font-family:var(--mono);font-size:11px;border:1px solid var(--border);border-radius:20px;padding:3px 10px;color:var(--muted);background:var(--surface-2);}
+  .spacer{flex:1;}
+  .status{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);}
+  .status.ready .dot{background:var(--ok);} .status.err .dot{background:var(--danger);} .status.boot .dot{background:var(--warn);animation:pulse 1s infinite;}
+  @keyframes pulse{50%{opacity:.3;}}
+  .layout{flex:1;display:grid;grid-template-columns:248px minmax(0,1fr);min-height:0;}
+  .side{border-right:1px solid var(--hairline);background:var(--surface);overflow:auto;padding:14px 10px 40px;}
+  .side h6{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;margin:16px 8px 6px;}
+  .tbtn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:none;background:none;font:inherit;font-size:13px;color:var(--fg);padding:6px 9px;border-radius:7px;cursor:pointer;}
+  .tbtn:hover{background:var(--surface-3);}
+  .tbtn.active{background:var(--accent-tint);color:var(--accent);font-weight:600;}
+  .tbtn .ic{color:var(--faint);font-size:12px;}
+  .tbtn.view .ic{color:var(--violet);}
+  .main{min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+  .bar{padding:12px 18px;border-bottom:1px solid var(--hairline);background:var(--surface-2);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .bar .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-right:4px;}
+  .chip{border:1px solid var(--border);background:var(--surface);border-radius:20px;padding:5px 12px;font:inherit;font-size:12.5px;color:var(--fg);cursor:pointer;}
+  .chip:hover{border-color:var(--accent);color:var(--accent);}
+  .editor{padding:14px 18px;border-bottom:1px solid var(--hairline);}
+  textarea{width:100%;min-height:108px;resize:vertical;font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;outline:none;}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);}
+  .erow{display:flex;align-items:center;gap:12px;margin-top:10px;}
+  .run{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px 16px;font:inherit;font-weight:600;font-size:13px;cursor:pointer;}
+  .run:hover{background:#2942AE;} .run:disabled{opacity:.5;cursor:not-allowed;}
+  .hint{font-size:12px;color:var(--muted);}
+  .result{flex:1;overflow:auto;padding:0;}
+  .rmeta{padding:10px 18px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--hairline);position:sticky;top:0;background:var(--surface);z-index:2;}
+  .rmeta b{color:var(--fg);}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;}
+  th,td{text-align:left;padding:7px 14px;border-bottom:1px solid var(--hairline);white-space:nowrap;}
+  th{position:sticky;top:41px;background:var(--surface-3);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;z-index:1;}
+  td{font-variant-numeric:tabular-nums;color:var(--fg);}
+  tbody tr:hover{background:var(--surface-2);}
+  td.num{text-align:right;font-family:var(--mono);}
+  td .null{color:var(--faint);font-style:italic;}
+  .err{margin:18px;padding:14px 16px;border:1px solid var(--danger);background:var(--danger-t);color:var(--danger);border-radius:var(--r);font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  .foot{padding:9px 18px;border-top:1px solid var(--hairline);background:var(--surface-2);font-size:12px;color:var(--muted);flex:none;}
+  .foot a{color:var(--accent);text-decoration:none;}
+  @media (max-width:760px){ .layout{grid-template-columns:1fr;} .side{display:none;} }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="mark">A</div>
+    <div><b>Database Workbench</b><br><small>Aria ERP · in-browser PostgreSQL</small></div>
+    <span class="pill">PGlite · Postgres 16</span>
+    <div class="spacer"></div>
+    <button class="chip" id="reset" title="Drop all data and re-apply schema + seed">↺ Reset to seed</button>
+    <span class="status boot" id="status"><span class="dot"></span><span id="statusText">Booting Postgres…</span></span>
+  </div>
+
+  <div class="layout">
+    <aside class="side" id="side">
+      <div class="empty" style="padding:20px 8px;font-size:12px">Loading schema…</div>
+    </aside>
+    <div class="main">
+      <div class="bar">
+        <span class="lbl">Examples</span>
+        <button class="chip" data-q="ar">AR aging</button>
+        <button class="chip" data-q="o2c">Order-to-cash trace</button>
+        <button class="chip" data-q="tb">Trial balance</button>
+        <button class="chip" data-q="inv">Invoice totals</button>
+        <button class="chip" data-q="low">Low / out of stock</button>
+        <button class="chip" data-q="payroll">Payroll run total</button>
+      </div>
+      <div class="editor">
+        <textarea id="sql" spellcheck="false" placeholder="Write SQL and press ⌘/Ctrl + Enter…">SELECT * FROM v_order_to_cash;</textarea>
+        <div class="erow">
+          <button class="run" id="run" disabled>▸ Run query</button>
+          <span class="hint">⌘/Ctrl + Enter to run · results capped at 500 rows · persisted to IndexedDB</span>
+        </div>
+      </div>
+      <div class="result" id="result">
+        <div class="empty">Run a query or pick a table on the left.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">In-browser Postgres via <a href="https://pglite.dev" target="_blank" rel="noopener">PGlite</a>. The exact same <code>schema.sql</code> runs on a production PostgreSQL server — point a backend at it when you go live.</div>
+
+<script type="module">
+import { PGlite } from 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite/dist/index.js';
+
+const $ = s => document.querySelector(s);
+const statusEl = $('#status'), statusText = $('#statusText');
+const sqlEl = $('#sql'), runEl = $('#run'), resultEl = $('#result'), sideEl = $('#side');
+let db, activeTable = null;
+
+const EXAMPLES = {
+  ar:   "SELECT name, not_due, d1_30, d31_60, d61_90, d90_plus, total_open\nFROM v_ar_aging ORDER BY total_open DESC;",
+  o2c:  "SELECT * FROM v_order_to_cash;",
+  tb:   "SELECT code, name, type, balance FROM v_trial_balance\nWHERE total_dr <> 0 OR total_cr <> 0 ORDER BY code;",
+  inv:  "SELECT no, status, subtotal, tax, shipping, total, paid, balance\nFROM v_invoice_totals ORDER BY no;",
+  low:  "SELECT sku, name, on_hand, reorder\nFROM item WHERE on_hand <= reorder ORDER BY on_hand;",
+  payroll: "SELECT pr.period, count(*) AS staff,\n       sum(p.gross) AS gross, sum(p.epf) AS epf,\n       sum(p.tax) AS tax, sum(p.net) AS net\nFROM payslip p JOIN payroll_run pr ON pr.period = p.run_period\nGROUP BY pr.period;",
+};
+
+function setStatus(cls, text){ statusEl.className = 'status ' + cls; statusText.textContent = text; }
+
+async function applySeed(){
+  const schema = await (await fetch('db/schema.sql')).text();
+  await db.exec(schema);
+  const seed = await (await fetch('db/seed.sql')).text();
+  await db.exec(seed);
+  const demo = await (await fetch('db/seed_demo.sql')).text();
+  await db.exec(demo);
+}
+
+async function boot(){
+  try {
+    db = new PGlite('idb://aria-erp');   // persisted to IndexedDB
+    await db.waitReady;
+    // self-heal: reseed if empty OR missing the demo volume layer / on an older schema
+    let needsSeed = true;
+    try { const r = await db.query("SELECT count(*)::int AS n FROM sales_invoice WHERE no LIKE 'INV-H-%'"); needsSeed = r.rows[0].n === 0; }
+    catch (_) { needsSeed = true; }
+    if (needsSeed){
+      setStatus('boot','Seeding database…');
+      await db.exec('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+      await applySeed();
+    }
+    setStatus('ready','Ready · Postgres 16 · persisted');
+    runEl.disabled = false;
+    await loadSidebar();
+    runQuery(sqlEl.value);
+  } catch (e){
+    setStatus('err','Boot failed');
+    resultEl.innerHTML = '<div class="err">Could not start PGlite.\n\n' + escapeHtml(String(e && e.message || e)) +
+      '\n\nThis usually means the preview could not load the PGlite WASM from the CDN. The schema (db/schema.sql) and seed (db/seed.sql) are still valid PostgreSQL and run unchanged on a real server.</div>';
+  }
+}
+
+async function resetDb(){
+  if (!db) return;
+  setStatus('boot','Resetting to seed…'); runEl.disabled = true;
+  await db.exec('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  await applySeed();
+  setStatus('ready','Ready · Postgres 16 · persisted'); runEl.disabled = false;
+  await loadSidebar();
+  runQuery(sqlEl.value);
+}
+
+async function loadSidebar(){
+  const t = await db.query("SELECT table_name, table_type FROM information_schema.tables WHERE table_schema='public' ORDER BY table_type DESC, table_name");
+  const tables = t.rows.filter(r => r.table_type === 'BASE TABLE');
+  const views  = t.rows.filter(r => r.table_type === 'VIEW');
+  let h = `<h6>Tables · ${tables.length}</h6>`;
+  h += tables.map(r => `<button class="tbtn" data-t="${r.table_name}"><span class="ic">▦</span>${r.table_name}</button>`).join('');
+  h += `<h6>Views · ${views.length}</h6>`;
+  h += views.map(r => `<button class="tbtn view" data-t="${r.table_name}"><span class="ic">◈</span>${r.table_name}</button>`).join('');
+  sideEl.innerHTML = h;
+  sideEl.querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => {
+    sideEl.querySelectorAll('.tbtn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active'); activeTable = b.dataset.t;
+    const q = `SELECT * FROM ${b.dataset.t} LIMIT 200;`;
+    sqlEl.value = q; runQuery(q);
+  }));
+}
+
+function isNum(v){ return typeof v === 'number'; }
+function escapeHtml(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function fmtCell(v){
+  if (v === null || v === undefined) return '<span class="null">NULL</span>';
+  if (v instanceof Date) return v.toISOString().slice(0,10);
+  return escapeHtml(v);
+}
+
+async function runQuery(sql){
+  if (!db) return;
+  const t0 = performance.now();
+  try {
+    const res = await db.query(sql);
+    const ms = (performance.now() - t0).toFixed(1);
+    const rows = res.rows || [];
+    const cols = (res.fields && res.fields.length) ? res.fields.map(f => f.name)
+                 : (rows[0] ? Object.keys(rows[0]) : []);
+    if (!cols.length){
+      resultEl.innerHTML = `<div class="rmeta"><b>OK</b> · statement executed · ${ms} ms</div><div class="empty">No rows returned.</div>`;
+      return;
+    }
+    const shown = rows.slice(0, 500);
+    let h = `<div class="rmeta"><b>${rows.length}</b> row${rows.length===1?'':'s'} · ${cols.length} columns · ${ms} ms${rows.length>500?' · showing first 500':''}</div>`;
+    h += '<table><thead><tr>' + cols.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead><tbody>';
+    h += shown.map(r => '<tr>' + cols.map(c => {
+      const v = r[c];
+      return `<td class="${isNum(v)?'num':''}">${fmtCell(v)}</td>`;
+    }).join('') + '</tr>').join('');
+    h += '</tbody></table>';
+    resultEl.innerHTML = h;
+  } catch (e){
+    resultEl.innerHTML = '<div class="err">' + escapeHtml(String(e && e.message || e)) + '</div>';
+  }
+}
+
+runEl.addEventListener('click', () => runQuery(sqlEl.value));
+sqlEl.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter'){ e.preventDefault(); runQuery(sqlEl.value); }
+});
+document.querySelectorAll('.chip[data-q]').forEach(c => c.addEventListener('click', () => {
+  sqlEl.value = EXAMPLES[c.dataset.q]; runQuery(sqlEl.value);
+}));
+document.querySelector('#reset').addEventListener('click', () => {
+  if (confirm('Drop all data and re-apply schema + seed? Any edits you made will be lost.')) resetDb();
+});
+
+boot();
+</script>
+</body>
+</html>

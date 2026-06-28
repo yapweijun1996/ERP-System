@@ -46,6 +46,9 @@ Once the stack is up (or the demo loads), the app detects **first run** (no mast
 configured) and launches a guided wizard. Same wizard in both modes — the demo simply has
 no Phase A.
 
+The wizard is part of the real frontend, not a separate prototype. It must work with the
+same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND_PLAN.md).
+
 ### Steps
 1. **Welcome / language** — pick UI language (en/ms/zh/ja/vi) up front so the rest of the
    wizard is localized. See [I18N.md](I18N.md).
@@ -61,10 +64,16 @@ no Phase A.
    the system never stores a provider key.** → [AI_PROVIDERS.md](AI_PROVIDERS.md#2-how-byok-works-same-in-both-modes).
 6. **Finish** — seed optional sample data; land on the dashboard.
 
+For production, the wizard should write durable setup records to PostgreSQL through the
+API. For the public demo, the same flow may write to PGlite/IndexedDB and offer a reset
+button so visitors can restart the setup.
+
 ### First-run detection
 - The app checks for an existing master on boot. None → wizard. Exists → normal login.
 - The wizard writes through the **same data layer** as everything else, so it works
   against PGlite (demo) and the API/PostgreSQL (prod) without special-casing.
+- Production must treat wizard writes as privileged setup actions. After the first admin
+  exists, setup endpoints should be disabled or require superadmin authorization.
 
 ---
 

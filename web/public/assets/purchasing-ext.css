@@ -1,0 +1,38 @@
+/* ============================================================
+   ARIA ERP — Purchasing module extra styles
+   Quote comparison grid · Vendor performance scorecards
+   (reuses sales-ext.css classes for sub-nav, kpibar, tiles, dashboard)
+   ============================================================ */
+
+/* ---- quotation comparison (modal) ---- */
+.cmpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+.cmpcol{border:1px solid var(--hairline);border-radius:var(--r-l);background:var(--surface-2);overflow:hidden;}
+.cmpcol-best{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:var(--surface);}
+.cmp-h{padding:12px 14px;border-bottom:1px solid var(--hairline);background:var(--surface-3);position:relative;}
+.cmpcol-best .cmp-h{background:var(--accent-tint);}
+.cmp-h b{display:block;font-size:calc(13.5px * var(--fs,1));color:var(--ink);}
+.cmp-h small{display:block;color:var(--muted);font-size:calc(11.5px * var(--fs,1));margin-top:1px;}
+.cmp-badge{position:absolute;top:10px;right:12px;font-size:calc(9.5px * var(--fs,1));font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--accent);border-radius:6px;padding:2px 7px;}
+.cmp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;border-bottom:1px solid var(--hair,var(--hairline));font-size:calc(12.5px * var(--fs,1));}
+.cmp-row span{color:var(--muted);}
+.cmp-row b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums;}
+.cmp-row b.cmp-win{color:var(--ok);}
+.cmp-foot{padding:12px 14px;}
+.cmp-foot .btn{width:100%;justify-content:center;}
+
+/* ---- vendor performance scorecards ---- */
+.vp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
+.vp-card{padding:15px 16px;}
+.vp-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--hairline);}
+.vp-h .partner{align-items:flex-start;}
+.vp-h .pav{flex:none;}
+.vp-h b{font-size:calc(14px * var(--fs,1));color:var(--ink);display:block;}
+.vp-h small{font-size:calc(11.5px * var(--fs,1));color:var(--muted);display:block;margin-top:1px;}
+.vp-rate{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;}
+.vp-rate>b{font-size:calc(20px * var(--fs,1));line-height:1;color:var(--ink);}
+.vp-metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;}
+.vp-m{display:flex;flex-direction:column;gap:5px;}
+.vp-m>span{font-size:calc(11px * var(--fs,1));color:var(--muted);}
+.vp-mr{display:flex;align-items:center;gap:8px;}
+.vp-mr b{font-size:calc(13px * var(--fs,1));color:var(--fg);}
+@media (max-width:520px){ .vp-metrics{grid-template-columns:1fr;} }

@@ -1,47 +1,68 @@
-# web/ — UI / frontend landing zone
+# web/ — Frontend workspace
 
-**Paste your ERP UI / layout project here.** This folder is the home for the frontend.
-The backend (data model, transactions) already lives in `../src` and is independent of
-whatever you drop in here, so pasting your project will not break anything.
+This folder is the home for the ERP frontend.
 
-## How to drop it in
+The pasted Aria ERP prototype lives in `../references/ui/aria-erp/` and is the
+user-owned **visual baseline**. The real app should clone its shell, navigation, spacing,
+tables, forms, cards, responsive behavior, and page density so we do not waste time
+redesigning.
 
-Copy the **contents** of your UI project into this `web/` folder, so you end up with
-(for example):
+Keep the implementation clean: do not copy unrelated mock data, duplicate SQL schemas,
+or static screens that are outside the current milestone.
+
+The backend/data core already lives in `../src` and remains independent:
+
+- schema: `../src/data/schema/`
+- migrations: `../drizzle/`
+- business flows: `../src/modules/`
+- production server/API: to be added for Docker mode
+
+## Target structure
+
+The real frontend should become:
 
 ```
 web/
-  package.json        ← your UI project's own package.json
+  package.json
   index.html
-  src/                ← your components, pages, layout, styles
-  vite.config.ts      (or whatever your tool uses)
-  ...
+  vite.config.ts
+  src/
+    app/
+    components/
+    layouts/
+    pages/
+    data/
+    styles/
 ```
 
-> Tip: paste the *contents* of your UI project, not the outer folder — i.e. `web/package.json`,
-> not `web/my-ui/package.json`. (If it's easier to paste the whole folder, that's fine too —
-> just tell me and I'll adjust the paths when wiring it up.)
+See `../docs/FRONTEND_PLAN.md` for the implementation contract.
 
-## After you paste — tell me these 3 things
+## Runtime modes
 
-So I can wire the UI to the backend correctly:
-
-1. **Framework** — React / Vue / Svelte / plain HTML? (changes how we connect data)
-2. **Build tool** — Vite / Next / CRA / something else? (changes the build + `dist/` output)
-3. **Standalone vs layout-only** — does it have its own `package.json` (a full app), or is it
-   just components/pages/CSS to integrate?
-
-## How it will connect (later — layout first, function after)
-
-Per the project's dual-mode design ([../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)):
+The frontend must support both modes:
 
 - **Demo build** (`dist/` → GitHub Pages): the UI talks to **PGlite** (Postgres in the
   browser) via the data layer in `../src/data`.
 - **Production**: the same UI talks to the Node API → PostgreSQL.
 
-We are doing **layout first**: get the shell, navigation, and pages looking right with
-mock/placeholder data. Wiring real data (the `../src/data` adapters, the
-`confirmSalesOrder` flow, etc.) comes after the layout is approved.
+Use:
+
+```text
+VITE_DATA_MODE=demo   # PGlite / IndexedDB
+VITE_DATA_MODE=api    # API / PostgreSQL
+```
+
+## Build order
+
+Build one page group at a time:
+
+1. app shell: sidebar, topbar, company switcher, language switcher
+2. dashboard
+3. inventory
+4. sales order and invoice
+5. finance / GL
+6. settings
+7. setup wizard
 
 Things the layout will need slots for (already built on the backend):
 - **Company switcher** — multi-tenant: `master_fn` → `company_fn`

@@ -6,7 +6,7 @@ One codebase, two runtime modes, identical behavior:
 
 ```
                        ┌───────────────────────────────────────┐
-                       │   UI  (React + Vite)                   │
+                       │   UI  (Vite web app)                   │
                        ├───────────────────────────────────────┤
                        │   Business logic  (shared TypeScript)  │
                        │   order → deduct stock → invoice → GL  │
@@ -33,7 +33,7 @@ The system follows the classic ERP three-tier separation used by both SAP and Od
 
 | Tier | This project | SAP | Odoo |
 | --- | --- | --- | --- |
-| Presentation | React + Vite | Fiori | OWL / QWeb |
+| Presentation | Vite web app | Fiori | OWL / QWeb |
 | Business logic | Shared TypeScript | ABAP / Java | Python |
 | Data | PostgreSQL / PGlite | HANA | PostgreSQL |
 
@@ -107,6 +107,28 @@ src/
 A module owns: its schema slice, its repository functions, its UI, its business rules.
 Adding a module must not require editing another module — only registering it in
 `core/module-registry`.
+
+### Frontend implementation rule
+
+The frontend must be built incrementally in `web/` using the user's Aria ERP design as
+the visual baseline. The pasted Aria ERP prototype lives in `references/ui/aria-erp/`.
+Clone its shell, navigation, spacing, and component look, while avoiding unrelated mock
+data, duplicate schemas, and static screens outside the current milestone.
+
+Current implementation note: `web/index.html` directly runs the cloned Aria classic-script
+layout. `web/public/assets/erp-system-data-adapter.js` is the temporary data boundary: it
+maps the canonical Acme SG seed and `SO-1 -> INV-SO-1 -> GL` proof into Aria's `DB`
+contract before the screens boot. This lets the team keep the user's layout intact while
+the long-term `demo=PGlite` and `api=PostgreSQL` adapters are built.
+
+The source of truth stays split as follows:
+
+- UI shell and pages: `web/`
+- schema and migrations: `src/data/schema/` + `drizzle/`
+- business transactions: `src/modules/`
+- production server guarantees: Node API + PostgreSQL
+
+See [FRONTEND_PLAN.md](FRONTEND_PLAN.md).
 
 ## 6. Multi-tenancy
 
