@@ -20,6 +20,7 @@ const MasterStore = (function () {
   let db = null;
   let backend = 'memory';
   let resolveReady;
+  let bootStarted = false;
   const ready = new Promise((r) => (resolveReady = r));
 
   /* session mirror — deep clone so edits don't mutate the seed data */
@@ -92,8 +93,17 @@ const MasterStore = (function () {
     resolveReady(backend);
   }
 
+  function ensureReady() {
+    if (!bootStarted) {
+      bootStarted = true;
+      boot();
+    }
+    return ready;
+  }
+
   /* ---- reads ---- */
   async function list() {
+    await ensureReady();
     if (backend === 'pg') {
       const ms = (await db.query('SELECT * FROM master_account ORDER BY created_at, id')).rows;
       const cs = (await db.query('SELECT * FROM master_company ORDER BY id')).rows;
@@ -114,6 +124,7 @@ const MasterStore = (function () {
 
   /* ---- master account CRUD ---- */
   async function createMaster(d) {
+    await ensureReady();
     const modules = PLAN_MODULES[d.plan] || 5;
     if (backend === 'pg') {
       const ids = (await db.query('SELECT id FROM master_account')).rows.map((r) => r.id);
@@ -130,6 +141,7 @@ const MasterStore = (function () {
   }
 
   async function updateMaster(id, d) {
+    await ensureReady();
     if (backend === 'pg') {
       await db.query(
         'UPDATE master_account SET name=$2, plan=$3, region=$4, status=$5, owner=$6 WHERE id=$1',
@@ -142,6 +154,7 @@ const MasterStore = (function () {
   }
 
   async function deleteMaster(id) {
+    await ensureReady();
     if (backend === 'pg') { await db.query('DELETE FROM master_account WHERE id=$1', [id]); return; }
     const i = mem.findIndex((x) => x.id === id);
     if (i >= 0) mem.splice(i, 1);
@@ -149,6 +162,7 @@ const MasterStore = (function () {
 
   /* ---- company CRUD ---- */
   async function addCompany(masterId, d) {
+    await ensureReady();
     if (backend === 'pg') {
       const ids = (await db.query('SELECT id FROM master_company')).rows.map((r) => r.id);
       const id = nextId('CMP', ids);
@@ -165,6 +179,7 @@ const MasterStore = (function () {
   }
 
   async function deleteCompany(masterId, id) {
+    await ensureReady();
     if (backend === 'pg') { await db.query('DELETE FROM master_company WHERE id=$1', [id]); return; }
     const m = mem.find((x) => x.id === masterId);
     if (m) m.companies = m.companies.filter((c) => c.id !== id);
@@ -172,6 +187,7 @@ const MasterStore = (function () {
 
   /* ---- user CRUD ---- */
   async function addUser(masterId, d) {
+    await ensureReady();
     if (backend === 'pg') {
       const ids = (await db.query('SELECT id FROM master_user')).rows.map((r) => r.id);
       const id = nextId('USR', ids);
@@ -188,15 +204,15 @@ const MasterStore = (function () {
   }
 
   async function deleteUser(masterId, id) {
+    await ensureReady();
     if (backend === 'pg') { await db.query('DELETE FROM master_user WHERE id=$1', [id]); return; }
     const m = mem.find((x) => x.id === masterId);
     if (m) m.users = m.users.filter((u) => u.id !== id);
   }
 
-  boot();
-
   return {
     ready,
+    ensureReady,
     list,
     createMaster, updateMaster, deleteMaster,
     addCompany, deleteCompany,

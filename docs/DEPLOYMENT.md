@@ -151,6 +151,8 @@ npm run build:demo            # VITE_DATA_MODE=demo → web/dist/
 
 The GitHub Pages demo is static only. It must not require Docker, the API container,
 PostgreSQL, or any private environment variable.
+It also includes the PWA shell (`manifest.webmanifest`, `sw.js`, icons, safe-area CSS,
+and update prompt). See [PWA.md](PWA.md).
 
 The repository includes `.github/workflows/deploy-pages.yml`, which builds the demo and
 deploys `web/dist` to GitHub Pages on every push to `main` and on manual

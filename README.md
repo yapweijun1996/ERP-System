@@ -96,6 +96,7 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 | [docs/I18N.md](docs/I18N.md) | UI in **en / ms / zh / ja / vi**; i18n (language) vs L10n (tax) separation |
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Pluggable **OpenAI / Gemini / DeepSeek / LM Studio**; never leak keys into the demo |
 | [docs/DEMO_MODE.md](docs/DEMO_MODE.md) | PGlite + IndexedDB + mock data, limits, build flags |
+| [docs/PWA.md](docs/PWA.md) | PWA manifest, service worker, update prompt, mobile safe-area rules |
 | [docs/IMPORT_EXPORT.md](docs/IMPORT_EXPORT.md) | User-level CSV/Excel vs admin-level backup/restore at scale |
 | [docs/STUDYING_ODOO.md](docs/STUDYING_ODOO.md) | How to study Odoo legally (LGPL) for reference without contaminating this project |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local setup, scripts, conventions, adding a module |

@@ -44,6 +44,7 @@ npm run preview        # serve web/dist locally
 ```
 
 The build inlines the demo data adapter and the seed dataset. No `DATABASE_URL`, no API.
+The demo also ships as an installable PWA shell; see [PWA.md](PWA.md).
 
 ## 3. Mock data
 

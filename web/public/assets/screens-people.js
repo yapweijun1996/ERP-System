@@ -316,5 +316,5 @@ SCREENS['master-control'] = function(root){
       <div class="h1sub">Connecting to in-browser Postgres…</div></div>
     ${skeletonRows(6)}
   </div></section></div>`;
-  MasterStore.ready.then(()=>refresh());
+  MasterStore.ensureReady().then(()=>refresh());
 };
