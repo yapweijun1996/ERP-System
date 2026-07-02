@@ -52,9 +52,9 @@ SCREENS['gl'] = function(root){
     </div>
     <div class="statwrap"><div class="statcards">
       ${statTile(t('gl.t.cash'),money0(cash),erpDemo?'cash seed will be wired in the next finance slice':t('gl.t.cashsub'))}
-      ${statTile(t('gl.t.ar'),money0(ar),erpDemo?'from INV-SO-1 posted invoice':t('gl.t.arsub'),'var(--warn)')}
+      ${statTile(t('gl.t.ar'),money0(ar),erpDemo?`from ${DB.salesInvoices.length} posted invoice${DB.salesInvoices.length===1?'':'s'} (${DB.salesInvoices.map(i=>i.no).join(', ')})`:t('gl.t.arsub'),'var(--warn)')}
       ${statTile(t('gl.t.ap'),money0(ap),erpDemo?'no supplier invoice in canonical seed yet':t('gl.t.apsub'))}
-      ${statTile(t('gl.t.net'),money0(net),erpDemo?'revenue from SO-1 demo transaction':t('gl.t.netsub'),'var(--ok)')}
+      ${statTile(t('gl.t.net'),money0(net),erpDemo?`revenue from ${DB.salesOrders.filter(o=>o.status==='Closed').length} confirmed order${DB.salesOrders.filter(o=>o.status==='Closed').length===1?'':'s'}`:t('gl.t.netsub'),'var(--ok)')}
     </div></div>
     <div class="toolbar">
       <div class="filterchips" id="glChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${c[2]?`<span class="dot" style="background:var(--${c[2]})"></span>`:''}${esc(c[1])}</button>`).join('')}</div>
@@ -65,16 +65,16 @@ SCREENS['gl'] = function(root){
     </div>
     <div class="tablewrap" id="glTable">${table()}</div>
   </section></div>`;
-  function rewire(){ root.querySelectorAll('#glTable .dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{ tr.dataset.code==='1000'?navigate('account-ledger'):toast('Open ledger · '+tr.dataset.code,'info'); })); }
+  function rewire(){ root.querySelectorAll('#glTable .dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{ const c=tr.dataset.code; (DB.acctLedgerDocs&&DB.acctLedgerDocs[c])?navigate('account-ledger',{code:c}):(c==='1000'?navigate('account-ledger'):toast('Open ledger · '+c,'info')); })); }
   rewire();
   $('#glChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#glChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f; $('#glTable').innerHTML=table(); rewire(); }));
 };
 
 /* ---------------- ACCOUNT LEDGER (drill target) ---------------- */
-SCREENS['account-ledger'] = function(root){
-  const a=DB.acctLedger;
+SCREENS['account-ledger'] = function(root, params){
+  const a=(params&&params.code&&DB.acctLedgerDocs&&DB.acctLedgerDocs[params.code])||DB.acctLedger;
   let run=a.open;
-  const rows=a.rows.map((r,i)=>{ run+=r.dr-r.cr; return `<tr>
+  const rows=a.rows.map((r,i)=>{ run+=r.dr-r.cr; return `<tr class="je-link" data-je="${esc(r.je)}" style="cursor:pointer">
       <td class="lineno">${i+1}</td>
       <td class="l">${esc(r.date)}</td>
       <td class="l li-name"><b>${esc(r.je)}</b><small>${esc(r.memo)}</small></td>
@@ -104,6 +104,10 @@ SCREENS['account-ledger'] = function(root){
     </div>
     <div style="height:40px"></div>
   </div></div></section></div>`;
+  root.querySelectorAll('tr.je-link').forEach(tr=>tr.addEventListener('click',()=>{
+    const ref=tr.dataset.je;
+    (DB.journalDocs&&DB.journalDocs[ref])?navigate('journal-entry',{no:ref}):toast('Open journal · '+ref,'info');
+  }));
 };
 
 /* ---------------- BANK RECONCILIATION (interactive) ---------------- */
@@ -181,7 +185,7 @@ SCREENS['pnl'] = function(root){
   root.innerHTML=`<div class="content full"><section class="master"><div class="report">
     <aside class="report-params">
       <h3>Parameters</h3>
-      <div class="fld"><span>Company</span><select><option>Northwind Manufacturing</option><option>All companies (consolidated)</option></select></div>
+      <div class="fld"><span>Company</span><select><option>${esc(DB.company.name)}</option><option>All companies (consolidated)</option></select></div>
       <div class="fld"><span>Period</span><select><option>P06 · June 2026</option><option>Q2 FY2026</option><option>FY2026 YTD</option></select></div>
       <div class="fld"><span>Compare to</span><select><option>Budget</option><option>Prior year</option><option>Prior period</option></select></div>
       <div class="fld"><span>Basis</span><select><option>Accrual</option><option>Cash</option></select></div>

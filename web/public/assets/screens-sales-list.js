@@ -197,6 +197,7 @@ makeSalesList({
   onOpen:(i)=>openInvoice(i),
 });
 function openInvoice(i){
+  if(DB.salesInvoiceDocs&&DB.salesInvoiceDocs[i.no]){ navigate('sales-invoice',{no:i.no}); return; }
   if(i.doc){ navigate('sales-invoice'); return; }
   openTxn('invoice', i);
 }

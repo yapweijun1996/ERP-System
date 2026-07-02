@@ -318,13 +318,26 @@
       weight: '-', packages: 1, status: 'Delivered', eta: 'Jun 3, 2024', picker: 'Admin',
       lines: uiLines.map(function(l){ return { item: l.item, name: l.name, ordered: l.qty, delivered: l.qty, uom: l.uom }; }),
     } : null;
-    DB.invoice0331 = inv ? {
-      no: inv.doc_no, so: inv.order_no, do: 'DO-1', cust: inv.customer, code: inv.customer_code,
-      date: 'Jun 1, 2024', due: 'Jul 1, 2024', terms: 'Net 30', currency: inv.currency,
-      taxRate: soLines.length ? soLines[0].tax_rate / 100 : 0.09, shipping: 0,
-      status: 'Posted', paid: 0, owner: 'Admin', custBalance: beta.balance, custLimit: 50000,
-      lines: uiLines,
-    } : null;
+    function addDays(iso, n){
+      var t = new Date(iso + 'T00:00:00Z');
+      t.setUTCDate(t.getUTCDate() + n);
+      return t.toISOString().slice(0, 10);
+    }
+    /* one invoice document per generated invoice, keyed by doc no */
+    DB.salesInvoiceDocs = {};
+    d.invoices.forEach(function(i){
+      var ord = d.orders.filter(function(o){ return o.doc_no === i.order_no; })[0];
+      var fl = ord ? d.orderLines.filter(function(l){ return l.order_id === ord.id; })[0] : null;
+      DB.salesInvoiceDocs[i.doc_no] = {
+        no: i.doc_no, so: i.order_no, do: i.order_no === 'SO-1' ? 'DO-1' : '—',
+        cust: i.customer, code: i.customer_code,
+        date: i.invoice_date, due: addDays(i.invoice_date, 30), terms: 'Net 30', currency: i.currency,
+        taxRate: (fl ? fl.tax_rate : 9) / 100, shipping: 0,
+        status: 'Posted', paid: 0, owner: 'Admin', custBalance: beta.balance, custLimit: 50000,
+        lines: ord ? linesFor(ord.id) : [],
+      };
+    });
+    DB.invoice0331 = inv ? DB.salesInvoiceDocs[inv.doc_no] : null;
     DB.quotations = so ? [
       { no: 'Q-1', date: so.order_date, cust: beta.name, custCode: beta.code, valid: '2024-06-15',
         owner: 'Admin', total: orderTotal, prob: 100, status: 'Converted', doc: true },
@@ -335,7 +348,7 @@
         status: 'Delivered', doc: true },
     ] : [];
     DB.salesInvoices = d.invoices.map(function(i){
-      return { no: i.doc_no, date: i.invoice_date, due: '2024-07-01', cust: i.customer,
+      return { no: i.doc_no, date: i.invoice_date, due: addDays(i.invoice_date, 30), cust: i.customer,
                custCode: i.customer_code, so: i.order_no, total: i.total, paid: 0,
                status: 'Posted', doc: true };
     });
@@ -384,35 +397,58 @@
 
     var journalRefs = [];
     d.glLegs.forEach(function(l){ if (journalRefs.indexOf(l.journal_ref) < 0) journalRefs.push(l.journal_ref); });
+    function journalDate(ref){
+      var i = d.invoices.filter(function(x){ return x.doc_no === ref; })[0];
+      return i ? i.invoice_date : (so ? so.order_date : '');
+    }
     DB.journals = journalRefs.map(function(ref){
       var legs = d.glLegs.filter(function(l){ return l.journal_ref === ref; });
       var dr = legs.reduce(function(s, l){ return s + l.debit; }, 0);
-      return { no: ref, date: so ? so.order_date : '', memo: 'Post sales invoice ' + ref.replace(/^INV-/, ''),
+      return { no: ref, date: journalDate(ref), memo: 'Post sales invoice ' + ref.replace(/^INV-/, ''),
                status: 'Posted', dr: Math.round(dr * 100) / 100, period: 'P06', by: 'System' };
     });
-    var firstRef = journalRefs[0];
-    DB.je0611 = firstRef ? {
-      no: firstRef, date: so ? so.order_date : '', memo: 'Post sales invoice ' + firstRef.replace(/^INV-/, ''),
-      period: 'P06', status: 'Posted', by: 'System', source: 'Sales confirmation',
-      lines: d.glLegs.filter(function(l){ return l.journal_ref === firstRef; }).map(function(l){
-        return { acct: l.code, name: l.name, dr: l.debit, cr: l.credit,
-                 dim: l.memo === 'AR' ? beta.name : (l.memo === 'Revenue' ? 'Sales' : 'GST') };
-      }),
-    } : null;
-    var ar = d.accounts.filter(function(a){ return a.code === '1100'; })[0];
-    DB.acctLedger = ar ? {
-      code: ar.code, name: ar.name, period: 'FY2026 · P06', open: 0, close: ar.debit - ar.credit,
-      rows: d.glLegs.filter(function(l){ return l.code === '1100'; }).map(function(l){
-        return { date: 'Jun 01', je: l.journal_ref, memo: 'Invoice ' + beta.name, dr: l.debit, cr: l.credit };
-      }),
-    } : null;
+    /* one journal document per posting, keyed by journal ref */
+    DB.journalDocs = {};
+    journalRefs.forEach(function(ref){
+      DB.journalDocs[ref] = {
+        no: ref, date: journalDate(ref), memo: 'Post sales invoice ' + ref.replace(/^INV-/, ''),
+        period: 'P06', status: 'Posted', by: 'System', source: 'Sales confirmation',
+        lines: d.glLegs.filter(function(l){ return l.journal_ref === ref; }).map(function(l){
+          return { acct: l.code, name: l.name, dr: l.debit, cr: l.credit,
+                   dim: l.memo === 'AR' ? beta.name : (l.memo === 'Revenue' ? 'Sales' : 'GST') };
+        }),
+      };
+    });
+    DB.je0611 = journalRefs.length ? DB.journalDocs[journalRefs[0]] : null;
+    /* one ledger document per account that has postings, keyed by account code */
+    DB.acctLedgerDocs = {};
+    d.accounts.forEach(function(a){
+      var legs = d.glLegs.filter(function(l){ return l.code === a.code; });
+      if (!legs.length) return;
+      DB.acctLedgerDocs[a.code] = {
+        code: a.code, name: a.name, period: 'FY2026 · P06', open: 0,
+        close: Math.round((a.debit - a.credit) * 100) / 100,
+        rows: legs.map(function(l){
+          return { date: journalDate(l.journal_ref), je: l.journal_ref,
+                   memo: l.memo === 'AR' ? 'Invoice ' + beta.name : l.memo, dr: l.debit, cr: l.credit };
+        }),
+      };
+    });
+    DB.acctLedger = DB.acctLedgerDocs['1100'] || null;
     DB.bankRec = {
       account: 'Demo operating account', period: 'June 2026', stmtClose: 842000, bookClose: 842000,
       lines: [{ date: 'Jun 01', desc: 'Opening demo balance', amount: 842000, je: 'OPENING', matched: true }],
     };
+    var revAcct = d.accounts.filter(function(a){ return a.code === '4000'; })[0];
+    var revenueTotal = revAcct ? Math.round((revAcct.credit - revAcct.debit) * 100) / 100 : orderNet;
+    /* shape must match the pnl screen: [0] revenue, [1] cost of sales,
+       [2] gross-profit subtotal, [3] opex, [4] operating-profit subtotal */
     DB.pnl = [
-      { grp: 'Revenue', kind: 'head', rows: [{ name: 'Product sales', cur: orderNet, ytd: orderNet, bud: orderNet }], total: 'Net revenue' },
+      { grp: 'Revenue', kind: 'head', rows: [{ name: 'Product sales', cur: revenueTotal, ytd: revenueTotal, bud: revenueTotal }], total: 'Net revenue' },
+      { grp: 'Cost of sales', kind: 'head', rows: [{ name: 'Cost of goods sold', cur: 0, ytd: 0, bud: 0 }], total: 'Cost of sales' },
       { grp: 'Gross profit', kind: 'subtotal' },
+      { grp: 'Operating expenses', kind: 'head', rows: [{ name: 'Operating costs (not modelled in canonical seed yet)', cur: 0, ytd: 0, bud: 0 }], total: 'Total opex' },
+      { grp: 'Operating profit', kind: 'subtotal' },
     ];
     DB.arAging = d.customers.map(function(c){
       return { cust: c.name, code: c.code, cur: c.balance, b30: 0, b60: 0, b90: 0, b90p: 0 };
@@ -439,13 +475,13 @@
 
     DB.salesByMonth = [
       { m: 'Jan', val: 0 }, { m: 'Feb', val: 0 }, { m: 'Mar', val: 0 },
-      { m: 'Apr', val: 0 }, { m: 'May', val: 0 }, { m: 'Jun', val: orderNet },
+      { m: 'Apr', val: 0 }, { m: 'May', val: 0 }, { m: 'Jun', val: revenueTotal },
       { m: 'Jul', val: 220, fc: true }, { m: 'Aug', val: 330, fc: true },
       { m: 'Sep', val: 440, fc: true }, { m: 'Oct', val: 550, fc: true },
       { m: 'Nov', val: 660, fc: true }, { m: 'Dec', val: 770, fc: true },
     ];
-    DB.salesByRep = [{ rep: 'Admin', sales: orderNet, target: 500, deals: 1 }];
-    DB.topCustomers = [{ cust: beta.name, custCode: beta.code, ytd: orderNet, share: 100 }];
+    DB.salesByRep = [{ rep: 'Admin', sales: revenueTotal, target: 500, deals: d.invoices.length }];
+    DB.topCustomers = [{ cust: beta.name, custCode: beta.code, ytd: revenueTotal, share: 100 }];
 
     DB.dashboardMetrics = {
       approvals: DB.approvals.length,
@@ -459,7 +495,7 @@
       openOrderValue: DB.salesOrders.filter(function(o){ return o.status !== 'Closed' && o.status !== 'Cancelled'; })
         .reduce(function(sum, o){ return sum + o.total; }, 0),
       cash: 842000,
-      mtdSales: orderNet,
+      mtdSales: revenueTotal,
       cleared: 1,
     };
 

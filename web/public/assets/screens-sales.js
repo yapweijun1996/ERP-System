@@ -171,9 +171,11 @@ SCREENS['delivery-order'] = function(root){
 };
 
 /* ---------------- SALES INVOICE (document) ---------------- */
-SCREENS['sales-invoice'] = function(root){
-  const d=DB.invoice0331; const {sub,discGiven,tax,total}=docTotals(d);
-  const balance=total-d.paid, paidPct=Math.round(d.paid/total*100);
+SCREENS['sales-invoice'] = function(root, params){
+  const d=(params&&params.no&&DB.salesInvoiceDocs&&DB.salesInvoiceDocs[params.no])||DB.invoice0331;
+  const {sub,discGiven,tax,total}=docTotals(d);
+  const balance=total-d.paid, paidPct=total?Math.round(d.paid/total*100):0;
+  const hasPayment=d.paid>0;
   root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
     ${crumbs([DB.company.name,{label:'Sales',route:'sales-home'},{label:'Invoices',route:'sales-invoices'},{cur:d.no}])}
     <div class="dochead">
@@ -184,9 +186,9 @@ SCREENS['sales-invoice'] = function(root){
       </div>
       <div class="stepper">
         <div class="step done"><span class="sdot">${ic('check')}</span>Draft</div><span class="stepline done"></span>
-        <div class="step done"><span class="sdot">${ic('check')}</span>Posted</div><span class="stepline done"></span>
-        <div class="step current"><span class="sdot">${ic('clock')}</span>Part-paid</div><span class="stepline"></span>
-        <div class="step"><span class="sdot"></span>Paid</div>
+        <div class="step done"><span class="sdot">${ic('check')}</span>Posted</div><span class="stepline ${hasPayment?'done':''}"></span>
+        <div class="step ${hasPayment?(balance>0?'current':'done'):''}"><span class="sdot">${hasPayment?(balance>0?ic('clock'):ic('check')):''}</span>Part-paid</div><span class="stepline ${balance<=0?'done':''}"></span>
+        <div class="step ${balance<=0?'done':''}"><span class="sdot">${balance<=0?ic('check'):''}</span>Paid</div>
       </div>
       <div class="docmeta">
         <div class="dm"><small>Customer</small><div class="partner"><span class="pav">MR</span><b>${esc(d.cust)}</b></div></div>
@@ -202,14 +204,15 @@ SCREENS['sales-invoice'] = function(root){
           <div class="panel-h"><h3>Invoice lines</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${d.lines.length} lines · delivered qty</span></div>
           <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Item</th><th>Qty</th><th>Unit price</th><th>Disc</th><th>Amount</th></tr></thead><tbody>${docLineRows(d.lines)}</tbody></table>
         </div>
-        <div class="panel"><div class="panel-h"><h3>Payments</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">1 receipt</span></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Receipt</th><th class="l">Date</th><th class="l">Method</th><th>Amount</th></tr></thead>
-          <tbody><tr><td class="lineno">1</td><td class="l li-name"><b>RCP-26-0288</b><small>posted to ${ic('book')} 1100 AR</small></td><td class="l">Jun 18, 2026</td><td class="l">Bank transfer</td><td class="tnum"><b>${money(d.paid)}</b></td></tr></tbody></table>
+        <div class="panel"><div class="panel-h"><h3>Payments</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${hasPayment?'1 receipt':'no receipts'}</span></div>
+          ${hasPayment?`<table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Receipt</th><th class="l">Date</th><th class="l">Method</th><th>Amount</th></tr></thead>
+          <tbody><tr><td class="lineno">1</td><td class="l li-name"><b>RCP-26-0288</b><small>posted to ${ic('book')} 1100 AR</small></td><td class="l">Jun 18, 2026</td><td class="l">Bank transfer</td><td class="tnum"><b>${money(d.paid)}</b></td></tr></tbody></table>`
+          :`<div class="panel-body" style="color:var(--muted);font-size:13px">No payments recorded yet — invoice is open in Accounts Receivable (due ${esc(d.due)}).</div>`}
         </div>
         <div class="panel"><div class="panel-h"><h3>Audit trail</h3></div><div class="panel-body">${auditTrail([
-          {kind:'current',when:'Jun 18 · 11:30',what:'Part payment received — '+money(d.paid),who:'Finance'},
-          {kind:'add',when:'Jun 16 · 16:02',what:'Invoice posted to GL — AR debited',who:'A. Costa'},
-          {kind:'add',when:'Jun 16 · 15:58',what:'Generated from delivery <b>'+esc(d.do)+'</b>',who:'J. Okafor'},
+          ...(hasPayment?[{kind:'current',when:'Jun 18 · 11:30',what:'Part payment received — '+money(d.paid),who:'Finance'}]:[]),
+          {kind:hasPayment?'add':'current',when:esc(d.date),what:'Invoice posted to GL — AR debited, revenue and tax credited',who:'System'},
+          {kind:'add',when:esc(d.date),what:'Generated from sales order <b>'+esc(d.so)+'</b> confirmation',who:'System'},
         ])}</div></div>
       </div>
       <aside class="summary">
@@ -227,8 +230,7 @@ SCREENS['sales-invoice'] = function(root){
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">Related</div>
           ${relatedDocs([
-            {no:d.so,label:'Sales order',meta:'Meridian Robotics',status:'Pending Approval'},
-            {no:d.do,label:'Delivery order',meta:'14 packages',status:'In transit'},
+            {no:d.so,label:'Sales order',meta:d.cust,status:'Completed'},
             {no:'AR Aging',label:'Receivables position',meta:'open this report'},
           ])}
         </div>

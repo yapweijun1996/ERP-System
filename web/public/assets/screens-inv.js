@@ -300,7 +300,7 @@ SCREENS['inv-valuation'] = function(root){
     <aside class="report-params">
       <h3>Parameters</h3>
       <div class="fld"><span>As at date</span><input type="date" value="2026-06-04"></div>
-      <div class="fld"><span>Company</span><select><option>Northwind Manufacturing</option></select></div>
+      <div class="fld"><span>Company</span><select><option>${esc(DB.company.name)}</option></select></div>
       <div class="fld"><span>Warehouse</span><select><option>All warehouses</option><option>KL-Main</option><option>Penang-2</option></select></div>
       <div class="fld"><span>Costing basis</span><select><option>Weighted Average</option><option>FIFO</option><option>Standard</option></select></div>
       <div class="fld"><span>Group by</span><select><option>Category</option><option>Warehouse</option><option>Item</option></select></div>
