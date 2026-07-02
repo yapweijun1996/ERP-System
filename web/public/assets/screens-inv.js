@@ -241,16 +241,20 @@ SCREENS['item-master'] = function(root){
 /* ---------------- STOCK MOVEMENT LEDGER ---------------- */
 SCREENS['stock-movement'] = function(root){
   function tone(t){ return t.startsWith('Goods Receipt')||t.includes('Receipt')||t==='Transfer In'?'ok':t.includes('Issue')||t==='Transfer Out'||t==='Adjustment'?'danger':'accent'; }
+  const netChange=DB.movements.reduce((s,m)=>s+m.qty,0);
+  const mvDates=DB.movements.map(m=>m.date.slice(0,10)).sort();
+  const fmtD=d=>{ const [y,mo,da]=d.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+(+da); };
+  const rangeLabel=mvDates.length?fmtD(mvDates[0])+' – '+fmtD(mvDates[mvDates.length-1]):'No movements';
   root.innerHTML=`<div class="content full"><section class="master">
     <div class="pagehead">${crumbs([DB.company.name,'Inventory','Stock Movement'])}
       <div class="h1row"><h1>Stock Movement Ledger</h1><span class="countchip">${DB.movements.length} entries</span>
-        <div class="headright"><div class="kfig"><small>Net change (7d)</small><b class="tnum pos">+2,422</b></div></div></div>
+        <div class="headright"><div class="kfig"><small>Net change</small><b class="tnum ${netChange>=0?'pos':'neg'}">${netChange>0?'+':''}${num(netChange)}</b></div></div></div>
       <div class="h1sub">Every posted in/out and adjustment — the shared truth behind on-hand balances. Drill any row to its source document.</div>
     </div>
     <div class="toolbar">
       <div class="filterchips"><button class="chip on">All types</button><button class="chip">Receipts</button><button class="chip">Issues</button><button class="chip">Transfers</button><button class="chip">Adjustments</button></div>
       <div class="grow"></div>
-      <button class="viewsel">${ic('calendar')}Jun 1 – Jun 4${ic('chevD')}</button>
+      <button class="viewsel">${ic('calendar')}${rangeLabel}${ic('chevD')}</button>
       ${btn('Export',{icon:'download',cls:'soft'})}
       ${btn('New adjustment',{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-stock-adjustment\')"'})}
     </div>

@@ -208,6 +208,7 @@
       name: activeCompany.name,
       branch: 'Singapore HQ',
       currency: activeCompany.currency,
+      taxRegime: activeCompany.tax_regime,
       period: 'FY2026 · P06',
       periodLabel: 'June 2026',
       env: 'DEMO',

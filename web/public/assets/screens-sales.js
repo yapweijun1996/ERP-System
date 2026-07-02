@@ -61,7 +61,7 @@ SCREENS['quotation'] = function(root){
           <div class="sumrow"><span class="sk2">Subtotal</span><span class="sv tnum">${money(sub+discGiven)}</span></div>
           <div class="sumrow disc"><span class="sk2">Discount given</span><span class="sv tnum">−${money(discGiven)}</span></div>
           <div class="sumrow"><span class="sk2">Shipping</span><span class="sv tnum">${money(d.shipping)}</span></div>
-          <div class="sumrow"><span class="sk2">Tax (6% GST)</span><span class="sv tnum">${money(tax)}</span></div>
+          <div class="sumrow"><span class="sk2">Tax (${Math.round(d.taxRate*100)}% ${(DB.company&&DB.company.taxRegime)||'GST'})</span><span class="sv tnum">${money(tax)}</span></div>
           <div class="sumrow total"><span class="sk2">Quote total</span><span class="sv tnum">${money(total)}</span></div>
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">Validity</div>
@@ -217,7 +217,7 @@ SCREENS['sales-invoice'] = function(root){
           <div class="sumrow"><span class="sk2">Subtotal</span><span class="sv tnum">${money(sub+discGiven)}</span></div>
           <div class="sumrow disc"><span class="sk2">Discount given</span><span class="sv tnum">−${money(discGiven)}</span></div>
           <div class="sumrow"><span class="sk2">Shipping</span><span class="sv tnum">${money(d.shipping)}</span></div>
-          <div class="sumrow"><span class="sk2">Tax (6% GST)</span><span class="sv tnum">${money(tax)}</span></div>
+          <div class="sumrow"><span class="sk2">Tax (${Math.round(d.taxRate*100)}% ${(DB.company&&DB.company.taxRegime)||'GST'})</span><span class="sv tnum">${money(tax)}</span></div>
           <div class="sumrow total"><span class="sk2">Invoice total</span><span class="sv tnum">${money(total)}</span></div>
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">Payment status</div>

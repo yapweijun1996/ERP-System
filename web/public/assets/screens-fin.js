@@ -305,6 +305,25 @@ SCREENS['sales-order'] = function(root){
   };
   const creditUsed=c.balance+total, creditPct=Math.round(creditUsed/c.limit*100), overLimit=creditUsed>c.limit;
 
+  /* status-aware stepper: Closed/Invoiced orders show the full chain as done */
+  const STEP_LABELS=[ts('Draft'),t('appr.step.submitted'),ts('Pending Approval'),ts('Approved'),t('doc.step.delivered'),t('doc.step.invoiced')];
+  const stepIdx=({'Draft':0,'Submitted':1,'Pending Approval':2,'Approved':3,'Delivered':4,'Invoiced':6,'Closed':6})[d.status]??2;
+  const stepperHtml=`<div class="stepper">${STEP_LABELS.map((s,i)=>{
+    const cls=i<stepIdx?'done':(i===stepIdx?'current':'');
+    const dot=i<stepIdx?ic('check'):(i===stepIdx?ic('clock'):'');
+    return `<div class="step ${cls}"><span class="sdot">${dot}</span>${esc(s)}</div>`+(i<STEP_LABELS.length-1?`<span class="stepline ${i<stepIdx?'done':''}"></span>`:'');
+  }).join('')}</div>`;
+
+  /* approval alert only when the DATA warrants it (short stock / discount over threshold) */
+  const shortNames=d.lines.filter(l=>l.qty>l.avail).map(l=>l.name);
+  const discLines=d.lines.filter(l=>l.disc>10).map(l=>`${l.disc}% on ${l.name}`);
+  const alertReasons=[
+    ...discLines.map(x=>`a line discount (${x}) exceeds the 10% rep threshold`),
+    ...shortNames.map(n=>`${n} is short on stock`),
+  ];
+  const showAlert=d.status!=='Closed'&&d.status!=='Invoiced'&&alertReasons.length>0;
+  const taxLabel=`Tax (${Math.round(d.taxRate*100)}% ${(DB.company&&DB.company.taxRegime)||'GST'})`;
+
   const lineRows=d.lines.map((l,i)=>{
     const ext=l.qty*l.price*(1-l.disc/100); const short=l.qty>l.avail;
     return `<tr><td class="lineno">${i+1}</td>
@@ -323,14 +342,7 @@ SCREENS['sales-order'] = function(root){
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(t('doc.custref'))} ${esc(d.ref)} · ${esc(t('doc.owner'))} ${esc(d.owner)}</div></div>
         <div class="dactions">${statusBadge(d.status)}${btn(t('common.print'),{icon:'print',cls:'soft'})}<button class="btn soft sm" id="soMoreBtn" data-tip="More actions" aria-haspopup="menu" aria-expanded="false" aria-label="More actions">${ic('more')}<span>${esc(t('usr.more'))}</span></button></div>
       </div>
-      <div class="stepper">
-        <div class="step done"><span class="sdot">${ic('check')}</span>${esc(ts('Draft'))}</div><span class="stepline done"></span>
-        <div class="step done"><span class="sdot">${ic('check')}</span>${esc(t('appr.step.submitted'))}</div><span class="stepline done"></span>
-        <div class="step current"><span class="sdot">${ic('clock')}</span>${esc(ts('Pending Approval'))}</div><span class="stepline"></span>
-        <div class="step"><span class="sdot"></span>${esc(ts('Approved'))}</div><span class="stepline"></span>
-        <div class="step"><span class="sdot"></span>${esc(t('doc.step.delivered'))}</div><span class="stepline"></span>
-        <div class="step"><span class="sdot"></span>${esc(t('doc.step.invoiced'))}</div>
-      </div>
+      ${stepperHtml}
       <div class="docmeta">
         <div class="dm"><small>${esc(t('common.customer'))}</small><div class="partner"><span class="pav">MR</span><b>${esc(c.name)}</b></div></div>
         <div class="dm"><small>${esc(t('so.col.date'))}</small><b>${esc(d.date)}</b></div>
@@ -344,8 +356,8 @@ SCREENS['sales-order'] = function(root){
       </div>
     </div>
 
-    <div class="alert warn" style="margin:0 0 14px"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="grow"><b>${esc(t('doc.so.alert'))}</b> ${esc(t('doc.so.alert2'))}</span></div>
+    ${showAlert?`<div class="alert warn" style="margin:0 0 14px"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span class="grow"><b>${esc(t('doc.so.alert'))}</b> ${esc(alertReasons.join(', and '))}.</span></div>`:''}
 
     <div class="doclayout">
       <div class="docmain">
@@ -380,7 +392,7 @@ SCREENS['sales-order'] = function(root){
           <div class="sumrow"><span class="sk2">${esc(t('doc.sub.afterdisc'))}</span><span class="sv tnum">${money(d.lines.reduce((s,l)=>s+l.qty*l.price,0))}</span></div>
           <div class="sumrow disc"><span class="sk2">${esc(t('doc.discgiven'))}</span><span class="sv tnum">−${money(d.lines.reduce((s,l)=>s+l.qty*l.price*(l.disc/100),0))}</span></div>
           <div class="sumrow"><span class="sk2">${esc(t('doc.shipping'))}</span><span class="sv tnum">${money(d.shipping)}</span></div>
-          <div class="sumrow"><span class="sk2">${esc(t('appr.tax'))}</span><span class="sv tnum">${money(tax)}</span></div>
+          <div class="sumrow"><span class="sk2">${esc(taxLabel)}</span><span class="sv tnum">${money(tax)}</span></div>
           <div class="sumrow total"><span class="sk2">${esc(t('col.total'))}</span><span class="sv tnum">${money(total)}</span></div>
         </div>
         <div class="sumcard">

@@ -365,7 +365,9 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .mobtopbar{display:none;}
 
 @media (max-width:980px){
-  .app{grid-template-columns:1fr;}
+  /* .app.nav-collapsed (specificity 0,2,0) would beat the plain .app rule below and
+     leave a phantom 68px sidebar column on phones — pin both to a single column. */
+  .app,.app.nav-collapsed{grid-template-columns:1fr;}
   .sidebar{display:none;}
   .main{height:100dvh;padding-bottom:calc(58px + env(safe-area-inset-bottom));}
   .topbar{padding:10px 14px;}
