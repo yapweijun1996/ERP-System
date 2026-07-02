@@ -21,20 +21,25 @@ The demo frontend must be static-hosting friendly. It cannot rely on a Node serv
 server rewrites, cookies from a backend, or production-only secrets. It should use mock
 or sample data only.
 
-### Current Aria bridge
+### Current Aria bridge (Phase 2 — PGlite-backed)
 
-The cloned Aria ERP frontend is currently a classic-script app. Until its boot path is
-made async, the public demo uses `web/public/assets/erp-system-data-adapter.js` as a
-bridge:
+The cloned Aria ERP frontend is a classic-script app. `web/public/assets/erp-system-data-adapter.js`
+now boots the CANONICAL demo database in PGlite (persisted to IndexedDB at
+`idb://erp-system-demo`) and reads all screen data back with async SQL:
 
 ```
-Aria sample files -> erp-system-data-adapter.js -> Aria DB object -> screens
+web/public/db/erp-system-schema.sql    (byte copy of drizzle/0000_init.sql)
+web/public/db/erp-system-seed.sql      (SQL form of src/data/seed.ts)
+web/public/db/erp-system-demo-txn.sql  (SQL form of the src/demo.ts SO-1 chain)
+        │  exec on first boot (or after reset)
+        ▼
+PGlite (idb://erp-system-demo) -> async SQL reads -> Aria DB object -> screens
 ```
 
-That adapter mirrors `src/data/seed.ts` and the `src/demo.ts` sales transaction proof
-into the existing Aria `DB` contract. It is not the final storage adapter. The next data
-layer step is to replace the mirror values with PGlite query results and add reset
-reseeding.
+`app.js` defers UI boot until `window.ErpSystemDemoReady` resolves. If the PGlite
+WASM (loaded from CDN) is unreachable — e.g. fully offline — the adapter falls back
+to a static payload carrying the SAME canonical values, and `DB.erpSystem.dataMode`
+records `'fallback'` instead of `'pglite'`.
 
 ## 2. Build & run
 
@@ -50,10 +55,10 @@ The demo also ships as an installable PWA shell; see [PWA.md](PWA.md).
 
 - Canonical seed lives in `src/data/seed.ts` and the Drizzle schema under
   `src/data/schema/`.
-- The current Aria bridge mirrors that seed in `web/public/assets/erp-system-data-adapter.js`
-  so the cloned layout can render before async PGlite boot is wired in.
-- Seeded once per browser (guarded by a `seeded` flag in IndexedDB).
-- "Reset demo" button clears IndexedDB and re-seeds.
+- The Aria bridge executes the generated SQL copies under `web/public/db/` in PGlite
+  and maps async query results into the Aria `DB` contract.
+- Seeded once per browser (guarded by the presence of the `master` row in PGlite).
+- Settings → Demo data → "Reset demo data" drops the schema and reseeds on reload.
 - Keep the dataset **small** — a few hundred to a few thousand rows. The demo proves the
   UI and flows, not scale.
 - UI layout may use temporary mock data while a page is being built, but completed demo

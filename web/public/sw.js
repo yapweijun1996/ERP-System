@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v1';
+const CACHE_VERSION = 'erp-system-pwa-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -74,7 +74,10 @@ const staticUrls = [
   './assets/screens-inv-new.js',
   './assets/screens-activity.js',
   './assets/app.js',
-  './assets/pwa.js'
+  './assets/pwa.js',
+  './db/erp-system-schema.sql',
+  './db/erp-system-seed.sql',
+  './db/erp-system-demo-txn.sql'
 ];
 
 self.addEventListener('install', (event) => {

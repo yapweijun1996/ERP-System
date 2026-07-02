@@ -120,10 +120,19 @@ SCREENS['settings'] = function(root, params){
       ${s[3]?cap('This device','accent'):btn('Revoke',{cls:'plain',attrs:`data-revoke="${i}"`})}</div>`).join('')}
     <div class="set-row">${btn('Sign out all other sessions',{icon:'signout',cls:'soft',attrs:'data-act="signout-all"'})}</div>`);
 
+  /* ---- DEMO DATA (ERP-System canonical PGlite seed) ---- */
+  const demoInfo=(DB.erpSystem&&DB.erpSystem.dataMode==='pglite')
+    ? 'PGlite · in-browser PostgreSQL persisted to IndexedDB'
+    : 'Static fallback · PGlite unavailable in this session';
+  const demoData=panel('set-demo','box','Demo data',`
+    ${row('Data source',esc(demoInfo),cap(DB.erpSystem&&DB.erpSystem.dataMode==='pglite'?'PGlite':'Fallback',DB.erpSystem&&DB.erpSystem.dataMode==='pglite'?'ok':'warn'))}
+    ${row('Reset demo data','Drops the canonical demo database and reseeds it (companies, products, tax rules, the SO-1 transaction chain) on reload.',btn('Reset demo data',{icon:'refresh',cls:'soft',attrs:'data-act="demo-reset"'}))}`);
+
   const railItems=[
     ['set-profile','user','Profile'],['set-appearance','sun','Appearance'],
     ['set-notifications','bell','Notifications'],['set-localization','location','Language & region'],
     ['set-defaults','sliders','Defaults'],['set-security','lock','Security'],
+    ['set-demo','box','Demo data'],
   ];
 
   root.innerHTML=`<div class="content full"><section class="master" data-screen-label="Settings">
@@ -137,7 +146,7 @@ SCREENS['settings'] = function(root, params){
         ${railItems.map((r,i)=>`<button class="set-navitem ${i===0?'on':''}" data-target="${r[0]}">${ic(r[1])}<span>${r[2]}</span></button>`).join('')}
       </nav>
       <div class="set-scroll"><div class="set-page">
-        ${profile}${appearance}${notifications}${localization}${defaults}${security}
+        ${profile}${appearance}${notifications}${localization}${defaults}${security}${demoData}
       </div></div>
     </div>
     <div class="set-savebar">
@@ -232,6 +241,12 @@ SCREENS['settings'] = function(root, params){
   const rmph=root.querySelector('[data-act="rmphoto"]'); rmph&&rmph.addEventListener('click',()=>toast('Photo removed','info'));
   root.querySelector('[data-act="save"]').addEventListener('click',()=>toast('Settings saved','ok'));
   root.querySelector('[data-act="reset"]').addEventListener('click',()=>toast('Changes reset','info'));
+  root.querySelector('[data-act="demo-reset"]').addEventListener('click',()=>{
+    if(!window.ErpSystemDemo){ toast('Demo adapter not loaded','warn'); return; }
+    if(!confirm('Reset demo data? The in-browser database is dropped and the canonical sample data is reseeded on reload.')) return;
+    toast('Resetting demo data…','info');
+    window.ErpSystemDemo.reset();
+  });
 
   spy();
 

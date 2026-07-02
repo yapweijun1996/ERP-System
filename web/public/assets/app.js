@@ -556,4 +556,8 @@ function handleHotkey(e){
   if(k==='n'||k==='N'){ e.preventDefault(); togglePop('notifMenu',$('#bellBtn')); return; }
   if(k==='D'){ e.preventDefault(); toggleTheme(); return; }
 }
-document.addEventListener('DOMContentLoaded',boot);
+/* Defer boot until the ERP-System demo adapter has loaded canonical data from
+   PGlite (or applied its offline fallback) — see erp-system-data-adapter.js. */
+document.addEventListener('DOMContentLoaded',()=>{
+  (window.ErpSystemDemoReady||Promise.resolve()).then(boot);
+});

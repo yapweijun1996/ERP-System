@@ -1,252 +1,504 @@
 /* ============================================================
-   ERP-System data adapter
-   Maps this repository's canonical demo seed into the user-owned
-   Aria ERP static UI contract without changing the layout.
+   ERP-System data adapter — Phase 2 (TASK-002)
 
-   Source of truth mirrored here:
-   - src/data/seed.ts
-   - src/demo.ts sales confirmation proof
+   Boots the CANONICAL demo database in PGlite (in-browser
+   PostgreSQL, persisted to IndexedDB at idb://erp-system-demo):
+
+     web/public/db/erp-system-schema.sql   (copy of drizzle/0000_init.sql)
+     web/public/db/erp-system-seed.sql     (SQL form of src/data/seed.ts)
+     web/public/db/erp-system-demo-txn.sql (SQL form of the src/demo.ts
+                                            confirmed-order chain)
+
+   then READS the data back with async SQL and maps it into the
+   user-owned Aria ERP `DB` contract. The numbers on screen come
+   from the database, not from literals in this file.
+
+   Fallback: if PGlite (CDN WASM) cannot load — e.g. offline —
+   a static payload with the SAME canonical values keeps the demo
+   rendering. `DB.erpSystem.dataMode` records which path ran.
+
+   app.js defers boot until `window.ErpSystemDemoReady` resolves.
+   `window.ErpSystemDemo.reset()` drops the schema and reloads,
+   which reseeds the canonical sample data on next boot.
    ============================================================ */
-(function applyErpSystemDemoData(){
+(function erpSystemDataAdapter(){
   if (typeof DB === 'undefined') return;
 
-  const scope = { masterFn:'M1', companyFn:'C-SG' };
-  const master = { masterFn:'M1', name:'Acme Group' };
-  const companies = [
-    { companyFn:'C-SG', masterFn:'M1', name:'Acme Singapore', country:'SG', currency:'SGD', taxRegime:'GST', locale:'en' },
-    { companyFn:'C-MY', masterFn:'M1', name:'Acme Malaysia', country:'MY', currency:'MYR', taxRegime:'SST', locale:'ms' },
-  ];
-  const products = [
-    { id:1, masterFn:'M1', companyFn:'C-SG', sku:'SG-WIDGET', name:'Widget (SG)', uom:'unit', onHand:95, alloc:0, reorder:20, roq:100, cost:6.5, price:10 },
-    { id:2, masterFn:'M1', companyFn:'C-SG', sku:'SG-GADGET', name:'Gadget (SG)', uom:'box', onHand:97, alloc:0, reorder:20, roq:100, cost:13, price:20 },
-    { id:3, masterFn:'M1', companyFn:'C-MY', sku:'MY-WIDGET', name:'Widget (MY)', uom:'unit', onHand:50, alloc:0, reorder:15, roq:80, cost:7, price:12 },
-  ];
-  const customers = [
-    { id:1, masterFn:'M1', companyFn:'C-SG', code:'CUST1', name:'Beta Pte Ltd', terms:'Net 30', limit:50000, balance:119.90, overdue:0, status:'Active' },
-  ];
-  const accounts = [
-    { id:1, masterFn:'M1', companyFn:'C-SG', code:'1100', name:'Accounts Receivable', type:'asset' },
-    { id:2, masterFn:'M1', companyFn:'C-SG', code:'4000', name:'Revenue', type:'income' },
-    { id:3, masterFn:'M1', companyFn:'C-SG', code:'2200', name:'GST Output Tax', type:'liability' },
-  ];
-  const taxRules = [
-    { masterFn:'M1', companyFn:'C-SG', taxRegime:'GST', taxCode:'SR', rate:8, validFrom:'2023-01-01', validTo:'2024-01-01' },
-    { masterFn:'M1', companyFn:'C-SG', taxRegime:'GST', taxCode:'SR', rate:9, validFrom:'2024-01-01', validTo:null },
-    { masterFn:'M1', companyFn:'C-MY', taxRegime:'SST', taxCode:'SV', rate:8, validFrom:'2025-07-01', validTo:null },
-  ];
+  var PGLITE_URL = 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite/dist/index.js';
+  var PG_DATA_DIR = 'idb://erp-system-demo';
+  var PG_IDB_NAME = '/pglite/erp-system-demo';
+  var BOOT_TIMEOUT_MS = 20000;
+  var SCOPE = { masterFn: 'M1', companyFn: 'C-SG' };
 
-  const activeCompany = companies[0];
-  const beta = customers[0];
-  const widget = products[0];
-  const gadget = products[1];
-  const orderLines = [
-    { item:widget.sku, name:widget.name, qty:5, uom:widget.uom, price:10, disc:0, avail:widget.onHand },
-    { item:gadget.sku, name:gadget.name, qty:3, uom:gadget.uom, price:20, disc:0, avail:gadget.onHand },
-  ];
-  const orderNet = 110;
-  const orderTax = 9.90;
-  const orderTotal = 119.90;
+  /* db/*.sql lives next to assets/ — resolve relative to this script so the
+     GitHub Pages base path (/<repo>/) needs no configuration. */
+  var DB_BASE = (function(){
+    try { return new URL('../db/', document.currentScript.src).href; }
+    catch (e) { return 'db/'; }
+  })();
 
-  DB.erpSystem = {
-    source:'ERP-System canonical demo seed',
-    schema:'src/data/schema',
-    seed:'src/data/seed.ts',
-    transactionProof:'src/demo.ts',
-    dataMode:'demo-adapter',
-    scope,
-    master,
-    companies,
-    products,
-    customers,
-    accounts,
-    taxRules,
-  };
+  var state = { db: null, mode: 'pending' };
 
-  DB.company = {
-    name:activeCompany.name,
-    branch:'Singapore HQ',
-    currency:activeCompany.currency,
-    period:'FY2026 · P06',
-    periodLabel:'June 2026',
-    env:'DEMO',
-  };
-  DB.user = {
-    name:'Admin',
-    email:'admin@acme.co',
-    initials:'AD',
-    role:'Superadmin',
-    perms:{ post:true, approve:true, salaryView:false, costView:true },
-  };
-  const currencySymbols = { SGD:'S$', MYR:'RM', USD:'$' };
-  money = function erpSystemMoney(n, cur){
-    if(n==null) return '-';
-    const code = cur || DB.company.currency || 'SGD';
-    const symbol = currencySymbols[code] || (code + ' ');
-    return symbol + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
-  };
-  money0 = function erpSystemMoney0(n){
-    const symbol = currencySymbols[DB.company.currency] || (DB.company.currency + ' ');
-    return symbol + Math.round(n).toLocaleString('en-US');
-  };
+  /* ---------------- PGlite boot ---------------- */
 
-  DB.items = products
-    .filter((p)=>p.companyFn===activeCompany.companyFn)
-    .map((p)=>({
-      sku:p.sku,
-      name:p.name,
-      cat:'Finished Goods',
-      uom:p.uom,
-      onHand:p.onHand,
-      alloc:p.alloc,
-      reorder:p.reorder,
-      roq:p.roq,
-      cost:p.cost,
-      status:p.onHand <= p.reorder ? 'Reorder' : 'In stock',
-      bins:[[p.sku==='SG-WIDGET'?'SG-A-01':'SG-A-02', p.onHand]],
-    }));
-  DB.customers = customers.map((c)=>({
-    code:c.code,
-    name:c.name,
-    terms:c.terms,
-    limit:c.limit,
-    balance:c.balance,
-    overdue:c.overdue,
-    status:c.status,
-  }));
+  function fetchSql(name){
+    return fetch(DB_BASE + name).then(function(r){
+      if (!r.ok) throw new Error('fetch ' + name + ' -> HTTP ' + r.status);
+      return r.text();
+    });
+  }
 
-  DB.soNow = '2026-06-28';
-  DB.salesOrders = [
-    { no:'SO-1', cust:beta.name, custCode:beta.code, date:'2024-06-01', deliver:'2024-06-03', status:'Closed', total:orderTotal, currency:'SGD', owner:'Admin', items:2, done:2, posted:true, payStatus:'Unpaid' },
-    { no:'SO-DRAFT-1', cust:beta.name, custCode:beta.code, date:'2026-06-28', deliver:'2026-07-02', status:'Draft', total:110, currency:'SGD', owner:'Admin', items:2, done:0, posted:false, payStatus:'-' },
-  ];
-  DB.so0418 = {
-    no:'SO-1',
-    cust:DB.customers[0],
-    date:'2024-06-01',
-    deliver:'2024-06-03',
-    ref:'Canonical demo transaction',
-    status:'Closed',
-    owner:'Admin',
-    warehouse:'WH-SALES',
-    currency:'SGD',
-    rate:1,
-    terms:'Net 30',
-    lines:orderLines,
-    discountPct:0,
-    shipping:0,
-    taxRate:0.09,
-    billTo:{ name:beta.name, line1:'Singapore demo billing address', line2:'', city:'Singapore', state:'', post:'000000', country:'Singapore', contact:'Accounts Payable', email:'ap@beta.example', tax:'GST demo' },
-    shipTo:{ name:beta.name, line1:'Singapore demo warehouse', line2:'', city:'Singapore', state:'', post:'000000', country:'Singapore', contact:'Goods Inwards', email:'receiving@beta.example' },
-    note:'Confirmed by ERP-System demo transaction: stock, invoice and GL are committed atomically.',
-    memo:'Net S$110.00 + 9% GST S$9.90 = S$119.90.',
-  };
-  DB.quote0188 = {
-    no:'Q-1', cust:beta.name, code:beta.code, owner:'Admin',
-    date:'Jun 1, 2024', valid:'Jun 15, 2024', status:'Converted', terms:'Net 30', currency:'SGD', taxRate:0.09, shipping:0,
-    contact:{ name:'Accounts Payable', role:'Finance', email:'ap@beta.example' },
-    lines:orderLines,
-  };
-  DB.delivery0204 = {
-    no:'DO-1', so:'SO-1', cust:beta.name, code:beta.code,
-    date:'Jun 2, 2024', warehouse:'WH-SALES', carrier:'Demo delivery', tracking:'DEMO-DO-1', weight:'-', packages:1, status:'Delivered', eta:'Jun 3, 2024', picker:'Admin',
-    lines:orderLines.map((l)=>({ item:l.item, name:l.name, ordered:l.qty, delivered:l.qty, uom:l.uom })),
-  };
-  DB.invoice0331 = {
-    no:'INV-SO-1', so:'SO-1', do:'DO-1', cust:beta.name, code:beta.code,
-    date:'Jun 1, 2024', due:'Jul 1, 2024', terms:'Net 30', currency:'SGD', taxRate:0.09, shipping:0,
-    status:'Posted', paid:0, owner:'Admin', custBalance:orderTotal, custLimit:beta.limit,
-    lines:orderLines,
-  };
-  DB.quotations = [
-    { no:'Q-1', date:'2024-06-01', cust:beta.name, custCode:beta.code, valid:'2024-06-15', owner:'Admin', total:orderTotal, prob:100, status:'Converted', doc:true },
-  ];
-  DB.deliveries = [
-    { no:'DO-1', date:'2024-06-02', cust:beta.name, custCode:beta.code, so:'SO-1', warehouse:'WH-SALES', carrier:'Demo delivery', items:2, done:2, status:'Delivered', doc:true },
-  ];
-  DB.salesInvoices = [
-    { no:'INV-SO-1', date:'2024-06-01', due:'2024-07-01', cust:beta.name, custCode:beta.code, so:'SO-1', total:orderTotal, paid:0, status:'Posted', doc:true },
-  ];
-  DB.enquiries = [
-    { no:'ENQ-1', date:'2026-06-28', cust:beta.name, custCode:beta.code, subject:'Demo reorder enquiry', channel:'Demo', owner:'Admin', value:110, status:'New' },
-  ];
+  async function ensureSeeded(db){
+    var t = await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name='master'");
+    var seeded = false;
+    if (t.rows[0].n > 0) {
+      var m = await db.query('select count(*)::int as n from master');
+      seeded = m.rows[0].n > 0;
+    }
+    if (seeded) return false;
+    var schema = await fetchSql('erp-system-schema.sql');
+    var seed = await fetchSql('erp-system-seed.sql');
+    var txn = await fetchSql('erp-system-demo-txn.sql');
+    await db.exec(schema);
+    await db.exec(seed);
+    await db.exec(txn);
+    return true;
+  }
 
-  DB.movements = [
-    { no:'SM-SO-1-1', date:'2024-06-01 09:00', item:widget.sku, name:widget.name, type:'Goods Issue', ref:'SO-1', qty:-5, bal:95, by:'System', wh:'WH-SALES' },
-    { no:'SM-SO-1-2', date:'2024-06-01 09:00', item:gadget.sku, name:gadget.name, type:'Goods Issue', ref:'SO-1', qty:-3, bal:97, by:'System', wh:'WH-SALES' },
-  ];
-  DB.valuation = [
-    { cat:'Finished Goods', items:DB.items.map((it)=>({ sku:it.sku, name:it.name, qty:it.onHand, cost:it.cost })) },
-  ];
+  /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
+  async function readPayload(db){
+    async function rows(sql){ return (await db.query(sql)).rows; }
+    /* alias-qualified tenant scope, safe inside joins */
+    function w(a){ return a + ".master_fn='" + SCOPE.masterFn + "'"; }
+    function wc(a){ return w(a) + " and " + a + ".company_fn='" + SCOPE.companyFn + "'"; }
 
-  DB.coa = [
-    { grp:'Assets', accts:[{ code:'1100', name:'Accounts Receivable', mvt:orderTotal, bal:orderTotal, dc:'Dr' }] },
-    { grp:'Liabilities', accts:[{ code:'2200', name:'GST Output Tax', mvt:orderTax, bal:orderTax, dc:'Cr' }] },
-    { grp:'Income', accts:[{ code:'4000', name:'Revenue', mvt:orderNet, bal:orderNet, dc:'Cr' }] },
-  ];
-  DB.journals = [
-    { no:'INV-SO-1', date:'2024-06-01', memo:'Post sales invoice SO-1', status:'Posted', dr:orderTotal, period:'P06', by:'System' },
-  ];
-  DB.je0611 = {
-    no:'INV-SO-1', date:'2024-06-01', memo:'Post sales invoice SO-1', period:'P06', status:'Posted', by:'System', source:'Sales confirmation',
-    lines:[
-      { acct:'1100', name:'Accounts Receivable', dr:orderTotal, cr:0, dim:beta.name },
-      { acct:'4000', name:'Revenue', dr:0, cr:orderNet, dim:'Sales' },
-      { acct:'2200', name:'GST Output Tax', dr:0, cr:orderTax, dim:'GST' },
-    ],
+    var master = (await rows("select master_fn, name from master order by master_fn limit 1"))[0];
+    var companies = await rows(
+      "select company_fn, master_fn, name, country, currency, tax_regime, locale " +
+      "from company where " + w('company') + " order by company_fn");
+    var products = await rows(
+      "select p.id, p.company_fn, p.sku, p.name, p.uom, coalesce(sum(s.qty),0)::float as on_hand " +
+      "from product p left join stock_level s on s.product_id = p.id " +
+      "where " + w('p') + " group by p.id, p.company_fn, p.sku, p.name, p.uom order by p.id");
+    var customers = await rows(
+      "select c.id, c.code, c.name, coalesce(sum(case when i.status='unpaid' then i.total_amount end),0)::float as balance " +
+      "from customer c left join invoice i on i.customer_id = c.id " +
+      "where " + wc('c') + " group by c.id, c.code, c.name order by c.id");
+    var accounts = await rows(
+      "select a.id, a.code, a.name, a.type, coalesce(sum(g.debit),0)::float as debit, " +
+      "coalesce(sum(g.credit),0)::float as credit " +
+      "from account a left join gl_entry g on g.account_id = a.id " +
+      "where " + wc('a') + " group by a.id, a.code, a.name, a.type order by a.code");
+    var taxRules = await rows(
+      "select company_fn, tax_regime, tax_code, rate::float as rate, valid_from::text as valid_from, " +
+      "valid_to::text as valid_to from tax_rule where " + w('tax_rule') + " order by company_fn, tax_code, valid_from");
+    var orders = await rows(
+      "select o.id, o.doc_no, o.status, o.order_date::text as order_date, o.currency, " +
+      "o.net_amount::float as net, o.tax_amount::float as tax, o.total_amount::float as total, " +
+      "c.name as customer, c.code as customer_code, " +
+      "(select count(*)::int from sales_order_line l where l.order_id = o.id) as line_count " +
+      "from sales_order o join customer c on c.id = o.customer_id " +
+      "where " + wc('o') + " order by o.id");
+    var orderLines = await rows(
+      "select l.order_id, l.line_no, p.sku, p.name, p.uom, l.qty::float as qty, " +
+      "l.unit_price::float as unit_price, l.net_amount::float as net, " +
+      "l.tax_rate::float as tax_rate, l.tax_amount::float as tax, " +
+      "coalesce((select sum(s.qty) from stock_level s where s.product_id = p.id),0)::float as avail " +
+      "from sales_order_line l join product p on p.id = l.product_id " +
+      "where " + wc('l') + " order by l.order_id, l.line_no");
+    var invoices = await rows(
+      "select i.doc_no, i.status, i.invoice_date::text as invoice_date, i.currency, " +
+      "i.net_amount::float as net, i.tax_amount::float as tax, i.total_amount::float as total, " +
+      "c.name as customer, c.code as customer_code, o.doc_no as order_no " +
+      "from invoice i join customer c on c.id = i.customer_id " +
+      "join sales_order o on o.id = i.order_id where " + wc('i') + " order by i.id");
+    var glLegs = await rows(
+      "select g.journal_ref, a.code, a.name, g.debit::float as debit, g.credit::float as credit, g.memo " +
+      "from gl_entry g join account a on a.id = g.account_id " +
+      "where " + wc('g') + " order by g.id");
+    var movements = await rows(
+      "select m.id, m.qty::float as qty, m.direction, m.ref_type, m.ref_id, m.moved_at::text as moved_at, " +
+      "p.sku, p.name, w.code as warehouse " +
+      "from stock_movement m join product p on p.id = m.product_id " +
+      "join warehouse w on w.id = m.warehouse_id where " + wc('m') + " order by m.id");
+
+    return { master: master, companies: companies, products: products, customers: customers,
+             accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
+             invoices: invoices, glLegs: glLegs, movements: movements };
+  }
+
+  /* ---------------- static fallback (same canonical values) ---------------- */
+
+  function fallbackPayload(){
+    var lines = [
+      { order_id: 1, line_no: 1, sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', qty: 5, unit_price: 10, net: 50, tax_rate: 9, tax: 4.5, avail: 95 },
+      { order_id: 1, line_no: 2, sku: 'SG-GADGET', name: 'Gadget (SG)', uom: 'box', qty: 3, unit_price: 20, net: 60, tax_rate: 9, tax: 5.4, avail: 97 },
+    ];
+    return {
+      master: { master_fn: 'M1', name: 'Acme Group' },
+      companies: [
+        { company_fn: 'C-SG', master_fn: 'M1', name: 'Acme Singapore', country: 'SG', currency: 'SGD', tax_regime: 'GST', locale: 'en' },
+        { company_fn: 'C-MY', master_fn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', tax_regime: 'SST', locale: 'ms' },
+      ],
+      products: [
+        { id: 1, company_fn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', on_hand: 95 },
+        { id: 2, company_fn: 'C-SG', sku: 'SG-GADGET', name: 'Gadget (SG)', uom: 'box', on_hand: 97 },
+        { id: 3, company_fn: 'C-MY', sku: 'MY-WIDGET', name: 'Widget (MY)', uom: 'unit', on_hand: 0 },
+      ],
+      customers: [{ id: 1, code: 'CUST1', name: 'Beta Pte Ltd', balance: 119.9 }],
+      accounts: [
+        { id: 1, code: '1100', name: 'Accounts Receivable', type: 'asset', debit: 119.9, credit: 0 },
+        { id: 3, code: '2200', name: 'GST Output Tax', type: 'liability', debit: 0, credit: 9.9 },
+        { id: 2, code: '4000', name: 'Revenue', type: 'income', debit: 0, credit: 110 },
+      ],
+      taxRules: [
+        { company_fn: 'C-MY', tax_regime: 'SST', tax_code: 'SV', rate: 8, valid_from: '2025-07-01', valid_to: null },
+        { company_fn: 'C-SG', tax_regime: 'GST', tax_code: 'SR', rate: 8, valid_from: '2023-01-01', valid_to: '2024-01-01' },
+        { company_fn: 'C-SG', tax_regime: 'GST', tax_code: 'SR', rate: 9, valid_from: '2024-01-01', valid_to: null },
+      ],
+      orders: [{ id: 1, doc_no: 'SO-1', status: 'confirmed', order_date: '2024-06-01', currency: 'SGD',
+                 net: 110, tax: 9.9, total: 119.9, customer: 'Beta Pte Ltd', customer_code: 'CUST1', line_count: 2 }],
+      orderLines: lines,
+      invoices: [{ doc_no: 'INV-SO-1', status: 'unpaid', invoice_date: '2024-06-01', currency: 'SGD',
+                   net: 110, tax: 9.9, total: 119.9, customer: 'Beta Pte Ltd', customer_code: 'CUST1', order_no: 'SO-1' }],
+      glLegs: [
+        { journal_ref: 'INV-SO-1', code: '1100', name: 'Accounts Receivable', debit: 119.9, credit: 0, memo: 'AR' },
+        { journal_ref: 'INV-SO-1', code: '4000', name: 'Revenue', debit: 0, credit: 110, memo: 'Revenue' },
+        { journal_ref: 'INV-SO-1', code: '2200', name: 'GST Output Tax', debit: 0, credit: 9.9, memo: 'Output tax' },
+      ],
+      movements: [
+        { id: 1, qty: 5, direction: 'out', ref_type: 'sales_order', ref_id: 1, moved_at: '2024-06-01 09:00', sku: 'SG-WIDGET', name: 'Widget (SG)', warehouse: 'WH-SALES' },
+        { id: 2, qty: 3, direction: 'out', ref_type: 'sales_order', ref_id: 1, moved_at: '2024-06-01 09:00', sku: 'SG-GADGET', name: 'Gadget (SG)', warehouse: 'WH-SALES' },
+      ],
+    };
+  }
+
+  /* ---------------- payload → Aria DB mapping ---------------- */
+
+  function applyData(d, mode){
+    state.mode = mode;
+    var activeCompany = d.companies.filter(function(c){ return c.company_fn === SCOPE.companyFn; })[0] || d.companies[0];
+    var beta = d.customers[0];
+    var confirmed = d.orders.filter(function(o){ return o.status === 'confirmed'; });
+    var so = confirmed[0] || d.orders[0];
+    var inv = d.invoices[0];
+    var soLines = so ? d.orderLines.filter(function(l){ return l.order_id === so.id; }) : [];
+    var orderNet = so ? so.net : 0;
+    var orderTax = so ? so.tax : 0;
+    var orderTotal = so ? so.total : 0;
+
+    DB.erpSystem = {
+      source: 'ERP-System canonical demo seed',
+      schema: 'src/data/schema (drizzle/0000_init.sql)',
+      seed: 'web/public/db/erp-system-seed.sql (mirrors src/data/seed.ts)',
+      transactionProof: 'web/public/db/erp-system-demo-txn.sql (mirrors src/demo.ts)',
+      dataMode: mode,                          // 'pglite' | 'fallback'
+      scope: SCOPE,
+      master: d.master,
+      companies: d.companies,
+      products: d.products,
+      customers: d.customers,
+      accounts: d.accounts,
+      taxRules: d.taxRules,
+    };
+
+    DB.company = {
+      name: activeCompany.name,
+      branch: 'Singapore HQ',
+      currency: activeCompany.currency,
+      period: 'FY2026 · P06',
+      periodLabel: 'June 2026',
+      env: 'DEMO',
+    };
+    DB.user = {
+      name: 'Admin',
+      email: 'admin@acme.co',
+      initials: 'AD',
+      role: 'Superadmin',
+      perms: { post: true, approve: true, salaryView: false, costView: true },
+    };
+    var currencySymbols = { SGD: 'S$', MYR: 'RM', USD: '$' };
+    money = function erpSystemMoney(n, cur){
+      if (n == null) return '-';
+      var code = cur || DB.company.currency || 'SGD';
+      var symbol = currencySymbols[code] || (code + ' ');
+      return symbol + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+    money0 = function erpSystemMoney0(n){
+      var symbol = currencySymbols[DB.company.currency] || (DB.company.currency + ' ');
+      return symbol + Math.round(n).toLocaleString('en-US');
+    };
+
+    /* presentational-only defaults the canonical schema does not model yet */
+    var display = {
+      'SG-WIDGET': { reorder: 20, roq: 100, cost: 6.5, price: 10, bin: 'SG-A-01' },
+      'SG-GADGET': { reorder: 20, roq: 100, cost: 13, price: 20, bin: 'SG-A-02' },
+    };
+
+    DB.items = d.products
+      .filter(function(p){ return p.company_fn === SCOPE.companyFn; })
+      .map(function(p){
+        var x = display[p.sku] || { reorder: 0, roq: 0, cost: 0, price: 0, bin: 'SG-A-00' };
+        return {
+          sku: p.sku, name: p.name, cat: 'Finished Goods', uom: p.uom,
+          onHand: p.on_hand, alloc: 0, reorder: x.reorder, roq: x.roq, cost: x.cost,
+          status: p.on_hand <= x.reorder ? 'Reorder' : 'In stock',
+          bins: [[x.bin, p.on_hand]],
+        };
+      });
+    DB.customers = d.customers.map(function(c){
+      return { code: c.code, name: c.name, terms: 'Net 30', limit: 50000,
+               balance: c.balance, overdue: 0, status: 'Active' };
+    });
+
+    var uiLines = soLines.map(function(l){
+      return { item: l.sku, name: l.name, qty: l.qty, uom: l.uom, price: l.unit_price, disc: 0, avail: l.avail };
+    });
+
+    DB.soNow = '2026-06-28';
+    DB.salesOrders = d.orders.map(function(o){
+      return { no: o.doc_no, cust: o.customer, custCode: o.customer_code, date: o.order_date,
+               deliver: o.order_date === '2024-06-01' ? '2024-06-03' : o.order_date,
+               status: o.status === 'confirmed' ? 'Closed' : 'Draft',
+               total: o.total, currency: o.currency, owner: 'Admin',
+               items: o.line_count, done: o.status === 'confirmed' ? o.line_count : 0,
+               posted: o.status === 'confirmed', payStatus: o.status === 'confirmed' ? 'Unpaid' : '-' };
+    });
+    /* demo-only draft so approvals/open-order widgets have something pending */
+    DB.salesOrders.push({ no: 'SO-DRAFT-1', cust: beta.name, custCode: beta.code, date: '2026-06-28',
+      deliver: '2026-07-02', status: 'Draft', total: orderNet, currency: activeCompany.currency,
+      owner: 'Admin', items: uiLines.length, done: 0, posted: false, payStatus: '-' });
+
+    DB.so0418 = so ? {
+      no: so.doc_no, cust: DB.customers[0], date: so.order_date, deliver: '2024-06-03',
+      ref: 'Canonical demo transaction', status: 'Closed', owner: 'Admin', warehouse: 'WH-SALES',
+      currency: so.currency, rate: 1, terms: 'Net 30', lines: uiLines, discountPct: 0, shipping: 0,
+      taxRate: soLines.length ? soLines[0].tax_rate / 100 : 0.09,
+      billTo: { name: beta.name, line1: 'Singapore demo billing address', line2: '', city: 'Singapore', state: '', post: '000000', country: 'Singapore', contact: 'Accounts Payable', email: 'ap@beta.example', tax: 'GST demo' },
+      shipTo: { name: beta.name, line1: 'Singapore demo warehouse', line2: '', city: 'Singapore', state: '', post: '000000', country: 'Singapore', contact: 'Goods Inwards', email: 'receiving@beta.example' },
+      note: 'Confirmed by ERP-System demo transaction: stock, invoice and GL are committed atomically.',
+      memo: 'Net ' + money(orderNet) + ' + ' + (soLines.length ? soLines[0].tax_rate : 9) + '% GST ' + money(orderTax) + ' = ' + money(orderTotal) + '.',
+    } : null;
+    DB.quote0188 = so ? {
+      no: 'Q-1', cust: beta.name, code: beta.code, owner: 'Admin',
+      date: 'Jun 1, 2024', valid: 'Jun 15, 2024', status: 'Converted', terms: 'Net 30',
+      currency: so.currency, taxRate: soLines.length ? soLines[0].tax_rate / 100 : 0.09, shipping: 0,
+      contact: { name: 'Accounts Payable', role: 'Finance', email: 'ap@beta.example' },
+      lines: uiLines,
+    } : null;
+    DB.delivery0204 = so ? {
+      no: 'DO-1', so: so.doc_no, cust: beta.name, code: beta.code,
+      date: 'Jun 2, 2024', warehouse: 'WH-SALES', carrier: 'Demo delivery', tracking: 'DEMO-DO-1',
+      weight: '-', packages: 1, status: 'Delivered', eta: 'Jun 3, 2024', picker: 'Admin',
+      lines: uiLines.map(function(l){ return { item: l.item, name: l.name, ordered: l.qty, delivered: l.qty, uom: l.uom }; }),
+    } : null;
+    DB.invoice0331 = inv ? {
+      no: inv.doc_no, so: inv.order_no, do: 'DO-1', cust: inv.customer, code: inv.customer_code,
+      date: 'Jun 1, 2024', due: 'Jul 1, 2024', terms: 'Net 30', currency: inv.currency,
+      taxRate: soLines.length ? soLines[0].tax_rate / 100 : 0.09, shipping: 0,
+      status: 'Posted', paid: 0, owner: 'Admin', custBalance: beta.balance, custLimit: 50000,
+      lines: uiLines,
+    } : null;
+    DB.quotations = so ? [
+      { no: 'Q-1', date: so.order_date, cust: beta.name, custCode: beta.code, valid: '2024-06-15',
+        owner: 'Admin', total: orderTotal, prob: 100, status: 'Converted', doc: true },
+    ] : [];
+    DB.deliveries = so ? [
+      { no: 'DO-1', date: '2024-06-02', cust: beta.name, custCode: beta.code, so: so.doc_no,
+        warehouse: 'WH-SALES', carrier: 'Demo delivery', items: uiLines.length, done: uiLines.length,
+        status: 'Delivered', doc: true },
+    ] : [];
+    DB.salesInvoices = d.invoices.map(function(i){
+      return { no: i.doc_no, date: i.invoice_date, due: '2024-07-01', cust: i.customer,
+               custCode: i.customer_code, so: i.order_no, total: i.total, paid: 0,
+               status: 'Posted', doc: true };
+    });
+    DB.enquiries = [
+      { no: 'ENQ-1', date: '2026-06-28', cust: beta.name, custCode: beta.code,
+        subject: 'Demo reorder enquiry', channel: 'Demo', owner: 'Admin', value: orderNet, status: 'New' },
+    ];
+
+    /* movements: reconstruct running balance per SKU backwards from current on-hand */
+    var onHandBySku = {};
+    d.products.forEach(function(p){ onHandBySku[p.sku] = p.on_hand; });
+    var delta = {};
+    d.movements.forEach(function(m){
+      delta[m.sku] = (delta[m.sku] || 0) + (m.direction === 'out' ? m.qty : -m.qty);
+    });
+    var running = {};
+    Object.keys(delta).forEach(function(sku){ running[sku] = (onHandBySku[sku] || 0) + delta[sku]; });
+    DB.movements = d.movements.map(function(m, i){
+      running[m.sku] += (m.direction === 'out' ? -m.qty : m.qty);
+      return {
+        no: 'SM-' + (m.ref_type === 'sales_order' ? 'SO-' + m.ref_id + '-' + (i + 1) : m.id),
+        date: String(m.moved_at).slice(0, 16).replace('T', ' '),
+        item: m.sku, name: m.name,
+        type: m.direction === 'out' ? 'Goods Issue' : 'Goods Receipt',
+        ref: m.ref_type === 'sales_order' && so ? so.doc_no : (m.ref_type || '-'),
+        qty: m.direction === 'out' ? -m.qty : m.qty,
+        bal: running[m.sku], by: 'System', wh: m.warehouse,
+      };
+    });
+    DB.valuation = [
+      { cat: 'Finished Goods', items: DB.items.map(function(it){ return { sku: it.sku, name: it.name, qty: it.onHand, cost: it.cost }; }) },
+    ];
+
+    /* GL from gl_entry / account aggregates */
+    var typeGroup = { asset: 'Assets', liability: 'Liabilities', equity: 'Equity', income: 'Income', expense: 'Expenses' };
+    var groups = {};
+    d.accounts.forEach(function(a){
+      var g = typeGroup[a.type] || a.type;
+      (groups[g] = groups[g] || []).push({
+        code: a.code, name: a.name,
+        mvt: Math.max(a.debit, a.credit), bal: Math.abs(a.debit - a.credit),
+        dc: a.debit >= a.credit ? 'Dr' : 'Cr',
+      });
+    });
+    DB.coa = Object.keys(groups).map(function(g){ return { grp: g, accts: groups[g] }; });
+
+    var journalRefs = [];
+    d.glLegs.forEach(function(l){ if (journalRefs.indexOf(l.journal_ref) < 0) journalRefs.push(l.journal_ref); });
+    DB.journals = journalRefs.map(function(ref){
+      var legs = d.glLegs.filter(function(l){ return l.journal_ref === ref; });
+      var dr = legs.reduce(function(s, l){ return s + l.debit; }, 0);
+      return { no: ref, date: so ? so.order_date : '', memo: 'Post sales invoice ' + (so ? so.doc_no : ''),
+               status: 'Posted', dr: Math.round(dr * 100) / 100, period: 'P06', by: 'System' };
+    });
+    var firstRef = journalRefs[0];
+    DB.je0611 = firstRef ? {
+      no: firstRef, date: so ? so.order_date : '', memo: 'Post sales invoice ' + (so ? so.doc_no : ''),
+      period: 'P06', status: 'Posted', by: 'System', source: 'Sales confirmation',
+      lines: d.glLegs.filter(function(l){ return l.journal_ref === firstRef; }).map(function(l){
+        return { acct: l.code, name: l.name, dr: l.debit, cr: l.credit,
+                 dim: l.memo === 'AR' ? beta.name : (l.memo === 'Revenue' ? 'Sales' : 'GST') };
+      }),
+    } : null;
+    var ar = d.accounts.filter(function(a){ return a.code === '1100'; })[0];
+    DB.acctLedger = ar ? {
+      code: ar.code, name: ar.name, period: 'FY2026 · P06', open: 0, close: ar.debit - ar.credit,
+      rows: d.glLegs.filter(function(l){ return l.code === '1100'; }).map(function(l){
+        return { date: 'Jun 01', je: l.journal_ref, memo: 'Invoice ' + beta.name, dr: l.debit, cr: l.credit };
+      }),
+    } : null;
+    DB.bankRec = {
+      account: 'Demo operating account', period: 'June 2026', stmtClose: 842000, bookClose: 842000,
+      lines: [{ date: 'Jun 01', desc: 'Opening demo balance', amount: 842000, je: 'OPENING', matched: true }],
+    };
+    DB.pnl = [
+      { grp: 'Revenue', kind: 'head', rows: [{ name: 'Product sales', cur: orderNet, ytd: orderNet, bud: orderNet }], total: 'Net revenue' },
+      { grp: 'Gross profit', kind: 'subtotal' },
+    ];
+    DB.arAging = d.customers.map(function(c){
+      return { cust: c.name, code: c.code, cur: c.balance, b30: 0, b60: 0, b90: 0, b90p: 0 };
+    });
+
+    DB.approvals = [
+      { no: 'SETUP-1', kind: 'Company setup wizard', who: 'Admin', amt: null, age: 'now', risk: 'low', route: 'settings' },
+      { no: 'SO-DRAFT-1', kind: 'Sales Order Draft', who: 'Admin', amt: orderNet, age: 'today', risk: 'low', route: 'sales-orders' },
+    ];
+    DB.notifications = [
+      { id: 'erp1', ic: 'checkc', clr: 'ok', cat: 'system', group: 'today',
+        title: mode === 'pglite' ? 'PGlite demo database ready' : 'ERP-System demo seed loaded (offline fallback)',
+        body: mode === 'pglite'
+          ? 'Canonical schema seeded into in-browser PostgreSQL (IndexedDB).'
+          : 'PGlite unavailable — showing the same canonical values statically.',
+        t: 'now', unread: true, route: 'dashboard' },
+      { id: 'erp2', ic: 'receipt', clr: 'accent', cat: 'finance', group: 'today',
+        title: (inv ? inv.doc_no : 'INV-SO-1') + ' posted',
+        body: money(orderTotal) + ' balanced to AR, revenue and GST output tax.',
+        t: 'now', unread: true, route: 'gl' },
+    ];
+
+    DB.salesByMonth = [
+      { m: 'Jan', val: 0 }, { m: 'Feb', val: 0 }, { m: 'Mar', val: 0 },
+      { m: 'Apr', val: 0 }, { m: 'May', val: 0 }, { m: 'Jun', val: orderNet },
+      { m: 'Jul', val: 220, fc: true }, { m: 'Aug', val: 330, fc: true },
+      { m: 'Sep', val: 440, fc: true }, { m: 'Oct', val: 550, fc: true },
+      { m: 'Nov', val: 660, fc: true }, { m: 'Dec', val: 770, fc: true },
+    ];
+    DB.salesByRep = [{ rep: 'Admin', sales: orderNet, target: 500, deals: 1 }];
+    DB.topCustomers = [{ cust: beta.name, custCode: beta.code, ytd: orderNet, share: 100 }];
+
+    DB.dashboardMetrics = {
+      approvals: DB.approvals.length,
+      glIssues: 0,
+      stockAlerts: DB.items.filter(function(it){ return it.onHand - it.alloc <= it.reorder; }).length,
+      arOpen: DB.salesInvoices.reduce(function(sum, i){ return sum + Math.max(0, i.total - (i.paid || 0)); }, 0),
+      openDeliveries: DB.deliveries.filter(function(dd){ return dd.status !== 'Delivered' && dd.status !== 'Cancelled'; }).length,
+      goodsReceipts: 0,
+      pickTasks: 0,
+      leaveRequests: 0,
+      openOrderValue: DB.salesOrders.filter(function(o){ return o.status !== 'Closed' && o.status !== 'Cancelled'; })
+        .reduce(function(sum, o){ return sum + o.total; }, 0),
+      cash: 842000,
+      mtdSales: orderNet,
+      cleared: 1,
+    };
+
+    document.title = 'ERP System - Acme Singapore Demo';
+  }
+
+  /* ---------------- boot orchestration ---------------- */
+
+  var applied = false;
+  function applyOnce(payload, mode){
+    if (applied) return;
+    applied = true;
+    applyData(payload, mode);
+  }
+
+  async function bootPglite(){
+    var mod = await import(PGLITE_URL);
+    var db = new mod.PGlite(PG_DATA_DIR);
+    state.db = db;
+    var freshlySeeded = await ensureSeeded(db);
+    var payload = await readPayload(db);
+    if (!payload.master) throw new Error('PGlite payload empty (no master row)');
+    applyOnce(payload, 'pglite');
+    console.info('[erp-system] demo data source: PGlite (' + PG_DATA_DIR + ')' +
+      (freshlySeeded ? ' — freshly seeded' : ' — existing IndexedDB data'));
+  }
+
+  var ready = new Promise(function(resolve){
+    var timer = setTimeout(function(){
+      console.warn('[erp-system] PGlite boot exceeded ' + BOOT_TIMEOUT_MS + 'ms — using static fallback.');
+      applyOnce(fallbackPayload(), 'fallback');
+      resolve();
+    }, BOOT_TIMEOUT_MS);
+    bootPglite().then(function(){
+      clearTimeout(timer);
+      resolve();
+    }).catch(function(e){
+      clearTimeout(timer);
+      console.warn('[erp-system] PGlite unavailable — using static fallback.', e && e.message ? e.message : e);
+      applyOnce(fallbackPayload(), 'fallback');
+      resolve();
+    });
+  });
+
+  /* Reset demo: drop the canonical schema and reload — next boot reseeds. */
+  async function reset(){
+    try {
+      if (state.db) {
+        await state.db.exec('drop schema public cascade; create schema public;');
+        await state.db.close();
+      } else if (typeof indexedDB !== 'undefined') {
+        indexedDB.deleteDatabase(PG_IDB_NAME);
+      }
+    } catch (e) {
+      console.warn('[erp-system] reset: drop failed, deleting IndexedDB instead.', e);
+      try { indexedDB.deleteDatabase(PG_IDB_NAME); } catch (e2) {}
+    }
+    location.reload();
+  }
+
+  window.ErpSystemDemo = {
+    ready: ready,
+    reset: reset,
+    get mode(){ return state.mode; },
+    get db(){ return state.db; },
   };
-  DB.acctLedger = {
-    code:'1100', name:'Accounts Receivable', period:'FY2026 · P06', open:0, close:orderTotal,
-    rows:[{ date:'Jun 01', je:'INV-SO-1', memo:'Invoice Beta Pte Ltd', dr:orderTotal, cr:0 }],
-  };
-  DB.bankRec = {
-    account:'Demo operating account', period:'June 2026', stmtClose:842000, bookClose:842000,
-    lines:[{ date:'Jun 01', desc:'Opening demo balance', amount:842000, je:'OPENING', matched:true }],
-  };
-  DB.pnl = [
-    { grp:'Revenue', kind:'head', rows:[{ name:'Product sales', cur:orderNet, ytd:orderNet, bud:orderNet }], total:'Net revenue' },
-    { grp:'Gross profit', kind:'subtotal' },
-  ];
-  DB.arAging = [
-    { cust:beta.name, code:beta.code, cur:orderTotal, b30:0, b60:0, b90:0, b90p:0 },
-  ];
-
-  DB.approvals = [
-    { no:'SETUP-1', kind:'Company setup wizard', who:'Admin', amt:null, age:'now', risk:'low', route:'settings' },
-    { no:'SO-DRAFT-1', kind:'Sales Order Draft', who:'Admin', amt:110, age:'today', risk:'low', route:'sales-orders' },
-  ];
-  DB.notifications = [
-    { id:'erp1', ic:'checkc', clr:'ok', cat:'system', group:'today', title:'ERP-System demo seed loaded', body:'Acme Singapore · GST · SGD · canonical schema mirror.', t:'now', unread:true, route:'dashboard' },
-    { id:'erp2', ic:'receipt', clr:'accent', cat:'finance', group:'today', title:'INV-SO-1 posted', body:'S$119.90 balanced to AR, revenue and GST output tax.', t:'now', unread:true, route:'gl' },
-  ];
-
-  DB.salesByMonth = [
-    { m:'Jan', val:0 }, { m:'Feb', val:0 }, { m:'Mar', val:0 },
-    { m:'Apr', val:0 }, { m:'May', val:0 }, { m:'Jun', val:orderNet },
-    { m:'Jul', val:220, fc:true }, { m:'Aug', val:330, fc:true },
-    { m:'Sep', val:440, fc:true }, { m:'Oct', val:550, fc:true },
-    { m:'Nov', val:660, fc:true }, { m:'Dec', val:770, fc:true },
-  ];
-  DB.salesByRep = [
-    { rep:'Admin', sales:orderNet, target:500, deals:1 },
-  ];
-  DB.topCustomers = [
-    { cust:beta.name, custCode:beta.code, ytd:orderNet, share:100 },
-  ];
-
-  DB.dashboardMetrics = {
-    approvals:DB.approvals.length,
-    glIssues:0,
-    stockAlerts:DB.items.filter((it)=>it.onHand - it.alloc <= it.reorder).length,
-    arOpen:DB.salesInvoices.reduce((sum, inv)=>sum + Math.max(0, inv.total - (inv.paid || 0)), 0),
-    openDeliveries:DB.deliveries.filter((d)=>d.status !== 'Delivered' && d.status !== 'Cancelled').length,
-    goodsReceipts:0,
-    pickTasks:0,
-    leaveRequests:0,
-    openOrderValue:DB.salesOrders.filter((o)=>o.status !== 'Closed' && o.status !== 'Cancelled').reduce((sum, o)=>sum + o.total, 0),
-    cash:842000,
-    mtdSales:orderNet,
-    cleared:1,
-  };
-
-  document.title = 'ERP System - Acme Singapore Demo';
+  window.ErpSystemDemoReady = ready;
 })();
