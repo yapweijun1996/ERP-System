@@ -117,7 +117,7 @@ SCREENS['sales-orders'] = function(root){
     if(isOpen(s)) it.push({id:'cancel',icon:'x',label:t('so.act.cancel'),danger:true,sep:true});
     return it;
   }
-  function openDoc(no){ no==='SO-26-0418' ? navigate('sales-order') : toast(t('so.act.view')+' · '+no,'info'); }
+  function openDoc(no){ (DB.salesOrderDocs&&DB.salesOrderDocs[no]) ? navigate('sales-order',{no}) : toast(t('so.act.view')+' · '+no,'info'); }
   function runAction(id,s){
     if(id==='view'){ openDoc(s.no); return; }
     if(id==='edit'){ navigate('new-sales-order'); return; }
@@ -284,8 +284,8 @@ function togglePopList(anchorSel, items, onPick){
 }
 
 /* ---------------- SALES ORDER (transaction document) ---------------- */
-SCREENS['sales-order'] = function(root){
-  const d=DB.so0418, c=d.cust;
+SCREENS['sales-order'] = function(root, params){
+  const d=(params&&params.no&&DB.salesOrderDocs&&DB.salesOrderDocs[params.no])||DB.so0418, c=d.cust;
   const calc=()=>{
     let sub=0; d.lines.forEach(l=>sub+=l.qty*l.price*(1-l.disc/100));
     const tax=sub*d.taxRate; const total=sub+tax+d.shipping;
@@ -340,7 +340,7 @@ SCREENS['sales-order'] = function(root){
       <div class="dh-row1">
         <div><div class="dt">${ic('bag')}${esc(t('doc.so'))} <span class="dnum">${esc(d.no)}</span></div>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(t('doc.custref'))} ${esc(d.ref)} · ${esc(t('doc.owner'))} ${esc(d.owner)}</div></div>
-        <div class="dactions">${statusBadge(d.status)}${btn(t('common.print'),{icon:'print',cls:'soft'})}<button class="btn soft sm" id="soMoreBtn" data-tip="More actions" aria-haspopup="menu" aria-expanded="false" aria-label="More actions">${ic('more')}<span>${esc(t('usr.more'))}</span></button></div>
+        <div class="dactions">${statusBadge(d.status)}${d.status==='Draft'?btn('Confirm order',{icon:'check',cls:'primary',attrs:'data-act="confirm-order"'}):''}${btn(t('common.print'),{icon:'print',cls:'soft'})}<button class="btn soft sm" id="soMoreBtn" data-tip="More actions" aria-haspopup="menu" aria-expanded="false" aria-label="More actions">${ic('more')}<span>${esc(t('usr.more'))}</span></button></div>
       </div>
       ${stepperHtml}
       <div class="docmeta">
@@ -440,6 +440,21 @@ SCREENS['sales-order'] = function(root){
   }
   $$('#soTabs .tab').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.t)));
   tab('audit');
+
+  /* ---- Confirm draft: live cross-module transaction in PGlite ---- */
+  const confirmBtn=root.querySelector('[data-act="confirm-order"]');
+  confirmBtn&&confirmBtn.addEventListener('click',async()=>{
+    if(!(window.ErpSystemDemo&&window.ErpSystemDemo.confirmOrder)){ toast('Demo adapter not loaded','warn'); return; }
+    confirmBtn.disabled=true; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent='Confirming…');
+    try{
+      const res=await window.ErpSystemDemo.confirmOrder(d.no);
+      toast(d.no+' confirmed — stock issued, '+res.invDocNo+' posted to GL ('+money(res.total)+')','ok');
+      navigate('sales-order',{no:d.no});   // re-render from refreshed data
+    }catch(e){
+      toast((e&&e.message)||'Confirm failed','danger');
+      confirmBtn.disabled=false; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent='Confirm order');
+    }
+  });
 
   /* ---- More overflow menu ---- */
   const moreBtn=$('#soMoreBtn');

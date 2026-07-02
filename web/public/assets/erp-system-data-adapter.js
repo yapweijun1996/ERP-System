@@ -57,14 +57,21 @@
       var m = await db.query('select count(*)::int as n from master');
       seeded = m.rows[0].n > 0;
     }
-    if (seeded) return false;
-    var schema = await fetchSql('erp-system-schema.sql');
-    var seed = await fetchSql('erp-system-seed.sql');
-    var txn = await fetchSql('erp-system-demo-txn.sql');
-    await db.exec(schema);
-    await db.exec(seed);
-    await db.exec(txn);
-    return true;
+    if (!seeded) {
+      var schema = await fetchSql('erp-system-schema.sql');
+      var seed = await fetchSql('erp-system-seed.sql');
+      var txn = await fetchSql('erp-system-demo-txn.sql');
+      await db.exec(schema);
+      await db.exec(seed);
+      await db.exec(txn);
+    }
+    /* top-up: demo draft orders (idempotent — skips existing doc_no's), so
+       databases seeded before TASK-007 gain the Confirm-flow drafts too */
+    var drafts = await db.query(
+      "select count(*)::int as n from sales_order " +
+      "where master_fn='M1' and company_fn='C-SG' and doc_no in ('SO-2','SO-3')");
+    if (drafts.rows[0].n < 2) await db.exec(await fetchSql('erp-system-demo-drafts.sql'));
+    return !seeded;
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -254,9 +261,12 @@
                balance: c.balance, overdue: 0, status: 'Active' };
     });
 
-    var uiLines = soLines.map(function(l){
-      return { item: l.sku, name: l.name, qty: l.qty, uom: l.uom, price: l.unit_price, disc: 0, avail: l.avail };
-    });
+    function linesFor(orderId){
+      return d.orderLines.filter(function(l){ return l.order_id === orderId; }).map(function(l){
+        return { item: l.sku, name: l.name, qty: l.qty, uom: l.uom, price: l.unit_price, disc: 0, avail: l.avail };
+      });
+    }
+    var uiLines = so ? linesFor(so.id) : [];
 
     DB.soNow = '2026-06-28';
     DB.salesOrders = d.orders.map(function(o){
@@ -267,21 +277,34 @@
                items: o.line_count, done: o.status === 'confirmed' ? o.line_count : 0,
                posted: o.status === 'confirmed', payStatus: o.status === 'confirmed' ? 'Unpaid' : '-' };
     });
-    /* demo-only draft so approvals/open-order widgets have something pending */
-    DB.salesOrders.push({ no: 'SO-DRAFT-1', cust: beta.name, custCode: beta.code, date: '2026-06-28',
-      deliver: '2026-07-02', status: 'Draft', total: orderNet, currency: activeCompany.currency,
-      owner: 'Admin', items: uiLines.length, done: 0, posted: false, payStatus: '-' });
 
-    DB.so0418 = so ? {
-      no: so.doc_no, cust: DB.customers[0], date: so.order_date, deliver: '2024-06-03',
-      ref: 'Canonical demo transaction', status: 'Closed', owner: 'Admin', warehouse: 'WH-SALES',
-      currency: so.currency, rate: 1, terms: 'Net 30', lines: uiLines, discountPct: 0, shipping: 0,
-      taxRate: soLines.length ? soLines[0].tax_rate / 100 : 0.09,
+    var demoAddr = {
       billTo: { name: beta.name, line1: 'Singapore demo billing address', line2: '', city: 'Singapore', state: '', post: '000000', country: 'Singapore', contact: 'Accounts Payable', email: 'ap@beta.example', tax: 'GST demo' },
       shipTo: { name: beta.name, line1: 'Singapore demo warehouse', line2: '', city: 'Singapore', state: '', post: '000000', country: 'Singapore', contact: 'Goods Inwards', email: 'receiving@beta.example' },
-      note: 'Confirmed by ERP-System demo transaction: stock, invoice and GL are committed atomically.',
-      memo: 'Net ' + money(orderNet) + ' + ' + (soLines.length ? soLines[0].tax_rate : 9) + '% GST ' + money(orderTax) + ' = ' + money(orderTotal) + '.',
-    } : null;
+    };
+    /* one detail document per order, keyed by doc no — the sales-order screen
+       renders these; Confirm runs against drafts via ErpSystemDemo.confirmOrder */
+    DB.salesOrderDocs = {};
+    d.orders.forEach(function(o){
+      var isDraft = o.status !== 'confirmed';
+      var ls = linesFor(o.id);
+      var firstLine = d.orderLines.filter(function(l){ return l.order_id === o.id; })[0];
+      var ratePct = firstLine ? firstLine.tax_rate : 9;
+      DB.salesOrderDocs[o.doc_no] = {
+        no: o.doc_no, cust: DB.customers[0], date: o.order_date,
+        deliver: o.order_date === '2024-06-01' ? '2024-06-03' : o.order_date,
+        ref: isDraft ? 'Demo draft order' : 'Canonical demo transaction',
+        status: isDraft ? 'Draft' : 'Closed', owner: 'Admin', warehouse: 'WH-SALES',
+        currency: o.currency, rate: 1, terms: 'Net 30', lines: ls, discountPct: 0, shipping: 0,
+        taxRate: ratePct / 100,
+        billTo: demoAddr.billTo, shipTo: demoAddr.shipTo,
+        note: isDraft
+          ? 'Draft order — Confirm runs the canonical cross-module transaction: stock issue, invoice and GL post atomically (or roll back together).'
+          : 'Confirmed by ERP-System demo transaction: stock, invoice and GL are committed atomically.',
+        memo: 'Net ' + money(o.net) + ' + ' + ratePct + '% ' + activeCompany.tax_regime + ' ' + money(o.tax) + ' = ' + money(o.total) + '.',
+      };
+    });
+    DB.so0418 = so ? DB.salesOrderDocs[so.doc_no] : null;
     DB.quote0188 = so ? {
       no: 'Q-1', cust: beta.name, code: beta.code, owner: 'Admin',
       date: 'Jun 1, 2024', valid: 'Jun 15, 2024', status: 'Converted', terms: 'Net 30',
@@ -364,12 +387,12 @@
     DB.journals = journalRefs.map(function(ref){
       var legs = d.glLegs.filter(function(l){ return l.journal_ref === ref; });
       var dr = legs.reduce(function(s, l){ return s + l.debit; }, 0);
-      return { no: ref, date: so ? so.order_date : '', memo: 'Post sales invoice ' + (so ? so.doc_no : ''),
+      return { no: ref, date: so ? so.order_date : '', memo: 'Post sales invoice ' + ref.replace(/^INV-/, ''),
                status: 'Posted', dr: Math.round(dr * 100) / 100, period: 'P06', by: 'System' };
     });
     var firstRef = journalRefs[0];
     DB.je0611 = firstRef ? {
-      no: firstRef, date: so ? so.order_date : '', memo: 'Post sales invoice ' + (so ? so.doc_no : ''),
+      no: firstRef, date: so ? so.order_date : '', memo: 'Post sales invoice ' + firstRef.replace(/^INV-/, ''),
       period: 'P06', status: 'Posted', by: 'System', source: 'Sales confirmation',
       lines: d.glLegs.filter(function(l){ return l.journal_ref === firstRef; }).map(function(l){
         return { acct: l.code, name: l.name, dr: l.debit, cr: l.credit,
@@ -397,8 +420,10 @@
 
     DB.approvals = [
       { no: 'SETUP-1', kind: 'Company setup wizard', who: 'Admin', amt: null, age: 'now', risk: 'low', route: 'settings' },
-      { no: 'SO-DRAFT-1', kind: 'Sales Order Draft', who: 'Admin', amt: orderNet, age: 'today', risk: 'low', route: 'sales-orders' },
-    ];
+    ].concat(d.orders.filter(function(o){ return o.status !== 'confirmed'; }).map(function(o){
+      return { no: o.doc_no, kind: 'Sales Order Draft', who: 'Admin', amt: o.net,
+               age: 'today', risk: o.total > 1000 ? 'med' : 'low', route: 'sales-orders' };
+    }));
     DB.notifications = [
       { id: 'erp1', ic: 'checkc', clr: 'ok', cat: 'system', group: 'today',
         title: mode === 'pglite' ? 'PGlite demo database ready' : 'ERP-System demo seed loaded (offline fallback)',
@@ -479,6 +504,84 @@
     });
   });
 
+  /* Re-read everything from PGlite and re-apply to the Aria DB contract.
+     Call after any write so the next render shows fresh data. */
+  async function refresh(){
+    if (!state.db) return null;
+    var payload = await readPayload(state.db);
+    applyData(payload, 'pglite');
+    return payload;
+  }
+
+  /* Confirm a DRAFT sales order — the live counterpart of
+     src/modules/sales/confirmOrder.ts, in ONE PGlite transaction:
+     lock+deduct stock per line → movements → status confirmed →
+     invoice → balanced GL. Any failure (insufficient stock) rolls
+     the ENTIRE chain back. */
+  async function confirmOrder(docNo){
+    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Confirm needs PGlite.');
+    var result = await state.db.transaction(async function(tx){
+      var o = (await tx.query(
+        "select id, doc_no, order_date::text as order_date, currency, customer_id, " +
+        "net_amount::float as net, tax_amount::float as tax, total_amount::float as total " +
+        "from sales_order where master_fn=$1 and company_fn=$2 and doc_no=$3 and status='draft'",
+        [SCOPE.masterFn, SCOPE.companyFn, docNo])).rows[0];
+      if (!o) throw new Error('Draft order ' + docNo + ' not found (already confirmed?)');
+
+      var wh = (await tx.query(
+        "select id from warehouse where master_fn=$1 and company_fn=$2 and code='WH-SALES'",
+        [SCOPE.masterFn, SCOPE.companyFn])).rows[0];
+      if (!wh) throw new Error('Warehouse WH-SALES not found');
+
+      var lines = (await tx.query(
+        "select l.product_id, l.qty::float as qty, p.sku from sales_order_line l " +
+        "join product p on p.id = l.product_id " +
+        "where l.master_fn=$1 and l.company_fn=$2 and l.order_id=$3 order by l.line_no",
+        [SCOPE.masterFn, SCOPE.companyFn, o.id])).rows;
+
+      for (var i = 0; i < lines.length; i++){
+        var ln = lines[i];
+        var lvl = (await tx.query(
+          "select id, qty::float as qty from stock_level " +
+          "where master_fn=$1 and company_fn=$2 and product_id=$3 and warehouse_id=$4 for update",
+          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id])).rows[0];
+        var avail = lvl ? lvl.qty : 0;
+        if (!lvl || avail < ln.qty){
+          var err = new Error('Insufficient stock for ' + ln.sku + ': have ' + avail + ', need ' + ln.qty + ' — order rolled back, nothing was committed.');
+          err.name = 'InsufficientStockError';
+          throw err; // → whole transaction rolls back
+        }
+        await tx.query("update stock_level set qty = qty - $1, updated_at = now() where id = $2", [ln.qty, lvl.id]);
+        await tx.query(
+          "insert into stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id) " +
+          "values ($1,$2,$3,$4,$5,'out','sales_order',$6)",
+          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id, ln.qty, o.id]);
+      }
+
+      await tx.query("update sales_order set status='confirmed', updated_at=now() where id=$1", [o.id]);
+
+      var invDoc = 'INV-' + o.doc_no;
+      await tx.query(
+        "insert into invoice (master_fn, company_fn, doc_no, order_id, customer_id, status, invoice_date, currency, net_amount, tax_amount, total_amount) " +
+        "values ($1,$2,$3,$4,$5,'unpaid',$6,$7,$8,$9,$10)",
+        [SCOPE.masterFn, SCOPE.companyFn, invDoc, o.id, o.customer_id, o.order_date, o.currency, o.net, o.tax, o.total]);
+
+      var acct = {};
+      (await tx.query(
+        "select code, id from account where master_fn=$1 and company_fn=$2 and code in ('1100','4000','2200')",
+        [SCOPE.masterFn, SCOPE.companyFn])).rows.forEach(function(a){ acct[a.code] = a.id; });
+      if (!acct['1100'] || !acct['4000'] || !acct['2200']) throw new Error('Chart of accounts not configured');
+      await tx.query(
+        "insert into gl_entry (master_fn, company_fn, journal_ref, account_id, debit, credit, memo) values " +
+        "($1,$2,$3,$4,$5,0,'AR'), ($1,$2,$3,$6,0,$7,'Revenue'), ($1,$2,$3,$8,0,$9,'Output tax')",
+        [SCOPE.masterFn, SCOPE.companyFn, invDoc, acct['1100'], o.total, acct['4000'], o.net, acct['2200'], o.tax]);
+
+      return { invDocNo: invDoc, net: o.net, tax: o.tax, total: o.total, lines: lines.length };
+    });
+    await refresh();
+    return result;
+  }
+
   /* Reset demo: drop the canonical schema and reload — next boot reseeds. */
   async function reset(){
     try {
@@ -498,6 +601,8 @@
   window.ErpSystemDemo = {
     ready: ready,
     reset: reset,
+    refresh: refresh,
+    confirmOrder: confirmOrder,
     get mode(){ return state.mode; },
     get db(){ return state.db; },
   };
