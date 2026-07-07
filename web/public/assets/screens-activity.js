@@ -363,21 +363,22 @@ SCREENS['notifications'] = function(root){
     root.querySelectorAll('.ntf-modbar').forEach(b=>b.addEventListener('click',()=>{ filter=b.dataset.cat; render(); }));
     root.querySelectorAll('.ntf').forEach(rw=>rw.addEventListener('click',e=>{
       if(e.target.closest('[data-act]')) return;
-      const n=DB.notifications.find(x=>x.id===rw.dataset.id);
-      if(n) n.unread=false;
+      markNotificationRead(rw.dataset.id);
       updateBellBadge(); refreshNotifs();
       if(rw.dataset.route) navigate(rw.dataset.route);
     }));
     root.querySelectorAll('[data-act="read"]').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation(); const n=DB.notifications.find(x=>x.id===b.closest('.ntf').dataset.id);
-      if(n) n.unread=false; updateBellBadge(); refreshNotifs(); render();
+      e.stopPropagation();
+      markNotificationRead(b.closest('.ntf').dataset.id);
+      updateBellBadge(); refreshNotifs(); render();
     }));
     root.querySelectorAll('[data-act="dismiss"]').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation(); const n=DB.notifications.find(x=>x.id===b.closest('.ntf').dataset.id);
-      if(n) n.dismissed=true; updateBellBadge(); refreshNotifs(); render(); toast('Notification dismissed','info');
+      e.stopPropagation();
+      dismissNotification(b.closest('.ntf').dataset.id);
+      updateBellBadge(); refreshNotifs(); render(); toast('Notification dismissed','info');
     }));
-    const ra=root.querySelector('[data-nc="readall"]'); ra&&ra.addEventListener('click',()=>{ DB.notifications.forEach(n=>n.unread=false); updateBellBadge(); refreshNotifs(); render(); toast('All caught up','ok'); });
-    const ca=root.querySelector('[data-nc="clearall"]'); ca&&ca.addEventListener('click',()=>{ DB.notifications.forEach(n=>n.dismissed=true); updateBellBadge(); refreshNotifs(); render(); toast('Notifications cleared','info'); });
+    const ra=root.querySelector('[data-nc="readall"]'); ra&&ra.addEventListener('click',()=>{ markAllNotificationsRead(); updateBellBadge(); refreshNotifs(); render(); toast('All caught up','ok'); });
+    const ca=root.querySelector('[data-nc="clearall"]'); ca&&ca.addEventListener('click',()=>{ dismissAllNotifications(); updateBellBadge(); refreshNotifs(); render(); toast('Notifications cleared','info'); });
   }
 
   render();

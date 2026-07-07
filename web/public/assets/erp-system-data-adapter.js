@@ -472,6 +472,7 @@
         body: money(orderTotal) + ' balanced to AR, revenue and GST output tax.',
         t: 'now', unread: true, route: 'gl' },
     ];
+    if (typeof window.applyNotificationState === 'function') window.applyNotificationState();
 
     DB.salesByMonth = [
       { m: 'Jan', val: 0 }, { m: 'Feb', val: 0 }, { m: 'Mar', val: 0 },

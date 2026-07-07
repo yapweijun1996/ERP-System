@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v6';
+const CACHE_VERSION = 'erp-system-pwa-v12';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -116,6 +116,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (url.searchParams.has('v')) {
+    event.respondWith(networkFirstAsset(request));
+    return;
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(request));
     return;
@@ -134,6 +139,17 @@ async function networkFirstNavigation(request) {
     return response;
   } catch (error) {
     return (await cache.match('./index.html')) || Response.error();
+  }
+}
+
+async function networkFirstAsset(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (error) {
+    return (await cache.match(request)) || (await caches.match(request, { ignoreSearch: true })) || Response.error();
   }
 }
 

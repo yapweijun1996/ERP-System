@@ -180,3 +180,108 @@ SCREENS['sys-settings'] = function(root){
   </div>
   </section></div>`;
 };
+
+/* ---------------- MODULE ACTIVATION CONTROL (master/client module toggles) ---------------- */
+SCREENS['module-activation-control'] = function(root){
+  if(!isModuleAdmin()){
+    root.innerHTML=`<div class="content full"><section class="master">
+      <div class="pagehead">${crumbs([DB.company.name,'Admin','Module Activation Control'])}
+        <div class="h1row"><h1>Module Activation Control</h1>${cap('Admin only','warn')}</div>
+      </div>
+      ${statePanel({icon:'lock',title:'Admin access required',body:'Only Admin and Superadmin accounts can manage client module activation.'})}
+    </section></div>`;
+    return;
+  }
+
+  let cfg=readModuleControl();
+  const rows=()=>moduleControlItems();
+  const activeCount=()=>rows().filter(m=>cfg[m.id]&&cfg[m.id].active).length;
+  const visibleCount=()=>rows().filter(m=>cfg[m.id]&&cfg[m.id].visible).length;
+  const rowTone=m=>{
+    const st=cfg[m.id]||{visible:true,active:true};
+    if(!st.visible) return 'neutral';
+    if(!st.active) return 'warn';
+    return 'ok';
+  };
+  const statusLabel=m=>{
+    const st=cfg[m.id]||{visible:true,active:true};
+    if(!st.visible) return 'Hidden';
+    if(!st.active) return 'Inactive';
+    return 'Active';
+  };
+  function persist(message){
+    writeModuleControl(cfg);
+    renderSidebar();
+    renderTabbar();
+    setActiveNav(CURRENT_ROUTE);
+    toast(message||'Module activation updated','ok');
+  }
+  function table(){
+    const body=rows().map(m=>{
+      const st=cfg[m.id]||{visible:true,active:true};
+      return `<tr data-module="${esc(m.id)}">
+        <td class="l li-name"><b>${ic(m.icon)} ${esc(m.label)}</b><small>${esc(m.group)} · ${esc(m.route)}${m.required?' · required':''}</small></td>
+        <td class="l mono">${esc(currentMasterFn())}</td>
+        <td class="c"><input class="checkbox" type="checkbox" data-toggle="visible" ${st.visible?'checked':''} ${m.required?'disabled':''} aria-label="Show ${esc(m.label)}"></td>
+        <td class="c"><input class="checkbox" type="checkbox" data-toggle="active" ${st.active?'checked':''} ${(!st.visible||m.required)?'disabled':''} aria-label="Activate ${esc(m.label)}"></td>
+        <td class="l">${cap(statusLabel(m),rowTone(m))}</td>
+        <td class="c">${m.required?cap('Required','accent'):btn('Open',{icon:'ext',cls:'plain',attrs:`data-open="${esc(m.route)}"`})}</td>
+      </tr>`;
+    }).join('');
+    return `<table class="lines"><thead><tr><th class="l">Module</th><th class="l">Master FN</th><th class="c">Show</th><th class="c">Active</th><th class="l">Status</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+  }
+  function render(){
+    root.innerHTML=`<div class="content full"><section class="master"><div class="scrollarea">
+      <div class="pagehead">
+        ${crumbs([DB.company.name,'Admin','Module Activation Control'])}
+        <div class="h1row"><h1>Module Activation Control</h1><span class="acct-role" style="font-size:11px">${ic('shield')}${esc(DB.user.role)}</span>
+          <div class="headright">
+            <div class="kfig"><small>Master FN</small><b class="tnum">${esc(currentMasterFn())}</b></div>
+            <div class="kfig"><small>Shown</small><b class="tnum">${visibleCount()}/${rows().length}</b></div>
+            <div class="kfig"><small>Active</small><b class="tnum">${activeCount()}/${rows().length}</b></div>
+          </div></div>
+        <div class="h1sub">Control which ERP modules are visible and active for the current master/client. Hidden modules disappear from navigation; inactive modules remain visible but cannot be opened.</div>
+      </div>
+      <div class="toolbar">
+        ${btn('Show all',{icon:'eye',cls:'soft',attrs:'data-act="show-all"'})}
+        ${btn('Activate all',{icon:'checkc',cls:'soft',attrs:'data-act="activate-all"'})}
+        ${btn('Reset defaults',{icon:'refresh',cls:'soft',attrs:'data-act="reset"'})}
+        <div class="grow"></div>
+        ${cap('Saved locally for demo','info')}
+      </div>
+      <div class="panel" style="margin:0 24px 24px">
+        <div class="panel-h"><h3>Client module matrix</h3><span style="margin-left:auto;color:var(--muted);font-size:12px">Applies to ${esc(DB.company.name)}</span></div>
+        ${table()}
+      </div>
+    </div></section></div>`;
+
+    root.querySelectorAll('[data-toggle]').forEach(input=>input.addEventListener('change',()=>{
+      const id=input.closest('[data-module]').dataset.module;
+      const item=rows().find(m=>m.id===id);
+      if(!item||item.required) return;
+      cfg[id]=cfg[id]||{visible:true,active:true};
+      if(input.dataset.toggle==='visible'){
+        cfg[id].visible=input.checked;
+        cfg[id].active=input.checked;
+      }else{
+        cfg[id].active=input.checked;
+      }
+      render();
+      persist(`${item.label} set to ${statusLabel(item).toLowerCase()}`);
+    }));
+    root.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.open)));
+    root.querySelector('[data-act="show-all"]').addEventListener('click',()=>{
+      rows().forEach(m=>{ cfg[m.id]=cfg[m.id]||{visible:true,active:true}; cfg[m.id].visible=true; });
+      render(); persist('All modules shown');
+    });
+    root.querySelector('[data-act="activate-all"]').addEventListener('click',()=>{
+      rows().forEach(m=>{ cfg[m.id]=cfg[m.id]||{visible:true,active:true}; cfg[m.id].visible=true; cfg[m.id].active=true; });
+      render(); persist('All modules activated');
+    });
+    root.querySelector('[data-act="reset"]').addEventListener('click',()=>{
+      cfg=defaultModuleControl();
+      render(); persist('Module activation reset to defaults');
+    });
+  }
+  render();
+};

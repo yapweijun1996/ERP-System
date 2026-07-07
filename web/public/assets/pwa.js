@@ -5,14 +5,16 @@
   let waitingWorker = null;
   let sourceUpdatePromptOpen = false;
   const SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
-  const SOURCE_PROBE_FILES = [
-    './index.html',
-    './assets/app.js',
-    './assets/erp.css',
-    './assets/erp-blocks.css',
-    './assets/pwa.js',
-    './sw.js',
-  ];
+  const SOURCE_PROBE_BASE_FILES = ['./index.html', './sw.js'];
+
+  function sourceProbeFiles(){
+    const files = new Set(SOURCE_PROBE_BASE_FILES);
+    document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach((el) => {
+      const raw = el.getAttribute('src') || el.getAttribute('href');
+      if (raw) files.add(new URL(raw, window.location.href).href);
+    });
+    return [...files];
+  }
 
   async function hashText(value){
     if (window.crypto && window.crypto.subtle && window.TextEncoder) {
@@ -27,7 +29,7 @@
 
   async function sourceFingerprint(){
     const stamp = Date.now().toString(36);
-    const parts = await Promise.all(SOURCE_PROBE_FILES.map(async (file) => {
+    const parts = await Promise.all(sourceProbeFiles().map(async (file) => {
       const url = new URL(file, window.location.href);
       url.searchParams.set('__source_probe', stamp);
       const response = await fetch(url, {

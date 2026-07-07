@@ -97,6 +97,158 @@ function signOutDemo(){
   location.reload();
 }
 
+function isModuleAdmin(){
+  const role=String(DB.user&&DB.user.role||'').toLowerCase().replace(/\s+/g,'');
+  return role==='admin'||role==='superadmin'||role.includes('superadmin');
+}
+function currentMasterFn(){
+  return (DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.masterFn)
+    || (DB.masters&&DB.masters[0]&&DB.masters[0].id)
+    || (DB.company&&DB.company.name)
+    || 'default-master';
+}
+function moduleControlKey(){ return 'aria-module-activation:'+currentMasterFn(); }
+function moduleControlItems(){
+  return DB.nav.flatMap(g=>g.items.map(m=>({
+    ...m,
+    group:g.group,
+    required:m.id==='home'||m.id==='admin',
+  })));
+}
+function defaultModuleControl(){
+  const cfg={};
+  moduleControlItems().forEach(m=>{ cfg[m.id]={ visible:true, active:true }; });
+  return cfg;
+}
+function readModuleControl(){
+  const cfg=defaultModuleControl();
+  try{
+    const saved=JSON.parse(localStorage.getItem(moduleControlKey())||'{}');
+    Object.keys(cfg).forEach(id=>{
+      if(saved[id]){
+        cfg[id].visible=saved[id].visible!==false;
+        cfg[id].active=saved[id].active!==false;
+      }
+    });
+  }catch(e){}
+  moduleControlItems().forEach(m=>{
+    if(m.required) cfg[m.id]={ visible:true, active:true };
+    if(!cfg[m.id].visible) cfg[m.id].active=false;
+  });
+  return cfg;
+}
+function writeModuleControl(cfg){
+  moduleControlItems().forEach(m=>{
+    if(m.required) cfg[m.id]={ visible:true, active:true };
+    if(cfg[m.id]&&!cfg[m.id].visible) cfg[m.id].active=false;
+  });
+  try{ localStorage.setItem(moduleControlKey(),JSON.stringify(cfg)); }catch(e){}
+}
+function moduleState(moduleId){
+  return readModuleControl()[moduleId]||{ visible:true, active:true };
+}
+function notificationStateKey(){ return 'aria-notification-state:'+currentMasterFn(); }
+function readNotificationState(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(notificationStateKey())||'{}');
+    return saved&&typeof saved==='object'&&saved.items&&typeof saved.items==='object'?saved:{ items:{} };
+  }catch(e){ return { items:{} }; }
+}
+function writeNotificationState(state){
+  try{ localStorage.setItem(notificationStateKey(),JSON.stringify(state)); }catch(e){}
+}
+function saveNotificationState(id, patch){
+  if(!id) return;
+  const state=readNotificationState();
+  state.items[id]={ ...(state.items[id]||{}), ...patch };
+  writeNotificationState(state);
+}
+function applyNotificationState(){
+  const state=readNotificationState();
+  (DB.notifications||[]).forEach(n=>{
+    const st=state.items[n.id];
+    if(!st) return;
+    if(st.read) n.unread=false;
+    if(st.dismissed){ n.dismissed=true; n.unread=false; }
+  });
+}
+function markNotificationRead(id){
+  const n=(DB.notifications||[]).find(x=>x.id===id);
+  if(!n) return null;
+  n.unread=false;
+  saveNotificationState(id,{ read:true });
+  return n;
+}
+function dismissNotification(id){
+  const n=(DB.notifications||[]).find(x=>x.id===id);
+  if(!n) return null;
+  n.dismissed=true;
+  n.unread=false;
+  saveNotificationState(id,{ read:true, dismissed:true });
+  return n;
+}
+function markAllNotificationsRead(){
+  const state=readNotificationState();
+  (DB.notifications||[]).forEach(n=>{
+    if(n.dismissed) return;
+    n.unread=false;
+    state.items[n.id]={ ...(state.items[n.id]||{}), read:true };
+  });
+  writeNotificationState(state);
+}
+function dismissAllNotifications(){
+  const state=readNotificationState();
+  (DB.notifications||[]).forEach(n=>{
+    n.dismissed=true;
+    n.unread=false;
+    state.items[n.id]={ ...(state.items[n.id]||{}), read:true, dismissed:true };
+  });
+  writeNotificationState(state);
+}
+function routeModuleId(route){ return ROUTE_MODULE[route]; }
+function routeAllowed(route){
+  const mod=routeModuleId(route);
+  if(!mod||mod==='settings') return true;
+  const st=moduleState(mod);
+  return st.visible&&st.active;
+}
+function routeShownInCommands(route){
+  const mod=routeModuleId(route);
+  if(!mod||mod==='settings') return true;
+  const st=moduleState(mod);
+  return st.visible&&st.active;
+}
+function moduleBlockedPanel(route){
+  const mod=routeModuleId(route);
+  const item=moduleControlItems().find(m=>m.id===mod);
+  const label=item?item.label:(mod||route);
+  const st=mod?moduleState(mod):{ visible:true, active:true };
+  const reason=st.visible?'inactive for this client':'hidden for this client';
+  const action=isModuleAdmin()
+    ? btn('Open Module Activation Control',{icon:'sliders',cls:'primary',attrs:"onclick=\"navigate('module-activation-control')\""})
+    : '';
+  return `<div class="content full"><section class="master">
+    <div class="pagehead">${crumbs([DB.company.name,'Module access'])}
+      <div class="h1row"><h1>${esc(label)} unavailable</h1>${cap(reason,'warn')}</div>
+      <div class="h1sub">This module is controlled at master/client level for ${esc(currentMasterFn())}.</div>
+    </div>
+    ${statePanel({icon:'lock',title:'Module is not available',body:'Ask an admin or superadmin to enable this module in Module Activation Control.',action})}
+  </section></div>`;
+}
+function ensureModuleActivationMenuItem(){
+  const menu=$('#acctMenu'); if(!menu) return;
+  const existing=menu.querySelector('[data-acct="module-control"]');
+  if(!isModuleAdmin()){ if(existing) existing.remove(); return; }
+  if(existing) return;
+  const firstSection=menu.querySelector('.menu-section');
+  if(!firstSection) return;
+  const btnEl=document.createElement('button');
+  btnEl.className='menu-item';
+  btnEl.setAttribute('data-acct','module-control');
+  btnEl.innerHTML=`${ic('sliders')}<span>Module Activation Control</span><span class="meta">${ic('arrowR')}</span>`;
+  firstSection.appendChild(btnEl);
+}
+
 /* map every module's primary route + known sub-routes to a module id */
 const SUBROUTES = {
   sales:['sales-home','sales-orders','sales-order','quotation','delivery-order','sales-invoice','new-sales-order',
@@ -112,7 +264,7 @@ const SUBROUTES = {
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
-  workflow:['po-approval'], bi:['inv-valuation','bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings'],
+  workflow:['po-approval'], bi:['inv-valuation','bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
@@ -136,19 +288,25 @@ function renderSidebar(){
     <div class="brandtext"><b>Aria</b><small>${esc(DB.company.name.split(' ')[0])} Mfg.</small></div>
   </button>`;
   DB.nav.forEach(g=>{
+    const items=g.items.filter(m=>moduleState(m.id).visible);
+    if(!items.length) return;
     h+=`<div class="navgroup"><h6>${esc(tf('group.'+g.group, g.group))}</h6>`;
-    g.items.forEach(m=>{
+    items.forEach(m=>{
+      const st=moduleState(m.id);
       const label=tf('nav.'+m.id, m.label);
-      h+=`<button class="nav" data-route="${m.route}" data-mod="${m.id}" data-tip="${esc(label)}">
+      h+=`<button class="nav ${st.active?'':'is-disabled'}" data-route="${m.route}" data-mod="${m.id}" data-tip="${esc(st.active?label:label+' · inactive')}" ${st.active?'':'aria-disabled="true"'}>
         ${ic(m.icon)}<span class="navlabel">${esc(label)}</span>
-        ${m.badge?`<span class="badge ${m.id==='workflow'||m.id==='purchasing'?'warn':''}">${m.badge}</span>`:''}
+        ${st.active&&m.badge?`<span class="badge ${m.id==='workflow'||m.id==='purchasing'?'warn':''}">${m.badge}</span>`:''}
       </button>`;
     });
     h+=`</div>`;
   });
   h+=`<div class="sidebar-foot"><button class="nav" data-route="settings" data-mod="settings" data-tip="${esc(t('nav.settings'))}">${ic('gear')}<span class="navlabel">${esc(t('nav.settings'))}</span></button></div>`;
   el.innerHTML=h;
-  el.querySelectorAll('.nav[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
+  el.querySelectorAll('.nav[data-route]').forEach(b=>b.addEventListener('click',()=>{
+    if(b.getAttribute('aria-disabled')==='true'){ toast('Module inactive for this client','warn'); return; }
+    navigate(b.dataset.route);
+  }));
   const bb=el.querySelector('#brandBtn');
   bb&&bb.addEventListener('click',()=>setNavCollapsed(!$('#app').classList.contains('nav-collapsed'), true));
 }
@@ -161,6 +319,10 @@ function setActiveNav(route){
 /* ---------- router ---------- */
 function navigate(route, params){
   const root=$('#viewRoot');
+  if(!routeAllowed(route)){
+    root.innerHTML=moduleBlockedPanel(route);
+    CURRENT_ROUTE=route; setActiveNav(route); closeAllPops(); return;
+  }
   if(!SCREENS[route]){
     // unbuilt module -> graceful panel inside a simple shell
     const mod=DB.nav.flatMap(g=>g.items).find(m=>m.route===route);
@@ -298,6 +460,7 @@ const PAL_COMMANDS=[
     {label:'System Settings · numbering, tax, currency', icon:'gear', route:'sys-settings'},
     {label:'Role Permissions', icon:'shield', route:'role-permission'},
     {label:'Master Control · tenants & users', icon:'grid', route:'master-control'},
+    {label:'Module Activation Control', icon:'sliders', route:'module-activation-control'},
     {label:'Notifications center', icon:'bell', route:'notifications'},
   ]},
   {cat:'Create', items:[
@@ -323,7 +486,7 @@ function closePalette(){ $('#scrim').classList.remove('show'); $('#palette').cla
 function renderPalette(q){
   q=q.toLowerCase().trim(); const list=$('#palList'); palFlat=[]; let h='';
   PAL_COMMANDS.forEach(group=>{
-    const items=group.items.filter(it=>!q||it.label.toLowerCase().includes(q));
+    const items=group.items.filter(it=>(!it.route||routeShownInCommands(it.route))&&(!q||it.label.toLowerCase().includes(q)));
     if(!items.length) return;
     h+=`<div class="pcat">${esc(tf('pal.cat.'+group.cat, group.cat))}</div>`;
     items.forEach(it=>{ const idx=palFlat.length; palFlat.push(it);
@@ -375,8 +538,8 @@ function buildNotifCenter(){
   return `
     <div class="nc-head">
       <div class="nc-title">${esc(t('notif.title'))} ${unread?`<span class="nc-count">${unread}</span>`:''}</div>
-      <button class="nc-act" data-nc="readall" data-tip="${esc(t('notif.readall'))}" aria-label="${esc(t('notif.readall'))}">${ic('checkc')}</button>
-      <button class="nc-act" data-nc="settings" data-tip="${esc(t('notif.settings'))}" aria-label="${esc(t('notif.settings'))}">${ic('gear')}</button>
+      <button class="nc-act" type="button" data-nc="readall" data-tip="${esc(t('notif.readall'))}" aria-label="${esc(t('notif.readall'))}" ${unread?'':'disabled'}>${ic('checkc')}</button>
+      <button class="nc-act" type="button" data-nc="settings" data-tip="${esc(t('notif.settings'))}" aria-label="${esc(t('notif.settings'))}">${ic('gear')}</button>
     </div>
     <div class="nc-tabs">${tabs.map(t2=>`<button class="nc-tab ${t2[0]===notifFilter?'on':''}" data-tab="${t2[0]}">${esc(t2[1])}${t2[0]==='unread'&&unread?`<span class="nc-tabn">${unread}</span>`:''}</button>`).join('')}</div>
     <div class="nc-list">${body}</div>
@@ -387,19 +550,20 @@ function wireNotifCenter(){
   menu.querySelectorAll('.nc-tab').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();notifFilter=b.dataset.tab;refreshNotifs();}));
   menu.querySelectorAll('.nc-item[data-route]').forEach(it=>it.addEventListener('click',e=>{
     if(e.target.closest('[data-dismiss]')) return;
-    const n=DB.notifications.find(x=>x.id===it.dataset.id); if(n)n.unread=false;
+    markNotificationRead(it.dataset.id);
+    refreshNotifs();
     navigate(it.dataset.route);
   }));
   menu.querySelectorAll('[data-dismiss]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
-    const n=DB.notifications.find(x=>x.id===b.dataset.dismiss); if(n)n.dismissed=true;
+    dismissNotification(b.dataset.dismiss);
     refreshNotifs(); toast('Notification dismissed','info');
   }));
-  const ra=menu.querySelector('[data-nc="readall"]'); ra&&ra.addEventListener('click',e=>{e.stopPropagation();DB.notifications.forEach(n=>n.unread=false);refreshNotifs();toast('All caught up','ok');});
-  const st=menu.querySelector('[data-nc="settings"]'); st&&st.addEventListener('click',e=>{e.stopPropagation();toast('Notification settings — not in this build','info');});
+  const ra=menu.querySelector('[data-nc="readall"]'); ra&&ra.addEventListener('click',e=>{e.stopPropagation();markAllNotificationsRead();refreshNotifs();toast('All caught up','ok');});
+  const st=menu.querySelector('[data-nc="settings"]'); st&&st.addEventListener('click',e=>{e.stopPropagation();closeAllPops();navigate('settings',{section:'set-notifications'});});
   const va=menu.querySelector('[data-nc="viewall"]'); va&&va.addEventListener('click',e=>{e.stopPropagation();closeAllPops();navigate('notifications');});
 }
-function refreshNotifs(){ const m=$('#notifMenu'); if(m){ m.innerHTML=buildNotifCenter(); wireNotifCenter(); } updateBellBadge(); }
+function refreshNotifs(){ applyNotificationState(); const m=$('#notifMenu'); if(m){ m.innerHTML=buildNotifCenter(); wireNotifCenter(); } updateBellBadge(); }
 function buildQuickCreate(){
   const items=[[t('qc.so'),'bag','new-sales-order'],[t('qc.po'),'cart','new-purchase-order'],[t('qc.wo'),'factory','new-work-order'],[t('qc.je'),'book','new-journal-entry'],[t('qc.pv'),'coins','new-payment-voucher'],[t('qc.adj'),'adjust','new-stock-adjustment'],[t('qc.item'),'tag','new-item']];
   return `<div class="menu-section"><div class="menu-head">${esc(t('qc.title'))}</div>`+items.map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
@@ -522,7 +686,7 @@ function openFySetup(fyArg,isNew){
 /* ---------- mobile tab bar ---------- */
 function renderTabbar(){
   const tabs=[['dashboard','home',t('tab.home')],['sales-orders','bag',t('tab.sales')],['po-approval','flow',t('tab.approve')],['stock-on-hand','box',t('tab.stock')],['picking','warehouse',t('tab.pick')]];
-  $('#tabbar').innerHTML=tabs.map(([r,i,l])=>`<button data-route="${r}">${ic(i)}${esc(l)}</button>`).join('')+`<button onclick="openPalette()">${ic('search')}${esc(t('tab.search'))}</button>`;
+  $('#tabbar').innerHTML=tabs.filter(([r])=>routeShownInCommands(r)).map(([r,i,l])=>`<button data-route="${r}">${ic(i)}${esc(l)}</button>`).join('')+`<button onclick="openPalette()">${ic('search')}${esc(t('tab.search'))}</button>`;
   $$('#tabbar button[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
 }
 
@@ -535,8 +699,8 @@ function boot(){
   setAuthShell(false);
   const auth=$('#authView'); if(auth) auth.remove();
   // theme
-  let t='light'; try{t=localStorage.getItem('aria-theme')||'light';}catch(e){}
-  applyTheme(t);
+  let themePref='light'; try{themePref=localStorage.getItem('aria-theme')||'light';}catch(e){}
+  applyTheme(themePref);
   // personal prefs: accent + density
   try{ const ac=localStorage.getItem('aria-accent'); if(ac){ document.documentElement.style.setProperty('--accent',ac); document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+ac+' 14%, transparent)'); } }catch(e){}
   try{ if(localStorage.getItem('aria-density')==='compact') document.documentElement.setAttribute('data-density','compact'); }catch(e){}
@@ -549,6 +713,8 @@ function boot(){
   $('#ctxCompany').innerHTML=`<b>${esc(DB.company.name)} ${ic('chevD')}</b><small>${esc(DB.company.branch)}</small>`;
   const envEl=$('.env'); if(envEl) envEl.textContent=DB.company.env||envEl.textContent;
   syncAccountUi();
+  ensureModuleActivationMenuItem();
+  applyNotificationState();
   // restore persisted working period, then paint the fiscal-period switcher
   try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch(e){}
   applyPeriod(DB.fiscal.selectedPeriod);
@@ -563,6 +729,7 @@ function boot(){
   $('#companyMenu').querySelector('[data-co-action="master"]').addEventListener('click',()=>{ closeAllPops(); navigate('master-control'); });
   // language switcher
   $('#langBtn').innerHTML=ic('globe');
+  $('#langBtn').setAttribute('aria-label',t('tip.language'));
   $('#langMenu').innerHTML=buildLangMenu(); wireLangMenu();
   $('#langBtn').addEventListener('click',e=>{e.stopPropagation();togglePop('langMenu',$('#langBtn'));});
   // wiring
@@ -589,7 +756,7 @@ function boot(){
   });
   $('#palInput').addEventListener('input',e=>renderPalette(e.target.value));
   // account menu items
-  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){signOutDemo(); return;} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
+  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){signOutDemo(); return;} else if(a==='module-control'){navigate('module-activation-control');} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
   // initial route
   let start=(location.hash||'').replace('#','');
   if(!SCREENS[start]&&!DB.nav.flatMap(g=>g.items).some(m=>m.route===start)) start='dashboard';

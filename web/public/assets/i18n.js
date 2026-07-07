@@ -2058,7 +2058,7 @@ function applyI18n(){
     qc.querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
   }
   const lm=$('#langMenu'); if(lm){ lm.innerHTML=buildLangMenu(); wireLangMenu(); }
-  const lb=$('#langBtn'); if(lb){ lb.setAttribute('data-tip', t('tip.language')); }
+  const lb=$('#langBtn'); if(lb){ lb.setAttribute('data-tip', t('tip.language')); lb.setAttribute('aria-label', t('tip.language')); }
   const av=$('#avatarBtn'); if(av && typeof DB!=='undefined'){ av.setAttribute('data-tip', t('tip.account')+' · '+DB.user.name); }
   // re-render the active screen so its translated strings refresh
   if(typeof navigate==='function' && typeof CURRENT_ROUTE!=='undefined' && CURRENT_ROUTE) navigate(CURRENT_ROUTE);

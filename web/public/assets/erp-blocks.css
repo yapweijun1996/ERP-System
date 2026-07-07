@@ -427,6 +427,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 }
 
 /* ===== settings screen ===== */
+.master[data-screen-label="Settings"]>.pagehead{background:var(--surface);border-bottom:1px solid var(--hairline);}
 .set-body{flex:1;display:flex;min-height:0;overflow:hidden;}
 .set-rail{width:228px;flex:none;border-right:1px solid var(--hairline);padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;background:var(--material);}
 .set-railhead{font-size:calc(10.5px * var(--fs,1));text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:6px 10px 8px;}
