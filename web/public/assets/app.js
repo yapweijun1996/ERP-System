@@ -4,6 +4,98 @@
 /* SCREENS is declared in ui.js (loads before screen files) */
 const ROUTE_MODULE = {};       // route -> module id (for active state)
 let CURRENT_ROUTE = null;
+const DEMO_AUTH_KEY = 'aria-demo-auth';
+
+function demoUser(){
+  return DB.user || { name:'Demo Admin', email:'admin@example.com', initials:'DA', role:'Administrator' };
+}
+function demoAuthSession(){
+  try{ return JSON.parse(localStorage.getItem(DEMO_AUTH_KEY)||'null'); }catch(e){ return null; }
+}
+function isDemoSignedIn(){
+  const s=demoAuthSession();
+  return !!(s&&s.signedIn);
+}
+function setAuthShell(onLogin){
+  document.body.classList.toggle('auth-locked',!!onLogin);
+  const app=$('#app'), tabs=$('#tabbar');
+  if(app) app.setAttribute('aria-hidden',onLogin?'true':'false');
+  if(tabs) tabs.setAttribute('aria-hidden',onLogin?'true':'false');
+}
+function syncAccountUi(){
+  const u=demoUser();
+  const av=$('#avatarBtn');
+  if(av){ av.textContent=u.initials; av.setAttribute('data-tip','Account · '+u.name); }
+  const menu=$('#acctMenu');
+  if(menu){
+    const headAv=menu.querySelector('.acct-head .av');
+    const name=menu.querySelector('.acct-head .who b');
+    const email=menu.querySelector('.acct-head .who small');
+    const role=menu.querySelector('.acct-role');
+    if(headAv) headAv.textContent=u.initials;
+    if(name) name.textContent=u.name;
+    if(email) email.textContent=u.email;
+    if(role) role.innerHTML=`${ic('shield')}${esc(u.role||'Demo user')}`;
+  }
+}
+function renderLogin(){
+  const u=demoUser();
+  setAuthShell(true);
+  closeAllPops();
+  closePalette();
+  closeModal();
+  let auth=$('#authView');
+  if(!auth){
+    auth=document.createElement('main');
+    auth.id='authView';
+    auth.className='auth-view';
+    auth.setAttribute('aria-label','Sign in');
+    document.body.insertBefore(auth,$('#app'));
+  }
+  auth.innerHTML=`<section class="auth-panel">
+    <div class="auth-brand">
+      <span class="mark">${ic('box')}</span>
+      <span><b>Aria ERP</b><small>${esc(DB.company.name)} · Static demo</small></span>
+    </div>
+    <div class="auth-copy">
+      <h1>Sign in</h1>
+      <p>Use the demo account to open the ERP workspace. This static build stores only a local browser session.</p>
+    </div>
+    <form class="auth-form" id="loginForm">
+      <div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${esc(u.email)}"></div>
+      <div class="fld"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Any demo password"></div>
+      <div class="auth-error" id="loginError" role="alert"></div>
+      <button class="btn primary lg" type="submit">${ic('signout')}<span>Sign in</span></button>
+      <button class="btn soft lg" type="button" id="demoLoginBtn">${ic('user')}<span>Continue as ${esc(u.name)}</span></button>
+    </form>
+    <div class="auth-foot">
+      <span class="cap ok"><span class="dot"></span>Demo only</span>
+      <span>No server auth or real credentials</span>
+    </div>
+  </section>`;
+  const doLogin=(email)=>{
+    try{ localStorage.setItem(DEMO_AUTH_KEY,JSON.stringify({ signedIn:true, email:email||u.email, at:new Date().toISOString() })); }catch(e){}
+    location.reload();
+  };
+  $('#loginForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const email=$('#loginEmail').value.trim()||u.email;
+    const pass=$('#loginPassword').value.trim();
+    if(!pass){
+      $('#loginError').textContent='Enter any demo password, or use Continue as demo user.';
+      $('#loginPassword').focus();
+      return;
+    }
+    doLogin(email);
+  });
+  $('#demoLoginBtn').addEventListener('click',()=>doLogin(u.email));
+  setTimeout(()=>$('#loginPassword').focus(),60);
+}
+function signOutDemo(){
+  try{ localStorage.removeItem(DEMO_AUTH_KEY); }catch(e){}
+  try{ history.replaceState({},'',location.pathname+location.search); }catch(e){}
+  location.reload();
+}
 
 /* map every module's primary route + known sub-routes to a module id */
 const SUBROUTES = {
@@ -436,6 +528,12 @@ function renderTabbar(){
 
 /* ---------- boot ---------- */
 function boot(){
+  if(!isDemoSignedIn()){
+    renderLogin();
+    return;
+  }
+  setAuthShell(false);
+  const auth=$('#authView'); if(auth) auth.remove();
   // theme
   let t='light'; try{t=localStorage.getItem('aria-theme')||'light';}catch(e){}
   applyTheme(t);
@@ -450,7 +548,7 @@ function boot(){
   // topbar context
   $('#ctxCompany').innerHTML=`<b>${esc(DB.company.name)} ${ic('chevD')}</b><small>${esc(DB.company.branch)}</small>`;
   const envEl=$('.env'); if(envEl) envEl.textContent=DB.company.env||envEl.textContent;
-  const av=$('#avatarBtn'); if(av){ av.textContent=DB.user.initials; av.setAttribute('data-tip','Account · '+DB.user.name); }
+  syncAccountUi();
   // restore persisted working period, then paint the fiscal-period switcher
   try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch(e){}
   applyPeriod(DB.fiscal.selectedPeriod);
@@ -491,7 +589,7 @@ function boot(){
   });
   $('#palInput').addEventListener('input',e=>renderPalette(e.target.value));
   // account menu items
-  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){toast('Signed out (demo)','info');} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
+  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){signOutDemo(); return;} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
   // initial route
   let start=(location.hash||'').replace('#','');
   if(!SCREENS[start]&&!DB.nav.flatMap(g=>g.items).some(m=>m.route===start)) start='dashboard';

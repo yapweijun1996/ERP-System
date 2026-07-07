@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v3';
+const CACHE_VERSION = 'erp-system-pwa-v6';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -109,13 +109,18 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+
+  if (url.searchParams.has('__source_probe') || request.cache === 'reload' || request.cache === 'no-store') {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(request));
     return;
   }
 
-  const url = new URL(request.url);
   if (url.origin === self.location.origin) {
     event.respondWith(staleWhileRevalidate(request));
   }

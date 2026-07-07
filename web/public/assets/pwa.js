@@ -3,6 +3,100 @@
   let deferredInstallPrompt = null;
   let refreshing = false;
   let waitingWorker = null;
+  let sourceUpdatePromptOpen = false;
+  const SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
+  const SOURCE_PROBE_FILES = [
+    './index.html',
+    './assets/app.js',
+    './assets/erp.css',
+    './assets/erp-blocks.css',
+    './assets/pwa.js',
+    './sw.js',
+  ];
+
+  async function hashText(value){
+    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+      const data = new TextEncoder().encode(value);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+    return String(hash >>> 0);
+  }
+
+  async function sourceFingerprint(){
+    const stamp = Date.now().toString(36);
+    const parts = await Promise.all(SOURCE_PROBE_FILES.map(async (file) => {
+      const url = new URL(file, window.location.href);
+      url.searchParams.set('__source_probe', stamp);
+      const response = await fetch(url, {
+        cache:'no-store',
+        headers:{ 'Cache-Control':'no-cache' },
+      });
+      if (!response.ok) throw new Error(`Source probe failed: ${file}`);
+      return `${file}:${await response.text()}`;
+    }));
+    return hashText(parts.join('\n---erp-source---\n'));
+  }
+
+  async function clearAppCaches(){
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  }
+
+  function reloadWithFreshUrl(fingerprint){
+    const url = new URL(window.location.href);
+    url.searchParams.set('source', fingerprint.slice(0, 12));
+    window.location.replace(url.toString());
+  }
+
+  async function applySourceUpdate(fingerprint){
+    sourceUpdatePromptOpen = false;
+    hideToast();
+    localStorage.setItem(SOURCE_FINGERPRINT_KEY, fingerprint);
+    await clearAppCaches();
+    reloadWithFreshUrl(fingerprint);
+  }
+
+  function showSourceUpdatePrompt(fingerprint){
+    sourceUpdatePromptOpen = true;
+    showToast({
+      title:'Update ready',
+      body:'New source code is available. Update now to load the latest ERP demo files.',
+      primary:'Update now',
+      secondary:'Later',
+      onPrimary(){
+        applySourceUpdate(fingerprint);
+      },
+      onSecondary(){
+        sourceUpdatePromptOpen = false;
+        hideToast();
+      },
+    });
+  }
+
+  async function showUpdateIfSourceChanged(){
+    try {
+      const latest = await sourceFingerprint();
+      const previous = localStorage.getItem(SOURCE_FINGERPRINT_KEY);
+
+      if (!previous) {
+        localStorage.setItem(SOURCE_FINGERPRINT_KEY, latest);
+        return;
+      }
+
+      if (previous === latest) {
+        return;
+      }
+
+      showSourceUpdatePrompt(latest);
+    } catch (error) {
+      console.warn('Source freshness check failed:', error);
+    }
+  }
 
   function ensureToast(){
     let el = document.getElementById('pwaToast');
@@ -37,6 +131,7 @@
   }
 
   function showUpdatePrompt(worker){
+    if (sourceUpdatePromptOpen) return;
     waitingWorker = worker;
     showToast({
       title:'Update ready',
@@ -78,6 +173,8 @@
   if (!canUseServiceWorker) return;
 
   window.addEventListener('load', () => {
+    showUpdateIfSourceChanged();
+
     const swUrl = new URL('sw.js', window.location.href);
     navigator.serviceWorker.register(swUrl, { scope:'./' })
       .then((registration) => {
