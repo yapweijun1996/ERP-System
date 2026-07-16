@@ -5,6 +5,35 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-16 — TASK-009 setup wizard shell)
+- `web/public/assets/screens-setup-wizard.js` — 6-step first-run wizard (Language →
+  Organization → Company → Admin user → AI provider (optional, BYOK, not persisted) →
+  Finish), rendered outside `#app` like `renderLogin()`. Gated in `app.js` `boot()` via
+  `needsSetupWizard()` (localStorage flag), checked before the sign-in check per
+  `docs/SETUP_WIZARD.md`'s first-run ordering. Country picker live-previews
+  currency/tax (SG→SGD/GST 9%, MY→MYR/SST 8%). Per-step inline validation.
+- Settings → Demo data gained "Re-run setup wizard" (clears the flag only, keeps data)
+  alongside "Reset demo data" (now also clears the wizard flag).
+- Shell only: Finish does not write to PGlite yet — persistence is TASK-010.
+- Verified end-to-end in browser: full flow incl. validation errors, live
+  country/currency preview, Finish → reload → login (wizard does not re-show),
+  Settings re-run → reload → wizard re-shows with data intact; zero console errors
+  at desktop and 375px. `typecheck`, `typecheck:web`, `npm run demo`, `build:demo` pass.
+
+### Added (2026-07-16 — status review + planning suite)
+- `docs/STATUS.md` — audited ground truth: browser demo (PGlite/IndexedDB, sales →
+  stock → invoice → GL) is real; production (Docker/API/PostgreSQL, `VITE_DATA_MODE`
+  switch) is documented but unbuilt; mock-module inventory; design-debt list.
+- `docs/MVP.md` — MVP-1 (browser demo) / MVP-2 (Docker production) gates with exit
+  criteria; `docs/SPEC.md` — binding contract (invariants, data model, requirements,
+  verification gates); `docs/DESIGN.md` — repo map, golden paths, transaction design,
+  the dual-copy sync landmine, decisions log.
+- `CLAUDE.md` — AI-agent guide (reading order, task.jsonl workflow, commands,
+  definition of done, landmines).
+- `tasks/tasks.jsonl` TASK-019…025 + `docs/EPICS.md` EPIC-007 (data-seam integrity),
+  EPIC-008 (purchasing), EPIC-009 (auth); epic/roadmap statuses updated to reality;
+  README production quick-start marked not-yet-implemented.
+
 ### Added
 - **Documentation-first scaffold.** Standard docs before module implementation:
   - `README.md` — project overview, dual-mode (demo/production) summary, quick start.

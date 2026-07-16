@@ -49,6 +49,10 @@ load. **IndexedDB is for demo only** — it is not the 800 GB store. See
 
 ### Production mode (Docker: web + api + PostgreSQL) — one command
 
+> ⚠️ **Not yet implemented.** The compose stack, API service, and `make setup` flow
+> below are the target design — the Docker assets don't exist yet
+> (see [docs/STATUS.md](docs/STATUS.md); TASK-011/012/021 in `tasks/tasks.jsonl`).
+
 ```bash
 make setup        # creates .env, starts db+api+web, waits for DB, migrates, seeds SG+MY data
 ```
@@ -83,6 +87,11 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 | Doc | What's inside |
 | --- | --- |
+| [docs/STATUS.md](docs/STATUS.md) | **Start here** — what is built vs mock vs documented-only (reviewed 2026-07-16) |
+| [docs/MVP.md](docs/MVP.md) | MVP-1 (browser demo) and MVP-2 (Docker production) scope + exit criteria |
+| [docs/SPEC.md](docs/SPEC.md) | Contract of record: invariants, data model, functional requirements, gates |
+| [docs/DESIGN.md](docs/DESIGN.md) | Working design: repo map, golden paths, transaction design, landmines |
+| [CLAUDE.md](CLAUDE.md) | AI-agent guide: task workflow, commands, definition of done |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layers, dual-mode seam, where business logic runs, reference systems (SAP/Odoo) |
 | [docs/FRONTEND_PLAN.md](docs/FRONTEND_PLAN.md) | Frontend structure, Aria ERP UI baseline, demo/production UI contract |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Build phases from frontend foundation to production operations |
@@ -116,8 +125,12 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ## Status
 
-Early scaffolding. Documentation-first: this repo currently defines the architecture
-and contracts before module implementation begins. See [CHANGELOG.md](CHANGELOG.md).
+The **browser demo is live and real**: PGlite (IndexedDB) runs the canonical 18-table
+schema with a working order → stock → invoice → GL transaction (sales, inventory,
+finance screens on canonical data; other modules are labeled sample UIs). The
+**production path (API + Docker + PostgreSQL) is designed but not yet implemented** —
+see [docs/STATUS.md](docs/STATUS.md) for the honest breakdown and
+`tasks/tasks.jsonl` for the backlog.
 
 ## License
 

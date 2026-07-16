@@ -1,0 +1,80 @@
+# MVP Definition
+
+Two MVP gates, in order. Do not start MVP-2 items while MVP-1 exit criteria are open,
+except where a task is explicitly cross-cutting (CI, tests).
+
+## MVP-1 — Browser demo (zero backend)
+
+**Goal:** anyone opens a public URL and experiences a believable ERP — no install, no
+server, no account. All data lives in the browser (PGlite → IndexedDB; small UI prefs
+in localStorage).
+
+### In scope
+
+| # | Capability | Status |
+| --- | --- | --- |
+| 1 | Boot with seeded demo companies (Acme SG, Acme MY) into PGlite/IndexedDB | ✅ done |
+| 2 | Dashboard with figures derived from the database (not hardcoded) | ✅ done |
+| 3 | Inventory: products, warehouses, stock on hand, movements | ✅ done |
+| 4 | Sales: order list/detail, **Confirm order** → stock deducted → invoice → balanced GL, with insufficient-stock rollback | ✅ done |
+| 5 | Finance: invoices, journal entries, chart of accounts, ledger drill-down, P&L, AR aging | ✅ done |
+| 6 | Settings → Demo data reset (drop + reseed IndexedDB) | ✅ done |
+| 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
+| 8 | Deployed to GitHub Pages via Actions | ✅ done |
+| 9 | First-run **setup wizard** (language → company → country/tax → admin) | 🔶 shell done (TASK-009); persistence open (TASK-010) |
+| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ⬜ TASK-018 |
+| 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 |
+
+### Explicitly OUT of MVP-1
+
+- Real authentication (demo login stub is acceptable, but must be labeled demo)
+- Purchasing/CRM/HR/etc. backed by real tables (mock UI acceptable if labeled)
+- Any server, API, or Docker component
+- Multi-user anything — IndexedDB is single-browser by definition
+
+### MVP-1 exit criteria
+
+- Public Pages URL boots offline-capable PWA with seeded data on a phone and a laptop.
+- Order → stock → invoice → GL demo works and rolls back on over-sell (SO-2 / SO-3).
+- Setup wizard can create a fresh company and land on its empty dashboard.
+- Zero console errors on every registered route in demo mode.
+
+## MVP-2 — Docker production baseline
+
+**Goal:** `docker compose up -d` gives a real multi-user deployment: static web +
+Node API + PostgreSQL, sharing the exact schema/migrations/business logic already
+proven in the demo.
+
+### In scope
+
+| # | Capability | Task |
+| --- | --- | --- |
+| 1 | Frontend data seam actually switches on `VITE_DATA_MODE=demo\|api` | TASK-019 |
+| 2 | API server: `/health`, `GET /api/dashboard`, ERP read endpoints, `POST /api/sales-orders/:doc/confirm` running `confirmOrder.ts` server-side | TASK-011 |
+| 3 | Docker Compose stack `web` + `api` + `db` with health checks | TASK-012 |
+| 4 | Drizzle migrations + seed run against PostgreSQL | TASK-012 |
+| 5 | `Makefile` / `scripts/setup.sh` aligned with the real compose assets (`make setup` works end-to-end) | TASK-021 |
+| 6 | PostgreSQL parity + concurrency proof (`POSTGRES_URL npm run demo`; FOR UPDATE over-sell test: exactly one winner) | TASK-013 |
+| 7 | Minimal real auth: login validates against `app_user`, session scopes `master_fn`/`company_fn` server-side | TASK-024 |
+| 8 | CI validates typecheck (root+web), demo build, and demo proof on every PR | TASK-014 |
+
+### Explicitly OUT of MVP-2
+
+- Kubernetes, horizontal scaling, read replicas (see SCALABILITY.md — later)
+- SSO/OAuth, RBAC beyond the existing role table
+- Converting all mock modules to real tables (Phase 7+)
+- AI provider integration (docs exist; build after MVP-2)
+
+### MVP-2 exit criteria
+
+- Fresh machine: `make setup` → app at `:8080`, API `:3000`, DB `:5432`, seeded.
+- Browser in api mode performs the confirm-order flow **through the API**; stock and
+  money writes never execute client-side.
+- Concurrency test passes against real PostgreSQL.
+- The same `web/` bundle powers both Pages demo and Docker web service.
+
+## Guiding rule
+
+Demo (localStorage/IndexedDB via PGlite) and production (PostgreSQL) are **one product
+with a swappable data backend** — every feature must state which mode(s) it targets,
+and schema changes ship as one Drizzle migration used by both.
