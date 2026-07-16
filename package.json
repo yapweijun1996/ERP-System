@@ -15,7 +15,8 @@
     "migrate": "drizzle-kit migrate",
     "demo": "tsx src/demo.ts",
     "server": "tsx src/server.ts",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "check:drift": "node scripts/check-drift.mjs"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

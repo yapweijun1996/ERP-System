@@ -5,6 +5,27 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-020 schema drift check)
+- `scripts/check-drift.mjs`: zero-dependency Node script that parses `CREATE
+  TABLE` blocks from `drizzle/0000_init.sql` (source of truth) and
+  `web/public/db/erp-system-schema.sql` (hand-copied demo SQL — see the #1
+  landmine in `docs/DESIGN.md`) and compares them semantically per table/column,
+  not as a raw byte diff, so incidental formatting differences between
+  `drizzle-kit` regenerations don't false-positive.
+- `npm run check:drift`, wired into `.github/workflows/ci.yml` on every PR
+  (right after the typecheck steps, before the transaction proof) per TASK-020's
+  own instruction to wire it into TASK-014's workflow once it existed.
+- Documented in `docs/DEVELOPMENT.md`'s script table.
+- Verified directly: clean run against the current repo (0 drift, 18 tables);
+  simulated a column rename in only the demo copy (correctly reported as two
+  separate readable lines — missing + extra); simulated a pure type change
+  (`text` → `varchar(10)`) to confirm that detection path too; restored the file
+  and confirmed a clean `git diff` afterward.
+- Known limit, noted rather than silently left implicit: this only checks the
+  **schema** copy, not `src/data/seed.ts` vs `erp-system-seed.sql` or
+  `confirmOrder.ts` vs the adapter's raw-SQL mirror — those still rely on manual
+  discipline.
+
 ### Added (2026-07-16 — TASK-026 render the real dashboard in api mode)
 - `erp-system-api-adapter.js` now calls `GET {base}/dashboard?masterFn=&companyFn=`
   once the health check succeeds and maps the response onto `DB.company`/`DB.user`/

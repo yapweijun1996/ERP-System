@@ -39,6 +39,9 @@ jobs:
       - name: Typecheck web
         run: npm run typecheck:web
 
+      - name: Check schema drift (drizzle/0000_init.sql vs web/public/db/erp-system-schema.sql)
+        run: npm run check:drift
+
       - name: Run PGlite transaction proof (order -> stock -> invoice -> GL, incl. rollback)
         run: npm run demo
 

@@ -31,7 +31,8 @@ endpoints (confirm order / setup) on the server side yet.
 | Finance/GL screens (invoices, journals, CoA, ledger, P&L, AR aging) | ✅ Canonical data | `screens-fin*.js`, TASK-008 |
 | PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`, TASK-016 |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` |
-| CI validation on every PR (typecheck root+web, transaction proof, demo build) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 |
+| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
+| Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -67,8 +68,13 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 1. **Manual schema sync.** The frontend does not import `src/`. Schema/seed/txn logic
    is hand-copied to `web/public/db/*.sql` and the adapter re-implements
-   `confirmOrder.ts` in raw SQL. Any schema change must be made in BOTH places until a
-   drift check (TASK-020) or shared code path exists. This is the #1 landmine.
+   `confirmOrder.ts` in raw SQL. Any schema change must be made in BOTH places —
+   `npm run check:drift` (TASK-020, runs in CI on every PR) now catches schema
+   drift automatically, but it only compares `drizzle/0000_init.sql` against
+   `erp-system-schema.sql`; it does **not** check `src/data/seed.ts` against
+   `erp-system-seed.sql`, or `confirmOrder.ts` against the adapter's raw-SQL
+   mirror — those two still rely on manual discipline. This is still the #1
+   landmine, now partially — not fully — guarded.
 2. **PGlite loads from jsDelivr CDN** with a 20 s timeout → static fallback. Offline
    first-load depends on the SW cache.
 3. **`web/dist/` is gitignored** (built fresh by `deploy-pages.yml` on every deploy) —
@@ -80,11 +86,11 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…014, TASK-016, TASK-019, TASK-026 (17)
-- Todo: TASK-015, 017, 018, 020…025 (9)
-- Next up: TASK-021 (align Makefile/setup.sh, needs a session with `.env.example`
-  access), TASK-024 (real auth, unblocked), TASK-025 (vitest unit tests), TASK-020
-  (schema-drift check)
+- Done: TASK-001…014, TASK-016, TASK-019, TASK-020, TASK-026 (18)
+- Todo: TASK-015, 017, 018, 021…025 (8)
+- Next up: TASK-015 (browser smoke test), TASK-021 (align Makefile/setup.sh, needs
+  a session with `.env.example` access), TASK-024 (real auth, unblocked), TASK-025
+  (vitest unit tests)
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
 

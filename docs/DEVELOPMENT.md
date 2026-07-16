@@ -25,6 +25,7 @@ npm install
 | `npm run seed` | Seed sample data (demo dataset) |
 | `npm run typecheck` | `tsc --noEmit` over the schema + data layer |
 | `npm run demo` | **Dual-adapter proof** — same repo code on PGlite (and PostgreSQL if `POSTGRES_URL` set) |
+| `npm run check:drift` | **Schema drift check** — compares table/column definitions between `drizzle/0000_init.sql` (source of truth) and `web/public/db/erp-system-schema.sql` (hand-copied demo SQL); fails with a readable diff on any mismatch. Run this after any schema change, before re-copying the SQL by hand. Runs in CI on every PR. |
 | `npm test` | Run the test suite |
 | `npm run lint` | Lint |
 

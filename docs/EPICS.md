@@ -114,10 +114,10 @@ Acceptance criteria:
 - [x] Docs stay aligned with package scripts and deployment assets — actively kept
       current through TASK-009…014.
 
-## EPIC-007 — Data Seam Integrity 🔶 (seam wired; drift check open)
+## EPIC-007 — Data Seam Integrity ✅ (core acceptance criteria met)
 
 Close the gap between the documented dual-mode design and the code: one adapter
-interface, two backends, no silent schema drift. (TASK-019 done, TASK-020 todo)
+interface, two backends, no silent schema drift. (TASK-019, TASK-020, TASK-026 done)
 
 Acceptance criteria:
 
@@ -127,10 +127,14 @@ Acceptance criteria:
 - [x] The api adapter exposes every method the demo adapter exposes with the same
       signature (`ready/reset/refresh/confirmOrder/completeSetup/switchCompany/mode/db`);
       every write currently rejects with a clear "not available yet" error since
-      TASK-011's server doesn't exist — this is the documented contract for it to
-      implement.
-- [ ] A repeatable check detects drift between `drizzle/0000_init.sql` +
-      `src/data/seed.ts` and `web/public/db/erp-system-*.sql`, and runs in CI (TASK-020).
+      TASK-011's server doesn't have write endpoints — this is the documented
+      contract for it to implement.
+- [x] A repeatable check detects drift between `drizzle/0000_init.sql` and
+      `web/public/db/erp-system-schema.sql`, and runs in CI (TASK-020 done
+      2026-07-17 — `scripts/check-drift.mjs`, semantic table/column comparison,
+      wired into `.github/workflows/ci.yml`). Does not yet cover
+      `src/data/seed.ts` vs `erp-system-seed.sql` (only the schema, not the seed
+      data) — worth a follow-up if seed drift becomes a real incident.
 - [x] `confirmOrder`/`completeSetup`/`switchCompany` exist in exactly one place per
       runtime (demo adapter vs. api adapter), never both active at once.
 - [x] `VITE_DATA_MODE=api` renders the real dashboard once a server is reachable
