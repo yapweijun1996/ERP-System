@@ -97,18 +97,22 @@ Acceptance criteria:
       (TASK-012), but `scripts/setup.sh` itself (which touches the
       permission-blocked `.env.example`) is still unverified end-to-end (TASK-021).
 
-## EPIC-006 — CI, Testing, And Release ⬜
+## EPIC-006 — CI, Testing, And Release 🔶 (CI gate live; tests/smoke/device open)
 
-Add repeatable validation and deployment checks. (TASK-014, TASK-015, TASK-017, TASK-025)
+Add repeatable validation and deployment checks. (TASK-014 done, TASK-015/017/025 todo)
 
 Acceptance criteria:
 
-- CI runs root typecheck, web typecheck, and demo build.
-- CI can run transaction proof tests.
-- Unit tests (vitest) cover `src/modules/*` business logic.
-- Browser smoke test covers desktop and mobile demo load.
-- Release checklist distinguishes GitHub Pages demo and Docker production.
-- Docs stay aligned with package scripts and deployment assets.
+- [x] CI runs root typecheck, web typecheck, and demo build — `.github/workflows/ci.yml`
+      (TASK-014), triggered on every PR + push to main, separate from the deploy-only
+      `deploy-pages.yml`.
+- [x] CI can run transaction proof tests — same workflow runs `npm run demo`
+      (PGlite proof) on every PR.
+- [ ] Unit tests (vitest) cover `src/modules/*` business logic (TASK-025).
+- [ ] Browser smoke test covers desktop and mobile demo load (TASK-015).
+- [ ] Release checklist distinguishes GitHub Pages demo and Docker production.
+- [x] Docs stay aligned with package scripts and deployment assets — actively kept
+      current through TASK-009…014.
 
 ## EPIC-007 — Data Seam Integrity 🔶 (seam wired; drift check open)
 

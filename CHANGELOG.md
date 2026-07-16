@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-16 — TASK-014 CI validation workflow)
+- `.github/workflows/ci.yml`: runs on every pull request and push to `main` —
+  `npm ci` (root + web), `npm run typecheck`, `npm run typecheck:web` (the existing
+  `deploy-pages.yml` only ran root typecheck; this is the first workflow to gate
+  web typecheck on every PR), `npm run demo` (PGlite transaction proof, including
+  rollback), `npm run build:demo`. `deploy-pages.yml` is unchanged — deploy-only,
+  triggered on push to `main`.
+- Verified every command the workflow runs passes locally immediately before
+  creating it, and validated the YAML parses correctly.
+- Not included (separate follow-ups): TASK-020's schema-drift check (script
+  doesn't exist yet), Docker/Postgres integration testing in CI (would need a
+  Postgres service container in the workflow — valuable, but outside this task's
+  literal acceptance criteria).
+
 ### Added (2026-07-16 — TASK-012/013 Docker Compose production stack)
 - `docker-compose.yml` (repo root): `db` (`postgres:16-alpine`, named volume,
   `pg_isready` healthcheck), `api` (built from new `Dockerfile.api` — repo-root

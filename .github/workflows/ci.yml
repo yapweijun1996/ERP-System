@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, transaction proof, and demo build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install web dependencies
+        run: npm ci --prefix web
+
+      - name: Typecheck root (src/, includes the API server and drizzle config)
+        run: npm run typecheck
+
+      - name: Typecheck web
+        run: npm run typecheck:web
+
+      - name: Run PGlite transaction proof (order -> stock -> invoice -> GL, incl. rollback)
+        run: npm run demo
+
+      - name: Build the GitHub Pages demo bundle
+        env:
+          VITE_DATA_MODE: demo
+        run: npm run build:demo

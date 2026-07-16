@@ -29,6 +29,7 @@ screen even with a live server — TASK-026), and there are no write endpoints
 | Finance/GL screens (invoices, journals, CoA, ledger, P&L, AR aging) | ✅ Canonical data | `screens-fin*.js`, TASK-008 |
 | PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`, TASK-016 |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` |
+| CI validation on every PR (typecheck root+web, transaction proof, demo build) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -69,15 +70,20 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
    first-load depends on the SW cache.
 3. **`web/dist/` is gitignored** (built fresh by `deploy-pages.yml` on every deploy) —
    a local `npm run build:demo` output is disposable; don't hand-edit files under `dist/`.
-4. CI (`deploy-pages.yml`) does not run `typecheck:web` (→ TASK-014).
+4. ~~CI (`deploy-pages.yml`) does not run `typecheck:web`~~ — fixed by
+   `.github/workflows/ci.yml` (TASK-014), which runs on every PR; `deploy-pages.yml`
+   itself is unchanged (deploy-only, still doesn't run `typecheck:web`, which is
+   fine since `ci.yml` already gated it before merge).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…013, TASK-016, TASK-019 (15)
-- Todo: TASK-014, 015, 017, 018, 020…026 (11)
+- Done: TASK-001…014, TASK-016, TASK-019 (16)
+- Todo: TASK-015, 017, 018, 020…026 (10)
 - Next up: TASK-026 (P1, wire the frontend to the now-real dashboard — quick win),
   TASK-021 (align Makefile/setup.sh, needs a session with `.env.example` access),
-  TASK-024 (real auth, unblocked), TASK-014 (CI validation)
+  TASK-024 (real auth, unblocked), TASK-025 (vitest unit tests)
+- **Permanently blocked without a human**: TASK-017 (real-device verification)
+  requires a physical phone — no agent can complete this task alone.
 
 ## Where to go next
 
