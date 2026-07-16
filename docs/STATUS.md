@@ -34,6 +34,7 @@ endpoints (confirm order / setup) on the server side yet.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
+| Unit tests: `confirmOrder` (success/rollback/posting-error/GL-balance), `issueStock`, effective-dated tax boundaries | ✅ Working | `vitest`, `npm test`, 15 tests, wired into CI, TASK-025 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -63,7 +64,7 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | Real login/auth | `renderLogin()` is a demo stub; user hardcoded to Admin/Superadmin. → TASK-024 |
 | Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. |
-| `npm test` / `npm run lint` (referenced in CONTRIBUTING.md) | Neither script exists. Only `npm run demo` acts as a test gate. → TASK-025 |
+| `npm run lint` (referenced in CONTRIBUTING.md) | Still doesn't exist — no ESLint/Prettier config in the repo. `npm test` (TASK-025, done) now works. |
 
 ## Known design debt
 
@@ -87,13 +88,14 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…015, TASK-016, TASK-019, TASK-020, TASK-026 (19)
-- Todo: TASK-017, 018, 021…025 (7)
-- Next up: TASK-021 (align Makefile/setup.sh, needs a session with `.env.example`
-  access), TASK-024 (real auth, unblocked), TASK-025 (vitest unit tests), TASK-018
-  (screen audit)
+- Done: TASK-001…016, TASK-019, TASK-020, TASK-025, TASK-026 (20)
+- Todo: TASK-017, 018, 021…024 (6)
+- Next up: TASK-024 (real auth, unblocked), TASK-018 (screen audit), TASK-022/023
+  (purchasing module, largest remaining task)
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
-  requires a physical phone — no agent can complete this task alone.
+  requires a physical phone — no agent can complete this task alone. TASK-021
+  (verify `scripts/setup.sh`) is blocked in this sandbox specifically — it needs
+  `.env.example`, which this environment denies read access to.
 
 ## Where to go next
 

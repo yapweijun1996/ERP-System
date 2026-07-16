@@ -27,8 +27,8 @@ npm install
 | `npm run demo` | **Dual-adapter proof** — same repo code on PGlite (and PostgreSQL if `POSTGRES_URL` set) |
 | `npm run check:drift` | **Schema drift check** — compares table/column definitions between `drizzle/0000_init.sql` (source of truth) and `web/public/db/erp-system-schema.sql` (hand-copied demo SQL); fails with a readable diff on any mismatch. Run this after any schema change, before re-copying the SQL by hand. Runs in CI on every PR. |
 | `npm run smoke` | **Browser smoke test** — requires `npm run build:demo` first. Launches headless Chromium (Playwright) at desktop (1280×800) and mobile (375×812) viewports, bypasses the first-run wizard/login via a pre-set `localStorage` flag, and asserts the dashboard actually renders (`.dashgrid` visible, `document.title` mentions the seeded company) with **zero** console errors and **zero** uncaught page errors. Runs in CI on every PR. |
-| `npm test` | Run the test suite |
-| `npm run lint` | Lint |
+| `npm test` | **Unit tests** (`vitest run`) — `confirmSalesOrder` (success + GL-balance, whole-chain rollback on insufficient stock, `PostingError` when no tax rule covers the date), `issueStock` (deduct, insufficient, boundary at exactly available qty), `getEffectiveTaxRate` (dated-boundary cases: inclusive `validFrom`, exclusive `validTo`, open-ended, no-match). Each test gets its own fresh in-memory PGlite instance (`src/test/helpers.ts`). Runs in CI on every PR. |
+| `npm run lint` | Lint — **not implemented yet**, no ESLint/Prettier config in the repo |
 
 ### Browser smoke test
 

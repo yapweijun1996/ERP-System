@@ -5,6 +5,29 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-025 vitest unit tests)
+- `vitest` devDependency + `npm test` (`vitest run`).
+- `src/test/helpers.ts`: `freshDb()` gives every test its own isolated in-memory
+  PGlite instance (same `createPgliteDb()` + `migrate()` pattern as `src/demo.ts`),
+  so tests share no state and can run in any order.
+- 15 tests across 3 files: `src/modules/inventory/stock.test.ts` (deduct + one
+  movement on success, `InsufficientStockError` leaves state unchanged,
+  negative-stock rejection after a prior issue, exact-boundary
+  `qty === available`); `src/modules/sales/confirmOrder.test.ts` (success with an
+  explicit GL debit==credit==119.9 balance assertion, whole-chain rollback on a
+  later line's insufficient stock — including the earlier valid line,
+  `PostingError` when no tax rule covers the order date with the same rollback
+  guarantee); `src/data/repo.test.ts` (`getEffectiveTaxRate` dated-boundary cases:
+  mid-window, inclusive `validFrom`, exclusive `validTo`, open-ended, no-match;
+  `addProduct`/`listProducts` round-trip and tenant isolation).
+- Wired into `.github/workflows/ci.yml`. Documented in `docs/DEVELOPMENT.md`.
+- Verified the suite isn't vacuously green: deliberately corrupted one assertion,
+  confirmed both the reported diff and the actual process exit code (1), restored
+  the file, reconfirmed a clean 15/15 pass.
+- Fixed now-stale `docs/STATUS.md`/`docs/DEVELOPMENT.md` claims that `npm test`
+  didn't exist. `npm run lint` genuinely still doesn't — left as accurately
+  not-yet-implemented.
+
 ### Added (2026-07-17 — TASK-015 browser smoke test)
 - `scripts/smoke.mjs` (Playwright, new devDependency — verified it actually
   launches headless Chromium in this environment before committing to the

@@ -97,10 +97,11 @@ Acceptance criteria:
       (TASK-012), but `scripts/setup.sh` itself (which touches the
       permission-blocked `.env.example`) is still unverified end-to-end (TASK-021).
 
-## EPIC-006 — CI, Testing, And Release 🔶 (CI gate + smoke test live; unit tests/device open)
+## EPIC-006 — CI, Testing, And Release 🔶 (CI/smoke/unit-tests all live; release checklist + device open)
 
-Add repeatable validation and deployment checks. (TASK-014, TASK-015, TASK-020 done;
-TASK-017/025 todo)
+Add repeatable validation and deployment checks. (TASK-014, TASK-015, TASK-020,
+TASK-025 done; TASK-017 permanently blocked — needs a physical phone, no agent can
+complete it)
 
 Acceptance criteria:
 
@@ -109,7 +110,10 @@ Acceptance criteria:
       `deploy-pages.yml`.
 - [x] CI can run transaction proof tests — same workflow runs `npm run demo`
       (PGlite proof) on every PR.
-- [ ] Unit tests (vitest) cover `src/modules/*` business logic (TASK-025).
+- [x] Unit tests (vitest) cover `src/modules/*` business logic (TASK-025 done
+      2026-07-17 — 15 tests: `confirmSalesOrder` success/rollback/posting-error +
+      explicit GL-balance assertion, `issueStock` deduct/insufficient/boundary,
+      `getEffectiveTaxRate` dated-boundary cases; wired into CI).
 - [x] Browser smoke test covers desktop and mobile demo load (TASK-015 done
       2026-07-17 — `scripts/smoke.mjs`, Playwright, wired into CI with browser
       caching; checks zero console/page errors and that the dashboard actually
