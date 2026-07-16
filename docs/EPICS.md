@@ -45,25 +45,29 @@ Acceptance criteria:
 - [ ] Every routed screen opens error-free under canonical data; leftover Northwind
       sample shapes cleaned or labeled (TASK-018).
 
-## EPIC-004 — Setup Wizard 🔶 (shell done; persistence open)
+## EPIC-004 — Setup Wizard 🔶 (demo path done; production lock open)
 
-Implement first-run setup shared by demo and production. (TASK-009 done, TASK-010 todo)
+Implement first-run setup shared by demo and production. (TASK-009 done, TASK-010 done)
 
 Acceptance criteria:
 
 - [x] Empty app launches setup wizard (`needsSetupWizard()` gate in `app.js` boot(),
       before the sign-in check).
 - [x] User can choose language (en/ms/zh — the 3 implemented in `i18n.js`).
-- [x] User can create master/company (UI only — not yet persisted, see below).
+- [x] User can create master/company, persisted to PGlite via
+      `ErpSystemDemo.completeSetup()` in one transaction.
 - [x] Country selection configures currency and tax regime (SG→SGD/GST 9%,
-      MY→MYR/SST 8%, live preview).
-- [x] First admin user can be created (UI only — not yet persisted).
+      MY→MYR/SST 8%, live preview, written as an effective-dated `tax_rule`).
+- [x] First admin user can be created, persisted as `app_user` + `user_company` +
+      a `Superadmin` role.
 - [x] Demo can reset wizard state (Settings → "Re-run setup wizard" clears the flag
       without touching data; "Reset demo data" clears it too).
-- [ ] Production locks setup after first admin — blocked on TASK-010/TASK-011 (no
-      backend yet).
-- [ ] Wizard choices persist to PGlite/API (TASK-010 — the shell currently reloads
-      into login without writing anything to the database).
+- [x] Company switcher (topbar) reflects the created company — rewired from a
+      disconnected mock array to `DB.erpSystem.companies`, with a real
+      `switchCompany()` scope switch.
+- [ ] Production locks setup after first admin — blocked on TASK-011/TASK-019 (no
+      backend yet); the demo/API adapter *contract* (`completeSetup()` input/output
+      shape) is defined and documented for the future API adapter to implement.
 
 ## EPIC-005 — Production API And Docker ⬜
 

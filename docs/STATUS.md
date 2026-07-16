@@ -25,7 +25,8 @@ runtime, `VITE_DATA_MODE` switch) is documented but not yet built.**
 | Finance/GL screens (invoices, journals, CoA, ledger, P&L, AR aging) | ✅ Canonical data | `screens-fin*.js`, TASK-008 |
 | PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`, TASK-016 |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` |
-| Setup wizard shell (language/org/company/admin/AI preview → localStorage flag) | ✅ Working (UI only) | `web/public/assets/screens-setup-wizard.js`, gated in `app.js` boot(), TASK-009 |
+| Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
+| Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 
 ## What renders but is mock-only
 
@@ -46,7 +47,7 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 | `make setup` / `docker compose up` production stack | **No Dockerfile or compose file exists anywhere.** `Makefile` and `scripts/setup.sh` call `docker compose exec api/db` against services that don't exist. → TASK-011/012/021 |
 | Production API server | Not built. `deploy/erp-server.mjs` is a static "Live" placeholder page + `/health`, not the API. → TASK-011 |
 | Real login/auth | `renderLogin()` is a demo stub; user hardcoded to Admin/Superadmin. → TASK-024 |
-| Setup wizard **persists** choices to a database | Not built. TASK-009 (shell) is done; TASK-010 (write to PGlite/API) is still open — Finish only sets a localStorage flag and reloads. |
+| Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. |
 | `npm test` / `npm run lint` (referenced in CONTRIBUTING.md) | Neither script exists. Only `npm run demo` acts as a test gate. → TASK-025 |
 
 ## Known design debt
@@ -63,10 +64,10 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…009, TASK-016 (10)
-- Todo: TASK-010…015, 017…025 (15)
-- Next up (P0): TASK-010 (persist wizard data), TASK-019 (wire data-mode seam),
-  TASK-011/012/013 (API + Docker + PG parity)
+- Done: TASK-001…010, TASK-016 (11)
+- Todo: TASK-011…015, 017…025 (14)
+- Next up (P0): TASK-019 (wire data-mode seam), TASK-011/012/013 (API + Docker + PG
+  parity), TASK-024 (real auth, now unblocked)
 
 ## Where to go next
 

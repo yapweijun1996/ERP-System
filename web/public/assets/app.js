@@ -569,14 +569,38 @@ function buildQuickCreate(){
   return `<div class="menu-section"><div class="menu-head">${esc(t('qc.title'))}</div>`+items.map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
 }
 function buildCompanyMenu(){
-  const m=DB.masters[0];
-  const head=`<div class="menu-head">${esc(m.name)} · <span class="mono" style="text-transform:none">${esc(m.id)}</span></div>`;
-  const rows=m.companies.map(c=>`<button class="menu-item" data-co="${esc(c.id)}">
+  /* Canonical companies (ERP-System PGlite schema), not the unrelated Aria
+     "Master Control" mock hierarchy in DB.masters — this switches the real
+     active company scope via ErpSystemDemo.switchCompany(). */
+  const companies=(DB.erpSystem && DB.erpSystem.companies) || [];
+  const activeFn=DB.erpSystem && DB.erpSystem.scope && DB.erpSystem.scope.companyFn;
+  const masterName=(DB.erpSystem && DB.erpSystem.master && DB.erpSystem.master.name) || DB.company.name;
+  const head=`<div class="menu-head">${esc(masterName)}</div>`;
+  const rows=companies.map(c=>`<button class="menu-item" data-co="${esc(c.company_fn)}">
     <span class="mc-logo" style="width:26px;height:26px;font-size:9.5px;border-radius:7px">${esc(c.name.replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase())}</span>
-    <span>${esc(c.name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(c.cur)} · ${c.branches} branch${c.branches>1?'es':''}</small></span>
-    <span class="meta">${c.current?ic('check'):''}</span></button>`).join('');
+    <span>${esc(c.name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(c.currency)} · ${esc(c.country)}</small></span>
+    <span class="meta">${c.company_fn===activeFn?ic('check'):''}</span></button>`).join('');
   return `<div class="menu-section">${head}${rows}</div>
     <div class="menu-section"><button class="menu-item" data-co-action="master">${ic('grid')}<span>Master Control</span><span class="meta">${ic('arrowR')}</span></button></div>`;
+}
+/* (re)render the company switcher popover and wire its [data-co] buttons.
+   Called on boot and again after a successful switch, since the button
+   list itself changes (checkmark moves to the newly active company). */
+function wireCompanyMenu(){
+  $('#companyMenu').innerHTML=buildCompanyMenu();
+  $('#companyMenu').querySelectorAll('[data-co]').forEach(b=>b.addEventListener('click',()=>{
+    closeAllPops();
+    const fn=b.dataset.co;
+    if(!window.ErpSystemDemo||!window.ErpSystemDemo.switchCompany){ toast('Company switch needs the PGlite adapter.','warn'); return; }
+    if(!DB.erpSystem||!DB.erpSystem.scope||fn===DB.erpSystem.scope.companyFn) return;
+    window.ErpSystemDemo.switchCompany(fn).then(()=>{
+      $('#ctxCompany').innerHTML=`<b>${esc(DB.company.name)} ${ic('chevD')}</b><small>${esc(DB.company.branch)}</small>`;
+      wireCompanyMenu();
+      if(CURRENT_ROUTE) navigate(CURRENT_ROUTE);
+      toast('Switched to '+DB.company.name,'ok');
+    }).catch(e=>toast('Switch failed: '+((e&&e.message)||e),'danger'));
+  }));
+  $('#companyMenu').querySelector('[data-co-action="master"]').addEventListener('click',()=>{ closeAllPops(); navigate('master-control'); });
 }
 
 /* ---------- fiscal period switcher + FY setup ---------- */
@@ -729,9 +753,7 @@ function boot(){
   $('#qcMenu').innerHTML=buildQuickCreate();
   $('#qcMenu').querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
   // company switcher
-  $('#companyMenu').innerHTML=buildCompanyMenu();
-  $('#companyMenu').querySelectorAll('[data-co]').forEach(b=>b.addEventListener('click',()=>{ closeAllPops(); toast('Switched to '+b.querySelector('span').textContent.trim(),'ok'); }));
-  $('#companyMenu').querySelector('[data-co-action="master"]').addEventListener('click',()=>{ closeAllPops(); navigate('master-control'); });
+  wireCompanyMenu();
   // language switcher
   $('#langBtn').innerHTML=ic('globe');
   $('#langBtn').setAttribute('aria-label',t('tip.language'));

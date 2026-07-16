@@ -21,7 +21,7 @@ in localStorage).
 | 6 | Settings → Demo data reset (drop + reseed IndexedDB) | ✅ done |
 | 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
 | 8 | Deployed to GitHub Pages via Actions | ✅ done |
-| 9 | First-run **setup wizard** (language → company → country/tax → admin) | 🔶 shell done (TASK-009); persistence open (TASK-010) |
+| 9 | First-run **setup wizard** (language → company → country/tax → admin) | ✅ done (TASK-009, TASK-010) |
 | 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ⬜ TASK-018 |
 | 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 |
 

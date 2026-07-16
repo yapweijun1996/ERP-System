@@ -187,7 +187,10 @@
   function applyData(d, mode){
     state.mode = mode;
     var activeCompany = d.companies.filter(function(c){ return c.company_fn === SCOPE.companyFn; })[0] || d.companies[0];
-    var beta = d.customers[0];
+    /* fallback keeps applyData() safe for a freshly wizard-created company that
+       has no customers yet — every beta.* use below is a display string, never
+       a query key, so a stub is enough (no crash on an empty company). */
+    var beta = d.customers[0] || { id: null, code: '—', name: 'No customers yet', balance: 0 };
     var confirmed = d.orders.filter(function(o){ return o.status === 'confirmed'; });
     var so = confirmed[0] || d.orders[0];
     var inv = d.invoices[0];
@@ -213,7 +216,7 @@
 
     DB.company = {
       name: activeCompany.name,
-      branch: 'Singapore HQ',
+      branch: activeCompany.country === 'MY' ? 'Kuala Lumpur HQ' : 'Singapore HQ',
       currency: activeCompany.currency,
       taxRegime: activeCompany.tax_regime,
       period: 'FY2026 · P06',
@@ -619,6 +622,91 @@
     return result;
   }
 
+  /* Switch the active company scope (topbar company switcher) and re-read.
+     Same-master only today — SCOPE.masterFn stays fixed, matching the single-
+     org demo model. */
+  function switchCompany(companyFn){
+    if (!companyFn || companyFn === SCOPE.companyFn) return Promise.resolve(null);
+    SCOPE.companyFn = companyFn;
+    return refresh();
+  }
+
+  /* Persist first-run setup wizard choices (TASK-010). Demo-adapter contract:
+     completeSetup({ masterName, companyName, country, adminName, adminEmail, language })
+       -> { masterFn, companyFn, userId }
+     A production/API adapter (TASK-011/EPIC-007) must implement the same input
+     shape and return the same result shape, so screens-setup-wizard.js does not
+     need to know which backend is active. One transaction: rename the existing
+     master (masterFn is fixed — this demo models a single org), insert the new
+     company (SG -> SGD/GST 9%, MY -> MYR/SST 8%; both currencies are already
+     seeded so no currency insert is needed), a starter chart of accounts so
+     Finance is not empty, the effective-dated tax rule, the admin app_user
+     (idempotent on master_fn+email), a Superadmin role (created once), and the
+     user<->company link. Any failure rolls the whole setup back. */
+  async function completeSetup(input){
+    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Setup needs PGlite.');
+    input = input || {};
+    var companyName = String(input.companyName || '').trim();
+    var adminName = String(input.adminName || '').trim();
+    var adminEmail = String(input.adminEmail || '').trim().toLowerCase();
+    if (!companyName) throw new Error('Company name is required.');
+    if (!adminName || !adminEmail) throw new Error('Admin user name and email are required.');
+    var country = input.country === 'MY' ? 'MY' : 'SG';
+    var currency = country === 'MY' ? 'MYR' : 'SGD';
+    var taxRegime = country === 'MY' ? 'SST' : 'GST';
+    var taxCode = country === 'MY' ? 'SV' : 'SR';
+    var taxRate = country === 'MY' ? 8 : 9;
+    var masterName = String(input.masterName || '').trim();
+    var language = input.language || 'en';
+    var slug = companyName.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/(^-+|-+$)/g, '').slice(0, 16) || 'CO';
+    var companyFn = 'C-' + slug + '-' + Date.now().toString(36).toUpperCase();
+
+    var result = await state.db.transaction(async function(tx){
+      if (masterName) {
+        await tx.query('update master set name=$1, updated_at=now() where master_fn=$2', [masterName, SCOPE.masterFn]);
+      }
+      await tx.query(
+        'insert into company (company_fn, master_fn, name, country, currency, tax_regime, locale) values ($1,$2,$3,$4,$5,$6,$7)',
+        [companyFn, SCOPE.masterFn, companyName, country, currency, taxRegime, language]);
+
+      var today = new Date().toISOString().slice(0, 10);
+      await tx.query(
+        'insert into tax_rule (master_fn, company_fn, tax_regime, tax_code, rate, valid_from) values ($1,$2,$3,$4,$5,$6)',
+        [SCOPE.masterFn, companyFn, taxRegime, taxCode, taxRate, today]);
+
+      var starterAccounts = [
+        ['1100', 'Accounts Receivable', 'asset'],
+        ['4000', 'Revenue', 'income'],
+        ['2200', taxRegime + ' Output Tax', 'liability'],
+      ];
+      for (var i = 0; i < starterAccounts.length; i++){
+        await tx.query(
+          'insert into account (master_fn, company_fn, code, name, type) values ($1,$2,$3,$4,$5)',
+          [SCOPE.masterFn, companyFn, starterAccounts[i][0], starterAccounts[i][1], starterAccounts[i][2]]);
+      }
+
+      var roleRow = (await tx.query(
+        "select role_id from role where master_fn=$1 and name='Superadmin'", [SCOPE.masterFn])).rows[0];
+      var roleId = roleRow ? roleRow.role_id : (await tx.query(
+        "insert into role (master_fn, name, is_superadmin) values ($1,'Superadmin',true) returning role_id",
+        [SCOPE.masterFn])).rows[0].role_id;
+
+      var userRow = (await tx.query(
+        'select user_id from app_user where master_fn=$1 and email=$2', [SCOPE.masterFn, adminEmail])).rows[0];
+      var userId = userRow ? userRow.user_id : (await tx.query(
+        'insert into app_user (master_fn, email, full_name, language) values ($1,$2,$3,$4) returning user_id',
+        [SCOPE.masterFn, adminEmail, adminName, language])).rows[0].user_id;
+
+      await tx.query(
+        'insert into user_company (user_id, company_fn, role_id) values ($1,$2,$3) on conflict (user_id, company_fn) do nothing',
+        [userId, companyFn, roleId]);
+
+      return { masterFn: SCOPE.masterFn, companyFn: companyFn, userId: userId };
+    });
+    await refresh();
+    return result;
+  }
+
   /* Reset demo: drop the canonical schema and reload — next boot reseeds. */
   async function reset(){
     try {
@@ -640,6 +728,8 @@
     reset: reset,
     refresh: refresh,
     confirmOrder: confirmOrder,
+    completeSetup: completeSetup,
+    switchCompany: switchCompany,
     get mode(){ return state.mode; },
     get db(){ return state.db; },
   };

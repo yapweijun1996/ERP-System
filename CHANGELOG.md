@@ -5,6 +5,31 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-16 — TASK-010 persist wizard data)
+- `ErpSystemDemo.completeSetup({masterName,companyName,country,adminName,adminEmail,
+  language}) -> {masterFn,companyFn,userId}` — one PGlite transaction: renames the
+  existing master, inserts the new company (SG→SGD/GST 9%, MY→MYR/SST 8%), an
+  effective-dated `tax_rule`, a starter chart of accounts, the admin `app_user`
+  (idempotent), a `Superadmin` role, and the `user_company` link. Rolls back whole on
+  failure. This is the documented demo/API adapter contract for setup writes.
+- The wizard's Finish step now awaits `completeSetup()` before marking itself
+  complete; a failed write re-enables Finish and shows the error instead of
+  proceeding.
+- `ErpSystemDemo.switchCompany(companyFn)` + rewired topbar company switcher
+  (`buildCompanyMenu`/`wireCompanyMenu` in `app.js`) — it previously read a
+  disconnected Aria mock array and "switching" was a no-op toast; it now reads
+  `DB.erpSystem.companies` (canonical, includes wizard-created companies) and
+  performs a real scope switch + refresh.
+- Fixed a real crash risk found while implementing: `applyData()` dereferenced
+  `d.customers[0]` unguarded in ~10 places — a wizard-created company legitimately
+  has zero customers, which threw. Added a safe display-only stub. Also fixed
+  `DB.company.branch` being hardcoded to "Singapore HQ" regardless of country.
+- Verified in browser: created a second Malaysia company via the wizard (confirmed
+  the row via a direct PGlite query), switched to it from the topbar (zero console
+  errors, correct empty state), switched back (original data intact), spot-checked
+  General Ledger for regressions. `typecheck`, `typecheck:web`, `npm run demo`,
+  `build:demo` all pass.
+
 ### Added (2026-07-16 — TASK-009 setup wizard shell)
 - `web/public/assets/screens-setup-wizard.js` — 6-step first-run wizard (Language →
   Organization → Company → Admin user → AI provider (optional, BYOK, not persisted) →

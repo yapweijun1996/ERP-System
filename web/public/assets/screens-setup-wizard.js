@@ -1,12 +1,15 @@
 /* ============================================================
-   ARIA ERP — First-run Setup Wizard (TASK-009, EPIC-004)
+   ARIA ERP — First-run Setup Wizard (TASK-009, TASK-010, EPIC-004)
 
-   UI SHELL ONLY: collects language / organization / company /
-   admin user / AI-provider (BYOK, optional) choices and shows a
-   summary, then marks setup complete in localStorage and reloads
-   into the normal login/dashboard flow. It does NOT write to
-   PGlite yet — persisting these choices to the active data
-   adapter (demo PGlite now, production API later) is TASK-010.
+   Collects language / organization / company / admin user /
+   AI-provider (BYOK, optional — never persisted) choices, shows a
+   summary, then on Finish calls window.ErpSystemDemo.completeSetup()
+   (erp-system-data-adapter.js) to write the master rename, new
+   company, starter chart of accounts, tax rule, admin app_user and
+   user<->company link in one PGlite transaction. Only then does it
+   mark setup complete in localStorage and reload into the normal
+   login/dashboard flow — a failed write leaves the wizard open so
+   the user can retry.
 
    Gated in app.js's boot(): needsSetupWizard() runs BEFORE the
    sign-in check, mirroring docs/SETUP_WIZARD.md's "no master ->
@@ -68,7 +71,7 @@ function renderSetupWizard(){
       s4h:'Connect an AI provider (optional)', s4p:'Bring Your Own Key — your key is never stored or sent to us; this preview does not persist it.',
       s4provider:'Provider', s4key:'API key', s4keyph:'Not required for this preview',
       s4note:'This key is kept only in this step’s memory and is discarded on Finish/Back — nothing is saved.',
-      s5h:'Review and finish', s5p:'This creates a local preview only. Company and admin records are not written to the database yet.',
+      s5h:'Review and finish', s5p:'Finishing writes the company, tax rule, chart of accounts and admin user to this browser’s demo database (PGlite/IndexedDB).',
       sumLang:'Language', sumOrg:'Organization', sumCompany:'Company', sumCountry:'Country', sumCurrency:'Currency', sumTax:'Tax regime',
       sumAdmin:'Admin user', sumAi:'AI provider', none:'None selected',
       errMaster:'Enter an organization name to continue.',
@@ -90,7 +93,7 @@ function renderSetupWizard(){
       s4h:'Sambungkan pembekal AI (pilihan)', s4p:'Bawa Kunci Anda Sendiri — kunci anda tidak disimpan atau dihantar kepada kami; pratonton ini tidak menyimpannya.',
       s4provider:'Pembekal', s4key:'Kunci API', s4keyph:'Tidak diperlukan untuk pratonton ini',
       s4note:'Kunci ini hanya disimpan dalam memori langkah ini dan dibuang apabila Selesai/Kembali — tiada apa yang disimpan.',
-      s5h:'Semak dan selesai', s5p:'Ini hanya mencipta pratonton tempatan. Rekod syarikat dan admin belum ditulis ke pangkalan data.',
+      s5h:'Semak dan selesai', s5p:'Selesai akan menulis syarikat, peraturan cukai, carta akaun dan pengguna admin ke pangkalan data demo pelayar ini (PGlite/IndexedDB).',
       sumLang:'Bahasa', sumOrg:'Organisasi', sumCompany:'Syarikat', sumCountry:'Negara', sumCurrency:'Mata wang', sumTax:'Rejim cukai',
       sumAdmin:'Pengguna admin', sumAi:'Pembekal AI', none:'Tiada dipilih',
       errMaster:'Masukkan nama organisasi untuk teruskan.',
@@ -112,7 +115,7 @@ function renderSetupWizard(){
       s4h:'连接 AI 提供商(可选)', s4p:'自带密钥 — 您的密钥不会被存储或发送给我们;此预览不会保存它。',
       s4provider:'提供商', s4key:'API 密钥', s4keyph:'此预览不需要',
       s4note:'此密钥仅保留在本步骤的内存中,点击完成/上一步后即被丢弃 — 不会被保存。',
-      s5h:'检查并完成', s5p:'这仅创建本地预览。公司和管理员记录尚未写入数据库。',
+      s5h:'检查并完成', s5p:'点击完成后,公司、税务规则、会计科目表和管理员账户将写入此浏览器的演示数据库(PGlite/IndexedDB)。',
       sumLang:'语言', sumOrg:'组织', sumCompany:'公司', sumCountry:'国家', sumCurrency:'货币', sumTax:'税制',
       sumAdmin:'管理员账户', sumAi:'AI 提供商', none:'未选择',
       errMaster:'请输入组织名称以继续。',
@@ -271,10 +274,22 @@ function renderSetupWizard(){
     var finish=document.getElementById('wizFinish');
     if(finish) finish.addEventListener('click',function(){
       finish.setAttribute('disabled','');
-      try{ localStorage.setItem('aria-lang', S.lang); }catch(e){}
-      markSetupWizardComplete();
-      if(typeof toast==='function') toast(s('finished'),'ok');
-      setTimeout(function(){ location.reload(); }, 350);
+      var run = (window.ErpSystemDemo && window.ErpSystemDemo.completeSetup)
+        ? window.ErpSystemDemo.completeSetup({
+            masterName:S.masterName, companyName:S.companyName, country:S.country,
+            adminName:S.adminName, adminEmail:S.adminEmail, language:S.lang,
+          })
+        : Promise.reject(new Error('Demo database adapter is not ready yet — wait a moment and try again.'));
+      run.then(function(){
+        try{ localStorage.setItem('aria-lang', S.lang); }catch(e){}
+        markSetupWizardComplete();
+        if(typeof toast==='function') toast(s('finished'),'ok');
+        setTimeout(function(){ location.reload(); }, 350);
+      }).catch(function(e){
+        finish.removeAttribute('disabled');
+        var msg=(e&&e.message)?e.message:String(e);
+        if(typeof toast==='function') toast(msg,'danger');
+      });
     });
   }
 

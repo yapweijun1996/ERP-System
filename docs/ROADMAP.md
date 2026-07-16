@@ -37,17 +37,19 @@ invoice generation, GL posting view, insufficient-stock rollback (SO-3).
 
 Open: TASK-017 real-device verification, TASK-018 screen audit for sample-shape crashes.
 
-## Phase 4 — Setup Wizard 🔶 ← **current focus**
+## Phase 4 — Setup Wizard ✅ (demo path) — production lock is Phase 5 work
 
 Goal: support first-run setup in demo and production.
 
 Deliverables: language selection; master/company creation; country/currency/tax setup
 for Singapore and Malaysia; first admin user; optional sample data seed; production
-setup lock after first admin. (TASK-009 ✅ done 2026-07-16 — UI shell, gated on boot,
-localStorage-flag reset; TASK-010 todo — persist choices to PGlite, then the API)
+setup lock after first admin. (TASK-009 ✅ + TASK-010 ✅, both done 2026-07-16 — wizard
+shell gated on boot, writes company/tax/CoA/admin-user to PGlite in one transaction,
+topbar company switcher rewired to the canonical company list.)
 
 Exit criteria: empty demo opens wizard first (✅ met); production API can persist wizard
-results to PostgreSQL (⬜ TASK-010 + TASK-011).
+results to PostgreSQL (⬜ — needs TASK-011/TASK-019; the demo-adapter `completeSetup()`
+contract is defined and ready for an API adapter to implement the same shape).
 
 ## Phase 5 — Production Runtime ⬜
 
