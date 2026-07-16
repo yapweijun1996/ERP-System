@@ -33,6 +33,27 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
+
+  /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
+     format as src/auth/password.ts (TASK-024), via the browser's native Web
+     Crypto API — no dependency needed. This is what completeSetup() uses to
+     store a REAL password hash for a wizard-created admin, matching the
+     schema's password_hash NOT NULL constraint. The demo login form still does
+     not verify passwords (see screens-ops.js / renderLogin) — this hash exists
+     so the demo's data shape matches production's, not to gate demo access. */
+  async function hashPasswordBrowser(password){
+    var PBKDF2_ITERATIONS = 100000;
+    var enc = new TextEncoder();
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']);
+    var bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+      keyMaterial, 32 * 8);
+    function toHex(bytes){
+      return Array.prototype.map.call(bytes, function(b){ return ('0' + b.toString(16)).slice(-2); }).join('');
+    }
+    return 'pbkdf2$' + PBKDF2_ITERATIONS + '$' + toHex(salt) + '$' + toHex(new Uint8Array(bits));
+  }
   var SCOPE = { masterFn: 'M1', companyFn: 'C-SG' };
 
   /* db/*.sql lives next to assets/ — resolve relative to this script so the
@@ -90,6 +111,16 @@
     var companies = await rows(
       "select company_fn, master_fn, name, country, currency, tax_regime, locale " +
       "from company where " + w('company') + " order by company_fn");
+    /* TASK-024: real seeded users (password_hash never selected — it never needs
+       to leave the server, and the demo login form doesn't check it anyway,
+       matching "auto-login a labeled demo user"). */
+    var users = await rows(
+      "select u.user_id, u.email, u.full_name, u.language, " +
+      "coalesce(bool_or(r.is_superadmin), false) as is_superadmin " +
+      "from app_user u left join user_company uc on uc.user_id = u.user_id " +
+      "left join role r on r.role_id = uc.role_id " +
+      "where " + w('u') + " and u.is_active " +
+      "group by u.user_id, u.email, u.full_name, u.language order by u.user_id");
     var products = await rows(
       "select p.id, p.company_fn, p.sku, p.name, p.uom, coalesce(sum(s.qty),0)::float as on_hand " +
       "from product p left join stock_level s on s.product_id = p.id " +
@@ -136,7 +167,7 @@
       "from stock_movement m join product p on p.id = m.product_id " +
       "join warehouse w on w.id = m.warehouse_id where " + wc('m') + " order by m.id");
 
-    return { master: master, companies: companies, products: products, customers: customers,
+    return { master: master, companies: companies, users: users, products: products, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
              invoices: invoices, glLegs: glLegs, movements: movements };
   }
@@ -153,6 +184,10 @@
       companies: [
         { company_fn: 'C-SG', master_fn: 'M1', name: 'Acme Singapore', country: 'SG', currency: 'SGD', tax_regime: 'GST', locale: 'en' },
         { company_fn: 'C-MY', master_fn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', tax_regime: 'SST', locale: 'ms' },
+      ],
+      users: [
+        { user_id: 1, email: 'admin@acme.co', full_name: 'Admin', language: 'zh', is_superadmin: true },
+        { user_id: 2, email: 'viewer@acme.co', full_name: 'Demo Viewer', language: 'en', is_superadmin: false },
       ],
       products: [
         { id: 1, company_fn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', on_hand: 95 },
@@ -213,6 +248,7 @@
       scope: SCOPE,
       master: d.master,
       companies: d.companies,
+      users: d.users,
       products: d.products,
       customers: d.customers,
       accounts: d.accounts,
@@ -228,12 +264,25 @@
       periodLabel: 'June 2026',
       env: 'DEMO',
     };
+
+    /* TASK-024: real seeded user (was hardcoded "Admin" before), with a
+       browser-persisted "switch demo user" selection. Defaults to whichever
+       seeded user is Superadmin, preserving the pre-TASK-024 default
+       experience for anyone who never switches. */
+    var activeUserEmail = null;
+    try { activeUserEmail = localStorage.getItem('aria-active-user-email'); } catch (e) {}
+    var activeUser = (d.users || []).filter(function(u){ return u.email === activeUserEmail; })[0]
+      || (d.users || []).filter(function(u){ return u.is_superadmin; })[0]
+      || (d.users || [])[0]
+      || { email: 'admin@acme.co', full_name: 'Admin', is_superadmin: true };
+    var userDisplayName = activeUser.full_name || activeUser.email;
     DB.user = {
-      name: 'Admin',
-      email: 'admin@acme.co',
-      initials: 'AD',
-      role: 'Superadmin',
-      perms: { post: true, approve: true, salaryView: false, costView: true },
+      name: userDisplayName,
+      email: activeUser.email,
+      initials: (userDisplayName.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2)
+        .map(function(w){ return w[0]; }).join('').toUpperCase()) || 'U',
+      role: activeUser.is_superadmin ? 'Superadmin' : 'Viewer',
+      perms: { post: !!activeUser.is_superadmin, approve: !!activeUser.is_superadmin, salaryView: false, costView: !!activeUser.is_superadmin },
     };
     var currencySymbols = { SGD: 'S$', MYR: 'RM', USD: '$' };
     money = function erpSystemMoney(n, cur){
@@ -654,8 +703,11 @@
     var companyName = String(input.companyName || '').trim();
     var adminName = String(input.adminName || '').trim();
     var adminEmail = String(input.adminEmail || '').trim().toLowerCase();
+    var adminPassword = String(input.adminPassword || '');
     if (!companyName) throw new Error('Company name is required.');
     if (!adminName || !adminEmail) throw new Error('Admin user name and email are required.');
+    if (adminPassword.length < 8) throw new Error('Admin password must be at least 8 characters.');
+    var adminPasswordHash = await hashPasswordBrowser(adminPassword);
     var country = input.country === 'MY' ? 'MY' : 'SG';
     var currency = country === 'MY' ? 'MYR' : 'SGD';
     var taxRegime = country === 'MY' ? 'SST' : 'GST';
@@ -698,9 +750,11 @@
 
       var userRow = (await tx.query(
         'select user_id from app_user where master_fn=$1 and email=$2', [SCOPE.masterFn, adminEmail])).rows[0];
+      /* An existing user (re-running setup with the same email) keeps their
+         current password — never silently overwrite it here. */
       var userId = userRow ? userRow.user_id : (await tx.query(
-        'insert into app_user (master_fn, email, full_name, language) values ($1,$2,$3,$4) returning user_id',
-        [SCOPE.masterFn, adminEmail, adminName, language])).rows[0].user_id;
+        'insert into app_user (master_fn, email, full_name, password_hash, language) values ($1,$2,$3,$4,$5) returning user_id',
+        [SCOPE.masterFn, adminEmail, adminName, adminPasswordHash, language])).rows[0].user_id;
 
       await tx.query(
         'insert into user_company (user_id, company_fn, role_id) values ($1,$2,$3) on conflict (user_id, company_fn) do nothing',
@@ -728,6 +782,35 @@
     location.reload();
   }
 
+  /* TASK-024 — demo-mode auth. "Auto-login a clearly-labeled demo user, allow
+     switching among seeded users" (no password check in demo: there is no real
+     security boundary in a client-only demo — see docs/STATUS.md). login()
+     still recognizes a known seeded email and switches identity to it, so
+     entering a different seeded email in the login form does something real. */
+  async function needsSetup(){
+    return (typeof needsSetupWizard === 'function') ? needsSetupWizard() : false;
+  }
+  async function isSignedIn(){
+    return (typeof isDemoSignedIn === 'function') ? isDemoSignedIn() : false;
+  }
+  async function login(email){
+    var trimmed = String(email || '').trim().toLowerCase();
+    try {
+      if (trimmed) localStorage.setItem('aria-active-user-email', trimmed);
+      localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: trimmed || 'admin@acme.co', at: new Date().toISOString() }));
+    } catch (e) {}
+    return { email: trimmed };
+  }
+  async function logout(){
+    try { localStorage.removeItem('aria-demo-auth'); } catch (e) {}
+  }
+  async function switchUser(email){
+    var trimmed = String(email || '').trim().toLowerCase();
+    if (!trimmed) return null;
+    try { localStorage.setItem('aria-active-user-email', trimmed); } catch (e) {}
+    return refresh();
+  }
+
   window.ErpSystemDemo = {
     ready: ready,
     reset: reset,
@@ -735,6 +818,11 @@
     confirmOrder: confirmOrder,
     completeSetup: completeSetup,
     switchCompany: switchCompany,
+    needsSetup: needsSetup,
+    isSignedIn: isSignedIn,
+    login: login,
+    logout: logout,
+    switchUser: switchUser,
     get mode(){ return state.mode; },
     get db(){ return state.db; },
   };

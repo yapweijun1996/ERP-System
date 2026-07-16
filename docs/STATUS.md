@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-07-16
+# Project Status — reviewed 2026-07-17
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -14,9 +14,14 @@ and in the live UI. **The production path now genuinely runs end-to-end**:
 `GET /api/dashboard` through an nginx reverse proxy, and the frontend actually
 **renders that dashboard** (real figures, working company switcher, per-company data
 verified distinct) instead of the "waiting for API" screen — the waiting screen only
-shows when the API genuinely isn't reachable. What's still missing: other modules
-(inventory/sales/finance) have no api-mode data source yet, and there are no write
-endpoints (confirm order / setup) on the server side yet.
+shows when the API genuinely isn't reachable. **Auth is now real, not a stub**: both
+modes share one `login`/`logout`/`needsSetup`/`isSignedIn`/`switchUser` adapter
+contract; production validates PBKDF2-hashed passwords against `app_user` over a
+server-side session cookie (masterFn/companyFn never trusted from the client), and
+the demo mode hashes real passwords too (Web Crypto, same format) so wizard-created
+users aren't passwordless. What's still missing: other modules (inventory/sales/
+finance) have no api-mode data source yet, and there are no write endpoints
+(confirm order / setup) on the server side yet.
 
 ## What actually works (verified in code)
 
@@ -34,7 +39,7 @@ endpoints (confirm order / setup) on the server side yet.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
-| Unit tests: `confirmOrder` (success/rollback/posting-error/GL-balance), `issueStock`, effective-dated tax boundaries | ✅ Working | `vitest`, `npm test`, 15 tests, wired into CI, TASK-025 |
+| Unit tests: `confirmOrder` (success/rollback/posting-error/GL-balance), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 28 tests, wired into CI, TASK-025 + TASK-024 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -42,6 +47,8 @@ endpoints (confirm order / setup) on the server side yet.
 | Docker Compose stack: `web` (nginx) + `api` (Express) + `db` (PostgreSQL) | ✅ Working | `docker-compose.yml`, `Dockerfile.api`, `web/Dockerfile`, `web/nginx.conf`; built and run end-to-end for real (healthchecks, `docker compose exec api npm run migrate`/`seed`, dashboard through the reverse proxy), then fully torn down, TASK-012 |
 | PostgreSQL concurrency/parity proof | ✅ Working | `POSTGRES_URL=... npm run demo` — proven twice against real Postgres (host + inside verification), TASK-013 |
 | `VITE_DATA_MODE=api` renders the real dashboard (not the waiting screen) | ✅ Working | `erp-system-api-adapter.js` calls `GET /api/dashboard` on ready and maps it onto `DB.*`; company switcher also works (re-fetches with a different scope). Other modules (inventory/sales/finance) have no api-mode data source yet. TASK-026 |
+| Real auth: PBKDF2 password hashes, server-side sessions, session-derived tenant scope | ✅ Working | `src/auth/password.ts`, `src/auth/session.ts`, `src/server.ts` (`/api/auth/login`\|`logout`\|`session`, `/api/setup/status`); both adapters implement `needsSetup`/`isSignedIn`/`login`/`logout`/`switchUser`; verified end-to-end against Docker (login, company switch, logout, 375px), TASK-024 |
+| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v13) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale "signed in" state after logout; found and fixed during TASK-024 verification |
 
 ## What renders but is mock-only
 
@@ -62,8 +69,7 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 | API server has **write** endpoints (confirm order, complete setup) | Not built. Only `GET /health` + `GET /api/dashboard` exist (`switchCompany` doesn't need one — it's a read with a different scope). The client-side contract (`erp-system-api-adapter.js`) already defines the shape these must satisfy. → follow-up to TASK-011 |
 | `make setup` (`scripts/setup.sh`) works end-to-end | **Unverified**, not because it's broken — `docker-compose.yml` and every `docker compose` command the script wraps are individually proven working (TASK-012) — but because `scripts/setup.sh` does `cp .env.example .env` and `.env.example` is blocked by this sandbox's permission settings. A session with access to that file should run `make setup` once to confirm. → TASK-021 |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
-| Real login/auth | `renderLogin()` is a demo stub; user hardcoded to Admin/Superadmin. → TASK-024 |
-| Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. |
+| Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. Auth (TASK-024) is real in both modes, but production `completeSetup()` itself still rejects with "not available yet". |
 | `npm run lint` (referenced in CONTRIBUTING.md) | Still doesn't exist — no ESLint/Prettier config in the repo. `npm test` (TASK-025, done) now works. |
 
 ## Known design debt
@@ -85,13 +91,17 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
    `.github/workflows/ci.yml` (TASK-014), which runs on every PR; `deploy-pages.yml`
    itself is unchanged (deploy-only, still doesn't run `typecheck:web`, which is
    fine since `ci.yml` already gated it before merge).
+5. **Session store is in-memory, single-instance-only** (`src/auth/session.ts`) — a
+   real "minimal auth" scaffold (TASK-024), not production-hardened. No rate
+   limiting, no password reset, no multi-instance session sharing (would need
+   Redis/DB-backed sessions before running the `api` service at >1 replica).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-019, TASK-020, TASK-025, TASK-026 (20)
-- Todo: TASK-017, 018, 021…024 (6)
-- Next up: TASK-024 (real auth, unblocked), TASK-018 (screen audit), TASK-022/023
-  (purchasing module, largest remaining task)
+- Done: TASK-001…016, TASK-019, TASK-020, TASK-024, TASK-025, TASK-026 (21)
+- Todo: TASK-017, 018, 021, 022, 023 (5)
+- Next up: TASK-018 (screen audit) or TASK-022/023 (purchasing module, largest
+  remaining task, TASK-022's dependency TASK-013 is done)
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone. TASK-021
   (verify `scripts/setup.sh`) is blocked in this sandbox specifically — it needs

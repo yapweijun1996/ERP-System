@@ -3,7 +3,18 @@
 // change so the dated lookup is demonstrable). Same code runs on both adapters.
 import { sql } from 'drizzle-orm';
 import type { DB } from './db';
-import { master, company, currency, appUser, product, taxRule, customer, account } from './schema';
+import { master, company, currency, appUser, role, userCompany, product, taxRule, customer, account } from './schema';
+
+/**
+ * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
+ * Pre-computed rather than hashed at seed time so `seedDemo` stays synchronous-shaped
+ * and doesn't burn 100k PBKDF2 iterations on every demo boot. Demo passwords are
+ * intentionally documented here — this is public sample data, not a real credential.
+ *   admin@acme.co  / demo1234
+ *   viewer@acme.co / viewer1234
+ */
+const ADMIN_PASSWORD_HASH = 'pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48';
+const VIEWER_PASSWORD_HASH = 'pbkdf2$100000$da9fd51416f6c2fb48c282c0b370bdf1$072cf69c4fb68981cbb43a5af00b11435244a758e0a0ea4b538dd1074fac60a3';
 
 export async function seedDemo(db: DB): Promise<void> {
   await db.insert(master).values({ masterFn: 'M1', name: 'Acme Group' });
@@ -18,7 +29,27 @@ export async function seedDemo(db: DB): Promise<void> {
     { companyFn: 'C-MY', masterFn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', taxRegime: 'SST', locale: 'ms' },
   ]);
 
-  await db.insert(appUser).values({ masterFn: 'M1', email: 'admin@acme.co', fullName: 'Admin', language: 'zh' });
+  // Two demo personas so "switch user" (TASK-024) is meaningful: a superadmin with
+  // access to both companies, and a company-scoped viewer with access to SG only.
+  const [adminUser] = await db.insert(appUser).values({
+    masterFn: 'M1', email: 'admin@acme.co', fullName: 'Admin', passwordHash: ADMIN_PASSWORD_HASH, language: 'zh',
+  }).returning({ id: appUser.userId });
+  const [viewerUser] = await db.insert(appUser).values({
+    masterFn: 'M1', email: 'viewer@acme.co', fullName: 'Demo Viewer', passwordHash: VIEWER_PASSWORD_HASH, language: 'en',
+  }).returning({ id: appUser.userId });
+
+  const [superadminRole] = await db.insert(role).values({
+    masterFn: 'M1', name: 'Superadmin', isSuperadmin: true,
+  }).returning({ id: role.roleId });
+  const [viewerRole] = await db.insert(role).values({
+    masterFn: 'M1', name: 'Viewer', isSuperadmin: false,
+  }).returning({ id: role.roleId });
+
+  await db.insert(userCompany).values([
+    { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
+    { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
+    { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
+  ]);
 
   await db.insert(product).values([
     { masterFn: 'M1', companyFn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit' },

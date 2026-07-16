@@ -1,27 +1,28 @@
-// Production API server (TASK-011, EPIC-005). Scaffold: GET /health + GET /api/dashboard
-// against PostgreSQL via DATABASE_URL, using the SAME schema/repo code as the demo and
-// src/demo.ts's proof script — no second query dialect to maintain.
+// Production API server (TASK-011, EPIC-005; auth TASK-024). GET /health +
+// GET /api/dashboard + minimal session auth against PostgreSQL via DATABASE_URL,
+// using the SAME schema/repo code as the demo and src/demo.ts's proof script — no
+// second query dialect to maintain.
 //
 // This is the server-side counterpart the frontend's erp-system-api-adapter.js
 // (VITE_DATA_MODE=api) expects at its `{base}/health` check. Run:
 //   DATABASE_URL=postgres://user:pass@host:5432/db PORT=3000 npm run server
 //
-// NOT YET DONE (tracked separately, see docs/STATUS.md): write endpoints
-// (confirmOrder/completeSetup/switchCompany — the contract is defined in
-// erp-system-api-adapter.js), session-derived tenant scope (TASK-024 auth; this
-// scaffold accepts masterFn/companyFn as query params, which is fine for a health
-// probe but must never ship like this for a write endpoint), Docker packaging
-// (TASK-012) — including whether web reaches api same-origin through a reverse
-// proxy (matches erp-system-api-adapter.js's default relative '/api' base) or
-// needs CORS enabled here for a cross-origin browser fetch.
+// NOT YET DONE (tracked separately, see docs/STATUS.md): write endpoints for
+// stock/money (confirmOrder/completeSetup — the contract is defined in
+// erp-system-api-adapter.js), Docker packaging is TASK-012 (done — including
+// whether web reaches api same-origin through a reverse proxy, which it does).
 import express from 'express';
 import { and, eq, sql } from 'drizzle-orm';
 import { createPostgresDb, type DB } from './data/db';
 import { listCompanies } from './data/repo';
-import { product, stockLevel, salesOrder, invoice, account, glEntry } from './data/schema';
+import { product, stockLevel, salesOrder, invoice, account, glEntry, appUser, userCompany } from './data/schema';
+import { verifyPassword } from './auth/password';
+import { createSession, getSession, destroySession, parseCookies } from './auth/session';
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATABASE_URL = process.env.DATABASE_URL;
+const SESSION_COOKIE = 'erp_session';
+const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8h
 
 if (!DATABASE_URL) {
   console.error('[erp-system-api] DATABASE_URL is required. Example:');
@@ -129,17 +130,107 @@ async function buildDashboard(masterFn: string, companyFn: string) {
   };
 }
 
+/** Companies this user actually has access to (drives dashboard scoping + the
+ *  frontend company switcher's authorization check). */
+async function companiesForUser(userId: number): Promise<string[]> {
+  const rows = await db.select({ companyFn: userCompany.companyFn }).from(userCompany)
+    .where(eq(userCompany.userId, userId));
+  return rows.map((r) => r.companyFn);
+}
+
+/** Reads the session cookie and looks it up. Sends 401 and returns null if absent/invalid —
+ *  callers should `if (!session) return;` immediately. */
+function requireSession(req: express.Request, res: express.Response) {
+  const cookies = parseCookies(req.headers.cookie);
+  const session = getSession(cookies[SESSION_COOKIE]);
+  if (!session) {
+    res.status(401).json({ error: 'not_authenticated', message: 'Sign in first (POST /api/auth/login).' });
+    return null;
+  }
+  return session;
+}
+
 const app = express();
+app.use(express.json());
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'erp-system-api', time: new Date().toISOString() });
 });
 
-app.get('/api/dashboard', async (req, res) => {
-  const masterFn = typeof req.query.masterFn === 'string' ? req.query.masterFn : 'M1';
-  const companyFn = typeof req.query.companyFn === 'string' ? req.query.companyFn : 'C-SG';
+/** No auth required by design — used by the wizard gate (TASK-024) to decide
+ *  whether first-run setup should still be offered. Exposes only a boolean. */
+app.get('/api/setup/status', async (_req, res) => {
   try {
-    res.json(await buildDashboard(masterFn, companyFn));
+    const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(appUser);
+    res.json({ hasAdmin: (row?.n ?? 0) > 0 });
+  } catch (err) {
+    console.error('[erp-system-api] GET /api/setup/status failed', err);
+    res.status(500).json({ error: 'setup_status_failed', message: (err as Error).message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = (req.body ?? {}) as { email?: unknown; password?: unknown };
+  if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
+    res.status(400).json({ error: 'invalid_request', message: 'email and password are required' });
+    return;
+  }
+  try {
+    const [user] = await db.select({
+      userId: appUser.userId, masterFn: appUser.masterFn, email: appUser.email,
+      fullName: appUser.fullName, passwordHash: appUser.passwordHash, isActive: appUser.isActive,
+    }).from(appUser).where(eq(appUser.email, email.trim().toLowerCase()));
+
+    if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
+      // Same response for "no such user" and "wrong password" — don't leak which one.
+      res.status(401).json({ error: 'invalid_credentials' });
+      return;
+    }
+
+    const sessionId = createSession({
+      userId: user.userId, masterFn: user.masterFn, email: user.email, fullName: user.fullName,
+    });
+    res.cookie(SESSION_COOKIE, sessionId, {
+      httpOnly: true, sameSite: 'lax', maxAge: SESSION_MAX_AGE_MS,
+      // secure:true requires HTTPS — off by default so local/dev HTTP still works;
+      // set behind a TLS-terminating proxy in a real deployment.
+    });
+    res.json({ userId: user.userId, email: user.email, fullName: user.fullName, masterFn: user.masterFn });
+  } catch (err) {
+    console.error('[erp-system-api] POST /api/auth/login failed', err);
+    res.status(500).json({ error: 'login_failed', message: (err as Error).message });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const cookies = parseCookies(req.headers.cookie);
+  destroySession(cookies[SESSION_COOKIE]);
+  res.clearCookie(SESSION_COOKIE);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/session', (req, res) => {
+  const session = requireSession(req, res);
+  if (!session) return;
+  res.json(session);
+});
+
+app.get('/api/dashboard', async (req, res) => {
+  const session = requireSession(req, res);
+  if (!session) return;
+
+  try {
+    // masterFn ALWAYS from the session — never client input. companyFn may be
+    // requested via query (the frontend's switchCompany()) but only honored if
+    // this session's user actually has access to it via user_company.
+    const allowed = await companiesForUser(session.userId);
+    const requested = typeof req.query.companyFn === 'string' ? req.query.companyFn : null;
+    const companyFn = requested && allowed.includes(requested) ? requested : allowed[0];
+    if (!companyFn) {
+      res.status(403).json({ error: 'no_company_access', message: 'This user has no company assignments.' });
+      return;
+    }
+    res.json(await buildDashboard(session.masterFn, companyFn));
   } catch (err) {
     console.error('[erp-system-api] GET /api/dashboard failed', err);
     res.status(500).json({ error: 'dashboard_query_failed', message: (err as Error).message });
@@ -147,5 +238,5 @@ app.get('/api/dashboard', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[erp-system-api] listening on :${PORT} — DATABASE_URL connected, GET /health + GET /api/dashboard ready`);
+  console.log(`[erp-system-api] listening on :${PORT} — DATABASE_URL connected, auth + GET /api/dashboard ready`);
 });

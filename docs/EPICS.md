@@ -45,7 +45,7 @@ Acceptance criteria:
 - [ ] Every routed screen opens error-free under canonical data; leftover Northwind
       sample shapes cleaned or labeled (TASK-018).
 
-## EPIC-004 — Setup Wizard 🔶 (demo path done; production lock open)
+## EPIC-004 — Setup Wizard ✅
 
 Implement first-run setup shared by demo and production. (TASK-009 done, TASK-010 done)
 
@@ -65,9 +65,10 @@ Acceptance criteria:
 - [x] Company switcher (topbar) reflects the created company — rewired from a
       disconnected mock array to `DB.erpSystem.companies`, with a real
       `switchCompany()` scope switch.
-- [ ] Production locks setup after first admin — blocked on TASK-011/TASK-019 (no
-      backend yet); the demo/API adapter *contract* (`completeSetup()` input/output
-      shape) is defined and documented for the future API adapter to implement.
+- [x] Production locks setup after first admin — `GET /api/setup/status` (TASK-024)
+      exposes `hasAdmin`, no auth required; the api adapter's `needsSetup()` calls
+      it and `app.js`'s `boot()` gates on the real answer. Verified against a
+      seeded Docker stack: the wizard correctly stayed hidden.
 
 ## EPIC-005 — Production API And Docker 🔶 (stack up; writes + Makefile polish open)
 
@@ -164,13 +165,21 @@ Acceptance criteria:
 - Purchasing screens read canonical data in demo mode; mock purchasing data removed.
 - `src/demo.ts` gains purchasing assertions.
 
-## EPIC-009 — Auth And Users ⬜
+## EPIC-009 — Auth And Users ✅
 
-Replace the hardcoded Admin stub with real (but minimal) authentication. (TASK-024)
+Replace the hardcoded Admin stub with real (but minimal) authentication. (TASK-024 done)
 
 Acceptance criteria:
 
-- Login validates against `app_user`; passwords hashed.
-- Session carries `master_fn`/`company_fn`/role; company switcher respects `user_company`.
-- Demo mode may auto-login a labeled demo user; production requires login.
-- Production locks the setup wizard once the first admin exists (ties to EPIC-004).
+- [x] Login validates against `app_user`; passwords hashed (PBKDF2-HMAC-SHA256,
+      100k iterations — `src/auth/password.ts`, cross-compatible browser-side via
+      Web Crypto in the demo adapter).
+- [x] Session carries `master_fn`/`company_fn`/role; company switcher respects
+      `user_company` — `masterFn` is server-derived only, `companyFn` is only
+      honored if the session's `user_company` rows allow it (verified via curl:
+      an unauthorized company request silently falls back, no leakage).
+- [x] Demo mode may auto-login a labeled demo user; production requires login —
+      demo auto-logs in and supports switching between seeded users; production's
+      `renderLogin()` is mode-aware (no prefill, no frictionless button).
+- [x] Production locks the setup wizard once the first admin exists (ties to
+      EPIC-004) — see EPIC-004's now-checked last item.

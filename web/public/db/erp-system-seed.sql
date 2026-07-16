@@ -18,8 +18,32 @@ INSERT INTO company (company_fn, master_fn, name, country, currency, tax_regime,
   ('C-SG', 'M1', 'Acme Singapore', 'SG', 'SGD', 'GST', 'en'),
   ('C-MY', 'M1', 'Acme Malaysia', 'MY', 'MYR', 'SST', 'ms');
 
-INSERT INTO app_user (master_fn, email, full_name, language) VALUES
-  ('M1', 'admin@acme.co', 'Admin', 'zh');
+-- Two demo personas (TASK-024) so "switch user" is meaningful: a superadmin with
+-- access to both companies, and a company-scoped viewer with access to SG only.
+-- Passwords: admin@acme.co / demo1234, viewer@acme.co / viewer1234 (see
+-- src/auth/password.ts and the matching hashes hardcoded in src/data/seed.ts —
+-- public demo sample data, not a real credential).
+INSERT INTO app_user (master_fn, email, full_name, password_hash, language) VALUES
+  ('M1', 'admin@acme.co', 'Admin', 'pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48', 'zh'),
+  ('M1', 'viewer@acme.co', 'Demo Viewer', 'pbkdf2$100000$da9fd51416f6c2fb48c282c0b370bdf1$072cf69c4fb68981cbb43a5af00b11435244a758e0a0ea4b538dd1074fac60a3', 'en');
+
+INSERT INTO role (master_fn, name, is_superadmin) VALUES
+  ('M1', 'Superadmin', true),
+  ('M1', 'Viewer', false);
+
+INSERT INTO user_company (user_id, company_fn, role_id)
+SELECT u.user_id, c.company_fn, r.role_id
+FROM app_user u, company c, role r
+WHERE u.master_fn = 'M1' AND u.email = 'admin@acme.co'
+  AND c.master_fn = 'M1' AND c.company_fn IN ('C-SG', 'C-MY')
+  AND r.master_fn = 'M1' AND r.name = 'Superadmin';
+
+INSERT INTO user_company (user_id, company_fn, role_id)
+SELECT u.user_id, c.company_fn, r.role_id
+FROM app_user u, company c, role r
+WHERE u.master_fn = 'M1' AND u.email = 'viewer@acme.co'
+  AND c.master_fn = 'M1' AND c.company_fn = 'C-SG'
+  AND r.master_fn = 'M1' AND r.name = 'Viewer';
 
 INSERT INTO product (master_fn, company_fn, sku, name, uom) VALUES
   ('M1', 'C-SG', 'SG-WIDGET', 'Widget (SG)', 'unit'),

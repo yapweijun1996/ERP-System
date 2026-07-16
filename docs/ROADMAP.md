@@ -2,7 +2,7 @@
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-07-16** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-07-17** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 
@@ -37,7 +37,7 @@ invoice generation, GL posting view, insufficient-stock rollback (SO-3).
 
 Open: TASK-017 real-device verification, TASK-018 screen audit for sample-shape crashes.
 
-## Phase 4 — Setup Wizard ✅ (demo path) — production lock is Phase 5 work
+## Phase 4 — Setup Wizard ✅ (demo path) — production lock done via TASK-024 (Phase 5)
 
 Goal: support first-run setup in demo and production.
 
@@ -62,15 +62,19 @@ and run end-to-end for real: healthchecks pass, `docker compose exec api npm run
 migrate`/`npm run seed` work, the dashboard renders through the nginx reverse proxy
 with zero CORS needed); PostgreSQL concurrency proof (TASK-013 ✅ — proven against
 real Postgres, `POSTGRES_URL=... npm run demo` passes including the true-concurrency
-race). Remaining: wire the frontend to render the real dashboard instead of the
-waiting screen (TASK-026, quick win, unblocked now that TASK-012 settles the
-same-origin proxy question); align `Makefile`/`scripts/setup.sh` end-to-end —
+race); real dashboard render instead of the waiting screen (TASK-026 ✅ done
+2026-07-17); minimal real auth (TASK-024 ✅ done 2026-07-17 — PBKDF2 password
+hashes, server-side sessions, `/api/auth/login`\|`logout`\|`session` +
+`/api/setup/status`, both adapters share one `login`/`logout`/`needsSetup`/
+`isSignedIn`/`switchUser` contract, verified end-to-end against Docker including a
+real service-worker caching bug found and fixed along the way — see
+[STATUS.md](STATUS.md)); schema-drift check between core and demo SQL copies
+(TASK-020 ✅). Remaining: align `Makefile`/`scripts/setup.sh` end-to-end —
 individually-verified `docker compose` commands are done, but `scripts/setup.sh`
 itself is still unverified (blocked on `.env.example` sandbox permissions — flag for
 a session that can read it) (TASK-021); server-side stock and finance write
 endpoints (confirmOrder/completeSetup/switchCompany — client contract already
-defined); minimal real auth (TASK-024); schema-drift check between core and demo SQL
-copies (TASK-020).
+defined, production `completeSetup()` still explicitly rejects "not available yet").
 
 Exit criteria: `docker compose up -d` starts all services; production transaction +
 concurrency tests pass against PostgreSQL (TASK-013); browser writes stock/money

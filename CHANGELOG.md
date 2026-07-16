@@ -5,6 +5,47 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-024 real auth against app_user)
+- `app_user` gained a `password_hash` column (NOT NULL); `drizzle/0001_quiet_blizzard.sql`.
+- `src/auth/password.ts`: PBKDF2-HMAC-SHA256 (100k iterations), format
+  `pbkdf2$iterations$saltHex$hashHex`, `timingSafeEqual` compare, malformed hashes
+  rejected without throwing. `src/auth/session.ts`: in-memory
+  `Map<sessionId, SessionData>` session store + cookie parsing. 13 new vitest cases.
+- `src/server.ts`: `GET /api/setup/status` (no-auth `hasAdmin` check, gates the
+  wizard), `POST /api/auth/login`/`logout`, `GET /api/auth/session`; `GET
+  /api/dashboard` rewritten so `masterFn` comes only from the session and
+  `companyFn` is only honored if present in that session's `user_company` rows.
+- Both frontend adapters now implement the same `needsSetup`/`isSignedIn`/`login`/
+  `logout`/`switchUser` surface. `erp-system-api-adapter.js` redesigned around a
+  3-state machine (`api-unavailable`/`api-reachable`/`api`) fixing a
+  chicken-and-egg bug where a reachable-but-logged-out server looked identical to
+  an unreachable one. `erp-system-data-adapter.js` gained `hashPasswordBrowser()`
+  (Web Crypto PBKDF2, same format as the server) and a user switcher; the setup
+  wizard now collects and hashes a real admin password instead of leaving new
+  users passwordless.
+- `seed.ts` now creates two real users (`admin@acme.co`/`demo1234`, Superadmin on
+  both companies; `viewer@acme.co`/`viewer1234`, Viewer on one company) —
+  `web/public/db/erp-system-seed.sql` hand-mirrored to match.
+- `scripts/check-drift.mjs` upgraded to replay ALL migrations cumulatively (reads
+  `drizzle/meta/_journal.json`) instead of assuming a single `0000_init.sql` —
+  the old assumption would have silently missed this task's own column addition.
+- Two real bugs found and fixed during Docker end-to-end verification: (1)
+  `app.js`'s login screen showed stale mock company data pre-authentication in
+  api mode (`DB.company` is pre-populated by `data-core.js`'s static template
+  before any adapter runs) — fixed to always show plain "Production" pre-auth in
+  that mode. (2) `sw.js`'s stale-while-revalidate strategy was caching
+  `/api/auth/session` and `/api/dashboard` GET responses — the Cache API keys
+  purely on URL and ignores cookies, so the service worker served back a cached
+  "200 authenticated" response after a real, correctly-processed server-side
+  logout. Fixed by excluding `/api/*` and `/health` from the service worker's
+  cache strategy and bumping `CACHE_VERSION` to `v13` so existing installs purge
+  the stale cache on update.
+- Verified end-to-end against the full Docker Compose stack: wizard correctly
+  stayed hidden against a seeded database, login/dashboard/company-switch/logout
+  all confirmed with real network traces (not just UI appearance), 375px mobile
+  checked, and `npm run smoke` re-run to confirm the shared `app.js`/`sw.js`
+  edits didn't regress demo mode.
+
 ### Added (2026-07-17 — TASK-025 vitest unit tests)
 - `vitest` devDependency + `npm test` (`vitest run`).
 - `src/test/helpers.ts`: `freshDb()` gives every test its own isolated in-memory

@@ -68,6 +68,7 @@ function renderSetupWizard(){
       s2lbl:'Company name', s2ph:'e.g. Acme Singapore', s2country:'Country',
       s3h:'Create the first admin user', s3p:'This account will have full access once setup is applied.',
       s3name:'Full name', s3nameph:'e.g. Wei Jun Yap', s3email:'Work email', s3emailph:'e.g. admin@acme.co',
+      s3password:'Password', s3passwordph:'At least 8 characters', s3passwordConfirm:'Confirm password',
       s4h:'Connect an AI provider (optional)', s4p:'Bring Your Own Key — your key is never stored or sent to us; this preview does not persist it.',
       s4provider:'Provider', s4key:'API key', s4keyph:'Not required for this preview',
       s4note:'This key is kept only in this step’s memory and is discarded on Finish/Back — nothing is saved.',
@@ -78,6 +79,8 @@ function renderSetupWizard(){
       errCompany:'Enter a company name to continue.',
       errAdminName:'Enter the admin user’s full name to continue.',
       errAdminEmail:'Enter a valid email address to continue.',
+      errAdminPassword:'Password must be at least 8 characters.',
+      errAdminPasswordMismatch:'Passwords do not match.',
       finished:'Setup complete — reloading.',
     },
     ms:{
@@ -90,6 +93,7 @@ function renderSetupWizard(){
       s2lbl:'Nama syarikat', s2ph:'cth. Acme Malaysia', s2country:'Negara',
       s3h:'Cipta pengguna admin pertama', s3p:'Akaun ini akan mempunyai akses penuh selepas persediaan digunakan.',
       s3name:'Nama penuh', s3nameph:'cth. Wei Jun Yap', s3email:'E-mel kerja', s3emailph:'cth. admin@acme.co',
+      s3password:'Kata laluan', s3passwordph:'Sekurang-kurangnya 8 aksara', s3passwordConfirm:'Sahkan kata laluan',
       s4h:'Sambungkan pembekal AI (pilihan)', s4p:'Bawa Kunci Anda Sendiri — kunci anda tidak disimpan atau dihantar kepada kami; pratonton ini tidak menyimpannya.',
       s4provider:'Pembekal', s4key:'Kunci API', s4keyph:'Tidak diperlukan untuk pratonton ini',
       s4note:'Kunci ini hanya disimpan dalam memori langkah ini dan dibuang apabila Selesai/Kembali — tiada apa yang disimpan.',
@@ -100,6 +104,8 @@ function renderSetupWizard(){
       errCompany:'Masukkan nama syarikat untuk teruskan.',
       errAdminName:'Masukkan nama penuh pengguna admin untuk teruskan.',
       errAdminEmail:'Masukkan alamat e-mel yang sah untuk teruskan.',
+      errAdminPassword:'Kata laluan mestilah sekurang-kurangnya 8 aksara.',
+      errAdminPasswordMismatch:'Kata laluan tidak sepadan.',
       finished:'Persediaan selesai — memuat semula.',
     },
     zh:{
@@ -112,6 +118,7 @@ function renderSetupWizard(){
       s2lbl:'公司名称', s2ph:'例如 Acme Singapore', s2country:'国家',
       s3h:'创建第一个管理员账户', s3p:'设置生效后,此账户将拥有完整权限。',
       s3name:'姓名', s3nameph:'例如 Wei Jun Yap', s3email:'工作邮箱', s3emailph:'例如 admin@acme.co',
+      s3password:'密码', s3passwordph:'至少 8 个字符', s3passwordConfirm:'确认密码',
       s4h:'连接 AI 提供商(可选)', s4p:'自带密钥 — 您的密钥不会被存储或发送给我们;此预览不会保存它。',
       s4provider:'提供商', s4key:'API 密钥', s4keyph:'此预览不需要',
       s4note:'此密钥仅保留在本步骤的内存中,点击完成/上一步后即被丢弃 — 不会被保存。',
@@ -122,6 +129,8 @@ function renderSetupWizard(){
       errCompany:'请输入公司名称以继续。',
       errAdminName:'请输入管理员姓名以继续。',
       errAdminEmail:'请输入有效的电子邮箱地址以继续。',
+      errAdminPassword:'密码至少需要 8 个字符。',
+      errAdminPasswordMismatch:'两次输入的密码不一致。',
       finished:'设置完成 — 正在重新加载。',
     },
   };
@@ -130,7 +139,7 @@ function renderSetupWizard(){
     step:0, reached:0,
     lang:(typeof getLang==='function'?getLang():'en'),
     masterName:'', companyName:'', country:'SG',
-    adminName:'', adminEmail:'',
+    adminName:'', adminEmail:'', adminPassword:'', adminPasswordConfirm:'',
     aiProvider:'', aiKey:'',
   };
 
@@ -176,6 +185,8 @@ function renderSetupWizard(){
       return '<h2 class="wiz-h">'+esc(s('s3h'))+'</h2><p class="wiz-p">'+esc(s('s3p'))+'</p>'+
         fld(s('s3name'), '<input id="wizAdminName" value="'+esc(S.adminName)+'" placeholder="'+esc(s('s3nameph'))+'" autofocus>')+
         fld(s('s3email'), '<input id="wizAdminEmail" type="email" value="'+esc(S.adminEmail)+'" placeholder="'+esc(s('s3emailph'))+'">')+
+        fld(s('s3password'), '<input id="wizAdminPassword" type="password" value="'+esc(S.adminPassword)+'" placeholder="'+esc(s('s3passwordph'))+'" autocomplete="new-password">')+
+        fld(s('s3passwordConfirm'), '<input id="wizAdminPasswordConfirm" type="password" value="'+esc(S.adminPasswordConfirm)+'" autocomplete="new-password">')+
         '<div class="auth-error" id="wizErr"></div>';
     }
     if(S.step===4){
@@ -226,6 +237,8 @@ function renderSetupWizard(){
     else if(S.step===3){
       var n=document.getElementById('wizAdminName'); if(n) S.adminName=n.value;
       var e=document.getElementById('wizAdminEmail'); if(e) S.adminEmail=e.value;
+      var pw=document.getElementById('wizAdminPassword'); if(pw) S.adminPassword=pw.value;
+      var pwc=document.getElementById('wizAdminPasswordConfirm'); if(pwc) S.adminPasswordConfirm=pwc.value;
     }
     else if(S.step===4){
       var p=document.getElementById('wizProvider'); if(p) S.aiProvider=p.value;
@@ -239,6 +252,8 @@ function renderSetupWizard(){
     if(i===3){
       if(!S.adminName.trim()) return s('errAdminName');
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.adminEmail.trim())) return s('errAdminEmail');
+      if(S.adminPassword.length<8) return s('errAdminPassword');
+      if(S.adminPassword!==S.adminPasswordConfirm) return s('errAdminPasswordMismatch');
     }
     return '';
   }
@@ -277,7 +292,7 @@ function renderSetupWizard(){
       var run = (window.ErpSystemDemo && window.ErpSystemDemo.completeSetup)
         ? window.ErpSystemDemo.completeSetup({
             masterName:S.masterName, companyName:S.companyName, country:S.country,
-            adminName:S.adminName, adminEmail:S.adminEmail, language:S.lang,
+            adminName:S.adminName, adminEmail:S.adminEmail, adminPassword:S.adminPassword, language:S.lang,
           })
         : Promise.reject(new Error('Demo database adapter is not ready yet — wait a moment and try again.'));
       run.then(function(){

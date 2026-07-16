@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v12';
+const CACHE_VERSION = 'erp-system-pwa-v13';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -110,6 +110,17 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+
+  /* TASK-024: never cache API responses. They're session-scoped (auth,
+     dashboard) but the Cache API keys purely on URL, ignoring cookies — a
+     stale-while-revalidate hit here would hand back a cached "200
+     authenticated" response after the user signs out, since the browser's
+     own cookie jar (correctly cleared) never gets consulted. Always hit the
+     network for /api/* and /health. */
+  if (url.pathname.startsWith('/api/') || url.pathname === '/health') {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (url.searchParams.has('__source_probe') || request.cache === 'reload' || request.cache === 'no-store') {
     event.respondWith(fetch(request));

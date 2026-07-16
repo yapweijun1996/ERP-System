@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS "app_user" (
 	"master_fn" text NOT NULL,
 	"email" text NOT NULL,
 	"full_name" text,
+	"password_hash" text NOT NULL,
 	"language" text DEFAULT 'en' NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

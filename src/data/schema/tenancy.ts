@@ -28,12 +28,15 @@ export const company = pgTable('company', {
   index('idx_company_master').on(t.masterFn),
 ]);
 
-/** A person who logs in. Belongs to exactly ONE master. `language` = UI i18n preference. */
+/** A person who logs in. Belongs to exactly ONE master. `language` = UI i18n preference.
+ *  `password_hash` format: "pbkdf2$<iterations>$<saltHex>$<hashHex>" — see src/auth/password.ts
+ *  (TASK-024). Never store or compare plaintext passwords. */
 export const appUser = pgTable('app_user', {
   userId: bigint('user_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   masterFn: text('master_fn').notNull().references(() => master.masterFn),
   email: text('email').notNull(),
   fullName: text('full_name'),
+  passwordHash: text('password_hash').notNull(),
   language: text('language').notNull().default('en'),   // en | ms | zh | ja | vi
   isActive: boolean('is_active').notNull().default(true),
   ...timestamps,

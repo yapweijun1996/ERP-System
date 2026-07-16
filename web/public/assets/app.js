@@ -66,6 +66,13 @@ function renderApiUnavailable(){
 }
 function renderLogin(){
   const u=demoUser();
+  /* TASK-024: in api mode, DB.company is either unset or still holds stale
+     mock data from data-core.js's static defaults (no dashboard load without
+     a session — see erp-system-api-adapter.js) — never show it pre-auth. Demo
+     mode's adapter always finishes loading real data before renderLogin() can
+     be reached, so DB.company.name is trustworthy there. */
+  const apiMode=typeof window.erpDataMode==='function' && window.erpDataMode()==='api';
+  const companyLabel=(!apiMode && DB.company && DB.company.name) ? (esc(DB.company.name)+' · Static demo') : (apiMode?'Production':'Static demo');
   setAuthShell(true);
   closeAllPops();
   closePalette();
@@ -81,43 +88,76 @@ function renderLogin(){
   auth.innerHTML=`<section class="auth-panel">
     <div class="auth-brand">
       <span class="mark">${ic('box')}</span>
-      <span><b>Aria ERP</b><small>${esc(DB.company.name)} · Static demo</small></span>
+      <span><b>Aria ERP</b><small>${companyLabel}</small></span>
     </div>
     <div class="auth-copy">
       <h1>Sign in</h1>
-      <p>Use the demo account to open the ERP workspace. This static build stores only a local browser session.</p>
+      <p>${apiMode
+        ? 'Sign in with your account. Sessions are server-side; this browser only holds a session cookie.'
+        : 'Use the demo account to open the ERP workspace. This static build stores only a local browser session.'}</p>
     </div>
     <form class="auth-form" id="loginForm">
-      <div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${esc(u.email)}"></div>
-      <div class="fld"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Any demo password"></div>
+      <div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${apiMode?'':esc(u.email)}" placeholder="${apiMode?'admin@acme.co':''}"></div>
+      <div class="fld"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Any demo password'}"></div>
       <div class="auth-error" id="loginError" role="alert"></div>
       <button class="btn primary lg" type="submit">${ic('signout')}<span>Sign in</span></button>
-      <button class="btn soft lg" type="button" id="demoLoginBtn">${ic('user')}<span>Continue as ${esc(u.name)}</span></button>
+      ${apiMode?'':`<button class="btn soft lg" type="button" id="demoLoginBtn">${ic('user')}<span>Continue as ${esc(u.name)}</span></button>`}
     </form>
     <div class="auth-foot">
-      <span class="cap ok"><span class="dot"></span>Demo only</span>
-      <span>No server auth or real credentials</span>
+      ${apiMode
+        ? `<span class="cap ok"><span class="dot"></span>Production</span><span>Real session — see docs/STATUS.md for current auth scope</span>`
+        : `<span class="cap ok"><span class="dot"></span>Demo only</span><span>No server auth or real credentials</span>`}
     </div>
   </section>`;
   const doLogin=(email)=>{
     try{ localStorage.setItem(DEMO_AUTH_KEY,JSON.stringify({ signedIn:true, email:email||u.email, at:new Date().toISOString() })); }catch(e){}
     location.reload();
   };
-  $('#loginForm').addEventListener('submit',e=>{
+  $('#loginForm').addEventListener('submit',async e=>{
     e.preventDefault();
-    const email=$('#loginEmail').value.trim()||u.email;
+    const email=$('#loginEmail').value.trim()||(apiMode?'':u.email);
     const pass=$('#loginPassword').value.trim();
+    if(apiMode){
+      if(!email||!pass){ $('#loginError').textContent='Enter your email and password.'; return; }
+      const btnEl=$('#loginForm').querySelector('button[type="submit"]');
+      btnEl&&btnEl.setAttribute('disabled','');
+      try{
+        await window.ErpSystemDemo.login(email,pass);
+        location.reload();
+      }catch(err){
+        $('#loginError').textContent=(err&&err.message)||'Sign in failed.';
+        btnEl&&btnEl.removeAttribute('disabled');
+      }
+      return;
+    }
     if(!pass){
       $('#loginError').textContent='Enter any demo password, or use Continue as demo user.';
       $('#loginPassword').focus();
       return;
     }
+    if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.login==='function'){
+      await window.ErpSystemDemo.login(email,pass);
+      location.reload();
+      return;
+    }
     doLogin(email);
   });
-  $('#demoLoginBtn').addEventListener('click',()=>doLogin(u.email));
+  const demoBtn=$('#demoLoginBtn');
+  demoBtn&&demoBtn.addEventListener('click',async ()=>{
+    if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.login==='function'){
+      await window.ErpSystemDemo.login(u.email);
+      location.reload();
+      return;
+    }
+    doLogin(u.email);
+  });
   setTimeout(()=>$('#loginPassword').focus(),60);
 }
-function signOutDemo(){
+async function signOutDemo(){
+  /* api mode: destroy the real server-side session, not just a local flag. */
+  if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.logout==='function'){
+    try{ await window.ErpSystemDemo.logout(); }catch(e){}
+  }
   try{ localStorage.removeItem(DEMO_AUTH_KEY); }catch(e){}
   try{ history.replaceState({},'',location.pathname+location.search); }catch(e){}
   location.reload();
@@ -273,6 +313,45 @@ function ensureModuleActivationMenuItem(){
   btnEl.setAttribute('data-acct','module-control');
   btnEl.innerHTML=`${ic('sliders')}<span>Module Activation Control</span><span class="meta">${ic('arrowR')}</span>`;
   firstSection.appendChild(btnEl);
+}
+
+/* TASK-024: demo mode only — "allow switching among seeded users". Not offered
+   in api mode (DB.erpSystem.users is a demo-adapter-only field; switching to
+   another real user without their password isn't offered — sign out and sign
+   in as them instead). */
+function ensureUserSwitcherMenuItem(){
+  const menu=$('#acctMenu'); if(!menu) return;
+  const existing=menu.querySelector('[data-acct="switch-user"]');
+  const users=(DB.erpSystem&&DB.erpSystem.users)||[];
+  if(users.length<2){ if(existing) existing.remove(); return; }
+  if(existing) return;
+  const firstSection=menu.querySelector('.menu-section');
+  if(!firstSection) return;
+  const btnEl=document.createElement('button');
+  btnEl.className='menu-item';
+  btnEl.setAttribute('data-acct','switch-user');
+  btnEl.innerHTML=`${ic('people')}<span>Switch demo user</span><span class="meta">${ic('arrowR')}</span>`;
+  firstSection.appendChild(btnEl);
+}
+function openUserSwitcher(){
+  const users=(DB.erpSystem&&DB.erpSystem.users)||[];
+  const rows=users.map(u=>{
+    const name=u.full_name||u.email;
+    const current=DB.user&&DB.user.email===u.email;
+    return `<button class="menu-item" style="width:100%" ${current?'disabled':''} data-switch-email="${esc(u.email)}">
+      ${ic(u.is_superadmin?'shield':'user')}
+      <span>${esc(name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(u.email)} · ${u.is_superadmin?'Superadmin':'Viewer'}</small></span>
+      <span class="meta">${current?ic('check'):''}</span></button>`;
+  }).join('');
+  appModal({ icon:'people', title:'Switch demo user', body:`<div style="display:grid;gap:4px">${rows}</div>`, width:360 });
+  $$('#modalEl [data-switch-email]').forEach(b=>b.addEventListener('click',async ()=>{
+    const email=b.dataset.switchEmail;
+    closeModal();
+    if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.switchUser==='function'){
+      try{ await window.ErpSystemDemo.switchUser(email); }catch(e){}
+    }
+    location.reload();
+  }));
 }
 
 /* map every module's primary route + known sub-routes to a module id */
@@ -747,17 +826,28 @@ function renderTabbar(){
 }
 
 /* ---------- boot ---------- */
-function boot(){
+async function boot(){
   if(typeof window.erpDataMode==='function' && window.erpDataMode()==='api' &&
-     (!window.ErpSystemDemo || window.ErpSystemDemo.mode!=='api')){
+     (!window.ErpSystemDemo || window.ErpSystemDemo.mode==='api-unavailable')){
     renderApiUnavailable();
     return;
   }
-  if(typeof needsSetupWizard==='function' && needsSetupWizard()){
+  /* TASK-024: both adapters implement needsSetup()/isSignedIn() now (api mode
+     asks the server — a real per-deployment lock, not per-browser localStorage;
+     demo mode wraps the existing local flags) — prefer that uniform contract,
+     falling back to the legacy demo-only globals only if an adapter method is
+     somehow missing. isSignedIn() in api mode also loads the dashboard as a
+     side effect (see erp-system-api-adapter.js), so DB.* is ready by the time
+     we reach the shell below. */
+  const ed=window.ErpSystemDemo;
+  const needsWizard = (ed && typeof ed.needsSetup==='function') ? await ed.needsSetup()
+    : (typeof needsSetupWizard==='function' && needsSetupWizard());
+  if(needsWizard){
     renderSetupWizard();
     return;
   }
-  if(!isDemoSignedIn()){
+  const signedIn = (ed && typeof ed.isSignedIn==='function') ? await ed.isSignedIn() : isDemoSignedIn();
+  if(!signedIn){
     renderLogin();
     return;
   }
@@ -781,6 +871,7 @@ function boot(){
   const envEl=$('.env'); if(envEl) envEl.textContent=DB.company.env||envEl.textContent;
   syncAccountUi();
   ensureModuleActivationMenuItem();
+  ensureUserSwitcherMenuItem();
   applyNotificationState();
   // restore persisted working period, then paint the fiscal-period switcher
   try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch(e){}
@@ -821,7 +912,7 @@ function boot(){
   });
   $('#palInput').addEventListener('input',e=>renderPalette(e.target.value));
   // account menu items
-  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){signOutDemo(); return;} else if(a==='module-control'){navigate('module-activation-control');} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
+  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){signOutDemo(); return;} else if(a==='module-control'){navigate('module-activation-control');} else if(a==='switch-user'){closeAllPops();openUserSwitcher();return;} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
   // initial route
   let start=(location.hash||'').replace('#','');
   if(!SCREENS[start]&&!DB.nav.flatMap(g=>g.items).some(m=>m.route===start)) start='dashboard';
