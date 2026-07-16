@@ -5,6 +5,45 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-16 — TASK-012/013 Docker Compose production stack)
+- `docker-compose.yml` (repo root): `db` (`postgres:16-alpine`, named volume,
+  `pg_isready` healthcheck), `api` (built from new `Dockerfile.api` — repo-root
+  context, ships devDependencies since `tsx`/`drizzle-kit` run untranspiled,
+  `DATABASE_URL` wired to `db` by Docker DNS, node-fetch healthcheck), `web`
+  (built from new `web/Dockerfile` — multi-stage, `node:20-alpine` builds
+  `VITE_DATA_MODE=api` then `nginx:alpine` serves it). Host ports default to the
+  documented 8080/3000/5432, overridable via `WEB_PORT`/`API_PORT`/`DB_PORT`.
+- `web/nginx.conf`: reverse-proxies `/health` and `/api/*` to the `api` service —
+  same-origin, so `erp-system-api-adapter.js`'s relative `/api` default needs no
+  CORS.
+- `src/seed.ts` + `npm run seed`: standalone, idempotent seed script (guards with
+  the existing `isSeeded()` helper) — `Makefile`/`scripts/setup.sh` already called
+  this script; it didn't exist until now.
+- Fixed a real portability bug this surfaced: `web/vite.config.ts` uses
+  `process.env` but `web/package.json` had no `@types/node` and `web/tsconfig.json`
+  had no `"node"` in `types` — this only worked locally by accident (parent
+  directory's `node_modules` on the resolution path); an isolated Docker build
+  context correctly failed until fixed.
+- Verified for real (not just typechecked): built both images, started all three
+  containers with `WEB_PORT=18080 API_PORT=13000 DB_PORT=15432 docker compose -p
+  erp-system-test up -d --build` (avoiding this machine's existing services on
+  5432/3000) — `db` and `api` reached `Healthy` before `web` started
+  (`depends_on: condition: service_healthy` works). Curl-verified `/health` and
+  `/api/dashboard` both directly and through the nginx proxy (identical JSON). Ran
+  the exact `Makefile` commands (`docker compose exec api npm run migrate`, `npm
+  run seed`, `docker compose exec db psql -U erp -d erp`) — all worked, dashboard
+  showed real post-seed data through the full stack. Fully torn down afterward
+  (`docker compose down -v --rmi local`); confirmed the machine's 14 pre-existing
+  unrelated containers were untouched throughout.
+- **TASK-013** (PostgreSQL transaction parity): `POSTGRES_URL=... npm run demo`
+  proven against real Postgres, including the true-concurrency race (exactly 1 of
+  2 issues wins, final stock never negative) — the same proof from TASK-011's
+  verification, confirmed reproducible.
+- Not done: `scripts/setup.sh` itself (touches `.env.example`, blocked by this
+  sandbox's permission settings) — every `docker compose` command it wraps is
+  individually verified, but the script's own run is not (TASK-021). Server-side
+  write endpoints (confirm order / setup / company switch) remain open.
+
 ### Added (2026-07-16 — TASK-011 scaffold the production API server)
 - `src/server.ts` — Express server (`npm run server`), reads `DATABASE_URL` and
   exits with a clear error if unset. `GET /health` returns `{status,service,time}`.

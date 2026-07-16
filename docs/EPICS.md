@@ -69,9 +69,10 @@ Acceptance criteria:
       backend yet); the demo/API adapter *contract* (`completeSetup()` input/output
       shape) is defined and documented for the future API adapter to implement.
 
-## EPIC-005 — Production API And Docker 🔶 (API scaffolded; Docker/writes open)
+## EPIC-005 — Production API And Docker 🔶 (stack up; writes + Makefile polish open)
 
-Add the production runtime path. (TASK-011 done, TASK-012/013/021 todo)
+Add the production runtime path. (TASK-011 done, TASK-012 done, TASK-013 done,
+TASK-021 todo)
 
 Acceptance criteria:
 
@@ -81,17 +82,20 @@ Acceptance criteria:
       server-side.
 - [x] API connects to PostgreSQL through configured `DATABASE_URL`
       (`src/server.ts`, `npm run server`).
-- [ ] Docker Compose starts `web`, `api`, and `db` (TASK-012).
-- [x] Migrations run against PostgreSQL — verified for real against a local
-      instance (`drizzle.config.ts` needed a `dbCredentials.url` fix; `npm run
-      migrate` now works).
+- [x] Docker Compose starts `web`, `api`, and `db` — `docker-compose.yml`,
+      `Dockerfile.api`, `web/Dockerfile`, `web/nginx.conf` (same-origin reverse
+      proxy, no CORS needed); verified with a real build + run + teardown.
+- [x] Migrations run against PostgreSQL — verified both on the host and inside the
+      `api` container (`docker compose exec api npm run migrate`).
 - [ ] Stock and finance writes are server-side transactions (needs the write
       endpoints above).
 - [x] PostgreSQL concurrency test prevents stock over-sell — proven by
       `POSTGRES_URL=... npm run demo` (exactly 1 of 2 racing issues wins), verified
-      live during TASK-011.
+      live twice (TASK-011 host run, TASK-013).
 - [ ] `Makefile` and `scripts/setup.sh` targets work against the real compose assets
-      (TASK-021, blocked on TASK-012).
+      — every underlying `docker compose` command is individually verified
+      (TASK-012), but `scripts/setup.sh` itself (which touches the
+      permission-blocked `.env.example`) is still unverified end-to-end (TASK-021).
 
 ## EPIC-006 — CI, Testing, And Release ⬜
 

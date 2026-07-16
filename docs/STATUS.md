@@ -9,10 +9,12 @@ an epic-level milestone lands.
 The repo is a working **browser-first ERP demo**: real PostgreSQL (PGlite/WASM) runs in
 the browser, persisted to IndexedDB, with a genuine cross-module transaction
 (sales order → stock deduction → invoice → balanced GL) proven both in `src/demo.ts`
-and in the live UI. **The `VITE_DATA_MODE` seam genuinely switches adapters now**
-(TASK-019) — but the production side of that seam (Docker, API server, PostgreSQL
-runtime) is still documented, not built: `VITE_DATA_MODE=api` shows an honest
-"waiting for the API" screen rather than fabricating data.
+and in the live UI. **The production path now genuinely runs**: `docker compose up -d`
+starts `web`+`api`+`db`, migrates, seeds, and serves a real `GET /api/dashboard`
+through an nginx reverse proxy — built and verified end-to-end. What's still missing:
+the frontend doesn't render that dashboard yet (still shows a "waiting for API"
+screen even with a live server — TASK-026), and there are no write endpoints
+(confirm order / setup / company switch) on the server side yet.
 
 ## What actually works (verified in code)
 
@@ -31,6 +33,8 @@ runtime) is still documented, not built: `VITE_DATA_MODE=api` shows an honest
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
 | Production API server: `GET /health`, `GET /api/dashboard` over `DATABASE_URL` | ✅ Working | `src/server.ts` (`npm run server`); verified against a real local PostgreSQL — migrations, seed, and the true-concurrency proof all pass; dashboard figures curl-verified correct and tenant-scoped, TASK-011 |
+| Docker Compose stack: `web` (nginx) + `api` (Express) + `db` (PostgreSQL) | ✅ Working | `docker-compose.yml`, `Dockerfile.api`, `web/Dockerfile`, `web/nginx.conf`; built and run end-to-end for real (healthchecks, `docker compose exec api npm run migrate`/`seed`, dashboard through the reverse proxy), then fully torn down, TASK-012 |
+| PostgreSQL concurrency/parity proof | ✅ Working | `POSTGRES_URL=... npm run demo` — proven twice against real Postgres (host + inside verification), TASK-013 |
 
 ## What renders but is mock-only
 
@@ -47,10 +51,10 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders a full production dashboard | **Not yet.** The API server exists and works (curl-verified), but the frontend adapter doesn't call `GET /api/dashboard` yet — it still shows the "waiting for API" screen even against a live server. → TASK-026 |
+| `VITE_DATA_MODE=api` renders a full production dashboard | **Not yet.** The API server and Docker stack both exist and work (curl-verified through the nginx proxy too), but the frontend adapter doesn't call `GET /api/dashboard` yet — it still shows the "waiting for API" screen even against a live server. → TASK-026 |
 | API server has **write** endpoints (confirm order, complete setup, switch company) | Not built. Only `GET /health` + `GET /api/dashboard` exist. The client-side contract (`erp-system-api-adapter.js`) already defines the shape these must satisfy. → follow-up to TASK-011 |
-| `make setup` / `docker compose up` production stack | **No Dockerfile or compose file exists anywhere.** `Makefile` and `scripts/setup.sh` call `docker compose exec api/db` against services that don't exist. → TASK-012/021 |
-| `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server`, not this file. |
+| `make setup` (`scripts/setup.sh`) works end-to-end | **Unverified**, not because it's broken — `docker-compose.yml` and every `docker compose` command the script wraps are individually proven working (TASK-012) — but because `scripts/setup.sh` does `cp .env.example .env` and `.env.example` is blocked by this sandbox's permission settings. A session with access to that file should run `make setup` once to confirm. → TASK-021 |
+| `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | Real login/auth | `renderLogin()` is a demo stub; user hardcoded to Admin/Superadmin. → TASK-024 |
 | Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. |
 | `npm test` / `npm run lint` (referenced in CONTRIBUTING.md) | Neither script exists. Only `npm run demo` acts as a test gate. → TASK-025 |
@@ -69,11 +73,11 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…011, TASK-016, TASK-019 (13)
-- Todo: TASK-012…015, 017, 018, 020…026 (13)
-- Next up (P0): TASK-012 (Docker Compose — the next infrastructure task), TASK-013
-  (PG parity gate in CI), TASK-024 (real auth, unblocked); TASK-026 (P1, wire the
-  frontend to the now-real dashboard) is a quick high-value win
+- Done: TASK-001…013, TASK-016, TASK-019 (15)
+- Todo: TASK-014, 015, 017, 018, 020…026 (11)
+- Next up: TASK-026 (P1, wire the frontend to the now-real dashboard — quick win),
+  TASK-021 (align Makefile/setup.sh, needs a session with `.env.example` access),
+  TASK-024 (real auth, unblocked), TASK-014 (CI validation)
 
 ## Where to go next
 

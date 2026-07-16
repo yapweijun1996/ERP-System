@@ -51,21 +51,26 @@ Exit criteria: empty demo opens wizard first (✅ met); production API can persi
 results to PostgreSQL (⬜ — needs TASK-011/TASK-019; the demo-adapter `completeSetup()`
 contract is defined and ready for an API adapter to implement the same shape).
 
-## Phase 5 — Production Runtime 🔶 (API scaffolded; Docker next)
+## Phase 5 — Production Runtime 🔶 (`docker compose up -d` works; writes + polish open)
 
 Goal: run the ERP as a self-hosted Docker deployment.
 
-Deliverables: wire the `VITE_DATA_MODE` seam (TASK-019 ✅); API server (TASK-011 ✅
-done 2026-07-16 — `src/server.ts`, `GET /health` + `GET /api/dashboard` over
-`DATABASE_URL`, verified against a real local PostgreSQL including the true
-concurrency proof; fixed `drizzle.config.ts` so `npm run migrate` actually works
-against Postgres); wire the frontend to render that real dashboard instead of the
-waiting screen (TASK-026, next quick win); Docker Compose stack `web`+`api`+`db`
-(TASK-012, the next infrastructure task); health checks; align `Makefile`/`setup.sh`
-with real assets (TASK-021); server-side stock and finance write endpoints
-(confirmOrder/completeSetup/switchCompany — client contract already defined);
-minimal real auth (TASK-024); schema-drift check between core and demo SQL copies
-(TASK-020).
+Deliverables: wire the `VITE_DATA_MODE` seam (TASK-019 ✅); API server (TASK-011 ✅);
+Docker Compose stack `web`+`api`+`db` (TASK-012 ✅ done 2026-07-16 —
+`docker-compose.yml` + `Dockerfile.api` + `web/Dockerfile` + `web/nginx.conf`, built
+and run end-to-end for real: healthchecks pass, `docker compose exec api npm run
+migrate`/`npm run seed` work, the dashboard renders through the nginx reverse proxy
+with zero CORS needed); PostgreSQL concurrency proof (TASK-013 ✅ — proven against
+real Postgres, `POSTGRES_URL=... npm run demo` passes including the true-concurrency
+race). Remaining: wire the frontend to render the real dashboard instead of the
+waiting screen (TASK-026, quick win, unblocked now that TASK-012 settles the
+same-origin proxy question); align `Makefile`/`scripts/setup.sh` end-to-end —
+individually-verified `docker compose` commands are done, but `scripts/setup.sh`
+itself is still unverified (blocked on `.env.example` sandbox permissions — flag for
+a session that can read it) (TASK-021); server-side stock and finance write
+endpoints (confirmOrder/completeSetup/switchCompany — client contract already
+defined); minimal real auth (TASK-024); schema-drift check between core and demo SQL
+copies (TASK-020).
 
 Exit criteria: `docker compose up -d` starts all services; production transaction +
 concurrency tests pass against PostgreSQL (TASK-013); browser writes stock/money

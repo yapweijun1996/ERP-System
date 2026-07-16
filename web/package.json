@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.1",
-    "vite": "^6.0.7",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/node": "^26.1.1"
+  }
 }

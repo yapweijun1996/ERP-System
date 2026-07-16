@@ -49,9 +49,12 @@ load. **IndexedDB is for demo only** — it is not the 800 GB store. See
 
 ### Production mode (Docker: web + api + PostgreSQL) — one command
 
-> ⚠️ **Not yet implemented.** The compose stack, API service, and `make setup` flow
-> below are the target design — the Docker assets don't exist yet
-> (see [docs/STATUS.md](docs/STATUS.md); TASK-011/012/021 in `tasks/tasks.jsonl`).
+> ⚠️ **`scripts/setup.sh` itself is not yet verified end-to-end** in this
+> environment (see [docs/STATUS.md](docs/STATUS.md); TASK-021). The Docker stack it
+> drives is real and built/run-verified: `docker-compose.yml` starts `web` (nginx) +
+> `api` (Express) + `db` (PostgreSQL), migrations and seeding work via `docker
+> compose exec`, and the dashboard renders through the reverse proxy. Only
+> write endpoints (confirm order, setup, company switch) are still todo.
 
 ```bash
 make setup        # creates .env, starts db+api+web, waits for DB, migrates, seeds SG+MY data

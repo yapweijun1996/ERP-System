@@ -1,0 +1,22 @@
+# Production API image (TASK-012). Context = repo root (the api needs src/, drizzle/,
+# and the root package.json — there is no separate api/ workspace).
+#
+# No compile step: the whole repo runs via `tsx` (same as `npm run demo`/`npm run
+# server` locally), so devDependencies (tsx, drizzle-kit, typescript) must ship in the
+# image — `npm run migrate` needs drizzle-kit at runtime too (`docker compose exec api
+# npm run migrate`). Optimizing this to a compiled build is a future improvement, not
+# required for this scaffold.
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY tsconfig.json drizzle.config.ts ./
+COPY src ./src
+COPY drizzle ./drizzle
+
+EXPOSE 3000
+
+CMD ["npm", "run", "server"]

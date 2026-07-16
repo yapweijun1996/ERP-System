@@ -14,7 +14,8 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "demo": "tsx src/demo.ts",
-    "server": "tsx src/server.ts"
+    "server": "tsx src/server.ts",
+    "seed": "tsx src/seed.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -110,11 +110,23 @@ PostgreSQL — exactly one writer may win.
 ```
 
 - API is the only writer for stock/money. Session (cookie) carries tenant scope.
-- Compose file + Dockerfiles do not exist yet (TASK-012); `Makefile`/`scripts/setup.sh`
-  already assume them — align in TASK-021, don't "fix" the Makefile by deleting targets.
+- **`docker-compose.yml` + `Dockerfile.api` + `web/Dockerfile` + `web/nginx.conf`**
+  (TASK-012) implement the diagram above for real: `db` = `postgres:16-alpine`,
+  `api` = `Dockerfile.api` (repo-root context — no separate `api/` workspace, ships
+  devDependencies since `tsx`/`drizzle-kit` run untranspiled), `web` = multi-stage
+  (`node:20-alpine` builds `VITE_DATA_MODE=api` → `nginx:alpine` serves it, reverse-
+  proxying `/health` and `/api/*` to `api` over the Compose network — this is *why*
+  `erp-system-api-adapter.js`'s `API_BASE` defaults to a relative `/api`: same-origin,
+  zero CORS). Host ports default to the documented 8080/3000/5432 but are overridable
+  (`WEB_PORT`/`API_PORT`/`DB_PORT`) for machines where those are already taken.
+  `Makefile`/`scripts/setup.sh` targets were written to match this shape and every
+  underlying `docker compose` command has been verified — `scripts/setup.sh` itself
+  is the one remaining unverified piece (TASK-021, blocked on `.env.example` sandbox
+  access in this environment, not a known bug).
 - **`src/server.ts`** (TASK-011) is the real API — run with `DATABASE_URL=... npm run
-  server`. Currently `GET /health` + `GET /api/dashboard` only; write endpoints are a
-  follow-up (contract already defined client-side in `erp-system-api-adapter.js`).
+  server` locally, or as the `api` service in Docker. Currently `GET /health` +
+  `GET /api/dashboard` only; write endpoints are a follow-up (contract already
+  defined client-side in `erp-system-api-adapter.js`).
 - **Local Postgres for manual testing** (no Docker required yet): `createdb
   erp_system_dev` against any local PostgreSQL 16+, then
   `DATABASE_URL=postgresql://<user>@localhost:5432/erp_system_dev npm run migrate`
