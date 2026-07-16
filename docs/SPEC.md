@@ -77,9 +77,12 @@ and [SCALABILITY.md](SCALABILITY.md).
   Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
 - **Auth** (TASK-024): login validates against `app_user`; session carries
   `master_fn`/`company_fn`/role; demo mode may auto-login a demo user but must label it.
-- **Production API** (TASK-011): Node service, `DATABASE_URL` env, endpoints:
-  `GET /health`, `GET /api/dashboard`, module reads, `POST` writes for
-  stock/money flows executing `src/modules/*` inside transactions.
+- **Production API** (TASK-011 ✅ scaffolded, `src/server.ts`): Node/Express service,
+  `DATABASE_URL` env. `GET /health` and `GET /api/dashboard` exist and are verified
+  against real PostgreSQL. Still needed: more module reads, `POST` writes for
+  stock/money flows executing `src/modules/*` inside transactions, and session-derived
+  tenant scope (`masterFn`/`companyFn` are query params today — a documented
+  scaffold-only shortcut, never acceptable for a write endpoint per invariant #4).
 - **Purchasing** (TASK-022/023): supplier, purchase order + lines, goods receipt
   (increases stock), supplier invoice (posts GL). Mirrors the sales chain.
 

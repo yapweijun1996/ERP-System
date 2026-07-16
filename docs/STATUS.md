@@ -29,7 +29,8 @@ runtime) is still documented, not built: `VITE_DATA_MODE=api` shows an honest
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
-| `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api — health-checks and shows a "waiting for API" screen since no server exists yet), TASK-019 |
+| `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
+| Production API server: `GET /health`, `GET /api/dashboard` over `DATABASE_URL` | ✅ Working | `src/server.ts` (`npm run server`); verified against a real local PostgreSQL — migrations, seed, and the true-concurrency proof all pass; dashboard figures curl-verified correct and tenant-scoped, TASK-011 |
 
 ## What renders but is mock-only
 
@@ -46,9 +47,10 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders a full production dashboard | **Not yet** — by design. The seam is wired (TASK-019) and the frontend genuinely switches adapters, but `erp-system-api-adapter.js` has no server to call, so it shows a "waiting for the API" screen instead of fabricating dashboard data. → TASK-011 |
-| `make setup` / `docker compose up` production stack | **No Dockerfile or compose file exists anywhere.** `Makefile` and `scripts/setup.sh` call `docker compose exec api/db` against services that don't exist. → TASK-011/012/021 |
-| Production API server | Not built. `deploy/erp-server.mjs` is a static "Live" placeholder page + `/health`, not the API. The client-side contract it must satisfy (`ready/reset/refresh/confirmOrder/completeSetup/switchCompany/mode/db` over HTTP) is already defined in `erp-system-api-adapter.js`. → TASK-011 |
+| `VITE_DATA_MODE=api` renders a full production dashboard | **Not yet.** The API server exists and works (curl-verified), but the frontend adapter doesn't call `GET /api/dashboard` yet — it still shows the "waiting for API" screen even against a live server. → TASK-026 |
+| API server has **write** endpoints (confirm order, complete setup, switch company) | Not built. Only `GET /health` + `GET /api/dashboard` exist. The client-side contract (`erp-system-api-adapter.js`) already defines the shape these must satisfy. → follow-up to TASK-011 |
+| `make setup` / `docker compose up` production stack | **No Dockerfile or compose file exists anywhere.** `Makefile` and `scripts/setup.sh` call `docker compose exec api/db` against services that don't exist. → TASK-012/021 |
+| `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server`, not this file. |
 | Real login/auth | `renderLogin()` is a demo stub; user hardcoded to Admin/Superadmin. → TASK-024 |
 | Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. |
 | `npm test` / `npm run lint` (referenced in CONTRIBUTING.md) | Neither script exists. Only `npm run demo` acts as a test gate. → TASK-025 |
@@ -67,11 +69,11 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…010, TASK-016, TASK-019 (12)
-- Todo: TASK-011…015, 017, 018, 020…025 (13)
-- Next up (P0): TASK-011 (production API server — now the critical path; the seam is
-  ready and waiting for it), TASK-012 (Docker Compose), TASK-013 (PG parity),
-  TASK-024 (real auth, unblocked)
+- Done: TASK-001…011, TASK-016, TASK-019 (13)
+- Todo: TASK-012…015, 017, 018, 020…026 (13)
+- Next up (P0): TASK-012 (Docker Compose — the next infrastructure task), TASK-013
+  (PG parity gate in CI), TASK-024 (real auth, unblocked); TASK-026 (P1, wire the
+  frontend to the now-real dashboard) is a quick high-value win
 
 ## Where to go next
 

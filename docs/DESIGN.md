@@ -112,6 +112,16 @@ PostgreSQL — exactly one writer may win.
 - API is the only writer for stock/money. Session (cookie) carries tenant scope.
 - Compose file + Dockerfiles do not exist yet (TASK-012); `Makefile`/`scripts/setup.sh`
   already assume them — align in TASK-021, don't "fix" the Makefile by deleting targets.
+- **`src/server.ts`** (TASK-011) is the real API — run with `DATABASE_URL=... npm run
+  server`. Currently `GET /health` + `GET /api/dashboard` only; write endpoints are a
+  follow-up (contract already defined client-side in `erp-system-api-adapter.js`).
+- **Local Postgres for manual testing** (no Docker required yet): `createdb
+  erp_system_dev` against any local PostgreSQL 16+, then
+  `DATABASE_URL=postgresql://<user>@localhost:5432/erp_system_dev npm run migrate`
+  (requires `drizzle.config.ts`'s `dbCredentials.url`, fixed in TASK-011 — it was
+  missing entirely before), then `POSTGRES_URL=<same URL> npm run demo` to seed +
+  prove all invariants against real Postgres (including true concurrency). Never
+  point either at a database you didn't create for this purpose.
 - Deployment tuning and backup strategy → [DEPLOYMENT.md](DEPLOYMENT.md),
   [IMPORT_EXPORT.md](IMPORT_EXPORT.md).
 

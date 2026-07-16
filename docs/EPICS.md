@@ -69,19 +69,29 @@ Acceptance criteria:
       backend yet); the demo/API adapter *contract* (`completeSetup()` input/output
       shape) is defined and documented for the future API adapter to implement.
 
-## EPIC-005 — Production API And Docker ⬜
+## EPIC-005 — Production API And Docker 🔶 (API scaffolded; Docker/writes open)
 
-Add the production runtime path. (TASK-011, TASK-012, TASK-013, TASK-021)
+Add the production runtime path. (TASK-011 done, TASK-012/013/021 todo)
 
 Acceptance criteria:
 
-- API exposes dashboard and ERP write endpoints.
-- API connects to PostgreSQL through configured `DATABASE_URL`.
-- Docker Compose starts `web`, `api`, and `db`.
-- Migrations run against PostgreSQL.
-- Stock and finance writes are server-side transactions.
-- PostgreSQL concurrency test prevents stock over-sell.
-- `Makefile` and `scripts/setup.sh` targets work against the real compose assets.
+- [x] API exposes a dashboard read endpoint (`GET /api/dashboard`) — write
+      endpoints (confirm order, complete setup, switch company) are scaffolded as
+      a client-side contract (`erp-system-api-adapter.js`) but not yet implemented
+      server-side.
+- [x] API connects to PostgreSQL through configured `DATABASE_URL`
+      (`src/server.ts`, `npm run server`).
+- [ ] Docker Compose starts `web`, `api`, and `db` (TASK-012).
+- [x] Migrations run against PostgreSQL — verified for real against a local
+      instance (`drizzle.config.ts` needed a `dbCredentials.url` fix; `npm run
+      migrate` now works).
+- [ ] Stock and finance writes are server-side transactions (needs the write
+      endpoints above).
+- [x] PostgreSQL concurrency test prevents stock over-sell — proven by
+      `POSTGRES_URL=... npm run demo` (exactly 1 of 2 racing issues wins), verified
+      live during TASK-011.
+- [ ] `Makefile` and `scripts/setup.sh` targets work against the real compose assets
+      (TASK-021, blocked on TASK-012).
 
 ## EPIC-006 — CI, Testing, And Release ⬜
 
@@ -115,6 +125,9 @@ Acceptance criteria:
       `src/data/seed.ts` and `web/public/db/erp-system-*.sql`, and runs in CI (TASK-020).
 - [x] `confirmOrder`/`completeSetup`/`switchCompany` exist in exactly one place per
       runtime (demo adapter vs. api adapter), never both active at once.
+- [ ] `VITE_DATA_MODE=api` renders the real dashboard once a server is reachable,
+      not just the "waiting for API" screen (TASK-026, now that TASK-011 gives it
+      something real to call).
 
 ## EPIC-008 — Purchasing Module ⬜
 

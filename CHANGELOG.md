@@ -5,6 +5,30 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-16 — TASK-011 scaffold the production API server)
+- `src/server.ts` — Express server (`npm run server`), reads `DATABASE_URL` and
+  exits with a clear error if unset. `GET /health` returns `{status,service,time}`.
+  `GET /api/dashboard?masterFn=&companyFn=` (defaults `M1`/`C-SG`) returns
+  `{scope, companies, metrics, stockAlerts, generatedAt}` from five parallel,
+  tenant-scoped, explicit-column queries written in `src/demo.ts`'s style.
+  `masterFn`/`companyFn` as query params is flagged in-code as scaffold-only —
+  must become session-derived scope before any write endpoint ships (TASK-024).
+- Fixed `drizzle.config.ts`: it had no `dbCredentials` at all, so `npm run migrate`
+  failed outright against any real PostgreSQL. Added `dbCredentials.url` from
+  `DATABASE_URL` (`generate` is unaffected — it needs no DB connection).
+- Added `express` + `@types/express` (dev) and the `server` npm script.
+- Verified for real, not just typechecked: created an isolated local database
+  (`erp_system_dev`, without touching the machine's other existing databases), ran
+  `npm run migrate` against it, then `POSTGRES_URL=... npm run demo` — **all checks
+  passed including true PostgreSQL concurrency** (exactly 1 of 2 racing stock issues
+  wins). Started the server and curl-tested `/health` and `/api/dashboard`: correct
+  JSON content-type, figures matching the seeded scenario exactly (AR S$119.90,
+  MTD revenue S$110), correct per-company scoping, and a nonexistent company
+  returns zeroed metrics rather than crashing.
+- Added TASK-026 to the backlog: wire `erp-system-api-adapter.js` to actually call
+  `GET /api/dashboard` and render it (deliberately deferred in TASK-019 until this
+  endpoint existed — it now does).
+
 ### Added (2026-07-16 — TASK-019 wire the VITE_DATA_MODE seam)
 - `web/index.html`'s first script tag now sets `window.__ERP_DATA_MODE__` from
   Vite's built-in `%VITE_DATA_MODE%` HTML placeholder and defines
