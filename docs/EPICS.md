@@ -97,9 +97,10 @@ Acceptance criteria:
       (TASK-012), but `scripts/setup.sh` itself (which touches the
       permission-blocked `.env.example`) is still unverified end-to-end (TASK-021).
 
-## EPIC-006 — CI, Testing, And Release 🔶 (CI gate live; tests/smoke/device open)
+## EPIC-006 — CI, Testing, And Release 🔶 (CI gate + smoke test live; unit tests/device open)
 
-Add repeatable validation and deployment checks. (TASK-014 done, TASK-015/017/025 todo)
+Add repeatable validation and deployment checks. (TASK-014, TASK-015, TASK-020 done;
+TASK-017/025 todo)
 
 Acceptance criteria:
 
@@ -109,7 +110,10 @@ Acceptance criteria:
 - [x] CI can run transaction proof tests — same workflow runs `npm run demo`
       (PGlite proof) on every PR.
 - [ ] Unit tests (vitest) cover `src/modules/*` business logic (TASK-025).
-- [ ] Browser smoke test covers desktop and mobile demo load (TASK-015).
+- [x] Browser smoke test covers desktop and mobile demo load (TASK-015 done
+      2026-07-17 — `scripts/smoke.mjs`, Playwright, wired into CI with browser
+      caching; checks zero console/page errors and that the dashboard actually
+      renders, not just "no crash").
 - [ ] Release checklist distinguishes GitHub Pages demo and Docker production.
 - [x] Docs stay aligned with package scripts and deployment assets — actively kept
       current through TASK-009…014.

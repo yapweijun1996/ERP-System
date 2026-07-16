@@ -33,6 +33,7 @@ endpoints (confirm order / setup) on the server side yet.
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
+| Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -86,11 +87,11 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…014, TASK-016, TASK-019, TASK-020, TASK-026 (18)
-- Todo: TASK-015, 017, 018, 021…025 (8)
-- Next up: TASK-015 (browser smoke test), TASK-021 (align Makefile/setup.sh, needs
-  a session with `.env.example` access), TASK-024 (real auth, unblocked), TASK-025
-  (vitest unit tests)
+- Done: TASK-001…015, TASK-016, TASK-019, TASK-020, TASK-026 (19)
+- Todo: TASK-017, 018, 021…025 (7)
+- Next up: TASK-021 (align Makefile/setup.sh, needs a session with `.env.example`
+  access), TASK-024 (real auth, unblocked), TASK-025 (vitest unit tests), TASK-018
+  (screen audit)
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
 

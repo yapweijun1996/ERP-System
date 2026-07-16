@@ -76,22 +76,23 @@ Exit criteria: `docker compose up -d` starts all services; production transactio
 concurrency tests pass against PostgreSQL (TASK-013); browser writes stock/money
 through API only.
 
-## Phase 6 — Quality And Operations 🔶 (CI gate live; rest open)
+## Phase 6 — Quality And Operations 🔶 (CI + drift + smoke live; unit tests/PG-in-CI open)
 
 Goal: make the system safe to maintain.
 
-Deliverables: CI checks for typecheck/build/demo (TASK-014 ✅ done 2026-07-16 —
-`.github/workflows/ci.yml` runs on every PR: root+web typecheck, the PGlite
-transaction proof, and the demo build); vitest unit tests (TASK-025); browser smoke
-tests (TASK-015); transaction tests against PostgreSQL in CI (currently only proven
-manually — TASK-013 — not yet gated in CI, since that needs a Postgres service
-container in the workflow); deployment docs; backup/restore runbook; release
-checklist.
+Deliverables: CI checks for typecheck/build/demo (TASK-014 ✅); schema drift check
+in CI (TASK-020 ✅ done 2026-07-17 — `scripts/check-drift.mjs`); browser smoke test
+in CI (TASK-015 ✅ done 2026-07-17 — `scripts/smoke.mjs`, Playwright, desktop +
+mobile, zero console/page errors, dashboard content actually verified); vitest unit
+tests (TASK-025, still open); transaction tests against PostgreSQL in CI (currently
+only proven manually — TASK-013 — not yet gated in CI, since that needs a Postgres
+service container in the workflow); deployment docs; backup/restore runbook;
+release checklist.
 
 Exit criteria: every PR can be validated with documented commands (✅ for
-typecheck/demo-build; ⬜ for unit/smoke/PG-parity); demo and production paths have
-separate deployment checks (✅ — `deploy-pages.yml` deploys the demo, `ci.yml`
-validates every PR, Docker Compose is the production runtime).
+typecheck/demo-build/drift/smoke; ⬜ for unit tests and PG-parity-in-CI); demo and
+production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
+the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
 ## Phase 7 — Module Expansion ⬜
 

@@ -26,8 +26,23 @@ npm install
 | `npm run typecheck` | `tsc --noEmit` over the schema + data layer |
 | `npm run demo` | **Dual-adapter proof** — same repo code on PGlite (and PostgreSQL if `POSTGRES_URL` set) |
 | `npm run check:drift` | **Schema drift check** — compares table/column definitions between `drizzle/0000_init.sql` (source of truth) and `web/public/db/erp-system-schema.sql` (hand-copied demo SQL); fails with a readable diff on any mismatch. Run this after any schema change, before re-copying the SQL by hand. Runs in CI on every PR. |
+| `npm run smoke` | **Browser smoke test** — requires `npm run build:demo` first. Launches headless Chromium (Playwright) at desktop (1280×800) and mobile (375×812) viewports, bypasses the first-run wizard/login via a pre-set `localStorage` flag, and asserts the dashboard actually renders (`.dashgrid` visible, `document.title` mentions the seeded company) with **zero** console errors and **zero** uncaught page errors. Runs in CI on every PR. |
 | `npm test` | Run the test suite |
 | `npm run lint` | Lint |
+
+### Browser smoke test
+
+```bash
+npm run build:demo   # smoke.mjs serves the already-built web/dist/, it does not build it
+npm run smoke
+```
+
+First run needs the Chromium binary: `npx playwright install chromium` (~170 MB, cached
+by CI via `actions/cache` keyed on the `playwright` version in `package.json`). The test
+is a shell/dashboard smoke check, not a wizard/login flow test — it intentionally skips
+straight to the dashboard via `localStorage`, since the wizard and confirm-order flows are
+covered by manual verification recorded in their own tasks (`tasks/tasks.jsonl` TASK-009,
+TASK-007).
 
 ### Dual-adapter demo
 

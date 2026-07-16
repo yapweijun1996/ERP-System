@@ -5,6 +5,28 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-015 browser smoke test)
+- `scripts/smoke.mjs` (Playwright, new devDependency — verified it actually
+  launches headless Chromium in this environment before committing to the
+  approach): expects `web/dist/` already built, spawns `vite preview` directly,
+  waits for real HTTP readiness (not stdout pattern-matching), then for both
+  desktop (1280×800) and mobile (375×812) pre-sets the wizard-complete and
+  demo-auth `localStorage` flags so the run lands on the dashboard, collects every
+  `console.error` and `pageerror`, waits for `.dashgrid` to render, and checks
+  `document.title` mentions the seeded company. Exits 1 with a readable
+  per-viewport report on any error or missing content.
+- `npm run smoke`, wired into `.github/workflows/ci.yml` after `build:demo`, with
+  Playwright browser caching (`actions/cache` keyed on the `playwright` version)
+  so CI doesn't re-download ~170 MB of Chromium on every run.
+- Documented in `docs/DEVELOPMENT.md`.
+- Found and fixed a real bug while building the script itself: `vite preview`
+  binds only the IPv6 loopback (`[::1]`), not `127.0.0.1` — the script originally
+  hardcoded `127.0.0.1` and every connection was refused. Switched to `localhost`.
+- Verified all three acceptance criteria directly: clean pass at both viewports;
+  a deliberately injected broken script reference was correctly caught and
+  reported per-viewport with exit 1; restored the clean build afterward and
+  confirmed a byte-identical rebuild.
+
 ### Added (2026-07-17 — TASK-020 schema drift check)
 - `scripts/check-drift.mjs`: zero-dependency Node script that parses `CREATE
   TABLE` blocks from `drizzle/0000_init.sql` (source of truth) and
