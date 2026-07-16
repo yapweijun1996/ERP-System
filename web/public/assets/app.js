@@ -692,12 +692,17 @@ function renderTabbar(){
 
 /* ---------- boot ---------- */
 function boot(){
+  if(typeof needsSetupWizard==='function' && needsSetupWizard()){
+    renderSetupWizard();
+    return;
+  }
   if(!isDemoSignedIn()){
     renderLogin();
     return;
   }
   setAuthShell(false);
   const auth=$('#authView'); if(auth) auth.remove();
+  const wiz=$('#setupWizardView'); if(wiz) wiz.remove();
   // theme
   let themePref='light'; try{themePref=localStorage.getItem('aria-theme')||'light';}catch(e){}
   applyTheme(themePref);

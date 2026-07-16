@@ -36,6 +36,7 @@ SCREENS['settings'] = function(root, params){
       recoveryCodes:'Recovery codes', recoveryCodesDesc:'Single-use codes for when you lose your device.', viewCodes:'View codes',
       activeSessions:'Active sessions', thisDevice:'This device', revoke:'Revoke', signOutOthers:'Sign out all other sessions',
       dataSource:'Data source', resetDemo:'Reset demo data', resetDemoDesc:'Drops the canonical demo database and reseeds it (companies, products, tax rules, the SO-1 transaction chain) on reload.',
+      rerunWizard:'Re-run setup wizard', rerunWizardDesc:'Show the first-run setup wizard again on next reload. Existing demo data is not changed.', rerunWizardConfirm:'Re-run the setup wizard? Your demo data is kept — this only replays the setup screens.', rerunWizardToast:'Reloading into the setup wizard…',
       pgliteInfo:'PGlite · in-browser PostgreSQL persisted to IndexedDB', fallbackInfo:'Static fallback · PGlite unavailable in this session', fallback:'Fallback',
       savebar:'Personal preferences · saved to your account', reset:'Reset', save:'Save changes',
       uploadPhoto:'Upload photo — not in this build', photoRemoved:'Photo removed', settingsSaved:'Settings saved', changesReset:'Changes reset',
@@ -70,6 +71,7 @@ SCREENS['settings'] = function(root, params){
       recoveryCodes:'Kod pemulihan', recoveryCodesDesc:'Kod sekali guna apabila anda kehilangan peranti.', viewCodes:'Lihat kod',
       activeSessions:'Sesi aktif', thisDevice:'Peranti ini', revoke:'Batalkan', signOutOthers:'Log keluar sesi lain',
       dataSource:'Sumber data', resetDemo:'Tetapkan semula data demo', resetDemoDesc:'Menggugurkan pangkalan data demo kanonik dan menanam semula data pada muat semula.',
+      rerunWizard:'Jalankan semula wizard persediaan', rerunWizardDesc:'Tunjukkan semula wizard persediaan pertama pada muat semula seterusnya. Data demo sedia ada tidak berubah.', rerunWizardConfirm:'Jalankan semula wizard persediaan? Data demo anda dikekalkan — ini hanya memainkan semula skrin persediaan.', rerunWizardToast:'Memuat semula ke wizard persediaan…',
       pgliteInfo:'PGlite · PostgreSQL dalam pelayar disimpan ke IndexedDB', fallbackInfo:'Sandaran statik · PGlite tidak tersedia dalam sesi ini', fallback:'Sandaran',
       savebar:'Keutamaan peribadi · disimpan ke akaun anda', reset:'Tetapkan semula', save:'Simpan perubahan',
       uploadPhoto:'Muat naik foto — tiada dalam binaan ini', photoRemoved:'Foto dibuang', settingsSaved:'Tetapan disimpan', changesReset:'Perubahan ditetapkan semula',
@@ -104,6 +106,7 @@ SCREENS['settings'] = function(root, params){
       recoveryCodes:'恢复代码', recoveryCodesDesc:'设备丢失时可使用的一次性代码。', viewCodes:'查看代码',
       activeSessions:'活动会话', thisDevice:'此设备', revoke:'撤销', signOutOthers:'退出其他所有会话',
       dataSource:'数据来源', resetDemo:'重置演示数据', resetDemoDesc:'重新载入时删除标准演示数据库并重新植入公司、产品、税务规则和 SO-1 交易链。',
+      rerunWizard:'重新运行设置向导', rerunWizardDesc:'下次重新载入时再次显示首次设置向导。现有演示数据不会更改。', rerunWizardConfirm:'重新运行设置向导?您的演示数据将被保留 — 这只会重播设置画面。', rerunWizardToast:'正在重新载入设置向导…',
       pgliteInfo:'PGlite · 浏览器内 PostgreSQL，持久化到 IndexedDB', fallbackInfo:'静态备用 · 此会话中 PGlite 不可用', fallback:'备用',
       savebar:'个人偏好 · 已保存到您的账户', reset:'重置', save:'保存更改',
       uploadPhoto:'上传照片 — 此版本未提供', photoRemoved:'照片已移除', settingsSaved:'设置已保存', changesReset:'更改已重置',
@@ -233,6 +236,7 @@ SCREENS['settings'] = function(root, params){
     : s('fallbackInfo');
   const demoData=panel('set-demo','box',s('demo'),`
     ${row(s('dataSource'),esc(demoInfo),cap(DB.erpSystem&&DB.erpSystem.dataMode==='pglite'?'PGlite':s('fallback'),DB.erpSystem&&DB.erpSystem.dataMode==='pglite'?'ok':'warn'))}
+    ${row(s('rerunWizard'),s('rerunWizardDesc'),btn(s('rerunWizard'),{icon:'flag',cls:'soft',attrs:'data-act="rerun-wizard"'}))}
     ${row(s('resetDemo'),s('resetDemoDesc'),btn(s('resetDemo'),{icon:'refresh',cls:'soft',attrs:'data-act="demo-reset"'}))}`);
 
   const railItems=[
@@ -351,8 +355,16 @@ SCREENS['settings'] = function(root, params){
   root.querySelector('[data-act="demo-reset"]').addEventListener('click',()=>{
     if(!window.ErpSystemDemo){ toast(s('adapterMissing'),'warn'); return; }
     if(!confirm(s('resetConfirm'))) return;
+    if(typeof clearSetupWizardFlag==='function') clearSetupWizardFlag();
     toast(s('resetting'),'info');
     window.ErpSystemDemo.reset();
+  });
+  const rerunWiz=root.querySelector('[data-act="rerun-wizard"]');
+  rerunWiz&&rerunWiz.addEventListener('click',()=>{
+    if(!confirm(s('rerunWizardConfirm'))) return;
+    if(typeof clearSetupWizardFlag==='function') clearSetupWizardFlag();
+    toast(s('rerunWizardToast'),'info');
+    setTimeout(()=>location.reload(),300);
   });
 
   spy();
