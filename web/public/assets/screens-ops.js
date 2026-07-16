@@ -6,7 +6,11 @@
 SCREENS['dashboard'] = function(root){
   const u=DB.user;
   const m=DB.dashboardMetrics||{};
-  const erpDemo=!!DB.erpSystem;
+  /* TASK-026: only the PGlite/fallback demo adapter's canonical-values narrative
+     applies here (SG-WIDGET, Beta Pte Ltd, etc.) — api mode has DB.erpSystem set
+     too (for the company switcher) but must fall through to the generic i18n copy,
+     same distinction Settings already makes for its data-source panel. */
+  const erpDemo=!!DB.erpSystem && DB.erpSystem.dataMode!=='api';
   const fmt=(n)=>typeof n==='number'?num(n):n;
   const wc = (o)=>`<button class="wcard ${o.span?'span2':''}" data-route="${o.route||''}">
     <div class="wc-top"><span class="wc-ic ${o.tone}">${ic(o.icon)}</span><h4>${esc(o.title)}</h4>${o.meta?`<span class="wc-meta">${esc(o.meta)}</span>`:''}</div>

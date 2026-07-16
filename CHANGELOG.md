@@ -5,6 +5,41 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-16 — TASK-026 render the real dashboard in api mode)
+- `erp-system-api-adapter.js` now calls `GET {base}/dashboard?masterFn=&companyFn=`
+  once the health check succeeds and maps the response onto `DB.company`/`DB.user`/
+  `DB.erpSystem`/`DB.approvals`/`DB.dashboardMetrics` — a deliberately minimal
+  mapper, not a full port of `applyData()`. Unmodeled metrics (approvals, GL
+  issues, deliveries, receipts, picking, leave, cash, cleared) are `0` with a
+  comment explaining why, not fabricated. Other modules (inventory/sales/finance)
+  still have no api-mode data source — real remaining scope, not silently faked.
+- `switchCompany(companyFn)` added as a bonus: it's just a re-fetch with a
+  different `companyFn`, no new server endpoint needed, so the topbar company
+  switcher works in api mode too.
+- **Two real bugs found via actual browser verification** (not just typecheck):
+  1. `src/data/repo.ts`'s `listCompanies()` never selected the `currency` column —
+     every `/api/dashboard` response was missing it, so the UI silently fell back
+     to USD (`$`) instead of the correct SGD/MYR (`S$`/`RM`). Fixed.
+  2. `app.js`'s `buildCompanyMenu()` (TASK-010) read `c.company_fn` (snake_case,
+     matching the demo adapter's raw SQL rows) but the api adapter's JSON uses
+     Drizzle's camelCase `c.companyFn` — every company button silently got
+     `data-co=''` in api mode, so clicking any company in the switcher did
+     nothing, no error. Fixed to check both.
+- `screens-ops.js`'s `erpDemo` flag now checks `dataMode!=='api'` instead of bare
+  truthiness, so api mode's `DB.erpSystem` (needed for the company switcher)
+  doesn't trigger the PGlite-only demo narrative text — zero behavior change for
+  pglite/fallback modes.
+- Verified end-to-end via the full Docker Compose stack: dashboard rendered with
+  real, correct figures (S$ currency symbol, stock-alert count 2 for Singapore vs
+  1 for Malaysia — genuinely distinct per-company data), company switcher worked
+  bidirectionally with zero console errors at desktop and 375px, and the
+  api-unreachable fallback (stopped the `api` container, fresh browser tab) still
+  correctly showed the honest waiting screen. One incident during verification: a
+  `docker compose` command without repeating the port-override env vars briefly
+  brought up `db` on the default port 5432 alongside the host's native Postgres —
+  caught immediately, no data affected (verified), fixed by using an explicit
+  `--env-file` for every subsequent command. Fully torn down afterward.
+
 ### Added (2026-07-16 — TASK-014 CI validation workflow)
 - `.github/workflows/ci.yml`: runs on every pull request and push to `main` —
   `npm ci` (root + web), `npm run typecheck`, `npm run typecheck:web` (the existing

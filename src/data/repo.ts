@@ -13,7 +13,10 @@ export interface Scope {
 /** Companies under a master (tenant root). */
 export function listCompanies(db: DB, masterFn: string) {
   return db
-    .select({ companyFn: company.companyFn, name: company.name, country: company.country, taxRegime: company.taxRegime })
+    .select({
+      companyFn: company.companyFn, name: company.name, country: company.country,
+      currency: company.currency, taxRegime: company.taxRegime,
+    })
     .from(company)
     .where(eq(company.masterFn, masterFn))
     .orderBy(company.companyFn);

@@ -602,10 +602,16 @@ function buildCompanyMenu(){
   const activeFn=DB.erpSystem && DB.erpSystem.scope && DB.erpSystem.scope.companyFn;
   const masterName=(DB.erpSystem && DB.erpSystem.master && DB.erpSystem.master.name) || DB.company.name;
   const head=`<div class="menu-head">${esc(masterName)}</div>`;
-  const rows=companies.map(c=>`<button class="menu-item" data-co="${esc(c.company_fn)}">
+  /* demo adapter's raw SQL rows use snake_case (company_fn); the api adapter's
+     JSON (Drizzle/Express) uses camelCase (companyFn) — support both so this one
+     shared render function works under either data mode. */
+  const rows=companies.map(c=>{
+    const fn=c.company_fn||c.companyFn;
+    return `<button class="menu-item" data-co="${esc(fn)}">
     <span class="mc-logo" style="width:26px;height:26px;font-size:9.5px;border-radius:7px">${esc(c.name.replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase())}</span>
     <span>${esc(c.name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(c.currency)} · ${esc(c.country)}</small></span>
-    <span class="meta">${c.company_fn===activeFn?ic('check'):''}</span></button>`).join('');
+    <span class="meta">${fn===activeFn?ic('check'):''}</span></button>`;
+  }).join('');
   return `<div class="menu-section">${head}${rows}</div>
     <div class="menu-section"><button class="menu-item" data-co-action="master">${ic('grid')}<span>Master Control</span><span class="meta">${ic('arrowR')}</span></button></div>`;
 }

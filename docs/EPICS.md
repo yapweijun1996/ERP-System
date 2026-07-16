@@ -133,9 +133,10 @@ Acceptance criteria:
       `src/data/seed.ts` and `web/public/db/erp-system-*.sql`, and runs in CI (TASK-020).
 - [x] `confirmOrder`/`completeSetup`/`switchCompany` exist in exactly one place per
       runtime (demo adapter vs. api adapter), never both active at once.
-- [ ] `VITE_DATA_MODE=api` renders the real dashboard once a server is reachable,
-      not just the "waiting for API" screen (TASK-026, now that TASK-011 gives it
-      something real to call).
+- [x] `VITE_DATA_MODE=api` renders the real dashboard once a server is reachable
+      (TASK-026 done 2026-07-16) — including a working company switcher
+      (`switchCompany` re-fetches with a different scope, no new endpoint needed);
+      other modules (inventory/sales/finance) still have no api-mode data source.
 
 ## EPIC-008 — Purchasing Module ⬜
 
