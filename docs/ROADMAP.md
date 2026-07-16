@@ -51,15 +51,18 @@ Exit criteria: empty demo opens wizard first (✅ met); production API can persi
 results to PostgreSQL (⬜ — needs TASK-011/TASK-019; the demo-adapter `completeSetup()`
 contract is defined and ready for an API adapter to implement the same shape).
 
-## Phase 5 — Production Runtime ⬜
+## Phase 5 — Production Runtime 🔶 (seam wired; server not built)
 
 Goal: run the ERP as a self-hosted Docker deployment.
 
-Deliverables: wire the `VITE_DATA_MODE` seam (TASK-019); API server (TASK-011);
-PostgreSQL connection and migrations; Docker Compose stack `web`+`api`+`db`
-(TASK-012); health checks; align `Makefile`/`setup.sh` with real assets (TASK-021);
-server-side stock and finance transactions; minimal real auth (TASK-024);
-schema-drift check between core and demo SQL copies (TASK-020).
+Deliverables: wire the `VITE_DATA_MODE` seam (TASK-019 ✅ done 2026-07-16 — the
+frontend now genuinely switches adapters at build time; `VITE_DATA_MODE=api` shows an
+honest "waiting for the API" screen instead of a fake dashboard, since TASK-011 hasn't
+shipped yet); API server (TASK-011, next); PostgreSQL connection and migrations;
+Docker Compose stack `web`+`api`+`db` (TASK-012); health checks; align
+`Makefile`/`setup.sh` with real assets (TASK-021); server-side stock and finance
+transactions; minimal real auth (TASK-024); schema-drift check between core and demo
+SQL copies (TASK-020).
 
 Exit criteria: `docker compose up -d` starts all services; production transaction +
 concurrency tests pass against PostgreSQL (TASK-013); browser writes stock/money

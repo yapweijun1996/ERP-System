@@ -20,6 +20,15 @@
 </head>
 <body>
 <a class="skip" href="#viewRoot" data-i18n="skip">Skip to content</a>
+<!-- TASK-019 data-mode seam: %VITE_DATA_MODE% is substituted by Vite from the
+     VITE_DATA_MODE env var (unset in a plain `vite build` leaves the literal
+     placeholder text, which the adapters below treat as "demo"). 'demo' loads
+     erp-system-data-adapter.js (PGlite/IndexedDB); 'api' loads
+     erp-system-api-adapter.js (HTTP, stubbed until TASK-011 ships the server). -->
+<script>
+  window.__ERP_DATA_MODE__='%VITE_DATA_MODE%';
+  window.erpDataMode=function(){ return window.__ERP_DATA_MODE__==='api' ? 'api' : 'demo'; };
+</script>
 
 <div class="app" id="app">
   <aside class="sidebar" id="sidebar" aria-label="Primary navigation"></aside>
@@ -111,6 +120,7 @@
 <script src="%BASE_URL%assets/master-db.js"></script>
 <script src="%BASE_URL%assets/sales-data.js"></script>
 <script src="%BASE_URL%assets/erp-system-data-adapter.js?v=20260707-notification-state"></script>
+<script src="%BASE_URL%assets/erp-system-api-adapter.js?v=20260716-data-mode-seam"></script>
 <script src="%BASE_URL%assets/ui.js"></script>
 <script src="%BASE_URL%assets/i18n.js"></script>
 <script src="%BASE_URL%assets/screens-ops.js"></script>

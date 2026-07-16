@@ -20,9 +20,14 @@
    app.js defers boot until `window.ErpSystemDemoReady` resolves.
    `window.ErpSystemDemo.reset()` drops the schema and reloads,
    which reseeds the canonical sample data on next boot.
+
+   TASK-019: this file only runs in 'demo' data mode. In 'api' mode
+   (VITE_DATA_MODE=api) it self-disables and erp-system-api-adapter.js
+   sets window.ErpSystemDemo instead — see index.html's erpDataMode().
    ============================================================ */
 (function erpSystemDataAdapter(){
   if (typeof DB === 'undefined') return;
+  if (typeof window.erpDataMode === 'function' && window.erpDataMode() !== 'demo') return;
 
   var PGLITE_URL = 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite/dist/index.js';
   var PG_DATA_DIR = 'idb://erp-system-demo';

@@ -9,8 +9,10 @@ an epic-level milestone lands.
 The repo is a working **browser-first ERP demo**: real PostgreSQL (PGlite/WASM) runs in
 the browser, persisted to IndexedDB, with a genuine cross-module transaction
 (sales order → stock deduction → invoice → balanced GL) proven both in `src/demo.ts`
-and in the live UI. **Everything labeled "production" (Docker, API server, PostgreSQL
-runtime, `VITE_DATA_MODE` switch) is documented but not yet built.**
+and in the live UI. **The `VITE_DATA_MODE` seam genuinely switches adapters now**
+(TASK-019) — but the production side of that seam (Docker, API server, PostgreSQL
+runtime) is still documented, not built: `VITE_DATA_MODE=api` shows an honest
+"waiting for the API" screen rather than fabricating data.
 
 ## What actually works (verified in code)
 
@@ -27,6 +29,7 @@ runtime, `VITE_DATA_MODE` switch) is documented but not yet built.**
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
+| `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api — health-checks and shows a "waiting for API" screen since no server exists yet), TASK-019 |
 
 ## What renders but is mock-only
 
@@ -43,9 +46,9 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=demo\|api` switches the data backend | **Not wired.** No `VITE_DATA_MODE` / `import.meta.env` reference exists in `web/public/assets/`. The adapter always boots PGlite with a static in-file fallback. → TASK-019 |
+| `VITE_DATA_MODE=api` renders a full production dashboard | **Not yet** — by design. The seam is wired (TASK-019) and the frontend genuinely switches adapters, but `erp-system-api-adapter.js` has no server to call, so it shows a "waiting for the API" screen instead of fabricating dashboard data. → TASK-011 |
 | `make setup` / `docker compose up` production stack | **No Dockerfile or compose file exists anywhere.** `Makefile` and `scripts/setup.sh` call `docker compose exec api/db` against services that don't exist. → TASK-011/012/021 |
-| Production API server | Not built. `deploy/erp-server.mjs` is a static "Live" placeholder page + `/health`, not the API. → TASK-011 |
+| Production API server | Not built. `deploy/erp-server.mjs` is a static "Live" placeholder page + `/health`, not the API. The client-side contract it must satisfy (`ready/reset/refresh/confirmOrder/completeSetup/switchCompany/mode/db` over HTTP) is already defined in `erp-system-api-adapter.js`. → TASK-011 |
 | Real login/auth | `renderLogin()` is a demo stub; user hardcoded to Admin/Superadmin. → TASK-024 |
 | Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. |
 | `npm test` / `npm run lint` (referenced in CONTRIBUTING.md) | Neither script exists. Only `npm run demo` acts as a test gate. → TASK-025 |
@@ -64,10 +67,11 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…010, TASK-016 (11)
-- Todo: TASK-011…015, 017…025 (14)
-- Next up (P0): TASK-019 (wire data-mode seam), TASK-011/012/013 (API + Docker + PG
-  parity), TASK-024 (real auth, now unblocked)
+- Done: TASK-001…010, TASK-016, TASK-019 (12)
+- Todo: TASK-011…015, 017, 018, 020…025 (13)
+- Next up (P0): TASK-011 (production API server — now the critical path; the seam is
+  ready and waiting for it), TASK-012 (Docker Compose), TASK-013 (PG parity),
+  TASK-024 (real auth, unblocked)
 
 ## Where to go next
 

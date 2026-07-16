@@ -5,6 +5,29 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-16 — TASK-019 wire the VITE_DATA_MODE seam)
+- `web/index.html`'s first script tag now sets `window.__ERP_DATA_MODE__` from
+  Vite's built-in `%VITE_DATA_MODE%` HTML placeholder and defines
+  `window.erpDataMode()` (anything other than exactly `'api'` is treated as
+  `'demo'`, so an unset env var — the current `dev`/`build` scripts — is unaffected).
+- `erp-system-data-adapter.js` (demo/PGlite) gained one guard line that self-disables
+  when the mode isn't `demo` — zero behavior change otherwise.
+- New `erp-system-api-adapter.js`: self-disables unless mode is `api`; otherwise
+  health-checks `{base}/health` (requiring an actual JSON body — `res.ok` alone isn't
+  enough, since `vite preview`'s SPA fallback returns 200+index.html for any
+  unmatched path) and exposes the same `window.ErpSystemDemo` method shape as the
+  demo adapter. Every write rejects with a clear "not available yet, see TASK-011"
+  error. This is the documented contract the production API adapter must satisfy.
+- New `renderApiUnavailable()` boot gate in `app.js` (checked first, before the
+  wizard/login gates): shows an honest "Waiting for the API" screen with a Retry
+  button when `VITE_DATA_MODE=api` can't reach a server, instead of fabricating
+  dashboard data.
+- Verified in browser: `VITE_DATA_MODE=demo` build is unchanged (zero regressions —
+  wizard/login/dashboard flow identical); `VITE_DATA_MODE=api` build shows the
+  waiting screen with zero console errors at desktop and 375px. `typecheck`,
+  `typecheck:web`, `npm run demo`, `build:demo`, and a `VITE_DATA_MODE=api` build all
+  pass.
+
 ### Added (2026-07-16 — TASK-010 persist wizard data)
 - `ErpSystemDemo.completeSetup({masterName,companyName,country,adminName,adminEmail,
   language}) -> {masterFn,companyFn,userId}` — one PGlite transaction: renames the

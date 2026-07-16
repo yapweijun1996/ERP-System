@@ -96,19 +96,25 @@ Acceptance criteria:
 - Release checklist distinguishes GitHub Pages demo and Docker production.
 - Docs stay aligned with package scripts and deployment assets.
 
-## EPIC-007 — Data Seam Integrity ⬜
+## EPIC-007 — Data Seam Integrity 🔶 (seam wired; drift check open)
 
 Close the gap between the documented dual-mode design and the code: one adapter
-interface, two backends, no silent schema drift. (TASK-019, TASK-020)
+interface, two backends, no silent schema drift. (TASK-019 done, TASK-020 todo)
 
 Acceptance criteria:
 
-- Frontend reads `VITE_DATA_MODE` and selects the demo (PGlite) or api (HTTP) adapter.
-- The api adapter covers every read/write the demo adapter exposes (may stub until
-  EPIC-005 endpoints exist, but the interface is fixed).
-- A repeatable check detects drift between `drizzle/0000_init.sql` +
-  `src/data/seed.ts` and `web/public/db/erp-system-*.sql`, and runs in CI.
-- `confirmOrder` exists in exactly one place per runtime, with a documented sync rule.
+- [x] Frontend reads `VITE_DATA_MODE` and selects the demo (PGlite) or api (HTTP)
+      adapter (`erp-system-data-adapter.js` / `erp-system-api-adapter.js`, mutually
+      exclusive self-disable guards, chosen via `window.erpDataMode()`).
+- [x] The api adapter exposes every method the demo adapter exposes with the same
+      signature (`ready/reset/refresh/confirmOrder/completeSetup/switchCompany/mode/db`);
+      every write currently rejects with a clear "not available yet" error since
+      TASK-011's server doesn't exist — this is the documented contract for it to
+      implement.
+- [ ] A repeatable check detects drift between `drizzle/0000_init.sql` +
+      `src/data/seed.ts` and `web/public/db/erp-system-*.sql`, and runs in CI (TASK-020).
+- [x] `confirmOrder`/`completeSetup`/`switchCompany` exist in exactly one place per
+      runtime (demo adapter vs. api adapter), never both active at once.
 
 ## EPIC-008 — Purchasing Module ⬜
 

@@ -19,7 +19,9 @@ drizzle/                 Generated migrations (0000_init.sql) + meta
 web/                     Frontend (Vite wrapper around a static app)
   index.html             App shell; loads ~60 classic <script> tags
   public/assets/         app.js (hash router), ui.js (SCREENS registry),
-                         erp-system-data-adapter.js (PGlite boot + reads + confirmOrder mirror),
+                         erp-system-data-adapter.js (demo mode: PGlite boot + reads +
+                         confirmOrder mirror), erp-system-api-adapter.js (api mode:
+                         health-checks + "waiting for API" screen until TASK-011 exists),
                          data-*.js (mock data), screens-*.js (~50 screen modules)
   public/db/             Hand-copied SQL: erp-system-schema/seed/demo-txn/demo-drafts
   public/sw.js, manifest.webmanifest, pwa.js
@@ -56,11 +58,18 @@ docs/                    This documentation suite
 
 - **Two runtimes, one schema.** `src/data/db.ts` returns a Drizzle instance backed by
   PGlite (demo/tests) or node-postgres (production). `src/demo.ts` proves both paths.
-- **The seam (target design):** frontend reads/writes go through a data adapter
-  interface with two implementations — `demo` (PGlite in-browser, current behavior)
-  and `api` (HTTP to the Node API). Selected by `VITE_DATA_MODE` at build time.
-  **Current reality:** only the PGlite path exists and the env var is not read
-  anywhere in the frontend (TASK-019).
+- **The seam.** Frontend reads/writes go through a data-adapter interface with two
+  implementations, both setting `window.ErpSystemDemo` to the same method shape
+  (`ready/reset/refresh/confirmOrder/completeSetup/switchCompany/mode/db`) — `demo`
+  (`erp-system-data-adapter.js`, PGlite in-browser) and `api`
+  (`erp-system-api-adapter.js`, HTTP to the Node API). Selected at build time by
+  `VITE_DATA_MODE`, read via `window.erpDataMode()` (set in `web/index.html` from
+  Vite's `%VITE_DATA_MODE%` HTML placeholder). Each adapter self-disables (returns
+  immediately, touches no globals) when it isn't the active mode, so exactly one sets
+  `window.ErpSystemDemo`. **Current reality (TASK-019 done, TASK-011 open):** the api
+  adapter has no server to call yet, so it health-checks, finds nothing, and
+  `app.js`'s `boot()` shows an honest "waiting for the API" screen instead of
+  fabricating dashboard data — this is deliberate, not a stub bug.
 - **⚠ Landmine — manual sync:** `web/public/db/erp-system-*.sql` is a hand-copied
   snapshot of `drizzle/0000_init.sql` + `src/data/seed.ts`, and the adapter's
   `confirmOrder` re-implements `src/modules/sales/confirmOrder.ts` in raw SQL.

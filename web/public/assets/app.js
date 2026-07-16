@@ -38,6 +38,32 @@ function syncAccountUi(){
     if(role) role.innerHTML=`${ic('shield')}${esc(u.role||'Demo user')}`;
   }
 }
+/* TASK-019: shown instead of the normal shell when VITE_DATA_MODE=api and the
+   TASK-011 API server isn't reachable yet. Must not read DB.* — nothing has
+   been populated (there is no PGlite boot in api mode), unlike renderLogin(). */
+function renderApiUnavailable(){
+  setAuthShell(true);
+  if(typeof closeAllPops==='function') closeAllPops();
+  let host=document.getElementById('apiUnavailableView');
+  if(!host){
+    host=document.createElement('main');
+    host.id='apiUnavailableView';
+    host.className='auth-view';
+    host.setAttribute('aria-label','API unavailable');
+    document.body.insertBefore(host,$('#app'));
+  }
+  host.innerHTML=`<section class="auth-panel">
+    <div class="auth-brand"><span class="mark">${ic('box')}</span><span><b>Aria ERP</b><small>Production mode</small></span></div>
+    <h2 class="wiz-h">Waiting for the API</h2>
+    <p class="wiz-p">This build was compiled with <code>VITE_DATA_MODE=api</code>, but no API server
+      answered at <code>/health</code>. Start the TASK-011 API server (or Docker Compose stack once
+      TASK-012 ships), then retry.</p>
+    <div class="set-savebar" style="border-radius:12px;margin-top:16px"><span></span><div class="grow"></div>
+      ${btn('Retry',{icon:'refresh',cls:'primary',attrs:'id="apiRetryBtn"'})}
+    </div>
+  </section>`;
+  host.querySelector('#apiRetryBtn').addEventListener('click',()=>location.reload());
+}
 function renderLogin(){
   const u=demoUser();
   setAuthShell(true);
@@ -716,6 +742,11 @@ function renderTabbar(){
 
 /* ---------- boot ---------- */
 function boot(){
+  if(typeof window.erpDataMode==='function' && window.erpDataMode()==='api' &&
+     (!window.ErpSystemDemo || window.ErpSystemDemo.mode!=='api')){
+    renderApiUnavailable();
+    return;
+  }
   if(typeof needsSetupWizard==='function' && needsSetupWizard()){
     renderSetupWizard();
     return;
@@ -727,6 +758,7 @@ function boot(){
   setAuthShell(false);
   const auth=$('#authView'); if(auth) auth.remove();
   const wiz=$('#setupWizardView'); if(wiz) wiz.remove();
+  const apiUnavail=$('#apiUnavailableView'); if(apiUnavail) apiUnavail.remove();
   // theme
   let themePref='light'; try{themePref=localStorage.getItem('aria-theme')||'light';}catch(e){}
   applyTheme(themePref);

@@ -49,7 +49,7 @@ proven in the demo.
 
 | # | Capability | Task |
 | --- | --- | --- |
-| 1 | Frontend data seam actually switches on `VITE_DATA_MODE=demo\|api` | TASK-019 |
+| 1 | Frontend data seam actually switches on `VITE_DATA_MODE=demo\|api` | ✅ done (TASK-019) — `api` mode shows an honest "waiting for API" screen until TASK-011 exists |
 | 2 | API server: `/health`, `GET /api/dashboard`, ERP read endpoints, `POST /api/sales-orders/:doc/confirm` running `confirmOrder.ts` server-side | TASK-011 |
 | 3 | Docker Compose stack `web` + `api` + `db` with health checks | TASK-012 |
 | 4 | Drizzle migrations + seed run against PostgreSQL | TASK-012 |
