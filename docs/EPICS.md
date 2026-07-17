@@ -155,19 +155,26 @@ Acceptance criteria:
       (`switchCompany` re-fetches with a different scope, no new endpoint needed);
       other modules (inventory/sales/finance) still have no api-mode data source.
 
-## EPIC-008 — Purchasing Module ⬜
+## EPIC-008 — Purchasing Module 🔶 (schema + business logic done; screens open)
 
 First new domain built end-to-end after the sales chain: supplier → purchase order →
 goods receipt (stock IN) → supplier invoice (GL). Replaces the mock purchasing screens.
-(TASK-022, TASK-023)
+(TASK-022 done, TASK-023 open)
 
 Acceptance criteria:
 
-- Drizzle migration adds supplier, purchase_order, purchase_order_line, goods_receipt.
-- Receiving stock increases `stock_level` and writes `stock_movement` in one transaction.
-- Supplier invoice posts balanced GL (AP credit / inventory-expense debit + tax).
-- Purchasing screens read canonical data in demo mode; mock purchasing data removed.
-- `src/demo.ts` gains purchasing assertions.
+- [x] Drizzle migration adds supplier, purchase_order, purchase_order_line, goods_receipt
+      (+ supplier_invoice) — `drizzle/0002_messy_slyde.sql`, 23 tables total, TASK-022.
+- [x] Receiving stock increases `stock_level` and writes `stock_movement` in one
+      transaction — `src/modules/purchasing/receiveGoods.ts`, upserts `stock_level`
+      from zero on first receipt, guards against receiving the same PO twice.
+- [x] Supplier invoice posts balanced GL (AP credit / inventory-expense debit + tax) —
+      `src/modules/purchasing/postSupplierInvoice.ts`, gated on the PO already being
+      received.
+- [ ] Purchasing screens read canonical data in demo mode; mock purchasing data
+      removed → TASK-023.
+- [x] `src/demo.ts` gains purchasing assertions — `runPurchasingScenario`, both engines,
+      including both rollback guards, wired into the same `check()` block as sales.
 
 ## EPIC-009 — Auth And Users ✅
 

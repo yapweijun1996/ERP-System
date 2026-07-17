@@ -3,7 +3,7 @@
 // change so the dated lookup is demonstrable). Same code runs on both adapters.
 import { sql } from 'drizzle-orm';
 import type { DB } from './db';
-import { master, company, currency, appUser, role, userCompany, product, taxRule, customer, account } from './schema';
+import { master, company, currency, appUser, role, userCompany, product, taxRule, customer, account, supplier } from './schema';
 
 /**
  * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
@@ -68,11 +68,18 @@ export async function seedDemo(db: DB): Promise<void> {
   // A customer for the SG company.
   await db.insert(customer).values({ masterFn: 'M1', companyFn: 'C-SG', code: 'CUST1', name: 'Beta Pte Ltd' });
 
-  // Minimal chart of accounts for the SG company (used by sales-order posting).
+  // A supplier for the SG company (TASK-022 — purchasing chain).
+  await db.insert(supplier).values({ masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP1', name: 'Gamma Supplies Pte Ltd' });
+
+  // Minimal chart of accounts for the SG company (used by sales-order and
+  // purchase-order posting).
   await db.insert(account).values([
     { masterFn: 'M1', companyFn: 'C-SG', code: '1100', name: 'Accounts Receivable', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '4000', name: 'Revenue', type: 'income' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '2200', name: 'GST Output Tax', type: 'liability' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '1400', name: 'Inventory', type: 'asset' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '1200', name: 'GST Input Tax', type: 'asset' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '2100', name: 'Accounts Payable', type: 'liability' },
   ]);
 }
 

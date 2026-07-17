@@ -5,3 +5,4 @@ export * from './localization';
 export * from './inventory';
 export * from './sales';
 export * from './finance';
+export * from './purchasing';

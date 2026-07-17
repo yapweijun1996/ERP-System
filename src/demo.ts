@@ -10,11 +10,15 @@ import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { createPgliteDb, createPostgresDb, type DB } from './data/db';
 import { seedDemo } from './data/seed';
 import { listCompanies, listProducts, addProduct, getEffectiveTaxRate, type Scope } from './data/repo';
-import { product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry } from './data/schema';
+import { product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry, supplier } from './data/schema';
 import {
   issueStock, getStockQty, countMovements, setStockQty, InsufficientStockError,
 } from './modules/inventory/stock';
 import { confirmSalesOrder } from './modules/sales/confirmOrder';
+import { createPurchaseOrder } from './modules/purchasing/createPurchaseOrder';
+import { receiveGoods } from './modules/purchasing/receiveGoods';
+import { postSupplierInvoice } from './modules/purchasing/postSupplierInvoice';
+import { InvalidPurchaseOrderStateError } from './modules/purchasing/errors';
 
 const SCOPE: Scope = { masterFn: 'M1', companyFn: 'C-SG' };
 
@@ -170,14 +174,82 @@ async function runSalesScenario(db: DB) {
   };
 }
 
+/** Full purchasing chain (both engines): create PO → receive goods (stock IN,
+ *  from zero) → post supplier invoice (balanced GL), then two independent
+ *  rollback proofs mirroring confirmOrder.ts's discipline for the purchasing
+ *  side: receiving an already-received PO, and invoicing a not-yet-received one. */
+async function runPurchasingScenario(db: DB) {
+  const widgetId = await getProductId(db, 'SG-WIDGET');
+  const [wh] = await db.insert(warehouse)
+    .values({ masterFn: 'M1', companyFn: 'C-SG', code: 'WH-PUR', name: 'Purchasing Warehouse' })
+    .returning({ id: warehouse.id });
+  const [supp] = await db.select({ id: supplier.id }).from(supplier)
+    .where(and(eq(supplier.masterFn, 'M1'), eq(supplier.companyFn, 'C-SG'), eq(supplier.code, 'SUPP1')));
+
+  // Valid PO: 20 widgets @ cost 6, 9% GST (2024). net = 120; tax = 10.80; total 130.80.
+  const po = await createPurchaseOrder(db, SCOPE, {
+    docNo: 'PO-1', supplierId: supp.id, orderDate: '2024-06-01', currency: 'SGD',
+    lines: [{ productId: widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
+  });
+  const stockBeforeReceipt = await getStockQty(db, SCOPE, widgetId, wh.id); // 0 — no prior stock in this warehouse
+
+  const receipt = await receiveGoods(db, SCOPE, {
+    purchaseOrderId: po.orderId, warehouseId: wh.id, docNo: 'GR-1', receivedDate: '2024-06-05',
+  });
+  const stockAfterReceipt = await getStockQty(db, SCOPE, widgetId, wh.id); // 20
+  const movementsAfterReceipt = await countMovements(db, SCOPE, widgetId, wh.id); // 1
+
+  const inv = await postSupplierInvoice(db, SCOPE, {
+    purchaseOrderId: po.orderId, docNo: 'SINV-1', invoiceDate: '2024-06-06',
+  });
+  const gl = await glBalance(db, inv.invDocNo);
+
+  // Rollback A: receiving the SAME PO twice must fail and change nothing.
+  let doubleReceiveErr = '';
+  try {
+    await receiveGoods(db, SCOPE, {
+      purchaseOrderId: po.orderId, warehouseId: wh.id, docNo: 'GR-2', receivedDate: '2024-06-06',
+    });
+  } catch (e) {
+    doubleReceiveErr = (e as Error).name;
+  }
+  const stockAfterDoubleReceiveAttempt = await getStockQty(db, SCOPE, widgetId, wh.id); // still 20, not 40
+
+  // Rollback B: invoicing a PO that hasn't been received yet must fail and post no GL legs.
+  const po2 = await createPurchaseOrder(db, SCOPE, {
+    docNo: 'PO-2', supplierId: supp.id, orderDate: '2024-06-01', currency: 'SGD',
+    lines: [{ productId: widgetId, qty: 5, unitCost: 6, taxCode: 'SR' }],
+  });
+  let earlyInvoiceErr = '';
+  try {
+    await postSupplierInvoice(db, SCOPE, { purchaseOrderId: po2.orderId, docNo: 'SINV-2', invoiceDate: '2024-06-06' });
+  } catch (e) {
+    earlyInvoiceErr = (e as Error).name;
+  }
+  const earlyInvoiceGl = await glBalance(db, 'SINV-2'); // 0/0 — nothing posted
+
+  return {
+    po: { net: po.net, tax: po.tax, total: po.total },
+    stockBeforeReceipt, stockAfterReceipt, movementsAfterReceipt,
+    receiptLines: receipt.lines,
+    invoice: { net: inv.net, tax: inv.tax, total: inv.total },
+    glDebit: gl.debit, glCredit: gl.credit, glBalanced: gl.debit === gl.credit,
+    doubleReceiveErr,                                    // 'InvalidPurchaseOrderStateError'
+    stockAfterDoubleReceiveAttempt,                       // still 20
+    earlyInvoiceErr,                                      // 'InvalidPurchaseOrderStateError'
+    earlyInvoiceGlDebit: earlyInvoiceGl.debit, earlyInvoiceGlCredit: earlyInvoiceGl.credit, // 0, 0
+  };
+}
+
 async function runEngine(db: DB, withConcurrency: boolean) {
   await seedDemo(db);
   const repo = await runRepoScenario(db);
   const fx = await setupStockFixture(db);
   const tx = await runTxScenario(db, fx);
   const sales = await runSalesScenario(db);
+  const purchasing = await runPurchasingScenario(db);
   const concurrency = withConcurrency ? await runConcurrencyTest(db, fx) : null;
-  return { repo, tx, sales, concurrency };
+  return { repo, tx, sales, purchasing, concurrency };
 }
 
 const out: Record<string, Awaited<ReturnType<typeof runEngine>>> = {};
@@ -217,12 +289,22 @@ ok = check('PGlite sales chain: ledger balanced (Dr 119.9 = Cr 119.9), stock 95/
 ok = check('PGlite sales rollback: whole order undone — incl. valid line 1 (widget stays 95, orders=1, invoices=1)',
   p.sales.rollbackErr === 'InsufficientStockError' && p.sales.ordersAfterRollback === 1
   && p.sales.invoicesAfterRollback === 1 && p.sales.widgetAfterRollback === 95 && p.sales.gadgetMovements === 1) && ok;
+ok = check('PGlite purchasing chain: PO net=120 tax=10.8 total=130.8, receipt creates stock from 0 → 20',
+  p.purchasing.po.net === 120 && p.purchasing.po.tax === 10.8 && p.purchasing.po.total === 130.8
+  && p.purchasing.stockBeforeReceipt === 0 && p.purchasing.stockAfterReceipt === 20 && p.purchasing.movementsAfterReceipt === 1) && ok;
+ok = check('PGlite purchasing chain: supplier invoice ledger balanced (Dr 130.8 = Cr 130.8)',
+  p.purchasing.glBalanced && p.purchasing.glDebit === 130.8 && p.purchasing.invoice.total === 130.8) && ok;
+ok = check('PGlite purchasing rollback: double-receive rejected (stock stays 20), early invoice rejected (no GL legs)',
+  p.purchasing.doubleReceiveErr === 'InvalidPurchaseOrderStateError' && p.purchasing.stockAfterDoubleReceiveAttempt === 20
+  && p.purchasing.earlyInvoiceErr === 'InvalidPurchaseOrderStateError'
+  && p.purchasing.earlyInvoiceGlDebit === 0 && p.purchasing.earlyInvoiceGlCredit === 0) && ok;
 
 if (out.postgres) {
   const sameRepo = JSON.stringify(out.pglite.repo) === JSON.stringify(out.postgres.repo);
   const sameTx = JSON.stringify(out.pglite.tx) === JSON.stringify(out.postgres.tx);
   const sameSales = JSON.stringify(out.pglite.sales) === JSON.stringify(out.postgres.sales);
-  ok = check('repo+tx+sales identical across PGlite and PostgreSQL', sameRepo && sameTx && sameSales) && ok;
+  const samePurchasing = JSON.stringify(out.pglite.purchasing) === JSON.stringify(out.postgres.purchasing);
+  ok = check('repo+tx+sales+purchasing identical across PGlite and PostgreSQL', sameRepo && sameTx && sameSales && samePurchasing) && ok;
   const c = out.postgres.concurrency!;
   ok = check('Postgres concurrency: exactly 1 of 2 races wins (no over-sell)',
     c.fulfilled === 1 && c.rejected === 1 && c.finalStock === 2 && c.movementsDelta === 1) && ok;

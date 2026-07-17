@@ -5,6 +5,33 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-022 purchasing schema and business logic)
+- `src/data/schema/purchasing.ts` (new): `supplier`, `purchase_order` +
+  `purchase_order_line`, `goods_receipt`, `supplier_invoice` — all
+  `master_fn`/`company_fn`-scoped with the same tenant-leading composite indexes
+  as `sales.ts`. Generated as `drizzle/0002_messy_slyde.sql` (23 tables total).
+- `src/modules/purchasing/`: three functions modeling purchasing's three separate
+  temporal events (unlike sales' single confirm-everything-at-once step) —
+  `createPurchaseOrder` (header+lines+tax snapshot, no stock/GL impact),
+  `receiveGoods` (the purchasing mirror of `inventory/stock.ts`'s
+  `issueStockWithin`, but incrementing — upserts `stock_level` from zero on first
+  receipt, appends one `stock_movement` per line, guards against receiving the
+  same PO twice), `postSupplierInvoice` (balanced GL: Dr Inventory + Dr GST/SST
+  Input Tax = Cr Accounts Payable, gated on the PO already being received). 8 new
+  vitest cases across 3 files, including both rollback guards and a
+  missing-account `PostingError` case.
+- `seed.ts` gained a supplier and three chart-of-accounts rows (Inventory, GST
+  Input Tax, Accounts Payable). `demo.ts` gained `runPurchasingScenario`: PO
+  net=120/tax=10.8/total=130.8, receipt takes stock 0→20, invoice posts a
+  balanced GL, both rollback guards proven — wired into the same assertion block
+  and cross-engine identity check as the sales scenario; reverified against real
+  PostgreSQL via a temporary Docker container.
+- `web/public/db/erp-system-schema.sql` hand-mirrored with the 5 new tables in
+  the same commit; `npm run check:drift` confirms 23/23 tables match.
+- Deliberately schema/business-logic only — no screens, no adapter wiring, no
+  seed-data mirroring into the browser's SQL files. That's TASK-023's stated
+  scope; `npm run audit:screens` confirms zero regressions to the existing UI.
+
 ### Added (2026-07-17 — TASK-018 full screen audit)
 - `scripts/audit-screens.mjs` (new, `npm run audit:screens`, wired into CI): boots the
   demo build with Playwright, reads the live `SCREENS` registry in-page (114 routes —

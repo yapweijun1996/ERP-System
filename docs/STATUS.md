@@ -19,17 +19,23 @@ modes share one `login`/`logout`/`needsSetup`/`isSignedIn`/`switchUser` adapter
 contract; production validates PBKDF2-hashed passwords against `app_user` over a
 server-side session cookie (masterFn/companyFn never trusted from the client), and
 the demo mode hashes real passwords too (Web Crypto, same format) so wizard-created
-users aren't passwordless. What's still missing: other modules (inventory/sales/
-finance) have no api-mode data source yet, and there are no write endpoints
-(confirm order / setup) on the server side yet.
+users aren't passwordless. **A second domain now exists alongside sales**: the
+purchasing chain (supplier → PO → goods receipt → supplier invoice) is real at the
+schema/business-logic layer — `receiveGoods` increases stock from zero and guards
+against double-receiving, `postSupplierInvoice` posts a balanced GL gated on the
+goods actually having arrived, both proven on PGlite and PostgreSQL in `src/demo.ts`
+— but no screen reads it yet (TASK-023, next up). What's still missing: other
+modules (inventory/sales/finance) have no api-mode data source yet, and there are no
+write endpoints (confirm order / setup) on the server side yet.
 
 ## What actually works (verified in code)
 
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (18 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | `drizzle/0000_init.sql`, `src/data/schema/` |
+| Canonical schema (23 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | `drizzle/0000_init.sql` + `0001_quiet_blizzard.sql` + `0002_messy_slyde.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; browser mirror in adapter (`confirmOrder`) |
+| Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), schema + business logic only | ✅ Working (no screens yet) | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Screens still read mock data → TASK-023. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, confirm SO-2 / over-stock SO-3) | ✅ Canonical data | `screens-sales*.js`, TASK-006/007 |
 | Inventory screens (stock on hand, item master, movements) | ✅ Canonical data | `screens-inv*.js`, TASK-005 |
@@ -40,7 +46,7 @@ finance) have no api-mode data source yet, and there are no write endpoints
 | Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
 | Full screen audit — every route in `SCREENS` (114), zero errors, no leftover prototype identity on canonical screens | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads the live `SCREENS`/`ROUTE_MODULE` registries rather than a hand-maintained route list, so it stays correct as screens are added, TASK-018 |
-| Unit tests: `confirmOrder` (success/rollback/posting-error/GL-balance), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 28 tests, wired into CI, TASK-025 + TASK-024 |
+| Unit tests: `confirmOrder`/purchasing chain (success/rollback/posting-error/GL-balance), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 36 tests, wired into CI, TASK-025 + TASK-024 + TASK-022 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -105,10 +111,10 @@ schema/adapter wiring, drop its module id from `MOCK_MODULE_IDS` in the same cha
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018, TASK-019, TASK-020, TASK-024, TASK-025, TASK-026 (22)
-- Todo: TASK-017, 021, 022, 023 (4)
-- Next up: TASK-022/023 (purchasing module, largest remaining task, TASK-022's
-  dependency TASK-013 is done)
+- Done: TASK-001…016, TASK-018, TASK-019, TASK-020, TASK-022, TASK-024, TASK-025, TASK-026 (23)
+- Todo: TASK-017, 021, 023 (3)
+- Next up: TASK-023 (wire purchasing screens to canonical data — the only
+  unblocked task left; its dependency TASK-022 is done)
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone. TASK-021
   (verify `scripts/setup.sh`) is blocked in this sandbox specifically — it needs

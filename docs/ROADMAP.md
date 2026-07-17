@@ -104,7 +104,7 @@ typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
 production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion ⬜
+## Phase 7 — Module Expansion 🔶 (purchasing schema + logic done; screens open)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
@@ -112,10 +112,18 @@ Goal: convert mock modules into real domains, one at a time, each end-to-end
 Order of attack:
 
 1. **Purchasing** (EPIC-008) — completes the stock story: goods receipt IN mirrors
-   sales issue OUT; AP mirrors AR.
+   sales issue OUT; AP mirrors AR. Schema + business logic done (TASK-022 ✅ done
+   2026-07-17 — `src/data/schema/purchasing.ts`, `src/modules/purchasing/`
+   `createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`, both rollback guards
+   proven on both PGlite and PostgreSQL, `src/demo.ts` asserts the full chain — see
+   docs/STATUS.md). Screens still read mock data (TASK-023, open — replace
+   `data-purchasing*.js`, mirror the seed/txn SQL into `web/public/db`, wire PO
+   list/detail + goods receipt + supplier invoice views to canonical PGlite data).
 2. CRM (leads/activities feeding sales orders).
 3. HR-lite or Fixed Assets (whichever a real prospect asks for first).
-4. Relabel or hide remaining mock screens so the demo never oversells (ties TASK-018).
+4. Relabel or hide remaining mock screens so the demo never oversells (TASK-018 ✅
+   done 2026-07-17 — see Phase 3; this item now means keeping that guarantee as
+   Purchasing/CRM/HR convert one at a time, not a one-time sweep).
 
 Exit criteria per module: no mock data files for that module remain; `src/demo.ts`
 asserts its core transaction; screens work in demo and api modes.
