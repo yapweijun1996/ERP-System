@@ -10,7 +10,7 @@ import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { createPgliteDb, createPostgresDb, type DB } from './data/db';
 import { seedDemo } from './data/seed';
 import { listCompanies, listProducts, addProduct, getEffectiveTaxRate, type Scope } from './data/repo';
-import { product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry, supplier } from './data/schema';
+import { product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry, supplier, opportunity } from './data/schema';
 import {
   issueStock, getStockQty, countMovements, setStockQty, InsufficientStockError,
 } from './modules/inventory/stock';
@@ -18,7 +18,8 @@ import { confirmSalesOrder } from './modules/sales/confirmOrder';
 import { createPurchaseOrder } from './modules/purchasing/createPurchaseOrder';
 import { receiveGoods } from './modules/purchasing/receiveGoods';
 import { postSupplierInvoice } from './modules/purchasing/postSupplierInvoice';
-import { InvalidPurchaseOrderStateError } from './modules/purchasing/errors';
+import { createOpportunity } from './modules/crm/createOpportunity';
+import { convertOpportunityToSalesOrder } from './modules/crm/convertOpportunityToSalesOrder';
 
 const SCOPE: Scope = { masterFn: 'M1', companyFn: 'C-SG' };
 
@@ -241,6 +242,76 @@ async function runPurchasingScenario(db: DB) {
   };
 }
 
+/** Full CRM chain (both engines): create opportunity → convert to sales order (stock
+ *  issue + invoice + balanced GL, composed atomically with the opportunity's own
+ *  stage update via confirmSalesOrderWithin) → two independent rollback proofs:
+ *  converting the same opportunity twice, and a failure INSIDE the composed
+ *  transaction leaving the opportunity genuinely untouched (not half-converted) —
+ *  the whole reason confirmSalesOrder was split into a composable core. */
+async function runCrmScenario(db: DB) {
+  const widgetId = await getProductId(db, 'SG-WIDGET');
+  const [wh] = await db.insert(warehouse)
+    .values({ masterFn: 'M1', companyFn: 'C-SG', code: 'WH-CRM', name: 'CRM Warehouse' })
+    .returning({ id: warehouse.id });
+  await db.insert(stockLevel)
+    .values({ masterFn: 'M1', companyFn: 'C-SG', productId: widgetId, warehouseId: wh.id, qty: '50' });
+  const [cust] = await db.select({ id: customer.id }).from(customer)
+    .where(and(eq(customer.masterFn, 'M1'), eq(customer.companyFn, 'C-SG'), eq(customer.code, 'CUST1')));
+
+  // Valid conversion: 5 widgets @ 10, 9% GST (2024). net = 50; tax = 4.50; total 54.50.
+  const opp = await createOpportunity(db, SCOPE, {
+    docNo: 'OPP-2', customerId: cust.id, title: 'Widget resupply deal',
+    value: 65, currency: 'SGD', closeDate: '2024-06-10',
+  });
+  const conv = await convertOpportunityToSalesOrder(db, SCOPE, {
+    opportunityId: opp.opportunityId, docNo: 'SO-CRM-1', orderDate: '2024-06-01',
+    lines: [{ productId: widgetId, warehouseId: wh.id, qty: 5, unitPrice: 10, taxCode: 'SR' }],
+  });
+  const gl = await glBalance(db, conv.invDocNo);
+  const stockAfter = await getStockQty(db, SCOPE, widgetId, wh.id); // 45
+
+  // Rollback A: converting the SAME opportunity twice must fail and change nothing.
+  let doubleConvertErr = '';
+  try {
+    await convertOpportunityToSalesOrder(db, SCOPE, {
+      opportunityId: opp.opportunityId, docNo: 'SO-CRM-2', orderDate: '2024-06-02',
+      lines: [{ productId: widgetId, warehouseId: wh.id, qty: 1, unitPrice: 10, taxCode: 'SR' }],
+    });
+  } catch (e) {
+    doubleConvertErr = (e as Error).name;
+  }
+  const stockAfterDoubleConvertAttempt = await getStockQty(db, SCOPE, widgetId, wh.id); // still 45, not 44
+
+  // Rollback B: insufficient stock inside the COMPOSED transaction must leave the
+  // opportunity untouched (not half-converted) — proves confirmSalesOrderWithin
+  // and the opportunity-stage update are genuinely one atomic unit.
+  const opp2 = await createOpportunity(db, SCOPE, {
+    docNo: 'OPP-3', customerId: cust.id, title: 'Oversized deal',
+    value: 999999, currency: 'SGD', closeDate: '2024-06-20',
+  });
+  let insufficientErr = '';
+  try {
+    await convertOpportunityToSalesOrder(db, SCOPE, {
+      opportunityId: opp2.opportunityId, docNo: 'SO-CRM-3', orderDate: '2024-06-01',
+      lines: [{ productId: widgetId, warehouseId: wh.id, qty: 99999, unitPrice: 10, taxCode: 'SR' }],
+    });
+  } catch (e) {
+    insufficientErr = (e as Error).name;
+  }
+  const [oppRow] = await db.select({ stage: opportunity.stage }).from(opportunity)
+    .where(and(eq(opportunity.masterFn, 'M1'), eq(opportunity.companyFn, 'C-SG'), eq(opportunity.id, opp2.opportunityId)));
+
+  return {
+    conv: { net: conv.net, tax: conv.tax, total: conv.total },
+    glDebit: gl.debit, glCredit: gl.credit, glBalanced: gl.debit === gl.credit,
+    stockAfter,
+    doubleConvertErr,                          // 'InvalidOpportunityStateError'
+    stockAfterDoubleConvertAttempt,             // still 45
+    insufficientErr,                            // 'InsufficientStockError'
+    oppAfterFailedConvertStage: oppRow.stage,   // still 'lead' — untouched
+  };
+}
+
 async function runEngine(db: DB, withConcurrency: boolean) {
   await seedDemo(db);
   const repo = await runRepoScenario(db);
@@ -248,8 +319,9 @@ async function runEngine(db: DB, withConcurrency: boolean) {
   const tx = await runTxScenario(db, fx);
   const sales = await runSalesScenario(db);
   const purchasing = await runPurchasingScenario(db);
+  const crm = await runCrmScenario(db);
   const concurrency = withConcurrency ? await runConcurrencyTest(db, fx) : null;
-  return { repo, tx, sales, purchasing, concurrency };
+  return { repo, tx, sales, purchasing, crm, concurrency };
 }
 
 const out: Record<string, Awaited<ReturnType<typeof runEngine>>> = {};
@@ -298,13 +370,20 @@ ok = check('PGlite purchasing rollback: double-receive rejected (stock stays 20)
   p.purchasing.doubleReceiveErr === 'InvalidPurchaseOrderStateError' && p.purchasing.stockAfterDoubleReceiveAttempt === 20
   && p.purchasing.earlyInvoiceErr === 'InvalidPurchaseOrderStateError'
   && p.purchasing.earlyInvoiceGlDebit === 0 && p.purchasing.earlyInvoiceGlCredit === 0) && ok;
+ok = check('PGlite CRM chain: converting an opportunity creates a real order (net=50 tax=4.5 total=54.5), stock 50→45, balanced GL',
+  p.crm.conv.net === 50 && p.crm.conv.tax === 4.5 && p.crm.conv.total === 54.5
+  && p.crm.stockAfter === 45 && p.crm.glBalanced && p.crm.glDebit === 54.5) && ok;
+ok = check('PGlite CRM rollback: double-convert rejected (stock stays 45); insufficient stock leaves the opportunity untouched, not half-converted',
+  p.crm.doubleConvertErr === 'InvalidOpportunityStateError' && p.crm.stockAfterDoubleConvertAttempt === 45
+  && p.crm.insufficientErr === 'InsufficientStockError' && p.crm.oppAfterFailedConvertStage === 'lead') && ok;
 
 if (out.postgres) {
   const sameRepo = JSON.stringify(out.pglite.repo) === JSON.stringify(out.postgres.repo);
   const sameTx = JSON.stringify(out.pglite.tx) === JSON.stringify(out.postgres.tx);
   const sameSales = JSON.stringify(out.pglite.sales) === JSON.stringify(out.postgres.sales);
   const samePurchasing = JSON.stringify(out.pglite.purchasing) === JSON.stringify(out.postgres.purchasing);
-  ok = check('repo+tx+sales+purchasing identical across PGlite and PostgreSQL', sameRepo && sameTx && sameSales && samePurchasing) && ok;
+  const sameCrm = JSON.stringify(out.pglite.crm) === JSON.stringify(out.postgres.crm);
+  ok = check('repo+tx+sales+purchasing+crm identical across PGlite and PostgreSQL', sameRepo && sameTx && sameSales && samePurchasing && sameCrm) && ok;
   const c = out.postgres.concurrency!;
   ok = check('Postgres concurrency: exactly 1 of 2 races wins (no over-sell)',
     c.fulfilled === 1 && c.rejected === 1 && c.finalStock === 2 && c.movementsDelta === 1) && ok;

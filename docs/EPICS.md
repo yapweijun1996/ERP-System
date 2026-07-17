@@ -205,21 +205,26 @@ Acceptance criteria:
 - [x] Production locks the setup wizard once the first admin exists (ties to
       EPIC-004) — see EPIC-004's now-checked last item.
 
-## EPIC-010 — CRM Module ⬜
+## EPIC-010 — CRM Module 🔶 (schema + business logic done; screens open)
 
 Second new domain after Purchasing (EPIC-008): opportunity pipeline → convert to
 sales order, feeding the same Sales module Purchasing feeds Inventory into.
-Replaces the mock CRM screens for that core chain. (TASK-027, TASK-028)
+Replaces the mock CRM screens for that core chain. (TASK-027 done, TASK-028 open)
 
 Acceptance criteria:
 
-- [ ] Drizzle migration adds `opportunity` (linked to `customer`) and a lightweight
-      activity log, tenant-scoped indexes.
-- [ ] Converting an opportunity creates a real `sales_order` in one transaction;
+- [x] Drizzle migration adds `opportunity` (linked to `customer`) and a lightweight
+      activity log, tenant-scoped indexes — `drizzle/0003_fuzzy_ronan.sql`, 25 tables
+      total, TASK-027.
+- [x] Converting an opportunity creates a real `sales_order` in one transaction;
       converting the same opportunity twice is rejected (mirrors `receiveGoods`'s
-      open/received status guard).
+      open/received status guard) — `src/modules/crm/convertOpportunityToSalesOrder.ts`,
+      composed atomically with `confirmSalesOrder`'s newly-extracted
+      `confirmSalesOrderWithin` core (a failure inside the composed transaction
+      leaves the opportunity provably untouched, not half-converted).
 - [ ] CRM screens (pipeline board, opportunity detail, customer 360) read canonical
       PGlite data in demo mode; the "Convert to sales order" action is real, not a
-      toast.
-- [ ] `src/demo.ts` gains CRM assertions, following the `runPurchasingScenario`
-      pattern (success + a rollback/guard scenario).
+      toast → TASK-028.
+- [x] `src/demo.ts` gains CRM assertions, following the `runPurchasingScenario`
+      pattern (success + two rollback/guard scenarios), proven on both PGlite and
+      PostgreSQL.

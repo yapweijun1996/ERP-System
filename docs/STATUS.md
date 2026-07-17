@@ -29,18 +29,26 @@ supplier-invoices lists, the new-PO wizard, the receive-goods/post-invoice actio
 now read and write that real data instead of Northwind mock — verified live: receiving
 goods visibly moves stock on the real Inventory screen. RFQs, quotations,
 requisitions, returns, credit/debit notes, price lists, landed cost and vendor
-performance have no schema and intentionally still show sample data. What's still
-missing: other modules (inventory/sales/finance) have no api-mode data source yet, and
-there are no write endpoints (confirm order / setup) on the server side yet.
+performance have no schema and intentionally still show sample data. **A third
+domain's schema and business logic (not yet screens) now exists too**: CRM's
+opportunity pipeline → convert-to-sales-order — the conversion composes atomically
+with the sales module itself (`confirmSalesOrder` was split into a composable
+`confirmSalesOrderWithin` core so an opportunity's stage update and the resulting
+order/stock/invoice/GL posting are genuinely one transaction, not two), proven on
+PGlite and PostgreSQL including a test that a mid-conversion failure leaves the
+opportunity provably untouched. What's still missing: other modules
+(inventory/sales/finance) have no api-mode data source yet, and there are no write
+endpoints (confirm order / setup) on the server side yet.
 
 ## What actually works (verified in code)
 
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (23 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | `drizzle/0000_init.sql` + `0001_quiet_blizzard.sql` + `0002_messy_slyde.sql`, `src/data/schema/` |
+| Canonical schema (25 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | `drizzle/0000_init.sql` + `0001_quiet_blizzard.sql` + `0002_messy_slyde.sql` + `0003_fuzzy_ronan.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; browser mirror in adapter (`confirmOrder`) |
 | Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), end-to-end incl. screens | ✅ Working | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Demo-mode screens (suppliers/purchase-orders/goods-receipts/supplier-invoices lists, new-PO wizard, receive-goods/post-invoice row actions) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-023. RFQs/quotations/requisitions/returns/credit-debit-notes/price-lists/landed-cost/vendor-performance have no schema and stay mock. |
+| CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), schema + business logic only | ✅ Working (no screens yet) | `src/data/schema/crm.ts`, `src/modules/crm/` (`createOpportunity`/`convertOpportunityToSalesOrder`), both rollback guards (double-convert; mid-transaction failure leaves the opportunity untouched) proven on PGlite + PostgreSQL, TASK-027. Screens still read mock data → TASK-028. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, confirm SO-2 / over-stock SO-3) | ✅ Canonical data | `screens-sales*.js`, TASK-006/007 |
 | Inventory screens (stock on hand, item master, movements) | ✅ Canonical data | `screens-inv*.js`, TASK-005 |
@@ -51,7 +59,7 @@ there are no write endpoints (confirm order / setup) on the server side yet.
 | Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
 | Full screen audit — every route in `SCREENS` (114), zero errors, no leftover prototype identity on canonical screens | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads the live `SCREENS`/`ROUTE_MODULE` registries rather than a hand-maintained route list, so it stays correct as screens are added, TASK-018 |
-| Unit tests: `confirmOrder`/purchasing chain (success/rollback/posting-error/GL-balance), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 36 tests, wired into CI, TASK-025 + TASK-024 + TASK-022 |
+| Unit tests: `confirmOrder`/purchasing/CRM chains (success/rollback/posting-error/GL-balance/atomicity), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 40 tests, `vitest.config.ts` (`testTimeout: 20000` — fixes a real resource-contention flake found under TASK-027), wired into CI, TASK-025 + TASK-024 + TASK-022 + TASK-027 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -71,7 +79,7 @@ runtime-registered aliases); only sales/inventory/finance (and parts of master
 data/settings) read the canonical PGlite database. The rest render the original
 Aria/Northwind sample data from `web/public/assets/data-*.js`:
 
-**CRM, Manufacturing, Quality, Warehouse (advanced), HR/Payroll, Projects, Service,
+**Manufacturing, Quality, Warehouse (advanced), HR/Payroll, Projects, Service,
 Fixed Assets, Reporting/BI, Integration, Admin** — no schema tables exist for any of
 these. This boundary is now enforced, not just documented: `scripts/audit-screens.mjs`
 allowlists exactly these module ids (`MOCK_MODULE_IDS`, sourced from app.js's own live
@@ -79,6 +87,13 @@ allowlists exactly these module ids (`MOCK_MODULE_IDS`, sourced from app.js's ow
 any route in this mock list starts throwing errors. Converting or clearly relabeling these
 modules is roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7); when one gains real
 schema/adapter wiring, drop its module id from `MOCK_MODULE_IDS` in the same change.
+
+**CRM is a different kind of special case (TASK-027, 2026-07-17): real schema and
+business logic, but zero screens wired yet.** `opportunity`/`activity` and
+`convertOpportunityToSalesOrder` are real, but every CRM *screen* is still 100% on
+the original `data-crm.js` mock — TASK-028 (open) is what wires them together. Until
+then `crm` correctly stays in `MOCK_MODULE_IDS`: what a user actually sees in the CRM
+module is unchanged, even though the backend capability now exists underneath it.
 
 **Purchasing is a special case (TASK-022/023, 2026-07-17): partially converted, not
 fully mock and not fully real.** The core PO chain (suppliers, purchase orders, goods
@@ -129,10 +144,10 @@ change scoped to what its acceptance criteria actually asked for.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018…026 (25)
-- Todo: TASK-017, 027, 028 (3)
-- Next up: TASK-027 (CRM schema + business logic, EPIC-010 — added 2026-07-17,
-  dependency TASK-002 is done). TASK-028 (CRM screens) depends on TASK-027.
+- Done: TASK-001…016, TASK-018…027 (26)
+- Todo: TASK-017, 028 (2)
+- Next up: TASK-028 (wire CRM screens to canonical data — the only unblocked
+  task left; its dependency TASK-027 is done).
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

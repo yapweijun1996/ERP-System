@@ -3,7 +3,7 @@
 // change so the dated lookup is demonstrable). Same code runs on both adapters.
 import { sql } from 'drizzle-orm';
 import type { DB } from './db';
-import { master, company, currency, appUser, role, userCompany, product, taxRule, customer, account, supplier } from './schema';
+import { master, company, currency, appUser, role, userCompany, product, taxRule, customer, account, supplier, opportunity } from './schema';
 
 /**
  * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
@@ -66,10 +66,21 @@ export async function seedDemo(db: DB): Promise<void> {
   ]);
 
   // A customer for the SG company.
-  await db.insert(customer).values({ masterFn: 'M1', companyFn: 'C-SG', code: 'CUST1', name: 'Beta Pte Ltd' });
+  const [cust] = await db.insert(customer).values({
+    masterFn: 'M1', companyFn: 'C-SG', code: 'CUST1', name: 'Beta Pte Ltd',
+  }).returning({ id: customer.id });
 
   // A supplier for the SG company (TASK-022 — purchasing chain).
   await db.insert(supplier).values({ masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP1', name: 'Gamma Supplies Pte Ltd' });
+
+  // An open opportunity for CUST1, owned by the admin user (TASK-027 — CRM chain).
+  // Left in 'negotiation' (not converted) so the demo shows an in-flight pipeline
+  // deal; converting it is exercised by src/demo.ts's runCrmScenario, not the seed.
+  await db.insert(opportunity).values({
+    masterFn: 'M1', companyFn: 'C-SG', docNo: 'OPP-1', customerId: cust.id,
+    title: 'Widget supply expansion', value: '5000.00', currency: 'SGD',
+    stage: 'negotiation', probability: '75.00', closeDate: '2024-06-15', ownerUserId: adminUser.id,
+  });
 
   // Minimal chart of accounts for the SG company (used by sales-order and
   // purchase-order posting).

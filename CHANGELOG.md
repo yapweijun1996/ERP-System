@@ -5,6 +5,46 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-027 CRM schema and business logic)
+- `src/data/schema/crm.ts` (new): `opportunity` (linked to `customer`, optionally
+  `owner_user_id` → `app_user` and `order_id` → `sales_order` once converted) and
+  `activity` (lightweight log linked to `opportunity`). Generated as
+  `drizzle/0003_fuzzy_ronan.sql` (25 tables total).
+- Refactored `confirmSalesOrder` (`src/modules/sales/confirmOrder.ts`) into a
+  composable `confirmSalesOrderWithin(exec, scope, input)` core plus a thin
+  `confirmSalesOrder(db, scope, input)` wrapper — the same `issueStockWithin`/
+  `issueStock` pattern the codebase already used — so CRM conversion can compose
+  it atomically instead of running two independently-committing steps.
+  Behavior-preserving for every existing caller: all pre-existing
+  `confirmOrder.test.ts` cases and `npm run demo`'s sales scenario re-verified
+  unchanged.
+- `src/modules/crm/createOpportunity.ts` (plain insert, stage defaults `'lead'`,
+  no line items — exact SKUs are decided at conversion time, matching how real
+  CRM pipelines work) and `convertOpportunityToSalesOrder.ts` (one transaction:
+  locks the opportunity, guards `stage not in ('won','lost')`, composes
+  `confirmSalesOrderWithin`, then updates the opportunity to `'won'` +
+  `order_id`). 7 new vitest cases, including a test that a failure inside the
+  composed transaction (insufficient stock) leaves the opportunity completely
+  untouched — the specific thing the refactor was for.
+- `seed.ts` gained one opportunity (`OPP-1`, negotiation stage, deliberately
+  left unconverted for TASK-028's UI). `demo.ts` gained `runCrmScenario`:
+  conversion creates a real order (net=50/tax=4.5/total=54.5), stock 50→45,
+  balanced GL, both rollback guards — proven on PGlite and PostgreSQL.
+- `web/public/db/erp-system-schema.sql` hand-mirrored with the 2 new tables in
+  the same commit; `npm run check:drift` confirms 25/25 tables match.
+- Found and fixed 2 unrelated issues while working in this area: (1) a
+  genuinely unused import left over from TASK-022
+  (`InvalidPurchaseOrderStateError`, referenced only in a comment) — removed.
+  (2) A real test-suite flakiness risk: vitest's default 5000ms `testTimeout`
+  was occasionally insufficient once a 4th migration meant every `freshDb()`
+  call replays more DDL, and running all 10 test files concurrently under
+  load intermittently pushed some PGlite WASM boots past that timeout —
+  reproduced (as `freshDb()` itself timing out, never a real assertion
+  failure), fixed with a new `vitest.config.ts` (`testTimeout: 20000`),
+  confirmed 3 consecutive clean full-suite runs afterward.
+- Deliberately schema and business-logic only — no screens touched. TASK-028
+  owns wiring the CRM screens to this data, matching the TASK-022/023 split.
+
 ### Fixed (2026-07-17 — TASK-021 verify Makefile/scripts/setup.sh end-to-end)
 - Resolved the `.env.example` sandbox block that stalled this task across
   several earlier sessions: `git show HEAD:.env.example` reads the tracked
