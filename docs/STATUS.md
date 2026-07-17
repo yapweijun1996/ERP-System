@@ -130,11 +130,9 @@ change scoped to what its acceptance criteria actually asked for.
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
 - Done: TASK-001…016, TASK-018…026 (25)
-- Todo: TASK-017 (1) — every other task in the backlog is done.
-- Next up: none unblocked. TASK-017 needs a physical phone, which no agent
-  session can provide — new work needs a new `TASK-NNN` appended to
-  `tasks/tasks.jsonl` first (e.g. CRM as the next Phase 7 module, per
-  [ROADMAP.md](ROADMAP.md)).
+- Todo: TASK-017, 027, 028 (3)
+- Next up: TASK-027 (CRM schema + business logic, EPIC-010 — added 2026-07-17,
+  dependency TASK-002 is done). TASK-028 (CRM screens) depends on TASK-027.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

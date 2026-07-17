@@ -128,7 +128,11 @@ Order of attack:
    landed cost, vendor performance and the purchasing analytics reports have no
    schema and intentionally stay on sample data — a further, separate scope if
    ever prioritized, not a gap in TASK-022/023.
-2. CRM (leads/activities feeding sales orders).
+2. **CRM** (EPIC-010, ⬜) — opportunity pipeline → convert to sales order, the same
+   Sales module Purchasing feeds Inventory into. TASK-027 (schema: `opportunity` +
+   activity log, `convertOpportunityToSalesOrder` mirroring `receiveGoods`'s
+   status-guard discipline) and TASK-028 (screens: pipeline board, opportunity
+   detail, customer 360), split the same way TASK-022/023 split Purchasing.
 3. HR-lite or Fixed Assets (whichever a real prospect asks for first).
 4. Relabel or hide remaining mock screens so the demo never oversells (TASK-018 ✅
    done 2026-07-17 — see Phase 3; this item now means keeping that guarantee as
