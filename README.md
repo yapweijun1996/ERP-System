@@ -49,12 +49,14 @@ load. **IndexedDB is for demo only** — it is not the 800 GB store. See
 
 ### Production mode (Docker: web + api + PostgreSQL) — one command
 
-> ⚠️ **`scripts/setup.sh` itself is not yet verified end-to-end** in this
-> environment (see [docs/STATUS.md](docs/STATUS.md); TASK-021). The Docker stack it
-> drives is real and built/run-verified: `docker-compose.yml` starts `web` (nginx) +
-> `api` (Express) + `db` (PostgreSQL), migrations and seeding work via `docker
-> compose exec`, and the dashboard renders through the reverse proxy. Only
-> write endpoints (confirm order, setup, company switch) are still todo.
+> `make setup` (`scripts/setup.sh`) is verified end-to-end, including a real
+> first-run (`.env.example` → `.env`, then build, health-wait, migrate, seed) and a
+> repeat run against an existing `.env` (TASK-021). Every `make` target (`up`, `down`,
+> `restart`, `logs`, `migrate`, `seed`, `reset`, `ps`, `psql`) was individually
+> exercised against a live stack. Real auth (login/logout/session) is live on the API
+> — see [docs/STATUS.md](docs/STATUS.md). Write endpoints for business data (confirm
+> order, setup wizard, purchasing) are still todo on the production API; those flows
+> are real in demo mode only so far.
 
 ```bash
 make setup        # creates .env, starts db+api+web, waits for DB, migrates, seeds SG+MY data

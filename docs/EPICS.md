@@ -74,10 +74,10 @@ Acceptance criteria:
       it and `app.js`'s `boot()` gates on the real answer. Verified against a
       seeded Docker stack: the wizard correctly stayed hidden.
 
-## EPIC-005 — Production API And Docker 🔶 (stack up; writes + Makefile polish open)
+## EPIC-005 — Production API And Docker 🔶 (stack + Makefile done; server-side writes open)
 
 Add the production runtime path. (TASK-011 done, TASK-012 done, TASK-013 done,
-TASK-021 todo)
+TASK-021 done)
 
 Acceptance criteria:
 
@@ -97,10 +97,12 @@ Acceptance criteria:
 - [x] PostgreSQL concurrency test prevents stock over-sell — proven by
       `POSTGRES_URL=... npm run demo` (exactly 1 of 2 racing issues wins), verified
       live twice (TASK-011 host run, TASK-013).
-- [ ] `Makefile` and `scripts/setup.sh` targets work against the real compose assets
-      — every underlying `docker compose` command is individually verified
-      (TASK-012), but `scripts/setup.sh` itself (which touches the
-      permission-blocked `.env.example`) is still unverified end-to-end (TASK-021).
+- [x] `Makefile` and `scripts/setup.sh` targets work against the real compose assets
+      — TASK-021 done 2026-07-17: `scripts/setup.sh` run for real end-to-end
+      (fresh `.env` creation, build, health-wait, migrate, seed) plus every
+      individual `make` target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/
+      `seed`/`reset`/`ps`/`psql`) exercised against a live, isolated stack —
+      see docs/STATUS.md.
 
 ## EPIC-006 — CI, Testing, And Release 🔶 (CI/smoke/unit-tests all live; release checklist + device open)
 
