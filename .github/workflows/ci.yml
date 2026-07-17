@@ -74,3 +74,6 @@ jobs:
 
       - name: Browser smoke test (desktop + mobile, zero console/page errors)
         run: npm run smoke
+
+      - name: Screen audit (every SCREENS route, zero errors + no leftover prototype data on canonical screens)
+        run: npm run audit:screens

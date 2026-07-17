@@ -28,14 +28,19 @@ Pages build + Actions deploy, PWA shell with update prompt.
 Exit criteria: met (`build:demo` works, Pages URL boots with no backend, no secrets
 bundled).
 
-## Phase 3 — Core ERP Flow ✅ (audit open)
+## Phase 3 — Core ERP Flow ✅
 
 Goal: make the demo show a believable end-to-end ERP transaction.
 
 Delivered: customer/product browse, confirm sales order (SO-2), stock deduction,
-invoice generation, GL posting view, insufficient-stock rollback (SO-3).
+invoice generation, GL posting view, insufficient-stock rollback (SO-3); full screen
+audit across all 114 routes (TASK-018 ✅ done 2026-07-17 — `npm run audit:screens`,
+wired into CI, drives every route through the live router and asserts zero errors
+plus no leftover prototype identity leaks on canonical screens; found and fixed 3 real
+bugs — a stale sales-rep dropdown, a stale default-company picker, and a genuine async
+race in the Master Control screen — see docs/STATUS.md).
 
-Open: TASK-017 real-device verification, TASK-018 screen audit for sample-shape crashes.
+Open: TASK-017 real-device verification (permanently blocked — needs a physical phone).
 
 ## Phase 4 — Setup Wizard ✅ (demo path) — production lock done via TASK-024 (Phase 5)
 

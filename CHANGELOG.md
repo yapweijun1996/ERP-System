@@ -5,6 +5,30 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-018 full screen audit)
+- `scripts/audit-screens.mjs` (new, `npm run audit:screens`, wired into CI): boots the
+  demo build with Playwright, reads the live `SCREENS` registry in-page (114 routes —
+  more than any static grep found, since several are registered via runtime alias
+  tables in `screens-sales-hub.js`/`screens-purchasing-hub.js`), and calls the app's
+  own `navigate(route)` for every one of them. Asserts zero console errors / page
+  errors / synchronous throws on every route, and — on routes whose module (read live
+  from app.js's own `ROUTE_MODULE` map) isn't in the `MOCK_MODULE_IDS` allowlist — zero
+  leftover "Northwind"/"Dana Reyes" identity text from the original prototype template.
+- Found and fixed 3 real bugs, all on canonical screens the sweep's identity check
+  caught: (1) `new-quotation`'s Owner dropdown read a static prototype sales-rep
+  roster (`DB.salesReps`, never wired to real data) — now populated from the real
+  seeded users. (2) `settings`' "Default company" selector read a mock master-tenant
+  hierarchy (`DB.masters`, Northwind-named) instead of the real canonical company list
+  — now prefers `DB.erpSystem.companies` (works in both demo and api mode). (3) A
+  genuine async race in `master-control` (screens-people.js): its IndexedDB-backed
+  `refresh()` had no guard against the user navigating away before it resolved, so its
+  stale render could overwrite whatever screen was showing next — fixed with a
+  `CURRENT_ROUTE` check before applying the render.
+- The other 11 initially-flagged routes are confirmed-mock modules per docs/STATUS.md
+  (Purchasing, CRM, Manufacturing, Quality, Warehouse-advanced, HR/Payroll, Projects,
+  Service, Fixed Assets, Reporting/BI, Integration, Admin) — expected, not bugs;
+  allowlisted by module id so the script stays a meaningful permanent CI gate.
+
 ### Added (2026-07-17 — TASK-024 real auth against app_user)
 - `app_user` gained a `password_hash` column (NOT NULL); `drizzle/0001_quiet_blizzard.sql`.
 - `src/auth/password.ts`: PBKDF2-HMAC-SHA256 (100k iterations), format

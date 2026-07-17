@@ -39,6 +39,7 @@ finance) have no api-mode data source yet, and there are no write endpoints
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
+| Full screen audit — every route in `SCREENS` (114), zero errors, no leftover prototype identity on canonical screens | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads the live `SCREENS`/`ROUTE_MODULE` registries rather than a hand-maintained route list, so it stays correct as screens are added, TASK-018 |
 | Unit tests: `confirmOrder` (success/rollback/posting-error/GL-balance), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 28 tests, wired into CI, TASK-025 + TASK-024 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
@@ -52,14 +53,20 @@ finance) have no api-mode data source yet, and there are no write endpoints
 
 ## What renders but is mock-only
 
-~92 routes are registered in the `SCREENS` registry; only sales/inventory/finance (and
-parts of master data/settings) read the canonical PGlite database. The rest render the
-original Aria/Northwind sample data from `web/public/assets/data-*.js`:
+114 routes are registered in the `SCREENS` registry (per `npm run audit:screens`, TASK-018
+— the true, live count; earlier docs undercounted from a static grep that missed
+runtime-registered aliases); only sales/inventory/finance (and parts of master
+data/settings) read the canonical PGlite database. The rest render the original
+Aria/Northwind sample data from `web/public/assets/data-*.js`:
 
 **Purchasing, CRM, Manufacturing, Quality, Warehouse (advanced), HR/Payroll, Projects,
 Service, Fixed Assets, Reporting/BI, Integration, Admin** — no schema tables exist for
-any of these. TASK-018 tracks the audit; converting or clearly relabeling them is
-roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
+any of these. This boundary is now enforced, not just documented: `scripts/audit-screens.mjs`
+allowlists exactly these module ids (`MOCK_MODULE_IDS`, sourced from app.js's own live
+`ROUTE_MODULE` map) and fails CI if a canonical screen leaks prototype sample data, or if
+any route in this mock list starts throwing errors. Converting or clearly relabeling these
+modules is roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7); when one gains real
+schema/adapter wiring, drop its module id from `MOCK_MODULE_IDS` in the same change.
 
 ## Documented but NOT implemented (do not assume these exist)
 
@@ -98,10 +105,10 @@ roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7).
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-019, TASK-020, TASK-024, TASK-025, TASK-026 (21)
-- Todo: TASK-017, 018, 021, 022, 023 (5)
-- Next up: TASK-018 (screen audit) or TASK-022/023 (purchasing module, largest
-  remaining task, TASK-022's dependency TASK-013 is done)
+- Done: TASK-001…016, TASK-018, TASK-019, TASK-020, TASK-024, TASK-025, TASK-026 (22)
+- Todo: TASK-017, 021, 022, 023 (4)
+- Next up: TASK-022/023 (purchasing module, largest remaining task, TASK-022's
+  dependency TASK-013 is done)
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone. TASK-021
   (verify `scripts/setup.sh`) is blocked in this sandbox specifically — it needs

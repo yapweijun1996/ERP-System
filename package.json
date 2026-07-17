@@ -18,6 +18,7 @@
     "seed": "tsx src/seed.ts",
     "check:drift": "node scripts/check-drift.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "audit:screens": "node scripts/audit-screens.mjs",
     "test": "vitest run"
   },
   "devDependencies": {

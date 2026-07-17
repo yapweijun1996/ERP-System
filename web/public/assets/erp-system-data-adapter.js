@@ -317,6 +317,12 @@
       return { code: c.code, name: c.name, terms: 'Net 30', limit: 50000,
                balance: c.balance, overdue: 0, status: 'Active' };
     });
+    /* TASK-018: the new-quotation screen's Owner dropdown (screens-quotation-crud.js)
+       reads DB.salesReps — was sales-data.js's static prototype roster
+       (J. Okafor/L. Tan/M. Silva/Dana Reyes), never overridden here. Use the
+       real seeded users instead so the dropdown matches who can actually sign in. */
+    DB.salesReps = (d.users || []).map(function(u){ return u.full_name || u.email; }).filter(Boolean);
+    if (!DB.salesReps.length) DB.salesReps = [DB.user.name];
 
     function linesFor(orderId){
       return d.orderLines.filter(function(l){ return l.order_id === orderId; }).map(function(l){

@@ -6,7 +6,13 @@
    ============================================================ */
 SCREENS['settings'] = function(root, params){
   const u=DB.user;
-  const companies=DB.masters[0].companies;
+  /* TASK-018: prefer the real canonical company list (works in both demo and
+     api mode — both adapters populate DB.erpSystem.companies/scope) over the
+     mock master-tenant hierarchy in DB.masters, which still carries the
+     original Aria/Northwind prototype's placeholder company names. */
+  const companies=(DB.erpSystem&&DB.erpSystem.companies&&DB.erpSystem.companies.length)
+    ? DB.erpSystem.companies.map(c=>({name:c.name,current:c.company_fn===DB.erpSystem.scope.companyFn}))
+    : DB.masters[0].companies;
   const modules=DB.nav.flatMap(g=>g.items);
   const COPY={
     en:{

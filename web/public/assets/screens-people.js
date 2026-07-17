@@ -237,7 +237,14 @@ SCREENS['master-control'] = function(root){
   }
 
   async function refresh(keep){
-    masters=await MasterStore.list();
+    const list=await MasterStore.list();
+    /* TASK-018: MasterStore.list() is async (IndexedDB-backed); if the user
+       has already navigated to a different screen by the time it resolves,
+       applying this render would overwrite whatever screen is showing now
+       (found via an automated sweep: master-control's stale content leaked
+       into an unrelated screen visited right after it). */
+    if(CURRENT_ROUTE!=='master-control') return;
+    masters=list;
     if(keep && masters.find(m=>m.id===keep)) selId=keep;
     if(!masters.find(m=>m.id===selId)) selId=masters[0]?masters[0].id:null;
     render();
