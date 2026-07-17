@@ -158,8 +158,8 @@ change scoped to what its acceptance criteria actually asked for.
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
 - Done: TASK-001…016, TASK-018…028 (27)
-- Todo: TASK-017 (1)
-- Next up: none — every task except the permanently-blocked one is done.
+- Blocked: TASK-017 (1)
+- Todo: none — every agent-completable task is done.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
