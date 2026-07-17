@@ -94,7 +94,7 @@ SCREENS['new-opportunity'] = function(root){
             <div class="panel-h">${ic('coins')}<h3>Value &amp; forecast</h3></div>
             <div class="panel-body">
               <div class="fldrow c3">
-                <div class="fld"><span>Deal value (USD) <span class="req">*</span></span><input type="number" id="wValue" min="0" step="1000" value="${S.value}"></div>
+                <div class="fld"><span>Deal value (${esc(DB.company.currency)}) <span class="req">*</span></span><input type="number" id="wValue" min="0" step="1000" value="${S.value}"></div>
                 <div class="fld"><span>Stage</span><select id="wStage">${STAGES.map(s=>`<option ${s[0]===S.stage?'selected':''}>${s[0]}</option>`).join('')}</select></div>
                 <div class="fld"><span>Win probability</span><div style="display:flex;align-items:center;gap:8px"><input type="number" id="wProb" min="0" max="100" value="${S.prob}" style="width:80px"><span style="color:var(--muted);font-size:13px">%</span></div></div>
               </div>
@@ -140,10 +140,22 @@ SCREENS['new-opportunity'] = function(root){
   }
   function wireBar(){
     const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('crm-pipeline'));
-    const create=$('#wCreate'); create&&create.addEventListener('click',()=>{
+    const create=$('#wCreate'); create&&create.addEventListener('click',async()=>{
       if(!canCreate())return;
-      navigate('crm-pipeline');
-      setTimeout(()=>toast(`Opportunity OPP-26-0092 created · ${cust().name} · ${money0(S.value)} · ${S.stage}${S.hot?' · hot':''}`,'ok'),180);
+      if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.createOpportunity==='function')){ toast('Demo adapter not loaded','warn'); return; }
+      create.disabled=true;
+      try{
+        const c=cust();
+        const res=await window.ErpSystemDemo.createOpportunity({
+          customerCode:S.custCode, title:S.title.trim(), value:S.value, currency:DB.company.currency,
+          stage:S.stage, probability:S.prob, closeDate:S.close,
+        });
+        navigate('crm-pipeline');
+        toast(`Opportunity ${res.docNo} created · ${c.name} · ${money0(S.value)} · ${S.stage}${S.hot?' · hot':''}`,'ok');
+      }catch(e){
+        toast((e&&e.message)||'Create opportunity failed','danger');
+        create.disabled=false;
+      }
     });
   }
   render();

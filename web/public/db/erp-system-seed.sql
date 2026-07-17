@@ -63,6 +63,15 @@ INSERT INTO customer (master_fn, company_fn, code, name) VALUES
 INSERT INTO supplier (master_fn, company_fn, code, name) VALUES
   ('M1', 'C-SG', 'SUPP1', 'Gamma Supplies Pte Ltd');
 
+-- An open opportunity for CUST1, owned by the admin user (TASK-027/028 -- CRM
+-- chain). Left in 'negotiation' (not converted) so the demo shows an in-flight
+-- pipeline deal; converting it is a real user action, not baked into the seed.
+INSERT INTO opportunity (master_fn, company_fn, doc_no, customer_id, title, value, currency, stage, probability, close_date, owner_user_id)
+SELECT 'M1', 'C-SG', 'OPP-1', c.id, 'Widget supply expansion', 5000.00, 'SGD', 'negotiation', 75.00, '2024-06-15', u.user_id
+FROM customer c, app_user u
+WHERE c.master_fn = 'M1' AND c.company_fn = 'C-SG' AND c.code = 'CUST1'
+  AND u.master_fn = 'M1' AND u.email = 'admin@acme.co';
+
 -- Minimal chart of accounts for the SG company (used by sales-order and
 -- purchase-order posting).
 INSERT INTO account (master_fn, company_fn, code, name, type) VALUES

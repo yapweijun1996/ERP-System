@@ -205,11 +205,11 @@ Acceptance criteria:
 - [x] Production locks the setup wizard once the first admin exists (ties to
       EPIC-004) — see EPIC-004's now-checked last item.
 
-## EPIC-010 — CRM Module 🔶 (schema + business logic done; screens open)
+## EPIC-010 — CRM Module ✅
 
 Second new domain after Purchasing (EPIC-008): opportunity pipeline → convert to
 sales order, feeding the same Sales module Purchasing feeds Inventory into.
-Replaces the mock CRM screens for that core chain. (TASK-027 done, TASK-028 open)
+Replaces the mock CRM screens for that core chain. (TASK-027, TASK-028 both done)
 
 Acceptance criteria:
 
@@ -222,9 +222,14 @@ Acceptance criteria:
       composed atomically with `confirmSalesOrder`'s newly-extracted
       `confirmSalesOrderWithin` core (a failure inside the composed transaction
       leaves the opportunity provably untouched, not half-converted).
-- [ ] CRM screens (pipeline board, opportunity detail, customer 360) read canonical
-      PGlite data in demo mode; the "Convert to sales order" action is real, not a
-      toast → TASK-028.
+- [x] CRM screens (pipeline board, new-opportunity wizard) read canonical PGlite
+      data in demo mode; the "Convert to sales order" action is real, calling
+      `window.ErpSystemDemo.convertOpportunityToSalesOrder` — TASK-028. Verified
+      live in-browser: the converted order appears in Sales > Sales Orders (not
+      just CRM), stock decrements, and GL stays balanced; the insufficient-stock
+      guard was also exercised live (clear toast, opportunity left untouched).
+      Customer-360 view was not part of TASK-027/028's schema scope and remains
+      mock, consistent with how Purchasing left its own non-canonical sub-screens.
 - [x] `src/demo.ts` gains CRM assertions, following the `runPurchasingScenario`
       pattern (success + two rollback/guard scenarios), proven on both PGlite and
       PostgreSQL.

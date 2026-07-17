@@ -107,7 +107,7 @@ typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
 production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion 🔶 (purchasing done; CRM schema + logic done)
+## Phase 7 — Module Expansion 🔶 (purchasing done; CRM done)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
@@ -128,17 +128,21 @@ Order of attack:
    landed cost, vendor performance and the purchasing analytics reports have no
    schema and intentionally stay on sample data — a further, separate scope if
    ever prioritized, not a gap in TASK-022/023.
-2. **CRM** (EPIC-010, 🔶) — opportunity pipeline → convert to sales order, the same
-   Sales module Purchasing feeds Inventory into. Schema + business logic done
+2. **CRM** (EPIC-010 ✅) — opportunity pipeline → convert to sales order, the same
+   Sales module Purchasing feeds Inventory into. Schema + business logic
    (TASK-027 ✅ done 2026-07-17 — `src/data/schema/crm.ts`, `src/modules/crm/`
    `createOpportunity`/`convertOpportunityToSalesOrder`; the conversion composes
    atomically with sales via a newly-extracted `confirmSalesOrderWithin` core —
    `confirmSalesOrder` itself is unchanged for every existing caller — proven on
    both PGlite and PostgreSQL including a test that a failure inside the composed
-   transaction leaves the opportunity provably untouched, not half-converted).
-   Screens still read mock data (TASK-028, open — pipeline board, opportunity
-   detail, customer 360, wire the "Convert to sales order" action), split the same
-   way TASK-022/023 split Purchasing.
+   transaction leaves the opportunity provably untouched, not half-converted) and
+   screens (TASK-028 ✅ done 2026-07-17 — pipeline board and the new-opportunity
+   wizard read real PGlite data, the kanban's "Convert to sales order" action calls
+   the real adapter transaction, verified live end-to-end including the resulting
+   order visible in Sales screens, stock decrementing, and GL staying balanced —
+   see docs/STATUS.md) are both done for the CORE chain. Customer-360 and any
+   sub-features beyond opportunity+activity have no schema and intentionally stay
+   on sample data, split the same way TASK-022/023 split Purchasing.
 3. HR-lite or Fixed Assets (whichever a real prospect asks for first).
 4. Relabel or hide remaining mock screens so the demo never oversells (TASK-018 ✅
    done 2026-07-17 — see Phase 3; this item now means keeping that guarantee as

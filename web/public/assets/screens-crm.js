@@ -28,6 +28,7 @@ SCREENS['crm-pipeline'] = function(root){
           <span class="kc-av" style="background:${o.clr}">${esc(o.av)}</span>
           <span class="kc-close">${ic('calendar')} ${esc(o.close)}</span>
           <span class="kc-prob">${o.prob}%</span>
+          ${col.stage!=='Won'?`<button class="iconbtn" data-tip="Convert to sales order" data-convert="${esc(o.no)}" style="margin-left:auto;width:24px;height:24px">${ic('bag')}</button>`:''}
         </div>
       </div>`).join('');
     return `<div class="kcol">
@@ -58,7 +59,53 @@ SCREENS['crm-pipeline'] = function(root){
   root.querySelectorAll('.kcard[data-opp]').forEach(c=>c.addEventListener('click',()=>{
     c.dataset.opp==='OPP-26-0091'?navigate('opportunity'):toast('Opening '+c.dataset.opp,'info');
   }));
+  root.querySelectorAll('[data-convert]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();
+    const opp=DB.pipeline.flatMap(c=>c.items).find(o=>o.no===b.dataset.convert);
+    if(opp) openConvertOpportunityModal(opp);
+  }));
 };
+
+/* TASK-028: opportunities have no line items of their own (exact SKU/qty are
+   decided at conversion time — see src/data/schema/crm.ts's header comment),
+   so converting needs a small form, unlike Purchasing's one-click receive/
+   post actions. Defaults the qty to roughly match the opportunity's value at
+   the picked item's cost, editable before confirming. */
+function openConvertOpportunityModal(o){
+  const items=DB.items;
+  if(!items.length){ toast('No items available to convert against','warn'); return; }
+  const suggestQty=(it)=>Math.max(1,Math.round(o.value/(it.cost||1)));
+  appModal({
+    icon:'bag', title:'Convert to sales order', width:420,
+    body:`<p style="color:var(--muted);font-size:13px;margin:0 0 14px">${esc(o.title)} · ${esc(o.cust)} · ${money0(o.value)}</p>
+      <div class="fld"><span>Item</span><select id="cvItem">${items.map(it=>`<option value="${esc(it.sku)}">${esc(it.sku)} · ${esc(it.name)} — ${money(it.cost)}/${esc(it.uom)}</option>`).join('')}</select></div>
+      <div class="fldrow c2" style="margin-top:12px">
+        <div class="fld"><span>Qty</span><input type="number" id="cvQty" min="1" value="${suggestQty(items[0])}"></div>
+        <div class="fld"><span>Unit price</span><input type="number" id="cvPrice" min="0" step="0.01" value="${items[0].cost}"></div>
+      </div>`,
+    actions: btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})
+      + btn('Convert',{icon:'check',cls:'primary',attrs:'id="cvConfirm"'}),
+  });
+  const itemSel=$('#cvItem'), qtyEl=$('#cvQty'), priceEl=$('#cvPrice');
+  itemSel.addEventListener('change',()=>{
+    const it=items.find(x=>x.sku===itemSel.value);
+    qtyEl.value=suggestQty(it); priceEl.value=it.cost;
+  });
+  $('#cvConfirm').addEventListener('click', async ()=>{
+    if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.convertOpportunityToSalesOrder==='function')){ toast('Demo adapter not loaded','warn'); return; }
+    const confirmBtn=$('#cvConfirm'); confirmBtn.disabled=true;
+    try{
+      const res=await window.ErpSystemDemo.convertOpportunityToSalesOrder(
+        o.no, itemSel.value, Math.max(1,+qtyEl.value||1), Math.max(0,+priceEl.value||0));
+      closeModal();
+      navigate('crm-pipeline');
+      toast(`${o.no} converted — ${res.docNo} created · ${money(res.total)}`,'ok');
+    }catch(e){
+      toast((e&&e.message)||'Convert failed','danger');
+      confirmBtn.disabled=false;
+    }
+  });
+}
 
 /* ---------------- OPPORTUNITY (document) ---------------- */
 SCREENS['opportunity'] = function(root){

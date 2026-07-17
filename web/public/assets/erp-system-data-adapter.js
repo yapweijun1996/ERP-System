@@ -200,11 +200,23 @@
       "from supplier_invoice si join supplier s on s.id = si.supplier_id " +
       "join purchase_order po on po.id = si.order_id where " + wc('si') + " order by si.id");
 
+    /* TASK-028: CRM chain (TASK-027's schema/business logic wired into the
+       browser demo). owner is a left join — an opportunity may have no
+       owner_user_id set. */
+    var opportunities = await rows(
+      "select o.id, o.doc_no, o.title, o.value::float as value, o.currency, o.stage, " +
+      "o.probability::float as probability, o.close_date::text as close_date, " +
+      "c.name as customer, c.code as customer_code, u.full_name as owner_name, u.email as owner_email " +
+      "from opportunity o join customer c on c.id = o.customer_id " +
+      "left join app_user u on u.user_id = o.owner_user_id " +
+      "where " + wc('o') + " order by o.id");
+
     return { master: master, companies: companies, users: users, products: products, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
              invoices: invoices, glLegs: glLegs, movements: movements,
              suppliers: suppliers, purchaseOrders: purchaseOrders, purchaseOrderLines: purchaseOrderLines,
-             goodsReceipts: goodsReceipts, supplierInvoices: supplierInvoices };
+             goodsReceipts: goodsReceipts, supplierInvoices: supplierInvoices,
+             opportunities: opportunities };
   }
 
   /* ---------------- static fallback (same canonical values) ---------------- */
@@ -264,6 +276,9 @@
                          supplier: 'Gamma Supplies Pte Ltd', supplier_code: 'SUPP1', warehouse: 'WH-SALES' }],
       supplierInvoices: [{ doc_no: 'SINV-1', status: 'unpaid', invoice_date: '2024-06-06', currency: 'SGD',
                             net: 120, tax: 10.8, total: 130.8, supplier: 'Gamma Supplies Pte Ltd', supplier_code: 'SUPP1', po_no: 'PO-1' }],
+      opportunities: [{ id: 1, doc_no: 'OPP-1', title: 'Widget supply expansion', value: 5000, currency: 'SGD',
+                         stage: 'negotiation', probability: 75, close_date: '2024-06-15',
+                         customer: 'Beta Pte Ltd', customer_code: 'CUST1', owner_name: 'Admin', owner_email: 'admin@acme.co' }],
     };
   }
 
@@ -415,6 +430,28 @@
         po: i.po_no, grn: null, total: i.total, currency: i.currency,
         due: i.invoice_date, match: 'Matched', status: 'Posted',
       };
+    });
+
+    /* TASK-028: CRM pipeline — same shape screens-crm.js's kanban already
+       expects (stage, items:[{no,cust,custCode,title,value,owner,av,clr,
+       close,prob}]), just sourced from real opportunity/customer/app_user
+       rows instead of data-crm.js's Northwind mock. 'lost' opportunities are
+       omitted from the board — the original mock kanban never had a Lost
+       column either, and this schema's only real "mark lost" concept is the
+       terminal stage value itself, not a UI action built in this task. */
+    var CRM_STAGE_UI = { lead: 'Lead', qualified: 'Qualified', proposal: 'Proposal', negotiation: 'Negotiation', won: 'Won' };
+    DB.pipeline = Object.keys(CRM_STAGE_UI).map(function(stageKey){
+      var items = (d.opportunities || []).filter(function(o){ return o.stage === stageKey; }).map(function(o){
+        var ownerName = o.owner_name || o.owner_email || DB.user.name;
+        var initials = (ownerName.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2)
+          .map(function(w){ return w[0]; }).join('').toUpperCase()) || 'U';
+        return {
+          no: o.doc_no, cust: o.customer, custCode: o.customer_code, title: o.title,
+          value: o.value, currency: o.currency, owner: ownerName, av: initials, clr: '#0a84ff',
+          close: o.close_date, prob: o.probability,
+        };
+      });
+      return { stage: CRM_STAGE_UI[stageKey], items: items };
     });
 
     function linesFor(orderId){
@@ -661,10 +698,20 @@
 
   /* ---------------- boot orchestration ---------------- */
 
+  /* applied/appliedMode track which payload is currently on screen. Normally
+     this only fires once. But if the BOOT_TIMEOUT_MS watchdog wins the race
+     (slow WASM fetch, big seed, throttled network) and shows fallback data
+     FIRST, bootPglite() itself keeps running in the background — when it
+     later succeeds, its real data must still replace the fallback so the
+     UI is never permanently stuck showing stale/mock values. A fallback ->
+     pglite transition is the only override allowed; pglite is never
+     replaced once shown. */
   var applied = false;
+  var appliedMode = null;
   function applyOnce(payload, mode){
-    if (applied) return;
+    if (applied && !(appliedMode === 'fallback' && mode === 'pglite')) return;
     applied = true;
+    appliedMode = mode;
     applyData(payload, mode);
   }
 
@@ -675,9 +722,18 @@
     var freshlySeeded = await ensureSeeded(db);
     var payload = await readPayload(db);
     if (!payload.master) throw new Error('PGlite payload empty (no master row)');
+    var wasFallback = appliedMode === 'fallback';
     applyOnce(payload, 'pglite');
     console.info('[erp-system] demo data source: PGlite (' + PG_DATA_DIR + ')' +
-      (freshlySeeded ? ' — freshly seeded' : ' — existing IndexedDB data'));
+      (freshlySeeded ? ' — freshly seeded' : ' — existing IndexedDB data') +
+      (wasFallback ? ' (replacing fallback — late boot)' : ''));
+    /* boot() already rendered the current screen off fallback data before
+       this resolved late — re-render it so the swap is actually visible
+       instead of sitting correct-but-unpainted in DB until the user
+       happens to navigate elsewhere. */
+    if (wasFallback && typeof navigate === 'function' && typeof CURRENT_ROUTE !== 'undefined' && CURRENT_ROUTE) {
+      navigate(CURRENT_ROUTE);
+    }
   }
 
   var ready = new Promise(function(resolve){
@@ -934,6 +990,131 @@
     return result;
   }
 
+  /* TASK-028 — CRM chain, live counterpart of src/modules/crm/. This file
+     can't literally import confirmOrder's TypeScript module (the browser
+     adapter always hand-mirrors business logic in raw SQL — see this file's
+     header comment), so convertOpportunityToSalesOrder below reimplements
+     confirmOrder's steps inline within its own transaction, composed with
+     the opportunity-stage update, the same atomicity confirmSalesOrderWithin
+     gives the TypeScript side. */
+
+  /* createOpportunity.ts: a plain insert — stage starts at whatever the
+     wizard's kanban-column choice was, no line items yet. */
+  async function createOpportunity(input){
+    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Create opportunity needs PGlite.');
+    var result = await state.db.transaction(async function(tx){
+      var cust = (await tx.query(
+        'select id from customer where master_fn=$1 and company_fn=$2 and code=$3',
+        [SCOPE.masterFn, SCOPE.companyFn, input.customerCode])).rows[0];
+      if (!cust) throw new Error('Customer ' + input.customerCode + ' not found');
+
+      var docNo = await nextDocNo(tx, 'opportunity', 'OPP');
+      var stageMap = { Lead: 'lead', Qualified: 'qualified', Proposal: 'proposal', Negotiation: 'negotiation' };
+      var stage = stageMap[input.stage] || 'lead';
+
+      var opp = (await tx.query(
+        "insert into opportunity (master_fn, company_fn, doc_no, customer_id, title, value, currency, stage, probability, close_date) " +
+        'values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id',
+        [SCOPE.masterFn, SCOPE.companyFn, docNo, cust.id, input.title, input.value, input.currency, stage, input.probability, input.closeDate])).rows[0];
+
+      return { opportunityId: opp.id, docNo: docNo };
+    });
+    await refresh();
+    return result;
+  }
+
+  /* convertOpportunityToSalesOrder.ts: guards the opportunity's stage (→
+     rollback if already 'won'/'lost'), then runs confirmOrder's own steps —
+     sales_order + one line (product/qty/price chosen at conversion time, not
+     stored on the opportunity — see src/data/schema/crm.ts's header comment)
+     → lock+deduct WH-SALES stock → invoice → balanced GL — before marking
+     the opportunity 'won' and linking the new order. One transaction. */
+  async function convertOpportunityToSalesOrder(opportunityNo, sku, qty, unitPrice){
+    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Convert needs PGlite.');
+    var result = await state.db.transaction(async function(tx){
+      var opp = (await tx.query(
+        'select id, stage, customer_id, currency from opportunity ' +
+        'where master_fn=$1 and company_fn=$2 and doc_no=$3 for update',
+        [SCOPE.masterFn, SCOPE.companyFn, opportunityNo])).rows[0];
+      if (!opp) throw new Error('Opportunity ' + opportunityNo + ' not found');
+      if (opp.stage === 'won' || opp.stage === 'lost'){
+        var stateErr = new Error('Opportunity ' + opportunityNo + " is '" + opp.stage + "' — cannot convert twice.");
+        stateErr.name = 'InvalidOpportunityStateError';
+        throw stateErr; // → ROLLBACK
+      }
+
+      var prod = (await tx.query(
+        'select id from product where master_fn=$1 and company_fn=$2 and sku=$3',
+        [SCOPE.masterFn, SCOPE.companyFn, sku])).rows[0];
+      if (!prod) throw new Error('Product ' + sku + ' not found');
+
+      var wh = (await tx.query(
+        "select id from warehouse where master_fn=$1 and company_fn=$2 and code='WH-SALES'",
+        [SCOPE.masterFn, SCOPE.companyFn])).rows[0];
+      if (!wh) throw new Error('Warehouse WH-SALES not found');
+
+      var today = new Date().toISOString().slice(0, 10);
+      var taxRow = (await tx.query(
+        "select rate::float as rate from tax_rule where master_fn=$1 and company_fn=$2 and tax_code='SR' " +
+        'and valid_from <= $3 and (valid_to is null or valid_to > $3) order by valid_from desc limit 1',
+        [SCOPE.masterFn, SCOPE.companyFn, today])).rows[0];
+      if (!taxRow) throw new Error('No tax rule for SR on ' + today);
+
+      var net = Math.round(qty * unitPrice * 100) / 100;
+      var tax = Math.round(net * taxRow.rate) / 100;
+      var total = Math.round((net + tax) * 100) / 100;
+      var docNo = await nextDocNo(tx, 'sales_order', 'SO-CRM');
+
+      var order = (await tx.query(
+        "insert into sales_order (master_fn, company_fn, doc_no, customer_id, status, order_date, currency, net_amount, tax_amount, total_amount) " +
+        "values ($1,$2,$3,$4,'confirmed',$5,$6,$7,$8,$9) returning id",
+        [SCOPE.masterFn, SCOPE.companyFn, docNo, opp.customer_id, today, opp.currency, net, tax, total])).rows[0];
+
+      await tx.query(
+        'insert into sales_order_line (master_fn, company_fn, order_id, line_no, product_id, qty, unit_price, net_amount, tax_code, tax_rate, tax_amount) ' +
+        "values ($1,$2,$3,1,$4,$5,$6,$7,'SR',$8,$9)",
+        [SCOPE.masterFn, SCOPE.companyFn, order.id, prod.id, qty, unitPrice, net, taxRow.rate, tax]);
+
+      var lvl = (await tx.query(
+        'select id, qty::float as qty from stock_level ' +
+        'where master_fn=$1 and company_fn=$2 and product_id=$3 and warehouse_id=$4 for update',
+        [SCOPE.masterFn, SCOPE.companyFn, prod.id, wh.id])).rows[0];
+      var avail = lvl ? lvl.qty : 0;
+      if (!lvl || avail < qty){
+        var stockErr = new Error('Insufficient stock for ' + sku + ': have ' + avail + ', need ' + qty + ' — conversion rolled back.');
+        stockErr.name = 'InsufficientStockError';
+        throw stockErr; // → ROLLBACK
+      }
+      await tx.query('update stock_level set qty = qty - $1, updated_at = now() where id = $2', [qty, lvl.id]);
+      await tx.query(
+        'insert into stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id) ' +
+        "values ($1,$2,$3,$4,$5,'out','sales_order',$6)",
+        [SCOPE.masterFn, SCOPE.companyFn, prod.id, wh.id, qty, order.id]);
+
+      var invDoc = 'INV-' + docNo;
+      await tx.query(
+        "insert into invoice (master_fn, company_fn, doc_no, order_id, customer_id, status, invoice_date, currency, net_amount, tax_amount, total_amount) " +
+        "values ($1,$2,$3,$4,$5,'unpaid',$6,$7,$8,$9,$10)",
+        [SCOPE.masterFn, SCOPE.companyFn, invDoc, order.id, opp.customer_id, today, opp.currency, net, tax, total]);
+
+      var acct = {};
+      (await tx.query(
+        "select code, id from account where master_fn=$1 and company_fn=$2 and code in ('1100','4000','2200')",
+        [SCOPE.masterFn, SCOPE.companyFn])).rows.forEach(function(a){ acct[a.code] = a.id; });
+      if (!acct['1100'] || !acct['4000'] || !acct['2200']) throw new Error('Chart of accounts not configured');
+      await tx.query(
+        'insert into gl_entry (master_fn, company_fn, journal_ref, account_id, debit, credit, memo) values ' +
+        "($1,$2,$3,$4,$5,0,'AR'), ($1,$2,$3,$6,0,$7,'Revenue'), ($1,$2,$3,$8,0,$9,'Output tax')",
+        [SCOPE.masterFn, SCOPE.companyFn, invDoc, acct['1100'], total, acct['4000'], net, acct['2200'], tax]);
+
+      await tx.query("update opportunity set stage='won', order_id=$1, updated_at=now() where id=$2", [order.id, opp.id]);
+
+      return { docNo: docNo, orderId: order.id, net: net, tax: tax, total: total };
+    });
+    await refresh();
+    return result;
+  }
+
   /* Switch the active company scope (topbar company switcher) and re-read.
      Same-master only today — SCOPE.masterFn stays fixed, matching the single-
      org demo model. */
@@ -1077,6 +1258,8 @@
     createPurchaseOrder: createPurchaseOrder,
     receiveGoods: receiveGoods,
     postSupplierInvoice: postSupplierInvoice,
+    createOpportunity: createOpportunity,
+    convertOpportunityToSalesOrder: convertOpportunityToSalesOrder,
     completeSetup: completeSetup,
     switchCompany: switchCompany,
     needsSetup: needsSetup,

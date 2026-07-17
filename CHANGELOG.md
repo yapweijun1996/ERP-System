@@ -5,6 +5,47 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-028 wire CRM screens to canonical data)
+- `erp-system-data-adapter.js`: `readPayload()` gained an `opportunities` query
+  (joins `customer` + `app_user`); `applyData()` builds `DB.pipeline` (grouped by
+  stage) in the same shape the existing kanban already expected, deriving avatar
+  initials from the real owner name. New `createOpportunity(input)` and
+  `convertOpportunityToSalesOrder(opportunityNo, sku, qty, unitPrice)` functions
+  mirror the `createPurchaseOrder`/`receiveGoods` pattern — the latter is a SQL
+  port of `convertOpportunityToSalesOrder.ts` (locks the opportunity, guards
+  won/lost, runs `confirmOrder`'s steps inline, marks the opportunity won+linked,
+  all as one transaction).
+- `screens-crm-new.js`'s wizard now posts through `createOpportunity` instead of
+  a toast-only stub (also fixed the deal-value field label being hardcoded
+  "USD" regardless of company currency). `screens-crm.js`'s kanban cards gained
+  a convert button (hidden on Won cards) opening a new modal (item/qty/price,
+  with a suggested qty derived from the deal value) that calls
+  `convertOpportunityToSalesOrder`.
+- `erp-system-seed.sql` gained the `OPP-1` insert `seed.ts` already had (this
+  hand-mirrored file had been missed — the pipeline board rendered "0 open" in
+  every column until this was added). `erp-system-demo-txn.sql` gained a third
+  `DO` block mirroring `demo.ts`'s `runCrmScenario`: creates and converts a
+  second opportunity (`OPP-2` → `SO-CRM-1`), giving the demo a pre-populated
+  "Won" column on first load. All three `DO` blocks in that file verified
+  together against a disposable PostgreSQL container — balanced GL, correct
+  stock math, zero errors.
+- Fixed a real, pre-existing bug in the adapter's boot orchestration (found
+  during this task's live browser verification, not CRM-specific): the 20s
+  boot-timeout watchdog and `bootPglite()` raced through a one-shot
+  `applyOnce()` lock — if the watchdog won and applied static fallback data,
+  `bootPglite()` finishing successfully *afterward* was silently discarded,
+  so the UI could get permanently stuck on stale mock data with no error and
+  no recovery. `applyOnce()` now allows exactly one fallback→pglite override
+  and re-renders the current route when it happens.
+- Verified live end-to-end: pipeline board renders real opportunities
+  (including the pre-converted "Won" example); created a new opportunity via
+  the wizard; converted an opportunity via the new modal — both the
+  insufficient-stock rollback path (clear toast, opportunity left untouched)
+  and a successful conversion (order visible in Sales > Sales Orders, stock
+  decremented, GL balanced) confirmed live. 375px checked, zero console
+  errors. Full suite green: typecheck, `npm test` (40/40), `check:drift`
+  (25/25), `npm run demo`, `build:demo`, `smoke`, `audit:screens` (114 routes).
+
 ### Added (2026-07-17 — TASK-027 CRM schema and business logic)
 - `src/data/schema/crm.ts` (new): `opportunity` (linked to `customer`, optionally
   `owner_user_id` → `app_user` and `order_id` → `sales_order` once converted) and

@@ -30,15 +30,20 @@ now read and write that real data instead of Northwind mock — verified live: r
 goods visibly moves stock on the real Inventory screen. RFQs, quotations,
 requisitions, returns, credit/debit notes, price lists, landed cost and vendor
 performance have no schema and intentionally still show sample data. **A third
-domain's schema and business logic (not yet screens) now exists too**: CRM's
-opportunity pipeline → convert-to-sales-order — the conversion composes atomically
-with the sales module itself (`confirmSalesOrder` was split into a composable
-`confirmSalesOrderWithin` core so an opportunity's stage update and the resulting
-order/stock/invoice/GL posting are genuinely one transaction, not two), proven on
-PGlite and PostgreSQL including a test that a mid-conversion failure leaves the
-opportunity provably untouched. What's still missing: other modules
-(inventory/sales/finance) have no api-mode data source yet, and there are no write
-endpoints (confirm order / setup) on the server side yet.
+domain is now real end-to-end, screens included**: CRM's opportunity pipeline →
+convert-to-sales-order — the conversion composes atomically with the sales module
+itself (`confirmSalesOrder` was split into a composable `confirmSalesOrderWithin`
+core so an opportunity's stage update and the resulting order/stock/invoice/GL
+posting are genuinely one transaction, not two), proven on PGlite and PostgreSQL
+including a test that a mid-conversion failure leaves the opportunity provably
+untouched, and the pipeline board / new-opportunity wizard now read and write that
+real data instead of Northwind mock — verified live: converting an opportunity
+visibly creates a sales order in the Sales module, decrements stock, and posts a
+balanced GL entry. Opportunity-detail and customer-360 sub-screens have no schema
+backing yet and stay mock, the same way Purchasing's RFQs/quotations do. What's
+still missing: other modules (inventory/sales/finance) have no api-mode data
+source yet, and there are no write endpoints (confirm order / setup) on the
+server side yet.
 
 ## What actually works (verified in code)
 
@@ -48,7 +53,7 @@ endpoints (confirm order / setup) on the server side yet.
 | Canonical schema (25 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | `drizzle/0000_init.sql` + `0001_quiet_blizzard.sql` + `0002_messy_slyde.sql` + `0003_fuzzy_ronan.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; browser mirror in adapter (`confirmOrder`) |
 | Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), end-to-end incl. screens | ✅ Working | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Demo-mode screens (suppliers/purchase-orders/goods-receipts/supplier-invoices lists, new-PO wizard, receive-goods/post-invoice row actions) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-023. RFQs/quotations/requisitions/returns/credit-debit-notes/price-lists/landed-cost/vendor-performance have no schema and stay mock. |
-| CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), schema + business logic only | ✅ Working (no screens yet) | `src/data/schema/crm.ts`, `src/modules/crm/` (`createOpportunity`/`convertOpportunityToSalesOrder`), both rollback guards (double-convert; mid-transaction failure leaves the opportunity untouched) proven on PGlite + PostgreSQL, TASK-027. Screens still read mock data → TASK-028. |
+| CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Working | `src/data/schema/crm.ts`, `src/modules/crm/` (`createOpportunity`/`convertOpportunityToSalesOrder`), both rollback guards (double-convert; mid-transaction failure leaves the opportunity untouched) proven on PGlite + PostgreSQL, TASK-027. Demo-mode screens (pipeline board, new-opportunity wizard, kanban convert action) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-028; live-verified the converted order appears in Sales, stock decrements, GL balances. Opportunity-detail and customer-360 have no schema and stay mock. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, confirm SO-2 / over-stock SO-3) | ✅ Canonical data | `screens-sales*.js`, TASK-006/007 |
 | Inventory screens (stock on hand, item master, movements) | ✅ Canonical data | `screens-inv*.js`, TASK-005 |
@@ -88,12 +93,13 @@ any route in this mock list starts throwing errors. Converting or clearly relabe
 modules is roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7); when one gains real
 schema/adapter wiring, drop its module id from `MOCK_MODULE_IDS` in the same change.
 
-**CRM is a different kind of special case (TASK-027, 2026-07-17): real schema and
-business logic, but zero screens wired yet.** `opportunity`/`activity` and
-`convertOpportunityToSalesOrder` are real, but every CRM *screen* is still 100% on
-the original `data-crm.js` mock — TASK-028 (open) is what wires them together. Until
-then `crm` correctly stays in `MOCK_MODULE_IDS`: what a user actually sees in the CRM
-module is unchanged, even though the backend capability now exists underneath it.
+**CRM is now a special case the same shape as Purchasing (TASK-027/028,
+2026-07-17): partially converted, not fully mock and not fully real.** The core
+opportunity → convert-to-sales-order chain (pipeline board, new-opportunity
+wizard, the kanban's convert action) reads and writes real PGlite data. Opportunity
+detail and customer-360 have no schema and stay on the original `data-crm.js`
+mock. `crm` correctly stays in `MOCK_MODULE_IDS` for that reason — same rule as
+Purchasing below.
 
 **Purchasing is a special case (TASK-022/023, 2026-07-17): partially converted, not
 fully mock and not fully real.** The core PO chain (suppliers, purchase orders, goods
@@ -130,7 +136,14 @@ change scoped to what its acceptance criteria actually asked for.
    mirror — those two still rely on manual discipline. This is still the #1
    landmine, now partially — not fully — guarded.
 2. **PGlite loads from jsDelivr CDN** with a 20 s timeout → static fallback. Offline
-   first-load depends on the SW cache.
+   first-load depends on the SW cache. If real PGlite boot finishes *after* the
+   watchdog already showed fallback, it now correctly overrides the fallback data
+   and re-renders the current screen (fixed under TASK-028 — previously a late
+   success was silently discarded and the UI could get stuck on stale mock data
+   indefinitely with no user-visible error). One real trigger for hitting the
+   watchdog at all: a second browser tab on the same origin holding an open
+   PGlite/IndexedDB connection blocks a new tab's boot until that tab is closed —
+   found during TASK-028's live verification.
 3. **`web/dist/` is gitignored** (built fresh by `deploy-pages.yml` on every deploy) —
    a local `npm run build:demo` output is disposable; don't hand-edit files under `dist/`.
 4. ~~CI (`deploy-pages.yml`) does not run `typecheck:web`~~ — fixed by
@@ -144,10 +157,9 @@ change scoped to what its acceptance criteria actually asked for.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018…027 (26)
-- Todo: TASK-017, 028 (2)
-- Next up: TASK-028 (wire CRM screens to canonical data — the only unblocked
-  task left; its dependency TASK-027 is done).
+- Done: TASK-001…016, TASK-018…028 (27)
+- Todo: TASK-017 (1)
+- Next up: none — every task except the permanently-blocked one is done.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

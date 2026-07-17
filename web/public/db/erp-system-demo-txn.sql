@@ -212,3 +212,100 @@ BEGIN
     ('M1', 'C-SG', 'SINV-1', v_intax, v_tax, 0,     'Input tax'),
     ('M1', 'C-SG', 'SINV-1', v_ap,    0,     v_total, 'AP');
 END $$;
+
+-- ============================================================
+-- CRM chain (SQL form of src/demo.ts runCrmScenario, executing the
+-- same steps as src/modules/crm/createOpportunity.ts +
+-- convertOpportunityToSalesOrder.ts): create OPP-2 (separate from
+-- the seed's own still-open OPP-1) -> convert it, composing
+-- confirmOrder's own steps with the opportunity's stage update in
+-- one transaction. The seed's OPP-1 stays untouched/negotiation so
+-- the pipeline board has an in-flight deal to show; this converted
+-- OPP-2 gives the "Won" column a real example on first load, the
+-- same way SO-1/PO-1 are pre-processed examples for Sales/Purchasing.
+-- Expected result: net 50.00 + GST 4.50 = 54.50, SG-WIDGET stock -5
+-- (WH-SALES reused, same as the purchasing block above).
+-- ============================================================
+
+DO $$
+DECLARE
+  v_customer_id  bigint;
+  v_owner_id     bigint;
+  v_warehouse_id bigint;
+  v_product_id   bigint;
+  v_opp_id       bigint;
+  v_order_id     bigint;
+  v_available    numeric;
+  v_rate         numeric(6,3);
+  v_net          numeric(18,2);
+  v_tax          numeric(18,2);
+  v_total        numeric(18,2);
+  v_qty          numeric := 5;
+  v_unit_price   numeric := 10;
+  v_ar bigint; v_rev bigint; v_out bigint;
+BEGIN
+  SELECT id INTO v_customer_id FROM customer
+    WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = 'CUST1';
+  SELECT user_id INTO v_owner_id FROM app_user
+    WHERE master_fn = 'M1' AND email = 'admin@acme.co';
+  SELECT id INTO v_warehouse_id FROM warehouse
+    WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = 'WH-SALES';
+  SELECT id INTO v_product_id FROM product
+    WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND sku = 'SG-WIDGET';
+
+  -- 1. createOpportunity.ts: a second opportunity, deliberately not the seed's OPP-1.
+  INSERT INTO opportunity (master_fn, company_fn, doc_no, customer_id, title, value, currency, stage, probability, close_date, owner_user_id)
+    VALUES ('M1', 'C-SG', 'OPP-2', v_customer_id, 'Widget resupply deal', 65, 'SGD', 'negotiation', 70, DATE '2024-06-10', v_owner_id)
+    RETURNING id INTO v_opp_id;
+
+  -- 2. convertOpportunityToSalesOrder.ts: confirmOrder's own steps, composed
+  --    with the opportunity's stage update, in this SAME transaction.
+  SELECT rate INTO v_rate FROM tax_rule
+    WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND tax_code = 'SR'
+      AND valid_from <= DATE '2024-06-01'
+      AND (valid_to IS NULL OR valid_to > DATE '2024-06-01')
+    ORDER BY valid_from DESC LIMIT 1;
+  IF v_rate IS NULL THEN
+    RAISE EXCEPTION 'No tax rule for SR on 2024-06-01';
+  END IF;
+  v_net := round(v_qty * v_unit_price, 2);
+  v_tax := round(v_net * v_rate / 100, 2);
+  v_total := v_net + v_tax;
+
+  INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, status, order_date, currency, net_amount, tax_amount, total_amount)
+    VALUES ('M1', 'C-SG', 'SO-CRM-1', v_customer_id, 'confirmed', DATE '2024-06-01', 'SGD', v_net, v_tax, v_total)
+    RETURNING id INTO v_order_id;
+
+  INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, product_id, qty, unit_price, net_amount, tax_code, tax_rate, tax_amount)
+    VALUES ('M1', 'C-SG', v_order_id, 1, v_product_id, v_qty, v_unit_price, v_net, 'SR', v_rate, v_tax);
+
+  SELECT qty INTO v_available FROM stock_level
+    WHERE master_fn = 'M1' AND company_fn = 'C-SG'
+      AND product_id = v_product_id AND warehouse_id = v_warehouse_id
+    FOR UPDATE;
+  IF v_available IS NULL OR v_available < v_qty THEN
+    RAISE EXCEPTION 'Insufficient stock for SG-WIDGET: have %, need %', coalesce(v_available, 0), v_qty;
+  END IF;
+  UPDATE stock_level SET qty = qty - v_qty, updated_at = now()
+    WHERE master_fn = 'M1' AND company_fn = 'C-SG'
+      AND product_id = v_product_id AND warehouse_id = v_warehouse_id;
+  INSERT INTO stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id)
+    VALUES ('M1', 'C-SG', v_product_id, v_warehouse_id, v_qty, 'out', 'sales_order', v_order_id);
+
+  INSERT INTO invoice (master_fn, company_fn, doc_no, order_id, customer_id, status, invoice_date, currency, net_amount, tax_amount, total_amount)
+    VALUES ('M1', 'C-SG', 'INV-SO-CRM-1', v_order_id, v_customer_id, 'unpaid', DATE '2024-06-01', 'SGD', v_net, v_tax, v_total);
+
+  SELECT id INTO v_ar  FROM account WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = '1100';
+  SELECT id INTO v_rev FROM account WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = '4000';
+  SELECT id INTO v_out FROM account WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = '2200';
+  IF v_ar IS NULL OR v_rev IS NULL OR v_out IS NULL THEN
+    RAISE EXCEPTION 'Chart of accounts not configured';
+  END IF;
+  INSERT INTO gl_entry (master_fn, company_fn, journal_ref, account_id, debit, credit, memo) VALUES
+    ('M1', 'C-SG', 'INV-SO-CRM-1', v_ar,  v_total, 0,     'AR'),
+    ('M1', 'C-SG', 'INV-SO-CRM-1', v_rev, 0,       v_net, 'Revenue'),
+    ('M1', 'C-SG', 'INV-SO-CRM-1', v_out, 0,       v_tax, 'Output tax');
+
+  -- 3. Mark the opportunity won and link the resulting order.
+  UPDATE opportunity SET stage = 'won', order_id = v_order_id, updated_at = now() WHERE id = v_opp_id;
+END $$;
