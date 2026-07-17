@@ -546,7 +546,10 @@ function postJE(btnEl){
 
 /* ---------------- PAYMENT VOUCHER ---------------- */
 SCREENS['payment-voucher'] = function(root){
-  const supp=DB.suppliers[2];
+  /* TASK-023: DB.suppliers now comes from the canonical supplier table (only 1
+     seeded row today) instead of the old 4-row Northwind mock — index [2] is no
+     longer guaranteed to exist. */
+  const supp=DB.suppliers[2]||DB.suppliers[DB.suppliers.length-1]||{name:'—',balance:0};
   root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:960px">
     ${crumbs([DB.company.name,'Finance','Payment Voucher',{cur:'PV-26-0203'}])}
     <div class="dochead">

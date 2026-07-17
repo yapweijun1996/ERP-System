@@ -155,11 +155,14 @@ Acceptance criteria:
       (`switchCompany` re-fetches with a different scope, no new endpoint needed);
       other modules (inventory/sales/finance) still have no api-mode data source.
 
-## EPIC-008 — Purchasing Module 🔶 (schema + business logic done; screens open)
+## EPIC-008 — Purchasing Module ✅ (core chain done; RFQ/quotes/returns/analytics stay mock)
 
 First new domain built end-to-end after the sales chain: supplier → purchase order →
-goods receipt (stock IN) → supplier invoice (GL). Replaces the mock purchasing screens.
-(TASK-022 done, TASK-023 open)
+goods receipt (stock IN) → supplier invoice (GL). Replaces the mock purchasing screens
+for that core chain specifically — RFQs, quotations, requisitions, purchase returns,
+credit/debit notes, price lists, landed cost, vendor performance, and the purchasing
+analytics reports have no schema and stay on sample data, same as every other
+not-yet-converted module (see docs/STATUS.md). (TASK-022 done, TASK-023 done)
 
 Acceptance criteria:
 
@@ -171,8 +174,13 @@ Acceptance criteria:
 - [x] Supplier invoice posts balanced GL (AP credit / inventory-expense debit + tax) —
       `src/modules/purchasing/postSupplierInvoice.ts`, gated on the PO already being
       received.
-- [ ] Purchasing screens read canonical data in demo mode; mock purchasing data
-      removed → TASK-023.
+- [x] Purchasing screens read canonical data in demo mode for the core chain — TASK-023
+      done 2026-07-17: suppliers/purchase-orders/goods-receipts/supplier-invoices lists
+      render real data, the new-PO wizard and the "Receive goods"/"Post supplier
+      invoice" row actions call the real adapter transactions (mirroring
+      `confirmOrder`'s pattern) instead of fake toasts. Verified live: receiving goods
+      visibly moves stock on the real Inventory > Stock on Hand screen; posting an
+      invoice visibly balances on the real General Ledger screen.
 - [x] `src/demo.ts` gains purchasing assertions — `runPurchasingScenario`, both engines,
       including both rollback guards, wired into the same `check()` block as sales.
 

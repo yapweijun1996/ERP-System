@@ -4,10 +4,11 @@
    Boots the CANONICAL demo database in PGlite (in-browser
    PostgreSQL, persisted to IndexedDB at idb://erp-system-demo):
 
-     web/public/db/erp-system-schema.sql   (copy of drizzle/0000_init.sql)
+     web/public/db/erp-system-schema.sql   (copy of drizzle/*.sql, all migrations)
      web/public/db/erp-system-seed.sql     (SQL form of src/data/seed.ts)
      web/public/db/erp-system-demo-txn.sql (SQL form of the src/demo.ts
-                                            confirmed-order chain)
+                                            confirmed sales-order chain and
+                                            purchasing chain — TASK-022/023)
 
    then READS the data back with async SQL and maps it into the
    user-owned Aria ERP `DB` contract. The numbers on screen come
@@ -167,9 +168,43 @@
       "from stock_movement m join product p on p.id = m.product_id " +
       "join warehouse w on w.id = m.warehouse_id where " + wc('m') + " order by m.id");
 
+    /* TASK-023: purchasing chain (TASK-022's schema/business logic wired into
+       the browser demo). Same shape/conventions as the sales queries above. */
+    var suppliers = await rows(
+      "select s.id, s.code, s.name, coalesce(sum(case when si.status='unpaid' then si.total_amount end),0)::float as balance " +
+      "from supplier s left join supplier_invoice si on si.supplier_id = s.id " +
+      "where " + wc('s') + " group by s.id, s.code, s.name order by s.id");
+    var purchaseOrders = await rows(
+      "select po.id, po.doc_no, po.status, po.order_date::text as order_date, po.currency, " +
+      "po.net_amount::float as net, po.tax_amount::float as tax, po.total_amount::float as total, " +
+      "s.name as supplier, s.code as supplier_code, " +
+      "(select count(*)::int from purchase_order_line l where l.order_id = po.id) as line_count " +
+      "from purchase_order po join supplier s on s.id = po.supplier_id " +
+      "where " + wc('po') + " order by po.id");
+    var purchaseOrderLines = await rows(
+      "select l.order_id, l.line_no, p.sku, p.name, p.uom, l.qty::float as qty, " +
+      "l.unit_cost::float as unit_cost, l.net_amount::float as net, " +
+      "l.tax_rate::float as tax_rate, l.tax_amount::float as tax " +
+      "from purchase_order_line l join product p on p.id = l.product_id " +
+      "where " + wc('l') + " order by l.order_id, l.line_no");
+    var goodsReceipts = await rows(
+      "select gr.id, gr.doc_no, gr.received_date::text as received_date, po.doc_no as po_no, " +
+      "s.name as supplier, s.code as supplier_code, w.code as warehouse " +
+      "from goods_receipt gr join purchase_order po on po.id = gr.order_id " +
+      "join supplier s on s.id = po.supplier_id join warehouse w on w.id = gr.warehouse_id " +
+      "where " + wc('gr') + " order by gr.id");
+    var supplierInvoices = await rows(
+      "select si.doc_no, si.status, si.invoice_date::text as invoice_date, si.currency, " +
+      "si.net_amount::float as net, si.tax_amount::float as tax, si.total_amount::float as total, " +
+      "s.name as supplier, s.code as supplier_code, po.doc_no as po_no " +
+      "from supplier_invoice si join supplier s on s.id = si.supplier_id " +
+      "join purchase_order po on po.id = si.order_id where " + wc('si') + " order by si.id");
+
     return { master: master, companies: companies, users: users, products: products, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
-             invoices: invoices, glLegs: glLegs, movements: movements };
+             invoices: invoices, glLegs: glLegs, movements: movements,
+             suppliers: suppliers, purchaseOrders: purchaseOrders, purchaseOrderLines: purchaseOrderLines,
+             goodsReceipts: goodsReceipts, supplierInvoices: supplierInvoices };
   }
 
   /* ---------------- static fallback (same canonical values) ---------------- */
@@ -219,6 +254,16 @@
         { id: 1, qty: 5, direction: 'out', ref_type: 'sales_order', ref_id: 1, moved_at: '2024-06-01 09:00', sku: 'SG-WIDGET', name: 'Widget (SG)', warehouse: 'WH-SALES' },
         { id: 2, qty: 3, direction: 'out', ref_type: 'sales_order', ref_id: 1, moved_at: '2024-06-01 09:00', sku: 'SG-GADGET', name: 'Gadget (SG)', warehouse: 'WH-SALES' },
       ],
+      suppliers: [{ id: 1, code: 'SUPP1', name: 'Gamma Supplies Pte Ltd', balance: 0 }],
+      purchaseOrders: [{ id: 1, doc_no: 'PO-1', status: 'received', order_date: '2024-06-01', currency: 'SGD',
+                          net: 120, tax: 10.8, total: 130.8, supplier: 'Gamma Supplies Pte Ltd', supplier_code: 'SUPP1', line_count: 1 }],
+      purchaseOrderLines: [
+        { order_id: 1, line_no: 1, sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', qty: 20, unit_cost: 6, net: 120, tax_rate: 9, tax: 10.8 },
+      ],
+      goodsReceipts: [{ id: 1, doc_no: 'GR-1', received_date: '2024-06-05', po_no: 'PO-1',
+                         supplier: 'Gamma Supplies Pte Ltd', supplier_code: 'SUPP1', warehouse: 'WH-SALES' }],
+      supplierInvoices: [{ doc_no: 'SINV-1', status: 'unpaid', invoice_date: '2024-06-06', currency: 'SGD',
+                            net: 120, tax: 10.8, total: 130.8, supplier: 'Gamma Supplies Pte Ltd', supplier_code: 'SUPP1', po_no: 'PO-1' }],
     };
   }
 
@@ -253,6 +298,7 @@
       customers: d.customers,
       accounts: d.accounts,
       taxRules: d.taxRules,
+      suppliers: d.suppliers,
     };
 
     DB.company = {
@@ -323,6 +369,53 @@
        real seeded users instead so the dropdown matches who can actually sign in. */
     DB.salesReps = (d.users || []).map(function(u){ return u.full_name || u.email; }).filter(Boolean);
     if (!DB.salesReps.length) DB.salesReps = [DB.user.name];
+
+    /* TASK-023: purchasing chain (TASK-022's schema/business logic, wired into
+       the browser demo for the first time). The canonical schema is deliberately
+       minimal (code/name/balance for suppliers; doc/status/date/total for
+       orders — no contact/rating/lead-time/buyer/approvers columns), so the
+       decorative fields these list screens also render are neutral constants,
+       not fake prototype data. suppliers/purchaseOrders/goodsReceipts/
+       supplierInvoices are the only purchasing DB.* globals this adapter sets —
+       the rest (RFQs, quotations, requisitions, returns, credit/debit notes,
+       price lists, landed cost, vendor performance) have no schema yet and
+       stay on their original sample data, same as every other still-mock
+       module (see docs/STATUS.md). */
+    DB.suppliers = (d.suppliers || []).map(function(s){
+      return {
+        code: s.code, name: s.name, contact: '—', phone: '—', email: '—',
+        country: activeCompany.country, currency: activeCompany.currency,
+        terms: 'Net 30', category: 'General', leadTime: 14, rating: 4.5,
+        onTime: 95, approved: true, status: 'Active', balance: s.balance,
+      };
+    });
+    /* 'open'/'received' (this schema's only two live states) map onto the
+       screen's richer status vocabulary as the two ends of that spectrum —
+       there is no schema-backed "pending approval" or "partially completed"
+       workflow to represent those tones honestly. */
+    var PO_STATUS_UI = { open: 'Approved', received: 'Completed', cancelled: 'Cancelled' };
+    DB.purchaseOrders = (d.purchaseOrders || []).map(function(p){
+      return {
+        no: p.doc_no, supp: p.supplier, suppCode: p.supplier_code,
+        date: p.order_date, expect: p.order_date, status: PO_STATUS_UI[p.status] || p.status,
+        total: p.total, currency: p.currency, buyer: DB.user.name,
+        items: p.line_count, recv: p.status === 'received' ? 100 : 0,
+      };
+    });
+    DB.goodsReceipts = (d.goodsReceipts || []).map(function(g){
+      return {
+        no: g.doc_no, date: g.received_date, po: g.po_no,
+        supplier: g.supplier, code: g.supplier_code, warehouse: g.warehouse,
+        lines: 1, recvPct: 100, qc: 'Accepted', status: 'Posted',
+      };
+    });
+    DB.supplierInvoices = (d.supplierInvoices || []).map(function(i){
+      return {
+        no: i.doc_no, date: i.invoice_date, supplier: i.supplier, code: i.supplier_code,
+        po: i.po_no, grn: null, total: i.total, currency: i.currency,
+        due: i.invoice_date, match: 'Matched', status: 'Posted',
+      };
+    });
 
     function linesFor(orderId){
       return d.orderLines.filter(function(l){ return l.order_id === orderId; }).map(function(l){
@@ -682,6 +775,165 @@
     return result;
   }
 
+  /* TASK-023 — purchasing chain, live counterpart of src/modules/purchasing/.
+     Three separate transactions for three separate real-world events (create
+     the commitment, receive the goods, post the AP invoice), same as the
+     TypeScript source — NOT one big confirmOrder-style step, because a real
+     purchase order genuinely happens in stages. */
+
+  async function nextDocNo(tx, table, prefix){
+    var r = (await tx.query(
+      'select count(*)::int as n from ' + table + ' where master_fn=$1 and company_fn=$2',
+      [SCOPE.masterFn, SCOPE.companyFn])).rows[0];
+    return prefix + '-' + (r.n + 1);
+  }
+
+  /* createPurchaseOrder.ts: header + lines, effective-dated tax snapshot per
+     line. No stock or GL impact yet. input: { supplierCode, orderDate,
+     currency, lines: [{ sku, qty, unitCost, taxCode }] } */
+  async function createPurchaseOrder(input){
+    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Create PO needs PGlite.');
+    input = input || {};
+    var lines = input.lines || [];
+    if (!input.supplierCode) throw new Error('Supplier is required.');
+    if (!lines.length) throw new Error('At least one order line is required.');
+
+    var result = await state.db.transaction(async function(tx){
+      var sup = (await tx.query(
+        'select id from supplier where master_fn=$1 and company_fn=$2 and code=$3',
+        [SCOPE.masterFn, SCOPE.companyFn, input.supplierCode])).rows[0];
+      if (!sup) throw new Error('Supplier ' + input.supplierCode + ' not found');
+
+      var docNo = await nextDocNo(tx, 'purchase_order', 'PO');
+      var order = (await tx.query(
+        "insert into purchase_order (master_fn, company_fn, doc_no, supplier_id, status, order_date, currency) " +
+        "values ($1,$2,$3,$4,'open',$5,$6) returning id",
+        [SCOPE.masterFn, SCOPE.companyFn, docNo, sup.id, input.orderDate, input.currency || 'SGD'])).rows[0];
+
+      var netTotal = 0, taxTotal = 0, lineNo = 0;
+      for (var i = 0; i < lines.length; i++){
+        var ln = lines[i];
+        lineNo += 1;
+        var prod = (await tx.query(
+          'select id from product where master_fn=$1 and company_fn=$2 and sku=$3',
+          [SCOPE.masterFn, SCOPE.companyFn, ln.sku])).rows[0];
+        if (!prod) throw new Error('Product ' + ln.sku + ' not found');
+        var taxRow = (await tx.query(
+          "select rate::float as rate from tax_rule where master_fn=$1 and company_fn=$2 and tax_code=$3 " +
+          "and valid_from <= $4 and (valid_to is null or valid_to > $4) order by valid_from desc limit 1",
+          [SCOPE.masterFn, SCOPE.companyFn, ln.taxCode, input.orderDate])).rows[0];
+        if (!taxRow) throw new Error('No tax rule for ' + ln.taxCode + ' on ' + input.orderDate);
+        var net = Math.round(ln.qty * ln.unitCost * 100) / 100;
+        var tax = Math.round(net * taxRow.rate) / 100;
+
+        await tx.query(
+          "insert into purchase_order_line (master_fn, company_fn, order_id, line_no, product_id, qty, unit_cost, net_amount, tax_code, tax_rate, tax_amount) " +
+          "values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+          [SCOPE.masterFn, SCOPE.companyFn, order.id, lineNo, prod.id, ln.qty, ln.unitCost, net, ln.taxCode, taxRow.rate, tax]);
+
+        netTotal += net;
+        taxTotal += tax;
+      }
+      var grandTotal = Math.round((netTotal + taxTotal) * 100) / 100;
+      await tx.query(
+        'update purchase_order set net_amount=$1, tax_amount=$2, total_amount=$3, updated_at=now() where id=$4',
+        [netTotal, taxTotal, grandTotal, order.id]);
+
+      return { orderId: order.id, docNo: docNo, net: netTotal, tax: taxTotal, total: grandTotal, lines: lines.length };
+    });
+    await refresh();
+    return result;
+  }
+
+  /* receiveGoods.ts: receives EVERY line of a PO in one transaction. Reuses
+     WH-SALES (inventory screens aggregate on-hand across warehouses, so this
+     is visibly the same stock the sales chain already deducted from — no
+     separate purchasing warehouse needed for the demo). Guards against
+     receiving the same PO twice via the status check (→ rollback). */
+  async function receiveGoods(poDocNo){
+    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Receive goods needs PGlite.');
+    var result = await state.db.transaction(async function(tx){
+      var po = (await tx.query(
+        'select id, status from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3 for update',
+        [SCOPE.masterFn, SCOPE.companyFn, poDocNo])).rows[0];
+      if (!po) throw new Error('Purchase order ' + poDocNo + ' not found');
+      if (po.status !== 'open'){
+        throw new Error('Purchase order ' + poDocNo + " is '" + po.status + "', not 'open' — cannot receive goods twice.");
+      }
+
+      var wh = (await tx.query(
+        "select id from warehouse where master_fn=$1 and company_fn=$2 and code='WH-SALES'",
+        [SCOPE.masterFn, SCOPE.companyFn])).rows[0];
+      if (!wh) throw new Error('Warehouse WH-SALES not found');
+
+      var lines = (await tx.query(
+        'select product_id, qty::float as qty from purchase_order_line ' +
+        'where master_fn=$1 and company_fn=$2 and order_id=$3 order by line_no',
+        [SCOPE.masterFn, SCOPE.companyFn, po.id])).rows;
+
+      var docNo = await nextDocNo(tx, 'goods_receipt', 'GR');
+      var receipt = (await tx.query(
+        "insert into goods_receipt (master_fn, company_fn, doc_no, order_id, warehouse_id, received_date) " +
+        "values ($1,$2,$3,$4,$5,current_date) returning id",
+        [SCOPE.masterFn, SCOPE.companyFn, docNo, po.id, wh.id])).rows[0];
+
+      for (var i = 0; i < lines.length; i++){
+        var ln = lines[i];
+        await tx.query(
+          "insert into stock_level (master_fn, company_fn, product_id, warehouse_id, qty) values ($1,$2,$3,$4,$5) " +
+          "on conflict (master_fn, company_fn, product_id, warehouse_id) do update set qty = stock_level.qty + $5, updated_at = now()",
+          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id, ln.qty]);
+        await tx.query(
+          "insert into stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id) " +
+          "values ($1,$2,$3,$4,$5,'in','goods_receipt',$6)",
+          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id, ln.qty, receipt.id]);
+      }
+
+      await tx.query("update purchase_order set status='received', updated_at=now() where id=$1", [po.id]);
+      return { receiptId: receipt.id, docNo: docNo, lines: lines.length };
+    });
+    await refresh();
+    return result;
+  }
+
+  /* postSupplierInvoice.ts: balanced GL (Dr Inventory + Dr Input Tax = Cr
+     Accounts Payable), gated on the PO already being 'received' — invoicing
+     goods you haven't received is a real accounting error, not just a demo
+     shortcut, so this doubles as the second rollback-guard scenario. */
+  async function postSupplierInvoice(poDocNo){
+    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Post invoice needs PGlite.');
+    var result = await state.db.transaction(async function(tx){
+      var po = (await tx.query(
+        "select id, status, supplier_id, currency, net_amount::float as net, tax_amount::float as tax, total_amount::float as total " +
+        'from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
+        [SCOPE.masterFn, SCOPE.companyFn, poDocNo])).rows[0];
+      if (!po) throw new Error('Purchase order ' + poDocNo + ' not found');
+      if (po.status !== 'received'){
+        throw new Error('Purchase order ' + poDocNo + " is '" + po.status + "', not 'received' — cannot post an invoice before goods receipt.");
+      }
+
+      var docNo = await nextDocNo(tx, 'supplier_invoice', 'SINV');
+      await tx.query(
+        "insert into supplier_invoice (master_fn, company_fn, doc_no, order_id, supplier_id, status, invoice_date, currency, net_amount, tax_amount, total_amount) " +
+        "values ($1,$2,$3,$4,$5,'unpaid',current_date,$6,$7,$8,$9)",
+        [SCOPE.masterFn, SCOPE.companyFn, docNo, po.id, po.supplier_id, po.currency, po.net, po.tax, po.total]);
+
+      var acct = {};
+      (await tx.query(
+        "select code, id from account where master_fn=$1 and company_fn=$2 and code in ('1400','1200','2100')",
+        [SCOPE.masterFn, SCOPE.companyFn])).rows.forEach(function(a){ acct[a.code] = a.id; });
+      if (!acct['1400'] || !acct['1200'] || !acct['2100']) throw new Error('Purchasing chart of accounts not configured');
+      await tx.query(
+        "insert into gl_entry (master_fn, company_fn, journal_ref, account_id, debit, credit, memo) values " +
+        "($1,$2,$3,$4,$5,0,'Inventory'), ($1,$2,$3,$6,$7,0,'Input tax'), ($1,$2,$3,$8,0,$9,'AP')",
+        [SCOPE.masterFn, SCOPE.companyFn, docNo, acct['1400'], po.net, acct['1200'], po.tax, acct['2100'], po.total]);
+
+      return { docNo: docNo, net: po.net, tax: po.tax, total: po.total };
+    });
+    await refresh();
+    return result;
+  }
+
   /* Switch the active company scope (topbar company switcher) and re-read.
      Same-master only today — SCOPE.masterFn stays fixed, matching the single-
      org demo model. */
@@ -822,6 +1074,9 @@
     reset: reset,
     refresh: refresh,
     confirmOrder: confirmOrder,
+    createPurchaseOrder: createPurchaseOrder,
+    receiveGoods: receiveGoods,
+    postSupplierInvoice: postSupplierInvoice,
     completeSetup: completeSetup,
     switchCompany: switchCompany,
     needsSetup: needsSetup,

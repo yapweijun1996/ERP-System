@@ -313,13 +313,41 @@ makePurList({
   rowMenu:(p)=>[
     {id:'view',icon:'ext',label:'Open PO',run:()=>openPO(p)},
     {id:'approve',icon:'flow',label:'Review approval',run:()=>navigate('po-approval')},
-    {id:'grn',icon:'receive',label:'Create goods receipt',run:()=>navigate('goods-receipt')},
+    {id:'grn',icon:'receive',label:'Receive goods',run:()=>doReceiveGoods(p)},
+    {id:'inv',icon:'receipt',label:'Post supplier invoice',run:()=>doPostSupplierInvoice(p)},
     {id:'dup',icon:'copy',label:'Duplicate',run:()=>toast(`${p.no} duplicated as draft`,'info')},
     {id:'cancel',icon:'x',label:'Cancel PO',danger:true,sep:true,run:()=>toast(`${p.no} cancelled`,'danger')},
   ],
   onOpen:(p)=>openPO(p),
 });
 function openPO(p){ if(p.no==='PO-26-0291'){ navigate('po-approval'); return; } toast('Opening '+p.no,'info'); }
+
+/* TASK-023: the live counterparts of confirmOrder's UI pattern — await the
+   real adapter transaction, toast the real result or the real error, and
+   re-navigate so the list re-renders from freshly refreshed DB.* data (the
+   adapter calls refresh() itself before these promises resolve). Guarded by
+   the PO's real status ('Approved'/'Completed' — this schema's only two live
+   states, see erp-system-data-adapter.js) rather than hidden/disabled menu
+   items, since makePurList's row menu doesn't support conditional items. */
+async function doReceiveGoods(p){
+  if(p.status!=='Approved'){ toast(`${p.no} is '${p.status}' — cannot receive goods (already received, or cancelled).`,'warn'); return; }
+  if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.receiveGoods==='function')){ toast('Demo adapter not loaded','warn'); return; }
+  try{
+    const res=await window.ErpSystemDemo.receiveGoods(p.no);
+    toast(`${res.docNo} posted — stock updated for ${p.no} (${res.lines} line${res.lines===1?'':'s'}).`,'ok');
+    navigate('purchase-orders');
+  }catch(e){ toast((e&&e.message)||'Receive goods failed','danger'); }
+}
+async function doPostSupplierInvoice(p){
+  if(p.status!=='Completed'){ toast(`${p.no} is '${p.status}' — receive goods before posting an invoice.`,'warn'); return; }
+  if(DB.supplierInvoices.some(i=>i.po===p.no)){ toast(`${p.no} already has a posted supplier invoice.`,'info'); return; }
+  if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.postSupplierInvoice==='function')){ toast('Demo adapter not loaded','warn'); return; }
+  try{
+    const res=await window.ErpSystemDemo.postSupplierInvoice(p.no);
+    toast(`${res.docNo} posted to AP — ${money(res.total)} (Dr Inventory + Input Tax, Cr AP).`,'ok');
+    navigate('supplier-invoices');
+  }catch(e){ toast((e&&e.message)||'Post invoice failed','danger'); }
+}
 
 /* ---------------- GOODS RECEIPTS ---------------- */
 makePurList({

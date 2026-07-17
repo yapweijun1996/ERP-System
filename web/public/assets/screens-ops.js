@@ -214,7 +214,7 @@ SCREENS['po-approval'] = function(root){
             <div class="panel-body" style="padding-top:12px">
               <div class="risk danger">${ic('warn')}<div><b>${esc(t('appr.r1.title'))}</b><small>${t('appr.r1.body').replaceAll('{sub}',money(subtotal)).replaceAll('{bud}',money(budgetTotal)).replaceAll('{line}',esc(d.budgetLine)).replaceAll('{cap}',money0(d.budget)).replaceAll('{var}',money(overBudget))}</small></div></div>
               <div class="risk warn">${ic('info')}<div><b>${esc(t('appr.r2.title'))}</b><small>${esc(t('appr.r2.body'))}</small></div></div>
-              <div class="risk ok">${ic('checkc')}<div><b>${esc(t('appr.r3.title'))}</b><small>${t('appr.r3.body').replaceAll('{bal}',money(DB.suppliers[2].balance))}</small></div></div>
+              <div class="risk ok">${ic('checkc')}<div><b>${esc(t('appr.r3.title'))}</b><small>${t('appr.r3.body').replaceAll('{bal}',money((DB.suppliers[2]||DB.suppliers[DB.suppliers.length-1]||{balance:0}).balance))}</small></div></div>
             </div>
           </div>
           <div class="panel">

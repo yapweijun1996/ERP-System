@@ -5,6 +5,47 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-17 — TASK-023 wire purchasing screens to canonical data)
+- `erp-system-data-adapter.js`'s `readPayload()` gained 5 queries (suppliers,
+  purchase orders + lines, goods receipts, supplier invoices) and `applyData()`
+  maps them onto `DB.suppliers`/`DB.purchaseOrders`/`DB.goodsReceipts`/
+  `DB.supplierInvoices` — code/name/balance and doc/date/status/total are real;
+  decorative fields the schema doesn't model (contact, rating, lead-time, QC
+  disposition, 3-way-match state) are neutral constants, not fake data.
+- Three new write functions mirroring `confirmOrder`'s exact transaction
+  pattern: `createPurchaseOrder`, `receiveGoods` (upserts `stock_level` from
+  zero via `ON CONFLICT DO UPDATE`, guards against double-receiving),
+  `postSupplierInvoice` (balanced GL, gated on the PO already received) — all
+  exposed on `window.ErpSystemDemo`.
+- The new-PO wizard's "Create PO" button now calls `createPurchaseOrder` for
+  real (was a fake toast with a hardcoded PO number that never touched
+  `DB.purchaseOrders`); also fixed its Kuala-Lumpur-only warehouse list
+  (nonsensical for a Singapore company) and its 6%-instead-of-9% tax preview.
+  The purchase-orders list's row menu gained real "Receive goods"/"Post
+  supplier invoice" actions, replacing `navigate()`-only fakes.
+- `erp-system-seed.sql` gained the `SUPP1` supplier and 3 accounts (Inventory,
+  GST Input Tax, Accounts Payable) that were already in `src/data/seed.ts`
+  since TASK-022 but never mirrored — a real pre-existing gap, found and
+  fixed here. `erp-system-demo-txn.sql` gained a second transaction mirroring
+  `runPurchasingScenario` (PO-1 → GR-1 → SINV-1) so the demo shows one
+  realistic example on first load, same as the sales chain's SO-1.
+- Found and fixed 2 real bugs while browser-testing: (1) `DB.suppliers[2]`
+  index-based access in `screens-fin.js`/`screens-ops.js` would have crashed
+  once `DB.suppliers` shrank from the old 4-row mock to 1 real supplier —
+  made both defensive. (2) `screens-fin2.js`'s GL screen read account code
+  `'2000'` for Accounts Payable, which was never real (the seeded code is
+  `'2100'`) — silently "correct" only because there was never any AP data;
+  fixed the code and its stale "no supplier invoice" placeholder text.
+- Verified live end-to-end, twice: the pre-seeded PO-1/GR-1/SINV-1, and a
+  fresh PO-2 created through the wizard, received (SG-WIDGET on-hand visibly
+  115 → 125 on the real Inventory screen), and invoiced (GL visibly balanced
+  Dr 185 + Dr 16.65 = Cr 201.65 across both invoices). `npm run audit:screens`
+  (114 routes) and `npm run smoke` both clean afterward; desktop and 375px.
+- Deliberately left RFQs, quotations, requisitions, returns, credit/debit
+  notes, price lists, landed cost, and vendor performance on sample data — no
+  schema exists for any of those, consistent with every other not-yet-built
+  module.
+
 ### Added (2026-07-17 — TASK-022 purchasing schema and business logic)
 - `src/data/schema/purchasing.ts` (new): `supplier`, `purchase_order` +
   `purchase_order_line`, `goods_receipt`, `supplier_invoice` — all

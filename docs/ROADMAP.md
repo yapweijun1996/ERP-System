@@ -104,21 +104,27 @@ typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
 production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion 🔶 (purchasing schema + logic done; screens open)
+## Phase 7 — Module Expansion 🔶 (purchasing core chain done)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
 
 Order of attack:
 
-1. **Purchasing** (EPIC-008) — completes the stock story: goods receipt IN mirrors
-   sales issue OUT; AP mirrors AR. Schema + business logic done (TASK-022 ✅ done
+1. **Purchasing** (EPIC-008 ✅) — completes the stock story: goods receipt IN mirrors
+   sales issue OUT; AP mirrors AR. Schema + business logic (TASK-022 ✅ done
    2026-07-17 — `src/data/schema/purchasing.ts`, `src/modules/purchasing/`
    `createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`, both rollback guards
-   proven on both PGlite and PostgreSQL, `src/demo.ts` asserts the full chain — see
-   docs/STATUS.md). Screens still read mock data (TASK-023, open — replace
-   `data-purchasing*.js`, mirror the seed/txn SQL into `web/public/db`, wire PO
-   list/detail + goods receipt + supplier invoice views to canonical PGlite data).
+   proven on both PGlite and PostgreSQL, `src/demo.ts` asserts the full chain) and
+   screens (TASK-023 ✅ done 2026-07-17 — suppliers/purchase-orders/goods-receipts/
+   supplier-invoices lists render real PGlite data, the new-PO wizard and the
+   receive-goods/post-invoice row actions call the real adapter transactions,
+   verified live end-to-end including the stock visibly moving on the Inventory
+   screen — see docs/STATUS.md) are both done for the CORE chain specifically.
+   RFQs, quotations, requisitions, returns, credit/debit notes, price lists,
+   landed cost, vendor performance and the purchasing analytics reports have no
+   schema and intentionally stay on sample data — a further, separate scope if
+   ever prioritized, not a gap in TASK-022/023.
 2. CRM (leads/activities feeding sales orders).
 3. HR-lite or Fixed Assets (whichever a real prospect asks for first).
 4. Relabel or hide remaining mock screens so the demo never oversells (TASK-018 ✅

@@ -13,7 +13,10 @@ SCREENS['gl'] = function(root){
   const flat=DB.coa.flatMap(g=>g.accts.map(a=>({...a,type:g.grp})));
   const get=c=>flat.find(a=>a.code===c)?.bal||0;
   const cash=get('1000')+get('1010');
-  const ar=get('1100'), ap=get('2000');
+  /* TASK-023: 2100 is the real seeded Accounts Payable code (purchasing
+     chain) — 2000 was never a real account, so this always read 0 before
+     there was any AP data to show, accidentally looking correct. */
+  const ar=get('1100'), ap=get('2100');
   const income=get('4000')+get('4100')-get('4900');
   const expense=['5000','6000','6100','6200','6300','6900'].reduce((s,c)=>s+get(c),0);
   const net=income-expense;
@@ -53,7 +56,7 @@ SCREENS['gl'] = function(root){
     <div class="statwrap"><div class="statcards">
       ${statTile(t('gl.t.cash'),money0(cash),erpDemo?'cash seed will be wired in the next finance slice':t('gl.t.cashsub'))}
       ${statTile(t('gl.t.ar'),money0(ar),erpDemo?`from ${DB.salesInvoices.length} posted invoice${DB.salesInvoices.length===1?'':'s'} (${DB.salesInvoices.map(i=>i.no).join(', ')})`:t('gl.t.arsub'),'var(--warn)')}
-      ${statTile(t('gl.t.ap'),money0(ap),erpDemo?'no supplier invoice in canonical seed yet':t('gl.t.apsub'))}
+      ${statTile(t('gl.t.ap'),money0(ap),erpDemo?(DB.supplierInvoices&&DB.supplierInvoices.length?`from ${DB.supplierInvoices.length} posted invoice${DB.supplierInvoices.length===1?'':'s'} (${DB.supplierInvoices.map(i=>i.no).join(', ')})`:'no supplier invoice posted yet'):t('gl.t.apsub'))}
       ${statTile(t('gl.t.net'),money0(net),erpDemo?`revenue from ${DB.salesOrders.filter(o=>o.status==='Closed').length} confirmed order${DB.salesOrders.filter(o=>o.status==='Closed').length===1?'':'s'}`:t('gl.t.netsub'),'var(--ok)')}
     </div></div>
     <div class="toolbar">

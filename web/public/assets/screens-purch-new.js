@@ -8,12 +8,19 @@
    ============================================================ */
 SCREENS['new-purchase-order'] = function(root, params){
   const TODAY='2026-06-21', ETA='2026-07-05';
-  const TAX=0.06, APPROVAL_THRESHOLD=50000;
-  const whIn=['KL-Main','KL-Overflow','Penang DC'];
+  /* TASK-023: 9% matches the real seeded SG GST rate (tax_rule 'SR', effective
+     2024-01-01) — createPurchaseOrder looks this up for real per line at
+     submit time; this constant is only a live preview while the user edits. */
+  const TAX=0.09, APPROVAL_THRESHOLD=50000;
+  /* WH-SALES is the only real warehouse seeded for this company, and the only
+     one receiveGoods() ever receives into — a single real option replaces the
+     old hardcoded Kuala Lumpur-only list, which made no sense once a Singapore
+     company could reach this wizard. */
+  const whIn=['WH-SALES'];
 
   const S={ step:0, reached:0,
     supplier:(params&&params.supplier)||'', orderDate:TODAY, eta:ETA,
-    terms:'Net 30', warehouse:'KL-Main', reference:'', incoterm:'DAP',
+    terms:'Net 30', warehouse:'WH-SALES', reference:'', incoterm:'DAP',
     lines:[] /* {sku,name,uom,qty,price} */ };
 
   const sup=()=>DB.suppliers.find(s=>s.code===S.supplier);
@@ -111,7 +118,7 @@ SCREENS['new-purchase-order'] = function(root, params){
     const t=totals();
     return `<div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:6px">Order summary</div>
       <div class="sumrow"><span class="sk2">Goods subtotal</span><span class="sv tnum">${money(t.sub)}</span></div>
-      <div class="sumrow"><span class="sk2">Tax (6% GST)</span><span class="sv tnum">${money(t.tax)}</span></div>
+      <div class="sumrow"><span class="sk2">Tax (9% GST)</span><span class="sv tnum">${money(t.tax)}</span></div>
       <div class="sumrow total"><span class="sk2">PO total</span><span class="sv tnum">${money(t.total)}</span></div>`;
   }
   function addItem(sku,qty){
@@ -221,10 +228,21 @@ SCREENS['new-purchase-order'] = function(root, params){
     const next=$('#wNext'); next&&next.addEventListener('click',()=>{ if(!canAdvance())return; S.step++; S.reached=Math.max(S.reached,S.step); render(); });
     const back=$('#wBack'); back&&back.addEventListener('click',()=>{ S.step--; render(); });
     const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('purchase-orders'));
-    const create=$('#wCreate'); create&&create.addEventListener('click',()=>{
-      const t=totals(), s=sup(), over=t.total>APPROVAL_THRESHOLD;
-      navigate('purchase-orders');
-      setTimeout(()=>toast(`Purchase order PO-26-0292 created for ${s.name} · ${money0(t.total)}${over?' · sent for approval':' · issued'}`,'ok'),180);
+    const create=$('#wCreate'); create&&create.addEventListener('click',async()=>{
+      if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.createPurchaseOrder==='function')){ toast('Demo adapter not loaded','warn'); return; }
+      const s=sup();
+      create.disabled=true;
+      try{
+        const res=await window.ErpSystemDemo.createPurchaseOrder({
+          supplierCode:S.supplier, orderDate:S.orderDate, currency:DB.company.currency,
+          lines:S.lines.map(l=>({sku:l.sku,qty:l.qty,unitCost:l.price,taxCode:'SR'})),
+        });
+        navigate('purchase-orders');
+        toast(`Purchase order ${res.docNo} created for ${s.name} · ${money0(res.total)} · issued`,'ok');
+      }catch(e){
+        toast((e&&e.message)||'Create PO failed','danger');
+        create.disabled=false;
+      }
     });
   }
   render();

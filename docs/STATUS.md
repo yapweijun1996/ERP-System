@@ -19,14 +19,19 @@ modes share one `login`/`logout`/`needsSetup`/`isSignedIn`/`switchUser` adapter
 contract; production validates PBKDF2-hashed passwords against `app_user` over a
 server-side session cookie (masterFn/companyFn never trusted from the client), and
 the demo mode hashes real passwords too (Web Crypto, same format) so wizard-created
-users aren't passwordless. **A second domain now exists alongside sales**: the
-purchasing chain (supplier → PO → goods receipt → supplier invoice) is real at the
-schema/business-logic layer — `receiveGoods` increases stock from zero and guards
+users aren't passwordless. **A second domain now exists alongside sales, screens
+included**: the purchasing chain (supplier → PO → goods receipt → supplier invoice)
+is real end-to-end in demo mode — `receiveGoods` increases stock from zero and guards
 against double-receiving, `postSupplierInvoice` posts a balanced GL gated on the
-goods actually having arrived, both proven on PGlite and PostgreSQL in `src/demo.ts`
-— but no screen reads it yet (TASK-023, next up). What's still missing: other
-modules (inventory/sales/finance) have no api-mode data source yet, and there are no
-write endpoints (confirm order / setup) on the server side yet.
+goods actually having arrived, both proven on PGlite and PostgreSQL in `src/demo.ts`,
+and the Purchasing screens (suppliers/purchase-orders/goods-receipts/
+supplier-invoices lists, the new-PO wizard, the receive-goods/post-invoice actions)
+now read and write that real data instead of Northwind mock — verified live: receiving
+goods visibly moves stock on the real Inventory screen. RFQs, quotations,
+requisitions, returns, credit/debit notes, price lists, landed cost and vendor
+performance have no schema and intentionally still show sample data. What's still
+missing: other modules (inventory/sales/finance) have no api-mode data source yet, and
+there are no write endpoints (confirm order / setup) on the server side yet.
 
 ## What actually works (verified in code)
 
@@ -35,7 +40,7 @@ write endpoints (confirm order / setup) on the server side yet.
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
 | Canonical schema (23 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | `drizzle/0000_init.sql` + `0001_quiet_blizzard.sql` + `0002_messy_slyde.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; browser mirror in adapter (`confirmOrder`) |
-| Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), schema + business logic only | ✅ Working (no screens yet) | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Screens still read mock data → TASK-023. |
+| Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), end-to-end incl. screens | ✅ Working | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Demo-mode screens (suppliers/purchase-orders/goods-receipts/supplier-invoices lists, new-PO wizard, receive-goods/post-invoice row actions) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-023. RFQs/quotations/requisitions/returns/credit-debit-notes/price-lists/landed-cost/vendor-performance have no schema and stay mock. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, confirm SO-2 / over-stock SO-3) | ✅ Canonical data | `screens-sales*.js`, TASK-006/007 |
 | Inventory screens (stock on hand, item master, movements) | ✅ Canonical data | `screens-inv*.js`, TASK-005 |
@@ -65,14 +70,27 @@ runtime-registered aliases); only sales/inventory/finance (and parts of master
 data/settings) read the canonical PGlite database. The rest render the original
 Aria/Northwind sample data from `web/public/assets/data-*.js`:
 
-**Purchasing, CRM, Manufacturing, Quality, Warehouse (advanced), HR/Payroll, Projects,
-Service, Fixed Assets, Reporting/BI, Integration, Admin** — no schema tables exist for
-any of these. This boundary is now enforced, not just documented: `scripts/audit-screens.mjs`
+**CRM, Manufacturing, Quality, Warehouse (advanced), HR/Payroll, Projects, Service,
+Fixed Assets, Reporting/BI, Integration, Admin** — no schema tables exist for any of
+these. This boundary is now enforced, not just documented: `scripts/audit-screens.mjs`
 allowlists exactly these module ids (`MOCK_MODULE_IDS`, sourced from app.js's own live
 `ROUTE_MODULE` map) and fails CI if a canonical screen leaks prototype sample data, or if
 any route in this mock list starts throwing errors. Converting or clearly relabeling these
 modules is roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7); when one gains real
 schema/adapter wiring, drop its module id from `MOCK_MODULE_IDS` in the same change.
+
+**Purchasing is a special case (TASK-022/023, 2026-07-17): partially converted, not
+fully mock and not fully real.** The core PO chain (suppliers, purchase orders, goods
+receipts, supplier invoices) reads and writes real PGlite data. RFQs, quotations,
+requisitions, purchase returns, credit/debit notes, price lists, landed cost, and
+vendor performance remain sample data — no schema exists for any of those yet. Because
+`scripts/audit-screens.mjs` exempts by *module*, not by individual route, `purchasing`
+is still in `MOCK_MODULE_IDS` (most of its routes still are mock) — meaning the
+now-real routes are not currently regression-guarded by that script even though they
+were manually verified to leak nothing at the time of writing. A future session
+splitting the allowlist to route-level granularity (or moving the now-real routes to
+their own exempt-free check) would close that gap; not done here to keep TASK-023's
+change scoped to what its acceptance criteria actually asked for.
 
 ## Documented but NOT implemented (do not assume these exist)
 
@@ -111,10 +129,15 @@ schema/adapter wiring, drop its module id from `MOCK_MODULE_IDS` in the same cha
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018, TASK-019, TASK-020, TASK-022, TASK-024, TASK-025, TASK-026 (23)
-- Todo: TASK-017, 021, 023 (3)
-- Next up: TASK-023 (wire purchasing screens to canonical data — the only
-  unblocked task left; its dependency TASK-022 is done)
+- Done: TASK-001…016, TASK-018…020, TASK-022…026 (24)
+- Todo: TASK-017, 021 (2)
+- Next up: none unblocked — every remaining task is either permanently blocked
+  (see below) or has no lower-numbered todo task left to pick per the
+  lowest-numbered-unblocked-task rule in [/CLAUDE.md](../CLAUDE.md). A session
+  with either a physical phone or `.env.example` access should pick up
+  TASK-017 or TASK-021 respectively; otherwise, new work needs a new
+  `TASK-NNN` appended to `tasks/tasks.jsonl` first (e.g. CRM as the next
+  Phase 7 module, per [ROADMAP.md](ROADMAP.md)).
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone. TASK-021
   (verify `scripts/setup.sh`) is blocked in this sandbox specifically — it needs

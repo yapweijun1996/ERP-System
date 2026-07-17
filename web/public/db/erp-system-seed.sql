@@ -59,11 +59,19 @@ INSERT INTO tax_rule (master_fn, company_fn, tax_regime, tax_code, rate, valid_f
 INSERT INTO customer (master_fn, company_fn, code, name) VALUES
   ('M1', 'C-SG', 'CUST1', 'Beta Pte Ltd');
 
--- Minimal chart of accounts for the SG company (used by sales-order posting).
+-- A supplier for the SG company (TASK-022 -- purchasing chain).
+INSERT INTO supplier (master_fn, company_fn, code, name) VALUES
+  ('M1', 'C-SG', 'SUPP1', 'Gamma Supplies Pte Ltd');
+
+-- Minimal chart of accounts for the SG company (used by sales-order and
+-- purchase-order posting).
 INSERT INTO account (master_fn, company_fn, code, name, type) VALUES
   ('M1', 'C-SG', '1100', 'Accounts Receivable', 'asset'),
   ('M1', 'C-SG', '4000', 'Revenue', 'income'),
-  ('M1', 'C-SG', '2200', 'GST Output Tax', 'liability');
+  ('M1', 'C-SG', '2200', 'GST Output Tax', 'liability'),
+  ('M1', 'C-SG', '1400', 'Inventory', 'asset'),
+  ('M1', 'C-SG', '1200', 'GST Input Tax', 'asset'),
+  ('M1', 'C-SG', '2100', 'Accounts Payable', 'liability');
 
 -- Sales fixture (src/demo.ts runSalesScenario): warehouse + opening stock 100/100.
 INSERT INTO warehouse (master_fn, company_fn, code, name) VALUES
