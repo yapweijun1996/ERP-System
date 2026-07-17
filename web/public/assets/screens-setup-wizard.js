@@ -67,7 +67,7 @@ function renderSetupWizard(){
       s2h:'Add your first company', s2p:'One legal entity per country. Country sets currency and tax regime automatically.',
       s2lbl:'Company name', s2ph:'e.g. Acme Singapore', s2country:'Country',
       s3h:'Create the first admin user', s3p:'This account will have full access once setup is applied.',
-      s3name:'Full name', s3nameph:'e.g. Wei Jun Yap', s3email:'Work email', s3emailph:'e.g. admin@acme.co',
+      s3name:'Full name', s3nameph:'e.g. Alex Tan', s3email:'Work email', s3emailph:'e.g. admin@acme.co',
       s3password:'Password', s3passwordph:'At least 8 characters', s3passwordConfirm:'Confirm password',
       s4h:'Connect an AI provider (optional)', s4p:'Bring Your Own Key — your key is never stored or sent to us; this preview does not persist it.',
       s4provider:'Provider', s4key:'API key', s4keyph:'Not required for this preview',
@@ -92,7 +92,7 @@ function renderSetupWizard(){
       s2h:'Tambah syarikat pertama anda', s2p:'Satu entiti sah bagi setiap negara. Negara menetapkan mata wang dan rejim cukai secara automatik.',
       s2lbl:'Nama syarikat', s2ph:'cth. Acme Malaysia', s2country:'Negara',
       s3h:'Cipta pengguna admin pertama', s3p:'Akaun ini akan mempunyai akses penuh selepas persediaan digunakan.',
-      s3name:'Nama penuh', s3nameph:'cth. Wei Jun Yap', s3email:'E-mel kerja', s3emailph:'cth. admin@acme.co',
+      s3name:'Nama penuh', s3nameph:'cth. Aina Rahman', s3email:'E-mel kerja', s3emailph:'cth. admin@acme.co',
       s3password:'Kata laluan', s3passwordph:'Sekurang-kurangnya 8 aksara', s3passwordConfirm:'Sahkan kata laluan',
       s4h:'Sambungkan pembekal AI (pilihan)', s4p:'Bawa Kunci Anda Sendiri — kunci anda tidak disimpan atau dihantar kepada kami; pratonton ini tidak menyimpannya.',
       s4provider:'Pembekal', s4key:'Kunci API', s4keyph:'Tidak diperlukan untuk pratonton ini',
@@ -117,7 +117,7 @@ function renderSetupWizard(){
       s2h:'添加您的第一家公司', s2p:'每个国家一个法人实体。国家会自动设置货币和税制。',
       s2lbl:'公司名称', s2ph:'例如 Acme Singapore', s2country:'国家',
       s3h:'创建第一个管理员账户', s3p:'设置生效后,此账户将拥有完整权限。',
-      s3name:'姓名', s3nameph:'例如 Wei Jun Yap', s3email:'工作邮箱', s3emailph:'例如 admin@acme.co',
+      s3name:'姓名', s3nameph:'例如 陈晓明', s3email:'工作邮箱', s3emailph:'例如 admin@acme.co',
       s3password:'密码', s3passwordph:'至少 8 个字符', s3passwordConfirm:'确认密码',
       s4h:'连接 AI 提供商(可选)', s4p:'自带密钥 — 您的密钥不会被存储或发送给我们;此预览不会保存它。',
       s4provider:'提供商', s4key:'API 密钥', s4keyph:'此预览不需要',
@@ -157,8 +157,12 @@ function renderSetupWizard(){
     return '<div class="fld"><span>'+esc(label)+'</span>'+inputHtml+'</div>';
   }
   function seg(name, opts, cur, id){
-    return '<div class="seg" id="'+id+'">'+opts.map(function(o){
-      return '<button type="button" data-v="'+esc(o[0])+'" class="'+(o[0]===cur?'on':'')+'">'+esc(o[1])+'</button>';
+    var groupLabel = name==='lang' ? s('s0') : (name==='country' ? s('s2country') : name);
+    var groupClass = name==='lang' ? 'seg wiz-lang-seg' : 'seg';
+    return '<div class="'+groupClass+'" id="'+id+'" role="radiogroup" aria-label="'+esc(groupLabel)+'">'+opts.map(function(o){
+      var selected=o[0]===cur;
+      var langAttr=name==='lang' ? ' lang="'+(o[0]==='zh'?'zh-Hans':esc(o[0]))+'"' : '';
+      return '<button type="button" role="radio" aria-checked="'+selected+'" data-v="'+esc(o[0])+'" class="'+(selected?'on':'')+'"'+langAttr+'>'+esc(o[1])+'</button>';
     }).join('')+'</div>';
   }
 
@@ -218,10 +222,11 @@ function renderSetupWizard(){
       ? btn(s('finish'),{icon:'checkc',cls:'primary',sm:false,attrs:'id="wizFinish"'})
       : btn(s('cont'),{icon:'arrowR',cls:'primary',sm:false,attrs:'id="wizNext"'});
     var left = S.step>0 ? btn(s('back'),{icon:'chevL',cls:'soft',attrs:'id="wizBack"'}) : '<span></span>';
-    return '<div class="set-savebar" style="border-radius:12px;margin-top:16px">'+left+'<div class="grow"></div>'+right+'</div>';
+    return '<div class="set-savebar wizard-savebar" style="border-radius:12px;margin-top:16px">'+left+'<div class="grow"></div>'+right+'</div>';
   }
 
   function render(){
+    host.setAttribute('lang', S.lang==='zh'?'zh-Hans':S.lang);
     host.innerHTML = '<section class="auth-panel" style="width:min(640px,100%)">'+
       '<div class="auth-brand"><span class="mark">'+ic('box')+'</span><span><b>Aria ERP</b><small>'+esc(s('brand'))+'</small></span></div>'+
       stepper()+

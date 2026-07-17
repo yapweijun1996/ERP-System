@@ -34,6 +34,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
+  var DEMO_SCHEMA_VERSION = 3;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -99,6 +100,29 @@
       "where master_fn='M1' and company_fn='C-SG' and doc_no in ('SO-2','SO-3')");
     if (drafts.rows[0].n < 2) await db.exec(await fetchSql('erp-system-demo-drafts.sql'));
     return !seeded;
+  }
+
+  /* Upgrade IndexedDB databases created by older demo builds. Fresh databases
+     already have the current flat schema, but persistent PGlite databases need
+     the same incremental treatment as production PostgreSQL. The migration SQL
+     is idempotent, so an interrupted boot can safely retry before the version
+     marker is written. */
+  async function ensureSchemaUpToDate(db){
+    await db.exec(
+      'create table if not exists "_erp_demo_migration" (' +
+      '"version" integer primary key, "applied_at" timestamptz not null default now())');
+    var row = (await db.query(
+      'select coalesce(max("version"), 0)::int as version from "_erp_demo_migration"')).rows[0];
+    var currentVersion = row ? Number(row.version) : 0;
+    if (currentVersion >= DEMO_SCHEMA_VERSION) return false;
+
+    await db.exec(await fetchSql('erp-system-migrations.sql'));
+    await db.query(
+      'insert into "_erp_demo_migration" ("version") values ($1) on conflict ("version") do nothing',
+      [DEMO_SCHEMA_VERSION]);
+    console.info('[erp-system] upgraded persistent PGlite schema from v' +
+      currentVersion + ' to v' + DEMO_SCHEMA_VERSION);
+    return true;
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -719,20 +743,29 @@
     var mod = await import(PGLITE_URL);
     var db = new mod.PGlite(PG_DATA_DIR);
     state.db = db;
-    var freshlySeeded = await ensureSeeded(db);
-    var payload = await readPayload(db);
-    if (!payload.master) throw new Error('PGlite payload empty (no master row)');
-    var wasFallback = appliedMode === 'fallback';
-    applyOnce(payload, 'pglite');
-    console.info('[erp-system] demo data source: PGlite (' + PG_DATA_DIR + ')' +
-      (freshlySeeded ? ' — freshly seeded' : ' — existing IndexedDB data') +
-      (wasFallback ? ' (replacing fallback — late boot)' : ''));
-    /* boot() already rendered the current screen off fallback data before
-       this resolved late — re-render it so the swap is actually visible
-       instead of sitting correct-but-unpainted in DB until the user
-       happens to navigate elsewhere. */
-    if (wasFallback && typeof navigate === 'function' && typeof CURRENT_ROUTE !== 'undefined' && CURRENT_ROUTE) {
-      navigate(CURRENT_ROUTE);
+    try {
+      var freshlySeeded = await ensureSeeded(db);
+      await ensureSchemaUpToDate(db);
+      var payload = await readPayload(db);
+      if (!payload.master) throw new Error('PGlite payload empty (no master row)');
+      var wasFallback = appliedMode === 'fallback';
+      applyOnce(payload, 'pglite');
+      console.info('[erp-system] demo data source: PGlite (' + PG_DATA_DIR + ')' +
+        (freshlySeeded ? ' — freshly seeded' : ' — existing IndexedDB data') +
+        (wasFallback ? ' (replacing fallback — late boot)' : ''));
+      /* boot() already rendered the current screen off fallback data before
+         this resolved late — re-render it so the swap is actually visible
+         instead of sitting correct-but-unpainted in DB until the user
+         happens to navigate elsewhere. */
+      if (wasFallback && typeof navigate === 'function' && typeof CURRENT_ROUTE !== 'undefined' && CURRENT_ROUTE) {
+        navigate(CURRENT_ROUTE);
+      }
+    } catch (e) {
+      /* Never leave a failed or stale database writable through completeSetup()
+         or another mutation after the UI falls back to static data. */
+      state.db = null;
+      try { await db.close(); } catch (closeError) {}
+      throw e;
     }
   }
 
