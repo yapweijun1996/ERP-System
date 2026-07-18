@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
+  account,
   apiIdempotency,
   auditLog,
   customer,
@@ -344,6 +345,65 @@ describe('production API security contract', () => {
       linesBody.data.every((line: { orderId: number }) =>
         ordersBody.data.some((order: { id: number }) => order.id === line.orderId)),
     ).toBe(true);
+  });
+
+  it('serves canonical chart-of-accounts and immutable journal legs', async () => {
+    const accounts = await db.select().from(account);
+    const ar = accounts.find((row) => row.code === '1100');
+    const revenue = accounts.find((row) => row.code === '4000');
+    expect(ar).toBeDefined();
+    expect(revenue).toBeDefined();
+    await db.insert(glEntry).values([
+      {
+        masterFn: 'M1',
+        companyFn: 'C-SG',
+        journalRef: 'JE-READ-MODEL',
+        accountId: ar!.id,
+        debit: '25.00',
+        credit: '0',
+        memo: 'AR',
+      },
+      {
+        masterFn: 'M1',
+        companyFn: 'C-SG',
+        journalRef: 'JE-READ-MODEL',
+        accountId: revenue!.id,
+        debit: '0',
+        credit: '25.00',
+        memo: 'Revenue',
+      },
+    ]);
+    const cookies = await login(running.baseUrl);
+    const [accountsResponse, entriesResponse] = await Promise.all([
+      fetch(`${running.baseUrl}/api/finance/accounts?limit=100`, {
+        headers: { cookie: cookies.header },
+      }),
+      fetch(`${running.baseUrl}/api/finance/gl-entries?limit=100`, {
+        headers: { cookie: cookies.header },
+      }),
+    ]);
+    expect(accountsResponse.status).toBe(200);
+    expect(entriesResponse.status).toBe(200);
+    const accountsBody = await accountsResponse.json();
+    const entriesBody = await entriesResponse.json();
+    expect(accountsBody.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: ar!.id, code: '1100', type: 'asset' }),
+      expect.objectContaining({ id: revenue!.id, code: '4000', type: 'income' }),
+    ]));
+    expect(entriesBody.data).toEqual([
+      expect.objectContaining({
+        journalRef: 'JE-READ-MODEL',
+        accountId: ar!.id,
+        debit: '25.00',
+        credit: '0.00',
+      }),
+      expect.objectContaining({
+        journalRef: 'JE-READ-MODEL',
+        accountId: revenue!.id,
+        debit: '0.00',
+        credit: '25.00',
+      }),
+    ]);
   });
 
   it('runs the canonical purchasing create, receive and supplier-invoice chain over HTTP', async () => {

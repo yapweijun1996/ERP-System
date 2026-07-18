@@ -7,8 +7,233 @@ function glTypeTone(t){ return {Assets:'accent',Liabilities:'warn',Equity:'viole
 function signed0(n){ return (n<0?'−':'')+money0(Math.abs(n)); }
 function pnlCell(v){ return v<0?`<span style="color:var(--muted)">(${money0(-v)})</span>`:money0(v); }
 
+async function financeListPage(resource){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.list!=='function'){
+    throw new Error('The canonical ERP data adapter is unavailable.');
+  }
+  const response=await adapter.list(resource,{limit:100});
+  if(!response||!Array.isArray(response.data)){
+    throw new Error(`Unexpected ${resource} response.`);
+  }
+  return {
+    data:response.data,
+    nextCursor:response.meta&&response.meta.nextCursor||null,
+  };
+}
+
+function financeNumber(value){
+  const parsed=Number(value);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+function financeDateValue(value){
+  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
+  const text=String(value==null?'':value);
+  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
+  if(match) return match[0];
+  const parsed=new Date(value);
+  return Number.isNaN(parsed.getTime())?text:parsed.toISOString().slice(0,10);
+}
+
+function financeLocalDate(date){
+  const pad=value=>String(value).padStart(2,'0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+}
+
+function financeJournalSource(ref){
+  if(String(ref).startsWith('INV-SO-')) return 'Sales confirmation';
+  if(String(ref).startsWith('SINV-')) return 'Supplier invoice';
+  if(String(ref).startsWith('IA-')) return 'Inventory adjustment';
+  return 'Canonical posting';
+}
+
+/* Canonical finance presentation model. GL rows are the immutable fact source;
+   reports and document views below are rebuilt from those rows on every load. */
+async function prepareCanonicalFinanceData(){
+  const adapter=window.ErpSystemData;
+  if(adapter&&adapter.mode==='fallback'){
+    if(
+      Array.isArray(DB.coa)
+      &&DB.acctLedgerDocs
+      &&DB.journalDocs
+      &&Array.isArray(DB.pnl)
+      &&Array.isArray(DB.arAging)
+    ) return;
+    throw new Error('The offline canonical finance snapshot is unavailable.');
+  }
+  const pages=await Promise.all([
+    financeListPage('finance/accounts'),
+    financeListPage('finance/gl-entries'),
+    financeListPage('sales/customers'),
+    financeListPage('sales/invoices'),
+  ]);
+  const [accounts,entries,customers,invoices]=pages.map(page=>page.data);
+  const accountById=new Map(accounts.map(row=>[row.id,row]));
+  const entriesByAccountId=new Map();
+  const entriesByJournalRef=new Map();
+  entries.slice().sort((left,right)=>left.id-right.id).forEach(row=>{
+    const accountRows=entriesByAccountId.get(row.accountId)||[];
+    accountRows.push(row);
+    entriesByAccountId.set(row.accountId,accountRows);
+    const journalRows=entriesByJournalRef.get(row.journalRef)||[];
+    journalRows.push(row);
+    entriesByJournalRef.set(row.journalRef,journalRows);
+  });
+
+  const typeGroup={
+    asset:'Assets',liability:'Liabilities',equity:'Equity',income:'Income',expense:'Expenses',
+  };
+  const groupOrder=['Assets','Liabilities','Equity','Income','Expenses'];
+  const accountGroups=new Map(groupOrder.map(group=>[group,[]]));
+  accounts.forEach(accountRow=>{
+    const legs=entriesByAccountId.get(accountRow.id)||[];
+    const debit=legs.reduce((sum,row)=>sum+financeNumber(row.debit),0);
+    const credit=legs.reduce((sum,row)=>sum+financeNumber(row.credit),0);
+    const group=typeGroup[accountRow.type]||accountRow.type;
+    const balance=accountRow.type==='income'||accountRow.type==='liability'||accountRow.type==='equity'
+      ?credit-debit
+      :debit-credit;
+    const accountRows=accountGroups.get(group)||[];
+    accountRows.push({
+      id:accountRow.id,
+      code:accountRow.code,
+      name:accountRow.name,
+      mvt:Math.round((debit-credit)*100)/100,
+      bal:Math.round(Math.abs(balance)*100)/100,
+      dc:credit>debit?'Cr':'Dr',
+      rawType:accountRow.type,
+    });
+    accountGroups.set(group,accountRows);
+  });
+  DB.coa=groupOrder
+    .map(group=>({grp:group,accts:accountGroups.get(group)||[]}))
+    .filter(group=>group.accts.length);
+
+  DB.journals=[];
+  DB.journalDocs={};
+  entriesByJournalRef.forEach((legs,ref)=>{
+    const date=financeDateValue(legs[0]&&legs[0].postedAt);
+    const totalDebit=legs.reduce((sum,row)=>sum+financeNumber(row.debit),0);
+    const source=financeJournalSource(ref);
+    const memo=legs.map(row=>row.memo).filter(Boolean).join(' / ')||`Posted ${ref}`;
+    DB.journals.push({
+      no:ref,date,memo,status:'Posted',dr:totalDebit,
+      period:date?date.slice(0,7):'—',by:'System',
+    });
+    DB.journalDocs[ref]={
+      no:ref,
+      date,
+      memo,
+      period:date?date.slice(0,7):'—',
+      status:'Posted',
+      rawStatus:'posted',
+      by:'System',
+      source,
+      lines:legs.map(row=>{
+        const accountRow=accountById.get(row.accountId)||{};
+        return {
+          acct:accountRow.code||`Account #${row.accountId}`,
+          name:accountRow.name||`Account #${row.accountId}`,
+          dr:financeNumber(row.debit),
+          cr:financeNumber(row.credit),
+          dim:row.memo||'—',
+        };
+      }),
+    };
+  });
+  DB.journals.sort((left,right)=>right.date.localeCompare(left.date)||right.no.localeCompare(left.no));
+  DB.je0611=DB.journals.length?DB.journalDocs[DB.journals[0].no]:null;
+
+  DB.acctLedgerDocs={};
+  accounts.forEach(accountRow=>{
+    const legs=entriesByAccountId.get(accountRow.id)||[];
+    let close=0;
+    const rows=legs.map(row=>{
+      const debit=financeNumber(row.debit);
+      const credit=financeNumber(row.credit);
+      close+=debit-credit;
+      return {
+        date:financeDateValue(row.postedAt),
+        je:row.journalRef,
+        memo:row.memo||financeJournalSource(row.journalRef),
+        dr:debit,
+        cr:credit,
+      };
+    });
+    DB.acctLedgerDocs[accountRow.code]={
+      code:accountRow.code,
+      name:accountRow.name,
+      period:'Canonical posted ledger',
+      open:0,
+      close:Math.round(close*100)/100,
+      rows,
+    };
+  });
+  DB.acctLedger=DB.acctLedgerDocs['1100']
+    ||DB.acctLedgerDocs[accounts[0]&&accounts[0].code]
+    ||null;
+
+  const incomeRows=accounts.filter(row=>row.type==='income').map(row=>{
+    const legs=entriesByAccountId.get(row.id)||[];
+    const actual=legs.reduce(
+      (sum,entry)=>sum+financeNumber(entry.credit)-financeNumber(entry.debit),0,
+    );
+    return {name:row.name,cur:actual,ytd:actual,bud:actual};
+  });
+  const expenseRows=accounts.filter(row=>row.type==='expense').map(row=>{
+    const legs=entriesByAccountId.get(row.id)||[];
+    const actual=-legs.reduce(
+      (sum,entry)=>sum+financeNumber(entry.debit)-financeNumber(entry.credit),0,
+    );
+    return {name:row.name,cur:actual,ytd:actual,bud:actual};
+  });
+  const costRows=expenseRows.filter((_row,index)=>String(
+    accounts.filter(row=>row.type==='expense')[index]&&accounts.filter(row=>row.type==='expense')[index].code,
+  ).startsWith('5'));
+  const operatingRows=expenseRows.filter(row=>!costRows.includes(row));
+  DB.pnl=[
+    {grp:'Revenue',kind:'head',rows:incomeRows.length?incomeRows:[{name:'No posted revenue',cur:0,ytd:0,bud:0}],total:'Net revenue'},
+    {grp:'Cost of sales',kind:'head',rows:costRows.length?costRows:[{name:'No posted cost of sales',cur:0,ytd:0,bud:0}],total:'Cost of sales'},
+    {grp:'Gross profit',kind:'subtotal'},
+    {grp:'Operating expenses',kind:'head',rows:operatingRows.length?operatingRows:[{name:'No posted operating expenses',cur:0,ytd:0,bud:0}],total:'Total opex'},
+    {grp:'Operating profit',kind:'subtotal'},
+  ];
+
+  const customerById=new Map(customers.map(row=>[row.id,row]));
+  const agingByCustomerId=new Map();
+  const asAt=new Date();
+  invoices.filter(row=>row.status==='unpaid').forEach(row=>{
+    const invoiceDate=financeDateValue(row.invoiceDate);
+    const due=new Date(`${invoiceDate}T00:00:00`);
+    due.setDate(due.getDate()+30);
+    const age=Math.floor((asAt.getTime()-due.getTime())/86400000);
+    const current=agingByCustomerId.get(row.customerId)||{
+      cust:customerById.get(row.customerId)?.name||`Customer #${row.customerId}`,
+      code:customerById.get(row.customerId)?.code||'—',
+      cur:0,b30:0,b60:0,b90:0,b90p:0,
+    };
+    const amount=financeNumber(row.totalAmount);
+    if(age<=0) current.cur+=amount;
+    else if(age<=30) current.b30+=amount;
+    else if(age<=60) current.b60+=amount;
+    else if(age<=90) current.b90+=amount;
+    else current.b90p+=amount;
+    agingByCustomerId.set(row.customerId,current);
+  });
+  DB.arAging=Array.from(agingByCustomerId.values());
+  DB.financeAsAt=financeLocalDate(asAt);
+  DB.financeReadMeta={
+    truncated:pages.some(page=>Boolean(page.nextCursor)),
+    invoiceCount:invoices.length,
+    journalCount:entriesByJournalRef.size,
+    nextCursors:pages.map(page=>page.nextCursor),
+  };
+}
+
 /* ---------------- GENERAL LEDGER / CHART OF ACCOUNTS (module landing) ---------------- */
-SCREENS['gl'] = function(root){
+SCREENS['gl'] = async function(root){
+  await prepareCanonicalFinanceData();
   let filter='all';
   const flat=DB.coa.flatMap(g=>g.accts.map(a=>({...a,type:g.grp})));
   const get=c=>flat.find(a=>a.code===c)?.bal||0;
@@ -20,7 +245,7 @@ SCREENS['gl'] = function(root){
   const income=get('4000')+get('4100')-get('4900');
   const expense=['5000','6000','6100','6200','6300','6900'].reduce((s,c)=>s+get(c),0);
   const net=income-expense;
-  const erpDemo=!!DB.erpSystem;
+  const canonicalMeta=DB.financeReadMeta||{invoiceCount:0,journalCount:0};
 
   const chips=[['all',t('common.all'),null],['Assets',ts('Assets'),'accent'],['Liabilities',ts('Liabilities'),'warn'],['Income',ts('Income'),'ok'],['Expenses',ts('Expenses'),'teal']];
   function table(){
@@ -51,20 +276,19 @@ SCREENS['gl'] = function(root){
   root.innerHTML=`<div class="content full"><section class="master">
     <div class="pagehead">
       ${crumbs([DB.company.name,t('nav.finance'),t('gl.title')])}
-      <div class="h1row"><h1>${esc(t('gl.title'))}</h1><span class="countchip">${flat.length} ${esc(t('gl.accounts'))} · ${DB.company.period}</span></div>
+      <div class="h1row"><h1>${esc(t('gl.title'))}</h1><span class="countchip">${flat.length} ${esc(t('gl.accounts'))} · ${DB.company.period}${canonicalMeta.truncated?' · first 100 rows':''}</span></div>
     </div>
     <div class="statwrap"><div class="statcards">
-      ${statTile(t('gl.t.cash'),money0(cash),erpDemo?'cash seed will be wired in the next finance slice':t('gl.t.cashsub'))}
-      ${statTile(t('gl.t.ar'),money0(ar),erpDemo?`from ${DB.salesInvoices.length} posted invoice${DB.salesInvoices.length===1?'':'s'} (${DB.salesInvoices.map(i=>i.no).join(', ')})`:t('gl.t.arsub'),'var(--warn)')}
-      ${statTile(t('gl.t.ap'),money0(ap),erpDemo?(DB.supplierInvoices&&DB.supplierInvoices.length?`from ${DB.supplierInvoices.length} posted invoice${DB.supplierInvoices.length===1?'':'s'} (${DB.supplierInvoices.map(i=>i.no).join(', ')})`:'no supplier invoice posted yet'):t('gl.t.apsub'))}
-      ${statTile(t('gl.t.net'),money0(net),erpDemo?`revenue from ${DB.salesOrders.filter(o=>o.status==='Closed').length} confirmed order${DB.salesOrders.filter(o=>o.status==='Closed').length===1?'':'s'}`:t('gl.t.netsub'),'var(--ok)')}
+      ${statTile(t('gl.t.cash'),money0(cash),'Canonical posted balance')}
+      ${statTile(t('gl.t.ar'),money0(ar),`${canonicalMeta.invoiceCount} canonical invoice${canonicalMeta.invoiceCount===1?'':'s'}`,'var(--warn)')}
+      ${statTile(t('gl.t.ap'),money0(ap),'Canonical posted balance')}
+      ${statTile(t('gl.t.net'),money0(net),`${canonicalMeta.journalCount} posted journal${canonicalMeta.journalCount===1?'':'s'}`,'var(--ok)')}
     </div></div>
     <div class="toolbar">
       <div class="filterchips" id="glChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${c[2]?`<span class="dot" style="background:var(--${c[2]})"></span>`:''}${esc(c[1])}</button>`).join('')}</div>
       <div class="grow"></div>
       <button class="viewsel" data-tip="${esc(t('gl.pnltip'))}" onclick="navigate('pnl')">${ic('chart')}${esc(t('gl.pnl'))}</button>
       <button class="viewsel" data-tip="${esc(t('gl.bankrectip'))}" onclick="navigate('bank-rec')">${ic('bank')}${esc(t('gl.reconcile'))}</button>
-      ${btn(t('gl.newjournal'),{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-journal-entry\')"'})}
     </div>
     <div class="tablewrap" id="glTable">${table()}</div>
   </section></div>`;
@@ -74,8 +298,10 @@ SCREENS['gl'] = function(root){
 };
 
 /* ---------------- ACCOUNT LEDGER (drill target) ---------------- */
-SCREENS['account-ledger'] = function(root, params){
+SCREENS['account-ledger'] = async function(root, params){
+  await prepareCanonicalFinanceData();
   const a=(params&&params.code&&DB.acctLedgerDocs&&DB.acctLedgerDocs[params.code])||DB.acctLedger;
+  if(!a) throw new Error('No canonical account ledger is available.');
   let run=a.open;
   const rows=a.rows.map((r,i)=>{ run+=r.dr-r.cr; return `<tr class="je-link" data-je="${esc(r.je)}" style="cursor:pointer">
       <td class="lineno">${i+1}</td>
@@ -89,7 +315,7 @@ SCREENS['account-ledger'] = function(root, params){
     ${crumbs([DB.company.name,'Finance','General Ledger',{cur:a.code}])}
     <div class="dochead">
       <div class="dh-row1"><div><div class="dt">${ic('book')}${esc(a.name)} <span class="dnum">${esc(a.code)}</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(a.period)} · ${a.rows.length} entries</div></div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(a.period)} · ${a.rows.length} entries${DB.financeReadMeta&&DB.financeReadMeta.truncated?' · first 100 rows':''}</div></div>
         <div class="dactions">${btn('Back to GL',{icon:'chevL',cls:'soft',attrs:'onclick="navigate(\'gl\')"'})}${btn('Export',{icon:'download',cls:'soft'})}</div></div>
       <div class="docmeta">
         <div class="dm"><small>Opening balance</small><b>${money0(a.open)}</b></div>
@@ -165,7 +391,8 @@ SCREENS['bank-rec'] = function(root){
 };
 
 /* ---------------- INCOME STATEMENT (P&L report) ---------------- */
-SCREENS['pnl'] = function(root){
+SCREENS['pnl'] = async function(root){
+  await prepareCanonicalFinanceData();
   function sum(rows,k){ return rows.reduce((s,r)=>s+r[k],0); }
   // compute running subtotals
   const rev=DB.pnl[0], cos=DB.pnl[1], opex=DB.pnl[3];
@@ -183,26 +410,26 @@ SCREENS['pnl'] = function(root){
     body+=`<div class="dt-r grandtotal"><div class="dt-c l">${esc(label)}</div><div class="dt-c r tnum">${pnlCell(o.cur)}</div><div class="dt-c r tnum">${pnlCell(o.ytd)}</div><div class="dt-c r tnum" style="color:var(--muted)">${pnlCell(o.bud)}</div><div class="dt-c r">${varCell(o.ytd,o.bud)}</div></div>`;
   }
   headRow(rev); headRow(cos); subtotal('Gross profit',gp); headRow(opex); subtotal('Operating profit (Net)',op);
-  const gpMargin=(op.ytd/sum(rev.rows,'ytd')*100).toFixed(1);
+  const revenueYtd=sum(rev.rows,'ytd');
+  const gpMargin=(revenueYtd?op.ytd/revenueYtd*100:0).toFixed(1);
 
   root.innerHTML=`<div class="content full"><section class="master"><div class="report">
     <aside class="report-params">
       <h3>Parameters</h3>
       <div class="fld"><span>Company</span><select><option>${esc(DB.company.name)}</option><option>All companies (consolidated)</option></select></div>
-      <div class="fld"><span>Period</span><select><option>P06 · June 2026</option><option>Q2 FY2026</option><option>FY2026 YTD</option></select></div>
-      <div class="fld"><span>Compare to</span><select><option>Budget</option><option>Prior year</option><option>Prior period</option></select></div>
+      <div class="fld"><span>Period</span><select><option>All canonical postings</option></select></div>
+      <div class="fld"><span>Compare to</span><select><option>Actual reference</option></select></div>
       <div class="fld"><span>Basis</span><select><option>Accrual</option><option>Cash</option></select></div>
       ${btn('Run report',{icon:'play',cls:'primary',sm:false,attrs:'onclick="toast(\'Income statement refreshed\',\'ok\')"'})}
-      <div style="border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px">${btn('Balance sheet',{icon:'book',cls:'soft',attrs:'onclick="toast(\'Balance Sheet — not in this build\',\'info\')"'})}</div>
     </aside>
     <div class="report-result">
       <div class="report-toolbar">
-        <div><b style="font-size:15px">Income Statement (P&amp;L)</b><div class="report-meta">${DB.company.name} · FY2026 YTD vs budget · net margin ${gpMargin}%</div></div>
+        <div><b style="font-size:15px">Income Statement (P&amp;L)</b><div class="report-meta">${DB.company.name} · canonical posted entries${DB.financeReadMeta&&DB.financeReadMeta.truncated?' · first 100 rows':''} · net margin ${gpMargin}% · reference equals actual until budgets are modeled</div></div>
         <div class="grow"></div>
         ${btn('Excel',{icon:'filexls',cls:'soft'})}${btn('Print',{icon:'print',cls:'soft'})}
       </div>
       <div class="tablewrap"><div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-        <div class="dt-r dt-head"><div class="dt-c l">Account</div><div class="dt-c r">This period</div><div class="dt-c r">YTD</div><div class="dt-c r">Budget YTD</div><div class="dt-c r">Var %</div></div>
+        <div class="dt-r dt-head"><div class="dt-c l">Account</div><div class="dt-c r">This period</div><div class="dt-c r">YTD</div><div class="dt-c r">Actual reference</div><div class="dt-c r">Var %</div></div>
         <div class="dt-body">${body}</div>
       </div></div></div>
     </div>
@@ -210,12 +437,14 @@ SCREENS['pnl'] = function(root){
 };
 
 /* ---------------- AR AGING (report) ---------------- */
-SCREENS['ar-aging'] = function(root){
+SCREENS['ar-aging'] = async function(root){
+  await prepareCanonicalFinanceData();
   const keys=['cur','b30','b60','b90','b90p'];
   const colTot=k=>DB.arAging.reduce((s,r)=>s+r[k],0);
   const rowTot=r=>keys.reduce((s,k)=>s+r[k],0);
   const grand=DB.arAging.reduce((s,r)=>s+rowTot(r),0);
   const overdue=colTot('b30')+colTot('b60')+colTot('b90')+colTot('b90p');
+  const overduePct=grand?Math.round(overdue/grand*100):0;
   function amt(v){ return v?`<span class="tnum">${money0(v)}</span>`:`<span style="color:var(--faint)">—</span>`; }
   const tpl='minmax(200px,2fr) 110px 110px 110px 110px 120px 130px';
   let body='';
@@ -235,20 +464,20 @@ SCREENS['ar-aging'] = function(root){
   root.innerHTML=`<div class="content full"><section class="master"><div class="report">
     <aside class="report-params">
       <h3>Parameters</h3>
-      <div class="fld"><span>As at date</span><select><option>Jun 20, 2026</option><option>Period end</option></select></div>
+      <div class="fld"><span>As at date</span><select><option>${esc(DB.financeAsAt)}</option></select></div>
       <div class="fld"><span>Aging buckets</span><select><option>30 / 60 / 90 days</option><option>15 / 30 / 45 days</option></select></div>
       <div class="fld"><span>Customer</span><select><option>All customers</option><option>Overdue only</option></select></div>
-      <div class="fld"><span>Currency</span><select><option>USD (functional)</option></select></div>
+      <div class="fld"><span>Currency</span><select><option>${esc(DB.company.currency)} (functional)</option></select></div>
       ${btn('Run report',{icon:'play',cls:'primary',sm:false,attrs:'onclick="toast(\'Aging recalculated\',\'ok\')"'})}
       <div style="border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px">
-        <div class="indicator ${overdue/grand>0.2?'warn':'ok'}"><div class="ind-top">${ic('receipt')}<span>Overdue</span><span class="ind-r">${Math.round(overdue/grand*100)}%</span></div><div class="track"><i style="width:${Math.round(overdue/grand*100)}%"></i></div><small>${money0(overdue)} of ${money0(grand)} past due.</small></div>
+        <div class="indicator ${overduePct>20?'warn':'ok'}"><div class="ind-top">${ic('receipt')}<span>Overdue</span><span class="ind-r">${overduePct}%</span></div><div class="track"><i style="width:${overduePct}%"></i></div><small>${money0(overdue)} of ${money0(grand)} past due.</small></div>
       </div>
     </aside>
     <div class="report-result">
       <div class="report-toolbar">
-        <div><b style="font-size:15px">Accounts Receivable Aging</b><div class="report-meta">As at Jun 20, 2026 · ${DB.arAging.length} customers · ${money0(overdue)} overdue · click a customer to open 360</div></div>
+        <div><b style="font-size:15px">Accounts Receivable Aging</b><div class="report-meta">As at ${esc(DB.financeAsAt)} · ${DB.arAging.length} customers · ${money0(overdue)} overdue${DB.financeReadMeta&&DB.financeReadMeta.truncated?' · first 100 rows':''}</div></div>
         <div class="grow"></div>
-        ${btn('Send reminders',{icon:'send',cls:'soft',attrs:'onclick="toast(\'Reminder emails queued for overdue accounts\',\'ok\')"'})}${btn('Excel',{icon:'filexls',cls:'soft'})}
+        ${btn('Excel',{icon:'filexls',cls:'soft'})}
       </div>
       <div class="tablewrap"><div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
         <div class="dt-r dt-head"><div class="dt-c l">Customer</div><div class="dt-c r">Not due</div><div class="dt-c r">1–30</div><div class="dt-c r">31–60</div><div class="dt-c r">61–90</div><div class="dt-c r">90+</div><div class="dt-c r">Total</div></div>
@@ -256,5 +485,7 @@ SCREENS['ar-aging'] = function(root){
       </div></div></div>
     </div>
   </div></section></div>`;
-  root.querySelectorAll('.dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{ tr.dataset.code==='CUST-0007'?navigate('crm-customer'):toast('Open customer '+tr.dataset.code,'info'); }));
+  root.querySelectorAll('.dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{
+    toast('Customer detail · '+tr.dataset.code,'info');
+  }));
 };

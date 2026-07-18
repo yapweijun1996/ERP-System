@@ -471,8 +471,10 @@ SCREENS['sales-order'] = async function(root, params){
 };
 
 /* ---------------- JOURNAL ENTRY (finance transaction) ---------------- */
-SCREENS['journal-entry'] = function(root, params){
+SCREENS['journal-entry'] = async function(root, params){
+  await prepareCanonicalFinanceData();
   const j=(params&&params.no&&DB.journalDocs&&DB.journalDocs[params.no])||DB.je0611;
+  if(!j) throw new Error('No canonical journal entry is available.');
   const totDr=j.lines.reduce((s,l)=>s+l.dr,0), totCr=j.lines.reduce((s,l)=>s+l.cr,0);
   const balanced=Math.abs(totDr-totCr)<0.005;
   // listing of journals on the left as a compact table, detail on right
@@ -492,7 +494,7 @@ SCREENS['journal-entry'] = function(root, params){
     <div class="doclayout">
       <div class="docmain">
         <div class="panel">
-          <div class="panel-h"><h3>${esc(t('je.lines'))}</h3><div class="ph-act">${btn(t('doc.addline'),{icon:'plus',cls:'plain'})}</div></div>
+          <div class="panel-h"><h3>${esc(t('je.lines'))}</h3></div>
           <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('gl.col.account'))}</th><th class="l">${esc(t('je.col.dim'))}</th><th>${esc(t('je.col.debit'))}</th><th>${esc(t('je.col.credit'))}</th></tr></thead><tbody>
             ${j.lines.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
               <td class="l li-name"><b>${esc(l.acct)} · ${esc(l.name)}</b></td>
@@ -521,26 +523,16 @@ SCREENS['journal-entry'] = function(root, params){
           <div style="margin-top:10px">${balanced?indicator({tone:'ok',icon:'checkc',label:t('je.entrybalances'),value:'Dr = Cr'}):indicator({tone:'danger',icon:'warn',label:t('je.mustbalance'),value:'≠'})}</div>
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(t('je.posttogl'))}</div>
-          <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">${esc(t('je.postirrev').replaceAll('{p}',j.period))}</p>
-          ${DB.user.perms.post?btn(t('je.approvepost'),{icon:'check',cls:'primary',sm:false,attrs:'onclick="postJE(this)"'})
-            :`<button class="btn primary" disabled data-tip="${esc(t('je.noperm'))}" style="width:100%;justify-content:center">${ic('lock')}${esc(t('je.approvepost'))}</button><div class="fld" style="margin-top:6px"><span class="locked">${ic('lock')} ${esc(t('je.requiresperm'))}</span></div>`}
-          <div style="margin-top:8px">${btn(t('common.reject'),{icon:'x',cls:'danger',sm:false,attrs:'onclick="toast(\'Journal rejected\',\'danger\')"'})}</div>
+          <p style="font-size:12.5px;color:var(--muted);margin:0">${esc(t('je.postirrev').replaceAll('{p}',j.period))} This canonical posting is immutable; corrections require a reversal journal.</p>
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(t('je.periodstatus'))}</div>
-          ${indicator({tone:'ok',icon:'unlock',label:'P06 · June 2026',value:t('je.open')})}
-          <div style="margin-top:8px">${indicator({tone:'warn',icon:'lock',label:'P05 · May 2026',value:t('je.locked'),sub:t('je.p05blocked')})}</div>
+          ${indicator({tone:'neutral',icon:'lock',label:j.period,value:'Posted',sub:'Canonical journal legs are read-only.'})}
         </div>
       </aside>
     </div>
     <div style="height:40px"></div>
   </div></div></section></div>`;
 };
-function postJE(btnEl){
-  openModal(`<div class="modal-head">${ic('book')}<h3>${esc(t('je.m.title'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-    <div class="modal-body"><div class="risk warn" style="margin:0 0 10px">${ic('warn')}<div><b>${esc(t('je.m.irrev'))}</b><small>${esc(t('je.m.irrevsub'))}</small></div></div>
-    <div class="fld"><span>${esc(t('je.m.period'))}</span><select><option>P06 · June 2026 (${esc(t('je.open'))})</option><option disabled>P05 · May 2026 (${esc(t('je.locked'))})</option></select></div></div>
-    <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('je.m.confirm'),{icon:'check',cls:'primary',attrs:'onclick="closeModal();toast(\'JE-26-0611 posted to GL · P06\',\'ok\')"'})}</div>`);
-}
 
 /* ---------------- PAYMENT VOUCHER ---------------- */
 SCREENS['payment-voucher'] = function(root){
