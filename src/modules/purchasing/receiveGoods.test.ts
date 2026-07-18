@@ -6,7 +6,7 @@ import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { getStockQty, countMovements } from '../inventory/stock';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { receiveGoods } from './receiveGoods';
-import { InvalidPurchaseOrderStateError } from './errors';
+import { InvalidPurchaseOrderStateError, PostingError } from './errors';
 
 async function seedOpenPurchaseOrder(db: DB, qty = 20) {
   const [widget] = await db.insert(product).values({
@@ -81,5 +81,28 @@ describe('receiveGoods', () => {
     // Still 20, not 40 — the second (invalid) receipt left no trace.
     expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(20);
     expect(await countMovements(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(1);
+  });
+
+  it('rejects a warehouse from another company without changing the PO or stock', async () => {
+    const db = await freshDb();
+    const fx = await seedOpenPurchaseOrder(db, 20);
+    const [foreignWarehouse] = await db.insert(warehouse).values({
+      masterFn: SCOPE.masterFn,
+      companyFn: 'C-OTHER',
+      code: 'FOREIGN-WH',
+      name: 'Foreign Warehouse',
+    }).returning({ id: warehouse.id });
+
+    await expect(receiveGoods(db, SCOPE, {
+      purchaseOrderId: fx.purchaseOrderId,
+      warehouseId: foreignWarehouse.id,
+      docNo: 'GR-FOREIGN',
+      receivedDate: '2024-06-05',
+    })).rejects.toThrow(PostingError);
+
+    expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(0);
+    const [order] = await db.select({ status: purchaseOrder.status }).from(purchaseOrder)
+      .where(eq(purchaseOrder.id, fx.purchaseOrderId));
+    expect(order.status).toBe('open');
   });
 });

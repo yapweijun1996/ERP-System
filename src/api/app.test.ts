@@ -12,12 +12,17 @@ import {
   inventoryLot,
   inventorySerial,
   product,
+  purchaseOrder,
+  purchaseOrderLine,
   salesOrder,
   salesOrderLine,
   stockLevel,
   stockLocationBalance,
   stockMovement,
   stockTransfer,
+  supplier,
+  supplierInvoice,
+  goodsReceipt,
   warehouseBin,
   warehouse,
 } from '../data/schema';
@@ -262,6 +267,140 @@ describe('production API security contract', () => {
         qty: '5.0000',
       }),
     ]);
+  });
+
+  it('runs the canonical purchasing create, receive and supplier-invoice chain over HTTP', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [vendor] = await db.select({ id: supplier.id }).from(supplier)
+      .where(eq(supplier.code, 'SUPP1'));
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'PUR-API',
+      name: 'Purchasing API Warehouse',
+    }).returning({ id: warehouse.id });
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+
+    const created = await fetch(`${running.baseUrl}/api/purchasing/purchase-orders`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'po-create-api' },
+      body: JSON.stringify({
+        docNo: 'PO-API-1',
+        supplierId: vendor.id,
+        orderDate: '2026-07-19',
+        currency: 'SGD',
+        lines: [{
+          productId: item.id,
+          qty: 2,
+          unitCost: 10,
+          taxCode: 'SR',
+        }],
+      }),
+    });
+    expect(created.status).toBe(201);
+    const createdBody = await created.json();
+    expect(createdBody.data).toMatchObject({
+      net: 20,
+      tax: 1.8,
+      total: 21.8,
+      lines: 1,
+    });
+    const orderId = createdBody.data.orderId as number;
+
+    const lineResponse = await fetch(
+      `${running.baseUrl}/api/purchasing/purchase-order-lines?limit=100`,
+      { headers: { cookie: cookies.header } },
+    );
+    expect(lineResponse.status).toBe(200);
+    expect((await lineResponse.json()).data).toEqual([
+      expect.objectContaining({
+        orderId,
+        productId: item.id,
+        qty: '2.0000',
+        unitCost: '10.0000',
+      }),
+    ]);
+
+    const receive = () => fetch(
+      `${running.baseUrl}/api/purchasing/purchase-orders/${orderId}/actions/receive`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'po-receive-api-1' },
+        body: JSON.stringify({
+          warehouseId: location.id,
+          docNo: 'GR-API-1',
+          receivedDate: '2026-07-19',
+        }),
+      },
+    );
+    const received = await receive();
+    expect(received.status).toBe(200);
+    expect((await received.json()).data).toMatchObject({ lines: 1 });
+    const replay = await receive();
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+
+    const invoiced = await fetch(
+      `${running.baseUrl}/api/purchasing/purchase-orders/${orderId}/actions/post-invoice`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'po-invoice-api-1' },
+        body: JSON.stringify({
+          docNo: 'SINV-API-1',
+          invoiceDate: '2026-07-19',
+        }),
+      },
+    );
+    expect(invoiced.status).toBe(200);
+    expect((await invoiced.json()).data).toMatchObject({
+      net: 20,
+      tax: 1.8,
+      total: 21.8,
+    });
+
+    expect(await db.select().from(purchaseOrder)).toHaveLength(1);
+    expect(await db.select().from(purchaseOrderLine)).toHaveLength(1);
+    expect(await db.select().from(goodsReceipt)).toHaveLength(1);
+    expect(await db.select().from(supplierInvoice)).toHaveLength(1);
+    expect(await db.select().from(stockLocationBalance)).toEqual([
+      expect.objectContaining({
+        productId: item.id,
+        warehouseId: location.id,
+        trackingKey: 'none',
+        qty: '2.0000',
+      }),
+    ]);
+    expect((await db.select().from(glEntry)
+      .where(eq(glEntry.journalRef, 'SINV-API-1')))).toHaveLength(3);
+    expect((await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'po-create-api')))).toEqual([
+      expect.objectContaining({ entity: 'purchasing/purchase-orders', action: 'create' }),
+    ]);
+
+    const viewer = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const denied = await fetch(`${running.baseUrl}/api/purchasing/purchase-orders`, {
+      method: 'POST',
+      headers: {
+        cookie: viewer.header,
+        'content-type': 'application/json',
+        'x-csrf-token': viewer.csrf,
+      },
+      body: JSON.stringify({
+        docNo: 'PO-DENIED',
+        supplierId: vendor.id,
+        orderDate: '2026-07-19',
+        currency: 'SGD',
+        lines: [{ productId: item.id, qty: 1, unitCost: 1, taxCode: 'SR' }],
+      }),
+    });
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).error.code).toBe('permission_denied');
   });
 
   it('revokes logout sessions and does not accept the CSRF cookie alone', async () => {

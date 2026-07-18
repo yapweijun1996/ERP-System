@@ -8,6 +8,14 @@ import {
 } from '../modules/sales/confirmOrder';
 import { postInventoryAdjustmentWithin } from '../modules/inventory/adjustment';
 import { completeStockTransferWithin } from '../modules/inventory/transfer';
+import {
+  receiveGoodsWithin,
+  type ReceiveGoodsInput,
+} from '../modules/purchasing/receiveGoods';
+import {
+  postSupplierInvoiceWithin,
+  type PostSupplierInvoiceInput,
+} from '../modules/purchasing/postSupplierInvoice';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'inventory/adjustments/post': {
@@ -45,6 +53,59 @@ const ACTIONS: Record<string, ActionDefinition> = {
       return confirmDraftSalesOrderWithin(tx, scope, {
         salesOrderId: input.resourceId,
         warehouseId: Number(payload.warehouseId),
+      });
+    },
+  },
+  'purchasing/purchase-orders/receive': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as unknown as Omit<ReceiveGoodsInput, 'purchaseOrderId'>;
+      if (
+        !Number.isSafeInteger(payload.warehouseId)
+        || payload.warehouseId <= 0
+        || typeof payload.docNo !== 'string'
+        || !payload.docNo.trim()
+        || typeof payload.receivedDate !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}$/.test(payload.receivedDate)
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'warehouseId, docNo and receivedDate are required to receive a purchase order.',
+        );
+      }
+      return receiveGoodsWithin(tx, scope, {
+        purchaseOrderId: input.resourceId,
+        warehouseId: payload.warehouseId,
+        docNo: payload.docNo,
+        receivedDate: payload.receivedDate,
+      });
+    },
+  },
+  'purchasing/purchase-orders/post-invoice': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as unknown as Omit<PostSupplierInvoiceInput, 'purchaseOrderId'>;
+      if (
+        typeof payload.docNo !== 'string'
+        || !payload.docNo.trim()
+        || typeof payload.invoiceDate !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}$/.test(payload.invoiceDate)
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'docNo and invoiceDate are required to post a supplier invoice.',
+        );
+      }
+      return postSupplierInvoiceWithin(tx, scope, {
+        purchaseOrderId: input.resourceId,
+        docNo: payload.docNo,
+        invoiceDate: payload.invoiceDate,
       });
     },
   },

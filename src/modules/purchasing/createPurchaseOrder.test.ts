@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { DB } from '../../data/db';
-import { product, supplier, taxRule } from '../../data/schema';
+import { product, purchaseOrder, supplier, taxRule } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { PostingError } from './errors';
@@ -43,5 +43,39 @@ describe('createPurchaseOrder', () => {
       docNo: 'PO-T2', supplierId: fx.supplierId, orderDate: '2020-01-01', currency: 'SGD', // before the seeded rule's validFrom
       lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
     })).rejects.toThrow(PostingError);
+  });
+
+  it('rejects supplier and product IDs from another company before creating a header', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    const [foreignSupplier] = await db.insert(supplier).values({
+      masterFn: SCOPE.masterFn,
+      companyFn: 'C-OTHER',
+      code: 'FOREIGN-S',
+      name: 'Foreign Supplier',
+    }).returning({ id: supplier.id });
+    const [foreignProduct] = await db.insert(product).values({
+      masterFn: SCOPE.masterFn,
+      companyFn: 'C-OTHER',
+      sku: 'FOREIGN-P',
+      name: 'Foreign Product',
+    }).returning({ id: product.id });
+
+    await expect(createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-FOREIGN-S',
+      supplierId: foreignSupplier.id,
+      orderDate: '2024-06-01',
+      currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
+    })).rejects.toThrow(PostingError);
+    await expect(createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-FOREIGN-P',
+      supplierId: fx.supplierId,
+      orderDate: '2024-06-01',
+      currency: 'SGD',
+      lines: [{ productId: foreignProduct.id, qty: 1, unitCost: 6, taxCode: 'SR' }],
+    })).rejects.toThrow(PostingError);
+
+    expect(await db.select().from(purchaseOrder)).toHaveLength(0);
   });
 });

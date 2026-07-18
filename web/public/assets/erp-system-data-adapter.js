@@ -1205,6 +1205,7 @@
     'purchasing/suppliers':'supplier',
     'purchasing/orders':'purchase_order',
     'purchasing/purchase-orders':'purchase_order',
+    'purchasing/purchase-order-lines':'purchase_order_line',
     'purchasing/goods-receipts':'goods_receipt',
     'purchasing/supplier-invoices':'supplier_invoice',
     'crm/opportunities':'opportunity',
@@ -1293,6 +1294,14 @@
       return {data:transfer,meta:{}};
     }
     if(key==='purchasing/orders'||key==='purchasing/purchase-orders'){
+      if(Number.isSafeInteger(payload&&payload.supplierId)){
+        var canonicalOrder = await requireDemoDb().transaction(function(tx){
+          return state.runtime.commands.createPurchaseOrderWithin(
+            state.runtime.createOrm(tx), SCOPE, payload);
+        });
+        await refresh();
+        return {data:Object.assign({docNo:payload.docNo},canonicalOrder),meta:{}};
+      }
       return {data:await createPurchaseOrder(payload),meta:{}};
     }
     if(key==='crm/opportunities') return {data:await createOpportunity(payload),meta:{}};
@@ -1321,9 +1330,34 @@
     }
     if(key==='sales/orders'&&name==='confirm') return {data:await confirmOrder(id),meta:{}};
     if((key==='purchasing/orders'||key==='purchasing/purchase-orders')&&name==='receive'){
+      if(payload&&Number.isSafeInteger(payload.warehouseId)){
+        var canonicalReceipt = await requireDemoDb().transaction(function(tx){
+          return state.runtime.commands.receiveGoodsWithin(
+            state.runtime.createOrm(tx), SCOPE, {
+              purchaseOrderId:Number(id),
+              warehouseId:payload.warehouseId,
+              docNo:payload.docNo,
+              receivedDate:payload.receivedDate,
+            });
+        });
+        await refresh();
+        return {data:Object.assign({docNo:payload.docNo},canonicalReceipt),meta:{}};
+      }
       return {data:await receiveGoods(id),meta:{}};
     }
     if((key==='purchasing/orders'||key==='purchasing/purchase-orders')&&name==='post-invoice'){
+      if(payload&&payload.docNo){
+        var canonicalInvoice = await requireDemoDb().transaction(function(tx){
+          return state.runtime.commands.postSupplierInvoiceWithin(
+            state.runtime.createOrm(tx), SCOPE, {
+              purchaseOrderId:Number(id),
+              docNo:payload.docNo,
+              invoiceDate:payload.invoiceDate,
+            });
+        });
+        await refresh();
+        return {data:Object.assign({docNo:payload.docNo},canonicalInvoice),meta:{}};
+      }
       return {data:await postSupplierInvoice(id),meta:{}};
     }
     if(key==='crm/opportunities'&&name==='convert-to-sales-order'){

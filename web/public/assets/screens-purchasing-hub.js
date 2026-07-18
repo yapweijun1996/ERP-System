@@ -80,11 +80,192 @@ function suppCell(name, code){
   return `<div class="partnercell"><span class="pmini">${esc(ini)}</span><span class="cellsub"><b>${esc(name)}</b><small>${esc(code||'')}</small></span></div>`;
 }
 
+/* Canonical procure-to-pay read model. The screens consume the same bounded
+   resource pages in Demo and API modes; joins below are presentational only.
+   Creation, receiving, stock movements and AP posting stay in shared domain
+   commands and server transactions. */
+async function purchasingListPage(resource){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.list!=='function'){
+    throw new Error('The canonical ERP data adapter is unavailable.');
+  }
+  const response=await adapter.list(resource,{limit:100});
+  if(!response||!Array.isArray(response.data)){
+    throw new Error(`Unexpected ${resource} response.`);
+  }
+  return {
+    data:response.data,
+    nextCursor:response.meta&&response.meta.nextCursor||null,
+  };
+}
+
+function purchasingNumber(value){
+  const parsed=Number(value);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+async function prepareCanonicalPurchasingData(){
+  const adapter=window.ErpSystemData;
+  if(adapter&&adapter.mode==='fallback'){
+    if(
+      Array.isArray(DB.suppliers)
+      &&Array.isArray(DB.purchaseOrders)
+      &&Array.isArray(DB.goodsReceipts)
+      &&Array.isArray(DB.supplierInvoices)
+    ) return;
+    throw new Error('The offline canonical purchasing snapshot is unavailable.');
+  }
+  const pages=await Promise.all([
+    purchasingListPage('purchasing/suppliers'),
+    purchasingListPage('purchasing/purchase-orders'),
+    purchasingListPage('purchasing/purchase-order-lines'),
+    purchasingListPage('purchasing/goods-receipts'),
+    purchasingListPage('purchasing/supplier-invoices'),
+    purchasingListPage('inventory/products'),
+    purchasingListPage('inventory/stock-levels'),
+    purchasingListPage('inventory/warehouses'),
+  ]);
+  const [
+    suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,
+    products,stockLevels,warehouses,
+  ]=pages.map(page=>page.data);
+  const supplierById=new Map(suppliers.map(row=>[row.id,row]));
+  const orderById=new Map(purchaseOrders.map(row=>[row.id,row]));
+  const warehouseById=new Map(warehouses.map(row=>[row.id,row]));
+  const lineCountByOrder=new Map();
+  purchaseOrderLines.forEach(row=>{
+    lineCountByOrder.set(row.orderId,(lineCountByOrder.get(row.orderId)||0)+1);
+  });
+  const receiptByOrder=new Map(goodsReceipts.map(row=>[row.orderId,row]));
+  const payableBySupplier=new Map();
+  supplierInvoices.forEach(row=>{
+    if(row.status==='unpaid'){
+      payableBySupplier.set(
+        row.supplierId,
+        (payableBySupplier.get(row.supplierId)||0)+purchasingNumber(row.totalAmount),
+      );
+    }
+  });
+  const onHandByProduct=new Map();
+  stockLevels.forEach(row=>{
+    onHandByProduct.set(
+      row.productId,
+      (onHandByProduct.get(row.productId)||0)+purchasingNumber(row.qty),
+    );
+  });
+
+  DB.purchasingWarehouses=warehouses.map(row=>({
+    id:row.id,code:row.code,name:row.name,
+  }));
+  DB.items=products.map(row=>({
+    id:row.id,
+    sku:row.sku,
+    name:row.name,
+    uom:row.uom,
+    cost:purchasingNumber(row.standardCost),
+    onHand:onHandByProduct.get(row.id)||0,
+    alloc:0,
+    reorder:0,
+    roq:0,
+    status:(onHandByProduct.get(row.id)||0)>0?'In stock':'No stock',
+  }));
+  DB.suppliers=suppliers.map(row=>({
+    id:row.id,
+    code:row.code,
+    name:row.name,
+    contact:'—',
+    phone:'—',
+    email:'—',
+    country:DB.company.country||'—',
+    currency:DB.company.currency,
+    terms:'—',
+    category:'Unclassified',
+    leadTime:null,
+    rating:null,
+    onTime:null,
+    approved:null,
+    status:'Active',
+    balance:payableBySupplier.get(row.id)||0,
+  }));
+  const PO_STATUS_UI={open:'Approved',received:'Completed',cancelled:'Cancelled'};
+  DB.purchaseOrders=purchaseOrders.map(row=>{
+    const supplier=supplierById.get(row.supplierId)||{};
+    const lineCount=lineCountByOrder.get(row.id)||0;
+    return {
+      id:row.id,
+      version:row.version,
+      no:row.docNo,
+      supp:supplier.name||`Supplier #${row.supplierId}`,
+      suppCode:supplier.code||'—',
+      supplierId:row.supplierId,
+      date:row.orderDate,
+      expect:row.orderDate,
+      status:PO_STATUS_UI[row.status]||row.status,
+      rawStatus:row.status,
+      total:purchasingNumber(row.totalAmount),
+      net:purchasingNumber(row.netAmount),
+      tax:purchasingNumber(row.taxAmount),
+      currency:row.currency,
+      buyer:DB.user&&DB.user.name||'System',
+      items:lineCount,
+      recv:row.status==='received'?100:0,
+    };
+  });
+  DB.goodsReceipts=goodsReceipts.map(row=>{
+    const order=orderById.get(row.orderId)||{};
+    const supplier=supplierById.get(order.supplierId)||{};
+    const location=warehouseById.get(row.warehouseId)||{};
+    return {
+      id:row.id,
+      no:row.docNo,
+      date:row.receivedDate,
+      po:order.docNo||`PO #${row.orderId}`,
+      orderId:row.orderId,
+      supplier:supplier.name||'Unknown supplier',
+      code:supplier.code||'—',
+      warehouse:location.code||`Warehouse #${row.warehouseId}`,
+      lines:lineCountByOrder.get(row.orderId)||0,
+      recvPct:100,
+      qc:'Not modeled',
+      status:'Posted',
+    };
+  });
+  DB.supplierInvoices=supplierInvoices.map(row=>{
+    const order=orderById.get(row.orderId)||{};
+    const supplier=supplierById.get(row.supplierId)||{};
+    const receipt=receiptByOrder.get(row.orderId);
+    const status={unpaid:'Posted',paid:'Paid',cancelled:'Cancelled'}[row.status]||row.status;
+    return {
+      id:row.id,
+      version:row.version,
+      no:row.docNo,
+      date:row.invoiceDate,
+      supplier:supplier.name||'Unknown supplier',
+      code:supplier.code||'—',
+      po:order.docNo||`PO #${row.orderId}`,
+      grn:receipt&&receipt.docNo||null,
+      total:purchasingNumber(row.totalAmount),
+      net:purchasingNumber(row.netAmount),
+      tax:purchasingNumber(row.taxAmount),
+      currency:row.currency,
+      due:row.invoiceDate,
+      match:receipt?'Matched':'No GRN',
+      status,
+      rawStatus:row.status,
+    };
+  });
+  DB.purchasingReadMeta={
+    truncated:pages.some(page=>Boolean(page.nextCursor)),
+    nextCursors:pages.map(page=>page.nextCursor),
+  };
+}
+
 /* ============================================================
    GENERIC PURCHASING LIST FACTORY  (mirror of makeSalesList)
    ============================================================ */
 function makePurList(cfg){
-  SCREENS[cfg.route] = function(root){
+  SCREENS[cfg.route] = async function(root){
+    if(cfg.prepare) await cfg.prepare();
     let filter = 'all';
     const allRows = () => (typeof cfg.rows==='function' ? cfg.rows() : cfg.rows);
     const rows = () => { const r=allRows(); return filter==='all' ? r : r.filter(x=>cfg.filterFn(x,filter)); };
@@ -105,7 +286,9 @@ function makePurList(cfg){
 
     function render(){
       root.innerHTML = purPage({ active:cfg.active||cfg.route, title:cfg.title, crumb:cfg.crumb, sub:cfg.sub,
-        count: rows().length + (cfg.unit?(' '+cfg.unit):''), body: body() });
+        count: rows().length
+          +(cfg.prepare&&DB.purchasingReadMeta&&DB.purchasingReadMeta.truncated?'+':'')
+          +(cfg.unit?(' '+cfg.unit):''), body: body() });
       wire();
     }
     function setFilter(f){ filter=f; render(); }

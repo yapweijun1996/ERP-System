@@ -83,7 +83,7 @@
     'stock-levels':'inventory','stock-movements':'inventory',
     orders:'sales',invoices:'sales',
     accounts:'finance','gl-entries':'finance','journals':'finance',
-    suppliers:'purchasing','purchase-orders':'purchasing',
+    suppliers:'purchasing','purchase-orders':'purchasing','purchase-order-lines':'purchasing',
     'goods-receipts':'purchasing','supplier-invoices':'purchasing',
     opportunities:'crm',
   };

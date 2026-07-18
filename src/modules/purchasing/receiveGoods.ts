@@ -9,8 +9,14 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
-import { goodsReceipt, purchaseOrder, purchaseOrderLine, stockLevel, stockMovement } from '../../data/schema';
-import { InvalidPurchaseOrderStateError } from './errors';
+import {
+  goodsReceipt,
+  purchaseOrder,
+  purchaseOrderLine,
+  warehouse,
+} from '../../data/schema';
+import { InvalidPurchaseOrderStateError, PostingError } from './errors';
+import { receiveStockWithin } from '../inventory/stock';
 
 export interface ReceiveGoodsInput {
   purchaseOrderId: number;
@@ -36,6 +42,14 @@ export async function receiveGoodsWithin(exec: DB, scope: Scope, input: ReceiveG
       `Purchase order ${input.purchaseOrderId} is '${order.status}', not 'open' — cannot receive goods twice`,
     ); // → ROLLBACK
   }
+  const [location] = await exec.select({ id: warehouse.id }).from(warehouse).where(and(
+    eq(warehouse.masterFn, scope.masterFn),
+    eq(warehouse.companyFn, scope.companyFn),
+    eq(warehouse.id, input.warehouseId),
+  ));
+  if (!location) {
+    throw new PostingError(`Warehouse ${input.warehouseId} is not available in this company`);
+  }
 
   const lines = await exec
     .select({ productId: purchaseOrderLine.productId, qty: purchaseOrderLine.qty })
@@ -55,23 +69,15 @@ export async function receiveGoodsWithin(exec: DB, scope: Scope, input: ReceiveG
   const movementIds: number[] = [];
   for (const ln of lines) {
     const qty = Number(ln.qty);
-
-    await exec.insert(stockLevel)
-      .values({
-        masterFn: scope.masterFn, companyFn: scope.companyFn,
-        productId: ln.productId, warehouseId: input.warehouseId, qty: String(qty),
-      })
-      .onConflictDoUpdate({
-        target: [stockLevel.masterFn, stockLevel.companyFn, stockLevel.productId, stockLevel.warehouseId],
-        set: { qty: sql`${stockLevel.qty} + ${qty}`, updatedAt: sql`now()` },
-      });
-
-    const [mv] = await exec.insert(stockMovement).values({
-      masterFn: scope.masterFn, companyFn: scope.companyFn,
-      productId: ln.productId, warehouseId: input.warehouseId,
-      qty: String(qty), direction: 'in', refType: 'goods_receipt', refId: receipt.id,
-    }).returning({ id: stockMovement.id });
-    movementIds.push(mv.id);
+    const received = await receiveStockWithin(exec, scope, {
+      productId: ln.productId,
+      warehouseId: input.warehouseId,
+      qty,
+      refType: 'goods_receipt',
+      refId: receipt.id,
+      movementGroup: `goods_receipt:${receipt.id}`,
+    });
+    movementIds.push(received.movementId);
   }
 
   await exec.update(purchaseOrder).set({ status: 'received', updatedAt: sql`now()` })

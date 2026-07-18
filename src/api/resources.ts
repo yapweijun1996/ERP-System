@@ -11,6 +11,7 @@ import {
   inventorySerial,
   inventoryAdjustment,
   purchaseOrder,
+  purchaseOrderLine,
   salesOrder,
   stockLevel,
   stockMovement,
@@ -101,7 +102,10 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'purchasing/purchase-orders': resource(purchaseOrder, 'purchasing.read', {
     status: purchaseOrder.status,
     versionColumn: purchaseOrder.version,
+    allowedActions: ['receive', 'post-invoice'],
+    createPermission: 'purchasing.write',
   }),
+  'purchasing/purchase-order-lines': resource(purchaseOrderLine, 'purchasing.read'),
   'purchasing/goods-receipts': resource(goodsReceipt, 'purchasing.read'),
   'purchasing/supplier-invoices': resource(supplierInvoice, 'purchasing.read', {
     status: supplierInvoice.status,

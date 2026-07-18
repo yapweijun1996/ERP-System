@@ -126,6 +126,7 @@ SCREENS['pur-txn-view'] = function(root){
 /* ---------------- SUPPLIERS (master data) ---------------- */
 makePurList({
   route:'suppliers', title:'Suppliers', unit:'suppliers',
+  prepare:prepareCanonicalPurchasingData,
   sub:'Vendor master used across RFQ, quotation, purchase order, receipt, invoice and payment. Maintain terms, currency, lead-time, category and approved-supplier status.',
   rows:()=>DB.suppliers, rowId:s=>s.code,
   chips:[['all','All'],['approved','Approved'],['review','Under review'],['active','Active']],
@@ -136,24 +137,22 @@ makePurList({
     {label:'Under review', val:r.filter(s=>s.status==='Review').length, accent:true, f:'review'},
     {label:'Total payable', val:money0(r.reduce((a,s)=>a+s.balance,0))},
   ],
-  newBtn:{label:'New supplier', onClick:()=>toast('New supplier — master record form opens','info')},
   columns:[
     {label:'Code', w:'minmax(88px,0.8fr)', render:s=>`<b class="docnum">${esc(s.code)}</b>`},
     {label:'Supplier', align:'l', w:'minmax(170px,1.7fr)', render:s=>suppCell(s.name)},
     {label:'Category', align:'l', w:'minmax(140px,1.4fr)', render:s=>`<span class="li-subj">${esc(s.category)}</span>`},
     {label:'Country', align:'l', w:'minmax(90px,0.9fr)', render:s=>`<span style="color:var(--muted)">${esc(s.country)}</span>`},
     {label:'Terms', align:'l', w:'minmax(80px,0.8fr)', render:s=>`${esc(s.terms)} · ${esc(s.currency)}`},
-    {label:'Lead', align:'r', w:'minmax(60px,0.6fr)', render:s=>`${s.leadTime}d`},
-    {label:'Rating', align:'r', sortable:true, w:'minmax(70px,0.7fr)', render:s=>`<b class="tnum">${s.rating.toFixed(1)}</b>`},
+    {label:'Lead', align:'r', w:'minmax(60px,0.6fr)', render:s=>s.leadTime==null?'—':`${s.leadTime}d`},
+    {label:'Rating', align:'r', sortable:true, w:'minmax(70px,0.7fr)', render:s=>s.rating==null?'—':`<b class="tnum">${s.rating.toFixed(1)}</b>`},
     {label:'Balance', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:s=>`<b class="tnum">${money0(s.balance)}</b>`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(96px,0.9fr)', render:s=>s.approved?cap('Approved','ok'):cap('Review','warn')},
+    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(96px,0.9fr)', render:s=>s.approved==null?cap(s.status,'ok'):s.approved?cap('Approved','ok'):cap('Review','warn')},
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(s)=>[
     {id:'view',icon:'ext',label:'Open supplier',run:()=>toast(`Opening ${s.name}`,'info')},
     {id:'po',icon:'cart',label:'New purchase order',run:()=>navigate('new-purchase-order')},
     {id:'perf',icon:'shield',label:'View performance',run:()=>navigate('vendor-performance')},
-    {id:'hold',icon:'x',label:s.approved?'Suspend supplier':'Approve supplier',danger:s.approved,sep:true,run:()=>toast(`${s.name} ${s.approved?'suspended':'approved'}`,s.approved?'danger':'ok')},
   ],
   onOpen:(s)=>toast(`Opening ${s.name}`,'info'),
 });
@@ -288,6 +287,7 @@ function openQuoteCompare(rfqNo){
 /* PO_TONE → TONES.po (defined in data-core.js) */
 makePurList({
   route:'purchase-orders', active:'purchase-orders', title:'Purchase Orders', unit:'orders',
+  prepare:prepareCanonicalPurchasingData,
   sub:'Confirmed orders issued to suppliers after approval or supplier selection. Track approval, receiving, invoicing and payment status through to close.',
   rows:()=>DB.purchaseOrders, rowId:p=>p.no,
   chips:[['all','All'],['pending','Pending approval'],['approved','Approved'],['receiving','Receiving'],['done','Completed']],
@@ -315,8 +315,6 @@ makePurList({
     {id:'approve',icon:'flow',label:'Review approval',run:()=>navigate('po-approval')},
     {id:'grn',icon:'receive',label:'Receive goods',run:()=>doReceiveGoods(p)},
     {id:'inv',icon:'receipt',label:'Post supplier invoice',run:()=>doPostSupplierInvoice(p)},
-    {id:'dup',icon:'copy',label:'Duplicate',run:()=>toast(`${p.no} duplicated as draft`,'info')},
-    {id:'cancel',icon:'x',label:'Cancel PO',danger:true,sep:true,run:()=>toast(`${p.no} cancelled`,'danger')},
   ],
   onOpen:(p)=>openPO(p),
 });
@@ -331,27 +329,50 @@ function openPO(p){ if(p.no==='PO-26-0291'){ navigate('po-approval'); return; } 
    items, since makePurList's row menu doesn't support conditional items. */
 async function doReceiveGoods(p){
   if(p.status!=='Approved'){ toast(`${p.no} is '${p.status}' — cannot receive goods (already received, or cancelled).`,'warn'); return; }
-  if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.receiveGoods==='function')){ toast('Demo adapter not loaded','warn'); return; }
+  const adapter=window.ErpSystemData;
+  const location=(DB.purchasingWarehouses||[])[0];
+  if(!adapter||typeof adapter.action!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
+  if(!location){ toast('Create a warehouse before receiving goods.','warn'); return; }
+  const receivedDate=new Date().toISOString().slice(0,10);
+  const docNo=`GR-PO-${p.id}`;
   try{
-    const res=await window.ErpSystemDemo.receiveGoods(p.no);
-    toast(`${res.docNo} posted — stock updated for ${p.no} (${res.lines} line${res.lines===1?'':'s'}).`,'ok');
-    navigate('purchase-orders');
+    const response=await adapter.action(
+      'purchasing/purchase-orders',
+      p.id,
+      'receive',
+      {warehouseId:location.id,docNo,receivedDate},
+      `purchase-receive-${p.id}`,
+    );
+    const res=response.data;
+    toast(`${docNo} posted — stock updated for ${p.no} (${res.lines} line${res.lines===1?'':'s'}).`,'ok');
+    await navigate('purchase-orders');
   }catch(e){ toast((e&&e.message)||'Receive goods failed','danger'); }
 }
 async function doPostSupplierInvoice(p){
   if(p.status!=='Completed'){ toast(`${p.no} is '${p.status}' — receive goods before posting an invoice.`,'warn'); return; }
   if(DB.supplierInvoices.some(i=>i.po===p.no)){ toast(`${p.no} already has a posted supplier invoice.`,'info'); return; }
-  if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.postSupplierInvoice==='function')){ toast('Demo adapter not loaded','warn'); return; }
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.action!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
+  const invoiceDate=new Date().toISOString().slice(0,10);
+  const docNo=`SINV-PO-${p.id}`;
   try{
-    const res=await window.ErpSystemDemo.postSupplierInvoice(p.no);
-    toast(`${res.docNo} posted to AP — ${money(res.total)} (Dr Inventory + Input Tax, Cr AP).`,'ok');
-    navigate('supplier-invoices');
+    const response=await adapter.action(
+      'purchasing/purchase-orders',
+      p.id,
+      'post-invoice',
+      {docNo,invoiceDate},
+      `purchase-invoice-${p.id}`,
+    );
+    const res=response.data;
+    toast(`${docNo} posted to AP — ${money(res.total)} (Dr Inventory + Input Tax, Cr AP).`,'ok');
+    await navigate('supplier-invoices');
   }catch(e){ toast((e&&e.message)||'Post invoice failed','danger'); }
 }
 
 /* ---------------- GOODS RECEIPTS ---------------- */
 makePurList({
   route:'goods-receipts', active:'goods-receipts', title:'Goods Receipts', unit:'receipts',
+  prepare:prepareCanonicalPurchasingData,
   sub:'Receiving against purchase orders — full or partial, with QC disposition and putaway. Posting updates inventory and feeds the 3-way match.',
   rows:()=>DB.goodsReceipts, rowId:g=>g.no,
   chips:[['all','All'],['open','Open'],['qc','QC'],['posted','Posted'],['rejected','Rejected']],
@@ -386,6 +407,7 @@ function openGRN(g){ if(g.no==='GRN-26-0188'){ navigate('goods-receipt'); return
 /* ---------------- SUPPLIER INVOICES ---------------- */
 makePurList({
   route:'supplier-invoices', active:'supplier-invoices', title:'Supplier Invoices', unit:'invoices',
+  prepare:prepareCanonicalPurchasingData,
   sub:'AP invoices captured against purchase orders and goods receipts. 3-way matching flags quantity and price variances before posting and payment.',
   rows:()=>DB.supplierInvoices, rowId:i=>i.no,
   chips:[['all','All'],['match','To match'],['posted','Posted'],['paid','Paid'],['overdue','Overdue']],
@@ -396,7 +418,6 @@ makePurList({
     {label:'Overdue', val:r.filter(i=>i.status==='Overdue').length, neg:true, f:'overdue'},
     {label:'Paid', val:r.filter(i=>i.status==='Paid').length, f:'paid'},
   ],
-  newBtn:{label:'Capture invoice', onClick:()=>toast('Capture supplier invoice — OCR or manual','info')},
   columns:[
     {label:'Invoice', w:'minmax(140px,1.2fr)', render:i=>docNoCell(i.no, i.date)},
     {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:i=>suppCell(i.supplier,i.code)},
@@ -411,7 +432,6 @@ makePurList({
     {id:'view',icon:'ext',label:'Open invoice',run:()=>openSINV(i)},
     {id:'match',icon:'flow',label:'Run 3-way match',run:()=>navigate('supplier-invoice')},
     {id:'pay',icon:'coins',label:'Schedule payment',run:()=>navigate('payment-voucher')},
-    {id:'reject',icon:'x',label:'Reject invoice',danger:true,sep:true,run:()=>toast(`${i.no} rejected`,'danger')},
   ],
   onOpen:(i)=>openSINV(i),
 });

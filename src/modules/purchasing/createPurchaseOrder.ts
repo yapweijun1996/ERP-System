@@ -3,11 +3,16 @@
 // document; those happen later at receiveGoods.ts (stock) and
 // postSupplierInvoice.ts (GL). Mirrors confirmOrder.ts's line-processing discipline
 // minus the stock-issue step. See docs/DATA_MODEL.md §4.
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { getEffectiveTaxRate } from '../../data/repo';
-import { purchaseOrder, purchaseOrderLine } from '../../data/schema';
+import {
+  product,
+  purchaseOrder,
+  purchaseOrderLine,
+  supplier,
+} from '../../data/schema';
 import { PostingError } from './errors';
 
 export interface PurchaseOrderLineInput {
@@ -29,6 +34,23 @@ const money = (n: number) => n.toFixed(2);
 /** Create a purchase order. Returns a summary. Throws (and rolls back everything) if
  *  no tax rule covers a line's date. */
 export async function createPurchaseOrderWithin(exec: DB, scope: Scope, input: CreatePurchaseOrderInput) {
+  if (!input.lines.length) throw new PostingError('A purchase order requires at least one line');
+  const [supplierRow] = await exec.select({ id: supplier.id }).from(supplier).where(and(
+    eq(supplier.masterFn, scope.masterFn),
+    eq(supplier.companyFn, scope.companyFn),
+    eq(supplier.id, input.supplierId),
+  ));
+  if (!supplierRow) throw new PostingError(`Supplier ${input.supplierId} is not available in this company`);
+  const productIds = [...new Set(input.lines.map((line) => line.productId))];
+  const companyProducts = await exec.select({ id: product.id }).from(product).where(and(
+    eq(product.masterFn, scope.masterFn),
+    eq(product.companyFn, scope.companyFn),
+    inArray(product.id, productIds),
+  ));
+  if (companyProducts.length !== productIds.length) {
+    throw new PostingError('One or more products are not available in this company');
+  }
+
   const [order] = await exec.insert(purchaseOrder).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
     docNo: input.docNo, supplierId: input.supplierId,

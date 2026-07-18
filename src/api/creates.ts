@@ -16,6 +16,10 @@ import {
   type CreateWarehouseBinInput,
   type RegisterInventorySerialInput,
 } from '../modules/inventory/tracking';
+import {
+  createPurchaseOrderWithin,
+  type CreatePurchaseOrderInput,
+} from '../modules/purchasing/createPurchaseOrder';
 
 export interface CreateDefinition {
   permission: string;
@@ -77,6 +81,40 @@ const CREATES: Record<string, CreateDefinition> = {
         scope,
         payload as unknown as CreateStockTransferInput,
       );
+    },
+  },
+  'purchasing/purchase-orders': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      const input = payload as unknown as CreatePurchaseOrderInput;
+      if (
+        typeof input.docNo !== 'string'
+        || !input.docNo.trim()
+        || !Number.isSafeInteger(input.supplierId)
+        || input.supplierId <= 0
+        || typeof input.orderDate !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}$/.test(input.orderDate)
+        || typeof input.currency !== 'string'
+        || !/^[A-Z]{3}$/.test(input.currency)
+        || !Array.isArray(input.lines)
+        || input.lines.length === 0
+        || input.lines.some((line) =>
+          !line
+          || !Number.isSafeInteger(line.productId)
+          || line.productId <= 0
+          || !Number.isFinite(line.qty)
+          || line.qty <= 0
+          || !Number.isFinite(line.unitCost)
+          || line.unitCost < 0
+          || typeof line.taxCode !== 'string'
+          || !line.taxCode.trim())
+      ) {
+        throw new RangeError(
+          'docNo, supplierId, orderDate, currency and at least one valid purchase-order line are required.',
+        );
+      }
+      return createPurchaseOrderWithin(tx, scope, input);
     },
   },
 };

@@ -6,21 +6,20 @@
    Mirrors the Sales Order wizard; buys at item cost, suggests
    reorder quantities, and routes high-value POs for approval.
    ============================================================ */
-SCREENS['new-purchase-order'] = function(root, params){
-  const TODAY='2026-06-21', ETA='2026-07-05';
+SCREENS['new-purchase-order'] = async function(root, params){
+  await prepareCanonicalPurchasingData();
+  const TODAY=new Date().toISOString().slice(0,10);
   /* TASK-023: 9% matches the real seeded SG GST rate (tax_rule 'SR', effective
      2024-01-01) — createPurchaseOrder looks this up for real per line at
      submit time; this constant is only a live preview while the user edits. */
   const TAX=0.09, APPROVAL_THRESHOLD=50000;
-  /* WH-SALES is the only real warehouse seeded for this company, and the only
-     one receiveGoods() ever receives into — a single real option replaces the
-     old hardcoded Kuala Lumpur-only list, which made no sense once a Singapore
-     company could reach this wizard. */
-  const whIn=['WH-SALES'];
+  const poSuffix=typeof crypto!=='undefined'&&crypto.randomUUID
+    ?crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase()
+    :String(Date.now()).slice(-8);
+  const poDocNo=`PO-${TODAY.replaceAll('-','')}-${poSuffix}`;
 
   const S={ step:0, reached:0,
-    supplier:(params&&params.supplier)||'', orderDate:TODAY, eta:ETA,
-    terms:'Net 30', warehouse:'WH-SALES', reference:'', incoterm:'DAP',
+    supplier:(params&&params.supplier)||'', orderDate:TODAY,
     lines:[] /* {sku,name,uom,qty,price} */ };
 
   const sup=()=>DB.suppliers.find(s=>s.code===S.supplier);
@@ -36,7 +35,7 @@ SCREENS['new-purchase-order'] = function(root, params){
     const s=sup();
     const lows=lowItems().length;
     const sidebar=s?indicator({tone:'ok',icon:'shield',label:'Supplier account',
-        value:money0(s.balance),sub:`${esc(s.terms)} terms · ${esc(s.status)} · current payable balance.`})
+        value:money0(s.balance),sub:`Canonical supplier record · ${esc(s.status)} · current payable balance.`})
       :`<div style="color:var(--muted);font-size:13px;padding:6px 2px">Select a supplier to see their account terms.</div>`;
     const repl=lows?`<div class="sumcard" style="margin-top:12px"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Replenishment</div>${indicator({tone:'warn',icon:'box',label:'Items below reorder',value:String(lows),sub:'Add them in the next step — quantities pre-filled from reorder rules.'})}</div>`:'';
     return `<div class="doclayout"><div class="docmain">
@@ -46,9 +45,7 @@ SCREENS['new-purchase-order'] = function(root, params){
           <div class="fld"><span>Pay-to supplier <span class="req">*</span></span>
             <select id="wSup"><option value="">Choose a supplier…</option>
               ${DB.suppliers.map(s=>`<option value="${s.code}" ${s.code===S.supplier?'selected':''}>${esc(s.name)} · ${esc(s.code)}</option>`).join('')}</select></div>
-          ${s?`<div class="fldrow c2" style="margin-top:12px">
-            <div class="fld"><span>Default terms</span><input value="${esc(s.terms)}" readonly></div>
-            <div class="fld"><span>Status</span><input value="${esc(s.status)}" readonly></div></div>`:''}
+          ${s?`<div class="fld" style="margin-top:12px"><span>Status</span><input value="${esc(s.status)}" readonly></div>`:''}
         </div>
       </div>
       <div class="panel">
@@ -56,24 +53,19 @@ SCREENS['new-purchase-order'] = function(root, params){
         <div class="panel-body">
           <div class="fldrow c3">
             <div class="fld"><span>Order date</span><input type="date" id="wDate" value="${S.orderDate}"></div>
-            <div class="fld"><span>Expected receipt</span><input type="date" id="wEta" value="${S.eta}"></div>
-            <div class="fld"><span>Receive into</span><select id="wWh">${whIn.map(w=>`<option ${w===S.warehouse?'selected':''}>${w}</option>`).join('')}</select></div>
+            <div class="fld"><span>Currency</span><input value="${esc(DB.company.currency)}" readonly></div>
+            <div class="fld"><span>PO number</span><input value="${esc(poDocNo)}" readonly></div>
           </div>
-          <div class="fldrow c3" style="margin-top:12px">
-            <div class="fld"><span>Payment terms</span><select id="wTerms">${['Net 30','Net 45','Net 60','COD'].map(t=>`<option ${t===S.terms?'selected':''}>${t}</option>`).join('')}</select></div>
-            <div class="fld"><span>Incoterm</span><select id="wInco">${['DAP','EXW','FOB','CIF'].map(t=>`<option ${t===S.incoterm?'selected':''}>${t}</option>`).join('')}</select></div>
-            <div class="fld"><span>Internal reference</span><input id="wRef" value="${esc(S.reference)}" placeholder="e.g. MRP-26-0291"></div>
-          </div>
+          <div style="margin-top:12px;color:var(--muted);font-size:12.5px">Warehouse, receipt date and tracking details are recorded when goods are received.</div>
         </div>
       </div>
     </div>
     <aside class="summary"><div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Supplier check</div>${sidebar}</div>${repl}</aside></div>`;
   }
   function wire1(){
-    const su=$('#wSup'); su.addEventListener('change',()=>{ S.supplier=su.value; const s=sup(); if(s)S.terms=s.terms; render(); });
+    const su=$('#wSup'); su.addEventListener('change',()=>{ S.supplier=su.value; render(); });
     const bind=(id,key)=>{ const el=$('#'+id); el&&el.addEventListener('change',()=>S[key]=el.value); };
-    bind('wDate','orderDate'); bind('wEta','eta'); bind('wWh','warehouse'); bind('wTerms','terms'); bind('wInco','incoterm');
-    const ref=$('#wRef'); ref&&ref.addEventListener('input',()=>S.reference=ref.value);
+    bind('wDate','orderDate');
   }
 
   /* ---------------- STEP 2 — order lines ---------------- */
@@ -124,7 +116,7 @@ SCREENS['new-purchase-order'] = function(root, params){
   function addItem(sku,qty){
     const it=DB.items.find(x=>x.sku===sku); if(!it) return;
     const ex=S.lines.find(l=>l.sku===sku);
-    if(ex){ ex.qty+=qty; } else S.lines.push({sku:it.sku,name:it.name,uom:it.uom,qty,price:it.cost});
+    if(ex){ ex.qty+=qty; } else S.lines.push({productId:it.id,sku:it.sku,name:it.name,uom:it.uom,qty,price:it.cost});
   }
   function wire2(){
     $('#wAdd').addEventListener('click',()=>{
@@ -163,12 +155,10 @@ SCREENS['new-purchase-order'] = function(root, params){
       <td class="tnum"><b>${money(l.qty*l.price)}</b></td></tr>`).join('');
     const initials=s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     return `<div class="docmeta" style="margin-bottom:16px">
-        <div class="dm"><small>Supplier</small><div class="partner"><span class="pav">${esc(initials)}</span><b>${esc(s.name)}</b></div></div>
+      <div class="dm"><small>Supplier</small><div class="partner"><span class="pav">${esc(initials)}</span><b>${esc(s.name)}</b></div></div>
         <div class="dm"><small>Order date</small><b>${esc(S.orderDate)}</b></div>
-        <div class="dm"><small>Expected receipt</small><b>${esc(S.eta)}</b></div>
-        <div class="dm"><small>Terms</small><b>${esc(S.terms)} · ${esc(S.incoterm)}</b></div>
-        <div class="dm"><small>Receive into</small><b>${esc(S.warehouse)}</b></div>
-        <div class="dm"><small>Reference</small><b>${S.reference?esc(S.reference):'—'}</b></div>
+        <div class="dm"><small>Currency</small><b>${esc(DB.company.currency)}</b></div>
+        <div class="dm"><small>PO number</small><b>${esc(poDocNo)}</b></div>
       </div>
       <div class="doclayout"><div class="docmain">
         <div class="panel"><div class="panel-h">${ic('receipt')}<h3>Order lines</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${S.lines.length} lines</span></div>
@@ -229,16 +219,26 @@ SCREENS['new-purchase-order'] = function(root, params){
     const back=$('#wBack'); back&&back.addEventListener('click',()=>{ S.step--; render(); });
     const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('purchase-orders'));
     const create=$('#wCreate'); create&&create.addEventListener('click',async()=>{
-      if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.createPurchaseOrder==='function')){ toast('Demo adapter not loaded','warn'); return; }
+      const adapter=window.ErpSystemData;
+      if(!adapter||typeof adapter.create!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
       const s=sup();
       create.disabled=true;
       try{
-        const res=await window.ErpSystemDemo.createPurchaseOrder({
-          supplierCode:S.supplier, orderDate:S.orderDate, currency:DB.company.currency,
-          lines:S.lines.map(l=>({sku:l.sku,qty:l.qty,unitCost:l.price,taxCode:'SR'})),
+        const response=await adapter.create('purchasing/purchase-orders',{
+          docNo:poDocNo,
+          supplierId:s.id,
+          orderDate:S.orderDate,
+          currency:DB.company.currency,
+          lines:S.lines.map(l=>({
+            productId:l.productId,
+            qty:l.qty,
+            unitCost:l.price,
+            taxCode:DB.company.taxRegime==='SST'?'SV':'SR',
+          })),
         });
-        navigate('purchase-orders');
-        toast(`Purchase order ${res.docNo} created for ${s.name} · ${money0(res.total)} · issued`,'ok');
+        const res=response.data;
+        await navigate('purchase-orders');
+        toast(`Purchase order ${poDocNo} created for ${s.name} · ${money0(res.total)} · issued`,'ok');
       }catch(e){
         toast((e&&e.message)||'Create PO failed','danger');
         create.disabled=false;
