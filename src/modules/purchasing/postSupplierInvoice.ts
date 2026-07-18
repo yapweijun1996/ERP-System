@@ -27,49 +27,65 @@ async function accountIdByCode(exec: DB, scope: Scope, code: string): Promise<nu
   return a.id;
 }
 
+export async function postSupplierInvoiceWithin(exec: DB, scope: Scope, input: PostSupplierInvoiceInput) {
+  const [order] = await exec
+    .select({
+      id: purchaseOrder.id, status: purchaseOrder.status, supplierId: purchaseOrder.supplierId,
+      currency: purchaseOrder.currency,
+      netAmount: purchaseOrder.netAmount, taxAmount: purchaseOrder.taxAmount, totalAmount: purchaseOrder.totalAmount,
+    })
+    .from(purchaseOrder)
+    .where(and(
+      eq(purchaseOrder.masterFn, scope.masterFn),
+      eq(purchaseOrder.companyFn, scope.companyFn),
+      eq(purchaseOrder.id, input.purchaseOrderId),
+    ))
+    .for('update');
+
+  if (!order) throw new InvalidPurchaseOrderStateError(`Purchase order ${input.purchaseOrderId} not found`);
+  if (order.status !== 'received') {
+    throw new InvalidPurchaseOrderStateError(
+      `Purchase order ${input.purchaseOrderId} is '${order.status}', not 'received' — cannot post an invoice before goods receipt`,
+    ); // → ROLLBACK
+  }
+  const [existingInvoice] = await exec
+    .select({ id: supplierInvoice.id })
+    .from(supplierInvoice)
+    .where(and(
+      eq(supplierInvoice.masterFn, scope.masterFn),
+      eq(supplierInvoice.companyFn, scope.companyFn),
+      eq(supplierInvoice.orderId, order.id),
+    ));
+  if (existingInvoice) {
+    throw new InvalidPurchaseOrderStateError(
+      `Purchase order ${input.purchaseOrderId} already has a supplier invoice`,
+    );
+  }
+
+  const net = Number(order.netAmount);
+  const tax = Number(order.taxAmount);
+  const total = Number(order.totalAmount);
+
+  const [inv] = await exec.insert(supplierInvoice).values({
+    masterFn: scope.masterFn, companyFn: scope.companyFn,
+    docNo: input.docNo, orderId: order.id, supplierId: order.supplierId,
+    status: 'unpaid', invoiceDate: input.invoiceDate, currency: order.currency,
+    netAmount: money(net), taxAmount: money(tax), totalAmount: money(total),
+  }).returning({ id: supplierInvoice.id });
+
+  // Dr Inventory, Dr Input Tax (recoverable), Cr Accounts Payable.
+  const invId = await accountIdByCode(exec, scope, '1400');   // Inventory
+  const inputTaxId = await accountIdByCode(exec, scope, '1200'); // GST/SST Input Tax
+  const apId = await accountIdByCode(exec, scope, '2100');    // Accounts Payable
+  await exec.insert(glEntry).values([
+    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: input.docNo, accountId: invId, debit: money(net), credit: '0', memo: 'Inventory' },
+    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: input.docNo, accountId: inputTaxId, debit: money(tax), credit: '0', memo: 'Input tax' },
+    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: input.docNo, accountId: apId, debit: '0', credit: money(total), memo: 'AP' },
+  ]);
+
+  return { invoiceId: inv.id, invDocNo: input.docNo, net, tax, total };
+}
+
 export async function postSupplierInvoice(db: DB, scope: Scope, input: PostSupplierInvoiceInput) {
-  return db.transaction(async (tx) => {
-    const [order] = await tx
-      .select({
-        id: purchaseOrder.id, status: purchaseOrder.status, supplierId: purchaseOrder.supplierId,
-        currency: purchaseOrder.currency,
-        netAmount: purchaseOrder.netAmount, taxAmount: purchaseOrder.taxAmount, totalAmount: purchaseOrder.totalAmount,
-      })
-      .from(purchaseOrder)
-      .where(and(
-        eq(purchaseOrder.masterFn, scope.masterFn),
-        eq(purchaseOrder.companyFn, scope.companyFn),
-        eq(purchaseOrder.id, input.purchaseOrderId),
-      ));
-
-    if (!order) throw new InvalidPurchaseOrderStateError(`Purchase order ${input.purchaseOrderId} not found`);
-    if (order.status !== 'received') {
-      throw new InvalidPurchaseOrderStateError(
-        `Purchase order ${input.purchaseOrderId} is '${order.status}', not 'received' — cannot post an invoice before goods receipt`,
-      ); // → ROLLBACK
-    }
-
-    const net = Number(order.netAmount);
-    const tax = Number(order.taxAmount);
-    const total = Number(order.totalAmount);
-
-    const [inv] = await tx.insert(supplierInvoice).values({
-      masterFn: scope.masterFn, companyFn: scope.companyFn,
-      docNo: input.docNo, orderId: order.id, supplierId: order.supplierId,
-      status: 'unpaid', invoiceDate: input.invoiceDate, currency: order.currency,
-      netAmount: money(net), taxAmount: money(tax), totalAmount: money(total),
-    }).returning({ id: supplierInvoice.id });
-
-    // Dr Inventory, Dr Input Tax (recoverable), Cr Accounts Payable.
-    const invId = await accountIdByCode(tx, scope, '1400');   // Inventory
-    const inputTaxId = await accountIdByCode(tx, scope, '1200'); // GST/SST Input Tax
-    const apId = await accountIdByCode(tx, scope, '2100');    // Accounts Payable
-    await tx.insert(glEntry).values([
-      { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: input.docNo, accountId: invId, debit: money(net), credit: '0', memo: 'Inventory' },
-      { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: input.docNo, accountId: inputTaxId, debit: money(tax), credit: '0', memo: 'Input tax' },
-      { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: input.docNo, accountId: apId, debit: '0', credit: money(total), memo: 'AP' },
-    ]);
-
-    return { invoiceId: inv.id, invDocNo: input.docNo, net, tax, total };
-  });
+  return db.transaction((tx) => postSupplierInvoiceWithin(tx, scope, input));
 }

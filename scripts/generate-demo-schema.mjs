@@ -46,10 +46,13 @@ function compatibilitySql(entry) {
   if (/\bDROP\s+(TABLE|COLUMN)\b/i.test(sql)) {
     throw new Error(`${entry.tag} contains destructive DDL; write an explicit expand/backfill compatibility migration`);
   }
-  return sql.replace(
-    /ALTER TABLE "([^"]+)" ADD COLUMN "(?!IF NOT EXISTS )/g,
-    'ALTER TABLE "$1" ADD COLUMN IF NOT EXISTS "',
-  );
+  return sql
+    .replace(
+      /ALTER TABLE "([^"]+)" ADD COLUMN "(?!IF NOT EXISTS )/g,
+      'ALTER TABLE "$1" ADD COLUMN IF NOT EXISTS "',
+    )
+    .replace(/DROP INDEX "(?!IF EXISTS )/g, 'DROP INDEX IF EXISTS "')
+    .replace(/CREATE (UNIQUE )?INDEX "(?!IF NOT EXISTS )/g, 'CREATE $1INDEX IF NOT EXISTS "');
 }
 
 const compatibility = [

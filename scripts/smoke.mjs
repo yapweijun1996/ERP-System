@@ -162,11 +162,51 @@ async function checkViewport(browser, viewport) {
         'select coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn=$1 and company_fn=$2 and journal_ref=$3',
         ['M1', 'C-SG', invoiceNo],
       )).rows[0];
+      const purchaseBefore = after;
+      const purchaseOrder = await adapter.create('purchasing/purchase-orders', {
+        supplierCode: 'SUPP1',
+        orderDate: '2026-07-18',
+        currency: 'SGD',
+        lines: [{ sku: 'SG-WIDGET', qty: 2, unitCost: 30, taxCode: 'SR' }],
+      });
+      await adapter.action(
+        'purchasing/purchase-orders',
+        purchaseOrder.data.docNo,
+        'receive',
+        {},
+      );
+      const supplierPosting = await adapter.action(
+        'purchasing/purchase-orders',
+        purchaseOrder.data.docNo,
+        'post-invoice',
+        {},
+      );
+      let duplicateInvoiceBlocked = false;
+      try {
+        await adapter.action(
+          'purchasing/purchase-orders',
+          purchaseOrder.data.docNo,
+          'post-invoice',
+          {},
+        );
+      } catch (error) {
+        duplicateInvoiceBlocked = /already has a supplier invoice/i.test(error?.message || '');
+      }
+      const purchaseAfter = Number((await adapter.db.query(
+        "select coalesce(sum(s.qty),0)::float as qty from stock_level s join product p on p.id=s.product_id where p.master_fn='M1' and p.company_fn='C-SG' and p.sku='SG-WIDGET'",
+      )).rows[0].qty);
+      const purchaseGl = (await adapter.db.query(
+        'select coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn=$1 and company_fn=$2 and journal_ref=$3',
+        ['M1', 'C-SG', supplierPosting.data.docNo],
+      )).rows[0];
       return {
         error: null,
         stockDelta: after - before,
         won: won?.stage === 'won' && Number(won.order_id) === Number(converted.data.orderId),
         balanced: Number(gl.debit) === Number(gl.credit) && Number(gl.debit) > 0,
+        purchaseStockDelta: purchaseAfter - purchaseBefore,
+        purchaseBalanced: Number(purchaseGl.debit) === Number(purchaseGl.credit) && Number(purchaseGl.debit) > 0,
+        duplicateInvoiceBlocked,
       };
     }).catch((error) => ({ error: error.message || String(error) }));
     if (runtimeProof.error) {
@@ -175,6 +215,9 @@ async function checkViewport(browser, viewport) {
       if (runtimeProof.stockDelta !== -1) errors.push(`[demo-esm] expected stock delta -1, got ${runtimeProof.stockDelta}`);
       if (!runtimeProof.won) errors.push('[demo-esm] CRM opportunity was not atomically marked won and linked to its order');
       if (!runtimeProof.balanced) errors.push('[demo-esm] converted opportunity did not produce balanced GL entries');
+      if (runtimeProof.purchaseStockDelta !== 2) errors.push(`[demo-esm] expected purchase stock delta +2, got ${runtimeProof.purchaseStockDelta}`);
+      if (!runtimeProof.purchaseBalanced) errors.push('[demo-esm] supplier invoice did not produce balanced GL entries');
+      if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
     }
 
     const offlineAssets = await page.evaluate(async () => {

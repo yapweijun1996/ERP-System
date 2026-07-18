@@ -13,14 +13,17 @@ import {
 } from '../../src/modules/crm/createOpportunity';
 import {
   createPurchaseOrder,
+  createPurchaseOrderWithin,
   type CreatePurchaseOrderInput,
 } from '../../src/modules/purchasing/createPurchaseOrder';
 import {
   postSupplierInvoice,
+  postSupplierInvoiceWithin,
   type PostSupplierInvoiceInput,
 } from '../../src/modules/purchasing/postSupplierInvoice';
 import {
   receiveGoods,
+  receiveGoodsWithin,
   type ReceiveGoodsInput,
 } from '../../src/modules/purchasing/receiveGoods';
 import {
@@ -51,11 +54,20 @@ export const erpDemoRuntime = Object.freeze({
     createPurchaseOrder(db: DemoOrm, scope: Scope, input: CreatePurchaseOrderInput) {
       return createPurchaseOrder(asDomainDb(db), scope, input);
     },
+    createPurchaseOrderWithin(db: DemoOrm, scope: Scope, input: CreatePurchaseOrderInput) {
+      return createPurchaseOrderWithin(asDomainDb(db), scope, input);
+    },
     receiveGoods(db: DemoOrm, scope: Scope, input: ReceiveGoodsInput) {
       return receiveGoods(asDomainDb(db), scope, input);
     },
+    receiveGoodsWithin(db: DemoOrm, scope: Scope, input: ReceiveGoodsInput) {
+      return receiveGoodsWithin(asDomainDb(db), scope, input);
+    },
     postSupplierInvoice(db: DemoOrm, scope: Scope, input: PostSupplierInvoiceInput) {
       return postSupplierInvoice(asDomainDb(db), scope, input);
+    },
+    postSupplierInvoiceWithin(db: DemoOrm, scope: Scope, input: PostSupplierInvoiceInput) {
+      return postSupplierInvoiceWithin(asDomainDb(db), scope, input);
     },
     createOpportunity(db: DemoOrm, scope: Scope, input: CreateOpportunityInput) {
       return createOpportunity(asDomainDb(db), scope, input);

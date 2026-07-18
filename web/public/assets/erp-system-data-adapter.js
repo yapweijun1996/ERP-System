@@ -874,11 +874,9 @@
     return result;
   }
 
-  /* TASK-023 — purchasing chain, live counterpart of src/modules/purchasing/.
-     Three separate transactions for three separate real-world events (create
-     the commitment, receive the goods, post the AP invoice), same as the
-     TypeScript source — NOT one big confirmOrder-style step, because a real
-     purchase order genuinely happens in stages. */
+  /* Purchasing uses the same bundled TypeScript commands as the server. The
+     adapter temporarily resolves legacy screen codes and document numbers,
+     then executes each real-world event inside its own PGlite transaction. */
 
   async function nextDocNo(tx, table, prefix){
     var r = (await tx.query(
@@ -887,9 +885,9 @@
     return prefix + '-' + (r.n + 1);
   }
 
-  /* createPurchaseOrder.ts: header + lines, effective-dated tax snapshot per
-     line. No stock or GL impact yet. input: { supplierCode, orderDate,
-     currency, lines: [{ sku, qty, unitCost, taxCode }] } */
+  /* Header + lines with an effective-dated tax snapshot. No stock or GL impact
+     yet. Legacy input: { supplierCode, orderDate, currency,
+     lines: [{ sku, qty, unitCost, taxCode }] }. */
   async function createPurchaseOrder(input){
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Create PO needs PGlite.');
     input = input || {};
@@ -904,130 +902,91 @@
       if (!sup) throw new Error('Supplier ' + input.supplierCode + ' not found');
 
       var docNo = await nextDocNo(tx, 'purchase_order', 'PO');
-      var order = (await tx.query(
-        "insert into purchase_order (master_fn, company_fn, doc_no, supplier_id, status, order_date, currency) " +
-        "values ($1,$2,$3,$4,'open',$5,$6) returning id",
-        [SCOPE.masterFn, SCOPE.companyFn, docNo, sup.id, input.orderDate, input.currency || 'SGD'])).rows[0];
-
-      var netTotal = 0, taxTotal = 0, lineNo = 0;
+      var commandLines = [];
       for (var i = 0; i < lines.length; i++){
         var ln = lines[i];
-        lineNo += 1;
         var prod = (await tx.query(
           'select id from product where master_fn=$1 and company_fn=$2 and sku=$3',
           [SCOPE.masterFn, SCOPE.companyFn, ln.sku])).rows[0];
         if (!prod) throw new Error('Product ' + ln.sku + ' not found');
-        var taxRow = (await tx.query(
-          "select rate::float as rate from tax_rule where master_fn=$1 and company_fn=$2 and tax_code=$3 " +
-          "and valid_from <= $4 and (valid_to is null or valid_to > $4) order by valid_from desc limit 1",
-          [SCOPE.masterFn, SCOPE.companyFn, ln.taxCode, input.orderDate])).rows[0];
-        if (!taxRow) throw new Error('No tax rule for ' + ln.taxCode + ' on ' + input.orderDate);
-        var net = Math.round(ln.qty * ln.unitCost * 100) / 100;
-        var tax = Math.round(net * taxRow.rate) / 100;
-
-        await tx.query(
-          "insert into purchase_order_line (master_fn, company_fn, order_id, line_no, product_id, qty, unit_cost, net_amount, tax_code, tax_rate, tax_amount) " +
-          "values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
-          [SCOPE.masterFn, SCOPE.companyFn, order.id, lineNo, prod.id, ln.qty, ln.unitCost, net, ln.taxCode, taxRow.rate, tax]);
-
-        netTotal += net;
-        taxTotal += tax;
+        commandLines.push({
+          productId: prod.id,
+          qty: Number(ln.qty),
+          unitCost: Number(ln.unitCost),
+          taxCode: ln.taxCode,
+        });
       }
-      var grandTotal = Math.round((netTotal + taxTotal) * 100) / 100;
-      await tx.query(
-        'update purchase_order set net_amount=$1, tax_amount=$2, total_amount=$3, updated_at=now() where id=$4',
-        [netTotal, taxTotal, grandTotal, order.id]);
-
-      return { orderId: order.id, docNo: docNo, net: netTotal, tax: taxTotal, total: grandTotal, lines: lines.length };
+      var created = await state.runtime.commands.createPurchaseOrderWithin(
+        state.runtime.createOrm(tx),
+        SCOPE,
+        {
+          docNo: docNo,
+          supplierId: sup.id,
+          orderDate: input.orderDate,
+          currency: input.currency || 'SGD',
+          lines: commandLines,
+        });
+      return Object.assign({ docNo: docNo }, created);
     });
     await refresh();
     return result;
   }
 
-  /* receiveGoods.ts: receives EVERY line of a PO in one transaction. Reuses
+  /* Receives EVERY line of a PO in one transaction. Reuses
      WH-SALES (inventory screens aggregate on-hand across warehouses, so this
      is visibly the same stock the sales chain already deducted from — no
      separate purchasing warehouse needed for the demo). Guards against
-     receiving the same PO twice via the status check (→ rollback). */
+     receiving the same PO twice inside the shared command. */
   async function receiveGoods(poDocNo){
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Receive goods needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var po = (await tx.query(
-        'select id, status from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3 for update',
+        'select id from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
         [SCOPE.masterFn, SCOPE.companyFn, poDocNo])).rows[0];
       if (!po) throw new Error('Purchase order ' + poDocNo + ' not found');
-      if (po.status !== 'open'){
-        throw new Error('Purchase order ' + poDocNo + " is '" + po.status + "', not 'open' — cannot receive goods twice.");
-      }
 
       var wh = (await tx.query(
         "select id from warehouse where master_fn=$1 and company_fn=$2 and code='WH-SALES'",
         [SCOPE.masterFn, SCOPE.companyFn])).rows[0];
       if (!wh) throw new Error('Warehouse WH-SALES not found');
 
-      var lines = (await tx.query(
-        'select product_id, qty::float as qty from purchase_order_line ' +
-        'where master_fn=$1 and company_fn=$2 and order_id=$3 order by line_no',
-        [SCOPE.masterFn, SCOPE.companyFn, po.id])).rows;
-
       var docNo = await nextDocNo(tx, 'goods_receipt', 'GR');
-      var receipt = (await tx.query(
-        "insert into goods_receipt (master_fn, company_fn, doc_no, order_id, warehouse_id, received_date) " +
-        "values ($1,$2,$3,$4,$5,current_date) returning id",
-        [SCOPE.masterFn, SCOPE.companyFn, docNo, po.id, wh.id])).rows[0];
-
-      for (var i = 0; i < lines.length; i++){
-        var ln = lines[i];
-        await tx.query(
-          "insert into stock_level (master_fn, company_fn, product_id, warehouse_id, qty) values ($1,$2,$3,$4,$5) " +
-          "on conflict (master_fn, company_fn, product_id, warehouse_id) do update set qty = stock_level.qty + $5, updated_at = now()",
-          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id, ln.qty]);
-        await tx.query(
-          "insert into stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id) " +
-          "values ($1,$2,$3,$4,$5,'in','goods_receipt',$6)",
-          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id, ln.qty, receipt.id]);
-      }
-
-      await tx.query("update purchase_order set status='received', updated_at=now() where id=$1", [po.id]);
-      return { receiptId: receipt.id, docNo: docNo, lines: lines.length };
+      var received = await state.runtime.commands.receiveGoodsWithin(
+        state.runtime.createOrm(tx),
+        SCOPE,
+        {
+          purchaseOrderId: po.id,
+          warehouseId: wh.id,
+          docNo: docNo,
+          receivedDate: new Date().toISOString().slice(0, 10),
+        });
+      return Object.assign({ docNo: docNo }, received);
     });
     await refresh();
     return result;
   }
 
-  /* postSupplierInvoice.ts: balanced GL (Dr Inventory + Dr Input Tax = Cr
+  /* Balanced GL (Dr Inventory + Dr Input Tax = Cr
      Accounts Payable), gated on the PO already being 'received' — invoicing
-     goods you haven't received is a real accounting error, not just a demo
-     shortcut, so this doubles as the second rollback-guard scenario. */
+     goods you haven't received is rejected inside the shared command. */
   async function postSupplierInvoice(poDocNo){
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Post invoice needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var po = (await tx.query(
-        "select id, status, supplier_id, currency, net_amount::float as net, tax_amount::float as tax, total_amount::float as total " +
-        'from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
+        'select id from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
         [SCOPE.masterFn, SCOPE.companyFn, poDocNo])).rows[0];
       if (!po) throw new Error('Purchase order ' + poDocNo + ' not found');
-      if (po.status !== 'received'){
-        throw new Error('Purchase order ' + poDocNo + " is '" + po.status + "', not 'received' — cannot post an invoice before goods receipt.");
-      }
 
       var docNo = await nextDocNo(tx, 'supplier_invoice', 'SINV');
-      await tx.query(
-        "insert into supplier_invoice (master_fn, company_fn, doc_no, order_id, supplier_id, status, invoice_date, currency, net_amount, tax_amount, total_amount) " +
-        "values ($1,$2,$3,$4,$5,'unpaid',current_date,$6,$7,$8,$9)",
-        [SCOPE.masterFn, SCOPE.companyFn, docNo, po.id, po.supplier_id, po.currency, po.net, po.tax, po.total]);
-
-      var acct = {};
-      (await tx.query(
-        "select code, id from account where master_fn=$1 and company_fn=$2 and code in ('1400','1200','2100')",
-        [SCOPE.masterFn, SCOPE.companyFn])).rows.forEach(function(a){ acct[a.code] = a.id; });
-      if (!acct['1400'] || !acct['1200'] || !acct['2100']) throw new Error('Purchasing chart of accounts not configured');
-      await tx.query(
-        "insert into gl_entry (master_fn, company_fn, journal_ref, account_id, debit, credit, memo) values " +
-        "($1,$2,$3,$4,$5,0,'Inventory'), ($1,$2,$3,$6,$7,0,'Input tax'), ($1,$2,$3,$8,0,$9,'AP')",
-        [SCOPE.masterFn, SCOPE.companyFn, docNo, acct['1400'], po.net, acct['1200'], po.tax, acct['2100'], po.total]);
-
-      return { docNo: docNo, net: po.net, tax: po.tax, total: po.total };
+      var posted = await state.runtime.commands.postSupplierInvoiceWithin(
+        state.runtime.createOrm(tx),
+        SCOPE,
+        {
+          purchaseOrderId: po.id,
+          docNo: docNo,
+          invoiceDate: new Date().toISOString().slice(0, 10),
+        });
+      return Object.assign({ docNo: docNo }, posted);
     });
     await refresh();
     return result;

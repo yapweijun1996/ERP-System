@@ -10,7 +10,10 @@ import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { createPgliteDb, createPostgresDb, type DB } from './data/db';
 import { seedDemo } from './data/seed';
 import { listCompanies, listProducts, addProduct, getEffectiveTaxRate, type Scope } from './data/repo';
-import { product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry, supplier, opportunity } from './data/schema';
+import {
+  product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry,
+  supplier, supplierInvoice, opportunity,
+} from './data/schema';
 import {
   issueStock, getStockQty, countMovements, setStockQty, InsufficientStockError,
 } from './modules/inventory/stock';
@@ -176,9 +179,10 @@ async function runSalesScenario(db: DB) {
 }
 
 /** Full purchasing chain (both engines): create PO → receive goods (stock IN,
- *  from zero) → post supplier invoice (balanced GL), then two independent
+ *  from zero) → post supplier invoice (balanced GL), then three independent
  *  rollback proofs mirroring confirmOrder.ts's discipline for the purchasing
- *  side: receiving an already-received PO, and invoicing a not-yet-received one. */
+ *  side: receiving an already-received PO, invoicing it twice, and invoicing
+ *  a not-yet-received one. */
 async function runPurchasingScenario(db: DB) {
   const widgetId = await getProductId(db, 'SG-WIDGET');
   const [wh] = await db.insert(warehouse)
@@ -216,7 +220,18 @@ async function runPurchasingScenario(db: DB) {
   }
   const stockAfterDoubleReceiveAttempt = await getStockQty(db, SCOPE, widgetId, wh.id); // still 20, not 40
 
-  // Rollback B: invoicing a PO that hasn't been received yet must fail and post no GL legs.
+  // Rollback B: a PO can create only one supplier invoice / GL posting.
+  let duplicateInvoiceErr = '';
+  try {
+    await postSupplierInvoice(db, SCOPE, {
+      purchaseOrderId: po.orderId, docNo: 'SINV-1-DUP', invoiceDate: '2024-06-06',
+    });
+  } catch (e) {
+    duplicateInvoiceErr = (e as Error).name;
+  }
+  const duplicateInvoiceGl = await glBalance(db, 'SINV-1-DUP'); // 0/0 — nothing posted
+
+  // Rollback C: invoicing a PO that hasn't been received yet must fail and post no GL legs.
   const po2 = await createPurchaseOrder(db, SCOPE, {
     docNo: 'PO-2', supplierId: supp.id, orderDate: '2024-06-01', currency: 'SGD',
     lines: [{ productId: widgetId, qty: 5, unitCost: 6, taxCode: 'SR' }],
@@ -229,6 +244,30 @@ async function runPurchasingScenario(db: DB) {
   }
   const earlyInvoiceGl = await glBalance(db, 'SINV-2'); // 0/0 — nothing posted
 
+  // Concurrency proof: two independent requests race to invoice one received PO.
+  const po3 = await createPurchaseOrder(db, SCOPE, {
+    docNo: 'PO-3', supplierId: supp.id, orderDate: '2024-06-01', currency: 'SGD',
+    lines: [{ productId: widgetId, qty: 3, unitCost: 6, taxCode: 'SR' }],
+  });
+  await receiveGoods(db, SCOPE, {
+    purchaseOrderId: po3.orderId, warehouseId: wh.id, docNo: 'GR-3', receivedDate: '2024-06-05',
+  });
+  const invoiceRace = await Promise.allSettled([
+    postSupplierInvoice(db, SCOPE, {
+      purchaseOrderId: po3.orderId, docNo: 'SINV-3-A', invoiceDate: '2024-06-06',
+    }),
+    postSupplierInvoice(db, SCOPE, {
+      purchaseOrderId: po3.orderId, docNo: 'SINV-3-B', invoiceDate: '2024-06-06',
+    }),
+  ]);
+  const [invoiceRaceCount] = await db.select({ n: sql<number>`count(*)::int` })
+    .from(supplierInvoice)
+    .where(and(
+      eq(supplierInvoice.masterFn, SCOPE.masterFn),
+      eq(supplierInvoice.companyFn, SCOPE.companyFn),
+      eq(supplierInvoice.orderId, po3.orderId),
+    ));
+
   return {
     po: { net: po.net, tax: po.tax, total: po.total },
     stockBeforeReceipt, stockAfterReceipt, movementsAfterReceipt,
@@ -237,8 +276,14 @@ async function runPurchasingScenario(db: DB) {
     glDebit: gl.debit, glCredit: gl.credit, glBalanced: gl.debit === gl.credit,
     doubleReceiveErr,                                    // 'InvalidPurchaseOrderStateError'
     stockAfterDoubleReceiveAttempt,                       // still 20
+    duplicateInvoiceErr,                                  // 'InvalidPurchaseOrderStateError'
+    duplicateInvoiceGlDebit: duplicateInvoiceGl.debit,
+    duplicateInvoiceGlCredit: duplicateInvoiceGl.credit,  // 0, 0
     earlyInvoiceErr,                                      // 'InvalidPurchaseOrderStateError'
     earlyInvoiceGlDebit: earlyInvoiceGl.debit, earlyInvoiceGlCredit: earlyInvoiceGl.credit, // 0, 0
+    invoiceRaceFulfilled: invoiceRace.filter((result) => result.status === 'fulfilled').length,
+    invoiceRaceRejected: invoiceRace.filter((result) => result.status === 'rejected').length,
+    invoiceRaceCount: invoiceRaceCount.n,
   };
 }
 
@@ -366,10 +411,14 @@ ok = check('PGlite purchasing chain: PO net=120 tax=10.8 total=130.8, receipt cr
   && p.purchasing.stockBeforeReceipt === 0 && p.purchasing.stockAfterReceipt === 20 && p.purchasing.movementsAfterReceipt === 1) && ok;
 ok = check('PGlite purchasing chain: supplier invoice ledger balanced (Dr 130.8 = Cr 130.8)',
   p.purchasing.glBalanced && p.purchasing.glDebit === 130.8 && p.purchasing.invoice.total === 130.8) && ok;
-ok = check('PGlite purchasing rollback: double-receive rejected (stock stays 20), early invoice rejected (no GL legs)',
+ok = check('PGlite purchasing rollback: double-receive and duplicate/early invoices are rejected without stock/GL duplication',
   p.purchasing.doubleReceiveErr === 'InvalidPurchaseOrderStateError' && p.purchasing.stockAfterDoubleReceiveAttempt === 20
+  && p.purchasing.duplicateInvoiceErr === 'InvalidPurchaseOrderStateError'
+  && p.purchasing.duplicateInvoiceGlDebit === 0 && p.purchasing.duplicateInvoiceGlCredit === 0
   && p.purchasing.earlyInvoiceErr === 'InvalidPurchaseOrderStateError'
-  && p.purchasing.earlyInvoiceGlDebit === 0 && p.purchasing.earlyInvoiceGlCredit === 0) && ok;
+  && p.purchasing.earlyInvoiceGlDebit === 0 && p.purchasing.earlyInvoiceGlCredit === 0
+  && p.purchasing.invoiceRaceFulfilled === 1 && p.purchasing.invoiceRaceRejected === 1
+  && p.purchasing.invoiceRaceCount === 1) && ok;
 ok = check('PGlite CRM chain: converting an opportunity creates a real order (net=50 tax=4.5 total=54.5), stock 50→45, balanced GL',
   p.crm.conv.net === 50 && p.crm.conv.tax === 4.5 && p.crm.conv.total === 54.5
   && p.crm.stockAfter === 45 && p.crm.glBalanced && p.crm.glDebit === 54.5) && ok;
