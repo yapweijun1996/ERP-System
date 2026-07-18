@@ -16,6 +16,10 @@ import {
   postSupplierInvoiceWithin,
   type PostSupplierInvoiceInput,
 } from '../modules/purchasing/postSupplierInvoice';
+import {
+  completeWarehousePickWithin,
+  recordWarehousePickWithin,
+} from '../modules/warehouse/picking';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'inventory/adjustments/post': {
@@ -32,6 +36,39 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return completeStockTransferWithin(tx, scope, input.resourceId);
+    },
+  },
+  'warehouse/picks/pick-line': {
+    permission: 'inventory.transfer',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as { lineId?: unknown; qty?: unknown };
+      if (
+        !Number.isSafeInteger(payload.lineId)
+        || Number(payload.lineId) <= 0
+        || !Number.isFinite(payload.qty)
+        || Number(payload.qty) <= 0
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'lineId and a positive qty are required.',
+        );
+      }
+      return recordWarehousePickWithin(tx, scope, {
+        pickId: input.resourceId,
+        lineId: Number(payload.lineId),
+        qty: Number(payload.qty),
+      });
+    },
+  },
+  'warehouse/picks/complete': {
+    permission: 'inventory.transfer',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return completeWarehousePickWithin(tx, scope, input.resourceId);
     },
   },
   'sales/orders/confirm': {

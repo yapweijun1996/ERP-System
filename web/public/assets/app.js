@@ -389,6 +389,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
   'crm-pipeline','new-opportunity',
   'settings',
+  'picking',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -398,6 +399,7 @@ const API_SCREEN_ROUTES = new Set([
   'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
   'crm-pipeline','new-opportunity',
   'settings',
+  'picking',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',

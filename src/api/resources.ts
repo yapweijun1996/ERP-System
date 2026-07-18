@@ -18,9 +18,12 @@ import {
   stockLevel,
   stockMovement,
   stockLocationBalance,
+  stockReservation,
   stockTransfer,
   warehouse,
   warehouseBin,
+  warehousePick,
+  warehousePickLine,
   supplier,
   supplierInvoice,
 } from '../data/schema';
@@ -88,6 +91,16 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     versionColumn: stockTransfer.version,
     allowedActions: ['complete'],
     createPermission: 'inventory.transfer',
+  }),
+  'warehouse/picks': resource(warehousePick, 'inventory.read', {
+    status: warehousePick.status,
+    versionColumn: warehousePick.version,
+    allowedActions: ['pick-line', 'complete'],
+    createPermission: 'inventory.transfer',
+  }),
+  'warehouse/pick-lines': resource(warehousePickLine, 'inventory.read'),
+  'warehouse/reservations': resource(stockReservation, 'inventory.read', {
+    status: stockReservation.status,
   }),
   'sales/orders': resource(salesOrder, 'sales.read', {
     status: salesOrder.status,

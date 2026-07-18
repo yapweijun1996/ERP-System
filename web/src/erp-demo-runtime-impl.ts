@@ -54,6 +54,13 @@ import {
   type CreateWarehouseBinInput,
   type RegisterInventorySerialInput,
 } from '../../src/modules/inventory/tracking';
+import {
+  completeWarehousePickWithin,
+  createWarehousePickWithin,
+  recordWarehousePickWithin,
+  type CreateWarehousePickInput,
+  type RecordPickInput,
+} from '../../src/modules/warehouse/picking';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -100,6 +107,15 @@ export const erpDemoRuntime = Object.freeze({
     },
     completeStockTransferWithin(db: DemoOrm, scope: Scope, transferId: number) {
       return completeStockTransferWithin(asDomainDb(db), scope, transferId);
+    },
+    createWarehousePickWithin(db: DemoOrm, scope: Scope, input: CreateWarehousePickInput) {
+      return createWarehousePickWithin(asDomainDb(db), scope, input);
+    },
+    recordWarehousePickWithin(db: DemoOrm, scope: Scope, input: RecordPickInput) {
+      return recordWarehousePickWithin(asDomainDb(db), scope, input);
+    },
+    completeWarehousePickWithin(db: DemoOrm, scope: Scope, pickId: number) {
+      return completeWarehousePickWithin(asDomainDb(db), scope, pickId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

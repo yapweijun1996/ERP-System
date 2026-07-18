@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v23';
+const CACHE_VERSION = 'erp-system-pwa-v24';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -40,6 +40,7 @@ const staticUrls = [
   './assets/ui.js',
   './assets/i18n.js',
   './assets/screens-ops.js',
+  './assets/screens-warehouse.js',
   './assets/screens-inv.js',
   './assets/screens-mfg.js',
   './assets/screens-qc.js',
@@ -81,7 +82,8 @@ const staticUrls = [
   './db/erp-system-migrations.sql',
   './db/erp-system-seed.sql',
   './db/erp-system-demo-txn.sql',
-  './db/erp-system-demo-drafts.sql'
+  './db/erp-system-demo-drafts.sql',
+  './db/erp-system-demo-picks.sql'
 ];
 
 self.addEventListener('install', (event) => {

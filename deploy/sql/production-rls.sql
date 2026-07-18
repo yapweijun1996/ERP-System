@@ -15,6 +15,7 @@ DECLARE
     'warehouse_bin', 'inventory_lot', 'inventory_serial', 'stock_location_balance',
     'inventory_adjustment', 'inventory_adjustment_line',
     'stock_transfer', 'stock_transfer_line',
+    'warehouse_pick', 'warehouse_pick_line', 'stock_reservation',
     'customer', 'invoice', 'sales_order', 'sales_order_line',
     'account', 'gl_entry',
     'goods_receipt', 'purchase_order', 'purchase_order_line',

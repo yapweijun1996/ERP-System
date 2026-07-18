@@ -57,6 +57,13 @@
       "when": 1784377190077,
       "tag": "0007_wonderful_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784403933960,
+      "tag": "0008_sweet_menace",
+      "breakpoints": true
     }
   ]
 }

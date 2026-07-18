@@ -24,6 +24,10 @@ import {
   createOpportunity,
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
+import {
+  createWarehousePickWithin,
+  type CreateWarehousePickInput,
+} from '../modules/warehouse/picking';
 
 export interface CreateDefinition {
   permission: string;
@@ -84,6 +88,17 @@ const CREATES: Record<string, CreateDefinition> = {
         tx,
         scope,
         payload as unknown as CreateStockTransferInput,
+      );
+    },
+  },
+  'warehouse/picks': {
+    permission: 'inventory.transfer',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createWarehousePickWithin(
+        tx,
+        scope,
+        payload as unknown as CreateWarehousePickInput,
       );
     },
   },

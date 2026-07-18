@@ -22,14 +22,18 @@ import {
   stockLocationBalance,
   stockMovement,
   stockTransfer,
+  stockReservation,
   supplier,
   supplierInvoice,
   goodsReceipt,
   warehouseBin,
+  warehousePick,
+  warehousePickLine,
   warehouse,
 } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
+import { setStockQtyForFixture } from '../modules/inventory/stock';
 import { createApp } from './app';
 
 interface RunningApi {
@@ -1029,6 +1033,116 @@ describe('production API security contract', () => {
         warehouseId: location.id,
         code: 'DENIED',
         name: 'Denied',
+      }),
+    });
+    expect(denied.status).toBe(403);
+  });
+
+  it('creates, records and idempotently completes warehouse picks through the API', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'PICK-API',
+      name: 'Pick API Warehouse',
+    }).returning({ id: warehouse.id });
+    await db.insert(stockLevel).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: location.id,
+      qty: '0',
+    });
+    await setStockQtyForFixture(db, {
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+    }, item.id, location.id, 10);
+    const [bin] = await db.select({ id: warehouseBin.id }).from(warehouseBin)
+      .where(eq(warehouseBin.warehouseId, location.id));
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+
+    const createdResponse = await fetch(`${running.baseUrl}/api/warehouse/picks`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'warehouse-pick-create' },
+      body: JSON.stringify({
+        docNo: 'PICK-API-1',
+        warehouseId: location.id,
+        pickDate: '2026-07-19',
+        assignee: 'API operator',
+        lines: [{ productId: item.id, binId: bin.id, qty: 4 }],
+      }),
+    });
+    expect(createdResponse.status).toBe(201);
+    const created = (await createdResponse.json()).data;
+    expect(created).toMatchObject({ docNo: 'PICK-API-1', status: 'open' });
+    expect(created.lines).toHaveLength(1);
+
+    const pickLine = () => fetch(
+      `${running.baseUrl}/api/warehouse/picks/${created.id}/actions/pick-line`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'warehouse-pick-line-1' },
+        body: JSON.stringify({ lineId: created.lines[0].id, qty: 4 }),
+      },
+    );
+    const recorded = await pickLine();
+    expect(recorded.status).toBe(200);
+    const recordedBody = await recorded.json();
+    expect(recordedBody.data).toMatchObject({ pickedQty: '4' });
+    const replayedLine = await pickLine();
+    expect(replayedLine.headers.get('idempotency-replayed')).toBe('true');
+    expect(await replayedLine.json()).toEqual(recordedBody);
+
+    const complete = () => fetch(
+      `${running.baseUrl}/api/warehouse/picks/${created.id}/actions/complete`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'warehouse-pick-complete-1' },
+        body: '{}',
+      },
+    );
+    const completed = await complete();
+    expect(completed.status).toBe(200);
+    const completedBody = await completed.json();
+    expect(completedBody.data).toMatchObject({ status: 'picked' });
+    const replayedComplete = await complete();
+    expect(replayedComplete.headers.get('idempotency-replayed')).toBe('true');
+    expect(await replayedComplete.json()).toEqual(completedBody);
+
+    expect(await db.select().from(warehousePick)).toMatchObject([
+      { docNo: 'PICK-API-1', status: 'picked' },
+    ]);
+    expect(await db.select().from(warehousePickLine)).toMatchObject([
+      { pickedQty: '4.0000', requiredQty: '4.0000' },
+    ]);
+    expect(await db.select().from(stockReservation)).toMatchObject([
+      { status: 'consumed' },
+    ]);
+    const [remaining] = await db.select({ qty: stockLevel.qty }).from(stockLevel)
+      .where(eq(stockLevel.warehouseId, location.id));
+    expect(Number(remaining.qty)).toBe(6);
+    expect(await db.select().from(stockMovement)
+      .where(eq(stockMovement.refType, 'warehouse_pick'))).toHaveLength(1);
+
+    const viewer = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const denied = await fetch(`${running.baseUrl}/api/warehouse/picks`, {
+      method: 'POST',
+      headers: {
+        cookie: viewer.header,
+        'content-type': 'application/json',
+        'x-csrf-token': viewer.csrf,
+      },
+      body: JSON.stringify({
+        docNo: 'PICK-DENIED',
+        warehouseId: location.id,
+        pickDate: '2026-07-19',
+        lines: [{ productId: item.id, binId: bin.id, qty: 1 }],
       }),
     });
     expect(denied.status).toBe(403);

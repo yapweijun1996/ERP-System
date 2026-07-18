@@ -215,3 +215,59 @@ export const stockTransferLine = pgTable('stock_transfer_line', {
   uniqueIndex('uq_stock_transfer_line').on(t.masterFn, t.companyFn, t.transferId, t.lineNo),
   index('idx_stock_transfer_line_product').on(t.masterFn, t.companyFn, t.productId, t.transferId),
 ]);
+
+export const warehousePick = pgTable('warehouse_pick', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  status: text('status').notNull().default('open'), // open | in_progress | picked | cancelled
+  version: integer('version').notNull().default(1),
+  warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull().references(() => warehouse.id),
+  salesOrderId: bigint('sales_order_id', { mode: 'number' }),
+  priority: text('priority').notNull().default('normal'),
+  assignee: text('assignee'),
+  pickDate: date('pick_date').notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_warehouse_pick_docno').on(t.masterFn, t.companyFn, t.docNo),
+  index('idx_warehouse_pick_status').on(t.masterFn, t.companyFn, t.status, t.pickDate, t.id),
+  check('ck_warehouse_pick_status', sql`${t.status} in ('open', 'in_progress', 'picked', 'cancelled')`),
+]);
+
+export const warehousePickLine = pgTable('warehouse_pick_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  pickId: bigint('pick_id', { mode: 'number' }).notNull().references(() => warehousePick.id),
+  lineNo: integer('line_no').notNull(),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  binId: bigint('bin_id', { mode: 'number' }).notNull().references(() => warehouseBin.id),
+  requiredQty: numeric('required_qty', { precision: 18, scale: 4 }).notNull(),
+  pickedQty: numeric('picked_qty', { precision: 18, scale: 4 }).notNull().default('0'),
+  uom: text('uom').notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_warehouse_pick_line').on(t.masterFn, t.companyFn, t.pickId, t.lineNo),
+  index('idx_warehouse_pick_line_product').on(t.masterFn, t.companyFn, t.productId, t.pickId),
+  check('ck_warehouse_pick_line_qty', sql`${t.requiredQty} > 0 and ${t.pickedQty} >= 0 and ${t.pickedQty} <= ${t.requiredQty}`),
+]);
+
+export const stockReservation = pgTable('stock_reservation', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  pickId: bigint('pick_id', { mode: 'number' }).notNull().references(() => warehousePick.id),
+  pickLineId: bigint('pick_line_id', { mode: 'number' }).notNull().references(() => warehousePickLine.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull().references(() => warehouse.id),
+  binId: bigint('bin_id', { mode: 'number' }).notNull().references(() => warehouseBin.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  status: text('status').notNull().default('active'), // active | consumed | released
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_stock_reservation_pick_line').on(t.masterFn, t.companyFn, t.pickLineId),
+  index('idx_stock_reservation_active').on(
+    t.masterFn, t.companyFn, t.productId, t.warehouseId, t.status,
+  ),
+  check('ck_stock_reservation_qty', sql`${t.qty} > 0`),
+  check('ck_stock_reservation_status', sql`${t.status} in ('active', 'consumed', 'released')`),
+]);
