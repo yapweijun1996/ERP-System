@@ -146,7 +146,7 @@
   }
   function update(resource,id,payload,version){
     var headers={};
-    if(version!=null) headers['If-Match']=String(version);
+    if(version!=null) headers['If-Match']='"'+String(version).replace(/"/g,'')+'"';
     return apiRequest(resourcePath(resource)+'/'+encodeURIComponent(id),{
       method:'PATCH',headers:headers,body:Object.assign({},payload||{}),
     });

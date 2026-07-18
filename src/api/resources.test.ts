@@ -21,7 +21,8 @@ describe('canonical API resources', () => {
   it('lists a tenant-scoped resource with bounded keyset pagination', async () => {
     const first = await listResource(db, scope, 'inventory/products', { limit: 1 });
     expect(first.data).toHaveLength(1);
-    expect(first.meta.nextCursor).toBe(String((first.data[0] as { id: number }).id));
+    expect(first.meta.nextCursor).toEqual(expect.any(String));
+    expect(first.meta.nextCursor).not.toBe(String((first.data[0] as { id: number }).id));
 
     const second = await listResource(db, scope, 'inventory/products', {
       limit: 1000,
@@ -70,5 +71,7 @@ describe('canonical API resources', () => {
       .rejects.toThrow('unsupported filter(s): search');
     await expect(listResource(db, scope, 'unknown/things'))
       .rejects.toBeInstanceOf(UnknownResourceError);
+    await expect(listResource(db, scope, 'inventory/products', { cursor: '1' }))
+      .rejects.toThrow('cursor is invalid');
   });
 });

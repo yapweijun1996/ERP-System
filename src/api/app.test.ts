@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
 import { eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { auditLog } from '../data/schema';
+import {
+  apiIdempotency,
+  auditLog,
+  product,
+  stockLevel,
+  warehouse,
+} from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { createApp } from './app';
@@ -124,6 +130,25 @@ describe('production API security contract', () => {
     expect((await response.json()).error.code).toBe('company_access_denied');
   });
 
+  it('enforces write permission before dispatching a registered action', async () => {
+    const cookies = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const response = await fetch(
+      `${running.baseUrl}/api/crm/opportunities/1/actions/convert`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: cookies.header,
+          'content-type': 'application/json',
+          'x-csrf-token': cookies.csrf,
+          'idempotency-key': 'viewer-denied',
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe('permission_denied');
+  });
+
   it('takes tenant scope only from the session and rejects query overrides', async () => {
     const cookies = await login(running.baseUrl);
     const override = await fetch(
@@ -166,6 +191,85 @@ describe('production API security contract', () => {
         message: 'Request body is not valid JSON.',
         requestId: 'bad-json',
       },
+    });
+  });
+
+  it('dispatches a CRM conversion with atomic idempotency, audit and ETag', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'MAIN',
+      name: 'Main Warehouse',
+    }).returning({ id: warehouse.id });
+    await db.insert(stockLevel).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: location.id,
+      qty: '2',
+    });
+    const cookies = await login(running.baseUrl);
+    const detail = await fetch(`${running.baseUrl}/api/crm/opportunities/1`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(detail.status).toBe(200);
+    expect(detail.headers.get('etag')).toBe('"1"');
+
+    const payload = {
+      docNo: 'SO-API-1',
+      orderDate: '2026-07-18',
+      lines: [{
+        productId: item.id,
+        warehouseId: location.id,
+        qty: 5,
+        unitPrice: 10,
+        taxCode: 'SR',
+      }],
+    };
+    const action = (body: unknown, key?: string) => fetch(
+      `${running.baseUrl}/api/crm/opportunities/1/actions/convert`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: cookies.header,
+          'content-type': 'application/json',
+          'x-csrf-token': cookies.csrf,
+          'x-request-id': 'crm-action-test',
+          ...(key ? { 'idempotency-key': key } : {}),
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    const missingKey = await action(payload);
+    expect(missingKey.status).toBe(428);
+    expect((await missingKey.json()).error.code).toBe('idempotency_key_required');
+
+    const insufficient = await action(payload, 'crm-convert-1');
+    expect(insufficient.status).toBe(409);
+    expect((await insufficient.json()).error.code).toBe('insufficient_stock');
+    expect(await db.select().from(apiIdempotency)).toHaveLength(0);
+
+    await db.update(stockLevel).set({ qty: '50' }).where(eq(stockLevel.productId, item.id));
+    const converted = await action(payload, 'crm-convert-1');
+    expect(converted.status).toBe(200);
+    const convertedBody = await converted.json();
+    expect(convertedBody.data).toMatchObject({ opportunityId: 1, total: 54.5 });
+    const replay = await action(payload, 'crm-convert-1');
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await replay.json()).toEqual(convertedBody);
+
+    const changed = await action({ ...payload, docNo: 'SO-CHANGED' }, 'crm-convert-1');
+    expect(changed.status).toBe(409);
+    expect((await changed.json()).error.code).toBe('idempotency_key_reused');
+    const [audit] = await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'crm-action-test'));
+    expect(audit).toMatchObject({
+      entity: 'crm/opportunities',
+      entityId: '1',
+      action: 'convert',
     });
   });
 });

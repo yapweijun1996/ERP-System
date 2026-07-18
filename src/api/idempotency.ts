@@ -32,14 +32,6 @@ export function requestHash(operation: string, payload: unknown): string {
     .digest('hex');
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const candidate = error as { code?: string; message?: string; cause?: { code?: string } };
-  return candidate.code === '23505'
-    || candidate.cause?.code === '23505'
-    || Boolean(candidate.message?.toLowerCase().includes('unique'));
-}
-
 export async function beginIdempotentRequest(
   db: DB,
   scope: IdempotencyScope,
@@ -49,31 +41,49 @@ export async function beginIdempotentRequest(
   ttlMs = 24 * 60 * 60 * 1000,
 ): Promise<IdempotencyBeginResult> {
   const hash = requestHash(operation, payload);
-  try {
-    const [created] = await db.insert(apiIdempotency).values({
+  const [created] = await db.insert(apiIdempotency).values({
+    ...scope,
+    idempotencyKey: key,
+    operation,
+    requestHash: hash,
+    expiresAt: new Date(Date.now() + ttlMs),
+  }).onConflictDoNothing({
+    target: [
+      apiIdempotency.masterFn,
+      apiIdempotency.companyFn,
+      apiIdempotency.actorUserId,
+      apiIdempotency.idempotencyKey,
+    ],
+  }).returning({ id: apiIdempotency.id });
+  if (created) {
+    return { kind: 'started', recordId: created.id };
+  }
+
+  const [existing] = await db.select({
+    id: apiIdempotency.id,
+    requestHash: apiIdempotency.requestHash,
+    responseStatus: apiIdempotency.responseStatus,
+    responseBody: apiIdempotency.responseBody,
+    completedAt: apiIdempotency.completedAt,
+    expiresAt: apiIdempotency.expiresAt,
+  }).from(apiIdempotency).where(and(
+    eq(apiIdempotency.masterFn, scope.masterFn),
+    eq(apiIdempotency.companyFn, scope.companyFn),
+    eq(apiIdempotency.actorUserId, scope.actorUserId),
+    eq(apiIdempotency.idempotencyKey, key),
+  )).limit(1).for('update');
+  if (!existing) throw new Error('Idempotency claim disappeared after unique conflict');
+  if (existing.expiresAt <= new Date()) {
+    await db.delete(apiIdempotency).where(eq(apiIdempotency.id, existing.id));
+    const [renewed] = await db.insert(apiIdempotency).values({
       ...scope,
       idempotencyKey: key,
       operation,
       requestHash: hash,
       expiresAt: new Date(Date.now() + ttlMs),
     }).returning({ id: apiIdempotency.id });
-    return { kind: 'started', recordId: created.id };
-  } catch (error) {
-    if (!isUniqueViolation(error)) throw error;
+    return { kind: 'started', recordId: renewed.id };
   }
-
-  const [existing] = await db.select({
-    requestHash: apiIdempotency.requestHash,
-    responseStatus: apiIdempotency.responseStatus,
-    responseBody: apiIdempotency.responseBody,
-    completedAt: apiIdempotency.completedAt,
-  }).from(apiIdempotency).where(and(
-    eq(apiIdempotency.masterFn, scope.masterFn),
-    eq(apiIdempotency.companyFn, scope.companyFn),
-    eq(apiIdempotency.actorUserId, scope.actorUserId),
-    eq(apiIdempotency.idempotencyKey, key),
-  )).limit(1);
-  if (!existing) throw new Error('Idempotency claim disappeared after unique conflict');
   if (existing.requestHash !== hash) {
     return { kind: 'conflict', reason: 'different_request' };
   }

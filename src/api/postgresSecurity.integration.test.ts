@@ -12,6 +12,8 @@ import { completeProductionSetup } from '../modules/setup/completeSetup';
 import { createInvitation, acceptInvitation, requestPasswordReset, confirmPasswordReset } from '../auth/lifecycle';
 import { decryptToken, type EncryptedToken } from '../auth/tokenCrypto';
 import { processOutboxBatch } from '../worker/outbox';
+import { dispatchAction } from './actionDispatcher';
+import { actionDefinitionFor } from './actions';
 
 const postgresUrl = process.env.POSTGRES_URL;
 const suite = postgresUrl ? describe : describe.skip;
@@ -154,5 +156,79 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       'changed-password',
       'pg-reset-replay',
     )).rejects.toMatchObject({ code: 'reset_invalid' });
+
+    const fixture = await withTenantTransaction(db, {
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+    }, async (tx) => {
+      const [item] = await tx.insert(schema.product).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        sku: 'PG-WIDGET',
+        name: 'PostgreSQL Widget',
+      }).returning({ id: schema.product.id });
+      const [location] = await tx.insert(schema.warehouse).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        code: 'MAIN',
+        name: 'Main Warehouse',
+      }).returning({ id: schema.warehouse.id });
+      await tx.insert(schema.stockLevel).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        productId: item.id,
+        warehouseId: location.id,
+        qty: '20',
+      });
+      const [buyer] = await tx.insert(schema.customer).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        code: 'PG-CUSTOMER',
+        name: 'PostgreSQL Customer',
+      }).returning({ id: schema.customer.id });
+      const [deal] = await tx.insert(schema.opportunity).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        docNo: 'PG-OPP-1',
+        customerId: buyer.id,
+        title: 'PostgreSQL action proof',
+        value: '100.00',
+        currency: 'SGD',
+        closeDate: '2026-07-31',
+      }).returning({ id: schema.opportunity.id });
+      return { itemId: item.id, warehouseId: location.id, opportunityId: deal.id };
+    });
+    const action = actionDefinitionFor('crm/opportunities', 'convert');
+    expect(action).not.toBeNull();
+    const actionContext = {
+      db,
+      session: {
+        userId: admin.userId,
+        masterFn: setup.masterFn,
+        activeCompanyFn: setup.companyFn,
+        email: admin.email,
+        fullName: admin.fullName,
+      },
+      resource: 'crm/opportunities',
+      resourceId: fixture.opportunityId,
+      action: 'convert',
+      payload: {
+        docNo: 'PG-SO-1',
+        orderDate: '2026-07-18',
+        lines: [{
+          productId: fixture.itemId,
+          warehouseId: fixture.warehouseId,
+          qty: 2,
+          unitPrice: 10,
+          taxCode: 'SR',
+        }],
+      },
+      idempotencyKey: 'pg-action-proof',
+      requestId: 'pg-action-proof',
+    };
+    const dispatched = await dispatchAction(actionContext, action!);
+    const replayed = await dispatchAction(actionContext, action!);
+    expect(dispatched.replayed).toBe(false);
+    expect(replayed).toEqual({ ...dispatched, replayed: true });
   }, 60_000);
 });

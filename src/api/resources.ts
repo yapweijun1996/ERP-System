@@ -29,9 +29,20 @@ export interface ResourceQuery {
   [key: string]: unknown;
 }
 
-interface ResourceDefinition {
+export interface ResourceDefinition {
   table: any;
+  idColumn: any;
+  tenantScope: 'company';
   readPermission: string;
+  createPermission: string | null;
+  updatePermission: string | null;
+  allowedFilters: readonly string[];
+  allowedSorts: readonly string[];
+  allowedActions: readonly string[];
+  versionColumn?: any;
+  versionPolicy: 'none' | 'integer';
+  idempotencyPolicy: 'none' | 'required_for_actions';
+  auditPolicy: 'none' | 'writes';
   status?: any;
 }
 
@@ -40,19 +51,66 @@ interface ResourceDefinition {
  * allowlist: route parameters can never become SQL identifiers.
  */
 const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
-  'inventory/products': { table: product, readPermission: 'inventory.read' },
-  'inventory/stock-levels': { table: stockLevel, readPermission: 'inventory.read' },
-  'inventory/stock-movements': { table: stockMovement, readPermission: 'inventory.read' },
-  'sales/orders': { table: salesOrder, readPermission: 'sales.read', status: salesOrder.status },
-  'sales/invoices': { table: invoice, readPermission: 'sales.read', status: invoice.status },
-  'finance/accounts': { table: account, readPermission: 'finance.read' },
-  'finance/gl-entries': { table: glEntry, readPermission: 'finance.read' },
-  'purchasing/suppliers': { table: supplier, readPermission: 'purchasing.read' },
-  'purchasing/purchase-orders': { table: purchaseOrder, readPermission: 'purchasing.read', status: purchaseOrder.status },
-  'purchasing/goods-receipts': { table: goodsReceipt, readPermission: 'purchasing.read' },
-  'purchasing/supplier-invoices': { table: supplierInvoice, readPermission: 'purchasing.read', status: supplierInvoice.status },
-  'crm/opportunities': { table: opportunity, readPermission: 'crm.read', status: opportunity.stage },
+  'inventory/products': resource(product, 'inventory.read'),
+  'inventory/stock-levels': resource(stockLevel, 'inventory.read'),
+  'inventory/stock-movements': resource(stockMovement, 'inventory.read'),
+  'sales/orders': resource(salesOrder, 'sales.read', {
+    status: salesOrder.status,
+    versionColumn: salesOrder.version,
+  }),
+  'sales/invoices': resource(invoice, 'sales.read', {
+    status: invoice.status,
+    versionColumn: invoice.version,
+  }),
+  'finance/accounts': resource(account, 'finance.read'),
+  'finance/gl-entries': resource(glEntry, 'finance.read'),
+  'purchasing/suppliers': resource(supplier, 'purchasing.read'),
+  'purchasing/purchase-orders': resource(purchaseOrder, 'purchasing.read', {
+    status: purchaseOrder.status,
+    versionColumn: purchaseOrder.version,
+  }),
+  'purchasing/goods-receipts': resource(goodsReceipt, 'purchasing.read'),
+  'purchasing/supplier-invoices': resource(supplierInvoice, 'purchasing.read', {
+    status: supplierInvoice.status,
+    versionColumn: supplierInvoice.version,
+  }),
+  'crm/opportunities': resource(opportunity, 'crm.read', {
+    status: opportunity.stage,
+    versionColumn: opportunity.version,
+    allowedActions: ['convert'],
+    createPermission: 'crm.write',
+    updatePermission: 'crm.write',
+  }),
 };
+
+function resource(
+  table: any,
+  readPermission: string,
+  options: {
+    status?: any;
+    versionColumn?: any;
+    allowedActions?: readonly string[];
+    createPermission?: string;
+    updatePermission?: string;
+  } = {},
+): ResourceDefinition {
+  return {
+    table,
+    idColumn: table.id,
+    tenantScope: 'company',
+    readPermission,
+    createPermission: options.createPermission ?? null,
+    updatePermission: options.updatePermission ?? null,
+    allowedFilters: options.status ? ['status'] : [],
+    allowedSorts: ['id'],
+    allowedActions: options.allowedActions ?? [],
+    versionColumn: options.versionColumn,
+    versionPolicy: options.versionColumn ? 'integer' : 'none',
+    idempotencyPolicy: options.allowedActions?.length ? 'required_for_actions' : 'none',
+    auditPolicy: options.allowedActions?.length ? 'writes' : 'none',
+    status: options.status,
+  };
+}
 
 export class UnknownResourceError extends Error {
   constructor(resource: string) {
@@ -83,6 +141,27 @@ function parsePositiveInteger(value: unknown, fallback: number, label: string): 
   return parsed;
 }
 
+function decodeCursor(value: unknown): number {
+  if (value == null || value === '') return 0;
+  if (typeof value !== 'string') throw new InvalidResourceQueryError('cursor is invalid');
+  try {
+    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as {
+      v?: unknown;
+      id?: unknown;
+    };
+    if (parsed.v !== 1 || !Number.isSafeInteger(parsed.id) || Number(parsed.id) < 0) {
+      throw new Error('invalid cursor');
+    }
+    return Number(parsed.id);
+  } catch {
+    throw new InvalidResourceQueryError('cursor is invalid');
+  }
+}
+
+function encodeCursor(id: number): string {
+  return Buffer.from(JSON.stringify({ v: 1, id }), 'utf8').toString('base64url');
+}
+
 export async function listResource(
   db: DB,
   scope: ApiScope,
@@ -90,16 +169,21 @@ export async function listResource(
   query: ResourceQuery = {},
 ) {
   const definition = definitionFor(resource);
-  const unsupported = Object.keys(query).filter(
-    (key) => !['cursor', 'limit', 'sort', 'status'].includes(key),
-  );
+  const supported = ['cursor', 'limit', 'sort', ...definition.allowedFilters];
+  const unsupported = Object.keys(query).filter((key) => !supported.includes(key));
   if (unsupported.length) {
     throw new InvalidResourceQueryError(`unsupported filter(s): ${unsupported.join(', ')}`);
   }
-  const cursor = parsePositiveInteger(query.cursor, 0, 'cursor');
+  const cursor = decodeCursor(query.cursor);
   const limit = Math.min(100, Math.max(1, parsePositiveInteger(query.limit, 50, 'limit')));
-  if (query.sort != null && query.sort !== '' && query.sort !== 'id') {
-    throw new InvalidResourceQueryError("sort must be the whitelisted value 'id'");
+  if (
+    query.sort != null
+    && query.sort !== ''
+    && !definition.allowedSorts.includes(String(query.sort))
+  ) {
+    throw new InvalidResourceQueryError(
+      `sort must be one of: ${definition.allowedSorts.join(', ')}`,
+    );
   }
   if (query.status != null && !definition.status) {
     throw new InvalidResourceQueryError(`status is not a supported filter for '${resource}'`);
@@ -111,7 +195,7 @@ export async function listResource(
   const predicates = [
     eq(definition.table.masterFn, scope.masterFn),
     eq(definition.table.companyFn, scope.companyFn),
-    gt(definition.table.id, cursor),
+    gt(definition.idColumn, cursor),
   ];
   if (definition.status && typeof query.status === 'string' && query.status) {
     predicates.push(eq(definition.status, query.status));
@@ -121,7 +205,7 @@ export async function listResource(
     .select()
     .from(definition.table)
     .where(and(...predicates))
-    .orderBy(asc(definition.table.id))
+    .orderBy(asc(definition.idColumn))
     .limit(limit + 1);
   const hasMore = rows.length > limit;
   const data = hasMore ? rows.slice(0, limit) : rows;
@@ -129,7 +213,7 @@ export async function listResource(
 
   return {
     data,
-    meta: { nextCursor: hasMore && last?.id != null ? String(last.id) : null },
+    meta: { nextCursor: hasMore && last?.id != null ? encodeCursor(last.id) : null },
   };
 }
 
@@ -144,7 +228,7 @@ export async function getResource(db: DB, scope: ApiScope, resource: string, id:
     .where(and(
       eq(definition.table.masterFn, scope.masterFn),
       eq(definition.table.companyFn, scope.companyFn),
-      eq(definition.table.id, resourceId),
+      eq(definition.idColumn, resourceId),
     ))
     .limit(1);
 
@@ -157,4 +241,8 @@ export function isKnownResource(resource: string): boolean {
 
 export function readPermissionForResource(resource: string): string {
   return definitionFor(resource).readPermission;
+}
+
+export function resourceDefinitionFor(resource: string): ResourceDefinition {
+  return definitionFor(resource);
 }

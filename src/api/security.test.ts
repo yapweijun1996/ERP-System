@@ -33,6 +33,29 @@ describe('idempotency and audit services', () => {
     expect(requestHash('op', { a: 1, b: 2 })).toBe(requestHash('op', { b: 2, a: 1 }));
   });
 
+  it('allows an idempotency key to be claimed again after its TTL expires', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const [actor] = await db.select({ userId: appUser.userId }).from(appUser)
+      .where(eq(appUser.email, 'admin@acme.co'));
+    const scope = { masterFn: 'M1', companyFn: 'C-SG', actorUserId: actor.userId };
+    expect((await beginIdempotentRequest(
+      db,
+      scope,
+      'expired-key',
+      'inventory.adjust',
+      { qty: 1 },
+      -1,
+    )).kind).toBe('started');
+    expect((await beginIdempotentRequest(
+      db,
+      scope,
+      'expired-key',
+      'inventory.adjust',
+      { qty: 2 },
+    )).kind).toBe('started');
+  });
+
   it('appends auditable before/after state with the request correlation id', async () => {
     const db = await freshDb();
     await seedDemo(db);

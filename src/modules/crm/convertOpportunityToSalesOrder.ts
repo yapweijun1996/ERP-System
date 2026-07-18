@@ -18,37 +18,43 @@ export interface ConvertOpportunityInput {
   lines: OrderLineInput[];
 }
 
-export async function convertOpportunityToSalesOrder(db: DB, scope: Scope, input: ConvertOpportunityInput) {
-  return db.transaction(async (tx) => {
-    const [opp] = await tx
-      .select({
-        id: opportunity.id, stage: opportunity.stage,
-        customerId: opportunity.customerId, currency: opportunity.currency,
-      })
-      .from(opportunity)
-      .where(and(
-        eq(opportunity.masterFn, scope.masterFn),
-        eq(opportunity.companyFn, scope.companyFn),
-        eq(opportunity.id, input.opportunityId),
-      ))
-      .for('update'); // row lock: a concurrent conversion attempt waits here until we commit
+export async function convertOpportunityToSalesOrderWithin(
+  exec: DB,
+  scope: Scope,
+  input: ConvertOpportunityInput,
+) {
+  const [opp] = await exec
+    .select({
+      id: opportunity.id, stage: opportunity.stage,
+      customerId: opportunity.customerId, currency: opportunity.currency,
+    })
+    .from(opportunity)
+    .where(and(
+      eq(opportunity.masterFn, scope.masterFn),
+      eq(opportunity.companyFn, scope.companyFn),
+      eq(opportunity.id, input.opportunityId),
+    ))
+    .for('update'); // row lock: a concurrent conversion attempt waits here until we commit
 
-    if (!opp) throw new InvalidOpportunityStateError(`Opportunity ${input.opportunityId} not found`);
-    if (opp.stage === 'won' || opp.stage === 'lost') {
-      throw new InvalidOpportunityStateError(
-        `Opportunity ${input.opportunityId} is '${opp.stage}' — cannot convert twice`,
-      ); // → ROLLBACK
-    }
+  if (!opp) throw new InvalidOpportunityStateError(`Opportunity ${input.opportunityId} not found`);
+  if (opp.stage === 'won' || opp.stage === 'lost') {
+    throw new InvalidOpportunityStateError(
+      `Opportunity ${input.opportunityId} is '${opp.stage}' — cannot convert twice`,
+    ); // → ROLLBACK
+  }
 
-    const result = await confirmSalesOrderWithin(tx, scope, {
-      docNo: input.docNo, customerId: opp.customerId, orderDate: input.orderDate,
-      currency: opp.currency, lines: input.lines,
-    });
-
-    await tx.update(opportunity)
-      .set({ stage: 'won', orderId: result.orderId, updatedAt: sql`now()` })
-      .where(eq(opportunity.id, opp.id));
-
-    return { ...result, opportunityId: opp.id };
+  const result = await confirmSalesOrderWithin(exec, scope, {
+    docNo: input.docNo, customerId: opp.customerId, orderDate: input.orderDate,
+    currency: opp.currency, lines: input.lines,
   });
+
+  await exec.update(opportunity)
+    .set({ stage: 'won', orderId: result.orderId, updatedAt: sql`now()` })
+    .where(eq(opportunity.id, opp.id));
+
+  return { ...result, opportunityId: opp.id };
+}
+
+export async function convertOpportunityToSalesOrder(db: DB, scope: Scope, input: ConvertOpportunityInput) {
+  return db.transaction((tx) => convertOpportunityToSalesOrderWithin(tx, scope, input));
 }
