@@ -18,6 +18,8 @@ import {
   purchaseOrderLine,
   salesOrder,
   salesOrderLine,
+  salesDelivery,
+  salesDeliveryLine,
   stockLevel,
   stockLocationBalance,
   stockMovement,
@@ -825,6 +827,7 @@ describe('production API security contract', () => {
     const confirmedBody = await confirmed.json();
     expect(confirmedBody.data).toMatchObject({
       orderId: draft.id,
+      deliveryDocNo: 'DO-SO-API-DRAFT',
       invDocNo: 'INV-SO-API-DRAFT',
       total: 54.5,
     });
@@ -843,6 +846,16 @@ describe('production API security contract', () => {
       ));
     expect(Number(remaining.qty)).toBe(15);
     expect(await db.select().from(invoice).where(eq(invoice.orderId, draft.id))).toHaveLength(1);
+    const [delivery] = await db.select().from(salesDelivery)
+      .where(eq(salesDelivery.orderId, draft.id));
+    expect(delivery).toMatchObject({
+      docNo: 'DO-SO-API-DRAFT',
+      status: 'delivered',
+      version: 2,
+    });
+    expect(await db.select().from(salesDeliveryLine)
+      .where(eq(salesDeliveryLine.deliveryId, delivery.id)))
+      .toMatchObject([{ productId: item.id, warehouseId: location.id, deliveredQty: '5.0000' }]);
     const legs = await db.select().from(glEntry)
       .where(eq(glEntry.journalRef, 'INV-SO-API-DRAFT'));
     expect(legs.reduce((sum, leg) => sum + Number(leg.debit), 0)).toBe(54.5);

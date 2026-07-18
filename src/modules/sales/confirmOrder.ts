@@ -7,7 +7,15 @@ import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { getEffectiveTaxRate } from '../../data/repo';
 import { issueStockWithin } from '../inventory/stock';
-import { account, glEntry, invoice, salesOrder, salesOrderLine } from '../../data/schema';
+import {
+  account,
+  glEntry,
+  invoice,
+  salesDelivery,
+  salesDeliveryLine,
+  salesOrder,
+  salesOrderLine,
+} from '../../data/schema';
 
 export interface OrderLineInput {
   productId: number;
@@ -60,6 +68,8 @@ interface OrderToPost {
 }
 
 interface IssueLine {
+  orderLineId: number;
+  lineNo: number;
   productId: number;
   warehouseId: number;
   qty: number;
@@ -73,6 +83,25 @@ async function postOrderWithin(
   bumpVersion: boolean,
 ) {
   if (lines.length === 0) throw new PostingError(`Sales order ${order.docNo} has no lines`);
+  const deliveryDocNo = `DO-${order.docNo}`;
+  const [delivery] = await exec.insert(salesDelivery).values({
+    masterFn: scope.masterFn,
+    companyFn: scope.companyFn,
+    docNo: deliveryDocNo,
+    orderId: order.id,
+    status: 'draft',
+    deliveryDate: order.orderDate,
+  }).returning({ id: salesDelivery.id });
+  await exec.insert(salesDeliveryLine).values(lines.map((line) => ({
+    masterFn: scope.masterFn,
+    companyFn: scope.companyFn,
+    deliveryId: delivery.id,
+    lineNo: line.lineNo,
+    orderLineId: line.orderLineId,
+    productId: line.productId,
+    warehouseId: line.warehouseId,
+    deliveredQty: String(line.qty),
+  })));
   const movementIds: number[] = [];
   // Lock stock rows in a deterministic order so concurrent orders containing
   // the same products in different line order do not create a lock cycle.
@@ -83,8 +112,8 @@ async function postOrderWithin(
       productId: line.productId,
       warehouseId: line.warehouseId,
       qty: line.qty,
-      refType: 'sales_order',
-      refId: order.id,
+      refType: 'sales_delivery',
+      refId: delivery.id,
     });
     movementIds.push(issue.movementId);
   }
@@ -122,9 +151,17 @@ async function postOrderWithin(
     { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: revId, debit: '0', credit: money(order.net), memo: 'Revenue' },
     { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: taxId, debit: '0', credit: money(order.tax), memo: 'Output tax' },
   ]);
+  await exec.update(salesDelivery).set({
+    invoiceId: inv.id,
+    status: 'delivered',
+    version: 2,
+    updatedAt: sql`now()`,
+  }).where(eq(salesDelivery.id, delivery.id));
 
   return {
     orderId: order.id,
+    deliveryId: delivery.id,
+    deliveryDocNo,
     invoiceId: inv.id,
     invDocNo,
     net: order.net,
@@ -168,14 +205,16 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
     const net = Math.round(ln.qty * ln.unitPrice * 100) / 100;
     const tax = Math.round(net * rate) / 100;
 
-    await exec.insert(salesOrderLine).values({
+    const [orderLine] = await exec.insert(salesOrderLine).values({
       masterFn: scope.masterFn, companyFn: scope.companyFn,
       orderId: order.id, lineNo,
       productId: ln.productId, qty: String(ln.qty), unitPrice: String(ln.unitPrice),
       netAmount: money(net), taxCode: ln.taxCode, taxRate: String(rate), taxAmount: money(tax),
-    });
+    }).returning({ id: salesOrderLine.id });
 
     issueLines.push({
+      orderLineId: orderLine.id,
+      lineNo,
       productId: ln.productId,
       warehouseId: ln.warehouseId,
       qty: ln.qty,
@@ -242,13 +281,15 @@ export async function confirmDraftSalesOrderWithin(
   }
 
   const lines = await exec.select({
+    orderLineId: salesOrderLine.id,
+    lineNo: salesOrderLine.lineNo,
     productId: salesOrderLine.productId,
     qty: salesOrderLine.qty,
   }).from(salesOrderLine).where(and(
     eq(salesOrderLine.masterFn, scope.masterFn),
     eq(salesOrderLine.companyFn, scope.companyFn),
     eq(salesOrderLine.orderId, order.id),
-  ));
+  )).orderBy(salesOrderLine.lineNo);
 
   return postOrderWithin(exec, scope, {
     id: order.id,
@@ -261,6 +302,8 @@ export async function confirmDraftSalesOrderWithin(
     total: Number(order.totalAmount),
     version: order.version,
   }, lines.map((line) => ({
+    orderLineId: line.orderLineId,
+    lineNo: line.lineNo,
     productId: line.productId,
     warehouseId: input.warehouseId,
     qty: Number(line.qty),

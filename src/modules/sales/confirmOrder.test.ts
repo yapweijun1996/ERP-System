@@ -11,6 +11,8 @@ import {
   glEntry,
   salesOrder,
   salesOrderLine,
+  salesDelivery,
+  salesDeliveryLine,
   invoice,
 } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
@@ -104,6 +106,12 @@ describe('confirmSalesOrder', () => {
     expect(res.tax).toBe(9.9);
     expect(res.total).toBe(119.9);
     expect(res.movementIds).toHaveLength(2);
+    expect(res.deliveryDocNo).toBe('DO-SO-T1');
+    expect(await db.select().from(salesDelivery)
+      .where(eq(salesDelivery.id, res.deliveryId)))
+      .toMatchObject([{ status: 'delivered', invoiceId: res.invoiceId, version: 2 }]);
+    expect(await db.select().from(salesDeliveryLine)
+      .where(eq(salesDeliveryLine.deliveryId, res.deliveryId))).toHaveLength(2);
     expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(95);
     expect(await getStockQty(db, SCOPE, fx.gadgetId, fx.warehouseId)).toBe(97);
 
@@ -142,6 +150,7 @@ describe('confirmSalesOrder', () => {
       eq(invoice.masterFn, SCOPE.masterFn), eq(invoice.companyFn, SCOPE.companyFn),
     ));
     expect(invoices).toHaveLength(0);
+    expect(await db.select().from(salesDelivery)).toHaveLength(0);
   });
 
   it('throws PostingError (not a silent wrong rate) when no tax rule covers the order date', async () => {
@@ -177,6 +186,7 @@ describe('confirmSalesOrder', () => {
       tax: 9.9,
       total: 119.9,
       lines: 2,
+      deliveryDocNo: 'DO-SO-DRAFT-1',
     });
     expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(95);
     expect(await getStockQty(db, SCOPE, fx.gadgetId, fx.warehouseId)).toBe(97);
@@ -215,5 +225,7 @@ describe('confirmSalesOrder', () => {
     }).from(salesOrder).where(eq(salesOrder.id, orderId));
     expect(draft).toEqual({ status: 'draft', version: 1 });
     expect(await db.select().from(invoice).where(eq(invoice.orderId, orderId))).toHaveLength(0);
+    expect(await db.select().from(salesDelivery)
+      .where(eq(salesDelivery.orderId, orderId))).toHaveLength(0);
   });
 });

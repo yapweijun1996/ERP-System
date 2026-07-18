@@ -6,7 +6,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
-import { product } from './inventory';
+import { product, warehouse } from './inventory';
 
 export const customer = pgTable('customer', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -143,4 +143,54 @@ export const invoice = pgTable('invoice', {
 }, (t) => [
   uniqueIndex('uq_invoice_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_invoice_order').on(t.masterFn, t.companyFn, t.orderId),
+]);
+
+/**
+ * Fulfilment proof created by the current atomic order-confirmation command.
+ * The command issues stock and posts the invoice in the same transaction, so
+ * these records describe the completed delivery rather than a second stock
+ * mutation. Advanced pick/pack/partial delivery remains in the Warehouse slice.
+ */
+export const salesDelivery = pgTable('sales_delivery', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => salesOrder.id),
+  invoiceId: bigint('invoice_id', { mode: 'number' }).references(() => invoice.id),
+  status: text('status').notNull().default('draft'), // draft | delivered | cancelled
+  version: integer('version').notNull().default(1),
+  deliveryDate: date('delivery_date').notNull(),
+  carrier: text('carrier'),
+  trackingNo: text('tracking_no'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_delivery_docno').on(t.masterFn, t.companyFn, t.docNo),
+  uniqueIndex('uq_sales_delivery_order').on(t.masterFn, t.companyFn, t.orderId),
+  index('idx_sales_delivery_status').on(
+    t.masterFn, t.companyFn, t.status, t.deliveryDate, t.id,
+  ),
+  check('ck_sales_delivery_status', sql`${t.status} in ('draft', 'delivered', 'cancelled')`),
+]);
+
+export const salesDeliveryLine = pgTable('sales_delivery_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  deliveryId: bigint('delivery_id', { mode: 'number' }).notNull()
+    .references(() => salesDelivery.id),
+  lineNo: integer('line_no').notNull(),
+  orderLineId: bigint('order_line_id', { mode: 'number' }).notNull()
+    .references(() => salesOrderLine.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull()
+    .references(() => warehouse.id),
+  deliveredQty: numeric('delivered_qty', { precision: 18, scale: 4 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_delivery_line').on(
+    t.masterFn, t.companyFn, t.deliveryId, t.lineNo,
+  ),
+  index('idx_sales_delivery_line_order').on(
+    t.masterFn, t.companyFn, t.orderLineId, t.id,
+  ),
+  check('ck_sales_delivery_line_qty', sql`${t.deliveredQty} > 0`),
 ]);

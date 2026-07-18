@@ -15,6 +15,8 @@ import {
   purchaseOrderLine,
   salesOrder,
   salesOrderLine,
+  salesDelivery,
+  salesDeliveryLine,
   salesEnquiry,
   salesQuotation,
   salesQuotationLine,
@@ -129,6 +131,11 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
   'sales/customers': resource(customer, 'sales.read'),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),
+  'sales/deliveries': resource(salesDelivery, 'sales.read', {
+    status: salesDelivery.status,
+    versionColumn: salesDelivery.version,
+  }),
+  'sales/delivery-lines': resource(salesDeliveryLine, 'sales.read'),
   'sales/enquiries': resource(salesEnquiry, 'sales.read', {
     status: salesEnquiry.status,
     versionColumn: salesEnquiry.version,

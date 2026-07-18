@@ -15,6 +15,8 @@ DECLARE
   v_customer_id  bigint;
   v_warehouse_id bigint;
   v_order_id     bigint;
+  v_delivery_id  bigint;
+  v_invoice_id   bigint;
   v_product_id   bigint;
   v_available    numeric;
   v_rate         numeric(6,3);
@@ -36,6 +38,9 @@ BEGIN
   INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, status, order_date, currency)
     VALUES ('M1', 'C-SG', 'SO-1', v_customer_id, 'confirmed', DATE '2024-06-01', 'SGD')
     RETURNING id INTO v_order_id;
+  INSERT INTO sales_delivery (master_fn, company_fn, doc_no, order_id, status, delivery_date)
+    VALUES ('M1', 'C-SG', 'DO-SO-1', v_order_id, 'draft', DATE '2024-06-01')
+    RETURNING id INTO v_delivery_id;
 
   -- 2. Lines: tax snapshot, stock lock + deduct, movement — confirmOrder.ts step 2.
   FOR v_line IN
@@ -83,7 +88,7 @@ BEGIN
     INSERT INTO stock_movement (master_fn, company_fn, product_id, warehouse_id,
                                 qty, direction, ref_type, ref_id)
       VALUES ('M1', 'C-SG', v_product_id, v_warehouse_id,
-              v_line.qty, 'out', 'sales_order', v_order_id);
+              v_line.qty, 'out', 'sales_delivery', v_delivery_id);
 
     v_net := v_net + v_line_net;
     v_tax := v_tax + v_line_tax;
@@ -99,7 +104,22 @@ BEGIN
   INSERT INTO invoice (master_fn, company_fn, doc_no, order_id, customer_id, status,
                        invoice_date, currency, net_amount, tax_amount, total_amount)
     VALUES ('M1', 'C-SG', 'INV-SO-1', v_order_id, v_customer_id, 'unpaid',
-            DATE '2024-06-01', 'SGD', v_net, v_tax, v_total);
+            DATE '2024-06-01', 'SGD', v_net, v_tax, v_total)
+    RETURNING id INTO v_invoice_id;
+
+  INSERT INTO sales_delivery_line (
+    master_fn, company_fn, delivery_id, line_no, order_line_id,
+    product_id, warehouse_id, delivered_qty
+  )
+  SELECT 'M1', 'C-SG', v_delivery_id, sol.line_no, sol.id,
+         sol.product_id, v_warehouse_id, sol.qty
+    FROM sales_order_line sol
+   WHERE sol.master_fn = 'M1' AND sol.company_fn = 'C-SG'
+     AND sol.order_id = v_order_id
+   ORDER BY sol.line_no;
+  UPDATE sales_delivery
+     SET invoice_id = v_invoice_id, status = 'delivered', version = 2, updated_at = now()
+   WHERE id = v_delivery_id;
 
   -- 5. Balanced double-entry ledger: Dr AR, Cr Revenue, Cr GST Output.
   SELECT id INTO v_ar  FROM account WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = '1100';

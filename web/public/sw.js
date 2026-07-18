@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v26';
+const CACHE_VERSION = 'erp-system-pwa-v27';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -26,6 +26,7 @@ const staticUrls = [
   './db/erp-system-demo-manufacturing.sql',
   './db/erp-system-demo-quality.sql',
   './db/erp-system-demo-sales-front.sql',
+  './db/erp-system-demo-sales-delivery.sql',
   './assets/data-quality.js',
   './assets/data-crm.js',
   './assets/data-service.js',
@@ -69,6 +70,7 @@ const staticUrls = [
   './assets/screens-quotation-crud.js',
   './assets/screens-txn-view.js',
   './assets/screens-sales-front-canonical.js',
+  './assets/screens-sales-delivery-canonical.js',
   './assets/screens-purch-new.js',
   './assets/screens-purchasing-hub.js',
   './assets/screens-purchasing-lists.js',
