@@ -6,23 +6,36 @@
    ledger. Reached from Quick create, the command palette and
    the Stock Movement / Stock on Hand screens.
    ============================================================ */
-SCREENS['new-stock-adjustment'] = function(root){
+SCREENS['new-stock-adjustment'] = async function(root){
   const TODAY=new Date().toISOString().slice(0,10);
-  const WH=(DB.erpSystem&&DB.erpSystem.warehouses)||[];
+  const adapter=window.ErpSystemData;
+  if(!adapter) throw new Error('ERP data adapter is unavailable.');
+  const [warehousePage,productPage,stockPage]=await Promise.all([
+    adapter.list('inventory/warehouses',{limit:100}),
+    adapter.list('inventory/products',{limit:100}),
+    adapter.list('inventory/stock-levels',{limit:100}),
+  ]);
+  const WH=warehousePage.data||[];
+  const ITEMS=(productPage.data||[]).map(item=>({
+    id:Number(item.id),sku:item.sku,name:item.name,uom:item.uom,
+    cost:Number(item.standardCost||0),
+  }));
+  const STOCK=stockPage.data||[];
+  if(!WH.length) throw new Error('No warehouse is configured for the active company.');
   const REASONS=['Cycle count','Physical count','Damage / breakage','Write-off','Found stock','Revaluation'];
 
   const S={ date:TODAY, warehouseId:WH[0]&&WH[0].id, reason:'Cycle count', reference:'',
     lines:[] /* {sku,name,uom,sys,counted,cost} */ };
   const warehouseName=()=>{ const w=WH.find(x=>x.id===Number(S.warehouseId)); return w?`${w.code} · ${w.name}`:'—'; };
   const systemQty=(productId,warehouseId)=>{
-    const row=((DB.erpSystem&&DB.erpSystem.stockLevels)||[])
-      .find(x=>x.product_id===productId&&x.warehouse_id===Number(warehouseId));
+    const row=STOCK.find(x=>
+      Number(x.productId)===Number(productId)&&Number(x.warehouseId)===Number(warehouseId));
     return row?Number(row.qty):0;
   };
 
   // signed currency — money()/money0() strip the sign via Math.abs
-  const sd=n=>(n<0?'−':n>0?'+':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const sd0=n=>(n<0?'−':n>0?'+':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US');
+  const sd=n=>(n<0?'−':n>0?'+':'')+money(Math.abs(n));
+  const sd0=n=>(n<0?'−':n>0?'+':'')+money0(Math.abs(n));
 
   function totals(){
     let upQty=0,downQty=0,value=0,lines=0;
@@ -114,7 +127,7 @@ SCREENS['new-stock-adjustment'] = function(root){
           <div class="panel-body">
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
               <div class="fld" style="flex:1;min-width:260px"><span>Item</span>
-                <select id="wPick">${DB.items.map(it=>`<option value="${it.sku}">${esc(it.sku)} · ${esc(it.name)} — here ${num(systemQty(it.id,S.warehouseId))} ${esc(it.uom)}</option>`).join('')}</select></div>
+                <select id="wPick">${ITEMS.map(it=>`<option value="${it.sku}">${esc(it.sku)} · ${esc(it.name)} — here ${num(systemQty(it.id,S.warehouseId))} ${esc(it.uom)}</option>`).join('')}</select></div>
               ${btn('Add to count',{icon:'plus',cls:'primary',attrs:'id="wAdd"'})}
             </div>
           </div>
@@ -146,7 +159,7 @@ SCREENS['new-stock-adjustment'] = function(root){
     });
     b('wDate','date'); b('wReason','reason'); b('wRef','reference','input');
     $('#wAdd').addEventListener('click',()=>{
-      const sku=$('#wPick').value, it=DB.items.find(x=>x.sku===sku); if(!it) return;
+      const sku=$('#wPick').value, it=ITEMS.find(x=>x.sku===sku); if(!it) return;
       if(S.lines.find(l=>l.sku===sku)){ toast('Item already on the count sheet','info'); return; }
       const here=systemQty(it.id,S.warehouseId);
       S.lines.push({productId:it.id,sku:it.sku,name:it.name,uom:it.uom,sys:here,counted:here,cost:it.cost});
