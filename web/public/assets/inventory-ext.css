@@ -1,0 +1,41 @@
+/* ============================================================
+   ARIA ERP — Inventory module standard page shell
+   The module header spans both list and detail columns; the
+   business-specific master/detail workspace remains below it.
+   ============================================================ */
+
+.inventory-content{
+  grid-template-rows:auto minmax(0,1fr);
+}
+.inventory-content>.inventory-pagehead{
+  grid-column:1/-1;
+  grid-row:1;
+  min-width:0;
+  border-bottom:1px solid var(--hairline);
+  background:var(--bg);
+  padding-bottom:10px;
+}
+.inventory-content>.inventory-pagehead .inventory-subnav,
+.master>.inventory-pagehead .inventory-subnav{
+  margin-top:2px;
+}
+.inventory-pagehead .h1row{
+  margin-top:13px;
+}
+.inventory-content>.master{
+  grid-column:1;
+  grid-row:2;
+}
+.inventory-content>.detail{
+  grid-column:2;
+  grid-row:2;
+}
+
+@media (max-width:980px){
+  .inventory-content>.master{
+    grid-column:1;
+  }
+  .inventory-content>.inventory-pagehead{
+    grid-column:1;
+  }
+}

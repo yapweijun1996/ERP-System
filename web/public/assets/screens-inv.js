@@ -2,6 +2,41 @@
    ARIA ERP — screens: Inventory (stock, item master, ledger, valuation)
    ============================================================ */
 
+/* ---- module map + standard Inventory page shell ---- */
+const INVENTORY_SECTIONS = [
+  { route:'stock-on-hand', labelKey:'inv.nav.stock', icon:'box' },
+  { route:'item-master', labelKey:'inv.nav.items', icon:'tag' },
+  { route:'stock-movement', labelKey:'inv.nav.movements', icon:'history' },
+  { route:'inv-valuation', labelKey:'inv.nav.valuation', icon:'chart' },
+];
+const INVENTORY_ALIAS = { 'new-item':'item-master', 'new-stock-adjustment':'stock-movement' };
+
+function inventoryNav(active){
+  active = INVENTORY_ALIAS[active] || active;
+  return `<div class="sales-subnav inventory-subnav" role="tablist" aria-label="${esc(t('nav.inventory'))}">
+    ${INVENTORY_SECTIONS.map(it=>`<button class="ssub ${it.route===active?'on':''}" role="tab" aria-selected="${it.route===active}" onclick="navigate('${it.route}')">${ic(it.icon)}<span>${esc(t(it.labelKey))}</span></button>`).join('')}
+  </div>`;
+}
+
+function inventoryPageHead(o){
+  const crumb=o.crumb||[DB.company.name,{label:t('nav.inventory'),route:'stock-on-hand'},{cur:o.title}];
+  const kpi=o.kpiLabel?`<div class="headright"><div class="kfig"><small>${esc(o.kpiLabel)}</small><b class="tnum ${o.kpiClass||''}">${o.kpiValue}</b></div></div>`:'';
+  return `<div class="pagehead inventory-pagehead">
+    ${crumbs(crumb)}
+    ${inventoryNav(o.active)}
+    <div class="h1row"><h1>${esc(o.title)}</h1>${o.count!=null?`<span class="countchip">${esc(String(o.count))}</span>`:''}${kpi}</div>
+    ${o.sub?`<div class="h1sub">${esc(o.sub)}</div>`:''}
+  </div>`;
+}
+
+function wireInventoryNav(scope){
+  requestAnimationFrame(()=>{
+    const nav=scope.querySelector('.inventory-subnav');
+    const active=nav&&nav.querySelector('[aria-selected="true"]');
+    if(active) active.scrollIntoView({block:'nearest',inline:'nearest'});
+  });
+}
+
 /* ---------------- STOCK ON HAND (master + detail) ---------------- */
 SCREENS['stock-on-hand'] = function(root){
   let filter='all', selectedSku=null;
@@ -33,13 +68,15 @@ SCREENS['stock-on-hand'] = function(root){
       rows:rows(),
     });
   }
-  root.innerHTML=`<div class="content" id="invContent">
+  root.innerHTML=`<div class="content inventory-content" id="invContent">
+    ${inventoryPageHead({
+      active:'stock-on-hand',
+      title:t('inv.title'),
+      count:rows().length+' '+t('common.items'),
+      kpiLabel:t('inv.kpi.value'),
+      kpiValue:money0(totVal),
+    })}
     <section class="master">
-      <div class="pagehead">
-        ${crumbs([DB.company.name,t('nav.inventory'),t('inv.title')])}
-        <div class="h1row"><h1>${esc(t('inv.title'))}</h1><span class="countchip" id="invCount"></span>
-          <div class="headright"><div class="kfig"><small>${esc(t('inv.kpi.value'))}</small><b class="tnum">${money0(totVal)}</b></div></div></div>
-      </div>
       <div class="toolbar">
         <div class="filterchips" id="invChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${esc(c[1])}</button>`).join('')}</div>
         <div class="grow"></div>
@@ -52,7 +89,7 @@ SCREENS['stock-on-hand'] = function(root){
     </section>
     <aside class="detail" id="invDetail"><div class="detail-empty">${ic('box')}<div>${esc(t('inv.empty'))}</div></div></aside>
   </div>`;
-  $('#invCount').textContent=rows().length+' '+t('common.items');
+  wireInventoryNav(root);
   const content=$('#invContent');
   function showDetail(sku){
     selectedSku=sku; const it=DB.items.find(x=>x.sku===sku); if(!it)return;
@@ -107,7 +144,7 @@ SCREENS['stock-on-hand'] = function(root){
     wireTable($('#invTable'),{ onRow:showDetail, onSelectionChange:(n)=>{ $('#invBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('inv.reorder'),{icon:'reorder',cls:'soft'})}${btn(t('inv.adjust'),{icon:'adjust',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}</div>`:''; } });
   }
   rewire();
-  $('#invChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#invChips .chip.on').classList.remove('on');c.classList.add('on');filter=c.dataset.f; $('#invTable').innerHTML=table(); $('#invCount').textContent=rows().length+' '+t('common.items'); $('#invBulk').innerHTML=''; rewire(); }));
+  $('#invChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#invChips .chip.on').classList.remove('on');c.classList.add('on');filter=c.dataset.f; $('#invTable').innerHTML=table(); const cc=root.querySelector('.inventory-pagehead .countchip'); if(cc)cc.textContent=rows().length+' '+t('common.items'); $('#invBulk').innerHTML=''; rewire(); }));
   $('#densSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ $('#densSeg button.on').classList.remove('on');b.classList.add('on'); $('#invContent').setAttribute('data-density',b.dataset.d); }));
   // preselect first reorder item for a populated look
   setTimeout(()=>{ const tr=$('#invTable .dt-body .dt-r'); if(tr){tr.classList.add('sel');showDetail(tr.dataset.row);} },30);
@@ -210,18 +247,22 @@ SCREENS['item-master'] = function(root){
 
   function render(){
     const totVal=DB.items.reduce((s,it)=>s+it.onHand*it.cost,0);
-    root.innerHTML=`<div class="content" id="imContent">
+    root.innerHTML=`<div class="content inventory-content" id="imContent">
+      ${inventoryPageHead({
+        active:'item-master',
+        title:t('inv.nav.items'),
+        count:DB.items.length+' items',
+        kpiLabel:t('inv.kpi.value'),
+        kpiValue:money0(totVal),
+        sub:'Master data for every stocked item. Select a row to view, edit or delete — or add a new item.',
+      })}
       <section class="master">
-        <div class="pagehead">${crumbs([DB.company.name,'Inventory','Item Master'])}
-          <div class="h1row"><h1>Item Master</h1><span class="countchip">${DB.items.length} items</span>
-            <div class="headright"><div class="kfig"><small>Stock value</small><b class="tnum">${money0(totVal)}</b></div></div></div>
-          <div class="h1sub">Master data for every stocked item. Select a row to view, edit or delete — or add a new item.</div>
-        </div>
         <div class="toolbar"><div class="grow"></div>${btn('Export',{icon:'download',cls:'soft'})}${btn('New item',{icon:'plus',cls:'primary',attrs:'data-new="1"'})}</div>
         <div class="tablewrap" id="imTable">${listTable()}</div>
       </section>
       <aside class="detail ${selSku?'open':''}" id="imDetail">${detail()}</aside>
     </div>`;
+    wireInventoryNav(root);
     wire();
   }
 
@@ -246,11 +287,15 @@ SCREENS['stock-movement'] = function(root){
   const fmtD=d=>{ const [y,mo,da]=d.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+(+da); };
   const rangeLabel=mvDates.length?fmtD(mvDates[0])+' – '+fmtD(mvDates[mvDates.length-1]):'No movements';
   root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">${crumbs([DB.company.name,'Inventory','Stock Movement'])}
-      <div class="h1row"><h1>Stock Movement Ledger</h1><span class="countchip">${DB.movements.length} entries</span>
-        <div class="headright"><div class="kfig"><small>Net change</small><b class="tnum ${netChange>=0?'pos':'neg'}">${netChange>0?'+':''}${num(netChange)}</b></div></div></div>
-      <div class="h1sub">Every posted in/out and adjustment — the shared truth behind on-hand balances. Drill any row to its source document.</div>
-    </div>
+    ${inventoryPageHead({
+      active:'stock-movement',
+      title:t('inv.nav.movements'),
+      count:DB.movements.length+' entries',
+      kpiLabel:'Net change',
+      kpiValue:(netChange>0?'+':'')+num(netChange),
+      kpiClass:netChange>=0?'pos':'neg',
+      sub:'Every posted in/out and adjustment — the shared truth behind on-hand balances. Drill any row to its source document.',
+    })}
     <div class="toolbar">
       <div class="filterchips"><button class="chip on">All types</button><button class="chip">Receipts</button><button class="chip">Issues</button><button class="chip">Transfers</button><button class="chip">Adjustments</button></div>
       <div class="grow"></div>
@@ -273,6 +318,7 @@ SCREENS['stock-movement'] = function(root){
       rows:DB.movements,
     })}</div>
   </section></div>`;
+  wireInventoryNav(root);
   wireTable(root.querySelector('.tablewrap'),{onRow:(id)=>{ const m=DB.movements.find(x=>x.no===id); toast('Drill to source: '+m.ref,'info'); }});
 };
 
@@ -296,7 +342,13 @@ SCREENS['inv-valuation'] = function(root){
     h+=`<div class="dt-r grandtotal"><div class="dt-c l">Total inventory valuation</div><div class="dt-c"></div><div class="dt-c"></div><div class="dt-c"></div><div class="dt-c r tnum">${money(gt)}</div><div class="dt-c r tnum">100%</div></div>`;
     h+=`</div></div></div>`; return h;
   }
-  root.innerHTML=`<div class="content full"><section class="master"><div class="report">
+  root.innerHTML=`<div class="content full"><section class="master">
+    ${inventoryPageHead({
+      active:'inv-valuation',
+      title:t('inv.nav.valuation'),
+      sub:'Inventory value by category and item at weighted-average cost.',
+    })}
+    <div class="report">
     <aside class="report-params">
       <h3>Parameters</h3>
       <div class="fld"><span>As at date</span><input type="date" value="2026-06-04"></div>
@@ -318,6 +370,7 @@ SCREENS['inv-valuation'] = function(root){
       <div class="tablewrap" id="valTable">${table()}</div>
     </div>
   </div></section></div>`;
+  wireInventoryNav(root);
   function rewire(){
     root.querySelectorAll('.dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{ const g=+tr.dataset.g; open.has(g)?open.delete(g):open.add(g); $('#valTable').innerHTML=table(); rewire(); }));
     root.querySelectorAll('.dt-r.drillrow').forEach(tr=>tr.addEventListener('click',()=>toast('Drill: item balance → stock movements','info')));

@@ -360,7 +360,7 @@ const SUBROUTES = {
     'enquiries','quotations','so-approvals','delivery-orders','sales-invoices','sales-returns','sales-return',
     'credit-notes','credit-note','debit-notes','price-lists','discount-mgmt','credit-control','sales-commission',
     'sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','new-quotation','txn-view'], purchasing:['purchasing-home','suppliers','purchase-requisitions','rfqs','supplier-quotations','purchase-orders','po-approval','po-approvals','goods-receipts','goods-receipt','supplier-invoices','supplier-invoice','purchase-requisitions','purchase-request','purchase-returns','supplier-credit-notes','supplier-debit-notes','supplier-price-lists','landed-cost','vendor-performance','purchasing-reports','report-pur-supplier','report-pur-buyer','report-pur-price-var','report-pur-vendor','report-pur-generic','new-purchase-order','pur-txn-view'],
-  inventory:['stock-on-hand','item-master','new-item','stock-movement','new-stock-adjustment'], warehouse:['picking'],
+  inventory:['stock-on-hand','item-master','new-item','stock-movement','new-stock-adjustment','inv-valuation'], warehouse:['picking'],
   crm:['crm-pipeline','opportunity','new-opportunity','crm-customer'],
   manufacturing:['work-orders','work-order','new-work-order','bom','mrp'],
   quality:['qc-inspection','qc-report','ncr'],
@@ -369,7 +369,7 @@ const SUBROUTES = {
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
-  workflow:['po-approval'], bi:['inv-valuation','bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control'],
+  workflow:['po-approval'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));

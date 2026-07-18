@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v19';
+const CACHE_VERSION = 'erp-system-pwa-v20';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -13,6 +13,7 @@ const staticUrls = [
   './assets/erp-blocks.css',
   './assets/i18n.css',
   './assets/sales-ext.css',
+  './assets/inventory-ext.css',
   './assets/purchasing-ext.css',
   './assets/pwa.css',
   './assets/icons.js',
