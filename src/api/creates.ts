@@ -28,6 +28,10 @@ import {
   createWarehousePickWithin,
   type CreateWarehousePickInput,
 } from '../modules/warehouse/picking';
+import {
+  createWorkOrderWithin,
+  type CreateWorkOrderInput,
+} from '../modules/manufacturing/workOrder';
 
 export interface CreateDefinition {
   permission: string;
@@ -166,6 +170,17 @@ const CREATES: Record<string, CreateDefinition> = {
         );
       }
       return createOpportunity(tx, scope, input);
+    },
+  },
+  'manufacturing/work-orders': {
+    permission: 'manufacturing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createWorkOrderWithin(
+        tx,
+        scope,
+        payload as unknown as CreateWorkOrderInput,
+      );
     },
   },
 };

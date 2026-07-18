@@ -16,6 +16,8 @@ export const PERMISSIONS = {
   purchasingWrite: 'purchasing.write',
   crmRead: 'crm.read',
   crmWrite: 'crm.write',
+  manufacturingRead: 'manufacturing.read',
+  manufacturingWrite: 'manufacturing.write',
   companySwitch: 'session.switch_company',
   auditRead: 'admin.audit.read',
   usersInvite: 'admin.users.invite',

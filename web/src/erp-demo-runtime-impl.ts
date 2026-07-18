@@ -61,6 +61,11 @@ import {
   type CreateWarehousePickInput,
   type RecordPickInput,
 } from '../../src/modules/warehouse/picking';
+import {
+  createWorkOrderWithin,
+  releaseWorkOrderWithin,
+  type CreateWorkOrderInput,
+} from '../../src/modules/manufacturing/workOrder';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -116,6 +121,12 @@ export const erpDemoRuntime = Object.freeze({
     },
     completeWarehousePickWithin(db: DemoOrm, scope: Scope, pickId: number) {
       return completeWarehousePickWithin(asDomainDb(db), scope, pickId);
+    },
+    createWorkOrderWithin(db: DemoOrm, scope: Scope, input: CreateWorkOrderInput) {
+      return createWorkOrderWithin(asDomainDb(db), scope, input);
+    },
+    releaseWorkOrderWithin(db: DemoOrm, scope: Scope, workOrderId: number) {
+      return releaseWorkOrderWithin(asDomainDb(db), scope, workOrderId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

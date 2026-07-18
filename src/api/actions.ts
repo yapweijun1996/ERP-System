@@ -20,6 +20,7 @@ import {
   completeWarehousePickWithin,
   recordWarehousePickWithin,
 } from '../modules/warehouse/picking';
+import { releaseWorkOrderWithin } from '../modules/manufacturing/workOrder';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'inventory/adjustments/post': {
@@ -69,6 +70,14 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return completeWarehousePickWithin(tx, scope, input.resourceId);
+    },
+  },
+  'manufacturing/work-orders/release': {
+    permission: 'manufacturing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return releaseWorkOrderWithin(tx, scope, input.resourceId);
     },
   },
   'sales/orders/confirm': {

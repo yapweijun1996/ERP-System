@@ -26,6 +26,15 @@ import {
   warehousePickLine,
   supplier,
   supplierInvoice,
+  workCenter,
+  manufacturingBom,
+  bomVersion,
+  bomComponent,
+  manufacturingRouting,
+  routingOperation,
+  workOrder,
+  workOrderMaterial,
+  workOrderOperation,
 } from '../data/schema';
 
 export interface ApiScope {
@@ -135,6 +144,29 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['convert'],
     createPermission: 'crm.write',
     updatePermission: 'crm.write',
+  }),
+  'manufacturing/work-centers': resource(workCenter, 'manufacturing.read'),
+  'manufacturing/boms': resource(manufacturingBom, 'manufacturing.read', {
+    status: manufacturingBom.status,
+  }),
+  'manufacturing/bom-versions': resource(bomVersion, 'manufacturing.read', {
+    status: bomVersion.status,
+    versionColumn: bomVersion.version,
+  }),
+  'manufacturing/bom-components': resource(bomComponent, 'manufacturing.read'),
+  'manufacturing/routings': resource(manufacturingRouting, 'manufacturing.read', {
+    status: manufacturingRouting.status,
+  }),
+  'manufacturing/routing-operations': resource(routingOperation, 'manufacturing.read'),
+  'manufacturing/work-orders': resource(workOrder, 'manufacturing.read', {
+    status: workOrder.status,
+    versionColumn: workOrder.version,
+    allowedActions: ['release'],
+    createPermission: 'manufacturing.write',
+  }),
+  'manufacturing/work-order-materials': resource(workOrderMaterial, 'manufacturing.read'),
+  'manufacturing/work-order-operations': resource(workOrderOperation, 'manufacturing.read', {
+    status: workOrderOperation.status,
   }),
 };
 

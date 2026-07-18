@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 8;
+  var DEMO_SCHEMA_VERSION = 9;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -118,15 +118,16 @@
     var currentVersion = row ? Number(row.version) : 0;
     /* A service-worker update can briefly mix a newer adapter with an older
        cached migration asset. Never trust the version marker alone: verify the
-       v8 warehouse-picking signature before declaring the schema current.
+       v9 manufacturing signature before declaring the schema current.
        Replaying the generated compatibility bundle is safe and repairs a
        marker that was written after a stale/no-op migration response. */
     var signature = (await db.query(
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
-      "('warehouse_bin','inventory_lot','inventory_serial','stock_location_balance'," +
-      "'warehouse_pick','warehouse_pick_line','stock_reservation')")).rows[0];
-    var hasCurrentSignature = signature && Number(signature.n) === 7;
+      "('work_center','manufacturing_bom','bom_version','bom_component'," +
+      "'manufacturing_routing','routing_operation','work_order'," +
+      "'work_order_material','work_order_operation')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 9;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -145,6 +146,15 @@
       "where master_fn='M1' and company_fn='C-SG' and doc_no='PICK-1'")).rows[0];
     if(!row||Number(row.n)===0){
       await db.exec(await fetchSql('erp-system-demo-picks.sql'));
+    }
+  }
+
+  async function ensureManufacturingFixture(db){
+    var row=(await db.query(
+      "select count(*)::int as n from work_order " +
+      "where master_fn='M1' and company_fn='C-SG' and doc_no='WO-1'")).rows[0];
+    if(!row||Number(row.n)===0){
+      await db.exec(await fetchSql('erp-system-demo-manufacturing.sql'));
     }
   }
 
@@ -818,6 +828,7 @@
       var freshlySeeded = await ensureSeeded(db);
       await ensureSchemaUpToDate(db);
       await ensureWarehousePickFixture(db);
+      await ensureManufacturingFixture(db);
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
@@ -1226,6 +1237,15 @@
     'purchasing/supplier-invoices':'supplier_invoice',
     'crm/customers':'customer',
     'crm/opportunities':'opportunity',
+    'manufacturing/work-centers':'work_center',
+    'manufacturing/boms':'manufacturing_bom',
+    'manufacturing/bom-versions':'bom_version',
+    'manufacturing/bom-components':'bom_component',
+    'manufacturing/routings':'manufacturing_routing',
+    'manufacturing/routing-operations':'routing_operation',
+    'manufacturing/work-orders':'work_order',
+    'manufacturing/work-order-materials':'work_order_material',
+    'manufacturing/work-order-operations':'work_order_operation',
   };
   function normalizeResource(resource){
     return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
@@ -1340,6 +1360,14 @@
       }
       return {data:await createOpportunity(payload),meta:{}};
     }
+    if(key==='manufacturing/work-orders'){
+      var manufacturingOrder = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createWorkOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:manufacturingOrder,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1382,6 +1410,14 @@
       });
       await refresh();
       return {data:completedPick,meta:{}};
+    }
+    if(key==='manufacturing/work-orders'&&name==='release'){
+      var releasedWorkOrder = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.releaseWorkOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:releasedWorkOrder,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){
