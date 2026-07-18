@@ -21,6 +21,12 @@
         completed:'Completed',closed:'Closed',cancelled:'Cancelled',required:'Required',
         issued:'Issued',available:'Available',cost:'Unit cost',workCenter:'Work centre',
         plannedHours:'Planned hours',actualHours:'Actual hours',dataLimit:'Showing the first 100 canonical rows per resource.',
+        bomTitle:'Bill of materials',components:'Components',revision:'Revision',effective:'Effective',
+        qtyPer:'Qty / output',scrap:'Scrap',rolled:'Rolled material cost',routingTitle:'Production routing',
+        runMrp:'Run MRP',mrpTitle:'Material requirements planning',planningDate:'Planning horizon',
+        suggestions:'Planning suggestions',gross:'Gross requirement',onHand:'On hand',onOrder:'On order',
+        net:'Net requirement',action:'Action',purchase:'Purchase',sufficient:'Sufficient',
+        noRun:'No MRP run exists yet.',runComplete:'MRP run completed',
       },
       ms:{
         orders:'Arahan kerja',newOrder:'Arahan kerja baharu',product:'Produk',quantity:'Kuantiti',
@@ -36,6 +42,12 @@
         completed:'Selesai',closed:'Ditutup',cancelled:'Dibatalkan',required:'Diperlukan',
         issued:'Dikeluarkan',available:'Tersedia',cost:'Kos unit',workCenter:'Pusat kerja',
         plannedHours:'Jam dirancang',actualHours:'Jam sebenar',dataLimit:'Menunjukkan 100 baris kanonik pertama bagi setiap sumber.',
+        bomTitle:'Bil bahan',components:'Komponen',revision:'Semakan',effective:'Berkuat kuasa',
+        qtyPer:'Kuantiti / output',scrap:'Susut',rolled:'Kos bahan terkumpul',routingTitle:'Laluan pengeluaran',
+        runMrp:'Jalankan MRP',mrpTitle:'Perancangan keperluan bahan',planningDate:'Horizon perancangan',
+        suggestions:'Cadangan perancangan',gross:'Keperluan kasar',onHand:'Stok sedia ada',onOrder:'Dalam pesanan',
+        net:'Keperluan bersih',action:'Tindakan',purchase:'Beli',sufficient:'Mencukupi',
+        noRun:'Belum ada larian MRP.',runComplete:'Larian MRP selesai',
       },
       zh:{
         orders:'生产工单',newOrder:'新建工单',product:'成品',quantity:'计划数量',
@@ -51,6 +63,12 @@
         completed:'已完成',closed:'已关闭',cancelled:'已取消',required:'需求',
         issued:'已领料',available:'可用',cost:'单位成本',workCenter:'工作中心',
         plannedHours:'计划工时',actualHours:'实际工时',dataLimit:'每项资源显示前 100 条标准记录。',
+        bomTitle:'物料清单',components:'组件',revision:'版本',effective:'生效日期',
+        qtyPer:'每产出用量',scrap:'损耗',rolled:'物料滚算成本',routingTitle:'生产工艺路线',
+        runMrp:'运行 MRP',mrpTitle:'物料需求计划',planningDate:'计划范围',
+        suggestions:'计划建议',gross:'总需求',onHand:'现有库存',onOrder:'在途采购',
+        net:'净需求',action:'建议动作',purchase:'采购',sufficient:'库存足够',
+        noRun:'尚未运行 MRP。',runComplete:'MRP 运算完成',
       },
     };
     const copy=all[lang]||all.en;
@@ -398,6 +416,120 @@
       }catch(error){
         button.disabled=false;
         toast(error&&error.message||'Manufacturing create failed','danger');
+      }
+    });
+  };
+
+  SCREENS['bom']=async function(root){
+    const a=adapter(),s=mfgCopy();
+    const pages=await Promise.all([
+      a.list('manufacturing/boms',{limit:100}),
+      a.list('manufacturing/bom-versions',{limit:100}),
+      a.list('manufacturing/bom-components',{limit:100}),
+      a.list('inventory/products',{limit:100}),
+      a.list('manufacturing/routings',{limit:100}),
+      a.list('manufacturing/routing-operations',{limit:100}),
+      a.list('manufacturing/work-centers',{limit:100}),
+    ]);
+    const boms=pages[0].data||[],versions=pages[1].data||[];
+    const version=versions.find(row=>row.status==='active')||versions[0];
+    const bom=version&&boms.find(row=>Number(row.id)===Number(version.bomId));
+    if(!bom||!version){
+      root.innerHTML=`<div class="content full"><section class="master"><div class="statepanel empty">
+        ${ic('box')}<h3>${esc(s('bomTitle'))}</h3><p>${esc(s('emptyDesc'))}</p></div></section></div>`;
+      return;
+    }
+    const products=byId(pages[3].data),centers=byId(pages[6].data);
+    const finished=products.get(Number(bom.productId))||{};
+    const components=(pages[2].data||[]).filter(row=>Number(row.bomVersionId)===Number(version.id))
+      .sort((x,y)=>Number(x.lineNo)-Number(y.lineNo));
+    const routing=(pages[4].data||[]).find(row=>Number(row.productId)===Number(bom.productId)&&row.status==='active');
+    const operations=(pages[5].data||[]).filter(row=>Number(row.routingId)===Number(routing&&routing.id))
+      .sort((x,y)=>Number(x.sequence)-Number(y.sequence));
+    const rolled=components.reduce((sum,line)=>{
+      const item=products.get(Number(line.productId))||{};
+      return sum+Number(line.qtyPer)*Number(item.standardCost||0)*(1+Number(line.scrapPct||0)/100);
+    },0);
+    const componentRows=components.map((line,index)=>{
+      const item=products.get(Number(line.productId))||{};
+      return `<tr><td class="lineno">${index+1}</td><td class="l li-name"><b>${esc(item.name||'#'+line.productId)}</b>
+        <small>${esc(item.sku||'')} · ${esc(item.uom||'')}</small></td>
+        <td class="tnum">${num(Number(line.qtyPer))}</td><td class="tnum">${num(Number(line.scrapPct))}%</td>
+        <td class="tnum">${money(Number(item.standardCost||0))}</td></tr>`;
+    }).join('');
+    const operationRows=operations.map(operation=>{
+      const center=centers.get(Number(operation.workCenterId))||{};
+      return `<div class="oprow"><span class="opseq">${operation.sequence}</span>
+        <div class="opmain"><b>${esc(operation.name)}</b><small>${esc(center.code||'')} · ${esc(center.name||'')}</small></div>
+        <div class="tnum">${num(Number(operation.setupHours))} h + ${num(Number(operation.runHoursPerUnit))} h/unit</div>
+      </div>`;
+    }).join('');
+    root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
+      ${crumbs([DB.company.name,t('nav.manufacturing'),{cur:s('bomTitle')}])}
+      <div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('box')}${esc(bom.code)} <span class="dnum">${esc(finished.sku||'')}</span></div>
+        <div class="h1sub">${esc(finished.name||bom.name)} · ${esc(s('revision'))} ${esc(version.revision)} · ${esc(s('effective'))} ${esc(dateLabel(version.effectiveFrom))}</div>
+      </div>${cap(statusLabel(s,version.status),version.status==='active'?'ok':'neutral')}</div></div>
+      <div class="doclayout"><div class="docmain">
+        <div class="panel"><div class="panel-h"><h3>${esc(s('components'))}</h3></div>
+          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('product'))}</th>
+            <th>${esc(s('qtyPer'))}</th><th>${esc(s('scrap'))}</th><th>${esc(s('cost'))}</th></tr></thead>
+            <tbody>${componentRows}</tbody></table></div>
+        <div class="panel"><div class="panel-h"><h3>${esc(s('routingTitle'))}</h3></div>
+          <div class="panel-body" style="padding:6px 0">${operationRows}</div></div>
+      </div><aside class="summary"><div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(s('rolled'))}</div>
+        <div class="sumrow total"><span class="sk2">${esc(s('components'))}</span><span class="sv tnum">${money(rolled)}</span></div>
+        <div class="sumrow"><span class="sk2">${esc(s('quantity'))}</span><span class="sv">${num(Number(version.outputQty))} ${esc(version.uom)}</span></div>
+        <div class="sumrow"><span class="sk2">${esc(s('routing'))}</span><span class="sv">${esc(routing&&routing.code||'—')}</span></div>
+      </div></aside></div>
+    </div></div></section></div>`;
+  };
+
+  SCREENS['mrp']=async function(root){
+    const a=adapter(),s=mfgCopy();
+    const [runPage,suggestionPage,productPage]=await Promise.all([
+      a.list('manufacturing/mrp-runs',{limit:100}),
+      a.list('manufacturing/mrp-suggestions',{limit:100}),
+      a.list('inventory/products',{limit:100}),
+    ]);
+    const runs=(runPage.data||[]).sort((x,y)=>Number(y.id)-Number(x.id));
+    const run=runs[0];
+    const products=byId(productPage.data);
+    const suggestions=(suggestionPage.data||[]).filter(row=>run&&Number(row.mrpRunId)===Number(run.id));
+    const shortageCount=suggestions.filter(row=>row.action==='purchase').length;
+    const rows=suggestions.map(row=>{
+      const item=products.get(Number(row.productId))||{};
+      return `<tr><td class="l li-name"><b>${esc(item.name||'#'+row.productId)}</b><small>${esc(item.sku||'')}</small></td>
+        <td class="tnum">${num(Number(row.grossRequirement))}</td><td class="tnum">${num(Number(row.onHand))}</td>
+        <td class="tnum">${num(Number(row.onOrder))}</td>
+        <td class="tnum ${Number(row.netRequirement)>0?'neg':'pos'}">${num(Number(row.netRequirement))}</td>
+        <td>${cap(row.action==='purchase'?s('purchase'):s('sufficient'),row.action==='purchase'?'danger':'ok')}</td></tr>`;
+    }).join('');
+    root.innerHTML=`<div class="content full"><section class="master">
+      <div class="pagehead">${crumbs([DB.company.name,t('nav.manufacturing'),s('mrpTitle')])}
+        <div class="h1row"><h1>${esc(s('mrpTitle'))}</h1>${run?cap(statusLabel(s,run.status),'ok'):''}
+          <div class="headright"><div class="kfig"><small>${esc(s('purchase'))}</small><b>${shortageCount}</b></div>
+            ${btn(s('runMrp'),{icon:'chart',cls:'primary',attrs:'data-run-mrp'})}</div></div>
+        ${run?`<div class="h1sub">${esc(run.docNo)} · ${esc(s('planningDate'))} ${esc(dateLabel(run.planningDate))}</div>`:''}
+      </div>
+      ${run?`<div class="panel"><div class="panel-h"><h3>${esc(s('suggestions'))}</h3></div>
+        <table class="lines"><thead><tr><th class="l">${esc(s('product'))}</th><th>${esc(s('gross'))}</th>
+          <th>${esc(s('onHand'))}</th><th>${esc(s('onOrder'))}</th><th>${esc(s('net'))}</th><th>${esc(s('action'))}</th></tr></thead>
+          <tbody>${rows}</tbody></table></div>`:
+        `<div class="statepanel empty">${ic('chart')}<h3>${esc(s('noRun'))}</h3><p>${esc(s('emptyDesc'))}</p></div>`}
+    </section></div>`;
+    root.querySelector('[data-run-mrp]')?.addEventListener('click',async event=>{
+      const button=event.currentTarget;
+      const horizon=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+      button.disabled=true;
+      try{
+        await a.create('manufacturing/mrp-runs',{
+          docNo:`MRP-${runs.length+1}`,planningDate:horizon,
+        });
+        toast(s('runComplete'),'ok');
+        await navigate('mrp');
+      }catch(error){
+        button.disabled=false;
+        toast(error&&error.message||'MRP run failed','danger');
       }
     });
   };

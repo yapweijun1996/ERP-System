@@ -177,3 +177,43 @@ export const workOrderOperation = pgTable('work_order_operation', {
   check('ck_work_order_operation_hours', sql`${t.plannedHours} >= 0 and ${t.actualHours} >= 0`),
   check('ck_work_order_operation_status', sql`${t.status} in ('pending', 'ready', 'in_progress', 'completed', 'blocked', 'skipped')`),
 ]);
+
+export const mrpRun = pgTable('mrp_run', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  status: text('status').notNull().default('completed'), // running | completed | failed
+  version: integer('version').notNull().default(1),
+  planningDate: date('planning_date').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_mrp_run_docno').on(t.masterFn, t.companyFn, t.docNo),
+  index('idx_mrp_run_date').on(t.masterFn, t.companyFn, t.planningDate, t.id),
+  check('ck_mrp_run_status', sql`${t.status} in ('running', 'completed', 'failed')`),
+]);
+
+export const mrpSuggestion = pgTable('mrp_suggestion', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  mrpRunId: bigint('mrp_run_id', { mode: 'number' }).notNull().references(() => mrpRun.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  grossRequirement: numeric('gross_requirement', { precision: 18, scale: 4 }).notNull(),
+  onHand: numeric('on_hand', { precision: 18, scale: 4 }).notNull(),
+  onOrder: numeric('on_order', { precision: 18, scale: 4 }).notNull().default('0'),
+  netRequirement: numeric('net_requirement', { precision: 18, scale: 4 }).notNull(),
+  action: text('action').notNull(), // purchase | sufficient
+  status: text('status').notNull().default('open'), // open | accepted | dismissed
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_mrp_suggestion_product').on(
+    t.masterFn, t.companyFn, t.mrpRunId, t.productId,
+  ),
+  index('idx_mrp_suggestion_action').on(
+    t.masterFn, t.companyFn, t.action, t.status, t.id,
+  ),
+  check('ck_mrp_suggestion_qty', sql`${t.grossRequirement} >= 0 and ${t.onHand} >= 0 and ${t.onOrder} >= 0`),
+  check('ck_mrp_suggestion_action', sql`${t.action} in ('purchase', 'sufficient')`),
+  check('ck_mrp_suggestion_status', sql`${t.status} in ('open', 'accepted', 'dismissed')`),
+]);

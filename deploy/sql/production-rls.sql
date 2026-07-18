@@ -19,6 +19,7 @@ DECLARE
     'work_center', 'manufacturing_bom', 'bom_version', 'bom_component',
     'manufacturing_routing', 'routing_operation',
     'work_order', 'work_order_material', 'work_order_operation',
+    'mrp_run', 'mrp_suggestion',
     'customer', 'invoice', 'sales_order', 'sales_order_line',
     'account', 'gl_entry',
     'goods_receipt', 'purchase_order', 'purchase_order_line',

@@ -35,6 +35,8 @@ import {
   workOrder,
   workOrderMaterial,
   workOrderOperation,
+  mrpRun,
+  mrpSuggestion,
 } from '../data/schema';
 
 export interface ApiScope {
@@ -167,6 +169,14 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'manufacturing/work-order-materials': resource(workOrderMaterial, 'manufacturing.read'),
   'manufacturing/work-order-operations': resource(workOrderOperation, 'manufacturing.read', {
     status: workOrderOperation.status,
+  }),
+  'manufacturing/mrp-runs': resource(mrpRun, 'manufacturing.read', {
+    status: mrpRun.status,
+    versionColumn: mrpRun.version,
+    createPermission: 'manufacturing.write',
+  }),
+  'manufacturing/mrp-suggestions': resource(mrpSuggestion, 'manufacturing.read', {
+    status: mrpSuggestion.status,
   }),
 };
 

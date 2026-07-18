@@ -70,6 +70,7 @@ import {
   type ReportWorkOrderOperationInput,
   type CreateWorkOrderInput,
 } from '../../src/modules/manufacturing/workOrder';
+import { runMrpWithin, type RunMrpInput } from '../../src/modules/manufacturing/mrp';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -144,6 +145,9 @@ export const erpDemoRuntime = Object.freeze({
     },
     completeWorkOrderWithin(db: DemoOrm, scope: Scope, workOrderId: number) {
       return completeWorkOrderWithin(asDomainDb(db), scope, workOrderId);
+    },
+    runMrpWithin(db: DemoOrm, scope: Scope, input: RunMrpInput) {
+      return runMrpWithin(asDomainDb(db), scope, input);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

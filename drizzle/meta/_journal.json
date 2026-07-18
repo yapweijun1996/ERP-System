@@ -71,6 +71,13 @@
       "when": 1784405084663,
       "tag": "0009_wet_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784406356761,
+      "tag": "0010_gorgeous_arachne",
+      "breakpoints": true
     }
   ]
 }

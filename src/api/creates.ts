@@ -32,6 +32,7 @@ import {
   createWorkOrderWithin,
   type CreateWorkOrderInput,
 } from '../modules/manufacturing/workOrder';
+import { runMrpWithin, type RunMrpInput } from '../modules/manufacturing/mrp';
 
 export interface CreateDefinition {
   permission: string;
@@ -181,6 +182,13 @@ const CREATES: Record<string, CreateDefinition> = {
         scope,
         payload as unknown as CreateWorkOrderInput,
       );
+    },
+  },
+  'manufacturing/mrp-runs': {
+    permission: 'manufacturing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return runMrpWithin(tx, scope, payload as unknown as RunMrpInput);
     },
   },
 };
