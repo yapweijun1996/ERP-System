@@ -171,8 +171,10 @@ SCREENS['delivery-order'] = function(root){
 };
 
 /* ---------------- SALES INVOICE (document) ---------------- */
-SCREENS['sales-invoice'] = function(root, params){
+SCREENS['sales-invoice'] = async function(root, params){
+  await prepareCanonicalSalesData();
   const d=(params&&params.no&&DB.salesInvoiceDocs&&DB.salesInvoiceDocs[params.no])||DB.invoice0331;
+  if(!d) throw new Error('No canonical sales invoice is available.');
   const {sub,discGiven,tax,total}=docTotals(d);
   const balance=total-d.paid, paidPct=total?Math.round(d.paid/total*100):0;
   const hasPayment=d.paid>0;
@@ -204,14 +206,11 @@ SCREENS['sales-invoice'] = function(root, params){
           <div class="panel-h"><h3>Invoice lines</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${d.lines.length} lines · delivered qty</span></div>
           <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Item</th><th>Qty</th><th>Unit price</th><th>Disc</th><th>Amount</th></tr></thead><tbody>${docLineRows(d.lines)}</tbody></table>
         </div>
-        <div class="panel"><div class="panel-h"><h3>Payments</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${hasPayment?'1 receipt':'no receipts'}</span></div>
-          ${hasPayment?`<table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Receipt</th><th class="l">Date</th><th class="l">Method</th><th>Amount</th></tr></thead>
-          <tbody><tr><td class="lineno">1</td><td class="l li-name"><b>RCP-26-0288</b><small>posted to ${ic('book')} 1100 AR</small></td><td class="l">Jun 18, 2026</td><td class="l">Bank transfer</td><td class="tnum"><b>${money(d.paid)}</b></td></tr></tbody></table>`
-          :`<div class="panel-body" style="color:var(--muted);font-size:13px">No payments recorded yet — invoice is open in Accounts Receivable (due ${esc(d.due)}).</div>`}
+        <div class="panel"><div class="panel-h"><h3>Payments</h3></div>
+          <div class="panel-body" style="color:var(--muted);font-size:13px">${hasPayment?'The canonical invoice is marked paid. Receipt allocation details will be available with the receivables slice.':`No payments recorded yet — invoice is open in Accounts Receivable (due ${esc(d.due)}).`}</div>
         </div>
         <div class="panel"><div class="panel-h"><h3>Audit trail</h3></div><div class="panel-body">${auditTrail([
-          ...(hasPayment?[{kind:'current',when:'Jun 18 · 11:30',what:'Part payment received — '+money(d.paid),who:'Finance'}]:[]),
-          {kind:hasPayment?'add':'current',when:esc(d.date),what:'Invoice posted to GL — AR debited, revenue and tax credited',who:'System'},
+          {kind:'current',when:esc(d.date),what:`Invoice status — <b>${esc(d.status)}</b>`,who:'System'},
           {kind:'add',when:esc(d.date),what:'Generated from sales order <b>'+esc(d.so)+'</b> confirmation',who:'System'},
         ])}</div></div>
       </div>
@@ -236,18 +235,10 @@ SCREENS['sales-invoice'] = function(root, params){
         </div>
       </aside>
     </div>
-    <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
+    <div class="responsive-actionbar" style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
       <div style="font-size:12.5px;color:var(--muted)" class="hideonsmall">Balance <b style="color:var(--fg)">${money(balance)}</b> due ${esc(d.due)}.</div>
       <div class="grow"></div>
-      ${btn('Credit note',{icon:'receipt',cls:'soft',attrs:'onclick="toast(\'Credit note draft started\',\'info\')"'})}
-      ${btn('Send reminder',{icon:'send',cls:'soft',attrs:'onclick="navigate(\'ar-aging\')"'})}
-      ${btn('Record payment',{icon:'coins',cls:'primary',sm:false,attrs:'data-act="pay"'})}
+      ${btn('View AR aging',{icon:'clock',cls:'soft',attrs:'onclick="navigate(\'ar-aging\')"'})}
     </div>
   </div></div></section></div>`;
-  root.querySelector('[data-act="pay"]').addEventListener('click',()=>{
-    appModal({ icon:'coins', title:`Record payment — ${esc(d.no)}`,
-      body:`<p style="color:var(--muted);font-size:13.5px">Apply a receipt against the outstanding balance of <b>${money(balance)}</b>. A receipt is posted to AR (account 1100).</p>
-        <div class="fldrow c2"><div class="fld"><span>Amount</span><input value="${money(balance)}" class="tnum"></div><div class="fld"><span>Method</span><select><option>Bank transfer</option><option>Cheque</option><option>Card</option></select></div></div>`,
-      actions:`${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Post receipt',{icon:'check',cls:'primary',attrs:'onclick="closeModal();toast(\'Receipt posted · invoice marked Paid\',\'ok\')"'})}` });
-  });
 };

@@ -270,6 +270,82 @@ describe('production API security contract', () => {
     ]);
   });
 
+  it('serves the complete canonical sales read model with tenant-scoped joins', async () => {
+    const [buyer] = await db.select({ id: customer.id }).from(customer)
+      .where(eq(customer.code, 'CUST1'));
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [order] = await db.insert(salesOrder).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      docNo: 'SO-READ-MODEL',
+      customerId: buyer.id,
+      orderDate: '2026-07-19',
+      currency: 'SGD',
+      netAmount: '10.00',
+      taxAmount: '0.90',
+      totalAmount: '10.90',
+    }).returning({ id: salesOrder.id });
+    await db.insert(salesOrderLine).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      orderId: order.id,
+      lineNo: 1,
+      productId: item.id,
+      qty: '1',
+      unitPrice: '10',
+      netAmount: '10',
+      taxCode: 'SR',
+      taxRate: '9',
+      taxAmount: '0.9',
+    });
+    await db.insert(invoice).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      docNo: 'INV-SO-READ-MODEL',
+      orderId: order.id,
+      customerId: buyer.id,
+      invoiceDate: '2026-07-19',
+      currency: 'SGD',
+      netAmount: '10.00',
+      taxAmount: '0.90',
+      totalAmount: '10.90',
+    });
+    const cookies = await login(running.baseUrl);
+    const resources = ['customers', 'orders', 'order-lines', 'invoices'];
+    const responses = await Promise.all(resources.map((resource) => fetch(
+      `${running.baseUrl}/api/sales/${resource}?limit=100`,
+      { headers: { cookie: cookies.header } },
+    )));
+    responses.forEach((response) => expect(response.status).toBe(200));
+    const [customersBody, ordersBody, linesBody, invoicesBody] = await Promise.all(
+      responses.map((response) => response.json()),
+    );
+    expect(customersBody.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'CUST1', name: expect.any(String) }),
+    ]));
+    expect(ordersBody.data[0]).toMatchObject({
+      docNo: expect.any(String),
+      customerId: expect.any(Number),
+      totalAmount: expect.any(String),
+    });
+    expect(linesBody.data[0]).toMatchObject({
+      orderId: expect.any(Number),
+      productId: expect.any(Number),
+      unitPrice: expect.any(String),
+      taxRate: expect.any(String),
+    });
+    expect(invoicesBody.data[0]).toMatchObject({
+      docNo: expect.any(String),
+      orderId: expect.any(Number),
+      customerId: expect.any(Number),
+    });
+    expect(
+      linesBody.data.every((line: { orderId: number }) =>
+        ordersBody.data.some((order: { id: number }) => order.id === line.orderId)),
+    ).toBe(true);
+  });
+
   it('runs the canonical purchasing create, receive and supplier-invoice chain over HTTP', async () => {
     const [item] = await db.select({ id: product.id }).from(product)
       .where(eq(product.sku, 'SG-WIDGET'));

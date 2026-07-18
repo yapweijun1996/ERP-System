@@ -1198,7 +1198,9 @@
     'inventory/location-balances':'stock_location_balance',
     'inventory/adjustments':'inventory_adjustment',
     'inventory/transfers':'stock_transfer',
+    'sales/customers':'customer',
     'sales/orders':'sales_order',
+    'sales/order-lines':'sales_order_line',
     'sales/invoices':'invoice',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
@@ -1339,7 +1341,20 @@
       await refresh();
       return {data:completed,meta:{}};
     }
-    if(key==='sales/orders'&&name==='confirm') return {data:await confirmOrder(id),meta:{}};
+    if(key==='sales/orders'&&name==='confirm'){
+      if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){
+        var confirmedOrder = await requireDemoDb().transaction(function(tx){
+          return state.runtime.commands.confirmDraftSalesOrderWithin(
+            state.runtime.createOrm(tx), SCOPE, {
+              salesOrderId:Number(id),
+              warehouseId:payload.warehouseId,
+            });
+        });
+        await refresh();
+        return {data:confirmedOrder,meta:{}};
+      }
+      return {data:await confirmOrder(id),meta:{}};
+    }
     if((key==='purchasing/orders'||key==='purchasing/purchase-orders')&&name==='receive'){
       if(payload&&Number.isSafeInteger(payload.warehouseId)){
         var canonicalReceipt = await requireDemoDb().transaction(function(tx){

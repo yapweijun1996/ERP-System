@@ -72,6 +72,263 @@ function custCell(name, code){
 }
 function docNoCell(no, sub){ return `<div class="cellsub"><b class="docnum linknum">${esc(no)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div>`; }
 
+async function salesListPage(resource){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.list!=='function'){
+    throw new Error('The canonical ERP data adapter is unavailable.');
+  }
+  const response=await adapter.list(resource,{limit:100});
+  if(!response||!Array.isArray(response.data)){
+    throw new Error(`Unexpected ${resource} response.`);
+  }
+  return {
+    data:response.data,
+    nextCursor:response.meta&&response.meta.nextCursor||null,
+  };
+}
+
+function salesNumber(value){
+  const parsed=Number(value);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+function salesDateValue(value){
+  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
+  const text=String(value==null?'':value);
+  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
+  if(match) return match[0];
+  const parsed=new Date(value);
+  return Number.isNaN(parsed.getTime())?text:parsed.toISOString().slice(0,10);
+}
+
+function salesDueDate(value){
+  const normalized=salesDateValue(value);
+  const date=new Date(`${normalized}T00:00:00`);
+  if(Number.isNaN(date.getTime())) return value;
+  date.setDate(date.getDate()+30);
+  return date.toISOString().slice(0,10);
+}
+
+/* Canonical order-to-cash presentation model. Every row comes from the
+   bounded ErpSystemData resource contract in both Demo and API modes. */
+async function prepareCanonicalSalesData(){
+  const adapter=window.ErpSystemData;
+  if(adapter&&adapter.mode==='fallback'){
+    if(
+      Array.isArray(DB.customers)
+      &&Array.isArray(DB.salesOrders)
+      &&Array.isArray(DB.salesInvoices)
+      &&DB.salesOrderDocs
+      &&DB.salesInvoiceDocs
+    ) return;
+    throw new Error('The offline canonical sales snapshot is unavailable.');
+  }
+  const pages=await Promise.all([
+    salesListPage('sales/customers'),
+    salesListPage('sales/orders'),
+    salesListPage('sales/order-lines'),
+    salesListPage('sales/invoices'),
+    salesListPage('inventory/products'),
+    salesListPage('inventory/warehouses'),
+    salesListPage('inventory/stock-levels'),
+  ]);
+  const [
+    customers,orders,orderLines,invoices,products,warehouses,stockLevels,
+  ]=pages.map(page=>page.data);
+  const customerById=new Map(customers.map(row=>[row.id,row]));
+  const orderById=new Map(orders.map(row=>[row.id,row]));
+  const productById=new Map(products.map(row=>[row.id,row]));
+  const invoiceByOrderId=new Map(invoices.map(row=>[row.orderId,row]));
+  const onHandByProduct=new Map();
+  stockLevels.forEach(row=>{
+    onHandByProduct.set(
+      row.productId,
+      (onHandByProduct.get(row.productId)||0)+salesNumber(row.qty),
+    );
+  });
+  const linesByOrderId=new Map();
+  orderLines.forEach(row=>{
+    const product=productById.get(row.productId)||{};
+    const lines=linesByOrderId.get(row.orderId)||[];
+    lines.push({
+      id:row.id,
+      productId:row.productId,
+      item:product.sku||`Product #${row.productId}`,
+      name:product.name||`Product #${row.productId}`,
+      qty:salesNumber(row.qty),
+      uom:product.uom||'unit',
+      price:salesNumber(row.unitPrice),
+      disc:0,
+      avail:onHandByProduct.get(row.productId)||0,
+      taxCode:row.taxCode,
+      taxRate:salesNumber(row.taxRate)/100,
+    });
+    linesByOrderId.set(row.orderId,lines);
+  });
+  const invoiceBalanceByCustomer=new Map();
+  invoices.forEach(row=>{
+    if(row.status==='unpaid'){
+      invoiceBalanceByCustomer.set(
+        row.customerId,
+        (invoiceBalanceByCustomer.get(row.customerId)||0)+salesNumber(row.totalAmount),
+      );
+    }
+  });
+
+  DB.salesWarehouses=warehouses.map(row=>({
+    id:row.id,code:row.code,name:row.name,
+  }));
+  DB.customers=customers.map(row=>({
+    id:row.id,
+    code:row.code,
+    name:row.name,
+    terms:'—',
+    limit:null,
+    balance:invoiceBalanceByCustomer.get(row.id)||0,
+    overdue:0,
+    status:'Active',
+  }));
+  const customerViewById=new Map(DB.customers.map(row=>[row.id,row]));
+  DB.items=products.map(row=>({
+    id:row.id,
+    sku:row.sku,
+    name:row.name,
+    uom:row.uom,
+    cost:salesNumber(row.standardCost),
+    onHand:onHandByProduct.get(row.id)||0,
+    alloc:0,
+    reorder:0,
+    roq:0,
+    status:(onHandByProduct.get(row.id)||0)>0?'In stock':'No stock',
+  }));
+
+  const ORDER_STATUS_UI={draft:'Draft',confirmed:'Closed',cancelled:'Cancelled'};
+  const INVOICE_STATUS_UI={unpaid:'Posted',paid:'Paid',cancelled:'Cancelled'};
+  DB.salesOrders=orders.map(row=>{
+    const customer=customerById.get(row.customerId)||{};
+    const lines=linesByOrderId.get(row.id)||[];
+    const relatedInvoice=invoiceByOrderId.get(row.id);
+    return {
+      id:row.id,
+      version:row.version,
+      no:row.docNo,
+      cust:customer.name||`Customer #${row.customerId}`,
+      customerId:row.customerId,
+      custCode:customer.code||'—',
+      date:salesDateValue(row.orderDate),
+      deliver:salesDateValue(row.orderDate),
+      status:ORDER_STATUS_UI[row.status]||row.status,
+      rawStatus:row.status,
+      total:salesNumber(row.totalAmount),
+      net:salesNumber(row.netAmount),
+      tax:salesNumber(row.taxAmount),
+      currency:row.currency,
+      owner:DB.user&&DB.user.name||'System',
+      items:lines.length,
+      done:row.status==='confirmed'?lines.length:0,
+      posted:row.status==='confirmed',
+      payStatus:relatedInvoice
+        ?(relatedInvoice.status==='paid'?'Paid':'Unpaid')
+        :'—',
+    };
+  });
+  DB.salesOrderDocs={};
+  const defaultWarehouse=DB.salesWarehouses.find(row=>row.code==='WH-SALES')
+    ||DB.salesWarehouses[0]||null;
+  DB.salesOrders.forEach(row=>{
+    const customer=customerViewById.get(row.customerId)||{
+      id:row.customerId,name:row.cust,code:row.custCode,terms:'—',
+      limit:null,balance:0,overdue:0,
+    };
+    const taxRate=row.net>0?row.tax/row.net:0;
+    DB.salesOrderDocs[row.no]={
+      id:row.id,
+      version:row.version,
+      no:row.no,
+      cust:customer,
+      date:row.date,
+      deliver:row.deliver,
+      ref:'—',
+      status:row.status,
+      rawStatus:row.rawStatus,
+      owner:row.owner,
+      warehouse:defaultWarehouse?`${defaultWarehouse.code} · ${defaultWarehouse.name}`:'—',
+      warehouseId:defaultWarehouse&&defaultWarehouse.id,
+      currency:row.currency,
+      rate:1,
+      terms:customer.terms||'—',
+      lines:linesByOrderId.get(row.id)||[],
+      discountPct:0,
+      shipping:0,
+      taxRate,
+      billTo:null,
+      shipTo:null,
+      note:'Canonical sales order. Customer notes are not modeled yet.',
+      memo:'Created from the canonical order-to-cash ledger.',
+    };
+  });
+  DB.so0418=DB.salesOrderDocs[DB.salesOrders[0]&&DB.salesOrders[0].no]||null;
+
+  DB.salesInvoices=invoices.map(row=>{
+    const customer=customerById.get(row.customerId)||{};
+    const order=orderById.get(row.orderId)||{};
+    const total=salesNumber(row.totalAmount);
+    return {
+      id:row.id,
+      version:row.version,
+      no:row.docNo,
+      date:salesDateValue(row.invoiceDate),
+      due:salesDueDate(row.invoiceDate),
+      cust:customer.name||`Customer #${row.customerId}`,
+      customerId:row.customerId,
+      custCode:customer.code||'—',
+      so:order.docNo||`Order #${row.orderId}`,
+      orderId:row.orderId,
+      total,
+      paid:row.status==='paid'?total:0,
+      status:INVOICE_STATUS_UI[row.status]||row.status,
+      rawStatus:row.status,
+      currency:row.currency,
+      doc:true,
+    };
+  });
+  DB.salesInvoiceDocs={};
+  DB.salesInvoices.forEach(row=>{
+    const invoiceRow=invoices.find(item=>item.id===row.id)||{};
+    const order=orderById.get(row.orderId)||{};
+    const customer=customerById.get(row.customerId)||{};
+    const taxRate=salesNumber(invoiceRow.netAmount)>0
+      ?salesNumber(invoiceRow.taxAmount)/salesNumber(invoiceRow.netAmount)
+      :0;
+    DB.salesInvoiceDocs[row.no]={
+      id:row.id,
+      version:row.version,
+      no:row.no,
+      so:row.so,
+      do:'—',
+      cust:row.cust,
+      code:customer.code||'—',
+      date:row.date,
+      due:row.due,
+      terms:'—',
+      currency:row.currency,
+      taxRate,
+      shipping:0,
+      status:row.status,
+      rawStatus:row.rawStatus,
+      paid:row.paid,
+      owner:DB.user&&DB.user.name||'System',
+      lines:linesByOrderId.get(order.id)||[],
+    };
+  });
+  DB.invoice0331=DB.salesInvoiceDocs[DB.salesInvoices[0]&&DB.salesInvoices[0].no]||null;
+  DB.soNow=new Date().toISOString().slice(0,10);
+  DB.salesReadMeta={
+    truncated:pages.some(page=>Boolean(page.nextCursor)),
+    nextCursors:pages.map(page=>page.nextCursor),
+  };
+}
+
 /* ============================================================
    GENERIC SALES LIST FACTORY
    cfg: { route, active, title, crumb, sub, unit, rows, rowId,
@@ -79,7 +336,8 @@ function docNoCell(no, sub){ return `<div class="cellsub"><b class="docnum linkn
           columns:[...], onOpen(row), newBtn:{label,onClick}, actions, rowMenu(row)->[{id,icon,label,run}] }
    ============================================================ */
 function makeSalesList(cfg){
-  SCREENS[cfg.route] = function(root){
+  SCREENS[cfg.route] = async function(root){
+    if(cfg.prepare) await cfg.prepare();
     let filter = 'all';
     const allRows = () => (typeof cfg.rows==='function' ? cfg.rows() : cfg.rows);
     const rows = () => { const r=allRows(); return filter==='all' ? r : r.filter(x=>cfg.filterFn(x,filter)); };

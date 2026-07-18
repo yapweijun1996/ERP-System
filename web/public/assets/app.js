@@ -393,6 +393,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
   'stock-on-hand','stock-movement','inv-valuation',
+  'sales-orders','sales-order','sales-invoices','sales-invoice',
   'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
   'crm-pipeline','new-opportunity',
 ]);

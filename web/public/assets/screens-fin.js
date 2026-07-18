@@ -3,7 +3,8 @@
    ============================================================ */
 
 /* ---------------- SALES ORDERS (listing) ---------------- */
-SCREENS['sales-orders'] = function(root){
+SCREENS['sales-orders'] = async function(root){
+  await prepareCanonicalSalesData();
   const NOW=DB.soNow||'2026-06-12';
   let filter='all';
   let selected=null;
@@ -100,29 +101,19 @@ SCREENS['sales-orders'] = function(root){
 
   /* ---- actions ---- */
   function primaryAction(s){
-    if(s.status==='Pending Approval') return {id:'approve',icon:'check',label:t('so.act.approve')};
-    if(s.status==='Draft') return {id:'edit',icon:'edit',label:t('so.act.edit')};
-    if(s.status==='Approved'&&s.done<s.items) return {id:'createdo',icon:'truck',label:t('so.act.createdo')};
-    if(s.status==='Approved'&&s.done>=s.items) return {id:'createinv',icon:'receipt',label:t('so.act.createinv')};
     return {id:'view',icon:'ext',label:t('so.act.view')};
   }
   function menuItems(s){
-    const it=[{id:'view',icon:'ext',label:t('so.act.view')}];
-    if(s.status==='Draft'||s.status==='Pending Approval') it.push({id:'edit',icon:'edit',label:t('so.act.edit')});
-    it.push({id:'print',icon:'print',label:t('so.act.print')});
-    if(s.status==='Pending Approval') it.push({id:'approve',icon:'check',label:t('so.act.approve')});
-    if(s.status==='Approved'&&s.done<s.items) it.push({id:'createdo',icon:'truck',label:t('so.act.createdo')});
-    if((s.status==='Approved'||s.status==='Closed')&&s.done>0) it.push({id:'createinv',icon:'receipt',label:t('so.act.createinv')});
-    it.push({id:'duplicate',icon:'copy',label:t('so.act.duplicate')});
-    if(isOpen(s)) it.push({id:'cancel',icon:'x',label:t('so.act.cancel'),danger:true,sep:true});
-    return it;
+    return [
+      {id:'view',icon:'ext',label:t('so.act.view')},
+      {id:'print',icon:'print',label:t('so.act.print')},
+    ];
   }
   function openDoc(no){ (DB.salesOrderDocs&&DB.salesOrderDocs[no]) ? navigate('sales-order',{no}) : toast(t('so.act.view')+' · '+no,'info'); }
   function runAction(id,s){
     if(id==='view'){ openDoc(s.no); return; }
-    if(id==='edit'){ navigate('new-sales-order'); return; }
-    const msg={print:'Sales order sent to printer',approve:'Order approved',createdo:'Delivery order created',createinv:'Invoice created',duplicate:'Order duplicated',cancel:'Order cancelled'}[id]||id;
-    const tone={approve:'ok',createdo:'ok',createinv:'ok',cancel:'danger',duplicate:'info',print:'info'}[id]||'info';
+    const msg={print:'Sales order sent to printer'}[id]||id;
+    const tone={print:'info'}[id]||'info';
     toast(msg+' · '+s.no,tone);
   }
   function openRowMenu(btnEl,s){
@@ -179,7 +170,6 @@ SCREENS['sales-orders'] = function(root){
       <div class="sd-actions">
         ${btn(t('so.dt.open'),{icon:'ext',cls:'primary',sm:false,attrs:`data-act="view" data-no="${esc(s.no)}"`})}
         <div class="sd-actrow">
-          ${s.status==='Pending Approval'?btn(t('common.approve'),{icon:'check',cls:'soft',attrs:`data-act="approve" data-no="${esc(s.no)}"`}):''}
           ${btn(t('common.print'),{icon:'print',cls:'soft',attrs:`data-act="print" data-no="${esc(s.no)}"`})}
         </div>
       </div>`;
@@ -197,7 +187,6 @@ SCREENS['sales-orders'] = function(root){
       <div class="grow"></div>
       <button class="viewsel" id="soViews">${ic('star')}<span class="star"></span>${esc(t('so.view.allopen'))}${ic('chevD')}</button>
       ${btn(t('common.filter'),{icon:'filter',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}
-      ${btn(t('so.new'),{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-sales-order\')"'})}
     </div>
     <div class="so-split">
       <div class="so-tablewrap" id="soTable">${table()}</div>
@@ -242,7 +231,7 @@ SCREENS['sales-orders'] = function(root){
   function rewire(){
     wireTable($('#soTable'),{
       onRow:(id)=>selectRow(id),
-      onSelectionChange:(n)=>{ $('#soBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('so.bulk.approve'),{icon:'check',cls:'soft'})}${btn(t('so.bulk.release'),{icon:'truck',cls:'soft'})}${btn(t('common.print'),{icon:'print',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}</div>`:''; }
+      onSelectionChange:(n)=>{ $('#soBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('common.print'),{icon:'print',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}</div>`:''; }
     });
     wireMenus($('#soTable'));
     $('#soTable').querySelectorAll('.docnum').forEach(el=>{
@@ -284,8 +273,11 @@ function togglePopList(anchorSel, items, onPick){
 }
 
 /* ---------------- SALES ORDER (transaction document) ---------------- */
-SCREENS['sales-order'] = function(root, params){
-  const d=(params&&params.no&&DB.salesOrderDocs&&DB.salesOrderDocs[params.no])||DB.so0418, c=d.cust;
+SCREENS['sales-order'] = async function(root, params){
+  await prepareCanonicalSalesData();
+  const d=(params&&params.no&&DB.salesOrderDocs&&DB.salesOrderDocs[params.no])||DB.so0418;
+  if(!d) throw new Error('No canonical sales order is available.');
+  const c=d.cust||{name:'Unknown customer',balance:0,limit:null,overdue:0};
   const calc=()=>{
     let sub=0; d.lines.forEach(l=>sub+=l.qty*l.price*(1-l.disc/100));
     const tax=sub*d.taxRate; const total=sub+tax+d.shipping;
@@ -303,7 +295,10 @@ SCREENS['sales-order'] = function(root, params){
       ${withTax&&a.tax?`<div class="addr-meta">${esc(t('doc.taxid'))} ${esc(a.tax)}</div>`:''}
     </div>`;
   };
-  const creditUsed=c.balance+total, creditPct=Math.round(creditUsed/c.limit*100), overLimit=creditUsed>c.limit;
+  const hasCreditLimit=Number(c.limit)>0;
+  const creditUsed=salesNumber(c.balance)+total;
+  const creditPct=hasCreditLimit?Math.round(creditUsed/Number(c.limit)*100):0;
+  const overLimit=hasCreditLimit&&creditUsed>Number(c.limit);
 
   /* status-aware stepper: Closed/Invoiced orders show the full chain as done */
   const STEP_LABELS=[ts('Draft'),t('appr.step.submitted'),ts('Pending Approval'),ts('Approved'),t('doc.step.delivered'),t('doc.step.invoiced')];
@@ -362,9 +357,9 @@ SCREENS['sales-order'] = function(root, params){
     <div class="doclayout">
       <div class="docmain">
         <div class="panel">
-          <div class="panel-h"><h3>${esc(t('appr.panel.lines'))}</h3><div class="ph-act">${btn(t('doc.addline'),{icon:'plus',cls:'plain'})}</div></div>
+          <div class="panel-h"><h3>${esc(t('appr.panel.lines'))}</h3></div>
           <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('appr.col.item'))}</th><th>${esc(t('appr.col.qty'))}</th><th>${esc(t('appr.col.unitprice'))}</th><th>${esc(t('doc.col.disc'))}</th><th class="c">${esc(t('doc.col.stock'))}</th><th>${esc(t('appr.col.amount'))}</th></tr></thead><tbody>${lineRows}</tbody></table>
-          <div class="linefoot" style="display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px"><span>${esc(t('doc.linesunits').replaceAll('{n}',d.lines.length).replaceAll('{u}',d.lines.reduce((s,l)=>s+l.qty,0)))}</span><span>${esc(t('doc.inlineedit'))}</span></div>
+          <div class="linefoot" style="display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px"><span>${esc(t('doc.linesunits').replaceAll('{n}',d.lines.length).replaceAll('{u}',d.lines.reduce((s,l)=>s+l.qty,0)))}</span><span>Canonical order lines</span></div>
         </div>
         <div class="panel">
           <div class="panel-h"><h3>${t('doc.notes')}</h3></div>
@@ -381,7 +376,7 @@ SCREENS['sales-order'] = function(root, params){
         </div>
         <div class="panel">
           <div class="panel-h"><h3>${esc(t('doc.activity'))}</h3>
-            <div class="ph-act" id="soTabs"><button class="tab on" data-t="audit">${esc(t('doc.tab.audit'))}</button><button class="tab" data-t="attach">${esc(t('doc.tab.attach'))}<span class="tc">2</span></button><button class="tab" data-t="comments">${esc(t('doc.tab.comments'))}<span class="tc">2</span></button><button class="tab" data-t="related">${esc(t('doc.tab.related'))}</button></div>
+            <div class="ph-act" id="soTabs"><button class="tab on" data-t="audit">${esc(t('doc.tab.audit'))}</button><button class="tab" data-t="attach">${esc(t('doc.tab.attach'))}</button><button class="tab" data-t="comments">${esc(t('doc.tab.comments'))}</button><button class="tab" data-t="related">${esc(t('doc.tab.related'))}</button></div>
           </div>
           <div class="panel-body" id="soTabBody"></div>
         </div>
@@ -397,17 +392,14 @@ SCREENS['sales-order'] = function(root, params){
         </div>
         <div class="sumcard">
           <div class="sectitle" style="margin-top:0">${esc(t('doc.custcredit'))}</div>
-          ${indicator({tone:overLimit?'danger':creditPct>85?'warn':'ok',icon:'handshake',label:overLimit?t('doc.overcredit'):t('doc.creditlimit'),value:money0(creditUsed)+' / '+money0(c.limit),sub:t('doc.balanceplus').replaceAll('{b}',money0(c.balance)).replaceAll('{t}',money0(total)).replaceAll('{x}',overLimit?t('doc.apprrequired'):t('doc.withinlimit')),pct:creditPct})}
+          ${hasCreditLimit
+            ?indicator({tone:overLimit?'danger':creditPct>85?'warn':'ok',icon:'handshake',label:overLimit?t('doc.overcredit'):t('doc.creditlimit'),value:money0(creditUsed)+' / '+money0(c.limit),sub:t('doc.balanceplus').replaceAll('{b}',money0(c.balance)).replaceAll('{t}',money0(total)).replaceAll('{x}',overLimit?t('doc.apprrequired'):t('doc.withinlimit')),pct:creditPct})
+            :indicator({tone:'neutral',icon:'handshake',label:t('doc.creditlimit'),value:'—',sub:'Credit limits are not modeled in the canonical customer master yet.'})}
           ${c.overdue>0?`<div style="margin-top:8px">${indicator({tone:'warn',icon:'receipt',label:t('doc.overduerec'),value:money0(c.overdue),sub:t('doc.overduesub')})}</div>`:''}
         </div>
         <div class="sumcard">
           <div class="sectitle" style="margin-top:0">${esc(t('doc.actions'))}</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            ${btn(t('doc.approveorder'),{icon:'check',cls:'primary',sm:false,attrs:'onclick="toast(\'Order approved — credit override logged\',\'ok\')"'})}
-            ${btn(t('appr.btn.change'),{icon:'comment',cls:'soft',sm:false,attrs:'onclick="toast(\'Change requested\',\'warn\')"'})}
-            ${btn(t('common.reject'),{icon:'x',cls:'danger',sm:false,attrs:'onclick="toast(\'Order rejected\',\'danger\')"'})}
-          </div>
-          <p style="font-size:11.5px;color:var(--muted);margin:10px 0 0">${esc(t('doc.glnote'))}</p>
+          <p style="font-size:12px;color:var(--muted);margin:0">${d.rawStatus==='draft'?'Confirming this draft issues stock, creates the invoice and posts the balanced journal in one transaction.':'This posted order is immutable. Corrections must use a return or reversal workflow.'}</p>
         </div>
       </aside>
     </div>
@@ -416,27 +408,28 @@ SCREENS['sales-order'] = function(root, params){
   <div class="pop moremenu" id="soMoreMenu" style="width:250px" role="menu" aria-label="More actions">
     <div class="menu-section">
       <div class="menu-head">${esc(d.no)}</div>
-      <button class="menu-item" data-act="duplicate" role="menuitem">${ic('copy')}<span>Duplicate order</span></button>
-      <button class="menu-item" data-act="send" role="menuitem">${ic('send')}<span>Send to customer</span></button>
       <button class="menu-item" data-act="export" role="menuitem">${ic('download')}<span>Export as PDF</span></button>
       <button class="menu-item" data-act="link" role="menuitem">${ic('link')}<span>Copy link</span><span class="meta mono">${esc(d.no)}</span></button>
     </div>
     <div class="menu-section">
-      <button class="menu-item" data-act="comment" role="menuitem">${ic('comment')}<span>Add internal note</span></button>
       <button class="menu-item" data-act="history" role="menuitem">${ic('history')}<span>View change history</span></button>
-    </div>
-    <div class="menu-section">
-      <button class="menu-item danger" data-act="cancel" role="menuitem">${ic('x')}<span>Cancel order</span></button>
     </div>
   </div>`;
 
   const body=$('#soTabBody');
   function tab(t){
     $$('#soTabs .tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
-    if(t==='audit') body.innerHTML=genericAudit('Sales order','J. Okafor');
-    else if(t==='attach') body.innerHTML=attachments([{name:'Customer PO — MR-99821.pdf',meta:'PDF · 240 KB · J. Okafor',ic:'filepdf'},{name:'Signed quote Q-26-0188.pdf',meta:'PDF · 180 KB · System',ic:'filepdf'}]);
-    else if(t==='comments') body.innerHTML=comments([{av:'JO',clr:'#0a84ff',who:'J. Okafor',when:'2h ago',text:'Customer committed to Q3 volume — that’s why the 12% discount. Flagging for your approval.'},{av:'DR',clr:'#FF9500',who:'Dana Reyes',when:'1h ago',text:'Noted. Confirm Pneumatic Cylinder backfill from the inbound PO before we promise the date.'}]);
-    else body.innerHTML=relatedDocs([{no:'Q-26-0188',label:'Originating quotation',meta:'converted Jun 3',status:'Completed'},{no:'PO-26-0291',label:'Inbound PO covers shortage',meta:'+300 ea Jun 22',status:'Pending Approval'},{no:'C-0007',label:'Customer · Meridian Robotics',meta:'Net 30 · 4 open orders'}]);
+    if(t==='audit') body.innerHTML=auditTrail([
+      {kind:'current',when:esc(d.date),what:`Order status — <b>${esc(d.status)}</b>`,who:'System'},
+      {kind:'add',when:esc(d.date),what:'Canonical sales order created',who:'System'},
+    ]);
+    else if(t==='attach') body.innerHTML='<div class="empty">No canonical attachments.</div>';
+    else if(t==='comments') body.innerHTML='<div class="empty">No canonical comments.</div>';
+    else body.innerHTML=relatedDocs(
+      d.rawStatus==='confirmed'
+        ?[{no:'INV-'+d.no,label:'Posted sales invoice',meta:d.cust.name,status:'Posted'}]
+        :[],
+    );
   }
   $$('#soTabs .tab').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.t)));
   tab('audit');
@@ -447,9 +440,17 @@ SCREENS['sales-order'] = function(root, params){
     if(!(window.ErpSystemData&&window.ErpSystemData.action)){ toast('ERP data adapter not loaded','warn'); return; }
     confirmBtn.disabled=true; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent='Confirming…');
     try{
-      const response=await window.ErpSystemData.action('sales/orders',d.no,'confirm',{},'confirm-'+d.no);
+      if(!Number.isSafeInteger(d.warehouseId)) throw new Error('No warehouse is available for this order.');
+      const response=await window.ErpSystemData.action(
+        'sales/orders',
+        d.id,
+        'confirm',
+        {warehouseId:d.warehouseId},
+        'sales-confirm-'+d.id,
+      );
       const res=response.data;
       toast(d.no+' confirmed — stock issued, '+res.invDocNo+' posted to GL ('+money(res.total)+')','ok');
+      await prepareCanonicalSalesData();
       navigate('sales-order',{no:d.no});   // re-render from refreshed data
     }catch(e){
       toast((e&&e.message)||'Confirm failed','danger');
@@ -463,13 +464,9 @@ SCREENS['sales-order'] = function(root, params){
   $$('#soMoreMenu [data-act]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation(); closeAllPops();
     const a=b.dataset.act;
-    if(a==='duplicate') toast('Duplicated to '+d.no.replace(/\d+$/,m=>String(+m+16).padStart(m.length,'0'))+' · saved as draft','ok');
-    else if(a==='send') toast('Order PDF emailed to '+c.name,'ok');
-    else if(a==='export') toast('Exporting '+d.no+' as PDF…','info');
+    if(a==='export') toast('Exporting '+d.no+' as PDF…','info');
     else if(a==='link'){ const url=location.origin+location.pathname+'#sales-order'; (navigator.clipboard&&navigator.clipboard.writeText(url).catch(()=>{})); toast('Link to '+d.no+' copied','ok'); }
-    else if(a==='comment'){ tab('comments'); toast('Jump to comments to add an internal note','info'); }
     else if(a==='history'){ tab('audit'); toast('Showing change history','info'); }
-    else if(a==='cancel') toast('Sales order '+d.no+' cancelled','danger');
   }));
 };
 

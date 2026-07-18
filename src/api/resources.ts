@@ -14,6 +14,7 @@ import {
   purchaseOrder,
   purchaseOrderLine,
   salesOrder,
+  salesOrderLine,
   stockLevel,
   stockMovement,
   stockLocationBalance,
@@ -93,6 +94,8 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     versionColumn: salesOrder.version,
     allowedActions: ['confirm'],
   }),
+  'sales/customers': resource(customer, 'sales.read'),
+  'sales/order-lines': resource(salesOrderLine, 'sales.read'),
   'sales/invoices': resource(invoice, 'sales.read', {
     status: invoice.status,
     versionColumn: invoice.version,

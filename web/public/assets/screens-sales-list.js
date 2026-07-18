@@ -166,6 +166,7 @@ function openDelivery(d){
 /* INV_TONE → TONES.invoice (defined in data-core.js) */
 makeSalesList({
   route:'sales-invoices', active:'sales-invoices', title:'Sales Invoices', unit:'invoices',
+  prepare:prepareCanonicalSalesData,
   sub:'Customer billing posted to Accounts Receivable. Track payment status and outstanding balance; raise credit notes against any invoice.',
   rows:()=>DB.salesInvoices, rowId:i=>i.no,
   chips:[['all','All'],['unpaid','Unpaid'],['overdue','Overdue'],['paid','Paid'],['draft','Draft']],
@@ -176,7 +177,6 @@ makeSalesList({
     {label:'Posted this period', val:r.filter(i=>i.status!=='Draft'&&i.status!=='Cancelled').length},
     {label:'Paid', val:r.filter(i=>i.status==='Paid').length, f:'paid'},
   ],
-  newBtn:{label:'New invoice', onClick:()=>toast('New invoice — from a delivery or order','info')},
   columns:[
     {label:'Invoice', w:'minmax(132px,1.2fr)', render:i=>docNoCell(i.no, i.date)},
     {label:'Customer', align:'l', w:'minmax(150px,1.5fr)', render:i=>custCell(i.cust,i.custCode)},
@@ -190,9 +190,6 @@ makeSalesList({
   rowMenu:(i)=>[
     {id:'view',icon:'ext',label:'Open invoice',run:()=>openInvoice(i)},
     {id:'pdf',icon:'filepdf',label:'Download PDF',run:()=>toast('Invoice PDF generated','ok')},
-    {id:'pay',icon:'coins',label:'Record payment',run:()=>{i.doc?navigate('sales-invoice'):toast(`Receipt recorded against ${i.no}`,'ok');}},
-    {id:'cn',icon:'receipt',label:'Raise credit note',run:()=>{navigate('credit-notes');}},
-    {id:'remind',icon:'send',label:'Send reminder',sep:true,run:()=>toast(`Reminder sent for ${i.no}`,'info')},
   ],
   onOpen:(i)=>openInvoice(i),
 });
