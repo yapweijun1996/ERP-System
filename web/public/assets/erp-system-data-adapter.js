@@ -18,13 +18,15 @@
    a static payload with the SAME canonical values keeps the demo
    rendering. `DB.erpSystem.dataMode` records which path ran.
 
-   app.js defers boot until `window.ErpSystemDemoReady` resolves.
-   `window.ErpSystemDemo.reset()` drops the schema and reloads,
+   app.js defers boot until the adapter ready promise resolves.
+   `window.ErpSystemData.reset()` drops the schema and reloads,
    which reseeds the canonical sample data on next boot.
 
    TASK-019: this file only runs in 'demo' data mode. In 'api' mode
    (VITE_DATA_MODE=api) it self-disables and erp-system-api-adapter.js
-   sets window.ErpSystemDemo instead — see index.html's erpDataMode().
+   sets the same formal window.ErpSystemData contract instead. The legacy
+   window.ErpSystemDemo name remains a compatibility alias while screens
+   migrate route-by-route.
    ============================================================ */
 (function erpSystemDataAdapter(){
   if (typeof DB === 'undefined') return;
@@ -1283,10 +1285,110 @@
     return refresh();
   }
 
-  window.ErpSystemDemo = {
+  /* Formal resource contract used by new screens. Raw table access is strictly
+     whitelisted; tenant scope is injected here and cannot be supplied by the
+     caller. Existing vertical-slice helpers remain below as compatibility
+     methods until every screen has moved to create()/action(). */
+  var RESOURCE_TABLES = {
+    'inventory/products':'product',
+    'inventory/stock-levels':'stock_level',
+    'inventory/stock-movements':'stock_movement',
+    'sales/orders':'sales_order',
+    'sales/invoices':'invoice',
+    'finance/accounts':'account',
+    'finance/gl-entries':'gl_entry',
+    'purchasing/suppliers':'supplier',
+    'purchasing/orders':'purchase_order',
+    'purchasing/purchase-orders':'purchase_order',
+    'purchasing/goods-receipts':'goods_receipt',
+    'purchasing/supplier-invoices':'supplier_invoice',
+    'crm/opportunities':'opportunity',
+  };
+  function normalizeResource(resource){
+    return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
+  }
+  function requireDemoDb(){
+    if(!state.db) throw new Error('Demo database unavailable (offline fallback) — this operation needs PGlite.');
+    return state.db;
+  }
+  function contractRow(row){
+    var normalized={};
+    Object.keys(row||{}).forEach(function(key){
+      normalized[key.replace(/_([a-z])/g,function(_all,letter){ return letter.toUpperCase(); })]=row[key];
+    });
+    return normalized;
+  }
+  async function list(resource, query){
+    var key=normalizeResource(resource);
+    var table=RESOURCE_TABLES[key];
+    if(!table) throw new Error('Unsupported ERP resource: '+key);
+    query=query||{};
+    var limit=Math.max(1,Math.min(100,Number(query.limit)||50));
+    var cursor=Number(query.cursor)||0;
+    var params=[SCOPE.masterFn,SCOPE.companyFn,cursor,limit+1];
+    var sql='select * from '+table+
+      ' where master_fn=$1 and company_fn=$2 and id>$3 order by id asc limit $4';
+    var rows=(await requireDemoDb().query(sql,params)).rows;
+    var hasMore=rows.length>limit;
+    var data=(hasMore?rows.slice(0,limit):rows).map(contractRow);
+    return {data:data,meta:{nextCursor:hasMore?String(data[data.length-1].id):null}};
+  }
+  async function get(resource,id){
+    var key=normalizeResource(resource);
+    var table=RESOURCE_TABLES[key];
+    if(!table) throw new Error('Unsupported ERP resource: '+key);
+    var numericId=Number(id);
+    if(!Number.isInteger(numericId)||numericId<=0) throw new Error('Resource id must be a positive integer.');
+    var row=(await requireDemoDb().query(
+      'select * from '+table+' where master_fn=$1 and company_fn=$2 and id=$3 limit 1',
+      [SCOPE.masterFn,SCOPE.companyFn,numericId])).rows[0];
+    if(!row) throw new Error('ERP resource not found: '+key+'/'+numericId);
+    return {data:contractRow(row),meta:{}};
+  }
+  async function create(resource,payload){
+    var key=normalizeResource(resource);
+    if(key==='purchasing/orders'||key==='purchasing/purchase-orders'){
+      return {data:await createPurchaseOrder(payload),meta:{}};
+    }
+    if(key==='crm/opportunities') return {data:await createOpportunity(payload),meta:{}};
+    throw new Error('Create is not implemented for ERP resource: '+key);
+  }
+  async function update(resource){
+    throw new Error('Update is not implemented for ERP resource: '+normalizeResource(resource));
+  }
+  async function action(resource,id,name,payload){
+    var key=normalizeResource(resource);
+    if(key==='sales/orders'&&name==='confirm') return {data:await confirmOrder(id),meta:{}};
+    if((key==='purchasing/orders'||key==='purchasing/purchase-orders')&&name==='receive'){
+      return {data:await receiveGoods(id),meta:{}};
+    }
+    if((key==='purchasing/orders'||key==='purchasing/purchase-orders')&&name==='post-invoice'){
+      return {data:await postSupplierInvoice(id),meta:{}};
+    }
+    if(key==='crm/opportunities'&&name==='convert-to-sales-order'){
+      payload=payload||{};
+      return {data:await convertOpportunityToSalesOrder(id,payload.sku,payload.qty,payload.unitPrice),meta:{}};
+    }
+    throw new Error('Action is not implemented: '+key+'/'+id+'/'+name);
+  }
+  async function session(){
+    return {
+      user:DB.user||null,
+      scope:{masterFn:SCOPE.masterFn,companyFn:SCOPE.companyFn},
+      mode:state.mode,
+    };
+  }
+
+  var adapter = {
     ready: ready,
     reset: reset,
     refresh: refresh,
+    list: list,
+    get: get,
+    create: create,
+    update: update,
+    action: action,
+    session: session,
     confirmOrder: confirmOrder,
     createPurchaseOrder: createPurchaseOrder,
     receiveGoods: receiveGoods,
@@ -1300,8 +1402,17 @@
     login: login,
     logout: logout,
     switchUser: switchUser,
+    auth: {
+      needsSetup:needsSetup,
+      isSignedIn:isSignedIn,
+      login:login,
+      logout:logout,
+    },
     get mode(){ return state.mode; },
     get db(){ return state.db; },
   };
+  window.ErpSystemData = adapter;
+  window.ErpSystemDemo = adapter;
+  window.ErpSystemDataReady = ready;
   window.ErpSystemDemoReady = ready;
 })();

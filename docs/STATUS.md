@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-07-17
+# Project Status — reviewed 2026-07-18
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -41,9 +41,9 @@ real data instead of Northwind mock — verified live: converting an opportunity
 visibly creates a sales order in the Sales module, decrements stock, and posts a
 balanced GL entry. Opportunity-detail and customer-360 sub-screens have no schema
 backing yet and stay mock, the same way Purchasing's RFQs/quotations do. What's
-still missing: other modules (inventory/sales/finance) have no api-mode data
-source yet, and there are no write endpoints (confirm order / setup) on the
-server side yet.
+still missing: the module screens do not yet map the production resource
+responses into their view models, and there are no write endpoints (confirm
+order / setup) on the server side yet.
 
 ## What actually works (verified in code)
 
@@ -70,6 +70,8 @@ server side yet.
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
+| Formal `window.ErpSystemData` adapter contract | ✅ Working | Both adapters expose `list/get/create/update/action/refresh/session/auth/switchCompany`; `window.ErpSystemDemo` remains a compatibility alias while existing screens migrate. Demo resource reads use a tenant-injected whitelist; API mode uses the canonical REST paths and structured errors. |
+| Production canonical read API | ✅ Working | `src/api/resources.ts` + `src/server.ts`: tenant scope comes from the authenticated session, resources and filters are allowlisted, lists use `id > cursor` keyset pagination with `limit≤100`, responses use `{data,meta:{nextCursor}}`, and errors include code/message/requestId. Verified against PGlite tests and a real isolated PostgreSQL 16 container. |
 | Production API server: `GET /health`, `GET /api/dashboard` over `DATABASE_URL` | ✅ Working | `src/server.ts` (`npm run server`); verified against a real local PostgreSQL — migrations, seed, and the true-concurrency proof all pass; dashboard figures curl-verified correct and tenant-scoped, TASK-011 |
 | Docker Compose stack: `web` (nginx) + `api` (Express) + `db` (PostgreSQL) | ✅ Working | `docker-compose.yml`, `Dockerfile.api`, `web/Dockerfile`, `web/nginx.conf`; built and run end-to-end for real (healthchecks, `docker compose exec api npm run migrate`/`seed`, dashboard through the reverse proxy), then fully torn down, TASK-012 |
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
@@ -111,8 +113,8 @@ regression-checked as Canonical.
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders inventory/sales/finance with real data | **Not yet.** Only the dashboard has an api-mode data source (TASK-026). Other module screens have no api-mode payload — they would need their own `GET /api/*` endpoints and DB.* mapping. |
-| API server has **write** endpoints (confirm order, complete setup, purchasing) | Not built. Only `GET /health` + `GET /api/dashboard` + auth endpoints exist (`switchCompany` doesn't need one — it's a read with a different scope). The client-side contract (`erp-system-api-adapter.js`) already defines the shape these must satisfy. → follow-up to TASK-011 |
+| `VITE_DATA_MODE=api` renders inventory/sales/finance with real data | **Not yet.** The canonical resource GET endpoints now exist, but the legacy screens still read the monolithic `DB.*` view model. Each route must migrate to `ErpSystemData.list/get` (or receive an interim mapper) before its `supportedModes` can include `api`. |
+| API server has **write** endpoints (confirm order, complete setup, purchasing) | Not built. The formal client `create/update/action` contract exists, but stock, money and state-transition endpoints remain intentionally unavailable until server-side idempotency, permission and audit controls land. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. Auth (TASK-024) is real in both modes, but production `completeSetup()` itself still rejects with "not available yet". |
 | `npm run lint` (referenced in CONTRIBUTING.md) | Still doesn't exist — no ESLint/Prettier config in the repo. `npm test` (TASK-025, done) now works. |

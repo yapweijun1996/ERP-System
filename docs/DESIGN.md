@@ -123,10 +123,12 @@ PostgreSQL — exactly one writer may win.
   underlying `docker compose` command has been verified — `scripts/setup.sh` itself
   is the one remaining unverified piece (TASK-021, blocked on `.env.example` sandbox
   access in this environment, not a known bug).
-- **`src/server.ts`** (TASK-011) is the real API — run with `DATABASE_URL=... npm run
-  server` locally, or as the `api` service in Docker. Currently `GET /health` +
-  `GET /api/dashboard` only; write endpoints are a follow-up (contract already
-  defined client-side in `erp-system-api-adapter.js`).
+- **`src/server.ts`** is the real API — run with `DATABASE_URL=... npm run server`
+  locally, or as the `api` service in Docker. Besides health/auth/dashboard it
+  exposes the allowlisted canonical read resources in `src/api/resources.ts`.
+  Reads are session-tenant-scoped and keyset-paginated. Stock/money write endpoints
+  remain a follow-up; the formal `ErpSystemData.create/update/action` contract is
+  already defined in both frontend adapters.
 - **Local Postgres for manual testing** (no Docker required yet): `createdb
   erp_system_dev` against any local PostgreSQL 16+, then
   `DATABASE_URL=postgresql://<user>@localhost:5432/erp_system_dev npm run migrate`

@@ -29,9 +29,8 @@
    rows) and so does the TASK-024 auth flow (login/logout/needsSetup/
    isSignedIn) — real session cookies, not a local flag.
 
-   window.ErpSystemDemo keeps the demo (PGlite) adapter's shape plus these
-   auth additions — screens and the setup wizard never need to know which
-   backend is active.
+   window.ErpSystemData is the formal adapter. window.ErpSystemDemo remains
+   a temporary compatibility alias while existing screens migrate.
    ============================================================ */
 (function erpSystemApiAdapter(){
   if (typeof DB === 'undefined') return;
@@ -67,6 +66,80 @@
 
   async function jsonBody(res){
     try { return await res.json(); } catch (e) { return null; }
+  }
+
+  var RESOURCE_MODULES = {
+    products:'inventory','stock-levels':'inventory','stock-movements':'inventory',
+    orders:'sales',invoices:'sales',
+    accounts:'finance','gl-entries':'finance','journals':'finance',
+    suppliers:'purchasing','purchase-orders':'purchasing',
+    'goods-receipts':'purchasing','supplier-invoices':'purchasing',
+    opportunities:'crm',
+  };
+  function resourcePath(resource){
+    var key=String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
+    if(key.indexOf('/')!==-1) return key;
+    var moduleId=RESOURCE_MODULES[key];
+    if(!moduleId) throw new Error('Unsupported ERP resource: '+key);
+    return moduleId+'/'+key;
+  }
+  function queryString(query){
+    var p=new URLSearchParams();
+    Object.keys(query||{}).forEach(function(key){
+      var value=query[key];
+      if(value==null||value==='') return;
+      if(Array.isArray(value)) value.forEach(function(v){ p.append(key,String(v)); });
+      else p.set(key,String(value));
+    });
+    var text=p.toString();
+    return text?'?'+text:'';
+  }
+  async function apiRequest(path,options){
+    options=options||{};
+    var headers=Object.assign({},options.headers||{});
+    if(options.body!=null&&!headers['Content-Type']) headers['Content-Type']='application/json';
+    var res=await fetch(API_BASE+'/'+path.replace(/^\/+/,''),{
+      method:options.method||'GET',
+      credentials:'same-origin',
+      headers:headers,
+      body:options.body==null?undefined:JSON.stringify(options.body),
+    });
+    var body=await jsonBody(res);
+    if(!res.ok){
+      var detail=body&&body.error;
+      var error=new Error(
+        (detail&&detail.message)||
+        (body&&body.message)||
+        ('ERP API request failed (HTTP '+res.status+').'));
+      error.code=(detail&&detail.code)||(body&&body.error)||'http_'+res.status;
+      error.fieldErrors=(detail&&detail.fieldErrors)||null;
+      error.requestId=(detail&&detail.requestId)||res.headers.get('x-request-id')||null;
+      error.status=res.status;
+      throw error;
+    }
+    if(body&&Object.prototype.hasOwnProperty.call(body,'data')) return body;
+    return {data:body,meta:{}};
+  }
+  function list(resource,query){
+    return apiRequest(resourcePath(resource)+queryString(query));
+  }
+  function get(resource,id){
+    return apiRequest(resourcePath(resource)+'/'+encodeURIComponent(id));
+  }
+  function create(resource,payload){
+    return apiRequest(resourcePath(resource),{method:'POST',body:payload});
+  }
+  function update(resource,id,payload,version){
+    var body=Object.assign({},payload||{});
+    if(version!=null) body.version=version;
+    return apiRequest(resourcePath(resource)+'/'+encodeURIComponent(id),{method:'PATCH',body:body});
+  }
+  function action(resource,id,name,payload,idempotencyKey){
+    var headers={};
+    if(idempotencyKey) headers['Idempotency-Key']=idempotencyKey;
+    return apiRequest(resourcePath(resource)+'/'+encodeURIComponent(id)+'/actions/'+encodeURIComponent(name),{
+      method:'POST',headers:headers,body:payload||{},
+    });
   }
 
   async function fetchDashboard(){
@@ -225,7 +298,7 @@
     });
     if (!res.ok){
       var body = await jsonBody(res);
-      var message = (body && body.message) || (res.status === 401
+      var message = (body && body.error && body.error.message) || (body && body.message) || (res.status === 401
         ? 'Incorrect email or password.'
         : 'Sign in failed (HTTP ' + res.status + ').');
       throw new Error(message);
@@ -239,10 +312,16 @@
     } catch (e) { /* best-effort — reloading clears client state regardless */ }
   }
 
-  window.ErpSystemDemo = {
+  var adapter = {
     ready: ready,
     reset: function(){ return notAvailable('reset'); },
     refresh: refresh,
+    list:list,
+    get:get,
+    create:create,
+    update:update,
+    action:action,
+    session:fetchSession,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
     completeSetup: function(){ return notAvailable('completeSetup'); },
     switchCompany: switchCompany,
@@ -252,8 +331,17 @@
     login: login,
     logout: logout,
     switchUser: function(){ return Promise.reject(new Error('Switching user without signing in as them is not offered in production mode — sign out and sign in as the other user instead.')); },
+    auth: {
+      needsSetup:needsSetup,
+      isSignedIn:isSignedIn,
+      login:login,
+      logout:logout,
+    },
     get mode(){ return state.mode; },
     get db(){ return null; },
   };
+  window.ErpSystemData = adapter;
+  window.ErpSystemDemo = adapter;
+  window.ErpSystemDataReady = ready;
   window.ErpSystemDemoReady = ready;
 })();

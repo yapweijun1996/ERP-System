@@ -120,6 +120,14 @@ async function auditRoutes(browser, viewport) {
   const routes = await page.evaluate(() => Object.keys(SCREENS).sort());
   const routeModule = await page.evaluate(() => Object.assign({}, ROUTE_MODULE));
   const screenMeta = await page.evaluate(() => JSON.parse(JSON.stringify(window.SCREEN_META || {})));
+  const missingAdapterMethods = await page.evaluate(() => {
+    const required = ['list','get','create','update','action','refresh','session','switchCompany'];
+    if (!window.ErpSystemData) return ['ErpSystemData'];
+    return required.filter((name) => typeof window.ErpSystemData[name] !== 'function');
+  });
+  if (missingAdapterMethods.length) {
+    throw new Error(`ErpSystemData contract missing: ${missingAdapterMethods.join(', ')}`);
+  }
   console.log(`[${viewport.label}] Found ${routes.length} routes registered in SCREENS.`);
 
   const results = [];
