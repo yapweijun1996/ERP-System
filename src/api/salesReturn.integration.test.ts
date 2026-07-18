@@ -9,6 +9,8 @@ import {
   salesCreditNote,
   salesDebitNote,
   salesDeliveryLine,
+  salesDiscountRule,
+  salesPriceList,
   salesReturn,
   stockLevel,
   stockMovement,
@@ -175,5 +177,65 @@ describe('sales return API vertical slice', () => {
     const debitLegs = await db.select().from(glEntry).where(eq(glEntry.journalRef, 'DN-API-1'));
     expect(debitLegs.reduce((sum, row) => sum + Number(row.debit), 0)).toBe(10.9);
     expect(debitLegs.reduce((sum, row) => sum + Number(row.credit), 0)).toBe(10.9);
+
+    const priceResponse = await fetch(`${baseUrl}/api/sales/price-lists`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        code: 'PL-API-1',
+        name: 'Fictional API price list',
+        basis: 'customer',
+        customerId: buyer.id,
+        currency: 'SGD',
+        effectiveFrom: '2026-07-19',
+        lines: [{ productId: item.id, minQty: '1', unitPrice: '12', floorPrice: '9' }],
+      }),
+    });
+    expect(priceResponse.status).toBe(201);
+    const priceList = (await priceResponse.json()).data;
+    const activatePrice = () => fetch(
+      `${baseUrl}/api/sales/price-lists/${priceList.id}/actions/activate`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'sales-price-api-activate' },
+        body: '{}',
+      },
+    );
+    expect((await activatePrice()).status).toBe(200);
+    const priceReplay = await activatePrice();
+    expect(priceReplay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await db.select().from(salesPriceList).where(eq(salesPriceList.id, priceList.id)))
+      .toMatchObject([{ status: 'active', version: 2 }]);
+
+    const discountResponse = await fetch(`${baseUrl}/api/sales/discount-rules`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        code: 'DR-API-1',
+        name: 'Fictional API discount',
+        ruleType: 'customer',
+        customerId: buyer.id,
+        minOrderAmount: '1000',
+        discountPct: '5',
+        approvalThresholdPct: '10',
+        effectiveFrom: '2026-07-19',
+      }),
+    });
+    expect(discountResponse.status).toBe(201);
+    const discount = (await discountResponse.json()).data;
+    const activateDiscount = () => fetch(
+      `${baseUrl}/api/sales/discount-rules/${discount.id}/actions/activate`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'sales-discount-api-activate' },
+        body: '{}',
+      },
+    );
+    expect((await activateDiscount()).status).toBe(200);
+    const discountReplay = await activateDiscount();
+    expect(discountReplay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await db.select().from(salesDiscountRule)
+      .where(eq(salesDiscountRule.id, discount.id)))
+      .toMatchObject([{ status: 'active', version: 2 }]);
   });
 });

@@ -102,6 +102,14 @@ import {
   postSalesDebitNoteWithin,
   type CreateSalesDebitNoteInput,
 } from '../../src/modules/sales/debitNote';
+import {
+  activateDiscountRuleWithin,
+  activatePriceListWithin,
+  createDiscountRuleWithin,
+  createPriceListWithin,
+  type CreateDiscountRuleInput,
+  type CreatePriceListInput,
+} from '../../src/modules/sales/pricing';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -262,6 +270,18 @@ export const erpDemoRuntime = Object.freeze({
     },
     postSalesDebitNoteWithin(db: DemoOrm, scope: Scope, debitNoteId: number) {
       return postSalesDebitNoteWithin(asDomainDb(db), scope, debitNoteId);
+    },
+    createPriceListWithin(db: DemoOrm, scope: Scope, input: CreatePriceListInput) {
+      return createPriceListWithin(asDomainDb(db), scope, input);
+    },
+    activatePriceListWithin(db: DemoOrm, scope: Scope, priceListId: number) {
+      return activatePriceListWithin(asDomainDb(db), scope, priceListId);
+    },
+    createDiscountRuleWithin(db: DemoOrm, scope: Scope, input: CreateDiscountRuleInput) {
+      return createDiscountRuleWithin(asDomainDb(db), scope, input);
+    },
+    activateDiscountRuleWithin(db: DemoOrm, scope: Scope, discountRuleId: number) {
+      return activateDiscountRuleWithin(asDomainDb(db), scope, discountRuleId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

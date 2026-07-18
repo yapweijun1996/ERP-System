@@ -2,7 +2,7 @@
 // See docs/DATA_MODEL.md. Document-level totals are denormalized for reporting; lines hold
 // the per-line tax snapshot so a confirmed order reproduces its tax even if rules change.
 import {
-  pgTable, text, bigint, integer, numeric, date, index, uniqueIndex, check,
+  pgTable, text, bigint, integer, numeric, date, boolean, index, uniqueIndex, check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
@@ -301,4 +301,99 @@ export const salesDebitNote = pgTable('sales_debit_note', {
   index('idx_sales_debit_note_status').on(t.masterFn, t.companyFn, t.status, t.noteDate, t.id),
   check('ck_sales_debit_note_status', sql`${t.status} in ('draft', 'posted', 'cancelled')`),
   check('ck_sales_debit_note_amount', sql`${t.netAmount} > 0 and ${t.taxAmount} >= 0`),
+]);
+
+export const salesPriceList = pgTable('sales_price_list', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  basis: text('basis').notNull().default('standard'), // standard | customer | promotion
+  customerId: bigint('customer_id', { mode: 'number' }).references(() => customer.id),
+  currency: text('currency').notNull(),
+  status: text('status').notNull().default('draft'), // draft | active | archived
+  version: integer('version').notNull().default(1),
+  isDefault: boolean('is_default').notNull().default(false),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_price_list_code').on(t.masterFn, t.companyFn, t.code),
+  uniqueIndex('uq_sales_price_list_default_currency')
+    .on(t.masterFn, t.companyFn, t.currency)
+    .where(sql`${t.isDefault} = true`),
+  index('idx_sales_price_list_status').on(
+    t.masterFn, t.companyFn, t.status, t.effectiveFrom, t.id,
+  ),
+  index('idx_sales_price_list_customer').on(t.masterFn, t.companyFn, t.customerId, t.id),
+  check('ck_sales_price_list_basis', sql`${t.basis} in ('standard', 'customer', 'promotion')`),
+  check('ck_sales_price_list_status', sql`${t.status} in ('draft', 'active', 'archived')`),
+  check(
+    'ck_sales_price_list_dates',
+    sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`,
+  ),
+]);
+
+export const salesPriceListLine = pgTable('sales_price_list_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  priceListId: bigint('price_list_id', { mode: 'number' }).notNull()
+    .references(() => salesPriceList.id),
+  lineNo: integer('line_no').notNull(),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  minQty: numeric('min_qty', { precision: 18, scale: 4 }).notNull().default('1'),
+  unitPrice: numeric('unit_price', { precision: 18, scale: 4 }).notNull(),
+  floorPrice: numeric('floor_price', { precision: 18, scale: 4 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_price_list_line').on(
+    t.masterFn, t.companyFn, t.priceListId, t.productId, t.minQty,
+  ),
+  index('idx_sales_price_list_line_product').on(
+    t.masterFn, t.companyFn, t.productId, t.priceListId,
+  ),
+  check(
+    'ck_sales_price_list_line_amounts',
+    sql`${t.minQty} > 0 and ${t.unitPrice} >= 0 and ${t.floorPrice} >= 0`,
+  ),
+  check('ck_sales_price_list_floor', sql`${t.unitPrice} >= ${t.floorPrice}`),
+]);
+
+export const salesDiscountRule = pgTable('sales_discount_rule', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  ruleType: text('rule_type').notNull(), // standard | customer | product | quantity | campaign
+  customerId: bigint('customer_id', { mode: 'number' }).references(() => customer.id),
+  productId: bigint('product_id', { mode: 'number' }).references(() => product.id),
+  minQty: numeric('min_qty', { precision: 18, scale: 4 }),
+  minOrderAmount: numeric('min_order_amount', { precision: 18, scale: 2 }),
+  discountPct: numeric('discount_pct', { precision: 6, scale: 3 }).notNull(),
+  approvalThresholdPct: numeric('approval_threshold_pct', { precision: 6, scale: 3 }),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  status: text('status').notNull().default('draft'), // draft | active | inactive
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_discount_rule_code').on(t.masterFn, t.companyFn, t.code),
+  index('idx_sales_discount_rule_status').on(
+    t.masterFn, t.companyFn, t.status, t.effectiveFrom, t.id,
+  ),
+  check(
+    'ck_sales_discount_rule_type',
+    sql`${t.ruleType} in ('standard', 'customer', 'product', 'quantity', 'campaign')`,
+  ),
+  check('ck_sales_discount_rule_status', sql`${t.status} in ('draft', 'active', 'inactive')`),
+  check(
+    'ck_sales_discount_rule_pct',
+    sql`${t.discountPct} >= 0 and ${t.discountPct} <= 100
+      and (${t.approvalThresholdPct} is null
+        or (${t.approvalThresholdPct} >= 0 and ${t.approvalThresholdPct} <= 100))`,
+  ),
+  check(
+    'ck_sales_discount_rule_dates',
+    sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`,
+  ),
 ]);

@@ -40,8 +40,28 @@ import {
   rejectSalesReturnWithin,
 } from '../modules/sales/return';
 import { postSalesDebitNoteWithin } from '../modules/sales/debitNote';
+import {
+  activateDiscountRuleWithin,
+  activatePriceListWithin,
+} from '../modules/sales/pricing';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'sales/price-lists/activate': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return activatePriceListWithin(tx, scope, input.resourceId);
+    },
+  },
+  'sales/discount-rules/activate': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return activateDiscountRuleWithin(tx, scope, input.resourceId);
+    },
+  },
   'sales/debit-notes/post': {
     permission: 'sales.write',
     idempotency: 'required',

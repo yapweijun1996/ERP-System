@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 15;
+  var DEMO_SCHEMA_VERSION = 17;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -118,7 +118,7 @@
     var currentVersion = row ? Number(row.version) : 0;
     /* A service-worker update can briefly mix a newer adapter with an older
        cached migration asset. Never trust the version marker alone: verify the
-       v15 manufacturing/MRP/quality/sales signature before declaring the schema current.
+       v16 manufacturing/MRP/quality/sales signature before declaring the schema current.
        Replaying the generated compatibility bundle is safe and repairs a
        marker that was written after a stale/no-op migration response. */
     var signature = (await db.query(
@@ -133,8 +133,9 @@
       "'sales_enquiry','sales_quotation','sales_quotation_line'," +
       "'sales_delivery','sales_delivery_line'," +
       "'sales_return','sales_return_line','sales_credit_note','sales_credit_note_line'," +
-      "'sales_debit_note')")).rows[0];
-    var hasCurrentSignature = signature && Number(signature.n) === 27;
+      "'sales_debit_note','sales_price_list','sales_price_list_line'," +
+      "'sales_discount_rule')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 30;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -181,6 +182,10 @@
 
   async function ensureSalesDebitFixture(db){
     await db.exec(await fetchSql('erp-system-demo-sales-debit.sql'));
+  }
+
+  async function ensureSalesPricingFixture(db){
+    await db.exec(await fetchSql('erp-system-demo-sales-pricing.sql'));
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -859,6 +864,7 @@
       await ensureSalesDeliveryFixture(db);
       await ensureSalesReturnFixture(db);
       await ensureSalesDebitFixture(db);
+      await ensureSalesPricingFixture(db);
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
@@ -1267,6 +1273,9 @@
     'sales/credit-notes':'sales_credit_note',
     'sales/credit-note-lines':'sales_credit_note_line',
     'sales/debit-notes':'sales_debit_note',
+    'sales/price-lists':'sales_price_list',
+    'sales/price-list-lines':'sales_price_list_line',
+    'sales/discount-rules':'sales_discount_rule',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
     'purchasing/suppliers':'supplier',
@@ -1472,6 +1481,22 @@
       await refresh();
       return {data:debitNote,meta:{}};
     }
+    if(key==='sales/price-lists'){
+      var priceList = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createPriceListWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:priceList,meta:{}};
+    }
+    if(key==='sales/discount-rules'){
+      var discountRule = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createDiscountRuleWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:discountRule,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1619,6 +1644,22 @@
       });
       await refresh();
       return {data:postedDebitNote,meta:{}};
+    }
+    if(key==='sales/price-lists'&&name==='activate'){
+      var activePriceList = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.activatePriceListWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:activePriceList,meta:{}};
+    }
+    if(key==='sales/discount-rules'&&name==='activate'){
+      var activeDiscountRule = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.activateDiscountRuleWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:activeDiscountRule,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

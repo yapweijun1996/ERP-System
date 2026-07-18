@@ -53,6 +53,12 @@ import {
   createSalesDebitNoteWithin,
   type CreateSalesDebitNoteInput,
 } from '../modules/sales/debitNote';
+import {
+  createDiscountRuleWithin,
+  createPriceListWithin,
+  type CreateDiscountRuleInput,
+  type CreatePriceListInput,
+} from '../modules/sales/pricing';
 
 export interface CreateDefinition {
   permission: string;
@@ -267,6 +273,20 @@ const CREATES: Record<string, CreateDefinition> = {
         scope,
         payload as unknown as CreateSalesDebitNoteInput,
       );
+    },
+  },
+  'sales/price-lists': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createPriceListWithin(tx, scope, payload as unknown as CreatePriceListInput);
+    },
+  },
+  'sales/discount-rules': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createDiscountRuleWithin(tx, scope, payload as unknown as CreateDiscountRuleInput);
     },
   },
 };

@@ -40,6 +40,7 @@ import { QualityInspectionError } from '../../modules/quality/inspection';
 import { SalesQuotationError } from '../../modules/sales/quotation';
 import { SalesReturnError } from '../../modules/sales/return';
 import { SalesDebitNoteError } from '../../modules/sales/debitNote';
+import { SalesPricingError } from '../../modules/sales/pricing';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -106,6 +107,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof SalesQuotationError
         || error instanceof SalesReturnError
         || error instanceof SalesDebitNoteError
+        || error instanceof SalesPricingError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -278,6 +280,10 @@ export function createResourceRouter(db: DB): Router {
         return;
       }
       if (error instanceof SalesDebitNoteError) {
+        apiError(res, 409, 'invalid_state', error.message);
+        return;
+      }
+      if (error instanceof SalesPricingError) {
         apiError(res, 409, 'invalid_state', error.message);
         return;
       }

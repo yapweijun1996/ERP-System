@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_sales_price_list_default_currency" ON "sales_price_list" USING btree ("master_fn","company_fn","currency") WHERE "sales_price_list"."is_default" = true;
