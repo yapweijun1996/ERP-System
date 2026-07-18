@@ -30,7 +30,12 @@
 <script>
   window.__ERP_DATA_MODE__='%VITE_DATA_MODE%';
   window.erpDataMode=function(){ return window.__ERP_DATA_MODE__==='api' ? 'api' : 'demo'; };
+  window.ErpDemoRuntimeReady=new Promise(function(resolve,reject){
+    window.__resolveErpDemoRuntime=resolve;
+    window.__rejectErpDemoRuntime=reject;
+  });
 </script>
+<script type="module" src="/src/erp-demo-runtime.ts"></script>
 
 <div class="app" id="app">
   <aside class="sidebar" id="sidebar" aria-label="Primary navigation"></aside>

@@ -6,7 +6,7 @@
 // supplier invoice (GL impact, src/modules/purchasing/postSupplierInvoice.ts).
 // See docs/DATA_MODEL.md.
 import {
-  pgTable, text, bigint, integer, numeric, date, timestamp, index, uniqueIndex,
+  pgTable, text, bigint, integer, numeric, date, index, uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { tenant, timestamps } from './_shared';
 import { product, warehouse } from './inventory';

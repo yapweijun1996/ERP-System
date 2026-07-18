@@ -117,6 +117,49 @@ async function auditRoutes(browser, viewport) {
   await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 20000 });
   await page.waitForSelector('.dashgrid', { timeout: 15000, state: 'visible' });
 
+  const asyncRenderIssues = await page.evaluate(async () => {
+    const issues = [];
+    const dashboardScreen = SCREENS.dashboard;
+    const stockScreen = SCREENS['stock-on-hand'];
+    try {
+      SCREENS.dashboard = () => new Promise((resolve) => {
+        setTimeout(() => resolve('<div data-async-contract="slow">stale dashboard</div>'), 80);
+      });
+      SCREENS['stock-on-hand'] = () => new Promise((resolve) => {
+        setTimeout(() => resolve('<div data-async-contract="fast">current inventory</div>'), 10);
+      });
+
+      const slowNavigation = navigate('dashboard');
+      if (!document.querySelector('#viewRoot .screen-loading')) {
+        issues.push('async screen did not render the standard loading skeleton');
+      }
+      const fastNavigation = navigate('stock-on-hand');
+      await Promise.all([slowNavigation, fastNavigation]);
+      if (!document.querySelector('#viewRoot [data-async-contract="fast"]')) {
+        issues.push('latest async screen result was not committed');
+      }
+      if (document.querySelector('#viewRoot [data-async-contract="slow"]')) {
+        issues.push('stale async screen result replaced the current route');
+      }
+
+      SCREENS.dashboard = () => Promise.reject(new Error('contract failure'));
+      await navigate('dashboard');
+      const errorRoot = document.querySelector('#viewRoot .screen-render-error');
+      if (!errorRoot) issues.push('rejected async screen did not render the standard error state');
+      if (!/No sample data was substituted/i.test(document.querySelector('#viewRoot')?.innerText || '')) {
+        issues.push('async error state does not disclose that sample fallback is disabled');
+      }
+    } finally {
+      SCREENS.dashboard = dashboardScreen;
+      SCREENS['stock-on-hand'] = stockScreen;
+      await navigate('dashboard');
+    }
+    return issues;
+  });
+  if (asyncRenderIssues.length) {
+    throw new Error(`Async SCREENS contract failed: ${asyncRenderIssues.join(' | ')}`);
+  }
+
   const routes = await page.evaluate(() => Object.keys(SCREENS).sort());
   const routeModule = await page.evaluate(() => Object.assign({}, ROUTE_MODULE));
   const screenMeta = await page.evaluate(() => JSON.parse(JSON.stringify(window.SCREEN_META || {})));
@@ -155,7 +198,7 @@ async function auditRoutes(browser, viewport) {
 
     const rendered = await page.evaluate(() => {
       const el = document.getElementById('viewRoot');
-      if (!el) return { text: '', previewBanner: false, enabledPreviewWrites: [], layoutIssues: ['viewRoot missing'], moduleShell: false };
+      if (!el) return { text: '', previewBanner: false, enabledPreviewWrites: [], layoutIssues: ['viewRoot missing'], moduleShell: false, renderError: true };
       const nav = el.querySelector('.sales-subnav');
       const active = nav && nav.querySelector('[aria-selected="true"]');
       const navRect = nav && nav.getBoundingClientRect();
@@ -184,8 +227,9 @@ async function auditRoutes(browser, viewport) {
         enabledPreviewWrites,
         layoutIssues,
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
+        renderError: Boolean(el.querySelector('.screen-render-error')),
       };
-    }).catch(() => ({ text: '', previewBanner: false, enabledPreviewWrites: [], layoutIssues: ['render inspection failed'], moduleShell: false }));
+    }).catch(() => ({ text: '', previewBanner: false, enabledPreviewWrites: [], layoutIssues: ['render inspection failed'], moduleShell: false, renderError: true }));
 
     const moduleId = routeModule[route] || null;
     const canonical = meta && meta.maturity === 'canonical';
@@ -201,6 +245,7 @@ async function auditRoutes(browser, viewport) {
       pageErrors: events.filter((e) => e.kind === 'pageerror').map((e) => e.message),
       identityLeaks: leaks,
       missingMeta: !meta,
+      renderError: rendered.renderError,
       missingPreviewBanner: Boolean(meta && meta.maturity === 'preview' && !rendered.previewBanner),
       enabledPreviewWrites: meta && meta.maturity === 'preview' ? rendered.enabledPreviewWrites : [],
       layoutIssues: rendered.layoutIssues,
@@ -230,7 +275,7 @@ try {
     const canonicalCount = desktopMeta.filter((r) => r.meta && r.meta.maturity === 'canonical').length;
     const previewCount = desktopMeta.filter((r) => r.meta && r.meta.maturity === 'preview').length;
 
-    const failed = results.filter((r) => r.threwSync || r.consoleErrors.length || r.pageErrors.length || r.missingMeta);
+    const failed = results.filter((r) => r.threwSync || r.renderError || r.consoleErrors.length || r.pageErrors.length || r.missingMeta);
     const leaked = results.filter((r) => r.identityLeaks.length);
     const previewContractFailed = results.filter((r) => r.missingPreviewBanner || r.enabledPreviewWrites.length);
     const layoutFailed = results.filter((r) => r.layoutIssues.length);
@@ -243,6 +288,7 @@ try {
         console.error(`FAIL [${r.viewport}:${r.route}]`);
         if (r.missingMeta) console.error('  [metadata] SCREEN_META entry missing');
         if (r.threwSync) console.error(`  [sync throw] ${r.threwSync}`);
+        if (r.renderError) console.error('  [render error] standard page error state is visible');
         for (const m of r.consoleErrors) console.error(`  [console.error] ${m}`);
         for (const m of r.pageErrors) console.error(`  [pageerror] ${m}`);
       }

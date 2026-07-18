@@ -1,7 +1,8 @@
 /* ============================================================
    ERP-System data adapter — Phase 2 (TASK-002)
 
-   Boots the CANONICAL demo database in PGlite (in-browser
+   Boots the CANONICAL demo database through the Vite ESM runtime
+   (PGlite + Drizzle + shared TypeScript domain commands) in-browser,
    PostgreSQL, persisted to IndexedDB at idb://erp-system-demo):
 
      web/public/db/erp-system-schema.sql   (copy of drizzle/*.sql, all migrations)
@@ -14,7 +15,7 @@
    user-owned Aria ERP `DB` contract. The numbers on screen come
    from the database, not from literals in this file.
 
-   Fallback: if PGlite (CDN WASM) cannot load — e.g. offline —
+   Fallback: if the bundled PGlite runtime cannot load —
    a static payload with the SAME canonical values keeps the demo
    rendering. `DB.erpSystem.dataMode` records which path ran.
 
@@ -32,7 +33,6 @@
   if (typeof DB === 'undefined') return;
   if (typeof window.erpDataMode === 'function' && window.erpDataMode() !== 'demo') return;
 
-  var PGLITE_URL = 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite/dist/index.js';
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
@@ -67,7 +67,7 @@
     catch (e) { return 'db/'; }
   })();
 
-  var state = { db: null, mode: 'pending' };
+  var state = { db: null, orm: null, runtime: null, mode: 'pending' };
 
   /* ---------------- PGlite boot ---------------- */
 
@@ -742,9 +742,15 @@
   }
 
   async function bootPglite(){
-    var mod = await import(PGLITE_URL);
-    var db = new mod.PGlite(PG_DATA_DIR);
+    var runtime = await window.ErpDemoRuntimeReady;
+    if (!runtime || typeof runtime.openDatabase !== 'function') {
+      throw new Error('Bundled ERP demo runtime is unavailable.');
+    }
+    var opened = runtime.openDatabase(PG_DATA_DIR);
+    var db = opened.client;
     state.db = db;
+    state.orm = opened.orm;
+    state.runtime = runtime;
     try {
       var freshlySeeded = await ensureSeeded(db);
       await ensureSchemaUpToDate(db);
@@ -766,6 +772,8 @@
       /* Never leave a failed or stale database writable through completeSetup()
          or another mutation after the UI falls back to static data. */
       state.db = null;
+      state.orm = null;
+      state.runtime = null;
       try { await db.close(); } catch (closeError) {}
       throw e;
     }
@@ -1025,13 +1033,9 @@
     return result;
   }
 
-  /* TASK-028 — CRM chain, live counterpart of src/modules/crm/. This file
-     can't literally import confirmOrder's TypeScript module (the browser
-     adapter always hand-mirrors business logic in raw SQL — see this file's
-     header comment), so convertOpportunityToSalesOrder below reimplements
-     confirmOrder's steps inline within its own transaction, composed with
-     the opportunity-stage update, the same atomicity confirmSalesOrderWithin
-     gives the TypeScript side. */
+  /* CRM is the first demo vertical migrated to the bundled ESM runtime. Lookup
+     and document-number compatibility stay here temporarily, while the writes
+     below execute the exact shared TypeScript domain commands used by API mode. */
 
   /* createOpportunity.ts: a plain insert — stage starts at whatever the
      wizard's kanban-column choice was, no line items yet. */
@@ -1047,36 +1051,35 @@
       var stageMap = { Lead: 'lead', Qualified: 'qualified', Proposal: 'proposal', Negotiation: 'negotiation' };
       var stage = stageMap[input.stage] || 'lead';
 
-      var opp = (await tx.query(
-        "insert into opportunity (master_fn, company_fn, doc_no, customer_id, title, value, currency, stage, probability, close_date) " +
-        'values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id',
-        [SCOPE.masterFn, SCOPE.companyFn, docNo, cust.id, input.title, input.value, input.currency, stage, input.probability, input.closeDate])).rows[0];
-
-      return { opportunityId: opp.id, docNo: docNo };
+      var created = await state.runtime.commands.createOpportunity(
+        state.runtime.createOrm(tx),
+        SCOPE,
+        {
+          docNo: docNo,
+          customerId: cust.id,
+          title: input.title,
+          value: Number(input.value),
+          currency: input.currency,
+          stage: stage,
+          probability: Number(input.probability || 0),
+          closeDate: input.closeDate,
+        });
+      return { opportunityId: created.opportunityId, docNo: docNo };
     });
     await refresh();
     return result;
   }
 
-  /* convertOpportunityToSalesOrder.ts: guards the opportunity's stage (→
-     rollback if already 'won'/'lost'), then runs confirmOrder's own steps —
-     sales_order + one line (product/qty/price chosen at conversion time, not
-     stored on the opportunity — see src/data/schema/crm.ts's header comment)
-     → lock+deduct WH-SALES stock → invoice → balanced GL — before marking
-     the opportunity 'won' and linking the new order. One transaction. */
+  /* Conversion composes the shared CRM and sales commands inside this PGlite
+     transaction: opportunity lock → order/line → stock → invoice → balanced
+     GL → stage update. No browser-side copy of those business writes remains. */
   async function convertOpportunityToSalesOrder(opportunityNo, sku, qty, unitPrice){
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Convert needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var opp = (await tx.query(
-        'select id, stage, customer_id, currency from opportunity ' +
-        'where master_fn=$1 and company_fn=$2 and doc_no=$3 for update',
+        'select id from opportunity where master_fn=$1 and company_fn=$2 and doc_no=$3',
         [SCOPE.masterFn, SCOPE.companyFn, opportunityNo])).rows[0];
       if (!opp) throw new Error('Opportunity ' + opportunityNo + ' not found');
-      if (opp.stage === 'won' || opp.stage === 'lost'){
-        var stateErr = new Error('Opportunity ' + opportunityNo + " is '" + opp.stage + "' — cannot convert twice.");
-        stateErr.name = 'InvalidOpportunityStateError';
-        throw stateErr; // → ROLLBACK
-      }
 
       var prod = (await tx.query(
         'select id from product where master_fn=$1 and company_fn=$2 and sku=$3',
@@ -1089,62 +1092,23 @@
       if (!wh) throw new Error('Warehouse WH-SALES not found');
 
       var today = new Date().toISOString().slice(0, 10);
-      var taxRow = (await tx.query(
-        "select rate::float as rate from tax_rule where master_fn=$1 and company_fn=$2 and tax_code='SR' " +
-        'and valid_from <= $3 and (valid_to is null or valid_to > $3) order by valid_from desc limit 1',
-        [SCOPE.masterFn, SCOPE.companyFn, today])).rows[0];
-      if (!taxRow) throw new Error('No tax rule for SR on ' + today);
-
-      var net = Math.round(qty * unitPrice * 100) / 100;
-      var tax = Math.round(net * taxRow.rate) / 100;
-      var total = Math.round((net + tax) * 100) / 100;
       var docNo = await nextDocNo(tx, 'sales_order', 'SO-CRM');
-
-      var order = (await tx.query(
-        "insert into sales_order (master_fn, company_fn, doc_no, customer_id, status, order_date, currency, net_amount, tax_amount, total_amount) " +
-        "values ($1,$2,$3,$4,'confirmed',$5,$6,$7,$8,$9) returning id",
-        [SCOPE.masterFn, SCOPE.companyFn, docNo, opp.customer_id, today, opp.currency, net, tax, total])).rows[0];
-
-      await tx.query(
-        'insert into sales_order_line (master_fn, company_fn, order_id, line_no, product_id, qty, unit_price, net_amount, tax_code, tax_rate, tax_amount) ' +
-        "values ($1,$2,$3,1,$4,$5,$6,$7,'SR',$8,$9)",
-        [SCOPE.masterFn, SCOPE.companyFn, order.id, prod.id, qty, unitPrice, net, taxRow.rate, tax]);
-
-      var lvl = (await tx.query(
-        'select id, qty::float as qty from stock_level ' +
-        'where master_fn=$1 and company_fn=$2 and product_id=$3 and warehouse_id=$4 for update',
-        [SCOPE.masterFn, SCOPE.companyFn, prod.id, wh.id])).rows[0];
-      var avail = lvl ? lvl.qty : 0;
-      if (!lvl || avail < qty){
-        var stockErr = new Error('Insufficient stock for ' + sku + ': have ' + avail + ', need ' + qty + ' — conversion rolled back.');
-        stockErr.name = 'InsufficientStockError';
-        throw stockErr; // → ROLLBACK
-      }
-      await tx.query('update stock_level set qty = qty - $1, updated_at = now() where id = $2', [qty, lvl.id]);
-      await tx.query(
-        'insert into stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id) ' +
-        "values ($1,$2,$3,$4,$5,'out','sales_order',$6)",
-        [SCOPE.masterFn, SCOPE.companyFn, prod.id, wh.id, qty, order.id]);
-
-      var invDoc = 'INV-' + docNo;
-      await tx.query(
-        "insert into invoice (master_fn, company_fn, doc_no, order_id, customer_id, status, invoice_date, currency, net_amount, tax_amount, total_amount) " +
-        "values ($1,$2,$3,$4,$5,'unpaid',$6,$7,$8,$9,$10)",
-        [SCOPE.masterFn, SCOPE.companyFn, invDoc, order.id, opp.customer_id, today, opp.currency, net, tax, total]);
-
-      var acct = {};
-      (await tx.query(
-        "select code, id from account where master_fn=$1 and company_fn=$2 and code in ('1100','4000','2200')",
-        [SCOPE.masterFn, SCOPE.companyFn])).rows.forEach(function(a){ acct[a.code] = a.id; });
-      if (!acct['1100'] || !acct['4000'] || !acct['2200']) throw new Error('Chart of accounts not configured');
-      await tx.query(
-        'insert into gl_entry (master_fn, company_fn, journal_ref, account_id, debit, credit, memo) values ' +
-        "($1,$2,$3,$4,$5,0,'AR'), ($1,$2,$3,$6,0,$7,'Revenue'), ($1,$2,$3,$8,0,$9,'Output tax')",
-        [SCOPE.masterFn, SCOPE.companyFn, invDoc, acct['1100'], total, acct['4000'], net, acct['2200'], tax]);
-
-      await tx.query("update opportunity set stage='won', order_id=$1, updated_at=now() where id=$2", [order.id, opp.id]);
-
-      return { docNo: docNo, orderId: order.id, net: net, tax: tax, total: total };
+      var converted = await state.runtime.commands.convertOpportunityToSalesOrderWithin(
+        state.runtime.createOrm(tx),
+        SCOPE,
+        {
+          opportunityId: opp.id,
+          docNo: docNo,
+          orderDate: today,
+          lines: [{
+            productId: prod.id,
+            warehouseId: wh.id,
+            qty: Number(qty),
+            unitPrice: Number(unitPrice),
+            taxCode: 'SR',
+          }],
+        });
+      return Object.assign({ docNo: docNo }, converted);
     });
     await refresh();
     return result;

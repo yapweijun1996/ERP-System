@@ -114,6 +114,90 @@ async function checkViewport(browser, viewport) {
     errors.push(`[content] document.title "${title}" does not mention the seeded company (expected "Acme...")`);
   }
 
+  if (viewport.name === 'desktop' && errors.length === 0) {
+    const runtimeProof = await page.evaluate(async () => {
+      const runtime = window.ErpDemoRuntime;
+      const adapter = window.ErpSystemData;
+      if (!runtime || typeof runtime.createOrm !== 'function') {
+        return { error: 'bundled ErpDemoRuntime is not installed' };
+      }
+      if (!adapter || adapter.mode !== 'pglite' || !adapter.db) {
+        return { error: `demo adapter did not boot PGlite (mode=${adapter?.mode || 'missing'})` };
+      }
+      const before = Number((await adapter.db.query(
+        "select coalesce(sum(s.qty),0)::float as qty from stock_level s join product p on p.id=s.product_id where p.master_fn='M1' and p.company_fn='C-SG' and p.sku='SG-WIDGET'",
+      )).rows[0].qty);
+      const created = await adapter.create('crm/opportunities', {
+        customerCode: 'CUST1',
+        title: 'ESM runtime proof',
+        value: 250,
+        currency: 'SGD',
+        stage: 'Qualified',
+        probability: 60,
+        closeDate: '2026-07-31',
+      });
+      const opportunityNo = created.data.docNo;
+      const createdRow = (await adapter.db.query(
+        'select id, stage from opportunity where master_fn=$1 and company_fn=$2 and doc_no=$3',
+        ['M1', 'C-SG', opportunityNo],
+      )).rows[0];
+      if (!createdRow || createdRow.stage !== 'qualified') {
+        return { error: 'shared createOpportunity command did not preserve the selected stage' };
+      }
+      const converted = await adapter.action(
+        'crm/opportunities',
+        opportunityNo,
+        'convert-to-sales-order',
+        { sku: 'SG-WIDGET', qty: 1, unitPrice: 100 },
+      );
+      const after = Number((await adapter.db.query(
+        "select coalesce(sum(s.qty),0)::float as qty from stock_level s join product p on p.id=s.product_id where p.master_fn='M1' and p.company_fn='C-SG' and p.sku='SG-WIDGET'",
+      )).rows[0].qty);
+      const won = (await adapter.db.query(
+        'select stage, order_id from opportunity where id=$1',
+        [createdRow.id],
+      )).rows[0];
+      const invoiceNo = `INV-${converted.data.docNo}`;
+      const gl = (await adapter.db.query(
+        'select coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn=$1 and company_fn=$2 and journal_ref=$3',
+        ['M1', 'C-SG', invoiceNo],
+      )).rows[0];
+      return {
+        error: null,
+        stockDelta: after - before,
+        won: won?.stage === 'won' && Number(won.order_id) === Number(converted.data.orderId),
+        balanced: Number(gl.debit) === Number(gl.credit) && Number(gl.debit) > 0,
+      };
+    }).catch((error) => ({ error: error.message || String(error) }));
+    if (runtimeProof.error) {
+      errors.push(`[demo-esm] ${runtimeProof.error}`);
+    } else {
+      if (runtimeProof.stockDelta !== -1) errors.push(`[demo-esm] expected stock delta -1, got ${runtimeProof.stockDelta}`);
+      if (!runtimeProof.won) errors.push('[demo-esm] CRM opportunity was not atomically marked won and linked to its order');
+      if (!runtimeProof.balanced) errors.push('[demo-esm] converted opportunity did not produce balanced GL entries');
+    }
+
+    const offlineAssets = await page.evaluate(async () => {
+      if (!('serviceWorker' in navigator) || !('caches' in window)) return [];
+      await navigator.serviceWorker.ready;
+      const keys = await caches.keys();
+      const requests = (await Promise.all(keys.map(async (key) => {
+        const cache = await caches.open(key);
+        return cache.keys();
+      }))).flat();
+      return requests.map((request) => new URL(request.url).pathname);
+    });
+    for (const expected of [
+      /erp-demo-runtime-impl-.*\.js$/,
+      /pglite-.*\.wasm$/,
+      /pglite-.*\.data$/,
+    ]) {
+      if (!offlineAssets.some((pathname) => expected.test(pathname))) {
+        errors.push(`[offline] service worker did not precache ${expected}`);
+      }
+    }
+  }
+
   await context.close();
   return { viewport: viewport.name, dashboardVisible, title, errors };
 }

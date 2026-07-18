@@ -4,6 +4,8 @@
 /* SCREENS is declared in ui.js (loads before screen files) */
 const ROUTE_MODULE = {};       // route -> module id (for active state)
 let CURRENT_ROUTE = null;
+let CURRENT_ROUTE_PARAMS = {};
+let SCREEN_RENDER_SEQUENCE = 0;
 const DEMO_AUTH_KEY = 'aria-demo-auth';
 
 function demoUser(){
@@ -648,11 +650,69 @@ function setActiveNav(route){
 }
 
 /* ---------- router ---------- */
+function screenLoadingHtml(route){
+  const meta=getScreenMeta(route);
+  const title=tf('route.'+route, route.replace(/-/g,' '));
+  const body=`<div class="screen-loading" role="status" aria-live="polite" aria-label="${esc(title)}">
+    ${skeletonRows(7)}
+  </div>`;
+  if(meta.module && meta.module!=='home' && meta.module!=='settings'){
+    return modulePage({module:meta.module,route,active:meta.activeSection,title,body});
+  }
+  return `<div class="content full"><section class="master"><div class="scrollarea">
+    <div class="pagehead"><div class="h1row"><h1>${esc(title)}</h1></div></div>${body}
+  </div></section></div>`;
+}
+function screenErrorHtml(route,error){
+  const requestId=error && (error.requestId || (error.error&&error.error.requestId));
+  const message=error && error.message ? error.message : String(error||'Unknown rendering error');
+  const action=btn('Retry',{icon:'refresh',cls:'primary',attrs:'onclick="retryCurrentScreen()"'});
+  const panel=statePanel({
+    icon:'warn',
+    title:'This page could not be loaded',
+    body:`${esc(message)} Please retry. No sample data was substituted.`,
+    code:requestId||undefined,
+    action,
+  });
+  const meta=getScreenMeta(route);
+  if(meta.module && meta.module!=='home' && meta.module!=='settings'){
+    return modulePage({
+      module:meta.module,route,active:meta.activeSection,
+      title:tf('route.'+route,route.replace(/-/g,' ')),body:panel,
+    });
+  }
+  return `<div class="content full"><section class="master screen-render-error">${panel}</section></div>`;
+}
+function finishScreenRender(root,route,sequence,output){
+  if(sequence!==SCREEN_RENDER_SEQUENCE || CURRENT_ROUTE!==route) return false;
+  if(typeof output==='string') root.innerHTML=output;
+  decorateScreen(root,route);
+  root.scrollTop=0;
+  return true;
+}
+function failScreenRender(root,route,sequence,error){
+  if(sequence!==SCREEN_RENDER_SEQUENCE || CURRENT_ROUTE!==route) return false;
+  root.innerHTML=screenErrorHtml(route,error);
+  const panel=root.querySelector('.statepanel');
+  if(panel) panel.closest('.master')?.classList.add('screen-render-error');
+  decorateScreen(root,route);
+  root.scrollTop=0;
+  return true;
+}
+function retryCurrentScreen(){
+  if(CURRENT_ROUTE) return navigate(CURRENT_ROUTE,CURRENT_ROUTE_PARAMS);
+  return Promise.resolve(false);
+}
+window.retryCurrentScreen=retryCurrentScreen;
+
 function navigate(route, params){
   const root=$('#viewRoot');
+  const sequence=++SCREEN_RENDER_SEQUENCE;
+  CURRENT_ROUTE=route;
+  CURRENT_ROUTE_PARAMS=Object.assign({},params||{});
   if(!routeAllowed(route)){
     root.innerHTML=moduleBlockedPanel(route);
-    CURRENT_ROUTE=route; setActiveNav(route); closeAllPops(); return;
+    setActiveNav(route); closeAllPops(); return Promise.resolve(false);
   }
   if(!SCREENS[route]){
     // unbuilt module -> graceful panel inside a simple shell
@@ -662,16 +722,31 @@ function navigate(route, params){
         <div class="h1row"><h1>${mod?esc(mod.label):'Module'}</h1></div></div>
       ${notBuilt(mod?mod.label:'This module')}
     </section></div>`;
-    CURRENT_ROUTE=route; setActiveNav(route); closeAllPops(); return;
+    setActiveNav(route); closeAllPops(); return Promise.resolve(false);
   }
-  CURRENT_ROUTE=route;
   root.innerHTML='';
-  SCREENS[route](root, params||{});
-  decorateScreen(root, route);
   setActiveNav(route);
   closeAllPops();
-  root.scrollTop=0;
   try{ history.replaceState({},'',`#${route}`); }catch(e){}
+  let output;
+  try{
+    output=SCREENS[route](root,params||{});
+  }catch(error){
+    failScreenRender(root,route,sequence,error);
+    return Promise.resolve(false);
+  }
+  if(output && typeof output.then==='function'){
+    root.innerHTML=screenLoadingHtml(route);
+    decorateScreen(root,route);
+    root.scrollTop=0;
+    return Promise.resolve(output).then(result=>{
+      return finishScreenRender(root,route,sequence,result);
+    }).catch(error=>{
+      return failScreenRender(root,route,sequence,error);
+    });
+  }
+  finishScreenRender(root,route,sequence,output);
+  return Promise.resolve(true);
 }
 
 /* Some prototype screens re-render asynchronously or replace their root after

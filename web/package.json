@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.1",
+    "@electric-sql/pglite": "^0.5.4",
+    "drizzle-orm": "^0.45.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"
   },

@@ -13,6 +13,7 @@ export interface CreateOpportunityInput {
   value: number;
   currency: string;
   closeDate: string; // YYYY-MM-DD
+  stage?: 'lead' | 'qualified' | 'proposal' | 'negotiation';
   probability?: number;
   ownerUserId?: number;
 }
@@ -22,7 +23,7 @@ export async function createOpportunity(db: DB, scope: Scope, input: CreateOppor
     masterFn: scope.masterFn, companyFn: scope.companyFn,
     docNo: input.docNo, customerId: input.customerId, title: input.title,
     value: input.value.toFixed(2), currency: input.currency,
-    stage: 'lead', probability: String(input.probability ?? 0),
+    stage: input.stage ?? 'lead', probability: String(input.probability ?? 0),
     closeDate: input.closeDate, ownerUserId: input.ownerUserId ?? null,
   }).returning({ id: opportunity.id });
   return { opportunityId: row.id };

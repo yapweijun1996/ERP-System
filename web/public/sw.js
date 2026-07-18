@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v22';
+const CACHE_VERSION = 'erp-system-pwa-v23';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -87,9 +87,51 @@ const staticUrls = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => cache.addAll(staticUrls))
+      .then(async (cache) => {
+        await cache.addAll(staticUrls);
+        await precacheBundledRuntime(cache);
+      })
   );
 });
+
+/* Vite gives the ESM runtime, PGlite WASM and database image content-hashed
+   filenames. Discover that local module graph from the built index/JS rather
+   than hard-coding hashes, so a completed service-worker install is a real
+   offline proof for the bundled database runtime too. */
+async function precacheBundledRuntime(cache) {
+  const scope = new URL(self.registration.scope);
+  const queue = [new URL('./index.html', scope).href];
+  const seen = new Set();
+  while (queue.length) {
+    const href = queue.shift();
+    if (seen.has(href)) continue;
+    seen.add(href);
+    const url = new URL(href);
+    if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) continue;
+
+    let response = await cache.match(href);
+    if (!response) {
+      response = await fetch(href, { cache: 'no-cache' });
+      if (!response.ok) throw new Error(`Unable to precache bundled ERP asset: ${url.pathname}`);
+      await cache.put(href, response.clone());
+    }
+    if (!/\.(?:html|js)$/.test(url.pathname)) continue;
+
+    const source = await response.clone().text();
+    const references = new Set();
+    const htmlPattern = /(?:src|href)=["']([^"'#]+)["']/g;
+    const modulePattern = /(?:import\s*\(|new URL\s*\()\s*["']([^"']+\.(?:js|wasm|data))["']/g;
+    let match;
+    const pattern = url.pathname.endsWith('.html') ? htmlPattern : modulePattern;
+    while ((match = pattern.exec(source))) references.add(match[1]);
+    for (const reference of references) {
+      const child = new URL(reference, href);
+      if (child.origin === scope.origin && child.pathname.startsWith(scope.pathname)) {
+        queue.push(child.href);
+      }
+    }
+  }
+}
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(

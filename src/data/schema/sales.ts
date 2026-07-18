@@ -2,7 +2,7 @@
 // See docs/DATA_MODEL.md. Document-level totals are denormalized for reporting; lines hold
 // the per-line tax snapshot so a confirmed order reproduces its tax even if rules change.
 import {
-  pgTable, text, bigint, integer, numeric, date, timestamp, index, uniqueIndex,
+  pgTable, text, bigint, integer, numeric, date, index, uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { tenant, timestamps } from './_shared';
 import { product } from './inventory';

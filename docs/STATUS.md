@@ -56,7 +56,9 @@ IDs and production-only RLS policies are implemented and tested.
 | Canonical schema (34 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | Ordered migrations through `drizzle/0005_magenta_terrax.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; browser mirror in adapter (`confirmOrder`) |
 | Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), end-to-end incl. screens | ✅ Working | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Demo-mode screens (suppliers/purchase-orders/goods-receipts/supplier-invoices lists, new-PO wizard, receive-goods/post-invoice row actions) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-023. RFQs/quotations/requisitions/returns/credit-debit-notes/price-lists/landed-cost/vendor-performance have no schema and stay mock. |
-| CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Working | `src/data/schema/crm.ts`, `src/modules/crm/` (`createOpportunity`/`convertOpportunityToSalesOrder`), both rollback guards (double-convert; mid-transaction failure leaves the opportunity untouched) proven on PGlite + PostgreSQL, TASK-027. Demo-mode screens (pipeline board, new-opportunity wizard, kanban convert action) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-028; live-verified the converted order appears in Sales, stock decrements, GL balances. Opportunity-detail and customer-360 have no schema and stay mock. |
+| CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Working | `src/data/schema/crm.ts`, `src/modules/crm/` (`createOpportunity`/`convertOpportunityToSalesOrder`), both rollback guards (double-convert; mid-transaction failure leaves the opportunity untouched) proven on PGlite + PostgreSQL, TASK-027. Demo-mode screens now execute those same TypeScript commands through the bundled Vite ESM runtime rather than a raw-SQL browser mirror; the browser smoke proof creates and converts an opportunity, verifies stock -1, opportunity `won`, and balanced GL. Opportunity-detail and customer-360 have no schema and stay mock. |
+| Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. The 114-route audit explicitly proves the loading/race/error contract at desktop + 375px. |
+| Bundled Demo ESM runtime | ✅ First vertical migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. The CRM create/convert writes use the shared TypeScript commands; Sales/Purchasing/Setup compatibility SQL still awaits migration. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, confirm SO-2 / over-stock SO-3) | ✅ Canonical data | `screens-sales*.js`, TASK-006/007 |
 | Inventory screens (stock on hand, item master, movements) | ✅ Canonical data | `screens-inv*.js`, TASK-005 |
@@ -69,7 +71,7 @@ IDs and production-only RLS policies are implemented and tested.
 | Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **21 Canonical / 93 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
 | Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 74 PGlite tests plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, RBAC, encrypted account lifecycle, setup, atomic action idempotency/replay/expiry, audit correlation and migration compatibility. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 75 PGlite tests plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, RBAC, encrypted account lifecycle, setup, atomic action idempotency/replay/expiry, audit correlation and migration compatibility. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -125,13 +127,15 @@ regression-checked as Canonical.
 
 ## Known design debt
 
-1. **Seed/domain SQL duplication remains.** Browser PGlite schema and compatibility
+1. **Seed/domain SQL duplication remains, but the migration has started.** Browser PGlite schema and compatibility
    migrations are now generated from the ordered Drizzle journal, so schema DDL is
    no longer hand-copied. `src/data/seed.ts` vs `erp-system-seed.sql`, and TypeScript
-   domain commands vs the demo adapter's raw business SQL mirrors, are still manually
-   duplicated. Stage B must move the browser to shared ESM domain commands.
-2. **PGlite loads from jsDelivr CDN** with a 20 s timeout → static fallback. Offline
-   first-load depends on the SW cache. If real PGlite boot finishes *after* the
+   domain commands vs the demo adapter's Sales/Purchasing/Setup raw business SQL mirrors
+   are still manually duplicated. CRM create/convert is the first vertical now using
+   the shared commands through `web/src/erp-demo-runtime-impl.ts`.
+2. **PGlite and Drizzle are now bundled locally by Vite** and no longer depend on
+   jsDelivr for first load. The adapter keeps its 20 s timeout → static fallback.
+   If real PGlite boot finishes *after* the
    watchdog already showed fallback, it now correctly overrides the fallback data
    and re-renders the current screen (fixed under TASK-028 — previously a late
    success was silently discarded and the UI could get stuck on stale mock data
