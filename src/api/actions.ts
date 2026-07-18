@@ -39,8 +39,17 @@ import {
   receiveAndCreditSalesReturnWithin,
   rejectSalesReturnWithin,
 } from '../modules/sales/return';
+import { postSalesDebitNoteWithin } from '../modules/sales/debitNote';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'sales/debit-notes/post': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return postSalesDebitNoteWithin(tx, scope, input.resourceId);
+    },
+  },
   'sales/returns/receive-and-credit': {
     permission: 'sales.write',
     idempotency: 'required',

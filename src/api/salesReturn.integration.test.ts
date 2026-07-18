@@ -7,6 +7,7 @@ import {
   glEntry,
   product,
   salesCreditNote,
+  salesDebitNote,
   salesDeliveryLine,
   salesReturn,
   stockLevel,
@@ -137,5 +138,42 @@ describe('sales return API vertical slice', () => {
     const legs = await db.select().from(glEntry).where(eq(glEntry.journalRef, 'CN-API-1'));
     expect(legs.reduce((sum, row) => sum + Number(row.debit), 0)).toBe(10.9);
     expect(legs.reduce((sum, row) => sum + Number(row.credit), 0)).toBe(10.9);
+
+    const debitCreatedResponse = await fetch(`${baseUrl}/api/sales/debit-notes`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        docNo: 'DN-API-1',
+        invoiceId: posted.invoiceId,
+        noteDate: '2026-07-19',
+        reason: 'Fictional handling charge',
+        netAmount: '10.00',
+        taxCode: 'SR',
+      }),
+    });
+    expect(debitCreatedResponse.status).toBe(201);
+    const debitCreated = (await debitCreatedResponse.json()).data;
+    const postDebit = () => fetch(
+      `${baseUrl}/api/sales/debit-notes/${debitCreated.id}/actions/post`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'sales-debit-api-post' },
+        body: '{}',
+      },
+    );
+    const debitPostedResponse = await postDebit();
+    expect(debitPostedResponse.status).toBe(200);
+    const debitPosted = await debitPostedResponse.json();
+    expect(debitPosted.data).toMatchObject({ status: 'posted', totalAmount: '10.90' });
+    const debitReplay = await postDebit();
+    expect(debitReplay.status).toBe(200);
+    expect(debitReplay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await debitReplay.json()).toEqual(debitPosted);
+    expect(await db.select().from(salesDebitNote)
+      .where(eq(salesDebitNote.id, debitCreated.id)))
+      .toMatchObject([{ status: 'posted', version: 2 }]);
+    const debitLegs = await db.select().from(glEntry).where(eq(glEntry.journalRef, 'DN-API-1'));
+    expect(debitLegs.reduce((sum, row) => sum + Number(row.debit), 0)).toBe(10.9);
+    expect(debitLegs.reduce((sum, row) => sum + Number(row.credit), 0)).toBe(10.9);
   });
 });

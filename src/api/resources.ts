@@ -21,6 +21,7 @@ import {
   salesReturnLine,
   salesCreditNote,
   salesCreditNoteLine,
+  salesDebitNote,
   salesEnquiry,
   salesQuotation,
   salesQuotationLine,
@@ -152,6 +153,12 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     versionColumn: salesCreditNote.version,
   }),
   'sales/credit-note-lines': resource(salesCreditNoteLine, 'sales.read'),
+  'sales/debit-notes': resource(salesDebitNote, 'sales.read', {
+    status: salesDebitNote.status,
+    versionColumn: salesDebitNote.version,
+    allowedActions: ['post'],
+    createPermission: 'sales.write',
+  }),
   'sales/enquiries': resource(salesEnquiry, 'sales.read', {
     status: salesEnquiry.status,
     versionColumn: salesEnquiry.version,

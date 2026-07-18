@@ -214,4 +214,53 @@
       <div class="doclayout"><div class="panel"><div class="panel-body">${indicator({tone:'ok',icon:'box',label:s('movement'),value:creditLines.length,sub:s('gl')})}</div></div></div>
       </div></div></section></div>`;
   };
+
+  SCREENS['debit-notes']=async function(root){
+    const lang=typeof getLang==='function'?getLang():'en';
+    const packs={
+      en:{title:'Debit notes',newNote:'New debit note',help:'Additional customer charges are drafted, then posted with balanced AR, revenue and output-tax legs.',invoice:'Invoice',reason:'Reason',date:'Date',net:'Net amount',tax:'Tax',total:'Total',status:'Status',post:'Post',create:'Create',cancel:'Cancel',empty:'No canonical debit notes yet.',created:'Debit note drafted',posted:'Debit note posted',number:'Debit note number'},
+      ms:{title:'Nota debit',newNote:'Nota debit baharu',help:'Caj tambahan pelanggan didraf, kemudian diposting dengan kaki AR, hasil dan cukai output yang seimbang.',invoice:'Invois',reason:'Sebab',date:'Tarikh',net:'Amaun bersih',tax:'Cukai',total:'Jumlah',status:'Status',post:'Posting',create:'Cipta',cancel:'Batal',empty:'Belum ada nota debit kanonik.',created:'Nota debit didraf',posted:'Nota debit diposting',number:'Nombor nota debit'},
+      zh:{title:'借项通知单',newNote:'新建借项通知单',help:'客户附加收费先保存为草稿，再以平衡的应收、收入和销项税分录过账。',invoice:'原销售发票',reason:'原因',date:'日期',net:'未税金额',tax:'税额',total:'总额',status:'状态',post:'过账',create:'创建',cancel:'取消',empty:'目前没有标准借项通知单。',created:'借项通知单草稿已创建',posted:'借项通知单已过账',number:'借项通知单编号'},
+      ja:{title:'デビットノート',newNote:'デビットノートを作成',help:'顧客への追加請求をドラフトし、売掛金・売上・税の均衡仕訳で転記します。',invoice:'請求書',reason:'理由',date:'日付',net:'税抜金額',tax:'税額',total:'合計',status:'ステータス',post:'転記',create:'作成',cancel:'キャンセル',empty:'標準デビットノートはありません。',created:'デビットノートを作成しました',posted:'デビットノートを転記しました',number:'デビット番号'},
+      vi:{title:'Phiếu ghi nợ',newNote:'Tạo phiếu ghi nợ',help:'Khoản thu thêm được lưu nháp rồi ghi sổ với công nợ, doanh thu và thuế đầu ra cân bằng.',invoice:'Hóa đơn',reason:'Lý do',date:'Ngày',net:'Trước thuế',tax:'Thuế',total:'Tổng cộng',status:'Trạng thái',post:'Ghi sổ',create:'Tạo',cancel:'Hủy',empty:'Chưa có phiếu ghi nợ chuẩn.',created:'Đã tạo phiếu ghi nợ nháp',posted:'Đã ghi sổ phiếu ghi nợ',number:'Số phiếu ghi nợ'},
+    };
+    const d=packs[lang]||packs.en,a=adapter();
+    const pages=await Promise.all([
+      a.list('sales/debit-notes',{limit:100}),a.list('sales/invoices',{limit:100}),
+    ]);
+    const notes=pages[0].data||[],invoices=byId(pages[1].data||[]);
+    const table=buildTable({rowId:row=>row.id,columns:[
+      {label:d.title,render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(row.noteDate)}</small></div>`},
+      {label:d.invoice,render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
+      {label:d.reason,render:row=>esc(row.reason)},{label:d.net,align:'r',render:row=>esc(money(row.netAmount,row.currency))},
+      {label:d.tax,align:'r',render:row=>esc(money(row.taxAmount,row.currency))},{label:d.total,align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},
+      {label:d.status,render:row=>cap(row.status,row.status==='posted'?'ok':'neutral')},
+      {label:'',align:'r',render:row=>row.status==='draft'?`<span class="rowact">${btn(d.post,{icon:'check',cls:'primary',attrs:`data-post-debit="${row.id}"`})}</span>`:''},
+    ],rows:notes});
+    root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),d.title])}${salesNav('debit-notes')}
+      <div class="h1row"><h1>${esc(d.title)}</h1><span class="countchip">${notes.length}</span><div class="headright">${btn(d.newNote,{icon:'plus',cls:'primary',attrs:'data-new-debit'})}</div></div>
+      <div class="h1sub">${esc(d.help)}</div></div><div class="tablewrap">${table}</div>
+      ${!notes.length?`<div class="statepanel empty">${ic('coins')}<h3>${esc(d.empty)}</h3><p>${esc(d.help)}</p></div>`:''}</section></div>`;
+    root.querySelector('[data-new-debit]')?.addEventListener('click',()=>{
+      const opts=(pages[1].data||[]).map(inv=>`<option value="${inv.id}">${esc(inv.docNo)} · ${esc(money(inv.totalAmount,inv.currency))}</option>`).join('');
+      appModal({icon:'coins',title:d.newNote,width:560,body:`<div class="fldrow c2"><div class="fld"><span>${esc(d.number)}</span><input id="debitNo" value="${esc(seq('DN'))}"></div>
+        <div class="fld"><span>${esc(d.date)}</span><input id="debitDate" type="date" value="${today()}"></div></div>
+        <div class="fld"><span>${esc(d.invoice)}</span><select id="debitInvoice">${opts}</select></div>
+        <div class="fldrow c2"><div class="fld"><span>${esc(d.net)}</span><input id="debitNet" type="number" min="0.01" step="0.01" value="10"></div>
+        <div class="fld"><span>${esc(d.reason)}</span><input id="debitReason" value="Fictional handling charge"></div></div>`,
+        actions:btn(d.cancel,{cls:'soft',attrs:'data-debit-cancel'})+btn(d.create,{icon:'plus',cls:'primary',attrs:'data-debit-create'})});
+      document.querySelector('[data-debit-cancel]')?.addEventListener('click',closeModal);
+      document.querySelector('[data-debit-create]')?.addEventListener('click',async event=>{
+        const button=event.currentTarget;button.disabled=true;
+        try{await a.create('sales/debit-notes',{docNo:document.querySelector('#debitNo').value.trim(),invoiceId:Number(document.querySelector('#debitInvoice').value),
+          noteDate:document.querySelector('#debitDate').value,reason:document.querySelector('#debitReason').value.trim(),netAmount:document.querySelector('#debitNet').value,taxCode:'SR'});
+          closeModal();toast(d.created,'ok');navigate('debit-notes');}catch(error){button.disabled=false;toast(error&&error.message||'Create failed','danger');}
+      });
+    });
+    root.querySelectorAll('[data-post-debit]').forEach(button=>button.addEventListener('click',async event=>{
+      event.stopPropagation();button.disabled=true;
+      try{await a.action('sales/debit-notes',Number(button.dataset.postDebit),'post',{},`post-sales-debit-${button.dataset.postDebit}`);
+        toast(d.posted,'ok');navigate('debit-notes');}catch(error){button.disabled=false;toast(error&&error.message||'Post failed','danger');}
+    }));
+  };
 })();

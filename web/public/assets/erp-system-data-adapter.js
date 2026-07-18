@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 14;
+  var DEMO_SCHEMA_VERSION = 15;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -118,7 +118,7 @@
     var currentVersion = row ? Number(row.version) : 0;
     /* A service-worker update can briefly mix a newer adapter with an older
        cached migration asset. Never trust the version marker alone: verify the
-       v14 manufacturing/MRP/quality/sales signature before declaring the schema current.
+       v15 manufacturing/MRP/quality/sales signature before declaring the schema current.
        Replaying the generated compatibility bundle is safe and repairs a
        marker that was written after a stale/no-op migration response. */
     var signature = (await db.query(
@@ -132,8 +132,9 @@
       "'quality_ncr','quality_corrective_action'," +
       "'sales_enquiry','sales_quotation','sales_quotation_line'," +
       "'sales_delivery','sales_delivery_line'," +
-      "'sales_return','sales_return_line','sales_credit_note','sales_credit_note_line')")).rows[0];
-    var hasCurrentSignature = signature && Number(signature.n) === 26;
+      "'sales_return','sales_return_line','sales_credit_note','sales_credit_note_line'," +
+      "'sales_debit_note')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 27;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -176,6 +177,10 @@
 
   async function ensureSalesReturnFixture(db){
     await db.exec(await fetchSql('erp-system-demo-sales-return.sql'));
+  }
+
+  async function ensureSalesDebitFixture(db){
+    await db.exec(await fetchSql('erp-system-demo-sales-debit.sql'));
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -853,6 +858,7 @@
       await ensureSalesFrontFixture(db);
       await ensureSalesDeliveryFixture(db);
       await ensureSalesReturnFixture(db);
+      await ensureSalesDebitFixture(db);
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
@@ -1260,6 +1266,7 @@
     'sales/return-lines':'sales_return_line',
     'sales/credit-notes':'sales_credit_note',
     'sales/credit-note-lines':'sales_credit_note_line',
+    'sales/debit-notes':'sales_debit_note',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
     'purchasing/suppliers':'supplier',
@@ -1457,6 +1464,14 @@
       await refresh();
       return {data:salesReturn,meta:{}};
     }
+    if(key==='sales/debit-notes'){
+      var debitNote = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createSalesDebitNoteWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:debitNote,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1596,6 +1611,14 @@
       });
       await refresh();
       return {data:rejectedReturn,meta:{}};
+    }
+    if(key==='sales/debit-notes'&&name==='post'){
+      var postedDebitNote = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.postSalesDebitNoteWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:postedDebitNote,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

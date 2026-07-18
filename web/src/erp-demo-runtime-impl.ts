@@ -97,6 +97,11 @@ import {
   type CreateSalesReturnInput,
   type CreditSalesReturnInput,
 } from '../../src/modules/sales/return';
+import {
+  createSalesDebitNoteWithin,
+  postSalesDebitNoteWithin,
+  type CreateSalesDebitNoteInput,
+} from '../../src/modules/sales/debitNote';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -247,6 +252,16 @@ export const erpDemoRuntime = Object.freeze({
     },
     rejectSalesReturnWithin(db: DemoOrm, scope: Scope, returnId: number) {
       return rejectSalesReturnWithin(asDomainDb(db), scope, returnId);
+    },
+    createSalesDebitNoteWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateSalesDebitNoteInput,
+    ) {
+      return createSalesDebitNoteWithin(asDomainDb(db), scope, input);
+    },
+    postSalesDebitNoteWithin(db: DemoOrm, scope: Scope, debitNoteId: number) {
+      return postSalesDebitNoteWithin(asDomainDb(db), scope, debitNoteId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

@@ -49,6 +49,10 @@ import {
   createSalesReturnWithin,
   type CreateSalesReturnInput,
 } from '../modules/sales/return';
+import {
+  createSalesDebitNoteWithin,
+  type CreateSalesDebitNoteInput,
+} from '../modules/sales/debitNote';
 
 export interface CreateDefinition {
   permission: string;
@@ -251,6 +255,17 @@ const CREATES: Record<string, CreateDefinition> = {
         tx,
         scope,
         payload as unknown as CreateSalesReturnInput,
+      );
+    },
+  },
+  'sales/debit-notes': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSalesDebitNoteWithin(
+        tx,
+        scope,
+        payload as unknown as CreateSalesDebitNoteInput,
       );
     },
   },

@@ -278,3 +278,27 @@ export const salesCreditNoteLine = pgTable('sales_credit_note_line', {
     t.masterFn, t.companyFn, t.creditNoteId, t.lineNo,
   ),
 ]);
+
+export const salesDebitNote = pgTable('sales_debit_note', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  invoiceId: bigint('invoice_id', { mode: 'number' }).notNull().references(() => invoice.id),
+  status: text('status').notNull().default('draft'), // draft | posted | cancelled
+  version: integer('version').notNull().default(1),
+  noteDate: date('note_date').notNull(),
+  currency: text('currency').notNull(),
+  reason: text('reason').notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxCode: text('tax_code').notNull(),
+  taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_debit_note_docno').on(t.masterFn, t.companyFn, t.docNo),
+  index('idx_sales_debit_note_invoice').on(t.masterFn, t.companyFn, t.invoiceId, t.id),
+  index('idx_sales_debit_note_status').on(t.masterFn, t.companyFn, t.status, t.noteDate, t.id),
+  check('ck_sales_debit_note_status', sql`${t.status} in ('draft', 'posted', 'cancelled')`),
+  check('ck_sales_debit_note_amount', sql`${t.netAmount} > 0 and ${t.taxAmount} >= 0`),
+]);
