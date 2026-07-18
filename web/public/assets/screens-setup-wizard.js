@@ -3,10 +3,10 @@
 
    Collects language / organization / company / admin user /
    AI-provider (BYOK, optional — never persisted) choices, shows a
-   summary, then on Finish calls window.ErpSystemDemo.completeSetup()
-   (erp-system-data-adapter.js) to write the master rename, new
-   company, starter chart of accounts, tax rule, admin app_user and
-   user<->company link in one PGlite transaction. Only then does it
+   summary, then on Finish calls the active ErpSystemData-compatible
+   adapter to write the organization, company, starter chart of
+   accounts, tax rule, admin app_user and user<->company link in one
+   PGlite or PostgreSQL transaction. Only then does it
    mark setup complete in localStorage and reload into the normal
    login/dashboard flow — a failed write leaves the wizard open so
    the user can retry.
@@ -49,6 +49,7 @@ function renderSetupWizard(){
     SG:{ currency:'SGD', symbol:'S$', taxRegime:'GST', taxLabel:'GST 9%' },
     MY:{ currency:'MYR', symbol:'RM', taxRegime:'SST', taxLabel:'SST 8%' },
   };
+  var IS_API = typeof window.erpDataMode === 'function' && window.erpDataMode() === 'api';
   var PROVIDERS = [
     ['', 'None — skip for now'],
     ['openai', 'OpenAI'],
@@ -64,6 +65,8 @@ function renderSetupWizard(){
       s0h:'Choose your language', s0p:'You can change this later from the top bar.',
       s1h:'Name your organization', s1p:'The top-level group or holding entity. Every company you add belongs to it.',
       s1lbl:'Organization name', s1ph:'e.g. Acme Group',
+      setupToken:'Deployment setup token', setupTokenPh:'Provided by your installer',
+      setupTokenNote:'Used once to authorize production setup. It is kept only in this page’s memory.',
       s2h:'Add your first company', s2p:'One legal entity per country. Country sets currency and tax regime automatically.',
       s2lbl:'Company name', s2ph:'e.g. Acme Singapore', s2country:'Country',
       s3h:'Create the first admin user', s3p:'This account will have full access once setup is applied.',
@@ -73,9 +76,11 @@ function renderSetupWizard(){
       s4provider:'Provider', s4key:'API key', s4keyph:'Not required for this preview',
       s4note:'This key is kept only in this step’s memory and is discarded on Finish/Back — nothing is saved.',
       s5h:'Review and finish', s5p:'Finishing writes the company, tax rule, chart of accounts and admin user to this browser’s demo database (PGlite/IndexedDB).',
+      s5pProd:'Finishing securely creates the organization, company, tax rule, chart of accounts and first administrator in PostgreSQL.',
       sumLang:'Language', sumOrg:'Organization', sumCompany:'Company', sumCountry:'Country', sumCurrency:'Currency', sumTax:'Tax regime',
       sumAdmin:'Admin user', sumAi:'AI provider', none:'None selected',
       errMaster:'Enter an organization name to continue.',
+      errSetupToken:'Enter the deployment setup token to continue.',
       errCompany:'Enter a company name to continue.',
       errAdminName:'Enter the admin user’s full name to continue.',
       errAdminEmail:'Enter a valid email address to continue.',
@@ -89,6 +94,8 @@ function renderSetupWizard(){
       s0h:'Pilih bahasa anda', s0p:'Anda boleh menukarnya kemudian dari bar atas.',
       s1h:'Namakan organisasi anda', s1p:'Kumpulan induk peringkat atas. Setiap syarikat yang anda tambah tergolong dalamnya.',
       s1lbl:'Nama organisasi', s1ph:'cth. Acme Group',
+      setupToken:'Token persediaan penggunaan', setupTokenPh:'Diberikan oleh pemasang anda',
+      setupTokenNote:'Digunakan sekali untuk membenarkan persediaan produksi. Ia hanya disimpan dalam memori halaman ini.',
       s2h:'Tambah syarikat pertama anda', s2p:'Satu entiti sah bagi setiap negara. Negara menetapkan mata wang dan rejim cukai secara automatik.',
       s2lbl:'Nama syarikat', s2ph:'cth. Acme Malaysia', s2country:'Negara',
       s3h:'Cipta pengguna admin pertama', s3p:'Akaun ini akan mempunyai akses penuh selepas persediaan digunakan.',
@@ -98,9 +105,11 @@ function renderSetupWizard(){
       s4provider:'Pembekal', s4key:'Kunci API', s4keyph:'Tidak diperlukan untuk pratonton ini',
       s4note:'Kunci ini hanya disimpan dalam memori langkah ini dan dibuang apabila Selesai/Kembali — tiada apa yang disimpan.',
       s5h:'Semak dan selesai', s5p:'Selesai akan menulis syarikat, peraturan cukai, carta akaun dan pengguna admin ke pangkalan data demo pelayar ini (PGlite/IndexedDB).',
+      s5pProd:'Selesai akan mencipta organisasi, syarikat, peraturan cukai, carta akaun dan pentadbir pertama dengan selamat dalam PostgreSQL.',
       sumLang:'Bahasa', sumOrg:'Organisasi', sumCompany:'Syarikat', sumCountry:'Negara', sumCurrency:'Mata wang', sumTax:'Rejim cukai',
       sumAdmin:'Pengguna admin', sumAi:'Pembekal AI', none:'Tiada dipilih',
       errMaster:'Masukkan nama organisasi untuk teruskan.',
+      errSetupToken:'Masukkan token persediaan penggunaan untuk teruskan.',
       errCompany:'Masukkan nama syarikat untuk teruskan.',
       errAdminName:'Masukkan nama penuh pengguna admin untuk teruskan.',
       errAdminEmail:'Masukkan alamat e-mel yang sah untuk teruskan.',
@@ -114,6 +123,8 @@ function renderSetupWizard(){
       s0h:'选择您的语言', s0p:'您稍后可以从顶部栏更改。',
       s1h:'为您的组织命名', s1p:'顶层集团/控股实体。您添加的每家公司都属于它。',
       s1lbl:'组织名称', s1ph:'例如 Acme Group',
+      setupToken:'部署设置令牌', setupTokenPh:'由系统安装人员提供',
+      setupTokenNote:'仅用于授权一次生产设置,只保留在本页面内存中。',
       s2h:'添加您的第一家公司', s2p:'每个国家一个法人实体。国家会自动设置货币和税制。',
       s2lbl:'公司名称', s2ph:'例如 Acme Singapore', s2country:'国家',
       s3h:'创建第一个管理员账户', s3p:'设置生效后,此账户将拥有完整权限。',
@@ -123,9 +134,11 @@ function renderSetupWizard(){
       s4provider:'提供商', s4key:'API 密钥', s4keyph:'此预览不需要',
       s4note:'此密钥仅保留在本步骤的内存中,点击完成/上一步后即被丢弃 — 不会被保存。',
       s5h:'检查并完成', s5p:'点击完成后,公司、税务规则、会计科目表和管理员账户将写入此浏览器的演示数据库(PGlite/IndexedDB)。',
+      s5pProd:'点击完成后,组织、公司、税务规则、会计科目表和首位管理员将安全地创建到 PostgreSQL。',
       sumLang:'语言', sumOrg:'组织', sumCompany:'公司', sumCountry:'国家', sumCurrency:'货币', sumTax:'税制',
       sumAdmin:'管理员账户', sumAi:'AI 提供商', none:'未选择',
       errMaster:'请输入组织名称以继续。',
+      errSetupToken:'请输入部署设置令牌以继续。',
       errCompany:'请输入公司名称以继续。',
       errAdminName:'请输入管理员姓名以继续。',
       errAdminEmail:'请输入有效的电子邮箱地址以继续。',
@@ -138,7 +151,7 @@ function renderSetupWizard(){
   var S = {
     step:0, reached:0,
     lang:(typeof getLang==='function'?getLang():'en'),
-    masterName:'', companyName:'', country:'SG',
+    masterName:'', setupToken:'', companyName:'', country:'SG',
     adminName:'', adminEmail:'', adminPassword:'', adminPasswordConfirm:'',
     aiProvider:'', aiKey:'',
   };
@@ -174,6 +187,8 @@ function renderSetupWizard(){
     if(S.step===1){
       return '<h2 class="wiz-h">'+esc(s('s1h'))+'</h2><p class="wiz-p">'+esc(s('s1p'))+'</p>'+
         fld(s('s1lbl'), '<input id="wizMaster" value="'+esc(S.masterName)+'" placeholder="'+esc(s('s1ph'))+'" autofocus>')+
+        (IS_API ? fld(s('setupToken'), '<input id="wizSetupToken" type="password" value="'+esc(S.setupToken)+'" placeholder="'+esc(s('setupTokenPh'))+'" autocomplete="off">')+
+          '<p class="wiz-p" style="margin-top:6px">'+esc(s('setupTokenNote'))+'</p>' : '')+
         '<div class="auth-error" id="wizErr"></div>';
     }
     if(S.step===2){
@@ -205,7 +220,7 @@ function renderSetupWizard(){
     var meta = COUNTRY_META[S.country];
     var langNative = (I18N_LANGS.filter(function(l){ return l.code===S.lang; })[0]||{}).native||S.lang;
     var providerLabel = (PROVIDERS.filter(function(p){ return p[0]===S.aiProvider; })[0]||[,s('none')])[1];
-    return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(s('s5p'))+'</p>'+
+    return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(IS_API?s('s5pProd'):s('s5p'))+'</p>'+
       '<div class="panel" style="margin-top:8px"><div class="panel-body" style="padding:14px 16px;display:grid;gap:8px;font-size:13px">'+
       ['sumLang,'+langNative, 'sumOrg,'+(S.masterName||'—'), 'sumCompany,'+(S.companyName||'—'),
        'sumCountry,'+S.country, 'sumCurrency,'+meta.currency, 'sumTax,'+meta.taxLabel,
@@ -237,7 +252,10 @@ function renderSetupWizard(){
   }
 
   function readCurrentStepInputs(){
-    if(S.step===1){ var m=document.getElementById('wizMaster'); if(m) S.masterName=m.value; }
+    if(S.step===1){
+      var m=document.getElementById('wizMaster'); if(m) S.masterName=m.value;
+      var st=document.getElementById('wizSetupToken'); if(st) S.setupToken=st.value;
+    }
     else if(S.step===2){ var c=document.getElementById('wizCompany'); if(c) S.companyName=c.value; }
     else if(S.step===3){
       var n=document.getElementById('wizAdminName'); if(n) S.adminName=n.value;
@@ -253,6 +271,7 @@ function renderSetupWizard(){
 
   function validateStep(i){
     if(i===1 && !S.masterName.trim()) return s('errMaster');
+    if(i===1 && IS_API && !S.setupToken) return s('errSetupToken');
     if(i===2 && !S.companyName.trim()) return s('errCompany');
     if(i===3){
       if(!S.adminName.trim()) return s('errAdminName');
@@ -294,12 +313,13 @@ function renderSetupWizard(){
     var finish=document.getElementById('wizFinish');
     if(finish) finish.addEventListener('click',function(){
       finish.setAttribute('disabled','');
-      var run = (window.ErpSystemDemo && window.ErpSystemDemo.completeSetup)
-        ? window.ErpSystemDemo.completeSetup({
-            masterName:S.masterName, companyName:S.companyName, country:S.country,
+      var dataAdapter = window.ErpSystemData || window.ErpSystemDemo;
+      var run = (dataAdapter && dataAdapter.completeSetup)
+        ? dataAdapter.completeSetup({
+            masterName:S.masterName, setupToken:S.setupToken, companyName:S.companyName, country:S.country,
             adminName:S.adminName, adminEmail:S.adminEmail, adminPassword:S.adminPassword, language:S.lang,
           })
-        : Promise.reject(new Error('Demo database adapter is not ready yet — wait a moment and try again.'));
+        : Promise.reject(new Error('ERP data adapter is not ready yet — wait a moment and try again.'));
       run.then(function(){
         try{ localStorage.setItem('aria-lang', S.lang); }catch(e){}
         markSetupWizardComplete();

@@ -14,14 +14,23 @@ import { buildDashboard } from './dashboard';
 import { apiError, context, requireSession } from './http';
 import { createAuthRouter } from './routes/auth';
 import { createResourceRouter } from './routes/resources';
+import { parseTokenEncryptionKey } from '../auth/tokenCrypto';
+import { createSetupRouter } from './routes/setup';
 
 export interface AppOptions {
   secureCookies?: boolean;
   trustProxy?: boolean;
+  tokenEncryptionKey?: string;
+  publicUrl?: string;
+  setupToken?: string;
 }
 
 const CSRF_EXEMPT_PATHS = new Set([
   '/api/auth/login',
+  '/api/auth/invitations/actions/accept',
+  '/api/auth/password-reset/actions/request',
+  '/api/auth/password-reset/actions/confirm',
+  '/api/setup/actions/complete',
 ]);
 
 export function createApp(db: DB, options: AppOptions = {}): Express {
@@ -66,9 +75,14 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(appUser);
     res.json({ hasAdmin: (row?.n ?? 0) > 0 });
   });
+  app.use('/api/setup', createSetupRouter(db, options.setupToken));
 
   app.use('/api/auth', createAuthRouter(db, {
     secureCookies: options.secureCookies ?? false,
+    lifecycle: options.tokenEncryptionKey ? {
+      tokenEncryptionKey: parseTokenEncryptionKey(options.tokenEncryptionKey),
+      publicUrl: options.publicUrl ?? 'http://127.0.0.1:4173',
+    } : undefined,
   }));
 
   app.get('/api/dashboard', async (req, res) => {

@@ -17,7 +17,7 @@ DECLARE
     'goods_receipt', 'purchase_order', 'purchase_order_line',
     'supplier', 'supplier_invoice',
     'activity', 'opportunity',
-    'api_idempotency', 'user_invitation', 'outbox_event'
+    'api_idempotency'
   ];
 BEGIN
   FOREACH table_name IN ARRAY company_tables LOOP
@@ -40,7 +40,8 @@ BEGIN
 END $$;
 
 -- master, company, app_user, role, role_permission, app_session, user_company,
--- password_reset_token, auth_rate_limit and audit_log are security/configuration
+-- user_invitation, password_reset_token, auth_rate_limit, outbox_event and
+-- audit_log are security/configuration/worker
 -- infrastructure accessed before/around a tenant transaction. They are not
 -- exposed through generic resources and require separately restricted grants on
 -- the API database role. audit_log remains insert/select only to that role.

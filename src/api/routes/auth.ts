@@ -19,11 +19,21 @@ import {
   recordLoginFailure,
 } from '../../auth/rateLimit';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
+import {
+  acceptInvitation,
+  AuthLifecycleError,
+  confirmPasswordReset,
+  createInvitation,
+  requestPasswordReset,
+  type LifecycleOptions,
+} from '../../auth/lifecycle';
+import { hashOpaqueToken } from '../../auth/tokenCrypto';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 
 export interface AuthRouterOptions {
   secureCookies: boolean;
+  lifecycle?: LifecycleOptions;
 }
 
 function clientIp(req: Request): string {
@@ -43,6 +53,20 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
     secure: options.secureCookies,
     path: '/',
   };
+
+  function handleLifecycleError(res: import('express').Response, error: unknown): void {
+    if (error instanceof AuthLifecycleError) {
+      apiError(res, error.status, error.code, error.message, error.fieldErrors);
+      return;
+    }
+    throw error;
+  }
+
+  function requireLifecycle(res: import('express').Response): LifecycleOptions | null {
+    if (options.lifecycle) return options.lifecycle;
+    apiError(res, 503, 'auth_lifecycle_unavailable', 'Email account lifecycle is not configured.');
+    return null;
+  }
 
   router.post('/login', async (req, res) => {
     const { email, password } = (req.body ?? {}) as { email?: unknown; password?: unknown };
@@ -165,6 +189,122 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
     });
     ctx.session = changed;
     res.json({ data: changed, meta: {} });
+  });
+
+  router.post('/invitations', async (req, res) => {
+    const lifecycle = requireLifecycle(res);
+    if (!lifecycle) return;
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersInvite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot invite users.');
+      return;
+    }
+    const body = (req.body ?? {}) as { email?: unknown; roleId?: unknown };
+    if (typeof body.email !== 'string') {
+      apiError(res, 400, 'invalid_request', 'Email is required.', {
+        email: 'Email is required.',
+      });
+      return;
+    }
+    const roleId = typeof body.roleId === 'number'
+      ? body.roleId
+      : Number(typeof body.roleId === 'string' ? body.roleId : Number.NaN);
+    try {
+      const invitation = await createInvitation(
+        db,
+        session,
+        { email: body.email, roleId },
+        context(res).requestId,
+        lifecycle,
+      );
+      res.status(201).json({ data: invitation, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/invitations/actions/accept', async (req, res) => {
+    const body = (req.body ?? {}) as {
+      token?: unknown;
+      fullName?: unknown;
+      password?: unknown;
+      language?: unknown;
+    };
+    const token = typeof body.token === 'string' ? body.token : '';
+    const identifier = loginIdentifierHash(
+      `invitation:${hashOpaqueToken(token)}`,
+      clientIp(req),
+    );
+    const rateLimit = await checkLoginRateLimit(db, identifier);
+    if (!rateLimit.allowed) {
+      res.setHeader('retry-after', String(rateLimit.retryAfterSeconds));
+      apiError(res, 429, 'auth_rate_limited', 'Too many attempts. Try again later.');
+      return;
+    }
+    try {
+      const accepted = await acceptInvitation(db, {
+        token,
+        fullName: typeof body.fullName === 'string' ? body.fullName : '',
+        password: typeof body.password === 'string' ? body.password : '',
+        language: typeof body.language === 'string' ? body.language : undefined,
+      }, context(res).requestId);
+      await clearLoginFailures(db, identifier);
+      res.status(201).json({ data: accepted, meta: {} });
+    } catch (error) {
+      await recordLoginFailure(db, identifier);
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/password-reset/actions/request', async (req, res) => {
+    const lifecycle = requireLifecycle(res);
+    if (!lifecycle) return;
+    const email = typeof req.body?.email === 'string' ? req.body.email : '';
+    const identifier = loginIdentifierHash(`password-reset:${email}`, clientIp(req));
+    const rateLimit = await checkLoginRateLimit(db, identifier);
+    if (rateLimit.allowed) {
+      try {
+        await requestPasswordReset(db, email, context(res).requestId, lifecycle);
+        await recordLoginFailure(db, identifier);
+      } catch (error) {
+        // Deliberately keep an identical response for existing and unknown accounts.
+        const errorType = error instanceof Error ? error.name : 'UnknownError';
+        console.error(
+          `[erp-system-api] password reset request ${context(res).requestId} failed (${errorType})`,
+        );
+      }
+    }
+    res.status(202).json({
+      data: {
+        accepted: true,
+        message: 'If the account exists, password reset instructions will be sent.',
+      },
+      meta: {},
+    });
+  });
+
+  router.post('/password-reset/actions/confirm', async (req, res) => {
+    const token = typeof req.body?.token === 'string' ? req.body.token : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    const identifier = loginIdentifierHash(
+      `password-confirm:${hashOpaqueToken(token)}`,
+      clientIp(req),
+    );
+    const rateLimit = await checkLoginRateLimit(db, identifier);
+    if (!rateLimit.allowed) {
+      res.setHeader('retry-after', String(rateLimit.retryAfterSeconds));
+      apiError(res, 429, 'auth_rate_limited', 'Too many attempts. Try again later.');
+      return;
+    }
+    try {
+      await confirmPasswordReset(db, token, password, context(res).requestId);
+      await clearLoginFailures(db, identifier);
+      res.json({ data: { ok: true }, meta: {} });
+    } catch (error) {
+      await recordLoginFailure(db, identifier);
+      handleLifecycleError(res, error);
+    }
   });
 
   return router;

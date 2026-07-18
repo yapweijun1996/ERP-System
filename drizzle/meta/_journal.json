@@ -36,6 +36,13 @@
       "when": 1784350872865,
       "tag": "0004_stormy_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784353804897,
+      "tag": "0005_magenta_terrax",
+      "breakpoints": true
     }
   ]
 }

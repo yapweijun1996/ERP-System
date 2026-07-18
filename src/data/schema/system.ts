@@ -82,6 +82,12 @@ export const authRateLimit = pgTable('auth_rate_limit', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const systemState = pgTable('system_state', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  ...timestamps,
+});
+
 export const userInvitation = pgTable('user_invitation', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,
@@ -118,11 +124,15 @@ export const outboxEvent = pgTable('outbox_event', {
   payload: jsonb('payload').notNull(),
   availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
   attempts: integer('attempts').notNull().default(0),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedBy: text('locked_by'),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
   lastError: text('last_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('idx_outbox_pending').on(t.deliveredAt, t.availableAt, t.id),
+  index('idx_outbox_lease').on(t.deliveredAt, t.lockedAt, t.availableAt, t.id),
   index('idx_outbox_tenant_aggregate').on(
     t.masterFn, t.companyFn, t.aggregateType, t.aggregateId, t.id,
   ),

@@ -77,7 +77,8 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ### Also built in
 
-- **i18n** — UI in English, Malay, Mandarin, Japanese, Vietnamese, lazy-loaded
+- **i18n** — runtime UI currently supports English, Malay and Mandarin; Japanese and
+  Vietnamese locale packs are part of the productionization plan
   ([I18N.md](docs/I18N.md)). Language is a *user* preference, independent of a company's
   country/tax.
 - **Pluggable LLM providers (BYOK)** — OpenAI, Gemini, DeepSeek, LM Studio behind two
@@ -130,7 +131,7 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ## Status
 
-The browser demo uses PGlite/IndexedDB with the canonical 25-table schema and working
+The browser demo uses PGlite/IndexedDB with the canonical 34-table schema and working
 Sales, Purchasing and CRM transaction chains into stock and balanced GL. Route-level
 `SCREEN_META` currently classifies 21 routes as Canonical and 93 as
 `Preview · Sample Data`; Preview writes are disabled. The production Docker/PostgreSQL

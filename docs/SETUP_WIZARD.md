@@ -64,16 +64,22 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
    the system never stores a provider key.** → [AI_PROVIDERS.md](AI_PROVIDERS.md#2-how-byok-works-same-in-both-modes).
 6. **Finish** — seed optional sample data; land on the dashboard.
 
-For production, the wizard should write durable setup records to PostgreSQL through the
-API. For the public demo, the same flow may write to PGlite/IndexedDB and offer a reset
-button so visitors can restart the setup.
+For production, `POST /api/setup/actions/complete` now writes the tenant foundation to
+PostgreSQL in one transaction. It is available only while there are zero users and
+requires the deployment-only `ERP_SETUP_TOKEN` in `X-ERP-Setup-Token`. The API creates
+the master, first company, Superadmin, permissions, effective-dated tax rule and base
+chart of accounts, then permanently marks setup complete. In API mode the wizard asks
+for the installer-provided token, keeps it only in page memory and sends it in
+`X-ERP-Setup-Token`; it is never placed in the JSON body or localStorage. The public
+demo continues to write to PGlite/IndexedDB and can be reset for visitors.
 
 ### First-run detection
 - The app checks for an existing master on boot. None → wizard. Exists → normal login.
 - The wizard writes through the **same data layer** as everything else, so it works
   against PGlite (demo) and the API/PostgreSQL (prod) without special-casing.
-- Production must treat wizard writes as privileged setup actions. After the first admin
-  exists, setup endpoints should be disabled or require superadmin authorization.
+- Production setup is a privileged, one-time deployment action. The raw setup token is
+  never accepted in JSON or stored in the database; after the first admin exists the
+  command returns `409 already_initialized`.
 
 ---
 

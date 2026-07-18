@@ -12,6 +12,7 @@ export const PERMISSIONS = {
   crmRead: 'crm.read',
   companySwitch: 'session.switch_company',
   auditRead: 'admin.audit.read',
+  usersInvite: 'admin.users.invite',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS] | (string & {});

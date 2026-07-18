@@ -705,3 +705,16 @@ CREATE INDEX IF NOT EXISTS "idx_password_reset_user" ON "password_reset_token" U
 CREATE INDEX IF NOT EXISTS "idx_role_permission_master" ON "role_permission" USING btree ("master_fn","permission_key","role_id");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "uq_invitation_token" ON "user_invitation" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_invitation_tenant_email" ON "user_invitation" USING btree ("master_fn","company_fn","email");
+
+-- 0005_magenta_terrax
+CREATE TABLE IF NOT EXISTS "system_state" (
+	"key" text PRIMARY KEY NOT NULL,
+	"value" jsonb NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "outbox_event" ADD COLUMN "locked_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "outbox_event" ADD COLUMN "locked_by" text;--> statement-breakpoint
+ALTER TABLE "outbox_event" ADD COLUMN "last_attempt_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_outbox_lease" ON "outbox_event" USING btree ("delivered_at","locked_at","available_at","id");

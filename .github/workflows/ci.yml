@@ -14,6 +14,20 @@ jobs:
   validate:
     name: Typecheck, transaction proof, and demo build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: erp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +61,11 @@ jobs:
 
       - name: Run unit tests (confirmOrder, issueStock, effective-dated tax)
         run: npm test
+
+      - name: PostgreSQL 16 non-superuser security lifecycle proof
+        env:
+          POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/erp_ci
+        run: npm run test:postgres
 
       - name: Run PGlite transaction proof (order -> stock -> invoice -> GL, incl. rollback)
         run: npm run demo

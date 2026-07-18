@@ -17,6 +17,9 @@ const app = createApp(db, {
   // Local Docker runs over HTTP; real TLS deployments must set COOKIE_SECURE=true.
   secureCookies: process.env.COOKIE_SECURE === 'true',
   trustProxy: process.env.TRUST_PROXY === 'true',
+  tokenEncryptionKey: process.env.ERP_TOKEN_ENCRYPTION_KEY,
+  publicUrl: process.env.ERP_PUBLIC_URL,
+  setupToken: process.env.ERP_SETUP_TOKEN,
 });
 
 app.listen(port, () => {

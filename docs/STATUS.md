@@ -53,7 +53,7 @@ IDs and production-only RLS policies are implemented and tested.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (33 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | Ordered migrations through `drizzle/0004_stormy_guardian.sql`, `src/data/schema/` |
+| Canonical schema (34 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | Ordered migrations through `drizzle/0005_magenta_terrax.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; browser mirror in adapter (`confirmOrder`) |
 | Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), end-to-end incl. screens | ✅ Working | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Demo-mode screens (suppliers/purchase-orders/goods-receipts/supplier-invoices lists, new-PO wizard, receive-goods/post-invoice row actions) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-023. RFQs/quotations/requisitions/returns/credit-debit-notes/price-lists/landed-cost/vendor-performance have no schema and stay mock. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Working | `src/data/schema/crm.ts`, `src/modules/crm/` (`createOpportunity`/`convertOpportunityToSalesOrder`), both rollback guards (double-convert; mid-transaction failure leaves the opportunity untouched) proven on PGlite + PostgreSQL, TASK-027. Demo-mode screens (pipeline board, new-opportunity wizard, kanban convert action) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-028; live-verified the converted order appears in Sales, stock decrements, GL balances. Opportunity-detail and customer-360 have no schema and stay mock. |
@@ -69,7 +69,7 @@ IDs and production-only RLS policies are implemented and tested.
 | Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **21 Canonical / 93 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
 | Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 57 tests. Includes persistent Session restart, CSRF, company access, RBAC, login limiting, idempotency replay, audit correlation and PGlite migration compatibility. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 71 PGlite tests plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, company access, RBAC, login limiting, cross-master/expired encrypted invitations, password reset, outbox leases/redaction, one-time production setup, idempotency replay, audit correlation and migration compatibility. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -80,7 +80,8 @@ IDs and production-only RLS policies are implemented and tested.
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
 | PostgreSQL concurrency/parity proof | ✅ Working | `POSTGRES_URL=... npm run demo` — proven twice against real Postgres (host + inside verification), TASK-013 |
 | `VITE_DATA_MODE=api` renders the real dashboard (not the waiting screen) | ✅ Working | `erp-system-api-adapter.js` calls `GET /api/dashboard` on ready and maps it onto `DB.*`; company switcher also works (re-fetches with a different scope). Other modules (inventory/sales/finance) have no api-mode data source yet. TASK-026 |
-| Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited `POST /api/auth/session/actions/switch-company`; persistent idempotency/audit tables; transaction-local tenant settings and `deploy/sql/production-rls.sql`. Verified on PGlite and an isolated PostgreSQL 16 non-superuser role. |
+| Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
+| Production one-time setup | ✅ Working | The API-mode wizard collects the installer token in memory and calls `POST /api/setup/actions/complete` with `X-ERP-Setup-Token`. A database singleton locks concurrent attempts; the command only works with zero users and atomically creates tenant/company/admin/role/permissions/tax/accounts. |
 | Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v13) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale "signed in" state after logout; found and fixed during TASK-024 verification |
 
 ## Canonical and Preview route boundary
@@ -117,9 +118,8 @@ regression-checked as Canonical.
 | Claim in docs | Reality |
 | --- | --- |
 | `VITE_DATA_MODE=api` renders inventory/sales/finance with real data | **Not yet.** The canonical resource GET endpoints now exist, but the legacy screens still read the monolithic `DB.*` view model. Each route must migrate to `ErpSystemData.list/get` (or receive an interim mapper) before its `supportedModes` can include `api`. |
-| API server has **write** endpoints (confirm order, complete setup, purchasing) | Not built. The formal client `create/update/action` contract exists, but stock, money and state-transition endpoints remain intentionally unavailable until server-side idempotency, permission and audit controls land. |
+| API server has business **write** endpoints (confirm order, purchasing) | Not built. Production setup and auth lifecycle writes now exist; stock, money and business state-transition endpoints remain intentionally unavailable until the unified action dispatcher lands. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
-| Setup wizard persists choices in **production (API/PostgreSQL)** | Not built. TASK-009+010 cover the demo (PGlite) path only; an API adapter implementing the same `completeSetup()` contract is TASK-011/TASK-019. Auth (TASK-024) is real in both modes, but production `completeSetup()` itself still rejects with "not available yet". |
 | `npm run lint` (referenced in CONTRIBUTING.md) | Still doesn't exist — no ESLint/Prettier config in the repo. `npm test` (TASK-025, done) now works. |
 
 ## Known design debt
@@ -144,9 +144,9 @@ regression-checked as Canonical.
    `.github/workflows/ci.yml` (TASK-014), which runs on every PR; `deploy-pages.yml`
    itself is unchanged (deploy-only, still doesn't run `typecheck:web`, which is
    fine since `ci.yml` already gated it before merge).
-5. **Invitation/password-reset delivery is not wired.** Durable token and outbox
-   tables exist, but user-facing invitation/reset endpoints and an outbox delivery
-   worker are still pending. MFA is also not implemented.
+5. **MFA is not implemented.** Invitation/password-reset endpoints and encrypted SMTP
+   outbox delivery now exist; production deployments must configure the optional email
+   worker profile and monitor delivery failures.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 

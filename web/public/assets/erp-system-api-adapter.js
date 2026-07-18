@@ -22,10 +22,10 @@
      'api'              — health OK AND the dashboard has been loaded for
                           an authenticated session. DB.* is populated.
 
-   Writes for stock/money (confirmOrder/completeSetup) still reject with a
-   clear "not available yet" error — no such endpoints exist server-side
-   (see docs/STATUS.md). switchCompany DOES work through the authenticated
-   session action, authorized server-side against this user's user_company
+   Writes for stock/money (confirmOrder) still reject with a clear "not
+   available yet" error. One-time production setup is available through the
+   deployment-token-protected setup action. switchCompany DOES work through the
+   authenticated session action, authorized server-side against this user's user_company
    rows, and so does the TASK-024 auth flow (login/logout/needsSetup/
    isSignedIn) — real session cookies, not a local flag.
 
@@ -332,6 +332,26 @@
     } catch (e) { /* best-effort — reloading clears client state regardless */ }
   }
 
+  async function completeSetup(input){
+    input=input||{};
+    var setupToken=String(input.setupToken||'');
+    if(!setupToken) throw new Error('The deployment setup token is required.');
+    var response=await apiRequest('setup/actions/complete',{
+      method:'POST',
+      headers:{'X-ERP-Setup-Token':setupToken},
+      body:{
+        organizationName:input.masterName,
+        companyName:input.companyName,
+        country:input.country,
+        adminName:input.adminName,
+        adminEmail:input.adminEmail,
+        adminPassword:input.adminPassword,
+        language:input.language,
+      },
+    });
+    return response.data;
+  }
+
   var adapter = {
     ready: ready,
     reset: function(){ return notAvailable('reset'); },
@@ -343,7 +363,7 @@
     action:action,
     session:fetchSession,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
-    completeSetup: function(){ return notAvailable('completeSetup'); },
+    completeSetup: completeSetup,
     switchCompany: switchCompany,
     /* TASK-024 additions — demo adapter implements the same names locally. */
     needsSetup: needsSetup,
