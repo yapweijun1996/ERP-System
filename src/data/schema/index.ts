@@ -9,3 +9,4 @@ export * from './purchasing';
 export * from './crm';
 export * from './system';
 export * from './manufacturing';
+export * from './quality';

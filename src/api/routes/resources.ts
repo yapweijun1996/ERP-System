@@ -36,6 +36,7 @@ import {
   InvalidPurchaseOrderStateError,
   PostingError as PurchasingPostingError,
 } from '../../modules/purchasing/errors';
+import { QualityInspectionError } from '../../modules/quality/inspection';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -98,6 +99,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof InventoryTrackingError
         || error instanceof PurchasingPostingError
         || error instanceof InvalidOpportunityStateError
+        || error instanceof QualityInspectionError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -251,6 +253,7 @@ export function createResourceRouter(db: DB): Router {
         error instanceof InventoryAdjustmentValidationError
         || error instanceof StockTransferValidationError
         || error instanceof InventoryTrackingError
+        || error instanceof QualityInspectionError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);

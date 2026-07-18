@@ -71,6 +71,15 @@ import {
   type CreateWorkOrderInput,
 } from '../../src/modules/manufacturing/workOrder';
 import { runMrpWithin, type RunMrpInput } from '../../src/modules/manufacturing/mrp';
+import {
+  completeInspectionWithin,
+  createInspectionWithin,
+  createNcrWithin,
+  disposeNcrWithin,
+  type CompleteInspectionInput,
+  type CreateInspectionInput,
+  type CreateNcrInput,
+} from '../../src/modules/quality/inspection';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -148,6 +157,23 @@ export const erpDemoRuntime = Object.freeze({
     },
     runMrpWithin(db: DemoOrm, scope: Scope, input: RunMrpInput) {
       return runMrpWithin(asDomainDb(db), scope, input);
+    },
+    createInspectionWithin(db: DemoOrm, scope: Scope, input: CreateInspectionInput) {
+      return createInspectionWithin(asDomainDb(db), scope, input);
+    },
+    completeInspectionWithin(db: DemoOrm, scope: Scope, input: CompleteInspectionInput) {
+      return completeInspectionWithin(asDomainDb(db), scope, input);
+    },
+    createNcrWithin(db: DemoOrm, scope: Scope, input: CreateNcrInput) {
+      return createNcrWithin(asDomainDb(db), scope, input);
+    },
+    disposeNcrWithin(
+      db: DemoOrm,
+      scope: Scope,
+      ncrId: number,
+      disposition: 'release' | 'scrap',
+    ) {
+      return disposeNcrWithin(asDomainDb(db), scope, ncrId, disposition);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

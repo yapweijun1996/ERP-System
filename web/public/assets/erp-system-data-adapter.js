@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 10;
+  var DEMO_SCHEMA_VERSION = 11;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -118,7 +118,7 @@
     var currentVersion = row ? Number(row.version) : 0;
     /* A service-worker update can briefly mix a newer adapter with an older
        cached migration asset. Never trust the version marker alone: verify the
-       v10 manufacturing/MRP signature before declaring the schema current.
+       v11 manufacturing/MRP/quality signature before declaring the schema current.
        Replaying the generated compatibility bundle is safe and repairs a
        marker that was written after a stale/no-op migration response. */
     var signature = (await db.query(
@@ -126,8 +126,11 @@
       "where table_schema='public' and table_name in " +
       "('work_center','manufacturing_bom','bom_version','bom_component'," +
       "'manufacturing_routing','routing_operation','work_order'," +
-      "'work_order_material','work_order_operation','mrp_run','mrp_suggestion')")).rows[0];
-    var hasCurrentSignature = signature && Number(signature.n) === 11;
+      "'work_order_material','work_order_operation','mrp_run','mrp_suggestion'," +
+      "'quality_inspection_plan','quality_inspection_plan_item'," +
+      "'quality_inspection','quality_inspection_result'," +
+      "'quality_ncr','quality_corrective_action')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 17;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -154,6 +157,10 @@
        boot. This also tops up newly required manufacturing accounts or
        snapshots in a persistent IndexedDB created by an earlier v9 build. */
     await db.exec(await fetchSql('erp-system-demo-manufacturing.sql'));
+  }
+
+  async function ensureQualityFixture(db){
+    await db.exec(await fetchSql('erp-system-demo-quality.sql'));
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -827,6 +834,7 @@
       await ensureSchemaUpToDate(db);
       await ensureWarehousePickFixture(db);
       await ensureManufacturingFixture(db);
+      await ensureQualityFixture(db);
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
@@ -1246,6 +1254,12 @@
     'manufacturing/work-order-operations':'work_order_operation',
     'manufacturing/mrp-runs':'mrp_run',
     'manufacturing/mrp-suggestions':'mrp_suggestion',
+    'quality/plans':'quality_inspection_plan',
+    'quality/plan-items':'quality_inspection_plan_item',
+    'quality/inspections':'quality_inspection',
+    'quality/results':'quality_inspection_result',
+    'quality/ncrs':'quality_ncr',
+    'quality/corrective-actions':'quality_corrective_action',
   };
   function normalizeResource(resource){
     return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
@@ -1376,6 +1390,22 @@
       await refresh();
       return {data:mrp,meta:{}};
     }
+    if(key==='quality/inspections'){
+      var inspection = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createInspectionWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:inspection,meta:{}};
+    }
+    if(key==='quality/ncrs'){
+      var ncr = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createNcrWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:ncr,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1455,6 +1485,26 @@
       });
       await refresh();
       return {data:completedWorkOrder,meta:{}};
+    }
+    if(key==='quality/inspections'&&name==='complete'){
+      var completedInspection = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.completeInspectionWithin(
+          state.runtime.createOrm(tx), SCOPE, {
+            inspectionId:Number(id),
+            results:(payload&&payload.results)||[],
+          });
+      });
+      await refresh();
+      return {data:completedInspection,meta:{}};
+    }
+    if(key==='quality/ncrs'&&(name==='release'||name==='reject')){
+      var disposedNcr = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.disposeNcrWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id),
+          name==='release'?'release':'scrap');
+      });
+      await refresh();
+      return {data:disposedNcr,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

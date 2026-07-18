@@ -33,6 +33,12 @@ import {
   type CreateWorkOrderInput,
 } from '../modules/manufacturing/workOrder';
 import { runMrpWithin, type RunMrpInput } from '../modules/manufacturing/mrp';
+import {
+  createInspectionWithin,
+  createNcrWithin,
+  type CreateInspectionInput,
+  type CreateNcrInput,
+} from '../modules/quality/inspection';
 
 export interface CreateDefinition {
   permission: string;
@@ -189,6 +195,20 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return runMrpWithin(tx, scope, payload as unknown as RunMrpInput);
+    },
+  },
+  'quality/inspections': {
+    permission: 'quality.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createInspectionWithin(tx, scope, payload as unknown as CreateInspectionInput);
+    },
+  },
+  'quality/ncrs': {
+    permission: 'quality.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createNcrWithin(tx, scope, payload as unknown as CreateNcrInput);
     },
   },
 };

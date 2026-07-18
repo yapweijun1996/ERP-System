@@ -393,6 +393,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'new-stock-adjustment',
   'work-orders','work-order','new-work-order',
   'bom','mrp',
+  'qc-inspection','qc-report','ncr',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -406,6 +407,7 @@ const API_SCREEN_ROUTES = new Set([
   'new-stock-adjustment',
   'work-orders','work-order','new-work-order',
   'bom','mrp',
+  'qc-inspection','qc-report','ncr',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',

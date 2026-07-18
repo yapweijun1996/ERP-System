@@ -18,6 +18,8 @@ export const PERMISSIONS = {
   crmWrite: 'crm.write',
   manufacturingRead: 'manufacturing.read',
   manufacturingWrite: 'manufacturing.write',
+  qualityRead: 'quality.read',
+  qualityWrite: 'quality.write',
   companySwitch: 'session.switch_company',
   auditRead: 'admin.audit.read',
   usersInvite: 'admin.users.invite',

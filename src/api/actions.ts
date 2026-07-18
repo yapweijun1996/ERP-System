@@ -26,6 +26,10 @@ import {
   releaseWorkOrderWithin,
   reportWorkOrderOperationWithin,
 } from '../modules/manufacturing/workOrder';
+import {
+  completeInspectionWithin,
+  disposeNcrWithin,
+} from '../modules/quality/inspection';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'inventory/adjustments/post': {
@@ -124,6 +128,69 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return completeWorkOrderWithin(tx, scope, input.resourceId);
+    },
+  },
+  'quality/inspections/complete': {
+    permission: 'quality.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as {
+        results?: Array<{
+          resultId?: unknown;
+          measuredValue?: unknown;
+          result?: unknown;
+          defectClass?: unknown;
+        }>;
+      };
+      if (
+        !Array.isArray(payload.results)
+        || payload.results.length === 0
+        || payload.results.some((row) =>
+          !Number.isSafeInteger(row.resultId)
+          || Number(row.resultId) <= 0
+          || typeof row.measuredValue !== 'string'
+          || !row.measuredValue.trim()
+          || !['pass', 'fail'].includes(String(row.result))
+          || (row.defectClass != null
+            && !['critical', 'major', 'minor'].includes(String(row.defectClass))))
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'Every result requires resultId, measuredValue and pass/fail outcome.',
+        );
+      }
+      return completeInspectionWithin(tx, scope, {
+        inspectionId: input.resourceId,
+        results: payload.results.map((row) => ({
+          resultId: Number(row.resultId),
+          measuredValue: String(row.measuredValue),
+          result: row.result as 'pass' | 'fail',
+          defectClass: row.defectClass as
+            | 'critical'
+            | 'major'
+            | 'minor'
+            | null
+            | undefined,
+        })),
+      });
+    },
+  },
+  'quality/ncrs/release': {
+    permission: 'quality.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return disposeNcrWithin(tx, scope, input.resourceId, 'release');
+    },
+  },
+  'quality/ncrs/reject': {
+    permission: 'quality.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return disposeNcrWithin(tx, scope, input.resourceId, 'scrap');
     },
   },
   'sales/orders/confirm': {

@@ -61,6 +61,7 @@ export async function seedDemo(db: DB): Promise<void> {
     'finance.read',
     'purchasing.read',
     'crm.read',
+    'quality.read',
     'session.switch_company',
   ].map((permissionKey) => ({
     masterFn: 'M1',

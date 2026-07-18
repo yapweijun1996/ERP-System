@@ -37,6 +37,12 @@ import {
   workOrderOperation,
   mrpRun,
   mrpSuggestion,
+  qualityInspectionPlan,
+  qualityInspectionPlanItem,
+  qualityInspection,
+  qualityInspectionResult,
+  qualityNcr,
+  qualityCorrectiveAction,
 } from '../data/schema';
 
 export interface ApiScope {
@@ -177,6 +183,26 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
   'manufacturing/mrp-suggestions': resource(mrpSuggestion, 'manufacturing.read', {
     status: mrpSuggestion.status,
+  }),
+  'quality/plans': resource(qualityInspectionPlan, 'quality.read'),
+  'quality/plan-items': resource(qualityInspectionPlanItem, 'quality.read'),
+  'quality/inspections': resource(qualityInspection, 'quality.read', {
+    status: qualityInspection.status,
+    versionColumn: qualityInspection.version,
+    allowedActions: ['complete'],
+    createPermission: 'quality.write',
+  }),
+  'quality/results': resource(qualityInspectionResult, 'quality.read', {
+    status: qualityInspectionResult.result,
+  }),
+  'quality/ncrs': resource(qualityNcr, 'quality.read', {
+    status: qualityNcr.status,
+    versionColumn: qualityNcr.version,
+    allowedActions: ['release', 'reject'],
+    createPermission: 'quality.write',
+  }),
+  'quality/corrective-actions': resource(qualityCorrectiveAction, 'quality.read', {
+    status: qualityCorrectiveAction.status,
   }),
 };
 
