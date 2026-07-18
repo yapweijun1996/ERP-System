@@ -397,6 +397,7 @@ const API_SCREEN_ROUTES = new Set([
   'gl','account-ledger','journal-entry','pnl','ar-aging',
   'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
   'crm-pipeline','new-opportunity',
+  'settings',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
