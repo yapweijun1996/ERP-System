@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 11;
+  var DEMO_SCHEMA_VERSION = 12;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -118,7 +118,7 @@
     var currentVersion = row ? Number(row.version) : 0;
     /* A service-worker update can briefly mix a newer adapter with an older
        cached migration asset. Never trust the version marker alone: verify the
-       v11 manufacturing/MRP/quality signature before declaring the schema current.
+       v12 manufacturing/MRP/quality/sales-front signature before declaring the schema current.
        Replaying the generated compatibility bundle is safe and repairs a
        marker that was written after a stale/no-op migration response. */
     var signature = (await db.query(
@@ -129,8 +129,9 @@
       "'work_order_material','work_order_operation','mrp_run','mrp_suggestion'," +
       "'quality_inspection_plan','quality_inspection_plan_item'," +
       "'quality_inspection','quality_inspection_result'," +
-      "'quality_ncr','quality_corrective_action')")).rows[0];
-    var hasCurrentSignature = signature && Number(signature.n) === 17;
+      "'quality_ncr','quality_corrective_action'," +
+      "'sales_enquiry','sales_quotation','sales_quotation_line')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 20;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -161,6 +162,10 @@
 
   async function ensureQualityFixture(db){
     await db.exec(await fetchSql('erp-system-demo-quality.sql'));
+  }
+
+  async function ensureSalesFrontFixture(db){
+    await db.exec(await fetchSql('erp-system-demo-sales-front.sql'));
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -835,6 +840,7 @@
       await ensureWarehousePickFixture(db);
       await ensureManufacturingFixture(db);
       await ensureQualityFixture(db);
+      await ensureSalesFrontFixture(db);
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
@@ -1233,6 +1239,9 @@
     'sales/orders':'sales_order',
     'sales/order-lines':'sales_order_line',
     'sales/invoices':'invoice',
+    'sales/enquiries':'sales_enquiry',
+    'sales/quotations':'sales_quotation',
+    'sales/quotation-lines':'sales_quotation_line',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
     'purchasing/suppliers':'supplier',
@@ -1406,6 +1415,22 @@
       await refresh();
       return {data:ncr,meta:{}};
     }
+    if(key==='sales/enquiries'){
+      var enquiry = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createSalesEnquiryWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:enquiry,meta:{}};
+    }
+    if(key==='sales/quotations'){
+      var quotation = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createSalesQuotationWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:quotation,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1505,6 +1530,30 @@
       });
       await refresh();
       return {data:disposedNcr,meta:{}};
+    }
+    if(key==='sales/enquiries'&&name==='convert-to-quotation'){
+      var convertedEnquiry = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.convertEnquiryToQuotationWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload);
+      });
+      await refresh();
+      return {data:convertedEnquiry,meta:{}};
+    }
+    if(key==='sales/quotations'&&(name==='issue'||name==='accept')){
+      var transitionedQuotation = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.transitionQuotationWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), name);
+      });
+      await refresh();
+      return {data:transitionedQuotation,meta:{}};
+    }
+    if(key==='sales/quotations'&&name==='convert-to-order'){
+      var convertedQuotation = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.convertQuotationToOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload);
+      });
+      await refresh();
+      return {data:convertedQuotation,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

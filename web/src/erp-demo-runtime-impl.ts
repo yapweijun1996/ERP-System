@@ -80,6 +80,16 @@ import {
   type CreateInspectionInput,
   type CreateNcrInput,
 } from '../../src/modules/quality/inspection';
+import {
+  convertEnquiryToQuotationWithin,
+  convertQuotationToOrderWithin,
+  createSalesEnquiryWithin,
+  createSalesQuotationWithin,
+  transitionQuotationWithin,
+  type ConvertEnquiryInput,
+  type CreateSalesEnquiryInput,
+  type CreateSalesQuotationInput,
+} from '../../src/modules/sales/quotation';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -174,6 +184,44 @@ export const erpDemoRuntime = Object.freeze({
       disposition: 'release' | 'scrap',
     ) {
       return disposeNcrWithin(asDomainDb(db), scope, ncrId, disposition);
+    },
+    createSalesEnquiryWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateSalesEnquiryInput,
+    ) {
+      return createSalesEnquiryWithin(asDomainDb(db), scope, input);
+    },
+    createSalesQuotationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateSalesQuotationInput,
+    ) {
+      return createSalesQuotationWithin(asDomainDb(db), scope, input);
+    },
+    convertEnquiryToQuotationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      enquiryId: number,
+      input: ConvertEnquiryInput,
+    ) {
+      return convertEnquiryToQuotationWithin(asDomainDb(db), scope, enquiryId, input);
+    },
+    transitionQuotationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      quotationId: number,
+      transition: 'issue' | 'accept',
+    ) {
+      return transitionQuotationWithin(asDomainDb(db), scope, quotationId, transition);
+    },
+    convertQuotationToOrderWithin(
+      db: DemoOrm,
+      scope: Scope,
+      quotationId: number,
+      input: { docNo: string; orderDate: string },
+    ) {
+      return convertQuotationToOrderWithin(asDomainDb(db), scope, quotationId, input);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

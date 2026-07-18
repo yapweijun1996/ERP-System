@@ -37,6 +37,7 @@ import {
   PostingError as PurchasingPostingError,
 } from '../../modules/purchasing/errors';
 import { QualityInspectionError } from '../../modules/quality/inspection';
+import { SalesQuotationError } from '../../modules/sales/quotation';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -100,6 +101,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof PurchasingPostingError
         || error instanceof InvalidOpportunityStateError
         || error instanceof QualityInspectionError
+        || error instanceof SalesQuotationError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -261,6 +263,10 @@ export function createResourceRouter(db: DB): Router {
       }
       if (error instanceof PurchasingPostingError) {
         apiError(res, 422, 'posting_failed', error.message);
+        return;
+      }
+      if (error instanceof SalesQuotationError) {
+        apiError(res, 409, 'invalid_state', error.message);
         return;
       }
       throw error;

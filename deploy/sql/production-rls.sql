@@ -24,6 +24,7 @@ DECLARE
     'quality_inspection', 'quality_inspection_result',
     'quality_ncr', 'quality_corrective_action',
     'customer', 'invoice', 'sales_order', 'sales_order_line',
+    'sales_enquiry', 'sales_quotation', 'sales_quotation_line',
     'account', 'gl_entry',
     'goods_receipt', 'purchase_order', 'purchase_order_line',
     'supplier', 'supplier_invoice',

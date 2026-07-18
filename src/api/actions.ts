@@ -30,6 +30,11 @@ import {
   completeInspectionWithin,
   disposeNcrWithin,
 } from '../modules/quality/inspection';
+import {
+  convertEnquiryToQuotationWithin,
+  convertQuotationToOrderWithin,
+  transitionQuotationWithin,
+} from '../modules/sales/quotation';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'inventory/adjustments/post': {
@@ -191,6 +196,88 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return disposeNcrWithin(tx, scope, input.resourceId, 'scrap');
+    },
+  },
+  'sales/enquiries/convert-to-quotation': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as {
+        docNo?: unknown;
+        quoteDate?: unknown;
+        validUntil?: unknown;
+        currency?: unknown;
+        probability?: unknown;
+        lines?: Array<{
+          productId?: unknown;
+          qty?: unknown;
+          unitPrice?: unknown;
+          taxCode?: unknown;
+        }>;
+      };
+      if (
+        typeof payload.docNo !== 'string'
+        || typeof payload.quoteDate !== 'string'
+        || typeof payload.validUntil !== 'string'
+        || typeof payload.currency !== 'string'
+        || !Array.isArray(payload.lines)
+        || payload.lines.length === 0
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'Quotation number, dates, currency and at least one line are required.',
+        );
+      }
+      return convertEnquiryToQuotationWithin(tx, scope, input.resourceId, {
+        docNo: payload.docNo,
+        quoteDate: payload.quoteDate,
+        validUntil: payload.validUntil,
+        currency: payload.currency,
+        probability: payload.probability as string | number | undefined,
+        lines: payload.lines.map((line) => ({
+          productId: Number(line.productId),
+          qty: line.qty as string | number,
+          unitPrice: line.unitPrice as string | number,
+          taxCode: String(line.taxCode ?? ''),
+        })),
+      });
+    },
+  },
+  'sales/quotations/issue': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return transitionQuotationWithin(tx, scope, input.resourceId, 'issue');
+    },
+  },
+  'sales/quotations/accept': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return transitionQuotationWithin(tx, scope, input.resourceId, 'accept');
+    },
+  },
+  'sales/quotations/convert-to-order': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as { docNo?: unknown; orderDate?: unknown };
+      if (typeof payload.docNo !== 'string' || typeof payload.orderDate !== 'string') {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'Sales order number and orderDate are required.',
+        );
+      }
+      return convertQuotationToOrderWithin(tx, scope, input.resourceId, {
+        docNo: payload.docNo,
+        orderDate: payload.orderDate,
+      });
     },
   },
   'sales/orders/confirm': {

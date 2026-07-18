@@ -39,6 +39,12 @@ import {
   type CreateInspectionInput,
   type CreateNcrInput,
 } from '../modules/quality/inspection';
+import {
+  createSalesEnquiryWithin,
+  createSalesQuotationWithin,
+  type CreateSalesEnquiryInput,
+  type CreateSalesQuotationInput,
+} from '../modules/sales/quotation';
 
 export interface CreateDefinition {
   permission: string;
@@ -209,6 +215,28 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createNcrWithin(tx, scope, payload as unknown as CreateNcrInput);
+    },
+  },
+  'sales/enquiries': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSalesEnquiryWithin(
+        tx,
+        scope,
+        payload as unknown as CreateSalesEnquiryInput,
+      );
+    },
+  },
+  'sales/quotations': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSalesQuotationWithin(
+        tx,
+        scope,
+        payload as unknown as CreateSalesQuotationInput,
+      );
     },
   },
 };
