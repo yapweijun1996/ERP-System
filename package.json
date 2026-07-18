@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit",
     "typecheck:web": "npm --prefix web run typecheck",
     "generate": "drizzle-kit generate",
+    "generate:demo-schema": "node scripts/generate-demo-schema.mjs",
+    "check:demo-schema": "node scripts/generate-demo-schema.mjs --check",
     "migrate": "drizzle-kit migrate",
     "demo": "tsx src/demo.ts",
     "server": "tsx src/server.ts",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Detects drift between the Drizzle-generated schema (source of truth) and the
-// hand-copied SQL the browser demo boots into PGlite (TASK-020; the #1 landmine
+// generated SQL the browser demo boots into PGlite (TASK-020; the #1 landmine
 // in docs/DESIGN.md section 3). Parses table/column definitions and compares them
 // semantically — not a raw byte diff, so incidental formatting or comment
 // differences between regenerations don't produce false positives.
@@ -113,9 +113,9 @@ for (const table of demo.keys()) {
 }
 
 if (diffs.length) {
-  console.error(`Schema drift detected between ${CORE_LABEL} (source of truth) and ${relative(DEMO_PATH)} (hand-copied demo SQL):\n`);
+  console.error(`Schema drift detected between ${CORE_LABEL} (source of truth) and ${relative(DEMO_PATH)} (generated demo SQL):\n`);
   console.error(diffs.join('\n'));
-  console.error(`\nFix: copy the corrected table/column definitions from ${CORE_LABEL} into ${relative(DEMO_PATH)}. See docs/DESIGN.md section 3 (landmine #1).`);
+  console.error(`\nFix: run npm run generate:demo-schema. See docs/DESIGN.md section 3 (landmine #1).`);
   process.exit(1);
 } else {
   console.log(`No schema drift: ${core.size} tables match between ${CORE_LABEL} and ${relative(DEMO_PATH)}.`);

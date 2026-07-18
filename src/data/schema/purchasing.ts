@@ -27,6 +27,7 @@ export const purchaseOrder = pgTable('purchase_order', {
   docNo: text('doc_no').notNull(),
   supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
   status: text('status').notNull().default('open'),   // open | received | cancelled
+  version: integer('version').notNull().default(1),
   orderDate: date('order_date').notNull(),
   currency: text('currency').notNull(),
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull().default('0'),
@@ -78,6 +79,7 @@ export const supplierInvoice = pgTable('supplier_invoice', {
   orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => purchaseOrder.id),
   supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
   status: text('status').notNull().default('unpaid'),  // unpaid | paid | cancelled
+  version: integer('version').notNull().default(1),
   invoiceDate: date('invoice_date').notNull(),
   currency: text('currency').notNull(),
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),

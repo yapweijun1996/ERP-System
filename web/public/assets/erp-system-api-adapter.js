@@ -24,9 +24,9 @@
 
    Writes for stock/money (confirmOrder/completeSetup) still reject with a
    clear "not available yet" error — no such endpoints exist server-side
-   (see docs/STATUS.md). switchCompany DOES work (a read with a different
-   companyFn, authorized server-side against this session's user_company
-   rows) and so does the TASK-024 auth flow (login/logout/needsSetup/
+   (see docs/STATUS.md). switchCompany DOES work through the authenticated
+   session action, authorized server-side against this user's user_company
+   rows, and so does the TASK-024 auth flow (login/logout/needsSetup/
    isSignedIn) — real session cookies, not a local flag.
 
    window.ErpSystemData is the formal adapter. window.ErpSystemDemo remains
@@ -68,6 +68,16 @@
     try { return await res.json(); } catch (e) { return null; }
   }
 
+  function cookieValue(name){
+    var prefix=name+'=';
+    var parts=document.cookie ? document.cookie.split(';') : [];
+    for(var i=0;i<parts.length;i++){
+      var part=parts[i].trim();
+      if(part.indexOf(prefix)===0) return decodeURIComponent(part.slice(prefix.length));
+    }
+    return '';
+  }
+
   var RESOURCE_MODULES = {
     products:'inventory','stock-levels':'inventory','stock-movements':'inventory',
     orders:'sales',invoices:'sales',
@@ -97,9 +107,14 @@
   async function apiRequest(path,options){
     options=options||{};
     var headers=Object.assign({},options.headers||{});
+    var method=(options.method||'GET').toUpperCase();
     if(options.body!=null&&!headers['Content-Type']) headers['Content-Type']='application/json';
+    if(method!=='GET'&&method!=='HEAD'&&method!=='OPTIONS'&&!headers['X-CSRF-Token']){
+      var csrf=cookieValue('erp_csrf');
+      if(csrf) headers['X-CSRF-Token']=csrf;
+    }
     var res=await fetch(API_BASE+'/'+path.replace(/^\/+/,''),{
-      method:options.method||'GET',
+      method:method,
       credentials:'same-origin',
       headers:headers,
       body:options.body==null?undefined:JSON.stringify(options.body),
@@ -130,9 +145,11 @@
     return apiRequest(resourcePath(resource),{method:'POST',body:payload});
   }
   function update(resource,id,payload,version){
-    var body=Object.assign({},payload||{});
-    if(version!=null) body.version=version;
-    return apiRequest(resourcePath(resource)+'/'+encodeURIComponent(id),{method:'PATCH',body:body});
+    var headers={};
+    if(version!=null) headers['If-Match']=String(version);
+    return apiRequest(resourcePath(resource)+'/'+encodeURIComponent(id),{
+      method:'PATCH',headers:headers,body:Object.assign({},payload||{}),
+    });
   }
   function action(resource,id,name,payload,idempotencyKey){
     var headers={};
@@ -143,7 +160,7 @@
   }
 
   async function fetchDashboard(){
-    var url = API_BASE + '/dashboard' + (SCOPE.companyFn ? '?companyFn=' + encodeURIComponent(SCOPE.companyFn) : '');
+    var url = API_BASE + '/dashboard';
     var res = await fetch(url, { method: 'GET', credentials: 'same-origin' });
     if (res.status === 401) throw new Error('not_authenticated');
     if (!res.ok) throw new Error('GET ' + url + ' -> HTTP ' + res.status);
@@ -253,8 +270,11 @@
     if (!companyFn || companyFn === SCOPE.companyFn) return null;
     if (state.mode === 'api-unavailable') throw new Error('Production API is not available yet (switchCompany).');
     var previous = SCOPE.companyFn;
-    SCOPE.companyFn = companyFn;
     try {
+      await apiRequest('auth/session/actions/switch-company',{
+        method:'POST',body:{companyFn:companyFn},
+      });
+      SCOPE.companyFn = companyFn;
       return await loadDashboard();
     } catch (e) {
       SCOPE.companyFn = previous; // don't leave SCOPE pointing at a company we failed to load
@@ -308,7 +328,7 @@
 
   async function logout(){
     try {
-      await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      await apiRequest('auth/logout', { method: 'POST' });
     } catch (e) { /* best-effort — reloading clears client state regardless */ }
   }
 

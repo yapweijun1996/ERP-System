@@ -39,7 +39,10 @@ jobs:
       - name: Typecheck web
         run: npm run typecheck:web
 
-      - name: Check schema drift (drizzle/0000_init.sql vs web/public/db/erp-system-schema.sql)
+      - name: Check generated PGlite artifacts
+        run: npm run check:demo-schema
+
+      - name: Check schema drift (all Drizzle migrations vs generated PGlite schema)
         run: npm run check:drift
 
       - name: Run unit tests (confirmOrder, issueStock, effective-dated tax)

@@ -28,6 +28,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${DB_USER:-erp}:${DB_PASSWORD:-erp_dev_password}@db:5432/erp
       PORT: 3000
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:

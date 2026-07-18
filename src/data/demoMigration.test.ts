@@ -45,14 +45,40 @@ describe('browser demo compatibility migrations', () => {
         select table_name
         from information_schema.tables
         where table_schema = 'public'
-          and table_name in ('supplier', 'purchase_order', 'opportunity', 'activity')
+          and table_name in (
+            'supplier', 'purchase_order', 'opportunity', 'activity',
+            'app_session', 'api_idempotency', 'audit_log', 'role_permission'
+          )
         order by table_name
       `);
       expect(addedTables.rows.map((row) => row.table_name)).toEqual([
         'activity',
+        'api_idempotency',
+        'app_session',
+        'audit_log',
         'opportunity',
         'purchase_order',
+        'role_permission',
         'supplier',
+      ]);
+
+      const versionColumns = await db.query<{ table_name: string }>(`
+        select table_name
+        from information_schema.columns
+        where table_schema = 'public'
+          and column_name = 'version'
+          and table_name in (
+            'sales_order', 'invoice', 'purchase_order',
+            'supplier_invoice', 'opportunity'
+          )
+        order by table_name
+      `);
+      expect(versionColumns.rows.map((row) => row.table_name)).toEqual([
+        'invoice',
+        'opportunity',
+        'purchase_order',
+        'sales_order',
+        'supplier_invoice',
       ]);
 
       const master = await db.query<{ name: string }>(`

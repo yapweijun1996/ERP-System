@@ -23,6 +23,7 @@ export const salesOrder = pgTable('sales_order', {
   docNo: text('doc_no').notNull(),
   customerId: bigint('customer_id', { mode: 'number' }).notNull().references(() => customer.id),
   status: text('status').notNull().default('draft'),   // draft | confirmed | cancelled
+  version: integer('version').notNull().default(1),
   orderDate: date('order_date').notNull(),
   currency: text('currency').notNull(),
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull().default('0'),
@@ -58,6 +59,7 @@ export const invoice = pgTable('invoice', {
   orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => salesOrder.id),
   customerId: bigint('customer_id', { mode: 'number' }).notNull().references(() => customer.id),
   status: text('status').notNull().default('unpaid'),  // unpaid | paid | cancelled
+  version: integer('version').notNull().default(1),
   invoiceDate: date('invoice_date').notNull(),
   currency: text('currency').notNull(),
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),

@@ -31,6 +31,7 @@ export interface ResourceQuery {
 
 interface ResourceDefinition {
   table: any;
+  readPermission: string;
   status?: any;
 }
 
@@ -39,18 +40,18 @@ interface ResourceDefinition {
  * allowlist: route parameters can never become SQL identifiers.
  */
 const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
-  'inventory/products': { table: product },
-  'inventory/stock-levels': { table: stockLevel },
-  'inventory/stock-movements': { table: stockMovement },
-  'sales/orders': { table: salesOrder, status: salesOrder.status },
-  'sales/invoices': { table: invoice, status: invoice.status },
-  'finance/accounts': { table: account },
-  'finance/gl-entries': { table: glEntry },
-  'purchasing/suppliers': { table: supplier },
-  'purchasing/purchase-orders': { table: purchaseOrder, status: purchaseOrder.status },
-  'purchasing/goods-receipts': { table: goodsReceipt },
-  'purchasing/supplier-invoices': { table: supplierInvoice, status: supplierInvoice.status },
-  'crm/opportunities': { table: opportunity, status: opportunity.stage },
+  'inventory/products': { table: product, readPermission: 'inventory.read' },
+  'inventory/stock-levels': { table: stockLevel, readPermission: 'inventory.read' },
+  'inventory/stock-movements': { table: stockMovement, readPermission: 'inventory.read' },
+  'sales/orders': { table: salesOrder, readPermission: 'sales.read', status: salesOrder.status },
+  'sales/invoices': { table: invoice, readPermission: 'sales.read', status: invoice.status },
+  'finance/accounts': { table: account, readPermission: 'finance.read' },
+  'finance/gl-entries': { table: glEntry, readPermission: 'finance.read' },
+  'purchasing/suppliers': { table: supplier, readPermission: 'purchasing.read' },
+  'purchasing/purchase-orders': { table: purchaseOrder, readPermission: 'purchasing.read', status: purchaseOrder.status },
+  'purchasing/goods-receipts': { table: goodsReceipt, readPermission: 'purchasing.read' },
+  'purchasing/supplier-invoices': { table: supplierInvoice, readPermission: 'purchasing.read', status: supplierInvoice.status },
+  'crm/opportunities': { table: opportunity, readPermission: 'crm.read', status: opportunity.stage },
 };
 
 export class UnknownResourceError extends Error {
@@ -90,7 +91,7 @@ export async function listResource(
 ) {
   const definition = definitionFor(resource);
   const unsupported = Object.keys(query).filter(
-    (key) => !['cursor', 'limit', 'sort', 'status', 'companyFn'].includes(key),
+    (key) => !['cursor', 'limit', 'sort', 'status'].includes(key),
   );
   if (unsupported.length) {
     throw new InvalidResourceQueryError(`unsupported filter(s): ${unsupported.join(', ')}`);
@@ -152,4 +153,8 @@ export async function getResource(db: DB, scope: ApiScope, resource: string, id:
 
 export function isKnownResource(resource: string): boolean {
   return Object.prototype.hasOwnProperty.call(RESOURCE_DEFINITIONS, resource);
+}
+
+export function readPermissionForResource(resource: string): string {
+  return definitionFor(resource).readPermission;
 }

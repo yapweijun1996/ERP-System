@@ -41,16 +41,19 @@ real data instead of Northwind mock — verified live: converting an opportunity
 visibly creates a sales order in the Sales module, decrements stock, and posts a
 balanced GL entry. Opportunity-detail and customer-360 sub-screens have no schema
 backing yet and stay mock, the same way Purchasing's RFQs/quotations do. What's
-still missing: the module screens do not yet map the production resource
-responses into their view models, and there are no write endpoints (confirm
-order / setup) on the server side yet.
+still missing: the module screens do not yet map every production resource
+response into their view models, and stock/money write endpoints (confirm
+order / setup) remain closed. The production-write security foundation is now
+real: database sessions, CSRF, login limiting, server-side RBAC, active-company
+session switching, idempotency records, append-only API audit events, request
+IDs and production-only RLS policies are implemented and tested.
 
 ## What actually works (verified in code)
 
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (25 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | `drizzle/0000_init.sql` + `0001_quiet_blizzard.sql` + `0002_messy_slyde.sql` + `0003_fuzzy_ronan.sql`, `src/data/schema/` |
+| Canonical schema (33 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | Ordered migrations through `drizzle/0004_stormy_guardian.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; browser mirror in adapter (`confirmOrder`) |
 | Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), end-to-end incl. screens | ✅ Working | `src/data/schema/purchasing.ts`, `src/modules/purchasing/` (`createPurchaseOrder`/`receiveGoods`/`postSupplierInvoice`), both rollback guards proven on PGlite + PostgreSQL, TASK-022. Demo-mode screens (suppliers/purchase-orders/goods-receipts/supplier-invoices lists, new-PO wizard, receive-goods/post-invoice row actions) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-023. RFQs/quotations/requisitions/returns/credit-debit-notes/price-lists/landed-cost/vendor-performance have no schema and stay mock. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Working | `src/data/schema/crm.ts`, `src/modules/crm/` (`createOpportunity`/`convertOpportunityToSalesOrder`), both rollback guards (double-convert; mid-transaction failure leaves the opportunity untouched) proven on PGlite + PostgreSQL, TASK-027. Demo-mode screens (pipeline board, new-opportunity wizard, kanban convert action) wired to real PGlite data — `erp-system-data-adapter.js`, TASK-028; live-verified the converted order appears in Sales, stock decrements, GL balances. Opportunity-detail and customer-360 have no schema and stay mock. |
@@ -61,12 +64,12 @@ order / setup) on the server side yet.
 | PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`, TASK-016 |
 | GitHub Pages deploy | ⏸️ Disabled (intentional) | `.github/workflows/deploy-pages.yml` builds cleanly (typecheck, PGlite demo proof, `build:demo` all pass) but the final "Configure Pages" step always 404'd — Pages was never enabled on this repo, and it can't be on the Free plan while the repo stays **private**. 2026-07-17: repo is intentionally kept private (this is a monetizable product; publishing the full source would let it be freely copied). Workflow disabled via `gh workflow disable` (reversible — file untouched, just toggled off in GitHub so it stops failing on every push). Plan: a **separate, new public repo** will host only `web/dist/`'s static demo (localStorage/IndexedDB, no server) for prospects to try; this repo stays private and becomes the Docker+PostgreSQL production track if/when a prospect converts. |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
-| Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
+| Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
 | Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **21 Canonical / 93 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
 | Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
-| Unit tests: `confirmOrder`/purchasing/CRM chains (success/rollback/posting-error/GL-balance/atomicity), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 40 tests, `vitest.config.ts` (`testTimeout: 20000` — fixes a real resource-contention flake found under TASK-027), wired into CI, TASK-025 + TASK-024 + TASK-022 + TASK-027 |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 57 tests. Includes persistent Session restart, CSRF, company access, RBAC, login limiting, idempotency replay, audit correlation and PGlite migration compatibility. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -77,7 +80,7 @@ order / setup) on the server side yet.
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
 | PostgreSQL concurrency/parity proof | ✅ Working | `POSTGRES_URL=... npm run demo` — proven twice against real Postgres (host + inside verification), TASK-013 |
 | `VITE_DATA_MODE=api` renders the real dashboard (not the waiting screen) | ✅ Working | `erp-system-api-adapter.js` calls `GET /api/dashboard` on ready and maps it onto `DB.*`; company switcher also works (re-fetches with a different scope). Other modules (inventory/sales/finance) have no api-mode data source yet. TASK-026 |
-| Real auth: PBKDF2 password hashes, server-side sessions, session-derived tenant scope | ✅ Working | `src/auth/password.ts`, `src/auth/session.ts`, `src/server.ts` (`/api/auth/login`\|`logout`\|`session`, `/api/setup/status`); both adapters implement `needsSetup`/`isSignedIn`/`login`/`logout`/`switchUser`; verified end-to-end against Docker (login, company switch, logout, 375px), TASK-024 |
+| Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited `POST /api/auth/session/actions/switch-company`; persistent idempotency/audit tables; transaction-local tenant settings and `deploy/sql/production-rls.sql`. Verified on PGlite and an isolated PostgreSQL 16 non-superuser role. |
 | Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v13) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale "signed in" state after logout; found and fixed during TASK-024 verification |
 
 ## Canonical and Preview route boundary
@@ -121,15 +124,11 @@ regression-checked as Canonical.
 
 ## Known design debt
 
-1. **Manual schema sync.** The frontend does not import `src/`. Schema/seed/txn logic
-   is hand-copied to `web/public/db/*.sql` and the adapter re-implements
-   `confirmOrder.ts` in raw SQL. Any schema change must be made in BOTH places —
-   `npm run check:drift` (TASK-020, runs in CI on every PR) now catches schema
-   drift automatically, but it only compares `drizzle/0000_init.sql` against
-   `erp-system-schema.sql`; it does **not** check `src/data/seed.ts` against
-   `erp-system-seed.sql`, or `confirmOrder.ts` against the adapter's raw-SQL
-   mirror — those two still rely on manual discipline. This is still the #1
-   landmine, now partially — not fully — guarded.
+1. **Seed/domain SQL duplication remains.** Browser PGlite schema and compatibility
+   migrations are now generated from the ordered Drizzle journal, so schema DDL is
+   no longer hand-copied. `src/data/seed.ts` vs `erp-system-seed.sql`, and TypeScript
+   domain commands vs the demo adapter's raw business SQL mirrors, are still manually
+   duplicated. Stage B must move the browser to shared ESM domain commands.
 2. **PGlite loads from jsDelivr CDN** with a 20 s timeout → static fallback. Offline
    first-load depends on the SW cache. If real PGlite boot finishes *after* the
    watchdog already showed fallback, it now correctly overrides the fallback data
@@ -145,10 +144,9 @@ regression-checked as Canonical.
    `.github/workflows/ci.yml` (TASK-014), which runs on every PR; `deploy-pages.yml`
    itself is unchanged (deploy-only, still doesn't run `typecheck:web`, which is
    fine since `ci.yml` already gated it before merge).
-5. **Session store is in-memory, single-instance-only** (`src/auth/session.ts`) — a
-   real "minimal auth" scaffold (TASK-024), not production-hardened. No rate
-   limiting, no password reset, no multi-instance session sharing (would need
-   Redis/DB-backed sessions before running the `api` service at >1 replica).
+5. **Invitation/password-reset delivery is not wired.** Durable token and outbox
+   tables exist, but user-facing invitation/reset endpoints and an outbox delivery
+   worker are still pending. MFA is also not implemented.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 

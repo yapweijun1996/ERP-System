@@ -3,7 +3,10 @@
 // change so the dated lookup is demonstrable). Same code runs on both adapters.
 import { sql } from 'drizzle-orm';
 import type { DB } from './db';
-import { master, company, currency, appUser, role, userCompany, product, taxRule, customer, account, supplier, opportunity } from './schema';
+import {
+  master, company, currency, appUser, role, rolePermission, userCompany,
+  product, taxRule, customer, account, supplier, opportunity,
+} from './schema';
 
 /**
  * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
@@ -50,6 +53,20 @@ export async function seedDemo(db: DB): Promise<void> {
     { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
   ]);
+
+  await db.insert(rolePermission).values([
+    'dashboard.read',
+    'inventory.read',
+    'sales.read',
+    'finance.read',
+    'purchasing.read',
+    'crm.read',
+    'session.switch_company',
+  ].map((permissionKey) => ({
+    masterFn: 'M1',
+    roleId: viewerRole.id,
+    permissionKey,
+  })));
 
   await db.insert(product).values([
     { masterFn: 'M1', companyFn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit' },

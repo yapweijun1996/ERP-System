@@ -4,7 +4,7 @@
 // caller for real product lines at conversion time, since that's when a deal's exact
 // SKUs/qty are actually decided, not when it's first estimated. See docs/DATA_MODEL.md.
 import {
-  pgTable, text, bigint, numeric, date, timestamp, index, uniqueIndex,
+  pgTable, text, bigint, integer, numeric, date, timestamp, index, uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { tenant, timestamps } from './_shared';
 import { customer, salesOrder } from './sales';
@@ -19,6 +19,7 @@ export const opportunity = pgTable('opportunity', {
   value: numeric('value', { precision: 18, scale: 2 }).notNull(),
   currency: text('currency').notNull(),
   stage: text('stage').notNull().default('lead'),  // lead | qualified | proposal | negotiation | won | lost
+  version: integer('version').notNull().default(1),
   probability: numeric('probability', { precision: 5, scale: 2 }).notNull().default('0'),
   closeDate: date('close_date').notNull(),
   ownerUserId: bigint('owner_user_id', { mode: 'number' }).references(() => appUser.userId),
