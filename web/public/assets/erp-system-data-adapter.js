@@ -805,70 +805,29 @@
     return payload;
   }
 
-  /* Confirm a DRAFT sales order — the live counterpart of
-     src/modules/sales/confirmOrder.ts, in ONE PGlite transaction:
-     lock+deduct stock per line → movements → status confirmed →
-     invoice → balanced GL. Any failure (insufficient stock) rolls
-     the ENTIRE chain back. */
+  /* Confirm an existing DRAFT through the same TypeScript domain command used
+     by PostgreSQL. The adapter resolves legacy document/warehouse codes only;
+     stock, state, invoice and GL rules live in confirmOrder.ts. */
   async function confirmOrder(docNo){
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Confirm needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var o = (await tx.query(
-        "select id, doc_no, order_date::text as order_date, currency, customer_id, " +
-        "net_amount::float as net, tax_amount::float as tax, total_amount::float as total " +
-        "from sales_order where master_fn=$1 and company_fn=$2 and doc_no=$3 and status='draft'",
+        'select id from sales_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
         [SCOPE.masterFn, SCOPE.companyFn, docNo])).rows[0];
-      if (!o) throw new Error('Draft order ' + docNo + ' not found (already confirmed?)');
+      if (!o) throw new Error('Sales order ' + docNo + ' not found');
 
       var wh = (await tx.query(
         "select id from warehouse where master_fn=$1 and company_fn=$2 and code='WH-SALES'",
         [SCOPE.masterFn, SCOPE.companyFn])).rows[0];
       if (!wh) throw new Error('Warehouse WH-SALES not found');
 
-      var lines = (await tx.query(
-        "select l.product_id, l.qty::float as qty, p.sku from sales_order_line l " +
-        "join product p on p.id = l.product_id " +
-        "where l.master_fn=$1 and l.company_fn=$2 and l.order_id=$3 order by l.line_no",
-        [SCOPE.masterFn, SCOPE.companyFn, o.id])).rows;
-
-      for (var i = 0; i < lines.length; i++){
-        var ln = lines[i];
-        var lvl = (await tx.query(
-          "select id, qty::float as qty from stock_level " +
-          "where master_fn=$1 and company_fn=$2 and product_id=$3 and warehouse_id=$4 for update",
-          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id])).rows[0];
-        var avail = lvl ? lvl.qty : 0;
-        if (!lvl || avail < ln.qty){
-          var err = new Error('Insufficient stock for ' + ln.sku + ': have ' + avail + ', need ' + ln.qty + ' — order rolled back, nothing was committed.');
-          err.name = 'InsufficientStockError';
-          throw err; // → whole transaction rolls back
-        }
-        await tx.query("update stock_level set qty = qty - $1, updated_at = now() where id = $2", [ln.qty, lvl.id]);
-        await tx.query(
-          "insert into stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id) " +
-          "values ($1,$2,$3,$4,$5,'out','sales_order',$6)",
-          [SCOPE.masterFn, SCOPE.companyFn, ln.product_id, wh.id, ln.qty, o.id]);
-      }
-
-      await tx.query("update sales_order set status='confirmed', updated_at=now() where id=$1", [o.id]);
-
-      var invDoc = 'INV-' + o.doc_no;
-      await tx.query(
-        "insert into invoice (master_fn, company_fn, doc_no, order_id, customer_id, status, invoice_date, currency, net_amount, tax_amount, total_amount) " +
-        "values ($1,$2,$3,$4,$5,'unpaid',$6,$7,$8,$9,$10)",
-        [SCOPE.masterFn, SCOPE.companyFn, invDoc, o.id, o.customer_id, o.order_date, o.currency, o.net, o.tax, o.total]);
-
-      var acct = {};
-      (await tx.query(
-        "select code, id from account where master_fn=$1 and company_fn=$2 and code in ('1100','4000','2200')",
-        [SCOPE.masterFn, SCOPE.companyFn])).rows.forEach(function(a){ acct[a.code] = a.id; });
-      if (!acct['1100'] || !acct['4000'] || !acct['2200']) throw new Error('Chart of accounts not configured');
-      await tx.query(
-        "insert into gl_entry (master_fn, company_fn, journal_ref, account_id, debit, credit, memo) values " +
-        "($1,$2,$3,$4,$5,0,'AR'), ($1,$2,$3,$6,0,$7,'Revenue'), ($1,$2,$3,$8,0,$9,'Output tax')",
-        [SCOPE.masterFn, SCOPE.companyFn, invDoc, acct['1100'], o.total, acct['4000'], o.net, acct['2200'], o.tax]);
-
-      return { invDocNo: invDoc, net: o.net, tax: o.tax, total: o.total, lines: lines.length };
+      return state.runtime.commands.confirmDraftSalesOrderWithin(
+        state.runtime.createOrm(tx),
+        SCOPE,
+        {
+          salesOrderId: o.id,
+          warehouseId: wh.id,
+        });
     });
     await refresh();
     return result;
@@ -1082,18 +1041,14 @@
     return refresh();
   }
 
-  /* Persist first-run setup wizard choices (TASK-010). Demo-adapter contract:
+  /* Persist first-run setup wizard choices through the shared Drizzle command.
+     Demo-adapter contract:
      completeSetup({ masterName, companyName, country, adminName, adminEmail, language })
        -> { masterFn, companyFn, userId }
-     A production/API adapter (TASK-011/EPIC-007) must implement the same input
-     shape and return the same result shape, so screens-setup-wizard.js does not
-     need to know which backend is active. One transaction: rename the existing
-     master (masterFn is fixed — this demo models a single org), insert the new
-     company (SG -> SGD/GST 9%, MY -> MYR/SST 8%; both currencies are already
-     seeded so no currency insert is needed), a starter chart of accounts so
-     Finance is not empty, the effective-dated tax rule, the admin app_user
-     (idempotent on master_fn+email), a Superadmin role (created once), and the
-     user<->company link. Any failure rolls the whole setup back. */
+     Production setup intentionally remains a different zero-user command that
+     creates a new master; Demo setup adds a company to the seeded M1 master.
+     Password hashing stays in Web Crypto, while all database rules execute in
+     completeDemoSetupWithin. Any failure rolls the whole setup back. */
   async function completeSetup(input){
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Setup needs PGlite.');
     input = input || {};
@@ -1106,58 +1061,25 @@
     if (adminPassword.length < 8) throw new Error('Admin password must be at least 8 characters.');
     var adminPasswordHash = await hashPasswordBrowser(adminPassword);
     var country = input.country === 'MY' ? 'MY' : 'SG';
-    var currency = country === 'MY' ? 'MYR' : 'SGD';
-    var taxRegime = country === 'MY' ? 'SST' : 'GST';
-    var taxCode = country === 'MY' ? 'SV' : 'SR';
-    var taxRate = country === 'MY' ? 8 : 9;
     var masterName = String(input.masterName || '').trim();
     var language = input.language || 'en';
     var slug = companyName.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/(^-+|-+$)/g, '').slice(0, 16) || 'CO';
     var companyFn = 'C-' + slug + '-' + Date.now().toString(36).toUpperCase();
 
     var result = await state.db.transaction(async function(tx){
-      if (masterName) {
-        await tx.query('update master set name=$1, updated_at=now() where master_fn=$2', [masterName, SCOPE.masterFn]);
-      }
-      await tx.query(
-        'insert into company (company_fn, master_fn, name, country, currency, tax_regime, locale) values ($1,$2,$3,$4,$5,$6,$7)',
-        [companyFn, SCOPE.masterFn, companyName, country, currency, taxRegime, language]);
-
-      var today = new Date().toISOString().slice(0, 10);
-      await tx.query(
-        'insert into tax_rule (master_fn, company_fn, tax_regime, tax_code, rate, valid_from) values ($1,$2,$3,$4,$5,$6)',
-        [SCOPE.masterFn, companyFn, taxRegime, taxCode, taxRate, today]);
-
-      var starterAccounts = [
-        ['1100', 'Accounts Receivable', 'asset'],
-        ['4000', 'Revenue', 'income'],
-        ['2200', taxRegime + ' Output Tax', 'liability'],
-      ];
-      for (var i = 0; i < starterAccounts.length; i++){
-        await tx.query(
-          'insert into account (master_fn, company_fn, code, name, type) values ($1,$2,$3,$4,$5)',
-          [SCOPE.masterFn, companyFn, starterAccounts[i][0], starterAccounts[i][1], starterAccounts[i][2]]);
-      }
-
-      var roleRow = (await tx.query(
-        "select role_id from role where master_fn=$1 and name='Superadmin'", [SCOPE.masterFn])).rows[0];
-      var roleId = roleRow ? roleRow.role_id : (await tx.query(
-        "insert into role (master_fn, name, is_superadmin) values ($1,'Superadmin',true) returning role_id",
-        [SCOPE.masterFn])).rows[0].role_id;
-
-      var userRow = (await tx.query(
-        'select user_id from app_user where master_fn=$1 and email=$2', [SCOPE.masterFn, adminEmail])).rows[0];
-      /* An existing user (re-running setup with the same email) keeps their
-         current password — never silently overwrite it here. */
-      var userId = userRow ? userRow.user_id : (await tx.query(
-        'insert into app_user (master_fn, email, full_name, password_hash, language) values ($1,$2,$3,$4,$5) returning user_id',
-        [SCOPE.masterFn, adminEmail, adminName, adminPasswordHash, language])).rows[0].user_id;
-
-      await tx.query(
-        'insert into user_company (user_id, company_fn, role_id) values ($1,$2,$3) on conflict (user_id, company_fn) do nothing',
-        [userId, companyFn, roleId]);
-
-      return { masterFn: SCOPE.masterFn, companyFn: companyFn, userId: userId };
+      return state.runtime.commands.completeDemoSetupWithin(
+        state.runtime.createOrm(tx),
+        {
+          masterFn: SCOPE.masterFn,
+          masterName: masterName,
+          companyFn: companyFn,
+          companyName: companyName,
+          country: country,
+          adminName: adminName,
+          adminEmail: adminEmail,
+          adminPasswordHash: adminPasswordHash,
+          language: language,
+        });
     });
     await refresh();
     return result;

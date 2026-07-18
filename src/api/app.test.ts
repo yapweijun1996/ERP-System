@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   apiIdempotency,
   auditLog,
+  customer,
+  glEntry,
+  invoice,
   product,
+  salesOrder,
+  salesOrderLine,
   stockLevel,
   warehouse,
 } from '../data/schema';
@@ -270,6 +275,104 @@ describe('production API security contract', () => {
       entity: 'crm/opportunities',
       entityId: '1',
       action: 'convert',
+    });
+  });
+
+  it('confirms an existing sales draft through the transactional action dispatcher', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [buyer] = await db.select({ id: customer.id }).from(customer)
+      .where(eq(customer.code, 'CUST1'));
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'SALES-ACTION',
+      name: 'Sales action warehouse',
+    }).returning({ id: warehouse.id });
+    await db.insert(stockLevel).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: location.id,
+      qty: '20',
+    });
+    const [draft] = await db.insert(salesOrder).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      docNo: 'SO-API-DRAFT',
+      customerId: buyer.id,
+      status: 'draft',
+      orderDate: '2026-07-18',
+      currency: 'SGD',
+      netAmount: '50.00',
+      taxAmount: '4.50',
+      totalAmount: '54.50',
+    }).returning({ id: salesOrder.id });
+    await db.insert(salesOrderLine).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      orderId: draft.id,
+      lineNo: 1,
+      productId: item.id,
+      qty: '5',
+      unitPrice: '10',
+      netAmount: '50',
+      taxCode: 'SR',
+      taxRate: '9',
+      taxAmount: '4.5',
+    });
+
+    const cookies = await login(running.baseUrl);
+    const action = (key?: string) => fetch(
+      `${running.baseUrl}/api/sales/orders/${draft.id}/actions/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: cookies.header,
+          'content-type': 'application/json',
+          'x-csrf-token': cookies.csrf,
+          'x-request-id': 'sales-confirm-test',
+          ...(key ? { 'idempotency-key': key } : {}),
+        },
+        body: JSON.stringify({ warehouseId: location.id }),
+      },
+    );
+
+    const missingKey = await action();
+    expect(missingKey.status).toBe(428);
+    const confirmed = await action('sales-confirm-1');
+    expect(confirmed.status).toBe(200);
+    const confirmedBody = await confirmed.json();
+    expect(confirmedBody.data).toMatchObject({
+      orderId: draft.id,
+      invDocNo: 'INV-SO-API-DRAFT',
+      total: 54.5,
+    });
+    const replay = await action('sales-confirm-1');
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await replay.json()).toEqual(confirmedBody);
+    const duplicate = await action('sales-confirm-2');
+    expect(duplicate.status).toBe(409);
+    expect((await duplicate.json()).error.code).toBe('invalid_state');
+
+    const [remaining] = await db.select({ qty: stockLevel.qty }).from(stockLevel)
+      .where(and(
+        eq(stockLevel.productId, item.id),
+        eq(stockLevel.warehouseId, location.id),
+      ));
+    expect(Number(remaining.qty)).toBe(15);
+    expect(await db.select().from(invoice).where(eq(invoice.orderId, draft.id))).toHaveLength(1);
+    const legs = await db.select().from(glEntry)
+      .where(eq(glEntry.journalRef, 'INV-SO-API-DRAFT'));
+    expect(legs.reduce((sum, leg) => sum + Number(leg.debit), 0)).toBe(54.5);
+    expect(legs.reduce((sum, leg) => sum + Number(leg.credit), 0)).toBe(54.5);
+    const [audit] = await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'sales-confirm-test'));
+    expect(audit).toMatchObject({
+      entity: 'sales/orders',
+      entityId: String(draft.id),
+      action: 'confirm',
     });
   });
 });

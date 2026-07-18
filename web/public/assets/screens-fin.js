@@ -444,10 +444,11 @@ SCREENS['sales-order'] = function(root, params){
   /* ---- Confirm draft: live cross-module transaction in PGlite ---- */
   const confirmBtn=root.querySelector('[data-act="confirm-order"]');
   confirmBtn&&confirmBtn.addEventListener('click',async()=>{
-    if(!(window.ErpSystemDemo&&window.ErpSystemDemo.confirmOrder)){ toast('Demo adapter not loaded','warn'); return; }
+    if(!(window.ErpSystemData&&window.ErpSystemData.action)){ toast('ERP data adapter not loaded','warn'); return; }
     confirmBtn.disabled=true; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent='Confirming…');
     try{
-      const res=await window.ErpSystemDemo.confirmOrder(d.no);
+      const response=await window.ErpSystemData.action('sales/orders',d.no,'confirm',{},'confirm-'+d.no);
+      const res=response.data;
       toast(d.no+' confirmed — stock issued, '+res.invDocNo+' posted to GL ('+money(res.total)+')','ok');
       navigate('sales-order',{no:d.no});   // re-render from refreshed data
     }catch(e){

@@ -23,9 +23,17 @@ export interface ConfirmOrderInput {
   currency: string;
   lines: OrderLineInput[];
 }
+export interface ConfirmDraftOrderInput {
+  salesOrderId: number;
+  warehouseId: number;
+}
 
 export class PostingError extends Error {
   constructor(message: string) { super(message); this.name = 'PostingError'; }
+}
+
+export class InvalidSalesOrderStateError extends Error {
+  constructor(message: string) { super(message); this.name = 'InvalidSalesOrderStateError'; }
 }
 
 const money = (n: number) => n.toFixed(2);
@@ -37,6 +45,94 @@ async function accountIdByCode(exec: DB, scope: Scope, code: string): Promise<nu
     .where(and(eq(account.masterFn, scope.masterFn), eq(account.companyFn, scope.companyFn), eq(account.code, code)));
   if (!a) throw new PostingError(`Account ${code} not configured`);
   return a.id;
+}
+
+interface OrderToPost {
+  id: number;
+  docNo: string;
+  customerId: number;
+  orderDate: string;
+  currency: string;
+  net: number;
+  tax: number;
+  total: number;
+  version: number;
+}
+
+interface IssueLine {
+  productId: number;
+  warehouseId: number;
+  qty: number;
+}
+
+async function postOrderWithin(
+  exec: DB,
+  scope: Scope,
+  order: OrderToPost,
+  lines: IssueLine[],
+  bumpVersion: boolean,
+) {
+  if (lines.length === 0) throw new PostingError(`Sales order ${order.docNo} has no lines`);
+  const movementIds: number[] = [];
+  // Lock stock rows in a deterministic order so concurrent orders containing
+  // the same products in different line order do not create a lock cycle.
+  const orderedLines = [...lines].sort((left, right) =>
+    left.warehouseId - right.warehouseId || left.productId - right.productId);
+  for (const line of orderedLines) {
+    const issue = await issueStockWithin(exec, scope, {
+      productId: line.productId,
+      warehouseId: line.warehouseId,
+      qty: line.qty,
+      refType: 'sales_order',
+      refId: order.id,
+    });
+    movementIds.push(issue.movementId);
+  }
+
+  await exec.update(salesOrder).set({
+    status: 'confirmed',
+    version: bumpVersion ? order.version + 1 : order.version,
+    updatedAt: sql`now()`,
+  }).where(and(
+    eq(salesOrder.masterFn, scope.masterFn),
+    eq(salesOrder.companyFn, scope.companyFn),
+    eq(salesOrder.id, order.id),
+  ));
+
+  const invDocNo = `INV-${order.docNo}`;
+  const [inv] = await exec.insert(invoice).values({
+    masterFn: scope.masterFn,
+    companyFn: scope.companyFn,
+    docNo: invDocNo,
+    orderId: order.id,
+    customerId: order.customerId,
+    status: 'unpaid',
+    invoiceDate: order.orderDate,
+    currency: order.currency,
+    netAmount: money(order.net),
+    taxAmount: money(order.tax),
+    totalAmount: money(order.total),
+  }).returning({ id: invoice.id });
+
+  const arId = await accountIdByCode(exec, scope, '1100');
+  const revId = await accountIdByCode(exec, scope, '4000');
+  const taxId = await accountIdByCode(exec, scope, '2200');
+  await exec.insert(glEntry).values([
+    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: arId, debit: money(order.total), credit: '0', memo: 'AR' },
+    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: revId, debit: '0', credit: money(order.net), memo: 'Revenue' },
+    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: taxId, debit: '0', credit: money(order.tax), memo: 'Output tax' },
+  ]);
+
+  return {
+    orderId: order.id,
+    invoiceId: inv.id,
+    invDocNo,
+    net: order.net,
+    tax: order.tax,
+    total: order.total,
+    lines: lines.length,
+    movementIds,
+  };
 }
 
 /**
@@ -53,14 +149,16 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
   const [order] = await exec.insert(salesOrder).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
     docNo: input.docNo, customerId: input.customerId,
-    status: 'confirmed', orderDate: input.orderDate, currency: input.currency,
-  }).returning({ id: salesOrder.id });
+    status: 'draft', orderDate: input.orderDate, currency: input.currency,
+  }).returning({ id: salesOrder.id, version: salesOrder.version });
 
   let netTotal = 0;
   let taxTotal = 0;
-  const movementIds: number[] = [];
+  const issueLines: IssueLine[] = [];
 
-  // 2. Lines: snapshot tax, deduct stock (may throw → full rollback), accumulate totals.
+  // 2. Lines: snapshot tax and accumulate totals. Stock is issued only after
+  // every line has been persisted so this follows the same finalization path
+  // as confirming an already-existing draft.
   let lineNo = 0;
   for (const ln of input.lines) {
     lineNo += 1;
@@ -77,11 +175,11 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
       netAmount: money(net), taxCode: ln.taxCode, taxRate: String(rate), taxAmount: money(tax),
     });
 
-    const issue = await issueStockWithin(exec, scope, {
-      productId: ln.productId, warehouseId: ln.warehouseId, qty: ln.qty,
-      refType: 'sales_order', refId: order.id,
+    issueLines.push({
+      productId: ln.productId,
+      warehouseId: ln.warehouseId,
+      qty: ln.qty,
     });
-    movementIds.push(issue.movementId);
 
     netTotal += net;
     taxTotal += tax;
@@ -94,30 +192,79 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
     updatedAt: sql`now()`,
   }).where(eq(salesOrder.id, order.id));
 
-  // 4. Invoice.
-  const invDocNo = `INV-${input.docNo}`;
-  const [inv] = await exec.insert(invoice).values({
-    masterFn: scope.masterFn, companyFn: scope.companyFn,
-    docNo: invDocNo, orderId: order.id, customerId: input.customerId,
-    status: 'unpaid', invoiceDate: input.orderDate, currency: input.currency,
-    netAmount: money(netTotal), taxAmount: money(taxTotal), totalAmount: money(grandTotal),
-  }).returning({ id: invoice.id });
+  return postOrderWithin(exec, scope, {
+    id: order.id,
+    docNo: input.docNo,
+    customerId: input.customerId,
+    orderDate: input.orderDate,
+    currency: input.currency,
+    net: netTotal,
+    tax: taxTotal,
+    total: grandTotal,
+    version: order.version,
+  }, issueLines, false);
+}
 
-  // 5. Post balanced double-entry ledger: Dr AR, Cr Revenue, Cr GST Output.
-  const arId = await accountIdByCode(exec, scope, '1100');       // Accounts Receivable
-  const revId = await accountIdByCode(exec, scope, '4000');      // Revenue
-  const taxId = await accountIdByCode(exec, scope, '2200');      // GST/SST Output
-  await exec.insert(glEntry).values([
-    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: arId, debit: money(grandTotal), credit: '0', memo: 'AR' },
-    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: revId, debit: '0', credit: money(netTotal), memo: 'Revenue' },
-    { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: taxId, debit: '0', credit: money(taxTotal), memo: 'Output tax' },
-  ]);
+/**
+ * Confirm an existing draft order. The row lock serializes competing confirm
+ * requests; the second request observes `confirmed` after the first commits and
+ * cannot issue stock, create another invoice, or duplicate GL postings.
+ */
+export async function confirmDraftSalesOrderWithin(
+  exec: DB,
+  scope: Scope,
+  input: ConfirmDraftOrderInput,
+) {
+  const [order] = await exec.select({
+    id: salesOrder.id,
+    docNo: salesOrder.docNo,
+    customerId: salesOrder.customerId,
+    status: salesOrder.status,
+    version: salesOrder.version,
+    orderDate: salesOrder.orderDate,
+    currency: salesOrder.currency,
+    netAmount: salesOrder.netAmount,
+    taxAmount: salesOrder.taxAmount,
+    totalAmount: salesOrder.totalAmount,
+  }).from(salesOrder).where(and(
+    eq(salesOrder.masterFn, scope.masterFn),
+    eq(salesOrder.companyFn, scope.companyFn),
+    eq(salesOrder.id, input.salesOrderId),
+  )).for('update');
 
-  return {
-    orderId: order.id, invoiceId: inv.id, invDocNo,
-    net: netTotal, tax: taxTotal, total: grandTotal,
-    lines: input.lines.length, movementIds,
-  };
+  if (!order) {
+    throw new InvalidSalesOrderStateError(`Sales order ${input.salesOrderId} not found`);
+  }
+  if (order.status !== 'draft') {
+    throw new InvalidSalesOrderStateError(
+      `Sales order ${order.docNo} is '${order.status}', not 'draft'`,
+    );
+  }
+
+  const lines = await exec.select({
+    productId: salesOrderLine.productId,
+    qty: salesOrderLine.qty,
+  }).from(salesOrderLine).where(and(
+    eq(salesOrderLine.masterFn, scope.masterFn),
+    eq(salesOrderLine.companyFn, scope.companyFn),
+    eq(salesOrderLine.orderId, order.id),
+  ));
+
+  return postOrderWithin(exec, scope, {
+    id: order.id,
+    docNo: order.docNo,
+    customerId: order.customerId,
+    orderDate: order.orderDate,
+    currency: order.currency,
+    net: Number(order.netAmount),
+    tax: Number(order.taxAmount),
+    total: Number(order.totalAmount),
+    version: order.version,
+  }, lines.map((line) => ({
+    productId: line.productId,
+    warehouseId: input.warehouseId,
+    qty: Number(line.qty),
+  })), true);
 }
 
 /**
@@ -127,4 +274,8 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
  */
 export async function confirmSalesOrder(db: DB, scope: Scope, input: ConfirmOrderInput) {
   return db.transaction((tx) => confirmSalesOrderWithin(tx, scope, input));
+}
+
+export async function confirmDraftSalesOrder(db: DB, scope: Scope, input: ConfirmDraftOrderInput) {
+  return db.transaction((tx) => confirmDraftSalesOrderWithin(tx, scope, input));
 }

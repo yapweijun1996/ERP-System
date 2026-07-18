@@ -3,8 +3,33 @@ import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
 } from '../modules/crm/convertOpportunityToSalesOrder';
+import {
+  confirmDraftSalesOrderWithin,
+} from '../modules/sales/confirmOrder';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'sales/orders/confirm': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as { warehouseId?: unknown };
+      if (
+        !Number.isSafeInteger(payload.warehouseId)
+        || Number(payload.warehouseId) <= 0
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'warehouseId must be a positive integer.',
+        );
+      }
+      return confirmDraftSalesOrderWithin(tx, scope, {
+        salesOrderId: input.resourceId,
+        warehouseId: Number(payload.warehouseId),
+      });
+    },
+  },
   'crm/opportunities/convert': {
     permission: 'crm.write',
     idempotency: 'required',

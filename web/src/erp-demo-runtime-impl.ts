@@ -27,9 +27,15 @@ import {
   type ReceiveGoodsInput,
 } from '../../src/modules/purchasing/receiveGoods';
 import {
+  confirmDraftSalesOrderWithin,
   confirmSalesOrder,
+  type ConfirmDraftOrderInput,
   type ConfirmOrderInput,
 } from '../../src/modules/sales/confirmOrder';
+import {
+  completeDemoSetupWithin,
+  type CompleteDemoSetupInput,
+} from '../../src/modules/setup/completeDemoSetup';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -50,6 +56,12 @@ export const erpDemoRuntime = Object.freeze({
   commands: Object.freeze({
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);
+    },
+    confirmDraftSalesOrderWithin(db: DemoOrm, scope: Scope, input: ConfirmDraftOrderInput) {
+      return confirmDraftSalesOrderWithin(asDomainDb(db), scope, input);
+    },
+    completeDemoSetupWithin(db: DemoOrm, input: CompleteDemoSetupInput) {
+      return completeDemoSetupWithin(asDomainDb(db), input);
     },
     createPurchaseOrder(db: DemoOrm, scope: Scope, input: CreatePurchaseOrderInput) {
       return createPurchaseOrder(asDomainDb(db), scope, input);

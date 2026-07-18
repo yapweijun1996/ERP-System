@@ -11,13 +11,16 @@ import { createPgliteDb, createPostgresDb, type DB } from './data/db';
 import { seedDemo } from './data/seed';
 import { listCompanies, listProducts, addProduct, getEffectiveTaxRate, type Scope } from './data/repo';
 import {
-  product, warehouse, stockLevel, customer, salesOrder, invoice, glEntry,
+  product, warehouse, stockLevel, customer, salesOrder, salesOrderLine, invoice, glEntry,
   supplier, supplierInvoice, opportunity,
 } from './data/schema';
 import {
   issueStock, getStockQty, countMovements, setStockQty, InsufficientStockError,
 } from './modules/inventory/stock';
-import { confirmSalesOrder } from './modules/sales/confirmOrder';
+import {
+  confirmDraftSalesOrder,
+  confirmSalesOrder,
+} from './modules/sales/confirmOrder';
 import { createPurchaseOrder } from './modules/purchasing/createPurchaseOrder';
 import { receiveGoods } from './modules/purchasing/receiveGoods';
 import { postSupplierInvoice } from './modules/purchasing/postSupplierInvoice';
@@ -165,16 +168,65 @@ async function runSalesScenario(db: DB) {
   } catch (e) {
     rollbackErr = (e as Error).name;
   }
+  const ordersAfterRollback = await countOrders(db);
+  const invoicesAfterRollback = await countInvoices(db);
+  const widgetAfterRollback = await getStockQty(db, SCOPE, widgetId, wh.id);
+  const gadgetMovements = await countMovements(db, SCOPE, gadgetId, wh.id);
+
+  // Existing-Draft concurrency proof: the row lock permits exactly one
+  // confirmation, so stock, invoice and GL are not duplicated.
+  const [draft] = await db.insert(salesOrder).values({
+    masterFn: SCOPE.masterFn,
+    companyFn: SCOPE.companyFn,
+    docNo: 'SO-DRAFT-RACE',
+    customerId: cust.id,
+    status: 'draft',
+    orderDate: '2024-06-01',
+    currency: 'SGD',
+    netAmount: '10.00',
+    taxAmount: '0.90',
+    totalAmount: '10.90',
+  }).returning({ id: salesOrder.id });
+  await db.insert(salesOrderLine).values({
+    masterFn: SCOPE.masterFn,
+    companyFn: SCOPE.companyFn,
+    orderId: draft.id,
+    lineNo: 1,
+    productId: widgetId,
+    qty: '1',
+    unitPrice: '10',
+    netAmount: '10',
+    taxCode: 'SR',
+    taxRate: '9',
+    taxAmount: '0.9',
+  });
+  const draftRace = await Promise.allSettled([
+    confirmDraftSalesOrder(db, SCOPE, {
+      salesOrderId: draft.id,
+      warehouseId: wh.id,
+    }),
+    confirmDraftSalesOrder(db, SCOPE, {
+      salesOrderId: draft.id,
+      warehouseId: wh.id,
+    }),
+  ]);
+  const [draftInvoiceCount] = await db.select({ n: sql<number>`count(*)::int` })
+    .from(invoice)
+    .where(eq(invoice.orderId, draft.id));
 
   return {
     order: { net: res.net, tax: res.tax, total: res.total, lines: res.lines, movements: res.movementIds.length },
     glDebit: gl.debit, glCredit: gl.credit, glBalanced: gl.debit === gl.credit,
     widgetAfter, gadgetAfter, ordersAfterValid,
     rollbackErr,                                                    // 'InsufficientStockError'
-    ordersAfterRollback: await countOrders(db),                    // still 1
-    invoicesAfterRollback: await countInvoices(db),                // still 1
-    widgetAfterRollback: await getStockQty(db, SCOPE, widgetId, wh.id), // still 95 (line-1 undone)
-    gadgetMovements: await countMovements(db, SCOPE, gadgetId, wh.id),  // 1 (only the valid order)
+    ordersAfterRollback,                                            // still 1
+    invoicesAfterRollback,                                         // still 1
+    widgetAfterRollback,                                           // still 95 (line-1 undone)
+    gadgetMovements,                                                // 1 (only the valid order)
+    draftRaceFulfilled: draftRace.filter((result) => result.status === 'fulfilled').length,
+    draftRaceRejected: draftRace.filter((result) => result.status === 'rejected').length,
+    draftInvoiceCount: draftInvoiceCount.n,
+    widgetAfterDraftRace: await getStockQty(db, SCOPE, widgetId, wh.id), // 94, one deduction
   };
 }
 
@@ -406,6 +458,9 @@ ok = check('PGlite sales chain: ledger balanced (Dr 119.9 = Cr 119.9), stock 95/
 ok = check('PGlite sales rollback: whole order undone — incl. valid line 1 (widget stays 95, orders=1, invoices=1)',
   p.sales.rollbackErr === 'InsufficientStockError' && p.sales.ordersAfterRollback === 1
   && p.sales.invoicesAfterRollback === 1 && p.sales.widgetAfterRollback === 95 && p.sales.gadgetMovements === 1) && ok;
+ok = check('PGlite existing Draft race: exactly one confirmation creates one invoice and one stock deduction',
+  p.sales.draftRaceFulfilled === 1 && p.sales.draftRaceRejected === 1
+  && p.sales.draftInvoiceCount === 1 && p.sales.widgetAfterDraftRace === 94) && ok;
 ok = check('PGlite purchasing chain: PO net=120 tax=10.8 total=130.8, receipt creates stock from 0 → 20',
   p.purchasing.po.net === 120 && p.purchasing.po.tax === 10.8 && p.purchasing.po.total === 130.8
   && p.purchasing.stockBeforeReceipt === 0 && p.purchasing.stockAfterReceipt === 20 && p.purchasing.movementsAfterReceipt === 1) && ok;

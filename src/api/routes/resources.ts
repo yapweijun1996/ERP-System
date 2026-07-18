@@ -16,7 +16,10 @@ import { actionDefinitionFor } from '../actions';
 import { ActionDispatchError, dispatchAction } from '../actionDispatcher';
 import { InsufficientStockError } from '../../modules/inventory/stock';
 import { InvalidOpportunityStateError } from '../../modules/crm/errors';
-import { PostingError } from '../../modules/sales/confirmOrder';
+import {
+  InvalidSalesOrderStateError,
+  PostingError,
+} from '../../modules/sales/confirmOrder';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -141,6 +144,10 @@ export function createResourceRouter(db: DB): Router {
         return;
       }
       if (error instanceof InvalidOpportunityStateError) {
+        apiError(res, 409, 'invalid_state', error.message);
+        return;
+      }
+      if (error instanceof InvalidSalesOrderStateError) {
         apiError(res, 409, 'invalid_state', error.message);
         return;
       }

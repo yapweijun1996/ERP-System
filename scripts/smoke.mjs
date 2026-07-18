@@ -199,6 +199,74 @@ async function checkViewport(browser, viewport) {
         'select coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn=$1 and company_fn=$2 and journal_ref=$3',
         ['M1', 'C-SG', supplierPosting.data.docNo],
       )).rows[0];
+      const draftStockBefore = (await adapter.db.query(
+        "select p.sku, s.qty::float as qty from stock_level s join product p on p.id=s.product_id join warehouse w on w.id=s.warehouse_id where p.master_fn='M1' and p.company_fn='C-SG' and w.code='WH-SALES' and p.sku in ('SG-WIDGET','SG-GADGET') order by p.sku",
+      )).rows;
+      const salesPosting = await adapter.action(
+        'sales/orders',
+        'SO-2',
+        'confirm',
+        {},
+        'smoke-confirm-SO-2',
+      );
+      let duplicateSalesConfirmBlocked = false;
+      try {
+        await adapter.action(
+          'sales/orders',
+          'SO-2',
+          'confirm',
+          {},
+          'smoke-confirm-SO-2-duplicate',
+        );
+      } catch (error) {
+        duplicateSalesConfirmBlocked = /not 'draft'/i.test(error?.message || '');
+      }
+      const draftStockAfter = (await adapter.db.query(
+        "select p.sku, s.qty::float as qty from stock_level s join product p on p.id=s.product_id join warehouse w on w.id=s.warehouse_id where p.master_fn='M1' and p.company_fn='C-SG' and w.code='WH-SALES' and p.sku in ('SG-WIDGET','SG-GADGET') order by p.sku",
+      )).rows;
+      const salesGl = (await adapter.db.query(
+        'select coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn=$1 and company_fn=$2 and journal_ref=$3',
+        ['M1', 'C-SG', salesPosting.data.invDocNo],
+      )).rows[0];
+      let insufficientDraftBlocked = false;
+      try {
+        await adapter.action(
+          'sales/orders',
+          'SO-3',
+          'confirm',
+          {},
+          'smoke-confirm-SO-3',
+        );
+      } catch (error) {
+        insufficientDraftBlocked = error?.name === 'InsufficientStockError'
+          || /insufficient stock/i.test(error?.message || '');
+      }
+      const overstockDraft = (await adapter.db.query(
+        "select status, version from sales_order where master_fn='M1' and company_fn='C-SG' and doc_no='SO-3'",
+      )).rows[0];
+      const setup = await adapter.completeSetup({
+        companyName: 'Smoke Setup Malaysia',
+        country: 'MY',
+        adminName: 'Smoke Administrator',
+        adminEmail: 'smoke.setup@example.test',
+        adminPassword: 'smoke-pass-123',
+        language: 'vi',
+      });
+      const setupCompany = (await adapter.db.query(
+        'select country, currency, tax_regime, locale from company where master_fn=$1 and company_fn=$2',
+        ['M1', setup.companyFn],
+      )).rows[0];
+      const setupAccountCount = Number((await adapter.db.query(
+        'select count(*)::int as n from account where master_fn=$1 and company_fn=$2',
+        ['M1', setup.companyFn],
+      )).rows[0].n);
+      const setupAdmin = (await adapter.db.query(
+        'select password_hash, language from app_user where master_fn=$1 and email=$2',
+        ['M1', 'smoke.setup@example.test'],
+      )).rows[0];
+      const stockBySku = (rows) => Object.fromEntries(rows.map((row) => [row.sku, Number(row.qty)]));
+      const draftBeforeBySku = stockBySku(draftStockBefore);
+      const draftAfterBySku = stockBySku(draftStockAfter);
       return {
         error: null,
         stockDelta: after - before,
@@ -207,6 +275,20 @@ async function checkViewport(browser, viewport) {
         purchaseStockDelta: purchaseAfter - purchaseBefore,
         purchaseBalanced: Number(purchaseGl.debit) === Number(purchaseGl.credit) && Number(purchaseGl.debit) > 0,
         duplicateInvoiceBlocked,
+        salesDraftWidgetDelta: draftAfterBySku['SG-WIDGET'] - draftBeforeBySku['SG-WIDGET'],
+        salesDraftGadgetDelta: draftAfterBySku['SG-GADGET'] - draftBeforeBySku['SG-GADGET'],
+        salesDraftBalanced: Number(salesGl.debit) === Number(salesGl.credit) && Number(salesGl.debit) > 0,
+        duplicateSalesConfirmBlocked,
+        insufficientDraftBlocked,
+        overstockDraftUntouched: overstockDraft?.status === 'draft' && Number(overstockDraft?.version) === 1,
+        setupCanonical: setupCompany?.country === 'MY'
+          && setupCompany?.currency === 'MYR'
+          && setupCompany?.tax_regime === 'SST'
+          && setupCompany?.locale === 'vi'
+          && setupAccountCount === 8
+          && setupAdmin?.language === 'vi'
+          && /^pbkdf2\$/.test(setupAdmin?.password_hash || '')
+          && setupAdmin?.password_hash !== 'smoke-pass-123',
       };
     }).catch((error) => ({ error: error.message || String(error) }));
     if (runtimeProof.error) {
@@ -218,6 +300,17 @@ async function checkViewport(browser, viewport) {
       if (runtimeProof.purchaseStockDelta !== 2) errors.push(`[demo-esm] expected purchase stock delta +2, got ${runtimeProof.purchaseStockDelta}`);
       if (!runtimeProof.purchaseBalanced) errors.push('[demo-esm] supplier invoice did not produce balanced GL entries');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
+      if (runtimeProof.salesDraftWidgetDelta !== -5 || runtimeProof.salesDraftGadgetDelta !== -3) {
+        errors.push(`[demo-esm] expected draft sales stock deltas -5/-3, got ${runtimeProof.salesDraftWidgetDelta}/${runtimeProof.salesDraftGadgetDelta}`);
+      }
+      if (!runtimeProof.salesDraftBalanced) errors.push('[demo-esm] draft sales confirmation did not produce balanced GL entries');
+      if (!runtimeProof.duplicateSalesConfirmBlocked) errors.push('[demo-esm] duplicate draft sales confirmation was not blocked');
+      if (!runtimeProof.insufficientDraftBlocked || !runtimeProof.overstockDraftUntouched) {
+        errors.push('[demo-esm] insufficient draft confirmation did not roll back to untouched draft state');
+      }
+      if (!runtimeProof.setupCanonical) {
+        errors.push('[demo-esm] setup did not create canonical MY company, accounts and hashed admin through the shared command');
+      }
     }
 
     const offlineAssets = await page.evaluate(async () => {

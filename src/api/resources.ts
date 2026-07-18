@@ -57,6 +57,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'sales/orders': resource(salesOrder, 'sales.read', {
     status: salesOrder.status,
     versionColumn: salesOrder.version,
+    allowedActions: ['confirm'],
   }),
   'sales/invoices': resource(invoice, 'sales.read', {
     status: invoice.status,

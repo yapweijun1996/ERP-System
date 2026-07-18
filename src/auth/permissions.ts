@@ -7,6 +7,7 @@ export const PERMISSIONS = {
   dashboardRead: 'dashboard.read',
   inventoryRead: 'inventory.read',
   salesRead: 'sales.read',
+  salesWrite: 'sales.write',
   financeRead: 'finance.read',
   purchasingRead: 'purchasing.read',
   crmRead: 'crm.read',
