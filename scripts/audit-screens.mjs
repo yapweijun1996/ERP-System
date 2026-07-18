@@ -14,12 +14,12 @@
 //   - the rendered text never contains a leftover identity marker from the
 //     original Aria/Northwind prototype template (data-core.js's pre-adapter
 //     defaults: "Northwind Manufacturing" / "Dana Reyes" / "dana.reyes@northwind.co")
-//     on a route belonging to a module docs/STATUS.md documents as canonical.
-//     Module ownership is read live from app.js's own ROUTE_MODULE map (not
-//     hand-duplicated here), so this stays correct as routes move between
-//     modules. MOCK_MODULE_IDS below is the one list that needs updating —
-//     when a module in it gains real schema/adapter wiring, drop its id here
-//     in the same change that updates docs/STATUS.md.
+//     on a route whose live SCREEN_META entry marks it canonical.
+//   - every route has route-level SCREEN_META, Preview routes render the
+//     visible Sample Data banner, active module tabs stay visible on mobile,
+//     and standard action bars do not overflow.
+//   - stateful transaction detail routes are opened through real fixtures
+//     instead of silently redirecting because no record was selected.
 //
 // Usage: npm run build:demo && node scripts/audit-screens.mjs
 import { chromium } from 'playwright';
@@ -36,20 +36,10 @@ const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
-
-/* Module ids (app.js's ROUTE_MODULE values) docs/STATUS.md's "What renders but
-   is mock-only" list documents as having no schema yet: Purchasing, CRM,
-   Manufacturing, Quality, Warehouse (advanced), HR/Payroll, Projects, Service,
-   Fixed Assets, Reporting/BI, Integration, Admin. */
-const MOCK_MODULE_IDS = new Set([
-  'purchasing', 'crm', 'manufacturing', 'quality', 'warehouse',
-  'hr', 'project', 'service', 'asset', 'bi', 'integration', 'admin',
-  // 'workflow' is app.js's sidebar "Approvals" entry — app.js's own
-  // ROUTE_MODULE build order (DB.nav processed before SUBROUTES) assigns it
-  // to po-approval specifically, which is the same mock purchasing content
-  // as 'purchasing', just reached through a second sidebar entry point.
-  'workflow',
-]);
+const VIEWPORTS = [
+  { label: 'desktop', width: 1280, height: 800 },
+  { label: 'mobile', width: 375, height: 812 },
+];
 
 if (!existsSync(DIST_INDEX)) {
   console.error(`web/dist/index.html not found. Run "npm run build:demo" before this script.`);
@@ -102,12 +92,12 @@ function findIdentityLeak(text) {
   return IDENTITY_MARKERS.filter((marker) => lower.includes(marker));
 }
 
-async function auditRoutes(browser) {
+async function auditRoutes(browser, viewport) {
   // Accumulates errors for whichever route is currently being tested; the
   // loop below clears it after consuming each route's window, so listeners
   // don't need to be attached/detached per iteration.
   const events = []; // {kind, message}
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height } });
   const page = await context.newPage();
 
   page.on('console', (msg) => {
@@ -129,38 +119,84 @@ async function auditRoutes(browser) {
 
   const routes = await page.evaluate(() => Object.keys(SCREENS).sort());
   const routeModule = await page.evaluate(() => Object.assign({}, ROUTE_MODULE));
-  console.log(`Found ${routes.length} routes registered in SCREENS.\n`);
+  const screenMeta = await page.evaluate(() => JSON.parse(JSON.stringify(window.SCREEN_META || {})));
+  console.log(`[${viewport.label}] Found ${routes.length} routes registered in SCREENS.`);
 
   const results = [];
 
   for (const route of routes) {
-    const throwMessage = await page.evaluate((r) => {
+    const meta = screenMeta[route] || null;
+    const throwMessage = await page.evaluate(({ r, fixture }) => {
       try {
-        navigate(r);
+        if (fixture === 'sales-enquiry') {
+          if (!DB.enquiries || !DB.enquiries[0]) throw new Error('sales-enquiry fixture has no record');
+          openTxn('enquiry', DB.enquiries[0]);
+        } else if (fixture === 'purchasing-rfq') {
+          if (!DB.rfqs || !DB.rfqs[0]) throw new Error('purchasing-rfq fixture has no record');
+          openPurTxn('rfq', DB.rfqs[0]);
+        } else {
+          navigate(r);
+        }
         return null;
       } catch (e) {
         return e && e.message ? e.message : String(e);
       }
-    }, route);
+    }, { r: route, fixture: meta && meta.fixture });
 
     await page.waitForTimeout(SETTLE_MS);
 
-    const text = await page.evaluate(() => {
+    const rendered = await page.evaluate(() => {
       const el = document.getElementById('viewRoot');
-      return el ? el.innerText : '';
-    }).catch(() => '');
+      if (!el) return { text: '', previewBanner: false, enabledPreviewWrites: [], layoutIssues: ['viewRoot missing'], moduleShell: false };
+      const nav = el.querySelector('.sales-subnav');
+      const active = nav && nav.querySelector('[aria-selected="true"]');
+      const navRect = nav && nav.getBoundingClientRect();
+      const activeRect = active && active.getBoundingClientRect();
+      const enabledPreviewWrites = [...el.querySelectorAll('button')].filter((button) => {
+        if (button.disabled) return false;
+        if (button.closest('.crumb,.sales-subnav,.tabs,.filterchips,.seg,.viewsel')) return false;
+        return /\b(new|create|save|post|approve|reject|delete|edit|receive|convert|issue|release|adjust|transfer|reconcile|import|upload|invite|add|run payroll|start|complete|dispose|record payment)\b/i
+          .test((button.textContent || '').replace(/\s+/g, ' ').trim());
+      }).map((button) => (button.textContent || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+      const layoutIssues = [];
+      if (document.documentElement.scrollWidth > window.innerWidth + 1) {
+        layoutIssues.push(`page overflow ${document.documentElement.scrollWidth}>${window.innerWidth}`);
+      }
+      if (nav && active && (activeRect.left < navRect.left - 1 || activeRect.right > navRect.right + 1)) {
+        layoutIssues.push('active subnav is outside the visible strip');
+      }
+      [...el.querySelectorAll('.set-savebar,.responsive-actionbar,.bulkbar')].forEach((bar) => {
+        if (bar.offsetParent !== null && bar.scrollWidth > bar.clientWidth + 1) {
+          layoutIssues.push(`${bar.className} overflow ${bar.scrollWidth}>${bar.clientWidth}`);
+        }
+      });
+      return {
+        text: el.innerText || '',
+        previewBanner: Boolean(el.querySelector('[data-preview-banner]')),
+        enabledPreviewWrites,
+        layoutIssues,
+        moduleShell: Boolean(el.querySelector('.sales-subnav')),
+      };
+    }).catch(() => ({ text: '', previewBanner: false, enabledPreviewWrites: [], layoutIssues: ['render inspection failed'], moduleShell: false }));
 
     const moduleId = routeModule[route] || null;
-    const exempt = moduleId != null && MOCK_MODULE_IDS.has(moduleId);
-    const leaks = exempt ? [] : findIdentityLeak(text || '');
+    const canonical = meta && meta.maturity === 'canonical';
+    const leaks = canonical ? findIdentityLeak(rendered.text || '') : [];
 
     results.push({
       route,
+      viewport: viewport.label,
       moduleId,
+      meta,
       threwSync: throwMessage,
       consoleErrors: events.filter((e) => e.kind === 'console.error').map((e) => e.message),
       pageErrors: events.filter((e) => e.kind === 'pageerror').map((e) => e.message),
       identityLeaks: leaks,
+      missingMeta: !meta,
+      missingPreviewBanner: Boolean(meta && meta.maturity === 'preview' && !rendered.previewBanner),
+      enabledPreviewWrites: meta && meta.maturity === 'preview' ? rendered.enabledPreviewWrites : [],
+      layoutIssues: rendered.layoutIssues,
+      missingModuleShell: !['dashboard','settings'].includes(route) && !rendered.moduleShell,
     });
 
     events.length = 0; // fully consumed this route's window; reset for the next
@@ -178,30 +214,68 @@ try {
 
   const browser = await chromium.launch();
   try {
-    const results = await auditRoutes(browser);
+    const batches = [];
+    for (const viewport of VIEWPORTS) batches.push(await auditRoutes(browser, viewport));
+    const results = batches.flat();
+    const routeCount = batches[0] ? batches[0].length : 0;
+    const desktopMeta = batches[0] || [];
+    const canonicalCount = desktopMeta.filter((r) => r.meta && r.meta.maturity === 'canonical').length;
+    const previewCount = desktopMeta.filter((r) => r.meta && r.meta.maturity === 'preview').length;
 
-    const failed = results.filter((r) => r.threwSync || r.consoleErrors.length || r.pageErrors.length);
+    const failed = results.filter((r) => r.threwSync || r.consoleErrors.length || r.pageErrors.length || r.missingMeta);
     const leaked = results.filter((r) => r.identityLeaks.length);
+    const previewContractFailed = results.filter((r) => r.missingPreviewBanner || r.enabledPreviewWrites.length);
+    const layoutFailed = results.filter((r) => r.layoutIssues.length);
+    const shellFailed = results.filter((r) => r.missingModuleShell);
 
     if (failed.length) {
       exitCode = 1;
       console.error(`\n${failed.length}/${results.length} routes errored:\n`);
       for (const r of failed) {
-        console.error(`FAIL [${r.route}]`);
+        console.error(`FAIL [${r.viewport}:${r.route}]`);
+        if (r.missingMeta) console.error('  [metadata] SCREEN_META entry missing');
         if (r.threwSync) console.error(`  [sync throw] ${r.threwSync}`);
         for (const m of r.consoleErrors) console.error(`  [console.error] ${m}`);
         for (const m of r.pageErrors) console.error(`  [pageerror] ${m}`);
       }
     } else {
-      console.log(`All ${results.length} routes rendered without console/page errors.`);
+      console.log(`All ${routeCount} routes rendered at desktop + mobile without console/page errors.`);
     }
 
     if (leaked.length) {
       exitCode = 1;
       console.error(`\n${leaked.length} route(s) leaked prototype identity markers:\n`);
-      for (const r of leaked) console.error(`LEAK [${r.route}] matched: ${r.identityLeaks.join(', ')}`);
+      for (const r of leaked) console.error(`LEAK [${r.viewport}:${r.route}] matched: ${r.identityLeaks.join(', ')}`);
     } else {
-      console.log('No leftover Northwind/Dana Reyes identity markers found on any route.');
+      console.log('No leftover Northwind/Dana Reyes identity markers found on canonical routes.');
+    }
+
+    if (previewContractFailed.length) {
+      exitCode = 1;
+      console.error(`\n${previewContractFailed.length} Preview contract failure(s):\n`);
+      for (const r of previewContractFailed) {
+        console.error(`PREVIEW [${r.viewport}:${r.route}]`);
+        if (r.missingPreviewBanner) console.error('  visible Preview · Sample Data banner missing');
+        if (r.enabledPreviewWrites.length) console.error(`  enabled write actions: ${r.enabledPreviewWrites.join(' | ')}`);
+      }
+    } else {
+      console.log(`Route maturity contract passed: ${canonicalCount} canonical, ${previewCount} preview.`);
+    }
+
+    if (layoutFailed.length) {
+      exitCode = 1;
+      console.error(`\n${layoutFailed.length} layout failure(s):\n`);
+      for (const r of layoutFailed) console.error(`LAYOUT [${r.viewport}:${r.route}] ${r.layoutIssues.join(' | ')}`);
+    } else {
+      console.log('Desktop/mobile layout contract passed: no page, active-tab, or standard action-bar overflow.');
+    }
+
+    if (shellFailed.length) {
+      exitCode = 1;
+      console.error(`\n${shellFailed.length} module shell failure(s):\n`);
+      for (const r of shellFailed) console.error(`SHELL [${r.viewport}:${r.route}] shared module shell/subnav missing`);
+    } else {
+      console.log('Shared module shell contract passed on every business route.');
     }
   } finally {
     await browser.close();

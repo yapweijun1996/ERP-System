@@ -27,7 +27,7 @@ npm install
 | `npm run demo` | **Dual-adapter proof** — same repo code on PGlite (and PostgreSQL if `POSTGRES_URL` set) |
 | `npm run check:drift` | **Schema drift check** — compares table/column definitions between `drizzle/0000_init.sql` (source of truth) and `web/public/db/erp-system-schema.sql` (hand-copied demo SQL); fails with a readable diff on any mismatch. Run this after any schema change, before re-copying the SQL by hand. Runs in CI on every PR. |
 | `npm run smoke` | **Browser smoke test** — requires `npm run build:demo` first. Launches headless Chromium (Playwright) at desktop (1280×800) and mobile (375×812) viewports, bypasses the first-run wizard/login via a pre-set `localStorage` flag, and asserts the dashboard actually renders (`.dashgrid` visible, `document.title` mentions the seeded company) with **zero** console errors and **zero** uncaught page errors. Runs in CI on every PR. |
-| `npm run audit:screens` | **Screen audit** — requires `npm run build:demo` first. Boots the demo, reads the live `SCREENS` registry (not a hand-maintained list), and calls the router's own `navigate(route)` for every registered route, asserting zero console errors/page errors/synchronous throws, and — on routes whose module (per app.js's own `ROUTE_MODULE` map) docs/STATUS.md documents as canonical — zero leftover "Northwind"/"Dana Reyes" identity text from the original prototype template. Routes in still-mock modules (Purchasing, CRM, Manufacturing, Quality, Warehouse-advanced, HR/Payroll, Projects, Service, Fixed Assets, Reporting/BI, Integration, Admin) are exempt by design. Runs in CI on every PR. |
+| `npm run audit:screens` | **Screen audit** — requires `npm run build:demo` first. Boots the demo at desktop (1280×800) and mobile (375×812), reads the live `SCREENS` and route-level `SCREEN_META` registries, applies stateful fixtures for detail routes, and drives all 114 routes through the router. It fails on console/page errors, synchronous throws, prototype identity on Canonical routes, missing Preview banners, enabled Preview write actions, missing shared module navigation, whole-page overflow, hidden active tabs, or overflowing standard action bars. Runs in CI on every PR. |
 | `npm test` | **Unit tests** (`vitest run`) — `confirmSalesOrder` (success + GL-balance, whole-chain rollback on insufficient stock, `PostingError` when no tax rule covers the date), `issueStock` (deduct, insufficient, boundary at exactly available qty), `getEffectiveTaxRate` (dated-boundary cases: inclusive `validFrom`, exclusive `validTo`, open-ended, no-match). Each test gets its own fresh in-memory PGlite instance (`src/test/helpers.ts`). Runs in CI on every PR. |
 | `npm run lint` | Lint — **not implemented yet**, no ESLint/Prettier config in the repo |
 
@@ -54,11 +54,11 @@ npm run audit:screens
 
 Same Chromium requirement as the smoke test. Unlike the smoke test (which only checks the
 dashboard shell), this drives every route in the live `SCREENS` registry — 114 as of
-TASK-018 — through the router directly, so new screens are covered automatically without
-updating a route list here. If a canonical-module screen legitimately needs to show a name
-that happens to match the identity-marker check (unlikely, but possible for arbitrary seed
-data), extend the check in `scripts/audit-screens.mjs` rather than suppressing the route
-wholesale.
+2026-07-18 — through the router directly, so new screens are covered automatically without
+updating a route list here. Route maturity is declared in `SCREEN_META`, not inferred from
+a module-level mock allowlist: partially migrated modules such as Purchasing and CRM can
+therefore promote one route at a time. Detail routes use explicit fixtures so `txn-view`
+and `pur-txn-view` are audited rather than silently skipped.
 
 ### Dual-adapter demo
 

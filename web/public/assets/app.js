@@ -375,6 +375,230 @@ DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
 ROUTE_MODULE['settings']='settings';
 
+/* ---------- screen maturity / productionization metadata ---------- */
+/* Route-level, not module-level: Purchasing and CRM already contain a mix of
+   canonical PGlite-backed routes and original sample-data routes. New vertical
+   slices move one route at a time from preview -> canonical. */
+const CANONICAL_SCREEN_ROUTES = new Set([
+  'dashboard',
+  'sales-orders','sales-order','sales-invoices','sales-invoice',
+  'stock-on-hand','stock-movement','inv-valuation',
+  'gl','account-ledger','journal-entry','pnl','ar-aging',
+  'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
+  'crm-pipeline','new-opportunity',
+  'settings',
+]);
+const API_SCREEN_ROUTES = new Set(['dashboard']);
+const SCREEN_ACTIVE_ALIASES = {
+  quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
+  'sales-order':'sales-orders','new-sales-order':'sales-orders','sales-return':'sales-returns',
+  'credit-note':'credit-notes','new-quotation':'quotations','txn-view':'enquiries',
+  'purchase-request':'purchase-requisitions','goods-receipt':'goods-receipts',
+  'supplier-invoice':'supplier-invoices','po-approval':'po-approvals',
+  'new-purchase-order':'purchase-orders','pur-txn-view':'purchase-orders',
+  'new-item':'item-master','new-stock-adjustment':'stock-movement',
+  'work-order':'work-orders','new-work-order':'work-orders',
+  'qc-report':'qc-inspection',
+  opportunity:'crm-pipeline','new-opportunity':'crm-pipeline','crm-customer':'crm-pipeline',
+  employee:'hr-directory','new-employee':'hr-directory','payslip':'payroll-run',
+  'project-detail':'project-pl',
+  'asset-detail':'asset-register',
+  'new-journal-entry':'journal-entry','new-payment-voucher':'payment-voucher',
+};
+const MODULE_DEFS = {
+  finance:{ labelKey:'nav.finance', home:'gl', items:[
+    ['gl','General Ledger','book'],['account-ledger','Account Ledger','list'],
+    ['journal-entry','Journal Entries','receipt'],['payment-voucher','Payment Vouchers','coins'],
+    ['bank-rec','Bank Reconciliation','refresh'],['pnl','Profit & Loss','chart'],
+    ['ar-aging','AR Aging','clock'],
+  ]},
+  crm:{ labelKey:'nav.crm', home:'crm-pipeline', items:[
+    ['crm-pipeline','Pipeline','flow'],['crm-customer','Customer 360','user'],
+  ]},
+  warehouse:{ labelKey:'nav.warehouse', home:'picking', items:[
+    ['picking','Picking','warehouse'],
+  ]},
+  manufacturing:{ labelKey:'nav.manufacturing', home:'work-orders', items:[
+    ['work-orders','Work Orders','factory'],['bom','Bill of Materials','box'],['mrp','MRP','flow'],
+  ]},
+  quality:{ labelKey:'nav.quality', home:'qc-inspection', items:[
+    ['qc-inspection','Inspections','checkc'],['ncr','Non-conformance','shield'],
+  ]},
+  hr:{ labelKey:'nav.hr', home:'hr-directory', items:[
+    ['hr-directory','Directory','people'],['leave-approval','Leave','calendar'],
+    ['payroll-run','Payroll','coins'],
+  ]},
+  project:{ labelKey:'nav.project', home:'project-pl', items:[
+    ['project-pl','Projects','project'],['timesheet','Timesheets','clock'],
+  ]},
+  service:{ labelKey:'nav.service', home:'service-ticket', items:[
+    ['service-ticket','Tickets','wrench'],['service-order','Service Orders','list'],
+    ['service-contracts','Contracts','receipt'],
+  ]},
+  asset:{ labelKey:'nav.asset', home:'asset-register', items:[
+    ['asset-register','Asset Register','asset'],['depreciation','Depreciation','chart'],
+  ]},
+  bi:{ labelKey:'nav.bi', home:'bi-dashboard', items:[
+    ['bi-dashboard','Dashboard','grid'],['sales-analysis','Sales Analysis','chart'],
+    ['stock-aging','Stock Aging','clock'],
+  ]},
+  integration:{ labelKey:'nav.integration', home:'integration', items:[
+    ['integration','Overview','plug'],['integration-logs','Logs','history'],
+    ['data-import','Data Import','upload'],
+  ]},
+  admin:{ labelKey:'nav.admin', home:'user-mgmt', items:[
+    ['user-mgmt','Users','people'],['role-permission','Roles & Permissions','shield'],
+    ['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
+    ['sys-settings','System Settings','gear'],['module-activation-control','Module Activation','sliders'],
+  ]},
+};
+const MODULE_READ_PERMISSION = {
+  home:'dashboard.read', sales:'sales.read', purchasing:'purchasing.read',
+  crm:'crm.read', inventory:'inventory.read', warehouse:'warehouse.read',
+  manufacturing:'manufacturing.read', quality:'quality.read', finance:'finance.read',
+  hr:'hr.read', project:'project.read', service:'service.read', asset:'asset.read',
+  workflow:'approval.read', bi:'reporting.read', admin:'admin.read',
+  integration:'integration.read', settings:'settings.read',
+};
+const SCREEN_FIXTURES = {
+  'txn-view':'sales-enquiry',
+  'pur-txn-view':'purchasing-rfq',
+};
+const SCREEN_META = {};
+Object.keys(SCREENS).forEach(route=>{
+  const moduleId=ROUTE_MODULE[route]||(
+    route==='dashboard'?'home':
+    route==='settings'?'settings':
+    ['notifications','my-activity'].includes(route)?'admin':'unmapped'
+  );
+  const canonical=CANONICAL_SCREEN_ROUTES.has(route);
+  SCREEN_META[route]=Object.freeze({
+    route,
+    module:moduleId,
+    maturity:canonical?'canonical':'preview',
+    dataSource:canonical?'canonical':'sample',
+    supportedModes:canonical?(API_SCREEN_ROUTES.has(route)?['demo','api']:['demo']):['demo'],
+    activeSection:SCREEN_ACTIVE_ALIASES[route]||route,
+    permission:MODULE_READ_PERMISSION[moduleId]||null,
+    fixture:SCREEN_FIXTURES[route]||null,
+  });
+});
+window.SCREEN_META=SCREEN_META;
+
+function getScreenMeta(route){
+  return SCREEN_META[route]||{
+    route, module:ROUTE_MODULE[route]||'unmapped', maturity:'preview',
+    dataSource:'sample', supportedModes:['demo'], activeSection:route,
+    permission:null, fixture:null,
+  };
+}
+function moduleMaturity(moduleId){
+  const rows=Object.values(SCREEN_META).filter(m=>m.module===moduleId);
+  if(!rows.length) return 'preview';
+  const canonical=rows.filter(m=>m.maturity==='canonical').length;
+  return canonical===0?'preview':canonical===rows.length?'canonical':'partial';
+}
+function moduleNav(moduleId, active){
+  if(moduleId==='sales' && typeof salesNav==='function') return salesNav(active);
+  if(moduleId==='purchasing' && typeof purNav==='function') return purNav(active);
+  if(moduleId==='inventory' && typeof inventoryNav==='function') return inventoryNav(active);
+  const def=MODULE_DEFS[moduleId];
+  if(!def) return '';
+  active=SCREEN_ACTIVE_ALIASES[active]||active;
+  return `<div class="sales-subnav standard-module-subnav" role="tablist" aria-label="${esc(t(def.labelKey))}">
+    ${def.items.map(item=>`<button class="ssub ${item[0]===active?'on':''}" role="tab" aria-selected="${item[0]===active}" onclick="navigate('${item[0]}')">${ic(item[2])}<span>${esc(tf('route.'+item[0],item[1]))}</span></button>`).join('')}
+  </div>`;
+}
+function modulePage(o){
+  const def=MODULE_DEFS[o.module];
+  const title=o.title||'';
+  const crumb=o.crumb||[DB.company.name,{label:def?t(def.labelKey):o.module,route:def&&def.home},{cur:title}];
+  return `<div class="content full"><section class="master" data-module-shell="${esc(o.module)}">
+    <div class="scrollarea">
+      <div class="pagehead">
+        ${crumbs(crumb)}
+        ${moduleNav(o.module,o.active||o.route)}
+        <div class="h1row" style="margin-top:13px"><h1>${esc(title)}</h1>${o.count!=null?`<span class="countchip">${esc(String(o.count))}</span>`:''}<div class="grow"></div>${o.action||''}</div>
+        ${o.sub?`<div class="h1sub">${esc(o.sub)}</div>`:''}
+      </div>
+      ${o.body||''}
+    </div>
+  </section></div>`;
+}
+window.MODULE_DEFS=MODULE_DEFS;
+window.modulePage=modulePage;
+
+function ensureModuleShell(root, meta){
+  const usesLegacyModuleNav=['sales','purchasing','inventory'].includes(meta?.module);
+  if(!root || !meta || (!MODULE_DEFS[meta.module] && !usesLegacyModuleNav)) return;
+  const shell=root.querySelector('.master')||root.querySelector('.content')||root.firstElementChild;
+  if(shell) shell.setAttribute('data-module-shell',meta.module);
+  if(root.querySelector('.sales-subnav')) return;
+  const navHtml=moduleNav(meta.module,meta.activeSection);
+  if(!navHtml) return;
+  const holder=document.createElement('div');
+  holder.innerHTML=navHtml;
+  const nav=holder.firstElementChild;
+  const pagehead=root.querySelector('.pagehead');
+  if(pagehead){
+    const crumb=pagehead.querySelector('.crumb');
+    if(crumb) crumb.after(nav); else pagehead.prepend(nav);
+    return;
+  }
+  const docpage=root.querySelector('.docpage');
+  if(docpage){
+    const crumb=docpage.querySelector('.crumb');
+    if(crumb) crumb.after(nav); else docpage.prepend(nav);
+    return;
+  }
+  const master=root.querySelector('.master');
+  if(master){
+    const wrapper=document.createElement('div');
+    wrapper.className='pagehead module-shell-head';
+    wrapper.appendChild(nav);
+    master.prepend(wrapper);
+    return;
+  }
+  root.prepend(nav);
+}
+const PREVIEW_WRITE_RE=/\b(new|create|save|post|approve|reject|delete|edit|receive|convert|issue|release|adjust|transfer|reconcile|import|upload|invite|add|run payroll|start|complete|dispose|record payment)\b/i;
+function isPreviewWriteButton(button){
+  if(!button || button.disabled) return false;
+  if(button.closest('.crumb,.sales-subnav,.tabs,.filterchips,.seg,.viewsel')) return false;
+  return PREVIEW_WRITE_RE.test((button.textContent||'').replace(/\s+/g,' ').trim());
+}
+function decorateScreen(root, route){
+  if(!root || CURRENT_ROUTE!==route) return;
+  const meta=getScreenMeta(route);
+  root.dataset.screenRoute=route;
+  root.dataset.screenModule=meta.module;
+  root.dataset.screenMaturity=meta.maturity;
+
+  ensureModuleShell(root,meta);
+  const active=root.querySelector('.sales-subnav [aria-selected="true"]');
+  if(active){
+    requestAnimationFrame(()=>active.scrollIntoView({block:'nearest',inline:'nearest'}));
+  }
+
+  if(meta.maturity!=='preview') return;
+  if(!root.querySelector('[data-preview-banner]')){
+    const banner=document.createElement('div');
+    banner.className='screen-preview-banner';
+    banner.dataset.previewBanner='true';
+    banner.setAttribute('role','status');
+    banner.innerHTML=`${ic('warn')}<div><b>${esc(t('preview.label'))}</b><span>${esc(t('preview.desc'))}</span></div>`;
+    root.prepend(banner);
+  }
+  root.querySelectorAll('button').forEach(button=>{
+    if(!isPreviewWriteButton(button)) return;
+    button.disabled=true;
+    button.classList.add('preview-write-disabled');
+    button.setAttribute('aria-disabled','true');
+    button.setAttribute('data-tip',t('preview.disabled'));
+    button.title=t('preview.disabled');
+  });
+}
+
 /* `DB.built` — live single source of truth for which routes are implemented,
    derived from the SCREENS registry that screen files populate at load time.
    app.js is the last script, so SCREENS is fully populated by now; a getter
@@ -399,9 +623,11 @@ function renderSidebar(){
     items.forEach(m=>{
       const st=moduleState(m.id);
       const label=tf('nav.'+m.id, m.label);
+      const maturity=moduleMaturity(m.id);
       h+=`<button class="nav ${st.active?'':'is-disabled'}" data-route="${m.route}" data-mod="${m.id}" data-tip="${esc(st.active?label:label+' · inactive')}" ${st.active?'':'aria-disabled="true"'}>
         ${ic(m.icon)}<span class="navlabel">${esc(label)}</span>
         ${st.active&&m.badge?`<span class="badge ${m.id==='workflow'||m.id==='purchasing'?'warn':''}">${m.badge}</span>`:''}
+        ${maturity!=='canonical'?`<span class="nav-maturity ${maturity}">${esc(t(maturity==='preview'?'preview.short':'preview.partial'))}</span>`:''}
       </button>`;
     });
     h+=`</div>`;
@@ -441,11 +667,22 @@ function navigate(route, params){
   CURRENT_ROUTE=route;
   root.innerHTML='';
   SCREENS[route](root, params||{});
+  decorateScreen(root, route);
   setActiveNav(route);
   closeAllPops();
   root.scrollTop=0;
   try{ history.replaceState({},'',`#${route}`); }catch(e){}
 }
+
+/* Some prototype screens re-render asynchronously or replace their root after
+   filters/actions. Re-apply route metadata without requiring every screen to
+   remember the preview contract. */
+const screenMetaObserver=new MutationObserver(()=>{
+  const route=CURRENT_ROUTE;
+  if(!route) return;
+  requestAnimationFrame(()=>decorateScreen($('#viewRoot'),route));
+});
+screenMetaObserver.observe($('#viewRoot'),{childList:true,subtree:true});
 
 /* ---------- theme ---------- */
 function applyTheme(t){

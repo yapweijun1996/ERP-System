@@ -133,7 +133,7 @@ SCREENS['txn-view'] = function(root){
           <div class="docmain">${C.main}</div>
           <aside class="summary">${C.summary}</aside>
         </div>
-        <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
+        <div class="responsive-actionbar" style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
           <div class="grow"></div>${C.footer}
         </div>
       </div></div>

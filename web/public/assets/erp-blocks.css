@@ -426,6 +426,16 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .barrow{grid-template-columns:110px 1fr 70px;}
   .fldrow.c3{grid-template-columns:1fr 1fr;}
   .pop.acctmenu,.pop.notifmenu,.pop.qcmenu{left:8px !important;right:8px !important;width:auto !important;}
+  .screen-preview-banner{padding:8px 14px;}
+  .screen-preview-banner>div{display:block;}
+  .screen-preview-banner span{display:block;margin-top:1px;}
+}
+
+@media (max-width:480px){
+  .set-savebar,.responsive-actionbar{min-width:0;padding:10px 14px;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .set-savebar>.grow,.responsive-actionbar>.grow{display:none;}
+  .set-savebar>.hideonsmall{display:none!important;}
+  .set-savebar .btn,.responsive-actionbar .btn{min-width:0;max-width:100%;}
 }
 .grabber{display:none;}
 @media (min-width:981px) and (max-width:1180px){

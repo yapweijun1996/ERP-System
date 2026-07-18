@@ -63,7 +63,9 @@ server side yet.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Schema drift check (`drizzle/0000_init.sql` vs `erp-system-schema.sql`) | ✅ Working | `scripts/check-drift.mjs`, `npm run check:drift`, TASK-020 |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
-| Full screen audit — every route in `SCREENS` (114), zero errors, no leftover prototype identity on canonical screens | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads the live `SCREENS`/`ROUTE_MODULE` registries rather than a hand-maintained route list, so it stays correct as screens are added, TASK-018 |
+| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **21 Canonical / 93 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
+| Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
+| Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
 | Unit tests: `confirmOrder`/purchasing/CRM chains (success/rollback/posting-error/GL-balance/atomicity), `issueStock`, effective-dated tax boundaries, password hashing, session store | ✅ Working | `vitest`, `npm test`, 40 tests, `vitest.config.ts` (`testTimeout: 20000` — fixes a real resource-contention flake found under TASK-027), wired into CI, TASK-025 + TASK-024 + TASK-022 + TASK-027 |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemDemo.completeSetup()`, gated in `app.js` boot(), TASK-009+010 |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
@@ -76,43 +78,34 @@ server side yet.
 | Real auth: PBKDF2 password hashes, server-side sessions, session-derived tenant scope | ✅ Working | `src/auth/password.ts`, `src/auth/session.ts`, `src/server.ts` (`/api/auth/login`\|`logout`\|`session`, `/api/setup/status`); both adapters implement `needsSetup`/`isSignedIn`/`login`/`logout`/`switchUser`; verified end-to-end against Docker (login, company switch, logout, 375px), TASK-024 |
 | Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v13) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale "signed in" state after logout; found and fixed during TASK-024 verification |
 
-## What renders but is mock-only
+## Canonical and Preview route boundary
 
-114 routes are registered in the `SCREENS` registry (per `npm run audit:screens`, TASK-018
-— the true, live count; earlier docs undercounted from a static grep that missed
-runtime-registered aliases); only sales/inventory/finance (and parts of master
-data/settings) read the canonical PGlite database. The rest render the original
-Aria/Northwind sample data from `web/public/assets/data-*.js`:
+114 routes are registered in the live `SCREENS` registry. `SCREEN_META` is now the source
+of truth for production maturity at route level: **21 routes are Canonical and 93 are
+Preview**. This replaces the old module-wide mock allowlist, which could not accurately
+represent partially migrated Purchasing and CRM modules.
 
-**Manufacturing, Quality, Warehouse (advanced), HR/Payroll, Projects, Service,
-Fixed Assets, Reporting/BI, Integration, Admin** — no schema tables exist for any of
-these. This boundary is now enforced, not just documented: `scripts/audit-screens.mjs`
-allowlists exactly these module ids (`MOCK_MODULE_IDS`, sourced from app.js's own live
-`ROUTE_MODULE` map) and fails CI if a canonical screen leaks prototype sample data, or if
-any route in this mock list starts throwing errors. Converting or clearly relabeling these
-modules is roadmap work (see [ROADMAP.md](ROADMAP.md) Phase 7); when one gains real
-schema/adapter wiring, drop its module id from `MOCK_MODULE_IDS` in the same change.
+Preview routes remain open for evaluation, but are visibly labeled
+`Preview · Sample Data`; their write-like actions are disabled so sample interactions
+cannot be mistaken for persisted transactions. A route may move to Canonical only after
+it has real schema and adapter coverage, permissions, tests and localization. The screen
+audit enforces both sides: Preview routes must carry the label and lock writes, while
+Canonical routes must not leak original prototype identities.
 
 **CRM is now a special case the same shape as Purchasing (TASK-027/028,
 2026-07-17): partially converted, not fully mock and not fully real.** The core
 opportunity → convert-to-sales-order chain (pipeline board, new-opportunity
 wizard, the kanban's convert action) reads and writes real PGlite data. Opportunity
 detail and customer-360 have no schema and stay on the original `data-crm.js`
-mock. `crm` correctly stays in `MOCK_MODULE_IDS` for that reason — same rule as
-Purchasing below.
+mock, so those individual routes remain Preview.
 
 **Purchasing is a special case (TASK-022/023, 2026-07-17): partially converted, not
 fully mock and not fully real.** The core PO chain (suppliers, purchase orders, goods
 receipts, supplier invoices) reads and writes real PGlite data. RFQs, quotations,
 requisitions, purchase returns, credit/debit notes, price lists, landed cost, and
-vendor performance remain sample data — no schema exists for any of those yet. Because
-`scripts/audit-screens.mjs` exempts by *module*, not by individual route, `purchasing`
-is still in `MOCK_MODULE_IDS` (most of its routes still are mock) — meaning the
-now-real routes are not currently regression-guarded by that script even though they
-were manually verified to leak nothing at the time of writing. A future session
-splitting the allowlist to route-level granularity (or moving the now-real routes to
-their own exempt-free check) would close that gap; not done here to keep TASK-023's
-change scoped to what its acceptance criteria actually asked for.
+vendor performance remain sample data — no schema exists for any of those yet. Those
+routes remain Preview, while the real PO-chain routes are independently classified and
+regression-checked as Canonical.
 
 ## Documented but NOT implemented (do not assume these exist)
 

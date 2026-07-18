@@ -130,12 +130,14 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ## Status
 
-The **browser demo is live and real**: PGlite (IndexedDB) runs the canonical 18-table
-schema with a working order → stock → invoice → GL transaction (sales, inventory,
-finance screens on canonical data; other modules are labeled sample UIs). The
-**production path (API + Docker + PostgreSQL) is designed but not yet implemented** —
-see [docs/STATUS.md](docs/STATUS.md) for the honest breakdown and
-`tasks/tasks.jsonl` for the backlog.
+The browser demo uses PGlite/IndexedDB with the canonical 25-table schema and working
+Sales, Purchasing and CRM transaction chains into stock and balanced GL. Route-level
+`SCREEN_META` currently classifies 21 routes as Canonical and 93 as
+`Preview · Sample Data`; Preview writes are disabled. The production Docker/PostgreSQL
+stack, authentication and dashboard API are operational, while the remaining module APIs
+and Canonical route migrations are still in progress. See
+[docs/STATUS.md](docs/STATUS.md) for the exact boundary and `tasks/tasks.jsonl` for the
+backlog.
 
 ## License
 
