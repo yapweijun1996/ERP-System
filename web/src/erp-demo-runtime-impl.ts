@@ -62,8 +62,12 @@ import {
   type RecordPickInput,
 } from '../../src/modules/warehouse/picking';
 import {
+  completeWorkOrderWithin,
   createWorkOrderWithin,
+  issueWorkOrderMaterialsWithin,
   releaseWorkOrderWithin,
+  reportWorkOrderOperationWithin,
+  type ReportWorkOrderOperationInput,
   type CreateWorkOrderInput,
 } from '../../src/modules/manufacturing/workOrder';
 
@@ -127,6 +131,19 @@ export const erpDemoRuntime = Object.freeze({
     },
     releaseWorkOrderWithin(db: DemoOrm, scope: Scope, workOrderId: number) {
       return releaseWorkOrderWithin(asDomainDb(db), scope, workOrderId);
+    },
+    issueWorkOrderMaterialsWithin(db: DemoOrm, scope: Scope, workOrderId: number) {
+      return issueWorkOrderMaterialsWithin(asDomainDb(db), scope, workOrderId);
+    },
+    reportWorkOrderOperationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: ReportWorkOrderOperationInput,
+    ) {
+      return reportWorkOrderOperationWithin(asDomainDb(db), scope, input);
+    },
+    completeWorkOrderWithin(db: DemoOrm, scope: Scope, workOrderId: number) {
+      return completeWorkOrderWithin(asDomainDb(db), scope, workOrderId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

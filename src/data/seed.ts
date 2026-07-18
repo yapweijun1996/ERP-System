@@ -106,6 +106,7 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', code: '4000', name: 'Revenue', type: 'income' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '2200', name: 'GST Output Tax', type: 'liability' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '1400', name: 'Inventory', type: 'asset' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '1450', name: 'Work in Progress', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '1200', name: 'GST Input Tax', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '2100', name: 'Accounts Payable', type: 'liability' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '5800', name: 'Inventory Variance', type: 'expense' },

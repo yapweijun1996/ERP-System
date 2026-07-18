@@ -150,12 +150,10 @@
   }
 
   async function ensureManufacturingFixture(db){
-    var row=(await db.query(
-      "select count(*)::int as n from work_order " +
-      "where master_fn='M1' and company_fn='C-SG' and doc_no='WO-1'")).rows[0];
-    if(!row||Number(row.n)===0){
-      await db.exec(await fetchSql('erp-system-demo-manufacturing.sql'));
-    }
+    /* The fixture is entirely guarded by NOT EXISTS, so replay it on every
+       boot. This also tops up newly required manufacturing accounts or
+       snapshots in a persistent IndexedDB created by an earlier v9 build. */
+    await db.exec(await fetchSql('erp-system-demo-manufacturing.sql'));
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -1418,6 +1416,35 @@
       });
       await refresh();
       return {data:releasedWorkOrder,meta:{}};
+    }
+    if(key==='manufacturing/work-orders'&&name==='issue-materials'){
+      var issuedWorkOrderMaterials = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.issueWorkOrderMaterialsWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:issuedWorkOrderMaterials,meta:{}};
+    }
+    if(key==='manufacturing/work-orders'&&name==='report-operation'){
+      var reportedWorkOrderOperation = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.reportWorkOrderOperationWithin(
+          state.runtime.createOrm(tx), SCOPE, {
+            workOrderId:Number(id),
+            operationId:Number(payload&&payload.operationId),
+            hours:payload&&payload.hours,
+            complete:!!(payload&&payload.complete),
+          });
+      });
+      await refresh();
+      return {data:reportedWorkOrderOperation,meta:{}};
+    }
+    if(key==='manufacturing/work-orders'&&name==='complete'){
+      var completedWorkOrder = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.completeWorkOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:completedWorkOrder,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

@@ -161,7 +161,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'manufacturing/work-orders': resource(workOrder, 'manufacturing.read', {
     status: workOrder.status,
     versionColumn: workOrder.version,
-    allowedActions: ['release'],
+    allowedActions: ['release', 'issue-materials', 'report-operation', 'complete'],
     createPermission: 'manufacturing.write',
   }),
   'manufacturing/work-order-materials': resource(workOrderMaterial, 'manufacturing.read'),

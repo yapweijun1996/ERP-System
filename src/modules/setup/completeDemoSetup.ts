@@ -120,6 +120,7 @@ export async function completeDemoSetupWithin(
     { masterFn, companyFn, code: '1100', name: 'Accounts Receivable', type: 'asset' },
     { masterFn, companyFn, code: '1200', name: 'Input Tax', type: 'asset' },
     { masterFn, companyFn, code: '1400', name: 'Inventory', type: 'asset' },
+    { masterFn, companyFn, code: '1450', name: 'Work in Progress', type: 'asset' },
     { masterFn, companyFn, code: '2100', name: 'Accounts Payable', type: 'liability' },
     { masterFn, companyFn, code: '2200', name: 'Output Tax', type: 'liability' },
     { masterFn, companyFn, code: '3000', name: 'Owner Equity', type: 'equity' },

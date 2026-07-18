@@ -11,7 +11,9 @@
         orders:'Work orders',newOrder:'New work order',product:'Product',quantity:'Quantity',
         start:'Start',due:'Due',status:'Status',priority:'Priority',progress:'Progress',
         materials:'Material requirements',operations:'Operations',release:'Release work order',
-        released:'Work order released',create:'Create work order',createRelease:'Create and release',
+        released:'Work order released',issue:'Issue materials',issuedDone:'Materials issued',
+        report:'Complete operation',reported:'Operation reported',completeOrder:'Complete & receive FG',
+        orderCompleted:'Finished goods received',create:'Create work order',createRelease:'Create and release',
         schedule:'Schedule',warehouse:'Production warehouse',bom:'BOM revision',routing:'Routing',
         demand:'Demand source',cancel:'Cancel',empty:'No canonical work orders are available.',
         emptyDesc:'Create a work order to snapshot its active BOM and routing.',
@@ -24,7 +26,9 @@
         orders:'Arahan kerja',newOrder:'Arahan kerja baharu',product:'Produk',quantity:'Kuantiti',
         start:'Mula',due:'Tarikh siap',status:'Status',priority:'Keutamaan',progress:'Kemajuan',
         materials:'Keperluan bahan',operations:'Operasi',release:'Lepaskan arahan kerja',
-        released:'Arahan kerja dilepaskan',create:'Cipta arahan kerja',createRelease:'Cipta dan lepaskan',
+        released:'Arahan kerja dilepaskan',issue:'Keluarkan bahan',issuedDone:'Bahan dikeluarkan',
+        report:'Selesaikan operasi',reported:'Operasi direkodkan',completeOrder:'Selesai & terima barang siap',
+        orderCompleted:'Barang siap telah diterima',create:'Cipta arahan kerja',createRelease:'Cipta dan lepaskan',
         schedule:'Jadual',warehouse:'Gudang pengeluaran',bom:'Semakan BOM',routing:'Laluan',
         demand:'Sumber permintaan',cancel:'Batal',empty:'Tiada arahan kerja kanonik.',
         emptyDesc:'Cipta arahan kerja untuk menyimpan petikan BOM dan laluan aktif.',
@@ -37,7 +41,9 @@
         orders:'生产工单',newOrder:'新建工单',product:'成品',quantity:'计划数量',
         start:'开始日期',due:'到期日期',status:'状态',priority:'优先级',progress:'进度',
         materials:'物料需求',operations:'工序',release:'释放工单',
-        released:'工单已释放',create:'创建工单',createRelease:'创建并释放',
+        released:'工单已释放',issue:'领用物料',issuedDone:'物料已领用',
+        report:'完成当前工序',reported:'工序报工完成',completeOrder:'完工并入库',
+        orderCompleted:'成品已入库',create:'创建工单',createRelease:'创建并释放',
         schedule:'生产排程',warehouse:'生产仓库',bom:'BOM 版本',routing:'工艺路线',
         demand:'需求来源',cancel:'取消',empty:'目前没有标准生产工单。',
         emptyDesc:'创建工单后，系统会保存当时生效的 BOM 和工艺路线快照。',
@@ -183,6 +189,19 @@
     const version=versions.get(Number(order.bomVersionId))||{};
     const routing=routings.get(Number(order.routingId))||{};
     const pct=Number(order.plannedQty)?Math.round(Number(order.completedQty)/Number(order.plannedQty)*100):0;
+    const allMaterialsIssued=materials.length>0&&materials.every(line=>Number(line.issuedQty)===Number(line.requiredQty));
+    const activeOperation=operations.find(operation=>!['completed','skipped'].includes(operation.status));
+    const allOperationsComplete=operations.length>0&&!activeOperation;
+    const executionActions=[
+      order.status==='planned'?btn(s('release'),{icon:'play',cls:'primary',attrs:'data-release-work-order'}):'',
+      order.status==='released'?btn(s('issue'),{icon:'transfer',cls:'primary',attrs:'data-issue-work-order'}):'',
+      order.status==='in_progress'&&activeOperation?btn(s('report'),{
+        icon:'factory',cls:'soft',attrs:`data-report-operation="${activeOperation.id}"`,
+      }):'',
+      order.status==='in_progress'&&allMaterialsIssued&&allOperationsComplete?btn(s('completeOrder'),{
+        icon:'check',cls:'primary',attrs:'data-complete-work-order',
+      }):'',
+    ].join('');
     const materialRows=materials.map((line,index)=>{
       const item=products.get(Number(line.productId))||{};
       const available=stock.get(Number(line.productId))||0;
@@ -208,7 +227,7 @@
         <div class="dt">${ic('factory')}${esc(order.docNo)} <span class="dnum">${esc(finished.sku||'')}</span></div>
         <div class="h1sub">${esc(finished.name||s('product'))} · ${num(Number(order.plannedQty))} ${esc(finished.uom||'')}</div>
       </div><div class="dactions">${cap(statusLabel(s,order.status),statusTone(order.status))}
-        ${order.status==='planned'?btn(s('release'),{icon:'play',cls:'primary',attrs:'data-release-work-order'}):''}
+        ${executionActions}
       </div></div>
       <div class="progressbig"><i style="width:${pct}%"></i></div>
       <div class="docmeta">
@@ -243,6 +262,46 @@
       }catch(error){
         button.disabled=false;
         toast(error&&error.message||'Manufacturing action failed','danger');
+      }
+    });
+    root.querySelector('[data-issue-work-order]')?.addEventListener('click',async event=>{
+      const button=event.currentTarget;
+      button.disabled=true;
+      try{
+        await a.action('manufacturing/work-orders',order.id,'issue-materials',{},`issue-work-order-${order.id}`);
+        toast(s('issuedDone'),'ok');
+        await navigate('work-order');
+      }catch(error){
+        button.disabled=false;
+        toast(error&&error.message||'Manufacturing issue failed','danger');
+      }
+    });
+    root.querySelector('[data-report-operation]')?.addEventListener('click',async event=>{
+      const button=event.currentTarget;
+      const operation=operations.find(row=>Number(row.id)===Number(button.dataset.reportOperation));
+      button.disabled=true;
+      try{
+        const remaining=Math.max(0.0001,Number(operation.plannedHours)-Number(operation.actualHours));
+        await a.action('manufacturing/work-orders',order.id,'report-operation',{
+          operationId:Number(operation.id),hours:String(remaining),complete:true,
+        },`report-work-order-${order.id}-operation-${operation.id}`);
+        toast(s('reported'),'ok');
+        await navigate('work-order');
+      }catch(error){
+        button.disabled=false;
+        toast(error&&error.message||'Manufacturing operation failed','danger');
+      }
+    });
+    root.querySelector('[data-complete-work-order]')?.addEventListener('click',async event=>{
+      const button=event.currentTarget;
+      button.disabled=true;
+      try{
+        await a.action('manufacturing/work-orders',order.id,'complete',{},`complete-work-order-${order.id}`);
+        toast(s('orderCompleted'),'ok');
+        await navigate('work-order');
+      }catch(error){
+        button.disabled=false;
+        toast(error&&error.message||'Manufacturing completion failed','danger');
       }
     });
   };

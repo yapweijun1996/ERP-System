@@ -5,6 +5,8 @@ import type { Scope } from '../../data/repo';
 import {
   bomComponent,
   bomVersion,
+  account,
+  glEntry,
   manufacturingBom,
   manufacturingRouting,
   product,
@@ -16,6 +18,7 @@ import {
   workOrderMaterial,
   workOrderOperation,
 } from '../../data/schema';
+import { issueStockWithin, receiveStockWithin } from '../inventory/stock';
 
 export class ManufacturingWorkOrderError extends Error {
   constructor(message: string) {
@@ -315,4 +318,301 @@ export async function releaseWorkOrderWithin(tx: DB, scope: Scope, workOrderId: 
     eq(workOrderOperation.status, 'pending'),
   ));
   return { workOrderId: header.id, status: 'released' as const };
+}
+
+async function manufacturingAccounts(tx: DB, scope: Scope) {
+  const rows = await tx.select({ id: account.id, code: account.code })
+    .from(account)
+    .where(and(
+      eq(account.masterFn, scope.masterFn),
+      eq(account.companyFn, scope.companyFn),
+      inArray(account.code, ['1400', '1450']),
+    ));
+  const byCode = new Map(rows.map((row) => [row.code, row.id]));
+  const inventoryId = byCode.get('1400');
+  const wipId = byCode.get('1450');
+  if (!inventoryId || !wipId) {
+    throw new ManufacturingWorkOrderError(
+      'Inventory (1400) and Work in Progress (1450) accounts are required',
+    );
+  }
+  return { inventoryId, wipId };
+}
+
+export async function issueWorkOrderMaterialsWithin(
+  tx: DB,
+  scope: Scope,
+  workOrderId: number,
+) {
+  requireScope(scope);
+  if (!positiveId(workOrderId)) {
+    throw new ManufacturingWorkOrderError('workOrderId must be a positive integer');
+  }
+  const [header] = await tx.select({
+    id: workOrder.id,
+    docNo: workOrder.docNo,
+    status: workOrder.status,
+    warehouseId: workOrder.warehouseId,
+  }).from(workOrder).where(and(
+    eq(workOrder.id, workOrderId),
+    eq(workOrder.masterFn, scope.masterFn),
+    eq(workOrder.companyFn, scope.companyFn),
+  )).for('update');
+  if (!header) throw new ManufacturingWorkOrderError('Work order was not found');
+  if (!['released', 'in_progress'].includes(header.status)) {
+    throw new ManufacturingWorkOrderError(
+      `Work order is ${header.status} and materials cannot be issued`,
+    );
+  }
+  const materials = await tx.select({
+    id: workOrderMaterial.id,
+    productId: workOrderMaterial.productId,
+    requiredQty: workOrderMaterial.requiredQty,
+    issuedQty: workOrderMaterial.issuedQty,
+    unitCost: workOrderMaterial.unitCost,
+  }).from(workOrderMaterial).where(and(
+    eq(workOrderMaterial.masterFn, scope.masterFn),
+    eq(workOrderMaterial.companyFn, scope.companyFn),
+    eq(workOrderMaterial.workOrderId, header.id),
+  )).orderBy(workOrderMaterial.productId).for('update');
+  if (!materials.length) throw new ManufacturingWorkOrderError('Work order has no material snapshot');
+
+  const remaining = materials.map((line) => ({
+    ...line,
+    qty: new Decimal(line.requiredQty).minus(line.issuedQty),
+  })).filter((line) => line.qty.gt(0));
+  if (!remaining.length) {
+    throw new ManufacturingWorkOrderError('All work-order materials are already issued');
+  }
+
+  const movementIds: number[] = [];
+  let materialValue = new Decimal(0);
+  for (const line of remaining) {
+    const qty = line.qty.toDecimalPlaces(4).toNumber();
+    const movement = await issueStockWithin(tx, scope, {
+      productId: line.productId,
+      warehouseId: header.warehouseId,
+      qty,
+      refType: 'work_order_material',
+      refId: header.id,
+      movementGroup: `WO-ISSUE-${header.id}`,
+    });
+    movementIds.push(movement.movementId);
+    materialValue = materialValue.plus(line.qty.mul(line.unitCost));
+    await tx.update(workOrderMaterial).set({
+      issuedQty: line.requiredQty,
+      updatedAt: sql`now()`,
+    }).where(eq(workOrderMaterial.id, line.id));
+  }
+  const { inventoryId, wipId } = await manufacturingAccounts(tx, scope);
+  const value = materialValue.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+  const journalRef = `WO-ISSUE-${header.docNo}`;
+  await tx.insert(glEntry).values([
+    {
+      masterFn: scope.masterFn, companyFn: scope.companyFn,
+      journalRef, accountId: wipId, debit: value, credit: '0', memo: 'Material issued to WIP',
+    },
+    {
+      masterFn: scope.masterFn, companyFn: scope.companyFn,
+      journalRef, accountId: inventoryId, debit: '0', credit: value, memo: 'Raw material inventory',
+    },
+  ]);
+  await tx.update(workOrder).set({
+    status: 'in_progress',
+    version: sql`${workOrder.version} + 1`,
+    updatedAt: sql`now()`,
+  }).where(eq(workOrder.id, header.id));
+  return {
+    workOrderId: header.id,
+    status: 'in_progress' as const,
+    movementIds,
+    materialValue: value,
+    journalRef,
+  };
+}
+
+export interface ReportWorkOrderOperationInput {
+  workOrderId: number;
+  operationId: number;
+  hours: string | number;
+  complete?: boolean;
+}
+
+export async function reportWorkOrderOperationWithin(
+  tx: DB,
+  scope: Scope,
+  input: ReportWorkOrderOperationInput,
+) {
+  requireScope(scope);
+  if (!positiveId(input.workOrderId) || !positiveId(input.operationId)) {
+    throw new ManufacturingWorkOrderError('workOrderId and operationId are required');
+  }
+  const hours = positiveDecimal(input.hours, 'hours');
+  const [header] = await tx.select({
+    id: workOrder.id,
+    status: workOrder.status,
+  }).from(workOrder).where(and(
+    eq(workOrder.id, input.workOrderId),
+    eq(workOrder.masterFn, scope.masterFn),
+    eq(workOrder.companyFn, scope.companyFn),
+  )).for('update');
+  if (!header) throw new ManufacturingWorkOrderError('Work order was not found');
+  if (header.status !== 'in_progress') {
+    throw new ManufacturingWorkOrderError('Materials must be issued before reporting production');
+  }
+  const [operation] = await tx.select({
+    id: workOrderOperation.id,
+    sequence: workOrderOperation.sequence,
+    status: workOrderOperation.status,
+    actualHours: workOrderOperation.actualHours,
+  }).from(workOrderOperation).where(and(
+    eq(workOrderOperation.id, input.operationId),
+    eq(workOrderOperation.workOrderId, header.id),
+    eq(workOrderOperation.masterFn, scope.masterFn),
+    eq(workOrderOperation.companyFn, scope.companyFn),
+  )).for('update');
+  if (!operation) throw new ManufacturingWorkOrderError('Work-order operation was not found');
+  if (['completed', 'skipped'].includes(operation.status)) {
+    throw new ManufacturingWorkOrderError(`Operation is already ${operation.status}`);
+  }
+  const [incompletePrevious] = await tx.select({ id: workOrderOperation.id })
+    .from(workOrderOperation)
+    .where(and(
+      eq(workOrderOperation.masterFn, scope.masterFn),
+      eq(workOrderOperation.companyFn, scope.companyFn),
+      eq(workOrderOperation.workOrderId, header.id),
+      sql`${workOrderOperation.sequence} < ${operation.sequence}`,
+      sql`${workOrderOperation.status} not in ('completed', 'skipped')`,
+    ))
+    .limit(1);
+  if (incompletePrevious) {
+    throw new ManufacturingWorkOrderError('Previous operations must be completed in sequence');
+  }
+  const actualHours = new Decimal(operation.actualHours).plus(hours)
+    .toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toFixed(4);
+  const nextStatus = input.complete ? 'completed' : 'in_progress';
+  await tx.update(workOrderOperation).set({
+    actualHours,
+    status: nextStatus,
+    updatedAt: sql`now()`,
+  }).where(eq(workOrderOperation.id, operation.id));
+  if (input.complete) {
+    const [next] = await tx.select({ id: workOrderOperation.id })
+      .from(workOrderOperation)
+      .where(and(
+        eq(workOrderOperation.masterFn, scope.masterFn),
+        eq(workOrderOperation.companyFn, scope.companyFn),
+        eq(workOrderOperation.workOrderId, header.id),
+        sql`${workOrderOperation.sequence} > ${operation.sequence}`,
+        eq(workOrderOperation.status, 'pending'),
+      ))
+      .orderBy(workOrderOperation.sequence)
+      .limit(1);
+    if (next) {
+      await tx.update(workOrderOperation).set({
+        status: 'ready',
+        updatedAt: sql`now()`,
+      }).where(eq(workOrderOperation.id, next.id));
+    }
+  }
+  return {
+    workOrderId: header.id,
+    operationId: operation.id,
+    actualHours,
+    status: nextStatus,
+  };
+}
+
+export async function completeWorkOrderWithin(tx: DB, scope: Scope, workOrderId: number) {
+  requireScope(scope);
+  if (!positiveId(workOrderId)) {
+    throw new ManufacturingWorkOrderError('workOrderId must be a positive integer');
+  }
+  const [header] = await tx.select({
+    id: workOrder.id,
+    docNo: workOrder.docNo,
+    status: workOrder.status,
+    productId: workOrder.productId,
+    warehouseId: workOrder.warehouseId,
+    plannedQty: workOrder.plannedQty,
+    completedQty: workOrder.completedQty,
+  }).from(workOrder).where(and(
+    eq(workOrder.id, workOrderId),
+    eq(workOrder.masterFn, scope.masterFn),
+    eq(workOrder.companyFn, scope.companyFn),
+  )).for('update');
+  if (!header) throw new ManufacturingWorkOrderError('Work order was not found');
+  if (header.status !== 'in_progress') {
+    throw new ManufacturingWorkOrderError(`Work order is ${header.status} and cannot be completed`);
+  }
+  if (!new Decimal(header.completedQty).isZero()) {
+    throw new ManufacturingWorkOrderError('Partial completion is not enabled for this work order');
+  }
+  const materials = await tx.select({
+    requiredQty: workOrderMaterial.requiredQty,
+    issuedQty: workOrderMaterial.issuedQty,
+    unitCost: workOrderMaterial.unitCost,
+  }).from(workOrderMaterial).where(and(
+    eq(workOrderMaterial.masterFn, scope.masterFn),
+    eq(workOrderMaterial.companyFn, scope.companyFn),
+    eq(workOrderMaterial.workOrderId, header.id),
+  )).for('update');
+  if (materials.some((line) => !new Decimal(line.issuedQty).eq(line.requiredQty))) {
+    throw new ManufacturingWorkOrderError('All required materials must be issued before completion');
+  }
+  const [openOperation] = await tx.select({ id: workOrderOperation.id })
+    .from(workOrderOperation)
+    .where(and(
+      eq(workOrderOperation.masterFn, scope.masterFn),
+      eq(workOrderOperation.companyFn, scope.companyFn),
+      eq(workOrderOperation.workOrderId, header.id),
+      sql`${workOrderOperation.status} not in ('completed', 'skipped')`,
+    ))
+    .limit(1)
+    .for('update');
+  if (openOperation) {
+    throw new ManufacturingWorkOrderError('Every operation must be completed before receipt');
+  }
+
+  const qty = new Decimal(header.plannedQty).toDecimalPlaces(4).toNumber();
+  const receipt = await receiveStockWithin(tx, scope, {
+    productId: header.productId,
+    warehouseId: header.warehouseId,
+    qty,
+    refType: 'work_order_completion',
+    refId: header.id,
+    movementGroup: `WO-COMPLETE-${header.id}`,
+  });
+  const materialValue = materials.reduce(
+    (sum, line) => sum.plus(new Decimal(line.issuedQty).mul(line.unitCost)),
+    new Decimal(0),
+  ).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+  const { inventoryId, wipId } = await manufacturingAccounts(tx, scope);
+  const journalRef = `WO-COMPLETE-${header.docNo}`;
+  await tx.insert(glEntry).values([
+    {
+      masterFn: scope.masterFn, companyFn: scope.companyFn,
+      journalRef, accountId: inventoryId, debit: materialValue, credit: '0',
+      memo: 'Finished goods receipt',
+    },
+    {
+      masterFn: scope.masterFn, companyFn: scope.companyFn,
+      journalRef, accountId: wipId, debit: '0', credit: materialValue,
+      memo: 'Clear material WIP',
+    },
+  ]);
+  await tx.update(workOrder).set({
+    status: 'completed',
+    completedQty: header.plannedQty,
+    completedAt: sql`now()`,
+    version: sql`${workOrder.version} + 1`,
+    updatedAt: sql`now()`,
+  }).where(eq(workOrder.id, header.id));
+  return {
+    workOrderId: header.id,
+    status: 'completed' as const,
+    movementId: receipt.movementId,
+    materialValue,
+    journalRef,
+  };
 }

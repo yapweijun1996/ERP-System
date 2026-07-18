@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import type { DB } from '../../data/db';
 import {
+  account,
   bomComponent,
   bomVersion,
   manufacturingBom,
@@ -14,16 +15,21 @@ import {
   workOrder,
   workOrderMaterial,
   workOrderOperation,
+  stockMovement,
+  glEntry,
 } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import {
   createWorkOrder,
+  completeWorkOrderWithin,
+  issueWorkOrderMaterialsWithin,
   ManufacturingWorkOrderError,
+  reportWorkOrderOperationWithin,
   releaseWorkOrderWithin,
 } from './workOrder';
 
 async function fixture(db: DB, componentStock = 20) {
-  const [finished, component] = await db.insert(product).values([
+  await db.insert(product).values([
     {
       masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn,
       sku: 'FG-1', name: 'Finished Good', uom: 'unit', standardCost: '30',
@@ -47,6 +53,16 @@ async function fixture(db: DB, componentStock = 20) {
     warehouseId: location.id,
     qty: String(componentStock),
   });
+  await db.insert(account).values([
+    {
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn,
+      code: '1400', name: 'Inventory', type: 'asset',
+    },
+    {
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn,
+      code: '1450', name: 'Work in Progress', type: 'asset',
+    },
+  ]);
   const [center] = await db.insert(workCenter).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn,
     code: 'WC-1', name: 'Assembly',
@@ -156,5 +172,81 @@ describe('manufacturing work orders', () => {
       startDate: '2026-07-19',
       dueDate: '2026-07-20',
     })).rejects.toThrow(ManufacturingWorkOrderError);
+  });
+
+  it('issues material, reports operations and completes finished goods with balanced WIP GL', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db, 20);
+    const created = await createWorkOrder(db, SCOPE, {
+      docNo: 'WO-EXEC',
+      productId: fx.finishedProductId,
+      bomVersionId: fx.bomVersionId,
+      routingId: fx.routingId,
+      warehouseId: fx.warehouseId,
+      plannedQty: '5',
+      startDate: '2026-07-19',
+      dueDate: '2026-07-20',
+    });
+    await db.transaction((tx) => releaseWorkOrderWithin(tx, SCOPE, created.id));
+    const issued = await db.transaction((tx) =>
+      issueWorkOrderMaterialsWithin(tx, SCOPE, created.id));
+    expect(issued).toMatchObject({
+      status: 'in_progress',
+      materialValue: '46.75',
+      journalRef: 'WO-ISSUE-WO-EXEC',
+    });
+    expect(issued.movementIds).toHaveLength(1);
+
+    const [operation] = await db.select({ id: workOrderOperation.id })
+      .from(workOrderOperation);
+    await db.transaction((tx) => reportWorkOrderOperationWithin(tx, SCOPE, {
+      workOrderId: created.id,
+      operationId: operation.id,
+      hours: '1.75',
+      complete: true,
+    }));
+    const completed = await db.transaction((tx) =>
+      completeWorkOrderWithin(tx, SCOPE, created.id));
+    expect(completed).toMatchObject({
+      status: 'completed',
+      materialValue: '46.75',
+      journalRef: 'WO-COMPLETE-WO-EXEC',
+    });
+    expect(await db.select().from(workOrder)).toMatchObject([
+      { status: 'completed', plannedQty: '5.0000', completedQty: '5.0000' },
+    ]);
+    expect(await db.select().from(stockMovement)).toMatchObject([
+      { direction: 'out', qty: '11.0000', refType: 'work_order_material' },
+      { direction: 'in', qty: '5.0000', refType: 'work_order_completion' },
+    ]);
+    const entries = await db.select().from(glEntry);
+    const debit = entries.reduce((sum, row) => sum + Number(row.debit), 0);
+    const credit = entries.reduce((sum, row) => sum + Number(row.credit), 0);
+    expect(debit).toBe(93.5);
+    expect(credit).toBe(93.5);
+  });
+
+  it('rolls back an incomplete execution and rejects duplicate material issue', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db, 20);
+    const created = await createWorkOrder(db, SCOPE, {
+      docNo: 'WO-GUARDS',
+      productId: fx.finishedProductId,
+      bomVersionId: fx.bomVersionId,
+      routingId: fx.routingId,
+      warehouseId: fx.warehouseId,
+      plannedQty: '5',
+      startDate: '2026-07-19',
+      dueDate: '2026-07-20',
+    });
+    await db.transaction((tx) => releaseWorkOrderWithin(tx, SCOPE, created.id));
+    await expect(db.transaction((tx) => completeWorkOrderWithin(tx, SCOPE, created.id)))
+      .rejects.toThrow('cannot be completed');
+    await db.transaction((tx) => issueWorkOrderMaterialsWithin(tx, SCOPE, created.id));
+    await expect(db.transaction((tx) => issueWorkOrderMaterialsWithin(tx, SCOPE, created.id)))
+      .rejects.toThrow('already issued');
+    await expect(db.transaction((tx) => completeWorkOrderWithin(tx, SCOPE, created.id)))
+      .rejects.toThrow('Every operation');
+    expect(await db.select().from(stockMovement)).toHaveLength(1);
   });
 });

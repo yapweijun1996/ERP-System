@@ -20,7 +20,12 @@ import {
   completeWarehousePickWithin,
   recordWarehousePickWithin,
 } from '../modules/warehouse/picking';
-import { releaseWorkOrderWithin } from '../modules/manufacturing/workOrder';
+import {
+  completeWorkOrderWithin,
+  issueWorkOrderMaterialsWithin,
+  releaseWorkOrderWithin,
+  reportWorkOrderOperationWithin,
+} from '../modules/manufacturing/workOrder';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'inventory/adjustments/post': {
@@ -78,6 +83,47 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return releaseWorkOrderWithin(tx, scope, input.resourceId);
+    },
+  },
+  'manufacturing/work-orders/issue-materials': {
+    permission: 'manufacturing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return issueWorkOrderMaterialsWithin(tx, scope, input.resourceId);
+    },
+  },
+  'manufacturing/work-orders/report-operation': {
+    permission: 'manufacturing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as { operationId?: unknown; hours?: unknown; complete?: unknown };
+      if (
+        !Number.isSafeInteger(payload.operationId)
+        || Number(payload.operationId) <= 0
+        || !['string', 'number'].includes(typeof payload.hours)
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'operationId and positive hours are required.',
+        );
+      }
+      return reportWorkOrderOperationWithin(tx, scope, {
+        workOrderId: input.resourceId,
+        operationId: Number(payload.operationId),
+        hours: payload.hours as string | number,
+        complete: payload.complete === true,
+      });
+    },
+  },
+  'manufacturing/work-orders/complete': {
+    permission: 'manufacturing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return completeWorkOrderWithin(tx, scope, input.resourceId);
     },
   },
   'sales/orders/confirm': {

@@ -1,6 +1,13 @@
 -- Canonical manufacturing fixture for the browser PGlite demo.
 -- Uses only fictional products already present in the shared seed and is safe
 -- to replay against an upgraded persistent IndexedDB database.
+insert into account (master_fn, company_fn, code, name, type)
+select 'M1', 'C-SG', '1450', 'Work in Progress', 'asset'
+where not exists (
+  select 1 from account
+  where master_fn='M1' and company_fn='C-SG' and code='1450'
+);
+
 insert into work_center
   (master_fn, company_fn, code, name, capacity_hours_per_day)
 select 'M1', 'C-SG', 'WC-ASSEMBLY', 'Demo Assembly Cell', 8

@@ -79,6 +79,7 @@ INSERT INTO account (master_fn, company_fn, code, name, type) VALUES
   ('M1', 'C-SG', '4000', 'Revenue', 'income'),
   ('M1', 'C-SG', '2200', 'GST Output Tax', 'liability'),
   ('M1', 'C-SG', '1400', 'Inventory', 'asset'),
+  ('M1', 'C-SG', '1450', 'Work in Progress', 'asset'),
   ('M1', 'C-SG', '1200', 'GST Input Tax', 'asset'),
   ('M1', 'C-SG', '2100', 'Accounts Payable', 'liability'),
   ('M1', 'C-SG', '5800', 'Inventory Variance', 'expense');
