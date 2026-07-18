@@ -85,7 +85,7 @@
     accounts:'finance','gl-entries':'finance','journals':'finance',
     suppliers:'purchasing','purchase-orders':'purchasing','purchase-order-lines':'purchasing',
     'goods-receipts':'purchasing','supplier-invoices':'purchasing',
-    opportunities:'crm',
+    opportunities:'crm',customers:'crm',
   };
   function resourcePath(resource){
     var key=String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');

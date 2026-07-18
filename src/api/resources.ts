@@ -2,6 +2,7 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   account,
+  customer,
   glEntry,
   goodsReceipt,
   invoice,
@@ -96,6 +97,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     status: invoice.status,
     versionColumn: invoice.version,
   }),
+  'crm/customers': resource(customer, 'crm.read'),
   'finance/accounts': resource(account, 'finance.read'),
   'finance/gl-entries': resource(glEntry, 'finance.read'),
   'purchasing/suppliers': resource(supplier, 'purchasing.read'),

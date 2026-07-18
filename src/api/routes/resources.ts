@@ -97,6 +97,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof StockTransferValidationError
         || error instanceof InventoryTrackingError
         || error instanceof PurchasingPostingError
+        || error instanceof InvalidOpportunityStateError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);

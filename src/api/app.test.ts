@@ -11,6 +11,7 @@ import {
   inventoryAdjustment,
   inventoryLot,
   inventorySerial,
+  opportunity,
   product,
   purchaseOrder,
   purchaseOrderLine,
@@ -515,6 +516,106 @@ describe('production API security contract', () => {
       entityId: '1',
       action: 'convert',
     });
+  });
+
+  it('serves the canonical CRM customer pipeline and creates opportunities with tenant/RBAC guards', async () => {
+    const cookies = await login(running.baseUrl);
+    const customersResponse = await fetch(`${running.baseUrl}/api/crm/customers`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(customersResponse.status).toBe(200);
+    const customersBody = await customersResponse.json();
+    expect(customersBody.data).toEqual([
+      expect.objectContaining({ code: 'CUST1', name: 'Beta Pte Ltd' }),
+    ]);
+
+    const [buyer] = await db.select({ id: customer.id }).from(customer)
+      .where(eq(customer.code, 'CUST1'));
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+      'x-request-id': 'crm-create-api',
+    };
+    const createdResponse = await fetch(`${running.baseUrl}/api/crm/opportunities`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        docNo: 'OPP-API-NEW',
+        customerId: buyer.id,
+        title: 'Canonical API opportunity',
+        value: 12500,
+        currency: 'SGD',
+        stage: 'qualified',
+        probability: 40,
+        closeDate: '2026-08-31',
+      }),
+    });
+    expect(createdResponse.status).toBe(201);
+    const createdBody = await createdResponse.json();
+    expect(createdBody.data).toMatchObject({
+      id: expect.any(Number),
+      opportunityId: expect.any(Number),
+      docNo: 'OPP-API-NEW',
+    });
+    expect(await db.select().from(opportunity)
+      .where(eq(opportunity.docNo, 'OPP-API-NEW'))).toEqual([
+      expect.objectContaining({
+        masterFn: 'M1',
+        companyFn: 'C-SG',
+        customerId: buyer.id,
+        stage: 'qualified',
+      }),
+    ]);
+    expect(await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'crm-create-api'))).toEqual([
+      expect.objectContaining({
+        entity: 'crm/opportunities',
+        entityId: String(createdBody.data.id),
+        action: 'create',
+      }),
+    ]);
+
+    const [foreignCustomer] = await db.insert(customer).values({
+      masterFn: 'M1',
+      companyFn: 'C-MY',
+      code: 'MY-CROSS',
+      name: 'Malaysia Customer',
+    }).returning({ id: customer.id });
+    const crossTenant = await fetch(`${running.baseUrl}/api/crm/opportunities`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        docNo: 'OPP-CROSS',
+        customerId: foreignCustomer.id,
+        title: 'Wrong tenant',
+        value: 100,
+        currency: 'SGD',
+        closeDate: '2026-08-31',
+      }),
+    });
+    expect(crossTenant.status).toBe(422);
+    expect((await crossTenant.json()).error.code).toBe('validation_failed');
+
+    const viewer = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const denied = await fetch(`${running.baseUrl}/api/crm/opportunities`, {
+      method: 'POST',
+      headers: {
+        cookie: viewer.header,
+        'content-type': 'application/json',
+        'x-csrf-token': viewer.csrf,
+      },
+      body: JSON.stringify({
+        docNo: 'OPP-DENIED',
+        customerId: buyer.id,
+        title: 'Denied',
+        value: 100,
+        currency: 'SGD',
+        closeDate: '2026-08-31',
+      }),
+    });
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).error.code).toBe('permission_denied');
   });
 
   it('confirms an existing sales draft through the transactional action dispatcher', async () => {

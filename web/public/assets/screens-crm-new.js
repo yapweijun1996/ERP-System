@@ -5,23 +5,26 @@
    win probability. Reached from Quick create, the command
    palette and the Sales Pipeline. Confirms to the pipeline.
    ============================================================ */
-SCREENS['new-opportunity'] = function(root){
+SCREENS['new-opportunity'] = async function(root){
+  await prepareCanonicalCrmData();
   const STAGES=[['Lead',10],['Qualified',30],['Proposal',50],['Negotiation',70]];
   const stageProb=st=>(STAGES.find(s=>s[0]===st)||[null,10])[1];
-  const OWNERS=[
-    {name:'J. Okafor', av:'JO', clr:'#0a84ff'},
-    {name:'L. Tan',    av:'LT', clr:'#1f9d57'},
-    {name:'A. Costa',  av:'AC', clr:'#ff9f0a'},
-    {name:'M. Reyes',  av:'MR', clr:'#bf5af2'},
-  ];
-  const SOURCES=['Inbound enquiry','Referral','Outbound prospecting','Trade show / event','Existing customer','Partner'];
+  const currentOwner=(DB.user&&DB.user.name)||'Unassigned';
+  const ownerInitials=(currentOwner.replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean)
+    .slice(0,2).map(word=>word[0]).join('').toUpperCase())||'U';
+  const OWNER={name:currentOwner,av:ownerInitials,clr:'#0a84ff'};
+  const today=new Date().toISOString().slice(0,10);
+  const closeDefault=new Date(Date.now()+42*24*60*60*1000).toISOString().slice(0,10);
+  const opportunitySuffix=typeof crypto!=='undefined'&&crypto.randomUUID
+    ?crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase()
+    :String(Date.now()).slice(-8);
+  const opportunityDocNo=`OPP-${today.replaceAll('-','')}-${opportunitySuffix}`;
 
   const S={ title:'', custCode:'', value:50000, stage:'Lead', prob:10,
-    close:'2026-08-29', owner:OWNERS[0].name, source:'Inbound enquiry', hot:false,
-    nextStep:'', notes:'', probTouched:false };
+    close:closeDefault, probTouched:false };
 
   const cust=()=>DB.customers.find(c=>c.code===S.custCode);
-  const owner=()=>OWNERS.find(o=>o.name===S.owner)||OWNERS[0];
+  const owner=()=>OWNER;
   const weighted=()=> S.value*S.prob/100;
   const canCreate=()=> S.title.trim() && S.custCode && S.value>0;
 
@@ -29,8 +32,8 @@ SCREENS['new-opportunity'] = function(root){
   function previewCard(){
     const o=owner(), c=cust();
     const clr=crmStageColor(S.stage);
-    return `<div class="kcard ${S.hot?'hot':''}" style="cursor:default;max-width:none">
-      <div class="kc-cust">${ic('handshake')}${esc(c?c.name:'— select customer —')}${S.hot?` · <span style="color:var(--warn)">⚠</span>`:''}</div>
+    return `<div class="kcard" style="cursor:default;max-width:none">
+      <div class="kc-cust">${ic('handshake')}${esc(c?c.name:'— select customer —')}</div>
       <div class="kc-title">${esc(S.title||'Untitled opportunity')}</div>
       <div class="kc-val">${money0(S.value)}</div>
       <div class="kprob"><i style="width:${S.prob}%;background:${clr}"></i></div>
@@ -83,11 +86,8 @@ SCREENS['new-opportunity'] = function(root){
             <div class="panel-h">${ic('handshake')}<h3>Opportunity</h3></div>
             <div class="panel-body">
               <div class="fld"><span>Title <span class="req">*</span></span><input id="wTitle" value="${esc(S.title)}" placeholder="e.g. Packaging line expansion — Phase 2"></div>
-              <div class="fldrow c2" style="margin-top:12px">
-                <div class="fld"><span>Customer <span class="req">*</span></span>
-                  ${combobox({id:'wCust',value:S.custCode,placeholder:'Search customers…',options:DB.customers.map(c=>({value:c.code,label:c.name,sub:c.code}))})}</div>
-                <div class="fld"><span>Source</span><select id="wSource">${SOURCES.map(s=>`<option ${s===S.source?'selected':''}>${s}</option>`).join('')}</select></div>
-              </div>
+              <div class="fld" style="margin-top:12px"><span>Customer <span class="req">*</span></span>
+                ${combobox({id:'wCust',value:S.custCode,placeholder:'Search customers…',options:DB.customers.map(c=>({value:c.code,label:c.name,sub:c.code}))})}</div>
             </div>
           </div>
           <div class="panel">
@@ -100,19 +100,18 @@ SCREENS['new-opportunity'] = function(root){
               </div>
               <div class="fldrow c2" style="margin-top:12px">
                 <div class="fld"><span>Expected close</span><input type="date" id="wClose" value="${S.close}"></div>
-                <div class="fld"><span>Owner</span><select id="wOwner">${OWNERS.map(o=>`<option ${o.name===S.owner?'selected':''}>${esc(o.name)}</option>`).join('')}</select></div>
+                <div class="fld"><span>Currency</span><input value="${esc(DB.company.currency)}" readonly></div>
               </div>
-              <label class="checkrow" id="wHotRow" style="display:flex;align-items:center;gap:10px;margin-top:14px;cursor:pointer">
-                <button type="button" class="set-tgl ${S.hot?'on':''}" id="wHot" role="switch" aria-checked="${S.hot}"><span class="set-tgl-k"></span></button>
-                <span><b style="font-size:13.5px">Flag as hot deal</b><small style="display:block;color:var(--muted);font-size:12px">Highlights the card and surfaces it in the “Hot” filter.</small></span>
-              </label>
             </div>
           </div>
           <div class="panel">
-            <div class="panel-h">${ic('edit')}<h3>Notes &amp; next step</h3></div>
+            <div class="panel-h">${ic('user')}<h3>Ownership</h3></div>
             <div class="panel-body">
-              <div class="fld"><span>Next step</span><input id="wNext" value="${esc(S.nextStep)}" placeholder="e.g. Send proposal by Fri; schedule site visit"></div>
-              <div class="fld" style="margin-top:12px"><span>Notes</span><textarea id="wNotes" rows="3" placeholder="Context, stakeholders, competition…" style="resize:vertical">${esc(S.notes)}</textarea></div>
+              <div class="fldrow c2">
+                <div class="fld"><span>Created by</span><input value="${esc(currentOwner)}" readonly></div>
+                <div class="fld"><span>Opportunity number</span><input value="${esc(opportunityDocNo)}" readonly></div>
+              </div>
+              <div style="margin-top:12px;color:var(--muted);font-size:12.5px">Activity notes and owner assignment will be added with the canonical CRM activity workflow.</div>
             </div>
           </div>
         </div>
@@ -127,31 +126,34 @@ SCREENS['new-opportunity'] = function(root){
   function wire(){
     const t=$('#wTitle'); t.addEventListener('input',()=>{ S.title=t.value; refreshSidebar(); refreshBar(); });
     wireCombobox('wCust',{options:DB.customers.map(c=>({value:c.code,label:c.name,sub:c.code})),onChange:v=>{ S.custCode=v; refreshSidebar(); refreshBar(); }});
-    const src=$('#wSource'); src.addEventListener('change',()=>S.source=src.value);
     const v=$('#wValue'); v.addEventListener('input',()=>{ S.value=Math.max(0,+v.value||0); refreshSidebar(); refreshBar(); });
     const st=$('#wStage'); st.addEventListener('change',()=>{ S.stage=st.value;
       if(!S.probTouched){ S.prob=stageProb(S.stage); $('#wProb').value=S.prob; } refreshSidebar(); });
     const pr=$('#wProb'); pr.addEventListener('input',()=>{ S.prob=Math.min(100,Math.max(0,+pr.value||0)); S.probTouched=true; refreshSidebar(); });
     const cl=$('#wClose'); cl.addEventListener('change',()=>{ S.close=cl.value; refreshSidebar(); });
-    const ow=$('#wOwner'); ow.addEventListener('change',()=>{ S.owner=ow.value; refreshSidebar(); });
-    const hot=$('#wHot'); $('#wHotRow').addEventListener('click',e=>{ e.preventDefault(); S.hot=!S.hot; hot.classList.toggle('on',S.hot); hot.setAttribute('aria-checked',S.hot); refreshSidebar(); });
-    const ns=$('#wNext'); ns.addEventListener('input',()=>S.nextStep=ns.value);
-    const no=$('#wNotes'); no.addEventListener('input',()=>S.notes=no.value);
   }
   function wireBar(){
     const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('crm-pipeline'));
     const create=$('#wCreate'); create&&create.addEventListener('click',async()=>{
       if(!canCreate())return;
-      if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.createOpportunity==='function')){ toast('Demo adapter not loaded','warn'); return; }
+      const adapter=window.ErpSystemData;
+      if(!adapter||typeof adapter.create!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
       create.disabled=true;
       try{
         const c=cust();
-        const res=await window.ErpSystemDemo.createOpportunity({
-          customerCode:S.custCode, title:S.title.trim(), value:S.value, currency:DB.company.currency,
-          stage:S.stage, probability:S.prob, closeDate:S.close,
+        const response=await adapter.create('crm/opportunities',{
+          docNo:opportunityDocNo,
+          customerId:c.id,
+          title:S.title.trim(),
+          value:S.value,
+          currency:DB.company.currency,
+          stage:S.stage.toLowerCase(),
+          probability:S.prob,
+          closeDate:S.close,
         });
+        const res=response.data||{};
         navigate('crm-pipeline');
-        toast(`Opportunity ${res.docNo} created · ${c.name} · ${money0(S.value)} · ${S.stage}${S.hot?' · hot':''}`,'ok');
+        toast(`Opportunity ${res.docNo||opportunityDocNo} created · ${c.name} · ${money0(S.value)} · ${S.stage}`,'ok');
       }catch(e){
         toast((e&&e.message)||'Create opportunity failed','danger');
         create.disabled=false;

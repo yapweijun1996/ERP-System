@@ -1208,6 +1208,7 @@
     'purchasing/purchase-order-lines':'purchase_order_line',
     'purchasing/goods-receipts':'goods_receipt',
     'purchasing/supplier-invoices':'supplier_invoice',
+    'crm/customers':'customer',
     'crm/opportunities':'opportunity',
   };
   function normalizeResource(resource){
@@ -1304,7 +1305,17 @@
       }
       return {data:await createPurchaseOrder(payload),meta:{}};
     }
-    if(key==='crm/opportunities') return {data:await createOpportunity(payload),meta:{}};
+    if(key==='crm/opportunities'){
+      if(Number.isSafeInteger(payload&&payload.customerId)){
+        var canonicalOpportunity = await requireDemoDb().transaction(function(tx){
+          return state.runtime.commands.createOpportunity(
+            state.runtime.createOrm(tx), SCOPE, payload);
+        });
+        await refresh();
+        return {data:canonicalOpportunity,meta:{}};
+      }
+      return {data:await createOpportunity(payload),meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1359,6 +1370,20 @@
         return {data:Object.assign({docNo:payload.docNo},canonicalInvoice),meta:{}};
       }
       return {data:await postSupplierInvoice(id),meta:{}};
+    }
+    if(key==='crm/opportunities'&&name==='convert'){
+      payload=payload||{};
+      var convertedOpportunity = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.convertOpportunityToSalesOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, {
+            opportunityId:Number(id),
+            docNo:payload.docNo,
+            orderDate:payload.orderDate,
+            lines:payload.lines,
+          });
+      });
+      await refresh();
+      return {data:convertedOpportunity,meta:{}};
     }
     if(key==='crm/opportunities'&&name==='convert-to-sales-order'){
       payload=payload||{};

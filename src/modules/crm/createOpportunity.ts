@@ -2,9 +2,11 @@
 // See src/data/schema/crm.ts's header comment: exact product lines are decided at
 // conversion time (convertOpportunityToSalesOrder.ts), not when a deal is first
 // estimated — a plain insert is enough here, no cross-module transaction needed.
+import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
-import { opportunity } from '../../data/schema';
+import { customer, opportunity } from '../../data/schema';
+import { InvalidOpportunityStateError } from './errors';
 
 export interface CreateOpportunityInput {
   docNo: string;
@@ -19,6 +21,19 @@ export interface CreateOpportunityInput {
 }
 
 export async function createOpportunity(db: DB, scope: Scope, input: CreateOpportunityInput) {
+  const [scopedCustomer] = await db.select({ id: customer.id })
+    .from(customer)
+    .where(and(
+      eq(customer.id, input.customerId),
+      eq(customer.masterFn, scope.masterFn),
+      eq(customer.companyFn, scope.companyFn),
+    ))
+    .limit(1);
+  if (!scopedCustomer) {
+    throw new InvalidOpportunityStateError(
+      'The selected customer does not belong to the active company.',
+    );
+  }
   const [row] = await db.insert(opportunity).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
     docNo: input.docNo, customerId: input.customerId, title: input.title,
@@ -26,5 +41,5 @@ export async function createOpportunity(db: DB, scope: Scope, input: CreateOppor
     stage: input.stage ?? 'lead', probability: String(input.probability ?? 0),
     closeDate: input.closeDate, ownerUserId: input.ownerUserId ?? null,
   }).returning({ id: opportunity.id });
-  return { opportunityId: row.id };
+  return { id: row.id, opportunityId: row.id, docNo: input.docNo };
 }

@@ -9,8 +9,113 @@ function crmStageColor(st){
   return {Lead:'var(--muted)',Qualified:'var(--accent)',Proposal:'var(--teal)',Negotiation:'var(--warn)',Won:'var(--ok)'}[st]||'var(--muted)';
 }
 
+async function crmListPage(resource){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.list!=='function'){
+    throw new Error('The canonical ERP data adapter is unavailable.');
+  }
+  const response=await adapter.list(resource,{limit:100});
+  if(!response||!Array.isArray(response.data)){
+    throw new Error(`Unexpected ${resource} response.`);
+  }
+  return {
+    data:response.data,
+    nextCursor:response.meta&&response.meta.nextCursor||null,
+  };
+}
+
+function crmNumber(value){
+  const parsed=Number(value);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+/* Canonical CRM presentation model. Customers, opportunities and conversion
+   stock choices come from the same bounded resource contract in Demo/API.
+   Joins below are display-only; create and conversion remain shared domain
+   commands executed by the adapter/server transaction. */
+async function prepareCanonicalCrmData(){
+  const adapter=window.ErpSystemData;
+  if(adapter&&adapter.mode==='fallback'){
+    if(Array.isArray(DB.pipeline)&&Array.isArray(DB.customers)&&Array.isArray(DB.items)) return;
+    throw new Error('The offline canonical CRM snapshot is unavailable.');
+  }
+  const pages=await Promise.all([
+    crmListPage('crm/customers'),
+    crmListPage('crm/opportunities'),
+    crmListPage('inventory/products'),
+    crmListPage('inventory/warehouses'),
+    crmListPage('inventory/stock-levels'),
+  ]);
+  const [customers,opportunities,products,warehouses,stockLevels]=pages.map(page=>page.data);
+  const customerById=new Map(customers.map(row=>[row.id,row]));
+  const onHandByProduct=new Map();
+  stockLevels.forEach(row=>{
+    onHandByProduct.set(
+      row.productId,
+      (onHandByProduct.get(row.productId)||0)+crmNumber(row.qty),
+    );
+  });
+
+  DB.customers=customers.map(row=>({
+    id:row.id,
+    code:row.code,
+    name:row.name,
+    terms:'—',
+    limit:0,
+    balance:0,
+    overdue:0,
+    status:'Active',
+  }));
+  DB.crmWarehouses=warehouses.map(row=>({
+    id:row.id,code:row.code,name:row.name,
+  }));
+  DB.items=products.map(row=>({
+    id:row.id,
+    sku:row.sku,
+    name:row.name,
+    uom:row.uom,
+    cost:crmNumber(row.standardCost),
+    onHand:onHandByProduct.get(row.id)||0,
+    alloc:0,
+    status:(onHandByProduct.get(row.id)||0)>0?'In stock':'No stock',
+  }));
+
+  const stageUi={lead:'Lead',qualified:'Qualified',proposal:'Proposal',negotiation:'Negotiation',won:'Won'};
+  DB.pipeline=Object.keys(stageUi).map(stage=>{
+    const items=opportunities.filter(row=>row.stage===stage).map(row=>{
+      const customer=customerById.get(row.customerId)||{};
+      const ownerName=DB.user&&DB.user.name||'Unassigned';
+      const initials=(ownerName.replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean)
+        .slice(0,2).map(word=>word[0]).join('').toUpperCase())||'U';
+      return {
+        id:row.id,
+        version:row.version,
+        no:row.docNo,
+        cust:customer.name||`Customer #${row.customerId}`,
+        custCode:customer.code||'—',
+        customerId:row.customerId,
+        title:row.title,
+        value:crmNumber(row.value),
+        currency:row.currency,
+        owner:ownerName,
+        av:initials,
+        clr:'#0a84ff',
+        close:row.closeDate,
+        prob:crmNumber(row.probability),
+        rawStage:row.stage,
+      };
+    });
+    return {stage:stageUi[stage],items};
+  });
+  DB.crmReadMeta={
+    truncated:pages.some(page=>Boolean(page.nextCursor)),
+    nextCursors:pages.map(page=>page.nextCursor),
+  };
+}
+
 /* ---------------- SALES PIPELINE (kanban — module landing) ---------------- */
-SCREENS['crm-pipeline'] = function(root){
+SCREENS['crm-pipeline'] = async function(root){
+  await prepareCanonicalCrmData();
   const total=DB.pipeline.reduce((s,c)=>s+c.items.reduce((a,o)=>a+o.value,0),0);
   const weighted=DB.pipeline.reduce((s,c)=>s+c.items.reduce((a,o)=>a+o.value*o.prob/100,0),0);
   const openCount=DB.pipeline.filter(c=>c.stage!=='Won').reduce((s,c)=>s+c.items.length,0);
@@ -92,14 +197,30 @@ function openConvertOpportunityModal(o){
     qtyEl.value=suggestQty(it); priceEl.value=it.cost;
   });
   $('#cvConfirm').addEventListener('click', async ()=>{
-    if(!(window.ErpSystemDemo&&typeof window.ErpSystemDemo.convertOpportunityToSalesOrder==='function')){ toast('Demo adapter not loaded','warn'); return; }
+    const adapter=window.ErpSystemData;
+    if(!adapter||typeof adapter.action!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
     const confirmBtn=$('#cvConfirm'); confirmBtn.disabled=true;
     try{
-      const res=await window.ErpSystemDemo.convertOpportunityToSalesOrder(
-        o.no, itemSel.value, Math.max(1,+qtyEl.value||1), Math.max(0,+priceEl.value||0));
+      const item=items.find(x=>x.sku===itemSel.value);
+      const warehouse=(DB.crmWarehouses||[]).find(x=>x.code==='WH-SALES')
+        ||(DB.crmWarehouses||[])[0];
+      if(!item||!warehouse) throw new Error('A product and warehouse are required for conversion.');
+      const today=new Date().toISOString().slice(0,10);
+      const response=await adapter.action('crm/opportunities',o.id,'convert',{
+        docNo:`SO-CRM-${o.id}`,
+        orderDate:today,
+        lines:[{
+          productId:item.id,
+          warehouseId:warehouse.id,
+          qty:Math.max(1,+qtyEl.value||1),
+          unitPrice:Math.max(0,+priceEl.value||0),
+          taxCode:DB.company&&DB.company.taxRegime==='SST'?'SV':'SR',
+        }],
+      },`crm-convert-${o.id}`);
+      const res=response.data||{};
       closeModal();
       navigate('crm-pipeline');
-      toast(`${o.no} converted — ${res.docNo} created · ${money(res.total)}`,'ok');
+      toast(`${o.no} converted — SO-CRM-${o.id} created · ${money(res.total)}`,'ok');
     }catch(e){
       toast((e&&e.message)||'Convert failed','danger');
       confirmBtn.disabled=false;

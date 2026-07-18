@@ -20,6 +20,10 @@ import {
   createPurchaseOrderWithin,
   type CreatePurchaseOrderInput,
 } from '../modules/purchasing/createPurchaseOrder';
+import {
+  createOpportunity,
+  type CreateOpportunityInput,
+} from '../modules/crm/createOpportunity';
 
 export interface CreateDefinition {
   permission: string;
@@ -115,6 +119,38 @@ const CREATES: Record<string, CreateDefinition> = {
         );
       }
       return createPurchaseOrderWithin(tx, scope, input);
+    },
+  },
+  'crm/opportunities': {
+    permission: 'crm.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      const input = payload as unknown as CreateOpportunityInput;
+      if (
+        typeof input.docNo !== 'string'
+        || !input.docNo.trim()
+        || !Number.isSafeInteger(input.customerId)
+        || input.customerId <= 0
+        || typeof input.title !== 'string'
+        || !input.title.trim()
+        || !Number.isFinite(input.value)
+        || input.value <= 0
+        || typeof input.currency !== 'string'
+        || !/^[A-Z]{3}$/.test(input.currency)
+        || typeof input.closeDate !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}$/.test(input.closeDate)
+        || (input.stage != null
+          && !['lead', 'qualified', 'proposal', 'negotiation'].includes(input.stage))
+        || (input.probability != null
+          && (!Number.isFinite(input.probability)
+            || input.probability < 0
+            || input.probability > 100))
+      ) {
+        throw new RangeError(
+          'docNo, customerId, title, positive value, currency and closeDate are required for an opportunity.',
+        );
+      }
+      return createOpportunity(tx, scope, input);
     },
   },
 };

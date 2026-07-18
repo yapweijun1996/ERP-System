@@ -36,4 +36,25 @@ describe('createOpportunity', () => {
       .where(eq(opportunity.id, res.opportunityId));
     expect(created.stage).toBe('qualified');
   });
+
+  it('rejects a customer from another company without creating an opportunity', async () => {
+    const db = await freshDb();
+    const [foreignCustomer] = await db.insert(customer).values({
+      masterFn: SCOPE.masterFn,
+      companyFn: 'C-MY',
+      code: 'MY-C1',
+      name: 'Foreign Customer',
+    }).returning({ id: customer.id });
+
+    await expect(createOpportunity(db, SCOPE, {
+      docNo: 'OPP-CROSS',
+      customerId: foreignCustomer.id,
+      title: 'Cross-company deal',
+      value: 1000,
+      currency: 'SGD',
+      closeDate: '2026-08-01',
+    })).rejects.toThrow('does not belong to the active company');
+
+    expect(await db.select().from(opportunity)).toHaveLength(0);
+  });
 });

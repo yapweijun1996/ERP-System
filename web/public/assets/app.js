@@ -394,6 +394,7 @@ const API_SCREEN_ROUTES = new Set([
   'dashboard',
   'stock-on-hand','stock-movement','inv-valuation',
   'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
+  'crm-pipeline','new-opportunity',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
