@@ -309,3 +309,78 @@ BEGIN
   -- 3. Mark the opportunity won and link the resulting order.
   UPDATE opportunity SET stage = 'won', order_id = v_order_id, updated_at = now() WHERE id = v_opp_id;
 END $$;
+-- Rebuild warehouse-location projections after all demo transactions have
+-- established their final aggregate stock quantities. Migration backfills run
+-- before seed data on a fresh browser database, so the fixture must reconcile
+-- these projections once seeding is complete.
+INSERT INTO "warehouse_bin" (
+  "master_fn",
+  "company_fn",
+  "warehouse_id",
+  "code",
+  "name",
+  "is_system",
+  "is_active",
+  "created_at"
+)
+SELECT
+  warehouse."master_fn",
+  warehouse."company_fn",
+  warehouse."id",
+  'DEFAULT',
+  'Default',
+  true,
+  true,
+  CURRENT_TIMESTAMP
+FROM "warehouse"
+ON CONFLICT ("master_fn", "company_fn", "warehouse_id", "code") DO NOTHING;
+
+INSERT INTO "stock_location_balance" (
+  "master_fn",
+  "company_fn",
+  "product_id",
+  "warehouse_id",
+  "bin_id",
+  "tracking_key",
+  "qty",
+  "updated_at"
+)
+SELECT
+  stock_level."master_fn",
+  stock_level."company_fn",
+  stock_level."product_id",
+  stock_level."warehouse_id",
+  warehouse_bin."id",
+  'none',
+  stock_level."qty",
+  CURRENT_TIMESTAMP
+FROM "stock_level"
+JOIN "product"
+  ON product."id" = stock_level."product_id"
+ AND product."master_fn" = stock_level."master_fn"
+ AND product."company_fn" = stock_level."company_fn"
+JOIN "warehouse_bin"
+  ON warehouse_bin."warehouse_id" = stock_level."warehouse_id"
+ AND warehouse_bin."master_fn" = stock_level."master_fn"
+ AND warehouse_bin."company_fn" = stock_level."company_fn"
+ AND warehouse_bin."code" = 'DEFAULT'
+WHERE product."tracking_type" = 'none'
+ON CONFLICT (
+  "master_fn",
+  "company_fn",
+  "product_id",
+  "warehouse_id",
+  "bin_id",
+  "tracking_key"
+) DO UPDATE SET
+  "qty" = excluded."qty",
+  "updated_at" = excluded."updated_at";
+
+UPDATE "stock_movement"
+SET "bin_id" = warehouse_bin."id"
+FROM "warehouse_bin"
+WHERE "stock_movement"."bin_id" IS NULL
+  AND warehouse_bin."warehouse_id" = "stock_movement"."warehouse_id"
+  AND warehouse_bin."master_fn" = "stock_movement"."master_fn"
+  AND warehouse_bin."company_fn" = "stock_movement"."company_fn"
+  AND warehouse_bin."code" = 'DEFAULT';

@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS "goods_receipt" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "purchase_order" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "purchase_order_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -37,7 +39,9 @@ CREATE TABLE IF NOT EXISTS "purchase_order" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "purchase_order_line" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "purchase_order_line_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -54,7 +58,9 @@ CREATE TABLE IF NOT EXISTS "purchase_order_line" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "supplier" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "supplier_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -64,7 +70,9 @@ CREATE TABLE IF NOT EXISTS "supplier" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "supplier_invoice" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "supplier_invoice_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -81,56 +89,86 @@ CREATE TABLE IF NOT EXISTS "supplier_invoice" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "goods_receipt" ADD CONSTRAINT "goods_receipt_order_id_purchase_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."purchase_order"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "goods_receipt" ADD CONSTRAINT "goods_receipt_warehouse_id_warehouse_id_fk" FOREIGN KEY ("warehouse_id") REFERENCES "public"."warehouse"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "purchase_order" ADD CONSTRAINT "purchase_order_supplier_id_supplier_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."supplier"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "purchase_order_line" ADD CONSTRAINT "purchase_order_line_order_id_purchase_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."purchase_order"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "purchase_order_line" ADD CONSTRAINT "purchase_order_line_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "supplier_invoice" ADD CONSTRAINT "supplier_invoice_order_id_purchase_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."purchase_order"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "supplier_invoice" ADD CONSTRAINT "supplier_invoice_supplier_id_supplier_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."supplier"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_gr_docno" ON "goods_receipt" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_gr_order" ON "goods_receipt" USING btree ("master_fn","company_fn","order_id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_po_docno" ON "purchase_order" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_po_tenant_date" ON "purchase_order" USING btree ("master_fn","company_fn","order_date","id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_pol_order" ON "purchase_order_line" USING btree ("master_fn","company_fn","order_id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_supplier_code" ON "supplier" USING btree ("master_fn","company_fn","code");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_si_docno" ON "supplier_invoice" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_gr_docno" ON "goods_receipt" USING btree ("master_fn","company_fn","doc_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_gr_order" ON "goods_receipt" USING btree ("master_fn","company_fn","order_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_po_docno" ON "purchase_order" USING btree ("master_fn","company_fn","doc_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_po_tenant_date" ON "purchase_order" USING btree ("master_fn","company_fn","order_date","id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_pol_order" ON "purchase_order_line" USING btree ("master_fn","company_fn","order_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_supplier_code" ON "supplier" USING btree ("master_fn","company_fn","code");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_si_docno" ON "supplier_invoice" USING btree ("master_fn","company_fn","doc_no");
+--> statement-breakpoint
+
 CREATE INDEX IF NOT EXISTS "idx_si_order" ON "supplier_invoice" USING btree ("master_fn","company_fn","order_id");
 
 -- 0003_fuzzy_ronan
@@ -145,7 +183,9 @@ CREATE TABLE IF NOT EXISTS "activity" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "opportunity" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "opportunity_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -163,34 +203,50 @@ CREATE TABLE IF NOT EXISTS "opportunity" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "activity" ADD CONSTRAINT "activity_opportunity_id_opportunity_id_fk" FOREIGN KEY ("opportunity_id") REFERENCES "public"."opportunity"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "opportunity" ADD CONSTRAINT "opportunity_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "opportunity" ADD CONSTRAINT "opportunity_owner_user_id_app_user_user_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "opportunity" ADD CONSTRAINT "opportunity_order_id_sales_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."sales_order"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_activity_opportunity" ON "activity" USING btree ("master_fn","company_fn","opportunity_id","occurred_at");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_opp_docno" ON "opportunity" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_opp_tenant_stage" ON "opportunity" USING btree ("master_fn","company_fn","stage","id");--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_activity_opportunity" ON "activity" USING btree ("master_fn","company_fn","opportunity_id","occurred_at");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_opp_docno" ON "opportunity" USING btree ("master_fn","company_fn","doc_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_opp_tenant_stage" ON "opportunity" USING btree ("master_fn","company_fn","stage","id");
+--> statement-breakpoint
+
 CREATE INDEX IF NOT EXISTS "idx_opp_customer" ON "opportunity" USING btree ("master_fn","company_fn","customer_id");
 
 -- 0004_stormy_guardian
@@ -209,7 +265,9 @@ CREATE TABLE IF NOT EXISTS "api_idempotency" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "app_session" (
 	"token_hash" text PRIMARY KEY NOT NULL,
 	"csrf_hash" text NOT NULL,
@@ -224,7 +282,9 @@ CREATE TABLE IF NOT EXISTS "app_session" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "audit_log" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "audit_log_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -238,7 +298,9 @@ CREATE TABLE IF NOT EXISTS "audit_log" (
 	"after" jsonb,
 	"occurred_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "auth_rate_limit" (
 	"identifier_hash" text PRIMARY KEY NOT NULL,
 	"attempts" integer DEFAULT 0 NOT NULL,
@@ -246,7 +308,9 @@ CREATE TABLE IF NOT EXISTS "auth_rate_limit" (
 	"blocked_until" timestamp with time zone,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "outbox_event" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "outbox_event_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -261,7 +325,9 @@ CREATE TABLE IF NOT EXISTS "outbox_event" (
 	"last_error" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "password_reset_token" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "password_reset_token_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"user_id" bigint NOT NULL,
@@ -270,7 +336,9 @@ CREATE TABLE IF NOT EXISTS "password_reset_token" (
 	"used_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "role_permission" (
 	"master_fn" text NOT NULL,
 	"role_id" bigint NOT NULL,
@@ -280,7 +348,9 @@ CREATE TABLE IF NOT EXISTS "role_permission" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "role_permission_role_id_permission_key_pk" PRIMARY KEY("role_id","permission_key")
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "user_invitation" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "user_invitation_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -294,73 +364,127 @@ CREATE TABLE IF NOT EXISTS "user_invitation" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
-ALTER TABLE "invoice" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "sales_order" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "purchase_order" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "supplier_invoice" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "opportunity" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+
+ALTER TABLE "invoice" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "sales_order" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "purchase_order" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "supplier_invoice" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "opportunity" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "api_idempotency" ADD CONSTRAINT "api_idempotency_actor_user_id_app_user_user_id_fk" FOREIGN KEY ("actor_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "app_session" ADD CONSTRAINT "app_session_user_id_app_user_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "app_session" ADD CONSTRAINT "app_session_active_company_fn_company_company_fn_fk" FOREIGN KEY ("active_company_fn") REFERENCES "public"."company"("company_fn") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_actor_user_id_app_user_user_id_fk" FOREIGN KEY ("actor_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "password_reset_token" ADD CONSTRAINT "password_reset_token_user_id_app_user_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "role_permission" ADD CONSTRAINT "role_permission_role_id_role_role_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."role"("role_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "user_invitation" ADD CONSTRAINT "user_invitation_role_id_role_role_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."role"("role_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "user_invitation" ADD CONSTRAINT "user_invitation_invited_by_user_id_app_user_user_id_fk" FOREIGN KEY ("invited_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_idempotency_actor_key" ON "api_idempotency" USING btree ("master_fn","company_fn","actor_user_id","idempotency_key");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_idempotency_expiry" ON "api_idempotency" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_session_user" ON "app_session" USING btree ("master_fn","user_id","revoked_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_session_expiry" ON "app_session" USING btree ("expires_at","idle_expires_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_audit_tenant_time" ON "audit_log" USING btree ("master_fn","company_fn","occurred_at","id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_audit_entity" ON "audit_log" USING btree ("master_fn","company_fn","entity","entity_id","occurred_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_audit_request" ON "audit_log" USING btree ("request_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_outbox_pending" ON "outbox_event" USING btree ("delivered_at","available_at","id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_outbox_tenant_aggregate" ON "outbox_event" USING btree ("master_fn","company_fn","aggregate_type","aggregate_id","id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_password_reset_token" ON "password_reset_token" USING btree ("token_hash");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_password_reset_user" ON "password_reset_token" USING btree ("user_id","expires_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_role_permission_master" ON "role_permission" USING btree ("master_fn","permission_key","role_id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_invitation_token" ON "user_invitation" USING btree ("token_hash");--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_idempotency_actor_key" ON "api_idempotency" USING btree ("master_fn","company_fn","actor_user_id","idempotency_key");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_idempotency_expiry" ON "api_idempotency" USING btree ("expires_at");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_session_user" ON "app_session" USING btree ("master_fn","user_id","revoked_at");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_session_expiry" ON "app_session" USING btree ("expires_at","idle_expires_at");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_audit_tenant_time" ON "audit_log" USING btree ("master_fn","company_fn","occurred_at","id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_audit_entity" ON "audit_log" USING btree ("master_fn","company_fn","entity","entity_id","occurred_at");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_audit_request" ON "audit_log" USING btree ("request_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_outbox_pending" ON "outbox_event" USING btree ("delivered_at","available_at","id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_outbox_tenant_aggregate" ON "outbox_event" USING btree ("master_fn","company_fn","aggregate_type","aggregate_id","id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_password_reset_token" ON "password_reset_token" USING btree ("token_hash");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_password_reset_user" ON "password_reset_token" USING btree ("user_id","expires_at");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_role_permission_master" ON "role_permission" USING btree ("master_fn","permission_key","role_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_invitation_token" ON "user_invitation" USING btree ("token_hash");
+--> statement-breakpoint
+
 CREATE INDEX IF NOT EXISTS "idx_invitation_tenant_email" ON "user_invitation" USING btree ("master_fn","company_fn","email");
 
 -- 0005_magenta_terrax
@@ -370,10 +494,18 @@ CREATE TABLE IF NOT EXISTS "system_state" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
-ALTER TABLE "outbox_event" ADD COLUMN IF NOT EXISTS "locked_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "outbox_event" ADD COLUMN IF NOT EXISTS "locked_by" text;--> statement-breakpoint
-ALTER TABLE "outbox_event" ADD COLUMN IF NOT EXISTS "last_attempt_at" timestamp with time zone;--> statement-breakpoint
+
+ALTER TABLE "outbox_event" ADD COLUMN IF NOT EXISTS "locked_at" timestamp with time zone;
+--> statement-breakpoint
+
+ALTER TABLE "outbox_event" ADD COLUMN IF NOT EXISTS "locked_by" text;
+--> statement-breakpoint
+
+ALTER TABLE "outbox_event" ADD COLUMN IF NOT EXISTS "last_attempt_at" timestamp with time zone;
+--> statement-breakpoint
+
 CREATE INDEX IF NOT EXISTS "idx_outbox_lease" ON "outbox_event" USING btree ("delivered_at","locked_at","available_at","id");
 
 -- 0006_uneven_korg
@@ -392,7 +524,9 @@ CREATE TABLE IF NOT EXISTS "inventory_adjustment" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "inventory_adjustment_line" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "inventory_adjustment_line_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -408,7 +542,9 @@ CREATE TABLE IF NOT EXISTS "inventory_adjustment_line" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "stock_transfer" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "stock_transfer_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -424,7 +560,9 @@ CREATE TABLE IF NOT EXISTS "stock_transfer" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "stock_transfer_line" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "stock_transfer_line_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"master_fn" text NOT NULL,
@@ -436,42 +574,295 @@ CREATE TABLE IF NOT EXISTS "stock_transfer_line" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
-ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "standard_cost" numeric(18, 4) DEFAULT '0' NOT NULL;--> statement-breakpoint
-ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "tracking_type" text DEFAULT 'none' NOT NULL;--> statement-breakpoint
+
+ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "standard_cost" numeric(18, 4) DEFAULT '0' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "tracking_type" text DEFAULT 'none' NOT NULL;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "inventory_adjustment" ADD CONSTRAINT "inventory_adjustment_warehouse_id_warehouse_id_fk" FOREIGN KEY ("warehouse_id") REFERENCES "public"."warehouse"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
+END $$;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "inventory_adjustment_line" ADD CONSTRAINT "inventory_adjustment_line_adjustment_id_inventory_adjustment_id_fk" FOREIGN KEY ("adjustment_id") REFERENCES "public"."inventory_adjustment"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
+END $$;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "inventory_adjustment_line" ADD CONSTRAINT "inventory_adjustment_line_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
+END $$;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "stock_transfer" ADD CONSTRAINT "stock_transfer_from_warehouse_id_warehouse_id_fk" FOREIGN KEY ("from_warehouse_id") REFERENCES "public"."warehouse"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
+END $$;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "stock_transfer" ADD CONSTRAINT "stock_transfer_to_warehouse_id_warehouse_id_fk" FOREIGN KEY ("to_warehouse_id") REFERENCES "public"."warehouse"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
+END $$;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "stock_transfer_line" ADD CONSTRAINT "stock_transfer_line_transfer_id_stock_transfer_id_fk" FOREIGN KEY ("transfer_id") REFERENCES "public"."stock_transfer"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
+END $$;
+--> statement-breakpoint
+
 DO $$ BEGIN
  ALTER TABLE "stock_transfer_line" ADD CONSTRAINT "stock_transfer_line_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
-END $$;--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_inventory_adjustment_docno" ON "inventory_adjustment" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_inventory_adjustment_date" ON "inventory_adjustment" USING btree ("master_fn","company_fn","adjustment_date","id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_inventory_adjustment_line" ON "inventory_adjustment_line" USING btree ("master_fn","company_fn","adjustment_id","line_no");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_inventory_adjustment_line_product" ON "inventory_adjustment_line" USING btree ("master_fn","company_fn","product_id","adjustment_id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_stock_transfer_docno" ON "stock_transfer" USING btree ("master_fn","company_fn","doc_no");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_stock_transfer_date" ON "stock_transfer" USING btree ("master_fn","company_fn","transfer_date","id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_stock_transfer_line" ON "stock_transfer_line" USING btree ("master_fn","company_fn","transfer_id","line_no");--> statement-breakpoint
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_inventory_adjustment_docno" ON "inventory_adjustment" USING btree ("master_fn","company_fn","doc_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_inventory_adjustment_date" ON "inventory_adjustment" USING btree ("master_fn","company_fn","adjustment_date","id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_inventory_adjustment_line" ON "inventory_adjustment_line" USING btree ("master_fn","company_fn","adjustment_id","line_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_inventory_adjustment_line_product" ON "inventory_adjustment_line" USING btree ("master_fn","company_fn","product_id","adjustment_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_stock_transfer_docno" ON "stock_transfer" USING btree ("master_fn","company_fn","doc_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_stock_transfer_date" ON "stock_transfer" USING btree ("master_fn","company_fn","transfer_date","id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_stock_transfer_line" ON "stock_transfer_line" USING btree ("master_fn","company_fn","transfer_id","line_no");
+--> statement-breakpoint
+
 CREATE INDEX IF NOT EXISTS "idx_stock_transfer_line_product" ON "stock_transfer_line" USING btree ("master_fn","company_fn","product_id","transfer_id");
+
+-- 0007_wonderful_swordsman
+CREATE TABLE IF NOT EXISTS "inventory_lot" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "inventory_lot_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"product_id" bigint NOT NULL,
+	"lot_no" text NOT NULL,
+	"manufactured_date" date,
+	"expiry_date" date,
+	"quality_status" text DEFAULT 'released' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_inventory_lot_quality" CHECK ("inventory_lot"."quality_status" in ('released', 'hold', 'rejected'))
+);
+
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "inventory_serial" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "inventory_serial_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"product_id" bigint NOT NULL,
+	"serial_no" text NOT NULL,
+	"lot_id" bigint,
+	"status" text DEFAULT 'registered' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_inventory_serial_status" CHECK ("inventory_serial"."status" in ('registered', 'available', 'issued', 'scrapped'))
+);
+
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "stock_location_balance" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "stock_location_balance_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"product_id" bigint NOT NULL,
+	"warehouse_id" bigint NOT NULL,
+	"bin_id" bigint NOT NULL,
+	"tracking_key" text DEFAULT 'none' NOT NULL,
+	"lot_id" bigint,
+	"serial_id" bigint,
+	"qty" numeric(18, 4) DEFAULT '0' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_stock_location_nonnegative" CHECK ("stock_location_balance"."qty" >= 0),
+	CONSTRAINT "ck_stock_location_tracking" CHECK (
+    ("stock_location_balance"."tracking_key" = 'none' and "stock_location_balance"."lot_id" is null and "stock_location_balance"."serial_id" is null)
+    or ("stock_location_balance"."tracking_key" like 'lot:%' and "stock_location_balance"."lot_id" is not null and "stock_location_balance"."serial_id" is null)
+    or ("stock_location_balance"."tracking_key" like 'serial:%' and "stock_location_balance"."serial_id" is not null)
+  ),
+	CONSTRAINT "ck_stock_location_serial_qty" CHECK ("stock_location_balance"."serial_id" is null or "stock_location_balance"."qty" in (0, 1))
+);
+
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "warehouse_bin" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "warehouse_bin_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"warehouse_id" bigint NOT NULL,
+	"code" text NOT NULL,
+	"name" text NOT NULL,
+	"is_system" boolean DEFAULT false NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "stock_movement" ADD COLUMN IF NOT EXISTS "bin_id" bigint;
+--> statement-breakpoint
+
+ALTER TABLE "stock_movement" ADD COLUMN IF NOT EXISTS "lot_id" bigint;
+--> statement-breakpoint
+
+ALTER TABLE "stock_movement" ADD COLUMN IF NOT EXISTS "serial_id" bigint;
+--> statement-breakpoint
+
+ALTER TABLE "stock_movement" ADD COLUMN IF NOT EXISTS "movement_group" text;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "inventory_lot" ADD CONSTRAINT "inventory_lot_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "inventory_serial" ADD CONSTRAINT "inventory_serial_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "inventory_serial" ADD CONSTRAINT "inventory_serial_lot_id_inventory_lot_id_fk" FOREIGN KEY ("lot_id") REFERENCES "public"."inventory_lot"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_location_balance" ADD CONSTRAINT "stock_location_balance_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_location_balance" ADD CONSTRAINT "stock_location_balance_warehouse_id_warehouse_id_fk" FOREIGN KEY ("warehouse_id") REFERENCES "public"."warehouse"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_location_balance" ADD CONSTRAINT "stock_location_balance_bin_id_warehouse_bin_id_fk" FOREIGN KEY ("bin_id") REFERENCES "public"."warehouse_bin"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_location_balance" ADD CONSTRAINT "stock_location_balance_lot_id_inventory_lot_id_fk" FOREIGN KEY ("lot_id") REFERENCES "public"."inventory_lot"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_location_balance" ADD CONSTRAINT "stock_location_balance_serial_id_inventory_serial_id_fk" FOREIGN KEY ("serial_id") REFERENCES "public"."inventory_serial"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "warehouse_bin" ADD CONSTRAINT "warehouse_bin_warehouse_id_warehouse_id_fk" FOREIGN KEY ("warehouse_id") REFERENCES "public"."warehouse"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_inventory_lot_no" ON "inventory_lot" USING btree ("master_fn","company_fn","product_id","lot_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_inventory_lot_expiry" ON "inventory_lot" USING btree ("master_fn","company_fn","product_id","expiry_date");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_inventory_serial_no" ON "inventory_serial" USING btree ("master_fn","company_fn","product_id","serial_no");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_inventory_serial_status" ON "inventory_serial" USING btree ("master_fn","company_fn","product_id","status");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_stock_location_balance" ON "stock_location_balance" USING btree ("master_fn","company_fn","product_id","warehouse_id","bin_id","tracking_key");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_stock_location_tracking" ON "stock_location_balance" USING btree ("master_fn","company_fn","product_id","tracking_key","warehouse_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_warehouse_bin_code" ON "warehouse_bin" USING btree ("master_fn","company_fn","warehouse_id","code");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_warehouse_bin_active" ON "warehouse_bin" USING btree ("master_fn","company_fn","warehouse_id","is_active");
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_movement" ADD CONSTRAINT "stock_movement_bin_id_warehouse_bin_id_fk" FOREIGN KEY ("bin_id") REFERENCES "public"."warehouse_bin"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_movement" ADD CONSTRAINT "stock_movement_lot_id_inventory_lot_id_fk" FOREIGN KEY ("lot_id") REFERENCES "public"."inventory_lot"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_movement" ADD CONSTRAINT "stock_movement_serial_id_inventory_serial_id_fk" FOREIGN KEY ("serial_id") REFERENCES "public"."inventory_serial"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "product" ADD CONSTRAINT "ck_product_tracking_type" CHECK ("product"."tracking_type" in ('none', 'lot', 'serial'));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "stock_movement" ADD CONSTRAINT "ck_stock_movement_direction" CHECK ("stock_movement"."direction" in ('in', 'out'));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+INSERT INTO "warehouse_bin" (
+	"master_fn", "company_fn", "warehouse_id", "code", "name", "is_system", "is_active"
+)
+SELECT "master_fn", "company_fn", "id", 'DEFAULT', 'Default Bin', true, true
+FROM "warehouse"
+ON CONFLICT ("master_fn", "company_fn", "warehouse_id", "code") DO NOTHING;
+
+--> statement-breakpoint
+
+INSERT INTO "stock_location_balance" (
+	"master_fn", "company_fn", "product_id", "warehouse_id", "bin_id",
+	"tracking_key", "qty"
+)
+SELECT
+	sl."master_fn", sl."company_fn", sl."product_id", sl."warehouse_id", wb."id",
+	'none', sl."qty"
+FROM "stock_level" sl
+JOIN "warehouse_bin" wb
+	ON wb."master_fn" = sl."master_fn"
+	AND wb."company_fn" = sl."company_fn"
+	AND wb."warehouse_id" = sl."warehouse_id"
+	AND wb."code" = 'DEFAULT'
+JOIN "product" p
+	ON p."id" = sl."product_id"
+	AND p."master_fn" = sl."master_fn"
+	AND p."company_fn" = sl."company_fn"
+WHERE p."tracking_type" = 'none'
+ON CONFLICT (
+	"master_fn", "company_fn", "product_id", "warehouse_id", "bin_id", "tracking_key"
+) DO NOTHING;
+
+--> statement-breakpoint
+
+UPDATE "stock_movement" m
+SET "bin_id" = wb."id"
+FROM "warehouse_bin" wb
+WHERE m."bin_id" IS NULL
+	AND wb."master_fn" = m."master_fn"
+	AND wb."company_fn" = m."company_fn"
+	AND wb."warehouse_id" = m."warehouse_id"
+	AND wb."code" = 'DEFAULT';

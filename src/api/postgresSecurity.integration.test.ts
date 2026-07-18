@@ -12,6 +12,16 @@ import { completeProductionSetup } from '../modules/setup/completeSetup';
 import { createInvitation, acceptInvitation, requestPasswordReset, confirmPasswordReset } from '../auth/lifecycle';
 import { decryptToken, type EncryptedToken } from '../auth/tokenCrypto';
 import { processOutboxBatch } from '../worker/outbox';
+import {
+  createInventoryLotWithin,
+  createWarehouseBinWithin,
+} from '../modules/inventory/tracking';
+import {
+  getStockLocationQty,
+  getStockQty,
+  issueStockWithin,
+  receiveStockWithin,
+} from '../modules/inventory/stock';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -196,7 +206,19 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         currency: 'SGD',
         closeDate: '2026-07-31',
       }).returning({ id: schema.opportunity.id });
-      return { itemId: item.id, warehouseId: location.id, opportunityId: deal.id };
+      const [trackedItem] = await tx.insert(schema.product).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        sku: 'PG-LOT-WIDGET',
+        name: 'PostgreSQL Lot Widget',
+        trackingType: 'lot',
+      }).returning({ id: schema.product.id });
+      return {
+        itemId: item.id,
+        trackedItemId: trackedItem.id,
+        warehouseId: location.id,
+        opportunityId: deal.id,
+      };
     });
     const action = actionDefinitionFor('crm/opportunities', 'convert');
     expect(action).not.toBeNull();
@@ -230,5 +252,56 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
     const replayed = await dispatchAction(actionContext, action!);
     expect(dispatched.replayed).toBe(false);
     expect(replayed).toEqual({ ...dispatched, replayed: true });
+
+    const trackingProof = await withTenantTransaction(db, {
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+    }, async (tx) => {
+      const scope = {
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+      };
+      const bin = await createWarehouseBinWithin(tx, scope, {
+        warehouseId: fixture.warehouseId,
+        code: 'LOT-A',
+        name: 'Lot Storage A',
+      });
+      const lot = await createInventoryLotWithin(tx, scope, {
+        productId: fixture.trackedItemId,
+        lotNo: 'PG-LOT-001',
+        qualityStatus: 'released',
+      });
+      await receiveStockWithin(tx, scope, {
+        productId: fixture.trackedItemId,
+        warehouseId: fixture.warehouseId,
+        binId: bin.id,
+        lotId: lot.id,
+        qty: 8,
+        refType: 'postgres_tracking_proof',
+      });
+      await issueStockWithin(tx, scope, {
+        productId: fixture.trackedItemId,
+        warehouseId: fixture.warehouseId,
+        binId: bin.id,
+        lotId: lot.id,
+        qty: 3,
+        refType: 'postgres_tracking_proof',
+      });
+      return {
+        binId: bin.id,
+        lotId: lot.id,
+        aggregateQty: await getStockQty(tx, scope, fixture.trackedItemId, fixture.warehouseId),
+        locationQty: await getStockLocationQty(
+          tx,
+          scope,
+          fixture.trackedItemId,
+          fixture.warehouseId,
+          bin.id,
+          `lot:${lot.id}`,
+        ),
+      };
+    });
+    expect(trackingProof).toMatchObject({ aggregateQty: 5, locationQty: 5 });
+    expect(await db.select().from(schema.stockLocationBalance)).toHaveLength(0);
   }, 60_000);
 });

@@ -50,6 +50,13 @@
       "when": 1784362755156,
       "tag": "0006_uneven_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784377190077,
+      "tag": "0007_wonderful_swordsman",
+      "breakpoints": true
     }
   ]
 }

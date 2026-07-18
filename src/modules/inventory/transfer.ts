@@ -158,12 +158,14 @@ export async function completeStockTransferWithin(exec: DB, scope: Scope, transf
     )).orderBy(asc(stockLevel.warehouseId)).for('update');
 
     const qty = Number(line.qty);
+    const movementGroup = `stock-transfer:${header.id}:${line.productId}`;
     const out = await issueStockWithin(exec, scope, {
       productId: line.productId,
       warehouseId: header.fromWarehouseId,
       qty,
       refType: 'stock_transfer',
       refId: header.id,
+      movementGroup,
     });
     const inbound = await receiveStockWithin(exec, scope, {
       productId: line.productId,
@@ -171,6 +173,7 @@ export async function completeStockTransferWithin(exec: DB, scope: Scope, transf
       qty,
       refType: 'stock_transfer',
       refId: header.id,
+      movementGroup,
     });
     movementIds.push(out.movementId, inbound.movementId);
   }

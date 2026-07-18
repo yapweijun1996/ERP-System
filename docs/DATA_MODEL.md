@@ -9,7 +9,9 @@ PGlite (demo) and PostgreSQL (production).
 tenancy/     master, company, app_user, role, user_company
 localization/ tax_rule (effective-dated), currency, fx_rate
 inventory/   product, warehouse, stock_level, stock_movement,
-             inventory_adjustment(+line), stock_transfer(+line)
+             warehouse_bin, inventory_lot, inventory_serial,
+             stock_location_balance, inventory_adjustment(+line),
+             stock_transfer(+line)
 sales/       customer, sales_order, sales_order_line, delivery, invoice, payment
 purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt
 finance/     account (chart of accounts), gl_entry
@@ -20,6 +22,12 @@ system/      audit_log
 `company` also holds country/currency/tax_regime ([LOCALIZATION.md](LOCALIZATION.md)).
 
 Each module owns its tables. Cross-module references are by id (e.g. `sales_order_line.product_id`).
+
+`stock_movement` is the inventory fact trail. `stock_level` is the rebuildable
+product/warehouse projection, while `stock_location_balance` is the rebuildable
+product/warehouse/bin/tracking projection. Production commands update both
+projections only while appending the corresponding movement in the same transaction;
+ordinary API resources cannot directly update either balance.
 
 ## 2. Conventions
 
@@ -152,10 +160,22 @@ erDiagram
     company      ||--o{ tax_rule      : "rates (dated)"
     company      ||--o{ product       : "scopes"
     company      ||--o{ warehouse     : "scopes"
+    warehouse    ||--o{ warehouse_bin : "contains"
+    product      ||--o{ inventory_lot : "tracked by"
+    product      ||--o{ inventory_serial : "tracked by"
+    inventory_lot ||--o{ inventory_serial : "groups"
     product      ||--o{ stock_level   : "on hand"
     warehouse    ||--o{ stock_level   : "on hand"
+    product      ||--o{ stock_location_balance : "located stock"
+    warehouse    ||--o{ stock_location_balance : "located stock"
+    warehouse_bin ||--o{ stock_location_balance : "holds"
+    inventory_lot ||--o{ stock_location_balance : "lot balance"
+    inventory_serial ||--o{ stock_location_balance : "serial balance"
     product      ||--o{ stock_movement: "in/out"
     warehouse    ||--o{ stock_movement: "in/out"
+    warehouse_bin ||--o{ stock_movement: "at"
+    inventory_lot ||--o{ stock_movement: "attributes"
+    inventory_serial ||--o{ stock_movement: "attributes"
     company      ||--o{ customer       : "scopes"
     customer     ||--o{ sales_order    : places
     sales_order  ||--o{ sales_order_line: contains
@@ -217,6 +237,7 @@ erDiagram
         text master_fn
         text company_fn
         text sku
+        text tracking_type
     }
     warehouse {
         bigint id PK
@@ -224,16 +245,46 @@ erDiagram
         text company_fn
         text code
     }
+    warehouse_bin {
+        bigint id PK
+        bigint warehouse_id FK
+        text code
+        bool is_active
+    }
+    inventory_lot {
+        bigint id PK
+        bigint product_id FK
+        text lot_no
+        text quality_status
+    }
+    inventory_serial {
+        bigint id PK
+        bigint product_id FK
+        bigint lot_id FK
+        text serial_no
+        text status
+    }
     stock_level {
         bigint id PK
         bigint product_id FK
         bigint warehouse_id FK
         numeric qty
     }
+    stock_location_balance {
+        bigint id PK
+        bigint product_id FK
+        bigint warehouse_id FK
+        bigint bin_id FK
+        text tracking_key
+        numeric qty
+    }
     stock_movement {
         bigint id PK
         bigint product_id FK
         bigint warehouse_id FK
+        bigint bin_id FK
+        bigint lot_id FK
+        bigint serial_id FK
         text direction
         timestamptz moved_at
     }

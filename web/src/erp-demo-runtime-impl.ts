@@ -46,6 +46,14 @@ import {
   createStockTransferWithin,
   type CreateStockTransferInput,
 } from '../../src/modules/inventory/transfer';
+import {
+  createInventoryLotWithin,
+  createWarehouseBinWithin,
+  registerInventorySerialWithin,
+  type CreateInventoryLotInput,
+  type CreateWarehouseBinInput,
+  type RegisterInventorySerialInput,
+} from '../../src/modules/inventory/tracking';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -64,6 +72,19 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    createWarehouseBinWithin(db: DemoOrm, scope: Scope, input: CreateWarehouseBinInput) {
+      return createWarehouseBinWithin(asDomainDb(db), scope, input);
+    },
+    createInventoryLotWithin(db: DemoOrm, scope: Scope, input: CreateInventoryLotInput) {
+      return createInventoryLotWithin(asDomainDb(db), scope, input);
+    },
+    registerInventorySerialWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: RegisterInventorySerialInput,
+    ) {
+      return registerInventorySerialWithin(asDomainDb(db), scope, input);
+    },
     createInventoryAdjustmentWithin(
       db: DemoOrm,
       scope: Scope,

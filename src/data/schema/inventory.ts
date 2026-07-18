@@ -4,8 +4,10 @@
 // moved_at via a separate raw-SQL migration (drizzle-kit does not emit PARTITION BY). The
 // PGlite demo uses it as a plain table. See docs/SCALABILITY.md §3.
 import {
-  pgTable, text, bigint, integer, numeric, date, timestamp, index, uniqueIndex,
+  pgTable, text, bigint, integer, numeric, date, timestamp, boolean,
+  index, uniqueIndex, check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 
 export const product = pgTable('product', {
@@ -20,6 +22,7 @@ export const product = pgTable('product', {
 }, (t) => [
   uniqueIndex('uq_product_sku').on(t.masterFn, t.companyFn, t.sku),
   index('idx_product_name').on(t.masterFn, t.companyFn, t.name),
+  check('ck_product_tracking_type', sql`${t.trackingType} in ('none', 'lot', 'serial')`),
 ]);
 
 export const warehouse = pgTable('warehouse', {
@@ -30,6 +33,81 @@ export const warehouse = pgTable('warehouse', {
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_warehouse_code').on(t.masterFn, t.companyFn, t.code),
+]);
+
+export const warehouseBin = pgTable('warehouse_bin', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull().references(() => warehouse.id),
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  isSystem: boolean('is_system').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_warehouse_bin_code').on(t.masterFn, t.companyFn, t.warehouseId, t.code),
+  index('idx_warehouse_bin_active').on(t.masterFn, t.companyFn, t.warehouseId, t.isActive),
+]);
+
+export const inventoryLot = pgTable('inventory_lot', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  lotNo: text('lot_no').notNull(),
+  manufacturedDate: date('manufactured_date'),
+  expiryDate: date('expiry_date'),
+  qualityStatus: text('quality_status').notNull().default('released'), // released | hold | rejected
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_inventory_lot_no').on(t.masterFn, t.companyFn, t.productId, t.lotNo),
+  index('idx_inventory_lot_expiry').on(t.masterFn, t.companyFn, t.productId, t.expiryDate),
+  check('ck_inventory_lot_quality', sql`${t.qualityStatus} in ('released', 'hold', 'rejected')`),
+]);
+
+export const inventorySerial = pgTable('inventory_serial', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  serialNo: text('serial_no').notNull(),
+  lotId: bigint('lot_id', { mode: 'number' }).references(() => inventoryLot.id),
+  status: text('status').notNull().default('registered'), // registered | available | issued | scrapped
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_inventory_serial_no').on(t.masterFn, t.companyFn, t.productId, t.serialNo),
+  index('idx_inventory_serial_status').on(t.masterFn, t.companyFn, t.productId, t.status),
+  check('ck_inventory_serial_status', sql`${t.status} in ('registered', 'available', 'issued', 'scrapped')`),
+]);
+
+/**
+ * Bin/lot/serial-level projection. tracking_key is deterministic:
+ * `none`, `lot:<id>` or `serial:<id>` and makes the uniqueness rule portable
+ * across PostgreSQL and PGlite without nullable-unique ambiguity.
+ */
+export const stockLocationBalance = pgTable('stock_location_balance', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull().references(() => warehouse.id),
+  binId: bigint('bin_id', { mode: 'number' }).notNull().references(() => warehouseBin.id),
+  trackingKey: text('tracking_key').notNull().default('none'),
+  lotId: bigint('lot_id', { mode: 'number' }).references(() => inventoryLot.id),
+  serialId: bigint('serial_id', { mode: 'number' }).references(() => inventorySerial.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull().default('0'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_stock_location_balance').on(
+    t.masterFn, t.companyFn, t.productId, t.warehouseId, t.binId, t.trackingKey,
+  ),
+  index('idx_stock_location_tracking').on(
+    t.masterFn, t.companyFn, t.productId, t.trackingKey, t.warehouseId,
+  ),
+  check('ck_stock_location_nonnegative', sql`${t.qty} >= 0`),
+  check('ck_stock_location_tracking', sql`
+    (${t.trackingKey} = 'none' and ${t.lotId} is null and ${t.serialId} is null)
+    or (${t.trackingKey} like 'lot:%' and ${t.lotId} is not null and ${t.serialId} is null)
+    or (${t.trackingKey} like 'serial:%' and ${t.serialId} is not null)
+  `),
+  check('ck_stock_location_serial_qty', sql`${t.serialId} is null or ${t.qty} in (0, 1)`),
 ]);
 
 /** Current on-hand quantity per product per warehouse (one row each). */
@@ -50,6 +128,10 @@ export const stockMovement = pgTable('stock_movement', {
   ...tenant,
   productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
   warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull().references(() => warehouse.id),
+  binId: bigint('bin_id', { mode: 'number' }).references(() => warehouseBin.id),
+  lotId: bigint('lot_id', { mode: 'number' }).references(() => inventoryLot.id),
+  serialId: bigint('serial_id', { mode: 'number' }).references(() => inventorySerial.id),
+  movementGroup: text('movement_group'),
   qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
   direction: text('direction').notNull(),     // 'in' | 'out'
   movedAt: timestamp('moved_at', { withTimezone: true }).notNull().defaultNow(),
@@ -60,6 +142,7 @@ export const stockMovement = pgTable('stock_movement', {
   // Keyset-friendly, tenant-leading (docs/SCALABILITY.md §2).
   index('idx_movement_tenant_moved').on(t.masterFn, t.companyFn, t.movedAt, t.id),
   index('idx_movement_product').on(t.masterFn, t.companyFn, t.productId, t.movedAt),
+  check('ck_stock_movement_direction', sql`${t.direction} in ('in', 'out')`),
 ]);
 
 export const inventoryAdjustment = pgTable('inventory_adjustment', {

@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 6;
+  var DEMO_SCHEMA_VERSION = 7;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -116,14 +116,25 @@
     var row = (await db.query(
       'select coalesce(max("version"), 0)::int as version from "_erp_demo_migration"')).rows[0];
     var currentVersion = row ? Number(row.version) : 0;
-    if (currentVersion >= DEMO_SCHEMA_VERSION) return false;
+    /* A service-worker update can briefly mix a newer adapter with an older
+       cached migration asset. Never trust the version marker alone: verify the
+       v7 warehouse-tracking signature before declaring the schema current.
+       Replaying the generated compatibility bundle is safe and repairs a
+       marker that was written after a stale/no-op migration response. */
+    var signature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('warehouse_bin','inventory_lot','inventory_serial','stock_location_balance')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 4;
+    if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
     await db.query(
       'insert into "_erp_demo_migration" ("version") values ($1) on conflict ("version") do nothing',
       [DEMO_SCHEMA_VERSION]);
-    console.info('[erp-system] upgraded persistent PGlite schema from v' +
-      currentVersion + ' to v' + DEMO_SCHEMA_VERSION);
+    console.info('[erp-system] ' +
+      (currentVersion >= DEMO_SCHEMA_VERSION ? 'repaired' : 'upgraded') +
+      ' persistent PGlite schema from v' + currentVersion + ' to v' + DEMO_SCHEMA_VERSION);
     return true;
   }
 
@@ -159,6 +170,20 @@
     var stockLevels = await rows(
       "select s.id, s.product_id, s.warehouse_id, s.qty::float as qty " +
       "from stock_level s where " + wc('s') + " order by s.product_id, s.warehouse_id");
+    var bins = await rows(
+      "select id, warehouse_id, code, name, is_system, is_active " +
+      "from warehouse_bin where " + wc('warehouse_bin') + " order by warehouse_id, code");
+    var lots = await rows(
+      "select id, product_id, lot_no, manufactured_date::text as manufactured_date, " +
+      "expiry_date::text as expiry_date, quality_status from inventory_lot " +
+      "where " + wc('inventory_lot') + " order by id");
+    var serials = await rows(
+      "select id, product_id, serial_no, lot_id, status from inventory_serial " +
+      "where " + wc('inventory_serial') + " order by id");
+    var locationBalances = await rows(
+      "select id, product_id, warehouse_id, bin_id, tracking_key, lot_id, serial_id, " +
+      "qty::float as qty from stock_location_balance where " + wc('stock_location_balance') +
+      " order by product_id, warehouse_id, bin_id, tracking_key");
     var customers = await rows(
       "select c.id, c.code, c.name, coalesce(sum(case when i.status='unpaid' then i.total_amount end),0)::float as balance " +
       "from customer c left join invoice i on i.customer_id = c.id " +
@@ -245,7 +270,8 @@
       "where " + wc('o') + " order by o.id");
 
     return { master: master, companies: companies, users: users, products: products,
-             warehouses: warehouses, stockLevels: stockLevels, customers: customers,
+             warehouses: warehouses, stockLevels: stockLevels, bins: bins, lots: lots,
+             serials: serials, locationBalances: locationBalances, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
              invoices: invoices, glLegs: glLegs, movements: movements,
              suppliers: suppliers, purchaseOrders: purchaseOrders, purchaseOrderLines: purchaseOrderLines,
@@ -279,6 +305,13 @@
       stockLevels: [
         { id: 1, product_id: 1, warehouse_id: 1, qty: 95 },
         { id: 2, product_id: 2, warehouse_id: 1, qty: 97 },
+      ],
+      bins: [{ id: 1, warehouse_id: 1, code: 'DEFAULT', name: 'Default Bin', is_system: true, is_active: true }],
+      lots: [],
+      serials: [],
+      locationBalances: [
+        { id: 1, product_id: 1, warehouse_id: 1, bin_id: 1, tracking_key: 'none', lot_id: null, serial_id: null, qty: 95 },
+        { id: 2, product_id: 2, warehouse_id: 1, bin_id: 1, tracking_key: 'none', lot_id: null, serial_id: null, qty: 97 },
       ],
       customers: [{ id: 1, code: 'CUST1', name: 'Beta Pte Ltd', balance: 119.9 }],
       accounts: [
@@ -351,6 +384,10 @@
       products: d.products,
       warehouses: d.warehouses || [],
       stockLevels: d.stockLevels || [],
+      bins: d.bins || [],
+      lots: d.lots || [],
+      serials: d.serials || [],
+      locationBalances: d.locationBalances || [],
       customers: d.customers,
       accounts: d.accounts,
       taxRules: d.taxRules,
@@ -1154,6 +1191,10 @@
     'inventory/products':'product',
     'inventory/stock-levels':'stock_level',
     'inventory/stock-movements':'stock_movement',
+    'inventory/bins':'warehouse_bin',
+    'inventory/lots':'inventory_lot',
+    'inventory/serials':'inventory_serial',
+    'inventory/location-balances':'stock_location_balance',
     'inventory/adjustments':'inventory_adjustment',
     'inventory/transfers':'stock_transfer',
     'sales/orders':'sales_order',
@@ -1210,6 +1251,30 @@
   }
   async function create(resource,payload){
     var key=normalizeResource(resource);
+    if(key==='inventory/bins'){
+      var bin = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createWarehouseBinWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:bin,meta:{}};
+    }
+    if(key==='inventory/lots'){
+      var lot = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createInventoryLotWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:lot,meta:{}};
+    }
+    if(key==='inventory/serials'){
+      var serial = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.registerInventorySerialWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:serial,meta:{}};
+    }
     if(key==='inventory/adjustments'){
       var adjustment = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createInventoryAdjustmentWithin(

@@ -12,6 +12,7 @@ DECLARE
   company_tables text[] := ARRAY[
     'tax_rule',
     'product', 'stock_level', 'stock_movement', 'warehouse',
+    'warehouse_bin', 'inventory_lot', 'inventory_serial', 'stock_location_balance',
     'inventory_adjustment', 'inventory_adjustment_line',
     'stock_transfer', 'stock_transfer_line',
     'customer', 'invoice', 'sales_order', 'sales_order_line',

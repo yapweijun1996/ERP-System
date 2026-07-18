@@ -8,6 +8,14 @@ import {
   createStockTransferWithin,
   type CreateStockTransferInput,
 } from '../modules/inventory/transfer';
+import {
+  createInventoryLotWithin,
+  createWarehouseBinWithin,
+  registerInventorySerialWithin,
+  type CreateInventoryLotInput,
+  type CreateWarehouseBinInput,
+  type RegisterInventorySerialInput,
+} from '../modules/inventory/tracking';
 
 export interface CreateDefinition {
   permission: string;
@@ -16,6 +24,39 @@ export interface CreateDefinition {
 }
 
 const CREATES: Record<string, CreateDefinition> = {
+  'inventory/bins': {
+    permission: 'inventory.track',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createWarehouseBinWithin(
+        tx,
+        scope,
+        payload as unknown as CreateWarehouseBinInput,
+      );
+    },
+  },
+  'inventory/lots': {
+    permission: 'inventory.track',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createInventoryLotWithin(
+        tx,
+        scope,
+        payload as unknown as CreateInventoryLotInput,
+      );
+    },
+  },
+  'inventory/serials': {
+    permission: 'inventory.track',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return registerInventorySerialWithin(
+        tx,
+        scope,
+        payload as unknown as RegisterInventorySerialInput,
+      );
+    },
+  },
   'inventory/adjustments': {
     permission: 'inventory.adjust',
     audit: 'required',

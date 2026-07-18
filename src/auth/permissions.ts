@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   inventoryRead: 'inventory.read',
   inventoryAdjust: 'inventory.adjust',
   inventoryTransfer: 'inventory.transfer',
+  inventoryTrack: 'inventory.track',
   salesRead: 'sales.read',
   salesWrite: 'sales.write',
   financeRead: 'finance.read',

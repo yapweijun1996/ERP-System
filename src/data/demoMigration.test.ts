@@ -18,8 +18,37 @@ describe('browser demo compatibility migrations', () => {
       await db.exec(LEGACY_SCHEMA);
       await db.exec(`
         insert into master (master_fn, name) values ('M-LEGACY', 'Legacy Group');
+        insert into currency (code, name, symbol)
+        values ('SGD', 'Singapore Dollar', 'S$');
+        insert into company (
+          company_fn, master_fn, name, country, currency, tax_regime
+        ) values (
+          'C-LEGACY', 'M-LEGACY', 'Legacy Company', 'SG', 'SGD', 'SG_GST'
+        );
         insert into app_user (master_fn, email, full_name, language)
         values ('M-LEGACY', 'legacy@example.com', 'Legacy Admin', 'en');
+        insert into product (master_fn, company_fn, sku, name)
+        values ('M-LEGACY', 'C-LEGACY', 'LEGACY-SKU', 'Legacy Product');
+        insert into warehouse (master_fn, company_fn, code, name)
+        values ('M-LEGACY', 'C-LEGACY', 'LEGACY-WH', 'Legacy Warehouse');
+        insert into stock_level (
+          master_fn, company_fn, product_id, warehouse_id, qty
+        )
+        select
+          'M-LEGACY', 'C-LEGACY', product.id, warehouse.id, 7
+        from product, warehouse
+        where product.sku = 'LEGACY-SKU'
+          and warehouse.code = 'LEGACY-WH';
+        insert into stock_movement (
+          master_fn, company_fn, product_id, warehouse_id,
+          qty, direction, ref_type
+        )
+        select
+          'M-LEGACY', 'C-LEGACY', product.id, warehouse.id,
+          7, 'in', 'legacy_seed'
+        from product, warehouse
+        where product.sku = 'LEGACY-SKU'
+          and warehouse.code = 'LEGACY-WH';
       `);
 
       await db.exec(BROWSER_MIGRATIONS);
@@ -80,6 +109,33 @@ describe('browser demo compatibility migrations', () => {
         'sales_order',
         'supplier_invoice',
       ]);
+
+      const locationProjection = await db.query<{
+        code: string;
+        tracking_key: string;
+        qty: string;
+        movement_bin_id: string;
+      }>(`
+        select
+          bin.code,
+          balance.tracking_key,
+          balance.qty::text,
+          movement.bin_id::text as movement_bin_id
+        from stock_location_balance balance
+        join warehouse_bin bin on bin.id = balance.bin_id
+        join stock_movement movement
+          on movement.product_id = balance.product_id
+         and movement.warehouse_id = balance.warehouse_id
+        where balance.master_fn = 'M-LEGACY'
+          and balance.company_fn = 'C-LEGACY'
+      `);
+      expect(locationProjection.rows).toHaveLength(1);
+      expect(locationProjection.rows[0]).toMatchObject({
+        code: 'DEFAULT',
+        tracking_key: 'none',
+        qty: '7.0000',
+      });
+      expect(locationProjection.rows[0].movement_bin_id).not.toBeNull();
 
       const master = await db.query<{ name: string }>(`
         select name from master where master_fn = 'M-LEGACY'

@@ -9,12 +9,15 @@ import {
   glEntry,
   invoice,
   inventoryAdjustment,
+  inventoryLot,
+  inventorySerial,
   product,
   salesOrder,
   salesOrderLine,
   stockLevel,
   stockMovement,
   stockTransfer,
+  warehouseBin,
   warehouse,
 } from '../data/schema';
 import { seedDemo } from '../data/seed';
@@ -474,5 +477,90 @@ describe('production API security contract', () => {
     expect(await db.select().from(inventoryAdjustment)).toHaveLength(1);
     expect(await db.select().from(stockTransfer)).toHaveLength(1);
     expect(await db.select().from(stockMovement)).toHaveLength(3);
+  });
+
+  it('creates tenant-scoped bins, lots and serial registrations through the resource API', async () => {
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'TRACK-API',
+      name: 'Tracking API Warehouse',
+    }).returning({ id: warehouse.id });
+    const items = await db.insert(product).values([
+      {
+        masterFn: 'M1',
+        companyFn: 'C-SG',
+        sku: 'LOT-API',
+        name: 'Lot API Product',
+        trackingType: 'lot',
+      },
+      {
+        masterFn: 'M1',
+        companyFn: 'C-SG',
+        sku: 'SERIAL-API',
+        name: 'Serial API Product',
+        trackingType: 'serial',
+      },
+    ]).returning({ id: product.id, trackingType: product.trackingType });
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+    const create = (resource: string, payload: unknown) => fetch(
+      `${running.baseUrl}/api/inventory/${resource}`,
+      { method: 'POST', headers, body: JSON.stringify(payload) },
+    );
+
+    const binResponse = await create('bins', {
+      warehouseId: location.id,
+      code: 'A-01',
+      name: 'Aisle A 01',
+    });
+    expect(binResponse.status).toBe(201);
+    const lotItem = items.find((item) => item.trackingType === 'lot')!;
+    const serialItem = items.find((item) => item.trackingType === 'serial')!;
+    const lotResponse = await create('lots', {
+      productId: lotItem.id,
+      lotNo: 'LOT-API-001',
+      expiryDate: '2027-07-18',
+      qualityStatus: 'hold',
+    });
+    expect(lotResponse.status).toBe(201);
+    const serialResponse = await create('serials', {
+      productId: serialItem.id,
+      serialNo: 'SERIAL-API-001',
+    });
+    expect(serialResponse.status).toBe(201);
+    const invalidLot = await create('lots', {
+      productId: 999999,
+      lotNo: 'INVALID',
+    });
+    expect(invalidLot.status).toBe(422);
+    expect((await invalidLot.json()).error.code).toBe('validation_failed');
+
+    expect(await db.select().from(warehouseBin)
+      .where(eq(warehouseBin.code, 'A-01'))).toHaveLength(1);
+    expect(await db.select().from(inventoryLot)
+      .where(eq(inventoryLot.lotNo, 'LOT-API-001'))).toHaveLength(1);
+    expect(await db.select().from(inventorySerial)
+      .where(eq(inventorySerial.serialNo, 'SERIAL-API-001'))).toHaveLength(1);
+
+    const viewer = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const denied = await fetch(`${running.baseUrl}/api/inventory/bins`, {
+      method: 'POST',
+      headers: {
+        cookie: viewer.header,
+        'content-type': 'application/json',
+        'x-csrf-token': viewer.csrf,
+      },
+      body: JSON.stringify({
+        warehouseId: location.id,
+        code: 'DENIED',
+        name: 'Denied',
+      }),
+    });
+    expect(denied.status).toBe(403);
   });
 });

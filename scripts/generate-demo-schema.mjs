@@ -46,7 +46,7 @@ function compatibilitySql(entry) {
   if (/\bDROP\s+(TABLE|COLUMN)\b/i.test(sql)) {
     throw new Error(`${entry.tag} contains destructive DDL; write an explicit expand/backfill compatibility migration`);
   }
-  return sql
+  const compatible = sql
     .replace(
       /CREATE TABLE "(?!IF NOT EXISTS )/g,
       'CREATE TABLE IF NOT EXISTS "',
@@ -57,6 +57,23 @@ function compatibilitySql(entry) {
     )
     .replace(/DROP INDEX "(?!IF EXISTS )/g, 'DROP INDEX IF EXISTS "')
     .replace(/CREATE (UNIQUE )?INDEX "(?!IF NOT EXISTS )/g, 'CREATE $1INDEX IF NOT EXISTS "');
+
+  return compatible
+    .split('--> statement-breakpoint')
+    .map((statement) => {
+      const match = statement.match(
+        /^\s*ALTER TABLE "([^"]+)" ADD CONSTRAINT "([^"]+)" ([\s\S]+);\s*$/,
+      );
+      if (!match) return statement;
+      const [, table, constraint, definition] = match;
+      return [
+        'DO $$ BEGIN',
+        ` ALTER TABLE "${table}" ADD CONSTRAINT "${constraint}" ${definition};`,
+        'EXCEPTION WHEN duplicate_object THEN null;',
+        'END $$;',
+      ].join('\n');
+    })
+    .join('\n--> statement-breakpoint\n');
 }
 
 const compatibility = [
