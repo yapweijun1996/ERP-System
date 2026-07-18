@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-07-18
+# Project Status — reviewed 2026-07-19
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -42,7 +42,11 @@ visibly creates a sales order in the Sales module, decrements stock, and posts a
 balanced GL entry. Opportunity-detail and customer-360 sub-screens have no schema
 backing yet and stay mock, the same way Purchasing's RFQs/quotations do. What's
 still missing: the module screens do not yet map every production resource
-response into their view models. The first inventory production writes are now
+response into their view models. Inventory is the first non-dashboard read slice
+to cross that boundary: stock-on-hand, stock-movement and inventory-valuation now
+load the same bounded keyset resource pages in Demo and API modes, joining products,
+warehouses, balances, movements, bins and location balances into their presentation
+model without falling back to sample data. The first inventory production writes are now
 live: adjustment draft/post and warehouse transfer draft/complete share the
 same domain commands in Demo and API mode, append movements, enforce state and
 idempotency, and adjustment posting creates balanced inventory-variance GL.
@@ -69,7 +73,7 @@ IDs and production-only RLS policies are implemented and tested.
 | Bundled Demo ESM runtime | ✅ Current Canonical writes migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. CRM create/convert, Purchasing create/receive/post, Sales Draft confirmation and Demo Setup all use TypeScript commands instead of browser business SQL mirrors. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, confirm SO-2 / over-stock SO-3) | ✅ Canonical data | `screens-sales*.js`, TASK-006/007 |
-| Inventory screens (stock on hand, item master, movements) | ✅ Canonical data | `screens-inv*.js`, TASK-005 |
+| Inventory read screens (stock on hand, movements, valuation) | ✅ Canonical Demo/API data | `screens-inv.js` reads the formal `ErpSystemData` resource contract in both modes, capped at the first 100 rows per resource with honest truncation metadata. The production API exposes products, warehouses, stock levels, movements, bins and location balances; its complete response shape is covered by an authenticated HTTP test. Item master remains Preview. |
 | Inventory adjustment + warehouse transfer commands/API | ✅ Working backend; adjustment UI remains Preview | Shared commands in `src/modules/inventory/adjustment.ts` and `transfer.ts` snapshot/lock stock, append movement facts, preserve transfer quantity and post balanced adjustment GL. Demo ESM and production API use the same commands. `new-stock-adjustment` reads real warehouse-level quantities but remains Preview/write-locked until API screen mapping and five-language coverage satisfy the Canonical gate. |
 | Warehouse bin / lot / serial tracking | ✅ Working backend; warehouse UI remains Preview | `warehouse_bin`, `inventory_lot`, `inventory_serial` and `stock_location_balance` are canonical through migration 0007. Shared commands reject invalid tracking combinations, enforce quality holds and serial quantity/lifecycle, and keep `stock_level` plus the location projection aligned with attributed `stock_movement` facts. PGlite tests and the gated PostgreSQL 16 RLS proof cover receive/issue and tenant invisibility. |
 | Finance/GL screens (invoices, journals, CoA, ledger, P&L, AR aging) | ✅ Canonical data | `screens-fin*.js`, TASK-008 |
@@ -81,7 +85,7 @@ IDs and production-only RLS policies are implemented and tested.
 | Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **21 Canonical / 93 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
 | Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 94 passing tests plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, RBAC, encrypted account lifecycle, setup, atomic action idempotency/replay/expiry, inventory adjustment snapshot conflicts, transfer conservation, bin/lot/serial invariants, audit correlation and migration compatibility. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 96 passing tests plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, RBAC, encrypted account lifecycle, setup, atomic action idempotency/replay/expiry, inventory adjustment snapshot conflicts, transfer conservation, bin/lot/serial invariants, the complete inventory read bundle, audit correlation and migration compatibility. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production Setup remains a separate deployment-token/zero-user command. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -92,7 +96,7 @@ IDs and production-only RLS policies are implemented and tested.
 | Docker Compose stack: `web` (nginx) + `api` (Express) + `db` (PostgreSQL) | ✅ Working | `docker-compose.yml`, `Dockerfile.api`, `web/Dockerfile`, `web/nginx.conf`; built and run end-to-end for real (healthchecks, `docker compose exec api npm run migrate`/`seed`, dashboard through the reverse proxy), then fully torn down, TASK-012 |
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
 | PostgreSQL concurrency/parity proof | ✅ Working | `POSTGRES_URL=... npm run demo` — proven twice against real Postgres (host + inside verification), TASK-013 |
-| `VITE_DATA_MODE=api` renders the real dashboard (not the waiting screen) | ✅ Working | `erp-system-api-adapter.js` calls `GET /api/dashboard` on ready and maps it onto `DB.*`; company switcher also works (re-fetches with a different scope). Other modules (inventory/sales/finance) have no api-mode data source yet. TASK-026 |
+| `VITE_DATA_MODE=api` renders the real dashboard and canonical inventory reads | ✅ Working | `erp-system-api-adapter.js` calls the authenticated API with no sample fallback. Dashboard plus `stock-on-hand`, `stock-movement` and `inv-valuation` are declared Demo/API and consume canonical resource pages; company switching re-fetches in the new tenant scope. Sales/finance screen mapping remains pending. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production one-time setup | ✅ Working | The API-mode wizard collects the installer token in memory and calls `POST /api/setup/actions/complete` with `X-ERP-Setup-Token`. A database singleton locks concurrent attempts; the command only works with zero users and atomically creates tenant/company/admin/role/permissions/tax/accounts. |
 | Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v13) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale "signed in" state after logout; found and fixed during TASK-024 verification |
@@ -130,7 +134,7 @@ regression-checked as Canonical.
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders inventory/sales/finance with real data | **Not yet.** The canonical resource GET endpoints now exist, but the legacy screens still read the monolithic `DB.*` view model. Each route must migrate to `ErpSystemData.list/get` (or receive an interim mapper) before its `supportedModes` can include `api`. |
+| `VITE_DATA_MODE=api` renders sales/finance and every inventory screen with real data | **Partially.** Stock on hand, stock movement and inventory valuation now use `ErpSystemData.list` in API mode with no sample fallback. Item master, adjustment UI, advanced warehouse, Sales and Finance still require route-by-route mapping before their `supportedModes` can include `api`. |
 | API server has all business **write** endpoints | Not yet. Production setup, auth lifecycle, CRM opportunity conversion, Sales Draft confirmation, inventory adjustment post and stock-transfer completion are live; purchasing, advanced warehouse and finance actions still need registration on the unified dispatcher. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` (referenced in CONTRIBUTING.md) | Still doesn't exist — no ESLint/Prettier config in the repo. `npm test` (TASK-025, done) now works. |

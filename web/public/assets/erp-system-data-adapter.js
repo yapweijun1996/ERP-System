@@ -1189,6 +1189,7 @@
      methods until every screen has moved to create()/action(). */
   var RESOURCE_TABLES = {
     'inventory/products':'product',
+    'inventory/warehouses':'warehouse',
     'inventory/stock-levels':'stock_level',
     'inventory/stock-movements':'stock_movement',
     'inventory/bins':'warehouse_bin',

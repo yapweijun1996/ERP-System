@@ -37,8 +37,158 @@ function wireInventoryNav(scope){
   });
 }
 
+/* Canonical inventory read model. Both adapters expose the same paginated
+   resource contract, so these screens no longer depend on the demo adapter's
+   monolithic DB.* payload. Joins stay presentational: stock rules and writes
+   remain in the shared TypeScript domain commands/server transactions. */
+async function inventoryListPage(resource){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.list!=='function'){
+    throw new Error('The canonical ERP data adapter is unavailable.');
+  }
+  const response=await adapter.list(resource,{limit:100});
+  if(!response||!Array.isArray(response.data)){
+    throw new Error(`Unexpected ${resource} response.`);
+  }
+  return {
+    data:response.data,
+    nextCursor:response.meta&&response.meta.nextCursor||null,
+  };
+}
+
+function inventoryNumber(value){
+  const parsed=Number(value);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+function inventoryMovementType(row){
+  if(row.refType==='stock_transfer') return row.direction==='in'?'Transfer In':'Transfer Out';
+  if(row.refType==='inventory_adjustment') return 'Adjustment';
+  if(row.direction==='in') return row.refType==='purchase_order'?'Goods Receipt':'Stock Receipt';
+  return row.refType==='sales_order'?'Goods Issue':'Stock Issue';
+}
+
+function inventoryReference(row){
+  if(!row.refType) return 'Manual';
+  const label=String(row.refType).replaceAll('_',' ');
+  return row.refId==null?label:`${label} #${row.refId}`;
+}
+
+async function prepareCanonicalInventoryData(){
+  const adapter=window.ErpSystemData;
+  if(adapter&&adapter.mode==='fallback'){
+    if(Array.isArray(DB.items)&&Array.isArray(DB.movements)&&Array.isArray(DB.valuation)) return;
+    throw new Error('The offline canonical inventory snapshot is unavailable.');
+  }
+  const pages=await Promise.all([
+    inventoryListPage('inventory/products'),
+    inventoryListPage('inventory/warehouses'),
+    inventoryListPage('inventory/stock-levels'),
+    inventoryListPage('inventory/stock-movements'),
+    inventoryListPage('inventory/bins'),
+    inventoryListPage('inventory/location-balances'),
+  ]);
+  const [products,warehouses,levels,movements,bins,locationBalances]=pages.map(page=>page.data);
+  const warehouseById=new Map(warehouses.map(row=>[row.id,row]));
+  const binById=new Map(bins.map(row=>[row.id,row]));
+  const onHandByProduct=new Map();
+  levels.forEach(row=>{
+    onHandByProduct.set(
+      row.productId,
+      (onHandByProduct.get(row.productId)||0)+inventoryNumber(row.qty),
+    );
+  });
+  const binsByProduct=new Map();
+  locationBalances.forEach(row=>{
+    const bin=binById.get(row.binId);
+    const warehouse=warehouseById.get(row.warehouseId);
+    const tracking=row.trackingKey&&row.trackingKey!=='none'?` · ${row.trackingKey}`:'';
+    const label=`${warehouse?warehouse.code:'Warehouse'} / ${bin?bin.code:'Bin'}${tracking}`;
+    const rows=binsByProduct.get(row.productId)||[];
+    rows.push([label,inventoryNumber(row.qty)]);
+    binsByProduct.set(row.productId,rows);
+  });
+
+  DB.inventoryWarehouses=warehouses.map(row=>({
+    id:row.id,code:row.code,name:row.name,
+  }));
+  DB.items=products.map(row=>{
+    const onHand=onHandByProduct.get(row.id)||0;
+    return {
+      id:row.id,
+      sku:row.sku,
+      name:row.name,
+      cat:'Unclassified',
+      uom:row.uom,
+      onHand,
+      alloc:0,
+      reorder:0,
+      roq:0,
+      cost:inventoryNumber(row.standardCost),
+      trackingType:row.trackingType||'none',
+      status:onHand>0?'In stock':'No stock',
+      bins:binsByProduct.get(row.id)||[],
+    };
+  });
+
+  const productById=new Map(DB.items.map(row=>[row.id,row]));
+  const signedTotals=new Map();
+  movements.forEach(row=>{
+    const signed=(row.direction==='out'?-1:1)*inventoryNumber(row.qty);
+    signedTotals.set(row.productId,(signedTotals.get(row.productId)||0)+signed);
+  });
+  const running=new Map();
+  DB.items.forEach(row=>{
+    running.set(row.id,row.onHand-(signedTotals.get(row.id)||0));
+  });
+  DB.movements=movements.slice().sort((a,b)=>a.id-b.id).map(row=>{
+    const item=productById.get(row.productId)||{
+      sku:`Product #${row.productId}`,name:'Unknown product',
+    };
+    const signed=(row.direction==='out'?-1:1)*inventoryNumber(row.qty);
+    const balance=(running.get(row.productId)||0)+signed;
+    running.set(row.productId,balance);
+    const location=warehouseById.get(row.warehouseId);
+    return {
+      no:`SM-${row.id}`,
+      date:String(row.movedAt||row.createdAt||'').slice(0,16).replace('T',' '),
+      item:item.sku,
+      name:item.name,
+      type:inventoryMovementType(row),
+      ref:inventoryReference(row),
+      qty:signed,
+      bal:balance,
+      by:'System',
+      wh:location?location.code:`Warehouse #${row.warehouseId}`,
+      productId:row.productId,
+      binId:row.binId,
+      lotId:row.lotId,
+      serialId:row.serialId,
+    };
+  });
+  DB.valuation=DB.items.length?[{
+    cat:'Unclassified',
+    items:DB.items.map(row=>({
+      sku:row.sku,name:row.name,qty:row.onHand,cost:row.cost,
+    })),
+  }]:[];
+  DB.erpSystem=Object.assign({},DB.erpSystem||{},{
+    products,
+    warehouses,
+    stockLevels:levels,
+    stockMovements:movements,
+    bins,
+    locationBalances,
+  });
+  DB.inventoryReadMeta={
+    truncated:pages.some(page=>Boolean(page.nextCursor)),
+    nextCursors:pages.map(page=>page.nextCursor),
+  };
+}
+
 /* ---------------- STOCK ON HAND (master + detail) ---------------- */
-SCREENS['stock-on-hand'] = function(root){
+SCREENS['stock-on-hand'] = async function(root){
+  await prepareCanonicalInventoryData();
   let filter='all', selectedSku=null;
   const totVal=DB.items.reduce((s,it)=>s+it.onHand*it.cost,0);
   const chips=[['all',t('common.all')],['reorder',ts('Reorder')],['low',ts('Low')],['backorder',ts('Backordered')],['instock',ts('In stock')]];
@@ -72,7 +222,7 @@ SCREENS['stock-on-hand'] = function(root){
     ${inventoryPageHead({
       active:'stock-on-hand',
       title:t('inv.title'),
-      count:rows().length+' '+t('common.items'),
+      count:rows().length+(DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?'+ ':' ')+t('common.items'),
       kpiLabel:t('inv.kpi.value'),
       kpiValue:money0(totVal),
     })}
@@ -94,6 +244,13 @@ SCREENS['stock-on-hand'] = function(root){
   function showDetail(sku){
     selectedSku=sku; const it=DB.items.find(x=>x.sku===sku); if(!it)return;
     const avail=it.onHand-it.alloc;
+    const itemMovements=DB.movements.filter(row=>row.item===it.sku);
+    const related=itemMovements.slice(-5).reverse().map(row=>({
+      no:row.no,
+      label:row.type,
+      meta:`${row.ref} · ${row.wh} · ${row.qty>0?'+':''}${num(row.qty)} ${it.uom}`,
+      status:'Posted',
+    }));
     content.classList.remove('detail-collapsed');
     $('#invDetail').classList.add('open');
     $('#invDetail').innerHTML=`
@@ -101,7 +258,7 @@ SCREENS['stock-on-hand'] = function(root){
         <span class="grabber"></span>
         <button class="close" onclick="document.getElementById('invContent').classList.add('detail-collapsed');document.getElementById('invDetail').classList.remove('open')">${ic('chevL')}${esc(t('common.close'))}</button>
         <div class="dh-top"><div><h2>${esc(it.name)}</h2><span class="sub">${esc(it.sku)} · ${esc(it.cat)} · ${esc(t('inv.peruom'))} ${esc(it.uom)}</span></div><div style="margin-left:auto">${statusBadge(it.status)}</div></div>
-        <div class="dh-actions">${btn(t('inv.reorder'),{icon:'reorder',cls:'primary',attrs:'onclick="toast(\'Reorder draft created\',\'ok\')"'})}${btn(t('inv.receive'),{icon:'receive',cls:'soft'})}${btn(t('inv.adjust'),{icon:'adjust',cls:'soft',attrs:'onclick="navigate(\'stock-movement\')"'})}</div>
+        <div class="dh-actions">${btn(t('inv.reorder'),{icon:'reorder',cls:'soft',attrs:'disabled title="Replenishment workflow is not implemented yet."'})}${btn(t('inv.receive'),{icon:'receive',cls:'soft',attrs:'disabled title="Use a canonical purchase receipt to receive stock."'})}${btn(t('inv.adjust'),{icon:'adjust',cls:'primary',attrs:'onclick="navigate(\'new-stock-adjustment\')"'})}</div>
         <div class="tabs" id="invTabs"><button class="tab on" data-t="overview">${esc(t('inv.tab.overview'))}</button><button class="tab" data-t="locations">${esc(t('inv.tab.locations'))}<span class="tc">${it.bins.length}</span></button><button class="tab" data-t="history">${esc(t('inv.tab.history'))}</button></div>
       </div>
       <div class="detail-body" id="invTabBody"></div>`;
@@ -120,28 +277,29 @@ SCREENS['stock-on-hand'] = function(root){
             ${it.expiry?`<div class="field"><span class="k">${esc(t('inv.expiry'))}</span><span class="v" style="color:var(--warn)">${esc(it.expiry)}</span></div>`:''}
           </div>
           <div class="sectitle">${esc(t('inv.commitments'))}</div>
-          ${relatedDocs(DB.erpSystem
-            ? [{no:'SO-1',label:'Sales order - Beta Pte Ltd',meta:'canonical issue transaction',status:'Closed'},{no:'INV-SO-1',label:'Posted invoice',meta:'balanced AR / revenue / GST',status:'Posted'}]
-            : [{no:'SO-26-0418',label:'Sales order — Meridian',meta:'allocates 24 ea',status:'Pending Approval'},{no:'PO-26-0291',label:'Purchase order — inbound',meta:'+300 ea expected Jun 22',status:'Pending Approval'}])}`;
+          ${related.length?relatedDocs(related):`<div class="card" style="color:var(--muted);font-size:13px">${esc(ts('No activity yet.'))}</div>`}`;
       } else if(tabName==='locations'){
         const sum=it.bins.reduce((s,b)=>s+b[1],0);
         body.innerHTML=`<div class="card">${it.bins.length?it.bins.map(b=>`<div class="field"><span class="k mono">${esc(b[0])}</span><span class="v tnum">${num(b[1])} ${esc(it.uom)}</span></div>`).join(''):`<div style="color:var(--muted);font-size:13px">${esc(t('inv.nobins'))}</div>`}
           ${it.bins.length?`<div class="field" style="border-top:2px solid var(--border);margin-top:4px"><span class="k"><b>${esc(t('inv.totalbins'))}</b></span><span class="v tnum"><b>${num(sum)} ${esc(it.uom)}</b> ${sum===it.onHand?cap(t('inv.reconciled'),'ok'):cap(t('inv.mismatch'),'warn')}</span></div>`:''}</div>
           <div style="margin-top:12px">${btn(t('inv.movebins'),{icon:'transfer',cls:'soft'})} ${btn(t('inv.cyclecount'),{icon:'count',cls:'soft',attrs:'onclick="toast(\'Cycle count task created\',\'ok\')"'})}</div>`;
       } else {
-        body.innerHTML=auditTrail([
-          {kind:'sub',when:'Jun 4 · 14:22',what:`Goods issue −24 against DO-26-0402`,who:'M. Silva · bal 88'},
-          {kind:'add',when:'Jun 1 · 09:10',what:`Goods receipt +60 against GRN-26-0181`,who:'System · bal 112'},
-          {kind:'move',when:'May 28 · 11:33',what:`Transfer −12 to Penang-2`,who:'J. Okafor · bal 52'},
-          {kind:'sys',when:'May 25 · 16:00',what:`Weighted-avg cost recalculated to ${money(it.cost)}`,who:'System'},
-        ]);
+        const events=itemMovements.slice().reverse().map(row=>({
+          kind:row.qty<0?'sub':'add',
+          when:row.date||'—',
+          what:esc(`${row.type} ${row.qty>0?'+':''}${num(row.qty)} · ${row.ref}`),
+          who:`${row.by} · ${row.wh} · bal ${num(row.bal)}`,
+        }));
+        body.innerHTML=events.length
+          ?auditTrail(events)
+          :`<div class="card" style="color:var(--muted);font-size:13px">${esc(ts('No activity yet.'))}</div>`;
       }
     }
     $$('#invTabs .tab').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.t)));
     tab('overview');
   }
   function rewire(){
-    wireTable($('#invTable'),{ onRow:showDetail, onSelectionChange:(n)=>{ $('#invBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('inv.reorder'),{icon:'reorder',cls:'soft'})}${btn(t('inv.adjust'),{icon:'adjust',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}</div>`:''; } });
+    wireTable($('#invTable'),{ onRow:showDetail, onSelectionChange:(n)=>{ $('#invBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('inv.reorder'),{icon:'reorder',cls:'soft',attrs:'disabled title="Replenishment workflow is not implemented yet."'})}${btn(t('inv.adjust'),{icon:'adjust',cls:'soft',attrs:'onclick="navigate(\'new-stock-adjustment\')"'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}</div>`:''; } });
   }
   rewire();
   $('#invChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#invChips .chip.on').classList.remove('on');c.classList.add('on');filter=c.dataset.f; $('#invTable').innerHTML=table(); const cc=root.querySelector('.inventory-pagehead .countchip'); if(cc)cc.textContent=rows().length+' '+t('common.items'); $('#invBulk').innerHTML=''; rewire(); }));
@@ -280,7 +438,8 @@ SCREENS['item-master'] = function(root){
 };
 
 /* ---------------- STOCK MOVEMENT LEDGER ---------------- */
-SCREENS['stock-movement'] = function(root){
+SCREENS['stock-movement'] = async function(root){
+  await prepareCanonicalInventoryData();
   function tone(t){ return t.startsWith('Goods Receipt')||t.includes('Receipt')||t==='Transfer In'?'ok':t.includes('Issue')||t==='Transfer Out'||t==='Adjustment'?'danger':'accent'; }
   const netChange=DB.movements.reduce((s,m)=>s+m.qty,0);
   const mvDates=DB.movements.map(m=>m.date.slice(0,10)).sort();
@@ -290,7 +449,7 @@ SCREENS['stock-movement'] = function(root){
     ${inventoryPageHead({
       active:'stock-movement',
       title:t('inv.nav.movements'),
-      count:DB.movements.length+' entries',
+      count:DB.movements.length+(DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?'+ entries':' entries'),
       kpiLabel:'Net change',
       kpiValue:(netChange>0?'+':'')+num(netChange),
       kpiClass:netChange>=0?'pos':'neg',
@@ -323,11 +482,21 @@ SCREENS['stock-movement'] = function(root){
 };
 
 /* ---------------- INVENTORY VALUATION REPORT ---------------- */
-SCREENS['inv-valuation'] = function(root){
+SCREENS['inv-valuation'] = async function(root){
+  await prepareCanonicalInventoryData();
   const open=new Set();
+  const asAt=new Date().toISOString().slice(0,10);
   function grand(){ return DB.valuation.reduce((s,g)=>s+g.items.reduce((a,it)=>a+it.qty*it.cost,0),0); }
   function table(){
     const gt=grand();
+    if(!DB.valuation.length){
+      return statePanel({
+        icon:'box',
+        title:'No inventory to value',
+        body:'No canonical product or stock balance exists for this company.',
+      });
+    }
+    const pct=value=>gt?(value/gt*100).toFixed(1):'0.0';
     const tpl='minmax(220px,2.4fr) 110px 90px 110px 140px 96px';
     let h=`<div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
       <div class="dt-r dt-head"><div class="dt-c l">Category / Item</div><div class="dt-c c">SKU</div><div class="dt-c r">Qty</div><div class="dt-c r">Unit cost</div><div class="dt-c r">Value</div><div class="dt-c r">% of total</div></div>
@@ -335,9 +504,9 @@ SCREENS['inv-valuation'] = function(root){
     DB.valuation.forEach((g,gi)=>{
       const gv=g.items.reduce((a,it)=>a+it.qty*it.cost,0);
       const isOpen=open.has(gi);
-      h+=`<div class="dt-r drill ${isOpen?'open':''}" data-g="${gi}"><div class="dt-c l"><span class="twirl">${ic('chevR')}</span><b>${esc(g.cat)}</b></div><div class="dt-c c" style="color:var(--muted)">${g.items.length} items</div><div class="dt-c r"></div><div class="dt-c r"></div><div class="dt-c r"><b>${money(gv)}</b></div><div class="dt-c r tnum">${(gv/gt*100).toFixed(1)}%</div></div>`;
+      h+=`<div class="dt-r drill ${isOpen?'open':''}" data-g="${gi}"><div class="dt-c l"><span class="twirl">${ic('chevR')}</span><b>${esc(g.cat)}</b></div><div class="dt-c c" style="color:var(--muted)">${g.items.length} items</div><div class="dt-c r"></div><div class="dt-c r"></div><div class="dt-c r"><b>${money(gv)}</b></div><div class="dt-c r tnum">${pct(gv)}%</div></div>`;
       if(isOpen) g.items.forEach(it=>{ const v=it.qty*it.cost;
-        h+=`<div class="dt-r drillrow"><div class="dt-c l indent1">${esc(it.name)}</div><div class="dt-c c"><span class="docnum">${esc(it.sku)}</span></div><div class="dt-c r tnum">${num(it.qty)}</div><div class="dt-c r tnum">${money(it.cost)}</div><div class="dt-c r tnum">${money(v)}</div><div class="dt-c r tnum" style="color:var(--muted)">${(v/gt*100).toFixed(1)}%</div></div>`; });
+        h+=`<div class="dt-r drillrow"><div class="dt-c l indent1">${esc(it.name)}</div><div class="dt-c c"><span class="docnum">${esc(it.sku)}</span></div><div class="dt-c r tnum">${num(it.qty)}</div><div class="dt-c r tnum">${money(it.cost)}</div><div class="dt-c r tnum">${money(v)}</div><div class="dt-c r tnum" style="color:var(--muted)">${pct(v)}%</div></div>`; });
     });
     h+=`<div class="dt-r grandtotal"><div class="dt-c l">Total inventory valuation</div><div class="dt-c"></div><div class="dt-c"></div><div class="dt-c"></div><div class="dt-c r tnum">${money(gt)}</div><div class="dt-c r tnum">100%</div></div>`;
     h+=`</div></div></div>`; return h;
@@ -346,23 +515,23 @@ SCREENS['inv-valuation'] = function(root){
     ${inventoryPageHead({
       active:'inv-valuation',
       title:t('inv.nav.valuation'),
-      sub:'Inventory value by category and item at weighted-average cost.',
+      sub:'Inventory value by category and item at standard cost.',
     })}
     <div class="report">
     <aside class="report-params">
       <h3>Parameters</h3>
-      <div class="fld"><span>As at date</span><input type="date" value="2026-06-04"></div>
+      <div class="fld"><span>As at date</span><input type="date" value="${asAt}"></div>
       <div class="fld"><span>Company</span><select><option>${esc(DB.company.name)}</option></select></div>
-      <div class="fld"><span>Warehouse</span><select><option>All warehouses</option><option>KL-Main</option><option>Penang-2</option></select></div>
-      <div class="fld"><span>Costing basis</span><select><option>Weighted Average</option><option>FIFO</option><option>Standard</option></select></div>
-      <div class="fld"><span>Group by</span><select><option>Category</option><option>Warehouse</option><option>Item</option></select></div>
+      <div class="fld"><span>Warehouse</span><select><option>All warehouses</option>${(DB.inventoryWarehouses||[]).map(row=>`<option>${esc(row.code)} · ${esc(row.name)}</option>`).join('')}</select></div>
+      <div class="fld"><span>Costing basis</span><select><option>Standard cost</option></select></div>
+      <div class="fld"><span>Group by</span><select><option>Category</option></select></div>
       <div class="fld"><span>Include zero qty</span><select><option>Yes</option><option>No</option></select></div>
       ${btn('Run report',{icon:'play',cls:'primary',sm:false,attrs:'onclick="toast(\'Report refreshed\',\'ok\')"'})}
       <div style="border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px">${btn('Save template',{icon:'save',cls:'soft'})}</div>
     </aside>
-    <div class="report-result">
+      <div class="report-result">
       <div class="report-toolbar">
-        <div><b style="font-size:15px">Inventory Valuation</b><div class="report-meta">As at Jun 4, 2026 · Weighted Average · all warehouses</div></div>
+        <div><b style="font-size:15px">Inventory Valuation</b><div class="report-meta">As at ${esc(asAt)} · standard cost · all warehouses${DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?' · first 100 rows per resource':''}</div></div>
         <div class="grow"></div>
         ${btn('Expand all',{icon:'list',cls:'soft',attrs:'data-act="expand"'})}
         ${btn('Excel',{icon:'filexls',cls:'soft'})}${btn('PDF',{icon:'filepdf',cls:'soft'})}${btn('Print',{icon:'print',cls:'soft'})}

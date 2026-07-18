@@ -79,7 +79,8 @@
   }
 
   var RESOURCE_MODULES = {
-    products:'inventory','stock-levels':'inventory','stock-movements':'inventory',
+    products:'inventory',warehouses:'inventory',
+    'stock-levels':'inventory','stock-movements':'inventory',
     orders:'sales',invoices:'sales',
     accounts:'finance','gl-entries':'finance','journals':'finance',
     suppliers:'purchasing','purchase-orders':'purchasing',

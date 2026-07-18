@@ -177,7 +177,7 @@ async function auditRoutes(browser, viewport) {
 
   for (const route of routes) {
     const meta = screenMeta[route] || null;
-    const throwMessage = await page.evaluate(({ r, fixture }) => {
+    const throwMessage = await page.evaluate(async ({ r, fixture }) => {
       try {
         if (fixture === 'sales-enquiry') {
           if (!DB.enquiries || !DB.enquiries[0]) throw new Error('sales-enquiry fixture has no record');
@@ -186,7 +186,7 @@ async function auditRoutes(browser, viewport) {
           if (!DB.rfqs || !DB.rfqs[0]) throw new Error('purchasing-rfq fixture has no record');
           openPurTxn('rfq', DB.rfqs[0]);
         } else {
-          navigate(r);
+          await navigate(r);
         }
         return null;
       } catch (e) {

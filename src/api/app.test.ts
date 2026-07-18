@@ -15,6 +15,7 @@ import {
   salesOrder,
   salesOrderLine,
   stockLevel,
+  stockLocationBalance,
   stockMovement,
   stockTransfer,
   warehouseBin,
@@ -168,6 +169,99 @@ describe('production API security contract', () => {
     );
     expect(override.status).toBe(400);
     expect((await override.json()).error.code).toBe('invalid_query');
+  });
+
+  it('serves the complete canonical inventory read model with camel-case API fields', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'API-WH',
+      name: 'API Warehouse',
+    }).returning({ id: warehouse.id });
+    const [bin] = await db.insert(warehouseBin).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      warehouseId: location.id,
+      code: 'A-01',
+      name: 'Aisle A 01',
+    }).returning({ id: warehouseBin.id });
+    await db.insert(stockLevel).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: location.id,
+      qty: '5.0000',
+    });
+    await db.insert(stockLocationBalance).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: location.id,
+      binId: bin.id,
+      trackingKey: 'none',
+      qty: '5.0000',
+    });
+    await db.insert(stockMovement).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: location.id,
+      binId: bin.id,
+      movementGroup: 'api-read-proof',
+      qty: '5.0000',
+      direction: 'in',
+      refType: 'inventory_adjustment',
+      refId: 1,
+    });
+
+    const cookies = await login(running.baseUrl);
+    const resources = [
+      'products',
+      'warehouses',
+      'stock-levels',
+      'stock-movements',
+      'bins',
+      'location-balances',
+    ];
+    const responses = await Promise.all(resources.map((resource) => fetch(
+      `${running.baseUrl}/api/inventory/${resource}?limit=100`,
+      { headers: { cookie: cookies.header } },
+    )));
+    responses.forEach((response) => expect(response.status).toBe(200));
+    const [productsBody, warehousesBody, levelsBody, movementsBody, binsBody, balancesBody] =
+      await Promise.all(responses.map((response) => response.json()));
+
+    expect(productsBody.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: item.id, sku: 'SG-WIDGET', standardCost: '6.5000' }),
+    ]));
+    expect(warehousesBody.data).toEqual([
+      expect.objectContaining({ id: location.id, code: 'API-WH' }),
+    ]);
+    expect(levelsBody.data).toEqual([
+      expect.objectContaining({ productId: item.id, warehouseId: location.id, qty: '5.0000' }),
+    ]);
+    expect(movementsBody.data).toEqual([
+      expect.objectContaining({
+        productId: item.id,
+        warehouseId: location.id,
+        binId: bin.id,
+        direction: 'in',
+      }),
+    ]);
+    expect(binsBody.data).toEqual([
+      expect.objectContaining({ warehouseId: location.id, code: 'A-01' }),
+    ]);
+    expect(balancesBody.data).toEqual([
+      expect.objectContaining({
+        productId: item.id,
+        warehouseId: location.id,
+        binId: bin.id,
+        trackingKey: 'none',
+        qty: '5.0000',
+      }),
+    ]);
   });
 
   it('revokes logout sessions and does not accept the CSRF cookie alone', async () => {

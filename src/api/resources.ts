@@ -16,6 +16,7 @@ import {
   stockMovement,
   stockLocationBalance,
   stockTransfer,
+  warehouse,
   warehouseBin,
   supplier,
   supplierInvoice,
@@ -58,6 +59,7 @@ export interface ResourceDefinition {
  */
 const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'inventory/products': resource(product, 'inventory.read'),
+  'inventory/warehouses': resource(warehouse, 'inventory.read'),
   'inventory/stock-levels': resource(stockLevel, 'inventory.read'),
   'inventory/stock-movements': resource(stockMovement, 'inventory.read'),
   'inventory/bins': resource(warehouseBin, 'inventory.read', {

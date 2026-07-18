@@ -390,7 +390,10 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'crm-pipeline','new-opportunity',
   'settings',
 ]);
-const API_SCREEN_ROUTES = new Set(['dashboard']);
+const API_SCREEN_ROUTES = new Set([
+  'dashboard',
+  'stock-on-hand','stock-movement','inv-valuation',
+]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
   'sales-order':'sales-orders','new-sales-order':'sales-orders','sales-return':'sales-returns',

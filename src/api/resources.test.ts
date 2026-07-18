@@ -46,6 +46,11 @@ describe('canonical API resources', () => {
     expect(my.data.map((row: any) => row.sku)).toEqual(['MY-WIDGET']);
   });
 
+  it('registers the warehouse resource required by canonical inventory screens', async () => {
+    const result = await listResource(db, scope, 'inventory/warehouses');
+    expect(result).toEqual({ data: [], meta: { nextCursor: null } });
+  });
+
   it('gets one row only inside the requested tenant', async () => {
     const sg = await listResource(db, scope, 'inventory/products', { limit: 1 });
     const id = (sg.data[0] as { id: number }).id;
