@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 5;
+  var DEMO_SCHEMA_VERSION = 6;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -149,9 +149,16 @@
       "where " + w('u') + " and u.is_active " +
       "group by u.user_id, u.email, u.full_name, u.language order by u.user_id");
     var products = await rows(
-      "select p.id, p.company_fn, p.sku, p.name, p.uom, coalesce(sum(s.qty),0)::float as on_hand " +
+      "select p.id, p.company_fn, p.sku, p.name, p.uom, p.standard_cost::float as standard_cost, " +
+      "p.tracking_type, coalesce(sum(s.qty),0)::float as on_hand " +
       "from product p left join stock_level s on s.product_id = p.id " +
-      "where " + w('p') + " group by p.id, p.company_fn, p.sku, p.name, p.uom order by p.id");
+      "where " + w('p') + " group by p.id, p.company_fn, p.sku, p.name, p.uom, " +
+      "p.standard_cost, p.tracking_type order by p.id");
+    var warehouses = await rows(
+      "select id, company_fn, code, name from warehouse where " + wc('warehouse') + " order by code");
+    var stockLevels = await rows(
+      "select s.id, s.product_id, s.warehouse_id, s.qty::float as qty " +
+      "from stock_level s where " + wc('s') + " order by s.product_id, s.warehouse_id");
     var customers = await rows(
       "select c.id, c.code, c.name, coalesce(sum(case when i.status='unpaid' then i.total_amount end),0)::float as balance " +
       "from customer c left join invoice i on i.customer_id = c.id " +
@@ -237,7 +244,8 @@
       "left join app_user u on u.user_id = o.owner_user_id " +
       "where " + wc('o') + " order by o.id");
 
-    return { master: master, companies: companies, users: users, products: products, customers: customers,
+    return { master: master, companies: companies, users: users, products: products,
+             warehouses: warehouses, stockLevels: stockLevels, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
              invoices: invoices, glLegs: glLegs, movements: movements,
              suppliers: suppliers, purchaseOrders: purchaseOrders, purchaseOrderLines: purchaseOrderLines,
@@ -263,9 +271,14 @@
         { user_id: 2, email: 'viewer@acme.co', full_name: 'Demo Viewer', language: 'en', is_superadmin: false },
       ],
       products: [
-        { id: 1, company_fn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', on_hand: 95 },
-        { id: 2, company_fn: 'C-SG', sku: 'SG-GADGET', name: 'Gadget (SG)', uom: 'box', on_hand: 97 },
-        { id: 3, company_fn: 'C-MY', sku: 'MY-WIDGET', name: 'Widget (MY)', uom: 'unit', on_hand: 0 },
+        { id: 1, company_fn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', standard_cost: 6.5, tracking_type: 'none', on_hand: 95 },
+        { id: 2, company_fn: 'C-SG', sku: 'SG-GADGET', name: 'Gadget (SG)', uom: 'box', standard_cost: 13, tracking_type: 'none', on_hand: 97 },
+        { id: 3, company_fn: 'C-MY', sku: 'MY-WIDGET', name: 'Widget (MY)', uom: 'unit', standard_cost: 6, tracking_type: 'none', on_hand: 0 },
+      ],
+      warehouses: [{ id: 1, company_fn: 'C-SG', code: 'WH-SALES', name: 'Sales Warehouse' }],
+      stockLevels: [
+        { id: 1, product_id: 1, warehouse_id: 1, qty: 95 },
+        { id: 2, product_id: 2, warehouse_id: 1, qty: 97 },
       ],
       customers: [{ id: 1, code: 'CUST1', name: 'Beta Pte Ltd', balance: 119.9 }],
       accounts: [
@@ -336,6 +349,8 @@
       companies: d.companies,
       users: d.users,
       products: d.products,
+      warehouses: d.warehouses || [],
+      stockLevels: d.stockLevels || [],
       customers: d.customers,
       accounts: d.accounts,
       taxRules: d.taxRules,
@@ -394,8 +409,9 @@
       .map(function(p){
         var x = display[p.sku] || { reorder: 0, roq: 0, cost: 0, price: 0, bin: 'SG-A-00' };
         return {
-          sku: p.sku, name: p.name, cat: 'Finished Goods', uom: p.uom,
-          onHand: p.on_hand, alloc: 0, reorder: x.reorder, roq: x.roq, cost: x.cost,
+          id: p.id, sku: p.sku, name: p.name, cat: 'Finished Goods', uom: p.uom,
+          onHand: p.on_hand, alloc: 0, reorder: x.reorder, roq: x.roq,
+          cost: Number(p.standard_cost || 0), trackingType: p.tracking_type || 'none',
           status: p.on_hand <= x.reorder ? 'Reorder' : 'In stock',
           bins: [[x.bin, p.on_hand]],
         };
@@ -1138,6 +1154,8 @@
     'inventory/products':'product',
     'inventory/stock-levels':'stock_level',
     'inventory/stock-movements':'stock_movement',
+    'inventory/adjustments':'inventory_adjustment',
+    'inventory/transfers':'stock_transfer',
     'sales/orders':'sales_order',
     'sales/invoices':'invoice',
     'finance/accounts':'account',
@@ -1192,6 +1210,22 @@
   }
   async function create(resource,payload){
     var key=normalizeResource(resource);
+    if(key==='inventory/adjustments'){
+      var adjustment = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createInventoryAdjustmentWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:adjustment,meta:{}};
+    }
+    if(key==='inventory/transfers'){
+      var transfer = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createStockTransferWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:transfer,meta:{}};
+    }
     if(key==='purchasing/orders'||key==='purchasing/purchase-orders'){
       return {data:await createPurchaseOrder(payload),meta:{}};
     }
@@ -1203,6 +1237,22 @@
   }
   async function action(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='inventory/adjustments'&&name==='post'){
+      var posted = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.postInventoryAdjustmentWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:posted,meta:{}};
+    }
+    if(key==='inventory/transfers'&&name==='complete'){
+      var completed = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.completeStockTransferWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:completed,meta:{}};
+    }
     if(key==='sales/orders'&&name==='confirm') return {data:await confirmOrder(id),meta:{}};
     if((key==='purchasing/orders'||key==='purchasing/purchase-orders')&&name==='receive'){
       return {data:await receiveGoods(id),meta:{}};

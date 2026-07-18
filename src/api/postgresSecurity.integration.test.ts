@@ -91,7 +91,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       masterFn: setup.masterFn,
       companyFn: setup.companyFn,
     }, (tx) => tx.select().from(schema.account));
-    expect(visibleAccounts).toHaveLength(8);
+    expect(visibleAccounts).toHaveLength(9);
 
     const [admin] = await db.select().from(schema.appUser)
       .where(eq(schema.appUser.userId, setup.userId));

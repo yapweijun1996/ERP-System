@@ -7,12 +7,18 @@
    the Stock Movement / Stock on Hand screens.
    ============================================================ */
 SCREENS['new-stock-adjustment'] = function(root){
-  const TODAY='2026-06-22';
-  const WH=['KL-Main','KL-Overflow','Penang DC'];
+  const TODAY=new Date().toISOString().slice(0,10);
+  const WH=(DB.erpSystem&&DB.erpSystem.warehouses)||[];
   const REASONS=['Cycle count','Physical count','Damage / breakage','Write-off','Found stock','Revaluation'];
 
-  const S={ date:TODAY, warehouse:'KL-Main', reason:'Cycle count', reference:'',
+  const S={ date:TODAY, warehouseId:WH[0]&&WH[0].id, reason:'Cycle count', reference:'',
     lines:[] /* {sku,name,uom,sys,counted,cost} */ };
+  const warehouseName=()=>{ const w=WH.find(x=>x.id===Number(S.warehouseId)); return w?`${w.code} · ${w.name}`:'—'; };
+  const systemQty=(productId,warehouseId)=>{
+    const row=((DB.erpSystem&&DB.erpSystem.stockLevels)||[])
+      .find(x=>x.product_id===productId&&x.warehouse_id===Number(warehouseId));
+    return row?Number(row.qty):0;
+  };
 
   // signed currency — money()/money0() strip the sign via Math.abs
   const sd=n=>(n<0?'−':n>0?'+':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -49,7 +55,7 @@ SCREENS['new-stock-adjustment'] = function(root){
       <div class="sumrow"><span class="sk2">Units up</span><span class="sv tnum" style="color:var(--ok)">+${num(t.upQty)}</span></div>
       <div class="sumrow"><span class="sk2">Units down</span><span class="sv tnum" style="color:var(--danger)">−${num(t.downQty)}</span></div>
       <div class="sumrow total"><span class="sk2">Net value impact</span><span class="sv tnum" style="color:${t.value>0?'var(--ok)':t.value<0?'var(--danger)':'inherit'}">${t.value===0?money(0):sd(t.value)}</span></div>
-      <div style="margin-top:10px">${indicator({tone,icon: t.value<0?'warn':'checkc',label,value:money0(Math.abs(t.value)),sub: t.value===0?'Counted matches system — nothing to post.':`${t.value<0?'Debits':'Credits'} inventory variance (5800), ${t.value<0?'credits':'debits'} inventory (1300).`})}</div>`;
+      <div style="margin-top:10px">${indicator({tone,icon: t.value<0?'warn':'checkc',label,value:money0(Math.abs(t.value)),sub: t.value===0?'Counted matches system — nothing to post.':`${t.value<0?'Debits':'Credits'} inventory variance (5800), ${t.value<0?'credits':'debits'} inventory (1400).`})}</div>`;
   }
   function refreshLines(){ $('#wLines').innerHTML=lineRows(); $('#wImpact').innerHTML=totalsCard(); bindLines(); updateBar(); }
   function bindLines(){
@@ -95,7 +101,7 @@ SCREENS['new-stock-adjustment'] = function(root){
           <div class="panel-h">${ic('receipt')}<h3>Adjustment details</h3></div>
           <div class="panel-body">
             <div class="fldrow c3">
-              <div class="fld"><span>Warehouse</span><select id="wWh">${WH.map(w=>`<option ${w===S.warehouse?'selected':''}>${w}</option>`).join('')}</select></div>
+              <div class="fld"><span>Warehouse</span><select id="wWh">${WH.map(w=>`<option value="${w.id}" ${w.id===S.warehouseId?'selected':''}>${esc(w.code)} · ${esc(w.name)}</option>`).join('')}</select></div>
               <div class="fld"><span>Adjustment date</span><input type="date" id="wDate" value="${S.date}"></div>
               <div class="fld"><span>Reason</span><select id="wReason">${REASONS.map(r=>`<option ${r===S.reason?'selected':''}>${r}</option>`).join('')}</select></div>
             </div>
@@ -108,7 +114,7 @@ SCREENS['new-stock-adjustment'] = function(root){
           <div class="panel-body">
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
               <div class="fld" style="flex:1;min-width:260px"><span>Item</span>
-                <select id="wPick">${DB.items.map(it=>`<option value="${it.sku}">${esc(it.sku)} · ${esc(it.name)} — on hand ${num(it.onHand)} ${esc(it.uom)}</option>`).join('')}</select></div>
+                <select id="wPick">${DB.items.map(it=>`<option value="${it.sku}">${esc(it.sku)} · ${esc(it.name)} — here ${num(systemQty(it.id,S.warehouseId))} ${esc(it.uom)}</option>`).join('')}</select></div>
               ${btn('Add to count',{icon:'plus',cls:'primary',attrs:'id="wAdd"'})}
             </div>
           </div>
@@ -130,11 +136,20 @@ SCREENS['new-stock-adjustment'] = function(root){
   }
   function bindHeader(){
     const b=(id,key,ev='change')=>{ const el=$('#'+id); el&&el.addEventListener(ev,()=>S[key]=el.value); };
-    b('wWh','warehouse'); b('wDate','date'); b('wReason','reason'); b('wRef','reference','input');
+    const wh=$('#wWh'); wh&&wh.addEventListener('change',()=>{
+      S.warehouseId=Number(wh.value);
+      S.lines.forEach(line=>{
+        line.sys=systemQty(line.productId,S.warehouseId);
+        line.counted=line.sys;
+      });
+      refreshLines();
+    });
+    b('wDate','date'); b('wReason','reason'); b('wRef','reference','input');
     $('#wAdd').addEventListener('click',()=>{
       const sku=$('#wPick').value, it=DB.items.find(x=>x.sku===sku); if(!it) return;
       if(S.lines.find(l=>l.sku===sku)){ toast('Item already on the count sheet','info'); return; }
-      S.lines.push({sku:it.sku,name:it.name,uom:it.uom,sys:it.onHand,counted:it.onHand,cost:it.cost});
+      const here=systemQty(it.id,S.warehouseId);
+      S.lines.push({productId:it.id,sku:it.sku,name:it.name,uom:it.uom,sys:here,counted:here,cost:it.cost});
       $('#wCount2').textContent=`${S.lines.length} item${S.lines.length===1?'':'s'}`;
       refreshLines();
     });
@@ -145,12 +160,36 @@ SCREENS['new-stock-adjustment'] = function(root){
       const t=totals();
       openModal(`<div class="modal-head">${ic('adjust')}<h3>Post stock adjustment?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
         <div class="modal-body">
-          <p style="color:var(--muted);font-size:13.5px;margin:0 0 12px">Adjust <b>${t.lines}</b> item${t.lines===1?'':'s'} in <b>${esc(S.warehouse)}</b>. Stock balances update immediately and a variance posting hits the GL.</p>
+          <p style="color:var(--muted);font-size:13.5px;margin:0 0 12px">Adjust <b>${t.lines}</b> item${t.lines===1?'':'s'} in <b>${esc(warehouseName())}</b>. Stock balances update immediately and a variance posting hits the GL.</p>
           <div class="sumrow"><span class="sk2">Units up / down</span><span class="sv tnum"><span style="color:var(--ok)">+${num(t.upQty)}</span> / <span style="color:var(--danger)">−${num(t.downQty)}</span></span></div>
           <div class="sumrow total"><span class="sk2">Net value impact</span><span class="sv tnum" style="color:${t.value>0?'var(--ok)':t.value<0?'var(--danger)':'inherit'}">${t.value===0?money(0):sd(t.value)}</span></div>
         </div>
         <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Confirm & post',{icon:'check',cls:'primary',attrs:'onclick="closeModal();window.__saPost&&window.__saPost()"'})}</div>`);
-      window.__saPost=()=>{ navigate('stock-movement'); setTimeout(()=>toast(`Stock adjustment SA-26-0148 posted · ${t.lines} item${t.lines===1?'':'s'} · ${t.value===0?money0(0):sd0(t.value)}`,'ok'),180); };
+      window.__saPost=async()=>{
+        const docNo='SA-'+Date.now().toString(36).toUpperCase();
+        try{
+          const created=await window.ErpSystemData.create('inventory/adjustments',{
+            docNo,
+            warehouseId:Number(S.warehouseId),
+            adjustmentDate:S.date,
+            reason:S.reason,
+            reference:S.reference||null,
+            lines:S.lines.filter(line=>line.counted!==line.sys)
+              .map(line=>({productId:line.productId,countedQty:String(line.counted)})),
+          });
+          await window.ErpSystemData.action(
+            'inventory/adjustments',
+            created.data.id,
+            'post',
+            {},
+            'stock-adjustment-'+created.data.id,
+          );
+          navigate('stock-movement');
+          setTimeout(()=>toast(`Stock adjustment ${docNo} posted · ${t.lines} item${t.lines===1?'':'s'} · ${t.value===0?money0(0):sd0(t.value)}`,'ok'),180);
+        }catch(error){
+          toast(error&&error.message?error.message:'Stock adjustment could not be posted','danger');
+        }
+      };
     });
   }
   render();

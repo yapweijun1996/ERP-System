@@ -125,6 +125,7 @@ export async function completeDemoSetupWithin(
     { masterFn, companyFn, code: '3000', name: 'Owner Equity', type: 'equity' },
     { masterFn, companyFn, code: '4000', name: 'Revenue', type: 'income' },
     { masterFn, companyFn, code: '5000', name: 'Cost of Goods Sold', type: 'expense' },
+    { masterFn, companyFn, code: '5800', name: 'Inventory Variance', type: 'expense' },
   ]);
 
   let [adminRole] = await exec.select({ roleId: role.roleId })

@@ -51,7 +51,7 @@ describe('completeDemoSetup', () => {
       eq(taxRule.taxCode, 'SV'),
     ))).toMatchObject([{ rate: '8.000', validFrom: '2025-07-01' }]);
     expect(await db.select().from(account)
-      .where(eq(account.companyFn, 'C-MY-NEW'))).toHaveLength(8);
+      .where(eq(account.companyFn, 'C-MY-NEW'))).toHaveLength(9);
     const [admin] = await db.select().from(appUser)
       .where(eq(appUser.email, 'new.admin@example.test'));
     expect(admin.passwordHash).toBe(PASSWORD_HASH);

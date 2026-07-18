@@ -8,7 +8,8 @@ PGlite (demo) and PostgreSQL (production).
 ```
 tenancy/     master, company, app_user, role, user_company
 localization/ tax_rule (effective-dated), currency, fx_rate
-inventory/   product, warehouse, stock_level, stock_movement
+inventory/   product, warehouse, stock_level, stock_movement,
+             inventory_adjustment(+line), stock_transfer(+line)
 sales/       customer, sales_order, sales_order_line, delivery, invoice, payment
 purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt
 finance/     account (chart of accounts), gl_entry
@@ -288,4 +289,3 @@ purchase_order ||--o{ goods_receipt   (receive stock → stock_movement 'in')
 ```
 
 Also planned: `delivery` and `payment` to extend the sales flow.
-

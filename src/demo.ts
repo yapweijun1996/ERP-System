@@ -15,7 +15,7 @@ import {
   supplier, supplierInvoice, opportunity,
 } from './data/schema';
 import {
-  issueStock, getStockQty, countMovements, setStockQty, InsufficientStockError,
+  issueStock, getStockQty, countMovements, setStockQtyForFixture, InsufficientStockError,
 } from './modules/inventory/stock';
 import {
   confirmDraftSalesOrder,
@@ -111,7 +111,7 @@ async function runTxScenario(db: DB, fx: { productId: number; warehouseId: numbe
 
 /** TRUE concurrency (PostgreSQL only): two simultaneous issues of 8 from stock 10. */
 async function runConcurrencyTest(db: DB, fx: { productId: number; warehouseId: number }) {
-  await setStockQty(db, SCOPE, fx.productId, fx.warehouseId, 10); // reset to 10
+  await setStockQtyForFixture(db, SCOPE, fx.productId, fx.warehouseId, 10); // reset to 10
   const before = await countMovements(db, SCOPE, fx.productId, fx.warehouseId);
   const results = await Promise.allSettled([
     issueStock(db, SCOPE, { ...fx, qty: 8, refType: 'race', refId: 1 }),

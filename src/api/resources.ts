@@ -7,10 +7,12 @@ import {
   invoice,
   opportunity,
   product,
+  inventoryAdjustment,
   purchaseOrder,
   salesOrder,
   stockLevel,
   stockMovement,
+  stockTransfer,
   supplier,
   supplierInvoice,
 } from '../data/schema';
@@ -54,6 +56,18 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'inventory/products': resource(product, 'inventory.read'),
   'inventory/stock-levels': resource(stockLevel, 'inventory.read'),
   'inventory/stock-movements': resource(stockMovement, 'inventory.read'),
+  'inventory/adjustments': resource(inventoryAdjustment, 'inventory.read', {
+    status: inventoryAdjustment.status,
+    versionColumn: inventoryAdjustment.version,
+    allowedActions: ['post'],
+    createPermission: 'inventory.adjust',
+  }),
+  'inventory/transfers': resource(stockTransfer, 'inventory.read', {
+    status: stockTransfer.status,
+    versionColumn: stockTransfer.version,
+    allowedActions: ['complete'],
+    createPermission: 'inventory.transfer',
+  }),
   'sales/orders': resource(salesOrder, 'sales.read', {
     status: salesOrder.status,
     versionColumn: salesOrder.version,

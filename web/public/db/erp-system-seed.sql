@@ -45,10 +45,10 @@ WHERE u.master_fn = 'M1' AND u.email = 'viewer@acme.co'
   AND c.master_fn = 'M1' AND c.company_fn = 'C-SG'
   AND r.master_fn = 'M1' AND r.name = 'Viewer';
 
-INSERT INTO product (master_fn, company_fn, sku, name, uom) VALUES
-  ('M1', 'C-SG', 'SG-WIDGET', 'Widget (SG)', 'unit'),
-  ('M1', 'C-SG', 'SG-GADGET', 'Gadget (SG)', 'box'),
-  ('M1', 'C-MY', 'MY-WIDGET', 'Widget (MY)', 'unit');
+INSERT INTO product (master_fn, company_fn, sku, name, uom, standard_cost) VALUES
+  ('M1', 'C-SG', 'SG-WIDGET', 'Widget (SG)', 'unit', 6.5000),
+  ('M1', 'C-SG', 'SG-GADGET', 'Gadget (SG)', 'box', 13.0000),
+  ('M1', 'C-MY', 'MY-WIDGET', 'Widget (MY)', 'unit', 6.0000);
 
 -- SG GST standard-rated: 8% from 2023, 9% from 2024 (effective-dated). MY SST 8%.
 INSERT INTO tax_rule (master_fn, company_fn, tax_regime, tax_code, rate, valid_from, valid_to) VALUES
@@ -80,7 +80,8 @@ INSERT INTO account (master_fn, company_fn, code, name, type) VALUES
   ('M1', 'C-SG', '2200', 'GST Output Tax', 'liability'),
   ('M1', 'C-SG', '1400', 'Inventory', 'asset'),
   ('M1', 'C-SG', '1200', 'GST Input Tax', 'asset'),
-  ('M1', 'C-SG', '2100', 'Accounts Payable', 'liability');
+  ('M1', 'C-SG', '2100', 'Accounts Payable', 'liability'),
+  ('M1', 'C-SG', '5800', 'Inventory Variance', 'expense');
 
 -- Sales fixture (src/demo.ts runSalesScenario): warehouse + opening stock 100/100.
 INSERT INTO warehouse (master_fn, company_fn, code, name) VALUES

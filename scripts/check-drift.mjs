@@ -28,7 +28,7 @@ const CORE_LABEL = 'drizzle/*.sql (all migrations)';
 
 /** Apply CREATE TABLE + ALTER TABLE ADD COLUMN statements onto a running schema map. */
 function applyMigration(tables, sql) {
-  const tableRe = /CREATE TABLE IF NOT EXISTS "(\w+)"\s*\(([\s\S]*?)\n\);/g;
+  const tableRe = /CREATE TABLE (?:IF NOT EXISTS )?"(\w+)"\s*\(([\s\S]*?)\n\);/g;
   let m;
   while ((m = tableRe.exec(sql))) {
     const [, name, body] = m;

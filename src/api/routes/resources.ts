@@ -20,9 +20,84 @@ import {
   InvalidSalesOrderStateError,
   PostingError,
 } from '../../modules/sales/confirmOrder';
+import {
+  InventoryAdjustmentValidationError,
+  InventorySnapshotConflictError,
+  InvalidInventoryAdjustmentStateError,
+} from '../../modules/inventory/adjustment';
+import {
+  InvalidStockTransferStateError,
+  StockTransferValidationError,
+} from '../../modules/inventory/transfer';
+import { createDefinitionFor } from '../creates';
+import { appendAudit } from '../audit';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
+
+  router.post('/:module/:resource', async (req, res) => {
+    const resource = `${req.params.module}/${req.params.resource}`;
+    if (!isKnownResource(resource)) {
+      apiError(res, 404, 'resource_not_found', `Unknown ERP resource '${resource}'.`);
+      return;
+    }
+    const resourceDefinition = resourceDefinitionFor(resource);
+    const createDefinition = createDefinitionFor(resource);
+    if (!resourceDefinition.createPermission || !createDefinition) {
+      apiError(res, 405, 'create_not_supported', `Creating ${resource} is not supported.`);
+      return;
+    }
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    const payload = req.body;
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      apiError(res, 400, 'invalid_request', 'A JSON object body is required.');
+      return;
+    }
+    if ('masterFn' in payload || 'companyFn' in payload) {
+      apiError(res, 400, 'tenant_override_rejected', 'Tenant scope comes from the authenticated session.');
+      return;
+    }
+    const scope = {
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+    };
+    try {
+      const result = await withTenantTransaction(db, scope, async (tx) => {
+        if (!await hasPermission(tx, session, createDefinition.permission)) {
+          throw new ActionDispatchError(403, 'permission_denied', 'You cannot create this ERP resource.');
+        }
+        const created = await createDefinition.execute(tx, scope, payload);
+        const entityId = (created as { id?: unknown }).id;
+        await appendAudit(tx, {
+          masterFn: scope.masterFn,
+          companyFn: scope.companyFn,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: resource,
+          entityId: typeof entityId === 'number' ? entityId : null,
+          action: 'create',
+          after: created,
+        });
+        return created;
+      });
+      res.status(201).json({ data: result, meta: {} });
+    } catch (error) {
+      if (error instanceof ActionDispatchError) {
+        apiError(res, error.status, error.code, error.message);
+        return;
+      }
+      if (
+        error instanceof InventoryAdjustmentValidationError
+        || error instanceof StockTransferValidationError
+        || error instanceof RangeError
+      ) {
+        apiError(res, 422, 'validation_failed', error.message);
+        return;
+      }
+      throw error;
+    }
+  });
 
   router.get('/:module/:resource', async (req, res) => {
     const resource = `${req.params.module}/${req.params.resource}`;
@@ -153,6 +228,22 @@ export function createResourceRouter(db: DB): Router {
       }
       if (error instanceof PostingError) {
         apiError(res, 422, 'posting_failed', error.message);
+        return;
+      }
+      if (
+        error instanceof InvalidInventoryAdjustmentStateError
+        || error instanceof InventorySnapshotConflictError
+        || error instanceof InvalidStockTransferStateError
+      ) {
+        apiError(res, 409, 'invalid_state', error.message);
+        return;
+      }
+      if (
+        error instanceof InventoryAdjustmentValidationError
+        || error instanceof StockTransferValidationError
+        || error instanceof RangeError
+      ) {
+        apiError(res, 422, 'validation_failed', error.message);
         return;
       }
       throw error;

@@ -26,6 +26,8 @@ export interface IssueArgs {
   refId?: number;
 }
 
+export interface ReceiveArgs extends IssueArgs {}
+
 /**
  * Core stock-issue operation, run on a caller-supplied execution context (`exec` may be a
  * db OR a transaction handle — PgTransaction extends PgDatabase, so both satisfy `DB`).
@@ -37,6 +39,9 @@ export interface IssueArgs {
  * MUST be called inside a transaction (so a failure rolls the whole unit of work back).
  */
 export async function issueStockWithin(exec: DB, scope: Scope, args: IssueArgs) {
+  if (!Number.isFinite(args.qty) || args.qty <= 0) {
+    throw new RangeError('Stock issue quantity must be greater than zero');
+  }
   const [level] = await exec
     .select({ id: stockLevel.id, qty: stockLevel.qty })
     .from(stockLevel)
@@ -75,6 +80,48 @@ export async function issueStockWithin(exec: DB, scope: Scope, args: IssueArgs) 
   return { movementId: mv.id, remaining: available - args.qty };
 }
 
+/**
+ * Increase stock and append the corresponding inbound movement. This is the
+ * only production path for raising the stock projection; callers supply the
+ * surrounding business transaction.
+ */
+export async function receiveStockWithin(exec: DB, scope: Scope, args: ReceiveArgs) {
+  if (!Number.isFinite(args.qty) || args.qty <= 0) {
+    throw new RangeError('Stock receipt quantity must be greater than zero');
+  }
+  const [level] = await exec.insert(stockLevel)
+    .values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      productId: args.productId,
+      warehouseId: args.warehouseId,
+      qty: String(args.qty),
+    })
+    .onConflictDoUpdate({
+      target: [
+        stockLevel.masterFn,
+        stockLevel.companyFn,
+        stockLevel.productId,
+        stockLevel.warehouseId,
+      ],
+      set: { qty: sql`${stockLevel.qty} + ${args.qty}`, updatedAt: sql`now()` },
+    })
+    .returning({ qty: stockLevel.qty });
+
+  const [mv] = await exec.insert(stockMovement).values({
+    masterFn: scope.masterFn,
+    companyFn: scope.companyFn,
+    productId: args.productId,
+    warehouseId: args.warehouseId,
+    qty: String(args.qty),
+    direction: 'in',
+    refType: args.refType ?? null,
+    refId: args.refId ?? null,
+  }).returning({ id: stockMovement.id });
+
+  return { movementId: mv.id, remaining: Number(level.qty) };
+}
+
 /** Standalone stock issue — owns its transaction boundary. Wraps {@link issueStockWithin}. */
 export async function issueStock(db: DB, scope: Scope, args: IssueArgs) {
   return db.transaction((tx) => issueStockWithin(tx, scope, args));
@@ -108,7 +155,17 @@ export async function countMovements(db: DB, scope: Scope, productId: number, wa
   return r?.n ?? 0;
 }
 
-export async function setStockQty(db: DB, scope: Scope, productId: number, warehouseId: number, qty: number): Promise<void> {
+/**
+ * Test/demo fixture escape hatch only. Production commands must append
+ * stock_movement through issueStockWithin/receiveStockWithin.
+ */
+export async function setStockQtyForFixture(
+  db: DB,
+  scope: Scope,
+  productId: number,
+  warehouseId: number,
+  qty: number,
+): Promise<void> {
   await db
     .update(stockLevel)
     .set({ qty: String(qty), updatedAt: sql`now()` })

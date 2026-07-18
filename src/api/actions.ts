@@ -6,8 +6,26 @@ import {
 import {
   confirmDraftSalesOrderWithin,
 } from '../modules/sales/confirmOrder';
+import { postInventoryAdjustmentWithin } from '../modules/inventory/adjustment';
+import { completeStockTransferWithin } from '../modules/inventory/transfer';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'inventory/adjustments/post': {
+    permission: 'inventory.adjust',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return postInventoryAdjustmentWithin(tx, scope, input.resourceId);
+    },
+  },
+  'inventory/transfers/complete': {
+    permission: 'inventory.transfer',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return completeStockTransferWithin(tx, scope, input.resourceId);
+    },
+  },
   'sales/orders/confirm': {
     permission: 'sales.write',
     idempotency: 'required',

@@ -36,6 +36,16 @@ import {
   completeDemoSetupWithin,
   type CompleteDemoSetupInput,
 } from '../../src/modules/setup/completeDemoSetup';
+import {
+  createInventoryAdjustmentWithin,
+  postInventoryAdjustmentWithin,
+  type CreateInventoryAdjustmentInput,
+} from '../../src/modules/inventory/adjustment';
+import {
+  completeStockTransferWithin,
+  createStockTransferWithin,
+  type CreateStockTransferInput,
+} from '../../src/modules/inventory/transfer';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -54,6 +64,22 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    createInventoryAdjustmentWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateInventoryAdjustmentInput,
+    ) {
+      return createInventoryAdjustmentWithin(asDomainDb(db), scope, input);
+    },
+    postInventoryAdjustmentWithin(db: DemoOrm, scope: Scope, adjustmentId: number) {
+      return postInventoryAdjustmentWithin(asDomainDb(db), scope, adjustmentId);
+    },
+    createStockTransferWithin(db: DemoOrm, scope: Scope, input: CreateStockTransferInput) {
+      return createStockTransferWithin(asDomainDb(db), scope, input);
+    },
+    completeStockTransferWithin(db: DemoOrm, scope: Scope, transferId: number) {
+      return completeStockTransferWithin(asDomainDb(db), scope, transferId);
+    },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);
     },

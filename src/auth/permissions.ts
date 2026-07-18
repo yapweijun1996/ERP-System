@@ -6,6 +6,8 @@ import type { SessionData } from './session';
 export const PERMISSIONS = {
   dashboardRead: 'dashboard.read',
   inventoryRead: 'inventory.read',
+  inventoryAdjust: 'inventory.adjust',
+  inventoryTransfer: 'inventory.transfer',
   salesRead: 'sales.read',
   salesWrite: 'sales.write',
   financeRead: 'finance.read',

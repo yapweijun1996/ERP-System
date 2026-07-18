@@ -48,6 +48,10 @@ function compatibilitySql(entry) {
   }
   return sql
     .replace(
+      /CREATE TABLE "(?!IF NOT EXISTS )/g,
+      'CREATE TABLE IF NOT EXISTS "',
+    )
+    .replace(
       /ALTER TABLE "([^"]+)" ADD COLUMN "(?!IF NOT EXISTS )/g,
       'ALTER TABLE "$1" ADD COLUMN IF NOT EXISTS "',
     )

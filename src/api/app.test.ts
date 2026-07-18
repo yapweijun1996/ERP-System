@@ -8,10 +8,13 @@ import {
   customer,
   glEntry,
   invoice,
+  inventoryAdjustment,
   product,
   salesOrder,
   salesOrderLine,
   stockLevel,
+  stockMovement,
+  stockTransfer,
   warehouse,
 } from '../data/schema';
 import { seedDemo } from '../data/seed';
@@ -374,5 +377,102 @@ describe('production API security contract', () => {
       entityId: String(draft.id),
       action: 'confirm',
     });
+  });
+
+  it('creates and posts inventory adjustments and transfers with idempotent actions', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const locations = await db.insert(warehouse).values([
+      { masterFn: 'M1', companyFn: 'C-SG', code: 'INV-A', name: 'Inventory A' },
+      { masterFn: 'M1', companyFn: 'C-SG', code: 'INV-B', name: 'Inventory B' },
+    ]).returning({ id: warehouse.id });
+    await db.insert(stockLevel).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: locations[0].id,
+      qty: '10',
+    });
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+
+    const createAdjustment = await fetch(`${running.baseUrl}/api/inventory/adjustments`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'adjustment-create-test' },
+      body: JSON.stringify({
+        docNo: 'ADJ-API-1',
+        warehouseId: locations[0].id,
+        adjustmentDate: '2026-07-18',
+        reason: 'API count',
+        lines: [{ productId: item.id, countedQty: 12 }],
+      }),
+    });
+    expect(createAdjustment.status).toBe(201);
+    const adjustment = (await createAdjustment.json()).data;
+    const missingAdjustmentKey = await fetch(
+      `${running.baseUrl}/api/inventory/adjustments/${adjustment.id}/actions/post`,
+      { method: 'POST', headers, body: '{}' },
+    );
+    expect(missingAdjustmentKey.status).toBe(428);
+    const postAdjustment = () => fetch(
+      `${running.baseUrl}/api/inventory/adjustments/${adjustment.id}/actions/post`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'idempotency-key': 'adjustment-post-1',
+          'x-request-id': 'adjustment-post-test',
+        },
+        body: '{}',
+      },
+    );
+    const posted = await postAdjustment();
+    expect(posted.status).toBe(200);
+    const postedBody = await posted.json();
+    expect(postedBody.data).toMatchObject({ status: 'posted', valueImpact: '13.00' });
+    const replay = await postAdjustment();
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await replay.json()).toEqual(postedBody);
+
+    const createTransfer = await fetch(`${running.baseUrl}/api/inventory/transfers`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        docNo: 'TRF-API-1',
+        fromWarehouseId: locations[0].id,
+        toWarehouseId: locations[1].id,
+        transferDate: '2026-07-18',
+        lines: [{ productId: item.id, qty: 5 }],
+      }),
+    });
+    expect(createTransfer.status).toBe(201);
+    const transfer = (await createTransfer.json()).data;
+    const completed = await fetch(
+      `${running.baseUrl}/api/inventory/transfers/${transfer.id}/actions/complete`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'transfer-complete-1' },
+        body: '{}',
+      },
+    );
+    expect(completed.status).toBe(200);
+    expect((await completed.json()).data).toMatchObject({ status: 'completed' });
+
+    const [source] = await db.select({ qty: stockLevel.qty }).from(stockLevel).where(and(
+      eq(stockLevel.productId, item.id),
+      eq(stockLevel.warehouseId, locations[0].id),
+    ));
+    const [destination] = await db.select({ qty: stockLevel.qty }).from(stockLevel).where(and(
+      eq(stockLevel.productId, item.id),
+      eq(stockLevel.warehouseId, locations[1].id),
+    ));
+    expect([Number(source.qty), Number(destination.qty)]).toEqual([7, 5]);
+    expect(await db.select().from(inventoryAdjustment)).toHaveLength(1);
+    expect(await db.select().from(stockTransfer)).toHaveLength(1);
+    expect(await db.select().from(stockMovement)).toHaveLength(3);
   });
 });
