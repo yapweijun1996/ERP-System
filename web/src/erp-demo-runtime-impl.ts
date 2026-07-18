@@ -90,6 +90,13 @@ import {
   type CreateSalesEnquiryInput,
   type CreateSalesQuotationInput,
 } from '../../src/modules/sales/quotation';
+import {
+  createSalesReturnWithin,
+  receiveAndCreditSalesReturnWithin,
+  rejectSalesReturnWithin,
+  type CreateSalesReturnInput,
+  type CreditSalesReturnInput,
+} from '../../src/modules/sales/return';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -222,6 +229,24 @@ export const erpDemoRuntime = Object.freeze({
       input: { docNo: string; orderDate: string },
     ) {
       return convertQuotationToOrderWithin(asDomainDb(db), scope, quotationId, input);
+    },
+    createSalesReturnWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateSalesReturnInput,
+    ) {
+      return createSalesReturnWithin(asDomainDb(db), scope, input);
+    },
+    receiveAndCreditSalesReturnWithin(
+      db: DemoOrm,
+      scope: Scope,
+      returnId: number,
+      input: CreditSalesReturnInput,
+    ) {
+      return receiveAndCreditSalesReturnWithin(asDomainDb(db), scope, returnId, input);
+    },
+    rejectSalesReturnWithin(db: DemoOrm, scope: Scope, returnId: number) {
+      return rejectSalesReturnWithin(asDomainDb(db), scope, returnId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

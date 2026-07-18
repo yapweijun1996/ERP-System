@@ -26,6 +26,7 @@ DECLARE
     'customer', 'invoice', 'sales_order', 'sales_order_line',
     'sales_enquiry', 'sales_quotation', 'sales_quotation_line',
     'sales_delivery', 'sales_delivery_line',
+    'sales_return', 'sales_return_line', 'sales_credit_note', 'sales_credit_note_line',
     'account', 'gl_entry',
     'goods_receipt', 'purchase_order', 'purchase_order_line',
     'supplier', 'supplier_invoice',

@@ -45,6 +45,10 @@ import {
   type CreateSalesEnquiryInput,
   type CreateSalesQuotationInput,
 } from '../modules/sales/quotation';
+import {
+  createSalesReturnWithin,
+  type CreateSalesReturnInput,
+} from '../modules/sales/return';
 
 export interface CreateDefinition {
   permission: string;
@@ -236,6 +240,17 @@ const CREATES: Record<string, CreateDefinition> = {
         tx,
         scope,
         payload as unknown as CreateSalesQuotationInput,
+      );
+    },
+  },
+  'sales/returns': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSalesReturnWithin(
+        tx,
+        scope,
+        payload as unknown as CreateSalesReturnInput,
       );
     },
   },

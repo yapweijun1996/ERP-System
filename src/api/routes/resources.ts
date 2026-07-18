@@ -38,6 +38,7 @@ import {
 } from '../../modules/purchasing/errors';
 import { QualityInspectionError } from '../../modules/quality/inspection';
 import { SalesQuotationError } from '../../modules/sales/quotation';
+import { SalesReturnError } from '../../modules/sales/return';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -102,6 +103,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof InvalidOpportunityStateError
         || error instanceof QualityInspectionError
         || error instanceof SalesQuotationError
+        || error instanceof SalesReturnError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -266,6 +268,10 @@ export function createResourceRouter(db: DB): Router {
         return;
       }
       if (error instanceof SalesQuotationError) {
+        apiError(res, 409, 'invalid_state', error.message);
+        return;
+      }
+      if (error instanceof SalesReturnError) {
         apiError(res, 409, 'invalid_state', error.message);
         return;
       }

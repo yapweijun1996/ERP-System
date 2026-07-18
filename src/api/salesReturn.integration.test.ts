@@ -1,0 +1,141 @@
+import type { Server } from 'node:http';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { and, eq } from 'drizzle-orm';
+import type { DB } from '../data/db';
+import {
+  customer,
+  glEntry,
+  product,
+  salesCreditNote,
+  salesDeliveryLine,
+  salesReturn,
+  stockLevel,
+  stockMovement,
+  warehouse,
+} from '../data/schema';
+import { seedDemo } from '../data/seed';
+import { confirmSalesOrder } from '../modules/sales/confirmOrder';
+import { setStockQtyForFixture } from '../modules/inventory/stock';
+import { freshDb } from '../test/helpers';
+import { createApp } from './app';
+
+function cookies(response: Response) {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+  const values = headers.getSetCookie?.() ?? [headers.get('set-cookie') ?? ''];
+  const pairs = values.flatMap((value) =>
+    Array.from(value.matchAll(/(?:^|,\s*)(erp_(?:session|csrf))=([^;,\s]+)/g),
+      (match) => `${match[1]}=${match[2]}`));
+  const csrfPair = pairs.find((pair) => pair.startsWith('erp_csrf='));
+  if (!csrfPair) throw new Error('Missing CSRF cookie');
+  return { header: pairs.join('; '), csrf: decodeURIComponent(csrfPair.slice(9)) };
+}
+
+describe('sales return API vertical slice', () => {
+  let db: DB;
+  let server: Server;
+  let baseUrl: string;
+
+  beforeEach(async () => {
+    db = await freshDb();
+    await seedDemo(db);
+    server = createApp(db).listen(0, '127.0.0.1');
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('HTTP server did not bind');
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  });
+  afterEach(async () => {
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => error ? reject(error) : resolve()));
+  });
+
+  it('creates, receives and credits an RMA with idempotent replay', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [buyer] = await db.select({ id: customer.id }).from(customer)
+      .where(eq(customer.code, 'CUST1'));
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'RMA-API-WH',
+      name: 'RMA API warehouse',
+    }).returning({ id: warehouse.id });
+    await db.insert(stockLevel).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      productId: item.id,
+      warehouseId: location.id,
+      qty: '0',
+    });
+    await setStockQtyForFixture(db, { masterFn: 'M1', companyFn: 'C-SG' }, item.id, location.id, 20);
+    const posted = await confirmSalesOrder(db, { masterFn: 'M1', companyFn: 'C-SG' }, {
+      docNo: 'SO-RMA-API',
+      customerId: buyer.id,
+      orderDate: '2026-07-19',
+      currency: 'SGD',
+      lines: [{
+        productId: item.id,
+        warehouseId: location.id,
+        qty: 2,
+        unitPrice: 10,
+        taxCode: 'SR',
+      }],
+    });
+    const [deliveryLine] = await db.select({ id: salesDeliveryLine.id })
+      .from(salesDeliveryLine).where(eq(salesDeliveryLine.deliveryId, posted.deliveryId));
+    const login = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@acme.co', password: 'demo1234' }),
+    });
+    const auth = cookies(login);
+    const headers = {
+      cookie: auth.header,
+      'content-type': 'application/json',
+      'x-csrf-token': auth.csrf,
+    };
+    const createdResponse = await fetch(`${baseUrl}/api/sales/returns`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        docNo: 'RMA-API-1',
+        deliveryId: posted.deliveryId,
+        invoiceId: posted.invoiceId,
+        warehouseId: location.id,
+        returnDate: '2026-07-19',
+        reason: 'Fictional API return',
+        lines: [{ deliveryLineId: deliveryLine.id, qty: '1' }],
+      }),
+    });
+    expect(createdResponse.status).toBe(201);
+    const created = (await createdResponse.json()).data;
+    const action = () => fetch(
+      `${baseUrl}/api/sales/returns/${created.id}/actions/receive-and-credit`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'sales-rma-api-credit' },
+        body: JSON.stringify({ creditDocNo: 'CN-API-1', noteDate: '2026-07-19' }),
+      },
+    );
+    const creditedResponse = await action();
+    expect(creditedResponse.status).toBe(200);
+    const credited = await creditedResponse.json();
+    expect(credited.data).toMatchObject({ status: 'credited', totalAmount: '10.90' });
+    const replay = await action();
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await replay.json()).toEqual(credited);
+    expect(await db.select().from(salesReturn).where(eq(salesReturn.id, created.id)))
+      .toMatchObject([{ status: 'credited' }]);
+    expect(await db.select().from(salesCreditNote)
+      .where(eq(salesCreditNote.returnId, created.id))).toHaveLength(1);
+    expect(await db.select().from(stockMovement).where(and(
+      eq(stockMovement.refType, 'sales_return'),
+      eq(stockMovement.refId, created.id),
+    )))
+      .toMatchObject([expect.objectContaining({ refType: 'sales_return', direction: 'in' })]);
+    const legs = await db.select().from(glEntry).where(eq(glEntry.journalRef, 'CN-API-1'));
+    expect(legs.reduce((sum, row) => sum + Number(row.debit), 0)).toBe(10.9);
+    expect(legs.reduce((sum, row) => sum + Number(row.credit), 0)).toBe(10.9);
+  });
+});

@@ -35,8 +35,44 @@ import {
   convertQuotationToOrderWithin,
   transitionQuotationWithin,
 } from '../modules/sales/quotation';
+import {
+  receiveAndCreditSalesReturnWithin,
+  rejectSalesReturnWithin,
+} from '../modules/sales/return';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'sales/returns/receive-and-credit': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as {
+        creditDocNo?: unknown;
+        noteDate?: unknown;
+        tracking?: unknown;
+      };
+      if (typeof payload.creditDocNo !== 'string' || typeof payload.noteDate !== 'string') {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'Credit note number and noteDate are required.',
+        );
+      }
+      return receiveAndCreditSalesReturnWithin(tx, scope, input.resourceId, {
+        creditDocNo: payload.creditDocNo,
+        noteDate: payload.noteDate,
+        tracking: Array.isArray(payload.tracking) ? payload.tracking as never : undefined,
+      });
+    },
+  },
+  'sales/returns/reject': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return rejectSalesReturnWithin(tx, scope, input.resourceId);
+    },
+  },
   'inventory/adjustments/post': {
     permission: 'inventory.adjust',
     idempotency: 'required',

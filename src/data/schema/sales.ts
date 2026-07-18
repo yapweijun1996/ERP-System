@@ -194,3 +194,87 @@ export const salesDeliveryLine = pgTable('sales_delivery_line', {
   ),
   check('ck_sales_delivery_line_qty', sql`${t.deliveredQty} > 0`),
 ]);
+
+export const salesReturn = pgTable('sales_return', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  deliveryId: bigint('delivery_id', { mode: 'number' }).notNull()
+    .references(() => salesDelivery.id),
+  invoiceId: bigint('invoice_id', { mode: 'number' }).notNull().references(() => invoice.id),
+  warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull()
+    .references(() => warehouse.id),
+  status: text('status').notNull().default('requested'), // requested | credited | rejected
+  version: integer('version').notNull().default(1),
+  returnDate: date('return_date').notNull(),
+  reason: text('reason').notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_return_docno').on(t.masterFn, t.companyFn, t.docNo),
+  index('idx_sales_return_status').on(t.masterFn, t.companyFn, t.status, t.returnDate, t.id),
+  index('idx_sales_return_delivery').on(t.masterFn, t.companyFn, t.deliveryId, t.id),
+  check('ck_sales_return_status', sql`${t.status} in ('requested', 'credited', 'rejected')`),
+]);
+
+export const salesReturnLine = pgTable('sales_return_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  returnId: bigint('return_id', { mode: 'number' }).notNull().references(() => salesReturn.id),
+  lineNo: integer('line_no').notNull(),
+  deliveryLineId: bigint('delivery_line_id', { mode: 'number' }).notNull()
+    .references(() => salesDeliveryLine.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  unitPrice: numeric('unit_price', { precision: 18, scale: 4 }).notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxCode: text('tax_code').notNull(),
+  taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_return_line').on(t.masterFn, t.companyFn, t.returnId, t.lineNo),
+  index('idx_sales_return_line_delivery').on(
+    t.masterFn, t.companyFn, t.deliveryLineId, t.id,
+  ),
+  check('ck_sales_return_line_qty', sql`${t.qty} > 0 and ${t.unitPrice} >= 0`),
+]);
+
+export const salesCreditNote = pgTable('sales_credit_note', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  returnId: bigint('return_id', { mode: 'number' }).notNull().references(() => salesReturn.id),
+  invoiceId: bigint('invoice_id', { mode: 'number' }).notNull().references(() => invoice.id),
+  status: text('status').notNull().default('posted'),
+  version: integer('version').notNull().default(1),
+  noteDate: date('note_date').notNull(),
+  currency: text('currency').notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_credit_note_docno').on(t.masterFn, t.companyFn, t.docNo),
+  uniqueIndex('uq_sales_credit_note_return').on(t.masterFn, t.companyFn, t.returnId),
+  index('idx_sales_credit_note_invoice').on(t.masterFn, t.companyFn, t.invoiceId, t.id),
+  check('ck_sales_credit_note_status', sql`${t.status} in ('posted', 'cancelled')`),
+]);
+
+export const salesCreditNoteLine = pgTable('sales_credit_note_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  creditNoteId: bigint('credit_note_id', { mode: 'number' }).notNull()
+    .references(() => salesCreditNote.id),
+  lineNo: integer('line_no').notNull(),
+  returnLineId: bigint('return_line_id', { mode: 'number' }).notNull()
+    .references(() => salesReturnLine.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_credit_note_line').on(
+    t.masterFn, t.companyFn, t.creditNoteId, t.lineNo,
+  ),
+]);
