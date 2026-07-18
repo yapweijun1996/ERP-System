@@ -29,6 +29,7 @@ DECLARE
     'sales_return', 'sales_return_line', 'sales_credit_note', 'sales_credit_note_line',
     'sales_debit_note',
     'sales_price_list', 'sales_price_list_line', 'sales_discount_rule',
+    'sales_credit_profile',
     'account', 'gl_entry',
     'goods_receipt', 'purchase_order', 'purchase_order_line',
     'supplier', 'supplier_invoice',

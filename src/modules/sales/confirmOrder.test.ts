@@ -23,6 +23,12 @@ import {
   InvalidSalesOrderStateError,
   PostingError,
 } from './confirmOrder';
+import {
+  createCreditProfile,
+  placeCreditHold,
+  releaseCreditHold,
+  SalesCreditError,
+} from './creditControl';
 
 async function seedSalesFixture(db: DB) {
   const [widget] = await db.insert(product).values({
@@ -227,5 +233,60 @@ describe('confirmSalesOrder', () => {
     expect(await db.select().from(invoice).where(eq(invoice.orderId, orderId))).toHaveLength(0);
     expect(await db.select().from(salesDelivery)
       .where(eq(salesDelivery.orderId, orderId))).toHaveLength(0);
+  });
+
+  it('blocks order confirmation atomically when the credit limit would be exceeded', async () => {
+    const db = await freshDb();
+    const fx = await seedSalesFixture(db);
+    await createCreditProfile(db, SCOPE, {
+      customerId: fx.customerId,
+      currency: 'SGD',
+      creditLimit: '50',
+    });
+    await expect(confirmSalesOrder(db, SCOPE, {
+      docNo: 'SO-CREDIT-LIMIT',
+      customerId: fx.customerId,
+      orderDate: '2024-06-01',
+      currency: 'SGD',
+      lines: [{
+        productId: fx.widgetId,
+        warehouseId: fx.warehouseId,
+        qty: 5,
+        unitPrice: 10,
+        taxCode: 'SR',
+      }],
+    })).rejects.toThrow(SalesCreditError);
+    expect(await db.select().from(salesOrder)
+      .where(eq(salesOrder.docNo, 'SO-CREDIT-LIMIT'))).toHaveLength(0);
+    expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(100);
+  });
+
+  it('enforces a manual hold and permits confirmation after release', async () => {
+    const db = await freshDb();
+    const fx = await seedSalesFixture(db);
+    const profile = await createCreditProfile(db, SCOPE, {
+      customerId: fx.customerId,
+      currency: 'SGD',
+      creditLimit: '1000',
+    });
+    await placeCreditHold(db, SCOPE, profile.id, 'Fictional overdue review');
+    const input = {
+      docNo: 'SO-CREDIT-HOLD',
+      customerId: fx.customerId,
+      orderDate: '2024-06-01',
+      currency: 'SGD',
+      lines: [{
+        productId: fx.widgetId,
+        warehouseId: fx.warehouseId,
+        qty: 1,
+        unitPrice: 10,
+        taxCode: 'SR',
+      }],
+    };
+    await expect(confirmSalesOrder(db, SCOPE, input)).rejects.toThrow('credit hold');
+    await releaseCreditHold(db, SCOPE, profile.id);
+    await expect(confirmSalesOrder(db, SCOPE, input)).resolves.toMatchObject({
+      total: 10.9,
+    });
   });
 });

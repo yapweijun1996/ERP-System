@@ -7,6 +7,7 @@ import {
   glEntry,
   product,
   salesCreditNote,
+  salesCreditProfile,
   salesDebitNote,
   salesDeliveryLine,
   salesDiscountRule,
@@ -237,5 +238,43 @@ describe('sales return API vertical slice', () => {
     expect(await db.select().from(salesDiscountRule)
       .where(eq(salesDiscountRule.id, discount.id)))
       .toMatchObject([{ status: 'active', version: 2 }]);
+
+    const creditResponse = await fetch(`${baseUrl}/api/sales/credit-profiles`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        customerId: buyer.id,
+        currency: 'SGD',
+        creditLimit: '5000',
+      }),
+    });
+    expect(creditResponse.status).toBe(201);
+    const credit = (await creditResponse.json()).data;
+    const holdCredit = () => fetch(
+      `${baseUrl}/api/sales/credit-profiles/${credit.id}/actions/hold`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'sales-credit-api-hold' },
+        body: JSON.stringify({ reason: 'Fictional API overdue review' }),
+      },
+    );
+    expect((await holdCredit()).status).toBe(200);
+    const holdReplay = await holdCredit();
+    expect(holdReplay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await db.select().from(salesCreditProfile)
+      .where(eq(salesCreditProfile.id, credit.id)))
+      .toMatchObject([{ status: 'held', version: 2 }]);
+    const releaseResponse = await fetch(
+      `${baseUrl}/api/sales/credit-profiles/${credit.id}/actions/release`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'sales-credit-api-release' },
+        body: '{}',
+      },
+    );
+    expect(releaseResponse.status).toBe(200);
+    expect(await db.select().from(salesCreditProfile)
+      .where(eq(salesCreditProfile.id, credit.id)))
+      .toMatchObject([{ status: 'open', version: 3 }]);
   });
 });

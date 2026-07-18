@@ -59,6 +59,10 @@ import {
   type CreateDiscountRuleInput,
   type CreatePriceListInput,
 } from '../modules/sales/pricing';
+import {
+  createCreditProfileWithin,
+  type CreateCreditProfileInput,
+} from '../modules/sales/creditControl';
 
 export interface CreateDefinition {
   permission: string;
@@ -287,6 +291,13 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createDiscountRuleWithin(tx, scope, payload as unknown as CreateDiscountRuleInput);
+    },
+  },
+  'sales/credit-profiles': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createCreditProfileWithin(tx, scope, payload as unknown as CreateCreditProfileInput);
     },
   },
 };

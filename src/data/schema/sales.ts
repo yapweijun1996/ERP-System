@@ -397,3 +397,24 @@ export const salesDiscountRule = pgTable('sales_discount_rule', {
     sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`,
   ),
 ]);
+
+export const salesCreditProfile = pgTable('sales_credit_profile', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  customerId: bigint('customer_id', { mode: 'number' }).notNull().references(() => customer.id),
+  currency: text('currency').notNull(),
+  creditLimit: numeric('credit_limit', { precision: 18, scale: 2 }).notNull(),
+  status: text('status').notNull().default('open'), // open | held
+  holdReason: text('hold_reason'),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_credit_profile_customer').on(
+    t.masterFn, t.companyFn, t.customerId,
+  ),
+  index('idx_sales_credit_profile_status').on(
+    t.masterFn, t.companyFn, t.status, t.customerId,
+  ),
+  check('ck_sales_credit_profile_status', sql`${t.status} in ('open', 'held')`),
+  check('ck_sales_credit_profile_limit', sql`${t.creditLimit} >= 0`),
+]);

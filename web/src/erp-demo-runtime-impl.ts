@@ -110,6 +110,12 @@ import {
   type CreateDiscountRuleInput,
   type CreatePriceListInput,
 } from '../../src/modules/sales/pricing';
+import {
+  createCreditProfileWithin,
+  placeCreditHoldWithin,
+  releaseCreditHoldWithin,
+  type CreateCreditProfileInput,
+} from '../../src/modules/sales/creditControl';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -282,6 +288,15 @@ export const erpDemoRuntime = Object.freeze({
     },
     activateDiscountRuleWithin(db: DemoOrm, scope: Scope, discountRuleId: number) {
       return activateDiscountRuleWithin(asDomainDb(db), scope, discountRuleId);
+    },
+    createCreditProfileWithin(db: DemoOrm, scope: Scope, input: CreateCreditProfileInput) {
+      return createCreditProfileWithin(asDomainDb(db), scope, input);
+    },
+    placeCreditHoldWithin(db: DemoOrm, scope: Scope, profileId: number, reason: string) {
+      return placeCreditHoldWithin(asDomainDb(db), scope, profileId, reason);
+    },
+    releaseCreditHoldWithin(db: DemoOrm, scope: Scope, profileId: number) {
+      return releaseCreditHoldWithin(asDomainDb(db), scope, profileId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

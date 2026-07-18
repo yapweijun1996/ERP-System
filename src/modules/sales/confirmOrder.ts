@@ -7,6 +7,7 @@ import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { getEffectiveTaxRate } from '../../data/repo';
 import { issueStockWithin } from '../inventory/stock';
+import { assertCustomerCreditWithin } from './creditControl';
 import {
   account,
   glEntry,
@@ -83,6 +84,13 @@ async function postOrderWithin(
   bumpVersion: boolean,
 ) {
   if (lines.length === 0) throw new PostingError(`Sales order ${order.docNo} has no lines`);
+  await assertCustomerCreditWithin(
+    exec,
+    scope,
+    order.customerId,
+    order.currency,
+    order.total,
+  );
   const deliveryDocNo = `DO-${order.docNo}`;
   const [delivery] = await exec.insert(salesDelivery).values({
     masterFn: scope.masterFn,

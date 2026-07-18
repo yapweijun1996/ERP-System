@@ -41,6 +41,7 @@ import { SalesQuotationError } from '../../modules/sales/quotation';
 import { SalesReturnError } from '../../modules/sales/return';
 import { SalesDebitNoteError } from '../../modules/sales/debitNote';
 import { SalesPricingError } from '../../modules/sales/pricing';
+import { SalesCreditError } from '../../modules/sales/creditControl';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -108,6 +109,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof SalesReturnError
         || error instanceof SalesDebitNoteError
         || error instanceof SalesPricingError
+        || error instanceof SalesCreditError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -285,6 +287,10 @@ export function createResourceRouter(db: DB): Router {
       }
       if (error instanceof SalesPricingError) {
         apiError(res, 409, 'invalid_state', error.message);
+        return;
+      }
+      if (error instanceof SalesCreditError) {
+        apiError(res, 409, 'credit_control', error.message);
         return;
       }
       throw error;

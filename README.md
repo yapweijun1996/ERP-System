@@ -131,10 +131,10 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ## Status
 
-The browser demo uses PGlite/IndexedDB with the canonical 75-table schema and working
+The browser demo uses PGlite/IndexedDB with the canonical 76-table schema and working
 Sales, Purchasing, CRM, inventory, warehouse-picking and manufacturing work-order
 transaction chains. Route-level
-`SCREEN_META` currently classifies 44 routes as Canonical and 70 as
+`SCREEN_META` currently classifies 45 routes as Canonical and 69 as
 `Preview · Sample Data`; Preview writes are disabled. The production Docker/PostgreSQL
 stack, authentication and every current Canonical route support API mode, while the remaining module APIs
 and Canonical route migrations are still in progress. See

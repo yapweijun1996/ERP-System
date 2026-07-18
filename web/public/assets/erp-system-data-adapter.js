@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 17;
+  var DEMO_SCHEMA_VERSION = 18;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -134,8 +134,8 @@
       "'sales_delivery','sales_delivery_line'," +
       "'sales_return','sales_return_line','sales_credit_note','sales_credit_note_line'," +
       "'sales_debit_note','sales_price_list','sales_price_list_line'," +
-      "'sales_discount_rule')")).rows[0];
-    var hasCurrentSignature = signature && Number(signature.n) === 30;
+      "'sales_discount_rule','sales_credit_profile')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 31;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -186,6 +186,10 @@
 
   async function ensureSalesPricingFixture(db){
     await db.exec(await fetchSql('erp-system-demo-sales-pricing.sql'));
+  }
+
+  async function ensureSalesCreditFixture(db){
+    await db.exec(await fetchSql('erp-system-demo-sales-credit.sql'));
   }
 
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
@@ -865,6 +869,7 @@
       await ensureSalesReturnFixture(db);
       await ensureSalesDebitFixture(db);
       await ensureSalesPricingFixture(db);
+      await ensureSalesCreditFixture(db);
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
@@ -1276,6 +1281,7 @@
     'sales/price-lists':'sales_price_list',
     'sales/price-list-lines':'sales_price_list_line',
     'sales/discount-rules':'sales_discount_rule',
+    'sales/credit-profiles':'sales_credit_profile',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
     'purchasing/suppliers':'supplier',
@@ -1497,6 +1503,14 @@
       await refresh();
       return {data:discountRule,meta:{}};
     }
+    if(key==='sales/credit-profiles'){
+      var creditProfile = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createCreditProfileWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:creditProfile,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1660,6 +1674,22 @@
       });
       await refresh();
       return {data:activeDiscountRule,meta:{}};
+    }
+    if(key==='sales/credit-profiles'&&name==='hold'){
+      var heldCredit = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.placeCreditHoldWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload.reason);
+      });
+      await refresh();
+      return {data:heldCredit,meta:{}};
+    }
+    if(key==='sales/credit-profiles'&&name==='release'){
+      var releasedCredit = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.releaseCreditHoldWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:releasedCredit,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

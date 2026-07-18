@@ -25,6 +25,7 @@ import {
   salesPriceList,
   salesPriceListLine,
   salesDiscountRule,
+  salesCreditProfile,
   salesEnquiry,
   salesQuotation,
   salesQuotationLine,
@@ -173,6 +174,12 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     status: salesDiscountRule.status,
     versionColumn: salesDiscountRule.version,
     allowedActions: ['activate'],
+    createPermission: 'sales.write',
+  }),
+  'sales/credit-profiles': resource(salesCreditProfile, 'sales.read', {
+    status: salesCreditProfile.status,
+    versionColumn: salesCreditProfile.version,
+    allowedActions: ['hold', 'release'],
     createPermission: 'sales.write',
   }),
   'sales/enquiries': resource(salesEnquiry, 'sales.read', {

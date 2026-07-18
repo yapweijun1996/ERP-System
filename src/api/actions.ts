@@ -44,8 +44,32 @@ import {
   activateDiscountRuleWithin,
   activatePriceListWithin,
 } from '../modules/sales/pricing';
+import {
+  placeCreditHoldWithin,
+  releaseCreditHoldWithin,
+} from '../modules/sales/creditControl';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'sales/credit-profiles/hold': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const reason = (input.payload as { reason?: unknown }).reason;
+      if (typeof reason !== 'string' || !reason.trim()) {
+        throw new ActionDispatchError(400, 'invalid_action_payload', 'Hold reason is required.');
+      }
+      return placeCreditHoldWithin(tx, scope, input.resourceId, reason);
+    },
+  },
+  'sales/credit-profiles/release': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return releaseCreditHoldWithin(tx, scope, input.resourceId);
+    },
+  },
   'sales/price-lists/activate': {
     permission: 'sales.write',
     idempotency: 'required',
