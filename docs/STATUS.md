@@ -102,12 +102,13 @@ hardcoded fictional customer regardless of the active company.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
-| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **47 Canonical / 67 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
+| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **50 Canonical / 64 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; `item-master` reads the same joined product/stock-level/location-balance view the already-Canonical Stock-on-Hand/Valuation/Movements screens use (which also stopped showing fake `Unclassified`/`0` category/reorder as a result) and writes through the audited idempotent Demo/API action dispatcher. New items start at 0 on hand — opening quantity is deliberately not an editable field, since that would bypass the stock movement ledger; use Stock Adjustment to receive initial stock. Delete shows an honest "not supported yet" explanation rather than a fake local deletion. |
 | Customer 360 (contacts, timeline, real receivables) | ✅ Canonical Demo/API data and writes | Migration 0020 adds nullable `industry`/`owner_user_id` to `customer`, a new tenant-scoped `contact` table, and a nullable `customer_id` on the previously-opportunity-only `activity` log (with a check that at least one target is set). `src/modules/crm/contact.ts` and `activity.ts` provide tenant-scoped create commands. `crm-customer` reads real contacts/open-orders/open-opportunities/activity and computes balance/overdue by reusing the AR-Aging report's existing Net-30 formula against unpaid invoices — no separate credit-exposure calculator was built. "Log activity" and "Add contact" call the real audited idempotent Demo/API actions. Opportunity-detail remains Preview (unchanged, per EPIC-010). |
+| Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
 | Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 134 passing tests plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, RBAC, encrypted account lifecycle, setup, atomic action idempotency/replay/expiry, inventory adjustment snapshot conflicts, transfer conservation, bin/lot/serial invariants, manufacturing create/release/issue/report/complete/MRP rules, quality inspection/NCR/lot-hold rules, enquiry/quotation/order/delivery status, cumulative RMA quantity limits, inventory restoration, cancelled-invoice rejection, balanced AR credit/debit replay, price-floor and discount-bound controls, enforced credit-limit/hold rollback, complete inventory, purchasing and CRM resource/transaction proofs, audit correlation and migration compatibility. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 304 passing tests (2 skipped) plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, RBAC, encrypted account lifecycle, setup, atomic action idempotency/replay/expiry, inventory adjustment snapshot conflicts, transfer conservation, bin/lot/serial invariants, manufacturing create/release/issue/report/complete/MRP rules, quality inspection/NCR/lot-hold rules, enquiry/quotation/order/delivery status, cumulative RMA quantity limits, inventory restoration, cancelled-invoice rejection, balanced AR credit/debit replay, price-floor and discount-bound controls, enforced credit-limit/hold rollback, fixed-asset registration and balanced depreciation posting, complete inventory, purchasing and CRM resource/transaction proofs, audit correlation and migration compatibility. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production Setup remains a separate deployment-token/zero-user command. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemDemo.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -126,7 +127,7 @@ hardcoded fictional customer regardless of the active company.
 ## Canonical and Preview route boundary
 
 114 routes are registered in the live `SCREENS` registry. `SCREEN_META` is now the source
-of truth for production maturity at route level: **47 routes are Canonical and 67 are
+of truth for production maturity at route level: **50 routes are Canonical and 64 are
 Preview**. This replaces the old module-wide mock allowlist, which could not accurately
 represent partially migrated Purchasing and CRM modules.
 
@@ -157,6 +158,18 @@ previously-unused `activity` log; Customer-360 shows real contacts, open
 orders, open opportunities and a real activity timeline, with balance/overdue
 computed by reusing the AR-Aging report's existing Net-30 formula rather than
 a new credit-exposure calculator.
+
+**Fixed Assets is a new fourth domain, now Canonical (TASK-035/036, 2026-07-19).**
+Asset register → depreciation run → balanced GL posting is real end-to-end in Demo
+mode, mirroring Purchasing's `postSupplierInvoice`-style "one document, one balanced
+journal" pattern. Unlike the mock (a fabricated 5-year future schedule stored as
+static data, a "New Asset" toast stub, row-open that always opened the same
+hardcoded record, and a GL account code that didn't match its own chart of
+accounts), the real version registers assets, computes straight-line depreciation
+per run (capped at each asset's remaining depreciable value), and posts one
+balanced journal per run. `asset.accumulated_depreciation` is a running aggregate;
+`depreciation_run_line` is the real, append-only posting ledger — asset-detail shows
+actual posted history, not a projection.
 
 **Purchasing is a special case (TASK-022/023, 2026-07-17): partially converted, not
 fully mock and not fully real.** The core PO chain (suppliers, purchase orders, goods
@@ -189,7 +202,7 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Complete for the present Canonical boundary.** All 47 current Canonical routes use `ErpSystemData` in API mode with no sample fallback. Settings reads the authenticated session and labels browser-local preferences honestly. CRM's opportunity-detail sub-screen remains Preview (no schema). |
+| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Complete for the present Canonical boundary.** All 50 current Canonical routes use `ErpSystemData` in API mode with no sample fallback. Settings reads the authenticated session and labels browser-local preferences honestly. CRM's opportunity-detail sub-screen remains Preview (no schema). |
 | Every Canonical route has five-language coverage | **True for Item Master / Customer-360 as of TASK-033 (2026-07-19)** — both gained local `copy()` translation packs. `npm run audit:screens` still doesn't gate on i18n coverage for any route, so this remains a manually-verified property, not an enforced one. |
 | API server has all business **write** endpoints | Not yet. Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and remaining finance/commercial actions still need registration on the unified dispatcher. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
@@ -252,7 +265,7 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018…032 (31)
+- Done: TASK-001…016, TASK-018…036 (35)
 - Blocked: TASK-017 (1)
 - Todo: none — every agent-completable task is done.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)

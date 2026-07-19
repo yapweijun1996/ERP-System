@@ -361,10 +361,10 @@ Acceptance criteria:
 - [x] Seed adds the real `1500`/`1510`/`6200` accounts (matching the mock's own COA/
       PnL, not the inconsistent "6400" label baked into its screen) and a handful of
       seeded assets.
-- [ ] `asset-register` reads real data and gains a real "New Asset" create form (no
+- [x] `asset-register` reads real data and gains a real "New Asset" create form (no
       mock precedent existed — new UI); row-open passes a real per-asset id instead of
       always opening the same hardcoded record. `asset-detail` shows real acquisition
       fields and real posted depreciation history (not a fabricated future schedule).
       `depreciation` actually computes and posts a real run instead of re-announcing a
       hardcoded number.
-- [ ] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`.
+- [x] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`.

@@ -131,6 +131,15 @@ import {
   releaseCreditHoldWithin,
   type CreateCreditProfileInput,
 } from '../../src/modules/sales/creditControl';
+import {
+  createAssetWithin,
+  type CreateAssetInput,
+} from '../../src/modules/assets/createAsset';
+import {
+  createDepreciationRunWithin,
+  postDepreciationRunWithin,
+  type CreateDepreciationRunInput,
+} from '../../src/modules/assets/depreciationRun';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -321,6 +330,15 @@ export const erpDemoRuntime = Object.freeze({
     },
     releaseCreditHoldWithin(db: DemoOrm, scope: Scope, profileId: number) {
       return releaseCreditHoldWithin(asDomainDb(db), scope, profileId);
+    },
+    createAssetWithin(db: DemoOrm, scope: Scope, input: CreateAssetInput) {
+      return createAssetWithin(asDomainDb(db), scope, input);
+    },
+    createDepreciationRunWithin(db: DemoOrm, scope: Scope, input: CreateDepreciationRunInput) {
+      return createDepreciationRunWithin(asDomainDb(db), scope, input);
+    },
+    postDepreciationRunWithin(db: DemoOrm, scope: Scope, runId: number) {
+      return postDepreciationRunWithin(asDomainDb(db), scope, runId);
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

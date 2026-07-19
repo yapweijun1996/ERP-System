@@ -1311,6 +1311,9 @@
     'quality/results':'quality_inspection_result',
     'quality/ncrs':'quality_ncr',
     'quality/corrective-actions':'quality_corrective_action',
+    'assets/assets':'asset',
+    'assets/depreciation-runs':'depreciation_run',
+    'assets/depreciation-run-lines':'depreciation_run_line',
   };
   function normalizeResource(resource){
     return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
@@ -1537,6 +1540,22 @@
       await refresh();
       return {data:creditProfile,meta:{}};
     }
+    if(key==='assets/assets'){
+      var newAsset = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createAssetWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newAsset,meta:{}};
+    }
+    if(key==='assets/depreciation-runs'){
+      var depreciationRun = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createDepreciationRunWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:depreciationRun,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1724,6 +1743,14 @@
       });
       await refresh();
       return {data:releasedCredit,meta:{}};
+    }
+    if(key==='assets/depreciation-runs'&&name==='post'){
+      var postedDepreciationRun = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.postDepreciationRunWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:postedDepreciationRun,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

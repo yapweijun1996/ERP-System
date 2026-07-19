@@ -107,7 +107,7 @@ typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
 production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion 🔶 (purchasing done; CRM done)
+## Phase 7 — Module Expansion 🔶 (purchasing done; CRM done; Fixed Assets done)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
@@ -145,7 +145,19 @@ Order of attack:
    orders/opportunities, activity timeline and Net-30 balance/overdue, closing the
    gap this item originally called out. Opportunity-detail remains the one CRM
    sub-screen with no schema and stays on sample data.
-3. HR-lite or Fixed Assets (whichever a real prospect asks for first).
+3. **Fixed Assets** (EPIC-015 ✅) — asset register → depreciation run → balanced GL
+   posting, chosen over HR-lite (3 routes vs. 6, and its GL tie-in was already
+   precisely specified in the mock data). Schema + business logic (TASK-035 ✅ done
+   2026-07-19 — `src/data/schema/assets.ts`, `src/modules/assets/`
+   `createAsset`/`createDepreciationRun`/`postDepreciationRun`, the aggregate+ledger
+   shape mirrors Inventory's `stock_level`/`stock_movement`, posting mirrors
+   `postSupplierInvoice`'s balanced-journal pattern, proven on PGlite) and screens
+   (TASK-036 ✅ done 2026-07-19 — asset-register gained a real "New Asset" create
+   modal and per-asset row-open, asset-detail shows real posted depreciation history,
+   depreciation computes and posts a real run with a link to the real General Ledger
+   screen, verified live end-to-end including balanced Dr 6200/Cr 1510 and
+   NBV/accumulated-depreciation updates — see docs/STATUS.md) are both done.
+   HR-lite remains available as a future module if a real prospect asks for it.
 4. Relabel or hide remaining mock screens so the demo never oversells (TASK-018 ✅
    done 2026-07-17 — see Phase 3; this item now means keeping that guarantee as
    Purchasing/CRM/HR convert one at a time, not a one-time sweep).
