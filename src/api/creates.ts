@@ -75,6 +75,14 @@ import {
   createCreditProfileWithin,
   type CreateCreditProfileInput,
 } from '../modules/sales/creditControl';
+import {
+  createAssetWithin,
+  type CreateAssetInput,
+} from '../modules/assets/createAsset';
+import {
+  createDepreciationRunWithin,
+  type CreateDepreciationRunInput,
+} from '../modules/assets/depreciationRun';
 
 export interface CreateDefinition {
   permission: string;
@@ -335,6 +343,20 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createCreditProfileWithin(tx, scope, payload as unknown as CreateCreditProfileInput);
+    },
+  },
+  'assets/assets': {
+    permission: 'asset.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createAssetWithin(tx, scope, payload as unknown as CreateAssetInput);
+    },
+  },
+  'assets/depreciation-runs': {
+    permission: 'asset.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createDepreciationRunWithin(tx, scope, payload as unknown as CreateDepreciationRunInput);
     },
   },
 };

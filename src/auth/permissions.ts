@@ -21,6 +21,8 @@ export const PERMISSIONS = {
   manufacturingWrite: 'manufacturing.write',
   qualityRead: 'quality.read',
   qualityWrite: 'quality.write',
+  assetRead: 'asset.read',
+  assetWrite: 'asset.write',
   companySwitch: 'session.switch_company',
   auditRead: 'admin.audit.read',
   usersInvite: 'admin.users.invite',

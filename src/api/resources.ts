@@ -59,6 +59,9 @@ import {
   qualityInspectionResult,
   qualityNcr,
   qualityCorrectiveAction,
+  asset,
+  depreciationRun,
+  depreciationRunLine,
 } from '../data/schema';
 
 export interface ApiScope {
@@ -292,6 +295,18 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'quality/corrective-actions': resource(qualityCorrectiveAction, 'quality.read', {
     status: qualityCorrectiveAction.status,
   }),
+  'assets/assets': resource(asset, 'asset.read', {
+    status: asset.status,
+    versionColumn: asset.version,
+    createPermission: 'asset.write',
+  }),
+  'assets/depreciation-runs': resource(depreciationRun, 'asset.read', {
+    status: depreciationRun.status,
+    versionColumn: depreciationRun.version,
+    allowedActions: ['post'],
+    createPermission: 'asset.write',
+  }),
+  'assets/depreciation-run-lines': resource(depreciationRunLine, 'asset.read'),
 };
 
 function resource(

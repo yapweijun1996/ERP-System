@@ -332,3 +332,39 @@ Acceptance criteria:
       updated so the service worker doesn't 404 trying to precache a deleted file.
 - [x] A fresh browser boot produces identical seeded data to before, and additionally
       now has all 8 `role_permission` rows that were previously silently missing.
+
+## EPIC-015 — Fixed Assets Module
+
+Third domain converted from mock to real under Phase 7 "Module Expansion" (after
+Purchasing/EPIC-008 and CRM/EPIC-010): asset register → depreciation run → balanced GL
+posting, mirroring the exact `postSupplierInvoice`-style "one document, one balanced
+journal" pattern. Unlike the mock, which stores a fabricated 5-year future schedule as
+static data, the real version follows the same aggregate+ledger shape already proven
+by Inventory (`stock_level`/`stock_movement`): `asset.accumulated_depreciation` is the
+running total, `depreciation_run_line` is the real append-only posting history. The
+mock also has no acquisition flow at all ("New Asset" is a toast stub) and its
+asset-detail screen hardcodes a GL account code ("6400") that doesn't match any account
+in its own chart of accounts — both fixed here. (TASK-035, TASK-036)
+
+Acceptance criteria:
+
+- [x] `asset`, `depreciation_run` and `depreciation_run_line` tables added via a
+      Drizzle migration, following `purchasing.ts`'s tenant/versioning/check-constraint
+      conventions. `src/modules/assets/` provides tenant-scoped
+      `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`,
+      the last posting one balanced `gl_entry` pair (Dr 6200 Depreciation Expense /
+      Cr 1510 Accumulated Depreciation) per run via the same `accountIdByCode` lookup
+      pattern `postSupplierInvoice.ts` uses — `drizzle/0021_busy_lilandra.sql`.
+- [x] `assets/assets`, `assets/depreciation-runs` and `assets/depreciation-run-lines`
+      are registered as resources (create + post-action) behind new `asset.read`/
+      `asset.write` permissions (neither existed in the backend registry before this).
+- [x] Seed adds the real `1500`/`1510`/`6200` accounts (matching the mock's own COA/
+      PnL, not the inconsistent "6400" label baked into its screen) and a handful of
+      seeded assets.
+- [ ] `asset-register` reads real data and gains a real "New Asset" create form (no
+      mock precedent existed — new UI); row-open passes a real per-asset id instead of
+      always opening the same hardcoded record. `asset-detail` shows real acquisition
+      fields and real posted depreciation history (not a fabricated future schedule).
+      `depreciation` actually computes and posts a real run instead of re-announcing a
+      hardcoded number.
+- [ ] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`.

@@ -52,8 +52,17 @@ import {
   placeCreditHoldWithin,
   releaseCreditHoldWithin,
 } from '../modules/sales/creditControl';
+import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'assets/depreciation-runs/post': {
+    permission: 'asset.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return postDepreciationRunWithin(tx, scope, input.resourceId);
+    },
+  },
   'inventory/products/update': {
     permission: 'inventory.write',
     idempotency: 'required',

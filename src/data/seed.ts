@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm';
 import type { DB } from './db';
 import {
   master, company, currency, appUser, role, rolePermission, userCompany,
-  product, taxRule, customer, account, supplier, opportunity, contact, activity,
+  product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
 } from './schema';
 
 /**
@@ -62,6 +62,7 @@ export async function seedDemo(db: DB): Promise<void> {
     'purchasing.read',
     'crm.read',
     'quality.read',
+    'asset.read',
     'session.switch_company',
   ].map((permissionKey) => ({
     masterFn: 'M1',
@@ -131,6 +132,33 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', code: '1200', name: 'GST Input Tax', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '2100', name: 'Accounts Payable', type: 'liability' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '5800', name: 'Inventory Variance', type: 'expense' },
+    // Fixed Assets (TASK-035) — codes match the original prototype's own chart of
+    // accounts/P&L (data-finance.js), not the inconsistent "6400" its asset-detail
+    // screen hardcoded (that code backed nothing in the prototype's own COA either).
+    { masterFn: 'M1', companyFn: 'C-SG', code: '1500', name: 'Property, Plant & Equipment', type: 'asset' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '1510', name: 'Accumulated Depreciation', type: 'asset' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '6200', name: 'Depreciation Expense', type: 'expense' },
+  ]);
+
+  // Fixed Assets register (TASK-035) — a few seeded assets so the register isn't
+  // empty on first boot; none pre-depreciated, so the demo's first "Run depreciation"
+  // has real work to do.
+  await db.insert(asset).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', assetNo: 'FA-1001', name: 'CNC Milling Machine',
+      category: 'Plant & Machinery', location: 'Plant 1 — Bay 3', acquisitionDate: '2023-03-01',
+      cost: '420000.00', residualValue: '20000.00', usefulLifeYears: 10, status: 'in_use',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', assetNo: 'FA-1002', name: 'Delivery Van',
+      category: 'Vehicles', location: 'Logistics Yard', acquisitionDate: '2024-06-15',
+      cost: '68000.00', residualValue: '8000.00', usefulLifeYears: 5, status: 'in_use',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', assetNo: 'FA-1003', name: 'Office Workstations (x12)',
+      category: 'IT Equipment', location: 'HQ — Level 3', acquisitionDate: '2025-01-10',
+      cost: '18000.00', residualValue: '0.00', usefulLifeYears: 3, status: 'in_use',
+    },
   ]);
 }
 
