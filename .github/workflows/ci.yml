@@ -67,7 +67,9 @@ jobs:
           POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/erp_ci
         run: npm run test:postgres
 
-      - name: Run PGlite transaction proof (order -> stock -> invoice -> GL, incl. rollback)
+      - name: Run transaction proof on PGlite AND PostgreSQL (cross-engine parity + true concurrency)
+        env:
+          POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/erp_ci
         run: npm run demo
 
       - name: Build the GitHub Pages demo bundle
