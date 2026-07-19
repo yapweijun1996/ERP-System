@@ -84,21 +84,6 @@ function suppCell(name, code){
    resource pages in Demo and API modes; joins below are presentational only.
    Creation, receiving, stock movements and AP posting stay in shared domain
    commands and server transactions. */
-async function purchasingListPage(resource){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.list!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  const response=await adapter.list(resource,{limit:100});
-  if(!response||!Array.isArray(response.data)){
-    throw new Error(`Unexpected ${resource} response.`);
-  }
-  return {
-    data:response.data,
-    nextCursor:response.meta&&response.meta.nextCursor||null,
-  };
-}
-
 function purchasingNumber(value){
   const parsed=Number(value);
   return Number.isFinite(parsed)?parsed:0;
@@ -116,14 +101,14 @@ async function prepareCanonicalPurchasingData(){
     throw new Error('The offline canonical purchasing snapshot is unavailable.');
   }
   const pages=await Promise.all([
-    purchasingListPage('purchasing/suppliers'),
-    purchasingListPage('purchasing/purchase-orders'),
-    purchasingListPage('purchasing/purchase-order-lines'),
-    purchasingListPage('purchasing/goods-receipts'),
-    purchasingListPage('purchasing/supplier-invoices'),
-    purchasingListPage('inventory/products'),
-    purchasingListPage('inventory/stock-levels'),
-    purchasingListPage('inventory/warehouses'),
+    listPage('purchasing/suppliers'),
+    listPage('purchasing/purchase-orders'),
+    listPage('purchasing/purchase-order-lines'),
+    listPage('purchasing/goods-receipts'),
+    listPage('purchasing/supplier-invoices'),
+    listPage('inventory/products'),
+    listPage('inventory/stock-levels'),
+    listPage('inventory/warehouses'),
   ]);
   const [
     suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,

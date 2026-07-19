@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v32';
+const CACHE_VERSION = 'erp-system-pwa-v33';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -47,6 +47,7 @@ const staticUrls = [
   './assets/erp-system-api-adapter.js',
   './assets/ui.js',
   './assets/i18n.js',
+  './assets/screens-common.js',
   './assets/screens-ops.js',
   './assets/screens-warehouse.js',
   './assets/screens-inv.js',

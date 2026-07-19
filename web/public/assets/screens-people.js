@@ -100,8 +100,8 @@ const ADMIN_PERMISSION_KEYS=[
 
 SCREENS['role-permission'] = async function(root){
   const s=adminCopy();
-  let roles=(await adminListPage('admin/roles')).data;
-  let grants=(await adminListPage('admin/role-permissions')).data;
+  let roles=(await listPage('admin/roles')).data;
+  let grants=(await listPage('admin/role-permissions')).data;
   function grantMap(){
     const m=new Map();
     grants.forEach(g=>{
@@ -154,7 +154,7 @@ SCREENS['role-permission'] = async function(root){
       b.disabled=true;
       try{
         await window.ErpSystemData.action('admin/roles',roleId,'set-permission',{permissionKey,allowed:nextAllowed});
-        grants=(await adminListPage('admin/role-permissions')).data;
+        grants=(await listPage('admin/role-permissions')).data;
         toast(s('permUpdated'),'ok');
         $('#permWrap').innerHTML=table();
         rewire();
@@ -179,8 +179,8 @@ SCREENS['role-permission'] = async function(root){
         await window.ErpSystemData.create('admin/roles',{name});
         closeModal();
         toast(s('roleCreated').replace('{name}',name),'ok');
-        roles=(await adminListPage('admin/roles')).data;
-        grants=(await adminListPage('admin/role-permissions')).data;
+        roles=(await listPage('admin/roles')).data;
+        grants=(await listPage('admin/role-permissions')).data;
         await render();
       }catch(error){
         saveBtn.disabled=false;

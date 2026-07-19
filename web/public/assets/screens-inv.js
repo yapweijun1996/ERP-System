@@ -41,21 +41,6 @@ function wireInventoryNav(scope){
    resource contract, so these screens no longer depend on the demo adapter's
    monolithic DB.* payload. Joins stay presentational: stock rules and writes
    remain in the shared TypeScript domain commands/server transactions. */
-async function inventoryListPage(resource){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.list!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  const response=await adapter.list(resource,{limit:100});
-  if(!response||!Array.isArray(response.data)){
-    throw new Error(`Unexpected ${resource} response.`);
-  }
-  return {
-    data:response.data,
-    nextCursor:response.meta&&response.meta.nextCursor||null,
-  };
-}
-
 function inventoryNumber(value){
   const parsed=Number(value);
   return Number.isFinite(parsed)?parsed:0;
@@ -81,12 +66,12 @@ async function prepareCanonicalInventoryData(){
     throw new Error('The offline canonical inventory snapshot is unavailable.');
   }
   const pages=await Promise.all([
-    inventoryListPage('inventory/products'),
-    inventoryListPage('inventory/warehouses'),
-    inventoryListPage('inventory/stock-levels'),
-    inventoryListPage('inventory/stock-movements'),
-    inventoryListPage('inventory/bins'),
-    inventoryListPage('inventory/location-balances'),
+    listPage('inventory/products'),
+    listPage('inventory/warehouses'),
+    listPage('inventory/stock-levels'),
+    listPage('inventory/stock-movements'),
+    listPage('inventory/bins'),
+    listPage('inventory/location-balances'),
   ]);
   const [products,warehouses,levels,movements,bins,locationBalances]=pages.map(page=>page.data);
   const warehouseById=new Map(warehouses.map(row=>[row.id,row]));

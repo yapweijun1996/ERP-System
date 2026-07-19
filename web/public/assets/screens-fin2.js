@@ -7,21 +7,6 @@ function glTypeTone(t){ return {Assets:'accent',Liabilities:'warn',Equity:'viole
 function signed0(n){ return (n<0?'−':'')+money0(Math.abs(n)); }
 function pnlCell(v){ return v<0?`<span style="color:var(--muted)">(${money0(-v)})</span>`:money0(v); }
 
-async function financeListPage(resource){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.list!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  const response=await adapter.list(resource,{limit:100});
-  if(!response||!Array.isArray(response.data)){
-    throw new Error(`Unexpected ${resource} response.`);
-  }
-  return {
-    data:response.data,
-    nextCursor:response.meta&&response.meta.nextCursor||null,
-  };
-}
-
 function financeNumber(value){
   const parsed=Number(value);
   return Number.isFinite(parsed)?parsed:0;
@@ -63,10 +48,10 @@ async function prepareCanonicalFinanceData(){
     throw new Error('The offline canonical finance snapshot is unavailable.');
   }
   const pages=await Promise.all([
-    financeListPage('finance/accounts'),
-    financeListPage('finance/gl-entries'),
-    financeListPage('sales/customers'),
-    financeListPage('sales/invoices'),
+    listPage('finance/accounts'),
+    listPage('finance/gl-entries'),
+    listPage('sales/customers'),
+    listPage('sales/invoices'),
   ]);
   const [accounts,entries,customers,invoices]=pages.map(page=>page.data);
   const accountById=new Map(accounts.map(row=>[row.id,row]));

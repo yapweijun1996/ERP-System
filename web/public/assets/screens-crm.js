@@ -9,21 +9,6 @@ function crmStageColor(st){
   return {Lead:'var(--muted)',Qualified:'var(--accent)',Proposal:'var(--teal)',Negotiation:'var(--warn)',Won:'var(--ok)'}[st]||'var(--muted)';
 }
 
-async function crmListPage(resource){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.list!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  const response=await adapter.list(resource,{limit:100});
-  if(!response||!Array.isArray(response.data)){
-    throw new Error(`Unexpected ${resource} response.`);
-  }
-  return {
-    data:response.data,
-    nextCursor:response.meta&&response.meta.nextCursor||null,
-  };
-}
-
 function crmNumber(value){
   const parsed=Number(value);
   return Number.isFinite(parsed)?parsed:0;
@@ -40,11 +25,11 @@ async function prepareCanonicalCrmData(){
     throw new Error('The offline canonical CRM snapshot is unavailable.');
   }
   const pages=await Promise.all([
-    crmListPage('crm/customers'),
-    crmListPage('crm/opportunities'),
-    crmListPage('inventory/products'),
-    crmListPage('inventory/warehouses'),
-    crmListPage('inventory/stock-levels'),
+    listPage('crm/customers'),
+    listPage('crm/opportunities'),
+    listPage('inventory/products'),
+    listPage('inventory/warehouses'),
+    listPage('inventory/stock-levels'),
   ]);
   const [customers,opportunities,products,warehouses,stockLevels]=pages.map(page=>page.data);
   const customerById=new Map(customers.map(row=>[row.id,row]));
@@ -428,13 +413,13 @@ function crmDateValue(value){
    for API mode in src/api/resources.ts) can't be relied on in both modes. */
 async function prepareCustomerDetail(customerId){
   const pages=await Promise.all([
-    crmListPage('crm/customers'),
-    crmListPage('sales/credit-profiles'),
-    crmListPage('crm/contacts'),
-    crmListPage('sales/orders'),
-    crmListPage('crm/opportunities'),
-    crmListPage('sales/invoices'),
-    crmListPage('crm/activities'),
+    listPage('crm/customers'),
+    listPage('sales/credit-profiles'),
+    listPage('crm/contacts'),
+    listPage('sales/orders'),
+    listPage('crm/opportunities'),
+    listPage('sales/invoices'),
+    listPage('crm/activities'),
   ]);
   const [customers,creditProfiles,contacts,orders,opportunities,invoices,activities]=pages.map(p=>p.data);
   const customer=customerId?customers.find(row=>row.id===customerId):customers[0];

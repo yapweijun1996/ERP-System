@@ -128,22 +128,10 @@ function permissionGroupKey(permissionKey){
   return hit?hit.key:'grpAdmin';
 }
 
-async function adminListPage(resource,query){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.list!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  const response=await adapter.list(resource,query||{});
-  if(!response||response.data==null){
-    throw new Error(`Unexpected ${resource} response.`);
-  }
-  return { data:response.data, nextCursor:response.meta&&response.meta.nextCursor||null };
-}
-
 /* ---------------- USER MANAGEMENT (listing — module landing) ---------------- */
 SCREENS['user-mgmt'] = async function(root){
   const s=adminCopy();
-  const usersPage=(await adminListPage('admin/users')).data;
+  const usersPage=(await listPage('admin/users')).data;
   const rows=[...usersPage.users, ...usersPage.invitations];
   let filter='all';
   const roleNames=[...new Set(usersPage.users.map(u=>u.roleName))];
@@ -208,7 +196,7 @@ SCREENS['user-mgmt'] = async function(root){
       try{
         await window.ErpSystemData.action('admin/users',userId,'toggle-active',{isActive:!wasActive});
         toast(s(wasActive?'toggleDisabled':'toggleEnabled').replace('{email}',row?row.email:''),'ok');
-        const refreshed=(await adminListPage('admin/users')).data;
+        const refreshed=(await listPage('admin/users')).data;
         usersPage.users=refreshed.users; usersPage.invitations=refreshed.invitations;
         rows.length=0; rows.push(...usersPage.users,...usersPage.invitations);
         await render();
@@ -242,7 +230,7 @@ SCREENS['user-mgmt'] = async function(root){
         await window.ErpSystemData.create('admin/invitations',{email,roleId});
         closeModal();
         toast(s('inviteSent').replace('{email}',email),'ok');
-        const refreshed=(await adminListPage('admin/users')).data;
+        const refreshed=(await listPage('admin/users')).data;
         usersPage.users=refreshed.users; usersPage.invitations=refreshed.invitations;
         rows.length=0; rows.push(...usersPage.users,...usersPage.invitations);
         await render();
@@ -264,7 +252,7 @@ SCREENS['user-mgmt'] = async function(root){
 /* ---------------- AUDIT LOG (report) ---------------- */
 SCREENS['audit-log'] = async function(root){
   const s=adminCopy();
-  const page=await adminListPage('admin/audit-log');
+  const page=await listPage('admin/audit-log');
   const events=page.data;
   let userFilter='all', entityFilter='all';
   const userNames=[...new Set(events.map(e=>e.actorName||e.actorEmail).filter(Boolean))];

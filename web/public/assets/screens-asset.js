@@ -142,18 +142,6 @@ function assetCopy(){
   return key=>pack[key]||packs.en[key]||key;
 }
 
-async function assetListPage(resource){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.list!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  const response=await adapter.list(resource,{limit:100});
-  if(!response||!Array.isArray(response.data)){
-    throw new Error(`Unexpected ${resource} response.`);
-  }
-  return { data:response.data, nextCursor:response.meta&&response.meta.nextCursor||null };
-}
-
 function assetNumber(value){ const parsed=Number(value); return Number.isFinite(parsed)?parsed:0; }
 
 function assetMonthlyDepreciation(cost,residual,life,accumulated){
@@ -174,7 +162,7 @@ async function prepareCanonicalAssetData(){
     if(Array.isArray(DB.assets)) return;
     throw new Error('The offline canonical asset snapshot is unavailable.');
   }
-  const page=await assetListPage('assets/assets');
+  const page=await listPage('assets/assets');
   DB.assets=page.data.map(row=>{
     const cost=assetNumber(row.cost);
     const residual=assetNumber(row.residualValue);
@@ -308,9 +296,9 @@ function assetForm(s){
 /* ---------------- ASSET DETAIL (master + real posted history) ---------------- */
 async function prepareAssetDetail(assetId){
   const pages=await Promise.all([
-    assetListPage('assets/assets'),
-    assetListPage('assets/depreciation-runs'),
-    assetListPage('assets/depreciation-run-lines'),
+    listPage('assets/assets'),
+    listPage('assets/depreciation-runs'),
+    listPage('assets/depreciation-run-lines'),
   ]);
   const [assets,runs,lines]=pages.map(p=>p.data);
   const asset=assetId?assets.find(row=>row.id===assetId):assets[0];
@@ -395,11 +383,11 @@ SCREENS['depreciation'] = async function(root){
   await prepareCanonicalAssetData();
 
   async function loadRuns(){
-    const page=await assetListPage('assets/depreciation-runs');
+    const page=await listPage('assets/depreciation-runs');
     return page.data.slice().sort((a,b)=>b.id-a.id);
   }
   async function loadLines(runId){
-    const page=await assetListPage('assets/depreciation-run-lines');
+    const page=await listPage('assets/depreciation-run-lines');
     return page.data.filter(line=>line.runId===runId);
   }
   function nextDocNo(runs){

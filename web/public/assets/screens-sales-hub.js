@@ -72,21 +72,6 @@ function custCell(name, code){
 }
 function docNoCell(no, sub){ return `<div class="cellsub"><b class="docnum linknum">${esc(no)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div>`; }
 
-async function salesListPage(resource){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.list!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  const response=await adapter.list(resource,{limit:100});
-  if(!response||!Array.isArray(response.data)){
-    throw new Error(`Unexpected ${resource} response.`);
-  }
-  return {
-    data:response.data,
-    nextCursor:response.meta&&response.meta.nextCursor||null,
-  };
-}
-
 function salesNumber(value){
   const parsed=Number(value);
   return Number.isFinite(parsed)?parsed:0;
@@ -124,13 +109,13 @@ async function prepareCanonicalSalesData(){
     throw new Error('The offline canonical sales snapshot is unavailable.');
   }
   const pages=await Promise.all([
-    salesListPage('sales/customers'),
-    salesListPage('sales/orders'),
-    salesListPage('sales/order-lines'),
-    salesListPage('sales/invoices'),
-    salesListPage('inventory/products'),
-    salesListPage('inventory/warehouses'),
-    salesListPage('inventory/stock-levels'),
+    listPage('sales/customers'),
+    listPage('sales/orders'),
+    listPage('sales/order-lines'),
+    listPage('sales/invoices'),
+    listPage('inventory/products'),
+    listPage('inventory/warehouses'),
+    listPage('inventory/stock-levels'),
   ]);
   const [
     customers,orders,orderLines,invoices,products,warehouses,stockLevels,
