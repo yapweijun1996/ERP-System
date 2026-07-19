@@ -460,6 +460,18 @@ const SCREEN_ACTIVE_ALIASES = {
   'new-journal-entry':'journal-entry','new-payment-voucher':'payment-voucher',
 };
 const MODULE_DEFS = {
+  /* sales/purchasing/inventory reference the section/alias data already defined in
+     screens-sales-hub.js/screens-purchasing-hub.js/screens-inv.js (loaded before
+     app.js -- see the script order in index.html), rather than duplicating it here.
+     Those files' own SALES_SECTIONS/PUR_SECTIONS/INVENTORY_SECTIONS are also the
+     hub screens' (sales-home/purchasing-home) tile-grid data source, so this is the
+     single real source of truth, not a copy (TASK-045). */
+  sales:{ labelKey:'nav.sales', home:'sales-home', ariaLabel:'Sales sections',
+    sections:SALES_SECTIONS, alias:SALES_ALIAS },
+  purchasing:{ labelKey:'nav.purchasing', home:'purchasing-home', ariaLabel:'Purchasing sections',
+    sections:PUR_SECTIONS, alias:PUR_ALIAS },
+  inventory:{ labelKey:'nav.inventory', home:'stock-on-hand', navClass:'inventory-subnav',
+    items:INVENTORY_SECTIONS, alias:INVENTORY_ALIAS },
   finance:{ labelKey:'nav.finance', home:'gl', items:[
     ['gl','General Ledger','book'],['account-ledger','Account Ledger','list'],
     ['journal-entry','Journal Entries','receipt'],['payment-voucher','Payment Vouchers','coins'],
@@ -552,16 +564,32 @@ function moduleMaturity(moduleId){
   const canonical=rows.filter(m=>m.maturity==='canonical').length;
   return canonical===0?'preview':canonical===rows.length?'canonical':'partial';
 }
+/* Single generic sub-nav renderer for every module, including sales/purchasing/
+   inventory (TASK-045 -- previously special-cased to salesNav()/purNav()/
+   inventoryNav(), which MODULE_DEFS-driven code like modulePage() couldn't see).
+   Supports both shapes MODULE_DEFS entries use: flat def.items (tuples
+   [route,label,icon] or {route,label,icon,labelKey} objects) and grouped
+   def.sections ({group,items:[...]}, rendered with a ssub-sep divider between
+   groups) for sales/purchasing's richer sub-nav. */
+function moduleNavItem(item, active){
+  const isArr=Array.isArray(item);
+  const route=isArr?item[0]:item.route;
+  const label=isArr?item[1]:item.label;
+  const icon=isArr?item[2]:item.icon;
+  const labelKey=isArr?item[3]:item.labelKey;
+  const text=labelKey?t(labelKey):tf('route.'+route,label);
+  return `<button class="ssub ${route===active?'on':''}" role="tab" aria-selected="${route===active}" onclick="navigate('${route}')">${ic(icon)}<span>${esc(text)}</span></button>`;
+}
 function moduleNav(moduleId, active){
-  if(moduleId==='sales' && typeof salesNav==='function') return salesNav(active);
-  if(moduleId==='purchasing' && typeof purNav==='function') return purNav(active);
-  if(moduleId==='inventory' && typeof inventoryNav==='function') return inventoryNav(active);
   const def=MODULE_DEFS[moduleId];
   if(!def) return '';
-  active=SCREEN_ACTIVE_ALIASES[active]||active;
-  return `<div class="sales-subnav standard-module-subnav" role="tablist" aria-label="${esc(t(def.labelKey))}">
-    ${def.items.map(item=>`<button class="ssub ${item[0]===active?'on':''}" role="tab" aria-selected="${item[0]===active}" onclick="navigate('${item[0]}')">${ic(item[2])}<span>${esc(tf('route.'+item[0],item[1]))}</span></button>`).join('')}
-  </div>`;
+  active=(def.alias&&def.alias[active])||SCREEN_ACTIVE_ALIASES[active]||active;
+  const cls='sales-subnav'+(def.navClass?' '+def.navClass:'');
+  const ariaLabel=def.ariaLabel?esc(def.ariaLabel):esc(t(def.labelKey));
+  const body=def.sections
+    ? def.sections.map((sec,gi)=>(gi?`<span class="ssub-sep" aria-hidden="true"></span>`:'')+sec.items.map(it=>moduleNavItem(it,active)).join('')).join('')
+    : def.items.map(it=>moduleNavItem(it,active)).join('');
+  return `<div class="${cls}" role="tablist" aria-label="${ariaLabel}">${body}</div>`;
 }
 function modulePage(o){
   const def=MODULE_DEFS[o.module];

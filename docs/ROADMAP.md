@@ -210,7 +210,7 @@ Order of attack:
 Exit criteria per module: no mock data files for that module remain; `src/demo.ts`
 asserts its core transaction; screens work in demo and api modes.
 
-## Phase 8 — Platform Standardization & Multi-Tenant Admin 🔶
+## Phase 8 — Platform Standardization & Multi-Tenant Admin ✅
 
 Goal: address a stakeholder-driven cross-cutting audit (2026-07-19) covering two
 concerns that don't belong to any single module: (1) frontend code quality — Sidebar/
@@ -222,13 +222,17 @@ Phase 7, this phase's items are not new business domains — they're standardiza
 platform-safety work found by auditing the existing 53 Canonical + 61 Preview routes
 (now 54 + 60 after EPIC-018).
 
-1. **Frontend SSOT Consolidation** (EPIC-017, 🔶) — `listPage()` helper done
-   (TASK-043 ✅, 7 near-identical copies replaced with one shared helper in a new
-   `screens-common.js`, net -97 lines, zero behavior change). Still open: hand-rolled
-   modal markup migrated onto the existing `appModal()` SSOT + a shared
-   field-validation helper (TASK-044), and the 3 legacy hardcoded module-nav functions
-   (`salesNav`/`purNav`/`inventoryNav`) folded into the generic `MODULE_DEFS`-driven nav
-   system every other module already uses (TASK-045).
+1. **Frontend SSOT Consolidation** (EPIC-017 ✅, TASK-043/044/045, 2026-07-19) —
+   `listPage()` helper (7 near-identical copies replaced with one shared helper in a new
+   `screens-common.js`, net -97 lines); 23 of 24 hand-rolled modal-chrome sites migrated
+   onto the existing `appModal()` SSOT plus a shared `requireField()` validation helper;
+   the 3 legacy hardcoded module-nav functions (`salesNav`/`purNav`/`inventoryNav`)
+   folded into the generic `MODULE_DEFS`-driven nav system, kept as thin delegates
+   rather than deleted once live investigation found ~20 direct callers across 13
+   detail-page files beyond the one special-case the original audit had found. Verified
+   with exact DOM-fingerprint diffs (class list, aria-label, separator/tab counts, label
+   text) before vs. after for Sales/Purchasing/Inventory — byte-identical, including
+   Inventory's real Chinese translations.
 2. **Super-Admin Module Access Control** (EPIC-018 ✅, TASK-047/048, 2026-07-19) —
    `module-activation-control` was a pure `localStorage` mock (confirmed: zero server
    persistence, zero enforcement). Now real: a tenant-scoped `master_module` table,

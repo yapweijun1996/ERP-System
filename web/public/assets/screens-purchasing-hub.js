@@ -45,17 +45,13 @@ const PUR_ALIAS = { 'purchase-request':'purchase-requisitions', 'goods-receipt':
 /* ---- status tone maps → TONES.* (defined in data-core.js): PR_TONE, RFQ_TONE,
    SQ_TONE, GRN_TONE, SINV_TONE, PRET_TONE, SCN_TONE, SDN_TONE, SPL_TONE ---- */
 
-/* ---- sub-nav strip (shown on every Purchasing screen we build) ---- */
+/* ---- sub-nav strip (shown on every Purchasing screen we build) ----
+   Thin delegate to the generic moduleNav() (app.js) -- kept as a named function
+   since several purchasing detail screens call purNav(active) directly rather
+   than going through modulePage() (TASK-045: PUR_SECTIONS/PUR_ALIAS stay here as
+   the single real source, referenced by MODULE_DEFS.purchasing in app.js). */
 function purNav(active){
-  active = PUR_ALIAS[active] || active;
-  let h = `<div class="sales-subnav" role="tablist" aria-label="Purchasing sections">`;
-  PUR_SECTIONS.forEach((sec,gi)=>{
-    if(gi) h += `<span class="ssub-sep" aria-hidden="true"></span>`;
-    sec.items.forEach(it=>{
-      h += `<button class="ssub ${it.route===active?'on':''}" role="tab" aria-selected="${it.route===active}" onclick="navigate('${it.route}')">${ic(it.icon)}<span>${esc(it.label)}</span></button>`;
-    });
-  });
-  return h + `</div>`;
+  return moduleNav('purchasing', active);
 }
 
 /* ---- standard Purchasing page shell (crumbs + sub-nav + title) ---- */

@@ -437,7 +437,7 @@ Acceptance criteria:
 - [x] `audit-log` reads real `audit_log` rows (bounded, client-side filters).
 - [x] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (50 → 53).
 
-## EPIC-017 — Frontend SSOT Consolidation
+## EPIC-017 — Frontend SSOT Consolidation ✅
 
 A three-agent audit (2026-07-19) of every `web/public/assets/screens-*.js` file, requested
 after stakeholder feedback that Sidebar/TopBar/page (List/Detail/Edit) logic doesn't
@@ -473,10 +473,31 @@ Acceptance criteria:
       the 2 sites that focus via a modal-scoped `querySelector` rather than the global
       `$()`, which the helper supports by accepting either a selector string or an
       already-resolved element.
-- [ ] `salesNav`/`purNav`/`inventoryNav` and their section arrays fold into `MODULE_DEFS`,
+- [x] `salesNav`/`purNav`/`inventoryNav` and their section arrays fold into `MODULE_DEFS`,
       and the `moduleNav()` special-case in `app.js` that routes around them is deleted.
+      Found mid-implementation that the original framing undersold the risk: these 3
+      functions are called *directly* (not just through the deleted special-case) from
+      ~20 sites across 13 detail-page files (individual quotations, sales returns,
+      credit/debit notes, PO approvals, etc.), several with no defensive `typeof` guard
+      — deleting them outright would have broken those pages. Kept them as thin
+      delegates to the new generic `moduleNav('sales'|'purchasing'|'inventory', active)`
+      instead of removing them, which is safe for every existing caller while still
+      eliminating the duplicated rendering logic. `MODULE_DEFS.sales`/`purchasing` gained
+      a new `sections` shape (grouped, with `ssub-sep` dividers) alongside the existing
+      flat `items` shape, since their sub-nav genuinely has more structure than the other
+      11 modules; `SALES_SECTIONS`/`PUR_SECTIONS`/`INVENTORY_SECTIONS` stay exactly where
+      they were (also the sales/purchasing hub screens' tile-grid data source) and are
+      referenced by `MODULE_DEFS`, not duplicated. Preserved a real i18n behavior the
+      generic path's `tf('route.'+x,fallback)` convention doesn't actually support today
+      (no `route.*` keys exist anywhere) — Inventory's nav labels use real translated
+      `inv.nav.*` keys, so `MODULE_DEFS` items gained an optional explicit `labelKey`.
 - [x] `npm run audit:screens` and a live desktop+375px browser check still pass with zero
-      console errors after each mechanical change.
+      console errors after each mechanical change. For this task specifically, also
+      diffed exact DOM fingerprints (class list, aria-label, group-separator count, tab
+      count, ordered label text) captured before the change against the same fingerprint
+      after, for Sales/Purchasing/Inventory — byte-identical in every case, including
+      Inventory's real Chinese translations and a previously-unguarded direct-call detail
+      page (Sales Return `RMA-DEMO-1`, the highest-risk call pattern).
 
 ## EPIC-018 — Super-Admin Module Access Control
 

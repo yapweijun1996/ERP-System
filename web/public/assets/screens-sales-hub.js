@@ -36,17 +36,13 @@ const SALES_FLAT = SALES_SECTIONS.flatMap(s=>s.items);
 const SALES_ALIAS = { quotation:'quotations', 'delivery-order':'delivery-orders', 'sales-invoice':'sales-invoices',
   'sales-order':'sales-orders', 'new-sales-order':'sales-orders', 'sales-return':'sales-returns', 'credit-note':'credit-notes' };
 
-/* ---- sub-nav strip (shown on every Sales screen we build) ---- */
+/* ---- sub-nav strip (shown on every Sales screen we build) ----
+   Thin delegate to the generic moduleNav() (app.js) -- kept as a named function
+   since ~20 sales detail screens call salesNav(active) directly rather than going
+   through modulePage() (TASK-045: SALES_SECTIONS/SALES_ALIAS stay here as the
+   single real source, referenced by MODULE_DEFS.sales in app.js, not duplicated). */
 function salesNav(active){
-  active = SALES_ALIAS[active] || active;
-  let h = `<div class="sales-subnav" role="tablist" aria-label="Sales sections">`;
-  SALES_SECTIONS.forEach((sec,gi)=>{
-    if(gi) h += `<span class="ssub-sep" aria-hidden="true"></span>`;
-    sec.items.forEach(it=>{
-      h += `<button class="ssub ${it.route===active?'on':''}" role="tab" aria-selected="${it.route===active}" onclick="navigate('${it.route}')">${ic(it.icon)}<span>${esc(it.label)}</span></button>`;
-    });
-  });
-  return h + `</div>`;
+  return moduleNav('sales', active);
 }
 
 /* ---- standard Sales page shell (crumbs + sub-nav + title) ---- */

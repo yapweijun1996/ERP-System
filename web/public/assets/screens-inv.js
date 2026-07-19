@@ -11,11 +11,12 @@ const INVENTORY_SECTIONS = [
 ];
 const INVENTORY_ALIAS = { 'new-item':'item-master', 'new-stock-adjustment':'stock-movement' };
 
+/* Thin delegate to the generic moduleNav() (app.js) -- kept as a named function
+   since inventoryPageHead() below calls inventoryNav(active) directly (TASK-045:
+   INVENTORY_SECTIONS/INVENTORY_ALIAS stay here as the single real source,
+   referenced by MODULE_DEFS.inventory in app.js). */
 function inventoryNav(active){
-  active = INVENTORY_ALIAS[active] || active;
-  return `<div class="sales-subnav inventory-subnav" role="tablist" aria-label="${esc(t('nav.inventory'))}">
-    ${INVENTORY_SECTIONS.map(it=>`<button class="ssub ${it.route===active?'on':''}" role="tab" aria-selected="${it.route===active}" onclick="navigate('${it.route}')">${ic(it.icon)}<span>${esc(t(it.labelKey))}</span></button>`).join('')}
-  </div>`;
+  return moduleNav('inventory', active);
 }
 
 function inventoryPageHead(o){
