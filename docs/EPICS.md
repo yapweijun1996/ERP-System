@@ -482,21 +482,31 @@ toggle UI. (TASK-047, TASK-048)
 
 Acceptance criteria:
 
-- [ ] A new tenant-scoped `master_module` table (`master_fn` + `module_key` + `enabled`,
+- [x] A new tenant-scoped `master_module` table (`master_fn` + `module_key` + `enabled`,
       following the composite-key style `role_permission` already uses) added via a
       Drizzle migration; module keys mirror the existing `MODULE_DEFS` set.
-- [ ] Business logic to list/set a master's enabled modules, audited, superadmin-gated
+- [x] Business logic to list/set a master's enabled modules, audited, superadmin-gated
       (new `admin.modules.manage`-style permission key), mirroring `adminLifecycle.ts`'s
       raw-exec-`...Within` + self-transacting-wrapper split.
-- [ ] Bespoke `/api/admin/modules` routes (mirrors `routes/admin.ts`'s existing style) and
+- [x] Bespoke `/api/admin/modules` routes (mirrors `routes/admin.ts`'s existing style) and
       matching demo-adapter wiring (`admin/modules` bespoke dispatch, not a generic
-      resource — same reasoning as EPIC-016).
+      resource — same reasoning as EPIC-016). Server-side enforcement also landed with
+      the backend: the 4 generic resource-router handlers (list/get/create/action in
+      `routes/resources.ts`) reject with `module_disabled` when the URL's `:module`
+      prefix maps to a disabled module for the session's tenant, covering all 9 domains
+      that have real generic resources today (assets/crm/finance/inventory/
+      manufacturing/purchasing/quality/sales/warehouse). The `admin` module itself can
+      never be disabled (would lock every superadmin out of re-enabling it).
 - [ ] `module-activation-control` reads/writes the real backend instead of `localStorage`.
-- [ ] A disabled module is actually hidden from the sidebar/module shell for users of that
-      master, AND rejected server-side if called directly (API mode) — a client-only
-      toggle would not meet the stated requirement.
-- [ ] Superadmin's own access is never gated by this mechanism (it controls what a
-      master's *other* users can reach, not the superadmin's own visibility).
+- [x] A disabled module is rejected server-side if called directly (API mode) — a
+      client-only toggle would not meet the stated requirement. (Sidebar/module-shell
+      hiding is TASK-048 — the client mechanism already exists via `moduleState()`, it
+      just needs repointing from `localStorage` to this real backend.)
+- [x] Superadmin's own access is never gated by this mechanism (it controls what a
+      master's *other* users can reach, not the superadmin's own visibility) — a new
+      `isSuperadminSession()` (`src/auth/permissions.ts`, same tenant-bounded lookup
+      `hasPermission`'s bypass uses) exempts superadmins from the `module_disabled`
+      check in all 4 generic resource-router handlers.
 
 ## EPIC-019 — Superadmin Safety Guard
 

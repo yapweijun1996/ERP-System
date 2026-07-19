@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import type { DB } from '../../data/db';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import { hasPermission } from '../../auth/permissions';
+import { hasPermission, isSuperadminSession } from '../../auth/permissions';
+import { isModuleEnabled, moduleKeyForResourcePrefix } from '../../auth/moduleAccess';
+import type { SessionData } from '../../auth/session';
 import {
   InvalidResourceQueryError,
   UnknownResourceError,
@@ -46,6 +48,13 @@ import { SalesCreditError } from '../../modules/sales/creditControl';
 export function createResourceRouter(db: DB): Router {
   const router = Router();
 
+  // Superadmins are exempt: this gate restricts what a master's *other* users can
+  // reach, not the superadmin's own visibility (EPIC-018).
+  async function moduleAccessDenied(session: SessionData, modulePrefix: string): Promise<boolean> {
+    if (await isModuleEnabled(db, session.masterFn, moduleKeyForResourcePrefix(modulePrefix))) return false;
+    return !await isSuperadminSession(db, session);
+  }
+
   router.post('/:module/:resource', async (req, res) => {
     const resource = `${req.params.module}/${req.params.resource}`;
     if (!isKnownResource(resource)) {
@@ -60,6 +69,10 @@ export function createResourceRouter(db: DB): Router {
     }
     const session = await requireSession(db, req, res);
     if (!session) return;
+    if (await moduleAccessDenied(session, req.params.module)) {
+      apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
+      return;
+    }
     const payload = req.body;
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       apiError(res, 400, 'invalid_request', 'A JSON object body is required.');
@@ -132,6 +145,10 @@ export function createResourceRouter(db: DB): Router {
         apiError(res, 403, 'permission_denied', 'You cannot read this ERP resource.');
         return;
       }
+      if (await moduleAccessDenied(session, req.params.module)) {
+        apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
+        return;
+      }
       const scope = {
         masterFn: session.masterFn,
         companyFn: session.activeCompanyFn,
@@ -162,6 +179,10 @@ export function createResourceRouter(db: DB): Router {
       if (!session) return;
       if (!await hasPermission(db, session, readPermissionForResource(resource))) {
         apiError(res, 403, 'permission_denied', 'You cannot read this ERP resource.');
+        return;
+      }
+      if (await moduleAccessDenied(session, req.params.module)) {
+        apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
         return;
       }
       const scope = {
@@ -211,6 +232,10 @@ export function createResourceRouter(db: DB): Router {
     }
     const session = await requireSession(db, req, res);
     if (!session) return;
+    if (await moduleAccessDenied(session, req.params.module)) {
+      apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
+      return;
+    }
     const payload = req.body;
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       apiError(res, 400, 'invalid_request', 'A JSON object body is required.');

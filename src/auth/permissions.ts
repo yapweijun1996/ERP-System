@@ -30,6 +30,7 @@ export const PERMISSIONS = {
   usersManage: 'admin.users.manage',
   rolesRead: 'admin.roles.read',
   rolesWrite: 'admin.roles.write',
+  modulesManage: 'admin.modules.manage',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS] | (string & {});
@@ -72,4 +73,34 @@ export async function hasPermission(
     ))
     .limit(1);
   return grant?.allowed === true;
+}
+
+/**
+ * True only if the session's role for its *current* company assignment is
+ * Superadmin (same tenant-bounded lookup hasPermission uses, never a
+ * cross-master bypass). Used to exempt superadmins from tenant-level
+ * restrictions that are meant to apply to a master's *other* users -- e.g.
+ * module-access-control (EPIC-018): a superadmin can disable a module for
+ * their organization's regular users without losing their own ability to
+ * view/manage it.
+ */
+export async function isSuperadminSession(db: DB, session: SessionData): Promise<boolean> {
+  const [assignment] = await db.select({
+    roleMasterFn: role.masterFn,
+    companyMasterFn: company.masterFn,
+    isSuperadmin: role.isSuperadmin,
+  }).from(userCompany)
+    .innerJoin(role, eq(role.roleId, userCompany.roleId))
+    .innerJoin(company, eq(company.companyFn, userCompany.companyFn))
+    .where(and(
+      eq(userCompany.userId, session.userId),
+      eq(userCompany.companyFn, session.activeCompanyFn),
+    ))
+    .limit(1);
+  if (!assignment) return false;
+  if (
+    assignment.roleMasterFn !== session.masterFn
+    || assignment.companyMasterFn !== session.masterFn
+  ) return false;
+  return assignment.isSuperadmin;
 }

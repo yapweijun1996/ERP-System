@@ -174,6 +174,70 @@ describe('production API security contract', () => {
     expect((await response.json()).error.code).toBe('permission_denied');
   });
 
+  it('blocks a non-superadmin from a disabled module, but exempts the superadmin who disabled it', async () => {
+    const adminCookies = await login(running.baseUrl);
+    const adminJsonHeaders = {
+      cookie: adminCookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': adminCookies.csrf,
+    };
+    const disable = await fetch(`${running.baseUrl}/api/admin/modules/crm/actions/set-enabled`, {
+      method: 'POST',
+      headers: adminJsonHeaders,
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(disable.status).toBe(200);
+    expect((await disable.json()).data).toEqual({ moduleKey: 'crm', enabled: false });
+
+    // Superadmin is exempt from a gate meant to restrict their own organization's
+    // other users, not their own visibility.
+    const adminList = await fetch(`${running.baseUrl}/api/crm/customers`, {
+      headers: { cookie: adminCookies.header },
+    });
+    expect(adminList.status).toBe(200);
+
+    // viewer@acme.co genuinely holds crm.read (seed.ts) -- the only reason this
+    // request can fail is the module gate, not a permission gap.
+    const viewerCookies = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const viewerList = await fetch(`${running.baseUrl}/api/crm/customers`, {
+      headers: { cookie: viewerCookies.header },
+    });
+    expect(viewerList.status).toBe(403);
+    expect((await viewerList.json()).error.code).toBe('module_disabled');
+
+    // Unrelated modules are unaffected for the same viewer.
+    const viewerInventory = await fetch(`${running.baseUrl}/api/inventory/products`, {
+      headers: { cookie: viewerCookies.header },
+    });
+    expect(viewerInventory.status).toBe(200);
+
+    const reenable = await fetch(`${running.baseUrl}/api/admin/modules/crm/actions/set-enabled`, {
+      method: 'POST',
+      headers: adminJsonHeaders,
+      body: JSON.stringify({ enabled: true }),
+    });
+    expect(reenable.status).toBe(200);
+    const viewerListAgain = await fetch(`${running.baseUrl}/api/crm/customers`, {
+      headers: { cookie: viewerCookies.header },
+    });
+    expect(viewerListAgain.status).toBe(200);
+  });
+
+  it('never allows disabling the admin module itself', async () => {
+    const cookies = await login(running.baseUrl);
+    const response = await fetch(`${running.baseUrl}/api/admin/modules/admin/actions/set-enabled`, {
+      method: 'POST',
+      headers: {
+        cookie: cookies.header,
+        'content-type': 'application/json',
+        'x-csrf-token': cookies.csrf,
+      },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe('admin_module_required');
+  });
+
   it('takes tenant scope only from the session and rejects query overrides', async () => {
     const cookies = await login(running.baseUrl);
     const override = await fetch(

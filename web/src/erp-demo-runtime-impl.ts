@@ -153,6 +153,7 @@ import {
   setRolePermissionWithin,
   setUserActiveWithin,
 } from '../../src/auth/adminLifecycle';
+import { listMasterModules, setMasterModuleWithin } from '../../src/auth/moduleAccess';
 import type { SessionData } from '../../src/auth/session';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
@@ -412,6 +413,20 @@ export const erpDemoRuntime = Object.freeze({
     },
     listAuditLog(db: DemoOrm, scope: Scope, query: { limit?: number; cursor?: number } = {}) {
       return listAuditLog(asDomainDb(db), scope.masterFn, scope.companyFn, query);
+    },
+    listMasterModules(db: DemoOrm, scope: Scope) {
+      return listMasterModules(asDomainDb(db), scope.masterFn);
+    },
+    setMasterModuleWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      moduleKey: string,
+      enabled: boolean,
+    ) {
+      return setMasterModuleWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), moduleKey, enabled, 'demo',
+      );
     },
     setUserActiveWithin(
       db: DemoOrm,

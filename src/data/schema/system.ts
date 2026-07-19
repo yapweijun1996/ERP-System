@@ -37,6 +37,21 @@ export const rolePermission = pgTable('role_permission', {
   index('idx_role_permission_master').on(t.masterFn, t.permissionKey, t.roleId),
 ]);
 
+/** Superadmin-controlled per-tenant module gate. Absence of a row for a
+ *  (masterFn, moduleKey) pair means "enabled" (the default) -- only rows
+ *  disabling a module need to exist. moduleKey matches web/public/assets/
+ *  app.js's MODULE_DEFS keys (plus 'sales'/'purchasing'/'inventory', which
+ *  today live outside MODULE_DEFS -- see TASK-045). */
+export const masterModule = pgTable('master_module', {
+  masterFn: text('master_fn').notNull(),
+  moduleKey: text('module_key').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  ...timestamps,
+}, (t) => [
+  primaryKey({ columns: [t.masterFn, t.moduleKey] }),
+  index('idx_master_module_master').on(t.masterFn),
+]);
+
 export const apiIdempotency = pgTable('api_idempotency', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,

@@ -1826,3 +1826,15 @@ CREATE UNIQUE INDEX "uq_depreciation_run_docno" ON "depreciation_run" USING btre
 CREATE INDEX "idx_depreciation_run_date" ON "depreciation_run" USING btree ("master_fn","company_fn","run_date","id");--> statement-breakpoint
 CREATE UNIQUE INDEX "uq_depreciation_run_line" ON "depreciation_run_line" USING btree ("master_fn","company_fn","run_id","line_no");--> statement-breakpoint
 CREATE INDEX "idx_depreciation_run_line_asset" ON "depreciation_run_line" USING btree ("master_fn","company_fn","asset_id","run_id");
+
+-- 0022_fluffy_shadowcat
+CREATE TABLE "master_module" (
+	"master_fn" text NOT NULL,
+	"module_key" text NOT NULL,
+	"enabled" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "master_module_master_fn_module_key_pk" PRIMARY KEY("master_fn","module_key")
+);
+--> statement-breakpoint
+CREATE INDEX "idx_master_module_master" ON "master_module" USING btree ("master_fn");

@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 21;
+  var DEMO_SCHEMA_VERSION = 22;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1361,6 +1361,12 @@
       });
       return {data:auditPage.data,meta:{nextCursor:auditPage.nextCursor}};
     }
+    if(key==='admin/modules'){
+      var modules = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listMasterModules(state.runtime.createOrm(tx), SCOPE);
+      });
+      return {data:modules,meta:{}};
+    }
     return null;
   }
   async function list(resource, query){
@@ -1661,6 +1667,14 @@
           payload&&payload.permissionKey, !!(payload&&payload.allowed));
       });
       return {data:updatedPermission,meta:{}};
+    }
+    if(key==='admin/modules'&&name==='set-enabled'){
+      var updatedModule = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.setMasterModuleWithin(
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, String(id),
+          !!(payload&&payload.enabled));
+      });
+      return {data:updatedModule,meta:{}};
     }
     if(key==='inventory/products'&&name==='update'){
       var updatedProduct = await requireDemoDb().transaction(function(tx){
