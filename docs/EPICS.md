@@ -125,7 +125,10 @@ Acceptance criteria:
       2026-07-17 — `scripts/smoke.mjs`, Playwright, wired into CI with browser
       caching; checks zero console/page errors and that the dashboard actually
       renders, not just "no crash").
-- [ ] Release checklist distinguishes GitHub Pages demo and Docker production.
+- [x] Release checklist distinguishes GitHub Pages demo and Docker production —
+      [docs/RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) (TASK-039): shared quality
+      gate + separate demo-bundle and Docker-production sections including backup,
+      migrate-only-upgrades, health verification and rollback.
 - [x] Docs stay aligned with package scripts and deployment assets — actively kept
       current through TASK-009…014.
 

@@ -285,4 +285,5 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 - Contract of record → [SPEC.md](SPEC.md)
 - How it's built / conventions → [DESIGN.md](DESIGN.md)
 - Work breakdown → [EPICS.md](EPICS.md), [ROADMAP.md](ROADMAP.md), `tasks/tasks.jsonl`
+- Releasing (demo bundle or Docker production) → [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
 - Agent workflow rules → [/CLAUDE.md](../CLAUDE.md)
