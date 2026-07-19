@@ -310,9 +310,119 @@ SCREENS['stock-on-hand'] = async function(root){
 };
 
 /* ---------------- ITEM MASTER (master data) ---------------- */
+function itemMasterCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{
+      colItem:'Item',colUom:'UoM',colReorderPt:'Reorder pt',colUnitCost:'Unit cost',colStatus:'Status',
+      selectItem:'Select an item to view, edit or delete its master record.',
+      edit:'Edit',newTransaction:'New transaction',delete:'Delete',
+      allocated:'Allocated',available:'Available',
+      masterData:'Master data',fieldSku:'SKU',fieldName:'Name',fieldBaseUom:'Base UoM',
+      fieldReorderPoint:'Reorder point',fieldReorderQty:'Reorder qty',fieldExpiry:'Expiry',
+      binLocations:'Bin locations',noBinAllocations:'No bin allocations.',
+      editItem:'Edit item',itemNameLabel:'Item name',itemNamePlaceholder:'e.g. Hydraulic Hose 12mm',
+      systemNumbered:'System-numbered',openingQty:'Opening qty',
+      useStockAdjustment:'Use Stock Adjustment to receive stock',
+      saveChanges:'Save changes',createItem:'Create item',itemNameRequired:'Item name is required',
+      itemUpdated:'Item {sku} updated',itemCreated:'Item {sku} "{name}" created',
+      itemSaveError:'Item could not be saved',
+      deleteTitle:'Delete {name}?',deleteNotSupported:"Deleting items isn't supported yet",
+      deleteBody:"{sku} has real stock/movement history behind it — item deletion isn't implemented. Archive or stop reordering it instead.",
+      subHeader:'Master data for every stocked item. Select a row to view, edit or delete — or add a new item.',
+      catComponents:'Components',catRawMaterials:'Raw Materials',catFinishedGoods:'Finished Goods',
+      catConsumables:'Consumables',catPackaging:'Packaging',
+    },
+    ms:{
+      colItem:'Item',colUom:'UoM',colReorderPt:'Titik pesan semula',colUnitCost:'Kos seunit',colStatus:'Status',
+      selectItem:'Pilih item untuk lihat, edit atau padam rekod induknya.',
+      edit:'Edit',newTransaction:'Transaksi baharu',delete:'Padam',
+      allocated:'Diperuntukkan',available:'Tersedia',
+      masterData:'Data induk',fieldSku:'SKU',fieldName:'Nama',fieldBaseUom:'UoM asas',
+      fieldReorderPoint:'Titik pesan semula',fieldReorderQty:'Kuantiti pesan semula',fieldExpiry:'Tamat tempoh',
+      binLocations:'Lokasi bin',noBinAllocations:'Tiada peruntukan bin.',
+      editItem:'Edit item',itemNameLabel:'Nama item',itemNamePlaceholder:'cth. Hos Hidraulik 12mm',
+      systemNumbered:'Bernombor sistem',openingQty:'Kuantiti pembukaan',
+      useStockAdjustment:'Guna Pelarasan Stok untuk terima stok',
+      saveChanges:'Simpan perubahan',createItem:'Cipta item',itemNameRequired:'Nama item diperlukan',
+      itemUpdated:'Item {sku} dikemas kini',itemCreated:'Item {sku} "{name}" dicipta',
+      itemSaveError:'Item tidak dapat disimpan',
+      deleteTitle:'Padam {name}?',deleteNotSupported:'Memadam item belum disokong',
+      deleteBody:'{sku} mempunyai sejarah stok/pergerakan sebenar — pemadaman item belum dilaksanakan. Arkibkan atau hentikan pesanan semula sebaliknya.',
+      subHeader:'Data induk untuk setiap item stok. Pilih baris untuk lihat, edit atau padam — atau tambah item baharu.',
+      catComponents:'Komponen',catRawMaterials:'Bahan Mentah',catFinishedGoods:'Barang Siap',
+      catConsumables:'Barang Guna Habis',catPackaging:'Pembungkusan',
+    },
+    zh:{
+      colItem:'物料',colUom:'计量单位',colReorderPt:'再订货点',colUnitCost:'单位成本',colStatus:'状态',
+      selectItem:'选择一行以查看、编辑或删除该物料主数据。',
+      edit:'编辑',newTransaction:'新建交易',delete:'删除',
+      allocated:'已分配',available:'可用',
+      masterData:'主数据',fieldSku:'SKU',fieldName:'名称',fieldBaseUom:'基本计量单位',
+      fieldReorderPoint:'再订货点',fieldReorderQty:'再订货量',fieldExpiry:'有效期',
+      binLocations:'库位',noBinAllocations:'暂无库位分配。',
+      editItem:'编辑物料',itemNameLabel:'物料名称',itemNamePlaceholder:'例如:液压软管 12mm',
+      systemNumbered:'系统编号',openingQty:'期初数量',
+      useStockAdjustment:'请使用库存调整来接收库存',
+      saveChanges:'保存更改',createItem:'创建物料',itemNameRequired:'请填写物料名称',
+      itemUpdated:'物料 {sku} 已更新',itemCreated:'物料 {sku}「{name}」已创建',
+      itemSaveError:'物料保存失败',
+      deleteTitle:'删除 {name}?',deleteNotSupported:'暂不支持删除物料',
+      deleteBody:'{sku} 已有真实的库存/移动记录 — 尚未实现物料删除功能。请改为归档或停止再订购。',
+      subHeader:'查看所有库存物料的主数据。点击一行以查看、编辑或删除 — 或新增物料。',
+      catComponents:'零部件',catRawMaterials:'原材料',catFinishedGoods:'成品',
+      catConsumables:'耗材',catPackaging:'包装',
+    },
+    ja:{
+      colItem:'品目',colUom:'単位',colReorderPt:'発注点',colUnitCost:'単価',colStatus:'ステータス',
+      selectItem:'行を選択すると品目マスタの表示・編集・削除ができます。',
+      edit:'編集',newTransaction:'新規取引',delete:'削除',
+      allocated:'引当済',available:'利用可能',
+      masterData:'マスタデータ',fieldSku:'SKU',fieldName:'名称',fieldBaseUom:'基本単位',
+      fieldReorderPoint:'発注点',fieldReorderQty:'発注数量',fieldExpiry:'有効期限',
+      binLocations:'保管ロケーション',noBinAllocations:'保管ロケーションの割当はありません。',
+      editItem:'品目を編集',itemNameLabel:'品目名',itemNamePlaceholder:'例:油圧ホース 12mm',
+      systemNumbered:'システム採番',openingQty:'期首数量',
+      useStockAdjustment:'在庫を受け入れるには在庫調整を使用してください',
+      saveChanges:'変更を保存',createItem:'品目を作成',itemNameRequired:'品目名を入力してください',
+      itemUpdated:'品目 {sku} を更新しました',itemCreated:'品目 {sku}「{name}」を作成しました',
+      itemSaveError:'品目を保存できませんでした',
+      deleteTitle:'{name} を削除しますか?',deleteNotSupported:'品目の削除は未対応です',
+      deleteBody:'{sku} には実際の在庫・入出庫履歴があるため、品目削除は未実装です。アーカイブするか発注を停止してください。',
+      subHeader:'在庫品目のマスタデータです。行を選択して表示・編集・削除するか、新しい品目を追加してください。',
+      catComponents:'部品',catRawMaterials:'原材料',catFinishedGoods:'完成品',
+      catConsumables:'消耗品',catPackaging:'梱包資材',
+    },
+    vi:{
+      colItem:'Mặt hàng',colUom:'ĐVT',colReorderPt:'Điểm đặt hàng lại',colUnitCost:'Đơn giá',colStatus:'Trạng thái',
+      selectItem:'Chọn một dòng để xem, sửa hoặc xóa hồ sơ gốc của mặt hàng.',
+      edit:'Sửa',newTransaction:'Giao dịch mới',delete:'Xóa',
+      allocated:'Đã phân bổ',available:'Khả dụng',
+      masterData:'Dữ liệu gốc',fieldSku:'SKU',fieldName:'Tên',fieldBaseUom:'ĐVT cơ bản',
+      fieldReorderPoint:'Điểm đặt hàng lại',fieldReorderQty:'SL đặt hàng lại',fieldExpiry:'Hạn sử dụng',
+      binLocations:'Vị trí kho',noBinAllocations:'Chưa có vị trí kho nào.',
+      editItem:'Sửa mặt hàng',itemNameLabel:'Tên mặt hàng',itemNamePlaceholder:'vd: Ống thủy lực 12mm',
+      systemNumbered:'Đánh số tự động',openingQty:'SL tồn đầu kỳ',
+      useStockAdjustment:'Dùng Điều chỉnh tồn kho để nhận hàng',
+      saveChanges:'Lưu thay đổi',createItem:'Tạo mặt hàng',itemNameRequired:'Vui lòng nhập tên mặt hàng',
+      itemUpdated:'Đã cập nhật mặt hàng {sku}',itemCreated:'Đã tạo mặt hàng {sku} "{name}"',
+      itemSaveError:'Không thể lưu mặt hàng',
+      deleteTitle:'Xóa {name}?',deleteNotSupported:'Chưa hỗ trợ xóa mặt hàng',
+      deleteBody:'{sku} đã có lịch sử tồn kho/giao dịch thực tế — chức năng xóa mặt hàng chưa được triển khai. Hãy lưu trữ hoặc ngừng đặt hàng lại thay vào đó.',
+      subHeader:'Dữ liệu gốc cho mọi mặt hàng tồn kho. Chọn một dòng để xem, sửa, xóa — hoặc thêm mặt hàng mới.',
+      catComponents:'Linh kiện',catRawMaterials:'Nguyên liệu',catFinishedGoods:'Thành phẩm',
+      catConsumables:'Vật tư tiêu hao',catPackaging:'Bao bì',
+    },
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
 SCREENS['item-master'] = async function(root){
   await prepareCanonicalInventoryData();
+  const s=itemMasterCopy();
   const CATS=['Components','Raw Materials','Finished Goods','Consumables','Packaging'];
+  const CAT_KEYS={Components:'catComponents','Raw Materials':'catRawMaterials','Finished Goods':'catFinishedGoods',Consumables:'catConsumables',Packaging:'catPackaging'};
   const UOMS=['ea','kg','m','sheet','L','box','pair','set'];
   let selSku = DB.items[0] ? DB.items[0].sku : null;
 
@@ -327,13 +437,13 @@ SCREENS['item-master'] = async function(root){
     return buildTable({
       rowId:it=>it.sku,
       columns:[
-        {label:'Item',sticky:true,render:it=>`<div class="cellsub"><b>${esc(it.name)}</b><small>${esc(it.sku)}</small></div>`},
-        {label:'Category',align:'l',render:it=>esc(it.cat)},
-        {label:'UoM',align:'l',render:it=>esc(it.uom)},
-        {label:'Reorder pt',align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.reorder)}</span>`},
-        {label:'Unit cost',align:'r',sortable:true,render:it=>`<span class="tnum">${money(it.cost)}</span>`},
-        {label:'On hand',align:'r',sortable:true,render:it=>`<span class="tnum">${num(it.onHand)}</span>`},
-        {label:'Status',align:'l',render:it=>statusBadge(it.status)},
+        {label:s('colItem'),sticky:true,render:it=>`<div class="cellsub"><b>${esc(it.name)}</b><small>${esc(it.sku)}</small></div>`},
+        {label:t('inv.category'),align:'l',render:it=>esc(s(CAT_KEYS[it.cat]||it.cat))},
+        {label:s('colUom'),align:'l',render:it=>esc(it.uom)},
+        {label:s('colReorderPt'),align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.reorder)}</span>`},
+        {label:s('colUnitCost'),align:'r',sortable:true,render:it=>`<span class="tnum">${money(it.cost)}</span>`},
+        {label:t('inv.col.onhand'),align:'r',sortable:true,render:it=>`<span class="tnum">${num(it.onHand)}</span>`},
+        {label:s('colStatus'),align:'l',render:it=>statusBadge(it.status)},
       ],
       rows:DB.items,
     });
@@ -341,30 +451,31 @@ SCREENS['item-master'] = async function(root){
 
   function detail(){
     const it=DB.items.find(x=>x.sku===selSku);
-    if(!it) return `<div class="detail-empty">${ic('tag')}<div>Select an item to view, edit or delete its master record.</div></div>`;
+    if(!it) return `<div class="detail-empty">${ic('tag')}<div>${esc(s('selectItem'))}</div></div>`;
     const avail=it.onHand-it.alloc;
+    const catLabel=s(CAT_KEYS[it.cat]||it.cat);
     return `
       <div class="detail-head">
         <span class="grabber"></span>
-        <button class="close" data-close="1">${ic('chevL')}Close</button>
-        <div class="dh-top"><div><h2>${esc(it.name)}</h2><span class="sub">${esc(it.sku)} · ${esc(it.cat)} · per ${esc(it.uom)}</span></div><div style="margin-left:auto">${statusBadge(it.status)}</div></div>
-        <div class="dh-actions">${btn('Edit',{icon:'edit',cls:'primary',attrs:'data-edit="1"'})}${btn('New transaction',{icon:'transfer',cls:'soft',attrs:'onclick="navigate(\'stock-movement\')"'})}${btn('Delete',{icon:'trash',cls:'soft',attrs:'data-del="1"'})}</div>
+        <button class="close" data-close="1">${ic('chevL')}${esc(t('common.close'))}</button>
+        <div class="dh-top"><div><h2>${esc(it.name)}</h2><span class="sub">${esc(it.sku)} · ${esc(catLabel)} · ${esc(t('inv.peruom'))} ${esc(it.uom)}</span></div><div style="margin-left:auto">${statusBadge(it.status)}</div></div>
+        <div class="dh-actions">${btn(s('edit'),{icon:'edit',cls:'primary',attrs:'data-edit="1"'})}${btn(s('newTransaction'),{icon:'transfer',cls:'soft',attrs:'onclick="navigate(\'stock-movement\')"'})}${btn(s('delete'),{icon:'trash',cls:'soft',attrs:'data-del="1"'})}</div>
       </div>
       <div class="detail-body">
-        <div class="statgrid"><div class="stat"><small>On hand</small><b class="tnum">${num(it.onHand)}</b></div><div class="stat"><small>Allocated</small><b class="tnum">${num(it.alloc)}</b></div><div class="stat accentval"><small>Available</small><b class="tnum">${num(avail)}</b></div><div class="stat"><small>Value</small><b class="tnum">${money0(it.onHand*it.cost)}</b></div></div>
-        <div class="sectitle">Master data</div>
+        <div class="statgrid"><div class="stat"><small>${esc(t('inv.col.onhand'))}</small><b class="tnum">${num(it.onHand)}</b></div><div class="stat"><small>${esc(s('allocated'))}</small><b class="tnum">${num(it.alloc)}</b></div><div class="stat accentval"><small>${esc(s('available'))}</small><b class="tnum">${num(avail)}</b></div><div class="stat"><small>${esc(t('inv.col.value'))}</small><b class="tnum">${money0(it.onHand*it.cost)}</b></div></div>
+        <div class="sectitle">${esc(s('masterData'))}</div>
         <div class="card">
-          <div class="field"><span class="k">SKU</span><span class="v mono">${esc(it.sku)}</span></div>
-          <div class="field"><span class="k">Name</span><span class="v">${esc(it.name)}</span></div>
-          <div class="field"><span class="k">Category</span><span class="v">${esc(it.cat)}</span></div>
-          <div class="field"><span class="k">Base UoM</span><span class="v">${esc(it.uom)}</span></div>
-          <div class="field"><span class="k">Reorder point</span><span class="v tnum">${num(it.reorder)}</span></div>
-          <div class="field"><span class="k">Reorder qty</span><span class="v tnum">${num(it.roq)}</span></div>
-          <div class="field"><span class="k">Unit cost</span><span class="v tnum">${money(it.cost)}</span></div>
-          ${it.expiry?`<div class="field"><span class="k">Expiry</span><span class="v" style="color:var(--warn)">${esc(it.expiry)}</span></div>`:''}
+          <div class="field"><span class="k">${esc(s('fieldSku'))}</span><span class="v mono">${esc(it.sku)}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldName'))}</span><span class="v">${esc(it.name)}</span></div>
+          <div class="field"><span class="k">${esc(t('inv.category'))}</span><span class="v">${esc(catLabel)}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldBaseUom'))}</span><span class="v">${esc(it.uom)}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldReorderPoint'))}</span><span class="v tnum">${num(it.reorder)}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldReorderQty'))}</span><span class="v tnum">${num(it.roq)}</span></div>
+          <div class="field"><span class="k">${esc(s('colUnitCost'))}</span><span class="v tnum">${money(it.cost)}</span></div>
+          ${it.expiry?`<div class="field"><span class="k">${esc(s('fieldExpiry'))}</span><span class="v" style="color:var(--warn)">${esc(it.expiry)}</span></div>`:''}
         </div>
-        <div class="sectitle">Bin locations</div>
-        <div class="card">${it.bins&&it.bins.length?it.bins.map(b=>`<div class="field"><span class="k mono">${esc(b[0])}</span><span class="v tnum">${num(b[1])} ${esc(it.uom)}</span></div>`).join(''):`<div style="color:var(--muted);font-size:13px">No bin allocations.</div>`}</div>
+        <div class="sectitle">${esc(s('binLocations'))}</div>
+        <div class="card">${it.bins&&it.bins.length?it.bins.map(b=>`<div class="field"><span class="k mono">${esc(b[0])}</span><span class="v tnum">${num(b[1])} ${esc(it.uom)}</span></div>`).join(''):`<div style="color:var(--muted);font-size:13px">${esc(s('noBinAllocations'))}</div>`}</div>
       </div>`;
   }
 
@@ -373,22 +484,22 @@ SCREENS['item-master'] = async function(root){
   function itemForm(it){
     const edit=!!it;
     const sku=edit?it.sku:nextSku();
-    openModal(`<div class="modal-head">${ic(edit?'edit':'plus')}<h3>${edit?'Edit item':'New item'}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
+    openModal(`<div class="modal-head">${ic(edit?'edit':'plus')}<h3>${edit?esc(s('editItem')):esc(t('inv.newitem'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
       <div class="modal-body"><div class="set-grid">
-        <div class="fld"><span>Item name <span class="req">*</span></span><input id="ifName" value="${edit?esc(it.name):''}" placeholder="e.g. Hydraulic Hose 12mm"></div>
-        <div class="fld"><span>SKU</span><input value="${esc(sku)}" readonly><span class="locked">${ic('lock')} System-numbered</span></div>
-        <div class="fld"><span>Category</span><select id="ifCat">${CATS.map(c=>`<option ${edit&&it.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
-        <div class="fld"><span>Base UoM</span><select id="ifUom">${UOMS.map(u=>`<option ${edit&&it.uom===u?'selected':''}>${u}</option>`).join('')}</select></div>
-        <div class="fld"><span>Reorder point</span><input id="ifReorder" type="number" min="0" class="tnum" value="${edit?it.reorder:50}"></div>
-        <div class="fld"><span>Reorder qty</span><input id="ifRoq" type="number" min="0" class="tnum" value="${edit?it.roq:150}"></div>
-        <div class="fld"><span>Unit cost (USD)</span><input id="ifCost" type="number" min="0" step="0.01" class="tnum" value="${edit?it.cost:0}"></div>
-        ${edit?'':`<div class="fld"><span>Opening qty</span><input value="0" readonly><span class="locked">${ic('lock')} Use Stock Adjustment to receive stock</span></div>`}
+        <div class="fld"><span>${esc(s('itemNameLabel'))} <span class="req">*</span></span><input id="ifName" value="${edit?esc(it.name):''}" placeholder="${esc(s('itemNamePlaceholder'))}"></div>
+        <div class="fld"><span>${esc(s('fieldSku'))}</span><input value="${esc(sku)}" readonly><span class="locked">${ic('lock')} ${esc(s('systemNumbered'))}</span></div>
+        <div class="fld"><span>${esc(t('inv.category'))}</span><select id="ifCat">${CATS.map(c=>`<option value="${esc(c)}" ${edit&&it.cat===c?'selected':''}>${esc(s(CAT_KEYS[c]))}</option>`).join('')}</select></div>
+        <div class="fld"><span>${esc(s('fieldBaseUom'))}</span><select id="ifUom">${UOMS.map(u=>`<option ${edit&&it.uom===u?'selected':''}>${u}</option>`).join('')}</select></div>
+        <div class="fld"><span>${esc(s('fieldReorderPoint'))}</span><input id="ifReorder" type="number" min="0" class="tnum" value="${edit?it.reorder:50}"></div>
+        <div class="fld"><span>${esc(s('fieldReorderQty'))}</span><input id="ifRoq" type="number" min="0" class="tnum" value="${edit?it.roq:150}"></div>
+        <div class="fld"><span>${esc(s('colUnitCost'))} (USD)</span><input id="ifCost" type="number" min="0" step="0.01" class="tnum" value="${edit?it.cost:0}"></div>
+        ${edit?'':`<div class="fld"><span>${esc(s('openingQty'))}</span><input value="0" readonly><span class="locked">${ic('lock')} ${esc(s('useStockAdjustment'))}</span></div>`}
       </div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?'Save changes':'Create item',{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?s('saveChanges'):s('createItem'),{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
     const saveBtn=$('#modalEl').querySelector('[data-save]');
     saveBtn.addEventListener('click',async()=>{
       const name=$('#ifName').value.trim();
-      if(!name){ toast('Item name is required','danger'); $('#ifName').focus(); return; }
+      if(!name){ toast(s('itemNameRequired'),'danger'); $('#ifName').focus(); return; }
       const d={ name, category:$('#ifCat').value, uom:$('#ifUom').value,
         reorderPoint:Math.max(0,+$('#ifReorder').value||0), reorderQty:Math.max(0,+$('#ifRoq').value||0),
         standardCost:Math.max(0,+$('#ifCost').value||0) };
@@ -396,10 +507,10 @@ SCREENS['item-master'] = async function(root){
       try{
         if(edit){
           await window.ErpSystemData.action('inventory/products', it.id, 'update', d);
-          toast(`Item ${it.sku} updated`,'ok');
+          toast(s('itemUpdated').replace('{sku}',it.sku),'ok');
         }else{
           await window.ErpSystemData.create('inventory/products', Object.assign({sku},d));
-          toast(`Item ${sku} “${name}” created`,'ok');
+          toast(s('itemCreated').replace('{sku}',sku).replace('{name}',name),'ok');
         }
         closeModal();
         await prepareCanonicalInventoryData();
@@ -407,15 +518,15 @@ SCREENS['item-master'] = async function(root){
         render();
       }catch(error){
         saveBtn.disabled=false;
-        toast(error&&error.message?error.message:'Item could not be saved','danger');
+        toast(error&&error.message?error.message:s('itemSaveError'),'danger');
       }
     });
   }
 
   function confirmDelete(it){
-    openModal(`<div class="modal-head">${ic('trash')}<h3>Delete ${esc(it.name)}?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="risk danger">${ic('warn')}<div><b>Deleting items isn’t supported yet</b><small>${esc(it.sku)} has real stock/movement history behind it — item deletion isn’t implemented. Archive or stop reordering it instead.</small></div></div></div>
-      <div class="modal-foot">${btn('Close',{cls:'primary',attrs:'onclick="closeModal()"'})}</div>`);
+    openModal(`<div class="modal-head">${ic('trash')}<h3>${esc(s('deleteTitle').replace('{name}',it.name))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
+      <div class="modal-body"><div class="risk danger">${ic('warn')}<div><b>${esc(s('deleteNotSupported'))}</b><small>${esc(s('deleteBody').replace('{sku}',it.sku))}</small></div></div></div>
+      <div class="modal-foot">${btn(t('common.close'),{cls:'primary',attrs:'onclick="closeModal()"'})}</div>`);
   }
 
   function render(){
@@ -424,13 +535,13 @@ SCREENS['item-master'] = async function(root){
       ${inventoryPageHead({
         active:'item-master',
         title:t('inv.nav.items'),
-        count:DB.items.length+' items',
+        count:DB.items.length+' '+t('common.items'),
         kpiLabel:t('inv.kpi.value'),
         kpiValue:money0(totVal),
-        sub:'Master data for every stocked item. Select a row to view, edit or delete — or add a new item.',
+        sub:s('subHeader'),
       })}
       <section class="master">
-        <div class="toolbar"><div class="grow"></div>${btn('Export',{icon:'download',cls:'soft'})}${btn('New item',{icon:'plus',cls:'primary',attrs:'data-new="1"'})}</div>
+        <div class="toolbar"><div class="grow"></div>${btn(t('common.export'),{icon:'download',cls:'soft'})}${btn(t('inv.newitem'),{icon:'plus',cls:'primary',attrs:'data-new="1"'})}</div>
         <div class="tablewrap" id="imTable">${listTable()}</div>
       </section>
       <aside class="detail ${selSku?'open':''}" id="imDetail">${detail()}</aside>

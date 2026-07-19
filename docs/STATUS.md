@@ -190,7 +190,7 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 | Claim in docs | Reality |
 | --- | --- |
 | `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Complete for the present Canonical boundary.** All 47 current Canonical routes use `ErpSystemData` in API mode with no sample fallback. Settings reads the authenticated session and labels browser-local preferences honestly. CRM's opportunity-detail sub-screen remains Preview (no schema). |
-| Every Canonical route has five-language coverage | **Not true for Item Master / Customer-360 (2026-07-19).** Both moved to Canonical for schema/adapter/permissions/tests, but their UI strings are still English-only (Item Master's screen already was, pre-conversion; Customer-360's new panels follow the same baseline it inherited). Full `t()`/`tf()` i18n coverage for these two screens is real remaining scope, not silently done — `npm run audit:screens` does not currently gate on this. |
+| Every Canonical route has five-language coverage | **True for Item Master / Customer-360 as of TASK-033 (2026-07-19)** — both gained local `copy()` translation packs. `npm run audit:screens` still doesn't gate on i18n coverage for any route, so this remains a manually-verified property, not an enforced one. |
 | API server has all business **write** endpoints | Not yet. Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and remaining finance/commercial actions still need registration on the unified dispatcher. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` (referenced in CONTRIBUTING.md) | Still doesn't exist — no ESLint/Prettier config in the repo. `npm test` (TASK-025, done) now works. |
@@ -230,11 +230,15 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 5. **MFA is not implemented.** Invitation/password-reset endpoints and encrypted SMTP
    outbox delivery now exist; production deployments must configure the optional email
    worker profile and monitor delivery failures.
-6. **Item Master and Customer-360 are Canonical but English-only.** Both cleared the
-   schema/adapter/permissions/tests bar (TASK-029…032) but not the five-language
-   coverage most other Canonical routes have; Item Master's screen was already
-   English-only before this conversion, and Customer-360's new panels inherited that
-   baseline. `npm run audit:screens` does not gate on this today.
+6. ~~Item Master and Customer-360 are Canonical but English-only~~ — **fixed
+   (TASK-033, 2026-07-19).** Both screens gained local `copy()`-style five-language
+   translation packs (en/ms/zh/ja/vi), matching the pattern every other Canonical
+   screen uses; existing global `t()`/`ts()` keys are reused where they already
+   matched. Verified live in-browser: switching en → zh actually changes every
+   label, button, status pill and toast on both screens, desktop and 375px, zero
+   console errors. `ja`/`vi` remain unreachable through the UI today, same as every
+   other "five-language" Canonical screen — the language switcher itself only ever
+   offers 3 languages (see item 7 below).
 7. **`vite dev` cannot boot real PGlite for this app — always verify against
    `npm run build:demo` + `vite preview` (or `npm run audit:screens`).** Found during
    TASK-030/032 verification: `vite dev` serves a truncated/corrupted PGlite `.data`

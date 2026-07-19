@@ -285,7 +285,7 @@ Acceptance criteria:
       the real adapter actions.
 - [x] `crm-customer` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.
 
-## EPIC-013 — Item Master / Customer-360 Localization
+## EPIC-013 — Item Master / Customer-360 Localization ✅
 
 Item Master and Customer-360 (EPIC-011/012) landed Canonical for schema, writes and
 permissions, but their UI strings are English-only — unlike most other Canonical
@@ -295,17 +295,18 @@ translation pack (see `screens-sales-front-canonical.js`). This epic closes that
 
 Acceptance criteria:
 
-- [ ] `item-master` (`screens-inv.js`) and `crm-customer` (`screens-crm.js`) each gain
+- [x] `item-master` (`screens-inv.js`) and `crm-customer` (`screens-crm.js`) each gain
       a local `copy()`-style translation pack (en/ms/zh/ja/vi), matching the exact
       shape already used by the sibling Canonical screens.
-- [ ] Existing global `t()`/`ts()`/`tf()` keys are reused wherever they already match
+- [x] Existing global `t()`/`ts()`/`tf()` keys are reused wherever they already match
       (`inv.newitem`, `crm.newopp`, `common.cancel`, `common.export`, `common.items`,
       `nav.crm`, `st.*` status values via `statusBadge()`), not re-declared locally.
-- [ ] A missing `st.No stock` key is added to the shared `I18N` object (all 3 real
+- [x] A missing `st.No stock` key is added to the shared `I18N` object (all 3 real
       languages) since Item Master's "No stock" status had no translation at all.
-- [ ] Customer-360's open-orders/open-opportunities status labels route through
-      `ts()`/`statusBadge()` instead of the English-only `crmTitleCase()` bypass.
-- [ ] Switching language (en/ms/zh) on both screens actually changes every visible
+- [x] Customer-360's open-orders/open-opportunities status labels route through
+      `ts()`/`statusBadge()` instead of the English-only `crmTitleCase()` bypass
+      (removed as dead code).
+- [x] Switching language (en/ms/zh) on both screens actually changes every visible
       label/button/toast, verified live in the browser, not just by code inspection.
 
 ## EPIC-014 — Single-Source Demo Seed ✅
