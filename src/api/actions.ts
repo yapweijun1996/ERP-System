@@ -9,6 +9,10 @@ import {
 import { postInventoryAdjustmentWithin } from '../modules/inventory/adjustment';
 import { completeStockTransferWithin } from '../modules/inventory/transfer';
 import {
+  updateProductWithin,
+  type UpdateProductInput,
+} from '../modules/inventory/product';
+import {
   receiveGoodsWithin,
   type ReceiveGoodsInput,
 } from '../modules/purchasing/receiveGoods';
@@ -50,6 +54,19 @@ import {
 } from '../modules/sales/creditControl';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'inventory/products/update': {
+    permission: 'inventory.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return updateProductWithin(
+        tx,
+        scope,
+        input.resourceId,
+        input.payload as unknown as UpdateProductInput,
+      );
+    },
+  },
   'sales/credit-profiles/hold': {
     permission: 'sales.write',
     idempotency: 'required',

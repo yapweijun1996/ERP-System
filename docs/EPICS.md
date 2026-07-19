@@ -233,3 +233,29 @@ Acceptance criteria:
 - [x] `src/demo.ts` gains CRM assertions, following the `runPurchasingScenario`
       pattern (success + two rollback/guard scenarios), proven on both PGlite and
       PostgreSQL.
+
+## EPIC-011 — Item Master
+
+Converts the last mock-data screen in Inventory: `item-master` still reads
+`web/public/assets/data-master.js`'s static `DB.items` and its create/edit form only
+mutates that in-memory array. `screens-inv.js`'s `prepareCanonicalInventoryData()` —
+already used by the Canonical Stock-on-Hand/Valuation/Movements screens — already
+builds the same `DB.items` shape from real `product`/`stock_level`/
+`stock_location_balance` data, but hardcodes `cat`/`reorder`/`roq` because `product`
+has no category or reorder columns yet. (TASK-029, TASK-030)
+
+Acceptance criteria:
+
+- [x] `product` gains `category` (checked against the 5 values the UI already offers),
+      `reorder_point`, `reorder_qty` and `version` columns via a Drizzle migration —
+      `drizzle/0019_aromatic_wendigo.sql`; `src/modules/inventory/product.ts` provides
+      tenant-scoped `createProductWithin`/`updateProductWithin` mirroring
+      `createOpportunity.ts`/`activatePriceListWithin`'s conventions.
+- [x] `inventory/products` is registered as a create+update (optimistic-locked)
+      resource in `src/api/resources.ts`/`creates.ts`/`actions.ts`, gated on a new
+      `inventory.write` permission.
+- [ ] `item-master` reads real data via `prepareCanonicalInventoryData()` instead of
+      the mock file, and its create/edit form calls the real adapter actions; the
+      3 already-Canonical screens sharing that function also stop showing fake
+      `Unclassified`/`0` category/reorder values.
+- [ ] `item-master` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.

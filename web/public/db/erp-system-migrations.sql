@@ -2123,3 +2123,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uq_sales_credit_profile_customer" ON "sales_c
 --> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "idx_sales_credit_profile_status" ON "sales_credit_profile" USING btree ("master_fn","company_fn","status","customer_id");
+
+-- 0019_aromatic_wendigo
+ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "category" text DEFAULT 'Components' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "reorder_point" numeric(18, 4) DEFAULT '0' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "reorder_qty" numeric(18, 4) DEFAULT '0' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "version" integer DEFAULT 1 NOT NULL;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "product" ADD CONSTRAINT "ck_product_category" CHECK ("product"."category" in ('Components', 'Raw Materials', 'Finished Goods', 'Consumables', 'Packaging'));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "product" ADD CONSTRAINT "ck_product_reorder_nonnegative" CHECK ("product"."reorder_point" >= 0 and "product"."reorder_qty" >= 0);
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+

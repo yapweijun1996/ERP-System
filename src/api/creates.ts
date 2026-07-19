@@ -17,6 +17,10 @@ import {
   type RegisterInventorySerialInput,
 } from '../modules/inventory/tracking';
 import {
+  createProductWithin,
+  type CreateProductInput,
+} from '../modules/inventory/product';
+import {
   createPurchaseOrderWithin,
   type CreatePurchaseOrderInput,
 } from '../modules/purchasing/createPurchaseOrder';
@@ -71,6 +75,13 @@ export interface CreateDefinition {
 }
 
 const CREATES: Record<string, CreateDefinition> = {
+  'inventory/products': {
+    permission: 'inventory.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createProductWithin(tx, scope, payload as unknown as CreateProductInput);
+    },
+  },
   'inventory/bins': {
     permission: 'inventory.track',
     audit: 'required',

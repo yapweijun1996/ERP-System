@@ -10,19 +10,35 @@ import {
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 
+// Item master category — fixed list matches the Item Master screen's own options
+// (web/public/assets/screens-inv.js's CATS const); kept as a checked enum rather
+// than a free-text field for the same reason trackingType/status are, elsewhere.
+export const PRODUCT_CATEGORIES = [
+  'Components', 'Raw Materials', 'Finished Goods', 'Consumables', 'Packaging',
+] as const;
+
 export const product = pgTable('product', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,
   sku: text('sku').notNull(),
   name: text('name').notNull(),
   uom: text('uom').notNull().default('unit'),   // unit of measure
+  category: text('category').notNull().default('Components'),
   standardCost: numeric('standard_cost', { precision: 18, scale: 4 }).notNull().default('0'),
+  reorderPoint: numeric('reorder_point', { precision: 18, scale: 4 }).notNull().default('0'),
+  reorderQty: numeric('reorder_qty', { precision: 18, scale: 4 }).notNull().default('0'),
   trackingType: text('tracking_type').notNull().default('none'), // none | lot | serial
+  version: integer('version').notNull().default(1),
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_product_sku').on(t.masterFn, t.companyFn, t.sku),
   index('idx_product_name').on(t.masterFn, t.companyFn, t.name),
   check('ck_product_tracking_type', sql`${t.trackingType} in ('none', 'lot', 'serial')`),
+  check(
+    'ck_product_category',
+    sql`${t.category} in ('Components', 'Raw Materials', 'Finished Goods', 'Consumables', 'Packaging')`,
+  ),
+  check('ck_product_reorder_nonnegative', sql`${t.reorderPoint} >= 0 and ${t.reorderQty} >= 0`),
 ]);
 
 export const warehouse = pgTable('warehouse', {

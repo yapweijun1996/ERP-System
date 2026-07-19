@@ -45,10 +45,10 @@ WHERE u.master_fn = 'M1' AND u.email = 'viewer@acme.co'
   AND c.master_fn = 'M1' AND c.company_fn = 'C-SG'
   AND r.master_fn = 'M1' AND r.name = 'Viewer';
 
-INSERT INTO product (master_fn, company_fn, sku, name, uom, standard_cost) VALUES
-  ('M1', 'C-SG', 'SG-WIDGET', 'Widget (SG)', 'unit', 6.5000),
-  ('M1', 'C-SG', 'SG-GADGET', 'Gadget (SG)', 'box', 13.0000),
-  ('M1', 'C-MY', 'MY-WIDGET', 'Widget (MY)', 'unit', 6.0000);
+INSERT INTO product (master_fn, company_fn, sku, name, uom, category, standard_cost, reorder_point, reorder_qty) VALUES
+  ('M1', 'C-SG', 'SG-WIDGET', 'Widget (SG)', 'unit', 'Finished Goods', 6.5000, 20, 100),
+  ('M1', 'C-SG', 'SG-GADGET', 'Gadget (SG)', 'box', 'Finished Goods', 13.0000, 10, 50),
+  ('M1', 'C-MY', 'MY-WIDGET', 'Widget (MY)', 'unit', 'Finished Goods', 6.0000, 20, 100);
 
 -- SG GST standard-rated: 8% from 2023, 9% from 2024 (effective-dated). MY SST 8%.
 INSERT INTO tax_rule (master_fn, company_fn, tax_regime, tax_code, rate, valid_from, valid_to) VALUES

@@ -95,7 +95,12 @@ export interface ResourceDefinition {
  * allowlist: route parameters can never become SQL identifiers.
  */
 const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
-  'inventory/products': resource(product, 'inventory.read'),
+  'inventory/products': resource(product, 'inventory.read', {
+    versionColumn: product.version,
+    allowedActions: ['update'],
+    createPermission: 'inventory.write',
+    updatePermission: 'inventory.write',
+  }),
   'inventory/warehouses': resource(warehouse, 'inventory.read'),
   'inventory/stock-levels': resource(stockLevel, 'inventory.read'),
   'inventory/stock-movements': resource(stockMovement, 'inventory.read'),

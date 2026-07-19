@@ -70,9 +70,18 @@ export async function seedDemo(db: DB): Promise<void> {
   })));
 
   await db.insert(product).values([
-    { masterFn: 'M1', companyFn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', standardCost: '6.5000' },
-    { masterFn: 'M1', companyFn: 'C-SG', sku: 'SG-GADGET', name: 'Gadget (SG)', uom: 'box', standardCost: '13.0000' },
-    { masterFn: 'M1', companyFn: 'C-MY', sku: 'MY-WIDGET', name: 'Widget (MY)', uom: 'unit', standardCost: '6.0000' },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit',
+      category: 'Finished Goods', standardCost: '6.5000', reorderPoint: '20', reorderQty: '100',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', sku: 'SG-GADGET', name: 'Gadget (SG)', uom: 'box',
+      category: 'Finished Goods', standardCost: '13.0000', reorderPoint: '10', reorderQty: '50',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', sku: 'MY-WIDGET', name: 'Widget (MY)', uom: 'unit',
+      category: 'Finished Goods', standardCost: '6.0000', reorderPoint: '20', reorderQty: '100',
+    },
   ]);
 
   // SG GST standard-rated: 8% from 2023, 9% from 2024 (effective-dated).
