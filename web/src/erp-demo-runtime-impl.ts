@@ -141,6 +141,15 @@ import {
   type CreateDepreciationRunInput,
 } from '../../src/modules/assets/depreciationRun';
 import {
+  createEmployeeWithin,
+  type CreateEmployeeInput,
+} from '../../src/modules/hr/employee';
+import {
+  createLeaveRequestWithin,
+  decideLeaveRequestWithin,
+  type CreateLeaveRequestInput,
+} from '../../src/modules/hr/leaveRequest';
+import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
@@ -401,6 +410,18 @@ export const erpDemoRuntime = Object.freeze({
     },
     postDepreciationRunWithin(db: DemoOrm, scope: Scope, runId: number) {
       return postDepreciationRunWithin(asDomainDb(db), scope, runId);
+    },
+    createEmployeeWithin(db: DemoOrm, scope: Scope, input: CreateEmployeeInput) {
+      return createEmployeeWithin(asDomainDb(db), scope, input);
+    },
+    createLeaveRequestWithin(db: DemoOrm, scope: Scope, input: CreateLeaveRequestInput) {
+      return createLeaveRequestWithin(asDomainDb(db), scope, input);
+    },
+    decideLeaveRequestWithin(
+      db: DemoOrm, scope: Scope, leaveRequestId: number,
+      decision: 'approved' | 'rejected', rejectionReason?: string | null,
+    ) {
+      return decideLeaveRequestWithin(asDomainDb(db), scope, leaveRequestId, decision, rejectionReason);
     },
     listCompanyUsers(db: DemoOrm, scope: Scope) {
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);

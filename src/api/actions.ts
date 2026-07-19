@@ -53,6 +53,7 @@ import {
   releaseCreditHoldWithin,
 } from '../modules/sales/creditControl';
 import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
+import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'assets/depreciation-runs/post': {
@@ -303,6 +304,25 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return disposeNcrWithin(tx, scope, input.resourceId, 'release');
+    },
+  },
+  'hr/leave-requests/approve': {
+    permission: 'hr.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return decideLeaveRequestWithin(tx, scope, input.resourceId, 'approved');
+    },
+  },
+  'hr/leave-requests/reject': {
+    permission: 'hr.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const reason = (input.payload as { rejectionReason?: unknown } | undefined)?.rejectionReason;
+      return decideLeaveRequestWithin(
+        tx, scope, input.resourceId, 'rejected', typeof reason === 'string' ? reason : null,
+      );
     },
   },
   'quality/ncrs/reject': {

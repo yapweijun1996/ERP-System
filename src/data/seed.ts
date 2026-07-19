@@ -6,6 +6,7 @@ import type { DB } from './db';
 import {
   master, company, currency, appUser, role, rolePermission, userCompany,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
+  employee, leaveRequest,
 } from './schema';
 
 /**
@@ -63,6 +64,7 @@ export async function seedDemo(db: DB): Promise<void> {
     'crm.read',
     'quality.read',
     'asset.read',
+    'hr.read',
     'session.switch_company',
   ].map((permissionKey) => ({
     masterFn: 'M1',
@@ -158,6 +160,62 @@ export async function seedDemo(db: DB): Promise<void> {
       masterFn: 'M1', companyFn: 'C-SG', assetNo: 'FA-1003', name: 'Office Workstations (x12)',
       category: 'IT Equipment', location: 'HQ — Level 3', acquisitionDate: '2025-01-10',
       cost: '18000.00', residualValue: '0.00', usefulLifeYears: 3, status: 'in_use',
+    },
+  ]);
+
+  // HR-lite (TASK-049): employee master + a few leave requests spanning every real
+  // status (pending/approved/rejected) so the demo isn't empty on first boot. Dana
+  // Reyes has no manager (top of the reporting line); the others report to her,
+  // exercising the self-referencing manager_id FK.
+  const [dana] = await db.insert(employee).values({
+    masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1001', fullName: 'Dana Reyes',
+    email: 'dana.reyes@acme.co', department: 'Operations', jobTitle: 'Operations Director',
+    employmentType: 'Full-time', startDate: '2019-02-01', annualLeaveDays: 20,
+  }).returning({ id: employee.id });
+  const [marcus, aisha, tom, lena] = await db.insert(employee).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1042', fullName: 'Marcus Silva',
+      email: 'marcus.silva@acme.co', department: 'Warehouse', jobTitle: 'Warehouse Supervisor',
+      employmentType: 'Full-time', managerId: dana.id, startDate: '2021-03-15', annualLeaveDays: 16,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1055', fullName: 'Aisha Rahman',
+      email: 'aisha.rahman@acme.co', department: 'Finance', jobTitle: 'Senior Accountant',
+      employmentType: 'Full-time', managerId: dana.id, startDate: '2020-07-01', annualLeaveDays: 18,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1071', fullName: 'Tom Becker',
+      email: 'tom.becker@acme.co', department: 'Production', jobTitle: 'Production Line Lead',
+      employmentType: 'Full-time', managerId: dana.id, startDate: '2022-01-10', annualLeaveDays: 14,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1088', fullName: 'Lena Park',
+      email: 'lena.park@acme.co', department: 'Sales', jobTitle: 'Account Executive',
+      employmentType: 'Contract', managerId: dana.id, startDate: '2023-05-20', annualLeaveDays: 12,
+    },
+  ]).returning({ id: employee.id });
+
+  await db.insert(leaveRequest).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId: marcus.id, leaveType: 'Annual',
+      startDate: '2026-08-10', endDate: '2026-08-14', days: 5,
+      reason: 'Family trip', status: 'pending',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId: aisha.id, leaveType: 'Medical',
+      startDate: '2026-06-09', endDate: '2026-06-10', days: 2,
+      reason: 'Medical appointment', status: 'approved', decidedAt: new Date('2026-06-08T09:00:00Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId: tom.id, leaveType: 'Unpaid',
+      startDate: '2026-07-01', endDate: '2026-07-05', days: 5,
+      reason: 'Personal', status: 'rejected', rejectionReason: 'Peak production week — please reschedule.',
+      decidedAt: new Date('2026-06-25T14:30:00Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId: lena.id, leaveType: 'Annual',
+      startDate: '2026-08-24', endDate: '2026-08-24', days: 1,
+      reason: 'Errand', status: 'pending',
     },
   ]);
 }

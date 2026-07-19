@@ -570,3 +570,38 @@ Acceptance criteria:
 - [x] Unit test covers: sole active superadmin cannot be disabled by another admin user;
       a superadmin CAN be disabled if at least one other active superadmin remains.
 - [x] No change to the existing self-disable guard or to non-superadmin user toggling.
+
+## EPIC-020 — HR-lite: Employee Master & Leave Management
+
+First Phase 7 module opened after Phase 8's platform work. Deliberately scoped to
+**employee master + leave request/approval only** — the mock's Payroll screens
+(`payroll-run`, `payslip`) and the onboarding wizard's compensation/pay-grade/
+provisioning-checklist fields stay mock, matching how every prior module conversion
+left schema-less siblings alone rather than expanding scope to "complete" a whole UI
+area (Purchasing's RFQs, Sales' Commission, Assets' Transfer/Dispose). Payroll is a
+materially different, statutory-contribution-heavy domain (EPF/SOCSO/PCB) that belongs
+in its own future epic, not bundled into a "lite" pass. (TASK-049, TASK-050)
+
+Acceptance criteria:
+
+- [x] `employee` (self-referencing `manager_id`, tenant-scoped, no link to `app_user` —
+      an HR record doesn't imply an ERP login) and `leave_request` tables added via a
+      Drizzle migration, following `assets.ts`'s tenant/check-constraint conventions.
+      Deliberately no compensation/salary column (out of scope) and no stored
+      `decided_by_user_id` (the generic action-dispatcher's `execute()` doesn't receive
+      an actor, matching `depreciation_run`'s precedent of not storing a `posted_by`
+      either — the audit trail, not the row, is where "who" lives).
+- [x] `src/modules/hr/employee.ts` (`createEmployeeWithin`/`createEmployee`) and
+      `src/modules/hr/leaveRequest.ts` (`createLeaveRequestWithin`/`createLeaveRequest`,
+      `decideLeaveRequestWithin`/`decideLeaveRequest` for the real approve/reject
+      outcomes) mirror `createAsset.ts`'s plain-insert shape; `hr/employees` and
+      `hr/leave-requests` registered as generic `ResourceDefinition`s (not bespoke
+      routes — these fit the standard single-integer-PK shape cleanly, unlike Admin's
+      tables), gated on new `hr.read`/`hr.write` permissions.
+- [x] 16 new unit tests cover validation, tenant isolation, the self-referencing manager
+      FK, inclusive leave-day computation, and the full approve/reject state machine
+      (including "already decided" and "reject requires a reason").
+- [ ] `hr-directory`, `employee` (per-employee, not always the same hardcoded record),
+      `new-employee` and `leave-approval` read/write real data through the standard
+      audited idempotent Demo/API action dispatcher.
+- [ ] All 4 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`.

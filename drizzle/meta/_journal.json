@@ -162,6 +162,13 @@
       "when": 1784460437521,
       "tag": "0022_fluffy_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1784469740630,
+      "tag": "0023_tired_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

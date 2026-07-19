@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 22;
+  var DEMO_SCHEMA_VERSION = 23;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1315,6 +1315,8 @@
     'assets/assets':'asset',
     'assets/depreciation-runs':'depreciation_run',
     'assets/depreciation-run-lines':'depreciation_run_line',
+    'hr/employees':'employee',
+    'hr/leave-requests':'leave_request',
   };
   function normalizeResource(resource){
     return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
@@ -1639,6 +1641,22 @@
       await refresh();
       return {data:depreciationRun,meta:{}};
     }
+    if(key==='hr/employees'){
+      var newEmployee = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createEmployeeWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newEmployee,meta:{}};
+    }
+    if(key==='hr/leave-requests'){
+      var newLeaveRequest = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createLeaveRequestWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newLeaveRequest,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1864,6 +1882,22 @@
       });
       await refresh();
       return {data:postedDepreciationRun,meta:{}};
+    }
+    if(key==='hr/leave-requests'&&name==='approve'){
+      var approvedLeave = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.decideLeaveRequestWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), 'approved');
+      });
+      await refresh();
+      return {data:approvedLeave,meta:{}};
+    }
+    if(key==='hr/leave-requests'&&name==='reject'){
+      var rejectedLeave = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.decideLeaveRequestWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), 'rejected', payload&&payload.rejectionReason);
+      });
+      await refresh();
+      return {data:rejectedLeave,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

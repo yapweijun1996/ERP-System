@@ -62,6 +62,8 @@ import {
   asset,
   depreciationRun,
   depreciationRunLine,
+  employee,
+  leaveRequest,
 } from '../data/schema';
 
 export interface ApiScope {
@@ -307,6 +309,14 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     createPermission: 'asset.write',
   }),
   'assets/depreciation-run-lines': resource(depreciationRunLine, 'asset.read'),
+  'hr/employees': resource(employee, 'hr.read', {
+    createPermission: 'hr.write',
+  }),
+  'hr/leave-requests': resource(leaveRequest, 'hr.read', {
+    status: leaveRequest.status,
+    allowedActions: ['approve', 'reject'],
+    createPermission: 'hr.write',
+  }),
 };
 
 function resource(

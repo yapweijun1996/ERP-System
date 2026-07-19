@@ -182,10 +182,13 @@ Order of attack:
    the demo's own audit trail — see docs/STATUS.md) are both done. `master-control`,
    `sys-settings` and `module-activation-control` remain Preview (need new schema or
    a data-repointing decision).
-6. **HR & Payroll** (⬜ not started) — employee master, leave, payroll run/payslip. No
-   schema exists today; mock data lives in `data-hr.js`, screens in `screens-hr.js`/
-   `screens-hr-new.js`. `leave-approval` (`screens-people.js`) is a separate, still-mock
-   HR screen despite sharing a file with the now-Canonical Admin `role-permission`.
+6. **HR-lite: Employee Master & Leave Management** (EPIC-020, 🔶, 2026-07-19) —
+   deliberately scoped to employee master + leave request/approval only; Payroll
+   (`payroll-run`/`payslip`) stays mock, deferred to its own future epic since it's a
+   materially different, statutory-contribution-heavy domain (EPF/SOCSO/PCB). Schema +
+   business logic done (TASK-049 ✅ — `employee`/`leave_request` tables,
+   `src/modules/hr/`, registered as standard generic resources gated on new
+   `hr.read`/`hr.write` permissions, 16 new unit tests). Screens (TASK-050) still open.
 7. **Project (Enterprise Project)** (⬜ not started) — project register and P&L exist as
    mock screens (`screens-project.js`: `project-pl`, `project-detail`, `timesheet`).
    Stakeholder-requested sub-features confirmed absent by a 2026-07-19 audit: a real

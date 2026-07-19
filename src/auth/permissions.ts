@@ -23,6 +23,8 @@ export const PERMISSIONS = {
   qualityWrite: 'quality.write',
   assetRead: 'asset.read',
   assetWrite: 'asset.write',
+  hrRead: 'hr.read',
+  hrWrite: 'hr.write',
   companySwitch: 'session.switch_company',
   auditRead: 'admin.audit.read',
   usersInvite: 'admin.users.invite',

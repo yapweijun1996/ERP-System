@@ -83,6 +83,14 @@ import {
   createDepreciationRunWithin,
   type CreateDepreciationRunInput,
 } from '../modules/assets/depreciationRun';
+import {
+  createEmployeeWithin,
+  type CreateEmployeeInput,
+} from '../modules/hr/employee';
+import {
+  createLeaveRequestWithin,
+  type CreateLeaveRequestInput,
+} from '../modules/hr/leaveRequest';
 
 export interface CreateDefinition {
   permission: string;
@@ -357,6 +365,20 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createDepreciationRunWithin(tx, scope, payload as unknown as CreateDepreciationRunInput);
+    },
+  },
+  'hr/employees': {
+    permission: 'hr.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createEmployeeWithin(tx, scope, payload as unknown as CreateEmployeeInput);
+    },
+  },
+  'hr/leave-requests': {
+    permission: 'hr.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createLeaveRequestWithin(tx, scope, payload as unknown as CreateLeaveRequestInput);
     },
   },
 };
