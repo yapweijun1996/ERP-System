@@ -284,3 +284,50 @@ Acceptance criteria:
       activity data instead of `DB.cust0007`; "Log activity" and "Add contact" call
       the real adapter actions.
 - [x] `crm-customer` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.
+
+## EPIC-013 — Item Master / Customer-360 Localization
+
+Item Master and Customer-360 (EPIC-011/012) landed Canonical for schema, writes and
+permissions, but their UI strings are English-only — unlike most other Canonical
+routes, which carry real multi-language coverage via a screen-local `copy()`
+translation pack (see `screens-sales-front-canonical.js`). This epic closes that gap.
+(TASK-033)
+
+Acceptance criteria:
+
+- [ ] `item-master` (`screens-inv.js`) and `crm-customer` (`screens-crm.js`) each gain
+      a local `copy()`-style translation pack (en/ms/zh/ja/vi), matching the exact
+      shape already used by the sibling Canonical screens.
+- [ ] Existing global `t()`/`ts()`/`tf()` keys are reused wherever they already match
+      (`inv.newitem`, `crm.newopp`, `common.cancel`, `common.export`, `common.items`,
+      `nav.crm`, `st.*` status values via `statusBadge()`), not re-declared locally.
+- [ ] A missing `st.No stock` key is added to the shared `I18N` object (all 3 real
+      languages) since Item Master's "No stock" status had no translation at all.
+- [ ] Customer-360's open-orders/open-opportunities status labels route through
+      `ts()`/`statusBadge()` instead of the English-only `crmTitleCase()` bypass.
+- [ ] Switching language (en/ms/zh) on both screens actually changes every visible
+      label/button/toast, verified live in the browser, not just by code inspection.
+
+## EPIC-014 — Single-Source Demo Seed ✅
+
+`src/data/seed.ts` (the Node-side seed used by `npm run demo`) and
+`web/public/db/erp-system-seed.sql` (hand-written SQL the browser demo executes on
+first boot) were two independently-maintained copies of the same data — TASK-028's own
+notes record a real incident where the SQL copy silently missed an insert `seed.ts`
+already had. This epic eliminates the duplication by running `seedDemo()` itself in
+the browser, the same way every Canonical write already runs real `src/modules/**`
+TypeScript commands against in-browser PGlite instead of a hand-written SQL mirror.
+(TASK-034)
+
+Acceptance criteria:
+
+- [x] `erp-demo-runtime-impl.ts` exposes `seedDemo` as a command; the browser adapter's
+      `ensureSeeded()` calls it directly instead of fetching and executing
+      `erp-system-seed.sql`.
+- [x] The WH-SALES warehouse + opening-stock fixture (demo-only bonus content, not
+      part of `seedDemo()` itself) moves into `erp-system-demo-txn.sql`, which already
+      depends on it existing.
+- [x] `erp-system-seed.sql` is deleted; `sw.js`'s precache list and `CACHE_VERSION` are
+      updated so the service worker doesn't 404 trying to precache a deleted file.
+- [x] A fresh browser boot produces identical seeded data to before, and additionally
+      now has all 8 `role_permission` rows that were previously silently missing.

@@ -3,6 +3,7 @@ import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import * as schema from '../../src/data/schema';
 import type { DB } from '../../src/data/db';
 import type { Scope } from '../../src/data/repo';
+import { seedDemo } from '../../src/data/seed';
 import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
@@ -148,6 +149,9 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    seedDemo(db: DemoOrm) {
+      return seedDemo(asDomainDb(db));
+    },
     createProductWithin(db: DemoOrm, scope: Scope, input: CreateProductInput) {
       return createProductWithin(asDomainDb(db), scope, input);
     },

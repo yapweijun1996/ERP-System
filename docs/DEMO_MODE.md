@@ -29,7 +29,7 @@ now boots the CANONICAL demo database in PGlite (persisted to IndexedDB at
 
 ```
 web/public/db/erp-system-schema.sql    (byte copy of drizzle/0000_init.sql)
-web/public/db/erp-system-seed.sql      (SQL form of src/data/seed.ts)
+src/data/seed.ts's seedDemo() runs directly (no SQL mirror — TASK-034)
 web/public/db/erp-system-demo-txn.sql  (SQL form of the src/demo.ts SO-1 chain)
         │  exec on first boot (or after reset)
         ▼

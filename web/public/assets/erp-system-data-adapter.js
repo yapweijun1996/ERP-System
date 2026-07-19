@@ -6,7 +6,8 @@
    PostgreSQL, persisted to IndexedDB at idb://erp-system-demo):
 
      web/public/db/erp-system-schema.sql   (copy of drizzle/*.sql, all migrations)
-     web/public/db/erp-system-seed.sql     (SQL form of src/data/seed.ts)
+     src/data/seed.ts's seedDemo() runs directly via the bundled runtime —
+                                            no hand-written SQL mirror (TASK-034)
      web/public/db/erp-system-demo-txn.sql (SQL form of the src/demo.ts
                                             confirmed sales-order chain and
                                             purchasing chain — TASK-022/023)
@@ -89,10 +90,9 @@
     }
     if (!seeded) {
       var schema = await fetchSql('erp-system-schema.sql');
-      var seed = await fetchSql('erp-system-seed.sql');
       var txn = await fetchSql('erp-system-demo-txn.sql');
       await db.exec(schema);
-      await db.exec(seed);
+      await state.runtime.commands.seedDemo(state.orm);
       await db.exec(txn);
     }
     /* top-up: demo draft orders (idempotent — skips existing doc_no's), so
@@ -428,7 +428,7 @@
     DB.erpSystem = {
       source: 'ERP-System canonical demo seed',
       schema: 'src/data/schema (drizzle/0000_init.sql)',
-      seed: 'web/public/db/erp-system-seed.sql (mirrors src/data/seed.ts)',
+      seed: 'src/data/seed.ts seedDemo() (runs directly, no SQL mirror)',
       transactionProof: 'web/public/db/erp-system-demo-txn.sql (mirrors src/demo.ts)',
       dataMode: mode,                          // 'pglite' | 'fallback'
       scope: SCOPE,

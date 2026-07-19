@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v31';
+const CACHE_VERSION = 'erp-system-pwa-v32';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -94,7 +94,6 @@ const staticUrls = [
   './assets/pwa.js',
   './db/erp-system-schema.sql',
   './db/erp-system-migrations.sql',
-  './db/erp-system-seed.sql',
   './db/erp-system-demo-txn.sql',
   './db/erp-system-demo-drafts.sql',
   './db/erp-system-demo-picks.sql'

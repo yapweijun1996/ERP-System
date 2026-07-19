@@ -81,7 +81,7 @@ hardcoded fictional customer regardless of the active company.
 | Purchasing chain: PO → goods receipt (stock IN) → supplier invoice (balanced GL), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `suppliers`, `purchase-orders`, `goods-receipts`, `supplier-invoices` and `new-purchase-order` use bounded formal resources in both modes. `createPurchaseOrderWithin`/`receiveGoodsWithin`/`postSupplierInvoiceWithin` run unchanged through Demo ESM and the transactional server dispatcher with RBAC, idempotency and audit. Receipt uses `receiveStockWithin`, keeping aggregate/bin/location projections and attributed movements aligned. Authenticated HTTP tests prove create → receive/replay → invoice → balanced GL, tenant rejection and viewer denial. RFQs/quotations/requisitions/returns/credit-debit-notes/price-lists/landed-cost/vendor-performance have no schema and stay mock. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline` and `new-opportunity` use bounded customer/opportunity/product/warehouse resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. The new page no longer presents fake people or fields that are not persisted. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay and rollback. Opportunity-detail and customer-360 have no schema and stay Preview. |
 | Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. The 114-route audit explicitly proves the loading/race/error contract at desktop + 375px. |
-| Bundled Demo ESM runtime | ✅ Current Canonical writes migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. CRM create/convert, Purchasing create/receive/post, Sales enquiry/quotation/order actions, Sales Draft confirmation and Demo Setup all use TypeScript commands instead of browser business SQL mirrors. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
+| Bundled Demo ESM runtime | ✅ Current Canonical writes migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. CRM create/convert, Purchasing create/receive/post, Sales enquiry/quotation/order actions, Sales Draft confirmation and Demo Setup all use TypeScript commands instead of browser business SQL mirrors — including the base demo seed itself (`seedDemo()`, TASK-034), which now runs directly on first boot instead of a hand-written `erp-system-seed.sql` mirror. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, invoices and idempotent confirmation) | ✅ Canonical Demo/API data and writes | Four Canonical routes read bounded formal customer/order/line/invoice resources in both modes. Confirmation executes the shared transactional command with a real warehouse, inventory movements, invoice and balanced GL; unsupported prototype actions are not exposed. |
 | Sales enquiry and quotation chain | ✅ Canonical Demo/API data and writes | Migration 0012 adds tenant-scoped enquiries, quotation headers and immutable quotation line tax snapshots. `enquiries`, `quotations`, `quotation` and `new-quotation` use bounded formal resources in five languages. The shared commands create enquiries/quotes, issue, accept and idempotently convert an accepted quote to an editable draft order without premature inventory, invoice or GL effects. Domain and authenticated HTTP tests cover status guards, rollback, tenant isolation, tax totals and idempotent replay. |
@@ -197,11 +197,20 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 
 ## Known design debt
 
-1. **Seed SQL duplication remains.** Browser PGlite schema and compatibility
-   migrations are now generated from the ordered Drizzle journal, so schema DDL is
-   no longer hand-copied. `src/data/seed.ts` vs `erp-system-seed.sql` is still
-   manually duplicated. Current Canonical browser writes use shared commands through
-   `web/src/erp-demo-runtime-impl.ts`; new business SQL must not be added to the adapter.
+1. ~~Seed SQL duplication~~ — **fixed (TASK-034, 2026-07-19).** Browser PGlite schema
+   and compatibility migrations are generated from the ordered Drizzle journal (schema
+   DDL is not hand-copied); the base seed itself now runs `src/data/seed.ts`'s
+   `seedDemo()` directly through `web/src/erp-demo-runtime-impl.ts`'s bundled runtime
+   — the same pattern every Canonical write already uses — instead of a hand-written
+   `erp-system-seed.sql` mirror (deleted). This also fixed a real, previously-silent
+   bug: the SQL mirror was missing all 8 `role_permission` rows `seed.ts` inserts, so
+   the browser demo's Viewer persona had zero read permissions in its own database.
+   Current Canonical browser writes use shared commands through
+   `web/src/erp-demo-runtime-impl.ts`; new business SQL must not be added to the
+   adapter. `erp-system-demo-txn.sql` and the other `erp-system-demo-*.sql` fixture
+   files remain hand-written SQL — they're either browser-only content with no Node
+   source, or (for `erp-system-demo-txn.sql`) intentionally kept as a literal SQL proof
+   of the transaction chain rather than re-run through the command layer at boot.
 2. **PGlite and Drizzle are now bundled locally by Vite** and no longer depend on
    jsDelivr for first load. The adapter keeps its 20 s timeout → static fallback.
    If real PGlite boot finishes *after* the

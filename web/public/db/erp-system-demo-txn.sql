@@ -8,7 +8,20 @@
 -- One DO block = one implicit transaction: any failure (e.g.
 -- insufficient stock) rolls the ENTIRE chain back.
 -- Expected result: net 110.00 + GST 9.90 = 119.90, stock 95/97.
+--
+-- Also creates the WH-SALES warehouse + opening stock this scenario needs
+-- (demo-only bonus fixture, not part of src/data/seed.ts's seedDemo() —
+-- TASK-034 moved this here from the now-deleted erp-system-seed.sql).
 -- ============================================================
+
+INSERT INTO warehouse (master_fn, company_fn, code, name) VALUES
+  ('M1', 'C-SG', 'WH-SALES', 'Sales Warehouse');
+
+INSERT INTO stock_level (master_fn, company_fn, product_id, warehouse_id, qty)
+SELECT 'M1', 'C-SG', p.id, w.id, 100
+FROM product p
+JOIN warehouse w ON w.master_fn = 'M1' AND w.company_fn = 'C-SG' AND w.code = 'WH-SALES'
+WHERE p.master_fn = 'M1' AND p.company_fn = 'C-SG' AND p.sku IN ('SG-WIDGET', 'SG-GADGET');
 
 DO $$
 DECLARE
