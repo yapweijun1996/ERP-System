@@ -530,18 +530,22 @@ SCREENS['crm-customer'] = async function(root, params){
     const s=customer360Copy();
     const addContactBtn=root.querySelector('[data-add-contact]');
     addContactBtn&&addContactBtn.addEventListener('click',()=>{
-      openModal(`<div class="modal-head">${ic('plus')}<h3>${esc(s('addContact'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-        <div class="modal-body"><div class="set-grid">
+      appModal({
+        icon: 'plus',
+        title: s('addContact'),
+        body: `<div class="set-grid">
           <div class="fld"><span>${esc(s('nameLabel'))} <span class="req">*</span></span><input id="ctName" placeholder="${esc(s('namePlaceholder'))}"></div>
           <div class="fld"><span>${esc(s('roleLabel'))} <span class="req">*</span></span><input id="ctRole" placeholder="${esc(s('rolePlaceholder'))}"></div>
           <div class="fld"><span>${esc(s('emailLabel'))}</span><input id="ctEmail" type="email" placeholder="${esc(s('optional'))}"></div>
           <div class="fld"><span>${esc(s('phoneLabel'))}</span><input id="ctPhone" placeholder="${esc(s('optional'))}"></div>
-        </div></div>
-        <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('addContact'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+        </div>`,
+        actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('addContact'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`,
+      });
       const saveBtn=$('#modalEl').querySelector('[data-save]');
       saveBtn.addEventListener('click',async()=>{
         const name=$('#ctName').value.trim(), role=$('#ctRole').value.trim();
-        if(!name||!role){ toast(s('nameRoleRequired'),'danger'); return; }
+        if(!requireField(name, s('nameRoleRequired'))) return;
+        if(!requireField(role, s('nameRoleRequired'))) return;
         saveBtn.disabled=true;
         try{
           await window.ErpSystemData.create('crm/contacts',{
@@ -560,16 +564,19 @@ SCREENS['crm-customer'] = async function(root, params){
 
     const logActivityBtn=root.querySelector('[data-log-activity]');
     logActivityBtn&&logActivityBtn.addEventListener('click',()=>{
-      openModal(`<div class="modal-head">${ic('comment')}<h3>${esc(s('logActivity'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-        <div class="modal-body"><div class="set-grid">
+      appModal({
+        icon: 'comment',
+        title: s('logActivity'),
+        body: `<div class="set-grid">
           <div class="fld"><span>${esc(s('type'))}</span><select id="acKind"><option value="note">${esc(s('note'))}</option><option value="call">${esc(s('call'))}</option><option value="email">${esc(s('email'))}</option></select></div>
           <div class="fld" style="grid-column:1/-1"><span>${esc(s('details'))} <span class="req">*</span></span><textarea id="acBody" rows="3" placeholder="${esc(s('whatHappened'))}"></textarea></div>
-        </div></div>
-        <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('logActivity'),{icon:'comment',cls:'primary',attrs:'data-save="1"'})}</div>`);
+        </div>`,
+        actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('logActivity'),{icon:'comment',cls:'primary',attrs:'data-save="1"'})}`,
+      });
       const saveBtn=$('#modalEl').querySelector('[data-save]');
       saveBtn.addEventListener('click',async()=>{
         const body=$('#acBody').value.trim();
-        if(!body){ toast(s('detailsRequired'),'danger'); return; }
+        if(!requireField(body, s('detailsRequired'))) return;
         saveBtn.disabled=true;
         try{
           await window.ErpSystemData.create('crm/activities',{

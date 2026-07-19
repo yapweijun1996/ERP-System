@@ -219,10 +219,13 @@ SCREENS['project-detail'] = function(root){
   </section></div>`;
 
   root.querySelector('[data-act="bill"]').addEventListener('click',()=>{
-    openModal(`<div class="modal-head">${ic('receipt')}<h3>Bill milestone — ${esc(d.no)}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><p style="color:var(--muted);font-size:13.5px">Raise a progress invoice for <b>Install &amp; commissioning</b> (${money0(145800)}). The milestone is 60% complete — bill the full amount on sign-off or a partial claim now.</p>
-        <div class="fld"><span>Amount to bill</span><input value="${money(145800)}" class="tnum"></div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Create invoice',{icon:'check',cls:'primary',attrs:'onclick="closeModal();toast(\'Progress invoice INV-26-0402 created\',\'ok\')"'})}</div>`);
+    appModal({
+      icon: 'receipt',
+      title: `Bill milestone — ${d.no}`,
+      body: `<p style="color:var(--muted);font-size:13.5px">Raise a progress invoice for <b>Install &amp; commissioning</b> (${money0(145800)}). The milestone is 60% complete — bill the full amount on sign-off or a partial claim now.</p>
+        <div class="fld"><span>Amount to bill</span><input value="${money(145800)}" class="tnum"></div>`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Create invoice',{icon:'check',cls:'primary',attrs:'onclick="closeModal();toast(\'Progress invoice INV-26-0402 created\',\'ok\')"'})}`,
+    });
   });
 };
 

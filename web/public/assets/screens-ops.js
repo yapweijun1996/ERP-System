@@ -252,15 +252,21 @@ SCREENS['po-approval'] = function(root){
   </section></div>`;
 
   root.querySelector('[data-act="approve"]').addEventListener('click',()=>{
-    openModal(`<div class="modal-head">${ic('checkc')}<h3>${esc(t('appr.approveq'))} ${esc(d.no)}?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><p style="color:var(--muted);font-size:13.5px">${esc(t('appr.modal.desc').replaceAll('{over}',money(overBudget)))}</p>
-      <div class="fld"><span>${esc(t('appr.note'))}</span><textarea placeholder="e.g. Approved — urgent line stoppage risk; variance accepted for Q2.">Approved — PCB shortage risk to SO-26-0418; budget variance accepted.</textarea></div></div>
-      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('appr.confirm'),{icon:'check',cls:'primary',attrs:'onclick="closeModal();toast(\'PO-26-0291 approved — routed to CFO\',\'ok\')"'})}</div>`);
+    appModal({
+      icon: 'checkc',
+      title: `${t('appr.approveq')} ${d.no}?`,
+      body: `<p style="color:var(--muted);font-size:13.5px">${esc(t('appr.modal.desc').replaceAll('{over}',money(overBudget)))}</p>
+      <div class="fld"><span>${esc(t('appr.note'))}</span><textarea placeholder="e.g. Approved — urgent line stoppage risk; variance accepted for Q2.">Approved — PCB shortage risk to SO-26-0418; budget variance accepted.</textarea></div>`,
+      actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('appr.confirm'),{icon:'check',cls:'primary',attrs:'onclick="closeModal();toast(\'PO-26-0291 approved — routed to CFO\',\'ok\')"'})}`,
+    });
   });
   root.querySelector('[data-act="reject"]').addEventListener('click',()=>{
-    openModal(`<div class="modal-head">${ic('xc')}<h3>${esc(t('appr.rejectq'))} ${esc(d.no)}?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="fld err"><span>${esc(t('appr.reason'))} <span class="req">*</span></span><textarea placeholder="Required — returned to buyer with this note."></textarea><span class="hint bad">${esc(t('appr.modal.reasonreq'))}</span></div></div>
-      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('appr.rejectreturn'),{icon:'x',cls:'danger-solid',attrs:'onclick="closeModal();toast(\'PO-26-0291 rejected — returned to R. Haddad\',\'danger\')"'})}</div>`);
+    appModal({
+      icon: 'xc',
+      title: `${t('appr.rejectq')} ${d.no}?`,
+      body: `<div class="fld err"><span>${esc(t('appr.reason'))} <span class="req">*</span></span><textarea placeholder="Required — returned to buyer with this note."></textarea><span class="hint bad">${esc(t('appr.modal.reasonreq'))}</span></div>`,
+      actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('appr.rejectreturn'),{icon:'x',cls:'danger-solid',attrs:'onclick="closeModal();toast(\'PO-26-0291 rejected — returned to R. Haddad\',\'danger\')"'})}`,
+    });
   });
 };
 
@@ -336,15 +342,16 @@ SCREENS['picking'] = function(root){
   /* ---- view / edit / add / delete a pick line ---- */
   function viewLine(idx){
     const l=pk.lines[idx]; if(!l)return; const isDone=l.picked>=l.qty;
-    openModal(`<div class="modal-head">${ic('box')}<h3>${esc(l.name)}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body">
-        <div class="field"><span class="k">Item code</span><span class="v mono">${esc(l.item)}</span></div>
+    appModal({
+      icon: 'box',
+      title: l.name,
+      body: `<div class="field"><span class="k">Item code</span><span class="v mono">${esc(l.item)}</span></div>
         <div class="field"><span class="k">Bin location</span><span class="v mono">${esc(l.bin)}</span></div>
         <div class="field"><span class="k">Quantity to pick</span><span class="v tnum">${l.qty} ${esc(l.uom)}</span></div>
         <div class="field"><span class="k">Picked so far</span><span class="v tnum">${l.picked} ${esc(l.uom)}</span></div>
-        <div class="field"><span class="k">Status</span><span class="v">${isDone?cap('Picked','ok'):l.picked>0?cap('Partial','warn'):cap('Open','accent')}</span></div>
-      </div>
-      <div class="modal-foot">${btn('Close',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Edit line',{icon:'edit',cls:'primary',attrs:`data-editfromview="${idx}"`})}</div>`);
+        <div class="field"><span class="k">Status</span><span class="v">${isDone?cap('Picked','ok'):l.picked>0?cap('Partial','warn'):cap('Open','accent')}</span></div>`,
+      actions: `${btn('Close',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Edit line',{icon:'edit',cls:'primary',attrs:`data-editfromview="${idx}"`})}`,
+    });
     $('#modalEl').querySelector('[data-editfromview]').addEventListener('click',()=>{ closeModal(); lineForm(idx); });
   }
 
@@ -353,8 +360,10 @@ SCREENS['picking'] = function(root){
     const l=edit?pk.lines[idx]:{bin:'',item:'',name:'',qty:1,picked:0,uom:'ea'};
     const uoms=['ea','m','kg','box','set','pr','L'];
     const itemOpts=(window.DB&&DB.items?DB.items:[]).map(it=>`<option value="${esc(it.sku)}" data-name="${esc(it.name)}" data-uom="${esc(it.uom)}" ${edit&&l.item===it.sku?'selected':''}>${esc(it.sku)} · ${esc(it.name)}</option>`).join('');
-    openModal(`<div class="modal-head">${ic(edit?'edit':'plus')}<h3>${edit?'Edit pick line':'Add pick line'}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="set-grid">
+    appModal({
+      icon: edit?'edit':'plus',
+      title: edit?'Edit pick line':'Add pick line',
+      body: `<div class="set-grid">
         <div class="fld" style="grid-column:1/-1"><span>Pick from item master</span><select id="plItem"><option value="">— Choose to auto-fill, or enter manually below —</option>${itemOpts}</select></div>
         <div class="fld"><span>Item name <span class="req">*</span></span><input id="plName" value="${edit?esc(l.name):''}" placeholder="e.g. Pneumatic Cylinder 32mm"></div>
         <div class="fld"><span>Item code</span><input id="plCode" value="${edit?esc(l.item):''}" placeholder="NW-0000"></div>
@@ -362,16 +371,17 @@ SCREENS['picking'] = function(root){
         <div class="fld"><span>UoM</span><select id="plUom">${uoms.map(u=>`<option ${(edit?l.uom:'ea')===u?'selected':''}>${u}</option>`).join('')}</select></div>
         <div class="fld"><span>Qty to pick <span class="req">*</span></span><input id="plQty" type="number" min="1" class="tnum" value="${edit?l.qty:1}"></div>
         <div class="fld"><span>Already picked</span><input id="plPicked" type="number" min="0" class="tnum" value="${edit?l.picked:0}"></div>
-      </div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?'Save changes':'Add line',{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      </div>`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?'Save changes':'Add line',{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}`,
+    });
     const m=$('#modalEl');
     m.querySelector('#plItem').addEventListener('change',e=>{ const o=e.target.selectedOptions[0]; if(!o||!o.value)return; m.querySelector('#plName').value=o.dataset.name||''; m.querySelector('#plCode').value=o.value; if(o.dataset.uom)m.querySelector('#plUom').value=o.dataset.uom; });
     m.querySelector('[data-save]').addEventListener('click',()=>{
       const name=m.querySelector('#plName').value.trim();
       const bin=m.querySelector('#plBin').value.trim();
       const qty=Math.max(1,+m.querySelector('#plQty').value||0);
-      if(!name){ toast('Item name is required','danger'); m.querySelector('#plName').focus(); return; }
-      if(!bin){ toast('Bin is required','danger'); m.querySelector('#plBin').focus(); return; }
+      if(!requireField(name, 'Item name is required', m.querySelector('#plName'))) return;
+      if(!requireField(bin, 'Bin is required', m.querySelector('#plBin'))) return;
       const picked=Math.min(qty,Math.max(0,+m.querySelector('#plPicked').value||0));
       const d={ bin, item:m.querySelector('#plCode').value.trim()||'—', name, qty, picked, uom:m.querySelector('#plUom').value };
       closeModal();
@@ -383,9 +393,12 @@ SCREENS['picking'] = function(root){
 
   function confirmDeleteLine(idx){
     const l=pk.lines[idx]; if(!l)return;
-    openModal(`<div class="modal-head">${ic('trash')}<h3>Delete pick line?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="risk danger">${ic('warn')}<div><b>Remove ${esc(l.name)} (${esc(l.item)})</b><small>${l.picked>0?`${l.picked} ${esc(l.uom)} already recorded as picked will be discarded. `:''}This line is removed from pick list ${esc(pk.no)}.</small></div></div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Delete line',{icon:'trash',cls:'danger-solid',attrs:'data-del="1"'})}</div>`);
+    appModal({
+      icon: 'trash',
+      title: 'Delete pick line?',
+      body: `<div class="risk danger">${ic('warn')}<div><b>Remove ${esc(l.name)} (${esc(l.item)})</b><small>${l.picked>0?`${l.picked} ${esc(l.uom)} already recorded as picked will be discarded. `:''}This line is removed from pick list ${esc(pk.no)}.</small></div></div>`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Delete line',{icon:'trash',cls:'danger-solid',attrs:'data-del="1"'})}`,
+    });
     $('#modalEl').querySelector('[data-del]').addEventListener('click',()=>{ closeModal(); pk.lines.splice(idx,1); toast('Pick line deleted','danger'); render(); });
   }
 

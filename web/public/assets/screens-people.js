@@ -69,9 +69,12 @@ SCREENS['leave-approval'] = function(root){
     $('#lvTable').querySelectorAll('.dt-r[data-row]').forEach(tr=>{ tr.classList.toggle('sel',tr.dataset.row===selected); tr.addEventListener('click',()=>{ selected=tr.dataset.row; render(); $('#lvContent').classList.remove('detail-collapsed'); }); });
     const ap=root.querySelector('[data-lv="approve"]'); if(ap)ap.addEventListener('click',()=>{ sel.status='Approved'; toast(`${sel.emp}’s leave approved`,'ok'); render(); });
     const rj=root.querySelector('[data-lv="reject"]'); if(rj)rj.addEventListener('click',()=>{
-      openModal(`<div class="modal-head">${ic('xc')}<h3>Reject leave — ${esc(sel.emp)}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-        <div class="modal-body"><div class="fld err"><span>Reason <span class="req">*</span></span><textarea placeholder="Shared with the employee and HR."></textarea><span class="hint bad">Required to reject.</span></div></div>
-        <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Reject',{icon:'x',cls:'danger-solid',attrs:`onclick="closeModal();rejectLeave('${sel.no}')"`})}</div>`);
+      appModal({
+        icon: 'xc',
+        title: `Reject leave — ${sel.emp}`,
+        body: `<div class="fld err"><span>Reason <span class="req">*</span></span><textarea placeholder="Shared with the employee and HR."></textarea><span class="hint bad">Required to reject.</span></div>`,
+        actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Reject',{icon:'x',cls:'danger-solid',attrs:`onclick="closeModal();rejectLeave('${sel.no}')"`})}`,
+      });
     });
   }
   window.rejectLeave=(no)=>{ const l=data.find(x=>x.no===no); if(l){l.status='Rejected';} toast('Leave rejected','danger'); render(); };
@@ -167,13 +170,16 @@ SCREENS['role-permission'] = async function(root){
     addBtn&&addBtn.addEventListener('click',()=>openAddRoleModal());
   }
   function openAddRoleModal(){
-    openModal(`<div class="modal-head">${ic('plus')}<h3>${esc(s('addRole'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="fld"><span>${esc(s('roleNameLabel'))} <span class="req">*</span></span><input id="rnName" placeholder="${esc(s('roleNamePlaceholder'))}"></div></div>
-      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('addRole'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+    appModal({
+      icon: 'plus',
+      title: s('addRole'),
+      body: `<div class="fld"><span>${esc(s('roleNameLabel'))} <span class="req">*</span></span><input id="rnName" placeholder="${esc(s('roleNamePlaceholder'))}"></div>`,
+      actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('addRole'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`,
+    });
     const saveBtn=$('#modalEl').querySelector('[data-save]');
     saveBtn.addEventListener('click',async()=>{
       const name=$('#rnName').value.trim();
-      if(!name){ toast(s('roleNameRequired'),'danger'); return; }
+      if(!requireField(name, s('roleNameRequired'))) return;
       saveBtn.disabled=true;
       try{
         await window.ErpSystemData.create('admin/roles',{name});
@@ -321,18 +327,21 @@ SCREENS['master-control'] = function(root){
 
   function masterForm(m){
     const edit=!!m;
-    openModal(`<div class="modal-head">${ic(edit?'edit':'plus')}<h3>${edit?'Edit master account':'New master account'}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="set-grid">
+    appModal({
+      icon: edit?'edit':'plus',
+      title: edit?'Edit master account':'New master account',
+      body: `<div class="set-grid">
         ${fld('Account name <span class="req">*</span>',`<input id="mfName" value="${edit?esc(m.name):''}" placeholder="e.g. Northwind Group">`)}
         ${fld('Owner',`<input id="mfOwner" value="${edit&&m.owner!=='—'?esc(m.owner):''}" placeholder="Primary contact">`)}
         ${fld('Plan',selBox('mfPlan',PLANS,edit?m.plan:'Business'))}
         ${fld('Region',`<input id="mfRegion" value="${edit?esc(m.region):''}" placeholder="e.g. APAC · Singapore">`)}
         ${fld('Status',selBox('mfStatus',['Active','Suspended'],edit?m.status:'Active'))}
-      </div>${edit?'':`<p style="margin:12px 2px 0;font-size:11.5px;color:var(--muted)">A master account ID (MST-####) is assigned automatically. The plan sets the default module count.</p>`}</div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?'Save changes':'Create account',{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      </div>${edit?'':`<p style="margin:12px 2px 0;font-size:11.5px;color:var(--muted)">A master account ID (MST-####) is assigned automatically. The plan sets the default module count.</p>`}`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?'Save changes':'Create account',{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}`,
+    });
     $('#modalEl').querySelector('[data-save]').addEventListener('click',async()=>{
       const name=$('#mfName').value.trim();
-      if(!name){ toast('Account name is required','danger'); $('#mfName').focus(); return; }
+      if(!requireField(name, 'Account name is required', '#mfName')) return;
       const d={name,owner:$('#mfOwner').value.trim()||'—',plan:$('#mfPlan').value,region:$('#mfRegion').value.trim(),status:$('#mfStatus').value};
       closeModal();
       if(edit){ await MasterStore.updateMaster(m.id,d); toast('Master account updated','ok'); await refresh(m.id); }
@@ -341,41 +350,50 @@ SCREENS['master-control'] = function(root){
   }
 
   function confirmDeleteMaster(m){
-    openModal(`<div class="modal-head">${ic('trash')}<h3>Delete ${esc(m.name)}?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="risk danger">${ic('warn')}<div><b>This permanently removes the master account</b><small>${m.companies.length} compan${m.companies.length===1?'y':'ies'} and ${m.users.length} user${m.users.length===1?'':'s'} will be deleted with it.</small></div></div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Delete account',{icon:'trash',cls:'danger-solid',attrs:'data-del="1"'})}</div>`);
+    appModal({
+      icon: 'trash',
+      title: `Delete ${m.name}?`,
+      body: `<div class="risk danger">${ic('warn')}<div><b>This permanently removes the master account</b><small>${m.companies.length} compan${m.companies.length===1?'y':'ies'} and ${m.users.length} user${m.users.length===1?'':'s'} will be deleted with it.</small></div></div>`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Delete account',{icon:'trash',cls:'danger-solid',attrs:'data-del="1"'})}`,
+    });
     $('#modalEl').querySelector('[data-del]').addEventListener('click',async()=>{ closeModal(); await MasterStore.deleteMaster(m.id); toast('Master account deleted','danger'); await refresh(); });
   }
 
   function companyForm(masterId){
-    openModal(`<div class="modal-head">${ic('plus')}<h3>Add company</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="set-grid">
+    appModal({
+      icon: 'plus',
+      title: 'Add company',
+      body: `<div class="set-grid">
         ${fld('Company name <span class="req">*</span>',`<input id="cfName" placeholder="Legal entity name">`)}
         ${fld('Base currency',selBox('cfCur',CURS,'USD'))}
         ${fld('Branches',`<input id="cfBranch" type="number" min="1" value="1">`)}
         ${fld('Status',selBox('cfStatus',['Active','Suspended'],'Active'))}
-      </div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Add company',{icon:'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      </div>`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Add company',{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`,
+    });
     $('#modalEl').querySelector('[data-save]').addEventListener('click',async()=>{
       const name=$('#cfName').value.trim();
-      if(!name){ toast('Company name is required','danger'); $('#cfName').focus(); return; }
+      if(!requireField(name, 'Company name is required', '#cfName')) return;
       const d={name,cur:$('#cfCur').value,branches:Math.max(1,parseInt($('#cfBranch').value,10)||1),status:$('#cfStatus').value};
       closeModal(); await MasterStore.addCompany(masterId,d); toast('Company added','ok'); await refresh(masterId);
     });
   }
 
   function userForm(masterId){
-    openModal(`<div class="modal-head">${ic('plus')}<h3>Invite user</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="set-grid">
+    appModal({
+      icon: 'plus',
+      title: 'Invite user',
+      body: `<div class="set-grid">
         ${fld('Full name <span class="req">*</span>',`<input id="ufName" placeholder="e.g. Jordan Lee">`)}
         ${fld('Email',`<input id="ufEmail" type="email" placeholder="name@company.com">`)}
         ${fld('Role',selBox('ufRole',ROLES,'Sales User'))}
         ${fld('Company access',`<input id="ufAccess" value="All companies">`)}
-      </div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Send invite',{icon:'check',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      </div>`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Send invite',{icon:'check',cls:'primary',attrs:'data-save="1"'})}`,
+    });
     $('#modalEl').querySelector('[data-save]').addEventListener('click',async()=>{
       const name=$('#ufName').value.trim();
-      if(!name){ toast('Name is required','danger'); $('#ufName').focus(); return; }
+      if(!requireField(name, 'Name is required', '#ufName')) return;
       const d={name,email:$('#ufEmail').value.trim(),role:$('#ufRole').value,access:$('#ufAccess').value.trim()||'All companies'};
       closeModal(); await MasterStore.addUser(masterId,d); toast('Invitation sent','ok'); await refresh(masterId);
     });

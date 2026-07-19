@@ -1144,16 +1144,19 @@ function openFySetup(fyArg,isNew){
   const monthOpts=MONTHS.map((mn,i)=>`<option value="${i+1}" ${f.startMonth===i+1?'selected':''}>${mn}</option>`).join('');
   const schemeOpts=schemes.map(s=>`<option ${s===f.scheme?'selected':''}>${s}</option>`).join('');
   const periodOpts=fiscalPeriods(f).map(p=>`<option value="${p.i}" ${f.currentPeriod===p.i?'selected':''}>${p.code} · ${p.label}</option>`).join('');
-  openModal(`<div class="modal-head">${ic('calendar')}<h3>${isNew?'New fiscal year':'Set up '+esc(f.fyLabel)}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-    <div class="modal-body"><div class="set-grid">
+  appModal({
+    icon: 'calendar',
+    title: isNew?'New fiscal year':'Set up '+f.fyLabel,
+    body: `<div class="set-grid">
       <div class="fld"><span>Fiscal year label</span><input id="fyLabel" value="${esc(f.fyLabel)}"></div>
       <div class="fld"><span>Starting year</span><input id="fyYear" type="number" value="${f.startYear}"></div>
       <div class="fld"><span>First month</span><select id="fyMonth">${monthOpts}</select></div>
       <div class="fld"><span>Period scheme</span><select id="fyScheme">${schemeOpts}</select></div>
       <div class="fld" style="grid-column:1/-1"><span>Current open period</span><select id="fyCurrent">${periodOpts}</select></div>
     </div>
-    <p style="margin:12px 2px 0;font-size:11.5px;color:var(--muted)">Periods before the open period are <b>Closed</b>; later periods are <b>Future</b>. Posting is blocked outside the open period.</p></div>
-    <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(isNew?'Create fiscal year':'Save fiscal year',{icon:'save',cls:'primary',attrs:'data-save="1"'})}</div>`);
+    <p style="margin:12px 2px 0;font-size:11.5px;color:var(--muted)">Periods before the open period are <b>Closed</b>; later periods are <b>Future</b>. Posting is blocked outside the open period.</p>`,
+    actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(isNew?'Create fiscal year':'Save fiscal year',{icon:'save',cls:'primary',attrs:'data-save="1"'})}`,
+  });
   const rebuildCurrent=()=>{
     const scheme=$('#fyScheme').value, count=scheme.startsWith('Quarterly')?4:12;
     const tmp={ fyLabel:$('#fyLabel').value, startYear:+$('#fyYear').value||f.startYear, startMonth:+$('#fyMonth').value, periodCount:count, currentPeriod:0, selectedPeriod:0 };

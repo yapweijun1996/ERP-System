@@ -240,8 +240,11 @@ SCREENS['supplier-invoice'] = function(root){
     </div>
   </div></div></section></div>`;
   root.querySelector('[data-act="post"]').addEventListener('click',()=>{
-    openModal(`<div class="modal-head">${ic('book')}<h3>Approve variance & post ${esc(d.no)}?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="risk warn" style="margin:0 0 10px">${ic('warn')}<div><b>Price variance of ${money(varTotal)} will be accepted.</b><small>Posting credits Accounts Payable ${money(total)} and is eligible for the next payment run via a payment voucher.</small></div></div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Post & schedule payment',{icon:'check',cls:'primary',attrs:'onclick="closeModal();navigate(\'payment-voucher\');setTimeout(()=>toast(\'SI-26-0615 posted to AP · added to payment voucher\',\'ok\'),200)"'})}</div>`);
+    appModal({
+      icon: 'book',
+      title: `Approve variance & post ${d.no}?`,
+      body: `<div class="risk warn" style="margin:0 0 10px">${ic('warn')}<div><b>Price variance of ${money(varTotal)} will be accepted.</b><small>Posting credits Accounts Payable ${money(total)} and is eligible for the next payment run via a payment voucher.</small></div></div>`,
+      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Post & schedule payment',{icon:'check',cls:'primary',attrs:'onclick="closeModal();navigate(\'payment-voucher\');setTimeout(()=>toast(\'SI-26-0615 posted to AP · added to payment voucher\',\'ok\'),200)"'})}`,
+    });
   });
 };

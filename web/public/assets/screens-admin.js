@@ -248,18 +248,21 @@ SCREENS['user-mgmt'] = async function(root){
     inviteBtn&&inviteBtn.addEventListener('click',()=>openInviteModal());
   }
   function openInviteModal(){
-    openModal(`<div class="modal-head">${ic('people')}<h3>${esc(t('usr.invite'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="set-grid">
+    appModal({
+      icon: 'people',
+      title: t('usr.invite'),
+      body: `<div class="set-grid">
         <div class="fld"><span>${esc(s('fieldEmail'))} <span class="req">*</span></span><input id="uiEmail" type="email" placeholder="${esc(s('emailPlaceholder'))}"></div>
         <div class="fld"><span>${esc(s('fieldRole'))} <span class="req">*</span></span><select id="uiRole">${usersPage.users.length?'':''}${roleOptions()}</select></div>
-      </div></div>
-      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('usr.m.send'),{icon:'send',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      </div>`,
+      actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('usr.m.send'),{icon:'send',cls:'primary',attrs:'data-save="1"'})}`,
+    });
     const saveBtn=$('#modalEl').querySelector('[data-save]');
     saveBtn.addEventListener('click',async()=>{
       const email=$('#uiEmail').value.trim();
       const roleId=Number($('#uiRole').value);
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast(s('emailRequired'),'danger'); return; }
-      if(!roleId){ toast(s('roleRequired'),'danger'); return; }
+      if(!requireField(roleId, s('roleRequired'))) return;
       saveBtn.disabled=true;
       try{
         await window.ErpSystemData.create('admin/invitations',{email,roleId});

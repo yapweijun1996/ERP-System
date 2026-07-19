@@ -21,3 +21,23 @@ async function listPage(resource, query){
   }
   return { data:response.data, nextCursor:response.meta&&response.meta.nextCursor||null };
 }
+
+/**
+ * Replaces the copy-pasted if(!x){toast('X is required','danger');el.focus();return}
+ * pattern scattered across form-modal save handlers (TASK-044). Returns true when
+ * value is truthy; otherwise shows the danger toast, focuses focusTarget (a '#id'
+ * selector resolved via the global $(), or an already-resolved element -- needed
+ * because some call sites focus within a modal-scoped querySelector rather than
+ * the document-global one) if given, and returns false so the caller can
+ * `if(!requireField(...)) return;`. Only fits presence checks -- format/pattern
+ * validation (e.g. an email regex) is a different kind of check and stays inline.
+ */
+function requireField(value, message, focusTarget){
+  if(value) return true;
+  toast(message,'danger');
+  if(focusTarget){
+    const el=typeof focusTarget==='string'?$(focusTarget):focusTarget;
+    if(el&&typeof el.focus==='function') el.focus();
+  }
+  return false;
+}

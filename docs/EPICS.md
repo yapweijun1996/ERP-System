@@ -452,20 +452,30 @@ not a speculative rewrite. (TASK-043, TASK-044, TASK-045)
 
 Acceptance criteria:
 
-- [ ] A new `web/public/assets/screens-common.js`, loaded once right after `i18n.js` and
+- [x] A new `web/public/assets/screens-common.js`, loaded once right after `i18n.js` and
       before every `screens-*.js` file, exports one `listPage(resource, query)` helper
       replacing `crmListPage`/`assetListPage`/`financeListPage`/`inventoryListPage`/
       `purchasingListPage`/`salesListPage`/`adminListPage` at all ~40 call sites, with
       zero behavior change (verified: every `adminListPage` call site already passed no
       query argument, so unifying the default to `{limit:100}` changes nothing live).
-- [ ] The 12 files hand-rolling `<div class="modal-head">...</div>` markup are migrated
-      onto the existing `appModal({icon,title,body,actions,width})` SSOT in `ui.js`.
-- [ ] A shared `requireField()`/`validateRequired()` helper in `screens-common.js`
-      replaces the copy-pasted `if(!x){toast(...);focus();return}` pattern, with each
-      call site's exact message/focus target preserved.
+- [x] The 12 files hand-rolling `<div class="modal-head">...</div>` markup are migrated
+      onto the existing `appModal({icon,title,body,actions,width})` SSOT in `ui.js`
+      (23 of 24 sites — one, the keyboard-shortcuts modal in `app.js`, uses a custom
+      non-`modal-foot` footer and was deliberately left hand-rolled rather than
+      force-fit). Titles that wrapped an interpolated value in `esc(...)` had that
+      `esc()` stripped, since `appModal()` escapes the title internally — leaving it in
+      would have double-escaped real data (verified live with a name containing
+      `&"<>`).
+- [x] A shared `requireField(value, message, focusTarget)` helper in `screens-common.js`
+      replaces 11 of 12 copy-pasted `if(!x){toast(...);focus();return}` sites (the 12th,
+      an email-format regex check, is a different kind of validation and stays inline),
+      with each call site's exact message text and focus target preserved — including
+      the 2 sites that focus via a modal-scoped `querySelector` rather than the global
+      `$()`, which the helper supports by accepting either a selector string or an
+      already-resolved element.
 - [ ] `salesNav`/`purNav`/`inventoryNav` and their section arrays fold into `MODULE_DEFS`,
       and the `moduleNav()` special-case in `app.js` that routes around them is deleted.
-- [ ] `npm run audit:screens` and a live desktop+375px browser check still pass with zero
+- [x] `npm run audit:screens` and a live desktop+375px browser check still pass with zero
       console errors after each mechanical change.
 
 ## EPIC-018 — Super-Admin Module Access Control

@@ -469,8 +469,10 @@ SCREENS['item-master'] = async function(root){
   function itemForm(it){
     const edit=!!it;
     const sku=edit?it.sku:nextSku();
-    openModal(`<div class="modal-head">${ic(edit?'edit':'plus')}<h3>${edit?esc(s('editItem')):esc(t('inv.newitem'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="set-grid">
+    appModal({
+      icon: edit?'edit':'plus',
+      title: edit?s('editItem'):t('inv.newitem'),
+      body: `<div class="set-grid">
         <div class="fld"><span>${esc(s('itemNameLabel'))} <span class="req">*</span></span><input id="ifName" value="${edit?esc(it.name):''}" placeholder="${esc(s('itemNamePlaceholder'))}"></div>
         <div class="fld"><span>${esc(s('fieldSku'))}</span><input value="${esc(sku)}" readonly><span class="locked">${ic('lock')} ${esc(s('systemNumbered'))}</span></div>
         <div class="fld"><span>${esc(t('inv.category'))}</span><select id="ifCat">${CATS.map(c=>`<option value="${esc(c)}" ${edit&&it.cat===c?'selected':''}>${esc(s(CAT_KEYS[c]))}</option>`).join('')}</select></div>
@@ -479,12 +481,13 @@ SCREENS['item-master'] = async function(root){
         <div class="fld"><span>${esc(s('fieldReorderQty'))}</span><input id="ifRoq" type="number" min="0" class="tnum" value="${edit?it.roq:150}"></div>
         <div class="fld"><span>${esc(s('colUnitCost'))} (USD)</span><input id="ifCost" type="number" min="0" step="0.01" class="tnum" value="${edit?it.cost:0}"></div>
         ${edit?'':`<div class="fld"><span>${esc(s('openingQty'))}</span><input value="0" readonly><span class="locked">${ic('lock')} ${esc(s('useStockAdjustment'))}</span></div>`}
-      </div></div>
-      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?s('saveChanges'):s('createItem'),{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      </div>`,
+      actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?s('saveChanges'):s('createItem'),{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}`,
+    });
     const saveBtn=$('#modalEl').querySelector('[data-save]');
     saveBtn.addEventListener('click',async()=>{
       const name=$('#ifName').value.trim();
-      if(!name){ toast(s('itemNameRequired'),'danger'); $('#ifName').focus(); return; }
+      if(!requireField(name, s('itemNameRequired'), '#ifName')) return;
       const d={ name, category:$('#ifCat').value, uom:$('#ifUom').value,
         reorderPoint:Math.max(0,+$('#ifReorder').value||0), reorderQty:Math.max(0,+$('#ifRoq').value||0),
         standardCost:Math.max(0,+$('#ifCost').value||0) };
@@ -509,9 +512,12 @@ SCREENS['item-master'] = async function(root){
   }
 
   function confirmDelete(it){
-    openModal(`<div class="modal-head">${ic('trash')}<h3>${esc(s('deleteTitle').replace('{name}',it.name))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="risk danger">${ic('warn')}<div><b>${esc(s('deleteNotSupported'))}</b><small>${esc(s('deleteBody').replace('{sku}',it.sku))}</small></div></div></div>
-      <div class="modal-foot">${btn(t('common.close'),{cls:'primary',attrs:'onclick="closeModal()"'})}</div>`);
+    appModal({
+      icon: 'trash',
+      title: s('deleteTitle').replace('{name}',it.name),
+      body: `<div class="risk danger">${ic('warn')}<div><b>${esc(s('deleteNotSupported'))}</b><small>${esc(s('deleteBody').replace('{sku}',it.sku))}</small></div></div>`,
+      actions: `${btn(t('common.close'),{cls:'primary',attrs:'onclick="closeModal()"'})}`,
+    });
   }
 
   function render(){

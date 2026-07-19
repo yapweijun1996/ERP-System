@@ -171,13 +171,14 @@ SCREENS['new-stock-adjustment'] = async function(root){
     const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('stock-movement'));
     const post=$('#wPost'); post&&post.addEventListener('click',()=>{
       const t=totals();
-      openModal(`<div class="modal-head">${ic('adjust')}<h3>Post stock adjustment?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-        <div class="modal-body">
-          <p style="color:var(--muted);font-size:13.5px;margin:0 0 12px">Adjust <b>${t.lines}</b> item${t.lines===1?'':'s'} in <b>${esc(warehouseName())}</b>. Stock balances update immediately and a variance posting hits the GL.</p>
+      appModal({
+        icon: 'adjust',
+        title: 'Post stock adjustment?',
+        body: `<p style="color:var(--muted);font-size:13.5px;margin:0 0 12px">Adjust <b>${t.lines}</b> item${t.lines===1?'':'s'} in <b>${esc(warehouseName())}</b>. Stock balances update immediately and a variance posting hits the GL.</p>
           <div class="sumrow"><span class="sk2">Units up / down</span><span class="sv tnum"><span style="color:var(--ok)">+${num(t.upQty)}</span> / <span style="color:var(--danger)">−${num(t.downQty)}</span></span></div>
-          <div class="sumrow total"><span class="sk2">Net value impact</span><span class="sv tnum" style="color:${t.value>0?'var(--ok)':t.value<0?'var(--danger)':'inherit'}">${t.value===0?money(0):sd(t.value)}</span></div>
-        </div>
-        <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Confirm & post',{icon:'check',cls:'primary',attrs:'onclick="closeModal();window.__saPost&&window.__saPost()"'})}</div>`);
+          <div class="sumrow total"><span class="sk2">Net value impact</span><span class="sv tnum" style="color:${t.value>0?'var(--ok)':t.value<0?'var(--danger)':'inherit'}">${t.value===0?money(0):sd(t.value)}</span></div>`,
+        actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Confirm & post',{icon:'check',cls:'primary',attrs:'onclick="closeModal();window.__saPost&&window.__saPost()"'})}`,
+      });
       window.__saPost=async()=>{
         const docNo='SA-'+Date.now().toString(36).toUpperCase();
         try{

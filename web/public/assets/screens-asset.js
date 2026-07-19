@@ -259,8 +259,10 @@ function nextAssetNo(){
 function assetForm(s){
   const assetNo=nextAssetNo();
   const today=new Date().toISOString().slice(0,10);
-  openModal(`<div class="modal-head">${ic('plus')}<h3>${esc(t('fa.new'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-    <div class="modal-body"><div class="set-grid">
+  appModal({
+    icon: 'plus',
+    title: t('fa.new'),
+    body: `<div class="set-grid">
       <div class="fld"><span>${esc(s('fieldName'))} <span class="req">*</span></span><input id="afName" placeholder="${esc(s('namePlaceholder'))}"></div>
       <div class="fld"><span>${esc(s('fieldAssetNo'))}</span><input value="${esc(assetNo)}" readonly><span class="locked">${ic('lock')} ${esc(s('systemNumbered'))}</span></div>
       <div class="fld"><span>${esc(s('category'))}</span><select id="afCat">${ASSET_CATEGORIES.map(c=>`<option value="${esc(c)}">${esc(s(ASSET_CATEGORY_KEY[c]))}</option>`).join('')}</select></div>
@@ -269,12 +271,13 @@ function assetForm(s){
       <div class="fld"><span>${esc(s('fieldUsefulLife'))}</span><input id="afLife" type="number" min="1" class="tnum" value="5"></div>
       <div class="fld"><span>${esc(s('fieldCost'))} (USD)</span><input id="afCost" type="number" min="0" step="0.01" class="tnum" value="0"></div>
       <div class="fld"><span>${esc(s('fieldResidualValue'))} (USD)</span><input id="afResidual" type="number" min="0" step="0.01" class="tnum" value="0"></div>
-    </div></div>
-    <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('createAsset'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+    </div>`,
+    actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('createAsset'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`,
+  });
   const saveBtn=$('#modalEl').querySelector('[data-save]');
   saveBtn.addEventListener('click',async()=>{
     const name=$('#afName').value.trim();
-    if(!name){ toast(s('nameRequired'),'danger'); $('#afName').focus(); return; }
+    if(!requireField(name, s('nameRequired'), '#afName')) return;
     const payload={
       assetNo, name, category:$('#afCat').value, location:$('#afLoc').value.trim()||null,
       acquisitionDate:$('#afDate').value, usefulLifeYears:Math.max(1,+$('#afLife').value||1),

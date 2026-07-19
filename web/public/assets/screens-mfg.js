@@ -199,9 +199,12 @@ SCREENS['work-order'] = function(root){
   </section></div>`;
 
   root.querySelector('[data-act="finish"]').addEventListener('click',()=>{
-    openModal(`<div class="modal-head">${ic('warn')}<h3>Cannot complete ${esc(d.no)}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><p style="color:var(--muted);font-size:13.5px">This work order has <b>1 material short</b> (Control Module PCB v3, −15 ea) and 2 open operations. Complete &amp; FG receipt is blocked until materials are issued and QC passes.</p></div>
-      <div class="modal-foot">${btn('Close',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Go to inbound PO',{icon:'flow',cls:'primary',attrs:'onclick="closeModal();navigate(\'po-approval\')"'})}</div>`);
+    appModal({
+      icon: 'warn',
+      title: `Cannot complete ${d.no}`,
+      body: `<p style="color:var(--muted);font-size:13.5px">This work order has <b>1 material short</b> (Control Module PCB v3, −15 ea) and 2 open operations. Complete &amp; FG receipt is blocked until materials are issued and QC passes.</p>`,
+      actions: `${btn('Close',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Go to inbound PO',{icon:'flow',cls:'primary',attrs:'onclick="closeModal();navigate(\'po-approval\')"'})}`,
+    });
   });
 };
 

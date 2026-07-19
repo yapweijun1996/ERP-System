@@ -153,14 +153,15 @@ SCREENS['new-journal-entry'] = function(root){
     const draft=$('#wDraft'); draft&&draft.addEventListener('click',()=>toast('Journal saved as draft','info'));
     const post=$('#wPost'); post&&post.addEventListener('click',()=>{
       const t=totals();
-      openModal(`<div class="modal-head">${ic('book')}<h3>Post journal to GL?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-        <div class="modal-body">
-          <div class="risk warn" style="margin:0 0 12px">${ic('warn')}<div><b>This action is irreversible.</b><small>Posting writes this entry to the ledger for period ${esc(S.period)}. Corrections require a reversing entry.</small></div></div>
+      appModal({
+        icon: 'book',
+        title: 'Post journal to GL?',
+        body: `<div class="risk warn" style="margin:0 0 12px">${ic('warn')}<div><b>This action is irreversible.</b><small>Posting writes this entry to the ledger for period ${esc(S.period)}. Corrections require a reversing entry.</small></div></div>
           <div class="sumrow"><span class="sk2">Total debit</span><span class="sv tnum">${money(t.dr)}</span></div>
           <div class="sumrow"><span class="sk2">Total credit</span><span class="sv tnum">${money(t.cr)}</span></div>
-          <div class="sumrow total"><span class="sk2">Lines</span><span class="sv tnum">${S.lines.filter(l=>l.acct).length}</span></div>
-        </div>
-        <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Confirm & post',{icon:'check',cls:'primary',attrs:'onclick="closeModal();window.__jePosted&&window.__jePosted()"'})}</div>`);
+          <div class="sumrow total"><span class="sk2">Lines</span><span class="sv tnum">${S.lines.filter(l=>l.acct).length}</span></div>`,
+        actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Confirm & post',{icon:'check',cls:'primary',attrs:'onclick="closeModal();window.__jePosted&&window.__jePosted()"'})}`,
+      });
       window.__jePosted=()=>{ navigate('gl'); setTimeout(()=>toast(`Journal JE-26-0613 posted to GL · ${money0(t.dr)} · period ${S.period}`,'ok'),180); };
     });
   }
