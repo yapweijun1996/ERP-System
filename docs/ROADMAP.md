@@ -140,9 +140,11 @@ Order of attack:
    wizard read real PGlite data, the kanban's "Convert to sales order" action calls
    the real adapter transaction, verified live end-to-end including the resulting
    order visible in Sales screens, stock decrementing, and GL staying balanced —
-   see docs/STATUS.md) are both done for the CORE chain. Customer-360 and any
-   sub-features beyond opportunity+activity have no schema and intentionally stay
-   on sample data, split the same way TASK-022/023 split Purchasing.
+   see docs/STATUS.md) are both done for the CORE chain. Customer-360 (EPIC-012 ✅,
+   TASK-031/032 done 2026-07-19) is now also Canonical — real contacts, open
+   orders/opportunities, activity timeline and Net-30 balance/overdue, closing the
+   gap this item originally called out. Opportunity-detail remains the one CRM
+   sub-screen with no schema and stays on sample data.
 3. HR-lite or Fixed Assets (whichever a real prospect asks for first).
 4. Relabel or hide remaining mock screens so the demo never oversells (TASK-018 ✅
    done 2026-07-17 — see Phase 3; this item now means keeping that guarantee as

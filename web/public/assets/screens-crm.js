@@ -316,50 +316,194 @@ SCREENS['opportunity'] = function(root){
 };
 
 /* ---------------- CUSTOMER 360 (master / profile) ---------------- */
-SCREENS['crm-customer'] = function(root){
-  const c=DB.cust0007;
-  const usedPct=Math.round(c.balance/c.limit*100);
-  root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:960px">
-    ${crumbs([DB.company.name,'CRM','Customers',{cur:c.code}])}
-    <div class="dochead">
-      <div class="dh-row1"><div><div class="dt">${ic('user')}${esc(c.name)} <span class="dnum">${esc(c.code)}</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(c.industry)} · customer since ${esc(c.since)} · owner ${esc(c.owner)}</div></div>
-        <div class="dactions">${cap(c.status,'ok')}${btn('New opportunity',{icon:'plus',cls:'soft',attrs:'onclick="navigate(\'opportunity\')"'})}${btn('New sales order',{icon:'bag',cls:'primary',attrs:'onclick="navigate(\'new-sales-order\')"'})}</div></div>
-    </div>
-    <div class="doclayout">
-      <div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>Account</h3></div><div class="panel-body">
-          <div class="fldrow c3">
-            <div class="fld"><span>Payment terms</span><input value="${esc(c.terms)}" readonly></div>
-            <div class="fld"><span>Credit limit</span><input value="${money(c.limit)}" readonly></div>
-            <div class="fld"><span>Account owner</span><input value="${esc(c.owner)}" readonly></div>
-          </div>
-        </div></div>
-        <div class="panel"><div class="panel-h"><h3>Contacts</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${c.contacts.length}</span></div>
-          <div class="panel-body" style="padding:6px 0">${c.contacts.map(p=>`<div class="oprow"><span class="kc-av" style="background:${p.clr};width:30px;height:30px;font-size:11px">${esc(p.av)}</span><div class="opmain"><b>${esc(p.name)}</b><small>${esc(p.role)}</small></div>${btn('Email',{icon:'send',cls:'soft'})}</div>`).join('')}</div>
-        </div>
-        <div class="panel"><div class="panel-h"><h3>Open orders</h3></div><div class="panel-body">${relatedDocs(c.openOrders)}</div></div>
-        <div class="panel"><div class="panel-h"><h3>Open opportunities</h3></div><div class="panel-body">${relatedDocs(c.opps)}</div></div>
-        <div class="panel"><div class="panel-h"><h3>Activity</h3></div><div class="panel-body">${auditTrail(c.activities)}</div></div>
+function crmDateValue(value){
+  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
+  const text=String(value==null?'':value);
+  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
+  if(match) return match[0];
+  const parsed=new Date(value);
+  return Number.isNaN(parsed.getTime())?text:parsed.toISOString().slice(0,10);
+}
+function crmTitleCase(value){
+  return String(value||'').split(/[\s_-]+/).filter(Boolean)
+    .map(word=>word[0].toUpperCase()+word.slice(1)).join(' ')||'—';
+}
+
+/* Fetches the bounded resource set Customer-360 needs and joins/filters it
+   client-side by customerId — the demo adapter's list() ignores query filters
+   entirely (it only understands cursor/limit), so server-side filtering (added
+   for API mode in src/api/resources.ts) can't be relied on in both modes. */
+async function prepareCustomerDetail(customerId){
+  const pages=await Promise.all([
+    crmListPage('crm/customers'),
+    crmListPage('sales/credit-profiles'),
+    crmListPage('crm/contacts'),
+    crmListPage('sales/orders'),
+    crmListPage('crm/opportunities'),
+    crmListPage('sales/invoices'),
+    crmListPage('crm/activities'),
+  ]);
+  const [customers,creditProfiles,contacts,orders,opportunities,invoices,activities]=pages.map(p=>p.data);
+  const customer=customerId?customers.find(row=>row.id===customerId):customers[0];
+  if(!customer) throw new Error('No customer found for the active company.');
+
+  const creditProfile=creditProfiles.find(row=>row.customerId===customer.id)||null;
+  const custInvoices=invoices.filter(row=>row.customerId===customer.id&&row.status==='unpaid');
+  const asAt=new Date();
+  let balance=0, overdue=0;
+  custInvoices.forEach(row=>{
+    const amount=crmNumber(row.totalAmount);
+    balance+=amount;
+    const due=new Date(`${crmDateValue(row.invoiceDate)}T00:00:00`);
+    due.setDate(due.getDate()+30);
+    if(asAt.getTime()>due.getTime()) overdue+=amount;
+  });
+
+  return {
+    customer,
+    creditProfile,
+    contacts:contacts.filter(row=>row.customerId===customer.id),
+    orders:orders.filter(row=>row.customerId===customer.id&&row.status!=='cancelled'),
+    opportunities:opportunities.filter(row=>
+      row.customerId===customer.id&&row.stage!=='won'&&row.stage!=='lost'),
+    activities:activities.filter(row=>row.customerId===customer.id)
+      .sort((a,b)=>new Date(b.occurredAt)-new Date(a.occurredAt)),
+    balance, overdue,
+  };
+}
+
+SCREENS['crm-customer'] = async function(root, params){
+  const requestedId=params&&params.customerId?Number(params.customerId):null;
+  let detail=await prepareCustomerDetail(requestedId);
+
+  function render(){
+    const c=detail.customer;
+    const limit=detail.creditProfile?crmNumber(detail.creditProfile.creditLimit):0;
+    const usedPct=limit>0?Math.round(detail.balance/limit*100):0;
+    const ownerLabel=c.ownerUserId?((DB.user&&DB.user.name)||'Unassigned'):'Unassigned';
+    const since=crmDateValue(c.createdAt);
+    const openOrders=detail.orders.map(row=>({
+      no:row.docNo,label:'Sales order',
+      meta:`${crmDateValue(row.orderDate)} · ${money(crmNumber(row.totalAmount))}`,
+      status:crmTitleCase(row.status),
+    }));
+    const openOpps=detail.opportunities.map(row=>({
+      no:row.docNo,label:row.title,
+      meta:`${money0(crmNumber(row.value))} · ${crmNumber(row.probability)}%`,
+      status:crmTitleCase(row.stage),
+    }));
+    const activityEvents=detail.activities.map(row=>({
+      kind:'sys',when:crmDateValue(row.occurredAt),what:esc(row.body),
+      who:(DB.user&&DB.user.name)||'—',
+    }));
+
+    root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:960px">
+      ${crumbs([DB.company.name,'CRM','Customers',{cur:c.code}])}
+      <div class="dochead">
+        <div class="dh-row1"><div><div class="dt">${ic('user')}${esc(c.name)} <span class="dnum">${esc(c.code)}</span></div>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(c.industry||'—')} · customer since ${esc(since)} · owner ${esc(ownerLabel)}</div></div>
+          <div class="dactions">${cap('Active','ok')}${btn('New opportunity',{icon:'plus',cls:'soft',attrs:'onclick="navigate(\'new-opportunity\')"'})}${btn('New sales order',{icon:'bag',cls:'primary',attrs:'onclick="navigate(\'sales-orders\')"'})}</div></div>
       </div>
-      <aside class="summary">
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">Receivables</div>
-          <div class="sumrow"><span class="sk2">Balance</span><span class="sv tnum">${money(c.balance)}</span></div>
-          <div class="sumrow"><span class="sk2">Overdue</span><span class="sv tnum" style="color:var(--danger)">${money(c.overdue)}</span></div>
-          <div class="sumrow total"><span class="sk2">Credit limit</span><span class="sv tnum">${money(c.limit)}</span></div>
-          <div class="indicator ${usedPct>90?'danger':usedPct>70?'warn':'ok'}" style="margin-top:12px">
-            <div class="ind-top">${ic('receipt')}<span>Limit used</span><span class="ind-r">${usedPct}%</span></div>
-            <div class="track"><i style="width:${Math.min(100,usedPct)}%"></i></div>
-            <small>${money(c.balance)} of ${money(c.limit)} · ${money(c.overdue)} overdue.</small>
+      <div class="doclayout">
+        <div class="docmain">
+          <div class="panel"><div class="panel-h"><h3>Account</h3></div><div class="panel-body">
+            <div class="fldrow c3">
+              <div class="fld"><span>Payment terms</span><input value="Net 30" readonly></div>
+              <div class="fld"><span>Credit limit</span><input value="${detail.creditProfile?money(limit):'Not set'}" readonly></div>
+              <div class="fld"><span>Account owner</span><input value="${esc(ownerLabel)}" readonly></div>
+            </div>
+          </div></div>
+          <div class="panel"><div class="panel-h"><h3>Contacts</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${detail.contacts.length}</span>${btn('Add contact',{icon:'plus',cls:'soft',sm:true,attrs:'data-add-contact="1"'})}</div>
+            <div class="panel-body" style="padding:6px 0">${detail.contacts.length?detail.contacts.map(p=>{
+              const initials=(p.name||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
+              return `<div class="oprow"><span class="kc-av" style="background:#0a84ff;width:30px;height:30px;font-size:11px">${esc(initials)}</span><div class="opmain"><b>${esc(p.name)}</b><small>${esc(p.role)}${p.email?' · '+esc(p.email):''}</small></div></div>`;
+            }).join(''):`<div style="color:var(--muted);font-size:13px;padding:8px 0">No contacts yet.</div>`}</div>
           </div>
+          <div class="panel"><div class="panel-h"><h3>Open orders</h3></div><div class="panel-body">${openOrders.length?relatedDocs(openOrders):`<div style="color:var(--muted);font-size:13px;padding:8px 0">No open orders.</div>`}</div></div>
+          <div class="panel"><div class="panel-h"><h3>Open opportunities</h3></div><div class="panel-body">${openOpps.length?relatedDocs(openOpps):`<div style="color:var(--muted);font-size:13px;padding:8px 0">No open opportunities.</div>`}</div></div>
+          <div class="panel"><div class="panel-h"><h3>Activity</h3><span style="margin-left:auto"></span>${btn('Log activity',{icon:'comment',cls:'soft',sm:true,attrs:'data-log-activity="1"'})}</div><div class="panel-body">${activityEvents.length?auditTrail(activityEvents):`<div style="color:var(--muted);font-size:13px;padding:8px 0">No activity logged yet.</div>`}</div></div>
         </div>
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">Lifetime</div>
-          <div class="sumrow"><span class="sk2">Open pipeline</span><span class="sv tnum">${money0(114420)}</span></div>
-          <div class="sumrow"><span class="sk2">Won (FY26)</span><span class="sv tnum">${money0(312800)}</span></div>
-          <div class="sumrow"><span class="sk2">Avg. terms</span><span class="sv">${esc(c.terms)}</span></div>
-        </div>
-      </aside>
-    </div>
-    <div style="height:60px"></div>
-  </div></div></section></div>`;
+        <aside class="summary">
+          <div class="sumcard"><div class="sectitle" style="margin-top:0">Receivables</div>
+            <div class="sumrow"><span class="sk2">Balance</span><span class="sv tnum">${money(detail.balance)}</span></div>
+            <div class="sumrow"><span class="sk2">Overdue</span><span class="sv tnum" style="color:var(--danger)">${money(detail.overdue)}</span></div>
+            <div class="sumrow total"><span class="sk2">Credit limit</span><span class="sv tnum">${detail.creditProfile?money(limit):'Not set'}</span></div>
+            ${detail.creditProfile?`<div class="indicator ${usedPct>90?'danger':usedPct>70?'warn':'ok'}" style="margin-top:12px">
+              <div class="ind-top">${ic('receipt')}<span>Limit used</span><span class="ind-r">${usedPct}%</span></div>
+              <div class="track"><i style="width:${Math.min(100,usedPct)}%"></i></div>
+              <small>${money(detail.balance)} of ${money(limit)} · ${money(detail.overdue)} overdue.</small>
+            </div>`:`<div style="color:var(--muted);font-size:12.5px;margin-top:12px">No credit profile on file yet.</div>`}
+          </div>
+        </aside>
+      </div>
+      <div style="height:60px"></div>
+    </div></div></section></div>`;
+    wire();
+  }
+
+  async function reload(){
+    detail=await prepareCustomerDetail(detail.customer.id);
+    render();
+  }
+
+  function wire(){
+    const addContactBtn=root.querySelector('[data-add-contact]');
+    addContactBtn&&addContactBtn.addEventListener('click',()=>{
+      openModal(`<div class="modal-head">${ic('plus')}<h3>Add contact</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
+        <div class="modal-body"><div class="set-grid">
+          <div class="fld"><span>Name <span class="req">*</span></span><input id="ctName" placeholder="e.g. Alex Chen"></div>
+          <div class="fld"><span>Role <span class="req">*</span></span><input id="ctRole" placeholder="e.g. Buyer"></div>
+          <div class="fld"><span>Email</span><input id="ctEmail" type="email" placeholder="optional"></div>
+          <div class="fld"><span>Phone</span><input id="ctPhone" placeholder="optional"></div>
+        </div></div>
+        <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Add contact',{icon:'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      const saveBtn=$('#modalEl').querySelector('[data-save]');
+      saveBtn.addEventListener('click',async()=>{
+        const name=$('#ctName').value.trim(), role=$('#ctRole').value.trim();
+        if(!name||!role){ toast('Name and role are required','danger'); return; }
+        saveBtn.disabled=true;
+        try{
+          await window.ErpSystemData.create('crm/contacts',{
+            customerId:detail.customer.id, name, role,
+            email:$('#ctEmail').value.trim()||null, phone:$('#ctPhone').value.trim()||null,
+          });
+          closeModal();
+          toast(`Contact ${name} added`,'ok');
+          await reload();
+        }catch(error){
+          saveBtn.disabled=false;
+          toast(error&&error.message?error.message:'Contact could not be saved','danger');
+        }
+      });
+    });
+
+    const logActivityBtn=root.querySelector('[data-log-activity]');
+    logActivityBtn&&logActivityBtn.addEventListener('click',()=>{
+      openModal(`<div class="modal-head">${ic('comment')}<h3>Log activity</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
+        <div class="modal-body"><div class="set-grid">
+          <div class="fld"><span>Type</span><select id="acKind"><option value="note">Note</option><option value="call">Call</option><option value="email">Email</option></select></div>
+          <div class="fld" style="grid-column:1/-1"><span>Details <span class="req">*</span></span><textarea id="acBody" rows="3" placeholder="What happened?"></textarea></div>
+        </div></div>
+        <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Log activity',{icon:'comment',cls:'primary',attrs:'data-save="1"'})}</div>`);
+      const saveBtn=$('#modalEl').querySelector('[data-save]');
+      saveBtn.addEventListener('click',async()=>{
+        const body=$('#acBody').value.trim();
+        if(!body){ toast('Details are required','danger'); return; }
+        saveBtn.disabled=true;
+        try{
+          await window.ErpSystemData.create('crm/activities',{
+            customerId:detail.customer.id, kind:$('#acKind').value, body,
+          });
+          closeModal();
+          toast('Activity logged','ok');
+          await reload();
+        }catch(error){
+          saveBtn.disabled=false;
+          toast(error&&error.message?error.message:'Activity could not be logged','danger');
+        }
+      });
+    });
+  }
+
+  render();
 };

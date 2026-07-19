@@ -260,7 +260,7 @@ Acceptance criteria:
       `Unclassified`/`0` category/reorder values.
 - [x] `item-master` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.
 
-## EPIC-012 — Customer 360
+## EPIC-012 — Customer 360 ✅
 
 Converts CRM's remaining mock screen: `crm-customer` (Customer-360) was explicitly out
 of scope for EPIC-010/TASK-027/028 and still reads a single hardcoded mock record
@@ -280,7 +280,7 @@ Acceptance criteria:
       and `crm/activities` are registered as create resources, alongside a
       `customerId` filter added to `sales/orders`, `sales/invoices` and
       `crm/opportunities` for customer-scoped reads.
-- [ ] `crm-customer` reads real customer/contacts/orders/opportunities/unpaid-invoices/
-      activity data instead of `DB.cust0007`; "Log activity" (and, if added, "Add
-      contact") call the real adapter actions.
-- [ ] `crm-customer` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.
+- [x] `crm-customer` reads real customer/contacts/orders/opportunities/unpaid-invoices/
+      activity data instead of `DB.cust0007`; "Log activity" and "Add contact" call
+      the real adapter actions.
+- [x] `crm-customer` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.

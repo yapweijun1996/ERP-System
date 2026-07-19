@@ -61,7 +61,15 @@ quality holds plus the registered → available → issued serial lifecycle.
 The production-write security foundation is now
 real: database sessions, CSRF, login limiting, server-side RBAC, active-company
 session switching, idempotency records, append-only API audit events, request
-IDs and production-only RLS policies are implemented and tested.
+IDs and production-only RLS policies are implemented and tested. **The last two
+mock-data screens in Inventory and CRM are now real (TASK-029…032, 2026-07-19)**:
+Item Master creates and edits real product master data (category, reorder point/
+qty) through the same audited Demo/API write path every other Canonical screen
+uses, and fixed the 3 already-Canonical Stock-on-Hand/Valuation/Movements screens'
+fake category/reorder display as a side effect; Customer-360 shows a customer's
+real contacts, open orders, open opportunities, an activity timeline, and
+Net-30-based balance/overdue, replacing a screen that previously showed one
+hardcoded fictional customer regardless of the active company.
 
 ## What actually works (verified in code)
 
@@ -94,7 +102,9 @@ IDs and production-only RLS policies are implemented and tested.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015 |
-| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **45 Canonical / 69 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
+| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **47 Canonical / 67 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
+| Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; `item-master` reads the same joined product/stock-level/location-balance view the already-Canonical Stock-on-Hand/Valuation/Movements screens use (which also stopped showing fake `Unclassified`/`0` category/reorder as a result) and writes through the audited idempotent Demo/API action dispatcher. New items start at 0 on hand — opening quantity is deliberately not an editable field, since that would bypass the stock movement ledger; use Stock Adjustment to receive initial stock. Delete shows an honest "not supported yet" explanation rather than a fake local deletion. |
+| Customer 360 (contacts, timeline, real receivables) | ✅ Canonical Demo/API data and writes | Migration 0020 adds nullable `industry`/`owner_user_id` to `customer`, a new tenant-scoped `contact` table, and a nullable `customer_id` on the previously-opportunity-only `activity` log (with a check that at least one target is set). `src/modules/crm/contact.ts` and `activity.ts` provide tenant-scoped create commands. `crm-customer` reads real contacts/open-orders/open-opportunities/activity and computes balance/overdue by reusing the AR-Aging report's existing Net-30 formula against unpaid invoices — no separate credit-exposure calculator was built. "Log activity" and "Add contact" call the real audited idempotent Demo/API actions. Opportunity-detail remains Preview (unchanged, per EPIC-010). |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
 | Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
 | Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 134 passing tests plus one gated PostgreSQL 16 integration proof. Includes persistent Session restart, CSRF, RBAC, encrypted account lifecycle, setup, atomic action idempotency/replay/expiry, inventory adjustment snapshot conflicts, transfer conservation, bin/lot/serial invariants, manufacturing create/release/issue/report/complete/MRP rules, quality inspection/NCR/lot-hold rules, enquiry/quotation/order/delivery status, cumulative RMA quantity limits, inventory restoration, cancelled-invoice rejection, balanced AR credit/debit replay, price-floor and discount-bound controls, enforced credit-limit/hold rollback, complete inventory, purchasing and CRM resource/transaction proofs, audit correlation and migration compatibility. |
@@ -116,7 +126,7 @@ IDs and production-only RLS policies are implemented and tested.
 ## Canonical and Preview route boundary
 
 114 routes are registered in the live `SCREENS` registry. `SCREEN_META` is now the source
-of truth for production maturity at route level: **45 routes are Canonical and 69 are
+of truth for production maturity at route level: **47 routes are Canonical and 67 are
 Preview**. This replaces the old module-wide mock allowlist, which could not accurately
 represent partially migrated Purchasing and CRM modules.
 
@@ -130,9 +140,23 @@ Canonical routes must not leak original prototype identities.
 **CRM is now a special case the same shape as Purchasing (TASK-027/028,
 2026-07-17): partially converted, not fully mock and not fully real.** The core
 opportunity → convert-to-sales-order chain (pipeline board, new-opportunity
-wizard, the kanban's convert action) reads and writes canonical Demo/API data. Opportunity
-detail and customer-360 have no schema and stay on the original `data-crm.js`
-mock, so those individual routes remain Preview.
+wizard, the kanban's convert action) reads and writes canonical Demo/API data.
+Customer-360 also became Canonical (TASK-031/032, 2026-07-19 — see below).
+Opportunity detail has no schema and stays on the original `data-crm.js` mock,
+so that individual route remains Preview.
+
+**Item Master and Customer-360 are now Canonical (TASK-029…032, 2026-07-19),**
+closing the last mock-data screens in Inventory and CRM. `product` gained
+`category`/`reorder_point`/`reorder_qty`/`version`; Item Master creates/edits
+products through the same audited idempotent Demo/API action dispatcher every
+other Canonical write uses, and the fix also removed fake `Unclassified`/`0`
+category/reorder values from the 3 already-Canonical Stock-on-Hand/Valuation/
+Movements screens that share its read model. `customer` gained nullable
+`industry`/`owner_user_id`, a new `contact` table, and a `customer_id` on the
+previously-unused `activity` log; Customer-360 shows real contacts, open
+orders, open opportunities and a real activity timeline, with balance/overdue
+computed by reusing the AR-Aging report's existing Net-30 formula rather than
+a new credit-exposure calculator.
 
 **Purchasing is a special case (TASK-022/023, 2026-07-17): partially converted, not
 fully mock and not fully real.** The core PO chain (suppliers, purchase orders, goods
@@ -165,7 +189,8 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Complete for the present Canonical boundary.** All 45 current Canonical routes use `ErpSystemData` in API mode with no sample fallback. Settings reads the authenticated session and labels browser-local preferences honestly. Item master and CRM detail/Customer 360 remain Preview until their schema, adapters, permissions, tests and five-language coverage meet the Canonical gate. |
+| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Complete for the present Canonical boundary.** All 47 current Canonical routes use `ErpSystemData` in API mode with no sample fallback. Settings reads the authenticated session and labels browser-local preferences honestly. CRM's opportunity-detail sub-screen remains Preview (no schema). |
+| Every Canonical route has five-language coverage | **Not true for Item Master / Customer-360 (2026-07-19).** Both moved to Canonical for schema/adapter/permissions/tests, but their UI strings are still English-only (Item Master's screen already was, pre-conversion; Customer-360's new panels follow the same baseline it inherited). Full `t()`/`tf()` i18n coverage for these two screens is real remaining scope, not silently done — `npm run audit:screens` does not currently gate on this. |
 | API server has all business **write** endpoints | Not yet. Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and remaining finance/commercial actions still need registration on the unified dispatcher. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` (referenced in CONTRIBUTING.md) | Still doesn't exist — no ESLint/Prettier config in the repo. `npm test` (TASK-025, done) now works. |
@@ -196,10 +221,25 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 5. **MFA is not implemented.** Invitation/password-reset endpoints and encrypted SMTP
    outbox delivery now exist; production deployments must configure the optional email
    worker profile and monitor delivery failures.
+6. **Item Master and Customer-360 are Canonical but English-only.** Both cleared the
+   schema/adapter/permissions/tests bar (TASK-029…032) but not the five-language
+   coverage most other Canonical routes have; Item Master's screen was already
+   English-only before this conversion, and Customer-360's new panels inherited that
+   baseline. `npm run audit:screens` does not gate on this today.
+7. **`vite dev` cannot boot real PGlite for this app — always verify against
+   `npm run build:demo` + `vite preview` (or `npm run audit:screens`).** Found during
+   TASK-030/032 verification: `vite dev` serves a truncated/corrupted PGlite `.data`
+   FS bundle (`Invalid FS bundle size: 12273 !== 6293225` in the console), so the
+   adapter silently falls back to static sample data — writes against `vite dev`
+   look like they work but never touch real PGlite. A persistent demo IndexedDB left
+   partially migrated by an earlier `vite dev` session can also make a later, correct
+   `vite preview` session look broken (a missing table after a real migration ran) —
+   if that happens, call `window.ErpSystemData.reset()` from the app rather than
+   suspecting the migration bundle first.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018…028 (27)
+- Done: TASK-001…016, TASK-018…032 (31)
 - Blocked: TASK-017 (1)
 - Todo: none — every agent-completable task is done.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)

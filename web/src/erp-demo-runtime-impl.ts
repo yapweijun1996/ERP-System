@@ -12,6 +12,14 @@ import {
   type CreateOpportunityInput,
 } from '../../src/modules/crm/createOpportunity';
 import {
+  createContactWithin,
+  type CreateContactInput,
+} from '../../src/modules/crm/contact';
+import {
+  createCustomerActivityWithin,
+  type CreateCustomerActivityInput,
+} from '../../src/modules/crm/activity';
+import {
   createPurchaseOrder,
   createPurchaseOrderWithin,
   type CreatePurchaseOrderInput,
@@ -339,6 +347,12 @@ export const erpDemoRuntime = Object.freeze({
     },
     createOpportunity(db: DemoOrm, scope: Scope, input: CreateOpportunityInput) {
       return createOpportunity(asDomainDb(db), scope, input);
+    },
+    createContactWithin(db: DemoOrm, scope: Scope, input: CreateContactInput) {
+      return createContactWithin(asDomainDb(db), scope, input);
+    },
+    createCustomerActivityWithin(db: DemoOrm, scope: Scope, input: CreateCustomerActivityInput) {
+      return createCustomerActivityWithin(asDomainDb(db), scope, input);
     },
     convertOpportunityToSalesOrderWithin(
       db: DemoOrm,
