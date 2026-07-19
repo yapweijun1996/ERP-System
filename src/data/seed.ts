@@ -6,7 +6,7 @@ import type { DB } from './db';
 import {
   master, company, currency, appUser, role, rolePermission, userCompany,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
-  employee, leaveRequest,
+  employee, leaveRequest, project, progressClaim,
 } from './schema';
 
 /**
@@ -164,8 +164,8 @@ export async function seedDemo(db: DB): Promise<void> {
   ]);
 
   // HR-lite (TASK-049): employee master + a few leave requests spanning every real
-  // status (pending/approved/rejected) so the demo isn't empty on first boot. Dana
-  // Reyes has no manager (top of the reporting line); the others report to her,
+  // status (pending/approved/rejected) so the demo isn't empty on first boot. Farah
+  // Wong has no manager (top of the reporting line); the others report to her,
   // exercising the self-referencing manager_id FK.
   const [manager] = await db.insert(employee).values({
     masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1001', fullName: 'Farah Wong',
@@ -216,6 +216,50 @@ export async function seedDemo(db: DB): Promise<void> {
       masterFn: 'M1', companyFn: 'C-SG', employeeId: lena.id, leaveType: 'Annual',
       startDate: '2026-08-24', endDate: '2026-08-24', days: 1,
       reason: 'Errand', status: 'pending',
+    },
+  ]);
+
+  // Project-lite (TASK-051): a customer-billed project plus two internal ones (no
+  // customer, so they can never receive a progress claim — enforced by
+  // createProgressClaimWithin). Nothing is pre-posted, matching Fixed Assets'
+  // precedent (TASK-035) of leaving the first "Post" a live, real first action
+  // rather than fabricating GL history by hand in the seed.
+  const [cellProject] = await db.insert(project).values({
+    masterFn: 'M1', companyFn: 'C-SG', projectNo: 'PRJ-2026-001',
+    name: 'Beta Pte Ltd — Automation Cell Integration', customerId: cust.id,
+    managerName: 'Liam Cardoso', status: 'open',
+    startDate: '2026-03-04', dueDate: '2026-08-15', contractValue: '486000.00',
+  }).returning({ id: project.id });
+  await db.insert(project).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', projectNo: 'PRJ-2026-002',
+      name: 'Plant 2 Automation Retrofit', customerId: null,
+      managerName: 'Wei Ling Tan', status: 'on_hold',
+      startDate: '2026-04-18', dueDate: '2026-11-30', contractValue: '720000.00',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', projectNo: 'PRJ-2026-003',
+      name: 'Service Fleet Telematics Upgrade', customerId: null,
+      managerName: 'Rosa Delgado', status: 'open',
+      startDate: '2026-05-06', dueDate: '2026-09-20', contractValue: '96000.00',
+    },
+  ]);
+
+  // Two draft progress claims against the customer-billed project (9% SG GST,
+  // matching the taxRule row above) so the demo's progress-claims panel and
+  // "Post" action have real work to do on first use.
+  await db.insert(progressClaim).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', docNo: 'PC-2026-0001', projectId: cellProject.id,
+      claimDate: '2026-04-12', description: 'Design & sign-off',
+      netAmount: '92000.00', taxCode: 'SR', taxRate: '9.000',
+      taxAmount: '8280.00', totalAmount: '100280.00',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', docNo: 'PC-2026-0002', projectId: cellProject.id,
+      claimDate: '2026-05-20', description: 'Fabrication 50% complete',
+      netAmount: '138000.00', taxCode: 'SR', taxRate: '9.000',
+      taxAmount: '12420.00', totalAmount: '150420.00',
     },
   ]);
 }

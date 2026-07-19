@@ -54,6 +54,7 @@ import {
 } from '../modules/sales/creditControl';
 import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
 import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
+import { postProgressClaimWithin } from '../modules/project/progressClaim';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'assets/depreciation-runs/post': {
@@ -323,6 +324,14 @@ const ACTIONS: Record<string, ActionDefinition> = {
       return decideLeaveRequestWithin(
         tx, scope, input.resourceId, 'rejected', typeof reason === 'string' ? reason : null,
       );
+    },
+  },
+  'project/progress-claims/post': {
+    permission: 'project.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return postProgressClaimWithin(tx, scope, input.resourceId);
     },
   },
   'quality/ncrs/reject': {

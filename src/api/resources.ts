@@ -64,6 +64,8 @@ import {
   depreciationRunLine,
   employee,
   leaveRequest,
+  project,
+  progressClaim,
 } from '../data/schema';
 
 export interface ApiScope {
@@ -316,6 +318,16 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     status: leaveRequest.status,
     allowedActions: ['approve', 'reject'],
     createPermission: 'hr.write',
+  }),
+  'project/projects': resource(project, 'project.read', {
+    status: project.status,
+    createPermission: 'project.write',
+  }),
+  'project/progress-claims': resource(progressClaim, 'project.read', {
+    status: progressClaim.status,
+    versionColumn: progressClaim.version,
+    allowedActions: ['post'],
+    createPermission: 'project.write',
   }),
 };
 

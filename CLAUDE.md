@@ -41,10 +41,13 @@ with zero console errors.
 
 ## Landmines (violating these breaks the product)
 
-1. **Dual-copy sync:** `web/public/db/erp-system-*.sql` and the adapter's raw-SQL
-   `confirmOrder` are hand-mirrored from `drizzle/0000_init.sql` / `src/data/seed.ts` /
-   `src/modules/sales/confirmOrder.ts`. Schema or business-logic changes go in **both
-   places** in the same commit (until TASK-020 automates the check).
+1. **Dual-copy sync:** `web/public/db/erp-system-schema.sql`/`erp-system-migrations.sql`
+   are generated from `drizzle/*.sql` by `npm run generate:demo-schema` (verify with
+   `npm run check:demo-schema`) — run it after every `npm run generate`, don't hand-edit
+   these files. The adapter's raw-SQL `confirmOrder` in
+   `web/public/assets/erp-system-data-adapter.js` is still hand-mirrored from
+   `src/modules/sales/confirmOrder.ts`; business-logic changes there still go in **both
+   places** in the same commit.
 2. **Stock/money writes are one transaction** with full rollback; in production they
    are server-side only. Never post an unbalanced GL entry.
 3. **Tenant scoping:** every business query filters `master_fn` (+ `company_fn`);

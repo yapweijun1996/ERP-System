@@ -12,3 +12,4 @@ export * from './system';
 export * from './manufacturing';
 export * from './quality';
 export * from './hr';
+export * from './project';

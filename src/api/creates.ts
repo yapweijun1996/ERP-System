@@ -91,6 +91,14 @@ import {
   createLeaveRequestWithin,
   type CreateLeaveRequestInput,
 } from '../modules/hr/leaveRequest';
+import {
+  createProjectWithin,
+  type CreateProjectInput,
+} from '../modules/project/project';
+import {
+  createProgressClaimWithin,
+  type CreateProgressClaimInput,
+} from '../modules/project/progressClaim';
 
 export interface CreateDefinition {
   permission: string;
@@ -379,6 +387,20 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createLeaveRequestWithin(tx, scope, payload as unknown as CreateLeaveRequestInput);
+    },
+  },
+  'project/projects': {
+    permission: 'project.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createProjectWithin(tx, scope, payload as unknown as CreateProjectInput);
+    },
+  },
+  'project/progress-claims': {
+    permission: 'project.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createProgressClaimWithin(tx, scope, payload as unknown as CreateProgressClaimInput);
     },
   },
 };

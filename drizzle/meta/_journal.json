@@ -169,6 +169,13 @@
       "when": 1784469740630,
       "tag": "0023_tired_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1784504638334,
+      "tag": "0024_awesome_emma_frost",
+      "breakpoints": true
     }
   ]
 }
