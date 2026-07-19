@@ -182,6 +182,71 @@ Order of attack:
    the demo's own audit trail — see docs/STATUS.md) are both done. `master-control`,
    `sys-settings` and `module-activation-control` remain Preview (need new schema or
    a data-repointing decision).
+6. **HR & Payroll** (⬜ not started) — employee master, leave, payroll run/payslip. No
+   schema exists today; mock data lives in `data-hr.js`, screens in `screens-hr.js`/
+   `screens-hr-new.js`. `leave-approval` (`screens-people.js`) is a separate, still-mock
+   HR screen despite sharing a file with the now-Canonical Admin `role-permission`.
+7. **Project (Enterprise Project)** (⬜ not started) — project register and P&L exist as
+   mock screens (`screens-project.js`: `project-pl`, `project-detail`, `timesheet`).
+   Stakeholder-requested sub-features confirmed absent by a 2026-07-19 audit: a real
+   **Progress Claim** entity (today "progress invoice"/"partial claim" are narrative
+   copy only, no schema/screen/route), project-scoped **Account Payable**/**Account
+   Receivable** (AP/AR only exist generically under Finance, with zero project linkage),
+   and dedicated **Bank Receipt**/**Bank Payment** documents (today only a generic
+   Finance-wide "Bank Reconciliation" exists). **Payment Voucher** already exists as a
+   generic Finance document (`screens-fin.js`/`screens-fin-pay.js`) but has no project
+   linkage either. This is the largest remaining module — likely needs its own
+   sub-phasing (project register → progress billing → project-scoped finance documents)
+   rather than one task pair.
+8. **Service** (⬜ not started) — service tickets/orders/contracts, distinct from
+   Manufacturing's work orders. No schema; mock screens in `screens-service.js`.
+9. **Purchase Requisition** (⬜ not started) — the natural upstream step before the
+   already-Canonical PO chain. Mock screen (`purchase-requisitions` in
+   `screens-purchasing-hub.js`, detail in `screens-purchase.js`) and mock data
+   (`data-purchasing-ext.js`) exist but no schema table, same maturity tier as
+   RFQs/quotations. Converting this closes a real gap in an otherwise-real chain:
+   today a PO can be created with no requisition trail behind it.
 
 Exit criteria per module: no mock data files for that module remain; `src/demo.ts`
 asserts its core transaction; screens work in demo and api modes.
+
+## Phase 8 — Platform Standardization & Multi-Tenant Admin 🔶
+
+Goal: address a stakeholder-driven cross-cutting audit (2026-07-19) covering two
+concerns that don't belong to any single module: (1) frontend code quality — Sidebar/
+TopBar/page (List/Detail/Edit) logic should follow one consistent standard and reuse
+shared helpers instead of copy-paste; (2) the multi-tenant super-admin story needs a
+real module-access-control mechanism (enable/disable specific ERP modules per client)
+and a safety guard against a tenant ever losing its last working superadmin. Unlike
+Phase 7, this phase's items are not new business domains — they're standardization and
+platform-safety work found by auditing the existing 53 Canonical + 61 Preview routes.
+
+1. **Frontend SSOT Consolidation** (EPIC-017, 🔶) — one shared `listPage()` helper
+   replacing 7 near-identical copies, hand-rolled modal markup migrated onto the
+   existing `appModal()` SSOT, a shared field-validation helper, and the 3 legacy
+   hardcoded module-nav functions (`salesNav`/`purNav`/`inventoryNav`) folded into the
+   generic `MODULE_DEFS`-driven nav system every other module already uses.
+2. **Super-Admin Module Access Control** (EPIC-018, ⬜) — `module-activation-control`
+   is a pure `localStorage` mock today (confirmed: zero server persistence, zero
+   enforcement). Real tenant-scoped schema + backend + client-nav and server-side
+   enforcement, so a superadmin can genuinely restrict a client to e.g. Sales-only.
+3. **Superadmin Safety Guard** (EPIC-019, ⬜) — found while verifying "every database
+   must always have a super admin account": nothing today stops another admin user
+   from deactivating a tenant's *last* active superadmin. Small, high-value fix.
+
+A note on multi-tenancy topology, resolved by the same audit rather than deferred: the
+stakeholder described "one database has exactly one `master_fn`, never multiple" as an
+invariant. The **schema deliberately supports multiple `master_fn` rows per database**
+(`docs/MULTI_TENANCY.md`, modeled on the stakeholder's other production ERP; exercised
+on purpose by tests like `adminLifecycle.test.ts`'s cross-master-isolation case) — this
+is intentional shared-hosting/demo flexibility, not a bug. It does not conflict with the
+stated goal in practice: this repo's actual production topology is one Docker Compose
+stack (hence one database) per paying customer (see the private-repo strategy — a
+prospect "converts" to their own Docker deployment), which naturally lands on exactly
+one `master_fn` per database without needing a hard schema constraint that would break
+the deliberate multi-tenant test fixtures. No code change was made here; flagged for
+confirmation rather than silently altering a well-tested design.
+
+Exit criteria: `npm run audit:screens` passes after each mechanical change; the
+module-access-control toggle demonstrably hides a module from both the sidebar and the
+API for a non-superadmin user of a restricted tenant.

@@ -436,3 +436,84 @@ Acceptance criteria:
       permission toggles are real writes; the superadmin role renders read-only.
 - [x] `audit-log` reads real `audit_log` rows (bounded, client-side filters).
 - [x] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (50 → 53).
+
+## EPIC-017 — Frontend SSOT Consolidation
+
+A three-agent audit (2026-07-19) of every `web/public/assets/screens-*.js` file, requested
+after stakeholder feedback that Sidebar/TopBar/page (List/Detail/Edit) logic doesn't
+consistently follow one standard and that reusable functionality is copy-pasted instead
+of shared. Findings: sidebar and topbar are already genuinely single-source (`renderSidebar()`
+app.js, one topbar markup block); the real duplication is at the screen-helper level —
+7 byte-identical `*ListPage` functions, 12 files hand-rolling modal-chrome markup instead
+of the existing `appModal()` SSOT, zero shared field-validation helper, and 3 legacy
+hardcoded module-nav functions (`salesNav`/`purNav`/`inventoryNav`) that `MODULE_DEFS`
+doesn't even know about. This epic closes those specific, concretely-identified gaps —
+not a speculative rewrite. (TASK-043, TASK-044, TASK-045)
+
+Acceptance criteria:
+
+- [ ] A new `web/public/assets/screens-common.js`, loaded once right after `i18n.js` and
+      before every `screens-*.js` file, exports one `listPage(resource, query)` helper
+      replacing `crmListPage`/`assetListPage`/`financeListPage`/`inventoryListPage`/
+      `purchasingListPage`/`salesListPage`/`adminListPage` at all ~40 call sites, with
+      zero behavior change (verified: every `adminListPage` call site already passed no
+      query argument, so unifying the default to `{limit:100}` changes nothing live).
+- [ ] The 12 files hand-rolling `<div class="modal-head">...</div>` markup are migrated
+      onto the existing `appModal({icon,title,body,actions,width})` SSOT in `ui.js`.
+- [ ] A shared `requireField()`/`validateRequired()` helper in `screens-common.js`
+      replaces the copy-pasted `if(!x){toast(...);focus();return}` pattern, with each
+      call site's exact message/focus target preserved.
+- [ ] `salesNav`/`purNav`/`inventoryNav` and their section arrays fold into `MODULE_DEFS`,
+      and the `moduleNav()` special-case in `app.js` that routes around them is deleted.
+- [ ] `npm run audit:screens` and a live desktop+375px browser check still pass with zero
+      console errors after each mechanical change.
+
+## EPIC-018 — Super-Admin Module Access Control
+
+Stakeholder requirement: a superadmin must be able to enable/disable specific ERP modules
+per tenant (`master_fn`) — e.g. a client that only bought Sales should not see or be able
+to call Purchasing/Manufacturing/etc. The `module-activation-control` screen already
+exists but an audit (2026-07-19) found it is **100% browser-local**: `readModuleControl()`/
+`writeModuleControl()` in `screens-admin.js` only call `localStorage`, keyed per
+`currentMasterFn()`, explicitly labeled "Saved locally for demo" — nothing is persisted
+server-side or enforced anywhere. This epic gives it a real tenant-scoped backend and
+wires enforcement into both the client nav and server-side request handling, not just the
+toggle UI. (TASK-047, TASK-048)
+
+Acceptance criteria:
+
+- [ ] A new tenant-scoped `master_module` table (`master_fn` + `module_key` + `enabled`,
+      following the composite-key style `role_permission` already uses) added via a
+      Drizzle migration; module keys mirror the existing `MODULE_DEFS` set.
+- [ ] Business logic to list/set a master's enabled modules, audited, superadmin-gated
+      (new `admin.modules.manage`-style permission key), mirroring `adminLifecycle.ts`'s
+      raw-exec-`...Within` + self-transacting-wrapper split.
+- [ ] Bespoke `/api/admin/modules` routes (mirrors `routes/admin.ts`'s existing style) and
+      matching demo-adapter wiring (`admin/modules` bespoke dispatch, not a generic
+      resource — same reasoning as EPIC-016).
+- [ ] `module-activation-control` reads/writes the real backend instead of `localStorage`.
+- [ ] A disabled module is actually hidden from the sidebar/module shell for users of that
+      master, AND rejected server-side if called directly (API mode) — a client-only
+      toggle would not meet the stated requirement.
+- [ ] Superadmin's own access is never gated by this mechanism (it controls what a
+      master's *other* users can reach, not the superadmin's own visibility).
+
+## EPIC-019 — Superadmin Safety Guard
+
+Found by the same 2026-07-19 audit while verifying the stakeholder's "every database must
+always have a super admin account" requirement: `setUserActiveWithin`
+(`src/auth/adminLifecycle.ts`) only rejects a user disabling *themselves*
+(`cannot_disable_self`) — any other user holding the independently-grantable
+`admin.users.manage` permission can deactivate the last active superadmin, leaving a
+tenant with zero working superadmins (the row still exists with `isActive=false`, but
+nobody can act on it, including re-enabling it, without direct DB access). Small,
+high-value, low-risk fix. (TASK-046)
+
+Acceptance criteria:
+
+- [ ] `setUserActiveWithin` rejects deactivating a superadmin-role user when they are the
+      *last active* superadmin for that `master_fn` (a second active superadmin may still
+      be disabled).
+- [ ] Unit test covers: sole active superadmin cannot be disabled by another admin user;
+      a superadmin CAN be disabled if at least one other active superadmin remains.
+- [ ] No change to the existing self-disable guard or to non-superadmin user toggling.
