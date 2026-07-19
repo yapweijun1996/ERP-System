@@ -430,9 +430,9 @@ Acceptance criteria:
       `createInvitationRecordWithin` (Web Crypto token instead of node:crypto,
       `src/auth/adminLifecycle.ts`) replaces the real `createInvitation` for the browser
       path only — production still uses the real one.
-- [ ] `user-mgmt` reads real users+invitations; "Invite user" calls the real (already
+- [x] `user-mgmt` reads real users+invitations; "Invite user" calls the real (already
       built, previously unused) `createInvitation`; a new enable/disable action is real.
-- [ ] `role-permission` shows a real 2-state permission grid per role; "Add role" and
+- [x] `role-permission` shows a real 2-state permission grid per role; "Add role" and
       permission toggles are real writes; the superadmin role renders read-only.
-- [ ] `audit-log` reads real `audit_log` rows (bounded, client-side filters).
-- [ ] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (50 → 53).
+- [x] `audit-log` reads real `audit_log` rows (bounded, client-side filters).
+- [x] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (50 → 53).

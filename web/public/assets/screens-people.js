@@ -78,52 +78,117 @@ SCREENS['leave-approval'] = function(root){
   render();
 };
 
-/* ---------------- ADMIN ROLE PERMISSION (matrix) ---------------- */
-SCREENS['role-permission'] = function(root){
-  const lvls=DB.permLevels; // None View Edit Full
-  const state=JSON.parse(JSON.stringify(DB.permModules));
-  function cellHtml(gi,ri,ci,level){
-    // segmented control of 4 levels rendered compactly as a clickable pill cycling
-    const icons=['x','eye','edit','check'];
-    const tone=level===0?'':level===1?'info':level===2?'warn':'ok';
-    const lbl=lvls[level];
-    return `<button class="permcycle cap ${tone||'neutral'}" data-g="${gi}" data-r="${ri}" data-c="${ci}" data-tip="${esc(lbl)} — click to change" style="cursor:pointer;min-width:64px;justify-content:center">${ic(icons[level])}${esc(lbl)}</button>`;
+/* ---------------- ADMIN ROLE PERMISSION (matrix) ----------------
+   Mirrors the real backend model (src/auth/permissions.ts PERMISSIONS) rather
+   than the mock's fabricated 4-level None/View/Edit/Full matrix: role_permission
+   is a boolean per named key, so the real UI is an honest 2-state
+   allowed/not-allowed toggle instead of forcing a 4th level nothing backs. */
+const ADMIN_PERMISSION_KEYS=[
+  'dashboard.read',
+  'inventory.read','inventory.write','inventory.adjust','inventory.transfer','inventory.track',
+  'sales.read','sales.write',
+  'finance.read',
+  'purchasing.read','purchasing.write',
+  'crm.read','crm.write',
+  'manufacturing.read','manufacturing.write',
+  'quality.read','quality.write',
+  'asset.read','asset.write',
+  'session.switch_company',
+  'admin.audit.read','admin.users.invite','admin.users.read','admin.users.manage',
+  'admin.roles.read','admin.roles.write',
+];
+
+SCREENS['role-permission'] = async function(root){
+  const s=adminCopy();
+  let roles=(await adminListPage('admin/roles')).data;
+  let grants=(await adminListPage('admin/role-permissions')).data;
+  function grantMap(){
+    const m=new Map();
+    grants.forEach(g=>{
+      if(!m.has(g.roleId)) m.set(g.roleId,new Map());
+      m.get(g.roleId).set(g.permissionKey,g.allowed);
+    });
+    return m;
+  }
+  function cellHtml(role,permissionKey,gm){
+    if(role.isSuperadmin){
+      return `<span class="cap ok" data-tip="${esc(s('superadminNote'))}" style="cursor:default;opacity:.85;justify-content:center;display:inline-flex;min-width:96px">${ic('check')}${esc(s('permAllowed'))}</span>`;
+    }
+    const allowed=!!(gm.get(role.roleId)&&gm.get(role.roleId).get(permissionKey));
+    return `<button class="permcycle cap ${allowed?'ok':'neutral'}" data-role="${role.roleId}" data-perm="${esc(permissionKey)}" data-allowed="${allowed}" style="cursor:pointer;min-width:96px;justify-content:center">${ic(allowed?'check':'x')}${esc(allowed?s('permAllowed'):s('permDenied'))}</button>`;
   }
   function table(){
-    const tpl=`minmax(210px,1.6fr) repeat(${DB.roles.length},minmax(82px,1fr))`;
+    const gm=grantMap();
+    const tpl=`minmax(210px,1.6fr) repeat(${roles.length},minmax(110px,1fr))`;
     let h=`<div class="dt-page"><div class="permgrid" role="table" style="--ptpl:${tpl}">
-      <div class="pg-r pg-head"><div class="pg-c modcell">Module / screen</div>${DB.roles.map(r=>`<div class="pg-c c">${esc(r)}</div>`).join('')}</div>`;
-    state.forEach((g,gi)=>{
-      h+=`<div class="pg-grp">${esc(g.grp)}</div>`;
-      g.rows.forEach((row,ri)=>{
-        h+=`<div class="pg-r"><div class="pg-c modcell sub">${esc(row.m)}</div>${row.p.map((lv,ci)=>`<div class="pg-c c">${cellHtml(gi,ri,ci,lv)}</div>`).join('')}</div>`;
-      });
+      <div class="pg-r pg-head"><div class="pg-c modcell">${esc(t('hr.col.role'))}</div>${roles.map(r=>`<div class="pg-c c">${esc(r.name)}</div>`).join('')}</div>`;
+    let lastGroup=null;
+    ADMIN_PERMISSION_KEYS.forEach(permissionKey=>{
+      const groupKey=permissionGroupKey(permissionKey);
+      if(groupKey!==lastGroup){ h+=`<div class="pg-grp">${esc(s(groupKey))}</div>`; lastGroup=groupKey; }
+      h+=`<div class="pg-r"><div class="pg-c modcell sub mono" style="font-size:12px">${esc(permissionKey)}</div>${roles.map(r=>`<div class="pg-c c">${cellHtml(r,permissionKey,gm)}</div>`).join('')}</div>`;
     });
     h+=`</div></div>`; return h;
   }
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">${crumbs([DB.company.name,'Admin','Role Permission'])}
-      <div class="h1row"><h1>Role Permissions</h1><span class="countchip">${DB.roles.length} roles</span></div>
-      <div class="h1sub">Module → screen → action access per role. Click any cell to cycle None → View → Edit → Full. Data scope and field-masking are configured per role.</div>
-    </div>
-    <div class="toolbar">
-      <div class="filterchips"><button class="chip on">All modules</button><button class="chip">Sales</button><button class="chip">Finance</button><button class="chip">Inventory</button></div>
-      <div class="grow"></div>
-      <button class="viewsel">${ic('user')}Role: Approver${ic('chevD')}</button>
-      ${btn('Add role',{icon:'plus',cls:'soft'})}${btn('Save changes',{icon:'save',cls:'primary',attrs:'onclick="toast(\'Permission changes saved\',\'ok\')"'})}
-    </div>
-    <div class="alert info" style="margin-top:2px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="M12 11v5M12 8h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="grow">Restricted actions are <b>disabled with a reason</b> rather than hidden, so users understand why they can’t proceed (e.g. “You don’t have Finance Posting permission”).</span></div>
-    <div class="tablewrap" id="permWrap" style="padding:0 24px 24px">${table()}</div>
-  </section></div>`;
-  function rewire(){
-    root.querySelectorAll('.permcycle').forEach(b=>b.addEventListener('click',()=>{
-      const gi=+b.dataset.g,ri=+b.dataset.r,ci=+b.dataset.c;
-      state[gi].rows[ri].p[ci]=(state[gi].rows[ri].p[ci]+1)%4;
-      $('#permWrap').innerHTML=table(); rewire();
-    }));
+  async function render(){
+    root.innerHTML=`<div class="content full"><section class="master">
+      <div class="pagehead">${crumbs([DB.company.name,t('nav.admin'),t('usr.roles')])}
+        <div class="h1row"><h1>${esc(t('usr.roles'))}</h1><span class="countchip">${roles.length} ${esc((t('usr.roles')||'roles').toLowerCase())}</span></div>
+        <div class="h1sub">${esc(s('permMatrixTitle'))}</div>
+      </div>
+      <div class="toolbar">
+        <div class="grow"></div>
+        ${btn(s('addRole'),{icon:'plus',cls:'soft',attrs:'data-act="add-role"'})}
+      </div>
+      <div class="alert info" style="margin-top:2px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="M12 11v5M12 8h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span class="grow">${esc(s('superadminNote'))}</span></div>
+      <div class="tablewrap" id="permWrap" style="padding:0 24px 24px">${table()}</div>
+    </section></div>`;
+    rewire();
   }
-  rewire();
+  function rewire(){
+    root.querySelectorAll('.permcycle').forEach(b=>b.addEventListener('click',async()=>{
+      const roleId=Number(b.dataset.role);
+      const permissionKey=b.dataset.perm;
+      const nextAllowed=b.dataset.allowed!=='true';
+      b.disabled=true;
+      try{
+        await window.ErpSystemData.action('admin/roles',roleId,'set-permission',{permissionKey,allowed:nextAllowed});
+        grants=(await adminListPage('admin/role-permissions')).data;
+        toast(s('permUpdated'),'ok');
+        $('#permWrap').innerHTML=table();
+        rewire();
+      }catch(error){
+        b.disabled=false;
+        toast(error&&error.message?error.message:s('permUpdateError'),'danger');
+      }
+    }));
+    const addBtn=root.querySelector('[data-act="add-role"]');
+    addBtn&&addBtn.addEventListener('click',()=>openAddRoleModal());
+  }
+  function openAddRoleModal(){
+    openModal(`<div class="modal-head">${ic('plus')}<h3>${esc(s('addRole'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
+      <div class="modal-body"><div class="fld"><span>${esc(s('roleNameLabel'))} <span class="req">*</span></span><input id="rnName" placeholder="${esc(s('roleNamePlaceholder'))}"></div></div>
+      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('addRole'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
+    const saveBtn=$('#modalEl').querySelector('[data-save]');
+    saveBtn.addEventListener('click',async()=>{
+      const name=$('#rnName').value.trim();
+      if(!name){ toast(s('roleNameRequired'),'danger'); return; }
+      saveBtn.disabled=true;
+      try{
+        await window.ErpSystemData.create('admin/roles',{name});
+        closeModal();
+        toast(s('roleCreated').replace('{name}',name),'ok');
+        roles=(await adminListPage('admin/roles')).data;
+        grants=(await adminListPage('admin/role-permissions')).data;
+        await render();
+      }catch(error){
+        saveBtn.disabled=false;
+        toast(error&&error.message?error.message:s('roleCreateError'),'danger');
+      }
+    });
+  }
+  await render();
 };
 
 /* ---------------- MASTER CONTROL (super-admin platform console) ---------------- */

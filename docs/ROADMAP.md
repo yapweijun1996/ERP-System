@@ -168,6 +168,20 @@ Order of attack:
 4. Relabel or hide remaining mock screens so the demo never oversells (TASK-018 ✅
    done 2026-07-17 — see Phase 3; this item now means keeping that guarantee as
    Purchasing/CRM/HR convert one at a time, not a one-time sweep).
+5. **Admin: users, roles & audit log** (EPIC-016 ✅) — unlike every module above, no
+   schema migration was needed: `app_user`/`role`/`role_permission`/`audit_log`
+   already existed in full from TASK-024 (EPIC-009), just unwired from any screen.
+   Backend (TASK-041 ✅ done 2026-07-19 — bespoke `/api/admin/*` routes since these
+   tables are deliberately outside the generic resource/RLS framework; also fixed a
+   real gap where browser demo mode's `audit_log` was permanently empty since
+   `appendAudit` was only ever called from the production HTTP layer) and screens
+   (TASK-042 ✅ done 2026-07-19 — `user-mgmt` gained a real invite/enable/disable
+   flow, `role-permission` replaced the mock's fabricated 4-level matrix with a real
+   2-state grid matching the actual `role_permission` model, `audit-log` reads real
+   events, verified live including the fix making every module's writes show up in
+   the demo's own audit trail — see docs/STATUS.md) are both done. `master-control`,
+   `sys-settings` and `module-activation-control` remain Preview (need new schema or
+   a data-repointing decision).
 
 Exit criteria per module: no mock data files for that module remain; `src/demo.ts`
 asserts its core transaction; screens work in demo and api modes.

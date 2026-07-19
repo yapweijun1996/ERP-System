@@ -4,112 +4,315 @@
    ============================================================ */
 
 function userStatusTone(s){ return {Active:'ok',Invited:'info',Disabled:'neutral'}[s]||'neutral'; }
-function auditTypeTone(t,ok){
-  if(!ok) return 'danger';
-  return {approval:'accent',post:'teal',export:'violet',edit:'info',security:'neutral',permission:'warn',create:'ok',system:'neutral',config:'warn'}[t]||'neutral';
+function auditActionTone(a){
+  return {create:'ok',set_active:'warn','set-permission':'warn',set_permission:'warn',post:'teal',confirm:'teal',accept:'ok',convert:'accent',complete:'ok',release:'accent',reject:'danger'}[a]||'neutral';
+}
+
+function adminCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{
+      fieldEmail:'Email',emailPlaceholder:'name@company.com',fieldRole:'Role',
+      emailRequired:'Enter a valid email address',roleRequired:'Select a role',
+      inviteSent:'Invitation sent to {email}',inviteError:'Invitation could not be sent',
+      enable:'Enable',disable:'Disable',you:'you',
+      toggleEnabled:'{email} enabled',toggleDisabled:'{email} disabled',toggleError:'Could not update this user',
+      cannotDisableSelf:"You can't disable your own account",
+      invitedRow:'Invitation pending',
+      addRole:'Add role',roleNameLabel:'Role name',roleNamePlaceholder:'e.g. Warehouse Lead',
+      roleNameRequired:'Role name is required',roleCreated:'Role "{name}" created',roleCreateError:'Role could not be created',
+      permMatrixTitle:'Module → permission access per role. Click a cell to toggle allowed / not allowed.',
+      permAllowed:'Allowed',permDenied:'Not allowed',superadminNote:'Superadmin always has full access and cannot be edited.',
+      permUpdated:'Permission updated',permUpdateError:'Permission could not be updated',
+      grpDashboard:'Dashboard',grpInventory:'Inventory',grpSales:'Sales',grpFinance:'Finance',grpPurchasing:'Purchasing',
+      grpCrm:'CRM',grpManufacturing:'Manufacturing',grpQuality:'Quality',grpAsset:'Fixed Assets',grpAdmin:'Admin',grpSession:'Session',
+      auditFilterAllUsers:'All users',auditFilterAllEntities:'All record types',auditColTime:'Time',auditColUser:'User',
+      auditColAction:'Action',auditColRecord:'Record',auditTitle:'Audit Trail',auditMeta:'{count} events · immutable system log{truncated}',
+      auditTruncated:' · showing latest 100',auditNoEvents:'No activity recorded yet — actions you take are logged here in real time.',
+      auditSystem:'System',
+    },
+    ms:{
+      fieldEmail:'E-mel',emailPlaceholder:'nama@syarikat.com',fieldRole:'Peranan',
+      emailRequired:'Masukkan alamat e-mel yang sah',roleRequired:'Pilih peranan',
+      inviteSent:'Jemputan dihantar kepada {email}',inviteError:'Jemputan tidak dapat dihantar',
+      enable:'Aktifkan',disable:'Lumpuhkan',you:'anda',
+      toggleEnabled:'{email} diaktifkan',toggleDisabled:'{email} dilumpuhkan',toggleError:'Pengguna ini tidak dapat dikemas kini',
+      cannotDisableSelf:'Anda tidak boleh melumpuhkan akaun sendiri',
+      invitedRow:'Jemputan belum diterima',
+      addRole:'Tambah peranan',roleNameLabel:'Nama peranan',roleNamePlaceholder:'cth. Ketua Gudang',
+      roleNameRequired:'Nama peranan diperlukan',roleCreated:'Peranan "{name}" dicipta',roleCreateError:'Peranan tidak dapat dicipta',
+      permMatrixTitle:'Akses modul → kebenaran mengikut peranan. Klik sel untuk togol dibenarkan / tidak dibenarkan.',
+      permAllowed:'Dibenarkan',permDenied:'Tidak dibenarkan',superadminNote:'Superadmin sentiasa mempunyai akses penuh dan tidak boleh diubah.',
+      permUpdated:'Kebenaran dikemas kini',permUpdateError:'Kebenaran tidak dapat dikemas kini',
+      grpDashboard:'Papan Pemuka',grpInventory:'Inventori',grpSales:'Jualan',grpFinance:'Kewangan',grpPurchasing:'Perolehan',
+      grpCrm:'CRM',grpManufacturing:'Pembuatan',grpQuality:'Kualiti',grpAsset:'Aset Tetap',grpAdmin:'Pentadbiran',grpSession:'Sesi',
+      auditFilterAllUsers:'Semua pengguna',auditFilterAllEntities:'Semua jenis rekod',auditColTime:'Masa',auditColUser:'Pengguna',
+      auditColAction:'Tindakan',auditColRecord:'Rekod',auditTitle:'Jejak Audit',auditMeta:'{count} peristiwa · log sistem tidak boleh diubah{truncated}',
+      auditTruncated:' · memaparkan 100 terkini',auditNoEvents:'Belum ada aktiviti direkodkan — tindakan anda akan dilog di sini secara masa nyata.',
+      auditSystem:'Sistem',
+    },
+    zh:{
+      fieldEmail:'邮箱',emailPlaceholder:'name@company.com',fieldRole:'角色',
+      emailRequired:'请输入有效的邮箱地址',roleRequired:'请选择角色',
+      inviteSent:'邀请已发送至 {email}',inviteError:'邀请发送失败',
+      enable:'启用',disable:'停用',you:'您',
+      toggleEnabled:'{email} 已启用',toggleDisabled:'{email} 已停用',toggleError:'无法更新该用户',
+      cannotDisableSelf:'无法停用自己的账户',
+      invitedRow:'邀请待接受',
+      addRole:'新增角色',roleNameLabel:'角色名称',roleNamePlaceholder:'例如:仓库主管',
+      roleNameRequired:'请填写角色名称',roleCreated:'角色「{name}」已创建',roleCreateError:'角色创建失败',
+      permMatrixTitle:'各角色的模块权限。点击单元格切换允许 / 不允许。',
+      permAllowed:'允许',permDenied:'不允许',superadminNote:'超级管理员始终拥有完全权限,不可编辑。',
+      permUpdated:'权限已更新',permUpdateError:'权限更新失败',
+      grpDashboard:'仪表盘',grpInventory:'库存',grpSales:'销售',grpFinance:'财务',grpPurchasing:'采购',
+      grpCrm:'客户关系',grpManufacturing:'生产',grpQuality:'质量',grpAsset:'固定资产',grpAdmin:'管理',grpSession:'会话',
+      auditFilterAllUsers:'所有用户',auditFilterAllEntities:'所有记录类型',auditColTime:'时间',auditColUser:'用户',
+      auditColAction:'操作',auditColRecord:'记录',auditTitle:'审计日志',auditMeta:'{count} 条事件 · 不可篡改的系统日志{truncated}',
+      auditTruncated:' · 显示最近 100 条',auditNoEvents:'暂无活动记录 — 您执行的操作会实时记录在此处。',
+      auditSystem:'系统',
+    },
+    ja:{
+      fieldEmail:'メール',emailPlaceholder:'name@company.com',fieldRole:'役割',
+      emailRequired:'有効なメールアドレスを入力してください',roleRequired:'役割を選択してください',
+      inviteSent:'{email} に招待を送信しました',inviteError:'招待を送信できませんでした',
+      enable:'有効化',disable:'無効化',you:'あなた',
+      toggleEnabled:'{email} を有効化しました',toggleDisabled:'{email} を無効化しました',toggleError:'このユーザーを更新できませんでした',
+      cannotDisableSelf:'自分自身のアカウントは無効化できません',
+      invitedRow:'招待は保留中です',
+      addRole:'役割を追加',roleNameLabel:'役割名',roleNamePlaceholder:'例:倉庫リーダー',
+      roleNameRequired:'役割名を入力してください',roleCreated:'役割「{name}」を作成しました',roleCreateError:'役割を作成できませんでした',
+      permMatrixTitle:'役割ごとのモジュール権限。セルをクリックして許可/不許可を切り替えます。',
+      permAllowed:'許可',permDenied:'不許可',superadminNote:'スーパー管理者は常にフルアクセス権を持ち、編集できません。',
+      permUpdated:'権限を更新しました',permUpdateError:'権限を更新できませんでした',
+      grpDashboard:'ダッシュボード',grpInventory:'在庫',grpSales:'販売',grpFinance:'財務',grpPurchasing:'購買',
+      grpCrm:'CRM',grpManufacturing:'製造',grpQuality:'品質',grpAsset:'固定資産',grpAdmin:'管理',grpSession:'セッション',
+      auditFilterAllUsers:'すべてのユーザー',auditFilterAllEntities:'すべての記録種別',auditColTime:'日時',auditColUser:'ユーザー',
+      auditColAction:'操作',auditColRecord:'記録',auditTitle:'監査証跡',auditMeta:'{count} 件のイベント · 改ざん不可のシステムログ{truncated}',
+      auditTruncated:' · 最新100件を表示',auditNoEvents:'まだ活動記録がありません — 実行した操作はここにリアルタイムで記録されます。',
+      auditSystem:'システム',
+    },
+    vi:{
+      fieldEmail:'Email',emailPlaceholder:'ten@congty.com',fieldRole:'Vai trò',
+      emailRequired:'Vui lòng nhập địa chỉ email hợp lệ',roleRequired:'Vui lòng chọn vai trò',
+      inviteSent:'Đã gửi lời mời đến {email}',inviteError:'Không thể gửi lời mời',
+      enable:'Kích hoạt',disable:'Vô hiệu hóa',you:'bạn',
+      toggleEnabled:'Đã kích hoạt {email}',toggleDisabled:'Đã vô hiệu hóa {email}',toggleError:'Không thể cập nhật người dùng này',
+      cannotDisableSelf:'Bạn không thể vô hiệu hóa tài khoản của chính mình',
+      invitedRow:'Lời mời đang chờ',
+      addRole:'Thêm vai trò',roleNameLabel:'Tên vai trò',roleNamePlaceholder:'vd: Trưởng kho',
+      roleNameRequired:'Vui lòng nhập tên vai trò',roleCreated:'Đã tạo vai trò "{name}"',roleCreateError:'Không thể tạo vai trò',
+      permMatrixTitle:'Quyền truy cập theo mô-đun cho từng vai trò. Nhấp vào ô để chuyển đổi cho phép / không cho phép.',
+      permAllowed:'Cho phép',permDenied:'Không cho phép',superadminNote:'Superadmin luôn có toàn quyền truy cập và không thể chỉnh sửa.',
+      permUpdated:'Đã cập nhật quyền',permUpdateError:'Không thể cập nhật quyền',
+      grpDashboard:'Bảng điều khiển',grpInventory:'Tồn kho',grpSales:'Bán hàng',grpFinance:'Tài chính',grpPurchasing:'Mua hàng',
+      grpCrm:'CRM',grpManufacturing:'Sản xuất',grpQuality:'Chất lượng',grpAsset:'Tài sản cố định',grpAdmin:'Quản trị',grpSession:'Phiên đăng nhập',
+      auditFilterAllUsers:'Tất cả người dùng',auditFilterAllEntities:'Tất cả loại bản ghi',auditColTime:'Thời gian',auditColUser:'Người dùng',
+      auditColAction:'Hành động',auditColRecord:'Bản ghi',auditTitle:'Nhật ký kiểm toán',auditMeta:'{count} sự kiện · nhật ký hệ thống không thể sửa đổi{truncated}',
+      auditTruncated:' · hiển thị 100 gần nhất',auditNoEvents:'Chưa có hoạt động nào được ghi nhận — các hành động của bạn sẽ được ghi lại tại đây theo thời gian thực.',
+      auditSystem:'Hệ thống',
+    },
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
+const PERMISSION_GROUPS=[
+  {prefix:'dashboard.',key:'grpDashboard'},{prefix:'inventory.',key:'grpInventory'},
+  {prefix:'sales.',key:'grpSales'},{prefix:'finance.',key:'grpFinance'},
+  {prefix:'purchasing.',key:'grpPurchasing'},{prefix:'crm.',key:'grpCrm'},
+  {prefix:'manufacturing.',key:'grpManufacturing'},{prefix:'quality.',key:'grpQuality'},
+  {prefix:'asset.',key:'grpAsset'},{prefix:'admin.',key:'grpAdmin'},{prefix:'session.',key:'grpSession'},
+];
+function permissionGroupKey(permissionKey){
+  const hit=PERMISSION_GROUPS.find(g=>permissionKey.indexOf(g.prefix)===0);
+  return hit?hit.key:'grpAdmin';
+}
+
+async function adminListPage(resource,query){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.list!=='function'){
+    throw new Error('The canonical ERP data adapter is unavailable.');
+  }
+  const response=await adapter.list(resource,query||{});
+  if(!response||response.data==null){
+    throw new Error(`Unexpected ${resource} response.`);
+  }
+  return { data:response.data, nextCursor:response.meta&&response.meta.nextCursor||null };
 }
 
 /* ---------------- USER MANAGEMENT (listing — module landing) ---------------- */
-SCREENS['user-mgmt'] = function(root){
+SCREENS['user-mgmt'] = async function(root){
+  const s=adminCopy();
+  const usersPage=(await adminListPage('admin/users')).data;
+  const rows=[...usersPage.users, ...usersPage.invitations];
   let filter='all';
-  const roles=[...new Set(DB.adminUsers.map(u=>u.role))];
-  const chips=[['all',t('common.all')]].concat(roles.map(r=>[r,r]));
-  function rows(){ return filter==='all'?DB.adminUsers:DB.adminUsers.filter(u=>u.role===filter); }
+  const roleNames=[...new Set(usersPage.users.map(u=>u.roleName))];
+  const chips=[['all',t('common.all')]].concat(roleNames.map(r=>[r,r]));
+  function filtered(){ return filter==='all'?rows:rows.filter(u=>u.roleName===filter); }
+  function initialsOf(text){
+    return (text||'?').replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean).slice(0,2)
+      .map(w=>w[0]).join('').toUpperCase()||'?';
+  }
   function table(){
     return buildTable({
-      rowId:u=>u.id,
+      rowId:u=>u.kind+'-'+u.id,
       columns:[
-        {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:${u.clr};width:30px;height:30px;font-size:11px">${esc(u.av)}</span><div class="cellsub"><b>${esc(u.name)}</b><small>${esc(u.email)}</small></div></div>`},
-        {label:t('hr.col.role'),align:'l',render:u=>esc(u.role)},
-        {label:'MFA',align:'l',render:u=>u.mfa?cap(t('usr.mfa.on'),'ok'):cap(t('usr.mfa.off'),'warn')},
-        {label:t('usr.col.lastactive'),align:'l',render:u=>esc(u.last)},
+        {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:#0a84ff;width:30px;height:30px;font-size:11px">${esc(initialsOf(u.fullName||u.email))}</span><div class="cellsub"><b>${esc(u.fullName||u.email)}</b><small>${esc(u.email)}</small></div></div>`},
+        {label:t('hr.col.role'),align:'l',render:u=>esc(u.roleName)},
+        {label:t('usr.col.lastactive'),align:'l',render:u=>u.lastActiveAt?esc(String(u.lastActiveAt).slice(0,16).replace('T',' ')):'—'},
         {label:t('col.status'),align:'l',render:u=>cap(ts(u.status),userStatusTone(u.status))},
-        {label:'',align:'c',render:u=>`<span class="rowact"><button data-tip="${esc(t('usr.perm'))}" data-act="perm">${ic('shield')}</button><button data-tip="${esc(t('usr.more'))}">${ic('more')}</button></span>`},
+        {label:'',align:'c',render:u=>u.kind==='user'&&u.email!==(DB.user&&DB.user.email)
+          ?`<span class="rowact"><button data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button></span>`
+          :(u.kind==='user'?`<span class="rowact" data-tip="${esc(s('you'))}"><button disabled>${ic('user')}</button></span>`:'')},
       ],
-      rows:rows(),
+      rows:filtered(),
     });
   }
-  const active=DB.adminUsers.filter(u=>u.status==='Active').length;
-  const invited=DB.adminUsers.filter(u=>u.status==='Invited').length;
-  const mfaPct=Math.round(DB.adminUsers.filter(u=>u.mfa).length/DB.adminUsers.length*100);
   function statTile(label,value,sub,tone){
     return `<div class="card" style="padding:13px 15px"><small style="display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${label}</small>
       <b class="tnum" style="font-size:23px;font-weight:600;letter-spacing:-.02em;color:${tone||'var(--fg)'}">${value}</b>
       <small style="display:block;color:var(--muted);font-size:12px;margin-top:3px">${sub}</small></div>`;
   }
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">${crumbs([DB.company.name,t('nav.admin'),t('usr.crumb')])}
-      <div class="h1row"><h1>${esc(t('usr.title'))}</h1><span class="countchip" id="usrCount"></span></div>
-    </div>
-    <div class="statwrap"><div class="statcards">
-      ${statTile(t('usr.t.total'),DB.adminUsers.length,t('usr.t.totalsub'))}
-      ${statTile(t('usr.t.active'),active,t('usr.t.activesub'),'var(--ok)')}
-      ${statTile(t('usr.t.invites'),invited,t('usr.t.invitessub'),'var(--warn)')}
-      ${statTile(t('usr.t.mfa'),mfaPct+'%',mfaPct<90?t('usr.t.mfa.enforce'):t('usr.t.mfa.met'),mfaPct<90?'var(--warn)':'var(--ok)')}
-    </div></div>
-    <div class="toolbar">
-      <div class="filterchips" id="usrChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${esc(c[1])}</button>`).join('')}</div>
-      <div class="grow"></div>
-      <button class="viewsel" data-tip="${esc(t('usr.rolestip'))}" onclick="navigate('role-permission')">${ic('shield')}${esc(t('usr.roles'))}</button>
-      <button class="viewsel" data-tip="${esc(t('usr.audit'))}" onclick="navigate('audit-log')">${ic('history')}${esc(t('usr.audit'))}</button>
-      ${btn(t('usr.invite'),{icon:'plus',cls:'primary',attrs:'data-act="invite"'})}
-    </div>
-    <div class="tablewrap" id="usrTable">${table()}</div>
-  </section></div>`;
-  $('#usrCount').textContent=rows().length+' '+t('usr.users');
-  function rewire(){
-    wireTable($('#usrTable'),{ onRow:(id)=>navigate('role-permission') });
-    $('#usrTable').querySelectorAll('[data-act="perm"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();navigate('role-permission');}));
+  async function render(){
+    const active=usersPage.users.filter(u=>u.status==='Active').length;
+    const invited=usersPage.invitations.length;
+    root.innerHTML=`<div class="content full"><section class="master">
+      <div class="pagehead">${crumbs([DB.company.name,t('nav.admin'),t('usr.crumb')])}
+        <div class="h1row"><h1>${esc(t('usr.title'))}</h1><span class="countchip" id="usrCount"></span></div>
+      </div>
+      <div class="statwrap"><div class="statcards">
+        ${statTile(t('usr.t.total'),usersPage.users.length,t('usr.t.totalsub'))}
+        ${statTile(t('usr.t.active'),active,t('usr.t.activesub'),'var(--ok)')}
+        ${statTile(t('usr.t.invites'),invited,t('usr.t.invitessub'),invited?'var(--warn)':undefined)}
+      </div></div>
+      <div class="toolbar">
+        <div class="filterchips" id="usrChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${esc(c[0])}">${esc(c[1])}</button>`).join('')}</div>
+        <div class="grow"></div>
+        <button class="viewsel" data-tip="${esc(t('usr.rolestip'))}" onclick="navigate('role-permission')">${ic('shield')}${esc(t('usr.roles'))}</button>
+        <button class="viewsel" data-tip="${esc(t('usr.audit'))}" onclick="navigate('audit-log')">${ic('history')}${esc(t('usr.audit'))}</button>
+        ${btn(t('usr.invite'),{icon:'plus',cls:'primary',attrs:'data-act="invite"'})}
+      </div>
+      <div class="tablewrap" id="usrTable">${table()}</div>
+    </section></div>`;
+    $('#usrCount').textContent=filtered().length+' '+t('usr.users');
+    rewire();
   }
-  rewire();
-  $('#usrChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#usrChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f; $('#usrTable').innerHTML=table(); $('#usrCount').textContent=rows().length+' '+t('usr.users'); rewire(); }));
-  root.querySelector('[data-act="invite"]').addEventListener('click',()=>{
-    appModal({ icon:'people', title:t('usr.invite'),
-      body:`<div class="fld"><span>${esc(t('usr.m.email'))}</span><input placeholder="name@northwind.co"></div>
-        <div class="fldrow c2" style="margin-top:4px"><div class="fld"><span>${esc(t('hr.col.role'))}</span><select>${[...new Set(DB.adminUsers.map(u=>u.role))].map(r=>`<option>${esc(r)}</option>`).join('')}</select></div><div class="fld"><span>${esc(t('usr.m.companies'))}</span><select><option>${esc(t('usr.m.allco'))}</option><option>Northwind Mfg only</option></select></div></div>
-        <label style="display:flex;align-items:center;gap:9px;padding:10px 0 2px;font-size:13px"><input type="checkbox" class="checkbox" checked style="flex:none"><span>${esc(t('usr.m.mfareq'))}</span></label>`,
-      actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('usr.m.send'),{icon:'send',cls:'primary',attrs:'onclick="closeModal();toast(\'Invitation sent\',\'ok\')"'})}` });
-  });
+  function rewire(){
+    wireTable($('#usrTable'),{ onRow:()=>navigate('role-permission') });
+    $('#usrTable').querySelectorAll('[data-act="toggle"]').forEach(b=>b.addEventListener('click',async e=>{
+      e.stopPropagation();
+      const userId=Number(b.dataset.id);
+      const wasActive=b.dataset.active==='true';
+      const row=usersPage.users.find(u=>u.id===userId);
+      b.disabled=true;
+      try{
+        await window.ErpSystemData.action('admin/users',userId,'toggle-active',{isActive:!wasActive});
+        toast(s(wasActive?'toggleDisabled':'toggleEnabled').replace('{email}',row?row.email:''),'ok');
+        const refreshed=(await adminListPage('admin/users')).data;
+        usersPage.users=refreshed.users; usersPage.invitations=refreshed.invitations;
+        rows.length=0; rows.push(...usersPage.users,...usersPage.invitations);
+        await render();
+      }catch(error){
+        b.disabled=false;
+        toast(error&&error.message?error.message:s('toggleError'),'danger');
+      }
+    }));
+    $('#usrChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+      $('#usrChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f;
+      $('#usrTable').innerHTML=table(); $('#usrCount').textContent=filtered().length+' '+t('usr.users'); rewire();
+    }));
+    const inviteBtn=root.querySelector('[data-act="invite"]');
+    inviteBtn&&inviteBtn.addEventListener('click',()=>openInviteModal());
+  }
+  function openInviteModal(){
+    openModal(`<div class="modal-head">${ic('people')}<h3>${esc(t('usr.invite'))}</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
+      <div class="modal-body"><div class="set-grid">
+        <div class="fld"><span>${esc(s('fieldEmail'))} <span class="req">*</span></span><input id="uiEmail" type="email" placeholder="${esc(s('emailPlaceholder'))}"></div>
+        <div class="fld"><span>${esc(s('fieldRole'))} <span class="req">*</span></span><select id="uiRole">${usersPage.users.length?'':''}${roleOptions()}</select></div>
+      </div></div>
+      <div class="modal-foot">${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('usr.m.send'),{icon:'send',cls:'primary',attrs:'data-save="1"'})}</div>`);
+    const saveBtn=$('#modalEl').querySelector('[data-save]');
+    saveBtn.addEventListener('click',async()=>{
+      const email=$('#uiEmail').value.trim();
+      const roleId=Number($('#uiRole').value);
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast(s('emailRequired'),'danger'); return; }
+      if(!roleId){ toast(s('roleRequired'),'danger'); return; }
+      saveBtn.disabled=true;
+      try{
+        await window.ErpSystemData.create('admin/invitations',{email,roleId});
+        closeModal();
+        toast(s('inviteSent').replace('{email}',email),'ok');
+        const refreshed=(await adminListPage('admin/users')).data;
+        usersPage.users=refreshed.users; usersPage.invitations=refreshed.invitations;
+        rows.length=0; rows.push(...usersPage.users,...usersPage.invitations);
+        await render();
+      }catch(error){
+        saveBtn.disabled=false;
+        toast(error&&error.message?error.message:s('inviteError'),'danger');
+      }
+    });
+  }
+  function roleOptions(){
+    const uniqueRoles=[];
+    const seen=new Set();
+    usersPage.users.forEach(u=>{ if(!seen.has(u.roleId)){ seen.add(u.roleId); uniqueRoles.push({roleId:u.roleId,roleName:u.roleName}); } });
+    return uniqueRoles.map(r=>`<option value="${r.roleId}">${esc(r.roleName)}</option>`).join('');
+  }
+  await render();
 };
 
 /* ---------------- AUDIT LOG (report) ---------------- */
-SCREENS['audit-log'] = function(root){
-  const failed=DB.auditLog.filter(l=>!l.ok).length;
-  const tpl='80px minmax(130px,1.2fr) minmax(180px,1.7fr) minmax(140px,1.3fr) 110px 110px';
-  let body='';
-  DB.auditLog.forEach(l=>{
-    body+=`<div class="dt-r logrow" data-detail="${esc(l.user)} · ${esc(l.ip)}">
-      <div class="dt-c l mono" style="color:var(--muted);font-size:12px">${esc(l.t)}</div>
-      <div class="dt-c l"><b style="font-weight:600">${esc(l.user)}</b></div>
-      <div class="dt-c l">${esc(l.action)}</div>
-      <div class="dt-c l mono" style="font-size:12px;color:${l.obj==='—'?'var(--faint)':'var(--accent)'}">${esc(l.obj)}</div>
-      <div class="dt-c l">${cap(l.ok?l.type:'failed',auditTypeTone(l.type,l.ok))}</div>
-      <div class="dt-c l mono" style="font-size:11.5px;color:var(--muted)">${esc(l.ip)}</div></div>`;
-  });
+SCREENS['audit-log'] = async function(root){
+  const s=adminCopy();
+  const page=await adminListPage('admin/audit-log');
+  const events=page.data;
+  let userFilter='all', entityFilter='all';
+  const userNames=[...new Set(events.map(e=>e.actorName||e.actorEmail).filter(Boolean))];
+  const entities=[...new Set(events.map(e=>e.entity))];
+  function filtered(){
+    return events.filter(e=>{
+      if(userFilter!=='all'&&(e.actorName||e.actorEmail)!==userFilter) return false;
+      if(entityFilter!=='all'&&e.entity!==entityFilter) return false;
+      return true;
+    }).slice().reverse();
+  }
+  function table(){
+    const rows=filtered();
+    if(!rows.length){
+      return statePanel({icon:'history',title:s('auditNoEvents')});
+    }
+    const tpl='150px minmax(130px,1.2fr) minmax(140px,1.2fr) minmax(160px,1.6fr)';
+    let h=`<div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
+      <div class="dt-r dt-head"><div class="dt-c l">${esc(s('auditColTime'))}</div><div class="dt-c l">${esc(s('auditColUser'))}</div><div class="dt-c l">${esc(s('auditColAction'))}</div><div class="dt-c l">${esc(s('auditColRecord'))}</div></div>
+      <div class="dt-body">`;
+    rows.forEach(e=>{
+      h+=`<div class="dt-r">
+        <div class="dt-c l mono" style="color:var(--muted);font-size:12px">${esc(String(e.occurredAt).slice(0,16).replace('T',' '))}</div>
+        <div class="dt-c l"><b style="font-weight:600">${esc(e.actorName||e.actorEmail||s('auditSystem'))}</b></div>
+        <div class="dt-c l">${cap(esc(e.action),auditActionTone(e.action))}</div>
+        <div class="dt-c l mono" style="font-size:12px;color:var(--accent)">${esc(e.entity)}${e.entityId!=null?' #'+esc(e.entityId):''}</div>
+      </div>`;
+    });
+    h+=`</div></div></div>`; return h;
+  }
   root.innerHTML=`<div class="content full"><section class="master"><div class="report">
     <aside class="report-params">
-      <h3>Filters</h3>
-      <div class="fld"><span>User</span><select><option>All users</option>${[...new Set(DB.auditLog.map(l=>l.user))].map(u=>`<option>${esc(u)}</option>`).join('')}</select></div>
-      <div class="fld"><span>Action type</span><select><option>All types</option><option>Posting</option><option>Approval</option><option>Permission</option><option>Security</option><option>Export</option></select></div>
-      <div class="fld"><span>Date range</span><select><option>Today</option><option>Last 7 days</option><option>This period</option></select></div>
-      <div class="fld"><span>Result</span><select><option>All</option><option>Success</option><option>Failed</option></select></div>
-      ${btn('Apply filters',{icon:'filter',cls:'primary',sm:false,attrs:'onclick="toast(\'Filters applied\',\'ok\')"'})}
-      <div style="border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px">
-        ${failed?`<div class="indicator danger"><div class="ind-top">${ic('warn')}<span>Security events</span><span class="ind-r">${failed}</span></div><small>1 failed login from an unrecognised IP — review.</small></div>`:''}
-      </div>
+      <h3>${esc(t('common.filter'))}</h3>
+      <div class="fld"><span>${esc(s('auditColUser'))}</span><select id="alUser"><option value="all">${esc(s('auditFilterAllUsers'))}</option>${userNames.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('')}</select></div>
+      <div class="fld"><span>${esc(s('auditColRecord'))}</span><select id="alEntity"><option value="all">${esc(s('auditFilterAllEntities'))}</option>${entities.map(en=>`<option value="${esc(en)}">${esc(en)}</option>`).join('')}</select></div>
     </aside>
     <div class="report-result">
       <div class="report-toolbar">
-        <div><b style="font-size:15px">Audit Trail</b><div class="report-meta">Today · ${DB.auditLog.length} events · ${failed} failed · immutable system log</div></div>
+        <div><b style="font-size:15px">${esc(s('auditTitle'))}</b><div class="report-meta">${esc(s('auditMeta').replace('{count}',events.length).replace('{truncated}',page.nextCursor?s('auditTruncated'):''))}</div></div>
         <div class="grow"></div>
-        ${btn('Export',{icon:'download',cls:'soft'})}${btn('Users',{icon:'people',cls:'soft',attrs:'onclick="navigate(\'user-mgmt\')"'})}
+        ${btn(t('usr.crumb'),{icon:'people',cls:'soft',attrs:'onclick="navigate(\'user-mgmt\')"'})}
       </div>
-      <div class="tablewrap"><div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-        <div class="dt-r dt-head"><div class="dt-c l">Time</div><div class="dt-c l">User</div><div class="dt-c l">Action</div><div class="dt-c l">Object</div><div class="dt-c l">Type</div><div class="dt-c l">IP</div></div>
-        <div class="dt-body">${body}</div>
-      </div></div></div>
+      <div class="tablewrap" id="alTable">${table()}</div>
     </div>
   </div></section></div>`;
+  function rewire(){ $('#alTable').innerHTML=table(); }
+  $('#alUser').addEventListener('change',e=>{ userFilter=e.target.value; rewire(); });
+  $('#alEntity').addEventListener('change',e=>{ entityFilter=e.target.value; rewire(); });
 };
 
 /* ---------------- SYSTEM SETTINGS (config) ---------------- */
