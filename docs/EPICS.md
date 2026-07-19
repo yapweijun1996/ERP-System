@@ -383,3 +383,48 @@ Acceptance criteria:
       `depreciation` actually computes and posts a real run instead of re-announcing a
       hardcoded number.
 - [x] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`.
+
+## EPIC-016 — Admin: Users, Roles & Audit Log
+
+`user-mgmt`, `role-permission` and `audit-log` are the last mock-data screens whose
+*backend already exists in full* — TASK-024 (EPIC-009) built real `app_user`/`role`/
+`role_permission`/`audit_log` tables, `hasPermission()`, and a tested `src/auth/
+lifecycle.ts` (invitations, password reset) — but no screen ever called any of it. This
+epic wires the screens to that existing backend rather than adding new schema. Two real
+design gaps found along the way, both closed here rather than deferred: (1) these admin
+tables are deliberately excluded from the generic `resource()`/RLS-company-scope
+framework (documented in `deploy/sql/production-rls.sql`) and structurally don't fit it
+(non-`id` PKs, `role_permission`'s composite PK) — so this epic adds **bespoke** routes
+mirroring `src/api/routes/auth.ts`'s existing style, not `ResourceDefinition` entries;
+(2) `audit_log` was found to be **permanently empty in browser demo mode** — `appendAudit`
+was only ever called from the production HTTP layer, never by the demo adapter's direct
+`*Within` calls — fixed by wiring `appendAudit`-equivalent writes into the demo adapter's
+own generic create/action dispatch, which also retroactively gives every existing module
+a real audit trail in demo mode. The mock's 4-level (None/View/Edit/Full) permission
+matrix doesn't match the real boolean-per-key `role_permission` model — the real screen
+uses an honest 2-state (allowed/not-allowed) grid instead of forcing a fake 4th level.
+`master-control`, `sys-settings` and `module-activation-control` stay mock (need new
+schema or a data-repointing decision — out of scope for this pass). (TASK-041, TASK-042)
+
+Acceptance criteria:
+
+- [ ] `src/auth/permissions.ts` gains `usersRead`/`usersManage`/`rolesRead`/
+      `rolesWrite` keys; `src/auth/lifecycle.ts` gains tenant-scoped
+      `setUserActiveWithin` (rejects self-disable), `createRoleWithin` (unique name per
+      master), `setRolePermissionWithin` (rejects editing the superadmin role, validates
+      `permissionKey` against the real `PERMISSIONS` allowlist) — all audited.
+- [ ] `src/api/admin.ts` (new, mirrors `src/api/dashboard.ts`'s plain-function shape)
+      provides `listCompanyUsers` (real users + pending invitations), `listRoles`,
+      `listRolePermissions`, `listAuditLog`; `src/api/routes/admin.ts` (new, mirrors
+      `routes/auth.ts`) exposes them plus the write actions as `/api/admin/*`, mounted
+      in `src/api/app.ts`.
+- [ ] Demo adapter (`erp-system-data-adapter.js` + `erp-demo-runtime-impl.ts`) gains
+      matching bespoke dispatch for `admin/*` keys (not added to `RESOURCE_TABLES`) and
+      real `appendAudit` calls in its generic create/action dispatch, fixing demo-mode's
+      previously-always-empty audit log for every module, not just Admin.
+- [ ] `user-mgmt` reads real users+invitations; "Invite user" calls the real (already
+      built, previously unused) `createInvitation`; a new enable/disable action is real.
+- [ ] `role-permission` shows a real 2-state permission grid per role; "Add role" and
+      permission toggles are real writes; the superadmin role renders read-only.
+- [ ] `audit-log` reads real `audit_log` rows (bounded, client-side filters).
+- [ ] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (50 → 53).
