@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm';
 import type { DB } from './db';
 import {
   master, company, currency, appUser, role, rolePermission, userCompany,
-  product, taxRule, customer, account, supplier, opportunity,
+  product, taxRule, customer, account, supplier, opportunity, contact, activity,
 } from './schema';
 
 /**
@@ -95,7 +95,18 @@ export async function seedDemo(db: DB): Promise<void> {
   // A customer for the SG company.
   const [cust] = await db.insert(customer).values({
     masterFn: 'M1', companyFn: 'C-SG', code: 'CUST1', name: 'Beta Pte Ltd',
+    industry: 'Manufacturing', ownerUserId: adminUser.id,
   }).returning({ id: customer.id });
+
+  // Customer-360 contacts + timeline (TASK-031).
+  await db.insert(contact).values([
+    { masterFn: 'M1', companyFn: 'C-SG', customerId: cust.id, name: 'Priya Nair', role: 'Procurement Manager', email: 'priya.nair@beta.example', phone: '+65 6555 0142' },
+    { masterFn: 'M1', companyFn: 'C-SG', customerId: cust.id, name: 'Marcus Tan', role: 'Finance Controller', email: 'marcus.tan@beta.example', phone: null },
+  ]);
+  await db.insert(activity).values([
+    { masterFn: 'M1', companyFn: 'C-SG', customerId: cust.id, kind: 'call', body: 'Discussed Q3 widget supply volumes and lead times.' },
+    { masterFn: 'M1', companyFn: 'C-SG', customerId: cust.id, kind: 'note', body: 'Renewed payment terms conversation queued for next QBR.' },
+  ]);
 
   // A supplier for the SG company (TASK-022 — purchasing chain).
   await db.insert(supplier).values({ masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP1', name: 'Gamma Supplies Pte Ltd' });

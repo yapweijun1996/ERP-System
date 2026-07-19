@@ -2,6 +2,8 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   account,
+  activity,
+  contact,
   customer,
   glEntry,
   goodsReceipt,
@@ -88,6 +90,7 @@ export interface ResourceDefinition {
   idempotencyPolicy: 'none' | 'required_for_actions';
   auditPolicy: 'none' | 'writes';
   status?: any;
+  customerId?: any;
 }
 
 /**
@@ -140,6 +143,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
   'sales/orders': resource(salesOrder, 'sales.read', {
     status: salesOrder.status,
+    customerId: salesOrder.customerId,
     versionColumn: salesOrder.version,
     allowedActions: ['confirm'],
   }),
@@ -202,9 +206,18 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'sales/quotation-lines': resource(salesQuotationLine, 'sales.read'),
   'sales/invoices': resource(invoice, 'sales.read', {
     status: invoice.status,
+    customerId: invoice.customerId,
     versionColumn: invoice.version,
   }),
   'crm/customers': resource(customer, 'crm.read'),
+  'crm/contacts': resource(contact, 'crm.read', {
+    customerId: contact.customerId,
+    createPermission: 'crm.write',
+  }),
+  'crm/activities': resource(activity, 'crm.read', {
+    customerId: activity.customerId,
+    createPermission: 'crm.write',
+  }),
   'finance/accounts': resource(account, 'finance.read'),
   'finance/gl-entries': resource(glEntry, 'finance.read'),
   'purchasing/suppliers': resource(supplier, 'purchasing.read'),
@@ -222,6 +235,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
   'crm/opportunities': resource(opportunity, 'crm.read', {
     status: opportunity.stage,
+    customerId: opportunity.customerId,
     versionColumn: opportunity.version,
     allowedActions: ['convert'],
     createPermission: 'crm.write',
@@ -285,12 +299,16 @@ function resource(
   readPermission: string,
   options: {
     status?: any;
+    customerId?: any;
     versionColumn?: any;
     allowedActions?: readonly string[];
     createPermission?: string;
     updatePermission?: string;
   } = {},
 ): ResourceDefinition {
+  const allowedFilters: string[] = [];
+  if (options.status) allowedFilters.push('status');
+  if (options.customerId) allowedFilters.push('customerId');
   return {
     table,
     idColumn: table.id,
@@ -298,7 +316,7 @@ function resource(
     readPermission,
     createPermission: options.createPermission ?? null,
     updatePermission: options.updatePermission ?? null,
-    allowedFilters: options.status ? ['status'] : [],
+    allowedFilters,
     allowedSorts: ['id'],
     allowedActions: options.allowedActions ?? [],
     versionColumn: options.versionColumn,
@@ -306,6 +324,7 @@ function resource(
     idempotencyPolicy: options.allowedActions?.length ? 'required_for_actions' : 'none',
     auditPolicy: options.allowedActions?.length ? 'writes' : 'none',
     status: options.status,
+    customerId: options.customerId,
   };
 }
 
@@ -388,6 +407,12 @@ export async function listResource(
   if (query.status != null && query.status !== '' && typeof query.status !== 'string') {
     throw new InvalidResourceQueryError('status must be a string');
   }
+  if (query.customerId != null && !definition.customerId) {
+    throw new InvalidResourceQueryError(`customerId is not a supported filter for '${resource}'`);
+  }
+  if (query.customerId != null && query.customerId !== '') {
+    parsePositiveInteger(query.customerId, 0, 'customerId');
+  }
 
   const predicates = [
     eq(definition.table.masterFn, scope.masterFn),
@@ -396,6 +421,9 @@ export async function listResource(
   ];
   if (definition.status && typeof query.status === 'string' && query.status) {
     predicates.push(eq(definition.status, query.status));
+  }
+  if (definition.customerId && query.customerId != null && query.customerId !== '') {
+    predicates.push(eq(definition.customerId, Number(query.customerId)));
   }
 
   const rows = await db

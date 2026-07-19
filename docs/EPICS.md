@@ -259,3 +259,28 @@ Acceptance criteria:
       3 already-Canonical screens sharing that function also stop showing fake
       `Unclassified`/`0` category/reorder values.
 - [x] `item-master` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.
+
+## EPIC-012 — Customer 360
+
+Converts CRM's remaining mock screen: `crm-customer` (Customer-360) was explicitly out
+of scope for EPIC-010/TASK-027/028 and still reads a single hardcoded mock record
+(`DB.cust0007`). This epic gives it real contacts, a real activity log shared with the
+existing (previously unused) `activity` table, and real balance/overdue figures reusing
+the AR-Aging report's existing Net-30 client-side formula rather than inventing new
+credit-exposure logic. (TASK-031, TASK-032)
+
+Acceptance criteria:
+
+- [x] `customer` gains nullable `industry`/`owner_user_id`; a new tenant-scoped
+      `contact` table links to `customer`; `activity.opportunity_id` becomes nullable
+      and gains a nullable `customer_id` with a check that at least one target is set
+      — `drizzle/0020_fast_naoko.sql`.
+- [x] `src/modules/crm/contact.ts` and `src/modules/crm/activity.ts` provide
+      tenant-scoped `createContactWithin`/`createCustomerActivityWithin`; `crm/contacts`
+      and `crm/activities` are registered as create resources, alongside a
+      `customerId` filter added to `sales/orders`, `sales/invoices` and
+      `crm/opportunities` for customer-scoped reads.
+- [ ] `crm-customer` reads real customer/contacts/orders/opportunities/unpaid-invoices/
+      activity data instead of `DB.cust0007`; "Log activity" (and, if added, "Add
+      contact") call the real adapter actions.
+- [ ] `crm-customer` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.

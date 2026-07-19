@@ -141,6 +141,13 @@
       "when": 1784426858620,
       "tag": "0019_aromatic_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1784427927138,
+      "tag": "0020_fast_naoko",
+      "breakpoints": true
     }
   ]
 }

@@ -56,8 +56,27 @@ INSERT INTO tax_rule (master_fn, company_fn, tax_regime, tax_code, rate, valid_f
   ('M1', 'C-SG', 'GST', 'SR', 9.000, '2024-01-01', NULL),
   ('M1', 'C-MY', 'SST', 'SV', 8.000, '2025-07-01', NULL);
 
-INSERT INTO customer (master_fn, company_fn, code, name) VALUES
-  ('M1', 'C-SG', 'CUST1', 'Beta Pte Ltd');
+INSERT INTO customer (master_fn, company_fn, code, name, industry, owner_user_id)
+SELECT 'M1', 'C-SG', 'CUST1', 'Beta Pte Ltd', 'Manufacturing', u.user_id
+FROM app_user u
+WHERE u.master_fn = 'M1' AND u.email = 'admin@acme.co';
+
+-- Customer-360 contacts + timeline (TASK-031).
+INSERT INTO contact (master_fn, company_fn, customer_id, name, role, email, phone)
+SELECT 'M1', 'C-SG', c.id, x.name, x.role, x.email, x.phone
+FROM customer c, (VALUES
+  ('Priya Nair', 'Procurement Manager', 'priya.nair@beta.example', '+65 6555 0142'),
+  ('Marcus Tan', 'Finance Controller', 'marcus.tan@beta.example', NULL)
+) AS x(name, role, email, phone)
+WHERE c.master_fn = 'M1' AND c.company_fn = 'C-SG' AND c.code = 'CUST1';
+
+INSERT INTO activity (master_fn, company_fn, customer_id, kind, body)
+SELECT 'M1', 'C-SG', c.id, x.kind, x.body
+FROM customer c, (VALUES
+  ('call', 'Discussed Q3 widget supply volumes and lead times.'),
+  ('note', 'Renewed payment terms conversation queued for next QBR.')
+) AS x(kind, body)
+WHERE c.master_fn = 'M1' AND c.company_fn = 'C-SG' AND c.code = 'CUST1';
 
 -- A supplier for the SG company (TASK-022 -- purchasing chain).
 INSERT INTO supplier (master_fn, company_fn, code, name) VALUES

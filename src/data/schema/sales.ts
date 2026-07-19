@@ -7,12 +7,15 @@ import {
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { product, warehouse } from './inventory';
+import { appUser } from './tenancy';
 
 export const customer = pgTable('customer', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,
   code: text('code').notNull(),
   name: text('name').notNull(),
+  industry: text('industry'),
+  ownerUserId: bigint('owner_user_id', { mode: 'number' }).references(() => appUser.userId),
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_customer_code').on(t.masterFn, t.companyFn, t.code),

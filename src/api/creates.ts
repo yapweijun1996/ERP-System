@@ -29,6 +29,14 @@ import {
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
 import {
+  createContactWithin,
+  type CreateContactInput,
+} from '../modules/crm/contact';
+import {
+  createCustomerActivityWithin,
+  type CreateCustomerActivityInput,
+} from '../modules/crm/activity';
+import {
   createWarehousePickWithin,
   type CreateWarehousePickInput,
 } from '../modules/warehouse/picking';
@@ -180,6 +188,24 @@ const CREATES: Record<string, CreateDefinition> = {
         );
       }
       return createPurchaseOrderWithin(tx, scope, input);
+    },
+  },
+  'crm/contacts': {
+    permission: 'crm.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createContactWithin(tx, scope, payload as unknown as CreateContactInput);
+    },
+  },
+  'crm/activities': {
+    permission: 'crm.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createCustomerActivityWithin(
+        tx,
+        scope,
+        payload as unknown as CreateCustomerActivityInput,
+      );
     },
   },
   'crm/opportunities': {
