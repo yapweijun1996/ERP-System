@@ -167,31 +167,31 @@ export async function seedDemo(db: DB): Promise<void> {
   // status (pending/approved/rejected) so the demo isn't empty on first boot. Dana
   // Reyes has no manager (top of the reporting line); the others report to her,
   // exercising the self-referencing manager_id FK.
-  const [dana] = await db.insert(employee).values({
-    masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1001', fullName: 'Dana Reyes',
-    email: 'dana.reyes@acme.co', department: 'Operations', jobTitle: 'Operations Director',
+  const [manager] = await db.insert(employee).values({
+    masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1001', fullName: 'Farah Wong',
+    email: 'farah.wong@acme.co', department: 'Operations', jobTitle: 'Operations Director',
     employmentType: 'Full-time', startDate: '2019-02-01', annualLeaveDays: 20,
   }).returning({ id: employee.id });
   const [marcus, aisha, tom, lena] = await db.insert(employee).values([
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1042', fullName: 'Marcus Silva',
       email: 'marcus.silva@acme.co', department: 'Warehouse', jobTitle: 'Warehouse Supervisor',
-      employmentType: 'Full-time', managerId: dana.id, startDate: '2021-03-15', annualLeaveDays: 16,
+      employmentType: 'Full-time', managerId: manager.id, startDate: '2021-03-15', annualLeaveDays: 16,
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1055', fullName: 'Aisha Rahman',
       email: 'aisha.rahman@acme.co', department: 'Finance', jobTitle: 'Senior Accountant',
-      employmentType: 'Full-time', managerId: dana.id, startDate: '2020-07-01', annualLeaveDays: 18,
+      employmentType: 'Full-time', managerId: manager.id, startDate: '2020-07-01', annualLeaveDays: 18,
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1071', fullName: 'Tom Becker',
       email: 'tom.becker@acme.co', department: 'Production', jobTitle: 'Production Line Lead',
-      employmentType: 'Full-time', managerId: dana.id, startDate: '2022-01-10', annualLeaveDays: 14,
+      employmentType: 'Full-time', managerId: manager.id, startDate: '2022-01-10', annualLeaveDays: 14,
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1088', fullName: 'Lena Park',
       email: 'lena.park@acme.co', department: 'Sales', jobTitle: 'Account Executive',
-      employmentType: 'Contract', managerId: dana.id, startDate: '2023-05-20', annualLeaveDays: 12,
+      employmentType: 'Contract', managerId: manager.id, startDate: '2023-05-20', annualLeaveDays: 12,
     },
   ]).returning({ id: employee.id });
 

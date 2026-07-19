@@ -3,81 +3,111 @@
    ============================================================ */
 
 /* ---------------- HR LEAVE APPROVAL ---------------- */
-SCREENS['leave-approval'] = function(root){
-  const data=JSON.parse(JSON.stringify(DB.leave));
-  let selected=data[0].no;
-  function statusOf(l){ return l.status; }
-  function render(){
-    const pending=data.filter(l=>l.status==='Pending Approval');
-    const sel=data.find(l=>l.no===selected)||pending[0]||data[0];
-    selected=sel.no;
-    const listCols=[
-      {label:'Employee',align:'l',w:'minmax(190px,2fr)',render:l=>`<div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="cav" style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;background:${l.clr};flex:none">${esc(l.avatar)}</span><div class="cellsub"><b>${esc(l.emp)}</b><small>${esc(l.dept)} · ${esc(l.no)}</small></div></div>`},
-      {label:'Type',align:'l',render:l=>cap(l.type,l.type==='Medical'?'violet':l.type==='Unpaid'?'neutral':'accent')},
-      {label:'Dates',align:'l',w:'minmax(150px,1.4fr)',render:l=>`${esc(l.from)} → ${esc(l.to)}`},
-      {label:'Days',align:'r',w:'70px',render:l=>l.days},
-      {label:'Balance',align:'r',w:'92px',render:l=>`${l.balance}${l.warn?` <span data-tip="${esc(l.warn)}">${ic('warn')}</span>`:''}`},
-      {label:'Status',align:'l',render:l=>statusBadge(l.status)},
-    ];
-    const table=buildTable({rowId:l=>l.no, columns:listCols, rows:data});
+SCREENS['leave-approval'] = async function(root){
+  const s=hrCopy();
+  const leaveStatusTone={pending:'warn',approved:'ok',rejected:'danger'};
+  const leaveStatusLabel=st=>({pending:s('statusPending'),approved:s('statusApproved'),rejected:s('statusRejected')}[st]||st);
+  let {employees,leaveRequests}=await prepareHrData();
+  function empOf(lv){ return employees.find(e=>e.id===lv.employeeId)||{fullName:'—',department:'—'}; }
+  let filter='pending';
+  let selected=leaveRequests[0]&&leaveRequests[0].id;
 
-    // detail
-    const after=sel.balance-sel.days;
-    const detail=`
+  function rows(){ return filter==='all'?leaveRequests:leaveRequests.filter(l=>l.status===filter); }
+  async function reload(){
+    const fresh=await prepareHrData();
+    employees=fresh.employees; leaveRequests=fresh.leaveRequests;
+  }
+
+  function render(){
+    const pendingCount=leaveRequests.filter(l=>l.status==='pending').length;
+    const pendingDays=leaveRequests.filter(l=>l.status==='pending').reduce((sum,l)=>sum+l.days,0);
+    const list=rows();
+    const sel=list.find(l=>l.id===selected)||list[0]||leaveRequests[0];
+    selected=sel&&sel.id;
+    const listCols=[
+      {label:t('hr.col.employee'),align:'l',w:'minmax(190px,2fr)',render:l=>{ const e=empOf(l); return `<div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="cav" style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;background:${hrAvatarColor(e.fullName)};flex:none">${esc(hrInitials(e.fullName))}</span><div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.department)}</small></div></div>`; }},
+      {label:'Type',align:'l',render:l=>cap(l.leaveType,l.leaveType==='Medical'?'violet':l.leaveType==='Unpaid'?'neutral':'accent')},
+      {label:s('colDates'),align:'l',w:'minmax(150px,1.4fr)',render:l=>`${esc(l.startDate)} → ${esc(l.endDate)}`},
+      {label:'Days',align:'r',w:'70px',render:l=>l.days},
+      {label:t('col.status'),align:'l',render:l=>cap(leaveStatusLabel(l.status),leaveStatusTone[l.status]||'neutral')},
+    ];
+    const table=list.length?buildTable({rowId:l=>l.id, columns:listCols, rows:list}):statePanel({icon:'calendar',title:s('noLeaveRequests'),body:''});
+
+    const detail=sel?(()=>{
+      const e=empOf(sel);
+      const decided=sel.status!=='pending';
+      return `
       <div class="detail-head">
         <span class="grabber"></span>
         <button class="close" onclick="document.getElementById('lvContent').classList.add('detail-collapsed');document.getElementById('lvDetail').classList.remove('open')">${ic('chevL')}Close</button>
-        <div class="dh-top"><span class="cav" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:600;background:${sel.clr};flex:none">${esc(sel.avatar)}</span>
-          <div><h2>${esc(sel.emp)}</h2><span class="sub">${esc(sel.dept)} · ${esc(sel.no)}</span></div>
-          <div style="margin-left:auto">${statusBadge(sel.status)}</div></div>
+        <div class="dh-top"><span class="cav" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:600;background:${hrAvatarColor(e.fullName)};flex:none">${esc(hrInitials(e.fullName))}</span>
+          <div><h2>${esc(e.fullName)}</h2><span class="sub">${esc(e.department)} · ${esc(e.jobTitle||'')}</span></div>
+          <div style="margin-left:auto">${cap(leaveStatusLabel(sel.status),leaveStatusTone[sel.status]||'neutral')}</div></div>
       </div>
       <div class="detail-body">
-        ${sel.warn?`<div class="risk danger" style="margin-bottom:14px">${ic('warn')}<div><b>${esc(sel.warn)}</b><small>Approving will create a negative balance or unpaid leave. Add a note for HR.</small></div></div>`:''}
-        ${sel.cert?`<div class="risk ok" style="margin-bottom:14px">${ic('paperclip')}<div><b>Medical certificate attached</b><small>cert-${esc(sel.no)}.pdf · verified</small></div></div>`:''}
-        <div class="statgrid c3"><div class="stat"><small>Requested</small><b>${sel.days}d</b></div><div class="stat"><small>Balance</small><b>${sel.balance}d</b></div><div class="stat ${after<0?'dangerval':'okval'}"><small>After</small><b>${after}d</b></div></div>
+        <div class="statgrid c3"><div class="stat"><small>Requested</small><b>${sel.days}d</b></div></div>
         <div class="card">
-          <div class="field"><span class="k">Leave type</span><span class="v">${esc(sel.type)}</span></div>
-          <div class="field"><span class="k">From</span><span class="v">${esc(sel.from)}</span></div>
-          <div class="field"><span class="k">To</span><span class="v">${esc(sel.to)}</span></div>
-          <div class="field"><span class="k">Working days</span><span class="v">${sel.days}</span></div>
-          <div class="field"><span class="k">Cover</span><span class="v">${esc(sel.cover)}</span></div>
-          <div class="field"><span class="k">Reason</span><span class="v">${esc(sel.reason)}</span></div>
+          <div class="field"><span class="k">Leave type</span><span class="v">${esc(sel.leaveType)}</span></div>
+          <div class="field"><span class="k">From</span><span class="v">${esc(sel.startDate)}</span></div>
+          <div class="field"><span class="k">To</span><span class="v">${esc(sel.endDate)}</span></div>
+          <div class="field"><span class="k">${esc(s('rejectReasonLabel'))}</span><span class="v">${sel.reason?esc(sel.reason):'—'}</span></div>
+          ${sel.status==='rejected'?`<div class="field"><span class="k">${esc(s('rejectReasonLabel'))} (HR)</span><span class="v">${esc(sel.rejectionReason||'')}</span></div>`:''}
+          ${decided&&sel.decidedAt?`<div class="field"><span class="k">Decided</span><span class="v">${esc(String(sel.decidedAt).slice(0,10))}</span></div>`:''}
         </div>
-        <div class="sectitle">Team calendar — ${esc(sel.from.slice(0,7))}</div>
-        <div class="card" style="font-size:12px;color:var(--muted)">No overlapping leave in ${esc(sel.dept)} during these dates.${sel.cover==='—'?' <span style="color:var(--warn)">No cover assigned.</span>':''}</div>
-        <div class="sectitle">Approval trail</div>
-        ${auditTrail([{kind:'current',when:'Awaiting you',what:'Manager approval',who:DB.user.name+' · Operations Director'},{kind:'add',when:sel.from.slice(0,7)+'-01',what:'Submitted by employee',who:sel.emp}])}
       </div>
       <div class="approvebar">
-        ${btn('Reject',{icon:'x',cls:'danger',sm:false,attrs:`data-lv="reject"`})}
-        ${btn(sel.status==='Approved'?'Approved':'Approve',{icon:'check',cls:sel.status==='Approved'?'soft':'primary',sm:false,attrs:sel.status==='Approved'?'disabled':`data-lv="approve"`})}
+        ${btn(s('reject'),{icon:'x',cls:'danger',sm:false,attrs:decided?'disabled':`data-lv="reject"`})}
+        ${btn(sel.status==='approved'?s('statusApproved'):s('approve'),{icon:'check',cls:sel.status==='approved'?'soft':'primary',sm:false,attrs:decided?'disabled':`data-lv="approve"`})}
       </div>`;
+    })():'';
 
     root.innerHTML=`<div class="content" id="lvContent">
       <section class="master">
-        <div class="pagehead">${crumbs([DB.company.name,'HR','Leave Approval'])}
-          <div class="h1row"><h1>Leave Approval</h1><span class="countchip">${pending.length} pending</span>
-            <div class="headright"><div class="kfig"><small>This month</small><b class="tnum">18 days</b></div></div></div>
+        <div class="pagehead">${crumbs([DB.company.name,t('nav.hr'),t('hr.leave')])}
+          <div class="h1row"><h1>${esc(s('leaveApprovalTitle'))}</h1><span class="countchip">${pendingCount} ${esc(s('statusPending').toLowerCase())}</span>
+            <div class="headright"><div class="kfig"><small>${esc(s('statusPending'))}</small><b class="tnum">${pendingDays}d</b></div></div></div>
         </div>
-        <div class="toolbar"><div class="filterchips"><button class="chip on">Pending</button><button class="chip">All</button><button class="chip">My team</button></div>
-          <div class="grow"></div>${btn('Export',{icon:'download',cls:'soft'})}</div>
+        <div class="toolbar"><div class="filterchips" id="lvChips">
+          ${[['pending',s('statusPending')],['approved',s('statusApproved')],['rejected',s('statusRejected')],['all',s('filterAllStatus')]]
+            .map(([v,l])=>`<button class="chip ${v===filter?'on':''}" data-f="${v}">${esc(l)}</button>`).join('')}
+        </div>
+          <div class="grow"></div>${btn(t('common.export'),{icon:'download',cls:'soft',attrs:'onclick="toast(\'Export — not in this build\',\'info\')"'})}</div>
         <div class="tablewrap" id="lvTable">${table}</div>
       </section>
       <aside class="detail open" id="lvDetail">${detail}</aside>
     </div>`;
 
-    $('#lvTable').querySelectorAll('.dt-r[data-row]').forEach(tr=>{ tr.classList.toggle('sel',tr.dataset.row===selected); tr.addEventListener('click',()=>{ selected=tr.dataset.row; render(); $('#lvContent').classList.remove('detail-collapsed'); }); });
-    const ap=root.querySelector('[data-lv="approve"]'); if(ap)ap.addEventListener('click',()=>{ sel.status='Approved'; toast(`${sel.emp}’s leave approved`,'ok'); render(); });
+    $('#lvTable').querySelectorAll('.dt-r[data-row]').forEach(tr=>{ tr.classList.toggle('sel',Number(tr.dataset.row)===selected); tr.addEventListener('click',()=>{ selected=Number(tr.dataset.row); render(); $('#lvContent').classList.remove('detail-collapsed'); }); });
+    $('#lvChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ filter=c.dataset.f; selected=null; render(); }));
+    const ap=root.querySelector('[data-lv="approve"]'); if(ap)ap.addEventListener('click',async()=>{
+      ap.disabled=true;
+      try{
+        await window.ErpSystemData.action('hr/leave-requests',sel.id,'approve',{});
+        await reload();
+        toast(s('approvedToast').replace('{name}',empOf(sel).fullName),'ok');
+        render();
+      }catch(error){ toast(s('actionError'),'danger'); ap.disabled=false; }
+    });
     const rj=root.querySelector('[data-lv="reject"]'); if(rj)rj.addEventListener('click',()=>{
       appModal({
         icon: 'xc',
-        title: `Reject leave — ${sel.emp}`,
-        body: `<div class="fld err"><span>Reason <span class="req">*</span></span><textarea placeholder="Shared with the employee and HR."></textarea><span class="hint bad">Required to reject.</span></div>`,
-        actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Reject',{icon:'x',cls:'danger-solid',attrs:`onclick="closeModal();rejectLeave('${sel.no}')"`})}`,
+        title: s('rejectTitle').replace('{name}',empOf(sel).fullName),
+        body: `<div class="fld err"><span>${esc(s('rejectReasonLabel'))} <span class="req">*</span></span><textarea id="lvRejectReason" placeholder="${esc(s('rejectReasonPlaceholder'))}"></textarea><span class="hint bad">${esc(s('rejectReasonRequired'))}</span></div>`,
+        actions: `${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('reject'),{icon:'x',cls:'danger-solid',attrs:'data-save="1"'})}`,
+      });
+      $('#modalEl').querySelector('[data-save]').addEventListener('click', async()=>{
+        const reason=$('#lvRejectReason').value.trim();
+        if(!requireField(reason, s('rejectReasonRequired'), '#lvRejectReason')) return;
+        try{
+          await window.ErpSystemData.action('hr/leave-requests',sel.id,'reject',{rejectionReason:reason});
+          closeModal();
+          await reload();
+          toast(s('rejectedToast').replace('{name}',empOf(sel).fullName),'danger');
+          render();
+        }catch(error){ toast(s('actionError'),'danger'); }
       });
     });
   }
-  window.rejectLeave=(no)=>{ const l=data.find(x=>x.no===no); if(l){l.status='Rejected';} toast('Leave rejected','danger'); render(); };
   render();
 };
 

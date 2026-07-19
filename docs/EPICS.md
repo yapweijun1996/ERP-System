@@ -571,7 +571,7 @@ Acceptance criteria:
       a superadmin CAN be disabled if at least one other active superadmin remains.
 - [x] No change to the existing self-disable guard or to non-superadmin user toggling.
 
-## EPIC-020 — HR-lite: Employee Master & Leave Management
+## EPIC-020 — HR-lite: Employee Master & Leave Management ✅
 
 First Phase 7 module opened after Phase 8's platform work. Deliberately scoped to
 **employee master + leave request/approval only** — the mock's Payroll screens
@@ -601,7 +601,12 @@ Acceptance criteria:
 - [x] 16 new unit tests cover validation, tenant isolation, the self-referencing manager
       FK, inclusive leave-day computation, and the full approve/reject state machine
       (including "already decided" and "reject requires a reason").
-- [ ] `hr-directory`, `employee` (per-employee, not always the same hardcoded record),
+- [x] `hr-directory`, `employee` (per-employee, not always the same hardcoded record),
       `new-employee` and `leave-approval` read/write real data through the standard
-      audited idempotent Demo/API action dispatcher.
-- [ ] All 4 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`.
+      audited idempotent Demo/API action dispatcher. `new-employee` is a single real
+      form, not the mock's 3-step compensation/provisioning wizard — those steps had
+      no schema to back them. Found and fixed one thing during implementation: the
+      seed's first employee was named "Dana Reyes", which collided with the audit
+      script's known-prototype-placeholder identity marker (unrelated to this repo's
+      own demo data) — renamed to Farah Wong.
+- [x] All 4 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (54 → 58).

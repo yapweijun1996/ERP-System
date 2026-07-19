@@ -182,13 +182,18 @@ Order of attack:
    the demo's own audit trail — see docs/STATUS.md) are both done. `master-control`,
    `sys-settings` and `module-activation-control` remain Preview (need new schema or
    a data-repointing decision).
-6. **HR-lite: Employee Master & Leave Management** (EPIC-020, 🔶, 2026-07-19) —
-   deliberately scoped to employee master + leave request/approval only; Payroll
-   (`payroll-run`/`payslip`) stays mock, deferred to its own future epic since it's a
-   materially different, statutory-contribution-heavy domain (EPF/SOCSO/PCB). Schema +
-   business logic done (TASK-049 ✅ — `employee`/`leave_request` tables,
-   `src/modules/hr/`, registered as standard generic resources gated on new
-   `hr.read`/`hr.write` permissions, 16 new unit tests). Screens (TASK-050) still open.
+6. **HR-lite: Employee Master & Leave Management** (EPIC-020 ✅, TASK-049/050,
+   2026-07-19) — deliberately scoped to employee master + leave request/approval only;
+   Payroll (`payroll-run`/`payslip`) stays mock, deferred to its own future epic since
+   it's a materially different, statutory-contribution-heavy domain (EPF/SOCSO/PCB).
+   `employee`/`leave_request` tables, `src/modules/hr/`, registered as standard generic
+   resources gated on new `hr.read`/`hr.write` permissions. `hr-directory`, `employee`
+   (real per-employee detail, not always the same hardcoded record),  `new-employee`
+   (a single real form replacing the mock's 3-step compensation/provisioning wizard —
+   no schema backed those steps) and `leave-approval` (real approve/reject, including a
+   required-reason reject flow) all read/write real data. Verified live end-to-end:
+   created a real employee, approved one leave request, rejected another with a reason,
+   confirmed the employee detail's leave balance and history reflected both decisions.
 7. **Project (Enterprise Project)** (⬜ not started) — project register and P&L exist as
    mock screens (`screens-project.js`: `project-pl`, `project-detail`, `timesheet`).
    Stakeholder-requested sub-features confirmed absent by a 2026-07-19 audit: a real
