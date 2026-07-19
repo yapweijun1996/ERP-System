@@ -1,0 +1,195 @@
+// Bespoke admin routes for app_user/role/role_permission/audit_log. These tables
+// are deliberately NOT registered as generic resources (see
+// deploy/sql/production-rls.sql's header comment): they sit outside the
+// company-scoped RLS policy array by design (security/config infrastructure, not
+// business documents), and structurally don't fit ResourceDefinition's
+// single-monotonic-id cursor pagination (appUser's PK is userId, role's is roleId,
+// role_permission has a composite PK with no id column at all). This mirrors
+// routes/auth.ts's existing style exactly: manual hasPermission + manual
+// masterFn/companyFn scoping, no ResourceDefinition/actionDispatcher.
+import { Router } from 'express';
+import type { DB } from '../../data/db';
+import {
+  listAuditLog, listCompanyUsers, listRolePermissions, listRoles,
+} from '../admin';
+import {
+  AuthLifecycleError,
+  createInvitation,
+  type LifecycleOptions,
+} from '../../auth/lifecycle';
+import {
+  createRole,
+  setRolePermission,
+  setUserActive,
+} from '../../auth/adminLifecycle';
+import { PERMISSIONS, hasPermission } from '../../auth/permissions';
+import { apiError, context, requireSession } from '../http';
+
+export interface AdminRouterOptions {
+  lifecycle?: LifecycleOptions;
+}
+
+export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Router {
+  const router = Router();
+
+  function handleLifecycleError(res: import('express').Response, error: unknown): void {
+    if (error instanceof AuthLifecycleError) {
+      apiError(res, error.status, error.code, error.message, error.fieldErrors);
+      return;
+    }
+    throw error;
+  }
+
+  router.get('/users', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read users.');
+      return;
+    }
+    const result = await listCompanyUsers(db, session.masterFn, session.activeCompanyFn);
+    res.json({ data: result, meta: {} });
+  });
+
+  router.post('/users/:userId/actions/toggle-active', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersManage)) {
+      apiError(res, 403, 'permission_denied', 'You cannot manage users.');
+      return;
+    }
+    const userId = Number(req.params.userId);
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+      apiError(res, 400, 'invalid_id', 'userId must be a positive integer.');
+      return;
+    }
+    const isActive = (req.body as { isActive?: unknown } | undefined)?.isActive;
+    if (typeof isActive !== 'boolean') {
+      apiError(res, 400, 'invalid_request', 'isActive must be a boolean.', {
+        isActive: 'isActive must be a boolean.',
+      });
+      return;
+    }
+    try {
+      const result = await setUserActive(
+        db, session, userId, isActive, context(res).requestId,
+      );
+      res.json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/invitations', async (req, res) => {
+    if (!options.lifecycle) {
+      apiError(res, 503, 'auth_lifecycle_unavailable', 'Email account lifecycle is not configured.');
+      return;
+    }
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersInvite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot invite users.');
+      return;
+    }
+    const body = (req.body ?? {}) as { email?: unknown; roleId?: unknown };
+    if (typeof body.email !== 'string') {
+      apiError(res, 400, 'invalid_request', 'Email is required.', { email: 'Email is required.' });
+      return;
+    }
+    const roleId = typeof body.roleId === 'number'
+      ? body.roleId
+      : Number(typeof body.roleId === 'string' ? body.roleId : Number.NaN);
+    try {
+      const invitation = await createInvitation(
+        db, session, { email: body.email, roleId }, context(res).requestId, options.lifecycle,
+      );
+      res.status(201).json({ data: invitation, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.get('/roles', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read roles.');
+      return;
+    }
+    const result = await listRoles(db, session.masterFn);
+    res.json({ data: result, meta: {} });
+  });
+
+  router.get('/role-permissions', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read role permissions.');
+      return;
+    }
+    const result = await listRolePermissions(db, session.masterFn);
+    res.json({ data: result, meta: {} });
+  });
+
+  router.post('/roles', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesWrite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot create roles.');
+      return;
+    }
+    const name = (req.body as { name?: unknown } | undefined)?.name;
+    try {
+      const result = await createRole(
+        db, session, typeof name === 'string' ? name : '', context(res).requestId,
+      );
+      res.status(201).json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/roles/:roleId/actions/set-permission', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesWrite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot change role permissions.');
+      return;
+    }
+    const roleId = Number(req.params.roleId);
+    if (!Number.isSafeInteger(roleId) || roleId <= 0) {
+      apiError(res, 400, 'invalid_id', 'roleId must be a positive integer.');
+      return;
+    }
+    const body = (req.body ?? {}) as { permissionKey?: unknown; allowed?: unknown };
+    if (typeof body.permissionKey !== 'string' || typeof body.allowed !== 'boolean') {
+      apiError(res, 400, 'invalid_request', 'permissionKey (string) and allowed (boolean) are required.');
+      return;
+    }
+    try {
+      const result = await setRolePermission(
+        db, session, roleId, body.permissionKey, body.allowed, context(res).requestId,
+      );
+      res.json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.get('/audit-log', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.auditRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read the audit log.');
+      return;
+    }
+    const limit = req.query.limit != null ? Number(req.query.limit) : undefined;
+    const cursor = req.query.cursor != null ? Number(req.query.cursor) : undefined;
+    const result = await listAuditLog(db, session.masterFn, session.activeCompanyFn, {
+      limit, cursor,
+    });
+    res.json({ data: result.data, meta: { nextCursor: result.nextCursor } });
+  });
+
+  return router;
+}

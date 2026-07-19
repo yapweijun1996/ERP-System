@@ -68,7 +68,7 @@
     catch (e) { return 'db/'; }
   })();
 
-  var state = { db: null, orm: null, runtime: null, mode: 'pending' };
+  var state = { db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null };
 
   /* ---------------- PGlite boot ---------------- */
 
@@ -469,6 +469,7 @@
       || (d.users || [])[0]
       || { email: 'admin@acme.co', full_name: 'Admin', is_superadmin: true };
     var userDisplayName = activeUser.full_name || activeUser.email;
+    state.activeUserId = activeUser.user_id || null;
     DB.user = {
       name: userDisplayName,
       email: activeUser.email,
@@ -1329,8 +1330,43 @@
     });
     return normalized;
   }
+  /* app_user/role/role_permission/audit_log are deliberately NOT in RESOURCE_TABLES
+     (see routes/admin.ts's header comment) -- these bespoke branches mirror the
+     production /api/admin/* routes instead of the generic table-scoped SQL below. */
+  async function listAdminResource(key, query){
+    query=query||{};
+    if(key==='admin/users'){
+      var users = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listCompanyUsers(state.runtime.createOrm(tx), SCOPE);
+      });
+      return {data:users,meta:{}};
+    }
+    if(key==='admin/roles'){
+      var roles = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listRoles(state.runtime.createOrm(tx), SCOPE);
+      });
+      return {data:roles,meta:{}};
+    }
+    if(key==='admin/role-permissions'){
+      var rolePermissions = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listRolePermissions(state.runtime.createOrm(tx), SCOPE);
+      });
+      return {data:rolePermissions,meta:{}};
+    }
+    if(key==='admin/audit-log'){
+      var auditPage = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listAuditLog(state.runtime.createOrm(tx), SCOPE, {
+          limit:query.limit,cursor:query.cursor,
+        });
+      });
+      return {data:auditPage.data,meta:{nextCursor:auditPage.nextCursor}};
+    }
+    return null;
+  }
   async function list(resource, query){
     var key=normalizeResource(resource);
+    var adminResult=await listAdminResource(key, query);
+    if(adminResult) return adminResult;
     var table=RESOURCE_TABLES[key];
     if(!table) throw new Error('Unsupported ERP resource: '+key);
     query=query||{};
@@ -1356,8 +1392,49 @@
     if(!row) throw new Error('ERP resource not found: '+key+'/'+numericId);
     return {data:contractRow(row),meta:{}};
   }
+  /* Best-effort demo audit sink for create()/action() -- see appendDemoAudit's
+     comment in erp-demo-runtime-impl.ts. Must never throw: an audit-write failure
+     must not undo or block a create/action that already succeeded and already
+     called refresh(). Skips admin/* resources: those business-logic functions
+     (setUserActiveWithin, createRoleWithin, setRolePermissionWithin,
+     createInvitationRecordWithin) already call appendAudit themselves, exactly
+     mirroring how routes/admin.ts's production handlers never audit a second
+     time either -- only routes/resources.ts's generic route layer (and this
+     chokepoint, its demo-mode equivalent) audits on behalf of business logic
+     that doesn't audit itself. */
+  async function recordDemoAudit(entity, entityId, actionName){
+    if(entity.indexOf('admin/')===0) return;
+    try{
+      await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.appendDemoAudit(
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, entity, entityId, actionName);
+      });
+    }catch(e){
+      if(typeof console!=='undefined'&&console.warn) console.warn('[erp-system] demo audit write failed', e);
+    }
+  }
   async function create(resource,payload){
+    var result=await createInner(resource,payload);
+    var entityId=result&&result.data&&(result.data.id!=null?result.data.id:null);
+    await recordDemoAudit(normalizeResource(resource), entityId, 'create');
+    return result;
+  }
+  async function createInner(resource,payload){
     var key=normalizeResource(resource);
+    if(key==='admin/roles'){
+      var newRole = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createRoleWithin(
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, payload&&payload.name);
+      });
+      return {data:newRole,meta:{}};
+    }
+    if(key==='admin/invitations'){
+      var newInvitation = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createInvitation(
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, payload);
+      });
+      return {data:newInvitation,meta:{}};
+    }
     if(key==='inventory/products'){
       var newProduct = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createProductWithin(
@@ -1562,7 +1639,29 @@
     throw new Error('Update is not implemented for ERP resource: '+normalizeResource(resource));
   }
   async function action(resource,id,name,payload){
+    var result=await actionInner(resource,id,name,payload);
+    await recordDemoAudit(normalizeResource(resource), id, name);
+    return result;
+  }
+  async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='admin/users'&&name==='toggle-active'){
+      var toggledUser = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.setUserActiveWithin(
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, Number(id),
+          !!(payload&&payload.isActive));
+      });
+      await refresh();
+      return {data:toggledUser,meta:{}};
+    }
+    if(key==='admin/roles'&&name==='set-permission'){
+      var updatedPermission = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.setRolePermissionWithin(
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, Number(id),
+          payload&&payload.permissionKey, !!(payload&&payload.allowed));
+      });
+      return {data:updatedPermission,meta:{}};
+    }
     if(key==='inventory/products'&&name==='update'){
       var updatedProduct = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.updateProductWithin(

@@ -140,6 +140,20 @@ import {
   postDepreciationRunWithin,
   type CreateDepreciationRunInput,
 } from '../../src/modules/assets/depreciationRun';
+import {
+  listAuditLog,
+  listCompanyUsers,
+  listRolePermissions,
+  listRoles,
+} from '../../src/api/admin';
+import { appendAudit } from '../../src/api/audit';
+import {
+  createInvitationRecordWithin,
+  createRoleWithin,
+  setRolePermissionWithin,
+  setUserActiveWithin,
+} from '../../src/auth/adminLifecycle';
+import type { SessionData } from '../../src/auth/session';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -149,6 +163,53 @@ function createOrm(client: PGlite | Transaction): DemoOrm {
 
 function asDomainDb(db: DemoOrm): DB {
   return db as unknown as DB;
+}
+
+/* Synthetic session for the 3 lifecycle.ts admin functions, which take a real
+   SessionData (masterFn/activeCompanyFn/userId) rather than a bare Scope. email/
+   fullName are never read by these three functions -- confirmed by reading their
+   bodies -- so empty placeholders are safe here. */
+function demoSession(scope: Scope, actorUserId: number): SessionData {
+  return {
+    userId: actorUserId,
+    masterFn: scope.masterFn,
+    activeCompanyFn: scope.companyFn,
+    email: '',
+    fullName: null,
+  };
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/* Demo-only invitation creation. The real src/auth/lifecycle.ts createInvitation()
+   hard-depends on node:crypto (AES-256-GCM token encryption + an email outbox event)
+   which cannot run in a browser bundle. The browser demo has no email worker to
+   deliver an invitation link anyway, so this computes the token via the Web Crypto
+   API (available natively in the browser) and delegates the actual validation and
+   userInvitation insert to createInvitationRecordWithin -- identical logic to
+   createInvitation(), just fed a pre-computed hash instead of calling
+   encryptToken()/newOpaqueToken() and skipping the outbox event entirely (nothing
+   would ever consume it in-browser). */
+async function createDemoInvitation(
+  db: DemoOrm,
+  scope: Scope,
+  actorUserId: number,
+  input: { email: string; roleId: number },
+) {
+  const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+  const token = Array.from(randomBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const tokenHash = await sha256Hex(token);
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  return createInvitationRecordWithin(
+    asDomainDb(db),
+    demoSession(scope, actorUserId),
+    { email: input.email, roleId: input.roleId, tokenHash, expiresAt },
+    'demo',
+  );
 }
 
 export const erpDemoRuntime = Object.freeze({
@@ -339,6 +400,78 @@ export const erpDemoRuntime = Object.freeze({
     },
     postDepreciationRunWithin(db: DemoOrm, scope: Scope, runId: number) {
       return postDepreciationRunWithin(asDomainDb(db), scope, runId);
+    },
+    listCompanyUsers(db: DemoOrm, scope: Scope) {
+      return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);
+    },
+    listRoles(db: DemoOrm, scope: Scope) {
+      return listRoles(asDomainDb(db), scope.masterFn);
+    },
+    listRolePermissions(db: DemoOrm, scope: Scope) {
+      return listRolePermissions(asDomainDb(db), scope.masterFn);
+    },
+    listAuditLog(db: DemoOrm, scope: Scope, query: { limit?: number; cursor?: number } = {}) {
+      return listAuditLog(asDomainDb(db), scope.masterFn, scope.companyFn, query);
+    },
+    setUserActiveWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      targetUserId: number,
+      isActive: boolean,
+    ) {
+      return setUserActiveWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), targetUserId, isActive, 'demo',
+      );
+    },
+    createRoleWithin(db: DemoOrm, scope: Scope, actorUserId: number, name: string) {
+      return createRoleWithin(asDomainDb(db), demoSession(scope, actorUserId), name, 'demo');
+    },
+    setRolePermissionWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      roleId: number,
+      permissionKey: string,
+      allowed: boolean,
+    ) {
+      return setRolePermissionWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), roleId, permissionKey, allowed, 'demo',
+      );
+    },
+    createInvitation(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: { email: string; roleId: number },
+    ) {
+      return createDemoInvitation(db, scope, actorUserId, input);
+    },
+    /* Generic audit sink for the demo adapter's own create()/action() dispatch --
+       see the header comment on this file's admin-lifecycle imports. Production
+       writes audit through routes/resources.ts / actionDispatcher.ts; the demo
+       adapter calls *Within commands directly and never went through that layer,
+       so audit_log was permanently empty in browser demo mode until this call
+       site existed. Best-effort by design (see erp-system-data-adapter.js's
+       caller) -- an audit-write failure must never block the user-visible action
+       that already succeeded. */
+    appendDemoAudit(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number | null,
+      entity: string,
+      entityId: number | string | null,
+      action: string,
+    ) {
+      return appendAudit(asDomainDb(db), {
+        masterFn: scope.masterFn,
+        companyFn: scope.companyFn,
+        actorUserId,
+        requestId: 'demo',
+        entity,
+        entityId,
+        action,
+      });
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
       return confirmSalesOrder(asDomainDb(db), scope, input);

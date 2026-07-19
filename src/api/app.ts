@@ -12,6 +12,7 @@ import {
 import { PERMISSIONS, hasPermission } from '../auth/permissions';
 import { buildDashboard } from './dashboard';
 import { apiError, context, requireSession } from './http';
+import { createAdminRouter } from './routes/admin';
 import { createAuthRouter } from './routes/auth';
 import { createResourceRouter } from './routes/resources';
 import { parseTokenEncryptionKey } from '../auth/tokenCrypto';
@@ -77,13 +78,17 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   });
   app.use('/api/setup', createSetupRouter(db, options.setupToken));
 
+  const lifecycle = options.tokenEncryptionKey ? {
+    tokenEncryptionKey: parseTokenEncryptionKey(options.tokenEncryptionKey),
+    publicUrl: options.publicUrl ?? 'http://127.0.0.1:4173',
+  } : undefined;
+
   app.use('/api/auth', createAuthRouter(db, {
     secureCookies: options.secureCookies ?? false,
-    lifecycle: options.tokenEncryptionKey ? {
-      tokenEncryptionKey: parseTokenEncryptionKey(options.tokenEncryptionKey),
-      publicUrl: options.publicUrl ?? 'http://127.0.0.1:4173',
-    } : undefined,
+    lifecycle,
   }));
+
+  app.use('/api/admin', createAdminRouter(db, { lifecycle }));
 
   app.get('/api/dashboard', async (req, res) => {
     const session = await requireSession(db, req, res);

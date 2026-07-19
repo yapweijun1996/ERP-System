@@ -26,6 +26,10 @@ export const PERMISSIONS = {
   companySwitch: 'session.switch_company',
   auditRead: 'admin.audit.read',
   usersInvite: 'admin.users.invite',
+  usersRead: 'admin.users.read',
+  usersManage: 'admin.users.manage',
+  rolesRead: 'admin.roles.read',
+  rolesWrite: 'admin.roles.write',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS] | (string & {});

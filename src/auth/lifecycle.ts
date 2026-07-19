@@ -12,6 +12,7 @@ import {
 } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
+import { AuthLifecycleError } from './authErrors';
 import { hashPassword } from './password';
 import type { SessionData } from './session';
 import {
@@ -20,20 +21,11 @@ import {
   newOpaqueToken,
 } from './tokenCrypto';
 
+export { AuthLifecycleError } from './authErrors';
+
 const INVITATION_TTL_MS = 48 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
-
-export class AuthLifecycleError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string,
-    public readonly fieldErrors?: Record<string, string>,
-  ) {
-    super(message);
-  }
-}
 
 export interface LifecycleOptions {
   tokenEncryptionKey: Buffer;

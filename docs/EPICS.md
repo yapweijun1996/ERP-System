@@ -408,20 +408,28 @@ schema or a data-repointing decision — out of scope for this pass). (TASK-041,
 
 Acceptance criteria:
 
-- [ ] `src/auth/permissions.ts` gains `usersRead`/`usersManage`/`rolesRead`/
-      `rolesWrite` keys; `src/auth/lifecycle.ts` gains tenant-scoped
-      `setUserActiveWithin` (rejects self-disable), `createRoleWithin` (unique name per
-      master), `setRolePermissionWithin` (rejects editing the superadmin role, validates
-      `permissionKey` against the real `PERMISSIONS` allowlist) — all audited.
-- [ ] `src/api/admin.ts` (new, mirrors `src/api/dashboard.ts`'s plain-function shape)
+- [x] `src/auth/permissions.ts` gains `usersRead`/`usersManage`/`rolesRead`/
+      `rolesWrite` keys; `src/auth/adminLifecycle.ts` (new — split out of
+      `lifecycle.ts` so this file's import graph stays node:crypto-free and can be
+      bundled into the browser; see below) gains tenant-scoped
+      `setUserActiveWithin`/`setUserActive` (rejects self-disable), `createRoleWithin`/
+      `createRole` (unique name per master), `setRolePermissionWithin`/
+      `setRolePermission` (rejects editing the superadmin role, validates
+      `permissionKey` against the real `PERMISSIONS` allowlist) — all audited, each
+      following the same raw-exec-`...Within` + self-transacting-wrapper split every
+      other module in this repo uses.
+- [x] `src/api/admin.ts` (new, mirrors `src/api/dashboard.ts`'s plain-function shape)
       provides `listCompanyUsers` (real users + pending invitations), `listRoles`,
       `listRolePermissions`, `listAuditLog`; `src/api/routes/admin.ts` (new, mirrors
       `routes/auth.ts`) exposes them plus the write actions as `/api/admin/*`, mounted
       in `src/api/app.ts`.
-- [ ] Demo adapter (`erp-system-data-adapter.js` + `erp-demo-runtime-impl.ts`) gains
+- [x] Demo adapter (`erp-system-data-adapter.js` + `erp-demo-runtime-impl.ts`) gains
       matching bespoke dispatch for `admin/*` keys (not added to `RESOURCE_TABLES`) and
       real `appendAudit` calls in its generic create/action dispatch, fixing demo-mode's
-      previously-always-empty audit log for every module, not just Admin.
+      previously-always-empty audit log for every module, not just Admin. A demo-only
+      `createInvitationRecordWithin` (Web Crypto token instead of node:crypto,
+      `src/auth/adminLifecycle.ts`) replaces the real `createInvitation` for the browser
+      path only — production still uses the real one.
 - [ ] `user-mgmt` reads real users+invitations; "Invite user" calls the real (already
       built, previously unused) `createInvitation`; a new enable/disable action is real.
 - [ ] `role-permission` shows a real 2-state permission grid per role; "Add role" and
