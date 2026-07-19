@@ -610,3 +610,58 @@ Acceptance criteria:
       script's known-prototype-placeholder identity marker (unrelated to this repo's
       own demo data) — renamed to Farah Wong.
 - [x] All 4 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (54 → 58).
+
+## EPIC-021 — Project-lite: Register & Progress Claims
+
+Second Phase 7 module opened after HR-lite. ROADMAP.md flagged Project as "likely the
+largest remaining module" and recommended sub-phasing (register → progress billing →
+project-scoped finance documents) rather than one task pair. This epic deliberately
+covers only the **first two** of those three: a real project register and real
+**Progress Claim** billing documents — the one sub-feature the stakeholder explicitly
+named as absent ("progress invoice"/"partial claim" were narrative copy only, no
+schema). Project-scoped AP (linking `supplier_invoice` to a project), dedicated Bank
+Receipt/Bank Payment documents and a real Payment Voucher backend all stay out of scope
+for this epic — they are Finance-depth work spanning beyond Project, not gaps in the
+register/billing slice this epic delivers, and remain future epics per ROADMAP.md item 7.
+
+Cost/budget tracking, team allocation, milestone scheduling and physical "% complete"
+also stay out of scope: the mock's cost-breakdown/team/milestone panels have no
+transactional source (no timesheet or expense-capture schema exists, and building one
+is a materially separate feature), so surfacing them for real would require fabricating
+data the schema doesn't back — the same principle that dropped Fixed Assets'
+Transfer/Dispose and HR-lite's payroll/compensation. `timesheet` stays mock, deferred
+alongside `payroll-run`/`payslip`.
+
+Progress claims reuse the exact posting shape `src/modules/sales/debitNote.ts` already
+established (draft → post inserts balanced `gl_entry` legs: Dr `1100` AR / Cr `4000`
+Revenue / Cr `2200` Output Tax, `journalRef` = the claim's `docNo`) — no new chart-of-
+accounts codes needed. The project's `billed_to_date` running aggregate increments on
+each posted claim, mirroring `asset.accumulated_depreciation`'s aggregate-plus-ledger
+shape from EPIC-015.
+
+Acceptance criteria:
+
+- [ ] `project` (register: `project_no`, `name`, nullable `customer_id` FK — null means
+      an Internal project — `manager_name`, `status` open/on_hold/completed, dates,
+      `contract_value`, running `billed_to_date`) and `progress_claim` (billing document:
+      `doc_no`, `project_id` FK, draft/posted status, `version`, tax breakdown mirroring
+      `sales_debit_note`) tables added via a Drizzle migration, following `assets.ts`'s
+      tenant/check-constraint conventions. Deliberately no `type` column — Customer vs.
+      Internal is derived from `customer_id` presence rather than stored redundantly.
+- [ ] `src/modules/project/project.ts` (`createProjectWithin`/`createProject`) and
+      `src/modules/project/progressClaim.ts` (`createProgressClaimWithin`/
+      `createProgressClaim`, `postProgressClaimWithin`/`postProgressClaim`) — posting
+      rejects a project with no customer (can't bill an Internal project) and a project
+      already `completed`. `project/projects` and `project/progress-claims` registered
+      as generic `ResourceDefinition`s, gated on new `project.read`/`project.write`
+      permissions.
+- [ ] Unit tests cover validation, tenant isolation, the no-customer/completed-project
+      posting guards, and the balanced GL legs (mirroring `debitNote.test.ts`'s shape).
+- [ ] `project-pl` (portfolio list — real contract/billed/headroom KPIs, a real
+      over-billed alert instead of the mock's fabricated "at risk" judgment, a real
+      "New Project" create modal) and `project-detail` (real single-project view: real
+      progress-claims panel with inline create + row-level post, real activity feed
+      synthesized from real row timestamps, real "Related" linking to the actual linked
+      customer) read/write real data. Cost breakdown, milestones, and team panels are
+      removed, not fabricated. `timesheet` is unchanged (stays mock).
+- [ ] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (58 → 60).

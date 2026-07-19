@@ -114,7 +114,7 @@ typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
 production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion 🔶 (purchasing done; CRM done; Fixed Assets done)
+## Phase 7 — Module Expansion 🔶 (purchasing done; CRM done; Fixed Assets done; HR-lite done)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
@@ -194,18 +194,22 @@ Order of attack:
    required-reason reject flow) all read/write real data. Verified live end-to-end:
    created a real employee, approved one leave request, rejected another with a reason,
    confirmed the employee detail's leave balance and history reflected both decisions.
-7. **Project (Enterprise Project)** (⬜ not started) — project register and P&L exist as
-   mock screens (`screens-project.js`: `project-pl`, `project-detail`, `timesheet`).
-   Stakeholder-requested sub-features confirmed absent by a 2026-07-19 audit: a real
-   **Progress Claim** entity (today "progress invoice"/"partial claim" are narrative
-   copy only, no schema/screen/route), project-scoped **Account Payable**/**Account
-   Receivable** (AP/AR only exist generically under Finance, with zero project linkage),
-   and dedicated **Bank Receipt**/**Bank Payment** documents (today only a generic
-   Finance-wide "Bank Reconciliation" exists). **Payment Voucher** already exists as a
-   generic Finance document (`screens-fin.js`/`screens-fin-pay.js`) but has no project
-   linkage either. This is the largest remaining module — likely needs its own
-   sub-phasing (project register → progress billing → project-scoped finance documents)
-   rather than one task pair.
+7. **Project (Enterprise Project)** (🔶 in progress, EPIC-021) — project register and P&L
+   exist as mock screens (`screens-project.js`: `project-pl`, `project-detail`,
+   `timesheet`). Stakeholder-requested sub-features confirmed absent by a 2026-07-19
+   audit: a real **Progress Claim** entity (today "progress invoice"/"partial claim" are
+   narrative copy only, no schema/screen/route), project-scoped **Account Payable**/
+   **Account Receivable** (AP/AR only exist generically under Finance, with zero project
+   linkage), and dedicated **Bank Receipt**/**Bank Payment** documents (today only a
+   generic Finance-wide "Bank Reconciliation" exists). **Payment Voucher** already
+   exists as a generic Finance document (`screens-fin.js`/`screens-fin-pay.js`) but has
+   no project linkage either. Confirmed the largest remaining module and sub-phased as
+   planned: EPIC-021 (TASK-051/052) covers the first two sub-phases — a real project
+   register and real Progress Claim billing (draft → post a balanced AR/Revenue/Tax
+   journal, reusing `debitNote.ts`'s exact posting shape, no new CoA codes). Cost/budget/
+   team/milestone-schedule tracking stays mock (no timesheet or expense-capture schema
+   exists to back it — a materially separate feature). Project-scoped AP linkage and
+   dedicated Bank Receipt/Payment documents remain the third sub-phase, a future epic.
 8. **Service** (⬜ not started) — service tickets/orders/contracts, distinct from
    Manufacturing's work orders. No schema; mock screens in `screens-service.js`.
 9. **Purchase Requisition** (⬜ not started) — the natural upstream step before the
