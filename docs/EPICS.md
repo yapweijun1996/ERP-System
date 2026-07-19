@@ -511,9 +511,9 @@ high-value, low-risk fix. (TASK-046)
 
 Acceptance criteria:
 
-- [ ] `setUserActiveWithin` rejects deactivating a superadmin-role user when they are the
+- [x] `setUserActiveWithin` rejects deactivating a superadmin-role user when they are the
       *last active* superadmin for that `master_fn` (a second active superadmin may still
       be disabled).
-- [ ] Unit test covers: sole active superadmin cannot be disabled by another admin user;
+- [x] Unit test covers: sole active superadmin cannot be disabled by another admin user;
       a superadmin CAN be disabled if at least one other active superadmin remains.
-- [ ] No change to the existing self-disable guard or to non-superadmin user toggling.
+- [x] No change to the existing self-disable guard or to non-superadmin user toggling.

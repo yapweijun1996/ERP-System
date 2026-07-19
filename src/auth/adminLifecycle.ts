@@ -14,11 +14,11 @@
 // callers that aren't already inside a transaction (mirrors createAssetWithin +
 // createAsset in src/modules/assets/createAsset.ts).
 import {
-  and, eq, gt, isNull,
+  and, eq, gt, isNull, ne,
 } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  appSession, appUser, role, rolePermission, userInvitation,
+  appSession, appUser, role, rolePermission, userCompany, userInvitation,
 } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
@@ -48,6 +48,39 @@ export async function setUserActiveWithin(
     .limit(1);
   if (!target) {
     throw new AuthLifecycleError(404, 'user_not_found', 'User not found.');
+  }
+  if (!isActive) {
+    // A tenant must never end up with zero working superadmins -- role.isSuperadmin
+    // bypasses rolePermission entirely, so losing the last one means nobody left who
+    // can manage users/roles at all, including re-enabling this same account.
+    const [targetSuperadminGrant] = await exec.select({ roleId: role.roleId })
+      .from(userCompany)
+      .innerJoin(role, eq(role.roleId, userCompany.roleId))
+      .where(and(
+        eq(userCompany.userId, userId),
+        eq(role.isSuperadmin, true),
+      ))
+      .limit(1);
+    if (targetSuperadminGrant) {
+      const [otherActiveSuperadmin] = await exec.select({ userId: appUser.userId })
+        .from(appUser)
+        .innerJoin(userCompany, eq(userCompany.userId, appUser.userId))
+        .innerJoin(role, eq(role.roleId, userCompany.roleId))
+        .where(and(
+          eq(appUser.masterFn, session.masterFn),
+          eq(appUser.isActive, true),
+          eq(role.isSuperadmin, true),
+          ne(appUser.userId, userId),
+        ))
+        .limit(1);
+      if (!otherActiveSuperadmin) {
+        throw new AuthLifecycleError(
+          400,
+          'cannot_disable_last_superadmin',
+          'At least one active superadmin must remain for this organization.',
+        );
+      }
+    }
   }
   await exec.update(appUser).set({
     isActive,

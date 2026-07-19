@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { seedDemo } from '../data/seed';
 import {
-  appUser, master, outboxEvent, role, rolePermission, userInvitation,
+  appUser, master, outboxEvent, role, rolePermission, userCompany, userInvitation,
 } from '../data/schema';
 import { freshDb } from '../test/helpers';
 import { createSession, getSession } from './session';
@@ -55,6 +55,47 @@ describe('admin user/role/permission lifecycle', () => {
 
     await expect(setUserActive(db, session, viewer.userId, true, 're-enable-viewer'))
       .resolves.toEqual({ userId: viewer.userId, isActive: true });
+  });
+
+  it('protects the last active superadmin, but allows disabling an extra one', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const session = await adminSession(db);
+    const [superadminRole] = await db.select().from(role).where(and(
+      eq(role.masterFn, session.masterFn),
+      eq(role.isSuperadmin, true),
+    ));
+    const [secondAdmin] = await db.insert(appUser).values({
+      masterFn: session.masterFn,
+      email: 'second.admin@acme.co',
+      passwordHash: 'pbkdf2$1$a$b',
+    }).returning({ userId: appUser.userId });
+    await db.insert(userCompany).values({
+      userId: secondAdmin.userId,
+      companyFn: 'C-SG',
+      roleId: superadminRole.roleId,
+    });
+    const secondAdminSession = {
+      userId: secondAdmin.userId,
+      masterFn: session.masterFn,
+      activeCompanyFn: 'C-SG',
+      email: 'second.admin@acme.co',
+      fullName: null,
+    };
+
+    // Two active superadmins exist -- disabling one (as the other) is allowed.
+    await expect(setUserActive(db, secondAdminSession, session.userId, false, 'disable-first-admin'))
+      .resolves.toEqual({ userId: session.userId, isActive: false });
+
+    // Now only secondAdmin is an active superadmin -- disabling them must be rejected,
+    // even though the acting session (the now-disabled original admin) isn't self-targeting.
+    await expect(setUserActive(db, session, secondAdmin.userId, false, 'disable-last-admin'))
+      .rejects.toMatchObject({ code: 'cannot_disable_last_superadmin' });
+
+    // A non-superadmin user is never subject to this guard.
+    const [viewer] = await db.select().from(appUser).where(eq(appUser.email, 'viewer@acme.co'));
+    await expect(setUserActive(db, secondAdminSession, viewer.userId, false, 'disable-viewer-still-fine'))
+      .resolves.toEqual({ userId: viewer.userId, isActive: false });
   });
 
   it('rejects toggling a user outside the caller master', async () => {
