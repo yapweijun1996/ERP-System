@@ -74,17 +74,20 @@ Acceptance criteria:
       it and `app.js`'s `boot()` gates on the real answer. Verified against a
       seeded Docker stack: the wizard correctly stayed hidden.
 
-## EPIC-005 — Production API And Docker 🔶 (stack + Makefile done; server-side writes open)
+## EPIC-005 — Production API And Docker ✅
 
 Add the production runtime path. (TASK-011 done, TASK-012 done, TASK-013 done,
-TASK-021 done)
+TASK-021 done; last item closed by the TASK-040 audit — the claim that write
+endpoints were client-contract-only had gone stale while the work landed
+incrementally across the resource/dispatcher tasks.)
 
 Acceptance criteria:
 
-- [x] API exposes a dashboard read endpoint (`GET /api/dashboard`) — write
-      endpoints (confirm order, complete setup, switch company) are scaffolded as
-      a client-side contract (`erp-system-api-adapter.js`) but not yet implemented
-      server-side.
+- [x] API exposes a dashboard read endpoint (`GET /api/dashboard`) — and the
+      once-"scaffolded only" write endpoints are now implemented server-side:
+      confirm order (`sales/orders/confirm`), complete setup
+      (`POST /api/setup/actions/complete`, token-gated, zero-user locked) and the
+      audited session company switch all run through the production API.
 - [x] API connects to PostgreSQL through configured `DATABASE_URL`
       (`src/server.ts`, `npm run server`).
 - [x] Docker Compose starts `web`, `api`, and `db` — `docker-compose.yml`,
@@ -92,8 +95,17 @@ Acceptance criteria:
       proxy, no CORS needed); verified with a real build + run + teardown.
 - [x] Migrations run against PostgreSQL — verified both on the host and inside the
       `api` container (`docker compose exec api npm run migrate`).
-- [ ] Stock and finance writes are server-side transactions (needs the write
-      endpoints above).
+- [x] Stock and finance writes are server-side transactions — audited 2026-07-19
+      (TASK-040): the unified transactional dispatcher registers 24 create
+      resources and 28 actions in `src/api/creates.ts`/`actions.ts`, covering
+      sales confirmation/conversion/returns/credit-and-debit notes, purchasing
+      receipt and supplier-invoice posting, CRM conversion, inventory
+      adjustments/transfers, warehouse picking, manufacturing execution, quality
+      disposition and fixed-asset depreciation posting. No stock or money write
+      available in api mode executes client-side. Remaining gaps are feature
+      breadth (e.g. manual journal entries, payment vouchers — their screens are
+      still Preview), tracked under Phase 7 module expansion, not missing
+      server-side transaction plumbing.
 - [x] PostgreSQL concurrency test prevents stock over-sell — proven by
       `POSTGRES_URL=... npm run demo` (exactly 1 of 2 racing issues wins), verified
       live twice (TASK-011 host run, TASK-013).

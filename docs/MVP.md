@@ -22,8 +22,8 @@ in localStorage).
 | 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
 | 8 | Deployed to GitHub Pages via Actions | ✅ done |
 | 9 | First-run **setup wizard** (language → company → country/tax → admin) | ✅ done (TASK-009, TASK-010) |
-| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ⬜ TASK-018 |
-| 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 |
+| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ done (TASK-018, 2026-07-17) — `npm run audit:screens` enforces both in CI |
+| 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 (permanently blocked — needs a physical phone) |
 
 ### Explicitly OUT of MVP-1
 
@@ -50,10 +50,10 @@ proven in the demo.
 | # | Capability | Task |
 | --- | --- | --- |
 | 1 | Frontend data seam actually switches on `VITE_DATA_MODE=demo\|api` | ✅ done (TASK-019) — `api` mode shows an honest "waiting for API" screen until it's wired to render real data (TASK-026) |
-| 2 | API server: `/health`, `GET /api/dashboard` ✅ (TASK-011); `POST /api/sales-orders/:doc/confirm` and other writes running `confirmOrder.ts` server-side ⬜ still open |
+| 2 | API server: `/health`, `GET /api/dashboard` ✅ (TASK-011); sales-order confirmation and the other business writes run server-side through the unified transactional dispatcher (`sales/orders/confirm` + 24 create resources / 28 actions — TASK-040 audit 2026-07-19) ✅ |
 | 3 | Docker Compose stack `web` + `api` + `db` with health checks | ✅ done (TASK-012) — built, run, and torn down for real |
 | 4 | Drizzle migrations + seed run against PostgreSQL | ✅ done (TASK-011/012) — verified both on the host and inside the `api` container |
-| 5 | `Makefile` / `scripts/setup.sh` aligned with the real compose assets (`make setup` works end-to-end) | 🔶 every underlying `docker compose` command verified; `scripts/setup.sh` itself still unverified (`.env.example` sandbox block) — TASK-021 |
+| 5 | `Makefile` / `scripts/setup.sh` aligned with the real compose assets (`make setup` works end-to-end) | ✅ done (TASK-021, 2026-07-17) — `scripts/setup.sh` run for real end-to-end plus every individual `make` target against a live, isolated stack |
 | 6 | PostgreSQL parity + concurrency proof (`POSTGRES_URL npm run demo`; FOR UPDATE over-sell test: exactly one winner) | ✅ done (TASK-013) — proven against real Postgres twice |
 | 7 | Minimal real auth: login validates against `app_user`, session scopes `master_fn`/`company_fn` server-side | TASK-024 |
 | 8 | CI validates typecheck (root+web), demo build, and demo proof on every PR | TASK-014 |

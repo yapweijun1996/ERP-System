@@ -53,10 +53,11 @@ shell gated on boot, writes company/tax/CoA/admin-user to PGlite in one transact
 topbar company switcher rewired to the canonical company list.)
 
 Exit criteria: empty demo opens wizard first (✅ met); production API can persist wizard
-results to PostgreSQL (⬜ — needs TASK-011/TASK-019; the demo-adapter `completeSetup()`
-contract is defined and ready for an API adapter to implement the same shape).
+results to PostgreSQL (✅ — `POST /api/setup/actions/complete` runs
+`completeProductionSetup` server-side, token-gated and locked once the first admin
+exists; stale "⬜ needs TASK-011/TASK-019" claim corrected by the TASK-040 audit).
 
-## Phase 5 — Production Runtime 🔶 (stack + Makefile done; server-side writes open)
+## Phase 5 — Production Runtime ✅
 
 Goal: run the ERP as a self-hosted Docker deployment.
 
@@ -79,14 +80,20 @@ real service-worker caching bug found and fixed along the way — see
 `git show HEAD:.env.example` (reads the tracked blob through git's object
 database, not the filesystem path the permission system intercepts); ran
 `scripts/setup.sh` for real for the first time plus every individual `make`
-target against a live, isolated stack — see [STATUS.md](STATUS.md)). Remaining:
-server-side stock and finance write endpoints (confirmOrder/completeSetup/
-switchCompany/purchasing — client contract already defined, production
-`completeSetup()` still explicitly rejects "not available yet").
+target against a live, isolated stack — see [STATUS.md](STATUS.md)). The final item —
+server-side stock and finance write endpoints — landed incrementally across the
+resource/dispatcher work and was confirmed closed by the TASK-040 audit
+(2026-07-19): the unified transactional dispatcher registers 24 create resources
+and 28 actions including `sales/orders/confirm`, purchasing receipt/invoice
+posting, CRM conversion, inventory adjustments/transfers and depreciation
+posting; production `completeSetup` runs server-side via
+`POST /api/setup/actions/complete` (token-gated, zero-user locked).
 
-Exit criteria: `docker compose up -d` starts all services; production transaction +
-concurrency tests pass against PostgreSQL (TASK-013); browser writes stock/money
-through API only.
+Exit criteria: `docker compose up -d` starts all services (✅); production
+transaction + concurrency tests pass against PostgreSQL (✅ TASK-013, and in CI on
+every PR since TASK-038); browser writes stock/money through API only (✅ — no
+canonical write executes client-side in api mode). Feature breadth for
+not-yet-converted modules is Phase 7 scope, not a Phase 5 gap.
 
 ## Phase 6 — Quality And Operations 🔶 (CI + drift + smoke + unit tests live; PG-in-CI open)
 
