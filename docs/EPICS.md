@@ -497,16 +497,28 @@ Acceptance criteria:
       that have real generic resources today (assets/crm/finance/inventory/
       manufacturing/purchasing/quality/sales/warehouse). The `admin` module itself can
       never be disabled (would lock every superadmin out of re-enabling it).
-- [ ] `module-activation-control` reads/writes the real backend instead of `localStorage`.
-- [x] A disabled module is rejected server-side if called directly (API mode) — a
-      client-only toggle would not meet the stated requirement. (Sidebar/module-shell
-      hiding is TASK-048 — the client mechanism already exists via `moduleState()`, it
-      just needs repointing from `localStorage` to this real backend.)
+- [x] `module-activation-control` reads/writes the real backend instead of `localStorage`.
+- [x] A disabled module is hidden from the sidebar/module shell for non-superadmin users
+      of that master (`renderSidebar()`/`routeAllowed()`/`moduleBlockedPanel()` all read
+      the real state through `moduleState()`, unchanged from before except what backs it),
+      AND rejected server-side if called directly (API mode) — a client-only toggle would
+      not have met the stated requirement.
 - [x] Superadmin's own access is never gated by this mechanism (it controls what a
-      master's *other* users can reach, not the superadmin's own visibility) — a new
-      `isSuperadminSession()` (`src/auth/permissions.ts`, same tenant-bounded lookup
-      `hasPermission`'s bypass uses) exempts superadmins from the `module_disabled`
-      check in all 4 generic resource-router handlers.
+      master's *other* users can reach, not the superadmin's own visibility) — enforced
+      on both sides: server-side via `isSuperadminSession()` (`src/auth/permissions.ts`,
+      same tenant-bounded lookup `hasPermission`'s bypass uses) in all 4 generic
+      resource-router handlers, and client-side via `moduleState()` (not
+      `readModuleControl()`, which the admin screen itself calls directly so it always
+      shows the *true* state, never the exemption) checking `isModuleAdmin()`.
+
+Design simplification made during TASK-048, found while reading the mock's own screen
+code: the mock modeled two independent toggles per module (`visible` + `active`,
+allowing a third "shown but blocked" state) with real, if minor, distinct behavior.
+Nothing in the stated requirement calls for that third state — "turn off unnecessary
+modules for a client" is inherently binary — so the real screen collapses this to the
+one `enabled` boolean the backend already stores, matching the same
+don't-fabricate-a-distinction-the-backend-doesn't-model principle EPIC-016 established
+for `role-permission`'s 4-level-to-2-state simplification.
 
 ## EPIC-019 — Superadmin Safety Guard
 

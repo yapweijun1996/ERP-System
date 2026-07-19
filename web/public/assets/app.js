@@ -175,7 +175,6 @@ function currentMasterFn(){
     || (DB.company&&DB.company.name)
     || 'default-master';
 }
-function moduleControlKey(){ return 'aria-module-activation:'+currentMasterFn(); }
 function moduleControlItems(){
   return DB.nav.flatMap(g=>g.items.map(m=>({
     ...m,
@@ -183,36 +182,57 @@ function moduleControlItems(){
     required:m.id==='home'||m.id==='admin',
   })));
 }
-function defaultModuleControl(){
-  const cfg={};
-  moduleControlItems().forEach(m=>{ cfg[m.id]={ visible:true, active:true }; });
-  return cfg;
-}
-function readModuleControl(){
-  const cfg=defaultModuleControl();
+/* Real per-tenant module state (EPIC-018/TASK-047), cached in-memory because
+   readModuleControl()/moduleState() are called synchronously from render paths
+   (renderSidebar, routeAllowed, ...) that cannot await a fetch. loadModuleControl()
+   populates this cache once at boot (see boot()) and again after any write in
+   module-activation-control; before the first load resolves, or if it fails (e.g.
+   a non-admin user with no admin.modules.manage grant), every module reads as
+   enabled -- fail open, matching the server's own "no override row = enabled"
+   default, so a slow/denied fetch never locks a signed-in user out of navigation. */
+let MODULE_CONTROL_CACHE=null;
+async function loadModuleControl(){
   try{
-    const saved=JSON.parse(localStorage.getItem(moduleControlKey())||'{}');
-    Object.keys(cfg).forEach(id=>{
-      if(saved[id]){
-        cfg[id].visible=saved[id].visible!==false;
-        cfg[id].active=saved[id].active!==false;
-      }
+    const adapter=window.ErpSystemData;
+    if(!adapter||typeof adapter.list!=='function'){ MODULE_CONTROL_CACHE={}; return; }
+    const response=await adapter.list('admin/modules',{});
+    const cfg={};
+    (response&&response.data||[]).forEach(row=>{
+      cfg[row.moduleKey]={ visible:!!row.enabled, active:!!row.enabled };
     });
-  }catch(e){}
+    MODULE_CONTROL_CACHE=cfg;
+  }catch(e){
+    MODULE_CONTROL_CACHE={};
+  }
+}
+/* Raw per-module state, exactly as configured -- used by module-activation-control
+   itself so the admin managing it always sees the true on/off state, never the
+   exemption below. Everything else should call moduleState(), not this. */
+function readModuleControl(){
+  const cfg={};
   moduleControlItems().forEach(m=>{
-    if(m.required) cfg[m.id]={ visible:true, active:true };
-    if(!cfg[m.id].visible) cfg[m.id].active=false;
+    if(m.required){ cfg[m.id]={ visible:true, active:true }; return; }
+    const cached=MODULE_CONTROL_CACHE&&MODULE_CONTROL_CACHE[m.id];
+    cfg[m.id]=cached?{ visible:cached.visible, active:cached.active }:{ visible:true, active:true };
   });
   return cfg;
 }
-function writeModuleControl(cfg){
-  moduleControlItems().forEach(m=>{
-    if(m.required) cfg[m.id]={ visible:true, active:true };
-    if(cfg[m.id]&&!cfg[m.id].visible) cfg[m.id].active=false;
-  });
-  try{ localStorage.setItem(moduleControlKey(),JSON.stringify(cfg)); }catch(e){}
+async function setModuleEnabled(moduleId, enabled){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.action!=='function'){
+    throw new Error('The canonical ERP data adapter is unavailable.');
+  }
+  await adapter.action('admin/modules', moduleId, 'set-enabled', { enabled:!!enabled });
+  await loadModuleControl();
 }
+/* What navigation/route-guards should treat a module as. Mirrors the server's
+   isSuperadminSession() bypass (TASK-047): a superadmin is always exempt from
+   this gate -- it restricts what a master's other users can reach, never the
+   superadmin's own visibility, so a superadmin can never lock themselves out of
+   a module they just disabled for everyone else. module-activation-control
+   itself calls readModuleControl() directly to show the true, unexempted state. */
 function moduleState(moduleId){
+  if(isModuleAdmin()) return { visible:true, active:true };
   return readModuleControl()[moduleId]||{ visible:true, active:true };
 }
 function notificationStateKey(){ return 'aria-notification-state:'+currentMasterFn(); }
@@ -400,7 +420,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'debit-notes','price-lists','discount-mgmt','credit-control',
   'item-master','crm-customer',
   'asset-register','asset-detail','depreciation',
-  'user-mgmt','audit-log','role-permission',
+  'user-mgmt','audit-log','role-permission','module-activation-control',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -421,7 +441,7 @@ const API_SCREEN_ROUTES = new Set([
   'debit-notes','price-lists','discount-mgmt','credit-control',
   'item-master','crm-customer',
   'asset-register','asset-detail','depreciation',
-  'user-mgmt','audit-log','role-permission',
+  'user-mgmt','audit-log','role-permission','module-activation-control',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -1206,6 +1226,7 @@ async function boot(){
   try{ const ac=localStorage.getItem('aria-accent'); if(ac){ document.documentElement.style.setProperty('--accent',ac); document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+ac+' 14%, transparent)'); } }catch(e){}
   try{ if(localStorage.getItem('aria-density')==='compact') document.documentElement.setAttribute('data-density','compact'); }catch(e){}
   try{ const ts=localStorage.getItem('aria-textsize'); if(ts && ts!=='1') document.documentElement.style.setProperty('--fs',ts); }catch(e){}
+  await loadModuleControl();
   renderSidebar(); renderTabbar(); initTooltip();
   // default/restore sidebar collapse state (+ sets the toggle icon)
   autoNav();

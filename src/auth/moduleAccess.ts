@@ -12,12 +12,13 @@ import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import type { SessionData } from './session';
 
-/** Matches web/public/assets/app.js's MODULE_DEFS keys, plus 'sales'/'purchasing'/
- *  'inventory' which today live outside MODULE_DEFS (see TASK-045). 'admin' is
- *  included but can never be disabled -- see setMasterModuleWithin. */
+/** Matches every gateable id in web/public/assets/data-core.js's DB.nav (i.e. every
+ *  sidebar entry except 'home', which -- like 'settings' -- is deliberately always
+ *  on; see app.js's routeAllowed()). 'admin' is included but can never be disabled
+ *  -- see setMasterModuleWithin. */
 export const MODULE_KEYS = [
   'sales', 'purchasing', 'crm', 'inventory', 'warehouse', 'manufacturing', 'quality',
-  'finance', 'hr', 'project', 'service', 'asset', 'bi', 'integration', 'admin',
+  'finance', 'hr', 'project', 'service', 'asset', 'workflow', 'bi', 'admin', 'integration',
 ] as const;
 export type ModuleKey = typeof MODULE_KEYS[number];
 const KNOWN_MODULE_KEYS = new Set<string>(MODULE_KEYS);

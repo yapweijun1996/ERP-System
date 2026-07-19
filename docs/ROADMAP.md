@@ -219,20 +219,30 @@ shared helpers instead of copy-paste; (2) the multi-tenant super-admin story nee
 real module-access-control mechanism (enable/disable specific ERP modules per client)
 and a safety guard against a tenant ever losing its last working superadmin. Unlike
 Phase 7, this phase's items are not new business domains — they're standardization and
-platform-safety work found by auditing the existing 53 Canonical + 61 Preview routes.
+platform-safety work found by auditing the existing 53 Canonical + 61 Preview routes
+(now 54 + 60 after EPIC-018).
 
-1. **Frontend SSOT Consolidation** (EPIC-017, 🔶) — one shared `listPage()` helper
-   replacing 7 near-identical copies, hand-rolled modal markup migrated onto the
-   existing `appModal()` SSOT, a shared field-validation helper, and the 3 legacy
-   hardcoded module-nav functions (`salesNav`/`purNav`/`inventoryNav`) folded into the
-   generic `MODULE_DEFS`-driven nav system every other module already uses.
-2. **Super-Admin Module Access Control** (EPIC-018, ⬜) — `module-activation-control`
-   is a pure `localStorage` mock today (confirmed: zero server persistence, zero
-   enforcement). Real tenant-scoped schema + backend + client-nav and server-side
-   enforcement, so a superadmin can genuinely restrict a client to e.g. Sales-only.
-3. **Superadmin Safety Guard** (EPIC-019, ⬜) — found while verifying "every database
-   must always have a super admin account": nothing today stops another admin user
-   from deactivating a tenant's *last* active superadmin. Small, high-value fix.
+1. **Frontend SSOT Consolidation** (EPIC-017, 🔶) — `listPage()` helper done
+   (TASK-043 ✅, 7 near-identical copies replaced with one shared helper in a new
+   `screens-common.js`, net -97 lines, zero behavior change). Still open: hand-rolled
+   modal markup migrated onto the existing `appModal()` SSOT + a shared
+   field-validation helper (TASK-044), and the 3 legacy hardcoded module-nav functions
+   (`salesNav`/`purNav`/`inventoryNav`) folded into the generic `MODULE_DEFS`-driven nav
+   system every other module already uses (TASK-045).
+2. **Super-Admin Module Access Control** (EPIC-018 ✅, TASK-047/048, 2026-07-19) —
+   `module-activation-control` was a pure `localStorage` mock (confirmed: zero server
+   persistence, zero enforcement). Now real: a tenant-scoped `master_module` table,
+   bespoke `/api/admin/modules` routes, and — beyond the original scope — real
+   server-side enforcement across all 4 generic resource-router handlers, not just a
+   client-side nav hide. A superadmin is exempt from their own toggle on both sides.
+   Verified live: disabling Purchasing hid it from a real Viewer session's sidebar and
+   blocked API access, while the superadmin who disabled it kept full access to
+   configure it back.
+3. **Superadmin Safety Guard** (EPIC-019 ✅, TASK-046, 2026-07-19) — found while
+   verifying "every database must always have a super admin account": nothing stopped
+   another admin user from deactivating a tenant's *last* active superadmin, leaving
+   nobody who could even re-enable that same account. Fixed with a guard that still
+   allows disabling any *extra* superadmin.
 
 A note on multi-tenancy topology, resolved by the same audit rather than deferred: the
 stakeholder described "one database has exactly one `master_fn`, never multiple" as an

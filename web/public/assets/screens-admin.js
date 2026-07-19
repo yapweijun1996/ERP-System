@@ -30,6 +30,13 @@ function adminCopy(){
       auditColAction:'Action',auditColRecord:'Record',auditTitle:'Audit Trail',auditMeta:'{count} events · immutable system log{truncated}',
       auditTruncated:' · showing latest 100',auditNoEvents:'No activity recorded yet — actions you take are logged here in real time.',
       auditSystem:'System',
+      modActTitle:'Module Activation Control',
+      modActSubtitle:'Turn ERP modules on or off for {master}. Disabled modules are hidden from navigation and blocked from access, including through the API.',
+      modActColModule:'Module',modActColStatus:'Status',modActColAction:'Action',
+      modActEnabled:'Enabled',modActDisabled:'Disabled',modActOpen:'Open',modActRequired:'Required',
+      modActResetDefaults:'Enable all',modActResetDone:'All modules enabled',modActUpdateError:'Could not update this module',
+      modActAdminOnly:'Admin access required',modActAdminOnlyBody:'Only Admin and Superadmin accounts can manage module activation.',
+      modActEnabledCount:'Enabled',
     },
     ms:{
       fieldEmail:'E-mel',emailPlaceholder:'nama@syarikat.com',fieldRole:'Peranan',
@@ -50,6 +57,13 @@ function adminCopy(){
       auditColAction:'Tindakan',auditColRecord:'Rekod',auditTitle:'Jejak Audit',auditMeta:'{count} peristiwa · log sistem tidak boleh diubah{truncated}',
       auditTruncated:' · memaparkan 100 terkini',auditNoEvents:'Belum ada aktiviti direkodkan — tindakan anda akan dilog di sini secara masa nyata.',
       auditSystem:'Sistem',
+      modActTitle:'Kawalan Pengaktifan Modul',
+      modActSubtitle:'Hidupkan atau matikan modul ERP untuk {master}. Modul yang dilumpuhkan disembunyikan daripada navigasi dan disekat daripada akses, termasuk melalui API.',
+      modActColModule:'Modul',modActColStatus:'Status',modActColAction:'Tindakan',
+      modActEnabled:'Diaktifkan',modActDisabled:'Dilumpuhkan',modActOpen:'Buka',modActRequired:'Diperlukan',
+      modActResetDefaults:'Aktifkan semua',modActResetDone:'Semua modul diaktifkan',modActUpdateError:'Modul ini tidak dapat dikemas kini',
+      modActAdminOnly:'Akses admin diperlukan',modActAdminOnlyBody:'Hanya akaun Admin dan Superadmin boleh mengurus pengaktifan modul.',
+      modActEnabledCount:'Diaktifkan',
     },
     zh:{
       fieldEmail:'邮箱',emailPlaceholder:'name@company.com',fieldRole:'角色',
@@ -70,6 +84,13 @@ function adminCopy(){
       auditColAction:'操作',auditColRecord:'记录',auditTitle:'审计日志',auditMeta:'{count} 条事件 · 不可篡改的系统日志{truncated}',
       auditTruncated:' · 显示最近 100 条',auditNoEvents:'暂无活动记录 — 您执行的操作会实时记录在此处。',
       auditSystem:'系统',
+      modActTitle:'模块启用控制',
+      modActSubtitle:'为 {master} 开启或关闭 ERP 模块。已停用的模块会从导航中隐藏,并且包括通过 API 在内的所有访问都会被阻止。',
+      modActColModule:'模块',modActColStatus:'状态',modActColAction:'操作',
+      modActEnabled:'已启用',modActDisabled:'已停用',modActOpen:'打开',modActRequired:'必需',
+      modActResetDefaults:'全部启用',modActResetDone:'所有模块已启用',modActUpdateError:'无法更新此模块',
+      modActAdminOnly:'需要管理员权限',modActAdminOnlyBody:'只有管理员和超级管理员账户可以管理模块启用状态。',
+      modActEnabledCount:'已启用',
     },
     ja:{
       fieldEmail:'メール',emailPlaceholder:'name@company.com',fieldRole:'役割',
@@ -90,6 +111,13 @@ function adminCopy(){
       auditColAction:'操作',auditColRecord:'記録',auditTitle:'監査証跡',auditMeta:'{count} 件のイベント · 改ざん不可のシステムログ{truncated}',
       auditTruncated:' · 最新100件を表示',auditNoEvents:'まだ活動記録がありません — 実行した操作はここにリアルタイムで記録されます。',
       auditSystem:'システム',
+      modActTitle:'モジュール有効化管理',
+      modActSubtitle:'{master} 用に ERP モジュールを有効/無効にします。無効化したモジュールはナビゲーションから非表示になり、API を含むすべてのアクセスがブロックされます。',
+      modActColModule:'モジュール',modActColStatus:'ステータス',modActColAction:'操作',
+      modActEnabled:'有効',modActDisabled:'無効',modActOpen:'開く',modActRequired:'必須',
+      modActResetDefaults:'すべて有効化',modActResetDone:'すべてのモジュールを有効化しました',modActUpdateError:'このモジュールを更新できませんでした',
+      modActAdminOnly:'管理者権限が必要です',modActAdminOnlyBody:'Admin および Superadmin アカウントのみがモジュールの有効化を管理できます。',
+      modActEnabledCount:'有効',
     },
     vi:{
       fieldEmail:'Email',emailPlaceholder:'ten@congty.com',fieldRole:'Vai trò',
@@ -110,6 +138,13 @@ function adminCopy(){
       auditColAction:'Hành động',auditColRecord:'Bản ghi',auditTitle:'Nhật ký kiểm toán',auditMeta:'{count} sự kiện · nhật ký hệ thống không thể sửa đổi{truncated}',
       auditTruncated:' · hiển thị 100 gần nhất',auditNoEvents:'Chưa có hoạt động nào được ghi nhận — các hành động của bạn sẽ được ghi lại tại đây theo thời gian thực.',
       auditSystem:'Hệ thống',
+      modActTitle:'Kiểm soát kích hoạt mô-đun',
+      modActSubtitle:'Bật hoặc tắt các mô-đun ERP cho {master}. Các mô-đun bị vô hiệu hóa sẽ bị ẩn khỏi điều hướng và bị chặn truy cập, kể cả qua API.',
+      modActColModule:'Mô-đun',modActColStatus:'Trạng thái',modActColAction:'Hành động',
+      modActEnabled:'Đã kích hoạt',modActDisabled:'Đã vô hiệu hóa',modActOpen:'Mở',modActRequired:'Bắt buộc',
+      modActResetDefaults:'Kích hoạt tất cả',modActResetDone:'Đã kích hoạt tất cả mô-đun',modActUpdateError:'Không thể cập nhật mô-đun này',
+      modActAdminOnly:'Yêu cầu quyền quản trị',modActAdminOnlyBody:'Chỉ tài khoản Admin và Superadmin mới có thể quản lý kích hoạt mô-đun.',
+      modActEnabledCount:'Đã kích hoạt',
     },
   };
   const pack=packs[lang]||packs.en;
@@ -373,105 +408,89 @@ SCREENS['sys-settings'] = function(root){
 };
 
 /* ---------------- MODULE ACTIVATION CONTROL (master/client module toggles) ---------------- */
-SCREENS['module-activation-control'] = function(root){
+SCREENS['module-activation-control'] = async function(root){
+  const s=adminCopy();
   if(!isModuleAdmin()){
     root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,'Admin','Module Activation Control'])}
-        <div class="h1row"><h1>Module Activation Control</h1>${cap('Admin only','warn')}</div>
+      <div class="pagehead">${crumbs([DB.company.name,'Admin',s('modActTitle')])}
+        <div class="h1row"><h1>${esc(s('modActTitle'))}</h1>${cap('Admin only','warn')}</div>
       </div>
-      ${statePanel({icon:'lock',title:'Admin access required',body:'Only Admin and Superadmin accounts can manage client module activation.'})}
+      ${statePanel({icon:'lock',title:s('modActAdminOnly'),body:s('modActAdminOnlyBody')})}
     </section></div>`;
     return;
   }
 
-  let cfg=readModuleControl();
+  await loadModuleControl();
   const rows=()=>moduleControlItems();
-  const activeCount=()=>rows().filter(m=>cfg[m.id]&&cfg[m.id].active).length;
-  const visibleCount=()=>rows().filter(m=>cfg[m.id]&&cfg[m.id].visible).length;
-  const rowTone=m=>{
-    const st=cfg[m.id]||{visible:true,active:true};
-    if(!st.visible) return 'neutral';
-    if(!st.active) return 'warn';
-    return 'ok';
-  };
-  const statusLabel=m=>{
-    const st=cfg[m.id]||{visible:true,active:true};
-    if(!st.visible) return 'Hidden';
-    if(!st.active) return 'Inactive';
-    return 'Active';
-  };
-  function persist(message){
-    writeModuleControl(cfg);
-    renderSidebar();
-    renderTabbar();
-    setActiveNav(CURRENT_ROUTE);
-    toast(message||'Module activation updated','ok');
-  }
+  let busy=null;
+
+  function enabledCount(){ return rows().filter(m=>readModuleControl()[m.id]&&readModuleControl()[m.id].active).length; }
+
   function table(){
+    const cfg=readModuleControl();
     const body=rows().map(m=>{
       const st=cfg[m.id]||{visible:true,active:true};
       return `<tr data-module="${esc(m.id)}">
-        <td class="l li-name"><b>${ic(m.icon)} ${esc(m.label)}</b><small>${esc(m.group)} · ${esc(m.route)}${m.required?' · required':''}</small></td>
+        <td class="l li-name"><b>${ic(m.icon)} ${esc(m.label)}</b><small>${esc(m.group)} · ${esc(m.route)}${m.required?' · '+esc(s('modActRequired')):''}</small></td>
         <td class="l mono">${esc(currentMasterFn())}</td>
-        <td class="c"><input class="checkbox" type="checkbox" data-toggle="visible" ${st.visible?'checked':''} ${m.required?'disabled':''} aria-label="Show ${esc(m.label)}"></td>
-        <td class="c"><input class="checkbox" type="checkbox" data-toggle="active" ${st.active?'checked':''} ${(!st.visible||m.required)?'disabled':''} aria-label="Activate ${esc(m.label)}"></td>
-        <td class="l">${cap(statusLabel(m),rowTone(m))}</td>
-        <td class="c">${m.required?cap('Required','accent'):btn('Open',{icon:'ext',cls:'plain',attrs:`data-open="${esc(m.route)}"`})}</td>
+        <td class="l">${cap(st.active?s('modActEnabled'):s('modActDisabled'),st.active?'ok':'neutral')}</td>
+        <td class="c">${m.required
+          ?cap(s('modActRequired'),'accent')
+          :`<input class="checkbox" type="checkbox" data-toggle="enabled" ${st.active?'checked':''} ${busy===m.id?'disabled':''} aria-label="${esc(s('modActEnabled'))} ${esc(m.label)}">`}</td>
+        <td class="c">${btn(s('modActOpen'),{icon:'ext',cls:'plain',attrs:`data-open="${esc(m.route)}"`})}</td>
       </tr>`;
     }).join('');
-    return `<table class="lines"><thead><tr><th class="l">Module</th><th class="l">Master FN</th><th class="c">Show</th><th class="c">Active</th><th class="l">Status</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    return `<table class="lines"><thead><tr><th class="l">${esc(s('modActColModule'))}</th><th class="l">Master FN</th><th class="l">${esc(s('modActColStatus'))}</th><th class="c">${esc(s('modActEnabled'))}</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
   }
+
   function render(){
     root.innerHTML=`<div class="content full"><section class="master"><div class="scrollarea">
       <div class="pagehead">
-        ${crumbs([DB.company.name,'Admin','Module Activation Control'])}
-        <div class="h1row"><h1>Module Activation Control</h1><span class="acct-role" style="font-size:11px">${ic('shield')}${esc(DB.user.role)}</span>
+        ${crumbs([DB.company.name,'Admin',s('modActTitle')])}
+        <div class="h1row"><h1>${esc(s('modActTitle'))}</h1><span class="acct-role" style="font-size:11px">${ic('shield')}${esc(DB.user.role)}</span>
           <div class="headright">
             <div class="kfig"><small>Master FN</small><b class="tnum">${esc(currentMasterFn())}</b></div>
-            <div class="kfig"><small>Shown</small><b class="tnum">${visibleCount()}/${rows().length}</b></div>
-            <div class="kfig"><small>Active</small><b class="tnum">${activeCount()}/${rows().length}</b></div>
+            <div class="kfig"><small>${esc(s('modActEnabledCount'))}</small><b class="tnum">${enabledCount()}/${rows().length}</b></div>
           </div></div>
-        <div class="h1sub">Control which ERP modules are visible and active for the current master/client. Hidden modules disappear from navigation; inactive modules remain visible but cannot be opened.</div>
+        <div class="h1sub">${esc(s('modActSubtitle').replace('{master}',currentMasterFn()))}</div>
       </div>
       <div class="toolbar">
-        ${btn('Show all',{icon:'eye',cls:'soft',attrs:'data-act="show-all"'})}
-        ${btn('Activate all',{icon:'checkc',cls:'soft',attrs:'data-act="activate-all"'})}
-        ${btn('Reset defaults',{icon:'refresh',cls:'soft',attrs:'data-act="reset"'})}
-        <div class="grow"></div>
-        ${cap('Saved locally for demo','info')}
+        ${btn(s('modActResetDefaults'),{icon:'refresh',cls:'soft',attrs:'data-act="reset"'})}
       </div>
       <div class="panel" style="margin:0 24px 24px">
-        <div class="panel-h"><h3>Client module matrix</h3><span style="margin-left:auto;color:var(--muted);font-size:12px">Applies to ${esc(DB.company.name)}</span></div>
+        <div class="panel-h"><h3>${esc(s('modActColModule'))}</h3></div>
         ${table()}
       </div>
     </div></section></div>`;
 
-    root.querySelectorAll('[data-toggle]').forEach(input=>input.addEventListener('change',()=>{
+    root.querySelectorAll('[data-toggle="enabled"]').forEach(input=>input.addEventListener('change',async()=>{
       const id=input.closest('[data-module]').dataset.module;
       const item=rows().find(m=>m.id===id);
       if(!item||item.required) return;
-      cfg[id]=cfg[id]||{visible:true,active:true};
-      if(input.dataset.toggle==='visible'){
-        cfg[id].visible=input.checked;
-        cfg[id].active=input.checked;
-      }else{
-        cfg[id].active=input.checked;
+      const enabled=input.checked;
+      busy=id; render();
+      try{
+        await setModuleEnabled(id, enabled);
+        renderSidebar(); renderTabbar(); setActiveNav(CURRENT_ROUTE);
+        toast(`${item.label} ${enabled?s('modActEnabled'):s('modActDisabled')}`,'ok');
+      }catch(e){
+        toast(s('modActUpdateError'),'danger');
       }
-      render();
-      persist(`${item.label} set to ${statusLabel(item).toLowerCase()}`);
+      busy=null; render();
     }));
     root.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.open)));
-    root.querySelector('[data-act="show-all"]').addEventListener('click',()=>{
-      rows().forEach(m=>{ cfg[m.id]=cfg[m.id]||{visible:true,active:true}; cfg[m.id].visible=true; });
-      render(); persist('All modules shown');
-    });
-    root.querySelector('[data-act="activate-all"]').addEventListener('click',()=>{
-      rows().forEach(m=>{ cfg[m.id]=cfg[m.id]||{visible:true,active:true}; cfg[m.id].visible=true; cfg[m.id].active=true; });
-      render(); persist('All modules activated');
-    });
-    root.querySelector('[data-act="reset"]').addEventListener('click',()=>{
-      cfg=defaultModuleControl();
-      render(); persist('Module activation reset to defaults');
+    root.querySelector('[data-act="reset"]').addEventListener('click',async()=>{
+      const toEnable=rows().filter(m=>!m.required&&!(readModuleControl()[m.id]&&readModuleControl()[m.id].active));
+      if(!toEnable.length){ toast(s('modActResetDone'),'ok'); return; }
+      try{
+        await Promise.all(toEnable.map(m=>setModuleEnabled(m.id,true)));
+        await loadModuleControl();
+        renderSidebar(); renderTabbar(); setActiveNav(CURRENT_ROUTE);
+        toast(s('modActResetDone'),'ok');
+      }catch(e){
+        toast(s('modActUpdateError'),'danger');
+      }
+      render();
     });
   }
   render();
