@@ -118,13 +118,14 @@ async function prepareCanonicalInventoryData(){
       id:row.id,
       sku:row.sku,
       name:row.name,
-      cat:'Unclassified',
+      cat:row.category||'Components',
       uom:row.uom,
       onHand,
       alloc:0,
-      reorder:0,
-      roq:0,
+      reorder:inventoryNumber(row.reorderPoint),
+      roq:inventoryNumber(row.reorderQty),
       cost:inventoryNumber(row.standardCost),
+      version:row.version,
       trackingType:row.trackingType||'none',
       status:onHand>0?'In stock':'No stock',
       bins:binsByProduct.get(row.id)||[],
@@ -309,7 +310,8 @@ SCREENS['stock-on-hand'] = async function(root){
 };
 
 /* ---------------- ITEM MASTER (master data) ---------------- */
-SCREENS['item-master'] = function(root){
+SCREENS['item-master'] = async function(root){
+  await prepareCanonicalInventoryData();
   const CATS=['Components','Raw Materials','Finished Goods','Consumables','Packaging'];
   const UOMS=['ea','kg','m','sheet','L','box','pair','set'];
   let selSku = DB.items[0] ? DB.items[0].sku : null;
@@ -380,27 +382,40 @@ SCREENS['item-master'] = function(root){
         <div class="fld"><span>Reorder point</span><input id="ifReorder" type="number" min="0" class="tnum" value="${edit?it.reorder:50}"></div>
         <div class="fld"><span>Reorder qty</span><input id="ifRoq" type="number" min="0" class="tnum" value="${edit?it.roq:150}"></div>
         <div class="fld"><span>Unit cost (USD)</span><input id="ifCost" type="number" min="0" step="0.01" class="tnum" value="${edit?it.cost:0}"></div>
-        <div class="fld"><span>${edit?'On hand':'Opening qty'}</span><input id="ifOnHand" type="number" min="0" class="tnum" value="${edit?it.onHand:0}"></div>
+        ${edit?'':`<div class="fld"><span>Opening qty</span><input value="0" readonly><span class="locked">${ic('lock')} Use Stock Adjustment to receive stock</span></div>`}
       </div></div>
       <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?'Save changes':'Create item',{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}</div>`);
-    $('#modalEl').querySelector('[data-save]').addEventListener('click',()=>{
+    const saveBtn=$('#modalEl').querySelector('[data-save]');
+    saveBtn.addEventListener('click',async()=>{
       const name=$('#ifName').value.trim();
       if(!name){ toast('Item name is required','danger'); $('#ifName').focus(); return; }
-      const d={ name, cat:$('#ifCat').value, uom:$('#ifUom').value,
-        reorder:Math.max(0,+$('#ifReorder').value||0), roq:Math.max(0,+$('#ifRoq').value||0),
-        cost:Math.max(0,+$('#ifCost').value||0), onHand:Math.max(0,+$('#ifOnHand').value||0) };
-      closeModal();
-      if(edit){ Object.assign(it,d); it.status=statusOf(it); selSku=it.sku; toast(`Item ${it.sku} updated`,'ok'); }
-      else { const ni={ sku, name:d.name, cat:d.cat, uom:d.uom, onHand:d.onHand, alloc:0, reorder:d.reorder, roq:d.roq, cost:d.cost, bins:d.onHand>0?[['UNASSIGNED',d.onHand]]:[] }; ni.status=statusOf(ni); DB.items.unshift(ni); selSku=sku; toast(`Item ${sku} “${name}” created`,'ok'); }
-      render();
+      const d={ name, category:$('#ifCat').value, uom:$('#ifUom').value,
+        reorderPoint:Math.max(0,+$('#ifReorder').value||0), reorderQty:Math.max(0,+$('#ifRoq').value||0),
+        standardCost:Math.max(0,+$('#ifCost').value||0) };
+      saveBtn.disabled=true;
+      try{
+        if(edit){
+          await window.ErpSystemData.action('inventory/products', it.id, 'update', d);
+          toast(`Item ${it.sku} updated`,'ok');
+        }else{
+          await window.ErpSystemData.create('inventory/products', Object.assign({sku},d));
+          toast(`Item ${sku} “${name}” created`,'ok');
+        }
+        closeModal();
+        await prepareCanonicalInventoryData();
+        selSku=sku;
+        render();
+      }catch(error){
+        saveBtn.disabled=false;
+        toast(error&&error.message?error.message:'Item could not be saved','danger');
+      }
     });
   }
 
   function confirmDelete(it){
     openModal(`<div class="modal-head">${ic('trash')}<h3>Delete ${esc(it.name)}?</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
-      <div class="modal-body"><div class="risk danger">${ic('warn')}<div><b>Remove ${esc(it.sku)} from the item master</b><small>${it.onHand>0?`This item still has ${num(it.onHand)} ${esc(it.uom)} on hand. `:''}This can’t be undone in the prototype.</small></div></div></div>
-      <div class="modal-foot">${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Delete item',{icon:'trash',cls:'danger-solid',attrs:'data-del="1"'})}</div>`);
-    $('#modalEl').querySelector('[data-del]').addEventListener('click',()=>{ closeModal(); const i=DB.items.findIndex(x=>x.sku===it.sku); if(i>=0)DB.items.splice(i,1); selSku=DB.items[0]?DB.items[0].sku:null; toast('Item deleted','danger'); render(); });
+      <div class="modal-body"><div class="risk danger">${ic('warn')}<div><b>Deleting items isn’t supported yet</b><small>${esc(it.sku)} has real stock/movement history behind it — item deletion isn’t implemented. Archive or stop reordering it instead.</small></div></div></div>
+      <div class="modal-foot">${btn('Close',{cls:'primary',attrs:'onclick="closeModal()"'})}</div>`);
   }
 
   function render(){

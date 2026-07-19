@@ -55,6 +55,12 @@ import {
   type RegisterInventorySerialInput,
 } from '../../src/modules/inventory/tracking';
 import {
+  createProductWithin,
+  updateProductWithin,
+  type CreateProductInput,
+  type UpdateProductInput,
+} from '../../src/modules/inventory/product';
+import {
   completeWarehousePickWithin,
   createWarehousePickWithin,
   recordWarehousePickWithin,
@@ -134,6 +140,12 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    createProductWithin(db: DemoOrm, scope: Scope, input: CreateProductInput) {
+      return createProductWithin(asDomainDb(db), scope, input);
+    },
+    updateProductWithin(db: DemoOrm, scope: Scope, productId: number, input: UpdateProductInput) {
+      return updateProductWithin(asDomainDb(db), scope, productId, input);
+    },
     createWarehouseBinWithin(db: DemoOrm, scope: Scope, input: CreateWarehouseBinInput) {
       return createWarehouseBinWithin(asDomainDb(db), scope, input);
     },

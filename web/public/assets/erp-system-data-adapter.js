@@ -36,7 +36,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 18;
+  var DEMO_SCHEMA_VERSION = 19;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1353,6 +1353,14 @@
   }
   async function create(resource,payload){
     var key=normalizeResource(resource);
+    if(key==='inventory/products'){
+      var newProduct = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createProductWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newProduct,meta:{}};
+    }
     if(key==='inventory/bins'){
       var bin = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createWarehouseBinWithin(
@@ -1518,6 +1526,14 @@
   }
   async function action(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='inventory/products'&&name==='update'){
+      var updatedProduct = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateProductWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload);
+      });
+      await refresh();
+      return {data:updatedProduct,meta:{}};
+    }
     if(key==='inventory/adjustments'&&name==='post'){
       var posted = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.postInventoryAdjustmentWithin(

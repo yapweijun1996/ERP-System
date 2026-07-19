@@ -234,7 +234,7 @@ Acceptance criteria:
       pattern (success + two rollback/guard scenarios), proven on both PGlite and
       PostgreSQL.
 
-## EPIC-011 — Item Master
+## EPIC-011 — Item Master ✅
 
 Converts the last mock-data screen in Inventory: `item-master` still reads
 `web/public/assets/data-master.js`'s static `DB.items` and its create/edit form only
@@ -254,8 +254,8 @@ Acceptance criteria:
 - [x] `inventory/products` is registered as a create+update (optimistic-locked)
       resource in `src/api/resources.ts`/`creates.ts`/`actions.ts`, gated on a new
       `inventory.write` permission.
-- [ ] `item-master` reads real data via `prepareCanonicalInventoryData()` instead of
+- [x] `item-master` reads real data via `prepareCanonicalInventoryData()` instead of
       the mock file, and its create/edit form calls the real adapter actions; the
       3 already-Canonical screens sharing that function also stop showing fake
       `Unclassified`/`0` category/reorder values.
-- [ ] `item-master` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.
+- [x] `item-master` moves to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`.
