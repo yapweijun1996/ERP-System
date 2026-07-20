@@ -9,6 +9,7 @@ import type { Scope } from '../../data/repo';
 import { getEffectiveTaxRate } from '../../data/repo';
 import {
   product,
+  project,
   purchaseOrder,
   purchaseOrderLine,
   purchaseRequisition,
@@ -31,6 +32,10 @@ export interface CreatePurchaseOrderInput {
   /** Optional: link this PO back to the approved requisition it fulfils. Must be
    *  'approved' and not already linked to another purchase order. */
   requisitionId?: number | null;
+  /** Optional: tag this PO to a project, so its eventual supplier invoice carries a
+   *  real project cost trail (see postSupplierInvoice.ts, which copies this onto the
+   *  invoice automatically). */
+  projectId?: number | null;
 }
 
 const money = (n: number) => n.toFixed(2);
@@ -78,9 +83,20 @@ export async function createPurchaseOrderWithin(exec: DB, scope: Scope, input: C
     requisitionId = reqRow.id;
   }
 
+  let projectId: number | null = null;
+  if (input.projectId != null) {
+    const [projectRow] = await exec.select({ id: project.id }).from(project).where(and(
+      eq(project.masterFn, scope.masterFn),
+      eq(project.companyFn, scope.companyFn),
+      eq(project.id, input.projectId),
+    ));
+    if (!projectRow) throw new PostingError(`Project ${input.projectId} is not available in this company`);
+    projectId = projectRow.id;
+  }
+
   const [order] = await exec.insert(purchaseOrder).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
-    docNo: input.docNo, supplierId: input.supplierId, requisitionId,
+    docNo: input.docNo, supplierId: input.supplierId, requisitionId, projectId,
     status: 'open', orderDate: input.orderDate, currency: input.currency,
   }).returning({ id: purchaseOrder.id });
 

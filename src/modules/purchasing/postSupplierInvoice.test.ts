@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
-import { product, warehouse, supplier, taxRule, account, glEntry, supplierInvoice } from '../../data/schema';
+import { product, warehouse, supplier, taxRule, account, glEntry, supplierInvoice, project } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { receiveGoods } from './receiveGoods';
@@ -127,5 +127,40 @@ describe('postSupplierInvoice', () => {
     await expect(postSupplierInvoice(db, SCOPE, {
       purchaseOrderId: po.orderId, docNo: 'SINV-T3', invoiceDate: '2024-06-06',
     })).rejects.toThrow(PostingError);
+  });
+
+  it('propagates the originating PO\'s projectId onto the invoice automatically', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    const [proj] = await db.insert(project).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, projectNo: 'PRJ-T1',
+      name: 'Fictional Project', managerName: 'Demo PM', startDate: '2024-01-01',
+    }).returning({ id: project.id });
+    const po = await createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-T5', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      projectId: proj.id,
+      lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
+    });
+    await receiveGoods(db, SCOPE, { purchaseOrderId: po.orderId, warehouseId: fx.warehouseId, docNo: 'GR-T5', receivedDate: '2024-06-05' });
+    await postSupplierInvoice(db, SCOPE, { purchaseOrderId: po.orderId, docNo: 'SINV-T5', invoiceDate: '2024-06-06' });
+
+    const [invoice] = await db.select({ projectId: supplierInvoice.projectId })
+      .from(supplierInvoice).where(eq(supplierInvoice.docNo, 'SINV-T5'));
+    expect(invoice.projectId).toBe(proj.id);
+  });
+
+  it('leaves projectId null when the PO was not tagged to a project', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    const po = await createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-T6', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
+    });
+    await receiveGoods(db, SCOPE, { purchaseOrderId: po.orderId, warehouseId: fx.warehouseId, docNo: 'GR-T6', receivedDate: '2024-06-05' });
+    await postSupplierInvoice(db, SCOPE, { purchaseOrderId: po.orderId, docNo: 'SINV-T6', invoiceDate: '2024-06-06' });
+
+    const [invoice] = await db.select({ projectId: supplierInvoice.projectId })
+      .from(supplierInvoice).where(eq(supplierInvoice.docNo, 'SINV-T6'));
+    expect(invoice.projectId).toBeNull();
   });
 });

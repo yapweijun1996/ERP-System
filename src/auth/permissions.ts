@@ -13,6 +13,7 @@ export const PERMISSIONS = {
   salesRead: 'sales.read',
   salesWrite: 'sales.write',
   financeRead: 'finance.read',
+  financeWrite: 'finance.write',
   purchasingRead: 'purchasing.read',
   purchasingWrite: 'purchasing.write',
   crmRead: 'crm.read',

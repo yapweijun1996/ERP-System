@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, it, expect } from 'vitest';
 import type { DB } from '../../data/db';
-import { product, purchaseOrder, purchaseRequisition, supplier, taxRule } from '../../data/schema';
+import { product, project, purchaseOrder, purchaseRequisition, supplier, taxRule } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { PostingError } from './errors';
@@ -138,5 +138,36 @@ describe('createPurchaseOrder', () => {
       requisitionId: req.id,
     })).rejects.toThrow('already been converted');
     expect(await db.select().from(purchaseOrder)).toHaveLength(1);
+  });
+
+  it('tags a purchase order to a project when given a real projectId', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    const [proj] = await db.insert(project).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, projectNo: 'PRJ-PO-1',
+      name: 'Fictional Project', managerName: 'Demo PM', startDate: '2024-01-01',
+    }).returning({ id: project.id });
+
+    const res = await createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-PROJECT', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
+      projectId: proj.id,
+    });
+
+    const [order] = await db.select({ projectId: purchaseOrder.projectId })
+      .from(purchaseOrder).where(eq(purchaseOrder.id, res.orderId));
+    expect(order.projectId).toBe(proj.id);
+  });
+
+  it('rejects an unknown projectId before creating a header', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+
+    await expect(createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-BAD-PROJECT', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
+      projectId: 999999,
+    })).rejects.toThrow(PostingError);
+    expect(await db.select().from(purchaseOrder)).toHaveLength(0);
   });
 });

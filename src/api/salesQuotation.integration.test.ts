@@ -46,10 +46,19 @@ describe('sales enquiry and quotation API vertical slice', () => {
   let db: DB;
   let server: Server;
   let baseUrl: string;
+  let baseline: number[];
 
   beforeEach(async () => {
     db = await freshDb();
     await seedDemo(db);
+    // seedDemo() itself seeds a real posted progress claim + supplier invoice
+    // (EPIC-024) with their own real GL legs, so "no side effects" below must compare
+    // against this post-seed baseline, not an assumed-empty table.
+    baseline = (await Promise.all([
+      db.select({ value: count() }).from(stockMovement),
+      db.select({ value: count() }).from(invoice),
+      db.select({ value: count() }).from(glEntry),
+    ])).map(([row]) => row.value);
     server = createApp(db).listen(0, '127.0.0.1');
     await new Promise<void>((resolve) => server.once('listening', resolve));
     const address = server.address();
@@ -168,6 +177,6 @@ describe('sales enquiry and quotation API vertical slice', () => {
       db.select({ value: count() }).from(invoice),
       db.select({ value: count() }).from(glEntry),
     ]);
-    expect(sideEffects.map(([row]) => row.value)).toEqual([0, 0, 0]);
+    expect(sideEffects.map(([row], index) => row.value - baseline[index])).toEqual([0, 0, 0]);
   });
 });

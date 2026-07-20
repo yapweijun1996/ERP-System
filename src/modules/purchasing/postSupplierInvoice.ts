@@ -31,7 +31,7 @@ export async function postSupplierInvoiceWithin(exec: DB, scope: Scope, input: P
   const [order] = await exec
     .select({
       id: purchaseOrder.id, status: purchaseOrder.status, supplierId: purchaseOrder.supplierId,
-      currency: purchaseOrder.currency,
+      currency: purchaseOrder.currency, projectId: purchaseOrder.projectId,
       netAmount: purchaseOrder.netAmount, taxAmount: purchaseOrder.taxAmount, totalAmount: purchaseOrder.totalAmount,
     })
     .from(purchaseOrder)
@@ -68,7 +68,7 @@ export async function postSupplierInvoiceWithin(exec: DB, scope: Scope, input: P
 
   const [inv] = await exec.insert(supplierInvoice).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
-    docNo: input.docNo, orderId: order.id, supplierId: order.supplierId,
+    docNo: input.docNo, orderId: order.id, supplierId: order.supplierId, projectId: order.projectId,
     status: 'unpaid', invoiceDate: input.invoiceDate, currency: order.currency,
     netAmount: money(net), taxAmount: money(tax), totalAmount: money(total),
   }).returning({ id: supplierInvoice.id });

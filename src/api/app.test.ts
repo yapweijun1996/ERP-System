@@ -460,7 +460,12 @@ describe('production API security contract', () => {
       expect.objectContaining({ id: ar!.id, code: '1100', type: 'asset' }),
       expect.objectContaining({ id: revenue!.id, code: '4000', type: 'income' }),
     ]));
-    expect(entriesBody.data).toEqual([
+    // Filtered to this test's own journalRef: seedDemo() also seeds real GL legs
+    // (EPIC-024's Payment Voucher/Bank Receipt demo fixtures) that would otherwise
+    // leak into an unfiltered exact-array assertion here.
+    const ownEntries = (entriesBody.data as Array<{ journalRef: string }>)
+      .filter((row) => row.journalRef === 'JE-READ-MODEL');
+    expect(ownEntries).toEqual([
       expect.objectContaining({
         journalRef: 'JE-READ-MODEL',
         accountId: ar!.id,
@@ -525,7 +530,11 @@ describe('production API security contract', () => {
       { headers: { cookie: cookies.header } },
     );
     expect(lineResponse.status).toBe(200);
-    expect((await lineResponse.json()).data).toEqual([
+    const lineRows = (await lineResponse.json()).data as Array<{ orderId: number }>;
+    // Filtered to this order's own lines: seedDemo() also seeds an unrelated PO/line
+    // (EPIC-024's Payment Voucher demo fixture) that would otherwise leak into an
+    // unfiltered exact-array assertion here.
+    expect(lineRows.filter((row) => row.orderId === orderId)).toEqual([
       expect.objectContaining({
         orderId,
         productId: item.id,
@@ -571,10 +580,12 @@ describe('production API security contract', () => {
       total: 21.8,
     });
 
-    expect(await db.select().from(purchaseOrder)).toHaveLength(1);
-    expect(await db.select().from(purchaseOrderLine)).toHaveLength(1);
-    expect(await db.select().from(goodsReceipt)).toHaveLength(1);
-    expect(await db.select().from(supplierInvoice)).toHaveLength(1);
+    // Filtered to this test's own order (seedDemo() also seeds an unrelated
+    // PO/invoice — EPIC-024's Payment Voucher demo fixture).
+    expect(await db.select().from(purchaseOrder).where(eq(purchaseOrder.id, orderId))).toHaveLength(1);
+    expect(await db.select().from(purchaseOrderLine).where(eq(purchaseOrderLine.orderId, orderId))).toHaveLength(1);
+    expect(await db.select().from(goodsReceipt).where(eq(goodsReceipt.orderId, orderId))).toHaveLength(1);
+    expect(await db.select().from(supplierInvoice).where(eq(supplierInvoice.orderId, orderId))).toHaveLength(1);
     expect(await db.select().from(stockLocationBalance)).toEqual([
       expect.objectContaining({
         productId: item.id,

@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 26;
+  var DEMO_SCHEMA_VERSION = 27;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1285,6 +1285,9 @@
     'sales/credit-profiles':'sales_credit_profile',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
+    'finance/bank-receipts':'bank_receipt',
+    'finance/payment-vouchers':'payment_voucher',
+    'finance/payment-voucher-lines':'payment_voucher_line',
     'purchasing/suppliers':'supplier',
     'purchasing/orders':'purchase_order',
     'purchasing/purchase-orders':'purchase_order',
@@ -1702,6 +1705,22 @@
       });
       await refresh();
       return {data:newPurchaseRequisition,meta:{}};
+    }
+    if(key==='finance/bank-receipts'){
+      var newBankReceipt = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createBankReceiptWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newBankReceipt,meta:{}};
+    }
+    if(key==='finance/payment-vouchers'){
+      var newPaymentVoucher = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createPaymentVoucherWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newPaymentVoucher,meta:{}};
     }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }

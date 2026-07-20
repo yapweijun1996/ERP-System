@@ -190,6 +190,13 @@
       "when": 1784559179547,
       "tag": "0026_bouncy_fixer",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1784564102828,
+      "tag": "0027_familiar_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }

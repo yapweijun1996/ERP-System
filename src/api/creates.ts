@@ -111,6 +111,14 @@ import {
   createServiceTicketWithin,
   type CreateServiceTicketInput,
 } from '../modules/service/serviceTicket';
+import {
+  createBankReceiptWithin,
+  type CreateBankReceiptInput,
+} from '../modules/finance/bankReceipt';
+import {
+  createPaymentVoucherWithin,
+  type CreatePaymentVoucherInput,
+} from '../modules/finance/paymentVoucher';
 
 export interface CreateDefinition {
   permission: string;
@@ -420,6 +428,20 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createProgressClaimWithin(tx, scope, payload as unknown as CreateProgressClaimInput);
+    },
+  },
+  'finance/bank-receipts': {
+    permission: 'finance.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createBankReceiptWithin(tx, scope, payload as unknown as CreateBankReceiptInput);
+    },
+  },
+  'finance/payment-vouchers': {
+    permission: 'finance.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createPaymentVoucherWithin(tx, scope, payload as unknown as CreatePaymentVoucherInput);
     },
   },
   'service/contracts': {

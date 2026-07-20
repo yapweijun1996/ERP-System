@@ -11,6 +11,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { product, warehouse } from './inventory';
+import { project } from './project';
 
 export const PURCHASE_REQUISITION_PRIORITIES = ['Urgent', 'Project', 'Stock'] as const;
 export const PURCHASE_REQUISITION_STATUSES = ['submitted', 'approved', 'rejected'] as const;
@@ -72,6 +73,7 @@ export const purchaseOrder = pgTable('purchase_order', {
   docNo: text('doc_no').notNull(),
   supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
   requisitionId: bigint('requisition_id', { mode: 'number' }).references(() => purchaseRequisition.id),
+  projectId: bigint('project_id', { mode: 'number' }).references(() => project.id),
   status: text('status').notNull().default('open'),   // open | received | cancelled
   version: integer('version').notNull().default(1),
   orderDate: date('order_date').notNull(),
@@ -84,6 +86,7 @@ export const purchaseOrder = pgTable('purchase_order', {
   uniqueIndex('uq_po_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_po_tenant_date').on(t.masterFn, t.companyFn, t.orderDate, t.id),
   index('idx_po_requisition').on(t.masterFn, t.companyFn, t.requisitionId),
+  index('idx_po_project').on(t.masterFn, t.companyFn, t.projectId),
 ]);
 
 export const purchaseOrderLine = pgTable('purchase_order_line', {
@@ -125,6 +128,7 @@ export const supplierInvoice = pgTable('supplier_invoice', {
   docNo: text('doc_no').notNull(),
   orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => purchaseOrder.id),
   supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
+  projectId: bigint('project_id', { mode: 'number' }).references(() => project.id),
   status: text('status').notNull().default('unpaid'),  // unpaid | paid | cancelled
   version: integer('version').notNull().default(1),
   invoiceDate: date('invoice_date').notNull(),
@@ -136,4 +140,5 @@ export const supplierInvoice = pgTable('supplier_invoice', {
 }, (t) => [
   uniqueIndex('uq_si_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_si_order').on(t.masterFn, t.companyFn, t.orderId),
+  index('idx_si_project').on(t.masterFn, t.companyFn, t.projectId),
 ]);

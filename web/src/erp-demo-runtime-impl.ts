@@ -174,6 +174,14 @@ import {
   type CreatePurchaseRequisitionInput,
 } from '../../src/modules/purchasing/purchaseRequisition';
 import {
+  createBankReceiptWithin,
+  type CreateBankReceiptInput,
+} from '../../src/modules/finance/bankReceipt';
+import {
+  createPaymentVoucherWithin,
+  type CreatePaymentVoucherInput,
+} from '../../src/modules/finance/paymentVoucher';
+import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
@@ -476,6 +484,12 @@ export const erpDemoRuntime = Object.freeze({
       decision: 'approved' | 'rejected', rejectionReason?: string | null,
     ) {
       return decidePurchaseRequisitionWithin(asDomainDb(db), scope, requisitionId, decision, rejectionReason);
+    },
+    createBankReceiptWithin(db: DemoOrm, scope: Scope, input: CreateBankReceiptInput) {
+      return createBankReceiptWithin(asDomainDb(db), scope, input);
+    },
+    createPaymentVoucherWithin(db: DemoOrm, scope: Scope, input: CreatePaymentVoucherInput) {
+      return createPaymentVoucherWithin(asDomainDb(db), scope, input);
     },
     listCompanyUsers(db: DemoOrm, scope: Scope) {
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);

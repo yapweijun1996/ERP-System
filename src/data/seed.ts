@@ -8,6 +8,7 @@ import {
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
   purchaseRequisition, purchaseRequisitionLine,
+  purchaseOrder, purchaseOrderLine, supplierInvoice, glEntry,
 } from './schema';
 
 /**
@@ -144,6 +145,10 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', code: '1500', name: 'Property, Plant & Equipment', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '1510', name: 'Accumulated Depreciation', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '6200', name: 'Depreciation Expense', type: 'expense' },
+    // EPIC-024: Bank Receipt/Payment Voucher's Cash/Bank leg. Also the code
+    // screens-fin2.js's GL "Cash & bank" tile already reads (previously $0 — no
+    // account existed to sum, so this closes a dead frontend tile too).
+    { masterFn: 'M1', companyFn: 'C-SG', code: '1000', name: 'Cash & Bank', type: 'asset' },
   ]);
 
   // Fixed Assets register (TASK-035) — a few seeded assets so the register isn't
@@ -360,6 +365,79 @@ export async function seedDemo(db: DB): Promise<void> {
       productId: sgGadget.id, qty: '5', estimatedUnitCost: '13.00',
     },
   ]);
+
+  // EPIC-024 (TASK-058): a real received PO + unpaid supplier invoice tagged to the
+  // project below (project_id, threaded automatically the same way
+  // postSupplierInvoiceWithin does it for real), so Payment Voucher and the
+  // project's Project-costs panel both have something real on first load. A real
+  // posted (third) progress claim gives Bank Receipt something real to collect.
+  // Neither is pre-paid/pre-receipted -- matching the established precedent of
+  // leaving the first real conversion a live action (e.g. Purchase Requisition's
+  // approved-but-unconverted seed row).
+  async function acctId(code: string) {
+    const [row] = await db.select({ id: account.id }).from(account).where(and(
+      eq(account.masterFn, 'M1'), eq(account.companyFn, 'C-SG'), eq(account.code, code),
+    ));
+    return row.id;
+  }
+  const [supp1] = await db.select({ id: supplier.id }).from(supplier).where(and(
+    eq(supplier.masterFn, 'M1'), eq(supplier.companyFn, 'C-SG'), eq(supplier.code, 'SUPP1'),
+  ));
+
+  const [poFin1] = await db.insert(purchaseOrder).values({
+    masterFn: 'M1', companyFn: 'C-SG', docNo: 'PO-2026-0001', supplierId: supp1.id,
+    projectId: cellProject.id, status: 'received', orderDate: '2026-06-01', currency: 'SGD',
+    netAmount: '1000.00', taxAmount: '90.00', totalAmount: '1090.00',
+  }).returning({ id: purchaseOrder.id });
+  await db.insert(purchaseOrderLine).values({
+    masterFn: 'M1', companyFn: 'C-SG', orderId: poFin1.id, lineNo: 1,
+    productId: sgWidget.id, qty: '100', unitCost: '10.00',
+    netAmount: '1000.00', taxCode: 'SR', taxRate: '9.000', taxAmount: '90.00',
+  });
+  await db.insert(supplierInvoice).values({
+    masterFn: 'M1', companyFn: 'C-SG', docNo: 'SINV-2026-0001', orderId: poFin1.id,
+    supplierId: supp1.id, projectId: cellProject.id, status: 'unpaid',
+    invoiceDate: '2026-06-05', currency: 'SGD',
+    netAmount: '1000.00', taxAmount: '90.00', totalAmount: '1090.00',
+  });
+  await db.insert(glEntry).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', journalRef: 'SINV-2026-0001',
+      accountId: await acctId('1400'), debit: '1000.00', credit: '0', memo: 'Inventory',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', journalRef: 'SINV-2026-0001',
+      accountId: await acctId('1200'), debit: '90.00', credit: '0', memo: 'Input tax',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', journalRef: 'SINV-2026-0001',
+      accountId: await acctId('2100'), debit: '0', credit: '1090.00', memo: 'AP',
+    },
+  ]);
+
+  await db.insert(progressClaim).values({
+    masterFn: 'M1', companyFn: 'C-SG', docNo: 'PC-2026-0003', projectId: cellProject.id,
+    status: 'posted', claimDate: '2026-06-25', description: 'Commissioning & handover',
+    netAmount: '50000.00', taxCode: 'SR', taxRate: '9.000',
+    taxAmount: '4500.00', totalAmount: '54500.00',
+  });
+  await db.insert(glEntry).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', journalRef: 'PC-2026-0003',
+      accountId: await acctId('1100'), debit: '54500.00', credit: '0', memo: 'AR progress claim',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', journalRef: 'PC-2026-0003',
+      accountId: await acctId('4000'), debit: '0', credit: '50000.00', memo: 'Progress claim revenue',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', journalRef: 'PC-2026-0003',
+      accountId: await acctId('2200'), debit: '0', credit: '4500.00', memo: 'Output tax',
+    },
+  ]);
+  await db.update(project).set({
+    billedToDate: sql`${project.billedToDate} + 50000.00`,
+  }).where(and(eq(project.masterFn, 'M1'), eq(project.companyFn, 'C-SG'), eq(project.id, cellProject.id)));
 }
 
 /** True if the demo master already exists (so we can avoid double-seeding). */

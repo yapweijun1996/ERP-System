@@ -880,7 +880,7 @@ from `inventory.ts`).
 
 Acceptance criteria:
 
-- [ ] `bank_receipt` (`doc_no`, `progress_claim_id` FK not null, `received_date`,
+- [x] `bank_receipt` (`doc_no`, `progress_claim_id` FK not null, `received_date`,
       nullable `bank_ref`, `amount`) and `payment_voucher` (`doc_no`, `supplier_id` FK,
       `payment_date`, nullable `bank_ref`, `total_amount`) + `payment_voucher_line`
       (`payment_voucher_id` FK, `supplier_invoice_id` FK, `amount`) tables added to
@@ -888,7 +888,7 @@ Acceptance criteria:
       nullable `project_id` FK in `src/data/schema/purchasing.ts`. A new `1000` Cash/Bank
       account is seeded (fixes a currently-dead `screens-fin2.js` GL tile that already
       computes `get('1000')+get('1010')` against accounts that don't exist yet).
-- [ ] New `src/modules/finance/` module (first business-logic module in this domain —
+- [x] New `src/modules/finance/` module (first business-logic module in this domain —
       GL has been read-only until now): `bankReceipt.ts` (`createBankReceiptWithin` —
       requires the claim `posted` and not already receipted, requires the amount to
       exactly match the claim's `total_amount`, posts Dr `1000` Cash / Cr `1100` AR) and
@@ -901,7 +901,7 @@ Acceptance criteria:
       permission (Finance has only ever had `finance.read`); `finance/bank-receipts`,
       `finance/payment-vouchers` and `finance/payment-voucher-lines` registered as
       generic `ResourceDefinition`s.
-- [ ] Unit tests cover: bank receipt happy path, rejecting a not-yet-posted claim,
+- [x] Unit tests cover: bank receipt happy path, rejecting a not-yet-posted claim,
       rejecting a second receipt against an already-receipted claim, rejecting an
       amount that doesn't match the claim total; payment voucher happy path across
       multiple invoices with a correctly summed balanced GL posting, rejecting an
