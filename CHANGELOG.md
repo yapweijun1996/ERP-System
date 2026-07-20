@@ -5,6 +5,30 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed (2026-07-20 — TASK-053 decimal.js isPositive() zero-bypass sweep)
+- `decimal.js`'s `Decimal.prototype.isPositive()` returns `true` for zero (its sign bit
+  is `1` for both positive numbers and zero — only negative values and negative zero
+  have `s === -1`), so the common `if (!x.isFinite() || !x.isPositive()) throw ...`
+  guard silently let a zero amount/quantity through app-level validation and fall
+  through to a raw DB CHECK-constraint error instead of the intended friendly message.
+  TASK-051 found and fixed the first instance in `project/progressClaim.ts`; this task
+  swept the same pattern across the six remaining sites: `sales/return.ts` (Return
+  quantity), `sales/quotation.ts` (Line quantity — only the `!allowZero` branch was
+  buggy), `quality/inspection.ts` (lotQty/sampleQty/affectedQty), `sales/pricing.ts`
+  (Minimum quantity via `options.positive` — only that branch was buggy),
+  `sales/debitNote.ts` (netAmount), `manufacturing/workOrder.ts` (plannedQty/BOM
+  outputQty/reported hours). Each fix replaces `!x.isPositive()` with `x.lte(0)`,
+  leaving `isFinite()` checks and `allowZero`/`options.positive` branch logic that
+  legitimately permits zero (e.g. a free-of-charge quotation line) unchanged.
+- Added one unit test per file asserting an explicit `'0'` input now gets the friendly
+  error instead of the raw constraint failure, mirroring `progressClaim.test.ts`'s
+  `rejects a non-positive net amount`. Proved the tests are non-vacuous: reverted the
+  `return.ts` fix alone, confirmed its new test failed with the exact original symptom
+  (`Failed query: insert into "sales_return_line" ...`), then restored and reconfirmed
+  green. No schema or screen changes — full suite verified (typecheck ×2, `npm test`
+  203/204, `npm run demo`, `build:demo`, `check:drift`, `smoke`, `audit:screens`
+  114/114 routes).
+
 ### Added (2026-07-17 — TASK-028 wire CRM screens to canonical data)
 - `erp-system-data-adapter.js`: `readPayload()` gained an `opportunities` query
   (joins `customer` + `app_user`); `applyData()` builds `DB.pipeline` (grouped by

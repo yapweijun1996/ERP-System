@@ -211,6 +211,9 @@ Order of attack:
    team/milestone-schedule tracking stays mock (no timesheet or expense-capture schema
    exists to back it — a materially separate feature). Project-scoped AP linkage and
    dedicated Bank Receipt/Payment documents remain the third sub-phase, a future epic.
+   EPIC-021's own validation work also surfaced a repo-wide decimal.js correctness bug
+   (`isPositive()` doesn't reject zero); TASK-053 (2026-07-20) swept the fix across the
+   six affected modules — see EPICS.md.
 8. **Service** (⬜ not started) — service tickets/orders/contracts, distinct from
    Manufacturing's work orders. No schema; mock screens in `screens-service.js`.
 9. **Purchase Requisition** (⬜ not started) — the natural upstream step before the

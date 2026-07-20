@@ -249,4 +249,20 @@ describe('manufacturing work orders', () => {
       .rejects.toThrow('Every operation');
     expect(await db.select().from(stockMovement)).toHaveLength(1);
   });
+
+  it('rejects a zero planned quantity without creating a work order', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await expect(createWorkOrder(db, SCOPE, {
+      docNo: 'WO-ZERO',
+      productId: fx.finishedProductId,
+      bomVersionId: fx.bomVersionId,
+      routingId: fx.routingId,
+      warehouseId: fx.warehouseId,
+      plannedQty: '0',
+      startDate: '2026-07-19',
+      dueDate: '2026-07-20',
+    })).rejects.toThrow('plannedQty must be a positive decimal');
+    expect(await db.select().from(workOrder)).toHaveLength(0);
+  });
 });

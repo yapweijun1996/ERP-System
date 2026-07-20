@@ -61,7 +61,7 @@ function positiveDecimal(value: string | number, label: string): Decimal {
   } catch {
     throw new ManufacturingWorkOrderError(`${label} must be a positive decimal`);
   }
-  if (!parsed.isFinite() || !parsed.isPositive()) {
+  if (!parsed.isFinite() || parsed.lte(0)) {
     throw new ManufacturingWorkOrderError(`${label} must be a positive decimal`);
   }
   return parsed;

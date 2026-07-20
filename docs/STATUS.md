@@ -322,10 +322,21 @@ over-limit confirmations inside the transaction. Commission remains Preview.
    `vite preview` session look broken (a missing table after a real migration ran) —
    if that happens, call `window.ErpSystemData.reset()` from the app rather than
    suspecting the migration bundle first.
+8. ~~`decimal.js`'s `isPositive()` treats zero as positive, so `!x.isPositive()`
+   validation guards silently let a zero amount/quantity through to a raw DB
+   CHECK-constraint error~~ — **fixed (TASK-051 + TASK-053, 2026-07-20).** TASK-051
+   found and fixed the first instance in `project/progressClaim.ts`; TASK-053 swept
+   the same pattern across the six remaining sites (`sales/return.ts`,
+   `sales/quotation.ts`, `quality/inspection.ts`, `sales/pricing.ts`,
+   `sales/debitNote.ts`, `manufacturing/workOrder.ts`), replacing `!x.isPositive()`
+   with `x.lte(0)` and leaving `allowZero`/`options.positive` branches that
+   legitimately permit zero (e.g. a free-of-charge quotation line) untouched. One
+   regression test per file proves the friendly error now fires instead of the raw
+   constraint failure.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018…050 (49)
+- Done: TASK-001…016, TASK-018…053 (52)
 - Blocked: TASK-017 (1)
 - Todo: none — every agent-completable task is done.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)

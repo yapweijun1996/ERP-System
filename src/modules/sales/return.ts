@@ -36,7 +36,7 @@ function positive(value: string | number, label: string) {
   } catch {
     throw new SalesReturnError(`${label} must be a valid decimal.`);
   }
-  if (!result.isFinite() || !result.isPositive()) {
+  if (!result.isFinite() || result.lte(0)) {
     throw new SalesReturnError(`${label} must be greater than zero.`);
   }
   return result;

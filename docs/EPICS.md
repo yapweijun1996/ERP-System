@@ -680,3 +680,10 @@ fixed in passing: writing a Progress Claim's `netAmount > 0` check as
 treats zero as positive (sign-bit only) — the same latent bug already existed in five
 other files (`debitNote.ts` among them); fixed locally with `net.lte(0)` and flagged the
 rest as a separate follow-up rather than scope-creeping this epic.
+
+Follow-up: TASK-053 (2026-07-20) closed that gap — a repo-wide grep found **six** sites
+with the same pattern, not five (`manufacturing/workOrder.ts` was a sixth the original
+spot-check missed). All six fixed the same way (`!x.isPositive()` → `x.lte(0)`,
+branch-preserving wherever `allowZero`/`options.positive` logic already existed), each
+with a new unit test asserting an explicit `'0'` input now gets the friendly error
+instead of a raw DB constraint failure.

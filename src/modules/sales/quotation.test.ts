@@ -154,4 +154,28 @@ describe('sales enquiry and quotation chain', () => {
     expect(await db.select().from(salesOrder)).toHaveLength(0);
     expect(await db.select().from(salesQuotation)).toHaveLength(1);
   });
+
+  it('rejects a zero line quantity but still allows an explicit zero unit price', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await expect(createSalesQuotation(db, SCOPE, {
+      docNo: 'Q-ZERO-QTY',
+      customerId: fx.customerId,
+      quoteDate: '2026-07-19',
+      validUntil: '2026-08-19',
+      currency: 'SGD',
+      lines: [{ productId: fx.productId, qty: '0', unitPrice: '10', taxCode: 'SR' }],
+    })).rejects.toThrow('Line quantity must be greater than zero.');
+    expect(await db.select().from(salesQuotation)).toHaveLength(0);
+
+    const freebie = await createSalesQuotation(db, SCOPE, {
+      docNo: 'Q-FREE-LINE',
+      customerId: fx.customerId,
+      quoteDate: '2026-07-19',
+      validUntil: '2026-08-19',
+      currency: 'SGD',
+      lines: [{ productId: fx.productId, qty: '1', unitPrice: '0', taxCode: 'SR' }],
+    });
+    expect(freebie).toMatchObject({ status: 'draft' });
+  });
 });

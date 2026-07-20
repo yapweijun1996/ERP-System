@@ -57,7 +57,7 @@ export async function createSalesDebitNoteWithin(
   } catch {
     throw new SalesDebitNoteError('netAmount must be a valid decimal.');
   }
-  if (!net.isFinite() || !net.isPositive()) {
+  if (!net.isFinite() || net.lte(0)) {
     throw new SalesDebitNoteError('netAmount must be greater than zero.');
   }
   const [original] = await exec.select({

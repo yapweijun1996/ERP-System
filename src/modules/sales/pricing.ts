@@ -38,7 +38,7 @@ function decimal(
   } catch {
     throw new SalesPricingError(`${label} must be a valid decimal.`);
   }
-  if (!result.isFinite() || (options.positive ? !result.isPositive() : result.isNegative())) {
+  if (!result.isFinite() || (options.positive ? result.lte(0) : result.isNegative())) {
     throw new SalesPricingError(`${label} is invalid.`);
   }
   if (options.maximum != null && result.gt(options.maximum)) {

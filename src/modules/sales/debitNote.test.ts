@@ -113,4 +113,18 @@ describe('sales debit note', () => {
     })).rejects.toThrow('A cancelled invoice cannot receive a debit note.');
     expect(await db.select().from(salesDebitNote)).toHaveLength(0);
   });
+
+  it('rejects a non-positive net amount', async () => {
+    const db = await freshDb();
+    const original = await fixture(db);
+    await expect(createSalesDebitNote(db, SCOPE, {
+      docNo: 'DN-ZERO',
+      invoiceId: original.id,
+      noteDate: '2024-06-02',
+      reason: 'Fictional zero charge',
+      netAmount: '0',
+      taxCode: 'SR',
+    })).rejects.toThrow('netAmount must be greater than zero.');
+    expect(await db.select().from(salesDebitNote)).toHaveLength(0);
+  });
 });
