@@ -786,7 +786,7 @@ and HR's on-leave-today check.
 
 Acceptance criteria:
 
-- [ ] `purchase_requisition` (`req_no`, `requested_by_name`/`department` plain text — no
+- [x] `purchase_requisition` (`req_no`, `requested_by_name`/`department` plain text — no
       user FK, matching Project's `manager_name` precedent — `needed_by_date`, `priority`
       Urgent/Project/Stock matching the mock's exact values, nullable `justification`,
       `status` submitted/approved/rejected — collapses the mock's Draft/Submitted/Pending
@@ -800,7 +800,7 @@ Acceptance criteria:
       existing Purchasing domain, matching how that file already groups
       supplier/PO/GRN/invoice together). `purchase_order` gains a nullable
       `requisition_id` FK.
-- [ ] `src/modules/purchasing/purchaseRequisition.ts` (`createPurchaseRequisitionWithin`/
+- [x] `src/modules/purchasing/purchaseRequisition.ts` (`createPurchaseRequisitionWithin`/
       `createPurchaseRequisition` — always starts `submitted`;
       `decidePurchaseRequisitionWithin`/`decidePurchaseRequisition` — mirrors
       `decideLeaveRequestWithin`'s shape exactly, requires a reason to reject).
@@ -811,7 +811,7 @@ Acceptance criteria:
       lines` registered as generic `ResourceDefinition`s gated on the **existing**
       `purchasing.read`/`purchasing.write` permissions — no new permission keys needed,
       unlike every prior module (Purchasing already has them).
-- [ ] Unit tests cover validation, tenant isolation, the approve/reject state-machine
+- [x] Unit tests cover validation, tenant isolation, the approve/reject state-machine
       guards, and — in `createPurchaseOrder.test.ts` — the new requisition-linkage path:
       accepts a valid approved requisition, rejects a not-yet-approved one, rejects
       reusing an already-converted one, and confirms omitting `requisitionId` entirely

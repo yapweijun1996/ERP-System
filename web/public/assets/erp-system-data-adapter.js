@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 25;
+  var DEMO_SCHEMA_VERSION = 26;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1291,6 +1291,8 @@
     'purchasing/purchase-order-lines':'purchase_order_line',
     'purchasing/goods-receipts':'goods_receipt',
     'purchasing/supplier-invoices':'supplier_invoice',
+    'purchasing/purchase-requisitions':'purchase_requisition',
+    'purchasing/purchase-requisition-lines':'purchase_requisition_line',
     'crm/customers':'customer',
     'crm/opportunities':'opportunity',
     'crm/contacts':'contact',
@@ -1693,6 +1695,14 @@
       await refresh();
       return {data:newServiceTicket,meta:{}};
     }
+    if(key==='purchasing/purchase-requisitions'){
+      var newPurchaseRequisition = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createPurchaseRequisitionWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newPurchaseRequisition,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1958,6 +1968,22 @@
       });
       await refresh();
       return {data:resolvedServiceTicket,meta:{}};
+    }
+    if(key==='purchasing/purchase-requisitions'&&name==='approve'){
+      var approvedRequisition = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.decidePurchaseRequisitionWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), 'approved');
+      });
+      await refresh();
+      return {data:approvedRequisition,meta:{}};
+    }
+    if(key==='purchasing/purchase-requisitions'&&name==='reject'){
+      var rejectedRequisition = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.decidePurchaseRequisitionWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), 'rejected', payload&&payload.rejectionReason);
+      });
+      await refresh();
+      return {data:rejectedRequisition,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

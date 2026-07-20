@@ -1,12 +1,13 @@
 // Demo seed: one master (M1) with a Singapore (GST) and a Malaysia (SST) company,
 // currencies, a few products, and effective-dated tax rules (incl. the SG GST 8%→9%
 // change so the dated lookup is demonstrable). Same code runs on both adapters.
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from './db';
 import {
   master, company, currency, appUser, role, rolePermission, userCompany,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
+  purchaseRequisition, purchaseRequisitionLine,
 } from './schema';
 
 /**
@@ -301,6 +302,61 @@ export async function seedDemo(db: DB): Promise<void> {
       status: 'closed', technicianName: 'Rosa Diaz',
       diagnosis: 'Replaced worn drive belt and tested through 3 full cycles; running normally.',
       openedAt: new Date('2026-07-10T09:00:00Z'), resolvedAt: new Date('2026-07-12T14:20:00Z'),
+    },
+  ]);
+
+  // Purchase Requisition (TASK-055): 3 requisitions spanning every real status,
+  // against the real seeded SG products, so the demo's "Convert to PO" action has a
+  // real approved requisition ready to use on first load. Nothing is pre-converted --
+  // matching Fixed Assets/Service's precedent of leaving the first real conversion a
+  // live action.
+  const [sgWidget] = await db.select({ id: product.id }).from(product).where(and(
+    eq(product.masterFn, 'M1'), eq(product.companyFn, 'C-SG'), eq(product.sku, 'SG-WIDGET'),
+  ));
+  const [sgGadget] = await db.select({ id: product.id }).from(product).where(and(
+    eq(product.masterFn, 'M1'), eq(product.companyFn, 'C-SG'), eq(product.sku, 'SG-GADGET'),
+  ));
+
+  const [prSubmitted] = await db.insert(purchaseRequisition).values({
+    masterFn: 'M1', companyFn: 'C-SG', reqNo: 'PR-2026-0001',
+    requestedByName: 'Marcus Silva', department: 'Warehouse',
+    neededByDate: '2026-08-10', priority: 'Stock', status: 'submitted',
+    estimatedValue: '325.00',
+  }).returning({ id: purchaseRequisition.id });
+  const [prApproved] = await db.insert(purchaseRequisition).values({
+    masterFn: 'M1', companyFn: 'C-SG', reqNo: 'PR-2026-0002',
+    requestedByName: 'Tom Becker', department: 'Production',
+    neededByDate: '2026-08-05', priority: 'Urgent',
+    justification: 'Line 2 blocked without replacement gadgets — production halted since Monday.',
+    status: 'approved', decidedAt: new Date('2026-07-19T09:15:00Z'),
+    estimatedValue: '1430.00',
+  }).returning({ id: purchaseRequisition.id });
+  const [prRejected] = await db.insert(purchaseRequisition).values({
+    masterFn: 'M1', companyFn: 'C-SG', reqNo: 'PR-2026-0003',
+    requestedByName: 'Lena Park', department: 'Sales',
+    neededByDate: '2026-08-20', priority: 'Project',
+    justification: 'Client demo kit for Q3 roadshow.',
+    status: 'rejected', rejectionReason: "Not in this quarter's demo budget — resubmit in Q4.",
+    decidedAt: new Date('2026-07-18T16:00:00Z'),
+    estimatedValue: '65.00',
+  }).returning({ id: purchaseRequisition.id });
+
+  await db.insert(purchaseRequisitionLine).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', requisitionId: prSubmitted.id, lineNo: 1,
+      productId: sgWidget.id, qty: '50', estimatedUnitCost: '6.50',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', requisitionId: prApproved.id, lineNo: 1,
+      productId: sgGadget.id, qty: '100', estimatedUnitCost: '13.00',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', requisitionId: prApproved.id, lineNo: 2,
+      productId: sgWidget.id, qty: '20', estimatedUnitCost: '6.50',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', requisitionId: prRejected.id, lineNo: 1,
+      productId: sgGadget.id, qty: '5', estimatedUnitCost: '13.00',
     },
   ]);
 }

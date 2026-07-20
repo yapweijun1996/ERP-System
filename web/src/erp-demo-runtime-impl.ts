@@ -169,6 +169,11 @@ import {
   type CreateServiceTicketInput,
 } from '../../src/modules/service/serviceTicket';
 import {
+  createPurchaseRequisitionWithin,
+  decidePurchaseRequisitionWithin,
+  type CreatePurchaseRequisitionInput,
+} from '../../src/modules/purchasing/purchaseRequisition';
+import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
@@ -462,6 +467,15 @@ export const erpDemoRuntime = Object.freeze({
     },
     resolveServiceTicketWithin(db: DemoOrm, scope: Scope, ticketId: number, diagnosis: string) {
       return resolveServiceTicketWithin(asDomainDb(db), scope, ticketId, diagnosis);
+    },
+    createPurchaseRequisitionWithin(db: DemoOrm, scope: Scope, input: CreatePurchaseRequisitionInput) {
+      return createPurchaseRequisitionWithin(asDomainDb(db), scope, input);
+    },
+    decidePurchaseRequisitionWithin(
+      db: DemoOrm, scope: Scope, requisitionId: number,
+      decision: 'approved' | 'rejected', rejectionReason?: string | null,
+    ) {
+      return decidePurchaseRequisitionWithin(asDomainDb(db), scope, requisitionId, decision, rejectionReason);
     },
     listCompanyUsers(db: DemoOrm, scope: Scope) {
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);

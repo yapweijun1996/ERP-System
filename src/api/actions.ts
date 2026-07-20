@@ -20,6 +20,7 @@ import {
   postSupplierInvoiceWithin,
   type PostSupplierInvoiceInput,
 } from '../modules/purchasing/postSupplierInvoice';
+import { decidePurchaseRequisitionWithin } from '../modules/purchasing/purchaseRequisition';
 import {
   completeWarehousePickWithin,
   recordWarehousePickWithin,
@@ -520,6 +521,25 @@ const ACTIONS: Record<string, ActionDefinition> = {
         docNo: payload.docNo,
         invoiceDate: payload.invoiceDate,
       });
+    },
+  },
+  'purchasing/purchase-requisitions/approve': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return decidePurchaseRequisitionWithin(tx, scope, input.resourceId, 'approved');
+    },
+  },
+  'purchasing/purchase-requisitions/reject': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const reason = (input.payload as { rejectionReason?: unknown } | undefined)?.rejectionReason;
+      return decidePurchaseRequisitionWithin(
+        tx, scope, input.resourceId, 'rejected', typeof reason === 'string' ? reason : null,
+      );
     },
   },
   'crm/opportunities/convert': {

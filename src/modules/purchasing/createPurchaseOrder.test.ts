@@ -1,6 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { describe, it, expect } from 'vitest';
 import type { DB } from '../../data/db';
-import { product, purchaseOrder, supplier, taxRule } from '../../data/schema';
+import { product, purchaseOrder, purchaseRequisition, supplier, taxRule } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { PostingError } from './errors';
@@ -77,5 +78,65 @@ describe('createPurchaseOrder', () => {
     })).rejects.toThrow(PostingError);
 
     expect(await db.select().from(purchaseOrder)).toHaveLength(0);
+  });
+
+  it('links a purchase order to an approved requisition, closing the trail', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    const [req] = await db.insert(purchaseRequisition).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, reqNo: 'PR-LINK-1',
+      requestedByName: 'Fictional Requester', department: 'Fictional Dept',
+      neededByDate: '2024-06-15', status: 'approved',
+    }).returning({ id: purchaseRequisition.id });
+
+    const res = await createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-LINKED', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
+      requisitionId: req.id,
+    });
+
+    const [order] = await db.select({ requisitionId: purchaseOrder.requisitionId })
+      .from(purchaseOrder).where(eq(purchaseOrder.id, res.orderId));
+    expect(order.requisitionId).toBe(req.id);
+  });
+
+  it('rejects linking a requisition that is not yet approved', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    const [req] = await db.insert(purchaseRequisition).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, reqNo: 'PR-LINK-2',
+      requestedByName: 'Fictional Requester', department: 'Fictional Dept',
+      neededByDate: '2024-06-15', status: 'submitted',
+    }).returning({ id: purchaseRequisition.id });
+
+    await expect(createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-UNAPPROVED', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
+      requisitionId: req.id,
+    })).rejects.toThrow('must be approved');
+    expect(await db.select().from(purchaseOrder)).toHaveLength(0);
+  });
+
+  it('rejects converting an already-converted requisition a second time', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    const [req] = await db.insert(purchaseRequisition).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, reqNo: 'PR-LINK-3',
+      requestedByName: 'Fictional Requester', department: 'Fictional Dept',
+      neededByDate: '2024-06-15', status: 'approved',
+    }).returning({ id: purchaseRequisition.id });
+
+    await createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-FIRST', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
+      requisitionId: req.id,
+    });
+
+    await expect(createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-SECOND', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 1, unitCost: 6, taxCode: 'SR' }],
+      requisitionId: req.id,
+    })).rejects.toThrow('already been converted');
+    expect(await db.select().from(purchaseOrder)).toHaveLength(1);
   });
 });

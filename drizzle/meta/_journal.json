@@ -183,6 +183,13 @@
       "when": 1784551835307,
       "tag": "0025_great_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1784559179547,
+      "tag": "0026_bouncy_fixer",
+      "breakpoints": true
     }
   ]
 }

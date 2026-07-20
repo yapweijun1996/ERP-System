@@ -25,6 +25,10 @@ import {
   type CreatePurchaseOrderInput,
 } from '../modules/purchasing/createPurchaseOrder';
 import {
+  createPurchaseRequisitionWithin,
+  type CreatePurchaseRequisitionInput,
+} from '../modules/purchasing/purchaseRequisition';
+import {
   createOpportunity,
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
@@ -220,6 +224,13 @@ const CREATES: Record<string, CreateDefinition> = {
         );
       }
       return createPurchaseOrderWithin(tx, scope, input);
+    },
+  },
+  'purchasing/purchase-requisitions': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createPurchaseRequisitionWithin(tx, scope, payload as unknown as CreatePurchaseRequisitionInput);
     },
   },
   'crm/contacts': {

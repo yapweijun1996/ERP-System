@@ -15,6 +15,8 @@ import {
   inventoryAdjustment,
   purchaseOrder,
   purchaseOrderLine,
+  purchaseRequisition,
+  purchaseRequisitionLine,
   salesOrder,
   salesOrderLine,
   salesDelivery,
@@ -237,6 +239,12 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     createPermission: 'purchasing.write',
   }),
   'purchasing/purchase-order-lines': resource(purchaseOrderLine, 'purchasing.read'),
+  'purchasing/purchase-requisitions': resource(purchaseRequisition, 'purchasing.read', {
+    status: purchaseRequisition.status,
+    allowedActions: ['approve', 'reject'],
+    createPermission: 'purchasing.write',
+  }),
+  'purchasing/purchase-requisition-lines': resource(purchaseRequisitionLine, 'purchasing.read'),
   'purchasing/goods-receipts': resource(goodsReceipt, 'purchasing.read'),
   'purchasing/supplier-invoices': resource(supplierInvoice, 'purchasing.read', {
     status: supplierInvoice.status,

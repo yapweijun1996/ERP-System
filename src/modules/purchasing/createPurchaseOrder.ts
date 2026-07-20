@@ -11,6 +11,7 @@ import {
   product,
   purchaseOrder,
   purchaseOrderLine,
+  purchaseRequisition,
   supplier,
 } from '../../data/schema';
 import { PostingError } from './errors';
@@ -27,6 +28,9 @@ export interface CreatePurchaseOrderInput {
   orderDate: string; // YYYY-MM-DD
   currency: string;
   lines: PurchaseOrderLineInput[];
+  /** Optional: link this PO back to the approved requisition it fulfils. Must be
+   *  'approved' and not already linked to another purchase order. */
+  requisitionId?: number | null;
 }
 
 const money = (n: number) => n.toFixed(2);
@@ -51,9 +55,32 @@ export async function createPurchaseOrderWithin(exec: DB, scope: Scope, input: C
     throw new PostingError('One or more products are not available in this company');
   }
 
+  let requisitionId: number | null = null;
+  if (input.requisitionId != null) {
+    const [reqRow] = await exec.select({ id: purchaseRequisition.id, status: purchaseRequisition.status })
+      .from(purchaseRequisition).where(and(
+        eq(purchaseRequisition.masterFn, scope.masterFn),
+        eq(purchaseRequisition.companyFn, scope.companyFn),
+        eq(purchaseRequisition.id, input.requisitionId),
+      ));
+    if (!reqRow) throw new PostingError(`Purchase requisition ${input.requisitionId} is not available in this company`);
+    if (reqRow.status !== 'approved') {
+      throw new PostingError(`Purchase requisition ${input.requisitionId} must be approved before it can be converted to a purchase order`);
+    }
+    const [existingLink] = await exec.select({ id: purchaseOrder.id }).from(purchaseOrder).where(and(
+      eq(purchaseOrder.masterFn, scope.masterFn),
+      eq(purchaseOrder.companyFn, scope.companyFn),
+      eq(purchaseOrder.requisitionId, input.requisitionId),
+    ));
+    if (existingLink) {
+      throw new PostingError(`Purchase requisition ${input.requisitionId} has already been converted to a purchase order`);
+    }
+    requisitionId = reqRow.id;
+  }
+
   const [order] = await exec.insert(purchaseOrder).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
-    docNo: input.docNo, supplierId: input.supplierId,
+    docNo: input.docNo, supplierId: input.supplierId, requisitionId,
     status: 'open', orderDate: input.orderDate, currency: input.currency,
   }).returning({ id: purchaseOrder.id });
 
