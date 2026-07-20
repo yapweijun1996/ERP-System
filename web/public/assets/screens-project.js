@@ -332,24 +332,46 @@ async function prepareProjectDetail(projectId){
     listPage('project/projects'),
     listPage('sales/customers'),
     listPage('project/progress-claims'),
+    listPage('finance/bank-receipts'),
+    listPage('purchasing/supplier-invoices'),
+    listPage('purchasing/suppliers'),
   ]);
-  const [projects,customers,claims]=pages.map(p=>p.data);
+  const [projects,customers,claims,receipts,supplierInvoices,suppliers]=pages.map(p=>p.data);
   const project=projectId?projects.find(row=>row.id===projectId):projects[0];
   if(!project) throw new Error('No project found for the active company.');
   const customer=project.customerId!=null?customers.find(c=>c.id===project.customerId):null;
   const projectClaims=claims.filter(c=>c.projectId===project.id)
     .sort((a,b)=>String(a.claimDate).localeCompare(String(b.claimDate))||a.id-b.id);
-  /* doc_no is unique per tenant, not per project — nextClaimNo() must scan
-     every project's claims, not just this project's, or two projects' first
-     claims would both try PC-<year>-0001 and the second insert would fail
-     on the real unique-index constraint. */
-  return {project,customer,claims:projectClaims,allClaims:claims};
+  /* doc_no is unique per tenant, not per project — nextClaimNo()/nextReceiptNo() must
+     scan every project's own docs, not just this project's, or two projects' first
+     documents would both try the same numbered doc_no and the second insert would
+     fail on the real unique-index constraint. */
+  const receiptedClaimIds=new Set(receipts.map(r=>r.progressClaimId));
+  const supplierById=new Map(suppliers.map(row=>[row.id,row]));
+  const projectCosts=supplierInvoices.filter(row=>row.projectId===project.id).map(row=>({
+    id:row.id,
+    docNo:row.docNo,
+    supplierName:(supplierById.get(row.supplierId)||{}).name||`Supplier #${row.supplierId}`,
+    date:projectDateValue(row.invoiceDate),
+    total:projectNumber(row.totalAmount),
+    status:row.status,
+  })).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  return {
+    project,customer,claims:projectClaims,allClaims:claims,
+    receiptedClaimIds,allReceipts:receipts,projectCosts,
+  };
 }
 
 function nextClaimNo(claims){
   let max=0;
   (claims||[]).forEach(c=>{ const m=/(\d+)\s*$/.exec(c.docNo||''); if(m&&+m[1]>max) max=+m[1]; });
   return 'PC-'+new Date().getFullYear()+'-'+String(max+1).padStart(4,'0');
+}
+
+function nextReceiptNo(receipts){
+  let max=0;
+  (receipts||[]).forEach(r=>{ const m=/(\d+)\s*$/.exec(r.docNo||''); if(m&&+m[1]>max) max=+m[1]; });
+  return 'BR-'+new Date().getFullYear()+'-'+String(max+1).padStart(4,'0');
 }
 
 /* ---------------- PROJECT DETAIL (register + progress claims) ---------------- */
@@ -360,18 +382,28 @@ SCREENS['project-detail'] = async function(root, params){
   const {project:p,customer}=detail;
   let claims=detail.claims;
   let allClaims=detail.allClaims;
+  let receiptedClaimIds=detail.receiptedClaimIds;
+  let allReceipts=detail.allReceipts;
+  let projectCosts=detail.projectCosts;
 
   function renderClaimsRows(){
     if(!claims.length) return `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">${esc(s('claimsEmpty'))}</td></tr>`;
-    return claims.map((c,i)=>`<tr>
+    return claims.map((c,i)=>{
+      const receipted=receiptedClaimIds.has(c.id);
+      let action='';
+      if(c.status==='draft') action=` <button class="btn soft sm" data-post="${c.id}">${esc(s('postClaim'))}</button>`;
+      else if(c.status==='posted') action=receipted
+        ?` ${cap('Receipted','ok')}`
+        :` <button class="btn soft sm" data-receipt="${c.id}">Record receipt</button>`;
+      return `<tr>
       <td class="lineno">${i+1}</td>
       <td class="l li-name"><b>${esc(c.docNo)}</b><small>${esc(projectDateValue(c.claimDate))}</small></td>
       <td class="l">${esc(c.description)}</td>
       <td class="tnum">${money0(projectNumber(c.netAmount))}</td>
       <td class="tnum" style="color:var(--muted)">${money0(projectNumber(c.taxAmount))}</td>
       <td class="tnum"><b>${money0(projectNumber(c.totalAmount))}</b></td>
-      <td class="l">${statusBadge(c.status==='posted'?'Posted':'Draft')}${c.status==='draft'?` <button class="btn soft sm" data-post="${c.id}">${esc(s('postClaim'))}</button>`:''}</td>
-    </tr>`).join('');
+      <td class="l">${statusBadge(c.status==='posted'?'Posted':'Draft')}${action}</td>
+    </tr>`;}).join('');
   }
 
   const canBill=project_canBill(p);
@@ -445,6 +477,13 @@ SCREENS['project-detail'] = async function(root, params){
                 ?relatedDocs([{no:customer.code||('CUST-'+customer.id),label:s('linkedCustomer'),meta:customer.name,status:'Active'}])
                 :`<div style="color:var(--muted);font-size:13px">${esc(s('internalProject'))}</div>`}
             </div>
+            <div class="sumcard">
+              <div class="sectitle" style="margin-top:0">Project costs</div>
+              ${projectCosts.length
+                ?relatedDocs(projectCosts.map(c=>({no:c.docNo,label:c.supplierName,meta:money0(c.total),status:c.status==='paid'?'Paid':'Approved'})))
+                :`<div style="color:var(--muted);font-size:13px">No supplier invoices tagged to this project yet — tag a project when creating a purchase order.</div>`}
+              ${projectCosts.length?`<div class="sumrow total" style="margin-top:8px"><span class="sk2">Total</span><span class="sv tnum">${money0(projectCosts.reduce((sum,c)=>sum+c.total,0))}</span></div>`:''}
+            </div>
           </aside>
         </div>
       </div></div>
@@ -483,6 +522,18 @@ SCREENS['project-detail'] = async function(root, params){
       Object.assign(p,refreshed.project);
       navigate('project-detail',{projectId:p.id});
     }));
+    root.querySelectorAll('[data-receipt]').forEach(b=>b.addEventListener('click',()=>{
+      const claim=claims.find(c=>c.id===Number(b.dataset.receipt));
+      recordReceiptForm(claim,allReceipts,async()=>{
+        const refreshed=await prepareProjectDetail(p.id);
+        claims=refreshed.claims;
+        allClaims=refreshed.allClaims;
+        receiptedClaimIds=refreshed.receiptedClaimIds;
+        allReceipts=refreshed.allReceipts;
+        projectCosts=refreshed.projectCosts;
+        navigate('project-detail',{projectId:p.id});
+      });
+    }));
   }
 
   render();
@@ -520,6 +571,46 @@ function progressClaimForm(s,project,allClaims,onSaved){
     }catch(error){
       saveBtn.disabled=false;
       toast(error&&error.message?error.message:s('claimSaveError'),'danger');
+    }
+  });
+}
+
+/* Bank Receipt against a posted progress claim's AR (EPIC-024) — one receipt per
+   claim, full amount only, mirroring createBankReceiptWithin's own full-settlement
+   shape. Amount is locked to the claim's real total since the backend requires an
+   exact match. */
+function recordReceiptForm(claim,allReceipts,onSaved){
+  const docNo=nextReceiptNo(allReceipts);
+  const today=new Date().toISOString().slice(0,10);
+  const total=projectNumber(claim.totalAmount);
+  appModal({
+    icon:'bank',
+    title:'Record receipt — '+claim.docNo,
+    body:`<div class="set-grid">
+      <div class="fld"><span>Receipt no.</span><input value="${esc(docNo)}" readonly><span class="locked">${ic('lock')} System-numbered</span></div>
+      <div class="fld"><span>Received date</span><input id="brDate" type="date" value="${today}"></div>
+      <div class="fld"><span>Bank reference (optional)</span><input id="brRef" placeholder="e.g. HSBC TT-88213"></div>
+      <div class="fld"><span>Amount</span><input value="${money0(total)}" readonly><span class="locked">${ic('lock')} Full claim total</span></div>
+    </div>`,
+    actions:`${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Record receipt',{icon:'check',cls:'primary',attrs:'data-save="1"'})}`,
+  });
+  const saveBtn=$('#modalEl').querySelector('[data-save]');
+  saveBtn.addEventListener('click',async()=>{
+    const receivedDate=$('#brDate').value;
+    if(!requireField(receivedDate,'Received date is required','#brDate')) return;
+    const payload={
+      docNo, progressClaimId:claim.id, receivedDate,
+      bankRef:$('#brRef').value.trim()||null, amount:claim.totalAmount,
+    };
+    saveBtn.disabled=true;
+    try{
+      await window.ErpSystemData.create('finance/bank-receipts',payload);
+      closeModal();
+      toast(`Receipt ${docNo} recorded for ${claim.docNo}`,'ok');
+      await onSaved();
+    }catch(error){
+      saveBtn.disabled=false;
+      toast(error&&error.message?error.message:'Receipt could not be recorded','danger');
     }
   });
 }

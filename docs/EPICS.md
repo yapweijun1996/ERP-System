@@ -845,7 +845,7 @@ requisition's own *estimated* value next to the linked PO, not the PO's *real* t
 easy to miss since both numbers look plausible on their own — fixed by looking up the
 actual `DB.purchaseOrders` row via `convertedOrderId` instead of reusing the estimate.
 
-## EPIC-024 — Project Finance Depth: Bank Receipt, Payment Voucher & Project-Scoped AP
+## EPIC-024 — Project Finance Depth: Bank Receipt, Payment Voucher & Project-Scoped AP ✅
 
 Closes Project's third and final deferred sub-phase (`docs/ROADMAP.md` item 7): a real
 **Bank Receipt** against a progress claim's AR, a real **Payment Voucher** settling
@@ -909,13 +909,27 @@ Acceptance criteria:
       `createPurchaseOrder`'s new `projectId` path and `postSupplierInvoice` correctly
       propagating it, with every pre-existing test in both files still passing
       unchanged.
-- [ ] `payment-voucher` (real per-voucher detail) and `new-payment-voucher` (a real
+- [x] `payment-voucher` (real per-voucher detail) and `new-payment-voucher` (a real
       2-step wizard: pick a supplier, see that supplier's *real* unpaid invoices — not
       a fabricated list — select which to pay in full, submit) read/write real data.
       `project-detail` gains a real "Record receipt" action on any posted,
       not-yet-receipted progress claim, and a real "Project costs" panel listing linked
       supplier invoices (via the new `project_id`) with their paid/unpaid status and
       running total. `new-purchase-order` gains an optional "Project" field in step 1.
-- [ ] Both `payment-voucher` and `new-payment-voucher` move to
+- [x] Both `payment-voucher` and `new-payment-voucher` move to
       `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`; `bank-rec` is unaffected (stays
       Preview, out of scope).
+
+(TASK-058, TASK-059, 2026-07-21.) This closes Phase 7's last open item — every
+originally-scoped module is now real; only a hypothetical future depth pass (partial
+payments, bank reconciliation, full expense/timesheet tracking) remains, and none of it
+was ever promised. Live testing produced a clean, mathematically verifiable proof: after
+posting one Payment Voucher (settling S$1,220.80 across two real unpaid invoices,
+including one from the pre-existing SO-1/PO-1 demo proof chain, not just this epic's own
+seed row) and one Bank Receipt (S$54,500 against the seeded posted progress claim), the
+General Ledger's new `1000` Cash & Bank account read exactly S$53,279 — the net of both
+postings — while Accounts Payable and Accounts Receivable both moved by the exact settled
+amounts. That same GL screen had shown a permanently-$0 Cash & Bank tile since long
+before this epic (`screens-fin2.js` already summed account codes `1000`+`1010`, but
+neither existed) — seeding the missing account fixed a pre-existing dead tile as a
+side effect of giving Payment Voucher and Bank Receipt somewhere real to post into.

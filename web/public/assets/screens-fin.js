@@ -534,54 +534,96 @@ SCREENS['journal-entry'] = async function(root, params){
   </div></div></section></div>`;
 };
 
-/* ---------------- PAYMENT VOUCHER ---------------- */
-SCREENS['payment-voucher'] = function(root){
-  /* TASK-023: DB.suppliers now comes from the canonical supplier table (only 1
-     seeded row today) instead of the old 4-row Northwind mock — index [2] is no
-     longer guaranteed to exist. */
-  const supp=DB.suppliers[2]||DB.suppliers[DB.suppliers.length-1]||{name:'—',balance:0};
+/* ---------------- PAYMENT VOUCHER ----------------
+   Real per-voucher detail (not a hardcoded PV-26-0203 record). No approval workflow
+   exists in the schema — a voucher is created-and-settled atomically — so there's no
+   Approve/Hold action here, matching the honest "one document, one balanced posting"
+   shape createPaymentVoucherWithin implements. */
+async function prepareCanonicalPaymentVoucherData(){
+  await prepareCanonicalPurchasingData();
+  const adapter=window.ErpSystemData;
+  if(adapter&&adapter.mode==='fallback'){
+    if(Array.isArray(DB.paymentVouchers)) return;
+    throw new Error('The offline canonical payment voucher snapshot is unavailable.');
+  }
+  const pages=await Promise.all([
+    listPage('finance/payment-vouchers'),
+    listPage('finance/payment-voucher-lines'),
+  ]);
+  const [vouchers,lines]=pages.map(p=>p.data);
+  const supplierById=new Map(DB.suppliers.map(s=>[s.id,s]));
+  const invoiceById=new Map(DB.supplierInvoices.map(i=>[i.id,i]));
+  const linesByVoucher=new Map();
+  lines.forEach(row=>{
+    const arr=linesByVoucher.get(row.paymentVoucherId)||[];
+    arr.push(row);
+    linesByVoucher.set(row.paymentVoucherId,arr);
+  });
+  DB.paymentVouchers=vouchers.map(row=>{
+    const supplier=supplierById.get(row.supplierId)||{};
+    const voucherLines=(linesByVoucher.get(row.id)||[]).map(l=>{
+      const invoice=invoiceById.get(l.supplierInvoiceId)||{};
+      return {supplierInvoiceId:l.supplierInvoiceId,invoiceNo:invoice.no||`#${l.supplierInvoiceId}`,amount:financeNumber(l.amount)};
+    });
+    return {
+      id:row.id,
+      no:row.docNo,
+      date:financeDateValue(row.paymentDate),
+      bankRef:row.bankRef||'',
+      supplierId:row.supplierId,
+      supplierName:supplier.name||`Supplier #${row.supplierId}`,
+      total:financeNumber(row.totalAmount),
+      lines:voucherLines,
+    };
+  }).sort((a,b)=>b.id-a.id);
+}
+SCREENS['payment-voucher'] = async function(root, params){
+  await prepareCanonicalPaymentVoucherData();
+  const requestedId=params&&params.voucherId?Number(params.voucherId):null;
+  const v=requestedId?DB.paymentVouchers.find(x=>x.id===requestedId):DB.paymentVouchers[0];
+  if(!v){
+    root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,'Finance',{cur:'Payment Voucher'}])}
+      <div class="h1row"><h1>Payment Voucher</h1></div></div>
+      ${statePanel({icon:'coins',title:'No payment vouchers yet',body:'Settle a real unpaid supplier invoice to see it here.'})}
+      <div style="padding:0 24px">${btn('New voucher',{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-payment-voucher\')"'})}</div>
+    </section></div>`;
+    return;
+  }
+  const supplier=DB.suppliers.find(s=>s.id===v.supplierId);
+  const lineRows=v.lines.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
+    <td class="l li-name"><b>${esc(l.invoiceNo)}</b></td>
+    <td class="tnum"><b>${money(l.amount)}</b></td></tr>`).join('');
+  const recent=DB.paymentVouchers.slice(0,8);
   root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:960px">
-    ${crumbs([DB.company.name,'Finance','Payment Voucher',{cur:'PV-26-0203'}])}
+    ${crumbs([DB.company.name,'Finance','Payment Voucher',{cur:v.no}])}
     <div class="dochead">
-      <div class="dh-row1"><div><div class="dt">${ic('coins')}Payment Voucher <span class="dnum">PV-26-0203</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px">Supplier settlement · bank transfer</div></div>
-        <div class="dactions">${btn('New voucher',{icon:'plus',cls:'soft',attrs:'onclick="navigate(\'new-payment-voucher\')"'})}${cap('Pending Approval','warn')}</div></div>
+      <div class="dh-row1"><div><div class="dt">${ic('coins')}Payment Voucher <span class="dnum">${esc(v.no)}</span></div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(v.supplierName)} settlement</div></div>
+        <div class="dactions">${btn('New voucher',{icon:'plus',cls:'soft',attrs:'onclick="navigate(\'new-payment-voucher\')"'})}${cap('Posted','ok')}</div></div>
       <div class="docmeta">
-        <div class="dm"><small>Pay to</small><div class="partner"><span class="pav">SM</span><b>${esc(supp.name)}</b></div></div>
-        <div class="dm"><small>Date</small><b>2026-06-04</b></div>
-        <div class="dm"><small>Bank</small><b>HSBC · ••4021</b></div>
-        <div class="dm"><small>Method</small><b>Telegraphic transfer</b></div>
+        <div class="dm"><small>Pay to</small><div class="partner"><span class="pav">${esc((v.supplierName.match(/\b\w/g)||['—']).slice(0,2).join('').toUpperCase())}</span><b>${esc(v.supplierName)}</b></div></div>
+        <div class="dm"><small>Date</small><b>${esc(v.date)}</b></div>
+        <div class="dm"><small>Bank reference</small><b>${v.bankRef?esc(v.bankRef):'—'}</b></div>
       </div>
     </div>
     <div class="doclayout">
       <div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>Invoices being settled</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">3 of 5 open</span></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Supplier invoice</th><th class="l">Due</th><th>Amount</th><th>Discount</th><th>Paid now</th></tr></thead><tbody>
-            <tr><td class="lineno">1</td><td class="l li-name"><b>SI-26-0610</b><small>GRN-26-0186</small></td><td class="l">2026-06-10</td><td class="tnum">${money(18400)}</td><td class="tnum">—</td><td class="tnum"><b>${money(18400)}</b></td></tr>
-            <tr><td class="lineno">2</td><td class="l li-name"><b>SI-26-0604</b><small>GRN-26-0181</small></td><td class="l">2026-06-08</td><td class="tnum">${money(15200)}</td><td class="tnum" style="color:var(--ok)">${money(304)}</td><td class="tnum"><b>${money(14896)}</b></td></tr>
-            <tr><td class="lineno">3</td><td class="l li-name"><b>SI-26-0598</b><small>GRN-26-0177</small></td><td class="l">2026-06-12</td><td class="tnum">${money(9304)}</td><td class="tnum">—</td><td class="tnum"><b>${money(9304)}</b></td></tr>
-          </tbody></table>
+        <div class="panel"><div class="panel-h"><h3>Invoices settled</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${v.lines.length} invoice${v.lines.length===1?'':'s'}</span></div>
+          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Supplier invoice</th><th>Amount</th></tr></thead><tbody>${lineRows}</tbody>
+          <tfoot><tr><td></td><td class="l" style="font-weight:600">Net payment</td><td class="tnum"><b>${money(v.total)}</b></td></tr></tfoot></table>
         </div>
-        <div class="panel"><div class="panel-h"><h3>Audit trail</h3></div><div class="panel-body">${auditTrail([
-          {kind:'current',when:'Jun 4 · 10:20',what:'Submitted for approval',who:'A. Costa'},
-          {kind:'add',when:'Jun 4 · 10:18',what:'Voucher created — 3 invoices selected',who:'A. Costa'},
-        ])}</div></div>
       </div>
       <aside class="summary">
         <div class="sumcard">
-          <div class="sumrow"><span class="sk2">Gross</span><span class="sv tnum">${money(42904)}</span></div>
-          <div class="sumrow disc"><span class="sk2">Early-pay discount</span><span class="sv tnum">−${money(304)}</span></div>
-          <div class="sumrow total"><span class="sk2">Net payment</span><span class="sv tnum">${money(42600)}</span></div>
+          <div class="sumrow total"><span class="sk2">Net payment</span><span class="sv tnum">${money(v.total)}</span></div>
         </div>
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">Supplier balance</div>
-          ${indicator({tone:'ok',icon:'bank',label:'Open balance after pay',value:money0(supp.balance-42600),sub:`Was ${money0(supp.balance)} · Net 30 terms`})}
-        </div>
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">Approve payment</div>
-          ${btn('Approve & schedule',{icon:'check',cls:'primary',sm:false,attrs:'onclick="toast(\'Payment approved — scheduled for tonight’s run\',\'ok\')"'})}
-          <div style="margin-top:8px">${btn('Hold',{icon:'clock',cls:'soft',sm:false,attrs:'onclick="toast(\'Payment placed on hold\',\'warn\')"'})}</div>
-        </div>
+        ${supplier?`<div class="sumcard"><div class="sectitle" style="margin-top:0">Supplier balance</div>
+          ${indicator({tone:'ok',icon:'bank',label:'Remaining open balance',value:money0(supplier.balance),sub:`${esc(supplier.name)} · unpaid invoices still outstanding.`})}
+        </div>`:''}
+        ${recent.length>1?`<div class="sumcard"><div class="sectitle" style="margin-top:0">Recent vouchers</div>${relatedDocs(recent.map(r=>({no:r.no,label:r.supplierName,meta:money0(r.total),status:'Posted'})))}</div>`:''}
       </aside>
     </div>
     <div style="height:40px"></div>
   </div></div></section></div>`;
+  root.querySelectorAll('.sumcard .mli').forEach((el,i)=>el.addEventListener('click',()=>navigate('payment-voucher',{voucherId:recent[i].id})));
 };

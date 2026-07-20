@@ -7,7 +7,7 @@
    reorder quantities, and routes high-value POs for approval.
    ============================================================ */
 SCREENS['new-purchase-order'] = async function(root, params){
-  await prepareCanonicalPurchasingData();
+  await Promise.all([prepareCanonicalPurchasingData(), prepareCanonicalProjectData()]);
   const TODAY=new Date().toISOString().slice(0,10);
   /* TASK-023: 9% matches the real seeded SG GST rate (tax_rule 'SR', effective
      2024-01-01) — createPurchaseOrder looks this up for real per line at
@@ -21,6 +21,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
   const S={ step:0, reached:0,
     supplier:(params&&params.supplier)||'', orderDate:TODAY,
     requisitionId:(params&&params.requisitionId)?Number(params.requisitionId):null,
+    projectId:null,
     lines:[] /* {sku,name,uom,qty,price} */ };
   const sourceReq=S.requisitionId?(DB.purchaseReqs||[]).find(r=>r.id===S.requisitionId):null;
 
@@ -59,6 +60,9 @@ SCREENS['new-purchase-order'] = async function(root, params){
             <div class="fld"><span>Currency</span><input value="${esc(DB.company.currency)}" readonly></div>
             <div class="fld"><span>PO number</span><input value="${esc(poDocNo)}" readonly></div>
           </div>
+          <div class="fld" style="margin-top:12px"><span>Project (optional)</span>
+            <select id="wProject"><option value="">No project</option>
+              ${DB.projects.map(p=>`<option value="${p.id}" ${p.id===S.projectId?'selected':''}>${esc(p.no)} · ${esc(p.name)}</option>`).join('')}</select></div>
           <div style="margin-top:12px;color:var(--muted);font-size:12.5px">Warehouse, receipt date and tracking details are recorded when goods are received.</div>
         </div>
       </div>
@@ -69,6 +73,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
     const su=$('#wSup'); su.addEventListener('change',()=>{ S.supplier=su.value; render(); });
     const bind=(id,key)=>{ const el=$('#'+id); el&&el.addEventListener('change',()=>S[key]=el.value); };
     bind('wDate','orderDate');
+    const pr=$('#wProject'); pr&&pr.addEventListener('change',()=>{ S.projectId=pr.value?Number(pr.value):null; });
   }
 
   /* ---------------- STEP 2 — order lines ---------------- */
@@ -233,6 +238,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
           orderDate:S.orderDate,
           currency:DB.company.currency,
           requisitionId:S.requisitionId,
+          projectId:S.projectId,
           lines:S.lines.map(l=>({
             productId:l.productId,
             qty:l.qty,

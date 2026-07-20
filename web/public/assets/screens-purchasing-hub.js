@@ -248,6 +248,8 @@ async function prepareCanonicalPurchasingData(){
       match:receipt?'Matched':'No GRN',
       status,
       rawStatus:row.status,
+      supplierId:row.supplierId,
+      projectId:row.projectId,
     };
   });
   const requisitionLinesByReq=new Map();
