@@ -120,7 +120,7 @@ demo-build, drift, smoke, unit-tests and PG-parity all run in CI on every PR); d
 and production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion 🔶 (purchasing/CRM/Fixed Assets/HR-lite/Service/Purchase Requisition done; Project register + progress claims done)
+## Phase 7 — Module Expansion 🔶 (purchasing/CRM/Fixed Assets/HR-lite/Service/Purchase Requisition done; Project register + progress claims done, finance depth in progress as EPIC-024)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
@@ -201,7 +201,8 @@ Order of attack:
    created a real employee, approved one leave request, rejected another with a reason,
    confirmed the employee detail's leave balance and history reflected both decisions.
 7. **Project (Enterprise Project)** (🔶 register + progress claims done, EPIC-021 ✅;
-   AP/bank-voucher depth remains) — project register and P&L exist as mock screens
+   third sub-phase now scoped and in progress as EPIC-024, TASK-058/059) — project
+   register and P&L exist as mock screens
    (`screens-project.js`: `project-pl`, `project-detail`, `timesheet`).
    Stakeholder-requested sub-features confirmed absent by a 2026-07-19 audit: a real
    **Progress Claim** entity (today "progress invoice"/"partial claim" are narrative copy
@@ -216,7 +217,12 @@ Order of attack:
    journal, reusing `debitNote.ts`'s exact posting shape, no new CoA codes). Cost/budget/
    team/milestone-schedule tracking stays mock (no timesheet or expense-capture schema
    exists to back it — a materially separate feature). Project-scoped AP linkage and
-   dedicated Bank Receipt/Payment documents remain the third sub-phase, a future epic.
+   dedicated Bank Receipt/Payment documents are the third sub-phase, now scoped as
+   EPIC-024 (TASK-058/059, in progress): `purchase_order`/`supplier_invoice` gain a
+   nullable `project_id`; a real Bank Receipt settles a posted progress claim's AR; a
+   real Payment Voucher settles one or more of a supplier's unpaid invoices — closing
+   the gap this item named without inventing a full bank-reconciliation engine (Finance's
+   generic `bank-rec` screen stays mock/Preview, materially out of scope).
 8. **Service** (EPIC-022 ✅) — service tickets/orders/contracts, distinct from
    Manufacturing's work orders. Mock screens in `screens-service.js` had `service-ticket`
    (list), `service-order` (always the same hardcoded ticket — the same bug class already

@@ -844,3 +844,78 @@ before it shipped: the requisition detail's "Related" panel initially showed the
 requisition's own *estimated* value next to the linked PO, not the PO's *real* total —
 easy to miss since both numbers look plausible on their own — fixed by looking up the
 actual `DB.purchaseOrders` row via `convertedOrderId` instead of reusing the estimate.
+
+## EPIC-024 — Project Finance Depth: Bank Receipt, Payment Voucher & Project-Scoped AP
+
+Closes Project's third and final deferred sub-phase (`docs/ROADMAP.md` item 7): a real
+**Bank Receipt** against a progress claim's AR, a real **Payment Voucher** settling
+supplier invoices' AP, and **project-scoped AP linkage** (`purchase_order`/
+`supplier_invoice` gain a nullable `project_id`). All three were previously mock or
+entirely absent — `payment-voucher`/`new-payment-voucher` (`screens-fin.js`/
+`screens-fin-pay.js`) write nothing real today (the wizard's "open invoices" list is
+**fabricated** from a hash of the supplier code, never reads `supplier_invoice`; "Post
+payment" is a toast, no adapter call at all); nothing in `src/` has ever transitioned a
+`supplier_invoice` to `'paid'`. `bank-rec` (Finance-wide bank reconciliation, a different
+and materially larger feature — matching bank-statement lines against the GL) stays
+mock/Preview; ROADMAP only asks for dedicated receipt/payment *documents*, not a full
+reconciliation engine, so it's explicitly out of scope here.
+
+Real, and the reason this isn't just two document types: `purchase_order` gains a
+nullable `project_id` (additive, mirrors EPIC-023's `requisition_id` exactly — every
+existing caller that omits it is unaffected), settable from the `new-purchase-order`
+wizard; `postSupplierInvoiceWithin` copies it onto the resulting `supplier_invoice`
+automatically (no new user input in that screen's existing one-click "Post invoice" row
+action) — a project's real cost trail becomes visible without a second data-entry step.
+Bank Receipt deliberately only settles a progress claim's AR (not generic sales
+invoices) — this is Project's own outstanding-receivable, not a Finance-wide feature —
+one receipt per claim, full amount only (matching this codebase's established
+one-document-settles-one-thing convention: `receiveGoods`, `postSupplierInvoice`).
+Payment Voucher settles one or more of one supplier's unpaid invoices in full per line
+(no partial-payment tracking — a materially separate feature, deferred). Both are new
+Treasury/Finance documents in `src/data/schema/finance.ts` (alongside `account`/
+`gl_entry`, which they post into) even though they reference `progress_claim`
+(Project) / `supplier_invoice` (Purchasing) by FK — cross-domain schema references are
+already an established pattern (`purchasing.ts` already imports `product`/`warehouse`
+from `inventory.ts`).
+
+Acceptance criteria:
+
+- [ ] `bank_receipt` (`doc_no`, `progress_claim_id` FK not null, `received_date`,
+      nullable `bank_ref`, `amount`) and `payment_voucher` (`doc_no`, `supplier_id` FK,
+      `payment_date`, nullable `bank_ref`, `total_amount`) + `payment_voucher_line`
+      (`payment_voucher_id` FK, `supplier_invoice_id` FK, `amount`) tables added to
+      `src/data/schema/finance.ts`. `purchase_order` and `supplier_invoice` each gain a
+      nullable `project_id` FK in `src/data/schema/purchasing.ts`. A new `1000` Cash/Bank
+      account is seeded (fixes a currently-dead `screens-fin2.js` GL tile that already
+      computes `get('1000')+get('1010')` against accounts that don't exist yet).
+- [ ] New `src/modules/finance/` module (first business-logic module in this domain —
+      GL has been read-only until now): `bankReceipt.ts` (`createBankReceiptWithin` —
+      requires the claim `posted` and not already receipted, requires the amount to
+      exactly match the claim's `total_amount`, posts Dr `1000` Cash / Cr `1100` AR) and
+      `paymentVoucher.ts` (`createPaymentVoucherWithin` — requires every referenced
+      invoice to belong to the named supplier and be `unpaid`, posts Dr `2100` AP / Cr
+      `1000` Cash for the summed total, flips every referenced invoice to `paid`).
+      `createPurchaseOrder.ts` gains an optional `projectId` (mirrors `requisitionId`'s
+      validate-then-set shape); `postSupplierInvoiceWithin` copies the originating PO's
+      `project_id` onto the new invoice with no new input. New `finance.write`
+      permission (Finance has only ever had `finance.read`); `finance/bank-receipts`,
+      `finance/payment-vouchers` and `finance/payment-voucher-lines` registered as
+      generic `ResourceDefinition`s.
+- [ ] Unit tests cover: bank receipt happy path, rejecting a not-yet-posted claim,
+      rejecting a second receipt against an already-receipted claim, rejecting an
+      amount that doesn't match the claim total; payment voucher happy path across
+      multiple invoices with a correctly summed balanced GL posting, rejecting an
+      invoice that belongs to a different supplier, rejecting an already-paid invoice;
+      `createPurchaseOrder`'s new `projectId` path and `postSupplierInvoice` correctly
+      propagating it, with every pre-existing test in both files still passing
+      unchanged.
+- [ ] `payment-voucher` (real per-voucher detail) and `new-payment-voucher` (a real
+      2-step wizard: pick a supplier, see that supplier's *real* unpaid invoices — not
+      a fabricated list — select which to pay in full, submit) read/write real data.
+      `project-detail` gains a real "Record receipt" action on any posted,
+      not-yet-receipted progress claim, and a real "Project costs" panel listing linked
+      supplier invoices (via the new `project_id`) with their paid/unpaid status and
+      running total. `new-purchase-order` gains an optional "Project" field in step 1.
+- [ ] Both `payment-voucher` and `new-payment-voucher` move to
+      `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES`; `bank-rec` is unaffected (stays
+      Preview, out of scope).
