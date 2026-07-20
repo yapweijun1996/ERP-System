@@ -55,6 +55,7 @@ import {
 import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
 import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
 import { postProgressClaimWithin } from '../modules/project/progressClaim';
+import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 
 const ACTIONS: Record<string, ActionDefinition> = {
   'assets/depreciation-runs/post': {
@@ -332,6 +333,28 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return postProgressClaimWithin(tx, scope, input.resourceId);
+    },
+  },
+  'service/tickets/assign': {
+    permission: 'service.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const technicianName = (input.payload as { technicianName?: unknown } | undefined)?.technicianName;
+      return assignServiceTicketWithin(
+        tx, scope, input.resourceId, typeof technicianName === 'string' ? technicianName : '',
+      );
+    },
+  },
+  'service/tickets/resolve': {
+    permission: 'service.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const diagnosis = (input.payload as { diagnosis?: unknown } | undefined)?.diagnosis;
+      return resolveServiceTicketWithin(
+        tx, scope, input.resourceId, typeof diagnosis === 'string' ? diagnosis : '',
+      );
     },
   },
   'quality/ncrs/reject': {

@@ -12,5 +12,17 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     testTimeout: 20000,
+    // Claude Code agent worktrees live under .claude/worktrees/ as full nested
+    // checkouts of this repo (see `git worktree list`). Vitest's default
+    // include glob is recursive with no awareness of them, so without this
+    // exclude, running `npm test` while any background agent has an active
+    // worktree silently pulls in that worktree's own *.test.ts files too —
+    // against whatever mid-edit state its source happens to be in — and
+    // reports the combined pass/fail count as if it were this checkout's own.
+    // Confirmed 2026-07-20: a `npm test` run here showed 41 failures across 9
+    // files that did not reproduce in isolation or in git status; `git
+    // worktree list` revealed two concurrent agent worktrees, and every
+    // failing file existed only under .claude/worktrees/**.
+    exclude: ['**/node_modules/**', '**/.claude/worktrees/**'],
   },
 });

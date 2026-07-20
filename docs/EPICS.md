@@ -671,11 +671,25 @@ Acceptance criteria:
       synthesized from real row timestamps, real "Related" linking to the actual linked
       customer) read/write real data. Cost breakdown, milestones, and team panels are
       removed, not fabricated. `timesheet` is unchanged (stays mock).
-- [x] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (58 → 60).
+- [x] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (58 → 60). Live
+      verification surfaced two real bugs neither unit tests nor `audit:screens` caught:
+      PGlite/Drizzle return `date`/`timestamp` columns as JS `Date` objects, so naive
+      template-literal interpolation rendered `Wed Mar 04 2026 08:00:00 GMT+0800…` instead
+      of a clean date (fixed with a normalizer mirroring `screens-fin2.js`'s existing
+      `financeDateValue`); and the client-side progress-claim numbering was scoped to the
+      current project's own claims rather than the tenant's full claim list, so two
+      different projects' first claims both tried `doc_no` `PC-2026-0001` and the second
+      create leaked a raw SQL unique-constraint error to the user (fixed by numbering off
+      an unfiltered, tenant-wide claim list instead). Also found and fixed in passing:
+      writing a Progress Claim's `netAmount > 0` check as `!net.isPositive()` doesn't
+      actually reject zero, because decimal.js's `isPositive()` treats zero as positive
+      (sign-bit only) — the same latent bug already existed in five other files
+      (`debitNote.ts` among them); fixed locally with `net.lte(0)` and flagged the rest as
+      a separate follow-up rather than scope-creeping this epic.
 
 (TASK-051, TASK-052, 2026-07-20.)
 
-## EPIC-022 — Service-lite: Tickets & Contracts
+## EPIC-022 — Service-lite: Tickets & Contracts ✅
 
 Third Phase 7 module. `screens-service.js` has no schema: `service-ticket` is a real
 list rendering mock rows, but `service-order` always shows the same hardcoded ticket
@@ -704,7 +718,7 @@ materially separate depth feature stays mock:
 
 Acceptance criteria:
 
-- [ ] `service_contract` (`contract_no`, `customer_id` FK not null — every contract has
+- [x] `service_contract` (`contract_no`, `customer_id` FK not null — every contract has
       a customer, no Internal-project-style nullable case — `plan` Gold/Silver/Bronze,
       nullable `sla_response_hours`, `assets_covered`, dates, `annual_value`) and
       `service_ticket` (`ticket_no`, `customer_id` FK not null, nullable `contract_id`
@@ -715,7 +729,7 @@ Acceptance criteria:
       conventions. Contract status (Active/Expiring/Expired) is computed from
       `expiry_date` vs. today, not stored — mirrors Project's over-billed alert and HR's
       `hrIsOnLeaveToday` computed-not-stored precedent.
-- [ ] `src/modules/service/serviceContract.ts` (`createServiceContractWithin`/
+- [x] `src/modules/service/serviceContract.ts` (`createServiceContractWithin`/
       `createServiceContract`) and `src/modules/service/serviceTicket.ts`
       (`createServiceTicketWithin`/`createServiceTicket`, `assignServiceTicketWithin`/
       `assignServiceTicket` — `open` → `in_progress`, sets `technician_name` —
@@ -725,27 +739,26 @@ Acceptance criteria:
       `service.read`/`service.write` permissions (the client already referenced
       `service.read` in `app.js`'s `MODULE_READ_PERMISSION` map with nothing backing it
       server-side, the same gap HR-lite found for `hr.read`).
-- [ ] Unit tests cover validation, tenant isolation, the assign/resolve state-machine
+- [x] Unit tests cover validation, tenant isolation, the assign/resolve state-machine
       guards (including rejecting resolve on an already-closed ticket and rejecting a
       reason-less resolve), mirroring `leaveRequest.test.ts`'s shape.
-- [ ] `service-ticket` (list — real open/overdue KPIs replacing the mock's hardcoded
+- [x] `service-ticket` (list — real open/overdue KPIs replacing the mock's hardcoded
       "96%" SLA figure, real status filter chips, a real "New ticket" create modal),
       `service-order` (real per-ticket detail — not always the same hardcoded record —
       with real Assign and Resolve & close actions, a real SLA due-time computed from a
       linked contract's response hours where one exists) and `service-contracts` (real
       list with computed Active/Expiring/Expired status and a real "New contract" create
       modal) read/write real data. Parts/labour cost panels are removed, not fabricated.
-- [ ] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (60 → 63). Live verification surfaced two real bugs neither unit
-tests nor `audit:screens` caught: PGlite/Drizzle return `date`/`timestamp` columns as JS
-`Date` objects, so naive template-literal interpolation rendered
-`Wed Mar 04 2026 08:00:00 GMT+0800…` instead of a clean date (fixed with a normalizer
-mirroring `screens-fin2.js`'s existing `financeDateValue`); and the client-side progress-
-claim numbering was scoped to the current project's own claims rather than the tenant's
-full claim list, so two different projects' first claims both tried `doc_no`
-`PC-2026-0001` and the second create leaked a raw SQL unique-constraint error to the user
-(fixed by numbering off an unfiltered, tenant-wide claim list instead). Also found and
-fixed in passing: writing a Progress Claim's `netAmount > 0` check as
-`!net.isPositive()` doesn't actually reject zero, because decimal.js's `isPositive()`
-treats zero as positive (sign-bit only) — the same latent bug already existed in five
-other files (`debitNote.ts` among them); fixed locally with `net.lte(0)` and flagged the
-rest as a separate follow-up rather than scope-creeping this epic.
+- [x] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (60 → 63).
+
+(TASK-053, TASK-054, 2026-07-20.) Also found and fixed two issues unrelated to Service
+itself while implementing it: the Viewer role's seed permission grants were missing
+`project.read` (a real gap left by EPIC-021 — the Demo Viewer persona could never see the
+Project module, only missed because every live verification so far used the Admin/
+superadmin persona, which bypasses permission checks entirely) — added alongside the new
+`service.read` grant; and `vitest.config.ts` had no `exclude` pattern, so `npm test` was
+silently pulling in roughly 100 `*.test.ts` files from concurrent background agents'
+`.claude/worktrees/` checkouts and reporting their combined pass/fail state as this
+checkout's own (a `npm test` run showed 41 failures across 9 files that did not reproduce
+in isolation and did not correspond to any uncommitted change in `git status`; `git
+worktree list` explained why) — fixed by excluding `**/.claude/worktrees/**`.

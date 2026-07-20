@@ -99,6 +99,14 @@ import {
   createProgressClaimWithin,
   type CreateProgressClaimInput,
 } from '../modules/project/progressClaim';
+import {
+  createServiceContractWithin,
+  type CreateServiceContractInput,
+} from '../modules/service/serviceContract';
+import {
+  createServiceTicketWithin,
+  type CreateServiceTicketInput,
+} from '../modules/service/serviceTicket';
 
 export interface CreateDefinition {
   permission: string;
@@ -401,6 +409,20 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createProgressClaimWithin(tx, scope, payload as unknown as CreateProgressClaimInput);
+    },
+  },
+  'service/contracts': {
+    permission: 'service.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createServiceContractWithin(tx, scope, payload as unknown as CreateServiceContractInput);
+    },
+  },
+  'service/tickets': {
+    permission: 'service.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createServiceTicketWithin(tx, scope, payload as unknown as CreateServiceTicketInput);
     },
   },
 };

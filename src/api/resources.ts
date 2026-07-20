@@ -66,6 +66,8 @@ import {
   leaveRequest,
   project,
   progressClaim,
+  serviceContract,
+  serviceTicket,
 } from '../data/schema';
 
 export interface ApiScope {
@@ -328,6 +330,14 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     versionColumn: progressClaim.version,
     allowedActions: ['post'],
     createPermission: 'project.write',
+  }),
+  'service/contracts': resource(serviceContract, 'service.read', {
+    createPermission: 'service.write',
+  }),
+  'service/tickets': resource(serviceTicket, 'service.read', {
+    status: serviceTicket.status,
+    allowedActions: ['assign', 'resolve'],
+    createPermission: 'service.write',
   }),
 };
 

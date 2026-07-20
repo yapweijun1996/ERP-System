@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 24;
+  var DEMO_SCHEMA_VERSION = 25;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1319,6 +1319,8 @@
     'hr/leave-requests':'leave_request',
     'project/projects':'project',
     'project/progress-claims':'progress_claim',
+    'service/contracts':'service_contract',
+    'service/tickets':'service_ticket',
   };
   function normalizeResource(resource){
     return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
@@ -1675,6 +1677,22 @@
       await refresh();
       return {data:newProgressClaim,meta:{}};
     }
+    if(key==='service/contracts'){
+      var newServiceContract = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createServiceContractWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newServiceContract,meta:{}};
+    }
+    if(key==='service/tickets'){
+      var newServiceTicket = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createServiceTicketWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newServiceTicket,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1924,6 +1942,22 @@
       });
       await refresh();
       return {data:postedProgressClaim,meta:{}};
+    }
+    if(key==='service/tickets'&&name==='assign'){
+      var assignedServiceTicket = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.assignServiceTicketWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload&&payload.technicianName);
+      });
+      await refresh();
+      return {data:assignedServiceTicket,meta:{}};
+    }
+    if(key==='service/tickets'&&name==='resolve'){
+      var resolvedServiceTicket = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.resolveServiceTicketWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload&&payload.diagnosis);
+      });
+      await refresh();
+      return {data:resolvedServiceTicket,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){
