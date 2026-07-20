@@ -114,7 +114,7 @@ typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
 production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion 🔶 (purchasing/CRM/Fixed Assets/HR-lite/Service done; Project register + progress claims done)
+## Phase 7 — Module Expansion 🔶 (purchasing/CRM/Fixed Assets/HR-lite/Service/Purchase Requisition done; Project register + progress claims done)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
@@ -219,12 +219,16 @@ Order of attack:
    (3 real statuses, not the mock's 5 — Resolved/Closed already collapsed to one "done"
    filter bucket in the mock's own UI); spare-parts consumption and labour costing stay
    mock, deferred as Inventory-consumption depth work.
-9. **Purchase Requisition** (⬜ not started) — the natural upstream step before the
-   already-Canonical PO chain. Mock screen (`purchase-requisitions` in
-   `screens-purchasing-hub.js`, detail in `screens-purchase.js`) and mock data
-   (`data-purchasing-ext.js`) exist but no schema table, same maturity tier as
-   RFQs/quotations. Converting this closes a real gap in an otherwise-real chain:
-   today a PO can be created with no requisition trail behind it.
+9. **Purchase Requisition** (EPIC-023 ✅) — the natural upstream step before the
+   already-Canonical PO chain. Mock screen (`purchase-requisitions` list in
+   `screens-purchasing-lists.js`, detail in `screens-purchase.js`) and mock data
+   (`data-purchasing-ext.js`) existed but no schema table, same maturity tier as
+   RFQs/quotations (which stay mock — only Purchase Requisition itself was in scope).
+   EPIC-023 (TASK-055/056, 2026-07-20) closed the real gap this item named: `purchase_
+   order` gained a nullable `requisition_id` FK, so an approved requisition can be
+   genuinely converted to a real, linked purchase order through the existing
+   `new-purchase-order` wizard — a PO created this way now has a real requisition trail
+   behind it, not just a coincidental narrative.
 
 Exit criteria per module: no mock data files for that module remain; `src/demo.ts`
 asserts its core transaction; screens work in demo and api modes.
