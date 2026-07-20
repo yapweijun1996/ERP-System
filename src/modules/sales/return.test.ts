@@ -146,4 +146,18 @@ describe('sales return and credit note', () => {
     expect(await db.select().from(salesReturn)).toHaveLength(1);
     expect(await db.select().from(salesReturnLine)).toHaveLength(1);
   });
+
+  it('rejects a zero return quantity', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await expect(createSalesReturn(db, SCOPE, {
+      docNo: 'RMA-ZERO',
+      deliveryId: fx.posted.deliveryId,
+      invoiceId: fx.posted.invoiceId,
+      warehouseId: fx.location.id,
+      returnDate: '2024-06-02',
+      reason: 'Zero quantity',
+      lines: [{ deliveryLineId: fx.deliveryLine.id, qty: '0' }],
+    })).rejects.toThrow('must be greater than zero');
+  });
 });

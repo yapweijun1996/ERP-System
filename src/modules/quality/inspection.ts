@@ -27,7 +27,7 @@ function positiveDecimal(value: string | number, label: string): Decimal {
   } catch {
     throw new QualityInspectionError(`${label} must be a positive decimal.`);
   }
-  if (!decimal.isFinite() || !decimal.isPositive()) {
+  if (!decimal.isFinite() || decimal.lte(0)) {
     throw new QualityInspectionError(`${label} must be a positive decimal.`);
   }
   return decimal;

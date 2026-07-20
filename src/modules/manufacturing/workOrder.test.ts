@@ -124,6 +124,21 @@ describe('manufacturing work orders', () => {
     ]);
   });
 
+  it('rejects a zero plannedQty', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await expect(createWorkOrder(db, SCOPE, {
+      docNo: 'WO-ZERO',
+      productId: fx.finishedProductId,
+      bomVersionId: fx.bomVersionId,
+      routingId: fx.routingId,
+      warehouseId: fx.warehouseId,
+      plannedQty: '0',
+      startDate: '2026-07-19',
+      dueDate: '2026-07-20',
+    })).rejects.toThrow('plannedQty must be a positive decimal');
+  });
+
   it('releases only when every material has sufficient stock', async () => {
     const db = await freshDb();
     const fx = await fixture(db, 11);

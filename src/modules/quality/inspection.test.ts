@@ -239,4 +239,22 @@ describe('quality inspections and non-conformance', () => {
       qty: 1,
     })).rejects.toThrow(InventoryTrackingError);
   });
+
+  it('rejects a zero lotQty', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await expect(createInspection(db, SCOPE, {
+      docNo: 'QI-ZERO',
+      planId: fx.planId,
+      productId: fx.productId,
+      lotId: fx.lotId,
+      sourceType: 'goods_receipt',
+      sourceId: 1,
+      sourceRef: 'GRN-DEMO',
+      lotQty: '0',
+      sampleQty: '2',
+      inspectorName: 'Demo QA',
+      inspectionDate: '2026-07-19',
+    })).rejects.toThrow('lotQty must be a positive decimal.');
+  });
 });

@@ -154,4 +154,17 @@ describe('sales enquiry and quotation chain', () => {
     expect(await db.select().from(salesOrder)).toHaveLength(0);
     expect(await db.select().from(salesQuotation)).toHaveLength(1);
   });
+
+  it('rejects a zero line quantity', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await expect(createSalesQuotation(db, SCOPE, {
+      docNo: 'Q-ZERO-QTY',
+      customerId: fx.customerId,
+      quoteDate: '2026-07-19',
+      validUntil: '2026-08-19',
+      currency: 'SGD',
+      lines: [{ productId: fx.productId, qty: '0', unitPrice: '10', taxCode: 'SR' }],
+    })).rejects.toThrow('Line quantity must be greater than zero.');
+  });
 });

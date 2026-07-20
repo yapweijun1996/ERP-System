@@ -108,4 +108,18 @@ describe('sales pricing controls', () => {
       .resolves.toMatchObject({ status: 'active', version: 2 });
     expect(await db.select().from(salesDiscountRule)).toHaveLength(1);
   });
+
+  it('rejects a zero minimum quantity tier', async () => {
+    const db = await freshDb();
+    const { item } = await fixture(db);
+    await expect(createPriceList(db, SCOPE, {
+      code: 'PL-ZERO-MINQTY',
+      name: 'Invalid tier example',
+      basis: 'standard',
+      currency: 'SGD',
+      effectiveFrom: '2026-07-19',
+      lines: [{ productId: item.id, minQty: '0', unitPrice: '10', floorPrice: '8' }],
+    })).rejects.toThrow('Minimum quantity is invalid.');
+    expect(await db.select().from(salesPriceList)).toHaveLength(0);
+  });
 });

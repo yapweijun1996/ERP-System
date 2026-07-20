@@ -33,7 +33,7 @@ function amount(value: string | number, label: string, allowZero = false): Decim
   } catch {
     throw new SalesQuotationError(`${label} must be a valid decimal.`);
   }
-  if (!decimal.isFinite() || (allowZero ? decimal.isNegative() : !decimal.isPositive())) {
+  if (!decimal.isFinite() || (allowZero ? decimal.isNegative() : decimal.lte(0))) {
     throw new SalesQuotationError(`${label} must be ${allowZero ? 'zero or greater' : 'greater than zero'}.`);
   }
   return decimal;
