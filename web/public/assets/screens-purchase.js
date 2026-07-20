@@ -6,68 +6,128 @@
 function purTone(s){ return {Draft:'neutral',Submitted:'info',Approved:'accent',Ordered:'accent','QC hold':'warn',Received:'ok',Putaway:'ok','Pending Approval':'warn',Posted:'teal',Matched:'ok'}[s]||'neutral'; }
 
 /* ---------------- PURCHASE REQUEST (document) ---------------- */
-SCREENS['purchase-request'] = function(root){
-  const d=DB.pr0142;
-  const est=d.lines.reduce((s,l)=>s+l.qty*l.est,0);
-  const lineRows=d.lines.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
-    <td class="l li-name"><b>${esc(l.name)}</b><small>${esc(l.item)}</small></td>
+async function prepareRequisitionDetail(requisitionId){
+  await prepareCanonicalPurchasingData();
+  const req=requisitionId?DB.purchaseReqs.find(x=>x.id===requisitionId):DB.purchaseReqs[0];
+  if(!req) throw new Error('No purchase requisition found for the active company.');
+  return req;
+}
+async function approveRequisition(r,onDone){
+  try{
+    await window.ErpSystemData.action('purchasing/purchase-requisitions',r.id,'approve',{});
+    toast(`${r.no} approved`,'ok');
+    if(onDone) await onDone();
+  }catch(error){
+    toast((error&&error.message)||'Requisition could not be approved','danger');
+  }
+}
+function rejectRequisitionModal(r,onDone){
+  appModal({
+    icon:'xc',
+    title:`Reject ${r.no}?`,
+    body:`<div class="fld err"><span>Rejection reason <span class="req">*</span></span><textarea id="rjReason" placeholder="Why this requisition is being rejected"></textarea><span class="hint bad">A rejection reason is required</span></div>`,
+    actions:`${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Reject',{icon:'x',cls:'danger-solid',attrs:'data-save="1"'})}`,
+  });
+  const saveBtn=$('#modalEl').querySelector('[data-save]');
+  saveBtn.addEventListener('click',async()=>{
+    const rejectionReason=$('#rjReason').value.trim();
+    if(!requireField(rejectionReason,'A rejection reason is required','#rjReason')) return;
+    saveBtn.disabled=true;
+    try{
+      await window.ErpSystemData.action('purchasing/purchase-requisitions',r.id,'reject',{rejectionReason});
+      closeModal();
+      toast(`${r.no} rejected`,'danger');
+      if(onDone) await onDone();
+    }catch(error){
+      saveBtn.disabled=false;
+      toast((error&&error.message)||'Requisition could not be rejected','danger');
+    }
+  });
+}
+function reqStepper(d){
+  if(d.rawStatus==='rejected'){
+    return `<div class="stepper">
+      <div class="step done"><span class="sdot">${ic('check')}</span>Submitted</div><span class="stepline"></span>
+      <div class="step" style="color:var(--danger)"><span class="sdot" style="background:var(--danger);color:#fff">${ic('x')}</span>Rejected</div>
+    </div>`;
+  }
+  const labels=['Submitted','Approved','Converted'];
+  const idx=d.status==='Converted'?2:d.status==='Approved'?1:0;
+  return `<div class="stepper">${labels.map((lbl,i)=>{
+    const cls=i<idx?'done':(i===idx?'current':'');
+    const dot=i<idx?ic('check'):(i===idx?ic('clock'):'');
+    return `<div class="step ${cls}"><span class="sdot">${dot}</span>${esc(lbl)}</div>`+(i<labels.length-1?`<span class="stepline ${i<idx?'done':''}"></span>`:'');
+  }).join('')}</div>`;
+}
+SCREENS['purchase-request'] = async function(root, params){
+  const requestedId=params&&params.requisitionId?Number(params.requisitionId):null;
+  const d=await prepareRequisitionDetail(requestedId);
+  const convertedOrder=d.convertedOrderId?DB.purchaseOrders.find(p=>p.id===d.convertedOrderId):null;
+  const lineRows=d.lineItems.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
+    <td class="l li-name"><b>${esc(l.name)}</b><small>${esc(l.sku)}</small></td>
     <td class="tnum">${num(l.qty)} ${esc(l.uom)}</td>
-    <td class="tnum">${money(l.est)}</td>
-    <td class="l">${l.need==='Urgent'?cap('Urgent','danger'):cap('Stock','neutral')}</td>
-    <td class="tnum"><b>${money(l.qty*l.est)}</b></td></tr>`).join('');
-  root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
-    ${crumbs([DB.company.name,'Purchasing','Purchase Requests',{cur:d.no}])}
-    ${typeof purNav==='function'?'<div style="padding:0 0 4px">'+purNav('purchase-request')+'</div>':''}
+    <td class="tnum">${money(l.estimatedUnitCost)}</td>
+    <td class="tnum"><b>${money(l.qty*l.estimatedUnitCost)}</b></td></tr>`).join('');
+
+  function outcomePanel(){
+    if(d.status==='Converted') return indicator({tone:'accent',icon:'checkc',label:'Converted to PO',value:d.ref,sub:`This requisition was converted to purchase order ${esc(d.ref)}.`});
+    if(d.rawStatus==='rejected') return indicator({tone:'danger',icon:'xc',label:'Rejected',value:d.decidedAt||'—',sub:d.rejectionReason?esc(d.rejectionReason):'No reason recorded.'});
+    if(d.status==='Approved') return indicator({tone:'ok',icon:'checkc',label:'Approved',value:d.decidedAt||'—',sub:'Ready to convert to a purchase order.'});
+    return indicator({tone:'warn',icon:'clock',label:'Awaiting approval',value:d.date,sub:'This requisition has not been decided yet.'});
+  }
+
+  root.innerHTML=`<div class="content full"><section class="master" data-screen-label="Purchase Requisition ${esc(d.no)}"><div class="docwrap"><div class="docpage">
+    ${crumbs([DB.company.name,{label:'Purchasing',route:'purchasing-home'},{label:'Requisitions',route:'purchase-requisitions'},{cur:d.no}])}
+    ${typeof purNav==='function'?'<div style="padding:0 0 4px">'+purNav('purchase-requisitions')+'</div>':''}
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('cart')}Purchase Request <span class="dnum">${esc(d.no)}</span></div>
-          <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.requestedBy)} · needed by ${esc(d.need)}</div></div>
-        <div class="dactions">${cap(d.status,purTone(d.status))}${btn('Print',{icon:'print',cls:'soft'})}</div>
+        <div><div class="dt">${ic('list')}Purchase Requisition <span class="dnum">${esc(d.no)}</span></div>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.requestedBy)} · ${esc(d.dept)} · needed by ${esc(d.need)}</div></div>
+        <div class="dactions">${cap(d.status,PR_TONE[d.status])}${btn('Print',{icon:'print',cls:'soft'})}</div>
       </div>
-      <div class="stepper">
-        <div class="step done"><span class="sdot">${ic('check')}</span>Draft</div><span class="stepline done"></span>
-        <div class="step done"><span class="sdot">${ic('check')}</span>Submitted</div><span class="stepline done"></span>
-        <div class="step done"><span class="sdot">${ic('check')}</span>Approved</div><span class="stepline done"></span>
-        <div class="step current"><span class="sdot">${ic('check')}</span>Ordered</div>
-      </div>
+      ${reqStepper(d)}
       <div class="docmeta">
-        <div class="dm"><small>Requested by</small><b>${esc(d.requestedBy.split(' · ')[0])}</b></div>
+        <div class="dm"><small>Requested by</small><b>${esc(d.requestedBy)}</b></div>
+        <div class="dm"><small>Department</small><b>${esc(d.dept)}</b></div>
         <div class="dm"><small>Date</small><b>${esc(d.date)}</b></div>
         <div class="dm"><small>Needed by</small><b>${esc(d.need)}</b></div>
-        <div class="dm"><small>Warehouse</small><b>${esc(d.warehouse)}</b></div>
-        <div class="dm"><small>Cost centre</small><b>${esc(d.costCentre)}</b></div>
+        <div class="dm"><small>Priority</small><b>${esc(d.priority)}</b></div>
       </div>
     </div>
     <div class="doclayout">
       <div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>Justification</h3></div><div class="panel-body" style="padding-top:12px">
-          <div class="risk warn">${ic('warn')}<div><b>Blocks production</b><small>${esc(d.justification)}</small></div></div>
-        </div></div>
+        ${d.justification?`<div class="panel"><div class="panel-h"><h3>Justification</h3></div><div class="panel-body" style="padding-top:12px">
+          <div class="risk warn">${ic('warn')}<div><small>${esc(d.justification)}</small></div></div>
+        </div></div>`:''}
         <div class="panel">
-          <div class="panel-h"><h3>Requested items</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${d.lines.length} lines</span></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Item</th><th>Qty</th><th>Est. unit</th><th class="l">Priority</th><th>Est. amount</th></tr></thead><tbody>${lineRows}</tbody>
-          <tfoot><tr><td></td><td class="l" style="font-weight:600">Estimated total</td><td></td><td></td><td></td><td class="tnum"><b>${money(est)}</b></td></tr></tfoot></table>
+          <div class="panel-h"><h3>Requested items</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${d.lineItems.length} lines</span></div>
+          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Item</th><th>Qty</th><th>Est. unit</th><th>Est. amount</th></tr></thead><tbody>${lineRows}</tbody>
+          <tfoot><tr><td></td><td class="l" style="font-weight:600">Estimated total</td><td></td><td></td><td class="tnum"><b>${money(d.value)}</b></td></tr></tfoot></table>
         </div>
       </div>
       <aside class="summary">
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">Outcome</div>
-          ${indicator({tone:'accent',icon:'checkc',label:'Approved & ordered',value:'PO-26-0291',sub:'Sourced to Shenzhen Microcircuit · expected Jun 22.'})}
-        </div>
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">Related</div>
-          ${relatedDocs([
-            {no:'PO-26-0291',label:'Purchase order (from request)',meta:'$88.5k',status:'Pending Approval'},
-            {no:'WO-26-0081',label:'Driving work order',meta:'blocked on PCB',status:'On Hold'},
-          ])}
-        </div>
+        <div class="sumcard"><div class="sectitle" style="margin-top:0">Outcome</div>${outcomePanel()}</div>
+        ${convertedOrder?`<div class="sumcard"><div class="sectitle" style="margin-top:0">Related</div>${relatedDocs([{no:d.ref,label:'Purchase order (from requisition)',meta:money(convertedOrder.total,convertedOrder.currency),status:convertedOrder.status}])}</div>`:''}
       </aside>
     </div>
     <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
-      <div style="font-size:12.5px;color:var(--muted)" class="hideonsmall">This request was <b style="color:var(--fg)">converted</b> to purchase order PO-26-0291.</div>
       <div class="grow"></div>
-      ${btn('Duplicate',{icon:'copy',cls:'soft',attrs:'onclick="toast(\'Request duplicated as draft\',\'info\')"'})}
-      ${btn('View purchase order',{icon:'cart',cls:'primary',sm:false,attrs:'onclick="navigate(\'po-approval\')"'})}
+      ${d.rawStatus==='submitted'?btn('Reject',{icon:'x',cls:'danger',attrs:'data-act="reject"'})+btn('Approve',{icon:'check',cls:'primary',sm:false,attrs:'data-act="approve"'}):''}
+      ${d.status==='Approved'?btn('Convert to PO',{icon:'cart',cls:'primary',sm:false,attrs:'data-act="convert"'}):''}
+      ${d.status==='Converted'?btn('View purchase order',{icon:'cart',cls:'primary',sm:false,attrs:'data-act="viewpo"'}):''}
     </div>
   </div></div></section></div>`;
+
+  const approveBtn=root.querySelector('[data-act="approve"]');
+  approveBtn&&approveBtn.addEventListener('click',()=>approveRequisition(d,async()=>{ navigate('purchase-request',{requisitionId:d.id}); }));
+  const rejectBtn=root.querySelector('[data-act="reject"]');
+  rejectBtn&&rejectBtn.addEventListener('click',()=>rejectRequisitionModal(d,async()=>{ navigate('purchase-request',{requisitionId:d.id}); }));
+  const convertBtn=root.querySelector('[data-act="convert"]');
+  convertBtn&&convertBtn.addEventListener('click',()=>navigate('new-purchase-order',{requisitionId:d.id}));
+  const viewPoBtn=root.querySelector('[data-act="viewpo"]');
+  viewPoBtn&&viewPoBtn.addEventListener('click',()=>{
+    if(convertedOrder) openPO(convertedOrder); else navigate('purchase-orders');
+  });
 };
 
 /* ---------------- GOODS RECEIPT / GRN (document) ---------------- */

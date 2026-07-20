@@ -14,17 +14,7 @@ function buildPurTxn(kind, r){
   const C={ no:r.no, icon:'receipt', title:'Document', active:'', crumbLabel:'', crumbRoute:'',
     subtitle:'', status:r.status, tone:'neutral', meta:[], main:'', summary:'', footer:'' };
 
-  if(kind==='requisition'){
-    Object.assign(C,{ icon:'list', title:'Purchase Requisition', active:'purchase-requisitions', crumbLabel:'Requisitions', crumbRoute:'purchase-requisitions',
-      subtitle:`${esc(r.requestedBy)} · ${esc(r.dept)} · needed ${esc(r.need)}`, tone:PR_TONE[r.status],
-      meta:[['Requested by',`<b>${esc(r.requestedBy)}</b>`],['Department',`<b>${esc(r.dept)}</b>`],['Date',`<b>${esc(r.date)}</b>`],['Needed by',`<b>${esc(r.need)}</b>`],['Priority',`<b>${esc(r.priority)}</b>`]],
-      main: txnDetails([['Lines',String(r.lines)],['Estimated value',money0(r.value)],['Priority',esc(r.priority)],['Converted to',r.ref?esc(r.ref):'—']]) +
-        txnActivity([{kind:'current',when:r.date,what:`Status — <b>${esc(r.status)}</b>`,who:r.requestedBy},{kind:'add',when:r.date,what:`Requisition raised by ${esc(r.requestedBy)}`,who:r.dept}]),
-      summary: sumCard(null,[['Lines',String(r.lines)],['Est. value',money0(r.value),'total']]) +
-        (r.ref?`<div class="sumcard"><div class="sectitle" style="margin-top:0">Related</div>${relatedDocs([{no:r.ref,label:'Purchase order',meta:'converted',status:'Pending Approval'}])}</div>`:''),
-      footer: (['Draft','Submitted','Pending Approval'].includes(r.status)?btn('Approve',{icon:'check',cls:'soft',attrs:`onclick="toast('${r.no} approved','ok')"`}):'') + btn('Convert to RFQ',{icon:'comment',cls:'soft',attrs:`onclick="navigate('rfqs')"`}) + btn('Convert to PO',{icon:'cart',cls:'primary',sm:false,attrs:`onclick="navigate('new-purchase-order')"`}) });
-  }
-  else if(kind==='rfq'){
+  if(kind==='rfq'){
     Object.assign(C,{ icon:'comment', title:'Request for Quotation', active:'rfqs', crumbLabel:'RFQs', crumbRoute:'rfqs',
       subtitle:`${esc(r.subject)} · ${r.responded} of ${r.suppliers} responded`, tone:RFQ_TONE[r.status],
       meta:[['Subject',`<b>${esc(r.subject)}</b>`],['Date',`<b>${esc(r.date)}</b>`],['Suppliers invited',`<b>${r.suppliers}</b>`],['Responded',`<b>${r.responded}</b>`],['Response by',`<b>${esc(r.due)}</b>`]],
@@ -160,17 +150,18 @@ makePurList({
 /* ---------------- PURCHASE REQUISITIONS ---------------- */
 makePurList({
   route:'purchase-requisitions', title:'Purchase Requisitions', unit:'requisitions',
-  sub:'Internal purchase requests from warehouse, production, projects and admin. Approve, then convert to an RFQ or directly to a purchase order.',
+  prepare:prepareCanonicalPurchasingData,
+  sub:'Internal purchase requests from warehouse, production, projects and admin. Approve, then convert directly to a purchase order.',
   rows:()=>DB.purchaseReqs, rowId:r=>r.no,
-  chips:[['all','All'],['open','Open'],['approval','Pending approval'],['approved','Approved'],['converted','Converted']],
-  filterFn:(r,f)=>f==='open'?['Draft','Submitted','Pending Approval'].includes(r.status):f==='approval'?r.status==='Pending Approval':f==='approved'?r.status==='Approved':r.status==='Converted',
+  chips:[['all','All'],['submitted','Submitted'],['approved','Approved'],['converted','Converted'],['rejected','Rejected']],
+  filterFn:(r,f)=>r.status.toLowerCase()===f,
   kpis:(r)=>[
-    {label:'Open requisitions', val:r.filter(x=>['Draft','Submitted','Pending Approval'].includes(x.status)).length, f:'open'},
-    {label:'Pending approval', val:r.filter(x=>x.status==='Pending Approval').length, accent:true, f:'approval'},
+    {label:'Submitted', val:r.filter(x=>x.status==='Submitted').length, accent:true, f:'submitted'},
+    {label:'Approved', val:r.filter(x=>x.status==='Approved').length, f:'approved'},
     {label:'Est. value', val:money0(r.filter(x=>x.status!=='Rejected').reduce((a,x)=>a+x.value,0))},
     {label:'Converted', val:r.filter(x=>x.status==='Converted').length, f:'converted'},
   ],
-  newBtn:{label:'New requisition', onClick:()=>toast('New requisition — line capture opens','info')},
+  newBtn:{label:'New requisition', onClick:()=>newRequisitionModal()},
   columns:[
     {label:'Requisition', w:'minmax(140px,1.3fr)', render:r=>docNoCell(r.no, r.date)},
     {label:'Requested by', align:'l', w:'minmax(120px,1.1fr)', render:r=>esc(r.requestedBy)},
@@ -183,14 +174,119 @@ makePurList({
   ],
   rowMenu:(r)=>[
     {id:'view',icon:'ext',label:'View requisition',run:()=>openReq(r)},
-    {id:'approve',icon:'check',label:'Approve',run:()=>toast(`${r.no} approved`,'ok')},
-    {id:'rfq',icon:'comment',label:'Convert to RFQ',run:()=>navigate('rfqs')},
-    {id:'po',icon:'cart',label:'Convert to PO',run:()=>navigate('new-purchase-order')},
-    {id:'reject',icon:'x',label:'Reject',danger:true,sep:true,run:()=>toast(`${r.no} rejected`,'danger')},
+    ...(r.rawStatus==='submitted'?[
+      {id:'approve',icon:'check',label:'Approve',run:()=>approveRequisition(r,()=>navigate('purchase-requisitions'))},
+      {id:'reject',icon:'x',label:'Reject',danger:true,sep:true,run:()=>rejectRequisitionModal(r,()=>navigate('purchase-requisitions'))},
+    ]:[]),
+    ...(r.status==='Approved'?[
+      {id:'po',icon:'cart',label:'Convert to PO',sep:true,run:()=>navigate('new-purchase-order',{requisitionId:r.id})},
+    ]:[]),
   ],
   onOpen:(r)=>openReq(r),
 });
-function openReq(r){ if(r.no==='PR-26-0142'){ navigate('purchase-request'); return; } openPurTxn('requisition', r); }
+function openReq(r){ navigate('purchase-request',{requisitionId:r.id}); }
+
+function nextReqNo(reqs){
+  let max=0;
+  (reqs||[]).forEach(r=>{ const m=/(\d+)\s*$/.exec(r.no||''); if(m&&+m[1]>max) max=+m[1]; });
+  return 'PR-'+new Date().getFullYear()+'-'+String(max+1).padStart(4,'0');
+}
+
+function newRequisitionModal(){
+  const reqNo=nextReqNo(DB.purchaseReqs);
+  const state={ lines:[] /* {productId,sku,name,uom,qty,estimatedUnitCost} */ };
+  function lineRows(){
+    if(!state.lines.length) return `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">No lines yet — add an item below.</td></tr>`;
+    return state.lines.map((l,i)=>`<tr data-i="${i}">
+      <td class="l li-name"><b>${esc(l.name)}</b><small>${esc(l.sku)}</small></td>
+      <td><input class="lineinput rqQty" type="number" min="1" value="${l.qty}" style="width:72px"></td>
+      <td><input class="lineinput rqCost" type="number" min="0" step="0.01" value="${l.estimatedUnitCost}" style="width:88px"></td>
+      <td class="tnum"><b>${money(l.qty*l.estimatedUnitCost)}</b></td>
+      <td style="text-align:center"><button class="iconbtn rqDel" data-tip="Remove" style="width:28px;height:28px">${ic('trash')}</button></td></tr>`).join('');
+  }
+  function totalValue(){ return state.lines.reduce((a,l)=>a+l.qty*l.estimatedUnitCost,0); }
+  function linesBlock(){
+    return `<div class="panel" style="margin-top:14px">
+      <div class="panel-h"><h3>Lines</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)" id="rqLineCount">${state.lines.length} line${state.lines.length===1?'':'s'}</span></div>
+      <div class="panel-body" style="padding-top:10px">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+          <div class="fld" style="flex:1;min-width:220px"><span>Item</span>
+            <select id="rqPick">${DB.items.map(it=>`<option value="${it.sku}">${esc(it.sku)} · ${esc(it.name)} — ${money(it.cost)}/${esc(it.uom)}</option>`).join('')}</select></div>
+          <div class="fld" style="width:96px"><span>Qty</span><input type="number" id="rqAddQty" min="1" value="1"></div>
+          ${btn('Add line',{icon:'plus',cls:'soft',attrs:'id="rqAdd"'})}
+        </div>
+        <table class="lines"><thead><tr><th class="l">Item</th><th>Qty</th><th>Est. unit cost</th><th>Amount</th><th></th></tr></thead>
+          <tbody id="rqLines">${lineRows()}</tbody></table>
+        <div class="sumrow total" style="margin-top:10px"><span class="sk2">Estimated total</span><span class="sv tnum" id="rqTotal">${money(totalValue())}</span></div>
+      </div>
+    </div>`;
+  }
+  appModal({
+    icon:'plus',
+    title:'New requisition',
+    width:640,
+    body:`<div class="set-grid">
+      <div class="fld"><span>Requisition no.</span><input value="${esc(reqNo)}" readonly><span class="locked">${ic('lock')} System-numbered</span></div>
+      <div class="fld"><span>Needed by <span class="req">*</span></span><input type="date" id="rqNeed" value="${new Date(Date.now()+7*86400000).toISOString().slice(0,10)}"></div>
+      <div class="fld"><span>Requested by <span class="req">*</span></span><input id="rqRequester" placeholder="e.g. M. Okeke"></div>
+      <div class="fld"><span>Department <span class="req">*</span></span><input id="rqDept" placeholder="e.g. Production Planning"></div>
+      <div class="fld"><span>Priority</span><select id="rqPriority"><option value="Stock" selected>Stock</option><option value="Urgent">Urgent</option><option value="Project">Project</option></select></div>
+      <div class="fld" style="grid-column:1/-1"><span>Justification (optional)</span><textarea id="rqJustification" placeholder="Why this is needed"></textarea></div>
+    </div>
+    <div id="rqLinesBlock">${linesBlock()}</div>`,
+    actions:`${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Create requisition',{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`,
+  });
+  function wireLines(){
+    $('#rqAdd').addEventListener('click',()=>{
+      const sku=$('#rqPick').value; const qty=Math.max(1,+$('#rqAddQty').value||1);
+      const it=DB.items.find(x=>x.sku===sku); if(!it) return;
+      const ex=state.lines.find(l=>l.productId===it.id);
+      if(ex) ex.qty+=qty; else state.lines.push({productId:it.id,sku:it.sku,name:it.name,uom:it.uom,qty,estimatedUnitCost:it.cost});
+      refreshLines();
+    });
+    $$('#rqLines tr[data-i]').forEach(tr=>{
+      const i=+tr.dataset.i, l=state.lines[i];
+      const q=tr.querySelector('.rqQty'), c=tr.querySelector('.rqCost');
+      const upd=()=>{ l.qty=Math.max(1,+q.value||1); l.estimatedUnitCost=Math.max(0,+c.value||0);
+        tr.querySelector('td.tnum b').textContent=money(l.qty*l.estimatedUnitCost);
+        $('#rqTotal').textContent=money(totalValue()); };
+      [q,c].forEach(el=>el.addEventListener('input',upd));
+      tr.querySelector('.rqDel').addEventListener('click',()=>{ state.lines.splice(i,1); refreshLines(); });
+    });
+  }
+  function refreshLines(){
+    $('#rqLinesBlock').innerHTML=linesBlock();
+    wireLines();
+  }
+  wireLines();
+
+  const saveBtn=$('#modalEl').querySelector('[data-save]');
+  saveBtn.addEventListener('click',async()=>{
+    const requestedByName=$('#rqRequester').value.trim();
+    if(!requireField(requestedByName,'Requested by is required','#rqRequester')) return;
+    const department=$('#rqDept').value.trim();
+    if(!requireField(department,'Department is required','#rqDept')) return;
+    const neededByDate=$('#rqNeed').value;
+    if(!requireField(neededByDate,'Needed-by date is required','#rqNeed')) return;
+    if(!state.lines.length){ toast('Add at least one line','danger'); return; }
+    const payload={
+      reqNo, requestedByName, department, neededByDate,
+      priority:$('#rqPriority').value,
+      justification:$('#rqJustification').value.trim()||null,
+      lines:state.lines.map(l=>({productId:l.productId,qty:l.qty,estimatedUnitCost:l.estimatedUnitCost})),
+    };
+    saveBtn.disabled=true;
+    try{
+      await window.ErpSystemData.create('purchasing/purchase-requisitions',payload);
+      closeModal();
+      toast(`Requisition ${reqNo} submitted`,'ok');
+      navigate('purchase-requisitions');
+    }catch(error){
+      saveBtn.disabled=false;
+      toast((error&&error.message)||'Requisition could not be created','danger');
+    }
+  });
+}
 
 /* ---------------- RFQs ---------------- */
 makePurList({

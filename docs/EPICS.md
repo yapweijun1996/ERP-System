@@ -763,7 +763,7 @@ checkout's own (a `npm test` run showed 41 failures across 9 files that did not 
 in isolation and did not correspond to any uncommitted change in `git status`; `git
 worktree list` explained why) — fixed by excluding `**/.claude/worktrees/**`.
 
-## EPIC-023 — Purchase Requisition: register, approval & real PO linkage
+## EPIC-023 — Purchase Requisition: register, approval & real PO linkage ✅
 
 Fourth Phase 7 module, and the last not-started item on the original Phase 7 list.
 Unlike every prior "lite" module, this one is a **new table inside an existing, already-
@@ -823,11 +823,24 @@ Acceptance criteria:
       accepts a valid approved requisition, rejects a not-yet-approved one, rejects
       reusing an already-converted one, and confirms omitting `requisitionId` entirely
       (every pre-existing test) is completely unaffected.
-- [ ] `purchase-requisitions` (real KPIs/filter chips including a computed "Converted"
+- [x] `purchase-requisitions` (real KPIs/filter chips including a computed "Converted"
       bucket, a real "New requisition" create modal with real product-linked lines) and
       `purchase-request` (real per-requisition detail — not always the same hardcoded
       record — with real Approve/Reject actions and, for an approved-and-unconverted
       requisition, a real "Convert to PO" handoff into the existing `new-purchase-order`
       wizard) read/write real data. The wizard gains a small optional `requisitionId`
       param it silently threads into its existing create payload when reached this way.
-- [ ] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (63 → 65).
+- [x] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (63 → 65).
+
+(TASK-055, TASK-056, 2026-07-20.) Unlike every prior "lite" module this one extended an
+already-Canonical domain rather than standing up a new one — no new permission keys, no
+seed.ts Viewer-grant change, and the new tables joined the existing `purchasing.ts`
+schema file. The one genuinely new mechanism, a real `purchase_order.requisition_id`
+link validated in `createPurchaseOrder.ts`, is what turns this from a register into a
+closed procurement trail: converting a requisition rejects if it's not `approved` or is
+already linked to another order, and every pre-existing `createPurchaseOrder` caller
+that omits `requisitionId` stays completely unaffected. Live testing caught one real bug
+before it shipped: the requisition detail's "Related" panel initially showed the
+requisition's own *estimated* value next to the linked PO, not the PO's *real* total —
+easy to miss since both numbers look plausible on their own — fixed by looking up the
+actual `DB.purchaseOrders` row via `convertedOrderId` instead of reusing the estimate.

@@ -84,6 +84,18 @@ function purchasingNumber(value){
   const parsed=Number(value);
   return Number.isFinite(parsed)?parsed:0;
 }
+function purchasingDateValue(value){
+  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
+  const text=String(value==null?'':value);
+  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
+  return match?match[0]:text;
+}
+function purchasingDateTimeValue(value){
+  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,16).replace('T',' · ');
+  const text=String(value==null?'':value);
+  const match=text.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  return match?match[0].replace('T',' · '):text;
+}
 
 async function prepareCanonicalPurchasingData(){
   const adapter=window.ErpSystemData;
@@ -105,11 +117,14 @@ async function prepareCanonicalPurchasingData(){
     listPage('inventory/products'),
     listPage('inventory/stock-levels'),
     listPage('inventory/warehouses'),
+    listPage('purchasing/purchase-requisitions'),
+    listPage('purchasing/purchase-requisition-lines'),
   ]);
   const [
     suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,
-    products,stockLevels,warehouses,
+    products,stockLevels,warehouses,purchaseRequisitions,purchaseRequisitionLines,
   ]=pages.map(page=>page.data);
+  const productById=new Map(products.map(row=>[row.id,row]));
   const supplierById=new Map(suppliers.map(row=>[row.id,row]));
   const orderById=new Map(purchaseOrders.map(row=>[row.id,row]));
   const warehouseById=new Map(warehouses.map(row=>[row.id,row]));
@@ -235,6 +250,50 @@ async function prepareCanonicalPurchasingData(){
       rawStatus:row.status,
     };
   });
+  const requisitionLinesByReq=new Map();
+  purchaseRequisitionLines.forEach(row=>{
+    const arr=requisitionLinesByReq.get(row.requisitionId)||[];
+    arr.push(row);
+    requisitionLinesByReq.set(row.requisitionId,arr);
+  });
+  const convertedByRequisition=new Map();
+  purchaseOrders.forEach(row=>{
+    if(row.requisitionId!=null) convertedByRequisition.set(row.requisitionId,row);
+  });
+  const PR_STATUS_UI={submitted:'Submitted',approved:'Approved',rejected:'Rejected'};
+  DB.purchaseReqs=purchaseRequisitions.map(row=>{
+    const lines=requisitionLinesByReq.get(row.id)||[];
+    const convertedOrder=convertedByRequisition.get(row.id);
+    return {
+      id:row.id,
+      no:row.reqNo,
+      date:purchasingDateValue(row.createdAt),
+      requestedBy:row.requestedByName,
+      dept:row.department,
+      need:purchasingDateValue(row.neededByDate),
+      lines:lines.length,
+      lineItems:lines.map(line=>{
+        const product=productById.get(line.productId)||{};
+        return {
+          productId:line.productId,
+          sku:product.sku||`#${line.productId}`,
+          name:product.name||`Product #${line.productId}`,
+          uom:product.uom||'',
+          qty:purchasingNumber(line.qty),
+          estimatedUnitCost:purchasingNumber(line.estimatedUnitCost),
+        };
+      }),
+      value:purchasingNumber(row.estimatedValue),
+      priority:row.priority,
+      justification:row.justification||'',
+      status:convertedOrder?'Converted':(PR_STATUS_UI[row.status]||row.status),
+      rawStatus:row.status,
+      rejectionReason:row.rejectionReason||'',
+      decidedAt:row.decidedAt?purchasingDateTimeValue(row.decidedAt):null,
+      ref:convertedOrder?convertedOrder.docNo:'',
+      convertedOrderId:convertedOrder?convertedOrder.id:null,
+    };
+  });
   DB.purchasingReadMeta={
     truncated:pages.some(page=>Boolean(page.nextCursor)),
     nextCursors:pages.map(page=>page.nextCursor),
@@ -352,7 +411,7 @@ SCREENS['purchasing-home'] = function(root){
   function counts(route){
     switch(route){
       case 'suppliers': return DB.suppliers.filter(s=>s.status==='Active').length;
-      case 'purchase-requisitions': return DB.purchaseReqs.filter(r=>['Draft','Submitted','Pending Approval','Approved'].includes(r.status)).length;
+      case 'purchase-requisitions': return DB.purchaseReqs.filter(r=>['Submitted','Approved'].includes(r.status)).length;
       case 'rfqs': return DB.rfqs.filter(r=>!['Closed','Cancelled'].includes(r.status)).length;
       case 'supplier-quotations': return DB.supplierQuotes.filter(q=>q.status==='Received').length;
       case 'purchase-orders': return openPO.length;

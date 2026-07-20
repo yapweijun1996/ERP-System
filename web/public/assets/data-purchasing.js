@@ -32,17 +32,7 @@ DB.po0291 = {
   ],
 };
 
-/* ===================== PURCHASING procure-to-pay chain (PR, GRN, supplier invoice) ===================== */
-DB.pr0142 = {
-  no:'PR-26-0142', supplier:'Shenzhen Microcircuit', code:'S-0140', requestedBy:'M. Okeke · Production Planning',
-  date:'Jun 2, 2026', need:'Jun 22, 2026', status:'Ordered', warehouse:'KL-Main', costCentre:'MFG-RM-Q2',
-  justification:'Control Module PCB v3 shortage is blocking work order WO-26-0081 (Conveyor Drive Units for SO-26-0418). Bearings topped up to safety stock.',
-  lines:[
-    { item:'NW-1180', name:'Control Module PCB v3', qty:300, uom:'ea', est:118.00, need:'Urgent' },
-    { item:'NW-3310', name:'Industrial Bearing 6204', qty:1500, uom:'ea', est:6.80, need:'Stock' },
-    { item:'NW-3315', name:'Industrial Bearing 6206', qty:1000, uom:'ea', est:9.40, need:'Stock' },
-  ],
-};
+/* ===================== PURCHASING procure-to-pay chain (GRN, supplier invoice) ===================== */
 DB.grn0188 = {
   no:'GRN-26-0188', po:'PO-26-0291', supplier:'Shenzhen Microcircuit', code:'S-0140',
   date:'Jun 4, 2026', warehouse:'KL-Main', receiver:'M. Silva', carrier:'SF Express', waybill:'SF7740921188', status:'QC hold',

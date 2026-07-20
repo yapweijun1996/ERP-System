@@ -20,7 +20,9 @@ SCREENS['new-purchase-order'] = async function(root, params){
 
   const S={ step:0, reached:0,
     supplier:(params&&params.supplier)||'', orderDate:TODAY,
+    requisitionId:(params&&params.requisitionId)?Number(params.requisitionId):null,
     lines:[] /* {sku,name,uom,qty,price} */ };
+  const sourceReq=S.requisitionId?(DB.purchaseReqs||[]).find(r=>r.id===S.requisitionId):null;
 
   const sup=()=>DB.suppliers.find(s=>s.code===S.supplier);
   // suggest the items this supplier is most likely to replenish: those at/under reorder
@@ -38,6 +40,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
         value:money0(s.balance),sub:`Canonical supplier record · ${esc(s.status)} · current payable balance.`})
       :`<div style="color:var(--muted);font-size:13px;padding:6px 2px">Select a supplier to see their account terms.</div>`;
     const repl=lows?`<div class="sumcard" style="margin-top:12px"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Replenishment</div>${indicator({tone:'warn',icon:'box',label:'Items below reorder',value:String(lows),sub:'Add them in the next step — quantities pre-filled from reorder rules.'})}</div>`:'';
+    const reqPanel=sourceReq?`<div class="sumcard" style="margin-top:12px"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Converting requisition</div>${indicator({tone:'accent',icon:'list',label:sourceReq.no,value:money0(sourceReq.value),sub:`${esc(sourceReq.requestedBy)} · ${esc(sourceReq.dept)} · needed ${esc(sourceReq.need)}. This order will be linked back to it.`})}</div>`:'';
     return `<div class="doclayout"><div class="docmain">
       <div class="panel">
         <div class="panel-h">${ic('truck')}<h3>Supplier</h3></div>
@@ -60,7 +63,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
         </div>
       </div>
     </div>
-    <aside class="summary"><div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Supplier check</div>${sidebar}</div>${repl}</aside></div>`;
+    <aside class="summary"><div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Supplier check</div>${sidebar}</div>${repl}${reqPanel}</aside></div>`;
   }
   function wire1(){
     const su=$('#wSup'); su.addEventListener('change',()=>{ S.supplier=su.value; render(); });
@@ -217,7 +220,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
     $$('#viewRoot .step[data-step]').forEach(b=>b.addEventListener('click',()=>{ S.step=+b.dataset.step; render(); }));
     const next=$('#wNext'); next&&next.addEventListener('click',()=>{ if(!canAdvance())return; S.step++; S.reached=Math.max(S.reached,S.step); render(); });
     const back=$('#wBack'); back&&back.addEventListener('click',()=>{ S.step--; render(); });
-    const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('purchase-orders'));
+    const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>S.requisitionId?navigate('purchase-request',{requisitionId:S.requisitionId}):navigate('purchase-orders'));
     const create=$('#wCreate'); create&&create.addEventListener('click',async()=>{
       const adapter=window.ErpSystemData;
       if(!adapter||typeof adapter.create!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
@@ -229,6 +232,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
           supplierId:s.id,
           orderDate:S.orderDate,
           currency:DB.company.currency,
+          requisitionId:S.requisitionId,
           lines:S.lines.map(l=>({
             productId:l.productId,
             qty:l.qty,
