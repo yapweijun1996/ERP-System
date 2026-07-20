@@ -114,7 +114,7 @@ typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
 production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
-## Phase 7 — Module Expansion 🔶 (purchasing/CRM/Fixed Assets/HR-lite done; Project register + progress claims done)
+## Phase 7 — Module Expansion 🔶 (purchasing/CRM/Fixed Assets/HR-lite/Service done; Project register + progress claims done)
 
 Goal: convert mock modules into real domains, one at a time, each end-to-end
 (schema → seed → screens → demo assertions) in both modes.
@@ -211,14 +211,14 @@ Order of attack:
    team/milestone-schedule tracking stays mock (no timesheet or expense-capture schema
    exists to back it — a materially separate feature). Project-scoped AP linkage and
    dedicated Bank Receipt/Payment documents remain the third sub-phase, a future epic.
-8. **Service** (🔶 in progress, EPIC-022) — service tickets/orders/contracts, distinct
-   from Manufacturing's work orders. Mock screens in `screens-service.js`:
-   `service-ticket` (list), `service-order` (always the same hardcoded ticket — the same
-   bug class already fixed for `asset-detail`/`employee`/`project-detail`),
-   `service-contracts` (no detail/create). EPIC-022 (TASK-053/054) makes the ticket +
-   contract register real (3 real statuses, not the mock's 5 — Resolved/Closed already
-   collapse to one "done" filter bucket in the mock's own UI); spare-parts consumption
-   and labour costing stay mock, deferred as Inventory-consumption depth work.
+8. **Service** (EPIC-022 ✅) — service tickets/orders/contracts, distinct from
+   Manufacturing's work orders. Mock screens in `screens-service.js` had `service-ticket`
+   (list), `service-order` (always the same hardcoded ticket — the same bug class already
+   fixed for `asset-detail`/`employee`/`project-detail`), `service-contracts` (no detail/
+   create). EPIC-022 (TASK-053/054, 2026-07-20) made the ticket + contract register real
+   (3 real statuses, not the mock's 5 — Resolved/Closed already collapsed to one "done"
+   filter bucket in the mock's own UI); spare-parts consumption and labour costing stay
+   mock, deferred as Inventory-consumption depth work.
 9. **Purchase Requisition** (⬜ not started) — the natural upstream step before the
    already-Canonical PO chain. Mock screen (`purchase-requisitions` in
    `screens-purchasing-hub.js`, detail in `screens-purchase.js`) and mock data
