@@ -347,7 +347,7 @@ Acceptance criteria:
       updated so the service worker doesn't 404 trying to precache a deleted file.
 - [x] A fresh browser boot produces identical seeded data to before, and additionally
       now has all 8 `role_permission` rows that were previously silently missing.
-- [x] Follow-up (TASK-055, 2026-07-20): the same failure class recurred, single-source
+- [x] Follow-up (TASK-057, 2026-07-20): the same failure class recurred, single-source
       or not — `seedDemo()`'s own Viewer grant list simply never gained `manufacturing.read`
       when Manufacturing turned Canonical (2026-07-19), since nothing enforces that a new
       Canonical module's read permission gets added to the demo Viewer persona's grants.
@@ -762,3 +762,72 @@ silently pulling in roughly 100 `*.test.ts` files from concurrent background age
 checkout's own (a `npm test` run showed 41 failures across 9 files that did not reproduce
 in isolation and did not correspond to any uncommitted change in `git status`; `git
 worktree list` explained why) — fixed by excluding `**/.claude/worktrees/**`.
+
+## EPIC-023 — Purchase Requisition: register, approval & real PO linkage
+
+Fourth Phase 7 module, and the last not-started item on the original Phase 7 list.
+Unlike every prior "lite" module, this one is a **new table inside an existing, already-
+Canonical domain** (Purchasing — `suppliers`/`purchase-orders`/`goods-receipts`/
+`supplier-invoices` are already real from EPIC-008), not a new domain of its own. `
+purchase-requisitions` renders real-looking rows today but off pure static mock data
+(`DB.purchaseReqs`, no `prepare:` hook in its `makePurList` config, unlike its already-
+Canonical siblings); `purchase-request` (singular, detail) always shows the same
+hardcoded `PR-26-0142` record — the same bug class already fixed for `asset-detail`/
+`employee`/`project-detail`/`service-order`.
+
+RFQs, supplier quotations, purchase returns, and supplier credit/debit notes sit at the
+same mock maturity tier and are explicitly **out of scope** — ROADMAP.md already flagged
+Purchase Requisition specifically (not its siblings) as the one gap worth closing, since
+it's the direct upstream of the already-real PO chain.
+
+**Real, and the one thing that makes this more than a register:** a genuine
+requisition → purchase order link. `purchase_order` gains a nullable `requisition_id` FK
+(additive, backward-compatible — every existing caller of `createPurchaseOrderWithin`
+that doesn't pass it is completely unaffected); passing it validates the requisition is
+`approved` and not already converted, and the resulting PO is really tied to the
+requisition that spawned it — closing the exact gap ROADMAP.md named: "today a PO can be
+created with no requisition trail behind it." "Converted" is computed at read time (a
+requisition is converted if any `purchase_order` references it), not stored — same
+computed-not-stored precedent as Project's over-billed alert, Service's contract status,
+and HR's on-leave-today check.
+
+Acceptance criteria:
+
+- [ ] `purchase_requisition` (`req_no`, `requested_by_name`/`department` plain text — no
+      user FK, matching Project's `manager_name` precedent — `needed_by_date`, `priority`
+      Urgent/Project/Stock matching the mock's exact values, nullable `justification`,
+      `status` submitted/approved/rejected — collapses the mock's Draft/Submitted/Pending
+      Approval into one `submitted` state since nothing in the mock's own UI ever acted
+      on that distinction differently, stored `estimated_value` computed once at create
+      time mirroring `purchase_order`'s own denormalized-totals convention) and
+      `purchase_requisition_line` (real product-linked lines: `product_id` FK, `qty`,
+      `estimated_unit_cost` — replacing the mock's free-floating `lines:3`/`value:64200`
+      with real, addable line items) tables added via a Drizzle migration into the
+      existing `src/data/schema/purchasing.ts` (not a new schema file — this is the
+      existing Purchasing domain, matching how that file already groups
+      supplier/PO/GRN/invoice together). `purchase_order` gains a nullable
+      `requisition_id` FK.
+- [ ] `src/modules/purchasing/purchaseRequisition.ts` (`createPurchaseRequisitionWithin`/
+      `createPurchaseRequisition` — always starts `submitted`;
+      `decidePurchaseRequisitionWithin`/`decidePurchaseRequisition` — mirrors
+      `decideLeaveRequestWithin`'s shape exactly, requires a reason to reject).
+      `src/modules/purchasing/createPurchaseOrder.ts` gains an optional `requisitionId`
+      on `CreatePurchaseOrderInput`: when provided, validates the requisition is
+      `approved` and not already linked to another PO before setting it on the new
+      order. `purchasing/purchase-requisitions` and `purchasing/purchase-requisition-
+      lines` registered as generic `ResourceDefinition`s gated on the **existing**
+      `purchasing.read`/`purchasing.write` permissions — no new permission keys needed,
+      unlike every prior module (Purchasing already has them).
+- [ ] Unit tests cover validation, tenant isolation, the approve/reject state-machine
+      guards, and — in `createPurchaseOrder.test.ts` — the new requisition-linkage path:
+      accepts a valid approved requisition, rejects a not-yet-approved one, rejects
+      reusing an already-converted one, and confirms omitting `requisitionId` entirely
+      (every pre-existing test) is completely unaffected.
+- [ ] `purchase-requisitions` (real KPIs/filter chips including a computed "Converted"
+      bucket, a real "New requisition" create modal with real product-linked lines) and
+      `purchase-request` (real per-requisition detail — not always the same hardcoded
+      record — with real Approve/Reject actions and, for an approved-and-unconverted
+      requisition, a real "Convert to PO" handoff into the existing `new-purchase-order`
+      wizard) read/write real data. The wizard gains a small optional `requisitionId`
+      param it silently threads into its existing create payload when reached this way.
+- [ ] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (63 → 65).
