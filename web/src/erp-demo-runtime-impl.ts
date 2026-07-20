@@ -150,6 +150,15 @@ import {
   type CreateLeaveRequestInput,
 } from '../../src/modules/hr/leaveRequest';
 import {
+  createProjectWithin,
+  type CreateProjectInput,
+} from '../../src/modules/project/project';
+import {
+  createProgressClaimWithin,
+  postProgressClaimWithin,
+  type CreateProgressClaimInput,
+} from '../../src/modules/project/progressClaim';
+import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
@@ -422,6 +431,15 @@ export const erpDemoRuntime = Object.freeze({
       decision: 'approved' | 'rejected', rejectionReason?: string | null,
     ) {
       return decideLeaveRequestWithin(asDomainDb(db), scope, leaveRequestId, decision, rejectionReason);
+    },
+    createProjectWithin(db: DemoOrm, scope: Scope, input: CreateProjectInput) {
+      return createProjectWithin(asDomainDb(db), scope, input);
+    },
+    createProgressClaimWithin(db: DemoOrm, scope: Scope, input: CreateProgressClaimInput) {
+      return createProgressClaimWithin(asDomainDb(db), scope, input);
+    },
+    postProgressClaimWithin(db: DemoOrm, scope: Scope, claimId: number) {
+      return postProgressClaimWithin(asDomainDb(db), scope, claimId);
     },
     listCompanyUsers(db: DemoOrm, scope: Scope) {
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);

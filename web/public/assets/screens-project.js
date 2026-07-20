@@ -1,233 +1,528 @@
 /* ============================================================
-   ARIA ERP — screens: Projects (portfolio, project P&L, timesheet)
+   ARIA ERP — screens: Projects (portfolio, project detail, timesheet)
+   project-pl/project-detail are wired to real project/progress_claim data
+   (EPIC-021); timesheet has no schema and stays mock, deferred alongside
+   payroll-run/payslip.
    ============================================================ */
 
-function projTone(s){
-  return {'On track':'ok','At risk':'warn','Over budget':'danger','On hold':'neutral','Completed':'accent'}[s]||'neutral';
+const PROJECT_STATUS_LABEL = { open:'Open', on_hold:'On hold', completed:'Completed' };
+const PROJECT_STATUS_TONE = { open:'ok', on_hold:'warn', completed:'neutral' };
+function projectStatusBadge(status){
+  return cap(ts(PROJECT_STATUS_LABEL[status]||status), PROJECT_STATUS_TONE[status]||'neutral');
 }
-function pctBar(pct){
-  return `<span class="minibar"><i class="${pct>=100?'ok':pct>=60?'':'warn'}" style="width:${pct}%"></i></span> ${pct}%`;
+
+function projectCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{
+      colBilled:'Billed to date',overBilledAlert:'{n} project(s) have billed more than their contract value.',
+      fieldProjectNo:'Project no.',systemNumbered:'System-numbered',fieldName:'Project name',
+      namePlaceholder:'e.g. Beta Pte Ltd — Cell Integration',fieldCustomer:'Customer',
+      internalOption:'Internal project (no customer)',fieldManager:'Project manager',
+      managerPlaceholder:'e.g. Liam Cardoso',fieldStatus:'Status',fieldStartDate:'Start date',
+      fieldDueDate:'Due date',optional:'optional',fieldContractValue:'Contract value',
+      nameRequired:'Project name is required',managerRequired:'Project manager is required',
+      projectCreated:'Project {no} registered',projectSaveError:'Project could not be registered',
+      createProject:'Register project',internalNote:'Internal projects have no customer and cannot receive a progress claim.',
+      completedNote:'This project is completed and cannot receive a new progress claim.',
+      claimsPanel:'Progress Claims',claimsEmpty:'No progress claims yet.',
+      colClaimNo:'Claim',colClaimDate:'Date',colDescription:'Description',colNet:'Net',colTax:'Tax',colTotal:'Total',
+      newClaim:'New progress claim',fieldClaimNo:'Claim no.',fieldClaimDate:'Claim date',fieldDescriptionField:'Description',
+      descriptionPlaceholder:'e.g. Fabrication 50% complete',fieldNetAmount:'Net amount',
+      descriptionRequired:'Description is required',claimCreated:'Progress claim {no} created',
+      claimSaveError:'Progress claim could not be created',postClaim:'Post',
+      claimPosted:'Progress claim {no} posted — {amount} to GL',claimPostError:'Progress claim could not be posted',
+      billingSummary:'Billing summary',contractValue:'Contract value',headroom:'Headroom',
+      overBilledIndicator:'Over-billed',onTrackIndicator:'Within contract',
+      activityProjectCreated:'Project registered',activityClaimCreated:'Progress claim {no} drafted — {amount}',
+      activityClaimPosted:'Progress claim {no} posted — {amount} to GL',
+      internalProject:'Internal project',linkedCustomer:'Linked customer',customer360:'Customer 360',
+    },
+    ms:{
+      colBilled:'Dibil setakat ini',overBilledAlert:'{n} projek telah membilkan lebih daripada nilai kontrak.',
+      fieldProjectNo:'No. projek',systemNumbered:'Bernombor sistem',fieldName:'Nama projek',
+      namePlaceholder:'cth. Beta Pte Ltd — Integrasi Sel',fieldCustomer:'Pelanggan',
+      internalOption:'Projek dalaman (tiada pelanggan)',fieldManager:'Pengurus projek',
+      managerPlaceholder:'cth. Liam Cardoso',fieldStatus:'Status',fieldStartDate:'Tarikh mula',
+      fieldDueDate:'Tarikh akhir',optional:'pilihan',fieldContractValue:'Nilai kontrak',
+      nameRequired:'Nama projek diperlukan',managerRequired:'Pengurus projek diperlukan',
+      projectCreated:'Projek {no} didaftarkan',projectSaveError:'Projek tidak dapat didaftarkan',
+      createProject:'Daftar projek',internalNote:'Projek dalaman tiada pelanggan dan tidak boleh menerima tuntutan kemajuan.',
+      completedNote:'Projek ini telah selesai dan tidak boleh menerima tuntutan kemajuan baharu.',
+      claimsPanel:'Tuntutan Kemajuan',claimsEmpty:'Belum ada tuntutan kemajuan.',
+      colClaimNo:'Tuntutan',colClaimDate:'Tarikh',colDescription:'Keterangan',colNet:'Bersih',colTax:'Cukai',colTotal:'Jumlah',
+      newClaim:'Tuntutan kemajuan baharu',fieldClaimNo:'No. tuntutan',fieldClaimDate:'Tarikh tuntutan',fieldDescriptionField:'Keterangan',
+      descriptionPlaceholder:'cth. Fabrikasi 50% siap',fieldNetAmount:'Jumlah bersih',
+      descriptionRequired:'Keterangan diperlukan',claimCreated:'Tuntutan kemajuan {no} dicipta',
+      claimSaveError:'Tuntutan kemajuan tidak dapat dicipta',postClaim:'Catat',
+      claimPosted:'Tuntutan kemajuan {no} dicatat — {amount} ke GL',claimPostError:'Tuntutan kemajuan tidak dapat dicatat',
+      billingSummary:'Ringkasan bilan',contractValue:'Nilai kontrak',headroom:'Ruang baki',
+      overBilledIndicator:'Lebih bil',onTrackIndicator:'Dalam kontrak',
+      activityProjectCreated:'Projek didaftarkan',activityClaimCreated:'Tuntutan kemajuan {no} didraf — {amount}',
+      activityClaimPosted:'Tuntutan kemajuan {no} dicatat — {amount} ke GL',
+      internalProject:'Projek dalaman',linkedCustomer:'Pelanggan berkaitan',customer360:'Customer 360',
+    },
+    zh:{
+      colBilled:'累计已开账单',overBilledAlert:'{n} 个项目的开单金额已超过合约价值。',
+      fieldProjectNo:'项目编号',systemNumbered:'系统编号',fieldName:'项目名称',
+      namePlaceholder:'例如:Beta Pte Ltd — 单元集成',fieldCustomer:'客户',
+      internalOption:'内部项目(无客户)',fieldManager:'项目经理',
+      managerPlaceholder:'例如:Liam Cardoso',fieldStatus:'状态',fieldStartDate:'开始日期',
+      fieldDueDate:'截止日期',optional:'可选',fieldContractValue:'合约价值',
+      nameRequired:'请填写项目名称',managerRequired:'请填写项目经理',
+      projectCreated:'项目 {no} 已登记',projectSaveError:'项目登记失败',
+      createProject:'登记项目',internalNote:'内部项目没有客户,无法开立进度账单。',
+      completedNote:'该项目已完成,无法开立新的进度账单。',
+      claimsPanel:'进度账单',claimsEmpty:'尚无进度账单。',
+      colClaimNo:'账单编号',colClaimDate:'日期',colDescription:'说明',colNet:'净额',colTax:'税额',colTotal:'总额',
+      newClaim:'新建进度账单',fieldClaimNo:'账单编号',fieldClaimDate:'账单日期',fieldDescriptionField:'说明',
+      descriptionPlaceholder:'例如:制造进度达50%',fieldNetAmount:'净额',
+      descriptionRequired:'请填写说明',claimCreated:'进度账单 {no} 已创建',
+      claimSaveError:'进度账单创建失败',postClaim:'过账',
+      claimPosted:'进度账单 {no} 已过账 — {amount} 至总账',claimPostError:'进度账单过账失败',
+      billingSummary:'开单摘要',contractValue:'合约价值',headroom:'剩余额度',
+      overBilledIndicator:'超额开单',onTrackIndicator:'合约范围内',
+      activityProjectCreated:'项目已登记',activityClaimCreated:'进度账单 {no} 已建立草稿 — {amount}',
+      activityClaimPosted:'进度账单 {no} 已过账 — {amount} 至总账',
+      internalProject:'内部项目',linkedCustomer:'关联客户',customer360:'客户 360',
+    },
+    ja:{
+      colBilled:'請求累計',overBilledAlert:'{n} 件のプロジェクトが契約金額を超えて請求されています。',
+      fieldProjectNo:'プロジェクト番号',systemNumbered:'システム採番',fieldName:'プロジェクト名',
+      namePlaceholder:'例:Beta Pte Ltd — セル統合',fieldCustomer:'顧客',
+      internalOption:'社内プロジェクト(顧客なし)',fieldManager:'プロジェクトマネージャー',
+      managerPlaceholder:'例:Liam Cardoso',fieldStatus:'ステータス',fieldStartDate:'開始日',
+      fieldDueDate:'期限日',optional:'任意',fieldContractValue:'契約金額',
+      nameRequired:'プロジェクト名を入力してください',managerRequired:'プロジェクトマネージャーを入力してください',
+      projectCreated:'プロジェクト {no} を登録しました',projectSaveError:'プロジェクトを登録できませんでした',
+      createProject:'プロジェクトを登録',internalNote:'社内プロジェクトには顧客がなく、出来高請求を作成できません。',
+      completedNote:'このプロジェクトは完了しており、新しい出来高請求を作成できません。',
+      claimsPanel:'出来高請求',claimsEmpty:'出来高請求はまだありません。',
+      colClaimNo:'請求番号',colClaimDate:'日付',colDescription:'内容',colNet:'税抜額',colTax:'税額',colTotal:'合計',
+      newClaim:'出来高請求を作成',fieldClaimNo:'請求番号',fieldClaimDate:'請求日',fieldDescriptionField:'内容',
+      descriptionPlaceholder:'例:製作50%完了',fieldNetAmount:'税抜額',
+      descriptionRequired:'内容を入力してください',claimCreated:'出来高請求 {no} を作成しました',
+      claimSaveError:'出来高請求を作成できませんでした',postClaim:'計上',
+      claimPosted:'出来高請求 {no} を計上しました — {amount} を総勘定元帳へ',claimPostError:'出来高請求を計上できませんでした',
+      billingSummary:'請求サマリー',contractValue:'契約金額',headroom:'残余枠',
+      overBilledIndicator:'超過請求',onTrackIndicator:'契約範囲内',
+      activityProjectCreated:'プロジェクトを登録しました',activityClaimCreated:'出来高請求 {no} を下書き作成 — {amount}',
+      activityClaimPosted:'出来高請求 {no} を計上 — {amount} を総勘定元帳へ',
+      internalProject:'社内プロジェクト',linkedCustomer:'関連顧客',customer360:'顧客360',
+    },
+    vi:{
+      colBilled:'Đã xuất hóa đơn lũy kế',overBilledAlert:'{n} dự án đã xuất hóa đơn vượt giá trị hợp đồng.',
+      fieldProjectNo:'Mã dự án',systemNumbered:'Đánh số tự động',fieldName:'Tên dự án',
+      namePlaceholder:'vd: Beta Pte Ltd — Tích hợp cụm',fieldCustomer:'Khách hàng',
+      internalOption:'Dự án nội bộ (không có khách hàng)',fieldManager:'Quản lý dự án',
+      managerPlaceholder:'vd: Liam Cardoso',fieldStatus:'Trạng thái',fieldStartDate:'Ngày bắt đầu',
+      fieldDueDate:'Ngày kết thúc',optional:'tùy chọn',fieldContractValue:'Giá trị hợp đồng',
+      nameRequired:'Vui lòng nhập tên dự án',managerRequired:'Vui lòng nhập quản lý dự án',
+      projectCreated:'Đã đăng ký dự án {no}',projectSaveError:'Không thể đăng ký dự án',
+      createProject:'Đăng ký dự án',internalNote:'Dự án nội bộ không có khách hàng nên không thể lập đợt xuất hóa đơn tiến độ.',
+      completedNote:'Dự án này đã hoàn thành và không thể lập đợt xuất hóa đơn tiến độ mới.',
+      claimsPanel:'Hóa Đơn Tiến Độ',claimsEmpty:'Chưa có hóa đơn tiến độ nào.',
+      colClaimNo:'Số hóa đơn',colClaimDate:'Ngày',colDescription:'Mô tả',colNet:'Tiền chưa thuế',colTax:'Thuế',colTotal:'Tổng cộng',
+      newClaim:'Hóa đơn tiến độ mới',fieldClaimNo:'Số hóa đơn',fieldClaimDate:'Ngày hóa đơn',fieldDescriptionField:'Mô tả',
+      descriptionPlaceholder:'vd: Chế tạo hoàn thành 50%',fieldNetAmount:'Tiền chưa thuế',
+      descriptionRequired:'Vui lòng nhập mô tả',claimCreated:'Đã tạo hóa đơn tiến độ {no}',
+      claimSaveError:'Không thể tạo hóa đơn tiến độ',postClaim:'Ghi sổ',
+      claimPosted:'Đã ghi sổ hóa đơn tiến độ {no} — {amount} vào sổ cái',claimPostError:'Không thể ghi sổ hóa đơn tiến độ',
+      billingSummary:'Tóm tắt hóa đơn',contractValue:'Giá trị hợp đồng',headroom:'Hạn mức còn lại',
+      overBilledIndicator:'Vượt hóa đơn',onTrackIndicator:'Trong hạn mức hợp đồng',
+      activityProjectCreated:'Đã đăng ký dự án',activityClaimCreated:'Hóa đơn tiến độ {no} đã lập nháp — {amount}',
+      activityClaimPosted:'Hóa đơn tiến độ {no} đã ghi sổ — {amount} vào sổ cái',
+      internalProject:'Dự án nội bộ',linkedCustomer:'Khách hàng liên kết',customer360:'Customer 360',
+    },
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
+function projectNumber(value){ const parsed=Number(value); return Number.isFinite(parsed)?parsed:0; }
+
+/* PGlite/Drizzle return `date`/`timestamp` columns as JS Date objects, not
+   strings — matching screens-fin2.js's financeDateValue, template-literal
+   interpolation would otherwise coerce them via Date.prototype.toString()
+   ("Wed Mar 04 2026 08:00:00 GMT+0800…") instead of a clean value. */
+function projectDateValue(value){
+  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
+  const text=String(value==null?'':value);
+  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
+  return match?match[0]:text;
+}
+function projectDateTimeValue(value){
+  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,16).replace('T',' · ');
+  const text=String(value==null?'':value);
+  const match=text.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  return match?match[0].replace('T',' · '):text;
+}
+
+/* Reuses the mock's original field names (no/name/client/pm/contract/billed/
+   start/due/status) so the offline fallback snapshot in data-projects.js
+   keeps rendering through the same table/detail code, matching the
+   convention established by Fixed Assets/CRM/Inventory. */
+async function prepareCanonicalProjectData(){
+  const adapter=window.ErpSystemData;
+  if(adapter&&adapter.mode==='fallback'){
+    if(Array.isArray(DB.projects)) return;
+    throw new Error('The offline canonical project snapshot is unavailable.');
+  }
+  const pages=await Promise.all([
+    listPage('project/projects'),
+    listPage('sales/customers'),
+  ]);
+  const [projects,customers]=pages.map(p=>p.data);
+  const customerById=new Map(customers.map(c=>[c.id,c]));
+  /* Refresh DB.customers to the full real shape (incl. id) — mirrors
+     screens-crm.js's own prepare function, since DB.customers otherwise
+     reflects whichever screen's boot payload last wrote it (the generic
+     dashboard payload has no id at all). New Project's customer picker
+     needs a real id to link project.customer_id. */
+  DB.customers=customers.map(row=>({
+    id:row.id, code:row.code, name:row.name, terms:'—', limit:0, balance:0, overdue:0, status:'Active',
+  }));
+  DB.projects=projects.map(row=>({
+    id:row.id,
+    no:row.projectNo,
+    name:row.name,
+    customerId:row.customerId,
+    client:row.customerId!=null?(customerById.get(row.customerId)?.name||('Customer #'+row.customerId)):null,
+    pm:row.managerName,
+    status:row.status,
+    start:projectDateValue(row.startDate),
+    due:row.dueDate?projectDateValue(row.dueDate):null,
+    contract:projectNumber(row.contractValue),
+    billed:projectNumber(row.billedToDate),
+  }));
+  DB.projectReadMeta={ truncated:pages.some(p=>Boolean(p.nextCursor)) };
+}
+
+function nextProjectNo(projects){
+  let max=0;
+  (projects||[]).forEach(p=>{ const m=/(\d+)\s*$/.exec(p.no||''); if(m&&+m[1]>max) max=+m[1]; });
+  return 'PRJ-'+new Date().getFullYear()+'-'+String(max+1).padStart(3,'0');
 }
 
 /* ---------------- PROJECT PORTFOLIO (listing — module landing) ---------------- */
-SCREENS['project-pl'] = function(root){
+SCREENS['project-pl'] = async function(root){
+  await prepareCanonicalProjectData();
+  const s=projectCopy();
   let filter='all';
-  const chips=[['all',t('common.all'),null],['customer',ts('Customer'),'accent'],['internal',ts('Internal'),'teal'],['risk',ts('At risk'),'warn'],['done',ts('Completed'),'ok']];
+  const chips=[['all',t('common.all'),null],['customer',ts('Customer'),'accent'],['internal',ts('Internal'),'teal'],['on_hold',ts('On hold'),'warn'],['completed',ts('Completed'),'ok']];
   function rows(){
     return DB.projects.filter(p=>{
       if(filter==='all') return true;
-      if(filter==='customer') return p.type==='Customer';
-      if(filter==='internal') return p.type==='Internal';
-      if(filter==='risk') return p.status==='At risk'||p.status==='Over budget';
-      if(filter==='done') return p.status==='Completed';
+      if(filter==='customer') return p.client!=null;
+      if(filter==='internal') return p.client==null;
+      if(filter==='on_hold') return p.status==='on_hold';
+      if(filter==='completed') return p.status==='completed';
       return true;
     });
   }
   function headroomCell(p){
-    const hr=p.contract-p.cost, pctv=p.contract?Math.round(hr/p.contract*100):0;
+    const hr=p.contract-p.billed;
     const cls=hr<0?'neg':'pos';
-    return `<b class="tnum delta ${cls}">${hr<0?'−':''}${money0(Math.abs(hr))}</b> <small style="color:var(--muted)">${pctv}%</small>`;
+    return `<b class="tnum delta ${cls}">${hr<0?'−':''}${money0(Math.abs(hr))}</b>`;
   }
   function table(){
     return buildTable({
-      checkable:true, rowId:p=>p.no,
+      rowId:p=>p.id,
       columns:[
-        {label:t('prj.col.project'),render:p=>`<div class="cellsub"><b class="docnum">${esc(p.no)}</b><small>${esc(p.name)} · ${esc(p.client)}</small></div>`},
-        {label:t('qc.col.type'),align:'l',render:p=>cap(ts(p.type),p.type==='Customer'?'accent':'teal')},
+        {label:t('prj.col.project'),render:p=>`<div class="cellsub"><b class="docnum">${esc(p.no)}</b><small>${esc(p.name)}${p.client?' · '+esc(p.client):''}</small></div>`},
+        {label:t('qc.col.type'),align:'l',render:p=>p.client?cap(ts('Customer'),'accent'):cap(ts('Internal'),'teal')},
         {label:t('prj.col.manager'),align:'l',render:p=>esc(p.pm)},
-        {label:t('common.progress'),align:'r',render:p=>pctBar(p.pct)},
         {label:t('prj.col.contract'),align:'r',render:p=>`<span class="tnum">${money0(p.contract)}</span>`},
-        {label:t('prj.col.cost'),align:'r',render:p=>`<span class="tnum">${money0(p.cost)}</span>`},
-        {label:t('prj.col.headroom'),align:'r',render:p=>headroomCell(p)},
-        {label:t('col.status'),align:'l',render:p=>cap(ts(p.status),projTone(p.status))},
-        {label:'',align:'c',render:p=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button><button data-tip="${esc(t('prj.timesheet'))}" data-act="ts">${ic('clock')}</button></span>`},
+        {label:s('colBilled'),align:'r',render:p=>`<span class="tnum">${money0(p.billed)}</span>`},
+        {label:t('prj.col.headroom'),align:'r',render:headroomCell},
+        {label:t('col.status'),align:'l',render:p=>projectStatusBadge(p.status)},
+        {label:'',align:'c',render:p=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
       ],
       rows:rows(),
     });
   }
-  const active=DB.projects.filter(p=>p.status!=='Completed');
-  const wipValue=active.reduce((s,p)=>s+p.contract,0);
-  const costToDate=DB.projects.reduce((s,p)=>s+p.cost,0);
-  const headroom=active.reduce((s,p)=>s+(p.contract-p.cost),0);
-  const atRisk=DB.projects.filter(p=>p.status==='At risk'||p.status==='Over budget').length;
+  const openProjects=DB.projects.filter(p=>p.status==='open');
+  const contractTotal=openProjects.reduce((sum,p)=>sum+p.contract,0);
+  const billedTotal=DB.projects.reduce((sum,p)=>sum+p.billed,0);
+  const headroomTotal=openProjects.reduce((sum,p)=>sum+(p.contract-p.billed),0);
+  const overBilled=DB.projects.filter(p=>p.billed>p.contract);
 
   root.innerHTML=`<div class="content full"><section class="master">
     <div class="pagehead">
       ${crumbs([DB.company.name,t('nav.project'),t('prj.crumb')])}
       <div class="h1row"><h1>${esc(t('nav.project'))}</h1><span class="countchip" id="prjCount"></span>
         <div class="headright">
-          <div class="kfig"><small>${esc(t('prj.kpi.acv'))}</small><b class="tnum">${money0(wipValue)}</b></div>
-          <div class="kfig"><small>${esc(t('prj.col.cost'))}</small><b class="tnum">${money0(costToDate)}</b></div>
-          <div class="kfig"><small>${esc(t('prj.col.headroom'))}</small><b class="tnum">${money0(headroom)}</b></div>
+          <div class="kfig"><small>${esc(t('prj.kpi.acv'))}</small><b class="tnum">${money0(contractTotal)}</b></div>
+          <div class="kfig"><small>${esc(s('colBilled'))}</small><b class="tnum">${money0(billedTotal)}</b></div>
+          <div class="kfig"><small>${esc(t('prj.col.headroom'))}</small><b class="tnum">${money0(headroomTotal)}</b></div>
         </div></div>
     </div>
-    <div class="alert warn"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="grow"><b>${esc(t('prj.alert').replaceAll('{n}',atRisk))}</b> ${esc(t('prj.alert2'))}</span>
-      ${btn(t('prj.openmes'),{icon:'ext',cls:'soft',attrs:'onclick="toast(\'MES ↔ ERP Integration — drill-down not in this build\',\'info\')"'})}</div>
+    ${overBilled.length?`<div class="alert warn"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span class="grow"><b>${esc(s('overBilledAlert').replace('{n}',overBilled.length))}</b></span></div>`:''}
     <div class="toolbar">
       <div class="filterchips" id="prjChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${c[2]?`<span class="dot" style="background:var(--${c[2]})"></span>`:''}${esc(c[1])}</button>`).join('')}</div>
       <div class="grow"></div>
       <button class="viewsel" data-tip="${esc(t('prj.timesheettip'))}" onclick="navigate('timesheet')">${ic('clock')}${esc(t('prj.timesheet'))}</button>
       ${btn(t('common.export'),{icon:'download',cls:'soft'})}
-      ${btn(t('prj.new'),{icon:'plus',cls:'primary',attrs:'onclick="toast(\'New project — setup wizard not in this build\',\'info\')"'})}
+      ${btn(t('prj.new'),{icon:'plus',cls:'primary',attrs:'data-new="1"'})}
     </div>
     <div class="tablewrap" id="prjTable">${table()}</div>
-    <div id="prjBulk"></div>
   </section></div>`;
   const wrap=$('#prjTable');
   $('#prjCount').textContent=rows().length+' '+t('prj.projects');
+  function openProject(id){ navigate('project-detail',{projectId:Number(id)}); }
   function rewire(){
-    wireTable(wrap,{
-      onRow:(id)=>{ id==='PRJ-26-014'?navigate('project-detail'):toast('Opening '+id,'info'); },
-      onSelectionChange:(n)=>{ $('#prjBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('prj.billms'),{icon:'receipt',cls:'soft'})}${btn(t('prj.exportpl'),{icon:'download',cls:'soft'})}${btn(t('prj.archive'),{icon:'bin',cls:'danger'})}</div>`:''; }
-    });
-    wrap.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const no=b.closest('.dt-r').dataset.row;no==='PRJ-26-014'?navigate('project-detail'):toast('Opening '+no,'info');}));
-    wrap.querySelectorAll('[data-act="ts"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();navigate('timesheet');}));
+    wireTable(wrap,{ onRow:openProject });
+    wrap.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openProject(b.closest('.dt-r').dataset.row);}));
   }
   rewire();
   $('#prjChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
     $('#prjChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f;
-    wrap.innerHTML=table(); $('#prjCount').textContent=rows().length+' '+t('prj.projects'); $('#prjBulk').innerHTML=''; rewire();
+    wrap.innerHTML=table(); $('#prjCount').textContent=rows().length+' '+t('prj.projects'); rewire();
   }));
+  root.querySelector('[data-new]').addEventListener('click',()=>projectForm(s));
 };
 
-/* ---------------- PROJECT P&L (document) ---------------- */
-SCREENS['project-detail'] = function(root){
-  const d=DB.proj0014;
-  const tB=d.costs.reduce((s,c)=>s+c.budget,0);
-  const tA=d.costs.reduce((s,c)=>s+c.actual,0);
-  const tC=d.costs.reduce((s,c)=>s+c.committed,0);
-  const costRows=d.costs.map((c,i)=>{
-    const rem=c.budget-c.actual-c.committed, used=Math.round((c.actual+c.committed)/c.budget*100);
-    return `<tr><td class="lineno">${i+1}</td>
-      <td class="l li-name"><b>${esc(c.cat)}</b></td>
-      <td class="tnum">${money0(c.budget)}</td>
-      <td class="tnum">${money0(c.actual)}</td>
-      <td class="tnum" style="color:var(--muted)">${c.committed?money0(c.committed):'—'}</td>
-      <td class="tnum" style="color:${rem<0?'var(--danger)':'var(--fg)'}"><b>${rem<0?'−':''}${money0(Math.abs(rem))}</b></td>
-      <td class="l"><span class="minibar"><i class="${used>100?'':used>85?'warn':'ok'}" style="width:${Math.min(100,used)}%;${used>100?'background:var(--danger)':''}"></i></span> ${used}%</td></tr>`;
-  }).join('');
-
-  const msTone={Billed:'ok','In Progress':'info',Planned:'neutral'};
-  const billed=d.milestones.filter(m=>m.status==='Billed').reduce((s,m)=>s+m.amount,0);
-  const msRows=d.milestones.map((m,i)=>`<tr>
-      <td class="lineno">${i+1}</td>
-      <td class="l li-name"><b>${esc(m.name)}</b><small>target ${esc(m.date)}</small></td>
-      <td class="tnum">${money0(m.amount)}</td>
-      <td class="l">${cap(m.status,msTone[m.status]||'neutral')}</td></tr>`).join('');
-
-  const team=d.team.map(p=>`<div class="oprow">
-      <span class="kc-av" style="background:${p.clr};width:30px;height:30px;font-size:11px">${esc(p.av)}</span>
-      <div class="opmain"><b>${esc(p.name)}</b><small>${esc(p.role)} · ${p.alloc}% · ${money(p.rate)}/h</small></div>
-    </div>`).join('');
-
-  const fMargin=d.contract-d.forecastCost, fMpct=(fMargin/d.contract*100).toFixed(1);
-  const spentPct=Math.round((tA+tC)/d.contract*100);
-
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="docwrap"><div class="docpage">
-      ${crumbs([DB.company.name,'Projects','Portfolio',{cur:d.no}])}
-      <div class="dochead">
-        <div class="dh-row1">
-          <div>
-            <div class="dt">${ic('project')}${esc(d.name)} <span class="dnum">${esc(d.no)}</span></div>
-            <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.client)} · PM ${esc(d.pm)} · ${esc(d.start)} → ${esc(d.due)}</div>
-          </div>
-          <div class="dactions">${cap('On track',projTone('On track'))}${btn('Customer 360',{icon:'user',cls:'soft',attrs:'onclick="navigate(\'crm-customer\')"'})}</div>
-        </div>
-        <div class="stepper">
-          <div class="step done"><span class="sdot">${ic('check')}</span>Initiation</div><span class="stepline done"></span>
-          <div class="step done"><span class="sdot">${ic('check')}</span>Planning</div><span class="stepline done"></span>
-          <div class="step current"><span class="sdot">${ic('clock')}</span>Execution</div><span class="stepline"></span>
-          <div class="step"><span class="sdot"></span>Close-out</div>
-        </div>
-        <div class="docmeta">
-          <div class="dm"><small>Contract value</small><b>${money0(d.contract)}</b></div>
-          <div class="dm"><small>Cost to date</small><b>${money0(tA)}</b></div>
-          <div class="dm"><small>Billed</small><b>${money0(billed)}</b></div>
-          <div class="dm"><small>% complete</small><b>${d.pct}%</b></div>
-          <div class="dm"><small>Sponsor</small><b>${esc(d.sponsor)}</b></div>
-        </div>
-      </div>
-
-      <div class="appr-layout">
-        <div class="docmain">
-          <div class="panel">
-            <div class="panel-h"><h3>Cost breakdown</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${d.costs.length} categories</span></div>
-            <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Category</th><th>Budget</th><th>Actual</th><th>Committed</th><th>Remaining</th><th class="l">Used</th></tr></thead>
-            <tbody>${costRows}</tbody>
-            <tfoot><tr><td></td><td class="l" style="font-weight:600">Total</td><td class="tnum"><b>${money0(tB)}</b></td><td class="tnum"><b>${money0(tA)}</b></td><td class="tnum">${money0(tC)}</td><td class="tnum"><b>${money0(tB-tA-tC)}</b></td><td class="l">${Math.round((tA+tC)/tB*100)}%</td></tr></tfoot>
-            </table>
-          </div>
-          <div class="panel">
-            <div class="panel-h"><h3>Billing milestones</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${money0(billed)} of ${money0(d.contract)} billed</span></div>
-            <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Milestone</th><th>Amount</th><th class="l">Status</th></tr></thead><tbody>${msRows}</tbody></table>
-          </div>
-          <div class="panel">
-            <div class="panel-h"><h3>Activity</h3></div>
-            <div class="panel-body">${auditTrail(d.activities)}</div>
-          </div>
-        </div>
-
-        <aside>
-          <div class="sumcard" style="margin-bottom:14px">
-            <div class="sectitle" style="margin-top:0">Profitability</div>
-            <div class="sumrow"><span class="sk2">Contract value</span><span class="sv tnum">${money0(d.contract)}</span></div>
-            <div class="sumrow"><span class="sk2">Cost to date</span><span class="sv tnum">${money0(tA)}</span></div>
-            <div class="sumrow"><span class="sk2">Committed</span><span class="sv tnum">${money0(tC)}</span></div>
-            <div class="sumrow"><span class="sk2">Forecast cost (EAC)</span><span class="sv tnum">${money0(d.forecastCost)}</span></div>
-            <div class="sumrow total"><span class="sk2">Forecast margin</span><span class="sv tnum" style="color:var(--ok)">${money0(fMargin)}</span></div>
-            <div class="indicator ${fMpct<10?'warn':'ok'}" style="margin-top:12px">
-              <div class="ind-top">${ic('percent')}<span>Margin</span><span class="ind-r">${fMpct}%</span></div>
-              <div class="track"><i style="width:${Math.min(100,fMpct*4)}%"></i></div>
-              <small>${money0(fMargin)} forecast on ${money0(d.contract)} contract.</small>
-            </div>
-          </div>
-          <div class="sumcard" style="margin-bottom:14px">
-            <div class="sectitle" style="margin-top:0">Schedule &amp; earned value</div>
-            <div class="indicator ${spentPct>d.pct+8?'warn':'ok'}">
-              <div class="ind-top">${ic('chart')}<span>${d.pct}% done · ${spentPct}% spent</span><span class="ind-r">${spentPct<=d.pct?'On budget':'Watch'}</span></div>
-              <div class="track"><i style="width:${d.pct}%"></i></div>
-              <small>Cost &amp; commitment is ${spentPct}% of budget against ${d.pct}% physical progress.</small>
-            </div>
-            <div class="field"><span class="k">Start</span><span class="v">${esc(d.start)}</span></div>
-            <div class="field"><span class="k">Target finish</span><span class="v">${esc(d.due)}</span></div>
-          </div>
-          <div class="sumcard" style="margin-bottom:14px">
-            <div class="sectitle" style="margin-top:0">Team</div>
-            <div style="padding:2px 0">${team}</div>
-          </div>
-          <div class="sumcard">
-            <div class="sectitle" style="margin-top:0">Related</div>
-            ${relatedDocs([
-              {no:'OPP-26-0091',label:'Source opportunity',meta:'Meridian Robotics',status:'Won'},
-              {no:'CUST-0007',label:'Meridian Robotics',meta:'Customer 360',status:'Active'},
-              {no:'SO-26-0418',label:'Linked sales order',meta:'9 drive units',status:'Pending Approval'},
-            ])}
-          </div>
-        </aside>
-      </div>
-    </div></div>
-
-    <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
-      <div style="font-size:12.5px;color:var(--muted)" class="hideonsmall">Next milestone <b style="color:var(--fg)">Install &amp; commissioning</b> · ${money0(145800)} billable on completion.</div>
-      <div class="grow"></div>
-      ${btn('Log time',{icon:'clock',cls:'soft',attrs:'onclick="navigate(\'timesheet\')"'})}
-      ${btn('Raise change order',{icon:'edit',cls:'soft',attrs:'onclick="toast(\'Change order draft started\',\'ok\')"'})}
-      ${btn('Bill milestone',{icon:'receipt',cls:'primary',sm:false,attrs:'data-act="bill"'})}
-    </div>
-  </section></div>`;
-
-  root.querySelector('[data-act="bill"]').addEventListener('click',()=>{
-    appModal({
-      icon: 'receipt',
-      title: `Bill milestone — ${d.no}`,
-      body: `<p style="color:var(--muted);font-size:13.5px">Raise a progress invoice for <b>Install &amp; commissioning</b> (${money0(145800)}). The milestone is 60% complete — bill the full amount on sign-off or a partial claim now.</p>
-        <div class="fld"><span>Amount to bill</span><input value="${money(145800)}" class="tnum"></div>`,
-      actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn('Create invoice',{icon:'check',cls:'primary',attrs:'onclick="closeModal();toast(\'Progress invoice INV-26-0402 created\',\'ok\')"'})}`,
-    });
+function projectForm(s){
+  const projectNo=nextProjectNo(DB.projects);
+  const today=new Date().toISOString().slice(0,10);
+  const customers=(DB.customers||[]).slice();
+  appModal({
+    icon:'plus',
+    title:t('prj.new'),
+    body:`<div class="set-grid">
+      <div class="fld"><span>${esc(s('fieldName'))} <span class="req">*</span></span><input id="pfName" placeholder="${esc(s('namePlaceholder'))}"></div>
+      <div class="fld"><span>${esc(s('fieldProjectNo'))}</span><input value="${esc(projectNo)}" readonly><span class="locked">${ic('lock')} ${esc(s('systemNumbered'))}</span></div>
+      <div class="fld"><span>${esc(s('fieldCustomer'))}</span><select id="pfCustomer"><option value="">${esc(s('internalOption'))}</option>${customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="fld"><span>${esc(s('fieldManager'))} <span class="req">*</span></span><input id="pfManager" placeholder="${esc(s('managerPlaceholder'))}"></div>
+      <div class="fld"><span>${esc(s('fieldStatus'))}</span><select id="pfStatus"><option value="open">${esc(ts('Open'))}</option><option value="on_hold">${esc(ts('On hold'))}</option><option value="completed">${esc(ts('Completed'))}</option></select></div>
+      <div class="fld"><span>${esc(s('fieldStartDate'))}</span><input id="pfStart" type="date" value="${today}"></div>
+      <div class="fld"><span>${esc(s('fieldDueDate'))} (${esc(s('optional'))})</span><input id="pfDue" type="date"></div>
+      <div class="fld"><span>${esc(s('fieldContractValue'))}</span><input id="pfContract" type="number" min="0" step="0.01" class="tnum" value="0"></div>
+    </div>`,
+    actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('createProject'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`,
   });
+  const saveBtn=$('#modalEl').querySelector('[data-save]');
+  saveBtn.addEventListener('click',async()=>{
+    const name=$('#pfName').value.trim();
+    if(!requireField(name, s('nameRequired'), '#pfName')) return;
+    const managerName=$('#pfManager').value.trim();
+    if(!requireField(managerName, s('managerRequired'), '#pfManager')) return;
+    const customerId=$('#pfCustomer').value?Number($('#pfCustomer').value):null;
+    const payload={
+      projectNo, name, customerId, managerName,
+      status:$('#pfStatus').value, startDate:$('#pfStart').value,
+      dueDate:$('#pfDue').value||null, contractValue:Math.max(0,+$('#pfContract').value||0),
+    };
+    saveBtn.disabled=true;
+    try{
+      await window.ErpSystemData.create('project/projects',payload);
+      closeModal();
+      toast(s('projectCreated').replace('{no}',projectNo),'ok');
+      navigate('project-pl');
+    }catch(error){
+      saveBtn.disabled=false;
+      toast(error&&error.message?error.message:s('projectSaveError'),'danger');
+    }
+  });
+}
+
+async function prepareProjectDetail(projectId){
+  const pages=await Promise.all([
+    listPage('project/projects'),
+    listPage('sales/customers'),
+    listPage('project/progress-claims'),
+  ]);
+  const [projects,customers,claims]=pages.map(p=>p.data);
+  const project=projectId?projects.find(row=>row.id===projectId):projects[0];
+  if(!project) throw new Error('No project found for the active company.');
+  const customer=project.customerId!=null?customers.find(c=>c.id===project.customerId):null;
+  const projectClaims=claims.filter(c=>c.projectId===project.id)
+    .sort((a,b)=>String(a.claimDate).localeCompare(String(b.claimDate))||a.id-b.id);
+  /* doc_no is unique per tenant, not per project — nextClaimNo() must scan
+     every project's claims, not just this project's, or two projects' first
+     claims would both try PC-<year>-0001 and the second insert would fail
+     on the real unique-index constraint. */
+  return {project,customer,claims:projectClaims,allClaims:claims};
+}
+
+function nextClaimNo(claims){
+  let max=0;
+  (claims||[]).forEach(c=>{ const m=/(\d+)\s*$/.exec(c.docNo||''); if(m&&+m[1]>max) max=+m[1]; });
+  return 'PC-'+new Date().getFullYear()+'-'+String(max+1).padStart(4,'0');
+}
+
+/* ---------------- PROJECT DETAIL (register + progress claims) ---------------- */
+SCREENS['project-detail'] = async function(root, params){
+  const s=projectCopy();
+  const requestedId=params&&params.projectId?Number(params.projectId):null;
+  const detail=await prepareProjectDetail(requestedId);
+  const {project:p,customer}=detail;
+  let claims=detail.claims;
+  let allClaims=detail.allClaims;
+
+  function renderClaimsRows(){
+    if(!claims.length) return `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">${esc(s('claimsEmpty'))}</td></tr>`;
+    return claims.map((c,i)=>`<tr>
+      <td class="lineno">${i+1}</td>
+      <td class="l li-name"><b>${esc(c.docNo)}</b><small>${esc(projectDateValue(c.claimDate))}</small></td>
+      <td class="l">${esc(c.description)}</td>
+      <td class="tnum">${money0(projectNumber(c.netAmount))}</td>
+      <td class="tnum" style="color:var(--muted)">${money0(projectNumber(c.taxAmount))}</td>
+      <td class="tnum"><b>${money0(projectNumber(c.totalAmount))}</b></td>
+      <td class="l">${statusBadge(c.status==='posted'?'Posted':'Draft')}${c.status==='draft'?` <button class="btn soft sm" data-post="${c.id}">${esc(s('postClaim'))}</button>`:''}</td>
+    </tr>`).join('');
+  }
+
+  const canBill=project_canBill(p);
+  function project_canBill(project){ return project.customerId!=null && project.status!=='completed'; }
+
+  const contract=projectNumber(p.contractValue), billed=projectNumber(p.billedToDate), headroom=contract-billed;
+  const overBilled=billed>contract;
+
+  const activities=[];
+  activities.push({kind:'add',when:p.createdAt?projectDateTimeValue(p.createdAt):'',what:s('activityProjectCreated'),who:esc(p.managerName)});
+  claims.forEach(c=>{
+    activities.push({kind:'add',when:c.createdAt?projectDateTimeValue(c.createdAt):'',
+      what:s('activityClaimCreated').replace('{no}',esc(c.docNo)).replace('{amount}',money0(projectNumber(c.totalAmount))),who:esc(p.managerName)});
+    if(c.status==='posted'){
+      activities.push({kind:'current',when:c.updatedAt?projectDateTimeValue(c.updatedAt):'',
+        what:s('activityClaimPosted').replace('{no}',esc(c.docNo)).replace('{amount}',money0(projectNumber(c.totalAmount))),who:esc(p.managerName)});
+    }
+  });
+  activities.reverse();
+
+  function render(){
+    root.innerHTML=`<div class="content full"><section class="master">
+      <div class="docwrap"><div class="docpage">
+        ${crumbs([DB.company.name,{label:t('nav.project'),route:'project-pl'},t('prj.crumb'),{cur:p.projectNo}])}
+        <div class="dochead">
+          <div class="dh-row1">
+            <div>
+              <div class="dt">${ic('project')}${esc(p.name)} <span class="dnum">${esc(p.projectNo)}</span></div>
+              <div style="color:var(--muted);font-size:13px;margin-top:4px">${customer?esc(customer.name):esc(s('internalProject'))} · ${esc(p.managerName)} · ${esc(projectDateValue(p.startDate))}${p.dueDate?' → '+esc(projectDateValue(p.dueDate)):''}</div>
+            </div>
+            <div class="dactions">${projectStatusBadge(p.status)}${customer?btn(s('customer360'),{icon:'user',cls:'soft',attrs:'onclick="navigate(\'crm-customer\')"'}):''}</div>
+          </div>
+          <div class="docmeta">
+            <div class="dm"><small>${esc(s('contractValue'))}</small><b>${money0(contract)}</b></div>
+            <div class="dm"><small>${esc(s('colBilled'))}</small><b>${money0(billed)}</b></div>
+            <div class="dm"><small>${esc(s('headroom'))}</small><b style="color:${headroom<0?'var(--danger)':'var(--fg)'}">${headroom<0?'−':''}${money0(Math.abs(headroom))}</b></div>
+            <div class="dm"><small>${esc(t('col.status'))}</small><b>${esc(ts(PROJECT_STATUS_LABEL[p.status]||p.status))}</b></div>
+          </div>
+        </div>
+
+        <div class="appr-layout">
+          <div class="docmain">
+            <div class="panel">
+              <div class="panel-h"><h3>${esc(s('claimsPanel'))}</h3>
+                <span style="margin-left:auto">${canBill?btn(s('newClaim'),{icon:'plus',cls:'soft',attrs:'data-new-claim="1"'}):''}</span>
+              </div>
+              ${!canBill?`<div style="padding:0 16px 12px;font-size:12.5px;color:var(--muted)">${esc(p.status==='completed'?s('completedNote'):s('internalNote'))}</div>`:''}
+              <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('colClaimNo'))}</th><th class="l">${esc(s('colDescription'))}</th><th>${esc(s('colNet'))}</th><th>${esc(s('colTax'))}</th><th>${esc(s('colTotal'))}</th><th class="l">${esc(t('col.status'))}</th></tr></thead>
+              <tbody>${renderClaimsRows()}</tbody></table>
+            </div>
+            <div class="panel">
+              <div class="panel-h"><h3>${esc(t('doc.activity'))}</h3></div>
+              <div class="panel-body">${auditTrail(activities)}</div>
+            </div>
+          </div>
+
+          <aside>
+            <div class="sumcard" style="margin-bottom:14px">
+              <div class="sectitle" style="margin-top:0">${esc(s('billingSummary'))}</div>
+              <div class="sumrow"><span class="sk2">${esc(s('contractValue'))}</span><span class="sv tnum">${money0(contract)}</span></div>
+              <div class="sumrow"><span class="sk2">${esc(s('colBilled'))}</span><span class="sv tnum">${money0(billed)}</span></div>
+              <div class="sumrow total"><span class="sk2">${esc(s('headroom'))}</span><span class="sv tnum" style="color:${headroom<0?'var(--danger)':'var(--ok)'}">${headroom<0?'−':''}${money0(Math.abs(headroom))}</span></div>
+              <div class="indicator ${overBilled?'danger':'ok'}" style="margin-top:12px">
+                <div class="ind-top">${ic('percent')}<span>${esc(overBilled?s('overBilledIndicator'):s('onTrackIndicator'))}</span><span class="ind-r">${contract?Math.round(billed/contract*100):0}%</span></div>
+                <div class="track"><i style="width:${contract?Math.min(100,Math.round(billed/contract*100)):0}%"></i></div>
+              </div>
+            </div>
+            <div class="sumcard">
+              <div class="sectitle" style="margin-top:0">Related</div>
+              ${customer
+                ?relatedDocs([{no:customer.code||('CUST-'+customer.id),label:s('linkedCustomer'),meta:customer.name,status:'Active'}])
+                :`<div style="color:var(--muted);font-size:13px">${esc(s('internalProject'))}</div>`}
+            </div>
+          </aside>
+        </div>
+      </div></div>
+
+      <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
+        <div class="grow"></div>
+        ${btn(t('prj.timesheet'),{icon:'clock',cls:'soft',attrs:'onclick="navigate(\'timesheet\')"'})}
+      </div>
+    </section></div>`;
+    wire();
+  }
+
+  function wire(){
+    root.querySelectorAll('[data-post]').forEach(b=>b.addEventListener('click',async()=>{
+      b.disabled=true;
+      const claimId=Number(b.dataset.post);
+      const claim=claims.find(c=>c.id===claimId);
+      try{
+        await window.ErpSystemData.action('project/progress-claims',claimId,'post',{},`post-progress-claim-${claimId}`);
+        toast(s('claimPosted').replace('{no}',claim.docNo).replace('{amount}',money0(projectNumber(claim.totalAmount))),'ok');
+        const refreshed=await prepareProjectDetail(p.id);
+        claims=refreshed.claims;
+        allClaims=refreshed.allClaims;
+        Object.assign(p,refreshed.project);
+        navigate('project-detail',{projectId:p.id});
+      }catch(error){
+        toast(error&&error.message?error.message:s('claimPostError'),'danger');
+        b.disabled=false;
+      }
+    }));
+    const newClaimBtn=root.querySelector('[data-new-claim]');
+    newClaimBtn&&newClaimBtn.addEventListener('click',()=>progressClaimForm(s,p,allClaims,async()=>{
+      const refreshed=await prepareProjectDetail(p.id);
+      claims=refreshed.claims;
+      allClaims=refreshed.allClaims;
+      Object.assign(p,refreshed.project);
+      navigate('project-detail',{projectId:p.id});
+    }));
+  }
+
+  render();
 };
+
+function progressClaimForm(s,project,allClaims,onSaved){
+  const docNo=nextClaimNo(allClaims);
+  const today=new Date().toISOString().slice(0,10);
+  appModal({
+    icon:'receipt',
+    title:s('newClaim')+' — '+project.projectNo,
+    body:`<div class="set-grid">
+      <div class="fld"><span>${esc(s('fieldClaimNo'))}</span><input value="${esc(docNo)}" readonly><span class="locked">${ic('lock')} ${esc(s('systemNumbered'))}</span></div>
+      <div class="fld"><span>${esc(s('fieldClaimDate'))}</span><input id="cfDate" type="date" value="${today}"></div>
+      <div class="fld" style="grid-column:1/-1"><span>${esc(s('fieldDescriptionField'))} <span class="req">*</span></span><input id="cfDesc" placeholder="${esc(s('descriptionPlaceholder'))}"></div>
+      <div class="fld"><span>${esc(s('fieldNetAmount'))}</span><input id="cfNet" type="number" min="0" step="0.01" class="tnum" value="0"></div>
+    </div>`,
+    actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('newClaim'),{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`,
+  });
+  const saveBtn=$('#modalEl').querySelector('[data-save]');
+  saveBtn.addEventListener('click',async()=>{
+    const description=$('#cfDesc').value.trim();
+    if(!requireField(description, s('descriptionRequired'), '#cfDesc')) return;
+    const payload={
+      docNo, projectId:project.id, claimDate:$('#cfDate').value, description,
+      netAmount:Math.max(0,+$('#cfNet').value||0),
+      taxCode:(DB.company&&DB.company.taxRegime==='SST')?'SV':'SR',
+    };
+    saveBtn.disabled=true;
+    try{
+      await window.ErpSystemData.create('project/progress-claims',payload);
+      closeModal();
+      toast(s('claimCreated').replace('{no}',docNo),'ok');
+      await onSaved();
+    }catch(error){
+      saveBtn.disabled=false;
+      toast(error&&error.message?error.message:s('claimSaveError'),'danger');
+    }
+  });
+}
 
 /* ---------------- TIMESHEET (weekly grid) ---------------- */
 SCREENS['timesheet'] = function(root){

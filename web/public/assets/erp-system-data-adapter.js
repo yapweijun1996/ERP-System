@@ -1317,6 +1317,8 @@
     'assets/depreciation-run-lines':'depreciation_run_line',
     'hr/employees':'employee',
     'hr/leave-requests':'leave_request',
+    'project/projects':'project',
+    'project/progress-claims':'progress_claim',
   };
   function normalizeResource(resource){
     return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
@@ -1657,6 +1659,22 @@
       await refresh();
       return {data:newLeaveRequest,meta:{}};
     }
+    if(key==='project/projects'){
+      var newProject = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createProjectWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newProject,meta:{}};
+    }
+    if(key==='project/progress-claims'){
+      var newProgressClaim = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createProgressClaimWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newProgressClaim,meta:{}};
+    }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
   async function update(resource){
@@ -1898,6 +1916,14 @@
       });
       await refresh();
       return {data:rejectedLeave,meta:{}};
+    }
+    if(key==='project/progress-claims'&&name==='post'){
+      var postedProgressClaim = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.postProgressClaimWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:postedProgressClaim,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

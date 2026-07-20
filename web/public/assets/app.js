@@ -422,6 +422,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'asset-register','asset-detail','depreciation',
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval',
+  'project-pl','project-detail',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -444,6 +445,7 @@ const API_SCREEN_ROUTES = new Set([
   'asset-register','asset-detail','depreciation',
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval',
+  'project-pl','project-detail',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',

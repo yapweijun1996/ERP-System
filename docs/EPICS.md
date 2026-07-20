@@ -611,7 +611,7 @@ Acceptance criteria:
       own demo data) — renamed to Farah Wong.
 - [x] All 4 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (54 → 58).
 
-## EPIC-021 — Project-lite: Register & Progress Claims
+## EPIC-021 — Project-lite: Register & Progress Claims ✅
 
 Second Phase 7 module opened after HR-lite. ROADMAP.md flagged Project as "likely the
 largest remaining module" and recommended sub-phasing (register → progress billing →
@@ -641,27 +641,42 @@ shape from EPIC-015.
 
 Acceptance criteria:
 
-- [ ] `project` (register: `project_no`, `name`, nullable `customer_id` FK — null means
+- [x] `project` (register: `project_no`, `name`, nullable `customer_id` FK — null means
       an Internal project — `manager_name`, `status` open/on_hold/completed, dates,
       `contract_value`, running `billed_to_date`) and `progress_claim` (billing document:
       `doc_no`, `project_id` FK, draft/posted status, `version`, tax breakdown mirroring
       `sales_debit_note`) tables added via a Drizzle migration, following `assets.ts`'s
       tenant/check-constraint conventions. Deliberately no `type` column — Customer vs.
       Internal is derived from `customer_id` presence rather than stored redundantly.
-- [ ] `src/modules/project/project.ts` (`createProjectWithin`/`createProject`) and
+- [x] `src/modules/project/project.ts` (`createProjectWithin`/`createProject`) and
       `src/modules/project/progressClaim.ts` (`createProgressClaimWithin`/
       `createProgressClaim`, `postProgressClaimWithin`/`postProgressClaim`) — posting
       rejects a project with no customer (can't bill an Internal project) and a project
       already `completed`. `project/projects` and `project/progress-claims` registered
       as generic `ResourceDefinition`s, gated on new `project.read`/`project.write`
       permissions.
-- [ ] Unit tests cover validation, tenant isolation, the no-customer/completed-project
+- [x] Unit tests cover validation, tenant isolation, the no-customer/completed-project
       posting guards, and the balanced GL legs (mirroring `debitNote.test.ts`'s shape).
-- [ ] `project-pl` (portfolio list — real contract/billed/headroom KPIs, a real
+- [x] `project-pl` (portfolio list — real contract/billed/headroom KPIs, a real
       over-billed alert instead of the mock's fabricated "at risk" judgment, a real
       "New Project" create modal) and `project-detail` (real single-project view: real
       progress-claims panel with inline create + row-level post, real activity feed
       synthesized from real row timestamps, real "Related" linking to the actual linked
       customer) read/write real data. Cost breakdown, milestones, and team panels are
       removed, not fabricated. `timesheet` is unchanged (stays mock).
-- [ ] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (58 → 60).
+- [x] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (58 → 60).
+
+(TASK-051, TASK-052, 2026-07-20.) Live verification surfaced two real bugs neither unit
+tests nor `audit:screens` caught: PGlite/Drizzle return `date`/`timestamp` columns as JS
+`Date` objects, so naive template-literal interpolation rendered
+`Wed Mar 04 2026 08:00:00 GMT+0800…` instead of a clean date (fixed with a normalizer
+mirroring `screens-fin2.js`'s existing `financeDateValue`); and the client-side progress-
+claim numbering was scoped to the current project's own claims rather than the tenant's
+full claim list, so two different projects' first claims both tried `doc_no`
+`PC-2026-0001` and the second create leaked a raw SQL unique-constraint error to the user
+(fixed by numbering off an unfiltered, tenant-wide claim list instead). Also found and
+fixed in passing: writing a Progress Claim's `netAmount > 0` check as
+`!net.isPositive()` doesn't actually reject zero, because decimal.js's `isPositive()`
+treats zero as positive (sign-bit only) — the same latent bug already existed in five
+other files (`debitNote.ts` among them); fixed locally with `net.lte(0)` and flagged the
+rest as a separate follow-up rather than scope-creeping this epic.
