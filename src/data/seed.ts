@@ -63,6 +63,7 @@ export async function seedDemo(db: DB): Promise<void> {
     'finance.read',
     'purchasing.read',
     'crm.read',
+    'manufacturing.read',
     'quality.read',
     'asset.read',
     'hr.read',

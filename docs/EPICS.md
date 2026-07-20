@@ -347,6 +347,13 @@ Acceptance criteria:
       updated so the service worker doesn't 404 trying to precache a deleted file.
 - [x] A fresh browser boot produces identical seeded data to before, and additionally
       now has all 8 `role_permission` rows that were previously silently missing.
+- [x] Follow-up (TASK-057, 2026-07-20): the same failure class recurred, single-source
+      or not — `seedDemo()`'s own Viewer grant list simply never gained `manufacturing.read`
+      when Manufacturing turned Canonical (2026-07-19), since nothing enforces that a new
+      Canonical module's read permission gets added to the demo Viewer persona's grants.
+      Fixed directly (Viewer now sees Manufacturing); no structural gap here to close since
+      there's only one seed to update, but worth noting as this epic's failure mode is not
+      fully closed by removing the duplicate copy alone.
 
 ## EPIC-015 — Fixed Assets Module
 
