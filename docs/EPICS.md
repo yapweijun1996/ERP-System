@@ -666,7 +666,69 @@ Acceptance criteria:
       removed, not fabricated. `timesheet` is unchanged (stays mock).
 - [x] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (58 → 60).
 
-(TASK-051, TASK-052, 2026-07-20.) Live verification surfaced two real bugs neither unit
+(TASK-051, TASK-052, 2026-07-20.)
+
+## EPIC-022 — Service-lite: Tickets & Contracts
+
+Third Phase 7 module. `screens-service.js` has no schema: `service-ticket` is a real
+list rendering mock rows, but `service-order` always shows the same hardcoded ticket
+(`SVC-26-0042`, the same bug class already fixed for `asset-detail`/`employee`/
+`project-detail`), and `service-contracts` has no detail or create flow at all.
+
+Scoped like every prior "lite" conversion — the register/lifecycle core goes real, a
+materially separate depth feature stays mock:
+
+- **Real**: `service_contract` (a customer's warranty/maintenance agreement register —
+  plan, SLA response hours, assets covered, dates, annual value) and `service_ticket`
+  (the ticket/repair record — customer, free-text asset/serial, issue, priority,
+  coverage, optional linked contract, technician, status). Ticket lifecycle simplifies
+  the mock's 5 statuses (Open/In Progress/Scheduled/Resolved/Closed) to 3 real ones
+  (`open`/`in_progress`/`closed`) — the mock's own `service-ticket` filter chips already
+  bucket Resolved+Closed together as one "done" state, and its own `service-order`
+  footer button is already labeled "Resolve & close" as one combined action, so this
+  isn't a new simplification, just making explicit what the mock's own UI already
+  implied. "Scheduled" (a future-dated planned visit, a distinct concept from an active
+  issue's status) is dropped, not fabricated forward.
+- **Stays mock**: spare-parts consumption and labour costing (`service-order`'s parts
+  table and cost panel) — these need a new stock-consumption transaction against
+  Inventory, a materially separate feature from the ticket/contract register itself,
+  the same reasoning that kept Fixed Assets' Transfer/Dispose and Project's cost
+  tracking out of their own "lite" passes.
+
+Acceptance criteria:
+
+- [ ] `service_contract` (`contract_no`, `customer_id` FK not null — every contract has
+      a customer, no Internal-project-style nullable case — `plan` Gold/Silver/Bronze,
+      nullable `sla_response_hours`, `assets_covered`, dates, `annual_value`) and
+      `service_ticket` (`ticket_no`, `customer_id` FK not null, nullable `contract_id`
+      FK, free-text `asset_description`/`serial_no`, `issue`, nullable `diagnosis`,
+      `priority`, `coverage` in_warranty/contract/out_of_warranty, `status`
+      open/in_progress/closed, nullable `technician_name`, `opened_at`, nullable
+      `resolved_at`) tables added via a Drizzle migration, following `project.ts`'s
+      conventions. Contract status (Active/Expiring/Expired) is computed from
+      `expiry_date` vs. today, not stored — mirrors Project's over-billed alert and HR's
+      `hrIsOnLeaveToday` computed-not-stored precedent.
+- [ ] `src/modules/service/serviceContract.ts` (`createServiceContractWithin`/
+      `createServiceContract`) and `src/modules/service/serviceTicket.ts`
+      (`createServiceTicketWithin`/`createServiceTicket`, `assignServiceTicketWithin`/
+      `assignServiceTicket` — `open` → `in_progress`, sets `technician_name` —
+      `resolveServiceTicketWithin`/`resolveServiceTicket` — any non-`closed` status →
+      `closed`, requires non-empty `diagnosis`, sets `resolved_at`). `service/contracts`
+      and `service/tickets` registered as generic `ResourceDefinition`s, gated on new
+      `service.read`/`service.write` permissions (the client already referenced
+      `service.read` in `app.js`'s `MODULE_READ_PERMISSION` map with nothing backing it
+      server-side, the same gap HR-lite found for `hr.read`).
+- [ ] Unit tests cover validation, tenant isolation, the assign/resolve state-machine
+      guards (including rejecting resolve on an already-closed ticket and rejecting a
+      reason-less resolve), mirroring `leaveRequest.test.ts`'s shape.
+- [ ] `service-ticket` (list — real open/overdue KPIs replacing the mock's hardcoded
+      "96%" SLA figure, real status filter chips, a real "New ticket" create modal),
+      `service-order` (real per-ticket detail — not always the same hardcoded record —
+      with real Assign and Resolve & close actions, a real SLA due-time computed from a
+      linked contract's response hours where one exists) and `service-contracts` (real
+      list with computed Active/Expiring/Expired status and a real "New contract" create
+      modal) read/write real data. Parts/labour cost panels are removed, not fabricated.
+- [ ] All 3 routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (60 → 63). Live verification surfaced two real bugs neither unit
 tests nor `audit:screens` caught: PGlite/Drizzle return `date`/`timestamp` columns as JS
 `Date` objects, so naive template-literal interpolation rendered
 `Wed Mar 04 2026 08:00:00 GMT+0800…` instead of a clean date (fixed with a normalizer
