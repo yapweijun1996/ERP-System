@@ -27,6 +27,8 @@ export const PERMISSIONS = {
   hrWrite: 'hr.write',
   projectRead: 'project.read',
   projectWrite: 'project.write',
+  serviceRead: 'service.read',
+  serviceWrite: 'service.write',
   companySwitch: 'session.switch_company',
   auditRead: 'admin.audit.read',
   usersInvite: 'admin.users.invite',

@@ -159,6 +159,16 @@ import {
   type CreateProgressClaimInput,
 } from '../../src/modules/project/progressClaim';
 import {
+  createServiceContractWithin,
+  type CreateServiceContractInput,
+} from '../../src/modules/service/serviceContract';
+import {
+  assignServiceTicketWithin,
+  createServiceTicketWithin,
+  resolveServiceTicketWithin,
+  type CreateServiceTicketInput,
+} from '../../src/modules/service/serviceTicket';
+import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
@@ -440,6 +450,18 @@ export const erpDemoRuntime = Object.freeze({
     },
     postProgressClaimWithin(db: DemoOrm, scope: Scope, claimId: number) {
       return postProgressClaimWithin(asDomainDb(db), scope, claimId);
+    },
+    createServiceContractWithin(db: DemoOrm, scope: Scope, input: CreateServiceContractInput) {
+      return createServiceContractWithin(asDomainDb(db), scope, input);
+    },
+    createServiceTicketWithin(db: DemoOrm, scope: Scope, input: CreateServiceTicketInput) {
+      return createServiceTicketWithin(asDomainDb(db), scope, input);
+    },
+    assignServiceTicketWithin(db: DemoOrm, scope: Scope, ticketId: number, technicianName: string) {
+      return assignServiceTicketWithin(asDomainDb(db), scope, ticketId, technicianName);
+    },
+    resolveServiceTicketWithin(db: DemoOrm, scope: Scope, ticketId: number, diagnosis: string) {
+      return resolveServiceTicketWithin(asDomainDb(db), scope, ticketId, diagnosis);
     },
     listCompanyUsers(db: DemoOrm, scope: Scope) {
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);

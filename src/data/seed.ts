@@ -6,7 +6,7 @@ import type { DB } from './db';
 import {
   master, company, currency, appUser, role, rolePermission, userCompany,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
-  employee, leaveRequest, project, progressClaim,
+  employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
 } from './schema';
 
 /**
@@ -65,6 +65,8 @@ export async function seedDemo(db: DB): Promise<void> {
     'quality.read',
     'asset.read',
     'hr.read',
+    'project.read',
+    'service.read',
     'session.switch_company',
   ].map((permissionKey) => ({
     masterFn: 'M1',
@@ -260,6 +262,45 @@ export async function seedDemo(db: DB): Promise<void> {
       claimDate: '2026-05-20', description: 'Fabrication 50% complete',
       netAmount: '138000.00', taxCode: 'SR', taxRate: '9.000',
       taxAmount: '12420.00', totalAmount: '150420.00',
+    },
+  ]);
+
+  // Service-lite (TASK-053): a Gold contract (active) and a Silver contract expiring
+  // soon, plus three tickets spanning every real status/coverage combination — one
+  // open/unassigned, one in_progress/assigned, one closed with a real diagnosis.
+  const [goldContract] = await db.insert(serviceContract).values({
+    masterFn: 'M1', companyFn: 'C-SG', contractNo: 'SC-2026-0001', customerId: cust.id,
+    plan: 'Gold', slaResponseHours: 4, assetsCovered: 6,
+    startDate: '2025-04-01', expiryDate: '2027-03-31', annualValue: '48000.00',
+  }).returning({ id: serviceContract.id });
+  await db.insert(serviceContract).values({
+    masterFn: 'M1', companyFn: 'C-SG', contractNo: 'SC-2026-0002', customerId: cust.id,
+    plan: 'Silver', slaResponseHours: 24, assetsCovered: 3,
+    startDate: '2024-06-01', expiryDate: '2026-08-15', annualValue: '18000.00',
+  });
+
+  await db.insert(serviceTicket).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', ticketNo: 'SVC-2026-0001', customerId: cust.id,
+      contractId: null, assetDescription: 'Conveyor Drive Unit', serialNo: 'CDU-2291',
+      issue: 'Drive unit overheating, intermittent stop', priority: 'High',
+      coverage: 'in_warranty', status: 'in_progress', technicianName: 'Kwame Mensah',
+      openedAt: new Date('2026-07-18T08:10:00Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', ticketNo: 'SVC-2026-0002', customerId: cust.id,
+      contractId: goldContract.id, assetDescription: 'Packaging Line — Model X',
+      serialNo: 'PLX-0033', issue: 'Sensor calibration drift on infeed', priority: 'Medium',
+      coverage: 'contract', status: 'open',
+      openedAt: new Date('2026-07-19T10:30:00Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', ticketNo: 'SVC-2026-0003', customerId: cust.id,
+      contractId: null, assetDescription: 'Carton Former CF-200', serialNo: 'CF-0091',
+      issue: 'Drive belt replacement', priority: 'Medium', coverage: 'out_of_warranty',
+      status: 'closed', technicianName: 'Rosa Diaz',
+      diagnosis: 'Replaced worn drive belt and tested through 3 full cycles; running normally.',
+      openedAt: new Date('2026-07-10T09:00:00Z'), resolvedAt: new Date('2026-07-12T14:20:00Z'),
     },
   ]);
 }
