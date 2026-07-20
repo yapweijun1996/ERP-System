@@ -95,7 +95,7 @@ every PR since TASK-038); browser writes stock/money through API only (✅ — n
 canonical write executes client-side in api mode). Feature breadth for
 not-yet-converted modules is Phase 7 scope, not a Phase 5 gap.
 
-## Phase 6 — Quality And Operations 🔶 (CI + drift + smoke + unit tests live; PG-in-CI open)
+## Phase 6 — Quality And Operations ✅
 
 Goal: make the system safe to maintain.
 
@@ -105,13 +105,19 @@ in CI (TASK-015 ✅ done 2026-07-17 — `scripts/smoke.mjs`, Playwright, desktop
 mobile, zero console/page errors, dashboard content actually verified); vitest unit
 tests (TASK-025 ✅ done 2026-07-17 — 15 tests over `confirmSalesOrder`/`issueStock`/
 `getEffectiveTaxRate`, wired into CI); transaction tests against PostgreSQL in CI
-(currently only proven manually — TASK-013 — not yet gated in CI, since that needs
-a Postgres service container in the workflow); deployment docs; backup/restore
-runbook; release checklist.
+(TASK-038 ✅ done 2026-07-19 — `ci.yml` already ran a PostgreSQL 16 service container
+for `test:postgres`; the real gap was narrower — the PGlite transaction-proof step
+never set `POSTGRES_URL`, so the cross-engine parity + true-concurrency race was only
+ever PGlite-only in CI. Now that step exports `POSTGRES_URL` against the same `erp_ci`
+database and both proofs run gated on every PR); deployment docs, backup/restore
+runbook and release checklist (TASK-039 ✅ done 2026-07-17 —
+[docs/RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), separate demo-bundle and
+Docker-production sections including backup, migrate-only-upgrades, health
+verification and rollback).
 
-Exit criteria: every PR can be validated with documented commands (✅ for
-typecheck/demo-build/drift/smoke/unit-tests; ⬜ for PG-parity-in-CI); demo and
-production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
+Exit criteria: every PR can be validated with documented commands (✅ — typecheck,
+demo-build, drift, smoke, unit-tests and PG-parity all run in CI on every PR); demo
+and production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
 the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
 
 ## Phase 7 — Module Expansion 🔶 (purchasing/CRM/Fixed Assets/HR-lite/Service/Purchase Requisition done; Project register + progress claims done)
