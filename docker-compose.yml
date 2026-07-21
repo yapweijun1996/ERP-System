@@ -66,8 +66,9 @@ services:
 
   web:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      # Context = repo root, not web/ alone — see web/Dockerfile for why.
+      context: .
+      dockerfile: web/Dockerfile
       args:
         VITE_DATA_MODE: api
     ports:
