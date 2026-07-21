@@ -84,7 +84,7 @@ SCREENS['new-journal-entry'] = function(root){
     const ok=t.balanced;
     const hint=ok?'Balanced · ready to post':'Debits must equal credits before posting';
     const postBtn= canPost
-      ? btn('Post to GL',{icon:'check',cls:'primary',sm:false,attrs:`id="wPost" ${ok?'':'disabled style=\"opacity:.5;pointer-events:none\"'}`})
+      ? btn('Post to GL',{icon:'check',cls:'primary',sm:false,attrs:`id="wPost" ${ok?'':'disabled style="opacity:.5;pointer-events:none"'}`})
       : `<button class="btn primary" disabled data-tip="Requires Finance Posting permission" style="opacity:.6">${ic('lock')}<span>Post to GL</span></button>`;
     return `<div style="font-size:12.5px;color:${ok?'var(--ok)':'var(--muted)'}" class="hideonsmall">${ok?ic('checkc'):''} ${hint}</div>
       <div class="grow"></div>

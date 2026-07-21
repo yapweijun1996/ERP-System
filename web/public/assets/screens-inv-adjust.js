@@ -93,7 +93,7 @@ SCREENS['new-stock-adjustment'] = async function(root){
     return `<div style="font-size:12.5px;color:var(--muted)" class="hideonsmall">${hint}</div>
       <div class="grow"></div>
       ${btn('Cancel',{cls:'soft',attrs:'id="wCancel"'})}
-      ${btn('Post adjustment',{icon:'check',cls:'primary',sm:false,attrs:`id="wPost" ${ok?'':'disabled style=\"opacity:.5;pointer-events:none\"'}`})}`;
+      ${btn('Post adjustment',{icon:'check',cls:'primary',sm:false,attrs:`id="wPost" ${ok?'':'disabled style="opacity:.5;pointer-events:none"'}`})}`;
   }
   function updateBar(){ const b=$('#wBar'); if(b){ b.innerHTML=bar(); wireBar(); } }
 

@@ -326,6 +326,29 @@ over-limit confirmations inside the transaction. Commission remains Preview.
    `vite preview` session look broken (a missing table after a real migration ran) —
    if that happens, call `window.ErpSystemData.reset()` from the app rather than
    suspecting the migration bundle first.
+8. ~~`CONTRIBUTING.md` says "Run `npm run lint` before pushing" but no `lint` script or
+   ESLint config existed~~ — **fixed 2026-07-21.** `eslint.config.js` (flat config,
+   ESLint 10 + typescript-eslint) covers all three real JS/TS environments in this repo
+   with different, deliberately-tuned rule sets per environment — see the file's own
+   comments for why `web/public/assets/**/*.js` needs `no-undef: 'off'` (implicit
+   shared global scope across ~70 classic `<script>`-tag files, CLAUDE.md landmine
+   #4/#5) and `allowEmptyCatch` (the established, correct convention for optional
+   `localStorage`/`history` calls that can throw in private-browsing contexts). Wired
+   into `ci.yml` as the first step (fail-fast). The first real run found and fixed a
+   genuine, previously-undiscovered bug via `no-dupe-keys`: `i18n.js` had two unrelated
+   features both claiming the key `qc.title` (Quick Create's menu header vs. the
+   Quality Inspections screen's own h1) — the later-declared Quality definition always
+   won, so the Quick Create command-palette menu was silently mislabeled "Quality
+   Inspections" in every language. Fixed by renaming Quick Create's key to
+   `quickCreate.title`; verified live in-browser (before this fix could be captured in
+   a screenshot, so verified by re-deriving from a fresh `build:demo` + `preview` after
+   the fix) that Quick Create now reads correctly while the Quality Inspections screen
+   itself is unaffected. Also fixed 18 useless-escape, 1 stray `var` redeclare, 1
+   sparse-array, and 4 unused-catch-binding sites the same first run surfaced —
+   all confirmed safe, behavior-preserving mechanical fixes. `npm run lint` passes
+   clean (0 errors) with 91 non-blocking warnings (mostly caught-but-unused error
+   variables in the vanilla JS glob, `vars: 'local'` scoped so top-level cross-file
+   declarations aren't flagged) left for organic future cleanup, not blocking.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 

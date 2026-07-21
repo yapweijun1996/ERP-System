@@ -131,7 +131,7 @@ SCREENS['new-work-order'] = function(root){
     const adv=canAdvance();
     let right;
     if(S.step<1){
-      right=btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="wNext" ${adv?'':'disabled style=\"opacity:.5;pointer-events:none\"'}`});
+      right=btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="wNext" ${adv?'':'disabled style="opacity:.5;pointer-events:none"'}`});
     } else {
       const shorts=shortages().length;
       right=shorts

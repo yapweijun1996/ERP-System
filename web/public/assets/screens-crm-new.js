@@ -65,7 +65,7 @@ SCREENS['new-opportunity'] = async function(root){
     return `<div style="font-size:12.5px;color:var(--muted)" class="hideonsmall">${hint}</div>
       <div class="grow"></div>
       ${btn('Cancel',{cls:'soft',attrs:'id="wCancel"'})}
-      ${btn('Create opportunity',{icon:'check',cls:'primary',sm:false,attrs:`id="wCreate" ${ok?'':'disabled style=\"opacity:.5;pointer-events:none\"'}`})}`;
+      ${btn('Create opportunity',{icon:'check',cls:'primary',sm:false,attrs:`id="wCreate" ${ok?'':'disabled style="opacity:.5;pointer-events:none"'}`})}`;
   }
 
   /* ---------------- render ---------------- */

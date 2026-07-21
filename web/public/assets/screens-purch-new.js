@@ -189,7 +189,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
   function footer(){
     const adv=canAdvance();
     const right=S.step<2
-      ? btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="wNext" ${adv?'':'disabled style=\"opacity:.5;pointer-events:none\"'}`})
+      ? btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="wNext" ${adv?'':'disabled style="opacity:.5;pointer-events:none"'}`})
       : btn('Create PO',{icon:'check',cls:'primary',sm:false,attrs:'id="wCreate"'});
     const left=S.step>0?btn('Back',{icon:'chevL',cls:'soft',attrs:'id="wBack"'}):btn('Cancel',{cls:'soft',attrs:'id="wCancel"'});
     const hint=S.step===0?'Step 1 of 3 · choose who you’re buying from'

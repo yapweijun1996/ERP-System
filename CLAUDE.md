@@ -28,6 +28,7 @@ set, one business-logic contract across both.
 
 ```bash
 npm install && npm --prefix web install   # once
+npm run lint           # every change — eslint.config.js, 0 errors required
 npm run typecheck && npm run typecheck:web  # every change
 npm run demo          # transaction proof (PGlite; + PostgreSQL if POSTGRES_URL set)
 npm run build:demo    # static demo bundle → web/dist/
@@ -35,9 +36,9 @@ npm run dev           # vite dev server for web/
 npm run generate      # drizzle-kit generate (after schema changes)
 ```
 
-Definition of done for any change: typechecks pass, `npm run demo` passes,
-`npm run build:demo` passes, affected screens verified in browser at desktop AND 375 px
-with zero console errors.
+Definition of done for any change: `npm run lint` passes (0 errors — warnings are OK),
+typechecks pass, `npm run demo` passes, `npm run build:demo` passes, affected screens
+verified in browser at desktop AND 375 px with zero console errors.
 
 ## Landmines (violating these breaks the product)
 

@@ -41,7 +41,7 @@ function waitForServer(url, timeoutMs) {
         try {
           const res = await fetch(url, { method: 'GET' });
           if (res) { resolve(); return; }
-        } catch (e) { /* not up yet */ }
+        } catch { /* not up yet */ }
         await new Promise((r) => setTimeout(r, 300));
       }
       reject(new Error(`${url} did not respond within ${timeoutMs}ms`));
@@ -96,7 +96,7 @@ async function checkViewport(browser, viewport) {
     try {
       localStorage.setItem('aria-setup-wizard-complete', '1');
       localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: 'admin@acme.co', at: new Date(0).toISOString() }));
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
   });
 
   await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 20000 });

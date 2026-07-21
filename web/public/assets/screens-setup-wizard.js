@@ -217,9 +217,9 @@ function renderSetupWizard(){
         '<p class="wiz-p" style="margin-top:6px">'+esc(s('s4note'))+'</p>';
     }
     // step 5 — summary
-    var meta = COUNTRY_META[S.country];
+    meta = COUNTRY_META[S.country];
     var langNative = (I18N_LANGS.filter(function(l){ return l.code===S.lang; })[0]||{}).native||S.lang;
-    var providerLabel = (PROVIDERS.filter(function(p){ return p[0]===S.aiProvider; })[0]||[,s('none')])[1];
+    var providerLabel = (PROVIDERS.filter(function(p){ return p[0]===S.aiProvider; })[0]||[undefined,s('none')])[1];
     return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(IS_API?s('s5pProd'):s('s5p'))+'</p>'+
       '<div class="panel" style="margin-top:8px"><div class="panel-body" style="padding:14px 16px;display:grid;gap:8px;font-size:13px">'+
       ['sumLang,'+langNative, 'sumOrg,'+(S.masterName||'—'), 'sumCompany,'+(S.companyName||'—'),

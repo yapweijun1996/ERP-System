@@ -1073,7 +1073,7 @@ function wireNotifCenter(){
 function refreshNotifs(){ applyNotificationState(); const m=$('#notifMenu'); if(m){ m.innerHTML=buildNotifCenter(); wireNotifCenter(); } updateBellBadge(); }
 function buildQuickCreate(){
   const items=[[t('qc.so'),'bag','new-sales-order'],[t('qc.po'),'cart','new-purchase-order'],[t('qc.wo'),'factory','new-work-order'],[t('qc.je'),'book','new-journal-entry'],[t('qc.pv'),'coins','new-payment-voucher'],[t('qc.adj'),'adjust','new-stock-adjustment'],[t('qc.item'),'tag','new-item']];
-  return `<div class="menu-section"><div class="menu-head">${esc(t('qc.title'))}</div>`+items.map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
+  return `<div class="menu-section"><div class="menu-head">${esc(t('quickCreate.title'))}</div>`+items.map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
 }
 function buildCompanyMenu(){
   /* Canonical companies (ERP-System PGlite schema), not the unrelated Aria

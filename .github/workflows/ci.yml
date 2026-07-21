@@ -47,6 +47,9 @@ jobs:
       - name: Install web dependencies
         run: npm ci --prefix web
 
+      - name: Lint (src/, web/src/, web/public/assets/, scripts/)
+        run: npm run lint
+
       - name: Typecheck root (src/, includes the API server and drizzle config)
         run: npm run typecheck
 

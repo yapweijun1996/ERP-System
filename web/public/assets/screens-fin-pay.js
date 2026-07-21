@@ -131,7 +131,7 @@ SCREENS['new-payment-voucher'] = async function(root){
   function footer(){
     const adv=canAdvance();
     const right=S.step<1
-      ? btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="wNext" ${adv?'':'disabled style=\"opacity:.5;pointer-events:none\"'}`})
+      ? btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="wNext" ${adv?'':'disabled style="opacity:.5;pointer-events:none"'}`})
       : btn('Post payment',{icon:'check',cls:'primary',sm:false,attrs:'id="wCreate"'});
     const left=S.step>0?btn('Back',{icon:'chevL',cls:'soft',attrs:'id="wBack"'}):btn('Cancel',{cls:'soft',attrs:'id="wCancel"'});
     const t=totals();

@@ -230,7 +230,7 @@ SCREENS['new-quotation'] = function(root, params){
   function footer(){
     const adv=canAdvance();
     const right=S.step<2
-      ? btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="qNext" ${adv?'':'disabled style=\"opacity:.5;pointer-events:none\"'}`})
+      ? btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="qNext" ${adv?'':'disabled style="opacity:.5;pointer-events:none"'}`})
       : btn(editing?'Save quotation':'Issue quotation',{icon:'check',cls:'primary',sm:false,attrs:'id="qSave"'});
     const left=S.step>0?btn('Back',{icon:'chevL',cls:'soft',attrs:'id="qBack"'}):btn('Cancel',{cls:'soft',attrs:'id="qCancel"'});
     const hint=S.step===0?'Step 1 of 3 · who is this quote for'
