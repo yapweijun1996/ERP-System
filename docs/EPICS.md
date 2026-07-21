@@ -1163,3 +1163,28 @@ Acceptance criteria:
       empty run immediately after every future creation until a page reload), and the
       run-number generator didn't embed the year like every other document series in
       this codebase (fixed to `PAY-YYYY-NNNN`).
+
+## EPIC-027 — Canonical CRM Opportunity Detail
+
+**Goal:** close CRM's final registered Preview route by composing the existing
+canonical CRM and Sales resources instead of inventing a second opportunity model.
+
+Acceptance criteria:
+
+- [x] Every pipeline card opens `opportunity` with its real opportunity id; the detail
+      route reads bounded opportunity, customer, contact, activity and sales-order data
+      through `ErpSystemData` in Demo and API modes, with honest empty states.
+- [x] Opportunity activity creation accepts an opportunity target or customer target,
+      validates both targets when supplied, and links the detail timeline to Customer
+      360 without allowing a cross-customer mismatch.
+- [x] A shared `markOpportunityLostWithin` command requires a reason, locks and scopes
+      the opportunity, rejects won/lost records, increments its version and appends the
+      system activity in the same transaction.
+- [x] `crm/opportunities/mark-lost` is a registered RBAC, audit and idempotency action in
+      both the production dispatcher and Demo ESM runtime; conversion continues to use
+      the existing atomic CRM→Sales command.
+- [x] The page provides five-language copy, real lifecycle/action visibility and related
+      Customer 360/Sales Order navigation; `opportunity` moves to Canonical and Demo/API.
+- [x] Domain and authenticated HTTP tests cover targeting, tenant mismatch, loss reason,
+      terminal-state guards, idempotent replay and audit output. Desktop, Chinese and
+      375px browser verification plus the complete 114-route audit pass at 70/44.

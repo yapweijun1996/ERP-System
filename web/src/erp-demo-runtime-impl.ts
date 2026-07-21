@@ -20,6 +20,7 @@ import {
   createCustomerActivityWithin,
   type CreateCustomerActivityInput,
 } from '../../src/modules/crm/activity';
+import { markOpportunityLostWithin } from '../../src/modules/crm/opportunityLifecycle';
 import {
   createPurchaseOrder,
   createPurchaseOrderWithin,
@@ -630,6 +631,14 @@ export const erpDemoRuntime = Object.freeze({
       input: ConvertOpportunityInput,
     ) {
       return convertOpportunityToSalesOrderWithin(asDomainDb(db), scope, input);
+    },
+    markOpportunityLostWithin(
+      db: DemoOrm,
+      scope: Scope,
+      opportunityId: number,
+      reason: string,
+    ) {
+      return markOpportunityLostWithin(asDomainDb(db), scope, opportunityId, reason);
     },
   }),
 });

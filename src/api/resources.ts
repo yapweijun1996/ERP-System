@@ -268,7 +268,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     status: opportunity.stage,
     customerId: opportunity.customerId,
     versionColumn: opportunity.version,
-    allowedActions: ['convert'],
+    allowedActions: ['convert', 'mark-lost'],
     createPermission: 'crm.write',
     updatePermission: 'crm.write',
   }),

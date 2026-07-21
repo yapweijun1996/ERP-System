@@ -5,6 +5,7 @@ import type { DB } from '../data/db';
 import {
   account,
   apiIdempotency,
+  activity,
   auditLog,
   customer,
   glEntry,
@@ -833,6 +834,67 @@ describe('production API security contract', () => {
     });
     expect(denied.status).toBe(403);
     expect((await denied.json()).error.code).toBe('permission_denied');
+  });
+
+  it('logs an opportunity activity and marks the opportunity lost through audited API writes', async () => {
+    const cookies = await login(running.baseUrl);
+    const [buyer] = await db.select({ id: customer.id }).from(customer)
+      .where(eq(customer.code, 'CUST1'));
+    const [opp] = await db.insert(opportunity).values({
+      masterFn: 'M1', companyFn: 'C-SG', docNo: 'OPP-API-LOSS',
+      customerId: buyer.id, title: 'At-risk API deal', value: '2500', currency: 'SGD',
+      stage: 'proposal', probability: '55', closeDate: '2026-09-30',
+    }).returning({ id: opportunity.id });
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+
+    const logged = await fetch(`${running.baseUrl}/api/crm/activities`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'crm-activity-api' },
+      body: JSON.stringify({
+        opportunityId: opp.id,
+        customerId: buyer.id,
+        kind: 'call',
+        body: 'Customer requested a revised proposal.',
+      }),
+    });
+    expect(logged.status).toBe(201);
+
+    const markLost = () => fetch(
+      `${running.baseUrl}/api/crm/opportunities/${opp.id}/actions/mark-lost`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'x-request-id': 'crm-lost-api',
+          'idempotency-key': `crm-lost-${opp.id}-v1`,
+        },
+        body: JSON.stringify({ reason: 'Budget withdrawn' }),
+      },
+    );
+    const lost = await markLost();
+    expect(lost.status).toBe(200);
+    expect((await lost.json()).data).toMatchObject({ id: opp.id, stage: 'lost', version: 2 });
+    const replay = await markLost();
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+
+    const [stored] = await db.select().from(opportunity).where(eq(opportunity.id, opp.id));
+    expect(stored).toMatchObject({ stage: 'lost', version: 2 });
+    const events = await db.select().from(activity).where(eq(activity.opportunityId, opp.id));
+    expect(events.map((event) => event.body)).toEqual([
+      'Customer requested a revised proposal.',
+      'Marked lost: Budget withdrawn',
+    ]);
+    const [audit] = await db.select().from(auditLog).where(eq(auditLog.requestId, 'crm-lost-api'));
+    expect(audit).toMatchObject({
+      entity: 'crm/opportunities',
+      entityId: String(opp.id),
+      action: 'mark-lost',
+    });
   });
 
   it('confirms an existing sales draft through the transactional action dispatcher', async () => {

@@ -571,8 +571,8 @@
        close,prob}]), just sourced from real opportunity/customer/app_user
        rows instead of data-crm.js's Northwind mock. 'lost' opportunities are
        omitted from the board — the original mock kanban never had a Lost
-       column either, and this schema's only real "mark lost" concept is the
-       terminal stage value itself, not a UI action built in this task. */
+       column either. Opportunity Detail now exposes the real terminal
+       mark-lost action and activity timeline; the board still omits Lost. */
     var CRM_STAGE_UI = { lead: 'Lead', qualified: 'Qualified', proposal: 'Proposal', negotiation: 'Negotiation', won: 'Won' };
     DB.pipeline = Object.keys(CRM_STAGE_UI).map(function(stageKey){
       var items = (d.opportunities || []).filter(function(o){ return o.stage === stageKey; }).map(function(o){
@@ -2080,6 +2080,15 @@
       });
       await refresh();
       return {data:convertedOpportunity,meta:{}};
+    }
+    if(key==='crm/opportunities'&&name==='mark-lost'){
+      payload=payload||{};
+      var lostOpportunity = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.markOpportunityLostWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload.reason);
+      });
+      await refresh();
+      return {data:lostOpportunity,meta:{}};
     }
     if(key==='crm/opportunities'&&name==='convert-to-sales-order'){
       payload=payload||{};

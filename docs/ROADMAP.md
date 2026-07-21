@@ -156,8 +156,8 @@ Order of attack:
    see docs/STATUS.md) are both done for the CORE chain. Customer-360 (EPIC-012 ✅,
    TASK-031/032 done 2026-07-19) is now also Canonical — real contacts, open
    orders/opportunities, activity timeline and Net-30 balance/overdue, closing the
-   gap this item originally called out. Opportunity-detail remains the one CRM
-   sub-screen with no schema and stays on sample data.
+   gap this item originally called out. Opportunity-detail was subsequently closed by
+   EPIC-027/TASK-063 using the same opportunity/customer/activity schema.
 3. **Fixed Assets** (EPIC-015 ✅) — asset register → depreciation run → balanced GL
    posting, chosen over HR-lite (3 routes vs. 6, and its GL tie-in was already
    precisely specified in the mock data). Schema + business logic (TASK-035 ✅ done
@@ -369,3 +369,19 @@ Exit criteria: a real payroll run created and posted for each of the Singapore a
 Malaysia companies, GL balanced for both, a real payslip viewable per employee with
 correct country-specific statutory labels, `payroll-run`/`payslip` moved from Preview to
 Canonical.
+
+## Phase 11 — CRM Opportunity Detail ✅
+
+Goal: close the final registered CRM Preview route without adding a parallel model.
+
+1. **Canonical Opportunity Workspace** (EPIC-027 ✅, TASK-063 done) — replaced the
+   hardcoded opportunity detail with a real Demo/API read model assembled from the
+   existing opportunity, customer, contact, activity and sales-order resources. Every
+   pipeline card now opens its own record. The page logs real linked activities, reuses
+   the existing atomic conversion flow and adds an audited, idempotent `mark-lost`
+   command that requires a reason, rejects terminal opportunities and records the
+   transition in the timeline. Five-language copy, desktop/375px checks and the 114-route
+   audit move the route from Preview to Canonical, producing a **70/44** split.
+
+Exit criteria: `opportunity` uses no prototype detail data, supports Demo/API, writes
+only through registered commands, and passes domain/API/browser/audit verification.

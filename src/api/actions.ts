@@ -3,6 +3,7 @@ import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
 } from '../modules/crm/convertOpportunityToSalesOrder';
+import { markOpportunityLostWithin } from '../modules/crm/opportunityLifecycle';
 import {
   confirmDraftSalesOrderWithin,
 } from '../modules/sales/confirmOrder';
@@ -590,6 +591,22 @@ const ACTIONS: Record<string, ActionDefinition> = {
         orderDate: payload.orderDate,
         lines: payload.lines,
       });
+    },
+  },
+  'crm/opportunities/mark-lost': {
+    permission: 'crm.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const reason = (input.payload as { reason?: unknown } | undefined)?.reason;
+      if (typeof reason !== 'string' || !reason.trim()) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'A loss reason is required.',
+        );
+      }
+      return markOpportunityLostWithin(tx, scope, input.resourceId, reason);
     },
   },
 };
