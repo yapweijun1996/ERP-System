@@ -339,3 +339,29 @@ previously-undiscovered, pre-existing production bug: the `web` service's Docker
 been silently broken since 2026-07-18 (isolated `web/`-only build context couldn't reach
 `erp-demo-runtime-impl.ts`'s cross-workspace imports) — see `docs/EPICS.md` EPIC-025
 retrospective for detail.
+
+## Phase 10 — Payroll 🔶
+
+Goal: close the one deferral Phase 7 named explicitly but didn't build — HR-lite
+(EPIC-020) deliberately scoped Payroll out as "a materially different, statutory-
+contribution-heavy domain," not a lite extension of employee master. Phase 7's own
+header already states "every *originally-scoped* module converted" — Payroll was never
+in that original scope, so this is a new phase rather than reopening Phase 7.
+
+1. **Payroll: Run, Payslip & Statutory Contributions** (EPIC-026 🔶, TASK-061/062) —
+   `employee` has zero compensation data today (no salary/wage column anywhere), and the
+   existing mock (`payroll-run`/`payslip`) is Malaysia-only (EPF/SOCSO/EIS/PCB) while the
+   seed data only has employees for the Singapore company — the one company that mock
+   data can't actually demonstrate payroll for. Scoped to support **both** Singapore
+   (CPF) and Malaysia (EPF/SOCSO/EIS/PCB), matching this repo's existing dual-country
+   `TaxEngine` pattern for GST/SST, rather than a single-country first pass that would
+   leave the only company with real employees still unable to run its own payroll.
+   Reuses `depreciationRun.ts`'s exact draft → post GL pattern. Deliberately flat-rate
+   statutory approximations, not real gazetted bracket/age-banded tables or government
+   e-filing formats — matching how GST/SST model real tax mechanics without building
+   compliance-artifact depth. See `docs/EPICS.md` for full acceptance criteria.
+
+Exit criteria: a real payroll run created and posted for each of the Singapore and
+Malaysia companies, GL balanced for both, a real payslip viewable per employee with
+correct country-specific statutory labels, `payroll-run`/`payslip` moved from Preview to
+Canonical.
