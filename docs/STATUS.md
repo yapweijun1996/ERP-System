@@ -379,6 +379,40 @@ over-limit confirmations inside the transaction. Commission remains Preview.
    both the terminal and non-terminal enquiry stepper states) — zero
    regressions, zero console errors. `npm run lint` now passes with **0
    errors and 0 warnings**.
+9. ~~Raw `Date` objects rendered as `Date.prototype.toString()` garbage in
+   several listings~~ — **fixed 2026-07-21.** PGlite/Drizzle return
+   `date`/`timestamp` columns as live `Date` objects, not strings; naive
+   template-literal interpolation silently rendered
+   `"Wed Aug 19 2026 08:00:00 GMT+0800 (Malaysia Time)"` instead of a clean
+   date (first spotted in the Quotations list "Valid until" column). Six
+   near-identical per-module helpers (`crmDateValue`, `purchasingDateValue`,
+   `financeDateValue`, `salesDateValue`, `projectDateValue`,
+   `serviceDateValue`) plus warehouse.js's own `displayDate()` already
+   existed but were inconsistently applied — consolidated into shared
+   `dateValue()`/`dateTimeValue()`/`dateLabel()` in `screens-common.js`.
+   Also fixed two local `dateLabel()` copies (mfg-canonical.js,
+   qc-canonical.js) that never checked `instanceof Date` first and so
+   "looked" fixed but weren't, and audited every `screens-*.js` file for
+   raw date interpolation the old helpers never covered (~40 sites across
+   sales, purchasing, finance, inventory, assets, admin, HR/people, CRM,
+   warehouse). Found two real functional bugs in the same sweep: HR's "on
+   leave today" check compared a raw `Date` to a string and was always
+   false, and sort comparators in `screens-project.js`/`screens-asset.js`
+   sorted by `Date.toString()` weekday name instead of chronological order.
+   Most seriously, deleting `financeDateValue` from `screens-fin2.js` left
+   a dangling reference in the separate `screens-fin.js` (this codebase's
+   classic-`<script>`-tag shared global scope means one file can call a
+   function defined in another with no import) — `date:financeDateValue(...)`
+   would have thrown `ReferenceError` the first time anyone opened a
+   Payment Voucher. Not caught by `node --check` or an isolated lint pass;
+   only found via a codebase-wide grep for all six old helper names after
+   believing the migration was already done. **Lesson: renaming/deleting a
+   shared-global-scope function requires searching the entire codebase for
+   references, not just the file being edited — syntax-checking alone does
+   not catch it.** Verified live: Quotations, Sales Orders, an end-to-end
+   Payment Voucher creation, Manufacturing Work Orders, and HR
+   Directory/Leave Approval all render clean dates with zero console
+   errors.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
