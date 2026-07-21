@@ -301,3 +301,30 @@ confirmation rather than silently altering a well-tested design.
 Exit criteria: `npm run audit:screens` passes after each mechanical change; the
 module-access-control toggle demonstrably hides a module from both the sidebar and the
 API for a non-superadmin user of a restricted tenant.
+
+## Phase 9 — Deployment Ergonomics 🔶
+
+Goal: close the two "Future" items `docs/SETUP_WIZARD.md` itself already names under
+Phase A (pre-boot host bootstrap), now that Phase 7's module expansion is fully done and
+the product has enough real depth to be worth installing more than once. Unlike Phase 7,
+this is not a new business domain — it's the operational path an installer takes before
+the app (and its own in-app Phase B first-run wizard, already fully built) ever starts.
+
+1. **Interactive Host Bootstrap** (EPIC-025 🔶, TASK-060) — today `make setup`/
+   `scripts/setup.sh` is one-command but zero-prompt: it copies `.env.example` to `.env`
+   verbatim (shipping the literal `DB_PASSWORD=change-me` placeholder and blank
+   `ERP_SETUP_TOKEN`/`ERP_TOKEN_ENCRYPTION_KEY` unless the installer remembers to
+   hand-edit them first) and always provisions the bundled `db` container — there's no
+   way to point at a database an installer has already provisioned themselves (a managed
+   RDS/Cloud SQL/Supabase instance, for example) without manually editing `.env` and
+   understanding `docker-compose.yml`'s service graph. Also fixes a real, standalone bug
+   found along the way (confirmed via `docker compose config`, not just reading the
+   file): `docker-compose.yml`'s `api`/`worker` services silently ignore `.env`'s own
+   documented `DATABASE_URL` line, always reconstructing their own connection string
+   from `DB_USER`/`DB_PASSWORD` instead. The other named Future item — a full desktop
+   installer with Docker Desktop detection — stays out of scope, deferred to its own
+   future epic if ever prioritized. See `docs/EPICS.md` for full acceptance criteria.
+
+Exit criteria: `scripts/setup.sh --interactive` and the existing zero-flag path both
+verified against real Docker end-to-end (bundled-DB and external-DB cases); existing
+non-interactive behavior provably unchanged.

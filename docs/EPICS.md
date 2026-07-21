@@ -933,3 +933,73 @@ amounts. That same GL screen had shown a permanently-$0 Cash & Bank tile since l
 before this epic (`screens-fin2.js` already summed account codes `1000`+`1010`, but
 neither existed) — seeding the missing account fixed a pre-existing dead tile as a
 side effect of giving Payment Voucher and Bank Receipt somewhere real to post into.
+
+## EPIC-025 — Interactive Host Bootstrap (`scripts/setup.sh --interactive`)
+
+Closes the smaller of the two "Future" items `docs/SETUP_WIZARD.md` itself already names
+under Phase A (host bootstrap): today `make setup`/`scripts/setup.sh` is one-command but
+zero-prompt — it copies `.env.example` to `.env` verbatim (shipping the literal
+`DB_PASSWORD=change-me` placeholder and blank `ERP_SETUP_TOKEN`/`ERP_TOKEN_ENCRYPTION_KEY`
+unless the installer remembers to hand-edit them first) and always provisions the bundled
+`db` container — there is no way to point at a database an installer has already
+provisioned themselves (a managed RDS/Cloud SQL/Supabase instance, for example) without
+manually editing `.env` and understanding `docker-compose.yml`'s service graph. The other
+named Future item — a full desktop installer with Docker Desktop detection — stays out of
+scope; this epic is deliberately the small, low-risk half.
+
+Explicitly **not** the larger, riskier idea floated in earlier planning notes (a live
+in-app "connect to any database and provision it" web flow): that's architecturally
+impossible as a web UI anyway, since `src/server.ts` hard-requires `DATABASE_URL` before
+Express starts — there's no running server yet to serve such a page. Everything here stays
+a **pre-boot script**, matching Phase A's existing, already-validated design; it never
+touches Phase B (the in-app wizard) at all.
+
+Real, not cosmetic: `docker-compose.yml`'s `api`/`worker` services currently *ignore* the
+`DATABASE_URL` line `.env.example` itself documents — they always reconstruct their own
+connection string from `DB_USER`/`DB_PASSWORD`, silently. That's a live, standalone bug
+(confirmed via `docker compose config`, not just reading the file) fixed as part of this
+epic regardless of whether the interactive flag is ever used: `DATABASE_URL` becomes a real
+override, falling back to the constructed default when unset (Compose v2's nested
+`${VAR:-default}` interpolation, verified working on this engine's v2.40).
+
+Acceptance criteria:
+
+- [ ] `docker-compose.yml`: `api` and `worker` services' `DATABASE_URL` becomes
+      `${DATABASE_URL:-postgresql://${DB_USER:-erp}:${DB_PASSWORD:-erp_dev_password}@db:5432/erp}`
+      — an explicit `.env` `DATABASE_URL` now genuinely overrides the bundled-container
+      default instead of being silently ignored. `.env.example`'s own pre-filled
+      `DATABASE_URL=postgres://erp:change-me@db:5432/erp` line (which made every fresh
+      `.env` set it explicitly, defeating the fallback for everyone) is replaced with a
+      comment explaining it's auto-derived unless set.
+- [ ] `scripts/setup.sh` gains a `--interactive`/`-i` flag (only takes effect when `.env`
+      doesn't exist yet, matching the script's existing idempotent/never-overwrite
+      contract). Prompts, in order: (1) bundled PostgreSQL container vs. an
+      already-provisioned external connection string; (2a) for bundled, a database
+      password (blank auto-generates a strong one via `openssl rand -hex 20` instead of
+      shipping `change-me`); (2b) for external, the full `postgres://` connection string,
+      validated by prefix before continuing; (3) `ERP_SETUP_TOKEN` (blank
+      auto-generates); (4) `ERP_TOKEN_ENCRYPTION_KEY` (blank auto-generates, both via
+      `openssl rand -base64 32`, matching the exactly-32-bytes-after-decode contract
+      `.env.example` already documents); (5) `ERP_PUBLIC_URL`; (6) a real port-collision
+      check against WEB_PORT/API_PORT/(DB_PORT if bundled) — reusing TASK-021's own
+      documented pain point (a real verification run hit a taken port) — offering an
+      alternate port instead of failing later at `docker compose up`. Writes a real `.env`
+      derived from `.env.example` with the collected keys substituted in.
+- [ ] When an external connection string is chosen, the script never starts or waits on
+      the bundled `db` service (`docker compose up -d api web --no-deps`, not the
+      unqualified `docker compose up -d`) and replaces the `db`-container `pg_isready`
+      wait with a short retry loop directly against `docker compose exec -T api npm run
+      migrate` (which fails fast and clearly if the external database isn't reachable,
+      and is itself the real readiness proof once it isn't).
+- [ ] `make setup-interactive` target added, calling the new flag. Existing `make
+      setup`/bare `scripts/setup.sh` (no flag) behavior is completely unchanged — verified
+      by re-running the existing non-interactive path for real after the
+      `docker-compose.yml` change, not just by reading the diff.
+- [ ] `docs/SETUP_WIZARD.md`'s Phase A "Future" list item 1 (interactive prompts) marked
+      done; `docs/DEPLOYMENT.md` gains a short section on connecting to an
+      already-provisioned external database.
+- [ ] Verified live and end-to-end against real Docker, not just `docker compose config`:
+      the bundled path (fresh `.env`, real `docker compose up`, migrate, seed, teardown)
+      and the external path (a standalone `docker run postgres:16-alpine` standing in for
+      an "already-provisioned" database, pointed at by the interactive script's external
+      prompt, real migrate + seed succeeding against it, teardown) both complete cleanly.
