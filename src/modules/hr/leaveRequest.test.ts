@@ -10,7 +10,7 @@ import {
 async function seedEmployee(db: Awaited<ReturnType<typeof freshDb>>, employeeNo = 'EMP-L1') {
   return createEmployee(db, SCOPE, {
     employeeNo, fullName: 'Leave Test Employee', email: `${employeeNo.toLowerCase()}@example.test`,
-    department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01',
+    department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', baseSalary: '4000.00',
   });
 }
 

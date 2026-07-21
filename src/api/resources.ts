@@ -69,6 +69,8 @@ import {
   depreciationRunLine,
   employee,
   leaveRequest,
+  payrollRun,
+  payrollRunLine,
   project,
   progressClaim,
   serviceContract,
@@ -341,6 +343,13 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['approve', 'reject'],
     createPermission: 'hr.write',
   }),
+  'payroll/runs': resource(payrollRun, 'payroll.read', {
+    status: payrollRun.status,
+    versionColumn: payrollRun.version,
+    allowedActions: ['post'],
+    createPermission: 'payroll.write',
+  }),
+  'payroll/run-lines': resource(payrollRunLine, 'payroll.read'),
   'project/projects': resource(project, 'project.read', {
     status: project.status,
     createPermission: 'project.write',

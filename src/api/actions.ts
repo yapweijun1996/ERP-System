@@ -55,6 +55,7 @@ import {
 } from '../modules/sales/creditControl';
 import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
 import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
+import { postPayrollRunWithin } from '../modules/payroll/payrollRun';
 import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 
@@ -65,6 +66,14 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return postDepreciationRunWithin(tx, scope, input.resourceId);
+    },
+  },
+  'payroll/runs/post': {
+    permission: 'payroll.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return postPayrollRunWithin(tx, scope, input.resourceId);
     },
   },
   'inventory/products/update': {

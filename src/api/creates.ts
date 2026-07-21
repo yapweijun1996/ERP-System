@@ -96,6 +96,10 @@ import {
   type CreateLeaveRequestInput,
 } from '../modules/hr/leaveRequest';
 import {
+  createPayrollRunWithin,
+  type CreatePayrollRunInput,
+} from '../modules/payroll/payrollRun';
+import {
   createProjectWithin,
   type CreateProjectInput,
 } from '../modules/project/project';
@@ -414,6 +418,13 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createLeaveRequestWithin(tx, scope, payload as unknown as CreateLeaveRequestInput);
+    },
+  },
+  'payroll/runs': {
+    permission: 'payroll.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createPayrollRunWithin(tx, scope, payload as unknown as CreatePayrollRunInput);
     },
   },
   'project/projects': {

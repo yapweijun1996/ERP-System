@@ -14,3 +14,4 @@ export * from './quality';
 export * from './hr';
 export * from './project';
 export * from './service';
+export * from './payroll';

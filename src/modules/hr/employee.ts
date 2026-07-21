@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { EMPLOYMENT_TYPES, employee } from '../../data/schema';
+import { fixedUnits } from '../inventory/decimal';
 
 export class InvalidEmployeeStateError extends Error {
   constructor(message: string) {
@@ -25,6 +26,7 @@ export interface CreateEmployeeInput {
   managerId?: number | null;
   startDate: string; // YYYY-MM-DD
   annualLeaveDays?: number;
+  baseSalary: string;
 }
 
 export async function createEmployeeWithin(exec: DB, scope: Scope, input: CreateEmployeeInput) {
@@ -45,6 +47,10 @@ export async function createEmployeeWithin(exec: DB, scope: Scope, input: Create
   const annualLeaveDays = input.annualLeaveDays ?? 14;
   if (!Number.isFinite(annualLeaveDays) || annualLeaveDays < 0) {
     throw new InvalidEmployeeStateError('annualLeaveDays must be a non-negative number');
+  }
+  const baseSalaryCents = fixedUnits(input.baseSalary, 2);
+  if (baseSalaryCents <= 0n) {
+    throw new InvalidEmployeeStateError('baseSalary must be greater than 0');
   }
   if (input.managerId != null) {
     const [manager] = await exec.select({ id: employee.id })
@@ -71,6 +77,7 @@ export async function createEmployeeWithin(exec: DB, scope: Scope, input: Create
     managerId: input.managerId ?? null,
     startDate: input.startDate,
     annualLeaveDays: Math.round(annualLeaveDays),
+    baseSalary: String(input.baseSalary),
     isActive: true,
   }).returning({ id: employee.id });
   return { id: row.id };

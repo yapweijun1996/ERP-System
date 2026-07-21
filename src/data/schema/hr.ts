@@ -3,7 +3,7 @@
 // imply an ERP login) -- see docs/EPICS.md EPIC-020 for the scope boundary. Mirrors
 // assets.ts's tenant/check-constraint conventions.
 import {
-  pgTable, text, bigint, integer, boolean, date, timestamp, index, uniqueIndex, check,
+  pgTable, text, bigint, integer, numeric, boolean, date, timestamp, index, uniqueIndex, check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
@@ -25,6 +25,9 @@ export const employee = pgTable('employee', {
   managerId: bigint('manager_id', { mode: 'number' }).references((): any => employee.id),
   startDate: date('start_date').notNull(),
   annualLeaveDays: integer('annual_leave_days').notNull().default(14),
+  // One flat period base salary regardless of employmentType -- no wage-type
+  // modeling (hourly/piece-rate). Payroll (EPIC-026) is the only consumer today.
+  baseSalary: numeric('base_salary', { precision: 18, scale: 2 }).notNull(),
   isActive: boolean('is_active').notNull().default(true),
   ...timestamps,
 }, (t) => [
@@ -35,6 +38,7 @@ export const employee = pgTable('employee', {
     sql`${t.employmentType} in ('Full-time', 'Part-time', 'Contract', 'Intern')`,
   ),
   check('ck_employee_leave_days', sql`${t.annualLeaveDays} >= 0`),
+  check('ck_employee_base_salary', sql`${t.baseSalary} > 0`),
 ]);
 
 export const leaveRequest = pgTable('leave_request', {

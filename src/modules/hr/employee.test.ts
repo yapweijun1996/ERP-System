@@ -7,7 +7,7 @@ describe('createEmployee', () => {
     const db = await freshDb();
     const res = await createEmployee(db, SCOPE, {
       employeeNo: 'EMP-T1', fullName: 'Test Employee', email: 'test1@example.test',
-      department: 'Operations', jobTitle: 'Director', startDate: '2024-01-01',
+      department: 'Operations', jobTitle: 'Director', startDate: '2024-01-01', baseSalary: '5000.00',
     });
     expect(res.id).toBeGreaterThan(0);
   });
@@ -16,11 +16,12 @@ describe('createEmployee', () => {
     const db = await freshDb();
     const manager = await createEmployee(db, SCOPE, {
       employeeNo: 'EMP-T2', fullName: 'Manager', email: 'manager@example.test',
-      department: 'Operations', jobTitle: 'Director', startDate: '2024-01-01',
+      department: 'Operations', jobTitle: 'Director', startDate: '2024-01-01', baseSalary: '8000.00',
     });
     const res = await createEmployee(db, SCOPE, {
       employeeNo: 'EMP-T3', fullName: 'Report', email: 'report@example.test',
       department: 'Operations', jobTitle: 'Analyst', startDate: '2024-06-01', managerId: manager.id,
+      baseSalary: '4000.00',
     });
     expect(res.id).toBeGreaterThan(0);
   });
@@ -29,7 +30,7 @@ describe('createEmployee', () => {
     const db = await freshDb();
     await expect(createEmployee(db, SCOPE, {
       employeeNo: 'EMP-T4', fullName: 'Bad Email', email: 'not-an-email',
-      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01',
+      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', baseSalary: '4000.00',
     })).rejects.toThrow(InvalidEmployeeStateError);
   });
 
@@ -38,6 +39,7 @@ describe('createEmployee', () => {
     await expect(createEmployee(db, SCOPE, {
       employeeNo: 'EMP-T5', fullName: 'Bad Type', email: 'badtype@example.test',
       department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', employmentType: 'Freelance',
+      baseSalary: '4000.00',
     })).rejects.toThrow(InvalidEmployeeStateError);
   });
 
@@ -46,6 +48,7 @@ describe('createEmployee', () => {
     await expect(createEmployee(db, SCOPE, {
       employeeNo: 'EMP-T6', fullName: 'Orphan', email: 'orphan@example.test',
       department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', managerId: 999999,
+      baseSalary: '4000.00',
     })).rejects.toThrow(InvalidEmployeeStateError);
   });
 
@@ -53,11 +56,27 @@ describe('createEmployee', () => {
     const db = await freshDb();
     await createEmployee(db, SCOPE, {
       employeeNo: 'EMP-DUP', fullName: 'First', email: 'first@example.test',
-      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01',
+      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', baseSalary: '4000.00',
     });
     await expect(createEmployee(db, SCOPE, {
       employeeNo: 'EMP-DUP', fullName: 'Second', email: 'second@example.test',
-      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01',
+      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', baseSalary: '4000.00',
     })).rejects.toThrow();
+  });
+
+  it('rejects a zero baseSalary', async () => {
+    const db = await freshDb();
+    await expect(createEmployee(db, SCOPE, {
+      employeeNo: 'EMP-T7', fullName: 'Zero Salary', email: 'zerosalary@example.test',
+      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', baseSalary: '0.00',
+    })).rejects.toThrow(InvalidEmployeeStateError);
+  });
+
+  it('rejects a negative baseSalary', async () => {
+    const db = await freshDb();
+    await expect(createEmployee(db, SCOPE, {
+      employeeNo: 'EMP-T8', fullName: 'Negative Salary', email: 'negsalary@example.test',
+      department: 'Operations', jobTitle: 'Analyst', startDate: '2024-01-01', baseSalary: '-100.00',
+    })).rejects.toThrow(InvalidEmployeeStateError);
   });
 });

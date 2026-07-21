@@ -51,7 +51,10 @@ Source of truth: `src/data/schema/` → generated `drizzle/0000_init.sql`.
 | Sales | `customer`, `sales_order`, `sales_order_line`, `invoice` |
 | Finance | `account`, `gl_entry` |
 
-Planned domains (schema does not exist yet): purchasing (TASK-022), then CRM, HR, etc.
+The table above lists only the original MVP-1 core. Schema has since grown to cover
+purchasing, CRM, manufacturing, quality, fixed assets, HR, project, service, purchase
+requisitions, finance treasury (bank receipts/payment vouchers) and payroll — see
+`src/data/schema/index.ts` for the full current module list.
 Conventions (naming, keys, indexes, keyset pagination) → [DATA_MODEL.md](DATA_MODEL.md)
 and [SCALABILITY.md](SCALABILITY.md).
 

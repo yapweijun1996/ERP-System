@@ -9,7 +9,10 @@ import {
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
   purchaseRequisition, purchaseRequisitionLine,
   purchaseOrder, purchaseOrderLine, supplierInvoice, glEntry,
+  payrollRun, payrollRunLine,
 } from './schema';
+import { computeStatutoryContributions } from '../modules/payroll/statutory';
+import { fixedUnits, fixedString } from '../modules/inventory/decimal';
 
 /**
  * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
@@ -149,6 +152,23 @@ export async function seedDemo(db: DB): Promise<void> {
     // screens-fin2.js's GL "Cash & bank" tile already reads (previously $0 — no
     // account existed to sum, so this closes a dead frontend tile too).
     { masterFn: 'M1', companyFn: 'C-SG', code: '1000', name: 'Cash & Bank', type: 'asset' },
+    // Payroll (EPIC-026).
+    { masterFn: 'M1', companyFn: 'C-SG', code: '6100', name: 'Salary & Wages Expense', type: 'expense' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '6110', name: 'Employer Statutory Contributions Expense', type: 'expense' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '2310', name: 'Statutory Contributions Payable', type: 'liability' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '2320', name: 'Income Tax Payable', type: 'liability' },
+  ]);
+
+  // Payroll (EPIC-026): C-MY's first chart-of-accounts rows -- until now the
+  // Malaysia company had zero accounts (nothing had ever posted GL for it).
+  // Scoped to exactly what a payroll run needs to post, matching every other
+  // module's precedent of seeding only the accounts its own postings touch.
+  await db.insert(account).values([
+    { masterFn: 'M1', companyFn: 'C-MY', code: '1000', name: 'Cash & Bank', type: 'asset' },
+    { masterFn: 'M1', companyFn: 'C-MY', code: '6100', name: 'Salary & Wages Expense', type: 'expense' },
+    { masterFn: 'M1', companyFn: 'C-MY', code: '6110', name: 'Employer Statutory Contributions Expense', type: 'expense' },
+    { masterFn: 'M1', companyFn: 'C-MY', code: '2310', name: 'Statutory Contributions Payable', type: 'liability' },
+    { masterFn: 'M1', companyFn: 'C-MY', code: '2320', name: 'Income Tax Payable', type: 'liability' },
   ]);
 
   // Fixed Assets register (TASK-035) — a few seeded assets so the register isn't
@@ -179,28 +199,49 @@ export async function seedDemo(db: DB): Promise<void> {
   const [manager] = await db.insert(employee).values({
     masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1001', fullName: 'Farah Wong',
     email: 'farah.wong@acme.co', department: 'Operations', jobTitle: 'Operations Director',
-    employmentType: 'Full-time', startDate: '2019-02-01', annualLeaveDays: 20,
+    employmentType: 'Full-time', startDate: '2019-02-01', annualLeaveDays: 20, baseSalary: '8500.00',
   }).returning({ id: employee.id });
   const [marcus, aisha, tom, lena] = await db.insert(employee).values([
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1042', fullName: 'Marcus Silva',
       email: 'marcus.silva@acme.co', department: 'Warehouse', jobTitle: 'Warehouse Supervisor',
       employmentType: 'Full-time', managerId: manager.id, startDate: '2021-03-15', annualLeaveDays: 16,
+      baseSalary: '4200.00',
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1055', fullName: 'Aisha Rahman',
       email: 'aisha.rahman@acme.co', department: 'Finance', jobTitle: 'Senior Accountant',
       employmentType: 'Full-time', managerId: manager.id, startDate: '2020-07-01', annualLeaveDays: 18,
+      baseSalary: '5600.00',
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1071', fullName: 'Tom Becker',
       email: 'tom.becker@acme.co', department: 'Production', jobTitle: 'Production Line Lead',
       employmentType: 'Full-time', managerId: manager.id, startDate: '2022-01-10', annualLeaveDays: 14,
+      baseSalary: '4000.00',
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1088', fullName: 'Lena Park',
       email: 'lena.park@acme.co', department: 'Sales', jobTitle: 'Account Executive',
       employmentType: 'Contract', managerId: manager.id, startDate: '2023-05-20', annualLeaveDays: 12,
+      baseSalary: '3800.00',
+    },
+  ]).returning({ id: employee.id });
+
+  // Payroll (EPIC-026): two Malaysia employees so C-MY -- the company whose
+  // statutory scheme the payroll mock always demonstrated -- has a real
+  // headcount to run payroll for, matching C-SG's above (previously zero, see
+  // docs/EPICS.md EPIC-026's research note).
+  const [faridMY, sitiMY] = await db.insert(employee).values([
+    {
+      masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2001', fullName: 'Farid Iskandar',
+      email: 'farid.iskandar@acme.my', department: 'Warehouse', jobTitle: 'Warehouse Supervisor',
+      employmentType: 'Full-time', startDate: '2022-09-01', annualLeaveDays: 16, baseSalary: '5500.00',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2002', fullName: 'Siti Balqis',
+      email: 'siti.balqis@acme.my', department: 'Sales', jobTitle: 'Sales Executive',
+      employmentType: 'Full-time', startDate: '2023-11-15', annualLeaveDays: 14, baseSalary: '4200.00',
     },
   ]).returning({ id: employee.id });
 
@@ -374,9 +415,9 @@ export async function seedDemo(db: DB): Promise<void> {
   // Neither is pre-paid/pre-receipted -- matching the established precedent of
   // leaving the first real conversion a live action (e.g. Purchase Requisition's
   // approved-but-unconverted seed row).
-  async function acctId(code: string) {
+  async function acctId(code: string, companyFn = 'C-SG') {
     const [row] = await db.select({ id: account.id }).from(account).where(and(
-      eq(account.masterFn, 'M1'), eq(account.companyFn, 'C-SG'), eq(account.code, code),
+      eq(account.masterFn, 'M1'), eq(account.companyFn, companyFn), eq(account.code, code),
     ));
     return row.id;
   }
@@ -438,6 +479,101 @@ export async function seedDemo(db: DB): Promise<void> {
   await db.update(project).set({
     billedToDate: sql`${project.billedToDate} + 50000.00`,
   }).where(and(eq(project.masterFn, 'M1'), eq(project.companyFn, 'C-SG'), eq(project.id, cellProject.id)));
+
+  // Payroll (EPIC-026): one posted run per company so a real payslip is
+  // viewable immediately in both Singapore and Malaysia without first
+  // creating a run -- unlike Fixed Assets' deliberately-unposted depreciation
+  // runs, a payslip screen with nothing posted has nothing to show at all.
+  // Uses the real computeStatutoryContributions() so seed figures can never
+  // drift from what createPayrollRun/postPayrollRun would themselves compute.
+  async function seedPayrollRun(
+    companyFn: string,
+    country: 'SG' | 'MY',
+    docNo: string,
+    period: { start: string; end: string; payDate: string; postedAt: Date },
+    lines: { employeeId: number; baseSalary: string }[],
+  ) {
+    const computed = lines.map((line) => ({
+      ...line,
+      ...computeStatutoryContributions(country, line.baseSalary),
+    }));
+    const totalGrossCents = computed.reduce((sum, l) => sum + fixedUnits(l.baseSalary, 2), 0n);
+    const totalNetCents = computed.reduce((sum, l) => sum + fixedUnits(l.netPay, 2), 0n);
+    const employeeStatutoryCents = computed
+      .reduce((sum, l) => sum + fixedUnits(l.employeeStatutoryDeduction, 2), 0n);
+    const employerStatutoryCents = computed
+      .reduce((sum, l) => sum + fixedUnits(l.employerStatutoryContribution, 2), 0n);
+    const employerAdditionalCents = computed
+      .reduce((sum, l) => sum + fixedUnits(l.employerAdditionalContribution, 2), 0n);
+    const incomeTaxCents = computed.reduce((sum, l) => sum + fixedUnits(l.incomeTaxDeduction, 2), 0n);
+    const employerContributionCents = employerStatutoryCents + employerAdditionalCents;
+    const statutoryPayableCents = employeeStatutoryCents + employerContributionCents;
+
+    const [run] = await db.insert(payrollRun).values({
+      masterFn: 'M1', companyFn, docNo, status: 'posted',
+      periodStart: period.start, periodEnd: period.end, payDate: period.payDate,
+      totalGrossPay: fixedString(totalGrossCents, 2), totalNetPay: fixedString(totalNetCents, 2),
+      postedAt: period.postedAt,
+    }).returning({ id: payrollRun.id });
+
+    await db.insert(payrollRunLine).values(computed.map((line, index) => ({
+      masterFn: 'M1', companyFn, runId: run.id, lineNo: index + 1, employeeId: line.employeeId,
+      grossPay: line.baseSalary,
+      employeeStatutoryDeduction: line.employeeStatutoryDeduction,
+      incomeTaxDeduction: line.incomeTaxDeduction,
+      employerStatutoryContribution: line.employerStatutoryContribution,
+      employerAdditionalContribution: line.employerAdditionalContribution,
+      netPay: line.netPay,
+    })));
+
+    const legs = [
+      {
+        accountId: await acctId('6100', companyFn),
+        debit: fixedString(totalGrossCents, 2), credit: '0', memo: 'Salary & wages expense',
+      },
+      {
+        accountId: await acctId('6110', companyFn),
+        debit: fixedString(employerContributionCents, 2), credit: '0',
+        memo: 'Employer statutory contributions expense',
+      },
+      {
+        accountId: await acctId('2310', companyFn),
+        debit: '0', credit: fixedString(statutoryPayableCents, 2),
+        memo: 'Statutory contributions payable (employee + employer)',
+      },
+      ...(incomeTaxCents > 0n ? [{
+        accountId: await acctId('2320', companyFn),
+        debit: '0', credit: fixedString(incomeTaxCents, 2), memo: 'Income tax payable',
+      }] : []),
+      {
+        accountId: await acctId('1000', companyFn),
+        debit: '0', credit: fixedString(totalNetCents, 2), memo: 'Net pay disbursed',
+      },
+    ];
+    await db.insert(glEntry).values(legs.map((leg) => ({
+      masterFn: 'M1', companyFn, journalRef: docNo, ...leg,
+    })));
+  }
+
+  await seedPayrollRun(
+    'C-SG', 'SG', 'PAY-2026-0001',
+    { start: '2026-06-01', end: '2026-06-30', payDate: '2026-06-28', postedAt: new Date('2026-06-28T10:00:00Z') },
+    [
+      { employeeId: manager.id, baseSalary: '8500.00' },
+      { employeeId: marcus.id, baseSalary: '4200.00' },
+      { employeeId: aisha.id, baseSalary: '5600.00' },
+      { employeeId: tom.id, baseSalary: '4000.00' },
+      { employeeId: lena.id, baseSalary: '3800.00' },
+    ],
+  );
+  await seedPayrollRun(
+    'C-MY', 'MY', 'PAY-2026-0001',
+    { start: '2026-06-01', end: '2026-06-30', payDate: '2026-06-28', postedAt: new Date('2026-06-28T10:00:00Z') },
+    [
+      { employeeId: faridMY.id, baseSalary: '5500.00' },
+      { employeeId: sitiMY.id, baseSalary: '4200.00' },
+    ],
+  );
 }
 
 /** True if the demo master already exists (so we can avoid double-seeding). */

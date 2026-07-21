@@ -26,8 +26,10 @@ import { receiveGoods } from './modules/purchasing/receiveGoods';
 import { postSupplierInvoice } from './modules/purchasing/postSupplierInvoice';
 import { createOpportunity } from './modules/crm/createOpportunity';
 import { convertOpportunityToSalesOrder } from './modules/crm/convertOpportunityToSalesOrder';
+import { createPayrollRun, postPayrollRun } from './modules/payroll/payrollRun';
 
 const SCOPE: Scope = { masterFn: 'M1', companyFn: 'C-SG' };
+const MY_SCOPE: Scope = { masterFn: 'M1', companyFn: 'C-MY' };
 
 // --- small count/lookup helpers for the sales scenario ---
 async function getProductId(db: DB, sku: string): Promise<number> {
@@ -45,12 +47,12 @@ async function countInvoices(db: DB): Promise<number> {
     .where(and(eq(invoice.masterFn, SCOPE.masterFn), eq(invoice.companyFn, SCOPE.companyFn)));
   return r.n;
 }
-async function glBalance(db: DB, journalRef: string) {
+async function glBalance(db: DB, journalRef: string, scope: Scope = SCOPE) {
   const [r] = await db.select({
     debit: sql<number>`coalesce(sum(debit),0)::float`,
     credit: sql<number>`coalesce(sum(credit),0)::float`,
   }).from(glEntry)
-    .where(and(eq(glEntry.masterFn, SCOPE.masterFn), eq(glEntry.companyFn, SCOPE.companyFn), eq(glEntry.journalRef, journalRef)));
+    .where(and(eq(glEntry.masterFn, scope.masterFn), eq(glEntry.companyFn, scope.companyFn), eq(glEntry.journalRef, journalRef)));
   return { debit: r.debit, credit: r.credit };
 }
 
@@ -409,6 +411,43 @@ async function runCrmScenario(db: DB) {
   };
 }
 
+/** Payroll (EPIC-026): creates + posts a real run for each of the Singapore and
+ *  Malaysia companies (on top of seedDemo's already-posted PAY-2026-0001 for
+ *  each), proving both country-specific statutory engines and a balanced GL
+ *  posting for real, plus that re-posting an already-posted run is rejected. */
+async function runPayrollScenario(db: DB) {
+  const sg = await createPayrollRun(db, SCOPE, {
+    docNo: 'PAY-DEMO-SG', periodStart: '2026-07-01', periodEnd: '2026-07-31', payDate: '2026-07-28',
+  });
+  await postPayrollRun(db, SCOPE, sg.id);
+  const sgGl = await glBalance(db, 'PAY-DEMO-SG', SCOPE);
+
+  const my = await createPayrollRun(db, MY_SCOPE, {
+    docNo: 'PAY-DEMO-MY', periodStart: '2026-07-01', periodEnd: '2026-07-31', payDate: '2026-07-28',
+  });
+  await postPayrollRun(db, MY_SCOPE, my.id);
+  const myGl = await glBalance(db, 'PAY-DEMO-MY', MY_SCOPE);
+
+  let doublePostErr = '';
+  try {
+    await postPayrollRun(db, SCOPE, sg.id);
+  } catch (e) {
+    doublePostErr = (e as Error).name;
+  }
+
+  return {
+    sg: {
+      lineCount: sg.lineCount, totalGrossPay: sg.totalGrossPay, totalNetPay: sg.totalNetPay,
+      glBalanced: sgGl.debit === sgGl.credit, glDebit: sgGl.debit,
+    },
+    my: {
+      lineCount: my.lineCount, totalGrossPay: my.totalGrossPay, totalNetPay: my.totalNetPay,
+      glBalanced: myGl.debit === myGl.credit, glDebit: myGl.debit,
+    },
+    doublePostErr, // 'InvalidPayrollRunStateError'
+  };
+}
+
 async function runEngine(db: DB, withConcurrency: boolean) {
   await seedDemo(db);
   const repo = await runRepoScenario(db);
@@ -417,8 +456,9 @@ async function runEngine(db: DB, withConcurrency: boolean) {
   const sales = await runSalesScenario(db);
   const purchasing = await runPurchasingScenario(db);
   const crm = await runCrmScenario(db);
+  const payroll = await runPayrollScenario(db);
   const concurrency = withConcurrency ? await runConcurrencyTest(db, fx) : null;
-  return { repo, tx, sales, purchasing, crm, concurrency };
+  return { repo, tx, sales, purchasing, crm, payroll, concurrency };
 }
 
 const out: Record<string, Awaited<ReturnType<typeof runEngine>>> = {};
@@ -480,6 +520,14 @@ ok = check('PGlite CRM chain: converting an opportunity creates a real order (ne
 ok = check('PGlite CRM rollback: double-convert rejected (stock stays 45); insufficient stock leaves the opportunity untouched, not half-converted',
   p.crm.doubleConvertErr === 'InvalidOpportunityStateError' && p.crm.stockAfterDoubleConvertAttempt === 45
   && p.crm.insufficientErr === 'InsufficientStockError' && p.crm.oppAfterFailedConvertStage === 'lead') && ok;
+ok = check('PGlite payroll SG: 5 lines, gross=26100 net=20880, balanced GL (Dr=Cr=30602.25)',
+  p.payroll.sg.lineCount === 5 && p.payroll.sg.totalGrossPay === '26100.00' && p.payroll.sg.totalNetPay === '20880.00'
+  && p.payroll.sg.glBalanced && p.payroll.sg.glDebit === 30602.25) && ok;
+ok = check('PGlite payroll MY: 2 lines, gross=9700 net=8342, balanced GL incl. PCB (Dr=Cr=11072.55)',
+  p.payroll.my.lineCount === 2 && p.payroll.my.totalGrossPay === '9700.00' && p.payroll.my.totalNetPay === '8342.00'
+  && p.payroll.my.glBalanced && p.payroll.my.glDebit === 11072.55) && ok;
+ok = check('PGlite payroll rollback: re-posting an already-posted run is rejected',
+  p.payroll.doublePostErr === 'InvalidPayrollRunStateError') && ok;
 
 if (out.postgres) {
   const sameRepo = JSON.stringify(out.pglite.repo) === JSON.stringify(out.postgres.repo);
@@ -487,7 +535,9 @@ if (out.postgres) {
   const sameSales = JSON.stringify(out.pglite.sales) === JSON.stringify(out.postgres.sales);
   const samePurchasing = JSON.stringify(out.pglite.purchasing) === JSON.stringify(out.postgres.purchasing);
   const sameCrm = JSON.stringify(out.pglite.crm) === JSON.stringify(out.postgres.crm);
-  ok = check('repo+tx+sales+purchasing+crm identical across PGlite and PostgreSQL', sameRepo && sameTx && sameSales && samePurchasing && sameCrm) && ok;
+  const samePayroll = JSON.stringify(out.pglite.payroll) === JSON.stringify(out.postgres.payroll);
+  ok = check('repo+tx+sales+purchasing+crm+payroll identical across PGlite and PostgreSQL',
+    sameRepo && sameTx && sameSales && samePurchasing && sameCrm && samePayroll) && ok;
   const c = out.postgres.concurrency!;
   ok = check('Postgres concurrency: exactly 1 of 2 races wins (no over-sell)',
     c.fulfilled === 1 && c.rejected === 1 && c.finalStock === 2 && c.movementsDelta === 1) && ok;
