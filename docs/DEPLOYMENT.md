@@ -83,6 +83,31 @@ docker compose exec api npm run seed       # SG + MY demo data
 > (wipes the volume and re-runs setup) or `make seed`. Don't expect the init script to
 > re-run on an existing volume.
 
+### Connecting to an already-provisioned external database
+
+```bash
+make setup-interactive     # scripts/setup.sh --interactive
+```
+
+By default `make setup` provisions the bundled `db` container. If you already run a
+managed PostgreSQL instance (RDS, Cloud SQL, Supabase, a shared on-prem server, …),
+`make setup-interactive` walks through it instead of hand-editing `.env`:
+
+1. Choose **[2] already-provisioned external database** and paste its
+   `postgres://user:pass@host:port/db` connection string (validated by prefix before
+   continuing).
+2. Answer (or leave blank to auto-generate) `ERP_SETUP_TOKEN` / `ERP_TOKEN_ENCRYPTION_KEY`
+   / `ERP_PUBLIC_URL`, same as the bundled path.
+3. The script never starts or waits on the bundled `db` service
+   (`docker compose up -d api web --no-deps`) and proves readiness by retrying
+   `docker compose exec -T api npm run migrate` directly against your database instead
+   of `pg_isready` against a container that was never started.
+
+This only takes effect the first time — once `.env` exists, both `make setup` and
+`make setup-interactive` leave it untouched. To switch an *existing* deployment onto an
+external database later, edit `.env`'s `DATABASE_URL` by hand (see the comment above it
+in `.env.example`) and `docker compose up -d api web --no-deps` yourself.
+
 ### Auto-creating the database
 
 PostgreSQL's official image auto-creates the database named by `POSTGRES_DB` on first

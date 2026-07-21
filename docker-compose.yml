@@ -4,6 +4,11 @@
 # overridable via .env (WEB_PORT/API_PORT/DB_PORT) for machines where those are
 # already taken. DB_USER/DB_PASSWORD default to a placeholder for the one-command
 # `make setup` promise — override DB_PASSWORD in .env before any real deployment.
+#
+# DATABASE_URL (api/worker): if set in .env, it is used as-is — this is how
+# `scripts/setup.sh --interactive` points at an already-provisioned external
+# database (RDS/Cloud SQL/Supabase/etc). Unset, it falls back to the bundled
+# `db` service built from DB_USER/DB_PASSWORD above (TASK-060, EPIC-025).
 services:
   db:
     image: postgres:16-alpine
@@ -26,7 +31,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-erp}:${DB_PASSWORD:-erp_dev_password}@db:5432/erp
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USER:-erp}:${DB_PASSWORD:-erp_dev_password}@db:5432/erp}
       PORT: 3000
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       TRUST_PROXY: ${TRUST_PROXY:-false}
@@ -51,7 +56,7 @@ services:
       dockerfile: Dockerfile.api
     command: ["npm", "run", "worker"]
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-erp}:${DB_PASSWORD:-erp_dev_password}@db:5432/erp
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USER:-erp}:${DB_PASSWORD:-erp_dev_password}@db:5432/erp}
       ERP_TOKEN_ENCRYPTION_KEY: ${ERP_TOKEN_ENCRYPTION_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}

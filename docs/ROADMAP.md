@@ -2,7 +2,7 @@
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-07-17** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-07-21** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 
@@ -302,7 +302,7 @@ Exit criteria: `npm run audit:screens` passes after each mechanical change; the
 module-access-control toggle demonstrably hides a module from both the sidebar and the
 API for a non-superadmin user of a restricted tenant.
 
-## Phase 9 — Deployment Ergonomics 🔶
+## Phase 9 — Deployment Ergonomics ✅ (interactive host bootstrap done; desktop installer deliberately deferred, not phase-scoped)
 
 Goal: close the two "Future" items `docs/SETUP_WIZARD.md` itself already names under
 Phase A (pre-boot host bootstrap), now that Phase 7's module expansion is fully done and
@@ -310,21 +310,32 @@ the product has enough real depth to be worth installing more than once. Unlike 
 this is not a new business domain — it's the operational path an installer takes before
 the app (and its own in-app Phase B first-run wizard, already fully built) ever starts.
 
-1. **Interactive Host Bootstrap** (EPIC-025 🔶, TASK-060) — today `make setup`/
-   `scripts/setup.sh` is one-command but zero-prompt: it copies `.env.example` to `.env`
-   verbatim (shipping the literal `DB_PASSWORD=change-me` placeholder and blank
-   `ERP_SETUP_TOKEN`/`ERP_TOKEN_ENCRYPTION_KEY` unless the installer remembers to
-   hand-edit them first) and always provisions the bundled `db` container — there's no
-   way to point at a database an installer has already provisioned themselves (a managed
+1. **Interactive Host Bootstrap** (EPIC-025 ✅, TASK-060 done 2026-07-21) — `make setup`/
+   `scripts/setup.sh` used to be one-command but zero-prompt: it copied `.env.example` to
+   `.env` verbatim (shipping the literal `DB_PASSWORD=change-me` placeholder and blank
+   `ERP_SETUP_TOKEN`/`ERP_TOKEN_ENCRYPTION_KEY` unless the installer remembered to
+   hand-edit them first) and always provisioned the bundled `db` container — no way to
+   point at a database an installer had already provisioned themselves (a managed
    RDS/Cloud SQL/Supabase instance, for example) without manually editing `.env` and
-   understanding `docker-compose.yml`'s service graph. Also fixes a real, standalone bug
-   found along the way (confirmed via `docker compose config`, not just reading the
-   file): `docker-compose.yml`'s `api`/`worker` services silently ignore `.env`'s own
-   documented `DATABASE_URL` line, always reconstructing their own connection string
-   from `DB_USER`/`DB_PASSWORD` instead. The other named Future item — a full desktop
-   installer with Docker Desktop detection — stays out of scope, deferred to its own
-   future epic if ever prioritized. See `docs/EPICS.md` for full acceptance criteria.
+   understanding `docker-compose.yml`'s service graph. `scripts/setup.sh --interactive`
+   (`make setup-interactive`) now prompts for bundled-vs-external database, auto-generates
+   strong secrets on a blank answer (validated against the app's own exact contracts —
+   catching, for example, a manually-typed encryption key that doesn't decode to 32
+   bytes, before it can crash the `api` container), and checks host ports for collisions.
+   Also fixed a real, standalone bug found along the way (confirmed via `docker compose
+   config`, not just reading the file): `docker-compose.yml`'s `api`/`worker` services
+   silently ignored `.env`'s own documented `DATABASE_URL` line, always reconstructing
+   their own connection string from `DB_USER`/`DB_PASSWORD` instead. The other named
+   Future item — a full desktop installer with Docker Desktop detection — stays out of
+   scope, deferred to its own future epic if ever prioritized. See `docs/EPICS.md` for
+   full acceptance criteria and the retrospective.
 
-Exit criteria: `scripts/setup.sh --interactive` and the existing zero-flag path both
-verified against real Docker end-to-end (bundled-DB and external-DB cases); existing
-non-interactive behavior provably unchanged.
+Exit criteria: met — `scripts/setup.sh --interactive` and the existing zero-flag path were
+both verified against real Docker end-to-end (bundled-DB and external-DB cases, the latter
+against a standalone `postgres:16-alpine` container standing in for an already-provisioned
+database); existing non-interactive behavior proven byte-for-byte unchanged. Real-Docker
+verification also caught and fixed (separate commit, outside this epic's own diff) a
+previously-undiscovered, pre-existing production bug: the `web` service's Docker build had
+been silently broken since 2026-07-18 (isolated `web/`-only build context couldn't reach
+`erp-demo-runtime-impl.ts`'s cross-workspace imports) — see `docs/EPICS.md` EPIC-025
+retrospective for detail.

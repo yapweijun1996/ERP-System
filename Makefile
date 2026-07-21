@@ -2,7 +2,7 @@
 # Run `make` or `make help` to list targets.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup up down restart logs migrate seed reset demo preview ps psql
+.PHONY: help setup setup-interactive up down restart logs migrate seed reset demo preview ps psql
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -10,6 +10,9 @@ help: ## Show this help
 
 setup: ## First-time setup: env + start + migrate + seed (ONE command)
 	@./scripts/setup.sh
+
+setup-interactive: ## First-time setup with prompts for DB/tokens/ports instead of placeholders
+	@./scripts/setup.sh --interactive
 
 up: ## Start all services (web + api + db) in the background
 	docker compose up -d

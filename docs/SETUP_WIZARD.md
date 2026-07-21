@@ -30,8 +30,14 @@ Be honest: **installing Docker is the real friction** for a non-technical user. 
 from least to most effort to build:
 1. **Guided script** — `scripts/setup.sh` already checks for Docker and gives a clear
    error/instructions if missing. Good enough for a semi-technical user.
-2. **Interactive prompts** — an optional `make setup-interactive` that asks for DB
-   password, base port, etc., instead of editing `.env` by hand. (Future.)
+2. **Interactive prompts** — `make setup-interactive` (`scripts/setup.sh --interactive`)
+   asks for a bundled-vs-external database, DB password / connection string, setup
+   token, encryption key, public URL, and checks host ports for collisions —
+   auto-generating strong secrets on a blank answer instead of shipping
+   `DB_PASSWORD=change-me`. Done, EPIC-025/TASK-060. Only takes effect on a first-time
+   `.env` (still never overwrites an existing one). See
+   [DEPLOYMENT.md](DEPLOYMENT.md#connecting-to-an-already-provisioned-external-database)
+   for the external-database case.
 3. **Desktop installer** — bundle Docker Desktop detection + a one-click launcher.
    (Future; largest effort.)
 
