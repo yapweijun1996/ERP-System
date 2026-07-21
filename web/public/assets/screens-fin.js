@@ -568,7 +568,7 @@ async function prepareCanonicalPaymentVoucherData(){
     return {
       id:row.id,
       no:row.docNo,
-      date:financeDateValue(row.paymentDate),
+      date:dateValue(row.paymentDate),
       bankRef:row.bankRef||'',
       supplierId:row.supplierId,
       supplierName:supplier.name||`Supplier #${row.supplierId}`,

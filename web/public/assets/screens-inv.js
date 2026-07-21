@@ -138,7 +138,7 @@ async function prepareCanonicalInventoryData(){
     const location=warehouseById.get(row.warehouseId);
     return {
       no:`SM-${row.id}`,
-      date:String(row.movedAt||row.createdAt||'').slice(0,16).replace('T',' '),
+      date:dateTimeValue(row.movedAt||row.createdAt),
       item:item.sku,
       name:item.name,
       type:inventoryMovementType(row),

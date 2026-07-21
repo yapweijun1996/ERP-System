@@ -169,7 +169,7 @@ async function prepareHrData(){
 function hrToday(){ return new Date().toISOString().slice(0,10); }
 function hrIsOnLeaveToday(employeeId,leaveRequests){
   const today=hrToday();
-  return leaveRequests.some(lv=>lv.employeeId===employeeId&&lv.status==='approved'&&lv.startDate<=today&&lv.endDate>=today);
+  return leaveRequests.some(lv=>lv.employeeId===employeeId&&lv.status==='approved'&&dateValue(lv.startDate)<=today&&dateValue(lv.endDate)>=today);
 }
 function hrAnnualLeaveUsed(employeeId,leaveRequests){
   return leaveRequests.filter(lv=>lv.employeeId===employeeId&&lv.status==='approved'&&lv.leaveType==='Annual')
@@ -204,7 +204,7 @@ SCREENS['hr-directory'] = async function(root){
         {label:t('hr.col.dept'),align:'l',render:e=>esc(e.department)},
         {label:t('hr.col.role'),align:'l',render:e=>esc(e.jobTitle)},
         {label:t('qc.col.type'),align:'l',render:e=>e.employmentType==='Contract'?cap(t('hr.emp.contract'),'violet'):cap(hrEmploymentTypeLabel(s,e.employmentType),'neutral')},
-        {label:t('hr.col.joined'),align:'l',render:e=>esc(e.startDate)},
+        {label:t('hr.col.joined'),align:'l',render:e=>esc(dateValue(e.startDate))},
         {label:t('col.status'),align:'l',render:e=>{ const st=hrStatusOf(e,leaveRequests); return cap(hrStatusLabel(s,st),hrStatusTone(st)); }},
         {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
       ],
@@ -258,10 +258,10 @@ SCREENS['employee'] = async function(root, params){
   const used=hrAnnualLeaveUsed(e.id,leaveRequests);
   const total=e.annualLeaveDays;
   const pct=total>0?Math.max(0,Math.min(100,Math.round((total-used)/total*100))):0;
-  const myLeave=leaveRequests.filter(lv=>lv.employeeId===e.id).sort((a,b)=>String(b.startDate).localeCompare(String(a.startDate)));
+  const myLeave=leaveRequests.filter(lv=>lv.employeeId===e.id).sort((a,b)=>dateValue(b.startDate).localeCompare(dateValue(a.startDate)));
   const leaveStatusTone={pending:'warn',approved:'ok',rejected:'danger'};
   const leaveRows=myLeave.length?myLeave.map(lv=>`<tr>
-      <td class="l li-name"><b>${esc(lv.leaveType)}</b><small>${esc(lv.startDate)} → ${esc(lv.endDate)}</small></td>
+      <td class="l li-name"><b>${esc(lv.leaveType)}</b><small>${esc(dateValue(lv.startDate))} → ${esc(dateValue(lv.endDate))}</small></td>
       <td class="tnum">${lv.days}</td>
       <td class="l">${cap(lv.status,leaveStatusTone[lv.status]||'neutral')}</td>
     </tr>`).join('') : `<tr><td colspan="3" style="color:var(--muted);padding:14px 0">${esc(s('noLeaveRequests'))}</td></tr>`;
@@ -277,7 +277,7 @@ SCREENS['employee'] = async function(root, params){
       <div class="docmeta">
         <div class="dm"><small>${esc(s('fieldDept'))}</small><b>${esc(e.department)}</b></div>
         <div class="dm"><small>${esc(s('fieldEmployment'))}</small><b>${esc(hrEmploymentTypeLabel(s,e.employmentType))}</b></div>
-        <div class="dm"><small>${esc(s('fieldJoined'))}</small><b>${esc(e.startDate)}</b></div>
+        <div class="dm"><small>${esc(s('fieldJoined'))}</small><b>${esc(dateValue(e.startDate))}</b></div>
         <div class="dm"><small>${esc(s('fieldManager'))}</small><b>${manager?esc(manager.fullName):esc(s('noManager'))}</b></div>
       </div>
     </div>
@@ -299,7 +299,7 @@ SCREENS['employee'] = async function(root, params){
       <aside class="summary">
         <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(s('fieldEmployment'))}</div>
           <div class="field"><span class="k">${esc(t('col.status'))}</span><span class="v">${esc(hrStatusLabel(s,status))}</span></div>
-          <div class="field"><span class="k">${esc(s('fieldJoined'))}</span><span class="v">${esc(e.startDate)}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldJoined'))}</span><span class="v">${esc(dateValue(e.startDate))}</span></div>
         </div>
       </aside>
     </div>

@@ -12,15 +12,6 @@ function financeNumber(value){
   return Number.isFinite(parsed)?parsed:0;
 }
 
-function financeDateValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
-  if(match) return match[0];
-  const parsed=new Date(value);
-  return Number.isNaN(parsed.getTime())?text:parsed.toISOString().slice(0,10);
-}
-
 function financeLocalDate(date){
   const pad=value=>String(value).padStart(2,'0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
@@ -98,7 +89,7 @@ async function prepareCanonicalFinanceData(){
   DB.journals=[];
   DB.journalDocs={};
   entriesByJournalRef.forEach((legs,ref)=>{
-    const date=financeDateValue(legs[0]&&legs[0].postedAt);
+    const date=dateValue(legs[0]&&legs[0].postedAt);
     const totalDebit=legs.reduce((sum,row)=>sum+financeNumber(row.debit),0);
     const source=financeJournalSource(ref);
     const memo=legs.map(row=>row.memo).filter(Boolean).join(' / ')||`Posted ${ref}`;
@@ -139,7 +130,7 @@ async function prepareCanonicalFinanceData(){
       const credit=financeNumber(row.credit);
       close+=debit-credit;
       return {
-        date:financeDateValue(row.postedAt),
+        date:dateValue(row.postedAt),
         je:row.journalRef,
         memo:row.memo||financeJournalSource(row.journalRef),
         dr:debit,
@@ -189,7 +180,7 @@ async function prepareCanonicalFinanceData(){
   const agingByCustomerId=new Map();
   const asAt=new Date();
   invoices.filter(row=>row.status==='unpaid').forEach(row=>{
-    const invoiceDate=financeDateValue(row.invoiceDate);
+    const invoiceDate=dateValue(row.invoiceDate);
     const due=new Date(`${invoiceDate}T00:00:00`);
     due.setDate(due.getDate()+30);
     const age=Math.floor((asAt.getTime()-due.getTime())/86400000);

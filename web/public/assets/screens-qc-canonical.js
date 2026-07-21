@@ -105,13 +105,6 @@
     return window.ErpSystemData;
   }
   function byId(rows){ return new Map((rows||[]).map(row=>[Number(row.id),row])); }
-  function dateLabel(value){
-    const lang=typeof getLang==='function'?getLang():'en';
-    const locale={zh:'zh-CN',ms:'ms-MY',ja:'ja-JP',vi:'vi-VN',en:'en-SG'}[lang]||'en-SG';
-    const valueDate=new Date(String(value||'')+'T00:00:00');
-    return Number.isNaN(valueDate.getTime())?String(value||'—'):
-      new Intl.DateTimeFormat(locale,{year:'numeric',month:'short',day:'numeric'}).format(valueDate);
-  }
   function statusLabel(s,value){
     return ({
       scheduled:s('scheduled'),in_inspection:s('inInspection'),passed:s('passed'),

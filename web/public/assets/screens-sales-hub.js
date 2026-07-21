@@ -73,17 +73,8 @@ function salesNumber(value){
   return Number.isFinite(parsed)?parsed:0;
 }
 
-function salesDateValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
-  if(match) return match[0];
-  const parsed=new Date(value);
-  return Number.isNaN(parsed.getTime())?text:parsed.toISOString().slice(0,10);
-}
-
 function salesDueDate(value){
-  const normalized=salesDateValue(value);
+  const normalized=dateValue(value);
   const date=new Date(`${normalized}T00:00:00`);
   if(Number.isNaN(date.getTime())) return value;
   date.setDate(date.getDate()+30);
@@ -196,8 +187,8 @@ async function prepareCanonicalSalesData(){
       cust:customer.name||`Customer #${row.customerId}`,
       customerId:row.customerId,
       custCode:customer.code||'—',
-      date:salesDateValue(row.orderDate),
-      deliver:salesDateValue(row.orderDate),
+      date:dateValue(row.orderDate),
+      deliver:dateValue(row.orderDate),
       status:ORDER_STATUS_UI[row.status]||row.status,
       rawStatus:row.status,
       total:salesNumber(row.totalAmount),
@@ -258,7 +249,7 @@ async function prepareCanonicalSalesData(){
       id:row.id,
       version:row.version,
       no:row.docNo,
-      date:salesDateValue(row.invoiceDate),
+      date:dateValue(row.invoiceDate),
       due:salesDueDate(row.invoiceDate),
       cust:customer.name||`Customer #${row.customerId}`,
       customerId:row.customerId,

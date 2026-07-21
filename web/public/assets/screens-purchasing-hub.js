@@ -84,18 +84,6 @@ function purchasingNumber(value){
   const parsed=Number(value);
   return Number.isFinite(parsed)?parsed:0;
 }
-function purchasingDateValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
-  return match?match[0]:text;
-}
-function purchasingDateTimeValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,16).replace('T',' · ');
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-  return match?match[0].replace('T',' · '):text;
-}
 
 async function prepareCanonicalPurchasingData(){
   const adapter=window.ErpSystemData;
@@ -194,8 +182,8 @@ async function prepareCanonicalPurchasingData(){
       supp:supplier.name||`Supplier #${row.supplierId}`,
       suppCode:supplier.code||'—',
       supplierId:row.supplierId,
-      date:row.orderDate,
-      expect:row.orderDate,
+      date:dateValue(row.orderDate),
+      expect:dateValue(row.orderDate),
       status:PO_STATUS_UI[row.status]||row.status,
       rawStatus:row.status,
       total:purchasingNumber(row.totalAmount),
@@ -214,7 +202,7 @@ async function prepareCanonicalPurchasingData(){
     return {
       id:row.id,
       no:row.docNo,
-      date:row.receivedDate,
+      date:dateValue(row.receivedDate),
       po:order.docNo||`PO #${row.orderId}`,
       orderId:row.orderId,
       supplier:supplier.name||'Unknown supplier',
@@ -235,7 +223,7 @@ async function prepareCanonicalPurchasingData(){
       id:row.id,
       version:row.version,
       no:row.docNo,
-      date:row.invoiceDate,
+      date:dateValue(row.invoiceDate),
       supplier:supplier.name||'Unknown supplier',
       code:supplier.code||'—',
       po:order.docNo||`PO #${row.orderId}`,
@@ -244,7 +232,7 @@ async function prepareCanonicalPurchasingData(){
       net:purchasingNumber(row.netAmount),
       tax:purchasingNumber(row.taxAmount),
       currency:row.currency,
-      due:row.invoiceDate,
+      due:dateValue(row.invoiceDate),
       match:receipt?'Matched':'No GRN',
       status,
       rawStatus:row.status,
@@ -269,10 +257,10 @@ async function prepareCanonicalPurchasingData(){
     return {
       id:row.id,
       no:row.reqNo,
-      date:purchasingDateValue(row.createdAt),
+      date:dateValue(row.createdAt),
       requestedBy:row.requestedByName,
       dept:row.department,
-      need:purchasingDateValue(row.neededByDate),
+      need:dateValue(row.neededByDate),
       lines:lines.length,
       lineItems:lines.map(line=>{
         const product=productById.get(line.productId)||{};
@@ -291,7 +279,7 @@ async function prepareCanonicalPurchasingData(){
       status:convertedOrder?'Converted':(PR_STATUS_UI[row.status]||row.status),
       rawStatus:row.status,
       rejectionReason:row.rejectionReason||'',
-      decidedAt:row.decidedAt?purchasingDateTimeValue(row.decidedAt):null,
+      decidedAt:row.decidedAt?dateTimeValue(row.decidedAt):null,
       ref:convertedOrder?convertedOrder.docNo:'',
       convertedOrderId:convertedOrder?convertedOrder.id:null,
     };

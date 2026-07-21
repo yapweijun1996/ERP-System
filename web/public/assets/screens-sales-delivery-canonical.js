@@ -73,14 +73,14 @@
       return buildTable({
         rowId:row=>row.id,
         columns:[
-          {label:s('delivery'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(row.deliveryDate)}</small></div>`},
+          {label:s('delivery'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.deliveryDate))}</small></div>`},
           {label:s('customer'),render:row=>{
             const order=orders.get(Number(row.orderId))||{};
             return esc((customers.get(Number(order.customerId))||{}).name||'#'+order.customerId);
           }},
           {label:s('order'),render:row=>`<span class="mono">${esc((orders.get(Number(row.orderId))||{}).docNo||'#'+row.orderId)}</span>`},
           {label:s('invoice'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
-          {label:s('date'),render:row=>esc(row.deliveryDate)},
+          {label:s('date'),render:row=>esc(dateValue(row.deliveryDate))},
           {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
         ],rows:filtered(),
       });
@@ -139,7 +139,7 @@
         <div class="docmeta"><div class="dm"><small>${esc(s('customer'))}</small><b>${esc(customer.name||'—')}</b></div>
           <div class="dm"><small>${esc(s('order'))}</small><b>${esc(order.docNo||'—')}</b></div>
           <div class="dm"><small>${esc(s('invoice'))}</small><b>${esc(invoice.docNo||'—')}</b></div>
-          <div class="dm"><small>${esc(s('date'))}</small><b>${esc(delivery.deliveryDate)}</b></div>
+          <div class="dm"><small>${esc(s('date'))}</small><b>${esc(dateValue(delivery.deliveryDate))}</b></div>
           <div class="dm"><small>${esc(s('status'))}</small><b>${esc(statusLabel(s,delivery.status))}</b></div>
         </div></div>
       <div class="panel"><div class="panel-h"><h3>${esc(s('items'))}</h3></div>

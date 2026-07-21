@@ -141,23 +141,6 @@ function projectCopy(){
 
 function projectNumber(value){ const parsed=Number(value); return Number.isFinite(parsed)?parsed:0; }
 
-/* PGlite/Drizzle return `date`/`timestamp` columns as JS Date objects, not
-   strings — matching screens-fin2.js's financeDateValue, template-literal
-   interpolation would otherwise coerce them via Date.prototype.toString()
-   ("Wed Mar 04 2026 08:00:00 GMT+0800…") instead of a clean value. */
-function projectDateValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
-  return match?match[0]:text;
-}
-function projectDateTimeValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,16).replace('T',' · ');
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-  return match?match[0].replace('T',' · '):text;
-}
-
 /* Reuses the mock's original field names (no/name/client/pm/contract/billed/
    start/due/status) so the offline fallback snapshot in data-projects.js
    keeps rendering through the same table/detail code, matching the
@@ -190,8 +173,8 @@ async function prepareCanonicalProjectData(){
     client:row.customerId!=null?(customerById.get(row.customerId)?.name||('Customer #'+row.customerId)):null,
     pm:row.managerName,
     status:row.status,
-    start:projectDateValue(row.startDate),
-    due:row.dueDate?projectDateValue(row.dueDate):null,
+    start:dateValue(row.startDate),
+    due:row.dueDate?dateValue(row.dueDate):null,
     contract:projectNumber(row.contractValue),
     billed:projectNumber(row.billedToDate),
   }));
@@ -341,7 +324,7 @@ async function prepareProjectDetail(projectId){
   if(!project) throw new Error('No project found for the active company.');
   const customer=project.customerId!=null?customers.find(c=>c.id===project.customerId):null;
   const projectClaims=claims.filter(c=>c.projectId===project.id)
-    .sort((a,b)=>String(a.claimDate).localeCompare(String(b.claimDate))||a.id-b.id);
+    .sort((a,b)=>dateValue(a.claimDate).localeCompare(dateValue(b.claimDate))||a.id-b.id);
   /* doc_no is unique per tenant, not per project — nextClaimNo()/nextReceiptNo() must
      scan every project's own docs, not just this project's, or two projects' first
      documents would both try the same numbered doc_no and the second insert would
@@ -352,7 +335,7 @@ async function prepareProjectDetail(projectId){
     id:row.id,
     docNo:row.docNo,
     supplierName:(supplierById.get(row.supplierId)||{}).name||`Supplier #${row.supplierId}`,
-    date:projectDateValue(row.invoiceDate),
+    date:dateValue(row.invoiceDate),
     total:projectNumber(row.totalAmount),
     status:row.status,
   })).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
@@ -397,7 +380,7 @@ SCREENS['project-detail'] = async function(root, params){
         :` <button class="btn soft sm" data-receipt="${c.id}">Record receipt</button>`;
       return `<tr>
       <td class="lineno">${i+1}</td>
-      <td class="l li-name"><b>${esc(c.docNo)}</b><small>${esc(projectDateValue(c.claimDate))}</small></td>
+      <td class="l li-name"><b>${esc(c.docNo)}</b><small>${esc(dateValue(c.claimDate))}</small></td>
       <td class="l">${esc(c.description)}</td>
       <td class="tnum">${money0(projectNumber(c.netAmount))}</td>
       <td class="tnum" style="color:var(--muted)">${money0(projectNumber(c.taxAmount))}</td>
@@ -413,12 +396,12 @@ SCREENS['project-detail'] = async function(root, params){
   const overBilled=billed>contract;
 
   const activities=[];
-  activities.push({kind:'add',when:p.createdAt?projectDateTimeValue(p.createdAt):'',what:s('activityProjectCreated'),who:esc(p.managerName)});
+  activities.push({kind:'add',when:p.createdAt?dateTimeValue(p.createdAt):'',what:s('activityProjectCreated'),who:esc(p.managerName)});
   claims.forEach(c=>{
-    activities.push({kind:'add',when:c.createdAt?projectDateTimeValue(c.createdAt):'',
+    activities.push({kind:'add',when:c.createdAt?dateTimeValue(c.createdAt):'',
       what:s('activityClaimCreated').replace('{no}',esc(c.docNo)).replace('{amount}',money0(projectNumber(c.totalAmount))),who:esc(p.managerName)});
     if(c.status==='posted'){
-      activities.push({kind:'current',when:c.updatedAt?projectDateTimeValue(c.updatedAt):'',
+      activities.push({kind:'current',when:c.updatedAt?dateTimeValue(c.updatedAt):'',
         what:s('activityClaimPosted').replace('{no}',esc(c.docNo)).replace('{amount}',money0(projectNumber(c.totalAmount))),who:esc(p.managerName)});
     }
   });
@@ -432,7 +415,7 @@ SCREENS['project-detail'] = async function(root, params){
           <div class="dh-row1">
             <div>
               <div class="dt">${ic('project')}${esc(p.name)} <span class="dnum">${esc(p.projectNo)}</span></div>
-              <div style="color:var(--muted);font-size:13px;margin-top:4px">${customer?esc(customer.name):esc(s('internalProject'))} · ${esc(p.managerName)} · ${esc(projectDateValue(p.startDate))}${p.dueDate?' → '+esc(projectDateValue(p.dueDate)):''}</div>
+              <div style="color:var(--muted);font-size:13px;margin-top:4px">${customer?esc(customer.name):esc(s('internalProject'))} · ${esc(p.managerName)} · ${esc(dateValue(p.startDate))}${p.dueDate?' → '+esc(dateValue(p.dueDate)):''}</div>
             </div>
             <div class="dactions">${projectStatusBadge(p.status)}${customer?btn(s('customer360'),{icon:'user',cls:'soft',attrs:'onclick="navigate(\'crm-customer\')"'}):''}</div>
           </div>

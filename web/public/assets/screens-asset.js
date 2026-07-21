@@ -174,7 +174,7 @@ async function prepareCanonicalAssetData(){
       name:row.name,
       cat:row.category,
       loc:row.location,
-      acq:row.acquisitionDate,
+      acq:dateValue(row.acquisitionDate),
       cost,
       residual,
       life,
@@ -309,7 +309,7 @@ async function prepareAssetDetail(assetId){
   const postedRunById=new Map(runs.filter(row=>row.status==='posted').map(row=>[row.id,row]));
   const history=lines.filter(line=>line.assetId===asset.id&&postedRunById.has(line.runId))
     .map(line=>Object.assign({},line,{run:postedRunById.get(line.runId)}))
-    .sort((a,b)=>String(a.run.runDate).localeCompare(String(b.run.runDate))||a.id-b.id);
+    .sort((a,b)=>dateValue(a.run.runDate).localeCompare(dateValue(b.run.runDate))||a.id-b.id);
   return {asset,history};
 }
 
@@ -326,7 +326,7 @@ SCREENS['asset-detail'] = async function(root, params){
   const statusLabel=ASSET_STATUS_LABEL[a.status]||a.status;
   const catLabel=s(ASSET_CATEGORY_KEY[a.category]||a.category);
   const historyRows=detail.history.map(line=>`<tr>
-    <td class="l li-name"><b>${esc(line.run.docNo)}</b><small>${esc(line.run.runDate)}</small></td>
+    <td class="l li-name"><b>${esc(line.run.docNo)}</b><small>${esc(dateValue(line.run.runDate))}</small></td>
     <td class="tnum">${money0(assetNumber(line.openingNbv))}</td>
     <td class="tnum">${money0(assetNumber(line.depreciationAmount))}</td>
     <td class="tnum"><b>${money0(assetNumber(line.closingNbv))}</b></td>
@@ -342,7 +342,7 @@ SCREENS['asset-detail'] = async function(root, params){
       <div class="docmain">
         <div class="panel"><div class="panel-h"><h3>${esc(s('acquisition'))}</h3></div><div class="panel-body">
           <div class="fldrow c3">
-            <div class="fld"><span>${esc(s('fieldAcquisitionDate'))}</span><input value="${esc(a.acquisitionDate)}" readonly></div>
+            <div class="fld"><span>${esc(s('fieldAcquisitionDate'))}</span><input value="${esc(dateValue(a.acquisitionDate))}" readonly></div>
             <div class="fld"><span>${esc(s('fieldOriginalCost'))}</span><input value="${money(cost)}" readonly></div>
             <div class="fld"><span>${esc(s('category'))}</span><input value="${esc(catLabel)}" readonly></div>
             <div class="fld"><span>${esc(s('fieldLocation'))}</span><input value="${esc(a.location||'—')}" readonly></div>
@@ -443,7 +443,7 @@ SCREENS['depreciation'] = async function(root){
       </aside>
       <div class="report-result">
         <div class="report-toolbar">
-          <div><b style="font-size:15px">${esc(s('runTitle'))}</b><div class="report-meta">${latest?esc(latest.docNo)+' · '+esc(latest.runDate)+' · '+lines.length+' '+esc(s('assetsWord')):esc(s('noRunYet'))}</div></div>
+          <div><b style="font-size:15px">${esc(s('runTitle'))}</b><div class="report-meta">${latest?esc(latest.docNo)+' · '+esc(dateValue(latest.runDate))+' · '+lines.length+' '+esc(s('assetsWord')):esc(s('noRunYet'))}</div></div>
           <div class="grow"></div>
           ${isDraft?btn(s('postButton'),{icon:'book',cls:'primary',attrs:'data-post="1"'}):''}
           ${isPosted?btn(s('viewGl'),{icon:'book',cls:'soft',attrs:'onclick="navigate(\'gl\')"'}):''}

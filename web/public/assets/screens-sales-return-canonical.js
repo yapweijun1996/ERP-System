@@ -136,7 +136,7 @@
   SCREENS['sales-returns']=async function(root){
     const s=copy(),data=await load(),deliveries=byId(data.deliveries),invoices=byId(data.invoices);
     const table=buildTable({rowId:row=>row.id,columns:[
-      {label:s('returnDoc'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(row.returnDate)}</small></div>`},
+      {label:s('returnDoc'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.returnDate))}</small></div>`},
       {label:s('customer'),render:row=>esc(customerFor(data,deliveries.get(Number(row.deliveryId))).name||'—')},
       {label:s('against'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
       {label:s('reason'),render:row=>esc(row.reason)},{label:s('total'),align:'r',render:row=>`<b>${esc(money(returnTotal(data,row),(invoices.get(Number(row.invoiceId))||{}).currency))}</b>`},
@@ -168,7 +168,7 @@
       <div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('refresh')}${esc(s('returnDoc'))} <span class="dnum">${esc(row.docNo)}</span></div>
       <div class="h1sub">${esc(cust.name||'—')} · ${esc(row.reason)}</div></div>${cap(s(row.status),tone(row.status))}</div>
       <div class="docmeta"><div class="dm"><small>${esc(s('against'))}</small><b>${esc(inv.docNo||'—')}</b></div><div class="dm"><small>${esc(s('delivery'))}</small><b>${esc(delivery.docNo||'—')}</b></div>
-      <div class="dm"><small>${esc(s('warehouse'))}</small><b>${esc((warehouses.get(Number(row.warehouseId))||{}).name||'—')}</b></div><div class="dm"><small>${esc(s('date'))}</small><b>${esc(row.returnDate)}</b></div></div></div>
+      <div class="dm"><small>${esc(s('warehouse'))}</small><b>${esc((warehouses.get(Number(row.warehouseId))||{}).name||'—')}</b></div><div class="dm"><small>${esc(s('date'))}</small><b>${esc(dateValue(row.returnDate))}</b></div></div></div>
       <div class="panel"><div class="panel-h"><h3>${esc(s('items'))}</h3></div><table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('product'))}</th><th>${esc(s('qty'))}</th><th>${esc(s('unitPrice'))}</th><th>${esc(s('net'))}</th><th>${esc(s('tax'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
       </div></div>${row.status==='requested'?`<div class="set-savebar"><div class="grow"></div>${btn(s('reject'),{icon:'x',cls:'soft',attrs:'data-return-action="reject"'})}${btn(s('receiveCredit'),{icon:'coins',cls:'primary',attrs:'data-return-action="receive-and-credit"'})}</div>`:''}</section></div>`;
     root.querySelectorAll('[data-return-action]').forEach(button=>button.addEventListener('click',async()=>{
@@ -185,7 +185,7 @@
   SCREENS['credit-notes']=async function(root){
     const s=copy(),data=await load(),invoices=byId(data.invoices);
     const table=buildTable({rowId:row=>row.id,columns:[
-      {label:s('creditNote'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(row.noteDate)}</small></div>`},
+      {label:s('creditNote'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.noteDate))}</small></div>`},
       {label:s('against'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
       {label:s('net'),align:'r',render:row=>esc(money(row.netAmount,row.currency))},{label:s('tax'),align:'r',render:row=>esc(money(row.taxAmount,row.currency))},
       {label:s('total'),align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},{label:s('status'),render:row=>cap(s(row.status),tone(row.status))},
@@ -208,7 +208,7 @@
     root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:s('creditNotes'),route:'credit-notes'},{cur:credit.docNo}])}${salesNav('credit-notes')}</div>
       <div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('coins')}${esc(s('creditNote'))} <span class="dnum">${esc(credit.docNo)}</span></div>
       <div class="h1sub">${esc(s('against'))} ${esc(inv.docNo||'—')} · ${esc(ret.docNo||'—')}</div></div>${cap(s(credit.status),tone(credit.status))}</div>
-      <div class="docmeta"><div class="dm"><small>${esc(s('date'))}</small><b>${esc(credit.noteDate)}</b></div><div class="dm"><small>${esc(s('net'))}</small><b>${esc(money(credit.netAmount,credit.currency))}</b></div>
+      <div class="docmeta"><div class="dm"><small>${esc(s('date'))}</small><b>${esc(dateValue(credit.noteDate))}</b></div><div class="dm"><small>${esc(s('net'))}</small><b>${esc(money(credit.netAmount,credit.currency))}</b></div>
       <div class="dm"><small>${esc(s('tax'))}</small><b>${esc(money(credit.taxAmount,credit.currency))}</b></div><div class="dm"><small>${esc(s('total'))}</small><b>${esc(money(credit.totalAmount,credit.currency))}</b></div></div></div>
       <div class="panel"><div class="panel-h"><h3>${esc(s('items'))}</h3></div><table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('product'))}</th><th>${esc(s('qty'))}</th><th>${esc(s('net'))}</th><th>${esc(s('tax'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="doclayout"><div class="panel"><div class="panel-body">${indicator({tone:'ok',icon:'box',label:s('movement'),value:creditLines.length,sub:s('gl')})}</div></div></div>
@@ -230,7 +230,7 @@
     ]);
     const notes=pages[0].data||[],invoices=byId(pages[1].data||[]);
     const table=buildTable({rowId:row=>row.id,columns:[
-      {label:d.title,render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(row.noteDate)}</small></div>`},
+      {label:d.title,render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.noteDate))}</small></div>`},
       {label:d.invoice,render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
       {label:d.reason,render:row=>esc(row.reason)},{label:d.net,align:'r',render:row=>esc(money(row.netAmount,row.currency))},
       {label:d.tax,align:'r',render:row=>esc(money(row.taxAmount,row.currency))},{label:d.total,align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},

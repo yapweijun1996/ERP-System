@@ -78,12 +78,6 @@ SCREENS['picking'] = async function(root){
     low:s('priorityLow'),normal:s('priorityNormal'),
     high:s('priorityHigh'),urgent:s('priorityUrgent'),
   };
-  function displayDate(value){
-    const date=value instanceof Date?value:new Date(value);
-    if(Number.isNaN(date.getTime())) return String(value||'—');
-    const locale=lang==='zh'?'zh-CN':lang==='ms'?'ms-MY':'en-SG';
-    return new Intl.DateTimeFormat(locale,{year:'numeric',month:'short',day:'numeric'}).format(date);
-  }
 
   if(!pick){
     root.innerHTML=`<div class="content full"><section class="master">
@@ -145,7 +139,7 @@ SCREENS['picking'] = async function(root){
           <b class="tnum">${progress}%</b></div></div>
       </div>
       <div class="h1sub">${esc(s('assigned'))} ${esc(pick.assignee||s('unassigned'))} ·
-        ${esc(s('date'))} ${esc(displayDate(pick.pickDate))}</div>
+        ${esc(s('date'))} ${esc(dateLabel(pick.pickDate))}</div>
     </div>
     <div class="pick-layout">
       <div class="pick-main">

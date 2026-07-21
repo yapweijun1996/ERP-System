@@ -259,7 +259,7 @@
       return buildTable({
         rowId:row=>row.id,
         columns:[
-          {label:s('enquiries'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(row.enquiryDate)}</small></div>`},
+          {label:s('enquiries'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.enquiryDate))}</small></div>`},
           {label:s('customer'),render:row=>esc((customers.get(Number(row.customerId))||{}).name||'#'+row.customerId)},
           {label:s('subject'),render:row=>esc(row.subject)},
           {label:s('channel'),render:row=>esc(row.channel)},
@@ -310,9 +310,9 @@
       return buildTable({
         rowId:row=>row.id,
         columns:[
-          {label:s('quotations'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(row.quoteDate)}</small></div>`},
+          {label:s('quotations'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.quoteDate))}</small></div>`},
           {label:s('customer'),render:row=>esc((customers.get(Number(row.customerId))||{}).name||'#'+row.customerId)},
-          {label:s('validUntil'),render:row=>esc(row.validUntil)},
+          {label:s('validUntil'),render:row=>esc(dateValue(row.validUntil))},
           {label:s('probability'),align:'r',render:row=>`<span class="tnum">${num(Number(row.probability))}%</span>`},
           {label:s('total'),align:'r',render:row=>`<b class="tnum">${esc(amountLabel(row.totalAmount,row.currency))}</b>`},
           {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
@@ -382,8 +382,8 @@
         <div class="dactions">${cap(statusLabel(s,quotation.status),statusTone(quotation.status))}</div></div>
         <div class="docmeta">
           <div class="dm"><small>${esc(s('customer'))}</small><b>${esc(customer.name||'#'+quotation.customerId)}</b></div>
-          <div class="dm"><small>${esc(s('quoteDate'))}</small><b>${esc(quotation.quoteDate)}</b></div>
-          <div class="dm"><small>${esc(s('validUntil'))}</small><b>${esc(quotation.validUntil)}</b></div>
+          <div class="dm"><small>${esc(s('quoteDate'))}</small><b>${esc(dateValue(quotation.quoteDate))}</b></div>
+          <div class="dm"><small>${esc(s('validUntil'))}</small><b>${esc(dateValue(quotation.validUntil))}</b></div>
           <div class="dm"><small>${esc(s('probability'))}</small><b>${num(Number(quotation.probability))}%</b></div>
           <div class="dm"><small>${esc(s('currency'))}</small><b>${esc(quotation.currency)}</b></div>
         </div></div>

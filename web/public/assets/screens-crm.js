@@ -85,7 +85,7 @@ async function prepareCanonicalCrmData(){
         owner:ownerName,
         av:initials,
         clr:'#0a84ff',
-        close:row.closeDate,
+        close:dateValue(row.closeDate),
         prob:crmNumber(row.probability),
         rawStage:row.stage,
       };
@@ -399,14 +399,6 @@ function customer360Copy(){
   return key=>pack[key]||packs.en[key]||key;
 }
 
-function crmDateValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
-  if(match) return match[0];
-  const parsed=new Date(value);
-  return Number.isNaN(parsed.getTime())?text:parsed.toISOString().slice(0,10);
-}
 /* Fetches the bounded resource set Customer-360 needs and joins/filters it
    client-side by customerId — the demo adapter's list() ignores query filters
    entirely (it only understands cursor/limit), so server-side filtering (added
@@ -432,7 +424,7 @@ async function prepareCustomerDetail(customerId){
   custInvoices.forEach(row=>{
     const amount=crmNumber(row.totalAmount);
     balance+=amount;
-    const due=new Date(`${crmDateValue(row.invoiceDate)}T00:00:00`);
+    const due=new Date(`${dateValue(row.invoiceDate)}T00:00:00`);
     due.setDate(due.getDate()+30);
     if(asAt.getTime()>due.getTime()) overdue+=amount;
   });
@@ -460,11 +452,11 @@ SCREENS['crm-customer'] = async function(root, params){
     const limit=detail.creditProfile?crmNumber(detail.creditProfile.creditLimit):0;
     const usedPct=limit>0?Math.round(detail.balance/limit*100):0;
     const ownerLabel=c.ownerUserId?((DB.user&&DB.user.name)||s('unassigned')):s('unassigned');
-    const since=crmDateValue(c.createdAt);
+    const since=dateValue(c.createdAt);
     const notSet=s('notSet');
     const openOrders=detail.orders.map(row=>({
       no:row.docNo,label:s('salesOrder'),
-      meta:`${crmDateValue(row.orderDate)} · ${money(crmNumber(row.totalAmount))}`,
+      meta:`${dateValue(row.orderDate)} · ${money(crmNumber(row.totalAmount))}`,
       status:ts(row.status),
     }));
     const openOpps=detail.opportunities.map(row=>({
@@ -473,7 +465,7 @@ SCREENS['crm-customer'] = async function(root, params){
       status:ts(row.stage),
     }));
     const activityEvents=detail.activities.map(row=>({
-      kind:'sys',when:crmDateValue(row.occurredAt),what:esc(row.body),
+      kind:'sys',when:dateValue(row.occurredAt),what:esc(row.body),
       who:(DB.user&&DB.user.name)||'—',
     }));
 

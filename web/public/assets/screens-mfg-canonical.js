@@ -87,14 +87,6 @@
       completed:'ok',closed:'neutral',cancelled:'danger',
     })[status]||'neutral';
   }
-  function dateLabel(value){
-    const lang=typeof getLang==='function'?getLang():'en';
-    const date=new Date(String(value||'')+'T00:00:00');
-    if(Number.isNaN(date.getTime())) return String(value||'—');
-    return new Intl.DateTimeFormat(lang==='zh'?'zh-CN':lang==='ms'?'ms-MY':'en-SG',{
-      year:'numeric',month:'short',day:'numeric',
-    }).format(date);
-  }
   function adapter(){
     if(!window.ErpSystemData) throw new Error('ERP data adapter is unavailable.');
     return window.ErpSystemData;

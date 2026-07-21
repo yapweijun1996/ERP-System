@@ -182,7 +182,7 @@ SCREENS['user-mgmt'] = async function(root){
       columns:[
         {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:#0a84ff;width:30px;height:30px;font-size:11px">${esc(initialsOf(u.fullName||u.email))}</span><div class="cellsub"><b>${esc(u.fullName||u.email)}</b><small>${esc(u.email)}</small></div></div>`},
         {label:t('hr.col.role'),align:'l',render:u=>esc(u.roleName)},
-        {label:t('usr.col.lastactive'),align:'l',render:u=>u.lastActiveAt?esc(String(u.lastActiveAt).slice(0,16).replace('T',' ')):'—'},
+        {label:t('usr.col.lastactive'),align:'l',render:u=>u.lastActiveAt?esc(dateTimeValue(u.lastActiveAt)):'—'},
         {label:t('col.status'),align:'l',render:u=>cap(ts(u.status),userStatusTone(u.status))},
         {label:'',align:'c',render:u=>u.kind==='user'&&u.email!==(DB.user&&DB.user.email)
           ?`<span class="rowact"><button data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button></span>`
@@ -313,7 +313,7 @@ SCREENS['audit-log'] = async function(root){
       <div class="dt-body">`;
     rows.forEach(e=>{
       h+=`<div class="dt-r">
-        <div class="dt-c l mono" style="color:var(--muted);font-size:12px">${esc(String(e.occurredAt).slice(0,16).replace('T',' '))}</div>
+        <div class="dt-c l mono" style="color:var(--muted);font-size:12px">${esc(dateTimeValue(e.occurredAt))}</div>
         <div class="dt-c l"><b style="font-weight:600">${esc(e.actorName||e.actorEmail||s('auditSystem'))}</b></div>
         <div class="dt-c l">${cap(esc(e.action),auditActionTone(e.action))}</div>
         <div class="dt-c l mono" style="font-size:12px;color:var(--accent)">${esc(e.entity)}${e.entityId!=null?' #'+esc(e.entityId):''}</div>

@@ -175,28 +175,12 @@ function serviceCopy(){
 
 function serviceNumber(value){ const parsed=Number(value); return Number.isFinite(parsed)?parsed:0; }
 
-/* PGlite/Drizzle return date/timestamp columns as JS Date objects — see
-   projectDateValue()/projectDateTimeValue() in screens-project.js for the
-   same normalizer, duplicated here per this codebase's per-file convention
-   (financeDateValue also has its own copy). */
-function serviceDateValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}/);
-  return match?match[0]:text;
-}
-function serviceDateTimeValue(value){
-  if(value instanceof Date&&!Number.isNaN(value.getTime())) return value.toISOString().slice(0,16).replace('T',' · ');
-  const text=String(value==null?'':value);
-  const match=text.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-  return match?match[0].replace('T',' · '):text;
-}
 function serviceToDate(value){
   return value instanceof Date?value:new Date(value);
 }
 function serviceContractStatus(expiryDate){
   const today=new Date();
-  const expiry=new Date(serviceDateValue(expiryDate)+'T00:00:00');
+  const expiry=new Date(dateValue(expiryDate)+'T00:00:00');
   const daysLeft=Math.ceil((expiry-today)/86400000);
   if(daysLeft<0) return 'expired';
   if(daysLeft<=60) return 'expiring';
@@ -236,8 +220,8 @@ async function prepareCanonicalServiceData(){
     plan:row.plan,
     slaResponseHours:row.slaResponseHours==null?null:serviceNumber(row.slaResponseHours),
     assets:serviceNumber(row.assetsCovered),
-    start:serviceDateValue(row.startDate),
-    expiry:serviceDateValue(row.expiryDate),
+    start:dateValue(row.startDate),
+    expiry:dateValue(row.expiryDate),
     value:serviceNumber(row.annualValue),
     computedStatus:serviceContractStatus(row.expiryDate),
   }));
@@ -435,7 +419,7 @@ SCREENS['service-order'] = async function(root, params){
       <div class="sectitle" style="margin-top:0">${esc(s('slaTitle'))}</div>
       <div class="indicator ${tone}">
         <div class="ind-top">${ic('clock')}<span>${esc(s('responseDue'))}</span><span class="ind-r">${esc(label)}</span></div>
-        <small>${esc(contract?contract.plan+' SLA · ':'')}${esc(s('openedOn').replace('{d}',serviceDateTimeValue(d.openedAt)))} · ${esc(s('dueOn').replace('{d}',serviceDateTimeValue(d.dueAt)))}</small>
+        <small>${esc(contract?contract.plan+' SLA · ':'')}${esc(s('openedOn').replace('{d}',dateTimeValue(d.openedAt)))} · ${esc(s('dueOn').replace('{d}',dateTimeValue(d.dueAt)))}</small>
       </div>
       <div class="sumrow" style="margin-top:10px"><span class="sk2">${esc(s('coverageLabel'))}</span><span class="sv">${cap(ts(SERVICE_COVERAGE_LABEL[d.coverage]),coverTone(SERVICE_COVERAGE_LABEL[d.coverage]))}</span></div>
       <div class="sumrow"><span class="sk2">${esc(s('billable'))}</span><span class="sv">${d.coverage==='in_warranty'?esc(s('billableNo')):esc(s('billableYes'))}</span></div>
@@ -458,8 +442,8 @@ SCREENS['service-order'] = async function(root, params){
           <div class="dm"><small>${esc(s('technician'))}</small><b>${d.tech?esc(d.tech):esc(s('unassigned'))}</b></div>
           <div class="dm"><small>${esc(s('coverageLabel'))}</small><b>${esc(ts(SERVICE_COVERAGE_LABEL[d.coverage]))}</b></div>
           <div class="dm"><small>Contract</small><b>${contract?esc(contract.no):'—'}</b></div>
-          <div class="dm"><small>Opened</small><b>${esc(serviceDateTimeValue(d.openedAt))}</b></div>
-          ${d.resolvedAt?`<div class="dm"><small>Resolved</small><b>${esc(serviceDateTimeValue(d.resolvedAt))}</b></div>`:''}
+          <div class="dm"><small>Opened</small><b>${esc(dateTimeValue(d.openedAt))}</b></div>
+          ${d.resolvedAt?`<div class="dm"><small>Resolved</small><b>${esc(dateTimeValue(d.resolvedAt))}</b></div>`:''}
         </div>
       </div>
 

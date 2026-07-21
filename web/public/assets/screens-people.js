@@ -27,7 +27,7 @@ SCREENS['leave-approval'] = async function(root){
     const listCols=[
       {label:t('hr.col.employee'),align:'l',w:'minmax(190px,2fr)',render:l=>{ const e=empOf(l); return `<div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="cav" style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;background:${hrAvatarColor(e.fullName)};flex:none">${esc(hrInitials(e.fullName))}</span><div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.department)}</small></div></div>`; }},
       {label:'Type',align:'l',render:l=>cap(l.leaveType,l.leaveType==='Medical'?'violet':l.leaveType==='Unpaid'?'neutral':'accent')},
-      {label:s('colDates'),align:'l',w:'minmax(150px,1.4fr)',render:l=>`${esc(l.startDate)} → ${esc(l.endDate)}`},
+      {label:s('colDates'),align:'l',w:'minmax(150px,1.4fr)',render:l=>`${esc(dateValue(l.startDate))} → ${esc(dateValue(l.endDate))}`},
       {label:'Days',align:'r',w:'70px',render:l=>l.days},
       {label:t('col.status'),align:'l',render:l=>cap(leaveStatusLabel(l.status),leaveStatusTone[l.status]||'neutral')},
     ];
@@ -48,11 +48,11 @@ SCREENS['leave-approval'] = async function(root){
         <div class="statgrid c3"><div class="stat"><small>Requested</small><b>${sel.days}d</b></div></div>
         <div class="card">
           <div class="field"><span class="k">Leave type</span><span class="v">${esc(sel.leaveType)}</span></div>
-          <div class="field"><span class="k">From</span><span class="v">${esc(sel.startDate)}</span></div>
-          <div class="field"><span class="k">To</span><span class="v">${esc(sel.endDate)}</span></div>
+          <div class="field"><span class="k">From</span><span class="v">${esc(dateValue(sel.startDate))}</span></div>
+          <div class="field"><span class="k">To</span><span class="v">${esc(dateValue(sel.endDate))}</span></div>
           <div class="field"><span class="k">${esc(s('rejectReasonLabel'))}</span><span class="v">${sel.reason?esc(sel.reason):'—'}</span></div>
           ${sel.status==='rejected'?`<div class="field"><span class="k">${esc(s('rejectReasonLabel'))} (HR)</span><span class="v">${esc(sel.rejectionReason||'')}</span></div>`:''}
-          ${decided&&sel.decidedAt?`<div class="field"><span class="k">Decided</span><span class="v">${esc(String(sel.decidedAt).slice(0,10))}</span></div>`:''}
+          ${decided&&sel.decidedAt?`<div class="field"><span class="k">Decided</span><span class="v">${esc(dateValue(sel.decidedAt))}</span></div>`:''}
         </div>
       </div>
       <div class="approvebar">
