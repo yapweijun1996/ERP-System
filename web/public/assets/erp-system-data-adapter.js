@@ -449,6 +449,7 @@
 
     DB.company = {
       name: activeCompany.name,
+      country: activeCompany.country,
       branch: activeCompany.country === 'MY' ? 'Kuala Lumpur HQ' : 'Singapore HQ',
       currency: activeCompany.currency,
       taxRegime: activeCompany.tax_regime,
@@ -1321,6 +1322,8 @@
     'assets/depreciation-run-lines':'depreciation_run_line',
     'hr/employees':'employee',
     'hr/leave-requests':'leave_request',
+    'payroll/runs':'payroll_run',
+    'payroll/run-lines':'payroll_run_line',
     'project/projects':'project',
     'project/progress-claims':'progress_claim',
     'service/contracts':'service_contract',
@@ -1665,6 +1668,14 @@
       await refresh();
       return {data:newLeaveRequest,meta:{}};
     }
+    if(key==='payroll/runs'){
+      var newPayrollRun = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createPayrollRunWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newPayrollRun,meta:{}};
+    }
     if(key==='project/projects'){
       var newProject = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createProjectWithin(
@@ -1946,6 +1957,14 @@
       });
       await refresh();
       return {data:postedDepreciationRun,meta:{}};
+    }
+    if(key==='payroll/runs'&&name==='post'){
+      var postedPayrollRun = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.postPayrollRunWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:postedPayrollRun,meta:{}};
     }
     if(key==='hr/leave-requests'&&name==='approve'){
       var approvedLeave = await requireDemoDb().transaction(function(tx){

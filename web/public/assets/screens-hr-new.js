@@ -58,6 +58,7 @@ SCREENS['new-employee'] = async function(root){
             </div>
             <div class="fldrow c2" style="margin-top:12px">
               <div class="fld"><span>${esc(s('fieldAnnualDays'))}</span><input type="number" id="neLeave" min="0" max="40" value="14"></div>
+              <div class="fld"><span>${esc(s('fieldBaseSalary'))} <span class="req">*</span></span><input type="number" id="neSalary" min="0" step="0.01" class="tnum" placeholder="0.00"></div>
             </div>
           </div>
         </div>
@@ -83,6 +84,8 @@ SCREENS['new-employee'] = async function(root){
     if(!requireField(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), s('emailRequired'), '#neEmail')) return;
     if(!requireField(dept, s('deptRequired'), '#neDept')) return;
     if(!requireField(title, s('jobTitleRequired'), '#neTitle')) return;
+    const baseSalary=+$('#neSalary').value||0;
+    if(!requireField(baseSalary>0, s('baseSalaryRequired'), '#neSalary')) return;
     const managerId=$('#neManager').value?Number($('#neManager').value):null;
     const createBtn=$('#neCreate');
     createBtn.disabled=true;
@@ -93,6 +96,7 @@ SCREENS['new-employee'] = async function(root){
         department:dept, jobTitle:title, employmentType:$('#neType').value,
         managerId, startDate:$('#neStart').value,
         annualLeaveDays:Math.max(0,+$('#neLeave').value||0),
+        baseSalary:baseSalary.toFixed(2),
       });
       navigate('hr-directory');
       toast(s('employeeCreated').replace('{name}',name),'ok');

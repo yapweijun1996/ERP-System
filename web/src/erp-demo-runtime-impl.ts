@@ -150,6 +150,11 @@ import {
   type CreateLeaveRequestInput,
 } from '../../src/modules/hr/leaveRequest';
 import {
+  createPayrollRunWithin,
+  postPayrollRunWithin,
+  type CreatePayrollRunInput,
+} from '../../src/modules/payroll/payrollRun';
+import {
   createProjectWithin,
   type CreateProjectInput,
 } from '../../src/modules/project/project';
@@ -454,6 +459,12 @@ export const erpDemoRuntime = Object.freeze({
       decision: 'approved' | 'rejected', rejectionReason?: string | null,
     ) {
       return decideLeaveRequestWithin(asDomainDb(db), scope, leaveRequestId, decision, rejectionReason);
+    },
+    createPayrollRunWithin(db: DemoOrm, scope: Scope, input: CreatePayrollRunInput) {
+      return createPayrollRunWithin(asDomainDb(db), scope, input);
+    },
+    postPayrollRunWithin(db: DemoOrm, scope: Scope, runId: number) {
+      return postPayrollRunWithin(asDomainDb(db), scope, runId);
     },
     createProjectWithin(db: DemoOrm, scope: Scope, input: CreateProjectInput) {
       return createProjectWithin(asDomainDb(db), scope, input);

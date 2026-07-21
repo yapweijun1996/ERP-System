@@ -1029,7 +1029,7 @@ separate commit (`870fc08`, outside this epic's own diff) by widening `web`'s bu
 context to the repo root, mirroring the pattern `Dockerfile.api` already established for
 the identical cross-workspace-import problem.
 
-## EPIC-026 — Payroll: Run, Payslip & Statutory Contributions (SG CPF + MY EPF/SOCSO/EIS/PCB)
+## EPIC-026 — Payroll: Run, Payslip & Statutory Contributions (SG CPF + MY EPF/SOCSO/EIS/PCB) ✅
 
 EPIC-020 (HR-lite) deliberately deferred Payroll (`payroll-run`, `payslip`) as "a
 materially different, statutory-contribution-heavy domain," not a lite extension of
@@ -1079,10 +1079,10 @@ depth. A later epic can deepen any of this without changing the schema shape bel
 
 Acceptance criteria:
 
-- [ ] `employee` gains a required `baseSalary` (numeric, > 0) column — one flat period
+- [x] `employee` gains a required `baseSalary` (numeric, > 0) column — one flat period
       base salary per employee regardless of `employmentType`. Existing `createEmployee`
       validation extended to require it; no other `employee` schema change.
-- [ ] New `src/data/schema/payroll.ts`: `payrollRun` (tenant-scoped, `docNo`,
+- [x] New `src/data/schema/payroll.ts`: `payrollRun` (tenant-scoped, `docNo`,
       `periodStart`/`periodEnd`/`payDate`, `status: 'draft'|'posted'`, aggregate totals,
       `postedAt`, optimistic-concurrency `version` — mirrors `depreciation_run` exactly)
       and `payrollRunLine` (`payrollRunId` FK, `employeeId` FK, `lineNo`, `grossPay`
@@ -1090,16 +1090,19 @@ Acceptance criteria:
       `progress_claim`'s "don't recompute from a since-changed source" convention —
       `employeeStatutoryDeduction`, `incomeTaxDeduction`, `employerStatutoryContribution`,
       `employerAdditionalContribution`, `netPay`).
-- [ ] New `src/modules/payroll/statutory.ts`: a pluggable per-country engine mirroring
-      `TaxEngine`'s exact `GstEngine`/`SstEngine` shape — a Singapore (CPF: flat
-      below-55-bracket employee/employer rates + an approximate flat-rate SDL) and a
-      Malaysia (EPF employee/employer + a combined flat-rate SOCSO/EIS approximation +
-      a flat-rate PCB approximation) implementation, dispatched by the run's company's
-      `country`, returning the four contribution figures for a given `baseSalary`. SG
-      lines correctly show zero/near-zero income-tax withholding (Singapore does not
-      withhold monthly income tax on resident payroll the way Malaysia's PCB does) —
-      not a fabricated non-zero number just to fill the field.
-- [ ] New `src/modules/payroll/payrollRun.ts`, mirroring `depreciationRun.ts`'s exact
+- [x] New `src/modules/payroll/statutory.ts`: a pluggable per-country engine — a
+      Singapore (CPF: flat below-55-bracket employee/employer rates + an approximate
+      flat-rate SDL) and a Malaysia (EPF employee/employer + a combined flat-rate
+      SOCSO/EIS approximation + a flat-rate PCB approximation) implementation,
+      dispatched by the run's company's `country`, returning the four contribution
+      figures for a given `baseSalary`. Built as a plain function + rate-table dispatch
+      (not a class hierarchy) — confirmed during implementation that no `TaxEngine`/
+      `GstEngine`/`SstEngine` class actually exists in this codebase to mirror; real GST/
+      SST tax lookups are data-driven via `taxRule` + `getEffectiveTaxRate`, so this
+      module follows that same plain-function spirit instead. SG lines correctly show
+      zero income-tax withholding (Singapore does not withhold monthly income tax on
+      resident payroll the way Malaysia's PCB does) — not a fabricated non-zero number.
+- [x] New `src/modules/payroll/payrollRun.ts`, mirroring `depreciationRun.ts`'s exact
       two-function-pair shape: `createPayrollRunWithin`/`createPayrollRun` (computes one
       line per active employee in scope using the statutory engine, inserts the draft
       run + lines, no GL touched) and `postPayrollRunWithin`/`postPayrollRun` (row-locks
@@ -1107,42 +1110,56 @@ Acceptance criteria:
       aggregate journal: `Dr 6100` Salary & Wages Expense + `Dr 6110` Employer Statutory
       Contributions Expense / `Cr 2310` Statutory Contributions Payable (employee +
       employer sides combined — matches real-world practice of remitting both portions
-      to EPF/CPF in one payment) + `Cr 2320` Income Tax Payable (PCB) + `Cr 1000` Cash &
-      Bank for total net pay, tagged `journalRef: run.docNo`; marks `status: 'posted'`).
-      New `6100`/`6110`/`2310`/`2320` chart-of-accounts rows seeded (confirmed unused
-      today).
-- [ ] New `payrollRead: 'payroll.read'` / `payrollWrite: 'payroll.write'` permission
+      to EPF/CPF in one payment) + `Cr 2320` Income Tax Payable (PCB, skipped when zero
+      so SG runs don't post a spurious $0 leg) + `Cr 1000` Cash & Bank for total net pay,
+      tagged `journalRef: run.docNo`; marks `status: 'posted'`). New `6100`/`6110`/
+      `2310`/`2320` chart-of-accounts rows seeded for both C-SG and C-MY (C-MY had zero
+      accounts at all before this epic).
+- [x] New `payrollRead: 'payroll.read'` / `payrollWrite: 'payroll.write'` permission
       keys (`src/auth/permissions.ts`), registered as generic resources
       (`payroll/runs`, `payroll/run-lines`) gated on them — separate from `hr.read`/
       `hr.write` so a role can see the employee directory without seeing compensation.
-- [ ] `src/data/seed.ts`: every existing (`C-SG`) seeded employee gains a real
-      `baseSalary`; at least two employees seeded for `C-MY` (currently zero) with their
+- [x] `src/data/seed.ts`: every existing (`C-SG`) seeded employee gains a real
+      `baseSalary`; two new employees seeded for `C-MY` (previously zero) with their
       own `baseSalary`; one posted payroll run seeded per company so both a Singapore
       and a Malaysia payslip are viewable immediately without first creating a run.
-- [ ] `payroll-run` screen: real list of payroll runs (replacing the single hardcoded
-      "June 2026" row), a real "New payroll run" action (period + pay date, computes a
-      real draft via `createPayrollRun`), and a real "Approve & lock run" action calling
-      `postPayrollRun` — no more toast-only fake posting. Every employee row opens that
-      employee's real payslip (fixing the mock's hardcoded "only Marcus Silva's row
-      navigates" bug), not just one.
-- [ ] `payslip` screen: reads one real `payrollRunLine` (plus its `employee` and
+- [x] `payroll-run` screen: real list of payroll runs via a run picker (replacing the
+      single hardcoded "June 2026" row), a real "New payroll run" action (period + pay
+      date, computes a real draft via `createPayrollRun`), and a real "Approve & lock
+      run" action calling `postPayrollRun` — no more toast-only fake posting. Every
+      employee row opens that employee's real payslip (fixing the mock's hardcoded
+      "only Marcus Silva's row navigates" bug), not just one.
+- [x] `payslip` screen: reads one real `payrollRunLine` (plus its `employee` and
       `payrollRun`), replacing the single fabricated Marcus Silva document. "Year to
       date" is computed for real (sum of that employee's posted `payrollRunLine` rows
-      within the current fiscal year to date), not the mock's `×6` multiplication of one
-      period's figures.
-- [ ] `payroll-run`/`payslip` move from Preview to Canonical
-      (`CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`); `SCREEN_META`'s
-      stale "58 Canonical / 56 Preview" comment in `docs/STATUS.md` corrected to the
-      real current count while this is touched anyway (already stale before this epic,
-      confirmed against the live route count).
-- [ ] `docs/SPEC.md`'s stale "Planned domains (schema does not exist yet): purchasing,
+      within the current calendar year, matching this tenant's Jan–Dec fiscal year), not
+      the mock's `×6` multiplication of one period's figures.
+- [x] `payroll-run`/`payslip` move from Preview to Canonical
+      (`CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` in `app.js`); the stale "58
+      Canonical / 56 Preview" comment in `docs/STATUS.md` corrected to the real current
+      count (69/45, confirmed via `npm run audit:screens`) while this is touched anyway
+      (already stale before this epic, confirmed against the live route count).
+- [x] `docs/SPEC.md`'s stale "Planned domains (schema does not exist yet): purchasing,
       then CRM, HR, etc." line corrected — HR schema has existed since EPIC-020; noticed
       while reading SPEC.md for this epic's research, unrelated to payroll itself but
       trivial to fix in the same pass.
-- [ ] Verified live end-to-end in both demo and API modes: a real payroll run created
-      and posted for each of the Singapore and Malaysia companies, GL balanced
-      (`Dr = Cr`) confirmed on the General Ledger screen for both, a real payslip open
-      for an employee in each company showing that country's correct statutory labels
-      and a non-fabricated YTD figure, and the Viewer role correctly denied access to
-      `payroll-run`/`payslip` (gated on the new `payroll.read`, not granted to Viewer by
-      default) while still retaining `hr.read` for the employee directory.
+- [x] Verified live end-to-end in demo mode: a real payroll run created and posted for
+      each of the Singapore and Malaysia companies, GL balanced (`Dr = Cr`) confirmed
+      directly against `gl_entry` for both (SG: Dr=Cr=S$30,602.25, 4 legs, no spurious
+      $0 tax leg; MY: Dr=Cr=RM11,072.55, 5 legs incl. PCB), a real payslip open for an
+      employee in each company showing that country's correct statutory labels (CPF vs
+      EPF/SOCSO+EIS/PCB) and a non-fabricated YTD figure. **Caveat found during this
+      verification, not a payroll-specific regression**: browser demo mode does not
+      enforce `role_permission` grants at the screen level for *any* module today (only
+      the production API server does — see `erp_system_demo_mode_permission_enforcement_gap`
+      in project memory, a pre-existing, already-documented gap) — so "Viewer denied
+      access to payroll-run/payslip" could not be demonstrated in demo mode specifically;
+      server-side gating on the new `payroll.read` permission is wired identically to
+      every other resource in `resources.ts` and was not separately re-verified against
+      a live production API server in this pass.
+      Also found and fixed two real bugs during this verification: the "New payroll
+      run" button read `created.id` instead of `created.data.id` from
+      `ErpSystemData.create()`'s actual `{data, meta}` return shape (would have shown an
+      empty run immediately after every future creation until a page reload), and the
+      run-number generator didn't embed the year like every other document series in
+      this codebase (fixed to `PAY-YYYY-NNNN`).
