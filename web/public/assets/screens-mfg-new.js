@@ -38,7 +38,7 @@ SCREENS['new-work-order'] = function(root){
 
   /* ---------------- STEP 1 — product & schedule ---------------- */
   function step1(){
-    const b=bom(), fg=fgItem();
+    const b=bom();
     const r=rollup();
     const sidebar=b?`${indicator({tone:'ok',icon:'box',label:'Bill of materials',value:`${b.components.length} parts`,sub:`${esc(b.rev)} · effective ${esc(b.effective)} · std cost ${money(b.stdCost)}/unit.`})}
       <div style="margin-top:8px">${indicator({tone:'accent',icon:'coins',label:'Material cost',value:money0(r.matTotal),sub:`${money(r.matUnit)} per unit × ${num(S.qty)} ${esc(b.uom)} (incl. scrap).`})}</div>`
@@ -171,7 +171,7 @@ SCREENS['new-work-order'] = function(root){
     const back=$('#wBack'); back&&back.addEventListener('click',()=>{ S.step--; render(); });
     const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('work-orders'));
     const create=$('#wCreate'); create&&create.addEventListener('click',()=>{
-      const shorts=shortages().length, r=rollup();
+      const shorts=shortages().length;
       navigate('work-orders');
       setTimeout(()=>toast(`Work order WO-26-0083 created · ${num(S.qty)} × ${fgItem().name}${shorts?` · saved as Planned (${shorts} shortage${shorts>1?'s':''})`:' · released to '+S.wc}`,shorts?'info':'ok'),180);
     });

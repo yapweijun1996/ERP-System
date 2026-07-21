@@ -21,6 +21,7 @@ export const employee = pgTable('employee', {
   department: text('department').notNull(),
   jobTitle: text('job_title').notNull(),
   employmentType: text('employment_type').notNull().default('Full-time'),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- self-referencing FK: TS can't resolve employee's own type while still defining it, Drizzle's own docs use this exact escape hatch
   managerId: bigint('manager_id', { mode: 'number' }).references((): any => employee.id),
   startDate: date('start_date').notNull(),
   annualLeaveDays: integer('annual_leave_days').notNull().default(14),

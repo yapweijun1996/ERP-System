@@ -96,7 +96,7 @@ SCREENS['new-employee'] = async function(root){
       });
       navigate('hr-directory');
       toast(s('employeeCreated').replace('{name}',name),'ok');
-    }catch(error){
+    }catch{
       createBtn.disabled=false;
       toast(s('createError'),'danger');
     }

@@ -165,7 +165,7 @@ SCREENS['settings'] = async function(root, params){
     storedTextSize=localStorage.getItem('aria-textsize')||'1';
     storedAccent=localStorage.getItem('aria-accent')||'#0071E3';
     storedPalette=localStorage.getItem('aria-palette')||'';
-  }catch(error){}
+  }catch{}
   const storedSidebar=$('#app').classList.contains('nav-collapsed')?'collapsed':'expanded';
   const storedDensity=document.documentElement.getAttribute('data-density')==='compact'?'compact':'comfortable';
   const accents=[
@@ -308,11 +308,11 @@ SCREENS['settings'] = async function(root, params){
       else if(group==='sidebar') setNavCollapsed(value==='collapsed',true);
       else if(group==='density'){
         document.documentElement.setAttribute('data-density',value==='compact'?'compact':'default');
-        try{ localStorage.setItem('aria-density',value); }catch(error){}
+        try{ localStorage.setItem('aria-density',value); }catch{}
       }else if(group==='textsize'){
         if(value==='1') document.documentElement.style.removeProperty('--fs');
         else document.documentElement.style.setProperty('--fs',value);
-        try{ localStorage.setItem('aria-textsize',value); }catch(error){}
+        try{ localStorage.setItem('aria-textsize',value); }catch{}
       }
     }));
   });
@@ -320,18 +320,18 @@ SCREENS['settings'] = async function(root, params){
   function applyAccent(colour){
     document.documentElement.style.setProperty('--accent',colour);
     document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+colour+' 14%, transparent)');
-    try{ localStorage.setItem('aria-accent',colour); }catch(error){}
+    try{ localStorage.setItem('aria-accent',colour); }catch{}
     root.querySelectorAll('.set-sw').forEach(item=>item.classList.toggle('on',item.dataset.c===colour));
   }
   root.querySelectorAll('.set-pal').forEach(palette=>palette.addEventListener('click',()=>{
     root.querySelectorAll('.set-pal').forEach(item=>item.classList.toggle('on',item===palette));
     applyAccent(palette.dataset.c);
-    try{ localStorage.setItem('aria-palette',palette.dataset.name); }catch(error){}
+    try{ localStorage.setItem('aria-palette',palette.dataset.name); }catch{}
     toast(palette.dataset.name+' '+s('paletteApplied'),'ok');
   }));
   root.querySelectorAll('.set-sw').forEach(swatch=>swatch.addEventListener('click',()=>{
     root.querySelectorAll('.set-pal').forEach(item=>item.classList.remove('on'));
-    try{ localStorage.removeItem('aria-palette'); }catch(error){}
+    try{ localStorage.removeItem('aria-palette'); }catch{}
     applyAccent(swatch.dataset.c);
   }));
 
@@ -341,7 +341,7 @@ SCREENS['settings'] = async function(root, params){
     [
       'aria-theme','aria-nav','aria-density','aria-textsize',
       'aria-accent','aria-palette',
-    ].forEach(key=>{ try{ localStorage.removeItem(key); }catch(error){} });
+    ].forEach(key=>{ try{ localStorage.removeItem(key); }catch{} });
     toast(s('resetDone'),'ok');
     setTimeout(()=>location.reload(),250);
   });

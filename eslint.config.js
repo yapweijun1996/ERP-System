@@ -30,16 +30,17 @@ export default tseslint.config(
       globals: { ...globals.node },
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      // Both found only in deliberate, judged-safe spots as of the initial
-      // rollout (generic ResourceDefinition framework typing where Drizzle's
-      // real column/table types would need heavy generics for no real
-      // benefit; a Drizzle self-referencing-FK escape hatch; test-only casts;
-      // `interface X extends Y {}` used purely as a semantic rename). Kept as
-      // a warning rather than fully off so a genuinely lazy new `any` still
-      // gets a nudge.
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-empty-object-type': 'warn',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // Every occurrence as of the initial rollout was a deliberate, judged-
+      // safe spot (generic ResourceDefinition framework typing where
+      // Drizzle's real column/table types would need heavy generics for no
+      // real benefit; a Drizzle self-referencing-FK escape hatch; test-only
+      // casts; `interface X extends Y {}` used purely as a semantic rename)
+      // — each now has its own targeted eslint-disable-next-line/block with
+      // a reason, right at the site. Rules stay at full 'error' severity so
+      // a genuinely new, unreviewed `any` or empty interface still fails CI.
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-empty-object-type': 'error',
     },
   },
 
@@ -73,7 +74,7 @@ export default tseslint.config(
       globals: { ...globals.browser },
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
 
@@ -84,14 +85,18 @@ export default tseslint.config(
   // screens-admin.js" without a hand-maintained global allowlist, and that
   // allowlist would itself become a stale, high-friction liability in a
   // frontend this size. no-unused-vars is scoped to `vars: 'local'` so it
-  // still catches genuinely dead variables *inside* a function without
-  // flagging top-level declarations, which are usually public API for other
-  // files, not dead code. allowEmptyCatch matches this codebase's established
-  // (and correct) convention of silently ignoring optional localStorage/
-  // history-API calls that can throw in private-browsing/sandboxed contexts.
-  // skipTemplates lets deliberately-chosen Unicode spacing (e.g. an en-space
-  // around a "·" separator in UI copy) live inside the template-literal HTML
-  // these screens are built from without tripping irregular-whitespace.
+  // only checks variables declared *inside* a function, never top-level
+  // declarations (which are usually public API for other files, not dead
+  // code) — full 'error' severity is safe because that scoping already
+  // removes the false-positive risk, not because the bar is lower. Kept at
+  // 'after-used' for args so a real (used) param can still precede a
+  // deliberately-unused one positionally. allowEmptyCatch matches this
+  // codebase's established (and correct) convention of silently ignoring
+  // optional localStorage/history-API calls that can throw in private-
+  // browsing/sandboxed contexts. skipTemplates lets deliberately-chosen
+  // Unicode spacing (e.g. an en-space around a "·" separator in UI copy)
+  // live inside the template-literal HTML these screens are built from
+  // without tripping irregular-whitespace.
   {
     files: ['web/public/assets/**/*.js'],
     extends: [js.configs.recommended],
@@ -101,7 +106,7 @@ export default tseslint.config(
     },
     rules: {
       'no-undef': 'off',
-      'no-unused-vars': ['warn', { vars: 'local', args: 'after-used' }],
+      'no-unused-vars': ['error', { vars: 'local', args: 'after-used' }],
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-irregular-whitespace': ['error', { skipTemplates: true }],
     },
@@ -116,7 +121,7 @@ export default tseslint.config(
       globals: { ...globals.serviceworker },
     },
     rules: {
-      'no-unused-vars': ['warn', { vars: 'local', args: 'after-used' }],
+      'no-unused-vars': ['error', { vars: 'local', args: 'after-used' }],
       'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },

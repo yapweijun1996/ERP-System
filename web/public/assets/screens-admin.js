@@ -476,7 +476,7 @@ SCREENS['module-activation-control'] = async function(root){
         await setModuleEnabled(id, enabled);
         renderSidebar(); renderTabbar(); setActiveNav(CURRENT_ROUTE);
         toast(`${item.label} ${enabled?s('modActEnabled'):s('modActDisabled')}`,'ok');
-      }catch(e){
+      }catch{
         toast(s('modActUpdateError'),'danger');
       }
       busy=null; render();
@@ -490,7 +490,7 @@ SCREENS['module-activation-control'] = async function(root){
         await loadModuleControl();
         renderSidebar(); renderTabbar(); setActiveNav(CURRENT_ROUTE);
         toast(s('modActResetDone'),'ok');
-      }catch(e){
+      }catch{
         toast(s('modActUpdateError'),'danger');
       }
       render();

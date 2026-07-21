@@ -33,7 +33,7 @@ SCREENS['integration'] = function(root){
         {label:t('int.col.records'),align:'r',render:c=>`<span class="tnum">${esc(c.records)}</span>`},
         {label:t('int.col.lastsync'),align:'l',render:c=>esc(c.last)},
         {label:t('col.status'),align:'l',render:c=>cap(ts(c.status),connStatusTone(c.status))},
-        {label:'',align:'c',render:c=>`<span class="rowact"><button data-tip="${esc(t('int.viewlogs'))}" data-act="logs">${ic('history')}</button><button data-tip="${esc(t('int.configure'))}">${ic('gear')}</button></span>`},
+        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('int.viewlogs'))}" data-act="logs">${ic('history')}</button><button data-tip="${esc(t('int.configure'))}">${ic('gear')}</button></span>`},
       ],
       rows:rows(),
     });

@@ -86,7 +86,7 @@ SCREENS['leave-approval'] = async function(root){
         await reload();
         toast(s('approvedToast').replace('{name}',empOf(sel).fullName),'ok');
         render();
-      }catch(error){ toast(s('actionError'),'danger'); ap.disabled=false; }
+      }catch{ toast(s('actionError'),'danger'); ap.disabled=false; }
     });
     const rj=root.querySelector('[data-lv="reject"]'); if(rj)rj.addEventListener('click',()=>{
       appModal({
@@ -104,7 +104,7 @@ SCREENS['leave-approval'] = async function(root){
           await reload();
           toast(s('rejectedToast').replace('{name}',empOf(sel).fullName),'danger');
           render();
-        }catch(error){ toast(s('actionError'),'danger'); }
+        }catch{ toast(s('actionError'),'danger'); }
       });
     });
   }

@@ -35,7 +35,7 @@ function buildTxn(kind, r){
     const terminal = r.status==='Lost'?'Lost':r.status==='On hold'?null:null;
     Object.assign(C,{ icon:'comment', title:'Enquiry', active:'enquiries', crumbLabel:'Enquiries', crumbRoute:'enquiries',
       subtitle:`${esc(r.cust)} · ${esc(r.channel)} · owner ${esc(r.owner)}`, tone:ENQ_TONE[r.status],
-      stepper: txnStepper(['New','Quoted','Converted'], {New:0,Quoted:1,Converted:2,'On hold':0}[r.status]??0, r.status==='Lost'?'Lost':null),
+      stepper: txnStepper(['New','Quoted','Converted'], {New:0,Quoted:1,Converted:2,'On hold':0}[r.status]??0, terminal),
       meta:[['Customer',txnPartner(r.cust)],['Date',`<b>${esc(r.date)}</b>`],['Channel',`<b>${esc(r.channel)}</b>`],['Owner',`<b>${esc(r.owner)}</b>`],['Est. value',`<b>${money0(r.value)}</b>`]],
       main: `<div class="panel"><div class="panel-h">${ic('comment')}<h3>Request</h3></div><div class="panel-body"><div style="font-size:14px;color:var(--fg);line-height:1.55">${esc(r.subject)}</div></div></div>`
         + txnActivity([{kind:'current',when:r.date,what:`Status — <b>${esc(r.status)}</b>`,who:r.owner},{kind:'add',when:r.date,what:`Enquiry ${esc(r.no)} logged via ${esc(r.channel)}`,who:r.owner}]),

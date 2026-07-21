@@ -130,7 +130,7 @@
     const n=Number(value||0);
     try{
       return new Intl.NumberFormat(undefined,{style:'currency',currency:code||currency()}).format(n);
-    }catch(_error){ return `${code||currency()} ${n.toFixed(2)}`; }
+    }catch{ return `${code||currency()} ${n.toFixed(2)}`; }
   }
   function statusLabel(s,status){
     return ({

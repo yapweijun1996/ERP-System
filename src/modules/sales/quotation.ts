@@ -225,6 +225,7 @@ export async function createSalesQuotationWithin(
   return { ...completed, lineCount: input.lines.length };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- deliberate semantic rename, not a stub: same shape as the Omit<> above but reads correctly at convert-enquiry call sites
 export interface ConvertEnquiryInput extends Omit<CreateSalesQuotationInput, 'customerId' | 'enquiryId'> {}
 
 export async function convertEnquiryToQuotationWithin(

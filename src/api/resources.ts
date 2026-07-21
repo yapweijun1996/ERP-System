@@ -89,6 +89,11 @@ export interface ResourceQuery {
   [key: string]: unknown;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- this registry is
+   deliberately polymorphic across ~20 unrelated Drizzle tables; each one's
+   real column/table type is a deeply parameterized PgTableWithColumns<...>
+   with no shared supertype narrower than `any` that's worth the generic
+   complexity here. */
 export interface ResourceDefinition {
   table: any;
   idColumn: any;
@@ -106,6 +111,7 @@ export interface ResourceDefinition {
   status?: any;
   customerId?: any;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Canonical resources exposed by the phase-2 read API. The registry is an
@@ -355,6 +361,8 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
 };
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- mirrors
+   ResourceDefinition's own any usage above; this factory constructs one. */
 function resource(
   table: any,
   readPermission: string,
@@ -367,6 +375,7 @@ function resource(
     updatePermission?: string;
   } = {},
 ): ResourceDefinition {
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const allowedFilters: string[] = [];
   if (options.status) allowedFilters.push('status');
   if (options.customerId) allowedFilters.push('customerId');

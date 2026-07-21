@@ -176,7 +176,7 @@ async function prepareCanonicalInventoryData(){
 /* ---------------- STOCK ON HAND (master + detail) ---------------- */
 SCREENS['stock-on-hand'] = async function(root){
   await prepareCanonicalInventoryData();
-  let filter='all', selectedSku=null;
+  let filter='all';
   const totVal=DB.items.reduce((s,it)=>s+it.onHand*it.cost,0);
   const chips=[['all',t('common.all')],['reorder',ts('Reorder')],['low',ts('Low')],['backorder',ts('Backordered')],['instock',ts('In stock')]];
   function rows(){
@@ -229,7 +229,7 @@ SCREENS['stock-on-hand'] = async function(root){
   wireInventoryNav(root);
   const content=$('#invContent');
   function showDetail(sku){
-    selectedSku=sku; const it=DB.items.find(x=>x.sku===sku); if(!it)return;
+    const it=DB.items.find(x=>x.sku===sku); if(!it)return;
     const avail=it.onHand-it.alloc;
     const itemMovements=DB.movements.filter(row=>row.item===it.sku);
     const related=itemMovements.slice(-5).reverse().map(row=>({
@@ -412,13 +412,6 @@ SCREENS['item-master'] = async function(root){
   const UOMS=['ea','kg','m','sheet','L','box','pair','set'];
   let selSku = DB.items[0] ? DB.items[0].sku : null;
 
-  function statusOf(it){
-    if(it.onHand<=0) return it.alloc>0 ? 'Backordered' : 'No stock';
-    if(it.onHand<=it.reorder) return 'Low';
-    if((it.onHand-it.alloc)<=it.reorder) return 'Reorder';
-    return 'In stock';
-  }
-
   function listTable(){
     return buildTable({
       rowId:it=>it.sku,
@@ -561,7 +554,7 @@ SCREENS['stock-movement'] = async function(root){
   function tone(t){ return t.startsWith('Goods Receipt')||t.includes('Receipt')||t==='Transfer In'?'ok':t.includes('Issue')||t==='Transfer Out'||t==='Adjustment'?'danger':'accent'; }
   const netChange=DB.movements.reduce((s,m)=>s+m.qty,0);
   const mvDates=DB.movements.map(m=>m.date.slice(0,10)).sort();
-  const fmtD=d=>{ const [y,mo,da]=d.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+(+da); };
+  const fmtD=d=>{ const [,mo,da]=d.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+(+da); };
   const rangeLabel=mvDates.length?fmtD(mvDates[0])+' – '+fmtD(mvDates[mvDates.length-1]):'No movements';
   root.innerHTML=`<div class="content full"><section class="master">
     ${inventoryPageHead({

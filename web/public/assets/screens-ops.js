@@ -80,7 +80,7 @@ SCREENS['dashboard'] = function(root){
     </div>
   </section></div>`;
 
-  root.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',e=>{
+  root.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>{
     const r=el.dataset.route; if(r) navigate(r);
   }));
 };
@@ -111,7 +111,7 @@ SCREENS['purchase-orders'] = function(root){
         {label:t('po.col.received'),align:'r',render:p=>`<span class="minibar"><i class="${p.recv>=100?'ok':p.recv>0?'warn':''}" style="width:${p.recv}%"></i></span> ${p.recv}%`},
         {label:t('col.total'),align:'r',sortable:true,render:p=>`<b class="tnum">${money(p.total,p.currency)}</b>${p.currency!=='USD'?`<div style="font-size:11px;color:var(--muted)">${p.currency}</div>`:''}`},
         {label:t('col.status'),align:'l',render:p=>statusBadge(p.status)+(p.flag?` <span data-tip="${esc(p.flag)}">${ic('warn')}</span>`:'')},
-        {label:'',align:'c',render:p=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button><button data-tip="${esc(t('common.duplicate'))}">${ic('copy')}</button></span>`},
+        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button><button data-tip="${esc(t('common.duplicate'))}">${ic('copy')}</button></span>`},
       ],
       rows:rows(),
     });

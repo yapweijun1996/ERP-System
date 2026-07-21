@@ -306,7 +306,7 @@ SCREENS['service-ticket'] = async function(root){
         {label:t('svc.col.tech'),align:'l',render:x=>x.tech?esc(x.tech):`<span style="color:var(--warn)">${esc(s('unassigned'))}</span>`},
         {label:'SLA',align:'l',render:x=>x.dueAt?(x.overdue?`<span style="color:var(--danger)">${esc(s('overdueBy').replace('{t}',formatDuration(Date.now()-x.dueAt.getTime())))}</span>`:`<span class="tnum">${esc(s('timeLeft').replace('{t}',formatDuration(x.dueAt.getTime()-Date.now())))}</span>`):'—'},
         {label:t('col.status'),align:'l',render:x=>svcTicketStatusBadge(x.status)},
-        {label:'',align:'c',render:x=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
+        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
       ],
       rows:rows(),
     });

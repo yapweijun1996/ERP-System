@@ -345,10 +345,40 @@ over-limit confirmations inside the transaction. Commission remains Preview.
    the fix) that Quick Create now reads correctly while the Quality Inspections screen
    itself is unaffected. Also fixed 18 useless-escape, 1 stray `var` redeclare, 1
    sparse-array, and 4 unused-catch-binding sites the same first run surfaced —
-   all confirmed safe, behavior-preserving mechanical fixes. `npm run lint` passes
-   clean (0 errors) with 91 non-blocking warnings (mostly caught-but-unused error
-   variables in the vanilla JS glob, `vars: 'local'` scoped so top-level cross-file
-   declarations aren't flagged) left for organic future cleanup, not blocking.
+   all confirmed safe, behavior-preserving mechanical fixes.
+
+   **The remaining 91 non-blocking warnings were cleaned up the same day.**
+   53 caught-but-unused catch bindings became bare `catch{}` (ES2019+ optional
+   catch binding — this codebase's established convention for optional
+   `localStorage`/`history` calls that can throw). 9 single-parameter render
+   callbacks that only render a static action button (`render:a=>...ic('ext')...`)
+   dropped the unused row parameter. The remaining ~15 were genuine dead
+   code, verified individually before deletion (not assumed): a `statusOf()`
+   stock-status classifier in `screens-inv.js` superseded by reading the real
+   `it.status` field directly and never called; a `totalSpendYTD`/`totSpend`
+   KPI computed and discarded in two Purchasing screens; an `acctName` helper
+   and its `flat` source array, both orphaned; a `terminal` variable in
+   `screens-txn-view.js` that was computed once then — instead of being
+   reused — re-derived inline three lines later (the sibling "quotation"
+   block in the same function does reuse its own equivalent variable
+   correctly), fixed by reusing it, not deleting it, since both forms are
+   provably the same value. Every deletion was checked for side effects
+   first (all were pure lookups/computations) and for whether the "unused"
+   variable was actually feeding a KPI tile that should have been wired up
+   instead of removed (in every case, no — either genuinely superseded or
+   never rendered anywhere to begin with). `@typescript-eslint/no-explicit-any`
+   and `no-empty-object-type`'s 14 warnings got individually-justified
+   `eslint-disable-next-line`/block comments at each of the already-reviewed
+   sites instead of a blanket rule downgrade, so the rules stay at full
+   `error` severity — a genuinely new, unreviewed `any` still fails CI. Every
+   `'warn'` severity in `eslint.config.js` was then promoted to `'error'`
+   now that 0 is the real, achieved baseline, not just today's count. Full
+   suite re-verified after (`typecheck`, 239 tests, demo proof, `build:demo`,
+   all 114 routes via `audit:screens`, plus live interactive clicks through
+   the manufacturing wizard, inventory list/detail, vendor performance, and
+   both the terminal and non-terminal enquiry stepper states) — zero
+   regressions, zero console errors. `npm run lint` now passes with **0
+   errors and 0 warnings**.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 

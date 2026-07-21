@@ -100,10 +100,10 @@ SCREENS['sales-orders'] = async function(root){
   }
 
   /* ---- actions ---- */
-  function primaryAction(s){
+  function primaryAction(){
     return {id:'view',icon:'ext',label:t('so.act.view')};
   }
-  function menuItems(s){
+  function menuItems(){
     return [
       {id:'view',icon:'ext',label:t('so.act.view')},
       {id:'print',icon:'print',label:t('so.act.print')},
@@ -283,7 +283,7 @@ SCREENS['sales-order'] = async function(root, params){
     const tax=sub*d.taxRate; const total=sub+tax+d.shipping;
     return {sub,tax,total};
   };
-  const {sub,tax,total}=calc();
+  const {tax,total}=calc();
   const addrBlock=(icon,label,a,withTax)=>{
     if(!a) return '';
     const cityline=[a.city,a.state].filter(Boolean).join(', ')+(a.post?' '+a.post:'');

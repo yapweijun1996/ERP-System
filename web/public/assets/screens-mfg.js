@@ -32,7 +32,7 @@ SCREENS['work-orders'] = function(root){
         {label:t('wo.col.materials'),align:'c',render:w=>w.status==='Completed'?cap(t('wo.mat.consumed'),'ok'):w.matReady?cap(t('wo.mat.ready'),'ok'):cap(t('wo.mat.short'),'danger')},
         {label:t('common.progress'),align:'r',render:w=>`<span class="minibar"><i class="${w.progress>=100?'ok':w.progress>0?'warn':''}" style="width:${w.progress}%"></i></span> ${w.progress}%`},
         {label:t('col.status'),align:'l',render:w=>cap(ts(w.status),woTone(w.status))+(w.flag?` <span data-tip="${esc(w.flag)}">${ic('warn')}</span>`:'')},
-        {label:'',align:'c',render:w=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button><button data-tip="${esc(t('common.duplicate'))}">${ic('copy')}</button></span>`},
+        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button><button data-tip="${esc(t('common.duplicate'))}">${ic('copy')}</button></span>`},
       ],
       rows:rows(),
     });
@@ -81,7 +81,7 @@ SCREENS['work-orders'] = function(root){
 SCREENS['work-order'] = function(root){
   const d=DB.wo0081;
   const matRows=d.materials.map((l,i)=>{
-    const req=l.qtyPer*d.qty, short=Math.max(0,req-l.avail), open=req-l.issued;
+    const req=l.qtyPer*d.qty, short=Math.max(0,req-l.avail);
     const state = short>0 ? cap('Short '+num(short),'danger') : l.issued>=req ? cap('Issued','ok') : cap('Available','accent');
     return `<tr><td class="lineno">${i+1}</td>
       <td class="l li-name"><b>${esc(l.name)}</b><small>${esc(l.item)} · ${l.qtyPer} ${esc(l.uom)}/unit @ ${money(l.cost)}</small></td>

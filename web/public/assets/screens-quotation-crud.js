@@ -187,7 +187,7 @@ SCREENS['new-quotation'] = function(root, params){
 
   /* ---------------- STEP 3 — review & issue ---------------- */
   function step3(){
-    const c=cust(), t=totals();
+    const c=cust();
     const rows=S.lines.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
       <td class="l" style="white-space:nowrap">${l.type==='stock'?`<b class="mono" style="font-size:12px">${esc(l.sku)}</b>`:`<span class="cap neutral" style="font-size:10.5px"><span class="dot"></span>Non-stock</span>`}</td>
       <td class="l li-name"><b>${esc(l.name)}</b></td>

@@ -33,7 +33,7 @@ SCREENS['qc-inspection'] = function(root){
         {label:t('qc.col.inspector'),align:'l',render:q=>esc(q.inspector)},
         {label:t('common.date'),align:'l',sortable:true,render:q=>esc(q.date)},
         {label:t('qc.col.result'),align:'l',render:q=>cap(ts(q.status),qcTone(q.status))+(q.flag?` <span data-tip="${esc(q.flag)}">${ic('warn')}</span>`:'')},
-        {label:'',align:'c',render:q=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
+        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
       ],
       rows:rows(),
     });

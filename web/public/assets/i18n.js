@@ -2024,7 +2024,7 @@ const I18N = {
 };
 
 let LANG = 'en';
-try{ const s=localStorage.getItem('aria-lang'); if(s && I18N[s]) LANG=s; }catch(e){}
+try{ const s=localStorage.getItem('aria-lang'); if(s && I18N[s]) LANG=s; }catch{}
 
 function getLang(){ return LANG; }
 /* translate; falls back to English then to the key itself */
@@ -2045,7 +2045,7 @@ function ts(value){
 function setLang(code){
   if(!I18N[code] || code===LANG) return;
   LANG=code;
-  try{ localStorage.setItem('aria-lang',code); }catch(e){}
+  try{ localStorage.setItem('aria-lang',code); }catch{}
   document.documentElement.setAttribute('lang', code==='zh'?'zh-Hans':code);
   applyI18n();
 }

@@ -209,7 +209,7 @@ async function networkFirstNavigation(request) {
     const response = await fetch(request);
     if (response.ok) cache.put('./index.html', response.clone());
     return response;
-  } catch (error) {
+  } catch {
     return (await cache.match('./index.html')) || Response.error();
   }
 }
@@ -220,7 +220,7 @@ async function networkFirstAsset(request) {
     const response = await fetch(request);
     if (response.ok) cache.put(request, response.clone());
     return response;
-  } catch (error) {
+  } catch {
     return (await cache.match(request)) || (await caches.match(request, { ignoreSearch: true })) || Response.error();
   }
 }

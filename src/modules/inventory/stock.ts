@@ -33,6 +33,7 @@ export interface IssueArgs extends TrackingSelection {
   movementGroup?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- deliberate semantic rename, not a stub: same shape as IssueArgs but reads correctly at receive-goods call sites
 export interface ReceiveArgs extends IssueArgs {}
 
 async function seedLegacyUntrackedLocation(

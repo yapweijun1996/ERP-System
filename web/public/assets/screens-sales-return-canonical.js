@@ -75,7 +75,7 @@
   function seq(prefix){ return `${prefix}-${Date.now().toString().slice(-7)}`; }
   function money(value,currency){
     try{return new Intl.NumberFormat(undefined,{style:'currency',currency:currency||DB.company.currency||'SGD'}).format(Number(value||0));}
-    catch(_error){return Number(value||0).toFixed(2);}
+    catch{return Number(value||0).toFixed(2);}
   }
   function tone(status){return status==='credited'||status==='posted'?'ok':status==='rejected'||status==='cancelled'?'danger':'info';}
   function openReturn(id){window.ACTIVE_SALES_RETURN_ID=Number(id);navigate('sales-return');}

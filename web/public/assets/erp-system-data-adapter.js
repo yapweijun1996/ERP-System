@@ -65,7 +65,7 @@
      GitHub Pages base path (/<repo>/) needs no configuration. */
   var DB_BASE = (function(){
     try { return new URL('../db/', document.currentScript.src).href; }
-    catch (e) { return 'db/'; }
+    catch { return 'db/'; }
   })();
 
   var state = { db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null };
@@ -422,7 +422,6 @@
     var inv = d.invoices[0];
     var soLines = so ? d.orderLines.filter(function(l){ return l.order_id === so.id; }) : [];
     var orderNet = so ? so.net : 0;
-    var orderTax = so ? so.tax : 0;
     var orderTotal = so ? so.total : 0;
 
     DB.erpSystem = {
@@ -463,7 +462,7 @@
        seeded user is Superadmin, preserving the pre-TASK-024 default
        experience for anyone who never switches. */
     var activeUserEmail = null;
-    try { activeUserEmail = localStorage.getItem('aria-active-user-email'); } catch (e) {}
+    try { activeUserEmail = localStorage.getItem('aria-active-user-email'); } catch {}
     var activeUser = (d.users || []).filter(function(u){ return u.email === activeUserEmail; })[0]
       || (d.users || []).filter(function(u){ return u.is_superadmin; })[0]
       || (d.users || [])[0]
@@ -891,7 +890,7 @@
       state.db = null;
       state.orm = null;
       state.runtime = null;
-      try { await db.close(); } catch (closeError) {}
+      try { await db.close(); } catch {}
       throw e;
     }
   }
@@ -1213,7 +1212,7 @@
       }
     } catch (e) {
       console.warn('[erp-system] reset: drop failed, deleting IndexedDB instead.', e);
-      try { indexedDB.deleteDatabase(PG_IDB_NAME); } catch (e2) {}
+      try { indexedDB.deleteDatabase(PG_IDB_NAME); } catch {}
     }
     location.reload();
   }
@@ -1234,16 +1233,16 @@
     try {
       if (trimmed) localStorage.setItem('aria-active-user-email', trimmed);
       localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: trimmed || 'admin@acme.co', at: new Date().toISOString() }));
-    } catch (e) {}
+    } catch {}
     return { email: trimmed };
   }
   async function logout(){
-    try { localStorage.removeItem('aria-demo-auth'); } catch (e) {}
+    try { localStorage.removeItem('aria-demo-auth'); } catch {}
   }
   async function switchUser(email){
     var trimmed = String(email || '').trim().toLowerCase();
     if (!trimmed) return null;
-    try { localStorage.setItem('aria-active-user-email', trimmed); } catch (e) {}
+    try { localStorage.setItem('aria-active-user-email', trimmed); } catch {}
     return refresh();
   }
 

@@ -21,13 +21,13 @@
 var SETUP_WIZARD_KEY = 'aria-setup-wizard-complete';
 
 function needsSetupWizard(){
-  try{ return localStorage.getItem(SETUP_WIZARD_KEY) !== '1'; }catch(e){ return false; }
+  try{ return localStorage.getItem(SETUP_WIZARD_KEY) !== '1'; }catch{ return false; }
 }
 function markSetupWizardComplete(){
-  try{ localStorage.setItem(SETUP_WIZARD_KEY,'1'); }catch(e){}
+  try{ localStorage.setItem(SETUP_WIZARD_KEY,'1'); }catch{}
 }
 function clearSetupWizardFlag(){
-  try{ localStorage.removeItem(SETUP_WIZARD_KEY); }catch(e){}
+  try{ localStorage.removeItem(SETUP_WIZARD_KEY); }catch{}
 }
 
 function renderSetupWizard(){
@@ -321,7 +321,7 @@ function renderSetupWizard(){
           })
         : Promise.reject(new Error('ERP data adapter is not ready yet — wait a moment and try again.'));
       run.then(function(){
-        try{ localStorage.setItem('aria-lang', S.lang); }catch(e){}
+        try{ localStorage.setItem('aria-lang', S.lang); }catch{}
         markSetupWizardComplete();
         if(typeof toast==='function') toast(s('finished'),'ok');
         setTimeout(function(){ location.reload(); }, 350);

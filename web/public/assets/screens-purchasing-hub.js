@@ -407,8 +407,6 @@ SCREENS['purchasing-home'] = function(root){
 
   const topSupp=barList(DB.topSuppliers.map(s=>({label:s.supplier, value:s.ytd, text:money0(s.ytd), clr:'var(--accent)'})));
 
-  const totalSpendYTD=DB.topSuppliers.reduce((a,s)=>a+s.ytd,0);
-
   /* module directory tiles */
   function counts(route){
     switch(route){

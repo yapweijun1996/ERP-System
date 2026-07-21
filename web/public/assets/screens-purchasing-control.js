@@ -124,7 +124,6 @@ SCREENS['vendor-performance'] = function(root){
   const data=DB.vendorPerf.slice().sort((a,b)=>b.rating-a.rating);
   const avgOnTime=Math.round(data.reduce((a,v)=>a+v.onTime,0)/data.length);
   const avgLead=Math.round(data.reduce((a,v)=>a+v.leadTime,0)/data.length);
-  const totSpend=data.reduce((a,v)=>a+v.spend,0);
   const watch=data.filter(v=>v.rating<3.8).length;
 
   const kpis=[

@@ -211,7 +211,7 @@ SCREENS['asset-register'] = async function(root){
         {label:t('fa.col.nbv'),align:'r',sortable:true,render:a=>`<b class="tnum">${money0(a.nbv)}</b>`},
         {label:t('fa.col.depmo'),align:'r',render:a=>`<span class="tnum">${money0(a.monthly)}</span>`},
         {label:t('col.status'),align:'l',render:a=>statusBadge(a.status)},
-        {label:'',align:'c',render:a=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
+        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
       ],
       rows:rows(),
     });

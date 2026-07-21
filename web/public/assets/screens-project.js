@@ -236,7 +236,7 @@ SCREENS['project-pl'] = async function(root){
         {label:s('colBilled'),align:'r',render:p=>`<span class="tnum">${money0(p.billed)}</span>`},
         {label:t('prj.col.headroom'),align:'r',render:headroomCell},
         {label:t('col.status'),align:'l',render:p=>projectStatusBadge(p.status)},
-        {label:'',align:'c',render:p=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
+        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
       ],
       rows:rows(),
     });

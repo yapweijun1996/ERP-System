@@ -12,7 +12,7 @@ function demoUser(){
   return DB.user || { name:'Demo Admin', email:'admin@example.com', initials:'DA', role:'Administrator' };
 }
 function demoAuthSession(){
-  try{ return JSON.parse(localStorage.getItem(DEMO_AUTH_KEY)||'null'); }catch(e){ return null; }
+  try{ return JSON.parse(localStorage.getItem(DEMO_AUTH_KEY)||'null'); }catch{ return null; }
 }
 function isDemoSignedIn(){
   const s=demoAuthSession();
@@ -112,7 +112,7 @@ function renderLogin(){
     </div>
   </section>`;
   const doLogin=(email)=>{
-    try{ localStorage.setItem(DEMO_AUTH_KEY,JSON.stringify({ signedIn:true, email:email||u.email, at:new Date().toISOString() })); }catch(e){}
+    try{ localStorage.setItem(DEMO_AUTH_KEY,JSON.stringify({ signedIn:true, email:email||u.email, at:new Date().toISOString() })); }catch{}
     location.reload();
   };
   $('#loginForm').addEventListener('submit',async e=>{
@@ -158,10 +158,10 @@ function renderLogin(){
 async function signOutDemo(){
   /* api mode: destroy the real server-side session, not just a local flag. */
   if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.logout==='function'){
-    try{ await window.ErpSystemDemo.logout(); }catch(e){}
+    try{ await window.ErpSystemDemo.logout(); }catch{}
   }
-  try{ localStorage.removeItem(DEMO_AUTH_KEY); }catch(e){}
-  try{ history.replaceState({},'',location.pathname+location.search); }catch(e){}
+  try{ localStorage.removeItem(DEMO_AUTH_KEY); }catch{}
+  try{ history.replaceState({},'',location.pathname+location.search); }catch{}
   location.reload();
 }
 
@@ -201,7 +201,7 @@ async function loadModuleControl(){
       cfg[row.moduleKey]={ visible:!!row.enabled, active:!!row.enabled };
     });
     MODULE_CONTROL_CACHE=cfg;
-  }catch(e){
+  }catch{
     MODULE_CONTROL_CACHE={};
   }
 }
@@ -240,10 +240,10 @@ function readNotificationState(){
   try{
     const saved=JSON.parse(localStorage.getItem(notificationStateKey())||'{}');
     return saved&&typeof saved==='object'&&saved.items&&typeof saved.items==='object'?saved:{ items:{} };
-  }catch(e){ return { items:{} }; }
+  }catch{ return { items:{} }; }
 }
 function writeNotificationState(state){
-  try{ localStorage.setItem(notificationStateKey(),JSON.stringify(state)); }catch(e){}
+  try{ localStorage.setItem(notificationStateKey(),JSON.stringify(state)); }catch{}
 }
 function saveNotificationState(id, patch){
   if(!id) return;
@@ -370,7 +370,7 @@ function openUserSwitcher(){
     const email=b.dataset.switchEmail;
     closeModal();
     if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.switchUser==='function'){
-      try{ await window.ErpSystemDemo.switchUser(email); }catch(e){}
+      try{ await window.ErpSystemDemo.switchUser(email); }catch{}
     }
     location.reload();
   }));
@@ -817,7 +817,7 @@ function navigate(route, params){
   root.innerHTML='';
   setActiveNav(route);
   closeAllPops();
-  try{ history.replaceState({},'',`#${route}`); }catch(e){}
+  try{ history.replaceState({},'',`#${route}`); }catch{}
   let output;
   try{
     output=SCREENS[route](root,params||{});
@@ -852,7 +852,7 @@ screenMetaObserver.observe($('#viewRoot'),{childList:true,subtree:true});
 /* ---------- theme ---------- */
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
-  try{localStorage.setItem('aria-theme',t);}catch(e){}
+  try{localStorage.setItem('aria-theme',t);}catch{}
   const moon=$('#themeBtn'); if(moon)moon.innerHTML=ic(t==='dark'?'sun':'moon');
   const sw=$('#acctThemeSw'); if(sw)sw.classList.toggle('on',t==='dark');
 }
@@ -863,12 +863,12 @@ let navUserSet=false;
 function setNavCollapsed(on, fromUser){
   $('#app').classList.toggle('nav-collapsed',on);
   const bb=$('#brandBtn'); if(bb) bb.setAttribute('data-tip', on?'Expand sidebar':'Collapse sidebar');
-  if(fromUser){ navUserSet=true; try{localStorage.setItem('aria-nav',on?'1':'0');}catch(e){} }
+  if(fromUser){ navUserSet=true; try{localStorage.setItem('aria-nav',on?'1':'0');}catch{} }
 }
 /* default state: honour an explicit user choice; otherwise auto-collapse on tablet widths */
 function autoNav(){
   if(navUserSet) return;
-  let stored=null; try{stored=localStorage.getItem('aria-nav');}catch(e){}
+  let stored=null; try{stored=localStorage.getItem('aria-nav');}catch{}
   if(stored==='0'||stored==='1'){ navUserSet=true; setNavCollapsed(stored==='1'); return; }
   setNavCollapsed(innerWidth<1180);
 }
@@ -1142,7 +1142,7 @@ function applyPeriod(i){
   DB.fiscal.selectedPeriod=i;
   DB.company.period=DB.fiscal.fyLabel+' · '+p.code;
   DB.company.periodLabel=p.label;
-  try{ localStorage.setItem('aria-period', DB.fiscal.fyLabel+'|'+i); }catch(e){}
+  try{ localStorage.setItem('aria-period', DB.fiscal.fyLabel+'|'+i); }catch{}
   const cp=$('#ctxPeriod'); if(cp) cp.innerHTML=`<b>${esc(DB.company.period)} ${ic('chevD')}</b><small>${esc(DB.company.periodLabel)} · ${esc(DB.company.currency)}</small>`;
 }
 function buildPeriodMenu(){
@@ -1261,12 +1261,12 @@ async function boot(){
   const wiz=$('#setupWizardView'); if(wiz) wiz.remove();
   const apiUnavail=$('#apiUnavailableView'); if(apiUnavail) apiUnavail.remove();
   // theme
-  let themePref='light'; try{themePref=localStorage.getItem('aria-theme')||'light';}catch(e){}
+  let themePref='light'; try{themePref=localStorage.getItem('aria-theme')||'light';}catch{}
   applyTheme(themePref);
   // personal prefs: accent + density
-  try{ const ac=localStorage.getItem('aria-accent'); if(ac){ document.documentElement.style.setProperty('--accent',ac); document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+ac+' 14%, transparent)'); } }catch(e){}
-  try{ if(localStorage.getItem('aria-density')==='compact') document.documentElement.setAttribute('data-density','compact'); }catch(e){}
-  try{ const ts=localStorage.getItem('aria-textsize'); if(ts && ts!=='1') document.documentElement.style.setProperty('--fs',ts); }catch(e){}
+  try{ const ac=localStorage.getItem('aria-accent'); if(ac){ document.documentElement.style.setProperty('--accent',ac); document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+ac+' 14%, transparent)'); } }catch{}
+  try{ if(localStorage.getItem('aria-density')==='compact') document.documentElement.setAttribute('data-density','compact'); }catch{}
+  try{ const ts=localStorage.getItem('aria-textsize'); if(ts && ts!=='1') document.documentElement.style.setProperty('--fs',ts); }catch{}
   await loadModuleControl();
   renderSidebar(); renderTabbar(); initTooltip();
   // default/restore sidebar collapse state (+ sets the toggle icon)
@@ -1280,7 +1280,7 @@ async function boot(){
   ensureUserSwitcherMenuItem();
   applyNotificationState();
   // restore persisted working period, then paint the fiscal-period switcher
-  try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch(e){}
+  try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch{}
   applyPeriod(DB.fiscal.selectedPeriod);
   wirePeriodMenu();
   // popovers fill

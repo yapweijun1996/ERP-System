@@ -59,13 +59,13 @@
       if (ct.indexOf('json') === -1) return false;
       await res.json();
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
 
   async function jsonBody(res){
-    try { return await res.json(); } catch (e) { return null; }
+    try { return await res.json(); } catch { return null; }
   }
 
   function cookieValue(name){
@@ -293,7 +293,7 @@
       if (!res.ok) return false;
       var body = await jsonBody(res);
       return !(body && body.hasAdmin);
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -306,7 +306,7 @@
     try {
       await loadDashboard();
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -330,7 +330,7 @@
   async function logout(){
     try {
       await apiRequest('auth/logout', { method: 'POST' });
-    } catch (e) { /* best-effort — reloading clears client state regardless */ }
+    } catch { /* best-effort — reloading clears client state regardless */ }
   }
 
   async function completeSetup(input){

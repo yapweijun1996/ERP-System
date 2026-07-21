@@ -7,8 +7,6 @@
    ============================================================ */
 SCREENS['new-journal-entry'] = function(root){
   const TODAY='2026-06-21';
-  const flat=DB.coa.flatMap(g=>g.accts.map(a=>({...a,type:g.grp})));
-  const acctName=c=>{ const a=flat.find(x=>x.code===c); return a?a.name:''; };
   const canPost=DB.user.perms && DB.user.perms.post;
 
   const S={ date:TODAY, period:'P06', memo:'', reference:'', type:'Standard',

@@ -42,7 +42,9 @@ describe('canonical API resources', () => {
       { masterFn: 'M1', companyFn: 'C-MY' },
       'inventory/products',
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- listResource's row type isn't worth reconstructing just to read .sku in a test
     expect(sg.data.map((row: any) => row.sku)).toEqual(['SG-WIDGET', 'SG-GADGET']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above
     expect(my.data.map((row: any) => row.sku)).toEqual(['MY-WIDGET']);
   });
 
