@@ -32,8 +32,15 @@ DECLARE
     'sales_credit_profile',
     'account', 'gl_entry',
     'goods_receipt', 'purchase_order', 'purchase_order_line',
+    'purchase_requisition', 'purchase_requisition_line',
     'supplier', 'supplier_invoice',
-    'activity', 'opportunity',
+    'bank_receipt', 'payment_voucher', 'payment_voucher_line',
+    'activity', 'opportunity', 'contact',
+    'asset', 'depreciation_run', 'depreciation_run_line',
+    'employee', 'leave_request',
+    'project', 'progress_claim',
+    'service_contract', 'service_ticket',
+    'payroll_run', 'payroll_run_line',
     'api_idempotency'
   ];
 BEGIN
