@@ -26,6 +26,7 @@ import {
   shipAndCreditPurchaseReturnWithin,
 } from '../modules/purchasing/purchaseReturn';
 import { postSupplierDebitNoteWithin } from '../modules/purchasing/supplierDebitNote';
+import { allocateLandedCostWithin } from '../modules/purchasing/landedCost';
 import { decidePurchaseRequisitionWithin } from '../modules/purchasing/purchaseRequisition';
 import {
   convertSupplierQuotationToPurchaseOrderWithin,
@@ -70,6 +71,14 @@ import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'purchasing/landed-costs/allocate': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return allocateLandedCostWithin(tx, scope, input.resourceId);
+    },
+  },
   'purchasing/supplier-debit-notes/post': {
     permission: 'purchasing.write',
     idempotency: 'required',

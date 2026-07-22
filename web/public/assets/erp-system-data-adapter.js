@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 32;
+  var DEMO_SCHEMA_VERSION = 33;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -220,10 +220,11 @@
       "group by u.user_id, u.email, u.full_name, u.language order by u.user_id");
     var products = await rows(
       "select p.id, p.company_fn, p.sku, p.name, p.uom, p.standard_cost::float as standard_cost, " +
+      "p.average_cost::float as average_cost, " +
       "p.tracking_type, coalesce(sum(s.qty),0)::float as on_hand " +
       "from product p left join stock_level s on s.product_id = p.id " +
       "where " + w('p') + " group by p.id, p.company_fn, p.sku, p.name, p.uom, " +
-      "p.standard_cost, p.tracking_type order by p.id");
+      "p.standard_cost, p.average_cost, p.tracking_type order by p.id");
     var warehouses = await rows(
       "select id, company_fn, code, name from warehouse where " + wc('warehouse') + " order by code");
     var stockLevels = await rows(
@@ -508,7 +509,7 @@
         return {
           id: p.id, sku: p.sku, name: p.name, cat: 'Finished Goods', uom: p.uom,
           onHand: p.on_hand, alloc: 0, reorder: x.reorder, roq: x.roq,
-          cost: Number(p.standard_cost || 0), trackingType: p.tracking_type || 'none',
+          cost: Number(p.average_cost == null ? p.standard_cost || 0 : p.average_cost), trackingType: p.tracking_type || 'none',
           status: p.on_hand <= x.reorder ? 'Reorder' : 'In stock',
           bins: [[x.bin, p.on_hand]],
         };
@@ -1304,6 +1305,8 @@
     'purchasing/supplier-credit-notes':'supplier_credit_note',
     'purchasing/supplier-credit-note-lines':'supplier_credit_note_line',
     'purchasing/supplier-debit-notes':'supplier_debit_note',
+    'purchasing/landed-costs':'landed_cost',
+    'purchasing/landed-cost-lines':'landed_cost_line',
     'purchasing/purchase-requisitions':'purchase_requisition',
     'purchasing/purchase-requisition-lines':'purchase_requisition_line',
     'purchasing/rfqs':'purchase_rfq',
@@ -1567,6 +1570,14 @@
       });
       await refresh();
       return {data:supplierDebitNote,meta:{}};
+    }
+    if(key==='purchasing/landed-costs'){
+      var landedCost = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createLandedCostWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:landedCost,meta:{}};
     }
     if(key==='crm/opportunities'){
       if(Number.isSafeInteger(payload&&payload.customerId)){
@@ -2158,6 +2169,14 @@
       });
       await refresh();
       return {data:postedSupplierDebitNote,meta:{}};
+    }
+    if(key==='purchasing/landed-costs'&&name==='allocate'){
+      var allocatedLandedCost = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.allocateLandedCostWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:allocatedLandedCost,meta:{}};
     }
     if(key==='crm/opportunities'&&name==='convert'){
       payload=payload||{};

@@ -192,6 +192,7 @@ export async function completeProductionSetup(
       { masterFn, companyFn, code: '1450', name: 'Work in Progress', type: 'asset' },
       { masterFn, companyFn, code: '2100', name: 'Accounts Payable', type: 'liability' },
       { masterFn, companyFn, code: '2200', name: 'Output Tax', type: 'liability' },
+      { masterFn, companyFn, code: '2300', name: 'Landed Cost Accrual', type: 'liability' },
       { masterFn, companyFn, code: '3000', name: 'Owner Equity', type: 'equity' },
       { masterFn, companyFn, code: '4000', name: 'Revenue', type: 'income' },
       { masterFn, companyFn, code: '5000', name: 'Cost of Goods Sold', type: 'expense' },

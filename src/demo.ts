@@ -5,6 +5,7 @@
 //     real two-transaction race cannot exist in the demo/browser anyway.
 // Run: npm run demo   (or: POSTGRES_URL=postgres://… npm run demo)
 import { and, eq, sql } from 'drizzle-orm';
+import Decimal from 'decimal.js';
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
 import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { createPgliteDb, createPostgresDb, type DB } from './data/db';
@@ -25,6 +26,7 @@ import { createPurchaseOrder } from './modules/purchasing/createPurchaseOrder';
 import { receiveGoods } from './modules/purchasing/receiveGoods';
 import { postSupplierInvoice } from './modules/purchasing/postSupplierInvoice';
 import { createPurchaseReturn, shipAndCreditPurchaseReturn } from './modules/purchasing/purchaseReturn';
+import { allocateLandedCost, createLandedCost } from './modules/purchasing/landedCost';
 import { createOpportunity } from './modules/crm/createOpportunity';
 import { convertOpportunityToSalesOrder } from './modules/crm/convertOpportunityToSalesOrder';
 import { createPayrollRun, postPayrollRun } from './modules/payroll/payrollRun';
@@ -323,6 +325,32 @@ async function runPurchasingScenario(db: DB) {
       eq(supplierInvoice.orderId, po3.orderId),
     ));
 
+  // Landed-cost proof: capitalize tax-exclusive freight/duty into the current
+  // moving-average inventory cost, with a balanced accrual and no quantity movement.
+  const [costBefore] = await db.select({ averageCost: product.averageCost, standardCost: product.standardCost })
+    .from(product).where(eq(product.id, widgetId));
+  const [onHand] = await db.select({ qty: sql<string>`coalesce(sum(${stockLevel.qty}),0)` })
+    .from(stockLevel).where(and(
+      eq(stockLevel.masterFn, SCOPE.masterFn),
+      eq(stockLevel.companyFn, SCOPE.companyFn),
+      eq(stockLevel.productId, widgetId),
+    ));
+  const landedMovementCountBefore = await countMovements(db, SCOPE, widgetId, wh.id);
+  const landedDraft = await createLandedCost(db, SCOPE, {
+    docNo: 'LC-DEMO-1', goodsReceiptId: receipt.receiptId, costDate: '2024-06-07',
+    allocationBasis: 'value', freightAmount: '7.01', dutyAmount: '3.00',
+  });
+  const landedResult = await allocateLandedCost(db, SCOPE, landedDraft.id);
+  const [costAfter] = await db.select({ averageCost: product.averageCost }).from(product)
+    .where(eq(product.id, widgetId));
+  const landedGl = await glBalance(db, 'LC-DEMO-1');
+  let duplicateLandedErr = '';
+  try { await allocateLandedCost(db, SCOPE, landedDraft.id); } catch (e) {
+    duplicateLandedErr = (e as Error).name;
+  }
+  const landedMovementDelta = await countMovements(db, SCOPE, widgetId, wh.id)
+    - landedMovementCountBefore;
+
   // Reverse procure-to-pay proof: the return request is non-posting; shipping it
   // atomically issues stock and posts the supplier credit's balanced AP reversal.
   const [poLine] = await db.select({ id: purchaseOrderLine.id }).from(purchaseOrderLine)
@@ -368,6 +396,16 @@ async function runPurchasingScenario(db: DB) {
       glDebit: supplierCreditGl.debit,
       glCredit: supplierCreditGl.credit,
       glBalanced: supplierCreditGl.debit === supplierCreditGl.credit,
+    },
+    landedCost: {
+      status: landedResult.status,
+      total: landedResult.totalAddedCost,
+      valuationIncrease: Number(new Decimal(costAfter.averageCost!)
+        .minus(costBefore.averageCost ?? costBefore.standardCost).mul(onHand.qty).toDecimalPlaces(2)),
+      glDebit: landedGl.debit,
+      glCredit: landedGl.credit,
+      movementDelta: landedMovementDelta,
+      duplicateLandedErr,
     },
   };
 }
@@ -552,6 +590,14 @@ ok = check('PGlite purchase return: stock -2 and balanced supplier credit (Dr AP
   && p.purchasing.purchaseReturn.movementCount === 1
   && p.purchasing.purchaseReturn.glBalanced
   && p.purchasing.purchaseReturn.glDebit === 13.08) && ok;
+ok = check('PGlite landed cost: valuation +10.01 equals balanced accrual GL, no stock movement, duplicate rejected',
+  p.purchasing.landedCost.status === 'allocated'
+  && p.purchasing.landedCost.total === '10.01'
+  && p.purchasing.landedCost.valuationIncrease === 10.01
+  && p.purchasing.landedCost.glDebit === 10.01
+  && p.purchasing.landedCost.glCredit === 10.01
+  && p.purchasing.landedCost.movementDelta === 0
+  && p.purchasing.landedCost.duplicateLandedErr === 'LandedCostError') && ok;
 ok = check('PGlite CRM chain: converting an opportunity creates a real order (net=50 tax=4.5 total=54.5), stock 50→45, balanced GL',
   p.crm.conv.net === 50 && p.crm.conv.tax === 4.5 && p.crm.conv.total === 54.5
   && p.crm.stockAfter === 45 && p.crm.glBalanced && p.crm.glDebit === 54.5) && ok;

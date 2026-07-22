@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v48';
+const CACHE_VERSION = 'erp-system-pwa-v49';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 

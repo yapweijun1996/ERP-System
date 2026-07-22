@@ -30,7 +30,7 @@ describe('production setup command', () => {
     expect(await db.select().from(company)).toHaveLength(1);
     expect(await db.select().from(appUser)).toHaveLength(1);
     expect(await db.select().from(userCompany)).toHaveLength(1);
-    expect(await db.select().from(account)).toHaveLength(10);
+    expect(await db.select().from(account)).toHaveLength(11);
     expect(await db.select().from(taxRule)).toHaveLength(1);
     expect((await db.select().from(role))[0].isSuperadmin).toBe(true);
     expect((await db.select().from(auditLog))[0]).toMatchObject({

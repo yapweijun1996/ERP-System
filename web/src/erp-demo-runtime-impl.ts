@@ -49,6 +49,11 @@ import {
   type CreateSupplierDebitNoteInput,
 } from '../../src/modules/purchasing/supplierDebitNote';
 import {
+  allocateLandedCostWithin,
+  createLandedCostWithin,
+  type CreateLandedCostInput,
+} from '../../src/modules/purchasing/landedCost';
+import {
   confirmDraftSalesOrderWithin,
   confirmSalesOrder,
   type ConfirmDraftOrderInput,
@@ -683,6 +688,12 @@ export const erpDemoRuntime = Object.freeze({
     },
     postSupplierDebitNoteWithin(db: DemoOrm, scope: Scope, debitNoteId: number) {
       return postSupplierDebitNoteWithin(asDomainDb(db), scope, debitNoteId);
+    },
+    createLandedCostWithin(db: DemoOrm, scope: Scope, input: CreateLandedCostInput) {
+      return createLandedCostWithin(asDomainDb(db), scope, input);
+    },
+    allocateLandedCostWithin(db: DemoOrm, scope: Scope, landedCostId: number) {
+      return allocateLandedCostWithin(asDomainDb(db), scope, landedCostId);
     },
     createOpportunity(db: DemoOrm, scope: Scope, input: CreateOpportunityInput) {
       return createOpportunity(asDomainDb(db), scope, input);

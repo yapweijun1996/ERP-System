@@ -1277,3 +1277,30 @@ Acceptance criteria:
 - [x] Domain/API/browser proof covers amount caps, duplicate posting, net payment, balanced
       GL, no-stock invariant, Chinese rendering and 375px layout. All release gates pass at
       75 Canonical / 39 Preview.
+
+## EPIC-031 — Landed Cost Allocation and Inventory Revaluation
+
+**Goal:** replace Purchasing's sample-only Landed Cost register with a real,
+receipt-linked allocation that capitalizes freight, duty, handling and other costs into
+current inventory while keeping the inventory valuation and General Ledger equal.
+
+Acceptance criteria:
+
+- [x] Add versioned `landed_cost` and immutable `landed_cost_line` tables linked to a
+      real goods receipt, purchase order, supplier, source PO lines and products.
+- [x] Draft creation snapshots the received goods value and allocates the entered costs
+      exactly by received value or quantity using Decimal arithmetic and deterministic
+      residual rounding; tax is explicitly outside this document.
+- [x] `allocate` is one idempotent transaction: lock the draft, products and current
+      stock balances; require positive on-hand; increase each product's moving-average cost
+      by its exact share over current on-hand; post balanced Dr Inventory / Cr Landed
+      Cost Accrual; write no `stock_movement` because quantity does not change.
+- [x] Production API and Demo ESM expose bounded header/line resources, create and
+      audited allocate action under Purchasing RBAC/version/idempotency policies;
+      production RLS and migration-derived PGlite schema stay aligned.
+- [x] Existing and newly provisioned companies receive account `2300` Landed Cost
+      Accrual without overwriting tenant configuration.
+- [x] `landed-cost` becomes a five-language Canonical Demo/API route with real create,
+      allocation preview, posted detail, inventory-valuation and GL trace links.
+- [x] Domain/API/browser proof covers exact rounding, duplicate allocation, tenant and
+      zero-stock guards, atomic rollback, cost/GL equality, Chinese and 375px layout.

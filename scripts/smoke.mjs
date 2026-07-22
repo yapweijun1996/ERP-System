@@ -285,7 +285,7 @@ async function checkViewport(browser, viewport) {
           && setupCompany?.currency === 'MYR'
           && setupCompany?.tax_regime === 'SST'
           && setupCompany?.locale === 'vi'
-          && setupAccountCount === 10
+          && setupAccountCount === 11
           && setupAdmin?.language === 'vi'
           && /^pbkdf2\$/.test(setupAdmin?.password_hash || '')
           && setupAdmin?.password_hash !== 'smoke-pass-123',

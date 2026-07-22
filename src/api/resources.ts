@@ -8,6 +8,8 @@ import {
   customer,
   glEntry,
   goodsReceipt,
+  landedCost,
+  landedCostLine,
   invoice,
   opportunity,
   paymentVoucher,
@@ -306,6 +308,13 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['post'],
     createPermission: 'purchasing.write',
   }),
+  'purchasing/landed-costs': resource(landedCost, 'purchasing.read', {
+    status: landedCost.status,
+    versionColumn: landedCost.version,
+    allowedActions: ['allocate'],
+    createPermission: 'purchasing.write',
+  }),
+  'purchasing/landed-cost-lines': resource(landedCostLine, 'purchasing.read'),
   'crm/opportunities': resource(opportunity, 'crm.read', {
     status: opportunity.stage,
     customerId: opportunity.customerId,

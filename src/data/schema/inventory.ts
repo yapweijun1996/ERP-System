@@ -25,6 +25,9 @@ export const product = pgTable('product', {
   uom: text('uom').notNull().default('unit'),   // unit of measure
   category: text('category').notNull().default('Components'),
   standardCost: numeric('standard_cost', { precision: 18, scale: 4 }).notNull().default('0'),
+  // Actual moving-average inventory cost. Null means no valued receipt/revaluation
+  // has occurred yet, so read models deliberately fall back to standard_cost.
+  averageCost: numeric('average_cost', { precision: 22, scale: 8 }),
   reorderPoint: numeric('reorder_point', { precision: 18, scale: 4 }).notNull().default('0'),
   reorderQty: numeric('reorder_qty', { precision: 18, scale: 4 }).notNull().default('0'),
   trackingType: text('tracking_type').notNull().default('none'), // none | lot | serial

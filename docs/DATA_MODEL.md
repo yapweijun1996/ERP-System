@@ -13,7 +13,8 @@ inventory/   product, warehouse, stock_level, stock_movement,
              stock_location_balance, inventory_adjustment(+line),
              stock_transfer(+line)
 sales/       customer, sales_order, sales_order_line, delivery, invoice, payment
-purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt
+purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt,
+             landed_cost(+line)
 finance/     account (chart of accounts), gl_entry
 system/      audit_log
 ```
@@ -238,6 +239,7 @@ erDiagram
         text company_fn
         text sku
         text tracking_type
+        numeric average_cost "nullable; falls back to standard cost"
     }
     warehouse {
         bigint id PK
@@ -345,6 +347,9 @@ purchase_return ship-and-credit → stock_movement 'out' + Dr AP / Cr Inventory/
 supplier_invoice ||--o{ supplier_debit_note
 supplier_debit_note post → Dr AP / Cr Purchase Variance/Input Tax (no stock movement)
 payment_voucher settles invoice total − posted supplier credits − posted supplier debits
+goods_receipt ||--o{ landed_cost ||--o{ landed_cost_line }o--|| product
+landed_cost allocate → product.average_cost revaluation + Dr Inventory / Cr Landed Cost Accrual
+landed_cost allocation writes no stock_movement because on-hand quantity is unchanged
 ```
 
 Sales delivery/returns, purchasing sourcing, treasury payments, manufacturing, quality,

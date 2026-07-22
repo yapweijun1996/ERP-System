@@ -44,6 +44,9 @@ describe('receiveGoods', () => {
     expect(res.movementIds).toHaveLength(1);
     expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(20);
     expect(await countMovements(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(1);
+    const [costed] = await db.select({ averageCost: product.averageCost }).from(product)
+      .where(eq(product.id, fx.widgetId));
+    expect(costed.averageCost).toBe('6.00000000');
 
     const [po] = await db.select({ status: purchaseOrder.status }).from(purchaseOrder)
       .where(and(eq(purchaseOrder.masterFn, SCOPE.masterFn), eq(purchaseOrder.companyFn, SCOPE.companyFn), eq(purchaseOrder.id, fx.purchaseOrderId)));
@@ -66,6 +69,9 @@ describe('receiveGoods', () => {
 
     expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(25);
     expect(await countMovements(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(2);
+    const [costed] = await db.select({ averageCost: product.averageCost }).from(product)
+      .where(eq(product.id, fx.widgetId));
+    expect(costed.averageCost).toBe('6.00000000');
   });
 
   it('rollback: receiving an already-received PO throws and changes nothing (no double stock increase)', async () => {

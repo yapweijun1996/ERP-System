@@ -43,6 +43,10 @@ import {
   type CreateSupplierDebitNoteInput,
 } from '../modules/purchasing/supplierDebitNote';
 import {
+  createLandedCostWithin,
+  type CreateLandedCostInput,
+} from '../modules/purchasing/landedCost';
+import {
   createOpportunity,
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
@@ -499,6 +503,13 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createSupplierDebitNoteWithin(tx, scope, payload as unknown as CreateSupplierDebitNoteInput);
+    },
+  },
+  'purchasing/landed-costs': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createLandedCostWithin(tx, scope, payload as unknown as CreateLandedCostInput);
     },
   },
   'service/contracts': {

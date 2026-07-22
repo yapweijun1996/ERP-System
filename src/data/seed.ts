@@ -146,6 +146,7 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', code: '1450', name: 'Work in Progress', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '1200', name: 'GST Input Tax', type: 'asset' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '2100', name: 'Accounts Payable', type: 'liability' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: '2300', name: 'Landed Cost Accrual', type: 'liability' },
     { masterFn: 'M1', companyFn: 'C-SG', code: '5800', name: 'Inventory Variance', type: 'expense' },
     // Fixed Assets (TASK-035) — codes match the original prototype's own chart of
     // accounts/P&L (data-finance.js), not the inconsistent "6400" its asset-detail

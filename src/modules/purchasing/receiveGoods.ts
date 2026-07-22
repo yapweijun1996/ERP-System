@@ -7,12 +7,15 @@
 // receiving a PO that isn't 'open') rolls the whole receipt back — no partial stock
 // increase. See docs/DATA_MODEL.md §4.
 import { and, eq, sql } from 'drizzle-orm';
+import Decimal from 'decimal.js';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
   goodsReceipt,
+  product,
   purchaseOrder,
   purchaseOrderLine,
+  stockLevel,
   warehouse,
 } from '../../data/schema';
 import { InvalidPurchaseOrderStateError, PostingError } from './errors';
@@ -52,7 +55,11 @@ export async function receiveGoodsWithin(exec: DB, scope: Scope, input: ReceiveG
   }
 
   const lines = await exec
-    .select({ productId: purchaseOrderLine.productId, qty: purchaseOrderLine.qty })
+    .select({
+      productId: purchaseOrderLine.productId,
+      qty: purchaseOrderLine.qty,
+      netAmount: purchaseOrderLine.netAmount,
+    })
     .from(purchaseOrderLine)
     .where(and(
       eq(purchaseOrderLine.masterFn, scope.masterFn),
@@ -68,7 +75,26 @@ export async function receiveGoodsWithin(exec: DB, scope: Scope, input: ReceiveG
 
   const movementIds: number[] = [];
   for (const ln of lines) {
-    const qty = Number(ln.qty);
+    const [costedProduct] = await exec.select({
+      id: product.id,
+      standardCost: product.standardCost,
+      averageCost: product.averageCost,
+    }).from(product).where(and(
+      eq(product.masterFn, scope.masterFn),
+      eq(product.companyFn, scope.companyFn),
+      eq(product.id, ln.productId),
+    )).for('update');
+    if (!costedProduct) throw new PostingError(`Product ${ln.productId} is not available in this company`);
+    const currentBalances = await exec.select({ qty: stockLevel.qty }).from(stockLevel).where(and(
+      eq(stockLevel.masterFn, scope.masterFn),
+      eq(stockLevel.companyFn, scope.companyFn),
+      eq(stockLevel.productId, ln.productId),
+    )).for('update');
+    const currentQty = currentBalances.reduce(
+      (sum, row) => sum.plus(row.qty), new Decimal(0),
+    );
+    const receivedQty = new Decimal(ln.qty);
+    const qty = receivedQty.toNumber();
     const received = await receiveStockWithin(exec, scope, {
       productId: ln.productId,
       warehouseId: input.warehouseId,
@@ -78,6 +104,19 @@ export async function receiveGoodsWithin(exec: DB, scope: Scope, input: ReceiveG
       movementGroup: `goods_receipt:${receipt.id}`,
     });
     movementIds.push(received.movementId);
+    const before = new Decimal(costedProduct.averageCost ?? costedProduct.standardCost);
+    const newQty = currentQty.plus(receivedQty);
+    const newAverage = currentQty.mul(before).plus(ln.netAmount)
+      .div(newQty).toDecimalPlaces(8, Decimal.ROUND_HALF_UP);
+    await exec.update(product).set({
+      averageCost: newAverage.toFixed(8),
+      version: sql`${product.version} + 1`,
+      updatedAt: sql`now()`,
+    }).where(and(
+      eq(product.masterFn, scope.masterFn),
+      eq(product.companyFn, scope.companyFn),
+      eq(product.id, ln.productId),
+    ));
   }
 
   await exec.update(purchaseOrder).set({ status: 'received', updatedAt: sql`now()` })

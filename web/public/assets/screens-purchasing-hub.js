@@ -121,13 +121,15 @@ async function prepareCanonicalPurchasingData(){
     listPage('inventory/lots'),
     listPage('inventory/serials'),
     listPage('inventory/location-balances'),
+    listPage('purchasing/landed-costs'),
+    listPage('purchasing/landed-cost-lines'),
   ]);
   const [
     suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,
     products,stockLevels,warehouses,purchaseRequisitions,purchaseRequisitionLines,
     purchaseRfqs,purchaseRfqLines,purchaseRfqSuppliers,supplierQuotations,supplierQuotationLines,
     purchaseReturns,purchaseReturnLines,supplierCreditNotes,supplierCreditNoteLines,supplierDebitNotes,
-    inventoryBins,inventoryLots,inventorySerials,locationBalances,
+    inventoryBins,inventoryLots,inventorySerials,locationBalances,landedCosts,landedCostLines,
   ]=pages.map(page=>page.data);
   const productById=new Map(products.map(row=>[row.id,row]));
   const supplierById=new Map(suppliers.map(row=>[row.id,row]));
@@ -165,7 +167,8 @@ async function prepareCanonicalPurchasingData(){
     sku:row.sku,
     name:row.name,
     uom:row.uom,
-    cost:purchasingNumber(row.standardCost),
+    cost:purchasingNumber(row.averageCost==null?row.standardCost:row.averageCost),
+    standardCost:purchasingNumber(row.standardCost),
     onHand:onHandByProduct.get(row.id)||0,
     alloc:0,
     reorder:0,
@@ -268,6 +271,39 @@ async function prepareCanonicalPurchasingData(){
     unitCost:purchasingNumber(row.unitCost),net:purchasingNumber(row.netAmount),
     taxCode:row.taxCode,taxRate:purchasingNumber(row.taxRate),tax:purchasingNumber(row.taxAmount),
   }; });
+  const landedLinesByHeader=new Map();
+  landedCostLines.forEach(row=>{
+    const rows=landedLinesByHeader.get(row.landedCostId)||[];
+    const item=productById.get(row.productId)||{};
+    rows.push({
+      id:row.id,lineNo:row.lineNo,purchaseOrderLineId:row.purchaseOrderLineId,
+      productId:row.productId,sku:item.sku||`#${row.productId}`,
+      name:item.name||`Product #${row.productId}`,uom:item.uom||'',
+      qty:purchasingNumber(row.receivedQty),goods:purchasingNumber(row.goodsValue),
+      allocated:purchasingNumber(row.allocatedAmount),
+      onHand:row.onHandQtyAtAllocation==null?null:purchasingNumber(row.onHandQtyAtAllocation),
+      costBefore:row.averageCostBefore==null?null:purchasingNumber(row.averageCostBefore),
+      costAfter:row.averageCostAfter==null?null:purchasingNumber(row.averageCostAfter),
+    });
+    landedLinesByHeader.set(row.landedCostId,rows);
+  });
+  DB.landedCosts=landedCosts.map(row=>{
+    const receipt=receiptById.get(row.goodsReceiptId)||{};
+    const vendor=supplierById.get(row.supplierId)||{};
+    return {
+      id:row.id,version:row.version,no:row.docNo,date:dateValue(row.costDate),
+      goodsReceiptId:row.goodsReceiptId,orderId:row.orderId,supplierId:row.supplierId,
+      ref:receipt.docNo||`GR #${row.goodsReceiptId}`,
+      supplier:vendor.name||`Supplier #${row.supplierId}`,code:vendor.code||'—',
+      basis:row.allocationBasis,goods:purchasingNumber(row.goodsValue),
+      freight:purchasingNumber(row.freightAmount),duty:purchasingNumber(row.dutyAmount),
+      handling:purchasingNumber(row.handlingAmount),other:purchasingNumber(row.otherAmount),
+      added:purchasingNumber(row.totalAddedCost),currency:row.currency,
+      status:{draft:'Draft',allocated:'Allocated',cancelled:'Cancelled'}[row.status]||row.status,
+      rawStatus:row.status,allocatedAt:row.allocatedAt?dateTimeValue(row.allocatedAt):null,
+      lines:(landedLinesByHeader.get(row.id)||[]).sort((a,b)=>a.lineNo-b.lineNo),
+    };
+  });
   const requisitionLinesByReq=new Map();
   purchaseRequisitionLines.forEach(row=>{
     const arr=requisitionLinesByReq.get(row.requisitionId)||[];

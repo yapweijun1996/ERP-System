@@ -426,19 +426,31 @@ verification; no Preview action or sample detail remains on either promoted rout
 Exit criteria: real create/post/payment trace proves capped claims, balanced GL, zero
 stock movement and zero residual AP after the net voucher.
 
-## Remaining productionization backlog — 39 Preview routes
+## Phase 15 — Landed Cost Allocation & Inventory Revaluation ✅
 
-This is the authoritative work breakdown after TASK-066. `tasks/tasks.jsonl` records
+1. **Receipt-linked landed cost** (EPIC-031, TASK-067 done 2026-07-22) adds
+   value/quantity allocation with exact Decimal cents, current-on-hand moving-average
+   revaluation and balanced Dr Inventory / Cr Landed Cost Accrual posting. It creates no
+   stock movement because quantity does not change. Migration 0033 also backfills account
+   `2300` for existing companies. Demo/API, RBAC, audit, idempotency, five-language copy,
+   desktop/375px browser proof and all gates passed at **76/38**.
+
+Exit criteria: exact allocation, duplicate/tenant/zero-stock rollback, valuation/GL
+equality and no-stock-movement invariants pass domain, API and live-browser proof.
+
+## Remaining productionization backlog — 38 Preview routes
+
+This is the authoritative work breakdown after TASK-067. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Purchasing depth — 14 routes:** `purchasing-home`, `po-approvals`, `goods-receipt`,
-   `supplier-invoice`, `supplier-price-lists`, `landed-cost`,
+1. **Purchasing depth — 13 routes:** `purchasing-home`, `po-approvals`, `goods-receipt`,
+   `supplier-invoice`, `supplier-price-lists`,
    `vendor-performance`, `purchasing-reports`, `report-pur-supplier`,
    `report-pur-buyer`, `report-pur-price-var`, `report-pur-vendor`,
-   `report-pur-generic`, `pur-txn-view`. Implement landed cost next because it affects
-   inventory and GL; then approvals, controls and reports.
+   `report-pur-generic`, `pur-txn-view`. Implement approvals and transactional detail
+   next, then purchasing controls and reports.
 2. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
    `sales-commission`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
    `report-quote-conversion`, `report-generic`, `txn-view`. Prefer the reusable new-order

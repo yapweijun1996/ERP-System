@@ -20,6 +20,8 @@ export const SUPPLIER_QUOTATION_STATUSES = ['received', 'converted', 'rejected']
 export const PURCHASE_RETURN_STATUSES = ['requested', 'credited', 'rejected'] as const;
 export const SUPPLIER_CREDIT_NOTE_STATUSES = ['posted'] as const;
 export const SUPPLIER_DEBIT_NOTE_STATUSES = ['draft', 'posted', 'cancelled'] as const;
+export const LANDED_COST_STATUSES = ['draft', 'allocated', 'cancelled'] as const;
+export const LANDED_COST_ALLOCATION_BASES = ['value', 'quantity'] as const;
 
 export const supplier = pgTable('supplier', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -359,4 +361,64 @@ export const supplierDebitNote = pgTable('supplier_debit_note', {
   index('idx_supplier_debit_note_status').on(t.masterFn, t.companyFn, t.status, t.noteDate, t.id),
   check('ck_supplier_debit_note_status', sql`${t.status} in ('draft', 'posted', 'cancelled')`),
   check('ck_supplier_debit_note_amounts', sql`${t.netAmount} > 0 and ${t.taxAmount} >= 0 and ${t.totalAmount} > 0`),
+]);
+
+/** Receipt-linked capitalization of freight, duty and handling. The document is
+ * tax-exclusive: recoverable tax belongs to its supplier invoice, not this valuation
+ * entry. Allocation revalues current on-hand but never changes quantity. */
+export const landedCost = pgTable('landed_cost', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  goodsReceiptId: bigint('goods_receipt_id', { mode: 'number' }).notNull().references(() => goodsReceipt.id),
+  orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => purchaseOrder.id),
+  supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  costDate: date('cost_date').notNull(),
+  currency: text('currency').notNull(),
+  allocationBasis: text('allocation_basis').notNull(),
+  goodsValue: numeric('goods_value', { precision: 18, scale: 2 }).notNull(),
+  freightAmount: numeric('freight_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  dutyAmount: numeric('duty_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  handlingAmount: numeric('handling_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  otherAmount: numeric('other_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  totalAddedCost: numeric('total_added_cost', { precision: 18, scale: 2 }).notNull(),
+  allocatedAt: timestamp('allocated_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_landed_cost_docno').on(t.masterFn, t.companyFn, t.docNo),
+  index('idx_landed_cost_receipt').on(t.masterFn, t.companyFn, t.goodsReceiptId, t.id),
+  index('idx_landed_cost_status').on(t.masterFn, t.companyFn, t.status, t.costDate, t.id),
+  check('ck_landed_cost_status', sql`${t.status} in ('draft', 'allocated', 'cancelled')`),
+  check('ck_landed_cost_basis', sql`${t.allocationBasis} in ('value', 'quantity')`),
+  check('ck_landed_cost_values', sql`
+    ${t.goodsValue} > 0 and ${t.freightAmount} >= 0 and ${t.dutyAmount} >= 0
+    and ${t.handlingAmount} >= 0 and ${t.otherAmount} >= 0 and ${t.totalAddedCost} > 0
+  `),
+]);
+
+/** Immutable source/allocation snapshot. The three nullable valuation fields are
+ * filled exactly once by allocate; source qty/value and allocated_amount never change. */
+export const landedCostLine = pgTable('landed_cost_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  landedCostId: bigint('landed_cost_id', { mode: 'number' }).notNull().references(() => landedCost.id),
+  lineNo: integer('line_no').notNull(),
+  purchaseOrderLineId: bigint('purchase_order_line_id', { mode: 'number' }).notNull().references(() => purchaseOrderLine.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  receivedQty: numeric('received_qty', { precision: 18, scale: 4 }).notNull(),
+  goodsValue: numeric('goods_value', { precision: 18, scale: 2 }).notNull(),
+  allocatedAmount: numeric('allocated_amount', { precision: 18, scale: 2 }).notNull(),
+  onHandQtyAtAllocation: numeric('on_hand_qty_at_allocation', { precision: 18, scale: 4 }),
+  averageCostBefore: numeric('average_cost_before', { precision: 22, scale: 8 }),
+  averageCostAfter: numeric('average_cost_after', { precision: 22, scale: 8 }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_landed_cost_line_no').on(t.masterFn, t.companyFn, t.landedCostId, t.lineNo),
+  uniqueIndex('uq_landed_cost_source_line').on(t.masterFn, t.companyFn, t.landedCostId, t.purchaseOrderLineId),
+  index('idx_landed_cost_line_product').on(t.masterFn, t.companyFn, t.productId, t.landedCostId),
+  check('ck_landed_cost_line_values', sql`
+    ${t.receivedQty} > 0 and ${t.goodsValue} >= 0 and ${t.allocatedAmount} >= 0
+  `),
 ]);

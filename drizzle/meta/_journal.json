@@ -232,6 +232,13 @@
       "when": 1784685708173,
       "tag": "0032_backfill_cash_account",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1784687781692,
+      "tag": "0033_pretty_tarot",
+      "breakpoints": true
     }
   ]
 }
