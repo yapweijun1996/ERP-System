@@ -47,6 +47,10 @@ import {
   type CreateLandedCostInput,
 } from '../modules/purchasing/landedCost';
 import {
+  createSupplierPriceListWithin,
+  type CreateSupplierPriceListInput,
+} from '../modules/purchasing/supplierPricing';
+import {
   createOpportunity,
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
@@ -510,6 +514,17 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createLandedCostWithin(tx, scope, payload as unknown as CreateLandedCostInput);
+    },
+  },
+  'purchasing/supplier-price-lists': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSupplierPriceListWithin(
+        tx,
+        scope,
+        payload as unknown as CreateSupplierPriceListInput,
+      );
     },
   },
   'service/contracts': {

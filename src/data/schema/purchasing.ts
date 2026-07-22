@@ -6,7 +6,7 @@
 // supplier invoice (GL impact, src/modules/purchasing/postSupplierInvoice.ts).
 // See docs/DATA_MODEL.md.
 import {
-  pgTable, text, bigint, integer, numeric, date, timestamp, index, uniqueIndex, check,
+  pgTable, text, bigint, integer, numeric, date, timestamp, boolean, index, uniqueIndex, check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
@@ -36,6 +36,63 @@ export const supplier = pgTable('supplier', {
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_supplier_code').on(t.masterFn, t.companyFn, t.code),
+]);
+
+/** Effective-dated supplier contract pricing. Purchase documents keep their own
+ * immutable cost snapshots; these rows are the sourcing/defaulting policy used
+ * before a PO is created, never a mechanism for rewriting an existing order. */
+export const supplierPriceList = pgTable('supplier_price_list', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
+  currency: text('currency').notNull(),
+  status: text('status').notNull().default('draft'), // draft | active | archived
+  version: integer('version').notNull().default(1),
+  isPreferred: boolean('is_preferred').notNull().default(false),
+  leadTimeDays: integer('lead_time_days').notNull().default(0),
+  paymentTerms: text('payment_terms'),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_supplier_price_list_code').on(t.masterFn, t.companyFn, t.code),
+  index('idx_supplier_price_list_supplier').on(
+    t.masterFn, t.companyFn, t.supplierId, t.status, t.effectiveFrom, t.id,
+  ),
+  index('idx_supplier_price_list_status').on(
+    t.masterFn, t.companyFn, t.status, t.effectiveFrom, t.id,
+  ),
+  check('ck_supplier_price_list_status', sql`${t.status} in ('draft', 'active', 'archived')`),
+  check('ck_supplier_price_list_lead', sql`${t.leadTimeDays} >= 0`),
+  check(
+    'ck_supplier_price_list_dates',
+    sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`,
+  ),
+]);
+
+export const supplierPriceListLine = pgTable('supplier_price_list_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  priceListId: bigint('price_list_id', { mode: 'number' }).notNull()
+    .references(() => supplierPriceList.id),
+  lineNo: integer('line_no').notNull(),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  minQty: numeric('min_qty', { precision: 18, scale: 4 }).notNull().default('1'),
+  unitCost: numeric('unit_cost', { precision: 18, scale: 4 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_supplier_price_list_line').on(
+    t.masterFn, t.companyFn, t.priceListId, t.productId, t.minQty,
+  ),
+  index('idx_supplier_price_list_line_product').on(
+    t.masterFn, t.companyFn, t.productId, t.priceListId,
+  ),
+  check(
+    'ck_supplier_price_list_line_values',
+    sql`${t.minQty} > 0 and ${t.unitCost} >= 0`,
+  ),
 ]);
 
 /** Internal purchase request — the upstream step before a purchase order. Plain-text

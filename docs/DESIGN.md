@@ -159,6 +159,7 @@ accounting begins at supplier-invoice posting.
 | Tax as effective-dated rules table | SG GST vs MY SST divergence without code branches | LOCALIZATION.md |
 | BYOK AI keys, never build-time vars | Demo is a public static bundle — any bundled key leaks | AI_PROVIDERS.md |
 | `web/dist/` gitignored, built by CI | Reproducible from source; no drift between repo and deploy | STATUS.md debt #3 |
+| Vendor performance is a rebuildable read model, not a scored table | Supplier ratings must reconcile to real orders, receipts, invoices, returns and active contracts; no disconnected KPI can become a sourcing decision | EPIC-034 |
 
 ## 7. Testing design
 

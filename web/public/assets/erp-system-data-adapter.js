@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 34;
+  var DEMO_SCHEMA_VERSION = 35;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -118,7 +118,7 @@
     var currentVersion = row ? Number(row.version) : 0;
     /* A service-worker update can briefly mix a newer adapter with an older
        cached migration asset. Never trust the version marker alone: verify the
-       manufacturing/MRP/quality/sales/purchasing-return signature before declaring the schema current.
+       manufacturing/MRP/quality/sales/purchasing-control signature before declaring the schema current.
        Replaying the generated compatibility bundle is safe and repairs a
        marker that was written after a stale/no-op migration response. */
     var signature = (await db.query(
@@ -139,8 +139,13 @@
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
       "('purchase_return','purchase_return_line','supplier_credit_note','supplier_credit_note_line')")).rows[0];
+    var supplierPricingSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('supplier_price_list','supplier_price_list_line')")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
-      && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4;
+      && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
+      && supplierPricingSignature && Number(supplierPricingSignature.n) === 2;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -1320,6 +1325,8 @@
     'purchasing/supplier-debit-notes':'supplier_debit_note',
     'purchasing/landed-costs':'landed_cost',
     'purchasing/landed-cost-lines':'landed_cost_line',
+    'purchasing/supplier-price-lists':'supplier_price_list',
+    'purchasing/supplier-price-list-lines':'supplier_price_list_line',
     'purchasing/purchase-requisitions':'purchase_requisition',
     'purchasing/purchase-requisition-lines':'purchase_requisition_line',
     'purchasing/rfqs':'purchase_rfq',
@@ -1417,6 +1424,19 @@
     var key=normalizeResource(resource);
     var adminResult=await listAdminResource(key, query);
     if(adminResult) return adminResult;
+    if(key==='purchasing/vendor-performance'){
+      query=query||{};
+      var performancePage=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listVendorPerformanceWithin(
+          state.runtime.createOrm(tx),SCOPE,{
+            cursor:Number(query.cursor)||0,
+            limit:Math.max(1,Math.min(100,Number(query.limit)||50)),
+          });
+      });
+      return {data:performancePage.data,meta:{
+        nextCursor:performancePage.nextCursor==null?null:String(performancePage.nextCursor),
+      }};
+    }
     var table=RESOURCE_TABLES[key];
     if(!table) throw new Error('Unsupported ERP resource: '+key);
     query=query||{};
@@ -1674,6 +1694,14 @@
       });
       await refresh();
       return {data:priceList,meta:{}};
+    }
+    if(key==='purchasing/supplier-price-lists'){
+      var supplierPriceList = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createSupplierPriceListWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:supplierPriceList,meta:{}};
     }
     if(key==='sales/discount-rules'){
       var discountRule = await requireDemoDb().transaction(function(tx){
@@ -1996,6 +2024,14 @@
       });
       await refresh();
       return {data:activePriceList,meta:{}};
+    }
+    if(key==='purchasing/supplier-price-lists'&&name==='activate'){
+      var activeSupplierPriceList = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.activateSupplierPriceListWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:activeSupplierPriceList,meta:{}};
     }
     if(key==='sales/discount-rules'&&name==='activate'){
       var activeDiscountRule = await requireDemoDb().transaction(function(tx){

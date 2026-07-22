@@ -54,6 +54,12 @@ import {
   type CreateLandedCostInput,
 } from '../../src/modules/purchasing/landedCost';
 import {
+  activateSupplierPriceListWithin,
+  createSupplierPriceListWithin,
+  type CreateSupplierPriceListInput,
+} from '../../src/modules/purchasing/supplierPricing';
+import { listVendorPerformanceWithin } from '../../src/modules/purchasing/vendorPerformance';
+import {
   decidePurchaseOrderWithin,
   type DecidePurchaseOrderInput,
 } from '../../src/modules/purchasing/purchaseOrderApproval';
@@ -706,6 +712,23 @@ export const erpDemoRuntime = Object.freeze({
     },
     allocateLandedCostWithin(db: DemoOrm, scope: Scope, landedCostId: number) {
       return allocateLandedCostWithin(asDomainDb(db), scope, landedCostId);
+    },
+    createSupplierPriceListWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateSupplierPriceListInput,
+    ) {
+      return createSupplierPriceListWithin(asDomainDb(db), scope, input);
+    },
+    activateSupplierPriceListWithin(db: DemoOrm, scope: Scope, priceListId: number) {
+      return activateSupplierPriceListWithin(asDomainDb(db), scope, priceListId);
+    },
+    listVendorPerformanceWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { cursor?: number; limit?: number },
+    ) {
+      return listVendorPerformanceWithin(asDomainDb(db), scope, input);
     },
     createOpportunity(db: DemoOrm, scope: Scope, input: CreateOpportunityInput) {
       return createOpportunity(asDomainDb(db), scope, input);

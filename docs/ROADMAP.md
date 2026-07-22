@@ -137,10 +137,9 @@ Order of attack:
    receive-goods/post-invoice row actions call the real adapter transactions,
    verified live end-to-end including the stock visibly moving on the Inventory
    screen — see docs/STATUS.md) are both done for the CORE chain specifically.
-   RFQs, quotations, requisitions, returns, credit/debit notes, price lists,
-   landed cost, vendor performance and the purchasing analytics reports have no
-   schema and intentionally stay on sample data — a further, separate scope if
-   ever prioritized, not a gap in TASK-022/023.
+   The sourcing, return, supplier-note, landed-cost, approval, supplier-price and
+   derived vendor-performance slices are now Canonical. Purchasing analytics reports
+   and the legacy shared transaction prototype remain separate follow-up scope.
 2. **CRM** (EPIC-010 ✅) — opportunity pipeline → convert to sales order, the same
    Sales module Purchasing feeds Inventory into. Schema + business logic
    (TASK-027 ✅ done 2026-07-17 — `src/data/schema/crm.ts`, `src/modules/crm/`
@@ -452,7 +451,7 @@ equality and no-stock-movement invariants pass domain, API and live-browser proo
 Exit criteria: pending/rejected orders cannot be received; authorised replay is stable;
 approval leaves stock and GL unchanged; both approval routes have no sample-data path.
 
-## Phase 17 — Purchasing Transaction Details ✅
+## Phase 17 — Purchasing Details and Supplier Controls ✅
 
 1. **Canonical receipt and AP invoice workspaces** (EPIC-033, TASK-069 done
    2026-07-22) replaces the two fixed prototype documents with record-specific,
@@ -464,19 +463,25 @@ approval leaves stock and GL unchanged; both approval routes have no sample-data
    invoice chain and asserts both detail traces. The shared shell also re-reveals the
    active sub-navigation after a live viewport resize. Route maturity is **80/34**.
 
-Exit criteria: both routes use bounded formal resources in Demo/API, expose the real
-inventory/accounting facts, pass five-language desktop/375px verification and have no
-sample-only write path.
+2. **Supplier contracts and derived performance** (EPIC-034, TASK-070 done
+   2026-07-22). Effective-dated supplier price headers/quantity tiers now support
+   audited create/activate in Demo/API. Vendor scorecards are rebuilt from canonical
+   orders, quoted lead times, receipts, invoices, credited returns and active contract
+   coverage rather than curated sample ratings. Route maturity is **82/32**.
 
-## Remaining productionization backlog — 34 Preview routes
+Exit criteria: all four promoted routes use bounded formal resources in Demo/API;
+receipt/invoice details expose real inventory/accounting facts; supplier contracts are
+transactional and scorecards are rebuildable; five-language desktop/375px verification
+passes with no sample-only write path.
 
-This is the authoritative work breakdown after TASK-069. `tasks/tasks.jsonl` records
+## Remaining productionization backlog — 32 Preview routes
+
+This is the authoritative work breakdown after TASK-070. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Purchasing depth — 10 routes:** `purchasing-home`, `supplier-price-lists`,
-   `vendor-performance`, `purchasing-reports`, `report-pur-supplier`,
+1. **Purchasing depth — 8 routes:** `purchasing-home`, `purchasing-reports`, `report-pur-supplier`,
    `report-pur-buyer`, `report-pur-price-var`, `report-pur-vendor`,
    `report-pur-generic`, `pur-txn-view`. Implement purchasing controls and reports next.
 2. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,

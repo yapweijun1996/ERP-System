@@ -94,37 +94,72 @@ SCREENS['po-approval']=async function(root,params){
 };
 
 /* ---------------- SUPPLIER PRICE LISTS / CONTRACTS ---------------- */
+function supplierPricingCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Supplier Price Lists',unit:'contracts',sub:'Effective-dated supplier contract prices, quantity tiers and lead times used before a purchase order is created.',all:'All',active:'Active',draft:'Draft',expired:'Expired',preferred:'Preferred',contracts:'Active contracts',suppliers:'Suppliers',new:'New price list',code:'Code',name:'Name',supplier:'Supplier',item:'Item',minQty:'Minimum quantity',unitCost:'Unit cost',currency:'Currency',lead:'Lead time',days:'days',from:'Effective from',to:'Effective to',terms:'Payment terms',status:'Status',scope:'Contract lines',activate:'Activate',create:'Create draft',cancel:'Cancel',created:'Supplier price list drafted',activated:'Supplier price list activated',empty:'No canonical supplier price lists yet.'},
+    ms:{title:'Senarai Harga Pembekal',unit:'kontrak',sub:'Harga kontrak pembekal, peringkat kuantiti dan masa utama mengikut tarikh sebelum pesanan belian dicipta.',all:'Semua',active:'Aktif',draft:'Draf',expired:'Tamat tempoh',preferred:'Pilihan',contracts:'Kontrak aktif',suppliers:'Pembekal',new:'Senarai harga baharu',code:'Kod',name:'Nama',supplier:'Pembekal',item:'Item',minQty:'Kuantiti minimum',unitCost:'Kos seunit',currency:'Mata wang',lead:'Masa utama',days:'hari',from:'Berkuat kuasa dari',to:'Berkuat kuasa hingga',terms:'Terma bayaran',status:'Status',scope:'Baris kontrak',activate:'Aktifkan',create:'Cipta draf',cancel:'Batal',created:'Draf senarai harga pembekal dicipta',activated:'Senarai harga pembekal diaktifkan',empty:'Belum ada senarai harga pembekal kanonik.'},
+    zh:{title:'供应商价格表',unit:'份合同',sub:'在创建采购订单前，按生效日期管理供应商合同价、数量阶梯和交付周期。',all:'全部',active:'生效中',draft:'草稿',expired:'已到期',preferred:'首选',contracts:'生效合同',suppliers:'供应商',new:'新建价格表',code:'编码',name:'名称',supplier:'供应商',item:'物料',minQty:'最低数量',unitCost:'单位成本',currency:'币种',lead:'交付周期',days:'天',from:'生效日期',to:'失效日期',terms:'付款条件',status:'状态',scope:'合同明细',activate:'启用',create:'创建草稿',cancel:'取消',created:'供应商价格表草稿已创建',activated:'供应商价格表已启用',empty:'目前没有标准供应商价格表。'},
+    ja:{title:'仕入先価格表',unit:'契約',sub:'購買発注作成前に、有効日付きの仕入先契約価格、数量階層、リードタイムを管理します。',all:'すべて',active:'有効',draft:'ドラフト',expired:'期限切れ',preferred:'優先',contracts:'有効契約',suppliers:'仕入先',new:'価格表を作成',code:'コード',name:'名称',supplier:'仕入先',item:'品目',minQty:'最小数量',unitCost:'単価',currency:'通貨',lead:'リードタイム',days:'日',from:'開始日',to:'終了日',terms:'支払条件',status:'ステータス',scope:'契約明細',activate:'有効化',create:'ドラフト作成',cancel:'キャンセル',created:'仕入先価格表を作成しました',activated:'仕入先価格表を有効化しました',empty:'標準仕入先価格表はありません。'},
+    vi:{title:'Bảng giá nhà cung cấp',unit:'hợp đồng',sub:'Quản lý giá hợp đồng, bậc số lượng và thời gian giao theo hiệu lực trước khi tạo đơn mua.',all:'Tất cả',active:'Đang hiệu lực',draft:'Nháp',expired:'Hết hạn',preferred:'Ưu tiên',contracts:'Hợp đồng hiệu lực',suppliers:'Nhà cung cấp',new:'Tạo bảng giá',code:'Mã',name:'Tên',supplier:'Nhà cung cấp',item:'Mặt hàng',minQty:'Số lượng tối thiểu',unitCost:'Đơn giá',currency:'Tiền tệ',lead:'Thời gian giao',days:'ngày',from:'Hiệu lực từ',to:'Hiệu lực đến',terms:'Điều khoản thanh toán',status:'Trạng thái',scope:'Dòng hợp đồng',activate:'Kích hoạt',create:'Tạo nháp',cancel:'Hủy',created:'Đã tạo nháp bảng giá nhà cung cấp',activated:'Đã kích hoạt bảng giá nhà cung cấp',empty:'Chưa có bảng giá nhà cung cấp chuẩn.'},
+  };
+  const p=packs[lang]||packs.en;return key=>p[key]||packs.en[key]||key;
+}
+function supplierPriceToday(){ return new Date().toISOString().slice(0,10); }
+function supplierPriceStatus(row,s){return row.status==='Active'?s('active'):row.status==='Expired'?s('expired'):row.status==='Draft'?s('draft'):row.status;}
+function openSupplierPriceList(){
+  const s=supplierPricingCopy();
+  const supplierOptions=DB.suppliers.map(row=>`<option value="${row.id}">${esc(row.code)} · ${esc(row.name)}</option>`).join('');
+  const itemOptions=DB.items.map(row=>`<option value="${row.id}">${esc(row.sku)} · ${esc(row.name)}</option>`).join('');
+  appModal({icon:'tag',title:s('new'),width:680,body:`<div class="fldrow c2"><div class="fld"><span>${esc(s('code'))}</span><input id="splCode" value="${esc(nextSourcingNo(DB.supplierPriceLists,'SPL'))}"></div><div class="fld"><span>${esc(s('name'))}</span><input id="splName"></div></div>
+    <div class="fldrow c2"><div class="fld"><span>${esc(s('supplier'))}</span><select id="splSupplier">${supplierOptions}</select></div><div class="fld"><span>${esc(s('currency'))}</span><input id="splCurrency" value="${esc(DB.company.currency||'SGD')}"></div></div>
+    <div class="fldrow c3"><div class="fld"><span>${esc(s('from'))}</span><input id="splFrom" type="date" value="${supplierPriceToday()}"></div><div class="fld"><span>${esc(s('to'))}</span><input id="splTo" type="date"></div><div class="fld"><span>${esc(s('lead'))}</span><input id="splLead" type="number" min="0" step="1" value="7"></div></div>
+    <div class="fld"><span>${esc(s('terms'))}</span><input id="splTerms" value="30 days"></div><div class="fld"><span>${esc(s('item'))}</span><select id="splProduct">${itemOptions}</select></div>
+    <div class="fldrow c2"><div class="fld"><span>${esc(s('minQty'))}</span><input id="splMinQty" type="number" min="0.0001" step="1" value="1"></div><div class="fld"><span>${esc(s('unitCost'))}</span><input id="splUnitCost" type="number" min="0" step="0.01" value="10"></div></div>`,
+    actions:btn(s('cancel'),{cls:'soft',attrs:'data-spl-cancel'})+btn(s('create'),{icon:'plus',cls:'primary',attrs:'data-spl-create'})});
+  document.querySelector('[data-spl-cancel]')?.addEventListener('click',closeModal);
+  document.querySelector('[data-spl-create]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;button.disabled=true;
+    try{
+      await window.ErpSystemData.create('purchasing/supplier-price-lists',{
+        code:document.querySelector('#splCode').value.trim(),name:document.querySelector('#splName').value.trim(),
+        supplierId:Number(document.querySelector('#splSupplier').value),currency:document.querySelector('#splCurrency').value.trim().toUpperCase(),
+        effectiveFrom:document.querySelector('#splFrom').value,effectiveTo:document.querySelector('#splTo').value||null,
+        leadTimeDays:Number(document.querySelector('#splLead').value),paymentTerms:document.querySelector('#splTerms').value.trim()||null,
+        lines:[{productId:Number(document.querySelector('#splProduct').value),minQty:document.querySelector('#splMinQty').value,unitCost:document.querySelector('#splUnitCost').value}],
+      });
+      closeModal();toast(s('created'),'ok');navigate('supplier-price-lists');
+    }catch(error){button.disabled=false;toast(error&&error.message||'Create failed','danger');}
+  });
+}
 makePurList({
-  route:'supplier-price-lists', title:'Supplier Price Lists', unit:'contracts',
-  sub:'Supplier-specific pricing and contract terms applied automatically on purchase orders — contract price, MOQ, currency, lead-time and effective dates.',
-  rows:()=>DB.supplierPriceLists, rowId:p=>p.code,
-  chips:[['all','All'],['active','Active'],['preferred','Preferred'],['expiring','Expiring']],
-  filterFn:(p,f)=>f==='active'?p.status==='Active':f==='preferred'?p.preferred:p.status==='Expiring',
+  route:'supplier-price-lists', title:()=>supplierPricingCopy()('title'), unit:()=>supplierPricingCopy()('unit'),
+  sub:()=>supplierPricingCopy()('sub'),prepare:prepareCanonicalSupplierPriceData,
+  rows:()=>DB.supplierPriceLists, rowId:p=>p.id,
+  chips:[['all',()=>supplierPricingCopy()('all')],['active',()=>supplierPricingCopy()('active')],['draft',()=>supplierPricingCopy()('draft')],['expired',()=>supplierPricingCopy()('expired')],['preferred',()=>supplierPricingCopy()('preferred')]],
+  filterFn:(p,f)=>f==='active'?p.status==='Active':f==='draft'?p.status==='Draft':f==='expired'?p.status==='Expired':p.preferred,
   kpis:(r)=>[
-    {label:'Active contracts', val:r.filter(p=>p.status==='Active').length, f:'active'},
-    {label:'Preferred', val:r.filter(p=>p.preferred).length, accent:true, f:'preferred'},
-    {label:'Expiring', val:r.filter(p=>p.status==='Expiring').length, neg:true, f:'expiring'},
-    {label:'Suppliers', val:new Set(r.map(p=>p.supplier)).size},
+    {label:()=>supplierPricingCopy()('contracts'), val:r.filter(p=>p.status==='Active').length, f:'active'},
+    {label:()=>supplierPricingCopy()('draft'), val:r.filter(p=>p.status==='Draft').length, f:'draft'},
+    {label:()=>supplierPricingCopy()('preferred'), val:r.filter(p=>p.preferred).length, accent:true, f:'preferred'},
+    {label:()=>supplierPricingCopy()('suppliers'), val:new Set(r.map(p=>p.supplierId)).size},
   ],
-  newBtn:{label:'New price list', onClick:()=>toast('New supplier price list / contract','info')},
+  newBtn:{label:()=>supplierPricingCopy()('new'), onClick:openSupplierPriceList},
   columns:[
-    {label:'Code', w:'minmax(130px,1.1fr)', render:p=>`<b class="docnum">${esc(p.code)}</b>`},
-    {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:p=>suppCell(p.supplier)},
-    {label:'Scope', align:'l', w:'minmax(160px,1.8fr)', render:p=>`<span class="li-subj">${esc(p.scope)}</span>`},
-    {label:'MOQ', align:'r', w:'minmax(64px,0.6fr)', render:p=>num(p.moq)},
-    {label:'Lead', align:'r', w:'minmax(56px,0.5fr)', render:p=>`${p.leadTime}d`},
-    {label:'Effective', align:'l', w:'minmax(100px,1fr)', render:p=>`<span style="color:var(--muted)">${esc(p.effective)}</span>`},
-    {label:'Expiry', align:'l', w:'minmax(100px,1fr)', render:p=>`<span style="color:${p.status==='Expiring'?'var(--warn)':'var(--muted)'}">${esc(p.expiry)}</span>`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:p=>(p.preferred?cap('Preferred','accent')+' ':'')+cap(p.status,SPL_TONE[p.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:()=>supplierPricingCopy()('code'), w:'minmax(140px,1.1fr)', render:p=>`<div class="cellsub"><b class="docnum">${esc(p.code)}</b><small>${esc(p.name)}</small></div>`},
+    {label:()=>supplierPricingCopy()('supplier'), align:'l', w:'minmax(180px,1.5fr)', render:p=>suppCell(p.supplier,p.supplierCode)},
+    {label:()=>supplierPricingCopy()('scope'), align:'l', w:'minmax(170px,1.5fr)', render:p=>`<div class="cellsub"><b>${esc(p.scope)}</b><small>${p.lines.length} · MOQ ${num(p.moq)}</small></div>`},
+    {label:()=>supplierPricingCopy()('lead'), align:'r', w:'minmax(80px,.7fr)', render:p=>`${p.leadTime} ${esc(supplierPricingCopy()('days'))}`},
+    {label:()=>supplierPricingCopy()('from'), align:'l', w:'minmax(105px,.9fr)', render:p=>esc(p.effective)},
+    {label:()=>supplierPricingCopy()('to'), align:'l', w:'minmax(105px,.9fr)', render:p=>esc(p.expiry||'—')},
+    {label:()=>supplierPricingCopy()('status'), align:'l', cls:'cap-cell', w:'minmax(120px,1fr)', render:p=>(p.preferred?cap(supplierPricingCopy()('preferred'),'accent')+' ':'')+cap(supplierPriceStatus(p,supplierPricingCopy()),p.status==='Active'?'ok':p.status==='Expired'?'warn':'neutral')},
+    {label:'',align:'r',w:'110px',render:p=>p.rawStatus==='draft'?`<span class="rowact">${btn(supplierPricingCopy()('activate'),{icon:'check',cls:'primary',attrs:`data-spl-activate="${p.id}"`})}</span>`:''},
   ],
-  rowMenu:(p)=>[
-    {id:'view',icon:'ext',label:'Open contract',run:()=>toast(`Opening ${p.code}`,'info')},
-    {id:'renew',icon:'refresh',label:'Renew',run:()=>toast(`${p.code} renewal drafted`,'info')},
-    {id:'pref',icon:'star',label:p.preferred?'Unset preferred':'Set preferred',run:()=>toast(`${p.supplier} ${p.preferred?'unset':'set'} preferred`,'ok')},
-    {id:'end',icon:'x',label:'End contract',danger:true,sep:true,run:()=>toast(`${p.code} ended`,'danger')},
-  ],
-  onOpen:(p)=>toast(`Opening ${p.code}`,'info'),
+  wire:(root)=>root.querySelectorAll('[data-spl-activate]').forEach(button=>button.addEventListener('click',async event=>{
+    event.stopPropagation();button.disabled=true;
+    try{await window.ErpSystemData.action('purchasing/supplier-price-lists',Number(button.dataset.splActivate),'activate',{},`activate-supplier-price-${button.dataset.splActivate}`);toast(supplierPricingCopy()('activated'),'ok');navigate('supplier-price-lists');}
+    catch(error){button.disabled=false;toast(error&&error.message||'Activation failed','danger');}
+  })),
 });
 
 /* ---------------- LANDED COST ---------------- */
@@ -221,43 +256,55 @@ makePurList({
 });
 
 /* ---------------- VENDOR PERFORMANCE ---------------- */
-SCREENS['vendor-performance'] = function(root){
+function vendorPerformanceCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Vendor Performance',sub:'Rebuildable scorecards derived only from purchase orders, receipts, supplier invoices, returns and active contracts.',scored:'Suppliers scored',avgLead:'Avg lead time',spend:'Invoiced spend',watch:'On watch / review',preferred:'Preferred',approved:'Approved',watchTag:'Watch',review:'Review',orders:'Orders received',onTime:'On-time against quoted lead',lead:'Average actual lead',returns:'Credited return rate',match:'Exact invoice match',coverage:'Active-contract coverage',days:'days',na:'Not enough data'},
+    ms:{title:'Prestasi Pembekal',sub:'Kad skor boleh dibina semula hanya daripada pesanan, penerimaan, invois pembekal, pulangan dan kontrak aktif.',scored:'Pembekal dinilai',avgLead:'Purata masa utama',spend:'Belanja diinvois',watch:'Dalam pemantauan / semakan',preferred:'Pilihan',approved:'Diluluskan',watchTag:'Pantau',review:'Semak',orders:'Pesanan diterima',onTime:'Tepat masa ikut sebut harga',lead:'Purata masa sebenar',returns:'Kadar pulangan dikredit',match:'Padanan invois tepat',coverage:'Liputan kontrak aktif',days:'hari',na:'Data belum mencukupi'},
+    zh:{title:'供应商绩效',sub:'评分卡仅由采购订单、收货、供应商发票、退货和生效合同实时重建。',scored:'已评分供应商',avgLead:'平均实际周期',spend:'已开票采购额',watch:'观察 / 复审',preferred:'首选',approved:'合格',watchTag:'观察',review:'复审',orders:'订单收货率',onTime:'按报价周期准时',lead:'平均实际周期',returns:'已贷记退货率',match:'发票精确匹配率',coverage:'生效合同覆盖率',days:'天',na:'数据不足'},
+    ja:{title:'仕入先パフォーマンス',sub:'発注、入荷、仕入先請求、返品、有効契約のみから再構築できるスコアカードです。',scored:'評価済仕入先',avgLead:'平均実リードタイム',spend:'請求済仕入額',watch:'監視 / レビュー',preferred:'優先',approved:'承認済',watchTag:'監視',review:'レビュー',orders:'発注入荷率',onTime:'見積リード基準の定時率',lead:'平均実リードタイム',returns:'貸方済返品率',match:'請求一致率',coverage:'有効契約カバー率',days:'日',na:'データ不足'},
+    vi:{title:'Hiệu suất nhà cung cấp',sub:'Bảng điểm có thể tái tạo chỉ từ đơn mua, nhận hàng, hóa đơn, trả hàng và hợp đồng hiệu lực.',scored:'Nhà cung cấp đã chấm',avgLead:'Thời gian giao thực tế TB',spend:'Giá trị đã lập hóa đơn',watch:'Theo dõi / xem xét',preferred:'Ưu tiên',approved:'Được duyệt',watchTag:'Theo dõi',review:'Xem xét',orders:'Tỷ lệ đơn đã nhận',onTime:'Đúng hạn theo báo giá',lead:'Thời gian giao thực tế TB',returns:'Tỷ lệ trả hàng đã ghi Có',match:'Khớp hóa đơn chính xác',coverage:'Phủ hợp đồng hiệu lực',days:'ngày',na:'Chưa đủ dữ liệu'},
+  };const p=packs[lang]||packs.en;return key=>p[key]||packs.en[key]||key;
+}
+SCREENS['vendor-performance'] = async function(root){
+  await prepareCanonicalVendorPerformanceData();
+  const s=vendorPerformanceCopy();
   const data=DB.vendorPerf.slice().sort((a,b)=>b.rating-a.rating);
-  const avgOnTime=Math.round(data.reduce((a,v)=>a+v.onTime,0)/data.length);
-  const avgLead=Math.round(data.reduce((a,v)=>a+v.leadTime,0)/data.length);
+  const leadRows=data.filter(v=>v.leadTime!=null);
+  const avgLead=leadRows.length?Math.round(leadRows.reduce((a,v)=>a+v.leadTime,0)/leadRows.length):null;
+  const spend=data.reduce((a,v)=>a+v.spend,0);
   const watch=data.filter(v=>v.rating<3.8).length;
 
   const kpis=[
-    {label:'Suppliers scored', val:data.length},
-    {label:'Avg on-time', val:avgOnTime+'%'},
-    {label:'Avg lead time', val:avgLead+'d'},
-    {label:'On watch / review', val:watch, neg:watch>0},
+    {label:s('scored'), val:data.length},
+    {label:s('avgLead'), val:avgLead==null?'—':avgLead+' '+s('days')},
+    {label:s('spend'), val:money0(spend)},
+    {label:s('watch'), val:watch, neg:watch>0},
   ];
   const kpibar=`<div class="so-kpibar">`+kpis.map(k=>`<button class="so-kpi ${k.neg?'neg':''}" disabled><small>${esc(k.label)}</small><b class="tnum">${k.val}</b></button>`).join('')+`</div>`;
 
-  function ratingTag(r){ return r>=4.5?cap('Preferred','ok'):r>=4?cap('Approved','accent'):r>=3.6?cap('Watch','warn'):cap('Review','danger'); }
+  function ratingTag(r){ return r>=4.5?cap(s('preferred'),'ok'):r>=4?cap(s('approved'),'accent'):r>=3.6?cap(s('watchTag'),'warn'):cap(s('review'),'danger'); }
   function bar(v,scale,good){ // good: 'high' means higher is better
+    if(v==null)return `<span class="tnum" style="color:var(--muted)">${esc(s('na'))}</span>`;
     const pct=Math.max(4,Math.min(100,Math.round(v/scale*100)));
     const tone = good==='high' ? (v>=90?'ok':v>=80?'warn':'danger') : (v<=1?'ok':v<=3?'warn':'danger');
     const clr = tone==='ok'?'var(--ok)':tone==='warn'?'var(--warn)':'var(--danger)';
     return `<span class="minibar" style="width:64px"><i style="width:${pct}%;background:${clr}"></i></span>`;
   }
   const cards=data.map(v=>`<div class="wcard vp-card">
-      <div class="vp-h"><div class="partner"><span class="pav">${esc(v.supplier.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase())}</span><div><b>${esc(v.supplier)}</b><small>${esc(v.code)} · ${money0(v.spend)} spend</small></div></div><div class="vp-rate"><b class="tnum">${v.rating.toFixed(1)}</b>${ratingTag(v.rating)}</div></div>
+      <div class="vp-h"><div class="partner"><span class="pav">${esc(v.supplier.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase())}</span><div><b>${esc(v.supplier)}</b><small>${esc(v.code)} · ${money0(v.spend)} ${esc(s('spend'))}</small></div></div><div class="vp-rate"><b class="tnum">${v.rating.toFixed(1)}</b>${ratingTag(v.rating)}</div></div>
       <div class="vp-metrics">
-        <div class="vp-m"><span>On-time delivery</span><div class="vp-mr">${bar(v.onTime,100,'high')}<b class="tnum">${v.onTime}%</b></div></div>
-        <div class="vp-m"><span>Avg lead time</span><div class="vp-mr"><b class="tnum">${v.leadTime} days</b></div></div>
-        <div class="vp-m"><span>Quality reject</span><div class="vp-mr">${bar(v.qualityReject,6,'low')}<b class="tnum">${v.qualityReject}%</b></div></div>
-        <div class="vp-m"><span>Return rate</span><div class="vp-mr">${bar(v.returnRate,6,'low')}<b class="tnum">${v.returnRate}%</b></div></div>
-        <div class="vp-m"><span>Invoice mismatch</span><div class="vp-mr">${bar(v.mismatch,6,'low')}<b class="tnum">${v.mismatch}%</b></div></div>
-        <div class="vp-m"><span>Price variance</span><div class="vp-mr"><b class="tnum" style="color:${v.priceVar>2?'var(--warn)':'var(--ok)'}">${v.priceVar>0?'+':''}${v.priceVar}%</b></div></div>
+        <div class="vp-m"><span>${esc(s('orders'))}</span><div class="vp-mr">${bar(v.receivedPct,100,'high')}${v.receivedPct==null?'':`<b class="tnum">${v.receivedPct}%</b>`}</div></div>
+        <div class="vp-m"><span>${esc(s('onTime'))}</span><div class="vp-mr">${bar(v.onTime,100,'high')}${v.onTime==null?'':`<b class="tnum">${v.onTime}%</b>`}</div></div>
+        <div class="vp-m"><span>${esc(s('lead'))}</span><div class="vp-mr"><b class="tnum">${v.leadTime==null?esc(s('na')):`${v.leadTime} ${esc(s('days'))}`}</b></div></div>
+        <div class="vp-m"><span>${esc(s('returns'))}</span><div class="vp-mr">${bar(v.returnRate,10,'low')}<b class="tnum">${v.returnRate}%</b></div></div>
+        <div class="vp-m"><span>${esc(s('match'))}</span><div class="vp-mr">${bar(v.invoiceMatch,100,'high')}${v.invoiceMatch==null?'':`<b class="tnum">${v.invoiceMatch}%</b>`}</div></div>
+        <div class="vp-m"><span>${esc(s('coverage'))}</span><div class="vp-mr">${bar(v.contractCoverage,100,'high')}${v.contractCoverage==null?'':`<b class="tnum">${v.contractCoverage}%</b>`}</div></div>
       </div>
     </div>`).join('');
 
   root.innerHTML = purPage({
-    active:'vendor-performance', title:'Vendor Performance',
-    sub:'Supplier scorecards across on-time delivery, lead-time, quality, returns and invoice match — the inputs behind approved-supplier status and sourcing decisions.',
-    action: btn('Performance report',{icon:'chart',cls:'soft',attrs:'onclick="navigate(\'report-pur-vendor\')"'}),
+    active:'vendor-performance', title:s('title'),sub:s('sub'),
     body:`<div class="sales-body">${kpibar}<div class="vp-grid">${cards}</div></div>`
   });
 };

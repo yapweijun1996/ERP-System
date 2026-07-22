@@ -60,6 +60,8 @@ import {
   supplierCreditNote,
   supplierCreditNoteLine,
   supplierDebitNote,
+  supplierPriceList,
+  supplierPriceListLine,
   workCenter,
   manufacturingBom,
   bomVersion,
@@ -89,6 +91,7 @@ import {
   serviceContract,
   serviceTicket,
 } from '../data/schema';
+import { listVendorPerformanceWithin } from '../modules/purchasing/vendorPerformance';
 
 export interface ApiScope {
   masterFn: string;
@@ -125,6 +128,12 @@ export interface ResourceDefinition {
   auditPolicy: 'none' | 'writes';
   status?: any;
   customerId?: any;
+  listOnly?: boolean;
+  listHandler?: (
+    db: DB,
+    scope: ApiScope,
+    input: { cursor: number; limit: number },
+  ) => Promise<{ data: unknown[]; nextCursor: number | null }>;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -320,6 +329,18 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     createPermission: 'purchasing.write',
   }),
   'purchasing/landed-cost-lines': resource(landedCostLine, 'purchasing.read'),
+  'purchasing/supplier-price-lists': resource(supplierPriceList, 'purchasing.read', {
+    status: supplierPriceList.status,
+    versionColumn: supplierPriceList.version,
+    allowedActions: ['activate'],
+    createPermission: 'purchasing.write',
+  }),
+  'purchasing/supplier-price-list-lines': resource(supplierPriceListLine, 'purchasing.read'),
+  'purchasing/vendor-performance': derivedResource(
+    supplier,
+    'purchasing.read',
+    (db, scope, input) => listVendorPerformanceWithin(db, scope, input),
+  ),
   'crm/opportunities': resource(opportunity, 'crm.read', {
     status: opportunity.stage,
     customerId: opportunity.customerId,
@@ -463,6 +484,18 @@ function resource(
   };
 }
 
+function derivedResource(
+  cursorTable: ResourceDefinition['table'],
+  readPermission: string,
+  listHandler: NonNullable<ResourceDefinition['listHandler']>,
+): ResourceDefinition {
+  return {
+    ...resource(cursorTable, readPermission),
+    listOnly: true,
+    listHandler,
+  };
+}
+
 export class UnknownResourceError extends Error {
   constructor(resource: string) {
     super(`Unknown ERP resource '${resource}'`);
@@ -549,6 +582,16 @@ export async function listResource(
     parsePositiveInteger(query.customerId, 0, 'customerId');
   }
 
+  if (definition.listHandler) {
+    const page = await definition.listHandler(db, scope, { cursor, limit });
+    return {
+      data: page.data,
+      meta: {
+        nextCursor: page.nextCursor == null ? null : encodeCursor(page.nextCursor),
+      },
+    };
+  }
+
   const predicates = [
     eq(definition.table.masterFn, scope.masterFn),
     eq(definition.table.companyFn, scope.companyFn),
@@ -579,6 +622,7 @@ export async function listResource(
 
 export async function getResource(db: DB, scope: ApiScope, resource: string, id: unknown) {
   const definition = definitionFor(resource);
+  if (definition.listOnly) return null;
   const resourceId = parsePositiveInteger(id, 0, 'id');
   if (resourceId < 1) throw new InvalidResourceQueryError('id must be a positive integer');
 

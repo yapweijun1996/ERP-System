@@ -10,6 +10,7 @@ import {
   purchaseRequisition, purchaseRequisitionLine,
   purchaseRfq, purchaseRfqLine, purchaseRfqSupplier,
   supplierQuotation, supplierQuotationLine,
+  supplierPriceList, supplierPriceListLine,
   purchaseOrder, purchaseOrderApproval, purchaseOrderLine, supplierInvoice, glEntry,
   payrollRun, payrollRunLine,
 } from './schema';
@@ -126,6 +127,25 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP1', name: 'Gamma Supplies Pte Ltd' },
     { masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP2', name: 'Delta Components Pte Ltd' },
   ]).returning({ id: supplier.id });
+
+  // A real active supplier contract for Purchasing Controls. Vendor Performance
+  // derives coverage from this row and the actual PO lines; it has no curated KPI seed.
+  const [seedWidget] = await db.select({ id: product.id }).from(product).where(and(
+    eq(product.masterFn, 'M1'),
+    eq(product.companyFn, 'C-SG'),
+    eq(product.sku, 'SG-WIDGET'),
+  ));
+  const [seedSupplierPriceList] = await db.insert(supplierPriceList).values({
+    masterFn: 'M1', companyFn: 'C-SG', code: 'SPL-GAMMA-2026',
+    name: 'Gamma 2026 widget contract', supplierId: seedSupp1.id,
+    currency: 'SGD', status: 'active', version: 2, isPreferred: true,
+    leadTimeDays: 7, paymentTerms: '30 days',
+    effectiveFrom: '2026-01-01', effectiveTo: '2026-12-31',
+  }).returning({ id: supplierPriceList.id });
+  await db.insert(supplierPriceListLine).values({
+    masterFn: 'M1', companyFn: 'C-SG', priceListId: seedSupplierPriceList.id,
+    lineNo: 1, productId: seedWidget.id, minQty: '1.0000', unitCost: '6.0000',
+  });
 
   // An open opportunity for CUST1, owned by the admin user (TASK-027 — CRM chain).
   // Left in 'negotiation' (not converted) so the demo shows an in-flight pipeline

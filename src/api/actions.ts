@@ -28,6 +28,7 @@ import {
 import { postSupplierDebitNoteWithin } from '../modules/purchasing/supplierDebitNote';
 import { allocateLandedCostWithin } from '../modules/purchasing/landedCost';
 import { decidePurchaseOrderWithin } from '../modules/purchasing/purchaseOrderApproval';
+import { activateSupplierPriceListWithin } from '../modules/purchasing/supplierPricing';
 import { decidePurchaseRequisitionWithin } from '../modules/purchasing/purchaseRequisition';
 import {
   convertSupplierQuotationToPurchaseOrderWithin,
@@ -72,6 +73,14 @@ import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'purchasing/supplier-price-lists/activate': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return activateSupplierPriceListWithin(tx, scope, input.resourceId);
+    },
+  },
   'purchasing/purchase-orders/approve': {
     permission: 'purchasing.write',
     idempotency: 'required',

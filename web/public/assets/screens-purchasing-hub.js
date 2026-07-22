@@ -546,6 +546,52 @@ async function prepareCanonicalPurchasingData(){
   };
 }
 
+async function prepareCanonicalSupplierPriceData(){
+  await prepareCanonicalPurchasingData();
+  const pages=await Promise.all([
+    listPage('purchasing/supplier-price-lists'),
+    listPage('purchasing/supplier-price-list-lines'),
+  ]);
+  const [supplierPriceLists,supplierPriceListLines]=pages.map(page=>page.data||[]);
+  const productById=new Map((DB.items||[]).map(row=>[row.id,row]));
+  const supplierById=new Map((DB.suppliers||[]).map(row=>[row.id,row]));
+  const linesByHeader=new Map();
+  supplierPriceListLines.forEach(row=>{
+    const rows=linesByHeader.get(row.priceListId)||[];
+    const item=productById.get(row.productId)||{};
+    rows.push({id:row.id,lineNo:row.lineNo,productId:row.productId,sku:item.sku||`#${row.productId}`,
+      name:item.name||`Product #${row.productId}`,uom:item.uom||'',
+      minQty:purchasingNumber(row.minQty),unitCost:purchasingNumber(row.unitCost)});
+    linesByHeader.set(row.priceListId,rows);
+  });
+  DB.supplierPriceLists=supplierPriceLists.map(row=>{
+    const vendor=supplierById.get(row.supplierId)||{};
+    const lines=(linesByHeader.get(row.id)||[]).sort((a,b)=>a.lineNo-b.lineNo);
+    const isExpired=row.status==='active'&&row.effectiveTo&&row.effectiveTo<new Date().toISOString().slice(0,10);
+    return {id:row.id,version:row.version,code:row.code,name:row.name,supplierId:row.supplierId,
+      supplier:vendor.name||`Supplier #${row.supplierId}`,supplierCode:vendor.code||'—',currency:row.currency,
+      effective:dateValue(row.effectiveFrom),expiry:row.effectiveTo?dateValue(row.effectiveTo):null,
+      leadTime:row.leadTimeDays,paymentTerms:row.paymentTerms||'—',preferred:Boolean(row.isPreferred),
+      status:isExpired?'Expired':({draft:'Draft',active:'Active',archived:'Archived'}[row.status]||row.status),
+      rawStatus:row.status,lines,scope:lines.map(line=>line.name).slice(0,2).join(', ')||'—',
+      moq:lines.length?Math.min(...lines.map(line=>line.minQty)):0};
+  });
+}
+
+async function prepareCanonicalVendorPerformanceData(){
+  await prepareCanonicalPurchasingData();
+  const page=await listPage('purchasing/vendor-performance');
+  DB.vendorPerf=(page.data||[]).map(row=>({
+    id:row.id,code:row.supplierCode,supplier:row.supplierName,
+    orders:row.orderCount,received:row.receivedCount,receivedPct:row.receivedPct==null?null:purchasingNumber(row.receivedPct),
+    spend:purchasingNumber(row.invoicedSpend),leadTime:row.avgLeadDays==null?null:purchasingNumber(row.avgLeadDays),
+    onTime:row.onTimePct==null?null:purchasingNumber(row.onTimePct),
+    returnRate:purchasingNumber(row.returnRatePct),invoiceMatch:row.invoiceMatchPct==null?null:purchasingNumber(row.invoiceMatchPct),
+    contractCoverage:row.contractCoveragePct==null?null:purchasingNumber(row.contractCoveragePct),
+    rating:purchasingNumber(row.rating),
+  }));
+}
+
 /* ============================================================
    GENERIC PURCHASING LIST FACTORY  (mirror of makeSalesList)
    ============================================================ */
@@ -603,6 +649,7 @@ function makePurList(cfg){
       if(cfg.rowMenu) $('#plTable').querySelectorAll('.row-menu').forEach(b=>b.addEventListener('click',e=>{
         e.stopPropagation(); const tr=b.closest('[data-row]'); const row=allRows().find(r=>String(cfg.rowId(r))===String(tr.dataset.row)); openRowMenu(b,row);
       }));
+      if(cfg.wire) cfg.wire(root,allRows());
     }
     render();
   };

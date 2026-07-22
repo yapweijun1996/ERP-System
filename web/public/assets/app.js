@@ -430,6 +430,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'purchase-returns','supplier-credit-notes','supplier-debit-notes','landed-cost',
   'po-approvals','po-approval',
   'goods-receipt','supplier-invoice',
+  'supplier-price-lists','vendor-performance',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -460,6 +461,7 @@ const API_SCREEN_ROUTES = new Set([
   'purchase-returns','supplier-credit-notes','supplier-debit-notes','landed-cost',
   'po-approvals','po-approval',
   'goods-receipt','supplier-invoice',
+  'supplier-price-lists','vendor-performance',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',

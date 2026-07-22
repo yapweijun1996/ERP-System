@@ -1360,3 +1360,27 @@ Acceptance criteria:
       80 Canonical / 34 Preview.
 - [x] The active purchasing sub-navigation remains visible after a live
       desktop-to-375px resize; the route audit includes this lifecycle regression.
+
+## EPIC-034 — Supplier Contracts and Derived Vendor Performance
+
+**Goal:** replace Purchasing's sample supplier contracts and manually-curated vendor
+ratings with effective-dated canonical pricing plus a scorecard rebuilt from real
+procure-to-pay facts.
+
+Acceptance criteria:
+
+- [x] Migration 0035 adds tenant-scoped, versioned `supplier_price_list` headers and
+      quantity-tier lines linked to real suppliers and products, with date, currency,
+      lead-time and positive-value constraints.
+- [x] Shared Decimal commands create draft contracts, reject cross-company or duplicate
+      tiers, prevent ambiguous active product/date overlap, and activate once through an
+      audited idempotent action. Existing purchase documents remain immutable snapshots.
+- [x] Vendor performance has no independent KPI table or curated score. A shared bounded
+      read model derives receipt rate, quoted-lead on-time rate, actual lead days, invoiced
+      spend, credited-return rate, exact invoice match and active-contract coverage from
+      canonical orders, receipts, invoices, returns, quotations and price lists.
+- [x] Demo ESM and production API expose the two contract resources plus the derived
+      performance resource under Purchasing RBAC; production RLS and migration-generated
+      PGlite schema remain aligned.
+- [x] `supplier-price-lists` and `vendor-performance` are five-language Canonical Demo/API
+      routes. Domain/API/browser and full release gates pass at 82 Canonical / 32 Preview.

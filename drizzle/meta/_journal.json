@@ -246,6 +246,13 @@
       "when": 1784689948096,
       "tag": "0034_dapper_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1784702079850,
+      "tag": "0035_sad_paper_doll",
+      "breakpoints": true
     }
   ]
 }

@@ -45,6 +45,7 @@ import { SalesDebitNoteError } from '../../modules/sales/debitNote';
 import { SalesPricingError } from '../../modules/sales/pricing';
 import { SalesCreditError } from '../../modules/sales/creditControl';
 import { PurchaseOrderApprovalError } from '../../modules/purchasing/purchaseOrderApproval';
+import { SupplierPricingError } from '../../modules/purchasing/supplierPricing';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -123,6 +124,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof SalesReturnError
         || error instanceof SalesDebitNoteError
         || error instanceof SalesPricingError
+        || error instanceof SupplierPricingError
         || error instanceof SalesCreditError
         || error instanceof RangeError
       ) {
@@ -282,6 +284,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof InvalidStockTransferStateError
         || error instanceof InvalidPurchaseOrderStateError
         || error instanceof PurchaseOrderApprovalError
+        || error instanceof SupplierPricingError
       ) {
         apiError(res, 409, 'invalid_state', error.message);
         return;
