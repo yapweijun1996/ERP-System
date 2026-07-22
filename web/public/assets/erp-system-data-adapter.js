@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 36;
+  var DEMO_SCHEMA_VERSION = 37;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1307,6 +1307,10 @@
     'sales/price-list-lines':'sales_price_list_line',
     'sales/discount-rules':'sales_discount_rule',
     'sales/credit-profiles':'sales_credit_profile',
+    'sales/commission-plans':'sales_commission_plan',
+    'sales/commission-runs':'sales_commission_run',
+    'sales/commission-lines':'sales_commission_line',
+    'sales/commission-sources':'sales_commission_source',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
     'finance/bank-receipts':'bank_receipt',
@@ -1425,10 +1429,12 @@
     var key=normalizeResource(resource);
     var adminResult=await listAdminResource(key, query);
     if(adminResult) return adminResult;
-    if(key==='sales/analytics'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
+    if(key==='sales/analytics'||key==='sales/salespeople'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
       query=query||{};
       var derivedCommand=key==='sales/analytics'
         ?state.runtime.commands.listSalesAnalyticsWithin
+        :key==='sales/salespeople'
+        ?state.runtime.commands.listSalespeopleWithin
         :key==='purchasing/vendor-performance'
         ?state.runtime.commands.listVendorPerformanceWithin
         :key==='purchasing/analytics'
@@ -1450,9 +1456,24 @@
     query=query||{};
     var limit=Math.max(1,Math.min(100,Number(query.limit)||50));
     var cursor=Number(query.cursor)||0;
-    var params=[SCOPE.masterFn,SCOPE.companyFn,cursor,limit+1];
+    var params=[SCOPE.masterFn,SCOPE.companyFn,cursor];
     var sql='select * from '+table+
-      ' where master_fn=$1 and company_fn=$2 and id>$3 order by id asc limit $4';
+      ' where master_fn=$1 and company_fn=$2 and id>$3';
+    var numericFilters={
+      'sales/commission-lines':{runId:'run_id'},
+      'sales/commission-sources':{runId:'run_id'},
+    }[key]||{};
+    Object.keys(numericFilters).forEach(function(filter){
+      if(query[filter]==null||query[filter]==='') return;
+      var value=Number(query[filter]);
+      if(!Number.isSafeInteger(value)||value<=0){
+        throw new Error(filter+' must be a positive integer.');
+      }
+      params.push(value);
+      sql+=' and '+numericFilters[filter]+'=$'+params.length;
+    });
+    params.push(limit+1);
+    sql+=' order by id asc limit $'+params.length;
     var rows=(await requireDemoDb().query(sql,params)).rows;
     var hasMore=rows.length>limit;
     var data=(hasMore?rows.slice(0,limit):rows).map(contractRow);
@@ -1734,6 +1755,22 @@
       });
       await refresh();
       return {data:creditProfile,meta:{}};
+    }
+    if(key==='sales/commission-plans'){
+      var commissionPlan = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createCommissionPlanWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:commissionPlan,meta:{}};
+    }
+    if(key==='sales/commission-runs'){
+      var commissionRun = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createCommissionRunWithin(
+          state.runtime.createOrm(tx), SCOPE, payload, Number(state.activeUserId));
+      });
+      await refresh();
+      return {data:commissionRun,meta:{}};
     }
     if(key==='assets/assets'){
       var newAsset = await requireDemoDb().transaction(function(tx){
@@ -2072,6 +2109,25 @@
       });
       await refresh();
       return {data:releasedCredit,meta:{}};
+    }
+    if(key==='sales/commission-plans'&&name==='activate'){
+      var activatedCommissionPlan = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.activateCommissionPlanWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:activatedCommissionPlan,meta:{}};
+    }
+    if(key==='sales/commission-runs'&&name==='approve'){
+      var approvedCommissionRun = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.approveCommissionRunWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), {
+            note:payload&&payload.note,
+            actorUserId:Number(state.activeUserId),
+          });
+      });
+      await refresh();
+      return {data:approvedCommissionRun,meta:{}};
     }
     if(key==='assets/depreciation-runs'&&name==='post'){
       var postedDepreciationRun = await requireDemoDb().transaction(function(tx){

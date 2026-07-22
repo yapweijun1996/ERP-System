@@ -1447,3 +1447,25 @@ Acceptance criteria:
 - [x] CI smoke creates a real confirmed sale, proves positive analytics and visits all
       six Canonical routes. The full desktop/375px audit passes at 98 Canonical / 16
       Preview without page, action-bar or active-subnav overflow.
+
+## EPIC-038 — Canonical Sales Commission
+
+**Goal:** replace the sample commission list with effective-dated plans and immutable,
+auditable source-document calculation runs without pretending approval is payroll.
+
+Acceptance criteria:
+
+- [x] Migration 0037 snapshots salesperson ownership onto orders/invoices and adds
+      tenant-scoped, versioned plans plus immutable run, line and source tables with
+      production RLS and migration-generated PGlite alignment.
+- [x] Shared Decimal commands enforce one non-overlapping active plan per salesperson,
+      non-overlapping run periods, source-level rounding and invoice minus posted-credit
+      plus posted-debit reconciliation without silently dropping unattributed sources.
+- [x] Approval requires `sales.commission.approve`, a note, audit and idempotency; it
+      freezes the decision without creating payroll, payout, inventory or GL records.
+- [x] Demo/API resources expose bounded plans, runs, lines, sources and company users;
+      domain and authenticated API tests prove tenant isolation, Viewer denial,
+      ownership snapshots, replay and immutable historical results.
+- [x] `sales-commission` is a five-language Canonical route with real create, activate,
+      calculate, trace and approve flows. Smoke and full desktop/375px audit pass at
+      99 Canonical / 15 Preview.

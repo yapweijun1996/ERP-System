@@ -14,6 +14,8 @@ import {
   salesDelivery,
   salesDeliveryLine,
   invoice,
+  appUser,
+  master,
 } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { getStockQty, countMovements, InsufficientStockError } from '../inventory/stock';
@@ -31,6 +33,13 @@ import {
 } from './creditControl';
 
 async function seedSalesFixture(db: DB) {
+  await db.insert(master).values({ masterFn: SCOPE.masterFn, name: 'Test Master' });
+  const [salesperson] = await db.insert(appUser).values({
+    masterFn: SCOPE.masterFn,
+    email: 'salesperson@example.test',
+    fullName: 'Fictional Salesperson',
+    passwordHash: 'test-only-hash',
+  }).returning({ id: appUser.userId });
   const [widget] = await db.insert(product).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, sku: 'WIDGET', name: 'Widget', uom: 'unit',
   }).returning({ id: product.id });
@@ -46,6 +55,7 @@ async function seedSalesFixture(db: DB) {
   ]);
   const [cust] = await db.insert(customer).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: 'C1', name: 'Test Customer',
+    ownerUserId: salesperson.id,
   }).returning({ id: customer.id });
   await db.insert(account).values([
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '1100', name: 'Accounts Receivable', type: 'asset' },
@@ -56,7 +66,13 @@ async function seedSalesFixture(db: DB) {
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, taxRegime: 'GST', taxCode: 'SR',
     rate: '9.000', validFrom: '2024-01-01', validTo: null,
   });
-  return { widgetId: widget.id, gadgetId: gadget.id, warehouseId: wh.id, customerId: cust.id };
+  return {
+    widgetId: widget.id,
+    gadgetId: gadget.id,
+    warehouseId: wh.id,
+    customerId: cust.id,
+    salespersonId: salesperson.id,
+  };
 }
 
 async function createDraftOrder(
@@ -72,6 +88,7 @@ async function createDraftOrder(
     companyFn: SCOPE.companyFn,
     docNo,
     customerId: fx.customerId,
+    salespersonUserId: fx.salespersonId,
     status: 'draft',
     orderDate: '2024-06-01',
     currency: 'SGD',
@@ -128,6 +145,14 @@ describe('confirmSalesOrder', () => {
     const totalCredit = legs.reduce((sum, l) => sum + Number(l.credit), 0);
     expect(totalDebit).toBeCloseTo(totalCredit, 2);
     expect(totalDebit).toBeCloseTo(119.9, 2);
+    const [order] = await db.select({
+      salespersonUserId: salesOrder.salespersonUserId,
+    }).from(salesOrder).where(eq(salesOrder.id, res.orderId));
+    const [postedInvoice] = await db.select({
+      salespersonUserId: invoice.salespersonUserId,
+    }).from(invoice).where(eq(invoice.id, res.invoiceId));
+    expect(order.salespersonUserId).toBe(fx.salespersonId);
+    expect(postedInvoice.salespersonUserId).toBe(fx.salespersonId);
   });
 
   it('rollback: insufficient stock on a later line undoes the WHOLE order, including the earlier valid line', async () => {

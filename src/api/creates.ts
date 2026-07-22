@@ -102,6 +102,12 @@ import {
   type CreateCreditProfileInput,
 } from '../modules/sales/creditControl';
 import {
+  createCommissionPlanWithin,
+  createCommissionRunWithin,
+  type CreateCommissionPlanInput,
+  type CreateCommissionRunInput,
+} from '../modules/sales/commission';
+import {
   createSalesOrderWithin,
   type CreateSalesOrderInput,
 } from '../modules/sales/createSalesOrder';
@@ -153,7 +159,12 @@ import {
 export interface CreateDefinition {
   permission: string;
   audit: 'required';
-  execute(tx: DB, scope: Scope, payload: Record<string, unknown>): Promise<unknown>;
+  execute(
+    tx: DB,
+    scope: Scope,
+    payload: Record<string, unknown>,
+    actorUserId: number,
+  ): Promise<unknown>;
 }
 
 const CREATES: Record<string, CreateDefinition> = {
@@ -448,6 +459,24 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createCreditProfileWithin(tx, scope, payload as unknown as CreateCreditProfileInput);
+    },
+  },
+  'sales/commission-plans': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createCommissionPlanWithin(
+        tx, scope, payload as unknown as CreateCommissionPlanInput,
+      );
+    },
+  },
+  'sales/commission-runs': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload, actorUserId) {
+      return createCommissionRunWithin(
+        tx, scope, payload as unknown as CreateCommissionRunInput, actorUserId,
+      );
     },
   },
   'assets/assets': {

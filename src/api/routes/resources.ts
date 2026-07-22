@@ -48,6 +48,7 @@ import { SalesOrderValidationError } from '../../modules/sales/createSalesOrder'
 import { SalesOrderApprovalError } from '../../modules/sales/salesOrderApproval';
 import { PurchaseOrderApprovalError } from '../../modules/purchasing/purchaseOrderApproval';
 import { SupplierPricingError } from '../../modules/purchasing/supplierPricing';
+import { SalesCommissionError } from '../../modules/sales/commission';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -95,7 +96,7 @@ export function createResourceRouter(db: DB): Router {
         if (!await hasPermission(tx, session, createDefinition.permission)) {
           throw new ActionDispatchError(403, 'permission_denied', 'You cannot create this ERP resource.');
         }
-        const created = await createDefinition.execute(tx, scope, payload);
+        const created = await createDefinition.execute(tx, scope, payload, session.userId);
         const entityId = (created as { id?: unknown }).id;
         await appendAudit(tx, {
           masterFn: scope.masterFn,
@@ -129,6 +130,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof SupplierPricingError
         || error instanceof SalesCreditError
         || error instanceof SalesOrderValidationError
+        || error instanceof SalesCommissionError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -289,6 +291,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof PurchaseOrderApprovalError
         || error instanceof SalesOrderApprovalError
         || error instanceof SupplierPricingError
+        || error instanceof SalesCommissionError
       ) {
         apiError(res, 409, 'invalid_state', error.message);
         return;

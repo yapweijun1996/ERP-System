@@ -30,6 +30,8 @@ DECLARE
     'sales_debit_note',
     'sales_price_list', 'sales_price_list_line', 'sales_discount_rule',
     'sales_credit_profile',
+    'sales_commission_plan', 'sales_commission_run', 'sales_commission_line',
+    'sales_commission_source',
     'account', 'gl_entry',
     'goods_receipt', 'purchase_order', 'purchase_order_approval', 'purchase_order_line',
     'purchase_requisition', 'purchase_requisition_line',

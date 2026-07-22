@@ -26,6 +26,7 @@ WHERE p.master_fn = 'M1' AND p.company_fn = 'C-SG' AND p.sku IN ('SG-WIDGET', 'S
 DO $$
 DECLARE
   v_customer_id  bigint;
+  v_owner_id     bigint;
   v_warehouse_id bigint;
   v_order_id     bigint;
   v_delivery_id  bigint;
@@ -44,12 +45,13 @@ DECLARE
 BEGIN
   SELECT id INTO v_customer_id FROM customer
     WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = 'CUST1';
+  SELECT owner_user_id INTO v_owner_id FROM customer WHERE id = v_customer_id;
   SELECT id INTO v_warehouse_id FROM warehouse
     WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = 'WH-SALES';
 
   -- 1. Header (totals filled in after lines) — confirmOrder.ts step 1.
-  INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, status, order_date, currency)
-    VALUES ('M1', 'C-SG', 'SO-1', v_customer_id, 'confirmed', DATE '2024-06-01', 'SGD')
+  INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, salesperson_user_id, status, order_date, currency)
+    VALUES ('M1', 'C-SG', 'SO-1', v_customer_id, v_owner_id, 'confirmed', DATE '2024-06-01', 'SGD')
     RETURNING id INTO v_order_id;
   INSERT INTO sales_delivery (master_fn, company_fn, doc_no, order_id, status, delivery_date)
     VALUES ('M1', 'C-SG', 'DO-SO-1', v_order_id, 'draft', DATE '2024-06-01')
@@ -114,9 +116,9 @@ BEGIN
     WHERE id = v_order_id;
 
   -- 4. Invoice.
-  INSERT INTO invoice (master_fn, company_fn, doc_no, order_id, customer_id, status,
+  INSERT INTO invoice (master_fn, company_fn, doc_no, order_id, customer_id, salesperson_user_id, status,
                        invoice_date, currency, net_amount, tax_amount, total_amount)
-    VALUES ('M1', 'C-SG', 'INV-SO-1', v_order_id, v_customer_id, 'unpaid',
+    VALUES ('M1', 'C-SG', 'INV-SO-1', v_order_id, v_customer_id, v_owner_id, 'unpaid',
             DATE '2024-06-01', 'SGD', v_net, v_tax, v_total)
     RETURNING id INTO v_invoice_id;
 
@@ -305,8 +307,8 @@ BEGIN
   v_tax := round(v_net * v_rate / 100, 2);
   v_total := v_net + v_tax;
 
-  INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, status, order_date, currency, net_amount, tax_amount, total_amount)
-    VALUES ('M1', 'C-SG', 'SO-CRM-1', v_customer_id, 'confirmed', DATE '2024-06-01', 'SGD', v_net, v_tax, v_total)
+  INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, salesperson_user_id, status, order_date, currency, net_amount, tax_amount, total_amount)
+    VALUES ('M1', 'C-SG', 'SO-CRM-1', v_customer_id, v_owner_id, 'confirmed', DATE '2024-06-01', 'SGD', v_net, v_tax, v_total)
     RETURNING id INTO v_order_id;
 
   INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, product_id, qty, unit_price, net_amount, tax_code, tax_rate, tax_amount)
@@ -325,8 +327,8 @@ BEGIN
   INSERT INTO stock_movement (master_fn, company_fn, product_id, warehouse_id, qty, direction, ref_type, ref_id)
     VALUES ('M1', 'C-SG', v_product_id, v_warehouse_id, v_qty, 'out', 'sales_order', v_order_id);
 
-  INSERT INTO invoice (master_fn, company_fn, doc_no, order_id, customer_id, status, invoice_date, currency, net_amount, tax_amount, total_amount)
-    VALUES ('M1', 'C-SG', 'INV-SO-CRM-1', v_order_id, v_customer_id, 'unpaid', DATE '2024-06-01', 'SGD', v_net, v_tax, v_total);
+  INSERT INTO invoice (master_fn, company_fn, doc_no, order_id, customer_id, salesperson_user_id, status, invoice_date, currency, net_amount, tax_amount, total_amount)
+    VALUES ('M1', 'C-SG', 'INV-SO-CRM-1', v_order_id, v_customer_id, v_owner_id, 'unpaid', DATE '2024-06-01', 'SGD', v_net, v_tax, v_total);
 
   SELECT id INTO v_ar  FROM account WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = '1100';
   SELECT id INTO v_rev FROM account WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = '4000';

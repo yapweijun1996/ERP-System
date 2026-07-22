@@ -344,6 +344,55 @@ async function checkViewport(browser, viewport) {
         reportMarkers.push(Boolean(document.querySelector('[data-sales-report]'))
           && !document.querySelector('[data-preview-banner]'));
       }
+      const commissionPeople = await adapter.list('sales/salespeople', { limit: 100 });
+      const commissionPerson = commissionPeople.data.find((row) => row.email === 'admin@example.test')
+        || commissionPeople.data[0];
+      const commissionPlan = await adapter.create('sales/commission-plans', {
+        code: 'COMM-SMOKE-2024',
+        name: 'Smoke recognized revenue plan',
+        salespersonUserId: Number(commissionPerson.userId),
+        ratePct: '5',
+        effectiveFrom: '2024-01-01',
+        effectiveTo: '2024-12-31',
+      });
+      await adapter.action(
+        'sales/commission-plans',
+        commissionPlan.data.id,
+        'activate',
+        {},
+        'smoke-commission-plan-activate',
+      );
+      const commissionRun = await adapter.create('sales/commission-runs', {
+        docNo: 'COMRUN-SMOKE-2024-06',
+        periodStart: '2024-06-01',
+        periodEnd: '2024-06-30',
+        currency: 'SGD',
+      });
+      const commissionGlBefore = Number((await adapter.db.query(
+        "select count(*)::int as count from gl_entry where master_fn='M1' and company_fn='C-SG'",
+      )).rows[0].count);
+      await adapter.action(
+        'sales/commission-runs',
+        commissionRun.data.id,
+        'approve',
+        { note: 'Smoke reviewer verified every immutable source document.' },
+        'smoke-commission-run-approve',
+      );
+      const commissionGlAfter = Number((await adapter.db.query(
+        "select count(*)::int as count from gl_entry where master_fn='M1' and company_fn='C-SG'",
+      )).rows[0].count);
+      const commissionLines = await adapter.list('sales/commission-lines', {
+        limit: 100,
+        runId: commissionRun.data.id,
+      });
+      const commissionSources = await adapter.list('sales/commission-sources', {
+        limit: 100,
+        runId: commissionRun.data.id,
+      });
+      await navigate('sales-commission');
+      const commissionCanonical = Boolean(document.querySelector('[data-sales-commission="canonical"]'))
+        && !document.querySelector('[data-preview-banner]')
+        && document.body.textContent.includes('COMRUN-SMOKE-2024-06');
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -386,6 +435,12 @@ async function checkViewport(browser, viewport) {
         salesAnalyticsCanonical,
         salesReportsCanonical,
         salesReportRoutesCanonical: reportMarkers.every(Boolean),
+        commissionCanonical,
+        commissionTrace: Number(commissionRun.data.sourceCount) === commissionSources.data.length
+          && commissionSources.data.length >= 2
+          && commissionLines.data.length === 1
+          && Number(commissionRun.data.commissionAmount) > 0
+          && commissionGlAfter === commissionGlBefore,
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -426,6 +481,9 @@ async function checkViewport(browser, viewport) {
       if (!runtimeProof.salesAnalyticsCanonical) errors.push('[demo-esm] sales dashboard did not render canonical derived analytics');
       if (!runtimeProof.salesReportsCanonical || !runtimeProof.salesReportRoutesCanonical) {
         errors.push('[demo-esm] one or more sales analytics reports did not render as Canonical routes');
+      }
+      if (!runtimeProof.commissionCanonical || !runtimeProof.commissionTrace) {
+        errors.push('[demo-esm] Sales commission did not render an immutable canonical source trace without GL posting');
       }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');

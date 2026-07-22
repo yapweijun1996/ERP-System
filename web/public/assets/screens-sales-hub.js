@@ -430,7 +430,9 @@ SCREENS['sales-home'] = function(root){
       case 'credit-control': return DB.customers.filter(c=>c.overdue>0||c.balance/c.limit>=0.9||c.status==='On hold').length;
       case 'price-lists': return DB.priceLists.filter(p=>p.status==='Active').length;
       case 'discount-mgmt': return DB.discountRules.filter(d=>d.status==='Active').length;
-      case 'sales-commission': return DB.commissions.filter(c=>c.status!=='Approved').length;
+      /* The canonical page computes its own live run count. Do not surface the
+         legacy sample commission badge on the Sales directory. */
+      case 'sales-commission': return 0;
       case 'sales-reports': return DB.reportsCatalog.flatMap(g=>g.items).length;
       default: return null;
     }

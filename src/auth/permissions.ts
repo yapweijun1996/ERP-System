@@ -12,6 +12,7 @@ export const PERMISSIONS = {
   inventoryTrack: 'inventory.track',
   salesRead: 'sales.read',
   salesWrite: 'sales.write',
+  salesCommissionApprove: 'sales.commission.approve',
   financeRead: 'finance.read',
   financeWrite: 'finance.write',
   purchasingRead: 'purchasing.read',

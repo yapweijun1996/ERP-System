@@ -14,6 +14,7 @@
 DO $$
 DECLARE
   v_customer_id bigint;
+  v_owner_id    bigint;
   v_order_id    bigint;
   v_product_id  bigint;
   v_rate        numeric(6,3);
@@ -27,14 +28,15 @@ DECLARE
 BEGIN
   SELECT id INTO v_customer_id FROM customer
     WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND code = 'CUST1';
+  SELECT owner_user_id INTO v_owner_id FROM customer WHERE id = v_customer_id;
 
   FOR v_doc IN SELECT * FROM (VALUES ('SO-2'), ('SO-3')) AS t(doc_no) LOOP
     CONTINUE WHEN EXISTS (
       SELECT 1 FROM sales_order
       WHERE master_fn = 'M1' AND company_fn = 'C-SG' AND doc_no = v_doc.doc_no);
 
-    INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, status, order_date, currency)
-      VALUES ('M1', 'C-SG', v_doc.doc_no, v_customer_id, 'draft', DATE '2026-06-28', 'SGD')
+    INSERT INTO sales_order (master_fn, company_fn, doc_no, customer_id, salesperson_user_id, status, order_date, currency)
+      VALUES ('M1', 'C-SG', v_doc.doc_no, v_customer_id, v_owner_id, 'draft', DATE '2026-06-28', 'SGD')
       RETURNING id INTO v_order_id;
 
     v_net := 0; v_tax := 0; v_line_no := 0;

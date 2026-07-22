@@ -173,6 +173,15 @@ import {
   type CreateCreditProfileInput,
 } from '../../src/modules/sales/creditControl';
 import {
+  activateCommissionPlanWithin,
+  approveCommissionRunWithin,
+  createCommissionPlanWithin,
+  createCommissionRunWithin,
+  listSalespeopleWithin,
+  type CreateCommissionPlanInput,
+  type CreateCommissionRunInput,
+} from '../../src/modules/sales/commission';
+import {
   createAssetWithin,
   type CreateAssetInput,
 } from '../../src/modules/assets/createAsset';
@@ -487,6 +496,39 @@ export const erpDemoRuntime = Object.freeze({
     },
     releaseCreditHoldWithin(db: DemoOrm, scope: Scope, profileId: number) {
       return releaseCreditHoldWithin(asDomainDb(db), scope, profileId);
+    },
+    listSalespeopleWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { cursor?: number; limit?: number },
+    ) {
+      return listSalespeopleWithin(asDomainDb(db), scope, input);
+    },
+    createCommissionPlanWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateCommissionPlanInput,
+    ) {
+      return createCommissionPlanWithin(asDomainDb(db), scope, input);
+    },
+    activateCommissionPlanWithin(db: DemoOrm, scope: Scope, planId: number) {
+      return activateCommissionPlanWithin(asDomainDb(db), scope, planId);
+    },
+    createCommissionRunWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateCommissionRunInput,
+      actorUserId: number,
+    ) {
+      return createCommissionRunWithin(asDomainDb(db), scope, input, actorUserId);
+    },
+    approveCommissionRunWithin(
+      db: DemoOrm,
+      scope: Scope,
+      runId: number,
+      input: { note: string; actorUserId: number },
+    ) {
+      return approveCommissionRunWithin(asDomainDb(db), scope, runId, input);
     },
     createAssetWithin(db: DemoOrm, scope: Scope, input: CreateAssetInput) {
       return createAssetWithin(asDomainDb(db), scope, input);

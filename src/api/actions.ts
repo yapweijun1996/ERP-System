@@ -67,6 +67,10 @@ import {
   placeCreditHoldWithin,
   releaseCreditHoldWithin,
 } from '../modules/sales/creditControl';
+import {
+  activateCommissionPlanWithin,
+  approveCommissionRunWithin,
+} from '../modules/sales/commission';
 import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
 import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
 import { postPayrollRunWithin } from '../modules/payroll/payrollRun';
@@ -74,6 +78,33 @@ import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'sales/commission-plans/activate': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return activateCommissionPlanWithin(tx, scope, input.resourceId);
+    },
+  },
+  'sales/commission-runs/approve': {
+    permission: 'sales.commission.approve',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const note = (input.payload as { note?: unknown }).note;
+      if (typeof note !== 'string' || !note.trim()) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'An approval note is required to approve a commission run.',
+        );
+      }
+      return approveCommissionRunWithin(tx, scope, input.resourceId, {
+        note,
+        actorUserId: input.actorUserId,
+      });
+    },
+  },
   'purchasing/supplier-price-lists/activate': {
     permission: 'purchasing.write',
     idempotency: 'required',

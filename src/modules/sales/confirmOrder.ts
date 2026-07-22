@@ -10,6 +10,7 @@ import { issueStockWithin } from '../inventory/stock';
 import { assertCustomerCreditWithin } from './creditControl';
 import {
   account,
+  customer,
   glEntry,
   invoice,
   salesDelivery,
@@ -60,6 +61,7 @@ interface OrderToPost {
   id: number;
   docNo: string;
   customerId: number;
+  salespersonUserId: number | null;
   orderDate: string;
   currency: string;
   net: number;
@@ -143,6 +145,7 @@ async function postOrderWithin(
     docNo: invDocNo,
     orderId: order.id,
     customerId: order.customerId,
+    salespersonUserId: order.salespersonUserId,
     status: 'unpaid',
     invoiceDate: order.orderDate,
     currency: order.currency,
@@ -190,10 +193,20 @@ async function postOrderWithin(
  * is the standalone entry point that owns its own boundary.
  */
 export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: ConfirmOrderInput) {
+  const [buyer] = await exec.select({
+    id: customer.id,
+    salespersonUserId: customer.ownerUserId,
+  }).from(customer).where(and(
+    eq(customer.masterFn, scope.masterFn),
+    eq(customer.companyFn, scope.companyFn),
+    eq(customer.id, input.customerId),
+  ));
+  if (!buyer) throw new PostingError(`Customer ${input.customerId} not found`);
   // 1. Header (totals filled in after lines).
   const [order] = await exec.insert(salesOrder).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
-    docNo: input.docNo, customerId: input.customerId,
+    docNo: input.docNo, customerId: buyer.id,
+    salespersonUserId: buyer.salespersonUserId,
     status: 'draft', orderDate: input.orderDate, currency: input.currency,
   }).returning({ id: salesOrder.id, version: salesOrder.version });
 
@@ -243,6 +256,7 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
     id: order.id,
     docNo: input.docNo,
     customerId: input.customerId,
+    salespersonUserId: buyer.salespersonUserId,
     orderDate: input.orderDate,
     currency: input.currency,
     net: netTotal,
@@ -266,6 +280,7 @@ export async function confirmDraftSalesOrderWithin(
     id: salesOrder.id,
     docNo: salesOrder.docNo,
     customerId: salesOrder.customerId,
+    salespersonUserId: salesOrder.salespersonUserId,
     status: salesOrder.status,
     version: salesOrder.version,
     orderDate: salesOrder.orderDate,
@@ -303,6 +318,7 @@ export async function confirmDraftSalesOrderWithin(
     id: order.id,
     docNo: order.docNo,
     customerId: order.customerId,
+    salespersonUserId: order.salespersonUserId,
     orderDate: order.orderDate,
     currency: order.currency,
     net: Number(order.netAmount),

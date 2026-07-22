@@ -59,6 +59,7 @@ async function seedFixture(db: DB) {
     ...SCOPE,
     code: 'APPROVAL-CUSTOMER',
     name: 'Fictional Approval Customer',
+    ownerUserId: approver.id,
   }).returning({ id: customer.id });
   const [widget] = await db.insert(product).values({
     ...SCOPE,
@@ -118,7 +119,9 @@ describe('sales order creation and approval', () => {
       .where(eq(salesOrderApproval.orderId, created.orderId));
     const lines = await db.select().from(salesOrderLine)
       .where(eq(salesOrderLine.orderId, created.orderId));
-    expect(order).toMatchObject({ status: 'pending_approval', version: 1 });
+    expect(order).toMatchObject({
+      status: 'pending_approval', version: 1, salespersonUserId: fixture.approverId,
+    });
     expect(approval).toMatchObject({
       id: created.approvalId,
       status: 'pending',

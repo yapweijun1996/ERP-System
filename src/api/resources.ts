@@ -42,6 +42,10 @@ import {
   salesPriceListLine,
   salesDiscountRule,
   salesCreditProfile,
+  salesCommissionPlan,
+  salesCommissionRun,
+  salesCommissionLine,
+  salesCommissionSource,
   salesEnquiry,
   salesQuotation,
   salesQuotationLine,
@@ -98,6 +102,7 @@ import {
   listPurchasingAnalyticsWithin,
 } from '../modules/purchasing/analytics';
 import { listSalesAnalyticsWithin } from '../modules/sales/analytics';
+import { listSalespeopleWithin } from '../modules/sales/commission';
 
 export interface ApiScope {
   masterFn: string;
@@ -134,6 +139,7 @@ export interface ResourceDefinition {
   auditPolicy: 'none' | 'writes';
   status?: any;
   customerId?: any;
+  numericFilters?: Record<string, any>;
   listOnly?: boolean;
   listHandler?: (
     db: DB,
@@ -207,6 +213,11 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     'sales.read',
     (db, scope, input) => listSalesAnalyticsWithin(db, scope, input),
   ),
+  'sales/salespeople': derivedResource(
+    customer,
+    'sales.read',
+    (db, scope, input) => listSalespeopleWithin(db, scope, input),
+  ),
   'sales/customers': resource(customer, 'sales.read'),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),
   'sales/deliveries': resource(salesDelivery, 'sales.read', {
@@ -250,6 +261,24 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     versionColumn: salesCreditProfile.version,
     allowedActions: ['hold', 'release'],
     createPermission: 'sales.write',
+  }),
+  'sales/commission-plans': resource(salesCommissionPlan, 'sales.read', {
+    status: salesCommissionPlan.status,
+    versionColumn: salesCommissionPlan.version,
+    allowedActions: ['activate'],
+    createPermission: 'sales.write',
+  }),
+  'sales/commission-runs': resource(salesCommissionRun, 'sales.read', {
+    status: salesCommissionRun.status,
+    versionColumn: salesCommissionRun.version,
+    allowedActions: ['approve'],
+    createPermission: 'sales.write',
+  }),
+  'sales/commission-lines': resource(salesCommissionLine, 'sales.read', {
+    numericFilters: { runId: salesCommissionLine.runId },
+  }),
+  'sales/commission-sources': resource(salesCommissionSource, 'sales.read', {
+    numericFilters: { runId: salesCommissionSource.runId },
   }),
   'sales/enquiries': resource(salesEnquiry, 'sales.read', {
     status: salesEnquiry.status,
@@ -485,12 +514,14 @@ function resource(
     allowedActions?: readonly string[];
     createPermission?: string;
     updatePermission?: string;
+    numericFilters?: Record<string, any>;
   } = {},
 ): ResourceDefinition {
   /* eslint-enable @typescript-eslint/no-explicit-any */
   const allowedFilters: string[] = [];
   if (options.status) allowedFilters.push('status');
   if (options.customerId) allowedFilters.push('customerId');
+  allowedFilters.push(...Object.keys(options.numericFilters ?? {}));
   return {
     table,
     idColumn: table.id,
@@ -507,6 +538,7 @@ function resource(
     auditPolicy: options.allowedActions?.length ? 'writes' : 'none',
     status: options.status,
     customerId: options.customerId,
+    numericFilters: options.numericFilters,
   };
 }
 
@@ -607,6 +639,12 @@ export async function listResource(
   if (query.customerId != null && query.customerId !== '') {
     parsePositiveInteger(query.customerId, 0, 'customerId');
   }
+  for (const key of Object.keys(definition.numericFilters ?? {})) {
+    if (query[key] != null && query[key] !== '') {
+      const parsed = parsePositiveInteger(query[key], 0, key);
+      if (parsed < 1) throw new InvalidResourceQueryError(`${key} must be a positive integer`);
+    }
+  }
 
   if (definition.listHandler) {
     const page = await definition.listHandler(db, scope, { cursor, limit });
@@ -628,6 +666,11 @@ export async function listResource(
   }
   if (definition.customerId && query.customerId != null && query.customerId !== '') {
     predicates.push(eq(definition.customerId, Number(query.customerId)));
+  }
+  for (const [key, column] of Object.entries(definition.numericFilters ?? {})) {
+    if (query[key] != null && query[key] !== '') {
+      predicates.push(eq(column, Number(query[key])));
+    }
   }
 
   const rows = await db

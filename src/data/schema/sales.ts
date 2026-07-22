@@ -26,6 +26,10 @@ export const salesOrder = pgTable('sales_order', {
   ...tenant,
   docNo: text('doc_no').notNull(),
   customerId: bigint('customer_id', { mode: 'number' }).notNull().references(() => customer.id),
+  // Immutable commercial owner snapshot. Customer ownership can change after
+  // an order is booked, but historical revenue/commission attribution cannot.
+  salespersonUserId: bigint('salesperson_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
   status: text('status').notNull().default('draft'),
   version: integer('version').notNull().default(1),
   orderDate: date('order_date').notNull(),
@@ -37,6 +41,9 @@ export const salesOrder = pgTable('sales_order', {
 }, (t) => [
   uniqueIndex('uq_so_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_so_tenant_date').on(t.masterFn, t.companyFn, t.orderDate, t.id),
+  index('idx_so_salesperson_date').on(
+    t.masterFn, t.companyFn, t.salespersonUserId, t.orderDate, t.id,
+  ),
   check(
     'ck_sales_order_status',
     sql`${t.status} in ('pending_approval', 'draft', 'confirmed', 'rejected', 'cancelled')`,
@@ -169,6 +176,10 @@ export const invoice = pgTable('invoice', {
   docNo: text('doc_no').notNull(),
   orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => salesOrder.id),
   customerId: bigint('customer_id', { mode: 'number' }).notNull().references(() => customer.id),
+  // Copied from the order at posting time. Commission never follows the
+  // customer's mutable current owner.
+  salespersonUserId: bigint('salesperson_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
   status: text('status').notNull().default('unpaid'),  // unpaid | paid | cancelled
   version: integer('version').notNull().default(1),
   invoiceDate: date('invoice_date').notNull(),
@@ -180,6 +191,9 @@ export const invoice = pgTable('invoice', {
 }, (t) => [
   uniqueIndex('uq_invoice_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_invoice_order').on(t.masterFn, t.companyFn, t.orderId),
+  index('idx_invoice_salesperson_date').on(
+    t.masterFn, t.companyFn, t.salespersonUserId, t.invoiceDate, t.id,
+  ),
 ]);
 
 /**
@@ -454,4 +468,159 @@ export const salesCreditProfile = pgTable('sales_credit_profile', {
   ),
   check('ck_sales_credit_profile_status', sql`${t.status} in ('open', 'held')`),
   check('ck_sales_credit_profile_limit', sql`${t.creditLimit} >= 0`),
+]);
+
+/** Effective-dated commission rules. Activation rejects overlapping active
+ *  plans for the same salesperson, so every eligible source document resolves
+ *  to at most one rate. The first production basis is recognized revenue. */
+export const salesCommissionPlan = pgTable('sales_commission_plan', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  salespersonUserId: bigint('salesperson_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  basis: text('basis').notNull().default('recognized_revenue'),
+  ratePct: numeric('rate_pct', { precision: 6, scale: 3 }).notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_commission_plan_code').on(t.masterFn, t.companyFn, t.code),
+  index('idx_sales_commission_plan_person_date').on(
+    t.masterFn, t.companyFn, t.salespersonUserId, t.status, t.effectiveFrom, t.id,
+  ),
+  check('ck_sales_commission_plan_basis', sql`${t.basis} in ('recognized_revenue')`),
+  check('ck_sales_commission_plan_status', sql`${t.status} in ('draft', 'active', 'inactive')`),
+  check('ck_sales_commission_plan_rate', sql`${t.ratePct} > 0 and ${t.ratePct} <= 100`),
+  check(
+    'ck_sales_commission_plan_dates',
+    sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`,
+  ),
+]);
+
+/** One immutable calculation batch for a non-overlapping accounting period.
+ *  Approval snapshots the actor/note on the header; line/source facts are
+ *  append-only and deliberately expose no update resource. */
+export const salesCommissionRun = pgTable('sales_commission_run', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  periodStart: date('period_start').notNull(),
+  periodEnd: date('period_end').notNull(),
+  currency: text('currency').notNull(),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  grossInvoiceRevenue: numeric('gross_invoice_revenue', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  creditRevenue: numeric('credit_revenue', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  debitRevenue: numeric('debit_revenue', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  eligibleRevenue: numeric('eligible_revenue', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  commissionAmount: numeric('commission_amount', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  sourceCount: integer('source_count').notNull().default(0),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  createdByName: text('created_by_name').notNull(),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  approvedByUserId: bigint('approved_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  approvedByName: text('approved_by_name'),
+  approvalNote: text('approval_note'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_commission_run_docno').on(t.masterFn, t.companyFn, t.docNo),
+  uniqueIndex('uq_sales_commission_run_period').on(
+    t.masterFn, t.companyFn, t.currency, t.periodStart, t.periodEnd,
+  ),
+  index('idx_sales_commission_run_status').on(
+    t.masterFn, t.companyFn, t.status, t.periodEnd, t.id,
+  ),
+  check('ck_sales_commission_run_status', sql`${t.status} in ('draft', 'approved')`),
+  check('ck_sales_commission_run_dates', sql`${t.periodEnd} >= ${t.periodStart}`),
+  check(
+    'ck_sales_commission_run_amounts',
+    sql`${t.grossInvoiceRevenue} >= 0 and ${t.creditRevenue} >= 0
+      and ${t.debitRevenue} >= 0 and ${t.sourceCount} >= 0`,
+  ),
+]);
+
+export const salesCommissionLine = pgTable('sales_commission_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  runId: bigint('run_id', { mode: 'number' }).notNull()
+    .references(() => salesCommissionRun.id),
+  lineNo: integer('line_no').notNull(),
+  planId: bigint('plan_id', { mode: 'number' }).notNull()
+    .references(() => salesCommissionPlan.id),
+  salespersonUserId: bigint('salesperson_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  salespersonName: text('salesperson_name').notNull(),
+  basis: text('basis').notNull(),
+  ratePct: numeric('rate_pct', { precision: 6, scale: 3 }).notNull(),
+  grossInvoiceRevenue: numeric('gross_invoice_revenue', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  creditRevenue: numeric('credit_revenue', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  debitRevenue: numeric('debit_revenue', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  eligibleRevenue: numeric('eligible_revenue', { precision: 18, scale: 2 }).notNull(),
+  commissionAmount: numeric('commission_amount', { precision: 18, scale: 2 }).notNull(),
+  sourceCount: integer('source_count').notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_commission_line_no').on(
+    t.masterFn, t.companyFn, t.runId, t.lineNo,
+  ),
+  index('idx_sales_commission_line_person').on(
+    t.masterFn, t.companyFn, t.salespersonUserId, t.runId, t.id,
+  ),
+  check('ck_sales_commission_line_basis', sql`${t.basis} in ('recognized_revenue')`),
+  check('ck_sales_commission_line_rate', sql`${t.ratePct} > 0 and ${t.ratePct} <= 100`),
+  check(
+    'ck_sales_commission_line_amounts',
+    sql`${t.grossInvoiceRevenue} >= 0 and ${t.creditRevenue} >= 0
+      and ${t.debitRevenue} >= 0 and ${t.sourceCount} > 0`,
+  ),
+]);
+
+/** Document-level audit trail for every line. source_id intentionally has no
+ *  FK because it targets one of three immutable document tables; type + id +
+ *  number/date snapshots preserve a stable, human-readable trace. */
+export const salesCommissionSource = pgTable('sales_commission_source', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  runId: bigint('run_id', { mode: 'number' }).notNull()
+    .references(() => salesCommissionRun.id),
+  lineId: bigint('line_id', { mode: 'number' }).notNull()
+    .references(() => salesCommissionLine.id),
+  planId: bigint('plan_id', { mode: 'number' }).notNull()
+    .references(() => salesCommissionPlan.id),
+  salespersonUserId: bigint('salesperson_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  sourceType: text('source_type').notNull(),
+  sourceId: bigint('source_id', { mode: 'number' }).notNull(),
+  sourceDocNo: text('source_doc_no').notNull(),
+  sourceDate: date('source_date').notNull(),
+  recognizedAmount: numeric('recognized_amount', { precision: 18, scale: 2 }).notNull(),
+  ratePct: numeric('rate_pct', { precision: 6, scale: 3 }).notNull(),
+  commissionAmount: numeric('commission_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_commission_source_doc').on(
+    t.masterFn, t.companyFn, t.runId, t.sourceType, t.sourceId,
+  ),
+  index('idx_sales_commission_source_line').on(
+    t.masterFn, t.companyFn, t.lineId, t.sourceDate, t.id,
+  ),
+  check(
+    'ck_sales_commission_source_type',
+    sql`${t.sourceType} in ('invoice', 'credit_note', 'debit_note')`,
+  ),
+  check('ck_sales_commission_source_rate', sql`${t.ratePct} > 0 and ${t.ratePct} <= 100`),
 ]);

@@ -516,15 +516,28 @@ no-stock/no-GL invariants, live browser workflow and the full release suite pass
 Exit criteria: tenant/cursor/Decimal domain and API proof, real-transaction browser
 smoke, desktop/375px rendering and the full 114-route audit pass.
 
-## Remaining productionization backlog — 16 Preview routes
+## Phase 21 — Canonical Sales Commission ✅
 
-This is the authoritative work breakdown after TASK-073. `tasks/tasks.jsonl` records
+1. **Effective-dated plans and immutable source traces** (EPIC-038, TASK-074 done
+   2026-07-22) replace the sample salesperson payout list with one auditable
+   recognized-revenue calculation boundary. Customer ownership is snapshotted onto
+   orders/invoices; each run reconciles invoice net revenue minus posted credits plus
+   posted debits and stores source-level rates and rounded amounts. Approval uses its
+   own permission and required audit note, while explicitly creating no payroll,
+   payout or GL entry. The five-language Canonical route moves maturity to **99/15**.
+
+Exit criteria: effective-date/overlap/tenant/Decimal/immutability domain proof,
+authenticated RBAC/idempotency/audit API proof, no-payroll/no-GL browser smoke,
+desktop/375px rendering and the full 114-route audit pass.
+
+## Remaining productionization backlog — 15 Preview routes
+
+This is the authoritative work breakdown after TASK-074. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Sales completion — 2 routes:** `sales-commission` needs formal commission rules,
-   approvals and immutable runs; `txn-view` needs record-specific canonical transaction
+1. **Sales completion — 1 route:** `txn-view` needs record-specific canonical transaction
    context rather than the remaining shared prototype shell.
 2. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
    header/line post/reverse and bank statement/reconciliation commands before promoting

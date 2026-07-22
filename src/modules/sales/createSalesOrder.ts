@@ -88,7 +88,10 @@ export async function createSalesOrderWithin(
     );
   }
 
-  const [buyer] = await exec.select({ id: customer.id }).from(customer).where(and(
+  const [buyer] = await exec.select({
+    id: customer.id,
+    salespersonUserId: customer.ownerUserId,
+  }).from(customer).where(and(
     eq(customer.masterFn, scope.masterFn),
     eq(customer.companyFn, scope.companyFn),
     eq(customer.id, input.customerId),
@@ -116,6 +119,7 @@ export async function createSalesOrderWithin(
     companyFn: scope.companyFn,
     docNo,
     customerId: buyer.id,
+    salespersonUserId: buyer.salespersonUserId,
     status: 'pending_approval',
     orderDate: input.orderDate,
     currency: input.currency,

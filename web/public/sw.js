@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v59';
+const CACHE_VERSION = 'erp-system-pwa-v62';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -80,6 +80,7 @@ const staticUrls = [
   './assets/screens-sales-pricing-canonical.js',
   './assets/screens-sales-order-approval-canonical.js',
   './assets/screens-sales-analytics-canonical.js',
+  './assets/screens-sales-commission-canonical.js',
   './assets/screens-purch-new.js',
   './assets/screens-purchasing-hub.js',
   './assets/screens-purchasing-lists.js',
