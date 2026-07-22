@@ -1599,3 +1599,25 @@ Acceptance criteria:
       active-only totals, visible void history and no fake capacity, copy or approval.
 - [x] Demo smoke, live in-app browser and the full desktop/375px route audit pass with
       348 tests plus one expected skip, 41 migrations, 119 tables and maturity 107/7.
+
+## EPIC-045 — Canonical Sanitized Integration Delivery Log
+
+**Goal:** replace the sample integration-log table with a tenant-scoped operational
+read model over the existing transactional outbox without exposing message contents,
+credentials or worker infrastructure details.
+
+Acceptance criteria:
+
+- [x] `integration/events` reads only explicit safe columns from `outbox_event`, scopes
+      every query by Session master/company and provides newest-first keyset pagination
+      with a maximum page size of 100.
+- [x] The response never includes payload, email/token material, raw worker errors or
+      lock-owner/host identity. Raw failures collapse to a small safe error vocabulary.
+- [x] Demo and API use the same TypeScript read path protected by `integration.read`;
+      authenticated HTTP tests cover tenant isolation, authentication, unsupported
+      offset rejection and the sanitized response contract.
+- [x] `integration-logs` is a five-language Canonical read-only workspace with honest
+      loading/error/empty states, filters and safe details. It does not invent manual
+      replay, export or connector-configuration writes.
+- [x] Demo smoke seeds a secret-bearing outbox event and proves the topic renders while
+      the secret does not. The full desktop/375px audit passes at 108 Canonical / 6 Preview.

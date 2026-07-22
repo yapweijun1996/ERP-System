@@ -176,6 +176,7 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 | Management BI is a bounded rebuildable cross-module read model | Revenue, receivables, payables, cash and inventory must reconcile to current Canonical facts rather than a KPI table. Product-category revenue only allocates traceable invoice/credit lines, and stock age is disclosed as days since the latest inbound movement because FIFO cost layers are not stored | EPIC-042 |
 | Product master creation is stock-neutral | A product record defines identity, units, category, planning values and standard cost only. It must never create an opening balance or write a stock projection directly; initial physical quantity enters through the same auditable movement commands as every later receipt or adjustment | EPIC-043 |
 | Project time is an actor-owned append/void fact | The signed-in Session supplies the user identity; entries target an open tenant project and store Decimal hours on a real date. A correction marks the original row void with a reason, preserving its actor, project and hours. Weekly approval, capacity and payroll state remain absent until those domains exist | EPIC-044 |
+| Integration delivery visibility is a sanitized outbox projection | Operators may see tenant-scoped topic, aggregate reference, safe status, attempts and timestamps. Payload, recipients/tokens, raw transport errors and worker identity never leave the server; retry remains worker-owned until a separately authorised connector-control domain exists | EPIC-045 |
 
 ## 7. Testing design
 

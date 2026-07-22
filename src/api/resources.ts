@@ -98,6 +98,7 @@ import {
   project,
   progressClaim,
   projectTimeEntry,
+  outboxEvent,
   serviceContract,
   serviceTicket,
 } from '../data/schema';
@@ -109,6 +110,7 @@ import {
 import { listSalesAnalyticsWithin } from '../modules/sales/analytics';
 import { listSalespeopleWithin } from '../modules/sales/commission';
 import { listReportingAnalyticsWithin } from '../modules/reporting/analytics';
+import { listIntegrationEventsWithin } from '../modules/integration/eventLog';
 
 export interface ApiScope {
   masterFn: string;
@@ -231,6 +233,11 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     salesOrder,
     'reporting.read',
     (db, scope, input) => listReportingAnalyticsWithin(db, scope, input),
+  ),
+  'integration/events': derivedResource(
+    outboxEvent,
+    'integration.read',
+    (db, scope, input) => listIntegrationEventsWithin(db, scope, input),
   ),
   'sales/customers': resource(customer, 'sales.read'),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),

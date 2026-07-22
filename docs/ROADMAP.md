@@ -612,16 +612,29 @@ Exit criteria: domain and authenticated API validation/tenant/actor/RBAC/audit/i
 proof, real create/void Demo smoke, Chinese desktop/375px live browser verification and
 the full 114-route release suite pass.
 
-## Remaining productionization backlog — 7 Preview routes
+## Phase 28 — Canonical Integration Delivery Log ✅
 
-This is the authoritative work breakdown after TASK-080. `tasks/tasks.jsonl` records
+1. **Sanitized transactional-outbox visibility** (EPIC-045, TASK-081 done 2026-07-23)
+   replaces the sample integration-log table with one bounded, newest-first Demo/API
+   read model over existing `outbox_event` facts. Session tenant scope and
+   `integration.read` protect the route. Only topic, aggregate reference, safe status,
+   attempts and timestamps leave the server; payload, addresses/tokens, raw worker
+   errors and worker identity never do. The five-language read-only workspace exposes
+   no fabricated replay/export action and moves maturity to **108/6**.
+
+Exit criteria: tenant/cursor/auth/sanitization domain and HTTP proof, secret-bearing
+Demo smoke, desktop/375px rendering and the full 114-route release suite pass.
+
+## Remaining productionization backlog — 6 Preview routes
+
+This is the authoritative work breakdown after TASK-081. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
-   Requires import jobs/row errors, encrypted credentials and transactional outbox
-   delivery before writes are enabled.
+1. **Integration/import — 2 routes:** `integration`, `data-import`. The delivery-log
+   route is now a real sanitized outbox read model; connector configuration still
+   requires encrypted credentials, while imports require job/row-error persistence.
 2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.

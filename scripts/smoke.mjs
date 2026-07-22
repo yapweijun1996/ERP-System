@@ -600,6 +600,20 @@ async function checkViewport(browser, viewport) {
         && storedTimeEntry?.status === 'voided'
         && Number(storedTimeEntry?.version) === 2
         && storedTimeEntry?.void_reason === 'Smoke correction keeps the original fact.';
+      await adapter.db.query(
+        "insert into outbox_event (master_fn,company_fn,topic,aggregate_type,aggregate_id,payload,attempts,delivered_at) values ($1,$2,$3,$4,$5,$6::jsonb,1,now())",
+        ['M1', 'C-SG', 'smoke.delivery.completed', 'smoke_proof', '81', JSON.stringify({ token: 'SMOKE-SECRET-MUST-NOT-RENDER' })],
+      );
+      const integrationEvents = await adapter.list('integration/events', { limit: 100 });
+      await navigate('integration-logs');
+      for (let attempt = 0; attempt < 50 && !document.querySelector('[data-integration-events-canonical="true"]'); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const integrationLogCanonical = Boolean(document.querySelector('[data-integration-events-canonical="true"]'))
+        && document.body.textContent.includes('smoke.delivery.completed')
+        && !document.body.textContent.includes('SMOKE-SECRET-MUST-NOT-RENDER')
+        && !JSON.stringify(integrationEvents).includes('SMOKE-SECRET-MUST-NOT-RENDER')
+        && !document.querySelector('[data-preview-banner]');
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -678,6 +692,7 @@ async function checkViewport(browser, viewport) {
           && reportingAnalytics.data.some((row) => row.kind === 'stock-aging'
             && Number(row.inventoryValue) > 0),
         timesheetCanonical,
+        integrationLogCanonical,
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -739,6 +754,9 @@ async function checkViewport(browser, viewport) {
       }
       if (!runtimeProof.timesheetCanonical) {
         errors.push('[demo-esm] timesheet did not preserve an actor-owned Decimal entry and auditable void in its Canonical screen');
+      }
+      if (!runtimeProof.integrationLogCanonical) {
+        errors.push('[demo-esm] integration log did not render bounded sanitized transactional outbox facts');
       }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');

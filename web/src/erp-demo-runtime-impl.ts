@@ -83,6 +83,7 @@ import {
 } from '../../src/modules/sales/salesOrderApproval';
 import { listSalesAnalyticsWithin } from '../../src/modules/sales/analytics';
 import { listReportingAnalyticsWithin } from '../../src/modules/reporting/analytics';
+import { listIntegrationEventsWithin } from '../../src/modules/integration/eventLog';
 import {
   completeDemoSetupWithin,
   type CompleteDemoSetupInput,
@@ -345,6 +346,13 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    listIntegrationEventsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { cursor?: number; limit?: number },
+    ) {
+      return listIntegrationEventsWithin(asDomainDb(db), scope, input);
+    },
     listReportingAnalyticsWithin(
       db: DemoOrm,
       scope: Scope,

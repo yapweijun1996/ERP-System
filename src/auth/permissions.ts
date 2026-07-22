@@ -32,6 +32,7 @@ export const PERMISSIONS = {
   serviceRead: 'service.read',
   serviceWrite: 'service.write',
   reportingRead: 'reporting.read',
+  integrationRead: 'integration.read',
   payrollRead: 'payroll.read',
   payrollWrite: 'payroll.write',
   companySwitch: 'session.switch_company',

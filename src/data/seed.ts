@@ -77,6 +77,7 @@ export async function seedDemo(db: DB): Promise<void> {
     'project.read',
     'service.read',
     'reporting.read',
+    'integration.read',
     'session.switch_company',
   ].map((permissionKey) => ({
     masterFn: 'M1',

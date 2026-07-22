@@ -80,51 +80,96 @@ SCREENS['integration'] = function(root){
   }));
 };
 
-/* ---------------- INTEGRATION LOGS (event stream report) ---------------- */
-SCREENS['integration-logs'] = function(root){
-  function table(){
-    const tpl='84px minmax(150px,1.3fr) minmax(160px,1.5fr) 78px 92px 78px minmax(120px,1fr)';
-    let h=`<div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-      <div class="dt-r dt-head"><div class="dt-c l">Time</div><div class="dt-c l">Connector</div><div class="dt-c l">Event</div><div class="dt-c c">Dir</div><div class="dt-c r">Records</div><div class="dt-c r">Duration</div><div class="dt-c l">Status</div></div>
-      <div class="dt-body">`;
-    DB.syncLogs.forEach(l=>{
-      h+=`<div class="dt-r logrow" data-detail="${esc(l.detail)}">
-        <div class="dt-c l mono" style="color:var(--muted);font-size:12px">${esc(l.t)}</div>
-        <div class="dt-c l"><b style="font-weight:600">${esc(l.conn)}</b></div>
-        <div class="dt-c l mono" style="font-size:12px;color:var(--fg)">${esc(l.event)}</div>
-        <div class="dt-c c" style="color:var(--muted)">${esc(l.dir)}</div>
-        <div class="dt-c r tnum">${esc(l.rec)}</div>
-        <div class="dt-c r tnum" style="color:var(--muted)">${esc(l.dur)}</div>
-        <div class="dt-c l">${cap(l.status,logStatusTone(l.status))}</div></div>
-        <div class="dt-r logdetail" style="display:none"><div class="dt-c l" style="grid-column:1/-1;color:var(--muted);font-size:12.5px;padding:2px 12px 12px 84px">${ic('info')} ${esc(l.detail)}</div></div>`;
-    });
-    h+=`</div></div></div>`; return h;
-  }
-  const failed=DB.syncLogs.filter(l=>l.status==='Failed').length;
-  root.innerHTML=`<div class="content full"><section class="master"><div class="report">
-    <aside class="report-params">
-      <h3>Filters</h3>
-      <div class="fld"><span>Connector</span><select><option>All connectors</option>${DB.connectors.map(c=>`<option>${esc(c.name)}</option>`).join('')}</select></div>
-      <div class="fld"><span>Status</span><select><option>All statuses</option><option>Success</option><option>Failed</option><option>Partial</option><option>Retry</option></select></div>
-      <div class="fld"><span>Direction</span><select><option>Both</option><option>Inbound</option><option>Outbound</option></select></div>
-      <div class="fld"><span>Time range</span><select><option>Last 24 hours</option><option>Last 7 days</option><option>This period</option></select></div>
-      <div class="fld"><span>Event type</span><select><option>All events</option><option>sync</option><option>webhook</option><option>import</option></select></div>
-      ${btn('Apply filters',{icon:'filter',cls:'primary',sm:false,attrs:'onclick="toast(\'Filters applied\',\'ok\')"'})}
-      <div style="border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px">${btn('Replay failed',{icon:'refresh',cls:'soft',attrs:'onclick="toast(\'Replaying '+failed+' failed event(s)\',\'ok\')"'})}</div>
-    </aside>
-    <div class="report-result">
-      <div class="report-toolbar">
-        <div><b style="font-size:15px">Integration event log</b><div class="report-meta">Last 24 hours · ${DB.syncLogs.length} events · ${failed} failed · click a row for detail</div></div>
-        <div class="grow"></div>
-        ${btn('Export',{icon:'download',cls:'soft'})}${btn('Connectors',{icon:'plug',cls:'soft',attrs:'onclick="navigate(\'integration\')"'})}
-      </div>
-      <div class="tablewrap" id="logTable">${table()}</div>
-    </div>
-  </div></section></div>`;
-  root.querySelectorAll('#logTable .logrow').forEach(r=>r.addEventListener('click',()=>{
-    const det=r.nextElementSibling;
-    if(det&&det.classList.contains('logdetail')){ const open=det.style.display!=='none'; det.style.display=open?'none':''; r.classList.toggle('sel',!open); }
-  }));
+/* ---------------- INTEGRATION LOGS (canonical outbox facts) ---------------- */
+function integrationEventCopy(){
+  const packs={
+    en:{title:'Delivery log',sub:'Sanitized transactional outbox facts. Payloads, tokens and worker identities are never exposed.',total:'Events',delivered:'Delivered',waiting:'Awaiting delivery',retry:'Needs retry',all:'All',processing:'Processing',pending:'Pending',channel:'Channel',topic:'Event topic',aggregate:'Source record',attempts:'Attempts',activity:'Last activity',status:'Status',details:'Delivery detail',email:'Email',outbox:'Outbox',outbound:'Outbound',none:'No delivery facts exist for this company yet.',emptyFilter:'No events match this status.',loading:'Loading canonical delivery facts…',error:'Delivery facts could not be loaded.',retryLoad:'Retry',connectorPreview:'Connector preview',bounded:'Latest 100 events · newest first',readOnly:'Read-only boundary',readOnlyBody:'Delivery retries remain controlled by the leased server worker. Connector setup and manual replay stay Preview until encrypted credentials and generic webhook delivery are implemented.',errorNone:'No worker error recorded.',errorTransport:'The delivery transport is unavailable. The worker will retry with backoff.',errorUnsupported:'The worker does not support this topic yet.',errorGeneric:'Delivery failed. Sensitive worker diagnostics are withheld.',available:'Next available',created:'Created'},
+    ms:{title:'Log penghantaran',sub:'Fakta peti keluar transaksi yang dinyahpeka. Muatan, token dan identiti worker tidak pernah didedahkan.',total:'Peristiwa',delivered:'Dihantar',waiting:'Menunggu penghantaran',retry:'Perlu cuba semula',all:'Semua',processing:'Sedang diproses',pending:'Menunggu',channel:'Saluran',topic:'Topik peristiwa',aggregate:'Rekod sumber',attempts:'Percubaan',activity:'Aktiviti terakhir',status:'Status',details:'Butiran penghantaran',email:'E-mel',outbox:'Peti keluar',outbound:'Keluar',none:'Belum ada fakta penghantaran untuk syarikat ini.',emptyFilter:'Tiada peristiwa sepadan dengan status ini.',loading:'Memuatkan fakta penghantaran kanonik…',error:'Fakta penghantaran tidak dapat dimuatkan.',retryLoad:'Cuba lagi',connectorPreview:'Pratonton penyambung',bounded:'100 peristiwa terkini · paling baharu dahulu',readOnly:'Sempadan baca sahaja',readOnlyBody:'Cubaan semula penghantaran dikawal oleh worker pelayan bersewa. Persediaan penyambung dan ulang tayang manual kekal Pratonton sehingga kelayakan disulitkan dan penghantaran webhook generik tersedia.',errorNone:'Tiada ralat worker direkodkan.',errorTransport:'Pengangkutan penghantaran tidak tersedia. Worker akan mencuba semula dengan sela meningkat.',errorUnsupported:'Worker belum menyokong topik ini.',errorGeneric:'Penghantaran gagal. Diagnostik worker sensitif disembunyikan.',available:'Tersedia seterusnya',created:'Dicipta'},
+    zh:{title:'投递日志',sub:'来自事务 Outbox 的脱敏事实。载荷、令牌和 Worker 身份绝不会在此暴露。',total:'事件',delivered:'已投递',waiting:'等待投递',retry:'需要重试',all:'全部',processing:'处理中',pending:'等待中',channel:'渠道',topic:'事件主题',aggregate:'来源记录',attempts:'尝试次数',activity:'最近活动',status:'状态',details:'投递资料',email:'电子邮件',outbox:'Outbox',outbound:'出站',none:'当前公司尚无投递事实。',emptyFilter:'没有符合该状态的事件。',loading:'正在加载真实投递事实…',error:'无法加载投递事实。',retryLoad:'重试',connectorPreview:'连接器预览',bounded:'最近 100 个事件 · 最新优先',readOnly:'只读边界',readOnlyBody:'投递重试只由采用租约的服务端 Worker 控制。在加密凭据和通用 Webhook 投递完成前，连接器设置与手工重放仍为预览功能。',errorNone:'未记录 Worker 错误。',errorTransport:'投递渠道不可用。Worker 将按退避策略重试。',errorUnsupported:'Worker 尚不支持该事件主题。',errorGeneric:'投递失败。敏感的 Worker 诊断资料已隐藏。',available:'下次可用',created:'创建时间'},
+    ja:{title:'配信ログ',sub:'トランザクションOutboxのマスキング済み事実です。ペイロード、トークン、ワーカーIDは公開しません。',total:'イベント',delivered:'配信済み',waiting:'配信待ち',retry:'再試行が必要',all:'すべて',processing:'処理中',pending:'待機中',channel:'チャネル',topic:'イベントトピック',aggregate:'元レコード',attempts:'試行回数',activity:'最終アクティビティ',status:'ステータス',details:'配信詳細',email:'メール',outbox:'Outbox',outbound:'送信',none:'この会社には配信事実がありません。',emptyFilter:'このステータスに一致するイベントはありません。',loading:'標準配信事実を読み込み中…',error:'配信事実を読み込めません。',retryLoad:'再試行',connectorPreview:'コネクタープレビュー',bounded:'最新100イベント・新しい順',readOnly:'読み取り専用境界',readOnlyBody:'再試行はリース方式のサーバーワーカーだけが制御します。暗号化認証情報と汎用Webhook配信が完成するまで、コネクター設定と手動再実行はプレビューのままです。',errorNone:'ワーカーエラーは記録されていません。',errorTransport:'配信トランスポートを利用できません。ワーカーがバックオフして再試行します。',errorUnsupported:'ワーカーはこのトピックをまだサポートしていません。',errorGeneric:'配信に失敗しました。機密性のある診断情報は非表示です。',available:'次回実行可能',created:'作成日時'},
+    vi:{title:'Nhật ký chuyển phát',sub:'Dữ kiện transactional outbox đã được che dữ liệu nhạy cảm. Payload, token và danh tính worker không bao giờ được hiển thị.',total:'Sự kiện',delivered:'Đã chuyển',waiting:'Đang chờ chuyển',retry:'Cần thử lại',all:'Tất cả',processing:'Đang xử lý',pending:'Đang chờ',channel:'Kênh',topic:'Chủ đề sự kiện',aggregate:'Bản ghi nguồn',attempts:'Số lần thử',activity:'Hoạt động gần nhất',status:'Trạng thái',details:'Chi tiết chuyển phát',email:'Email',outbox:'Outbox',outbound:'Gửi đi',none:'Chưa có dữ kiện chuyển phát cho công ty này.',emptyFilter:'Không có sự kiện phù hợp trạng thái này.',loading:'Đang tải dữ kiện chuyển phát chuẩn…',error:'Không thể tải dữ kiện chuyển phát.',retryLoad:'Thử lại',connectorPreview:'Xem trước trình kết nối',bounded:'100 sự kiện mới nhất · mới nhất trước',readOnly:'Ranh giới chỉ đọc',readOnlyBody:'Việc thử lại do worker máy chủ có lease kiểm soát. Cấu hình trình kết nối và phát lại thủ công vẫn là Bản xem trước cho đến khi có thông tin xác thực mã hóa và webhook chung.',errorNone:'Không ghi nhận lỗi worker.',errorTransport:'Kênh chuyển phát không khả dụng. Worker sẽ thử lại với thời gian lùi.',errorUnsupported:'Worker chưa hỗ trợ chủ đề này.',errorGeneric:'Chuyển phát thất bại. Chẩn đoán nhạy cảm của worker đã được ẩn.',available:'Lần khả dụng kế tiếp',created:'Đã tạo'},
+  };
+  const lang=typeof getLang==='function'?getLang():'en';
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
+function integrationEventTime(value){
+  if(!value) return '—';
+  const parsed=value instanceof Date?value:new Date(value);
+  if(Number.isNaN(parsed.getTime())) return esc(String(value));
+  const locales={en:'en-SG',ms:'ms-MY',zh:'zh-CN',ja:'ja-JP',vi:'vi-VN'};
+  return new Intl.DateTimeFormat(locales[typeof getLang==='function'?getLang():'en']||'en-SG',{
+    dateStyle:'medium',timeStyle:'short',hour12:false,
+  }).format(parsed);
+}
+
+function integrationEventStatusLabel(status,c){
+  return c(status==='delivered'?'delivered':status==='processing'?'processing':status==='retry'?'retry':'pending');
+}
+function integrationEventStatusTone(status){
+  return {delivered:'ok',processing:'info',retry:'danger',pending:'warn'}[status]||'neutral';
+}
+function integrationEventError(row,c){
+  return row.errorCode==='transport_unavailable'?c('errorTransport'):
+    row.errorCode==='unsupported_topic'?c('errorUnsupported'):
+    row.errorCode==='delivery_failed'?c('errorGeneric'):c('errorNone');
+}
+
+function filterIntegrationEventRows(status){
+  const root=$('#viewRoot');
+  if(!root||CURRENT_ROUTE!=='integration-logs') return;
+  let visible=0;
+  root.querySelectorAll('[data-integration-event-row]').forEach(row=>{
+    const show=status==='all'||row.dataset.status===status;
+    row.style.display=show?'':'none';
+    const detail=root.querySelector(`[data-integration-event-detail="${row.dataset.eventId}"]`);
+    if(detail&&!show) detail.style.display='none';
+    if(show) visible++;
+  });
+  root.querySelectorAll('[data-integration-filter]').forEach(button=>{
+    button.classList.toggle('on',button.dataset.integrationFilter===status);
+  });
+  const empty=root.querySelector('[data-integration-filter-empty]');
+  if(empty) empty.style.display=visible?'none':'';
+}
+function toggleIntegrationEventDetails(eventId){
+  const root=$('#viewRoot');
+  const detail=root&&root.querySelector(`[data-integration-event-detail="${eventId}"]`);
+  if(detail) detail.style.display=detail.style.display==='none'?'':'none';
+}
+
+SCREENS['integration-logs'] = async function(){
+  const c=integrationEventCopy();
+  const page=await listPage('integration/events',{limit:100});
+  const rows=page.data||[];
+  const count=status=>rows.filter(row=>row.status===status).length;
+  const waiting=count('pending')+count('processing');
+  const stat=(label,value,tone)=>`<div class="card" style="padding:13px 15px"><small style="display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${esc(label)}</small><b class="tnum" style="font-size:24px;font-weight:600;color:${tone||'var(--fg)'}">${num(value)}</b></div>`;
+  const eventRows=rows.map(row=>{
+    const activity=row.deliveredAt||row.lastAttemptAt||row.createdAt;
+    return `<div class="dt-r integration-event-row" data-integration-event-row="true" data-event-id="${Number(row.id)}" data-status="${esc(row.status)}" onclick="toggleIntegrationEventDetails(${Number(row.id)})" style="cursor:pointer">
+      <div class="dt-c l"><div class="cellsub"><b>${esc(row.channel==='email'?c('email'):c('outbox'))}</b><small>${esc(c('outbound'))}</small></div></div>
+      <div class="dt-c l mono" style="font-size:12px">${esc(row.topic)}</div>
+      <div class="dt-c l"><div class="cellsub"><b>${esc(row.aggregateType)}</b><small>#${esc(row.aggregateId)}</small></div></div>
+      <div class="dt-c r tnum">${num(row.attempts||0)}</div>
+      <div class="dt-c l" style="font-size:12px;color:var(--muted)">${esc(integrationEventTime(activity))}</div>
+      <div class="dt-c l">${cap(integrationEventStatusLabel(row.status,c),integrationEventStatusTone(row.status))}</div>
+    </div><div class="dt-r integration-event-detail" data-integration-event-detail="${Number(row.id)}" style="display:none"><div class="dt-c l" style="grid-column:1/-1;padding:12px 16px;background:var(--surface2);display:grid;gap:6px;font-size:12.5px;color:var(--muted)">
+      <div><b style="color:var(--fg)">${esc(c('details'))}</b> · ${esc(integrationEventError(row,c))}</div>
+      <div>${esc(c('created'))}: ${esc(integrationEventTime(row.createdAt))} · ${esc(c('available'))}: ${esc(integrationEventTime(row.availableAt))}</div>
+    </div></div>`;
+  }).join('');
+  const table=rows.length?`<div class="dt-page"><div class="dt" role="table" style="--tpl:minmax(110px,.8fr) minmax(190px,1.4fr) minmax(160px,1.1fr) 85px minmax(150px,1.1fr) 120px">
+    <div class="dt-r dt-head"><div class="dt-c l">${esc(c('channel'))}</div><div class="dt-c l">${esc(c('topic'))}</div><div class="dt-c l">${esc(c('aggregate'))}</div><div class="dt-c r">${esc(c('attempts'))}</div><div class="dt-c l">${esc(c('activity'))}</div><div class="dt-c l">${esc(c('status'))}</div></div>
+    <div class="dt-body">${eventRows}</div></div></div>`:statePanel({icon:'history',title:c('none')});
+  const body=`<div data-integration-events-canonical="true">
+    <div class="statwrap"><div class="statcards">${stat(c('total'),rows.length)}${stat(c('delivered'),count('delivered'),'var(--ok)')}${stat(c('waiting'),waiting,'var(--accent)')}${stat(c('retry'),count('retry'),'var(--danger)')}</div></div>
+    <div class="alert info" style="margin:0 24px 14px">${ic('shield')}<span class="grow"><b>${esc(c('readOnly'))}</b> ${esc(c('readOnlyBody'))}</span></div>
+    <div class="toolbar"><div class="filterchips">${['all','delivered','pending','processing','retry'].map(status=>`<button class="chip ${status==='all'?'on':''}" data-integration-filter="${status}" onclick="filterIntegrationEventRows('${status}')">${esc(c(status))}</button>`).join('')}</div><div class="grow"></div><span class="hideonsmall" style="font-size:12px;color:var(--muted)">${esc(c('bounded'))}</span>${btn(c('connectorPreview'),{icon:'plug',cls:'soft',attrs:'onclick="navigate(\'integration\')"'})}</div>
+    <div class="tablewrap" data-integration-event-table="true">${table}<div data-integration-filter-empty="true" style="display:none;padding:32px">${statePanel({icon:'filter',title:c('emptyFilter')})}</div></div>
+  </div>`;
+  return modulePage({module:'integration',route:'integration-logs',active:'integration-logs',title:c('title'),sub:c('sub'),count:rows.length,body});
 };
 
 /* ---------------- DATA IMPORT (wizard) ---------------- */
