@@ -435,6 +435,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'report-pur-price-var','report-pur-vendor','report-pur-generic','pur-txn-view',
   'new-sales-order','so-approvals',
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
+  'bank-rec',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -458,6 +459,7 @@ const API_SCREEN_ROUTES = new Set([
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail',
+  'bank-rec',
   'service-ticket','service-order','service-contracts',
   'purchase-requisitions','purchase-request',
   'payment-voucher','new-payment-voucher',

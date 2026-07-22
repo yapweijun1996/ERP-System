@@ -252,6 +252,14 @@ import {
   type ReverseManualJournalInput,
 } from '../../src/modules/finance/manualJournal';
 import {
+  createBankStatementWithin,
+  matchBankStatementLineWithin,
+  reconcileBankStatementWithin,
+  unmatchBankStatementLineWithin,
+  type CreateBankStatementInput,
+  type MatchBankStatementLineInput,
+} from '../../src/modules/finance/bankReconciliation';
+import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
@@ -613,6 +621,23 @@ export const erpDemoRuntime = Object.freeze({
       input: ReverseManualJournalInput,
     ) {
       return reverseManualJournalWithin(asDomainDb(db), scope, journalId, input);
+    },
+    createBankStatementWithin(db: DemoOrm, scope: Scope, input: CreateBankStatementInput) {
+      return createBankStatementWithin(asDomainDb(db), scope, input);
+    },
+    matchBankStatementLineWithin(
+      db: DemoOrm,
+      scope: Scope,
+      lineId: number,
+      input: MatchBankStatementLineInput,
+    ) {
+      return matchBankStatementLineWithin(asDomainDb(db), scope, lineId, input);
+    },
+    unmatchBankStatementLineWithin(db: DemoOrm, scope: Scope, lineId: number) {
+      return unmatchBankStatementLineWithin(asDomainDb(db), scope, lineId);
+    },
+    reconcileBankStatementWithin(db: DemoOrm, scope: Scope, statementId: number) {
+      return reconcileBankStatementWithin(asDomainDb(db), scope, statementId);
     },
     listCompanyUsers(db: DemoOrm, scope: Scope) {
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);

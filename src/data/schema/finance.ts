@@ -94,6 +94,54 @@ export const journalLine = pgTable('journal_line', {
   )`),
 ]);
 
+/** Imported bank statement facts. A statement is reconciled only after each exact
+ * statement line is linked to one immutable bank-account GL leg. Missing bank charges
+ * or interest must first be posted through a real journal; reconciliation never invents
+ * or mutates ledger facts. */
+export const bankStatement = pgTable('bank_statement', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  statementNo: text('statement_no').notNull(),
+  bankAccountId: bigint('bank_account_id', { mode: 'number' }).notNull().references(() => account.id),
+  currency: text('currency').notNull(),
+  periodStart: date('period_start').notNull(),
+  periodEnd: date('period_end').notNull(),
+  openingBalance: numeric('opening_balance', { precision: 18, scale: 2 }).notNull(),
+  closingBalance: numeric('closing_balance', { precision: 18, scale: 2 }).notNull(),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  reconciledAt: timestamp('reconciled_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_bank_statement_number').on(t.masterFn, t.companyFn, t.statementNo),
+  index('idx_bank_statement_status').on(t.masterFn, t.companyFn, t.status, t.periodEnd, t.id),
+  index('idx_bank_statement_account').on(t.masterFn, t.companyFn, t.bankAccountId, t.periodEnd, t.id),
+  check('ck_bank_statement_status', sql`${t.status} in ('draft', 'reconciled')`),
+  check('ck_bank_statement_period', sql`${t.periodEnd} >= ${t.periodStart}`),
+  check('ck_bank_statement_currency', sql`char_length(${t.currency}) = 3`),
+]);
+
+export const bankStatementLine = pgTable('bank_statement_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  statementId: bigint('statement_id', { mode: 'number' }).notNull().references(() => bankStatement.id),
+  lineNo: integer('line_no').notNull(),
+  transactionDate: date('transaction_date').notNull(),
+  reference: text('reference'),
+  description: text('description').notNull(),
+  // Positive = money into the bank account; negative = money out.
+  amount: numeric('amount', { precision: 18, scale: 2 }).notNull(),
+  matchedGlEntryId: bigint('matched_gl_entry_id', { mode: 'number' }).references(() => glEntry.id),
+  matchedAt: timestamp('matched_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_bank_statement_line_number').on(t.masterFn, t.companyFn, t.statementId, t.lineNo),
+  uniqueIndex('uq_bank_statement_line_gl').on(t.masterFn, t.companyFn, t.matchedGlEntryId),
+  index('idx_bank_statement_line_statement').on(t.masterFn, t.companyFn, t.statementId, t.id),
+  index('idx_bank_statement_line_unmatched').on(t.masterFn, t.companyFn, t.matchedGlEntryId, t.id),
+  check('ck_bank_statement_line_amount', sql`${t.amount} <> 0`),
+]);
+
 /** Collects a posted progress claim's AR in full — one receipt per claim, no partial
  *  tracking (mirrors receiveGoods/postSupplierInvoice's one-document-settles-one-thing
  *  convention). Whether a claim is already receipted is derived by checking for an

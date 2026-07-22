@@ -274,6 +274,13 @@
       "when": 1784728602350,
       "tag": "0038_overjoyed_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1784733153778,
+      "tag": "0039_cultured_talkback",
+      "breakpoints": true
     }
   ]
 }

@@ -159,6 +159,10 @@ import {
   createManualJournalWithin,
   type CreateManualJournalInput,
 } from '../modules/finance/manualJournal';
+import {
+  createBankStatementWithin,
+  type CreateBankStatementInput,
+} from '../modules/finance/bankReconciliation';
 
 export interface CreateDefinition {
   permission: string;
@@ -172,6 +176,13 @@ export interface CreateDefinition {
 }
 
 const CREATES: Record<string, CreateDefinition> = {
+  'finance/bank-statements': {
+    permission: 'finance.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createBankStatementWithin(tx, scope, payload as unknown as CreateBankStatementInput);
+    },
+  },
   'inventory/products': {
     permission: 'inventory.write',
     audit: 'required',

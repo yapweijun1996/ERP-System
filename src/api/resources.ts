@@ -4,6 +4,8 @@ import {
   account,
   activity,
   bankReceipt,
+  bankStatement,
+  bankStatementLine,
   contact,
   customer,
   glEntry,
@@ -311,7 +313,9 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     createPermission: 'crm.write',
   }),
   'finance/accounts': resource(account, 'finance.read'),
-  'finance/gl-entries': resource(glEntry, 'finance.read'),
+  'finance/gl-entries': resource(glEntry, 'finance.read', {
+    numericFilters: { accountId: glEntry.accountId },
+  }),
   'finance/journals': resource(journalHeader, 'finance.read', {
     status: journalHeader.status,
     versionColumn: journalHeader.version,
@@ -322,6 +326,17 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     numericFilters: { journalId: journalLine.journalId },
   }),
   'finance/bank-receipts': resource(bankReceipt, 'finance.read', { createPermission: 'finance.write' }),
+  'finance/bank-statements': resource(bankStatement, 'finance.read', {
+    status: bankStatement.status,
+    versionColumn: bankStatement.version,
+    numericFilters: { bankAccountId: bankStatement.bankAccountId },
+    allowedActions: ['reconcile'],
+    createPermission: 'finance.write',
+  }),
+  'finance/bank-statement-lines': resource(bankStatementLine, 'finance.read', {
+    numericFilters: { statementId: bankStatementLine.statementId },
+    allowedActions: ['match', 'unmatch'],
+  }),
   'finance/payment-vouchers': resource(paymentVoucher, 'finance.read', { createPermission: 'finance.write' }),
   'finance/payment-voucher-lines': resource(paymentVoucherLine, 'finance.read'),
   'purchasing/suppliers': resource(supplier, 'purchasing.read'),

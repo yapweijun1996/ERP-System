@@ -1512,3 +1512,26 @@ Acceptance criteria:
       have no fake edit/export path and no Preview fallback.
 - [x] CI smoke creates, posts and reverses a balanced manual journal. The full desktop/
       375px audit passes at 101 Canonical / 13 Preview.
+
+## EPIC-041 — Canonical Bank Reconciliation
+
+**Goal:** replace the sample bank-reconciliation interaction with imported statement
+facts and one-to-one links to immutable bank-account GL legs, without silently creating
+accounting entries.
+
+Acceptance criteria:
+
+- [x] Migration 0039 adds versioned tenant-scoped `bank_statement` and immutable
+      `bank_statement_line` tables with document/line/matched-GL uniqueness, period,
+      status, non-zero amount checks, production RLS and generated PGlite alignment.
+- [x] Shared Decimal commands validate statement footing, dates, asset-account tenancy
+      and exact signed GL amount; one GL leg cannot be reused and a completed statement
+      cannot be unmatched or changed.
+- [x] Demo/API resources expose bounded statements/lines and account-filtered GL entries.
+      Import plus idempotent audited match/unmatch/reconcile actions have domain and
+      authenticated HTTP tests for rollback, Viewer denial, tenant and state guards.
+- [x] `bank-rec` is a five-language Canonical Demo/API workspace with real CSV import,
+      exact candidate matching, explicit journal hand-off for missing activity and no
+      fake auto-booking or toast-only completion.
+- [x] CI smoke performs real journal → statement → match → reconcile. Full desktop/375px
+      audit passes at 102 Canonical / 12 Preview.

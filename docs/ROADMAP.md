@@ -555,28 +555,38 @@ Exit criteria: cross-company/date/balance/state/duplicate guards, rollback, View
 idempotency and audit proof, PGlite/PostgreSQL schema alignment, real create/post/reverse
 browser workflow, desktop/375px rendering and the full release suite pass.
 
-## Remaining productionization backlog — 13 Preview routes
+## Phase 24 — Canonical Bank Reconciliation ✅
 
-This is the authoritative work breakdown after TASK-076. `tasks/tasks.jsonl` records
+1. **Imported statement facts and exact immutable GL matching** (EPIC-041, TASK-077
+   done 2026-07-22) replace the interactive sample reconciliation with tenant-scoped
+   statement headers/lines. Decimal validation proves opening plus signed movement equals
+   closing; each statement line can link once to an exact bank-account GL leg. Missing
+   charges must first use the real journal path. Audited idempotent match/unmatch/reconcile
+   actions, five-language UI and service-worker v65 move maturity to **102/12**.
+
+Exit criteria: footing/date/account/amount/one-use/state guards, Viewer/RBAC, audit and
+idempotency proof, no-GL-write reconciliation, PGlite/PostgreSQL alignment, live import/
+match/lock browser workflow, desktop/375px rendering and the full release suite pass.
+
+## Remaining productionization backlog — 12 Preview routes
+
+This is the authoritative work breakdown after TASK-077. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Finance depth — 1 route:** `bank-rec`. Manual journal header/line post/reverse is
-   complete; build bank statement/import/matching/reconciliation commands before
-   promoting the remaining Finance screen.
-2. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
+1. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
    every metric from Canonical tables or rebuildable views; large outputs use report jobs.
-3. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
+2. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
    Requires import jobs/row errors, encrypted credentials and transactional outbox
    delivery before writes are enabled.
-4. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
+3. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-5. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
+4. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
    Reuse existing product/project schemas and add only the missing server commands and
    audit rules.
-6. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
+5. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
    with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
 
 Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared

@@ -172,6 +172,7 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 | Sales analytics are rebuilt from commercial documents, not KPI/target tables | Revenue must reconcile posted invoices minus credits plus debits, while customer ownership and document status remain traceable to current canonical facts; unavailable target/forecast data is disclosed rather than fabricated | EPIC-037 |
 | Shared sales transaction state stores identifiers, never presentation records | `txn-view` re-reads one tenant-scoped enquiry plus its linked quotation from the formal adapter; document types with dedicated Canonical workspaces are dispatched there instead of retaining a second generic detail model | EPIC-039 |
 | Manual journals use immutable header/line facts with separately numbered reversals | A draft has no GL effect; posting appends balanced dated GL legs and freezes the journal; correction swaps debit/credit into a new linked posted journal instead of editing history | EPIC-040 |
+| Bank reconciliation links statement facts to GL; it does not auto-book | Imported signed lines must foot from opening to closing and each may match one exact immutable bank-account GL leg. Missing fees or interest first use the real journal workflow; completed statements are locked | EPIC-041 |
 
 ## 7. Testing design
 

@@ -50,6 +50,7 @@ import { PurchaseOrderApprovalError } from '../../modules/purchasing/purchaseOrd
 import { SupplierPricingError } from '../../modules/purchasing/supplierPricing';
 import { SalesCommissionError } from '../../modules/sales/commission';
 import { ManualJournalError } from '../../modules/finance/manualJournal';
+import { BankReconciliationError } from '../../modules/finance/bankReconciliation';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -133,6 +134,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof SalesOrderValidationError
         || error instanceof SalesCommissionError
         || error instanceof ManualJournalError
+        || error instanceof BankReconciliationError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -295,6 +297,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof SupplierPricingError
         || error instanceof SalesCommissionError
         || error instanceof ManualJournalError
+        || error instanceof BankReconciliationError
       ) {
         apiError(res, 409, 'invalid_state', error.message);
         return;

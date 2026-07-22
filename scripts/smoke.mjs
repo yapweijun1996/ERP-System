@@ -462,6 +462,42 @@ async function checkViewport(browser, viewport) {
       await navigate('journal-entry', { no: 'MJ-SMOKE-REV-1' });
       const manualJournalDetailCanonical = Boolean(document.querySelector('[data-manual-journal-detail="canonical"]'))
         && !document.querySelector('[data-manual-journal-reverse]');
+      const bankAccount = financeAccounts.data.find((row) => row.code === '1000');
+      const bankJournal = await adapter.create('finance/journals', {
+        docNo: 'MJ-SMOKE-BANK-1', postingDate: '2026-07-22', journalType: 'standard',
+        memo: 'Smoke bank receipt for reconciliation', reference: 'BANK-SMOKE',
+        lines: [
+          { accountId: bankAccount.id, dimension: 'SG', debit: '17.25', credit: '0' },
+          { accountId: revenueAccount.id, dimension: 'SG', debit: '0', credit: '17.25' },
+        ],
+      });
+      await adapter.action('finance/journals', bankJournal.data.id, 'post', {}, 'smoke-bank-journal-post');
+      const bankGl = await adapter.list('finance/gl-entries', { limit: 100, accountId: bankAccount.id });
+      const bankLeg = bankGl.data.find((row) => row.journalRef === 'MJ-SMOKE-BANK-1');
+      const bankStatement = await adapter.create('finance/bank-statements', {
+        statementNo: 'BS-SMOKE-1', bankAccountId: bankAccount.id, currency: 'SGD',
+        periodStart: '2026-07-01', periodEnd: '2026-07-31',
+        openingBalance: '0.00', closingBalance: '17.25',
+        lines: [{
+          transactionDate: '2026-07-22', reference: 'BANK-SMOKE',
+          description: 'Smoke customer receipt', amount: '17.25',
+        }],
+      });
+      const bankLines = await adapter.list('finance/bank-statement-lines', {
+        limit: 100, statementId: bankStatement.data.id,
+      });
+      await adapter.action(
+        'finance/bank-statement-lines', bankLines.data[0].id, 'match',
+        { glEntryId: bankLeg.id }, 'smoke-bank-match',
+      );
+      const bankReconciled = await adapter.action(
+        'finance/bank-statements', bankStatement.data.id, 'reconcile', {}, 'smoke-bank-reconcile',
+      );
+      await navigate('bank-rec', { statementId: bankStatement.data.id });
+      const bankReconciliationCanonical = Boolean(document.querySelector('[data-bank-reconciliation="canonical"]'))
+        && document.querySelector('[data-bank-status="reconciled"]')
+        && document.body.textContent.includes('BS-SMOKE-1')
+        && !document.querySelector('[data-preview-banner]');
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -520,6 +556,9 @@ async function checkViewport(browser, viewport) {
           && Number(reversalPosting.count) === 2
           && Number(reversalPosting.debit) === 42.5
           && Number(reversalPosting.credit) === 42.5,
+        bankReconciliationCanonical: bankReconciliationCanonical
+          && bankReconciled.data.status === 'reconciled'
+          && Number(bankReconciled.data.matchedLineCount) === 1,
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -567,6 +606,9 @@ async function checkViewport(browser, viewport) {
       }
       if (!runtimeProof.manualJournalCanonical) {
         errors.push('[demo-esm] manual journal draft/post/reversal or its Canonical composer/detail boundary failed');
+      }
+      if (!runtimeProof.bankReconciliationCanonical) {
+        errors.push('[demo-esm] bank statement import/match/reconcile or its Canonical screen boundary failed');
       }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');

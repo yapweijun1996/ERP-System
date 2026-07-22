@@ -81,8 +81,43 @@ import {
   reverseManualJournalWithin,
   type ReverseManualJournalInput,
 } from '../modules/finance/manualJournal';
+import {
+  matchBankStatementLineWithin,
+  reconcileBankStatementWithin,
+  unmatchBankStatementLineWithin,
+  type MatchBankStatementLineInput,
+} from '../modules/finance/bankReconciliation';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'finance/bank-statements/reconcile': {
+    permission: 'finance.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return reconcileBankStatementWithin(tx, scope, input.resourceId);
+    },
+  },
+  'finance/bank-statement-lines/match': {
+    permission: 'finance.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return matchBankStatementLineWithin(
+        tx,
+        scope,
+        input.resourceId,
+        input.payload as unknown as MatchBankStatementLineInput,
+      );
+    },
+  },
+  'finance/bank-statement-lines/unmatch': {
+    permission: 'finance.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return unmatchBankStatementLineWithin(tx, scope, input.resourceId);
+    },
+  },
   'finance/journals/post': {
     permission: 'finance.write',
     idempotency: 'required',
