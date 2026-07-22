@@ -182,7 +182,7 @@ async function checkViewport(browser, viewport) {
       const purchaseAfterApproval = Number((await adapter.db.query(
         "select coalesce(sum(s.qty),0)::float as qty from stock_level s join product p on p.id=s.product_id where p.master_fn='M1' and p.company_fn='C-SG' and p.sku='SG-WIDGET'",
       )).rows[0].qty);
-      await adapter.action(
+      const receiptPosting = await adapter.action(
         'purchasing/purchase-orders',
         purchaseOrder.data.docNo,
         'receive',
@@ -212,6 +212,17 @@ async function checkViewport(browser, viewport) {
         'select coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn=$1 and company_fn=$2 and journal_ref=$3',
         ['M1', 'C-SG', supplierPosting.data.docNo],
       )).rows[0];
+      await navigate('goods-receipt', { receiptId: receiptPosting.data.receiptId });
+      const receiptDetail = document.querySelector('[data-purchasing-detail="goods-receipt"]');
+      const receiptDetailCanonical = receiptDetail?.dataset.docNo === receiptPosting.data.docNo
+        && Number(receiptDetail?.dataset.traceCount) === 1
+        && !document.querySelector('[data-preview-banner]');
+      await navigate('supplier-invoice', { invoiceId: supplierPosting.data.invoiceId });
+      const invoiceDetail = document.querySelector('[data-purchasing-detail="supplier-invoice"]');
+      const invoiceDetailCanonical = invoiceDetail?.dataset.docNo === supplierPosting.data.docNo
+        && Number(invoiceDetail?.dataset.traceCount) === 3
+        && invoiceDetail?.dataset.journalBalanced === 'true'
+        && !document.querySelector('[data-preview-banner]');
       const draftStockBefore = (await adapter.db.query(
         "select p.sku, s.qty::float as qty from stock_level s join product p on p.id=s.product_id join warehouse w on w.id=s.warehouse_id where p.master_fn='M1' and p.company_fn='C-SG' and w.code='WH-SALES' and p.sku in ('SG-WIDGET','SG-GADGET') order by p.sku",
       )).rows;
@@ -290,6 +301,8 @@ async function checkViewport(browser, viewport) {
           && approvedPurchase?.approval_status === 'approved'
           && purchaseAfterApproval === purchaseBefore,
         purchaseBalanced: Number(purchaseGl.debit) === Number(purchaseGl.credit) && Number(purchaseGl.debit) > 0,
+        receiptDetailCanonical,
+        invoiceDetailCanonical,
         duplicateInvoiceBlocked,
         salesDraftWidgetDelta: draftAfterBySku['SG-WIDGET'] - draftBeforeBySku['SG-WIDGET'],
         salesDraftGadgetDelta: draftAfterBySku['SG-GADGET'] - draftBeforeBySku['SG-GADGET'],
@@ -316,6 +329,8 @@ async function checkViewport(browser, viewport) {
       if (runtimeProof.purchaseStockDelta !== 2) errors.push(`[demo-esm] expected purchase stock delta +2, got ${runtimeProof.purchaseStockDelta}`);
       if (!runtimeProof.purchaseApprovalNoStock) errors.push('[demo-esm] PO approval did not stay stock-neutral');
       if (!runtimeProof.purchaseBalanced) errors.push('[demo-esm] supplier invoice did not produce balanced GL entries');
+      if (!runtimeProof.receiptDetailCanonical) errors.push('[demo-esm] goods-receipt detail did not render its canonical stock trace');
+      if (!runtimeProof.invoiceDetailCanonical) errors.push('[demo-esm] supplier-invoice detail did not render its balanced canonical GL trace');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
       if (runtimeProof.salesDraftWidgetDelta !== -5 || runtimeProof.salesDraftGadgetDelta !== -3) {
         errors.push(`[demo-esm] expected draft sales stock deltas -5/-3, got ${runtimeProof.salesDraftWidgetDelta}/${runtimeProof.salesDraftGadgetDelta}`);

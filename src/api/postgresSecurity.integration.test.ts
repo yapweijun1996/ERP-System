@@ -101,7 +101,9 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       masterFn: setup.masterFn,
       companyFn: setup.companyFn,
     }, (tx) => tx.select().from(schema.account));
-    expect(visibleAccounts).toHaveLength(10);
+    // completeProductionSetup provisions the 10 core posting accounts plus
+    // 2300 Landed Cost Accrual (added with the canonical landed-cost flow).
+    expect(visibleAccounts).toHaveLength(11);
 
     const [admin] = await db.select().from(schema.appUser)
       .where(eq(schema.appUser.userId, setup.userId));

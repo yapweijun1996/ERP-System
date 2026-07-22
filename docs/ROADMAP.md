@@ -452,19 +452,33 @@ equality and no-stock-movement invariants pass domain, API and live-browser proo
 Exit criteria: pending/rejected orders cannot be received; authorised replay is stable;
 approval leaves stock and GL unchanged; both approval routes have no sample-data path.
 
-## Remaining productionization backlog — 36 Preview routes
+## Phase 17 — Purchasing Transaction Details ✅
 
-This is the authoritative work breakdown after TASK-068. `tasks/tasks.jsonl` records
+1. **Canonical receipt and AP invoice workspaces** (EPIC-033, TASK-069 done
+   2026-07-22) replaces the two fixed prototype documents with record-specific,
+   five-language Demo/API details. Every goods-receipt row now opens its own immutable
+   PO-line view and linked `stock_movement` trace. Every supplier-invoice row opens its
+   own PO/GRN match, outstanding balance and balanced `gl_entry` trace. The screens add
+   no client-side posting shortcuts; receiving and AP posting remain server/domain
+   actions on the purchase order. CI smoke now executes a fresh PO approval → receipt →
+   invoice chain and asserts both detail traces. The shared shell also re-reveals the
+   active sub-navigation after a live viewport resize. Route maturity is **80/34**.
+
+Exit criteria: both routes use bounded formal resources in Demo/API, expose the real
+inventory/accounting facts, pass five-language desktop/375px verification and have no
+sample-only write path.
+
+## Remaining productionization backlog — 34 Preview routes
+
+This is the authoritative work breakdown after TASK-069. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Purchasing depth — 12 routes:** `purchasing-home`, `goods-receipt`,
-   `supplier-invoice`, `supplier-price-lists`,
+1. **Purchasing depth — 10 routes:** `purchasing-home`, `supplier-price-lists`,
    `vendor-performance`, `purchasing-reports`, `report-pur-supplier`,
    `report-pur-buyer`, `report-pur-price-var`, `report-pur-vendor`,
-   `report-pur-generic`, `pur-txn-view`. Implement transactional detail next, then
-   purchasing controls and reports.
+   `report-pur-generic`, `pur-txn-view`. Implement purchasing controls and reports next.
 2. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
    `sales-commission`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
    `report-quote-conversion`, `report-generic`, `txn-view`. Prefer the reusable new-order

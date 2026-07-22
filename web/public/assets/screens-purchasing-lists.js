@@ -612,7 +612,7 @@ makePurList({
     {label:'Partially received', val:r.filter(g=>g.status==='Partially Received').length},
     {label:'Posted', val:r.filter(g=>g.status==='Posted').length, f:'posted'},
   ],
-  newBtn:{label:'New receipt', onClick:()=>navigate('goods-receipt')},
+  newBtn:{label:'Receive approved PO', onClick:()=>navigate('purchase-orders')},
   columns:[
     {label:'GRN', w:'minmax(140px,1.2fr)', render:g=>docNoCell(g.no, g.date)},
     {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:g=>suppCell(g.supplier,g.code)},
@@ -631,7 +631,7 @@ makePurList({
   ],
   onOpen:(g)=>openGRN(g),
 });
-function openGRN(g){ if(g.no==='GRN-26-0188'){ navigate('goods-receipt'); return; } openPurTxn('grn', g); }
+function openGRN(g){ navigate('goods-receipt',{receiptId:g.id}); }
 
 /* ---------------- SUPPLIER INVOICES ---------------- */
 makePurList({
@@ -659,12 +659,12 @@ makePurList({
   ],
   rowMenu:(i)=>[
     {id:'view',icon:'ext',label:'Open invoice',run:()=>openSINV(i)},
-    {id:'match',icon:'flow',label:'Run 3-way match',run:()=>navigate('supplier-invoice')},
+    {id:'match',icon:'flow',label:'Open 3-way match',run:()=>openSINV(i)},
     {id:'pay',icon:'coins',label:'Schedule payment',run:()=>navigate('payment-voucher')},
   ],
   onOpen:(i)=>openSINV(i),
 });
-function openSINV(i){ if(i.no==='SI-26-0615'){ navigate('supplier-invoice'); return; } openPurTxn('sinvoice', i); }
+function openSINV(i){ navigate('supplier-invoice',{invoiceId:i.id}); }
 
 /* ---------------- PURCHASE RETURNS ---------------- */
 function purchaseReturnCopy(){

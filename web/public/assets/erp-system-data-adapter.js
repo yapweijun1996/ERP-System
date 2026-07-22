@@ -306,13 +306,13 @@
       "from purchase_order_line l join product p on p.id = l.product_id " +
       "where " + wc('l') + " order by l.order_id, l.line_no");
     var goodsReceipts = await rows(
-      "select gr.id, gr.doc_no, gr.received_date::text as received_date, po.doc_no as po_no, " +
+      "select gr.id, gr.order_id, gr.warehouse_id, gr.doc_no, gr.received_date::text as received_date, po.doc_no as po_no, " +
       "s.name as supplier, s.code as supplier_code, w.code as warehouse " +
       "from goods_receipt gr join purchase_order po on po.id = gr.order_id " +
       "join supplier s on s.id = po.supplier_id join warehouse w on w.id = gr.warehouse_id " +
       "where " + wc('gr') + " order by gr.id");
     var supplierInvoices = await rows(
-      "select si.doc_no, si.status, si.invoice_date::text as invoice_date, si.currency, " +
+      "select si.id, si.version, si.order_id, si.supplier_id, si.project_id, si.doc_no, si.status, si.invoice_date::text as invoice_date, si.currency, " +
       "si.net_amount::float as net, si.tax_amount::float as tax, si.total_amount::float as total, " +
       "s.name as supplier, s.code as supplier_code, po.doc_no as po_no " +
       "from supplier_invoice si join supplier s on s.id = si.supplier_id " +
@@ -404,9 +404,9 @@
       purchaseOrderLines: [
         { order_id: 1, line_no: 1, sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', qty: 20, unit_cost: 6, net: 120, tax_rate: 9, tax: 10.8 },
       ],
-      goodsReceipts: [{ id: 1, doc_no: 'GR-1', received_date: '2024-06-05', po_no: 'PO-1',
+      goodsReceipts: [{ id: 1, order_id: 1, warehouse_id: 1, doc_no: 'GR-1', received_date: '2024-06-05', po_no: 'PO-1',
                          supplier: 'Gamma Supplies Pte Ltd', supplier_code: 'SUPP1', warehouse: 'WH-SALES' }],
-      supplierInvoices: [{ doc_no: 'SINV-1', status: 'unpaid', invoice_date: '2024-06-06', currency: 'SGD',
+      supplierInvoices: [{ id: 1, version: 1, order_id: 1, supplier_id: 1, project_id: null, doc_no: 'SINV-1', status: 'unpaid', invoice_date: '2024-06-06', currency: 'SGD',
                             net: 120, tax: 10.8, total: 130.8, supplier: 'Gamma Supplies Pte Ltd', supplier_code: 'SUPP1', po_no: 'PO-1' }],
       opportunities: [{ id: 1, doc_no: 'OPP-1', title: 'Widget supply expansion', value: 5000, currency: 'SGD',
                          stage: 'negotiation', probability: 75, close_date: '2024-06-15',
@@ -557,8 +557,18 @@
         items: p.line_count, recv: p.status === 'received' ? 100 : 0,
       };
     });
+    DB.purchaseOrderLines = (d.purchaseOrderLines || []).map(function(line){
+      return {
+        id: line.id || line.line_no, orderId: line.order_id, lineNo: line.line_no,
+        productId: line.product_id, sku: line.sku, name: line.name, uom: line.uom,
+        qty: Number(line.qty || 0), unitCost: Number(line.unit_cost || 0),
+        net: Number(line.net || 0), taxCode: line.tax_code || 'SR',
+        taxRate: Number(line.tax_rate || 0), tax: Number(line.tax || 0),
+      };
+    });
     DB.goodsReceipts = (d.goodsReceipts || []).map(function(g){
       return {
+        id: g.id, orderId: g.order_id, warehouseId: g.warehouse_id,
         no: g.doc_no, date: g.received_date, po: g.po_no,
         supplier: g.supplier, code: g.supplier_code, warehouse: g.warehouse,
         lines: 1, recvPct: 100, qc: 'Accepted', status: 'Posted',
@@ -566,9 +576,11 @@
     });
     DB.supplierInvoices = (d.supplierInvoices || []).map(function(i){
       return {
+        id: i.id, version: i.version, orderId: i.order_id, supplierId: i.supplier_id, projectId: i.project_id,
         no: i.doc_no, date: i.invoice_date, supplier: i.supplier, code: i.supplier_code,
-        po: i.po_no, grn: null, total: i.total, currency: i.currency,
-        due: i.invoice_date, match: 'Matched', status: 'Posted',
+        po: i.po_no, grn: null, net: i.net, tax: i.tax, total: i.total, currency: i.currency,
+        due: i.invoice_date, match: 'Matched', status: i.status === 'paid' ? 'Paid' : 'Posted',
+        rawStatus: i.status, outstanding: i.status === 'unpaid' ? Number(i.total || 0) : 0,
       };
     });
 

@@ -1333,3 +1333,30 @@ Acceptance criteria:
       Viewer denial, replay, audit, reject/duplicate-state guards, receipt gating and
       no-stock/no-GL impact. Desktop, Chinese and 375px checks plus the complete
       114-route audit pass at 78 Canonical / 36 Preview.
+
+## EPIC-033 — Canonical Purchasing Transaction Details
+
+**Goal:** replace the fixed sample goods-receipt and supplier-invoice documents with
+record-specific, read-only workspaces backed by the existing canonical procure-to-pay
+facts, without adding a parallel detail schema or browser-side posting logic.
+
+Acceptance criteria:
+
+- [x] Every row in `goods-receipts` and `supplier-invoices` navigates with its real
+      record ID; neither route special-cases an old prototype document number or falls
+      through to `pur-txn-view`.
+- [x] Goods-receipt detail joins the canonical receipt, purchase order and PO lines for
+      presentation and shows only linked `stock_movement` facts (`ref_type =
+      goods_receipt`, matching receipt ID).
+- [x] Supplier-invoice detail joins the canonical invoice, PO, receipt and PO-line
+      snapshots, computes its real outstanding balance and shows the linked journal
+      with account names and an explicit debit/credit balance proof.
+- [x] Both screens state posted-document immutability, offer navigation rather than
+      fabricated write buttons, use bounded formal resources in Demo/API and include
+      en/ms/zh/ja/vi copy.
+- [x] CI smoke creates and approves a PO, receives it, posts its supplier invoice and
+      asserts one receipt movement plus three balanced AP journal legs render on the
+      two Canonical detail routes. The full 114-route desktop/375px audit passes at
+      80 Canonical / 34 Preview.
+- [x] The active purchasing sub-navigation remains visible after a live
+      desktop-to-375px resize; the route audit includes this lifecycle regression.

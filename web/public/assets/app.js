@@ -429,6 +429,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'rfqs','supplier-quotations',
   'purchase-returns','supplier-credit-notes','supplier-debit-notes','landed-cost',
   'po-approvals','po-approval',
+  'goods-receipt','supplier-invoice',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -458,6 +459,7 @@ const API_SCREEN_ROUTES = new Set([
   'rfqs','supplier-quotations',
   'purchase-returns','supplier-credit-notes','supplier-debit-notes','landed-cost',
   'po-approvals','po-approval',
+  'goods-receipt','supplier-invoice',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -665,6 +667,18 @@ function isPreviewWriteButton(button){
   if(button.closest('.crumb,.sales-subnav,.tabs,.filterchips,.seg,.viewsel')) return false;
   return PREVIEW_WRITE_RE.test((button.textContent||'').replace(/\s+/g,' ').trim());
 }
+let MODULE_NAV_RESIZE_FRAME=0;
+function revealActiveModuleTab(root){
+  const active=root&&root.querySelector('.sales-subnav [aria-selected="true"]');
+  if(!active) return;
+  requestAnimationFrame(()=>{
+    if(active.isConnected) active.scrollIntoView({block:'nearest',inline:'nearest'});
+  });
+}
+window.addEventListener('resize',()=>{
+  cancelAnimationFrame(MODULE_NAV_RESIZE_FRAME);
+  MODULE_NAV_RESIZE_FRAME=requestAnimationFrame(()=>revealActiveModuleTab($('#viewRoot')));
+});
 function decorateScreen(root, route){
   if(!root || CURRENT_ROUTE!==route) return;
   const meta=getScreenMeta(route);
@@ -673,10 +687,7 @@ function decorateScreen(root, route){
   root.dataset.screenMaturity=meta.maturity;
 
   ensureModuleShell(root,meta);
-  const active=root.querySelector('.sales-subnav [aria-selected="true"]');
-  if(active){
-    requestAnimationFrame(()=>active.scrollIntoView({block:'nearest',inline:'nearest'}));
-  }
+  revealActiveModuleTab(root);
 
   if(meta.maturity!=='preview') return;
   if(!root.querySelector('[data-preview-banner]')){

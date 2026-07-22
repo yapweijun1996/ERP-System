@@ -255,6 +255,28 @@ async function auditRoutes(browser, viewport) {
     events.length = 0; // fully consumed this route's window; reset for the next
   }
 
+  // Responsive shells must also reveal the active section when an already-open
+  // desktop page is resized (for example, device rotation or a split window).
+  // A fresh mobile navigation alone cannot catch this lifecycle regression.
+  if (viewport.label === 'desktop') {
+    await page.evaluate(async () => navigate('supplier-invoice'));
+    await page.waitForTimeout(SETTLE_MS);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.waitForTimeout(SETTLE_MS);
+    const activeVisibleAfterResize = await page.evaluate(() => {
+      const nav = document.querySelector('#viewRoot .sales-subnav');
+      const active = nav && nav.querySelector('[aria-selected="true"]');
+      if (!nav || !active) return false;
+      const navRect = nav.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      return activeRect.left >= navRect.left - 1 && activeRect.right <= navRect.right + 1;
+    });
+    if (!activeVisibleAfterResize) {
+      const result = results.find((row) => row.route === 'supplier-invoice');
+      if (result) result.layoutIssues.push('active subnav is outside the visible strip after desktop-to-mobile resize');
+    }
+  }
+
   await context.close();
   return results;
 }
