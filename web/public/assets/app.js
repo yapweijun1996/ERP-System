@@ -404,7 +404,7 @@ ROUTE_MODULE['settings']='settings';
 const CANONICAL_SCREEN_ROUTES = new Set([
   'dashboard',
   'sales-orders','sales-order','sales-invoices','sales-invoice',
-  'stock-on-hand','stock-movement','inv-valuation',
+  'stock-on-hand','stock-movement','inv-valuation','new-item',
   'gl','account-ledger','journal-entry','new-journal-entry','pnl','ar-aging',
   'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
   'crm-pipeline','opportunity','new-opportunity',
@@ -440,7 +440,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
-  'stock-on-hand','stock-movement','inv-valuation',
+  'stock-on-hand','stock-movement','inv-valuation','new-item',
   'sales-orders','sales-order','sales-invoices','sales-invoice',
   'gl','account-ledger','journal-entry','new-journal-entry','pnl','ar-aging',
   'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',

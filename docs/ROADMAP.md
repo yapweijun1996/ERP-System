@@ -582,9 +582,23 @@ Exit criteria: tenant/cursor/Decimal domain and API proof, real-transaction smok
 five-language desktop/375px rendering and all 114 routes pass without a KPI table,
 sample fallback, fake export or unsupported FIFO claim.
 
-## Remaining productionization backlog — 9 Preview routes
+## Phase 26 — Canonical Product Master Creation ✅
 
-This is the authoritative work breakdown after TASK-078. `tasks/tasks.jsonl` records
+1. **Stock-neutral product authoring** (EPIC-043, TASK-079 done 2026-07-23) replaces
+   the separate sample `new-item` form with the same audited tenant-scoped product
+   command used by Item Master. The five-language composer stores only real schema
+   fields, accepts an explicit company-unique SKU and removes fabricated USD/GST,
+   accounting, shelf-life and negative-stock controls. Product creation leaves both
+   stock projections and movements empty; initial quantity must enter through Purchase
+   Receipt or Stock Adjustment. Service-worker v67 moves maturity to **106/8**.
+
+Exit criteria: atomic duplicate-SKU conflict, validation/tenant/RBAC/audit API proof,
+zero opening stock, real Demo form submission, five-language desktop/375px rendering
+and the full release suite pass.
+
+## Remaining productionization backlog — 8 Preview routes
+
+This is the authoritative work breakdown after TASK-079. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
@@ -595,9 +609,8 @@ workstreams in dependency order:
 2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-3. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
-   Reuse existing product/project schemas and add only the missing server commands and
-   audit rules.
+3. **Small vertical gap — 1 route:** Project `timesheet`. Reuse the existing project
+   schema and add only the missing time-entry command and audit rules.
 4. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
    with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
 

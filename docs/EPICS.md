@@ -1556,3 +1556,24 @@ Acceptance criteria:
 - [x] `bi-dashboard`, `sales-analysis` and `stock-aging` are five-language Canonical
       routes with honest loading/error/empty semantics and no fake export/report action.
       Smoke and the desktop/375px route audit pass at 105 Canonical / 9 Preview.
+
+## EPIC-043 — Canonical Product Master Creation
+
+**Goal:** replace the separate sample `new-item` composer with the same tenant-scoped
+product command used by Item Master, while preserving the inventory movement ledger as
+the only source of physical quantity.
+
+Acceptance criteria:
+
+- [x] `new-item` creates only the real `product` fields through `ErpSystemData` in Demo
+      and API modes; it never mutates `DB.items` or exposes fabricated accounting, tax,
+      shelf-life, negative-stock or costing-method fields.
+- [x] SKU uniqueness is enforced atomically per master/company and maps to a useful 409;
+      validation maps to 422, tenant override to 400 and Viewer writes to 403.
+- [x] New products have no `stock_level` or `stock_movement` row. The five-language UI
+      explains that initial stock must enter through Purchase Receipt or Stock Adjustment.
+- [x] Authenticated API tests prove tenant scope, audit, read access, permissions and the
+      zero-stock boundary; Demo smoke creates through the rendered form and verifies the
+      persisted Decimal planning fields.
+- [x] The route is Canonical in Demo/API, service worker advances to v67 and full
+      desktop/375px audit passes at 106 Canonical / 8 Preview.

@@ -127,6 +127,48 @@ async function checkViewport(browser, viewport) {
       if (!adapter || adapter.mode !== 'pglite' || !adapter.db) {
         return { error: `demo adapter did not boot PGlite (mode=${adapter?.mode || 'missing'})` };
       }
+      const newItemSku = `SMOKE-ITEM-${Date.now()}`;
+      await navigate('new-item');
+      for (let attempt = 0; attempt < 50 && !document.querySelector('#niCreate'); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const newItemScreenCanonical = Boolean(document.querySelector('[data-canonical-new-item="true"]'))
+        && !document.querySelector('[data-preview-banner]');
+      const skuField = document.querySelector('#niSku');
+      const nameField = document.querySelector('#niName');
+      const costField = document.querySelector('#niCost');
+      const reorderField = document.querySelector('#niReorder');
+      const reorderQtyField = document.querySelector('#niRoq');
+      if (!skuField || !nameField || !costField || !reorderField || !reorderQtyField) {
+        return { error: 'canonical new-item form fields did not render' };
+      }
+      skuField.value = newItemSku;
+      nameField.value = 'Smoke Canonical Item';
+      costField.value = '3.2500';
+      reorderField.value = '5';
+      reorderQtyField.value = '20';
+      skuField.dispatchEvent(new Event('input', { bubbles: true }));
+      nameField.dispatchEvent(new Event('input', { bubbles: true }));
+      document.querySelector('#niCreate').click();
+      let newItemRow;
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        newItemRow = (await adapter.db.query(
+          'select id, standard_cost, reorder_point, reorder_qty from product where master_fn=$1 and company_fn=$2 and sku=$3',
+          ['M1', 'C-SG', newItemSku],
+        )).rows[0];
+        if (newItemRow) break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const newItemStockFacts = newItemRow ? (await adapter.db.query(
+        'select (select count(*)::int from stock_level where product_id=$1) as levels, (select count(*)::int from stock_movement where product_id=$1) as movements',
+        [newItemRow.id],
+      )).rows[0] : null;
+      const newItemCanonical = newItemScreenCanonical
+        && Number(newItemRow?.standard_cost) === 3.25
+        && Number(newItemRow?.reorder_point) === 5
+        && Number(newItemRow?.reorder_qty) === 20
+        && Number(newItemStockFacts?.levels) === 0
+        && Number(newItemStockFacts?.movements) === 0;
       const before = Number((await adapter.db.query(
         "select coalesce(sum(s.qty),0)::float as qty from stock_level s join product p on p.id=s.product_id where p.master_fn='M1' and p.company_fn='C-SG' and p.sku='SG-WIDGET'",
       )).rows[0].qty);
@@ -541,6 +583,7 @@ async function checkViewport(browser, viewport) {
       const draftAfterBySku = stockBySku(draftStockAfter);
       return {
         error: null,
+        newItemCanonical,
         stockDelta: after - before,
         won: won?.stage === 'won' && Number(won.order_id) === Number(converted.data.orderId),
         balanced: Number(gl.debit) === Number(gl.credit) && Number(gl.debit) > 0,
@@ -617,6 +660,9 @@ async function checkViewport(browser, viewport) {
     if (runtimeProof.error) {
       errors.push(`[demo-esm] ${runtimeProof.error}`);
     } else {
+      if (!runtimeProof.newItemCanonical) {
+        errors.push('[demo-esm] new-item did not create audited canonical product master data with zero opening stock');
+      }
       if (runtimeProof.stockDelta !== -1) errors.push(`[demo-esm] expected stock delta -1, got ${runtimeProof.stockDelta}`);
       if (!runtimeProof.won) errors.push('[demo-esm] CRM opportunity was not atomically marked won and linked to its order');
       if (!runtimeProof.balanced) errors.push('[demo-esm] converted opportunity did not produce balanced GL entries');

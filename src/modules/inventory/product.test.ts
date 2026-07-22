@@ -36,7 +36,7 @@ describe('createProductWithin', () => {
     await expect(createProductWithin(db, SCOPE, {
       sku: 'IM-DUP', name: 'Second', uom: 'unit', category: 'Components',
       standardCost: '1', reorderPoint: '0', reorderQty: '0',
-    })).rejects.toThrow();
+    })).rejects.toThrow(InventoryProductConflictError);
   });
 });
 

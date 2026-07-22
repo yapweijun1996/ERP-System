@@ -51,6 +51,10 @@ import { SupplierPricingError } from '../../modules/purchasing/supplierPricing';
 import { SalesCommissionError } from '../../modules/sales/commission';
 import { ManualJournalError } from '../../modules/finance/manualJournal';
 import { BankReconciliationError } from '../../modules/finance/bankReconciliation';
+import {
+  InventoryProductConflictError,
+  InventoryProductValidationError,
+} from '../../modules/inventory/product';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -118,8 +122,13 @@ export function createResourceRouter(db: DB): Router {
         apiError(res, error.status, error.code, error.message);
         return;
       }
+      if (error instanceof InventoryProductConflictError) {
+        apiError(res, 409, 'product_conflict', error.message);
+        return;
+      }
       if (
-        error instanceof InventoryAdjustmentValidationError
+        error instanceof InventoryProductValidationError
+        || error instanceof InventoryAdjustmentValidationError
         || error instanceof StockTransferValidationError
         || error instanceof InventoryTrackingError
         || error instanceof PurchasingPostingError
@@ -288,7 +297,8 @@ export function createResourceRouter(db: DB): Router {
         return;
       }
       if (
-        error instanceof InvalidInventoryAdjustmentStateError
+        error instanceof InventoryProductConflictError
+        || error instanceof InvalidInventoryAdjustmentStateError
         || error instanceof InventorySnapshotConflictError
         || error instanceof InvalidStockTransferStateError
         || error instanceof InvalidPurchaseOrderStateError
@@ -303,7 +313,8 @@ export function createResourceRouter(db: DB): Router {
         return;
       }
       if (
-        error instanceof InventoryAdjustmentValidationError
+        error instanceof InventoryProductValidationError
+        || error instanceof InventoryAdjustmentValidationError
         || error instanceof StockTransferValidationError
         || error instanceof InventoryTrackingError
         || error instanceof QualityInspectionError

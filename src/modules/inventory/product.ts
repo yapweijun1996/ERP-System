@@ -74,7 +74,14 @@ export async function createProductWithin(exec: DB, scope: Scope, input: CreateP
     standardCost: String(input.standardCost),
     reorderPoint: String(input.reorderPoint),
     reorderQty: String(input.reorderQty),
+  }).onConflictDoNothing({
+    target: [product.masterFn, product.companyFn, product.sku],
   }).returning({ id: product.id });
+  if (!row) {
+    throw new InventoryProductConflictError(
+      `SKU ${input.sku.trim()} already exists in the active company.`,
+    );
+  }
   return { id: row.id };
 }
 
