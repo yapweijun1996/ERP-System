@@ -19,6 +19,7 @@ export const PURCHASE_RFQ_STATUSES = ['draft', 'sent', 'responded', 'awarded', '
 export const SUPPLIER_QUOTATION_STATUSES = ['received', 'converted', 'rejected'] as const;
 export const PURCHASE_RETURN_STATUSES = ['requested', 'credited', 'rejected'] as const;
 export const SUPPLIER_CREDIT_NOTE_STATUSES = ['posted'] as const;
+export const SUPPLIER_DEBIT_NOTE_STATUSES = ['draft', 'posted', 'cancelled'] as const;
 
 export const supplier = pgTable('supplier', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -330,4 +331,32 @@ export const supplierCreditNoteLine = pgTable('supplier_credit_note_line', {
   uniqueIndex('uq_supplier_credit_note_line').on(t.masterFn, t.companyFn, t.creditNoteId, t.lineNo),
   uniqueIndex('uq_supplier_credit_note_return_line').on(t.masterFn, t.companyFn, t.returnLineId),
   index('idx_supplier_credit_note_line_product').on(t.masterFn, t.companyFn, t.productId, t.creditNoteId),
+]);
+
+/** Buyer-issued commercial claim against one supplier invoice. Unlike a purchase
+ *  return, this document never moves stock: posting reduces AP through the existing
+ *  purchase-variance account and reverses the applicable input tax. */
+export const supplierDebitNote = pgTable('supplier_debit_note', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  supplierInvoiceId: bigint('supplier_invoice_id', { mode: 'number' }).notNull().references(() => supplierInvoice.id),
+  supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  noteDate: date('note_date').notNull(),
+  currency: text('currency').notNull(),
+  reason: text('reason').notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxCode: text('tax_code').notNull(),
+  taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_supplier_debit_note_docno').on(t.masterFn, t.companyFn, t.docNo),
+  index('idx_supplier_debit_note_invoice').on(t.masterFn, t.companyFn, t.supplierInvoiceId, t.status, t.id),
+  index('idx_supplier_debit_note_status').on(t.masterFn, t.companyFn, t.status, t.noteDate, t.id),
+  check('ck_supplier_debit_note_status', sql`${t.status} in ('draft', 'posted', 'cancelled')`),
+  check('ck_supplier_debit_note_amounts', sql`${t.netAmount} > 0 and ${t.taxAmount} >= 0 and ${t.totalAmount} > 0`),
 ]);

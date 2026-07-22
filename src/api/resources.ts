@@ -56,6 +56,7 @@ import {
   supplierInvoice,
   supplierCreditNote,
   supplierCreditNoteLine,
+  supplierDebitNote,
   workCenter,
   manufacturingBom,
   bomVersion,
@@ -299,6 +300,12 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     status: supplierCreditNote.status,
   }),
   'purchasing/supplier-credit-note-lines': resource(supplierCreditNoteLine, 'purchasing.read'),
+  'purchasing/supplier-debit-notes': resource(supplierDebitNote, 'purchasing.read', {
+    status: supplierDebitNote.status,
+    versionColumn: supplierDebitNote.version,
+    allowedActions: ['post'],
+    createPermission: 'purchasing.write',
+  }),
   'crm/opportunities': resource(opportunity, 'crm.read', {
     status: opportunity.stage,
     customerId: opportunity.customerId,

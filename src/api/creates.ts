@@ -39,6 +39,10 @@ import {
   type CreatePurchaseReturnInput,
 } from '../modules/purchasing/purchaseReturn';
 import {
+  createSupplierDebitNoteWithin,
+  type CreateSupplierDebitNoteInput,
+} from '../modules/purchasing/supplierDebitNote';
+import {
   createOpportunity,
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
@@ -488,6 +492,13 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createPaymentVoucherWithin(tx, scope, payload as unknown as CreatePaymentVoucherInput);
+    },
+  },
+  'purchasing/supplier-debit-notes': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSupplierDebitNoteWithin(tx, scope, payload as unknown as CreateSupplierDebitNoteInput);
     },
   },
   'service/contracts': {

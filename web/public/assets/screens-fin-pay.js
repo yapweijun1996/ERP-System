@@ -12,8 +12,8 @@ SCREENS['new-payment-voucher'] = async function(root){
 
   function openInvoicesFor(supplierId){
     return DB.supplierInvoices
-      .filter(i=>i.supplierId===supplierId&&i.rawStatus==='unpaid')
-      .map(i=>({id:i.id,no:i.no,due:i.due,amount:i.total,sel:true}));
+      .filter(i=>i.supplierId===supplierId&&i.rawStatus==='unpaid'&&i.outstanding>0)
+      .map(i=>({id:i.id,no:i.no,due:i.due,amount:i.outstanding,original:i.total,sel:true}));
   }
   function nextPvNo(vouchers){
     let max=0;
@@ -38,7 +38,7 @@ SCREENS['new-payment-voucher'] = async function(root){
       <td style="text-align:center"><button class="set-tgl ${inv.sel?'on':''}" data-sel="${i}" role="switch" aria-checked="${inv.sel}" style="width:38px;height:23px"><span class="set-tgl-k" style="width:17px;height:17px"></span></button></td>
       <td class="l li-name"><b>${esc(inv.no)}</b></td>
       <td class="l">${esc(inv.due)}</td>
-      <td class="tnum"><b>${money(inv.amount)}</b></td></tr>`).join('');
+      <td class="tnum"><b>${money(inv.amount)}</b>${inv.original!==inv.amount?`<small style="display:block;color:var(--muted)">Original ${money(inv.original)}</small>`:''}</td></tr>`).join('');
   }
   function step1(){
     const s=sup();

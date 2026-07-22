@@ -832,31 +832,83 @@ makePurList({
 });
 
 /* ---------------- SUPPLIER DEBIT NOTES ---------------- */
+function supplierDebitCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Supplier Debit Notes',unit:'debit notes',sub:'Commercial claims against unpaid supplier invoices. Posting reduces AP without changing physical stock.',all:'All',draft:'Draft',posted:'Posted',claimValue:'Claim value',newNote:'New debit note',noteNo:'Debit note number',supplier:'Supplier',invoice:'Supplier invoice',against:'Against invoice',reason:'Reason',date:'Date',net:'Net amount',tax:'Tax',total:'Total',status:'Status',open:'Open debit note',post:'Post to finance',create:'Create draft',cancel:'Cancel',created:'Supplier debit note drafted',postedDone:'Supplier debit note posted',remaining:'Remaining payable',accounting:'Posting debits Accounts Payable and credits Purchase Variance / Input Tax. It creates no stock movement.',empty:'No canonical supplier debit notes yet.',selectInvoice:'Choose an unpaid supplier invoice',shortSupply:'Fictional short-supply claim'},
+    ms:{title:'Nota Debit Pembekal',unit:'nota debit',sub:'Tuntutan komersial terhadap invois pembekal belum dibayar. Posting mengurangkan AP tanpa mengubah stok fizikal.',all:'Semua',draft:'Draf',posted:'Diposting',claimValue:'Nilai tuntutan',newNote:'Nota debit baharu',noteNo:'Nombor nota debit',supplier:'Pembekal',invoice:'Invois pembekal',against:'Terhadap invois',reason:'Sebab',date:'Tarikh',net:'Amaun bersih',tax:'Cukai',total:'Jumlah',status:'Status',open:'Buka nota debit',post:'Posting ke kewangan',create:'Cipta draf',cancel:'Batal',created:'Draf nota debit pembekal dicipta',postedDone:'Nota debit pembekal diposting',remaining:'Baki belum bayar',accounting:'Posting mendebit Akaun Belum Bayar dan mengkredit Varians Belian / Cukai Input. Tiada pergerakan stok.',empty:'Belum ada nota debit pembekal kanonik.',selectInvoice:'Pilih invois pembekal belum dibayar',shortSupply:'Tuntutan kekurangan bekalan fiksyen'},
+    zh:{title:'供应商借项单',unit:'张借项单',sub:'针对未付供应商发票的商业索赔。过账会减少应付账款，但不会改变实物库存。',all:'全部',draft:'草稿',posted:'已过账',claimValue:'索赔金额',newNote:'新建借项单',noteNo:'借项单编号',supplier:'供应商',invoice:'供应商发票',against:'对应发票',reason:'原因',date:'日期',net:'未税金额',tax:'税额',total:'总额',status:'状态',open:'打开借项单',post:'过账至财务',create:'创建草稿',cancel:'取消',created:'供应商借项单草稿已创建',postedDone:'供应商借项单已过账',remaining:'剩余应付',accounting:'过账借记应付账款，贷记采购差异及进项税；不会生成库存流水。',empty:'目前没有标准供应商借项单。',selectInvoice:'选择未付供应商发票',shortSupply:'虚构短供索赔'},
+    ja:{title:'仕入先デビットノート',unit:'件',sub:'未払仕入先請求書に対する商取引上の請求です。転記で買掛金を減額し、実在庫は変更しません。',all:'すべて',draft:'ドラフト',posted:'転記済',claimValue:'請求額',newNote:'デビットノートを作成',noteNo:'デビット番号',supplier:'仕入先',invoice:'仕入先請求書',against:'対象請求書',reason:'理由',date:'日付',net:'税抜金額',tax:'税額',total:'合計',status:'ステータス',open:'デビットノートを開く',post:'会計へ転記',create:'ドラフト作成',cancel:'キャンセル',created:'仕入先デビットノートを作成しました',postedDone:'仕入先デビットノートを転記しました',remaining:'未払残高',accounting:'買掛金を借記し、購入差異・仮払税を貸記します。在庫移動は作成しません。',empty:'標準仕入先デビットノートはありません。',selectInvoice:'未払仕入先請求書を選択',shortSupply:'架空の数量不足請求'},
+    vi:{title:'Phiếu ghi nợ nhà cung cấp',unit:'phiếu',sub:'Yêu cầu thương mại theo hóa đơn nhà cung cấp chưa thanh toán. Ghi sổ giảm phải trả nhưng không thay đổi tồn kho vật lý.',all:'Tất cả',draft:'Nháp',posted:'Đã ghi sổ',claimValue:'Giá trị yêu cầu',newNote:'Tạo phiếu ghi nợ',noteNo:'Số phiếu ghi nợ',supplier:'Nhà cung cấp',invoice:'Hóa đơn nhà cung cấp',against:'Theo hóa đơn',reason:'Lý do',date:'Ngày',net:'Trước thuế',tax:'Thuế',total:'Tổng cộng',status:'Trạng thái',open:'Mở phiếu ghi nợ',post:'Ghi sổ tài chính',create:'Tạo bản nháp',cancel:'Hủy',created:'Đã tạo phiếu ghi nợ nhà cung cấp',postedDone:'Đã ghi sổ phiếu ghi nợ nhà cung cấp',remaining:'Còn phải trả',accounting:'Ghi Nợ Phải trả và Có Chênh lệch mua hàng / Thuế đầu vào. Không tạo biến động kho.',empty:'Chưa có phiếu ghi nợ nhà cung cấp chuẩn.',selectInvoice:'Chọn hóa đơn nhà cung cấp chưa thanh toán',shortSupply:'Yêu cầu thiếu hàng giả lập'},
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+function nextSupplierDebitNo(){ return nextSourcingNo(DB.supplierDebitNotes,'SDN'); }
+function openSupplierDebitDetails(note){
+  const s=supplierDebitCopy();
+  const invoice=DB.supplierInvoices.find(row=>row.id===note.supplierInvoiceId)||{};
+  appModal({icon:'coins',title:`${note.no} · ${note.supplier}`,width:680,body:
+    `<div class="docmeta" style="margin-bottom:16px"><div class="dm"><small>${esc(s('against'))}</small><b>${esc(note.ref)}</b></div><div class="dm"><small>${esc(s('date'))}</small><b>${esc(note.date)}</b></div><div class="dm"><small>${esc(s('status'))}</small>${cap(s(note.rawStatus),note.rawStatus==='posted'?'teal':'neutral')}</div></div>
+    <div class="panel"><div class="panel-body">${txnDetails([[s('reason'),esc(note.reason)],[s('net'),money(note.net,note.currency)],[s('tax'),money(note.tax,note.currency)],[s('total'),money(note.amount,note.currency)],[s('remaining'),money(invoice.outstanding||0,note.currency)]])}</div></div>
+    <div class="callout info" style="margin-top:12px">${ic('lock')}<span>${esc(s('accounting'))}</span></div>`,
+    actions:btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})+(note.rawStatus==='draft'?btn(s('post'),{icon:'check',cls:'primary',attrs:`data-post-supplier-debit="${note.id}"`}):'')});
+  document.querySelector('[data-post-supplier-debit]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;button.disabled=true;
+    try{await window.ErpSystemData.action('purchasing/supplier-debit-notes',note.id,'post',{},`supplier-debit-${note.id}-post`);closeModal();toast(s('postedDone'),'ok');navigate('supplier-debit-notes');}
+    catch(error){button.disabled=false;toast(error&&error.message||'Post failed','danger');}
+  });
+}
+function newSupplierDebitModal(){
+  const s=supplierDebitCopy();
+  const invoices=DB.supplierInvoices.filter(row=>row.rawStatus==='unpaid'&&row.outstanding>0);
+  const options=invoices.map(row=>`<option value="${row.id}">${esc(row.no)} · ${esc(row.supplier)} · ${esc(s('remaining'))} ${money(row.outstanding,row.currency)}</option>`).join('');
+  appModal({icon:'coins',title:s('newNote'),width:600,body:
+    `<div class="fldrow c2"><div class="fld"><span>${esc(s('noteNo'))}</span><input id="supplierDebitNo" value="${esc(nextSupplierDebitNo())}"></div><div class="fld"><span>${esc(s('date'))}</span><input id="supplierDebitDate" type="date" value="${new Date().toISOString().slice(0,10)}"></div></div>
+    <div class="fld"><span>${esc(s('invoice'))}</span><select id="supplierDebitInvoice"><option value="">${esc(s('selectInvoice'))}</option>${options}</select></div>
+    <div class="fldrow c2"><div class="fld"><span>${esc(s('net'))}</span><input id="supplierDebitNet" type="number" min="0.01" step="0.01" value="10"></div><div class="fld"><span>${esc(s('reason'))}</span><input id="supplierDebitReason" value="${esc(s('shortSupply'))}"></div></div>`,
+    actions:btn(s('cancel'),{cls:'soft',attrs:'data-supplier-debit-cancel'})+btn(s('create'),{icon:'plus',cls:'primary',attrs:'data-supplier-debit-create'})});
+  document.querySelector('[data-supplier-debit-cancel]')?.addEventListener('click',closeModal);
+  document.querySelector('[data-supplier-debit-create]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;button.disabled=true;
+    try{
+      const supplierInvoiceId=Number(document.querySelector('#supplierDebitInvoice').value);
+      if(!supplierInvoiceId) throw new Error(s('selectInvoice'));
+      await window.ErpSystemData.create('purchasing/supplier-debit-notes',{
+        docNo:document.querySelector('#supplierDebitNo').value.trim(),supplierInvoiceId,
+        noteDate:document.querySelector('#supplierDebitDate').value,
+        reason:document.querySelector('#supplierDebitReason').value.trim(),
+        netAmount:document.querySelector('#supplierDebitNet').value,
+        taxCode:DB.company.country==='MY'?'SV':'SR',
+      });
+      closeModal();toast(s('created'),'ok');navigate('supplier-debit-notes');
+    }catch(error){button.disabled=false;toast(error&&error.message||'Create failed','danger');}
+  });
+}
 makePurList({
-  route:'supplier-debit-notes', title:'Supplier Debit Notes', unit:'debit notes',
-  sub:'Claims raised against suppliers — short-supply penalties, damage claims, logistics recovery or manual adjustments. Posting increases the supplier receivable.',
+  route:'supplier-debit-notes', title:()=>supplierDebitCopy()('title'), unit:()=>supplierDebitCopy()('unit'), prepare:prepareCanonicalPurchasingData,
+  sub:()=>supplierDebitCopy()('sub'),
   rows:()=>DB.supplierDebitNotes, rowId:d=>d.no,
-  chips:[['all','All'],['draft','Draft'],['posted','Posted']],
-  filterFn:(d,f)=>f==='draft'?d.status==='Draft':d.status==='Posted',
+  chips:[['all',()=>supplierDebitCopy()('all')],['draft',()=>supplierDebitCopy()('draft')],['posted',()=>supplierDebitCopy()('posted')]],
+  filterFn:(d,f)=>d.rawStatus===f,
   kpis:(r)=>[
-    {label:'Draft', val:r.filter(d=>d.status==='Draft').length, f:'draft'},
-    {label:'Claim value', val:money0(r.reduce((a,d)=>a+d.amount,0))},
-    {label:'Posted', val:r.filter(d=>d.status==='Posted').length, f:'posted'},
+    {label:()=>supplierDebitCopy()('draft'), val:r.filter(d=>d.rawStatus==='draft').length, f:'draft'},
+    {label:()=>supplierDebitCopy()('claimValue'), val:money0(r.reduce((a,d)=>a+d.amount,0))},
+    {label:()=>supplierDebitCopy()('posted'), val:r.filter(d=>d.rawStatus==='posted').length, f:'posted'},
   ],
-  newBtn:{label:'New debit note', onClick:()=>toast('New supplier debit note','info')},
+  newBtn:{label:()=>supplierDebitCopy()('newNote'), onClick:()=>newSupplierDebitModal()},
   columns:[
-    {label:'Debit note', w:'minmax(140px,1.2fr)', render:d=>docNoCell(d.no, d.date)},
-    {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:d=>suppCell(d.supplier,d.code)},
-    {label:'Against', align:'l', w:'minmax(116px,1fr)', render:d=>`<span class="mono" style="font-size:12px">${esc(d.ref)}</span>`},
-    {label:'Reason', align:'l', w:'minmax(180px,2fr)', render:d=>`<span class="li-subj">${esc(d.reason)}</span>`},
-    {label:'Amount', align:'r', sortable:true, w:'minmax(100px,0.9fr)', render:d=>`<b class="tnum">${money0(d.amount)}</b>`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:d=>cap(d.status,SDN_TONE[d.status])},
+    {label:()=>supplierDebitCopy()('title'), w:'minmax(140px,1.2fr)', render:d=>docNoCell(d.no, d.date)},
+    {label:()=>supplierDebitCopy()('supplier'), align:'l', w:'minmax(160px,1.6fr)', render:d=>suppCell(d.supplier,d.code)},
+    {label:()=>supplierDebitCopy()('against'), align:'l', w:'minmax(116px,1fr)', render:d=>`<span class="mono" style="font-size:12px">${esc(d.ref)}</span>`},
+    {label:()=>supplierDebitCopy()('reason'), align:'l', w:'minmax(180px,2fr)', render:d=>`<span class="li-subj">${esc(d.reason)}</span>`},
+    {label:()=>supplierDebitCopy()('total'), align:'r', sortable:true, w:'minmax(100px,0.9fr)', render:d=>`<b class="tnum">${money(d.amount,d.currency)}</b>`},
+    {label:()=>supplierDebitCopy()('status'), align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:d=>cap(supplierDebitCopy()(d.rawStatus),SDN_TONE[d.status])},
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(d)=>[
-    {id:'view',icon:'ext',label:'Open debit note',run:()=>openPurTxn('sdebitnote',d)},
-    {id:'post',icon:'check',label:'Post to finance',run:()=>toast(`${d.no} posted`,'ok')},
-    {id:'pdf',icon:'filepdf',label:'Download PDF',sep:true,run:()=>toast('Debit note PDF generated','ok')},
+    {id:'view',icon:'ext',label:supplierDebitCopy()('open'),run:()=>openSupplierDebitDetails(d)},
+    ...(d.rawStatus==='draft'?[{id:'post',icon:'check',label:supplierDebitCopy()('post'),run:()=>openSupplierDebitDetails(d)}]:[]),
   ],
-  onOpen:(d)=>openPurTxn('sdebitnote', d),
+  onOpen:(d)=>openSupplierDebitDetails(d),
 });

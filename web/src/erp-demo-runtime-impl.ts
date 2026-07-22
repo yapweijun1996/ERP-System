@@ -44,6 +44,11 @@ import {
   type ShipAndCreditPurchaseReturnInput,
 } from '../../src/modules/purchasing/purchaseReturn';
 import {
+  createSupplierDebitNoteWithin,
+  postSupplierDebitNoteWithin,
+  type CreateSupplierDebitNoteInput,
+} from '../../src/modules/purchasing/supplierDebitNote';
+import {
   confirmDraftSalesOrderWithin,
   confirmSalesOrder,
   type ConfirmDraftOrderInput,
@@ -672,6 +677,12 @@ export const erpDemoRuntime = Object.freeze({
     },
     rejectPurchaseReturnWithin(db: DemoOrm, scope: Scope, returnId: number) {
       return rejectPurchaseReturnWithin(asDomainDb(db), scope, returnId);
+    },
+    createSupplierDebitNoteWithin(db: DemoOrm, scope: Scope, input: CreateSupplierDebitNoteInput) {
+      return createSupplierDebitNoteWithin(asDomainDb(db), scope, input);
+    },
+    postSupplierDebitNoteWithin(db: DemoOrm, scope: Scope, debitNoteId: number) {
+      return postSupplierDebitNoteWithin(asDomainDb(db), scope, debitNoteId);
     },
     createOpportunity(db: DemoOrm, scope: Scope, input: CreateOpportunityInput) {
       return createOpportunity(asDomainDb(db), scope, input);

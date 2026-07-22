@@ -25,6 +25,7 @@ import {
   rejectPurchaseReturnWithin,
   shipAndCreditPurchaseReturnWithin,
 } from '../modules/purchasing/purchaseReturn';
+import { postSupplierDebitNoteWithin } from '../modules/purchasing/supplierDebitNote';
 import { decidePurchaseRequisitionWithin } from '../modules/purchasing/purchaseRequisition';
 import {
   convertSupplierQuotationToPurchaseOrderWithin,
@@ -69,6 +70,14 @@ import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'purchasing/supplier-debit-notes/post': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return postSupplierDebitNoteWithin(tx, scope, input.resourceId);
+    },
+  },
   'assets/depreciation-runs/post': {
     permission: 'asset.write',
     idempotency: 'required',

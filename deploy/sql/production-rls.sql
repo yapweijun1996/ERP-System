@@ -36,7 +36,7 @@ DECLARE
     'purchase_rfq', 'purchase_rfq_line', 'purchase_rfq_supplier',
     'purchase_return', 'purchase_return_line',
     'supplier', 'supplier_invoice', 'supplier_quotation', 'supplier_quotation_line',
-    'supplier_credit_note', 'supplier_credit_note_line',
+    'supplier_credit_note', 'supplier_credit_note_line', 'supplier_debit_note',
     'bank_receipt', 'payment_voucher', 'payment_voucher_line',
     'activity', 'opportunity', 'contact',
     'asset', 'depreciation_run', 'depreciation_run_line',

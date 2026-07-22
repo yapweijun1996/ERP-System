@@ -342,6 +342,9 @@ purchase_order ||--o{ supplier_invoice (Dr Inventory/Input Tax, Cr AP)
 goods_receipt ||--o{ purchase_return ||--o{ purchase_return_line
 purchase_return ||--|| supplier_credit_note ||--o{ supplier_credit_note_line
 purchase_return ship-and-credit → stock_movement 'out' + Dr AP / Cr Inventory/Input Tax
+supplier_invoice ||--o{ supplier_debit_note
+supplier_debit_note post → Dr AP / Cr Purchase Variance/Input Tax (no stock movement)
+payment_voucher settles invoice total − posted supplier credits − posted supplier debits
 ```
 
 Sales delivery/returns, purchasing sourcing, treasury payments, manufacturing, quality,

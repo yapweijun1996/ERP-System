@@ -9,6 +9,7 @@ import type { Scope } from '../../data/repo';
 import {
   account, glEntry, paymentVoucher, paymentVoucherLine, supplier, supplierInvoice,
 } from '../../data/schema';
+import { supplierInvoiceOutstandingWithin } from '../purchasing/supplierPayable';
 
 export class PaymentVoucherError extends Error {
   constructor(message: string) {
@@ -85,7 +86,18 @@ export async function createPaymentVoucherWithin(exec: DB, scope: Scope, input: 
     }
   }
 
-  const total = invoices.reduce((sum, invoice) => sum.plus(new Decimal(invoice.totalAmount)), new Decimal(0));
+  const invoicesWithOutstanding = [];
+  for (const invoice of invoices) {
+    const outstanding = await supplierInvoiceOutstandingWithin(exec, scope, invoice.id);
+    if (!outstanding || outstanding.lte(0)) {
+      throw new PaymentVoucherError(`Supplier invoice ${invoice.docNo} has no remaining payable.`);
+    }
+    invoicesWithOutstanding.push({ ...invoice, outstanding: outstanding.toFixed(2) });
+  }
+  const total = invoicesWithOutstanding.reduce(
+    (sum, invoice) => sum.plus(invoice.outstanding),
+    new Decimal(0),
+  );
 
   const [created] = await exec.insert(paymentVoucher).values({
     masterFn: scope.masterFn,
@@ -102,13 +114,13 @@ export async function createPaymentVoucherWithin(exec: DB, scope: Scope, input: 
     totalAmount: paymentVoucher.totalAmount,
   });
 
-  await exec.insert(paymentVoucherLine).values(invoices.map((invoice, index) => ({
+  await exec.insert(paymentVoucherLine).values(invoicesWithOutstanding.map((invoice, index) => ({
     masterFn: scope.masterFn,
     companyFn: scope.companyFn,
     paymentVoucherId: created.id,
     lineNo: index + 1,
     supplierInvoiceId: invoice.id,
-    amount: invoice.totalAmount,
+    amount: invoice.outstanding,
   })));
 
   await exec.update(supplierInvoice).set({ status: 'paid' }).where(and(

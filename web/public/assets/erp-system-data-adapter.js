@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 30;
+  var DEMO_SCHEMA_VERSION = 32;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1303,6 +1303,7 @@
     'purchasing/purchase-return-lines':'purchase_return_line',
     'purchasing/supplier-credit-notes':'supplier_credit_note',
     'purchasing/supplier-credit-note-lines':'supplier_credit_note_line',
+    'purchasing/supplier-debit-notes':'supplier_debit_note',
     'purchasing/purchase-requisitions':'purchase_requisition',
     'purchasing/purchase-requisition-lines':'purchase_requisition_line',
     'purchasing/rfqs':'purchase_rfq',
@@ -1558,6 +1559,14 @@
       });
       await refresh();
       return {data:purchaseReturn,meta:{}};
+    }
+    if(key==='purchasing/supplier-debit-notes'){
+      var supplierDebitNote = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createSupplierDebitNoteWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:supplierDebitNote,meta:{}};
     }
     if(key==='crm/opportunities'){
       if(Number.isSafeInteger(payload&&payload.customerId)){
@@ -2141,6 +2150,14 @@
       });
       await refresh();
       return {data:rejectedPurchaseReturn,meta:{}};
+    }
+    if(key==='purchasing/supplier-debit-notes'&&name==='post'){
+      var postedSupplierDebitNote = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.postSupplierDebitNoteWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:postedSupplierDebitNote,meta:{}};
     }
     if(key==='crm/opportunities'&&name==='convert'){
       payload=payload||{};

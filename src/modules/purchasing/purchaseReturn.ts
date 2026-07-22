@@ -15,6 +15,7 @@ import {
   supplierInvoice,
 } from '../../data/schema';
 import { issueStockWithin } from '../inventory/stock';
+import { supplierInvoiceOutstandingWithin } from './supplierPayable';
 
 export class PurchaseReturnError extends Error {
   constructor(message: string) {
@@ -266,6 +267,10 @@ export async function shipAndCreditPurchaseReturnWithin(
   const net = lines.reduce((sum, line) => sum.plus(line.netAmount), new Decimal(0));
   const tax = lines.reduce((sum, line) => sum.plus(line.taxAmount), new Decimal(0));
   const total = net.plus(tax);
+  const outstanding = await supplierInvoiceOutstandingWithin(exec, scope, sourceInvoice.id);
+  if (!outstanding || outstanding.lte(0) || total.gt(outstanding)) {
+    throw new PurchaseReturnError(`Supplier credit exceeds the remaining payable for ${sourceInvoice.docNo}.`);
+  }
   const [credit] = await exec.insert(supplierCreditNote).values({
     masterFn: scope.masterFn,
     companyFn: scope.companyFn,

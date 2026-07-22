@@ -116,6 +116,7 @@ async function prepareCanonicalPurchasingData(){
     listPage('purchasing/purchase-return-lines'),
     listPage('purchasing/supplier-credit-notes'),
     listPage('purchasing/supplier-credit-note-lines'),
+    listPage('purchasing/supplier-debit-notes'),
     listPage('inventory/bins'),
     listPage('inventory/lots'),
     listPage('inventory/serials'),
@@ -125,7 +126,7 @@ async function prepareCanonicalPurchasingData(){
     suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,
     products,stockLevels,warehouses,purchaseRequisitions,purchaseRequisitionLines,
     purchaseRfqs,purchaseRfqLines,purchaseRfqSuppliers,supplierQuotations,supplierQuotationLines,
-    purchaseReturns,purchaseReturnLines,supplierCreditNotes,supplierCreditNoteLines,
+    purchaseReturns,purchaseReturnLines,supplierCreditNotes,supplierCreditNoteLines,supplierDebitNotes,
     inventoryBins,inventoryLots,inventorySerials,locationBalances,
   ]=pages.map(page=>page.data);
   const productById=new Map(products.map(row=>[row.id,row]));
@@ -437,6 +438,34 @@ async function prepareCanonicalPurchasingData(){
       tax:purchasingNumber(row.taxAmount),currency:row.currency,status:'Posted',rawStatus:row.status,
       lines:(creditLinesByCredit.get(row.id)||[]).sort((a,b)=>a.lineNo-b.lineNo),
     };
+  });
+  DB.supplierDebitNotes=supplierDebitNotes.map(row=>{
+    const vendor=supplierById.get(row.supplierId)||{};
+    const invoice=invoiceById.get(row.supplierInvoiceId)||{};
+    return {
+      id:row.id,version:row.version,no:row.docNo,date:dateValue(row.noteDate),
+      supplierInvoiceId:row.supplierInvoiceId,supplierId:row.supplierId,
+      supplier:vendor.name||'Unknown supplier',code:vendor.code||'—',
+      ref:invoice.docNo||`Invoice #${row.supplierInvoiceId}`,reason:row.reason,
+      amount:purchasingNumber(row.totalAmount),net:purchasingNumber(row.netAmount),
+      tax:purchasingNumber(row.taxAmount),taxCode:row.taxCode,taxRate:purchasingNumber(row.taxRate),
+      currency:row.currency,status:{draft:'Draft',posted:'Posted',cancelled:'Cancelled'}[row.status]||row.status,
+      rawStatus:row.status,
+    };
+  });
+  const adjustmentByInvoice=new Map();
+  [...supplierCreditNotes.filter(row=>row.status==='posted'),...supplierDebitNotes.filter(row=>row.status==='posted')]
+    .forEach(row=>adjustmentByInvoice.set(
+      row.supplierInvoiceId,
+      (adjustmentByInvoice.get(row.supplierInvoiceId)||0)+purchasingNumber(row.totalAmount),
+    ));
+  DB.supplierInvoices.forEach(row=>{
+    row.outstanding=row.rawStatus==='unpaid'?Math.max(0,row.total-(adjustmentByInvoice.get(row.id)||0)):0;
+  });
+  DB.suppliers.forEach(row=>{
+    row.balance=DB.supplierInvoices
+      .filter(invoice=>invoice.supplierId===row.id&&invoice.rawStatus==='unpaid')
+      .reduce((sum,invoice)=>sum+invoice.outstanding,0);
   });
   DB.purchasingReadMeta={
     truncated:pages.some(page=>Boolean(page.nextCursor)),

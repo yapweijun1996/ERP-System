@@ -1250,3 +1250,30 @@ Acceptance criteria:
 - [x] Complete live in-app browser proof for create → ship/credit, Chinese rendering,
       stock/GL traceability and 375px layout, then run every release gate and close
       TASK-065 at 74 Canonical / 40 Preview.
+
+## EPIC-030 — Supplier Debit Note and Net AP Settlement
+
+**Goal:** replace Purchasing's sample-only supplier-debit register with a real
+invoice-linked supplier claim, while correcting settlement so supplier credits and
+debits reduce the amount actually paid instead of allowing an AP overpayment.
+
+Acceptance criteria:
+
+- [x] Add a versioned `supplier_debit_note` table linked to one still-unpaid supplier
+      invoice. Creation snapshots Decimal tax and stores a draft without stock or GL
+      impact; posting is immutable and cannot exceed the invoice's remaining payable.
+- [x] Posting is one idempotent transaction with balanced Dr AP / Cr Purchase Variance /
+      Cr Input Tax legs. It creates no stock movement because a commercial claim is not
+      itself a physical return or inventory revaluation.
+- [x] Introduce one shared invoice-outstanding calculation used by debit-note posting,
+      purchase-return crediting and Payment Voucher. A voucher settles original invoice
+      total less every posted supplier credit/debit, preventing overpayment and negative AP.
+- [x] Production API and Demo ESM expose the bounded resource, create and post action
+      under Purchasing RBAC, version, audit and idempotency policies; migration and RLS
+      remain aligned. The same migration idempotently backfills account `1000` for
+      pre-TASK-058 tenants so upgraded databases can actually settle the net payable.
+- [x] `supplier-debit-notes` becomes a five-language Canonical Demo/API route with real
+      create, post and detail flows. The shared sample `pur-txn-view` remains Preview.
+- [x] Domain/API/browser proof covers amount caps, duplicate posting, net payment, balanced
+      GL, no-stock invariant, Chinese rendering and 375px layout. All release gates pass at
+      75 Canonical / 39 Preview.
