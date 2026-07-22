@@ -116,9 +116,9 @@ async function auditRoutes(browser, viewport) {
 
   await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 20000 });
   // The PGlite WASM cold start can outlive network-idle on a constrained CI
-  // runner. Its readiness promise is bounded by the adapter's 20s watchdog.
-  await page.evaluate(async () => window.ErpSystemDataReady);
-  await page.waitForSelector('.dashgrid', { timeout: 15000, state: 'visible' });
+  // runner. Keep this locator alive across service-worker navigation and allow
+  // more than the adapter's bounded 20s fallback watchdog.
+  await page.waitForSelector('.dashgrid', { timeout: 45000, state: 'visible' });
 
   const asyncRenderIssues = await page.evaluate(async () => {
     const issues = [];
