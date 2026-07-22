@@ -103,6 +103,11 @@ async function checkViewport(browser, viewport) {
 
   let dashboardVisible = false;
   try {
+    // Network idle does not mean the WASM database finished its cold start.
+    // Await the adapter's own bounded readiness promise (20s watchdog) before
+    // spending the UI-render timeout, otherwise slower CI runners can lose a
+    // race against the fallback timer while the application is still healthy.
+    await page.evaluate(async () => window.ErpSystemDataReady);
     await page.waitForSelector('.dashgrid', { timeout: 15000, state: 'visible' });
     dashboardVisible = true;
   } catch (e) {
