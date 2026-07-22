@@ -29,6 +29,12 @@ import {
   type CreatePurchaseRequisitionInput,
 } from '../modules/purchasing/purchaseRequisition';
 import {
+  createPurchaseRfqWithin,
+  createSupplierQuotationWithin,
+  type CreatePurchaseRfqInput,
+  type CreateSupplierQuotationInput,
+} from '../modules/purchasing/rfq';
+import {
   createOpportunity,
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
@@ -224,10 +230,10 @@ const CREATES: Record<string, CreateDefinition> = {
           !line
           || !Number.isSafeInteger(line.productId)
           || line.productId <= 0
-          || !Number.isFinite(line.qty)
-          || line.qty <= 0
-          || !Number.isFinite(line.unitCost)
-          || line.unitCost < 0
+          || !Number.isFinite(Number(line.qty))
+          || Number(line.qty) <= 0
+          || !Number.isFinite(Number(line.unitCost))
+          || Number(line.unitCost) < 0
           || typeof line.taxCode !== 'string'
           || !line.taxCode.trim())
       ) {
@@ -243,6 +249,24 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createPurchaseRequisitionWithin(tx, scope, payload as unknown as CreatePurchaseRequisitionInput);
+    },
+  },
+  'purchasing/rfqs': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createPurchaseRfqWithin(tx, scope, payload as unknown as CreatePurchaseRfqInput);
+    },
+  },
+  'purchasing/supplier-quotations': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSupplierQuotationWithin(
+        tx,
+        scope,
+        payload as unknown as CreateSupplierQuotationInput,
+      );
     },
   },
   'crm/contacts': {

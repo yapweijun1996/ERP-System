@@ -8,6 +8,8 @@ import {
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
   purchaseRequisition, purchaseRequisitionLine,
+  purchaseRfq, purchaseRfqLine, purchaseRfqSupplier,
+  supplierQuotation, supplierQuotationLine,
   purchaseOrder, purchaseOrderLine, supplierInvoice, glEntry,
   payrollRun, payrollRunLine,
 } from './schema';
@@ -119,8 +121,11 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', customerId: cust.id, kind: 'note', body: 'Renewed payment terms conversation queued for next QBR.' },
   ]);
 
-  // A supplier for the SG company (TASK-022 — purchasing chain).
-  await db.insert(supplier).values({ masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP1', name: 'Gamma Supplies Pte Ltd' });
+  // Two suppliers for the SG company (Purchasing core + competitive RFQ sourcing).
+  const [seedSupp1, seedSupp2] = await db.insert(supplier).values([
+    { masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP1', name: 'Gamma Supplies Pte Ltd' },
+    { masterFn: 'M1', companyFn: 'C-SG', code: 'SUPP2', name: 'Delta Components Pte Ltd' },
+  ]).returning({ id: supplier.id });
 
   // An open opportunity for CUST1, owned by the admin user (TASK-027 — CRM chain).
   // Left in 'negotiation' (not converted) so the demo shows an in-flight pipeline
@@ -406,6 +411,35 @@ export async function seedDemo(db: DB): Promise<void> {
       productId: sgGadget.id, qty: '5', estimatedUnitCost: '13.00',
     },
   ]);
+
+  // RFQ sourcing: an issued ad-hoc request with one of two invited suppliers already
+  // responded. This leaves the second response + award as a real live demo flow.
+  const [seedRfq] = await db.insert(purchaseRfq).values({
+    masterFn: 'M1', companyFn: 'C-SG', docNo: 'RFQ-2026-0001',
+    subject: 'Widget replenishment sourcing', rfqDate: '2026-07-18',
+    responseDueDate: '2026-08-15', status: 'sent', version: 2,
+  }).returning({ id: purchaseRfq.id });
+  const [seedRfqLine] = await db.insert(purchaseRfqLine).values({
+    masterFn: 'M1', companyFn: 'C-SG', rfqId: seedRfq.id, lineNo: 1,
+    productId: sgWidget.id, qty: '50',
+  }).returning({ id: purchaseRfqLine.id });
+  await db.insert(purchaseRfqSupplier).values([
+    { masterFn: 'M1', companyFn: 'C-SG', rfqId: seedRfq.id, supplierId: seedSupp1.id },
+    { masterFn: 'M1', companyFn: 'C-SG', rfqId: seedRfq.id, supplierId: seedSupp2.id },
+  ]);
+  const [seedQuote] = await db.insert(supplierQuotation).values({
+    masterFn: 'M1', companyFn: 'C-SG', docNo: 'SQ-2026-0001',
+    rfqId: seedRfq.id, supplierId: seedSupp1.id,
+    quoteDate: '2026-07-20', validUntil: '2026-09-15', currency: 'SGD',
+    leadTimeDays: 10, paymentTerms: 'Net 30', warranty: '12 months',
+    status: 'received', netAmount: '350.00', taxAmount: '31.50', totalAmount: '381.50',
+  }).returning({ id: supplierQuotation.id });
+  await db.insert(supplierQuotationLine).values({
+    masterFn: 'M1', companyFn: 'C-SG', quotationId: seedQuote.id,
+    rfqLineId: seedRfqLine.id, lineNo: 1, productId: sgWidget.id,
+    qty: '50', unitCost: '7.0000', netAmount: '350.00',
+    taxCode: 'SR', taxRate: '9.000', taxAmount: '31.50',
+  });
 
   // EPIC-024 (TASK-058): a real received PO + unpaid supplier invoice tagged to the
   // project below (project_id, threaded automatically the same way

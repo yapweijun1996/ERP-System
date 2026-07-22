@@ -1188,3 +1188,37 @@ Acceptance criteria:
 - [x] Domain and authenticated HTTP tests cover targeting, tenant mismatch, loss reason,
       terminal-state guards, idempotent replay and audit output. Desktop, Chinese and
       375px browser verification plus the complete 114-route audit pass at 70/44.
+
+## EPIC-028 — Purchasing Sourcing: RFQ → Supplier Quotation → Purchase Order
+
+**Goal:** replace Purchasing's sample-only RFQ and supplier-quotation registers with a
+real, tenant-scoped sourcing chain that awards exactly one quotation into the existing
+canonical purchase-order flow without creating premature stock or accounting entries.
+
+Acceptance criteria:
+
+- [x] Drizzle migration adds versioned `purchase_rfq`, `purchase_rfq_line`,
+      `purchase_rfq_supplier`, `supplier_quotation` and `supplier_quotation_line`
+      tables. A purchase order may link to one winning quotation through nullable
+      `supplier_quotation_id`; the quote-to-PO relation is unique per tenant.
+- [x] RFQs may source one approved, unconverted requisition or carry ad-hoc lines.
+      Creation validates tenant-owned products and invited suppliers; issuing requires
+      at least one line and supplier. A requisition already sourced by RFQ cannot bypass
+      comparison through direct PO conversion.
+- [x] Only an invited supplier may submit a complete, exactly-once response. Quote
+      totals use Decimal and an effective tax-rate snapshot; all invited responses move
+      the RFQ to `responded`.
+- [x] Award is one atomic, idempotent action: create one linked draft PO, mark the winner
+      `converted`, reject competing quotes and mark the RFQ `awarded`. The sourcing
+      stages write no stock movement or GL entry.
+- [x] Five purchasing resources, two creates and three actions are registered for both
+      Demo ESM and production API with existing `purchasing.read/write` RBAC, optimistic
+      versions, idempotency and audit policies.
+- [x] `rfqs` and `supplier-quotations` render bounded real data in Demo/API, provide
+      five-language create/issue/close/respond/compare/award flows, and move to
+      Canonical. The shared `pur-txn-view` stays Preview because it also hosts still-
+      sample purchase returns and supplier notes.
+- [x] Domain and authenticated HTTP tests cover requisition guards, invited/complete
+      responses, tenant isolation, idempotent issue/award, audit correlation, one-winner
+      conversion and the no-stock/no-GL invariant. Live desktop/Chinese verification
+      plus the complete 114-route desktop/375px audit pass at 72/42.

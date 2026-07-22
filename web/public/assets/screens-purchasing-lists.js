@@ -289,93 +289,226 @@ function newRequisitionModal(){
 }
 
 /* ---------------- RFQs ---------------- */
+function sourcingCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{rfqs:'Requests for Quotation',rfqUnit:'RFQs',rfqSub:'Invite approved suppliers, collect comparable responses and award the winning quotation.',quotes:'Supplier Quotations',quoteUnit:'quotations',quoteSub:'Compare supplier price, lead time and terms, then create a traceable purchase order.',all:'All',draft:'Draft',sent:'Sent',responded:'Responded',awarded:'Awarded',closed:'Closed',received:'Received',rejected:'Rejected',converted:'Converted',open:'Open RFQs',awaiting:'Awaiting response',fully:'Fully responded',newRfq:'New RFQ',newQuote:'Record quotation',rfq:'RFQ',subject:'Subject',fromPr:'From PR',suppliers:'Suppliers',responseBy:'Response by',status:'Status',quote:'Quote',supplier:'Supplier',item:'Item',unitPrice:'Unit price',lead:'Lead',validUntil:'Valid until',total:'Total',view:'View details',compare:'Compare quotations',issue:'Issue RFQ',close:'Close RFQ',record:'Record supplier quotation',convert:'Select & convert to PO',date:'Date',requisition:'Approved requisition',adHoc:'Ad-hoc demand',due:'Response deadline',invited:'Invited suppliers',lines:'Requested lines',qty:'Qty',create:'Create RFQ',cancel:'Cancel',quoteDate:'Quote date',currency:'Currency',leadDays:'Lead time (days)',terms:'Payment terms',warranty:'Warranty',taxCode:'Tax code',saveQuote:'Save quotation',noQuotes:'No quotations are available for comparison.',best:'Best total',select:'Select',created:'RFQ created',issued:'RFQ issued',closedMsg:'RFQ closed',quoteSaved:'Supplier quotation saved',poCreated:'Purchase order created',required:'Complete all required fields.',chooseSupplier:'Choose at least one supplier.',chooseLine:'Choose an approved requisition or enter an item quantity.',noEligible:'No issued RFQ is awaiting a supplier response.',responses:'responses'},
+    ms:{rfqs:'Permintaan Sebut Harga',rfqUnit:'RFQ',rfqSub:'Jemput pembekal diluluskan, kumpul respons setara dan pilih sebut harga terbaik.',quotes:'Sebut Harga Pembekal',quoteUnit:'sebut harga',quoteSub:'Banding harga, tempoh dan syarat pembekal, kemudian cipta pesanan belian yang boleh dijejak.',all:'Semua',draft:'Draf',sent:'Dihantar',responded:'Dijawab',awarded:'Dipilih',closed:'Ditutup',received:'Diterima',rejected:'Ditolak',converted:'Ditukar',open:'RFQ terbuka',awaiting:'Menunggu respons',fully:'Respons lengkap',newRfq:'RFQ baharu',newQuote:'Rekod sebut harga',rfq:'RFQ',subject:'Subjek',fromPr:'Daripada PR',suppliers:'Pembekal',responseBy:'Tarikh respons',status:'Status',quote:'Sebut harga',supplier:'Pembekal',item:'Item',unitPrice:'Harga unit',lead:'Tempoh',validUntil:'Sah hingga',total:'Jumlah',view:'Lihat butiran',compare:'Banding sebut harga',issue:'Hantar RFQ',close:'Tutup RFQ',record:'Rekod sebut harga pembekal',convert:'Pilih & tukar ke PO',date:'Tarikh',requisition:'Rekuisisi diluluskan',adHoc:'Permintaan ad hoc',due:'Tarikh akhir respons',invited:'Pembekal dijemput',lines:'Baris diminta',qty:'Kuantiti',create:'Cipta RFQ',cancel:'Batal',quoteDate:'Tarikh sebut harga',currency:'Mata wang',leadDays:'Tempoh (hari)',terms:'Syarat bayaran',warranty:'Waranti',taxCode:'Kod cukai',saveQuote:'Simpan sebut harga',noQuotes:'Tiada sebut harga untuk dibandingkan.',best:'Jumlah terbaik',select:'Pilih',created:'RFQ dicipta',issued:'RFQ dihantar',closedMsg:'RFQ ditutup',quoteSaved:'Sebut harga disimpan',poCreated:'Pesanan belian dicipta',required:'Lengkapkan semua medan wajib.',chooseSupplier:'Pilih sekurang-kurangnya satu pembekal.',chooseLine:'Pilih rekuisisi diluluskan atau masukkan kuantiti item.',noEligible:'Tiada RFQ dihantar yang menunggu respons pembekal.',responses:'respons'},
+    zh:{rfqs:'询价单',rfqUnit:'张询价单',rfqSub:'邀请已批准供应商、收集可比较报价，并选择中标报价。',quotes:'供应商报价',quoteUnit:'份报价',quoteSub:'比较供应商价格、交期和条款，然后创建可追溯的采购订单。',all:'全部',draft:'草稿',sent:'已发出',responded:'已回复',awarded:'已定标',closed:'已关闭',received:'已收到',rejected:'未中标',converted:'已转采购单',open:'进行中询价',awaiting:'等待回复',fully:'全部回复',newRfq:'新建询价单',newQuote:'录入报价',rfq:'询价单',subject:'主题',fromPr:'来源请购单',suppliers:'供应商',responseBy:'回复期限',status:'状态',quote:'报价单',supplier:'供应商',item:'物料',unitPrice:'单价',lead:'交期',validUntil:'有效期至',total:'合计',view:'查看详情',compare:'比较报价',issue:'发出询价单',close:'关闭询价单',record:'录入供应商报价',convert:'选中并转采购订单',date:'日期',requisition:'已批准请购单',adHoc:'临时需求',due:'回复截止日期',invited:'受邀供应商',lines:'询价明细',qty:'数量',create:'创建询价单',cancel:'取消',quoteDate:'报价日期',currency:'币种',leadDays:'交期（天）',terms:'付款条款',warranty:'保修',taxCode:'税码',saveQuote:'保存报价',noQuotes:'没有可比较的报价。',best:'最低总额',select:'选择',created:'询价单已创建',issued:'询价单已发出',closedMsg:'询价单已关闭',quoteSaved:'供应商报价已保存',poCreated:'采购订单已创建',required:'请填写所有必填项。',chooseSupplier:'请至少选择一个供应商。',chooseLine:'请选择已批准请购单或填写物料数量。',noEligible:'没有等待供应商回复的已发出询价单。',responses:'份回复'},
+    ja:{rfqs:'見積依頼',rfqUnit:'件',rfqSub:'承認済み仕入先を招待し、比較可能な回答から採用見積を決定します。',quotes:'仕入先見積',quoteUnit:'件',quoteSub:'価格、納期、条件を比較し、追跡可能な発注書を作成します。',all:'すべて',draft:'下書き',sent:'送信済み',responded:'回答済み',awarded:'採用済み',closed:'終了',received:'受領済み',rejected:'不採用',converted:'発注書作成済み',open:'進行中RFQ',awaiting:'回答待ち',fully:'全回答済み',newRfq:'RFQ作成',newQuote:'見積登録',rfq:'RFQ',subject:'件名',fromPr:'購買依頼',suppliers:'仕入先',responseBy:'回答期限',status:'状態',quote:'見積',supplier:'仕入先',item:'品目',unitPrice:'単価',lead:'納期',validUntil:'有効期限',total:'合計',view:'詳細を表示',compare:'見積を比較',issue:'RFQを送信',close:'RFQを終了',record:'仕入先見積を登録',convert:'採用して発注書へ',date:'日付',requisition:'承認済み購買依頼',adHoc:'個別需要',due:'回答期限',invited:'招待仕入先',lines:'依頼明細',qty:'数量',create:'RFQを作成',cancel:'キャンセル',quoteDate:'見積日',currency:'通貨',leadDays:'納期（日）',terms:'支払条件',warranty:'保証',taxCode:'税コード',saveQuote:'見積を保存',noQuotes:'比較できる見積がありません。',best:'最安合計',select:'採用',created:'RFQを作成しました',issued:'RFQを送信しました',closedMsg:'RFQを終了しました',quoteSaved:'見積を保存しました',poCreated:'発注書を作成しました',required:'必須項目を入力してください。',chooseSupplier:'仕入先を1社以上選択してください。',chooseLine:'承認済み購買依頼を選ぶか品目数量を入力してください。',noEligible:'回答待ちの送信済みRFQがありません。',responses:'回答'},
+    vi:{rfqs:'Yêu cầu báo giá',rfqUnit:'RFQ',rfqSub:'Mời nhà cung cấp đã duyệt, thu thập phản hồi có thể so sánh và chọn báo giá thắng.',quotes:'Báo giá nhà cung cấp',quoteUnit:'báo giá',quoteSub:'So sánh giá, thời gian giao và điều khoản, rồi tạo đơn mua có thể truy vết.',all:'Tất cả',draft:'Nháp',sent:'Đã gửi',responded:'Đã phản hồi',awarded:'Đã chọn',closed:'Đã đóng',received:'Đã nhận',rejected:'Không chọn',converted:'Đã chuyển PO',open:'RFQ đang mở',awaiting:'Chờ phản hồi',fully:'Đã phản hồi đủ',newRfq:'RFQ mới',newQuote:'Ghi báo giá',rfq:'RFQ',subject:'Chủ đề',fromPr:'Từ yêu cầu mua',suppliers:'Nhà cung cấp',responseBy:'Hạn phản hồi',status:'Trạng thái',quote:'Báo giá',supplier:'Nhà cung cấp',item:'Mặt hàng',unitPrice:'Đơn giá',lead:'Thời gian',validUntil:'Hiệu lực đến',total:'Tổng',view:'Xem chi tiết',compare:'So sánh báo giá',issue:'Gửi RFQ',close:'Đóng RFQ',record:'Ghi báo giá nhà cung cấp',convert:'Chọn & chuyển thành PO',date:'Ngày',requisition:'Yêu cầu mua đã duyệt',adHoc:'Nhu cầu đột xuất',due:'Hạn phản hồi',invited:'Nhà cung cấp được mời',lines:'Dòng yêu cầu',qty:'Số lượng',create:'Tạo RFQ',cancel:'Hủy',quoteDate:'Ngày báo giá',currency:'Tiền tệ',leadDays:'Thời gian giao (ngày)',terms:'Điều khoản thanh toán',warranty:'Bảo hành',taxCode:'Mã thuế',saveQuote:'Lưu báo giá',noQuotes:'Không có báo giá để so sánh.',best:'Tổng tốt nhất',select:'Chọn',created:'Đã tạo RFQ',issued:'Đã gửi RFQ',closedMsg:'Đã đóng RFQ',quoteSaved:'Đã lưu báo giá',poCreated:'Đã tạo đơn mua',required:'Hoàn tất các trường bắt buộc.',chooseSupplier:'Chọn ít nhất một nhà cung cấp.',chooseLine:'Chọn yêu cầu mua đã duyệt hoặc nhập số lượng mặt hàng.',noEligible:'Không có RFQ đã gửi đang chờ phản hồi.',responses:'phản hồi'},
+  };
+  return packs[lang]||packs.en;
+}
+
+function nextSourcingNo(rows,prefix){
+  let max=0;
+  (rows||[]).forEach(row=>{ const match=/(\d+)\s*$/.exec(row.no||''); if(match&&+match[1]>max) max=+match[1]; });
+  return `${prefix}-${new Date().getFullYear()}-${String(max+1).padStart(4,'0')}`;
+}
+
+function sourcingRfqStatus(r){
+  const c=sourcingCopy();
+  return r.status==='Partially Responded'?`${c.sent} · ${r.responded}/${r.suppliers}`:(c[r.rawStatus]||r.status);
+}
+
+function sourcingQuoteStatus(q){
+  const c=sourcingCopy();
+  return c[q.rawStatus]||q.status;
+}
+
+async function runRfqAction(r,action){
+  const c=sourcingCopy();
+  try{
+    await window.ErpSystemData.action('purchasing/rfqs',r.id,action,{},`rfq-${action}-${r.id}-v${r.version}`);
+    toast(action==='issue'?c.issued:c.closedMsg,'ok'); navigate('rfqs');
+  }catch(error){ toast(error&&error.message||c.required,'danger'); }
+}
+
+function openRfqDetails(r){
+  const c=sourcingCopy();
+  const invited=r.supplierIds.map(id=>DB.suppliers.find(s=>s.id===id)).filter(Boolean);
+  appModal({icon:'comment',title:`${r.no} · ${r.subject}`,width:720,
+    body:`<div class="docmeta" style="margin-bottom:16px"><div class="dm"><small>${c.date}</small><b>${esc(r.date)}</b></div><div class="dm"><small>${c.due}</small><b>${esc(r.due)}</b></div><div class="dm"><small>${c.status}</small>${cap(sourcingRfqStatus(r),RFQ_TONE[r.status]||'neutral')}</div></div>
+      <div class="sectitle">${c.invited}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${invited.map(s=>cap(s.name,'info')).join('')}</div>
+      <div class="sectitle">${c.lines}</div><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th></tr></thead><tbody>${r.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td class="tnum">${num(line.qty)} ${esc(line.uom)}</td></tr>`).join('')}</tbody></table>`,
+    actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${r.rawStatus==='draft'?btn(c.issue,{icon:'send',cls:'primary',attrs:`onclick="closeModal();runRfqAction(DB.rfqs.find(r=>r.id===${r.id}),'issue')"`}):''}${['sent','responded'].includes(r.rawStatus)?btn(c.compare,{icon:'flow',cls:'primary',attrs:`onclick="closeModal();openQuoteCompare('${r.no}')"`}):''}`});
+}
+
+function newRfqModal(){
+  const c=sourcingCopy(), today=new Date().toISOString().slice(0,10), due=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  const reqs=DB.purchaseReqs.filter(r=>r.rawStatus==='approved'&&!r.convertedOrderId&&!DB.rfqs.some(q=>q.requisitionId===r.id));
+  const docNo=nextSourcingNo(DB.rfqs,'RFQ');
+  appModal({icon:'comment',title:c.newRfq,width:700,body:`<div class="set-grid">
+    <div class="fld"><span>${c.rfq}</span><input id="srcNo" value="${esc(docNo)}" readonly></div>
+    <div class="fld"><span>${c.subject} *</span><input id="srcSubject"></div>
+    <div class="fld"><span>${c.date} *</span><input id="srcDate" type="date" value="${today}"></div>
+    <div class="fld"><span>${c.due} *</span><input id="srcDue" type="date" value="${due}"></div>
+    <div class="fld" style="grid-column:1/-1"><span>${c.requisition}</span><select id="srcReq"><option value="">${c.adHoc}</option>${reqs.map(r=>`<option value="${r.id}">${esc(r.no)} · ${esc(r.dept)}</option>`).join('')}</select></div>
+    <div class="fld"><span>${c.item}</span><select id="srcItem">${DB.items.map(item=>`<option value="${item.id}">${esc(item.sku)} · ${esc(item.name)}</option>`).join('')}</select></div>
+    <div class="fld"><span>${c.qty}</span><input id="srcQty" type="number" min="0.0001" step="0.0001" value="1"></div>
+    <div class="fld" style="grid-column:1/-1"><span>${c.invited} *</span><div style="display:flex;gap:12px;flex-wrap:wrap;padding:8px 0">${DB.suppliers.map(s=>`<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="srcSupplier" value="${s.id}"> ${esc(s.name)}</label>`).join('')}</div></div>
+  </div><div class="panel"><div class="panel-h"><h3>${c.lines}</h3></div><div class="panel-body" id="srcLineSummary"></div></div>`,actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c.create,{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`});
+  const summary=()=>{
+    const req=DB.purchaseReqs.find(r=>r.id===Number($('#srcReq').value));
+    const lines=req?req.lineItems:[{...DB.items.find(i=>i.id===Number($('#srcItem').value)),qty:Number($('#srcQty').value)||0}];
+    $('#srcItem').disabled=Boolean(req); $('#srcQty').disabled=Boolean(req);
+    $('#srcLineSummary').innerHTML=lines.map(line=>`<div class="sumrow"><span>${esc(line.sku)} · ${esc(line.name)}</span><b>${num(line.qty)} ${esc(line.uom||'')}</b></div>`).join('');
+  };
+  ['srcReq','srcItem','srcQty'].forEach(id=>$('#'+id).addEventListener('change',summary)); summary();
+  $('#modalEl [data-save]').addEventListener('click',async function(){
+    const req=DB.purchaseReqs.find(r=>r.id===Number($('#srcReq').value));
+    const supplierIds=$$('input[name="srcSupplier"]:checked').map(el=>Number(el.value));
+    const subject=$('#srcSubject').value.trim();
+    const lines=req?req.lineItems.map(line=>({productId:line.productId,qty:line.qty})):[{productId:Number($('#srcItem').value),qty:Number($('#srcQty').value)}];
+    if(!subject||!$('#srcDate').value||!$('#srcDue').value){ toast(c.required,'danger'); return; }
+    if(!supplierIds.length){ toast(c.chooseSupplier,'danger'); return; }
+    if(lines.some(line=>!line.productId||!(line.qty>0))){ toast(c.chooseLine,'danger'); return; }
+    this.disabled=true;
+    try{
+      await window.ErpSystemData.create('purchasing/rfqs',{docNo,requisitionId:req?req.id:null,subject,rfqDate:$('#srcDate').value,responseDueDate:$('#srcDue').value,supplierIds,lines});
+      closeModal(); toast(c.created,'ok'); navigate('rfqs');
+    }catch(error){ this.disabled=false; toast(error&&error.message||c.required,'danger'); }
+  });
+}
+
 makePurList({
-  route:'rfqs', title:'Requests for Quotation', unit:'RFQs',
-  sub:'Pricing requests sent to one or more suppliers. Track responses, then compare quotations side-by-side to select the best supplier.',
+  route:'rfqs', title:()=>sourcingCopy().rfqs, unit:()=>sourcingCopy().rfqUnit, prepare:prepareCanonicalPurchasingData,
+  sub:()=>sourcingCopy().rfqSub,
   rows:()=>DB.rfqs, rowId:r=>r.no,
-  chips:[['all','All'],['draft','Draft'],['sent','Sent'],['responded','Responded'],['closed','Closed']],
-  filterFn:(r,f)=>f==='draft'?r.status==='Draft':f==='sent'?['Sent','Partially Responded'].includes(r.status):f==='responded'?r.status==='Responded':r.status==='Closed',
+  chips:[['all',()=>sourcingCopy().all],['draft',()=>sourcingCopy().draft],['sent',()=>sourcingCopy().sent],['responded',()=>sourcingCopy().responded],['awarded',()=>sourcingCopy().awarded],['closed',()=>sourcingCopy().closed]],
+  filterFn:(r,f)=>r.rawStatus===f,
   kpis:(r)=>[
-    {label:'Open RFQs', val:r.filter(x=>!['Closed','Cancelled'].includes(x.status)).length},
-    {label:'Awaiting response', val:r.filter(x=>['Sent','Partially Responded'].includes(x.status)).length, accent:true, f:'sent'},
-    {label:'Fully responded', val:r.filter(x=>x.status==='Responded').length, f:'responded'},
-    {label:'Closed', val:r.filter(x=>x.status==='Closed').length, f:'closed'},
+    {label:()=>sourcingCopy().open, val:r.filter(x=>!['awarded','closed'].includes(x.rawStatus)).length},
+    {label:()=>sourcingCopy().awaiting, val:r.filter(x=>x.rawStatus==='sent').length, accent:true, f:'sent'},
+    {label:()=>sourcingCopy().fully, val:r.filter(x=>x.rawStatus==='responded').length, f:'responded'},
+    {label:()=>sourcingCopy().awarded, val:r.filter(x=>x.rawStatus==='awarded').length, f:'awarded'},
   ],
-  newBtn:{label:'New RFQ', onClick:()=>toast('New RFQ — select suppliers & items','info')},
+  newBtn:{label:()=>sourcingCopy().newRfq, onClick:()=>newRfqModal()},
   columns:[
-    {label:'RFQ', w:'minmax(140px,1.2fr)', render:r=>docNoCell(r.no, r.date)},
-    {label:'Subject', align:'l', w:'minmax(200px,2.4fr)', render:r=>`<span class="li-subj">${esc(r.subject)}</span>`},
-    {label:'From PR', align:'l', w:'minmax(110px,1fr)', render:r=>r.pr?`<span class="mono" style="font-size:12px">${esc(r.pr)}</span>`:'<span style="color:var(--faint)">—</span>'},
-    {label:'Suppliers', align:'c', w:'minmax(86px,0.9fr)', render:r=>miniProgress(r.responded, r.suppliers)},
-    {label:'Response by', align:'l', w:'minmax(96px,0.9fr)', render:r=>`<span style="color:var(--muted)">${esc(r.due)}</span>`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(130px,1.2fr)', render:r=>cap(r.status,RFQ_TONE[r.status])},
+    {label:()=>sourcingCopy().rfq, w:'minmax(140px,1.2fr)', render:r=>docNoCell(r.no, r.date)},
+    {label:()=>sourcingCopy().subject, align:'l', w:'minmax(200px,2.4fr)', render:r=>`<span class="li-subj">${esc(r.subject)}</span>`},
+    {label:()=>sourcingCopy().fromPr, align:'l', w:'minmax(110px,1fr)', render:r=>r.pr?`<span class="mono" style="font-size:12px">${esc(r.pr)}</span>`:'<span style="color:var(--faint)">—</span>'},
+    {label:()=>sourcingCopy().suppliers, align:'c', w:'minmax(86px,0.9fr)', render:r=>miniProgress(r.responded, r.suppliers)},
+    {label:()=>sourcingCopy().responseBy, align:'l', w:'minmax(96px,0.9fr)', render:r=>`<span style="color:var(--muted)">${esc(r.due)}</span>`},
+    {label:()=>sourcingCopy().status, align:'l', cls:'cap-cell', w:'minmax(130px,1.2fr)', render:r=>cap(sourcingRfqStatus(r),RFQ_TONE[r.status]||'neutral')},
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(r)=>[
-    {id:'view',icon:'ext',label:'View RFQ',run:()=>openPurTxn('rfq',r)},
-    {id:'compare',icon:'flow',label:'Compare quotes',run:()=>openQuoteCompare(r.no)},
-    {id:'quotes',icon:'receipt',label:'View quotations',run:()=>navigate('supplier-quotations')},
-    {id:'close',icon:'x',label:'Close RFQ',danger:true,sep:true,run:()=>toast(`${r.no} closed`,'danger')},
+    {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openRfqDetails(r)},
+    ...(r.rawStatus==='draft'?[{id:'issue',icon:'send',label:sourcingCopy().issue,run:()=>runRfqAction(r,'issue')}]:[]),
+    ...(['sent','responded'].includes(r.rawStatus)?[{id:'compare',icon:'flow',label:sourcingCopy().compare,run:()=>openQuoteCompare(r.no)},{id:'record',icon:'receipt',label:sourcingCopy().record,run:()=>newSupplierQuoteModal(r.id)}]:[]),
+    ...(['draft','sent','responded'].includes(r.rawStatus)?[{id:'close',icon:'x',label:sourcingCopy().close,danger:true,sep:true,run:()=>runRfqAction(r,'close')}]:[]),
   ],
-  onOpen:(r)=>openPurTxn('rfq', r),
+  onOpen:(r)=>openRfqDetails(r),
 });
 
 /* ---------------- SUPPLIER QUOTATIONS + comparison ---------------- */
+function eligibleQuoteRfqs(){
+  return DB.rfqs.filter(r=>['sent','responded'].includes(r.rawStatus)&&r.supplierIds.some(id=>!DB.supplierQuotes.some(q=>q.rfqId===r.id&&q.supplierId===id)));
+}
+
+function newSupplierQuoteModal(preselectedRfqId){
+  const c=sourcingCopy(), eligible=eligibleQuoteRfqs();
+  if(!eligible.length){ toast(c.noEligible,'info'); return; }
+  const today=new Date().toISOString().slice(0,10), valid=new Date(Date.now()+30*86400000).toISOString().slice(0,10), docNo=nextSourcingNo(DB.supplierQuotes,'SQ');
+  const purchaseTaxCode=DB.company.country==='MY'?'SV':'SR';
+  appModal({icon:'receipt',title:c.newQuote,width:720,body:`<div class="set-grid">
+    <div class="fld"><span>${c.quote}</span><input value="${esc(docNo)}" readonly></div>
+    <div class="fld"><span>${c.rfq} *</span><select id="sqRfq">${eligible.map(r=>`<option value="${r.id}" ${r.id===preselectedRfqId?'selected':''}>${esc(r.no)} · ${esc(r.subject)}</option>`).join('')}</select></div>
+    <div class="fld"><span>${c.supplier} *</span><select id="sqSupplier"></select></div>
+    <div class="fld"><span>${c.quoteDate} *</span><input id="sqDate" type="date" value="${today}"></div>
+    <div class="fld"><span>${c.validUntil} *</span><input id="sqValid" type="date" value="${valid}"></div>
+    <div class="fld"><span>${c.currency}</span><input id="sqCurrency" value="${esc(DB.company.currency)}" maxlength="3"></div>
+    <div class="fld"><span>${c.leadDays}</span><input id="sqLead" type="number" min="0" value="7"></div>
+    <div class="fld"><span>${c.terms} *</span><input id="sqTerms" value="30 days"></div>
+    <div class="fld"><span>${c.warranty}</span><input id="sqWarranty" value="12 months"></div>
+  </div><div class="panel"><div class="panel-h"><h3>${c.lines}</h3></div><div class="panel-body"><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th><th>${c.unitPrice}</th><th>${c.taxCode}</th></tr></thead><tbody id="sqLines"></tbody></table></div></div>`,actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c.saveQuote,{icon:'check',cls:'primary',attrs:'data-save="1"'})}`});
+  const render=()=>{
+    const rfq=DB.rfqs.find(r=>r.id===Number($('#sqRfq').value));
+    const candidates=rfq.supplierIds.map(id=>DB.suppliers.find(s=>s.id===id)).filter(s=>s&&!DB.supplierQuotes.some(q=>q.rfqId===rfq.id&&q.supplierId===s.id));
+    $('#sqSupplier').innerHTML=candidates.map(s=>`<option value="${s.id}">${esc(s.code)} · ${esc(s.name)}</option>`).join('');
+    $('#sqLines').innerHTML=rfq.lines.map(line=>`<tr data-line="${line.id}"><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td class="tnum">${num(line.qty)}</td><td><input class="lineinput sqCost" type="number" min="0" step="0.0001" value="0"></td><td><select class="sqTax"><option value="${purchaseTaxCode}">${purchaseTaxCode}</option></select></td></tr>`).join('');
+  };
+  $('#sqRfq').addEventListener('change',render); render();
+  $('#modalEl [data-save]').addEventListener('click',async function(){
+    const rfq=DB.rfqs.find(r=>r.id===Number($('#sqRfq').value));
+    const lines=$$('#sqLines tr').map(tr=>({rfqLineId:Number(tr.dataset.line),unitCost:Number(tr.querySelector('.sqCost').value),taxCode:tr.querySelector('.sqTax').value}));
+    if(!rfq||!Number($('#sqSupplier').value)||!$('#sqDate').value||!$('#sqValid').value||!$('#sqTerms').value.trim()){ toast(c.required,'danger'); return; }
+    this.disabled=true;
+    try{
+      await window.ErpSystemData.create('purchasing/supplier-quotations',{docNo,rfqId:rfq.id,supplierId:Number($('#sqSupplier').value),quoteDate:$('#sqDate').value,validUntil:$('#sqValid').value,currency:$('#sqCurrency').value.trim().toUpperCase(),leadTimeDays:Number($('#sqLead').value),paymentTerms:$('#sqTerms').value.trim(),warranty:$('#sqWarranty').value.trim()||null,lines});
+      closeModal(); toast(c.quoteSaved,'ok'); navigate('supplier-quotations');
+    }catch(error){ this.disabled=false; toast(error&&error.message||c.required,'danger'); }
+  });
+}
+
+function openSupplierQuoteDetails(q){
+  const c=sourcingCopy();
+  appModal({icon:'receipt',title:`${q.no} · ${q.supplier}`,width:720,body:`<div class="docmeta" style="margin-bottom:16px"><div class="dm"><small>${c.rfq}</small><b>${esc(q.rfq)}</b></div><div class="dm"><small>${c.validUntil}</small><b>${esc(q.validity)}</b></div><div class="dm"><small>${c.status}</small>${cap(sourcingQuoteStatus(q),SQ_TONE[q.status]||'neutral')}</div></div><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th><th>${c.unitPrice}</th><th>${c.total}</th></tr></thead><tbody>${q.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td>${num(line.qty)}</td><td>${money(line.unitCost,q.currency)}</td><td>${money(line.net+line.tax,q.currency)}</td></tr>`).join('')}</tbody></table><div class="sumrow total"><span>${c.total}</span><b>${money(q.total,q.currency)}</b></div>`,actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${q.rawStatus==='received'?btn(c.convert,{icon:'check',cls:'primary',attrs:`onclick="closeModal();convertSupplierQuote(${q.id})"`}):''}`});
+}
+
+async function convertSupplierQuote(quotationId){
+  const c=sourcingCopy(), q=DB.supplierQuotes.find(row=>row.id===quotationId);
+  if(!q) return;
+  const docNo=nextSourcingNo(DB.purchaseOrders,'PO'), orderDate=new Date().toISOString().slice(0,10);
+  try{
+    await window.ErpSystemData.action('purchasing/supplier-quotations',q.id,'convert-to-purchase-order',{docNo,orderDate},`award-supplier-quotation-${q.id}-v${q.version}`);
+    closeModal(); toast(`${c.poCreated}: ${docNo}`,'ok'); navigate('supplier-quotations');
+  }catch(error){ toast(error&&error.message||c.required,'danger'); }
+}
+
 makePurList({
-  route:'supplier-quotations', title:'Supplier Quotations', unit:'quotations',
-  sub:'Supplier responses to RFQs. Compare price, lead-time, terms and supplier performance, then select the winning quotation and convert it to a purchase order.',
+  route:'supplier-quotations', title:()=>sourcingCopy().quotes, unit:()=>sourcingCopy().quoteUnit, prepare:prepareCanonicalPurchasingData,
+  sub:()=>sourcingCopy().quoteSub,
   rows:()=>DB.supplierQuotes, rowId:q=>q.no,
-  chips:[['all','All'],['received','Received'],['selected','Selected'],['rejected','Rejected'],['converted','Converted']],
-  filterFn:(q,f)=>f==='received'?q.status==='Received':f==='selected'?q.status==='Selected':f==='rejected'?q.status==='Rejected':q.status==='Converted',
+  chips:[['all',()=>sourcingCopy().all],['received',()=>sourcingCopy().received],['rejected',()=>sourcingCopy().rejected],['converted',()=>sourcingCopy().converted]],
+  filterFn:(q,f)=>q.rawStatus===f,
   kpis:(r)=>[
-    {label:'Open quotes', val:r.filter(q=>q.status==='Received').length, f:'received'},
-    {label:'Quoted value', val:money0(r.reduce((a,q)=>a+q.total,0))},
-    {label:'Selected', val:r.filter(q=>q.status==='Selected').length, accent:true, f:'selected'},
-    {label:'Converted', val:r.filter(q=>q.status==='Converted').length, f:'converted'},
+    {label:()=>sourcingCopy().received, val:r.filter(q=>q.rawStatus==='received').length, f:'received'},
+    {label:()=>sourcingCopy().total, val:money0(r.reduce((a,q)=>a+q.total,0))},
+    {label:()=>sourcingCopy().rejected, val:r.filter(q=>q.rawStatus==='rejected').length, f:'rejected'},
+    {label:()=>sourcingCopy().converted, val:r.filter(q=>q.rawStatus==='converted').length, f:'converted'},
   ],
-  actions: btn('Compare RFQ-26-0061',{icon:'flow',cls:'soft',attrs:'onclick="openQuoteCompare(\'RFQ-26-0061\')"'}),
+  newBtn:{label:()=>sourcingCopy().newQuote,onClick:()=>newSupplierQuoteModal()},
   columns:[
-    {label:'Quote', w:'minmax(128px,1.1fr)', render:q=>docNoCell(q.no, q.rfq)},
-    {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:q=>suppCell(q.supplier,q.code)},
-    {label:'Item', align:'l', w:'minmax(150px,1.6fr)', render:q=>`<span class="li-subj">${esc(q.item)}</span>`},
-    {label:'Unit price', align:'r', sortable:true, w:'minmax(90px,0.9fr)', render:q=>`<b class="tnum">${money(q.price,q.currency)}</b>`},
-    {label:'Lead', align:'r', sortable:true, w:'minmax(56px,0.6fr)', render:q=>`${q.leadTime}d`},
-    {label:'Valid until', align:'l', w:'minmax(94px,0.9fr)', render:q=>`<span style="color:var(--muted)">${esc(q.validity)}</span>`},
-    {label:'Total', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:q=>`<b class="tnum">${money(q.total,q.currency)}</b>`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:q=>cap(q.status,SQ_TONE[q.status])},
+    {label:()=>sourcingCopy().quote, w:'minmax(128px,1.1fr)', render:q=>docNoCell(q.no, q.rfq)},
+    {label:()=>sourcingCopy().supplier, align:'l', w:'minmax(160px,1.6fr)', render:q=>suppCell(q.supplier,q.code)},
+    {label:()=>sourcingCopy().item, align:'l', w:'minmax(150px,1.6fr)', render:q=>`<span class="li-subj">${esc(q.item)}</span>`},
+    {label:()=>sourcingCopy().unitPrice, align:'r', sortable:true, w:'minmax(90px,0.9fr)', render:q=>`<b class="tnum">${money(q.price,q.currency)}</b>`},
+    {label:()=>sourcingCopy().lead, align:'r', sortable:true, w:'minmax(56px,0.6fr)', render:q=>`${q.leadTime}d`},
+    {label:()=>sourcingCopy().validUntil, align:'l', w:'minmax(94px,0.9fr)', render:q=>`<span style="color:var(--muted)">${esc(q.validity)}</span>`},
+    {label:()=>sourcingCopy().total, align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:q=>`<b class="tnum">${money(q.total,q.currency)}</b>`},
+    {label:()=>sourcingCopy().status, align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:q=>cap(sourcingQuoteStatus(q),SQ_TONE[q.status]||'neutral')},
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(q)=>[
-    {id:'view',icon:'ext',label:'View quotation',run:()=>openPurTxn('squote',q)},
-    {id:'compare',icon:'flow',label:'Compare on RFQ',run:()=>openQuoteCompare(q.rfq)},
-    {id:'select',icon:'check',label:'Select & convert to PO',run:()=>navigate('new-purchase-order')},
-    {id:'reject',icon:'x',label:'Reject quote',danger:true,sep:true,run:()=>toast(`${q.no} rejected`,'danger')},
+    {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openSupplierQuoteDetails(q)},
+    {id:'compare',icon:'flow',label:sourcingCopy().compare,run:()=>openQuoteCompare(q.rfq)},
+    ...(q.rawStatus==='received'?[{id:'select',icon:'check',label:sourcingCopy().convert,run:()=>convertSupplierQuote(q.id)}]:[]),
   ],
-  onOpen:(q)=>openPurTxn('squote', q),
+  onOpen:(q)=>openSupplierQuoteDetails(q),
 });
 
 /* quotation comparison (modal) */
 function openQuoteCompare(rfqNo){
-  const qs=DB.supplierQuotes.filter(q=>q.rfq===rfqNo);
-  if(!qs.length){ toast('No quotations to compare for '+rfqNo,'info'); return; }
+  const c=sourcingCopy(), qs=DB.supplierQuotes.filter(q=>q.rfq===rfqNo);
+  if(!qs.length){ toast(c.noQuotes,'info'); return; }
   const rfq=DB.rfqs.find(r=>r.no===rfqNo);
-  const best={ price:Math.min(...qs.map(q=>q.price)), lead:Math.min(...qs.map(q=>q.leadTime)), total:Math.min(...qs.map(q=>q.total)) };
+  const best={lead:Math.min(...qs.map(q=>q.leadTime)),total:Math.min(...qs.map(q=>q.total))};
   const cols=qs.map(q=>{
-    const win = q.price===best.price;
+    const win=q.total===best.total;
     return `<div class="cmpcol ${win?'cmpcol-best':''}">
-      <div class="cmp-h">${win?`<span class="cmp-badge">Best price</span>`:''}<b>${esc(q.supplier)}</b><small>${esc(q.code)} · ${esc(q.no)}</small></div>
-      <div class="cmp-row"><span>Unit price</span><b class="${q.price===best.price?'cmp-win':''}">${money(q.price,q.currency)}</b></div>
-      <div class="cmp-row"><span>Total</span><b class="${q.total===best.total?'cmp-win':''}">${money(q.total,q.currency)}</b></div>
-      <div class="cmp-row"><span>Lead time</span><b class="${q.leadTime===best.lead?'cmp-win':''}">${q.leadTime} days</b></div>
-      <div class="cmp-row"><span>Terms</span><b>${esc(q.terms)}</b></div>
-      <div class="cmp-row"><span>Warranty</span><b>${esc(q.warranty)}</b></div>
-      <div class="cmp-row"><span>Valid until</span><b>${esc(q.validity)}</b></div>
-      <div class="cmp-foot">${btn('Select',{icon:'check',cls:win?'primary':'soft',sm:false,attrs:`onclick="closeModal();navigate('new-purchase-order')"`})}</div>
+      <div class="cmp-h">${win?`<span class="cmp-badge">${c.best}</span>`:''}<b>${esc(q.supplier)}</b><small>${esc(q.code)} · ${esc(q.no)}</small></div>
+      <div class="cmp-row"><span>${c.total}</span><b class="${win?'cmp-win':''}">${money(q.total,q.currency)}</b></div>
+      <div class="cmp-row"><span>${c.lead}</span><b class="${q.leadTime===best.lead?'cmp-win':''}">${q.leadTime}d</b></div>
+      <div class="cmp-row"><span>${c.terms}</span><b>${esc(q.terms)}</b></div>
+      <div class="cmp-row"><span>${c.warranty}</span><b>${esc(q.warranty)}</b></div>
+      <div class="cmp-row"><span>${c.validUntil}</span><b>${esc(q.validity)}</b></div>
+      <div class="cmp-foot">${q.rawStatus==='received'?btn(c.select,{icon:'check',cls:win?'primary':'soft',sm:false,attrs:`onclick="convertSupplierQuote(${q.id})"`}):cap(sourcingQuoteStatus(q),SQ_TONE[q.status]||'neutral')}</div>
     </div>`;
   }).join('');
-  appModal({ icon:'flow', title:`Compare quotations — ${rfqNo}`, width:'min(880px,94vw)',
-    body:`<div style="color:var(--muted);font-size:13px;margin-bottom:12px">${rfq?esc(rfq.subject)+' · ':''}${qs.length} responses · best price highlighted.</div><div class="cmpgrid">${cols}</div>`,
-    actions: btn('Close',{cls:'soft',attrs:'onclick="closeModal()"'}) });
+  appModal({icon:'flow',title:`${c.compare} · ${rfqNo}`,width:'min(880px,94vw)',body:`<div style="color:var(--muted);font-size:13px;margin-bottom:12px">${rfq?esc(rfq.subject)+' · ':''}${qs.length} ${c.responses}</div><div class="cmpgrid">${cols}</div>`,actions:btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})});
   const mEl=document.getElementById('modalEl'); if(mEl){ mEl.style.width='min(900px,95vw)'; mEl.style.maxWidth='95vw'; }
 }
 

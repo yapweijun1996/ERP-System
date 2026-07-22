@@ -8,24 +8,23 @@ the practical map: where things are, how they connect, and the traps.
 
 ```
 src/                     Canonical core (TypeScript, isomorphic)
-  data/schema/           Drizzle schema — THE single source of truth (6 files)
+  data/schema/           Drizzle schema — THE single source of truth (domain files)
   data/seed.ts           Canonical seed (Acme SG / Acme MY)
   data/db.ts             createPgliteDb() | createPostgresDb(url)
   data/repo.ts           Query helpers (listCompanies, getEffectiveTaxRate, …)
-  modules/inventory/     issueStock / InsufficientStockError
-  modules/sales/         confirmOrder.ts — the cross-module transaction
+  modules/*/             Shared domain commands (Demo + production API)
+  api/                   Resource registry, creates/actions and HTTP routes
+  auth/                  Session, CSRF, RBAC, token and audit services
   demo.ts                Proof script: asserts invariants, exit≠0 on failure
-drizzle/                 Generated migrations (0000_init.sql) + meta
+drizzle/                 Ordered generated migrations + snapshots/journal
 web/                     Frontend (Vite wrapper around a static app)
   index.html             App shell; loads ~60 classic <script> tags
   public/assets/         app.js (hash router), ui.js (SCREENS registry),
-                         erp-system-data-adapter.js (demo mode: PGlite boot + reads +
-                         confirmOrder mirror), erp-system-api-adapter.js (api mode:
-                         health-checks + "waiting for API" screen until TASK-011 exists),
-                         data-*.js (mock data), screens-*.js (~50 screen modules)
-  public/db/             Hand-copied SQL: erp-system-schema/seed/demo-txn/demo-drafts
+                         Demo/API ErpSystemData adapters, data-*.js (Preview only),
+                         screens-*.js (~50 screen modules)
+  src/                   Bundled Demo ESM runtime for PGlite/Drizzle commands
+  public/db/             Generated migration-derived PGlite boot/upgrade SQL
   public/sw.js, manifest.webmanifest, pwa.js
-deploy/erp-server.mjs    Placeholder "Live" page — NOT the production API
 tasks/tasks.jsonl        Work queue (one JSON task per line)
 docs/                    This documentation suite
 ```
@@ -38,49 +37,45 @@ docs/                    This documentation suite
 - **Routing:** hash router in `app.js` (`navigate()`); routes come from `DB.nav`
   (`data-core.js`). A screen = an entry in the global `SCREENS` registry
   (`SCREENS['route-name'] = () => html`), registered by each `screens-*.js` file.
-- **Data flow:** screens read from the global `DB` object. The adapter
-  (`erp-system-data-adapter.js`) boots PGlite, runs the SQL in `web/public/db/`, then
-  maps query results onto `DB.*` (e.g. `DB.movements`, `DB.journalDocs`,
-  `DB.erpSystem`). Mock modules still read static `data-*.js` payloads.
-- **Writes:** UI actions call `ErpSystemDemo.*` (e.g. `confirmOrder(docNo)`), which run
-  a single PGlite transaction and then `refresh()` re-reads everything so all screens
-  update.
+- **Data flow:** Canonical screens call the formal `window.ErpSystemData` contract and
+  map bounded resource pages into their view models. Demo mode executes against
+  browser PGlite; API mode calls the authenticated Express API and never falls back to
+  sample data. Preview routes may still read `data-*.js`, but `SCREEN_META` labels them
+  `Preview · Sample Data` and locks write-like controls.
+- **Writes:** Canonical UI actions use `ErpSystemData.create/update/action`. Demo mode
+  invokes bundled TypeScript `*Within` commands against PGlite; API mode invokes the
+  same commands through the transactional resource/action dispatcher. `refresh()` or
+  a bounded re-query updates the visible screen after success.
 - **Adding a screen (golden path):**
   1. Add nav entry in `data-core.js` (if new route).
   2. Create/extend a `screens-<module>.js` registering `SCREENS['<route>']`.
-  3. Read data from `DB.*`; if the data isn't there yet, extend the adapter's read
-     phase to populate it from PGlite.
+  3. Register the resource/create/action metadata and expose it through both adapters;
+     load it with `ErpSystemData` from the screen's async `prepare` function.
   4. Add the `<script>` tag to `web/index.html` (order matters: data → adapter →
      screens → app).
-  5. Verify desktop + 375 px, zero console errors; run `npm run build:demo`.
+  5. Add five-language copy, set the route Canonical only after Demo/API parity, then
+     run the type/test/schema/build/114-route gates and live desktop + 375 px checks.
 
 ## 3. Data layer design
 
 - **Two runtimes, one schema.** `src/data/db.ts` returns a Drizzle instance backed by
   PGlite (demo/tests) or node-postgres (production). `src/demo.ts` proves both paths.
-- **The seam.** Frontend reads/writes go through a data-adapter interface with two
-  implementations, both setting `window.ErpSystemDemo` to the same method shape
-  (`ready/reset/refresh/confirmOrder/completeSetup/switchCompany/mode/db`) — `demo`
-  (`erp-system-data-adapter.js`, PGlite in-browser) and `api`
-  (`erp-system-api-adapter.js`, HTTP to the Node API). Selected at build time by
-  `VITE_DATA_MODE`, read via `window.erpDataMode()` (set in `web/index.html` from
-  Vite's `%VITE_DATA_MODE%` HTML placeholder). Each adapter self-disables (returns
-  immediately, touches no globals) when it isn't the active mode, so exactly one sets
-  `window.ErpSystemDemo`. **Current reality (TASK-019 done, TASK-011 open):** the api
-  adapter has no server to call yet, so it health-checks, finds nothing, and
-  `app.js`'s `boot()` shows an honest "waiting for the API" screen instead of
-  fabricating dashboard data — this is deliberate, not a stub bug.
-- **⚠ Landmine — manual sync:** `web/public/db/erp-system-*.sql` is a hand-copied
-  snapshot of `drizzle/0000_init.sql` + `src/data/seed.ts`, and the adapter's
-  `confirmOrder` re-implements `src/modules/sales/confirmOrder.ts` in raw SQL.
-  **Any schema or business-logic change must be applied in both places** until
-  TASK-020 (drift check) or a shared-code build step lands. PRs touching one side
-  only must justify why.
+- **The seam.** `window.ErpSystemData` exposes
+  `list/get/create/update/action/refresh/session/switchCompany/auth`. The demo adapter
+  uses the Vite-bundled PGlite/Drizzle runtime; the API adapter uses relative `/api`
+  requests. `VITE_DATA_MODE` selects exactly one implementation at build time.
+  `window.ErpSystemDemo` remains only as a migration compatibility alias and must not
+  be used by newly Canonical screens.
+- **Schema synchronization is generated.** `scripts/generate-demo-schema.mjs` derives
+  fresh and upgrade SQL from the ordered Drizzle journal. `check:demo-schema` and
+  `check:drift` fail CI if the browser bundle or exported tables diverge. Seed data and
+  Canonical business writes run the same TypeScript functions in both engines; do not
+  add browser-only business SQL.
 - **Persistence:** PGlite database at `idb://erp-system-demo` (IndexedDB).
   localStorage holds small prefs (theme/UI state), never business data. Reset =
   drop IndexedDB database + re-run schema/seed SQL.
-- **Fallback:** if the PGlite CDN import fails or exceeds 20 s, the adapter renders a
-  static in-file payload so the demo never white-screens.
+- **Failure behavior:** Canonical routes show a retryable error state when their active
+  adapter fails. Only routes explicitly marked Preview may render sample data.
 
 ## 4. Transaction design (the heart of the system)
 
@@ -97,7 +92,15 @@ Seed ships SO-2 (confirmable) and SO-3 (intentionally over stock) to demo both p
 `src/demo.ts` additionally runs a true-concurrency over-sell race when pointed at
 PostgreSQL — exactly one writer may win.
 
-## 5. Production design (target — EPIC-005)
+Every other state-changing command follows the same boundary: validate tenant and
+state, lock the authoritative rows when races matter, append immutable facts (stock,
+GL, audit/outbox), update projections/status, and commit once. The action dispatcher
+adds permission, optimistic-version, idempotency and audit handling around that same
+transaction. Purchasing sourcing is intentionally pre-accounting: RFQ issue, supplier
+quote receipt and quote award create no stock or GL entries; award atomically creates
+one linked draft PO, marks the winner converted, rejects competitors and closes the RFQ.
+
+## 5. Production design (implemented — EPIC-005 onward)
 
 ```
 [browser] ──static──> web (nginx or static host, same web/dist bundle)
@@ -120,15 +123,15 @@ PostgreSQL — exactly one writer may win.
   zero CORS). Host ports default to the documented 8080/3000/5432 but are overridable
   (`WEB_PORT`/`API_PORT`/`DB_PORT`) for machines where those are already taken.
   `Makefile`/`scripts/setup.sh` targets were written to match this shape and every
-  underlying `docker compose` command has been verified — `scripts/setup.sh` itself
-  is the one remaining unverified piece (TASK-021, blocked on `.env.example` sandbox
-  access in this environment, not a known bug).
+  underlying `docker compose` command and both the normal and interactive setup paths
+  have been verified against real bundled and external PostgreSQL deployments.
 - **`src/server.ts`** is the real API — run with `DATABASE_URL=... npm run server`
   locally, or as the `api` service in Docker. Besides health/auth/dashboard it
-  exposes the allowlisted canonical read resources in `src/api/resources.ts`.
-  Reads are session-tenant-scoped and keyset-paginated. Stock/money write endpoints
-  remain a follow-up; the formal `ErpSystemData.create/update/action` contract is
-  already defined in both frontend adapters.
+  exposes allowlisted resources plus registered create/action handlers. Reads are
+  session-tenant-scoped and keyset-paginated; writes derive tenant scope from the
+  database session and run shared commands with RBAC, CSRF, idempotency and audit.
+  Remaining Preview business areas still require their own schema and commands before
+  they may join this API surface.
 - **Local Postgres for manual testing** (no Docker required yet): `createdb
   erp_system_dev` against any local PostgreSQL 16+, then
   `DATABASE_URL=postgresql://<user>@localhost:5432/erp_system_dev npm run migrate`
@@ -152,8 +155,11 @@ PostgreSQL — exactly one writer may win.
 
 ## 7. Testing design
 
-- Today: `npm run demo` is the only automated gate (invariant assertions, exit code).
-- Target: vitest unit tests for `src/modules/*` + repo helpers (TASK-025), a browser
-  smoke script over every registered route (TASK-015), PG parity in CI (TASK-013/014).
-- Rule: any bug fixed in business logic gets an assertion in `src/demo.ts` or a unit
-  test in the same PR.
+- Required local gates are root/web typecheck, ESLint, Vitest, `npm run demo`, generated
+  schema/drift checks, Demo and API builds, and the 114-route desktop/375px audit.
+- CI adds PostgreSQL 16 migration/RLS/integration coverage and the same schema and route
+  gates. Stateful browser fixtures ensure detail routes are not skipped for lack of
+  context.
+- Rule: every business bug or new command gets a same-slice domain/API assertion; every
+  route promoted to Canonical must also prove Demo/API loading, five-language UI, write
+  behavior and responsive rendering.

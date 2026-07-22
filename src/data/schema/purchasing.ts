@@ -15,6 +15,8 @@ import { project } from './project';
 
 export const PURCHASE_REQUISITION_PRIORITIES = ['Urgent', 'Project', 'Stock'] as const;
 export const PURCHASE_REQUISITION_STATUSES = ['submitted', 'approved', 'rejected'] as const;
+export const PURCHASE_RFQ_STATUSES = ['draft', 'sent', 'responded', 'awarded', 'closed'] as const;
+export const SUPPLIER_QUOTATION_STATUSES = ['received', 'converted', 'rejected'] as const;
 
 export const supplier = pgTable('supplier', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -67,12 +69,109 @@ export const purchaseRequisitionLine = pgTable('purchase_requisition_line', {
   index('idx_purchase_requisition_line_req').on(t.masterFn, t.companyFn, t.requisitionId),
 ]);
 
+/** A sourcing request issued to one or more invited suppliers. An approved purchase
+ *  requisition may feed exactly one RFQ; ad-hoc RFQs leave requisition_id null. */
+export const purchaseRfq = pgTable('purchase_rfq', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  requisitionId: bigint('requisition_id', { mode: 'number' }).references(() => purchaseRequisition.id),
+  subject: text('subject').notNull(),
+  rfqDate: date('rfq_date').notNull(),
+  responseDueDate: date('response_due_date').notNull(),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_purchase_rfq_docno').on(t.masterFn, t.companyFn, t.docNo),
+  uniqueIndex('uq_purchase_rfq_requisition').on(t.masterFn, t.companyFn, t.requisitionId),
+  index('idx_purchase_rfq_status').on(t.masterFn, t.companyFn, t.status, t.rfqDate, t.id),
+  check('ck_purchase_rfq_status', sql`${t.status} in ('draft', 'sent', 'responded', 'awarded', 'closed')`),
+  check('ck_purchase_rfq_dates', sql`${t.responseDueDate} >= ${t.rfqDate}`),
+]);
+
+export const purchaseRfqLine = pgTable('purchase_rfq_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  rfqId: bigint('rfq_id', { mode: 'number' }).notNull().references(() => purchaseRfq.id),
+  lineNo: integer('line_no').notNull(),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_purchase_rfq_line').on(t.masterFn, t.companyFn, t.rfqId, t.lineNo),
+  index('idx_purchase_rfq_line_product').on(t.masterFn, t.companyFn, t.productId, t.rfqId),
+  check('ck_purchase_rfq_line_qty', sql`${t.qty} > 0`),
+]);
+
+export const purchaseRfqSupplier = pgTable('purchase_rfq_supplier', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  rfqId: bigint('rfq_id', { mode: 'number' }).notNull().references(() => purchaseRfq.id),
+  supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_purchase_rfq_supplier').on(t.masterFn, t.companyFn, t.rfqId, t.supplierId),
+  index('idx_purchase_rfq_supplier_supplier').on(t.masterFn, t.companyFn, t.supplierId, t.rfqId),
+]);
+
+/** A supplier response snapshots price and tax per requested line. The winning quote
+ *  is linked from purchase_order.supplier_quotation_id when converted. */
+export const supplierQuotation = pgTable('supplier_quotation', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  rfqId: bigint('rfq_id', { mode: 'number' }).notNull().references(() => purchaseRfq.id),
+  supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
+  quoteDate: date('quote_date').notNull(),
+  validUntil: date('valid_until').notNull(),
+  currency: text('currency').notNull(),
+  leadTimeDays: integer('lead_time_days').notNull(),
+  paymentTerms: text('payment_terms').notNull(),
+  warranty: text('warranty'),
+  status: text('status').notNull().default('received'),
+  version: integer('version').notNull().default(1),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_supplier_quotation_docno').on(t.masterFn, t.companyFn, t.docNo),
+  uniqueIndex('uq_supplier_quotation_rfq_supplier').on(t.masterFn, t.companyFn, t.rfqId, t.supplierId),
+  index('idx_supplier_quotation_status').on(t.masterFn, t.companyFn, t.status, t.quoteDate, t.id),
+  check('ck_supplier_quotation_status', sql`${t.status} in ('received', 'converted', 'rejected')`),
+  check('ck_supplier_quotation_dates', sql`${t.validUntil} >= ${t.quoteDate}`),
+  check('ck_supplier_quotation_lead', sql`${t.leadTimeDays} >= 0`),
+]);
+
+export const supplierQuotationLine = pgTable('supplier_quotation_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  quotationId: bigint('quotation_id', { mode: 'number' }).notNull().references(() => supplierQuotation.id),
+  rfqLineId: bigint('rfq_line_id', { mode: 'number' }).notNull().references(() => purchaseRfqLine.id),
+  lineNo: integer('line_no').notNull(),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  unitCost: numeric('unit_cost', { precision: 18, scale: 4 }).notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxCode: text('tax_code').notNull(),
+  taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_supplier_quotation_line').on(t.masterFn, t.companyFn, t.quotationId, t.lineNo),
+  uniqueIndex('uq_supplier_quotation_rfq_line').on(t.masterFn, t.companyFn, t.quotationId, t.rfqLineId),
+  index('idx_supplier_quotation_line_product').on(t.masterFn, t.companyFn, t.productId, t.quotationId),
+  check('ck_supplier_quotation_line_values', sql`${t.qty} > 0 and ${t.unitCost} >= 0`),
+]);
+
 export const purchaseOrder = pgTable('purchase_order', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,
   docNo: text('doc_no').notNull(),
   supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
   requisitionId: bigint('requisition_id', { mode: 'number' }).references(() => purchaseRequisition.id),
+  supplierQuotationId: bigint('supplier_quotation_id', { mode: 'number' }).references(() => supplierQuotation.id),
   projectId: bigint('project_id', { mode: 'number' }).references(() => project.id),
   status: text('status').notNull().default('open'),   // open | received | cancelled
   version: integer('version').notNull().default(1),
@@ -86,6 +185,7 @@ export const purchaseOrder = pgTable('purchase_order', {
   uniqueIndex('uq_po_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_po_tenant_date').on(t.masterFn, t.companyFn, t.orderDate, t.id),
   index('idx_po_requisition').on(t.masterFn, t.companyFn, t.requisitionId),
+  uniqueIndex('uq_po_supplier_quotation').on(t.masterFn, t.companyFn, t.supplierQuotationId),
   index('idx_po_project').on(t.masterFn, t.companyFn, t.projectId),
 ]);
 

@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 28;
+  var DEMO_SCHEMA_VERSION = 29;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1296,6 +1296,11 @@
     'purchasing/supplier-invoices':'supplier_invoice',
     'purchasing/purchase-requisitions':'purchase_requisition',
     'purchasing/purchase-requisition-lines':'purchase_requisition_line',
+    'purchasing/rfqs':'purchase_rfq',
+    'purchasing/rfq-lines':'purchase_rfq_line',
+    'purchasing/rfq-suppliers':'purchase_rfq_supplier',
+    'purchasing/supplier-quotations':'supplier_quotation',
+    'purchasing/supplier-quotation-lines':'supplier_quotation_line',
     'crm/customers':'customer',
     'crm/opportunities':'opportunity',
     'crm/contacts':'contact',
@@ -1716,6 +1721,22 @@
       await refresh();
       return {data:newPurchaseRequisition,meta:{}};
     }
+    if(key==='purchasing/rfqs'){
+      var newPurchaseRfq = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createPurchaseRfqWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newPurchaseRfq,meta:{}};
+    }
+    if(key==='purchasing/supplier-quotations'){
+      var newSupplierQuotation = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createSupplierQuotationWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newSupplierQuotation,meta:{}};
+    }
     if(key==='finance/bank-receipts'){
       var newBankReceipt = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createBankReceiptWithin(
@@ -2021,6 +2042,26 @@
       });
       await refresh();
       return {data:rejectedRequisition,meta:{}};
+    }
+    if(key==='purchasing/rfqs'&&(name==='issue'||name==='close')){
+      var transitionedRfq = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.transitionPurchaseRfqWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), name);
+      });
+      await refresh();
+      return {data:transitionedRfq,meta:{}};
+    }
+    if(key==='purchasing/supplier-quotations'&&name==='convert-to-purchase-order'){
+      payload=payload||{};
+      var convertedSupplierQuotation = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.convertSupplierQuotationToPurchaseOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), {
+            docNo:payload.docNo,
+            orderDate:payload.orderDate,
+          });
+      });
+      await refresh();
+      return {data:convertedSupplierQuotation,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

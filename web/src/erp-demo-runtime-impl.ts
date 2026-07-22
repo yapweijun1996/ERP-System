@@ -180,6 +180,14 @@ import {
   type CreatePurchaseRequisitionInput,
 } from '../../src/modules/purchasing/purchaseRequisition';
 import {
+  convertSupplierQuotationToPurchaseOrderWithin,
+  createPurchaseRfqWithin,
+  createSupplierQuotationWithin,
+  transitionPurchaseRfqWithin,
+  type CreatePurchaseRfqInput,
+  type CreateSupplierQuotationInput,
+} from '../../src/modules/purchasing/rfq';
+import {
   createBankReceiptWithin,
   type CreateBankReceiptInput,
 } from '../../src/modules/finance/bankReceipt';
@@ -603,6 +611,34 @@ export const erpDemoRuntime = Object.freeze({
     },
     createPurchaseOrderWithin(db: DemoOrm, scope: Scope, input: CreatePurchaseOrderInput) {
       return createPurchaseOrderWithin(asDomainDb(db), scope, input);
+    },
+    createPurchaseRfqWithin(db: DemoOrm, scope: Scope, input: CreatePurchaseRfqInput) {
+      return createPurchaseRfqWithin(asDomainDb(db), scope, input);
+    },
+    transitionPurchaseRfqWithin(
+      db: DemoOrm,
+      scope: Scope,
+      rfqId: number,
+      transition: 'issue' | 'close',
+    ) {
+      return transitionPurchaseRfqWithin(asDomainDb(db), scope, rfqId, transition);
+    },
+    createSupplierQuotationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateSupplierQuotationInput,
+    ) {
+      return createSupplierQuotationWithin(asDomainDb(db), scope, input);
+    },
+    convertSupplierQuotationToPurchaseOrderWithin(
+      db: DemoOrm,
+      scope: Scope,
+      quotationId: number,
+      input: { docNo: string; orderDate: string },
+    ) {
+      return convertSupplierQuotationToPurchaseOrderWithin(
+        asDomainDb(db), scope, quotationId, input,
+      );
     },
     receiveGoods(db: DemoOrm, scope: Scope, input: ReceiveGoodsInput) {
       return receiveGoods(asDomainDb(db), scope, input);

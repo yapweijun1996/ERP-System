@@ -385,3 +385,55 @@ Goal: close the final registered CRM Preview route without adding a parallel mod
 
 Exit criteria: `opportunity` uses no prototype detail data, supports Demo/API, writes
 only through registered commands, and passes domain/API/browser/audit verification.
+
+## Phase 12 — Purchasing Sourcing ✅
+
+1. **RFQ → Supplier Quotation → Purchase Order** (EPIC-028, TASK-064 done
+   2026-07-22) — added a real requisition-aware RFQ register, invited-supplier response
+   capture, comparable Decimal/tax-snapshotted quotation totals and an atomic award
+   action that creates exactly one linked draft PO. Award closes the RFQ, converts the
+   winner and rejects competitors without touching stock or GL. `rfqs` and
+   `supplier-quotations` are now Canonical in Demo/API with five-language workflows,
+   moving the route boundary from 70/44 to **72/42**. `pur-txn-view` remains Preview
+   because it is shared by still-sample purchasing document types.
+
+Exit criteria: met when the domain/API/browser and 114-route gates below pass.
+
+## Remaining productionization backlog — 42 Preview routes
+
+This is the authoritative work breakdown after TASK-064. `tasks/tasks.jsonl` records
+completed vertical slices; it is not a claim that the remaining Preview routes are
+finished merely because no pre-written task is open. New tasks should be cut from these
+workstreams in dependency order:
+
+1. **Purchasing depth — 17 routes:** `purchasing-home`, `po-approvals`, `goods-receipt`,
+   `supplier-invoice`, `purchase-returns`, `supplier-credit-notes`,
+   `supplier-debit-notes`, `supplier-price-lists`, `landed-cost`,
+   `vendor-performance`, `purchasing-reports`, `report-pur-supplier`,
+   `report-pur-buyer`, `report-pur-price-var`, `report-pur-vendor`,
+   `report-pur-generic`, `pur-txn-view`. First implement return/credit/debit and landed
+   cost because they affect inventory and GL; then approvals, controls and reports.
+2. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
+   `sales-commission`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
+   `report-quote-conversion`, `report-generic`, `txn-view`. Prefer the reusable new-order
+   form and approval/commission rules before report-only shells.
+3. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
+   header/line post/reverse and bank statement/reconciliation commands before promoting
+   either screen.
+4. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
+   every metric from Canonical tables or rebuildable views; large outputs use report jobs.
+5. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
+   Requires import jobs/row errors, encrypted credentials and transactional outbox
+   delivery before writes are enabled.
+6. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
+   configuration, sequences, tax and period policies in the database; no localStorage
+   control plane.
+7. **Small vertical gaps — 3 routes:** Inventory `new-item`, Project `timesheet`, and
+   Workflow `po-approval`. Reuse existing product/project/purchasing schemas and add only
+   the missing server commands and audit rules.
+8. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
+   with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
+
+Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared
+Demo/PostgreSQL command path, RBAC/audit/idempotency, five-language copy and desktop/
+375px verification all exist. The final release gate remains 114/114 Canonical.

@@ -17,6 +17,8 @@ import {
   product,
   purchaseOrder,
   purchaseOrderLine,
+  purchaseRfq,
+  purchaseRfqLine,
   salesOrder,
   salesOrderLine,
   salesDelivery,
@@ -27,6 +29,7 @@ import {
   stockTransfer,
   stockReservation,
   supplier,
+  supplierQuotation,
   supplierInvoice,
   goodsReceipt,
   warehouseBin,
@@ -620,6 +623,89 @@ describe('production API security contract', () => {
     });
     expect(denied.status).toBe(403);
     expect((await denied.json()).error.code).toBe('permission_denied');
+  });
+
+  it('runs the RFQ, competitive supplier quotation and purchase-order award chain over HTTP', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const vendors = await db.select({ id: supplier.id }).from(supplier)
+      .where(and(eq(supplier.masterFn, 'M1'), eq(supplier.companyFn, 'C-SG')));
+    expect(vendors.length).toBeGreaterThanOrEqual(2);
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+    const created = await fetch(`${running.baseUrl}/api/purchasing/rfqs`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'rfq-create-api' },
+      body: JSON.stringify({
+        docNo: 'RFQ-API-1', subject: 'API competitive source',
+        rfqDate: '2026-07-22', responseDueDate: '2026-08-15',
+        supplierIds: vendors.slice(0, 2).map((row) => row.id),
+        lines: [{ productId: item.id, qty: 4 }],
+      }),
+    });
+    expect(created.status).toBe(201);
+    const rfqId = (await created.json()).data.id as number;
+
+    const issue = () => fetch(`${running.baseUrl}/api/purchasing/rfqs/${rfqId}/actions/issue`, {
+      method: 'POST', headers: { ...headers, 'idempotency-key': 'rfq-issue-api-1' }, body: '{}',
+    });
+    expect((await issue()).status).toBe(200);
+    const issueReplay = await issue();
+    expect(issueReplay.status).toBe(200);
+    expect(issueReplay.headers.get('idempotency-replayed')).toBe('true');
+
+    const [rfqLine] = await db.select({ id: purchaseRfqLine.id }).from(purchaseRfqLine)
+      .where(eq(purchaseRfqLine.rfqId, rfqId));
+    const createQuote = async (supplierId: number, docNo: string, unitCost: number) => {
+      const response = await fetch(`${running.baseUrl}/api/purchasing/supplier-quotations`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          docNo, rfqId, supplierId, quoteDate: '2026-07-23', validUntil: '2026-09-30',
+          currency: 'SGD', leadTimeDays: 8, paymentTerms: 'Net 30',
+          lines: [{ rfqLineId: rfqLine.id, unitCost, taxCode: 'SR' }],
+        }),
+      });
+      expect(response.status).toBe(201);
+      return (await response.json()).data as { id: number; totalAmount: string };
+    };
+    const winner = await createQuote(vendors[0].id, 'SQ-API-1', 6);
+    await createQuote(vendors[1].id, 'SQ-API-2', 7);
+    expect(winner.totalAmount).toBe('26.16');
+    const [responded] = await db.select().from(purchaseRfq).where(eq(purchaseRfq.id, rfqId));
+    expect(responded.status).toBe('responded');
+
+    const award = () => fetch(
+      `${running.baseUrl}/api/purchasing/supplier-quotations/${winner.id}/actions/convert-to-purchase-order`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'x-request-id': 'rfq-award-api', 'idempotency-key': 'rfq-award-api-1' },
+        body: JSON.stringify({ docNo: 'PO-RFQ-API-1', orderDate: '2026-07-24' }),
+      },
+    );
+    const awarded = await award();
+    expect(awarded.status).toBe(200);
+    expect((await awarded.json()).data).toMatchObject({
+      quotationId: winner.id, rfqId, purchaseOrderNo: 'PO-RFQ-API-1', totalAmount: '26.16',
+    });
+    const replay = await award();
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    const quotes = await db.select().from(supplierQuotation)
+      .where(eq(supplierQuotation.rfqId, rfqId));
+    expect(quotes.map((row) => row.status).sort()).toEqual(['converted', 'rejected']);
+    const [order] = await db.select().from(purchaseOrder)
+      .where(eq(purchaseOrder.supplierQuotationId, winner.id));
+    expect(order.docNo).toBe('PO-RFQ-API-1');
+    const [audit] = await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'rfq-award-api'));
+    expect(audit).toMatchObject({
+      entity: 'purchasing/supplier-quotations', entityId: String(winner.id),
+      action: 'convert-to-purchase-order',
+    });
   });
 
   it('revokes logout sessions and does not accept the CSRF cookie alone', async () => {

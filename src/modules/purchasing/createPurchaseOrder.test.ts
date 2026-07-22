@@ -27,13 +27,16 @@ describe('createPurchaseOrder', () => {
 
     const res = await createPurchaseOrder(db, SCOPE, {
       docNo: 'PO-T1', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
-      lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
+      lines: [
+        { productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' },
+        { productId: fx.widgetId, qty: '7.0000', unitCost: '0.3333', taxCode: 'SR' },
+      ],
     });
 
-    expect(res.net).toBe(120);
-    expect(res.tax).toBe(10.8);
-    expect(res.total).toBe(130.8);
-    expect(res.lines).toBe(1);
+    expect(res.net).toBe(122.33);
+    expect(res.tax).toBe(11.01);
+    expect(res.total).toBe(133.34);
+    expect(res.lines).toBe(2);
   });
 
   it('throws PostingError (not a silent wrong rate) when no tax rule covers the order date', async () => {

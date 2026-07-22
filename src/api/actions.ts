@@ -23,6 +23,10 @@ import {
 } from '../modules/purchasing/postSupplierInvoice';
 import { decidePurchaseRequisitionWithin } from '../modules/purchasing/purchaseRequisition';
 import {
+  convertSupplierQuotationToPurchaseOrderWithin,
+  transitionPurchaseRfqWithin,
+} from '../modules/purchasing/rfq';
+import {
   completeWarehousePickWithin,
   recordWarehousePickWithin,
 } from '../modules/warehouse/picking';
@@ -550,6 +554,46 @@ const ACTIONS: Record<string, ActionDefinition> = {
       return decidePurchaseRequisitionWithin(
         tx, scope, input.resourceId, 'rejected', typeof reason === 'string' ? reason : null,
       );
+    },
+  },
+  'purchasing/rfqs/issue': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return transitionPurchaseRfqWithin(tx, scope, input.resourceId, 'issue');
+    },
+  },
+  'purchasing/rfqs/close': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return transitionPurchaseRfqWithin(tx, scope, input.resourceId, 'close');
+    },
+  },
+  'purchasing/supplier-quotations/convert-to-purchase-order': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as { docNo?: unknown; orderDate?: unknown } | undefined;
+      if (
+        typeof payload?.docNo !== 'string'
+        || !payload.docNo.trim()
+        || typeof payload.orderDate !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}$/.test(payload.orderDate)
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'docNo and orderDate are required to convert a supplier quotation.',
+        );
+      }
+      return convertSupplierQuotationToPurchaseOrderWithin(tx, scope, input.resourceId, {
+        docNo: payload.docNo,
+        orderDate: payload.orderDate,
+      });
     },
   },
   'crm/opportunities/convert': {

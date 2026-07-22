@@ -131,7 +131,7 @@ const TONES = {
   commission:        { Approved:'ok', Pending:'warn', Review:'info' },
   /* purchasing */
   pr:                { Draft:'neutral', Submitted:'info', 'Pending Approval':'warn', Approved:'accent', Rejected:'danger', Converted:'ok', Cancelled:'neutral' },
-  rfq:               { Draft:'neutral', Sent:'info', 'Partially Responded':'warn', Responded:'accent', Closed:'ok', Cancelled:'neutral' },
+  rfq:               { Draft:'neutral', Sent:'info', 'Partially Responded':'warn', Responded:'accent', Awarded:'ok', Closed:'neutral', Cancelled:'neutral' },
   supplierQuote:     { Draft:'neutral', Received:'info', Selected:'accent', Rejected:'danger', Expired:'warn', Converted:'ok' },
   grn:               { Draft:'neutral', Received:'info', 'Partially Received':'warn', 'Pending QC':'warn', Accepted:'ok', Rejected:'danger', Posted:'teal', Cancelled:'neutral' },
   supplierInvoice:   { Draft:'neutral', 'Pending Matching':'warn', Matched:'accent', Mismatch:'danger', Posted:'teal', 'Partially Paid':'info', Paid:'ok', Overdue:'danger', Cancelled:'neutral' },

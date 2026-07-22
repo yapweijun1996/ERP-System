@@ -107,10 +107,16 @@ async function prepareCanonicalPurchasingData(){
     listPage('inventory/warehouses'),
     listPage('purchasing/purchase-requisitions'),
     listPage('purchasing/purchase-requisition-lines'),
+    listPage('purchasing/rfqs'),
+    listPage('purchasing/rfq-lines'),
+    listPage('purchasing/rfq-suppliers'),
+    listPage('purchasing/supplier-quotations'),
+    listPage('purchasing/supplier-quotation-lines'),
   ]);
   const [
     suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,
     products,stockLevels,warehouses,purchaseRequisitions,purchaseRequisitionLines,
+    purchaseRfqs,purchaseRfqLines,purchaseRfqSuppliers,supplierQuotations,supplierQuotationLines,
   ]=pages.map(page=>page.data);
   const productById=new Map(products.map(row=>[row.id,row]));
   const supplierById=new Map(suppliers.map(row=>[row.id,row]));
@@ -284,6 +290,76 @@ async function prepareCanonicalPurchasingData(){
       convertedOrderId:convertedOrder?convertedOrder.id:null,
     };
   });
+  const requisitionById=new Map(purchaseRequisitions.map(row=>[row.id,row]));
+  const rfqLineById=new Map(purchaseRfqLines.map(row=>[row.id,row]));
+  const rfqLinesByRfq=new Map();
+  purchaseRfqLines.forEach(row=>{
+    const rows=rfqLinesByRfq.get(row.rfqId)||[];
+    rows.push(row);
+    rfqLinesByRfq.set(row.rfqId,rows);
+  });
+  const invitedByRfq=new Map();
+  purchaseRfqSuppliers.forEach(row=>{
+    const rows=invitedByRfq.get(row.rfqId)||[];
+    rows.push(row);
+    invitedByRfq.set(row.rfqId,rows);
+  });
+  const quoteLinesByQuote=new Map();
+  supplierQuotationLines.forEach(row=>{
+    const rows=quoteLinesByQuote.get(row.quotationId)||[];
+    rows.push(row);
+    quoteLinesByQuote.set(row.quotationId,rows);
+  });
+  const quotesByRfq=new Map();
+  supplierQuotations.forEach(row=>{
+    const rows=quotesByRfq.get(row.rfqId)||[];
+    rows.push(row);
+    quotesByRfq.set(row.rfqId,rows);
+  });
+  const RFQ_STATUS_UI={draft:'Draft',sent:'Sent',responded:'Responded',awarded:'Awarded',closed:'Closed'};
+  DB.rfqs=purchaseRfqs.map(row=>{
+    const lines=(rfqLinesByRfq.get(row.id)||[]).sort((a,b)=>a.lineNo-b.lineNo);
+    const invitations=invitedByRfq.get(row.id)||[];
+    const responses=quotesByRfq.get(row.id)||[];
+    const requisition=requisitionById.get(row.requisitionId);
+    const rawStatus=row.status;
+    const status=rawStatus==='sent'&&responses.length>0?'Partially Responded':(RFQ_STATUS_UI[rawStatus]||rawStatus);
+    return {
+      id:row.id,version:row.version,no:row.docNo,date:dateValue(row.rfqDate),subject:row.subject,
+      requisitionId:row.requisitionId,pr:requisition&&requisition.reqNo||'',due:dateValue(row.responseDueDate),
+      suppliers:invitations.length,responded:responses.length,status,rawStatus,
+      supplierIds:invitations.map(invitation=>invitation.supplierId),
+      lines:lines.map(line=>{ const item=productById.get(line.productId)||{}; return {
+        id:line.id,productId:line.productId,sku:item.sku||`#${line.productId}`,
+        name:item.name||`Product #${line.productId}`,uom:item.uom||'',qty:purchasingNumber(line.qty),
+      }; }),
+    };
+  });
+  const rfqById=new Map(DB.rfqs.map(row=>[row.id,row]));
+  const SQ_STATUS_UI={received:'Received',converted:'Converted',rejected:'Rejected'};
+  DB.supplierQuotes=supplierQuotations.map(row=>{
+    const rfq=rfqById.get(row.rfqId)||{};
+    const vendor=supplierById.get(row.supplierId)||{};
+    const lines=(quoteLinesByQuote.get(row.id)||[]).sort((a,b)=>a.lineNo-b.lineNo);
+    const first=lines[0]||{};
+    const firstItem=productById.get(first.productId)||{};
+    return {
+      id:row.id,version:row.version,no:row.docNo,rfqId:row.rfqId,rfq:rfq.no||`RFQ #${row.rfqId}`,
+      supplierId:row.supplierId,supplier:vendor.name||`Supplier #${row.supplierId}`,code:vendor.code||'—',
+      item:lines.length>1?`${firstItem.name||'Item'} +${lines.length-1}`:(firstItem.name||'Item'),
+      qty:lines.reduce((sum,line)=>sum+purchasingNumber(line.qty),0),price:purchasingNumber(first.unitCost),
+      currency:row.currency,leadTime:row.leadTimeDays,validity:dateValue(row.validUntil),quoteDate:dateValue(row.quoteDate),
+      terms:row.paymentTerms,warranty:row.warranty||'—',net:purchasingNumber(row.netAmount),
+      tax:purchasingNumber(row.taxAmount),total:purchasingNumber(row.totalAmount),
+      status:SQ_STATUS_UI[row.status]||row.status,rawStatus:row.status,
+      lines:lines.map(line=>{ const item=productById.get(line.productId)||{}; const request=rfqLineById.get(line.rfqLineId)||{}; return {
+        id:line.id,rfqLineId:line.rfqLineId,productId:line.productId,sku:item.sku||`#${line.productId}`,
+        name:item.name||`Product #${line.productId}`,uom:item.uom||'',qty:purchasingNumber(line.qty||request.qty),
+        unitCost:purchasingNumber(line.unitCost),taxCode:line.taxCode,net:purchasingNumber(line.netAmount),
+        tax:purchasingNumber(line.taxAmount),
+      }; }),
+    };
+  });
   DB.purchasingReadMeta={
     truncated:pages.some(page=>Boolean(page.nextCursor)),
     nextCursors:pages.map(page=>page.nextCursor),
@@ -296,6 +372,7 @@ async function prepareCanonicalPurchasingData(){
 function makePurList(cfg){
   SCREENS[cfg.route] = async function(root){
     if(cfg.prepare) await cfg.prepare();
+    const value=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
     let filter = 'all';
     const allRows = () => (typeof cfg.rows==='function' ? cfg.rows() : cfg.rows);
     const rows = () => { const r=allRows(); return filter==='all' ? r : r.filter(x=>cfg.filterFn(x,filter)); };
@@ -304,21 +381,21 @@ function makePurList(cfg){
       if(!cfg.kpis) return '';
       return `<div class="so-kpibar">`+cfg.kpis(allRows()).map(k=>
         `<button class="so-kpi ${k.neg?'neg':''} ${k.accent?'accent':''} ${k.f?'clickable':''}" ${k.f?`data-f="${k.f}"`:'disabled'}>
-          <small>${esc(k.label)}</small><b class="tnum">${k.val}</b></button>`).join('')+`</div>`;
+          <small>${esc(value(k.label))}</small><b class="tnum">${k.val}</b></button>`).join('')+`</div>`;
     }
     function toolbar(){
-      const chips = cfg.chips ? `<div class="filterchips" id="plChips">${cfg.chips.map(c=>`<button class="chip ${c[0]===filter?'on':''}" data-f="${c[0]}">${esc(c[1])}</button>`).join('')}</div>` : '<div></div>';
-      const right = `${btn('Filter',{icon:'filter',cls:'soft'})}${btn('Export',{icon:'download',cls:'soft',attrs:'data-export'})}${cfg.newBtn?btn(cfg.newBtn.label,{icon:'plus',cls:'primary',attrs:'data-new'}):''}`;
-      return `<div class="toolbar">${chips}<div class="grow"></div>${cfg.actions||''}${right}</div>`;
+      const chips = cfg.chips ? `<div class="filterchips" id="plChips">${cfg.chips.map(c=>`<button class="chip ${c[0]===filter?'on':''}" data-f="${c[0]}">${esc(value(c[1]))}</button>`).join('')}</div>` : '<div></div>';
+      const right = `${btn('Filter',{icon:'filter',cls:'soft'})}${btn('Export',{icon:'download',cls:'soft',attrs:'data-export'})}${cfg.newBtn?btn(value(cfg.newBtn.label),{icon:'plus',cls:'primary',attrs:'data-new'}):''}`;
+      return `<div class="toolbar">${chips}<div class="grow"></div>${value(cfg.actions)||''}${right}</div>`;
     }
-    function table(){ return buildTable({ checkable:true, rowId:cfg.rowId, columns:cfg.columns, rows:rows() }); }
+    function table(){ return buildTable({ checkable:true, rowId:cfg.rowId, columns:cfg.columns.map(column=>({...column,label:value(column.label)})), rows:rows() }); }
     function body(){ return `<div class="sales-body">${kpibar()}${toolbar()}<div class="sales-tablewrap" id="plTable">${table()}</div></div>`; }
 
     function render(){
-      root.innerHTML = purPage({ active:cfg.active||cfg.route, title:cfg.title, crumb:cfg.crumb, sub:cfg.sub,
+      root.innerHTML = purPage({ active:cfg.active||cfg.route, title:value(cfg.title), crumb:cfg.crumb, sub:value(cfg.sub),
         count: rows().length
           +(cfg.prepare&&DB.purchasingReadMeta&&DB.purchasingReadMeta.truncated?'+':'')
-          +(cfg.unit?(' '+cfg.unit):''), body: body() });
+          +(cfg.unit?(' '+value(cfg.unit)):''), body: body() });
       wire();
     }
     function setFilter(f){ filter=f; render(); }
@@ -342,7 +419,7 @@ function makePurList(cfg){
       $('#plChips') && $$('#plChips .chip').forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.f)));
       $$('#viewRoot .so-kpi.clickable').forEach(k=>k.addEventListener('click',()=>setFilter(k.dataset.f)));
       const nb=$('#viewRoot [data-new]'); nb&&cfg.newBtn&&nb.addEventListener('click',cfg.newBtn.onClick);
-      const ex=$('#viewRoot [data-export]'); ex&&ex.addEventListener('click',()=>toast(cfg.title+' exported to Excel','ok'));
+      const ex=$('#viewRoot [data-export]'); ex&&ex.addEventListener('click',()=>toast(value(cfg.title)+' exported to Excel','ok'));
       if(cfg.rowMenu) $('#plTable').querySelectorAll('.row-menu').forEach(b=>b.addEventListener('click',e=>{
         e.stopPropagation(); const tr=b.closest('[data-row]'); const row=allRows().find(r=>String(cfg.rowId(r))===String(tr.dataset.row)); openRowMenu(b,row);
       }));
