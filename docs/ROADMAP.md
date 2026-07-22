@@ -568,25 +568,37 @@ Exit criteria: footing/date/account/amount/one-use/state guards, Viewer/RBAC, au
 idempotency proof, no-GL-write reconciliation, PGlite/PostgreSQL alignment, live import/
 match/lock browser workflow, desktop/375px rendering and the full release suite pass.
 
-## Remaining productionization backlog — 12 Preview routes
+## Phase 25 — Canonical Management Reporting and Stock Activity Aging ✅
 
-This is the authoritative work breakdown after TASK-077. `tasks/tasks.jsonl` records
+1. **Bounded cross-module BI read model** (EPIC-042, TASK-078 done 2026-07-23)
+   replaces the three sample Reporting/BI surfaces with one tenant-scoped Demo/API
+   resource rebuilt from Canonical Sales, Purchasing, Inventory and GL facts. Management
+   totals reconcile on every request; product-category analysis only allocates traceable
+   invoice/credit lines; stock aging is honestly defined as time since latest inbound
+   activity rather than a fabricated FIFO-layer age. Five-language UI, Viewer read
+   permission, smoke and full desktop/375px audit move maturity to **105/9**.
+
+Exit criteria: tenant/cursor/Decimal domain and API proof, real-transaction smoke,
+five-language desktop/375px rendering and all 114 routes pass without a KPI table,
+sample fallback, fake export or unsupported FIFO claim.
+
+## Remaining productionization backlog — 9 Preview routes
+
+This is the authoritative work breakdown after TASK-078. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
-   every metric from Canonical tables or rebuildable views; large outputs use report jobs.
-2. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
+1. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
    Requires import jobs/row errors, encrypted credentials and transactional outbox
    delivery before writes are enabled.
-3. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
+2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-4. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
+3. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
    Reuse existing product/project schemas and add only the missing server commands and
    audit rules.
-5. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
+4. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
    with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
 
 Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared

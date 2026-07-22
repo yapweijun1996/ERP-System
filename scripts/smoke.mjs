@@ -229,11 +229,19 @@ async function checkViewport(browser, viewport) {
       const purchasingAnalytics = await adapter.list('purchasing/analytics', { limit: 50 });
       const purchasingPriceVariance = await adapter.list('purchasing/price-variance', { limit: 50 });
       await navigate('purchasing-home');
-      const purchasingAnalyticsCanonical = Boolean(document.querySelector('[data-purchasing-analytics="canonical"]'))
-        && !document.querySelector('[data-preview-banner]')
-        && Array.isArray(purchasingAnalytics.data)
-        && purchasingAnalytics.data.some((row) => row.kind === 'summary')
+      const purchasingScreenCanonicalSource = String(SCREENS['purchasing-home'])
+        .includes('data-purchasing-analytics');
+      const purchasingAnalyticsMarker = Boolean(document.querySelector('[data-purchasing-analytics="canonical"]'));
+      const purchasingErrorAtCheck = document.querySelector('#viewRoot .screen-render-error')
+        ?.textContent?.trim() || null;
+      const purchasingAnalyticsSummary = Array.isArray(purchasingAnalytics.data)
+        && purchasingAnalytics.data.some((row) => row.kind === 'summary');
+      const purchasingAnalyticsMonthly = Array.isArray(purchasingAnalytics.data)
         && purchasingAnalytics.data.some((row) => row.kind === 'monthly-spend');
+      const purchasingAnalyticsCanonical = purchasingAnalyticsMarker
+        && !document.querySelector('[data-preview-banner]')
+        && purchasingAnalyticsSummary
+        && purchasingAnalyticsMonthly;
       await navigate('purchasing-reports');
       const purchasingReportsCanonical = Boolean(document.querySelector('[data-purchasing-reports="canonical"]'))
         && !document.querySelector('[data-preview-banner]')
@@ -498,6 +506,16 @@ async function checkViewport(browser, viewport) {
         && document.querySelector('[data-bank-status="reconciled"]')
         && document.body.textContent.includes('BS-SMOKE-1')
         && !document.querySelector('[data-preview-banner]');
+      const reportingAnalytics = await adapter.list('bi/analytics', { limit: 100 });
+      await navigate('bi-dashboard');
+      const biDashboardCanonical = Boolean(document.querySelector('[data-bi-dashboard="canonical"]'))
+        && !document.querySelector('[data-preview-banner]');
+      await navigate('sales-analysis');
+      const biSalesAnalysisCanonical = Boolean(document.querySelector('[data-bi-sales-analysis="canonical"]'))
+        && !document.querySelector('[data-preview-banner]');
+      await navigate('stock-aging');
+      const biStockAgingCanonical = Boolean(document.querySelector('[data-bi-stock-aging="canonical"]'))
+        && !document.querySelector('[data-preview-banner]');
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -534,6 +552,11 @@ async function checkViewport(browser, viewport) {
         receiptDetailCanonical,
         invoiceDetailCanonical,
         purchasingAnalyticsCanonical,
+        purchasingAnalyticsMarker,
+        purchasingAnalyticsSummary,
+        purchasingAnalyticsMonthly,
+        purchasingScreenCanonicalSource,
+        purchasingErrorAtCheck,
         purchasingReportsCanonical,
         salesOrderAuthoringCanonical,
         salesOrderApprovalCanonical,
@@ -559,6 +582,16 @@ async function checkViewport(browser, viewport) {
         bankReconciliationCanonical: bankReconciliationCanonical
           && bankReconciled.data.status === 'reconciled'
           && Number(bankReconciled.data.matchedLineCount) === 1,
+        reportingAnalyticsCanonical: biDashboardCanonical
+          && biSalesAnalysisCanonical
+          && biStockAgingCanonical
+          && reportingAnalytics.data.some((row) => row.kind === 'summary'
+            && Number(row.recognizedRevenue) > 0
+            && Number(row.inventoryValue) > 0)
+          && reportingAnalytics.data.some((row) => row.kind === 'sales-category'
+            && Number(row.productRevenue) > 0)
+          && reportingAnalytics.data.some((row) => row.kind === 'stock-aging'
+            && Number(row.inventoryValue) > 0),
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -592,7 +625,9 @@ async function checkViewport(browser, viewport) {
       if (!runtimeProof.purchaseBalanced) errors.push('[demo-esm] supplier invoice did not produce balanced GL entries');
       if (!runtimeProof.receiptDetailCanonical) errors.push('[demo-esm] goods-receipt detail did not render its canonical stock trace');
       if (!runtimeProof.invoiceDetailCanonical) errors.push('[demo-esm] supplier-invoice detail did not render its balanced canonical GL trace');
-      if (!runtimeProof.purchasingAnalyticsCanonical) errors.push('[demo-esm] purchasing dashboard did not render its canonical derived analytics');
+      if (!runtimeProof.purchasingAnalyticsCanonical) {
+        errors.push(`[demo-esm] purchasing dashboard did not render its canonical derived analytics (source=${runtimeProof.purchasingScreenCanonicalSource}, marker=${runtimeProof.purchasingAnalyticsMarker}, summary=${runtimeProof.purchasingAnalyticsSummary}, monthly=${runtimeProof.purchasingAnalyticsMonthly}, error=${runtimeProof.purchasingErrorAtCheck || 'none'})`);
+      }
       if (!runtimeProof.purchasingReportsCanonical) errors.push('[demo-esm] purchasing reports did not render from canonical derived resources');
       if (!runtimeProof.salesOrderAuthoringCanonical) errors.push('[demo-esm] new sales order did not render its Canonical authoring workspace');
       if (!runtimeProof.salesOrderApprovalCanonical) errors.push('[demo-esm] sales order approval queue did not render the created canonical order');
@@ -609,6 +644,9 @@ async function checkViewport(browser, viewport) {
       }
       if (!runtimeProof.bankReconciliationCanonical) {
         errors.push('[demo-esm] bank statement import/match/reconcile or its Canonical screen boundary failed');
+      }
+      if (!runtimeProof.reportingAnalyticsCanonical) {
+        errors.push('[demo-esm] Reporting/BI did not rebuild and render canonical management, category and stock-aging facts');
       }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');

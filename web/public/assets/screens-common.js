@@ -23,6 +23,25 @@ async function listPage(resource, query){
 }
 
 /**
+ * Shared horizontal comparison bars used by Sales and Purchasing dashboards.
+ * This helper originally lived in the sample BI screen even though unrelated
+ * modules called it through classic-script global scope. Keeping it here makes
+ * the dependency explicit and prevents replacing a module screen from breaking
+ * another module at runtime.
+ */
+function barList(rows){
+  const values=(rows||[]).map(row=>Math.abs(Number(row.value)||0));
+  const maximum=Math.max(1,...values);
+  return `<div class="barchart">${(rows||[]).map(row=>{
+    const value=Math.abs(Number(row.value)||0);
+    return `<div class="barrow"${row.route?` data-route="${esc(row.route)}" style="cursor:pointer"`:''}>
+      <span class="bl">${esc(row.label)}</span>
+      <span class="bartrack"><i style="width:${Math.round(value/maximum*100)}%;background:${row.clr||'var(--accent)'}"></i></span>
+      <span class="bv">${esc(row.text==null?'':row.text)}</span></div>`;
+  }).join('')}</div>`;
+}
+
+/**
  * Replaces the copy-pasted if(!x){toast('X is required','danger');el.focus();return}
  * pattern scattered across form-modal save handlers (TASK-044). Returns true when
  * value is truthy; otherwise shows the danger toast, focuses focusTarget (a '#id'

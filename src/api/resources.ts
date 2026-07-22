@@ -107,6 +107,7 @@ import {
 } from '../modules/purchasing/analytics';
 import { listSalesAnalyticsWithin } from '../modules/sales/analytics';
 import { listSalespeopleWithin } from '../modules/sales/commission';
+import { listReportingAnalyticsWithin } from '../modules/reporting/analytics';
 
 export interface ApiScope {
   masterFn: string;
@@ -221,6 +222,11 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     customer,
     'sales.read',
     (db, scope, input) => listSalespeopleWithin(db, scope, input),
+  ),
+  'bi/analytics': derivedResource(
+    salesOrder,
+    'reporting.read',
+    (db, scope, input) => listReportingAnalyticsWithin(db, scope, input),
   ),
   'sales/customers': resource(customer, 'sales.read'),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),

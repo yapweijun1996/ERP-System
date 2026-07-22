@@ -1535,3 +1535,24 @@ Acceptance criteria:
       fake auto-booking or toast-only completion.
 - [x] CI smoke performs real journal → statement → match → reconcile. Full desktop/375px
       audit passes at 102 Canonical / 12 Preview.
+
+## EPIC-042 — Canonical Management Reporting and Stock Activity Aging
+
+**Goal:** replace the three sample BI surfaces with one bounded, tenant-scoped read model
+that reconciles directly to Canonical commercial, purchasing, inventory and ledger facts.
+
+Acceptance criteria:
+
+- [x] `bi/analytics` derives recognized revenue, receivables, open sales/purchase value,
+      net unpaid payables, cash and total inventory value without storing a KPI table.
+- [x] Product-category analysis uses real invoice lines less product-linked posted credit
+      lines. Header-only debit notes remain in company recognized revenue but are not
+      falsely allocated to a category.
+- [x] Stock aging reads current positive product/warehouse balances and labels age as
+      days since the latest inbound movement. It explicitly does not claim FIFO layer age
+      because the current schema stores no inventory cost layers.
+- [x] The derived resource is bounded/keyset-paginated, tenant-isolated and protected by
+      `reporting.read`; Demo and API share the same TypeScript query path.
+- [x] `bi-dashboard`, `sales-analysis` and `stock-aging` are five-language Canonical
+      routes with honest loading/error/empty semantics and no fake export/report action.
+      Smoke and the desktop/375px route audit pass at 105 Canonical / 9 Preview.

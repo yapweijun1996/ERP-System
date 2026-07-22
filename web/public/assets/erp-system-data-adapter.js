@@ -1433,12 +1433,14 @@
     var key=normalizeResource(resource);
     var adminResult=await listAdminResource(key, query);
     if(adminResult) return adminResult;
-    if(key==='sales/analytics'||key==='sales/salespeople'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
+    if(key==='sales/analytics'||key==='sales/salespeople'||key==='bi/analytics'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
       query=query||{};
       var derivedCommand=key==='sales/analytics'
         ?state.runtime.commands.listSalesAnalyticsWithin
         :key==='sales/salespeople'
         ?state.runtime.commands.listSalespeopleWithin
+        :key==='bi/analytics'
+        ?state.runtime.commands.listReportingAnalyticsWithin
         :key==='purchasing/vendor-performance'
         ?state.runtime.commands.listVendorPerformanceWithin
         :key==='purchasing/analytics'
