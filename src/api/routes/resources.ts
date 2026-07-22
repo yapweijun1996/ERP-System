@@ -55,6 +55,7 @@ import {
   InventoryProductConflictError,
   InventoryProductValidationError,
 } from '../../modules/inventory/product';
+import { ProjectTimeEntryError } from '../../modules/project/timeEntry';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -128,6 +129,7 @@ export function createResourceRouter(db: DB): Router {
       }
       if (
         error instanceof InventoryProductValidationError
+        || error instanceof ProjectTimeEntryError
         || error instanceof InventoryAdjustmentValidationError
         || error instanceof StockTransferValidationError
         || error instanceof InventoryTrackingError
@@ -173,6 +175,7 @@ export function createResourceRouter(db: DB): Router {
       const scope = {
         masterFn: session.masterFn,
         companyFn: session.activeCompanyFn,
+        actorUserId: session.userId,
       };
       res.json(await withTenantTransaction(db, scope, (tx) =>
         listResource(tx, scope, resource, req.query)));
@@ -209,6 +212,7 @@ export function createResourceRouter(db: DB): Router {
       const scope = {
         masterFn: session.masterFn,
         companyFn: session.activeCompanyFn,
+        actorUserId: session.userId,
       };
       const result = await withTenantTransaction(db, scope, (tx) =>
         getResource(tx, scope, resource, req.params.id));
@@ -298,6 +302,7 @@ export function createResourceRouter(db: DB): Router {
       }
       if (
         error instanceof InventoryProductConflictError
+        || error instanceof ProjectTimeEntryError
         || error instanceof InvalidInventoryAdjustmentStateError
         || error instanceof InventorySnapshotConflictError
         || error instanceof InvalidStockTransferStateError

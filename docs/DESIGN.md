@@ -175,6 +175,7 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 | Bank reconciliation links statement facts to GL; it does not auto-book | Imported signed lines must foot from opening to closing and each may match one exact immutable bank-account GL leg. Missing fees or interest first use the real journal workflow; completed statements are locked | EPIC-041 |
 | Management BI is a bounded rebuildable cross-module read model | Revenue, receivables, payables, cash and inventory must reconcile to current Canonical facts rather than a KPI table. Product-category revenue only allocates traceable invoice/credit lines, and stock age is disclosed as days since the latest inbound movement because FIFO cost layers are not stored | EPIC-042 |
 | Product master creation is stock-neutral | A product record defines identity, units, category, planning values and standard cost only. It must never create an opening balance or write a stock projection directly; initial physical quantity enters through the same auditable movement commands as every later receipt or adjustment | EPIC-043 |
+| Project time is an actor-owned append/void fact | The signed-in Session supplies the user identity; entries target an open tenant project and store Decimal hours on a real date. A correction marks the original row void with a reason, preserving its actor, project and hours. Weekly approval, capacity and payroll state remain absent until those domains exist | EPIC-044 |
 
 ## 7. Testing design
 

@@ -54,15 +54,3 @@ DB.proj0014 = {
     { kind:'add', when:'Mar 04, 2026 · 08:30', what:'Project created from won opportunity OPP-26-0091', who:'Liam Cardoso' },
   ],
 };
-
-/* weekly timesheet (current user) */
-DB.timesheet = {
-  week:'Jun 15 – 21, 2026', employee:'Dana Reyes', status:'Draft', capacity:40,
-  days:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-  rows:[
-    { proj:'PRJ-26-014', task:'PM · Meridian cell', h:[2,2,1.5,2,2,0,0] },
-    { proj:'PRJ-26-021', task:'Design review · Plant 2', h:[3,2.5,3,2,1,0,0] },
-    { proj:'PRJ-26-031', task:'Solar roof scoping', h:[1,1.5,2,1,1,0,0] },
-    { proj:'Internal',   task:'Ops admin & meetings', h:[1.5,1,1.5,2,2.5,0,0] },
-  ],
-};

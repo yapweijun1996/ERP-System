@@ -140,6 +140,10 @@ import {
   type CreateProgressClaimInput,
 } from '../modules/project/progressClaim';
 import {
+  createProjectTimeEntryWithin,
+  type CreateProjectTimeEntryInput,
+} from '../modules/project/timeEntry';
+import {
   createServiceContractWithin,
   type CreateServiceContractInput,
 } from '../modules/service/serviceContract';
@@ -541,6 +545,18 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createProgressClaimWithin(tx, scope, payload as unknown as CreateProgressClaimInput);
+    },
+  },
+  'project/time-entries': {
+    permission: 'project.write',
+    audit: 'required',
+    execute(tx, scope, payload, actorUserId) {
+      return createProjectTimeEntryWithin(
+        tx,
+        scope,
+        actorUserId,
+        payload as unknown as CreateProjectTimeEntryInput,
+      );
     },
   },
   'finance/bank-receipts': {

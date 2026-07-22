@@ -7,13 +7,15 @@
 // claim posts, mirroring `asset.accumulated_depreciation`'s aggregate-plus-
 // ledger shape.
 import {
-  pgTable, text, bigint, integer, numeric, date, index, uniqueIndex, check,
+  pgTable, text, bigint, integer, numeric, date, timestamp, index, uniqueIndex, check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { customer } from './sales';
+import { appUser } from './tenancy';
 
 export const PROJECT_STATUSES = ['open', 'on_hold', 'completed'] as const;
+export const PROJECT_TIME_ENTRY_STATUSES = ['active', 'voided'] as const;
 
 export const project = pgTable('project', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -57,4 +59,41 @@ export const progressClaim = pgTable('progress_claim', {
   index('idx_progress_claim_status').on(t.masterFn, t.companyFn, t.status, t.claimDate, t.id),
   check('ck_progress_claim_status', sql`${t.status} in ('draft', 'posted')`),
   check('ck_progress_claim_amount', sql`${t.netAmount} > 0 and ${t.taxAmount} >= 0`),
+]);
+
+/**
+ * One auditable time fact owned by the signed-in ERP user. Time entries stay
+ * deliberately separate from HR employees: an employee master record does not
+ * imply a login, while every entry must have an authenticated actor. Corrections
+ * void the original fact instead of deleting or overwriting it.
+ */
+export const projectTimeEntry = pgTable('project_time_entry', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  projectId: bigint('project_id', { mode: 'number' }).notNull()
+    .references(() => project.id),
+  workDate: date('work_date').notNull(),
+  task: text('task').notNull(),
+  hours: numeric('hours', { precision: 5, scale: 2 }).notNull(),
+  status: text('status').notNull().default('active'),
+  version: integer('version').notNull().default(1),
+  voidReason: text('void_reason'),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  index('idx_project_time_entry_user_date').on(
+    t.masterFn, t.companyFn, t.actorUserId, t.workDate, t.id,
+  ),
+  index('idx_project_time_entry_project_date').on(
+    t.masterFn, t.companyFn, t.projectId, t.workDate, t.id,
+  ),
+  check('ck_project_time_entry_hours', sql`${t.hours} > 0 and ${t.hours} <= 24`),
+  check('ck_project_time_entry_status', sql`${t.status} in ('active', 'voided')`),
+  check(
+    'ck_project_time_entry_void_state',
+    sql`(${t.status} = 'active' and ${t.voidReason} is null and ${t.voidedAt} is null)
+      or (${t.status} = 'voided' and ${t.voidReason} is not null and ${t.voidedAt} is not null)`,
+  ),
 ]);

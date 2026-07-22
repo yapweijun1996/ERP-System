@@ -1,4 +1,4 @@
-import { and, asc, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, lte } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   account,
@@ -97,6 +97,7 @@ import {
   payrollRunLine,
   project,
   progressClaim,
+  projectTimeEntry,
   serviceContract,
   serviceTicket,
 } from '../data/schema';
@@ -112,6 +113,7 @@ import { listReportingAnalyticsWithin } from '../modules/reporting/analytics';
 export interface ApiScope {
   masterFn: string;
   companyFn: string;
+  actorUserId?: number;
 }
 
 export interface ResourceQuery {
@@ -145,6 +147,8 @@ export interface ResourceDefinition {
   status?: any;
   customerId?: any;
   numericFilters?: Record<string, any>;
+  actorUserIdColumn?: any;
+  dateRangeColumn?: any;
   listOnly?: boolean;
   listHandler?: (
     db: DB,
@@ -525,6 +529,14 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['post'],
     createPermission: 'project.write',
   }),
+  'project/time-entries': resource(projectTimeEntry, 'project.read', {
+    status: projectTimeEntry.status,
+    versionColumn: projectTimeEntry.version,
+    allowedActions: ['void'],
+    createPermission: 'project.write',
+    actorUserIdColumn: projectTimeEntry.actorUserId,
+    dateRangeColumn: projectTimeEntry.workDate,
+  }),
   'service/contracts': resource(serviceContract, 'service.read', {
     createPermission: 'service.write',
   }),
@@ -548,6 +560,8 @@ function resource(
     createPermission?: string;
     updatePermission?: string;
     numericFilters?: Record<string, any>;
+    actorUserIdColumn?: any;
+    dateRangeColumn?: any;
   } = {},
 ): ResourceDefinition {
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -555,6 +569,7 @@ function resource(
   if (options.status) allowedFilters.push('status');
   if (options.customerId) allowedFilters.push('customerId');
   allowedFilters.push(...Object.keys(options.numericFilters ?? {}));
+  if (options.dateRangeColumn) allowedFilters.push('from', 'to');
   return {
     table,
     idColumn: table.id,
@@ -572,6 +587,8 @@ function resource(
     status: options.status,
     customerId: options.customerId,
     numericFilters: options.numericFilters,
+    actorUserIdColumn: options.actorUserIdColumn,
+    dateRangeColumn: options.dateRangeColumn,
   };
 }
 
@@ -637,6 +654,22 @@ function encodeCursor(id: number): string {
   return Buffer.from(JSON.stringify({ v: 1, id }), 'utf8').toString('base64url');
 }
 
+function parseIsoDate(value: unknown, label: string): string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new InvalidResourceQueryError(`${label} must use YYYY-MM-DD`);
+  }
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) {
+    throw new InvalidResourceQueryError(`${label} must be a real calendar date`);
+  }
+  return value;
+}
+
 export async function listResource(
   db: DB,
   scope: ApiScope,
@@ -678,6 +711,18 @@ export async function listResource(
       if (parsed < 1) throw new InvalidResourceQueryError(`${key} must be a positive integer`);
     }
   }
+  let fromDate: string | null = null;
+  let toDate: string | null = null;
+  if (query.from != null || query.to != null) {
+    if (!definition.dateRangeColumn) {
+      throw new InvalidResourceQueryError(`date range is not supported for '${resource}'`);
+    }
+    fromDate = query.from == null || query.from === '' ? null : parseIsoDate(query.from, 'from');
+    toDate = query.to == null || query.to === '' ? null : parseIsoDate(query.to, 'to');
+    if (fromDate && toDate && fromDate > toDate) {
+      throw new InvalidResourceQueryError('from must be on or before to');
+    }
+  }
 
   if (definition.listHandler) {
     const page = await definition.listHandler(db, scope, { cursor, limit });
@@ -694,6 +739,12 @@ export async function listResource(
     eq(definition.table.companyFn, scope.companyFn),
     gt(definition.idColumn, cursor),
   ];
+  if (definition.actorUserIdColumn) {
+    if (!Number.isSafeInteger(scope.actorUserId) || Number(scope.actorUserId) <= 0) {
+      throw new InvalidResourceQueryError('actor user scope is required');
+    }
+    predicates.push(eq(definition.actorUserIdColumn, Number(scope.actorUserId)));
+  }
   if (definition.status && typeof query.status === 'string' && query.status) {
     predicates.push(eq(definition.status, query.status));
   }
@@ -704,6 +755,12 @@ export async function listResource(
     if (query[key] != null && query[key] !== '') {
       predicates.push(eq(column, Number(query[key])));
     }
+  }
+  if (definition.dateRangeColumn && fromDate) {
+    predicates.push(gte(definition.dateRangeColumn, fromDate));
+  }
+  if (definition.dateRangeColumn && toDate) {
+    predicates.push(lte(definition.dateRangeColumn, toDate));
   }
 
   const rows = await db
@@ -728,14 +785,21 @@ export async function getResource(db: DB, scope: ApiScope, resource: string, id:
   const resourceId = parsePositiveInteger(id, 0, 'id');
   if (resourceId < 1) throw new InvalidResourceQueryError('id must be a positive integer');
 
+  const predicates = [
+    eq(definition.table.masterFn, scope.masterFn),
+    eq(definition.table.companyFn, scope.companyFn),
+    eq(definition.idColumn, resourceId),
+  ];
+  if (definition.actorUserIdColumn) {
+    if (!Number.isSafeInteger(scope.actorUserId) || Number(scope.actorUserId) <= 0) {
+      throw new InvalidResourceQueryError('actor user scope is required');
+    }
+    predicates.push(eq(definition.actorUserIdColumn, Number(scope.actorUserId)));
+  }
   const [row] = await db
     .select()
     .from(definition.table)
-    .where(and(
-      eq(definition.table.masterFn, scope.masterFn),
-      eq(definition.table.companyFn, scope.companyFn),
-      eq(definition.idColumn, resourceId),
-    ))
+    .where(and(...predicates))
     .limit(1);
 
   return row ? { data: row, meta: {} } : null;

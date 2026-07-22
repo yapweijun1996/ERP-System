@@ -636,8 +636,8 @@ also stay out of scope: the mock's cost-breakdown/team/milestone panels have no
 transactional source (no timesheet or expense-capture schema exists, and building one
 is a materially separate feature), so surfacing them for real would require fabricating
 data the schema doesn't back — the same principle that dropped Fixed Assets'
-Transfer/Dispose and HR-lite's payroll/compensation. `timesheet` stays mock, deferred
-alongside `payroll-run`/`payslip`.
+Transfer/Dispose and HR-lite's payroll/compensation. This epic therefore left
+`timesheet` as mock; EPIC-044 later closes that separately without adding payroll.
 
 Progress claims reuse the exact posting shape `src/modules/sales/debitNote.ts` already
 established (draft → post inserts balanced `gl_entry` legs: Dr `1100` AR / Cr `4000`
@@ -670,7 +670,8 @@ Acceptance criteria:
       progress-claims panel with inline create + row-level post, real activity feed
       synthesized from real row timestamps, real "Related" linking to the actual linked
       customer) read/write real data. Cost breakdown, milestones, and team panels are
-      removed, not fabricated. `timesheet` is unchanged (stays mock).
+      removed, not fabricated. `timesheet` was unchanged in this slice and was later
+      canonicalized independently by EPIC-044.
 - [x] Both routes move to `CANONICAL_SCREEN_ROUTES`/`API_SCREEN_ROUTES` (58 → 60). Live
       verification surfaced two real bugs neither unit tests nor `audit:screens` caught:
       PGlite/Drizzle return `date`/`timestamp` columns as JS `Date` objects, so naive
@@ -1577,3 +1578,24 @@ Acceptance criteria:
       persisted Decimal planning fields.
 - [x] The route is Canonical in Demo/API, service worker advances to v67 and full
       desktop/375px audit passes at 106 Canonical / 8 Preview.
+
+## EPIC-044 — Canonical Project Timesheet
+
+**Goal:** replace the sample weekly grid with signed-in-user project-time facts that
+can be corrected without deleting audit history or fabricating approval/payroll state.
+
+Acceptance criteria:
+
+- [x] Migration 0040 adds tenant/company/actor/project-scoped `project_time_entry`
+      rows with real dates, Decimal hours, version, active/void state, required void
+      metadata, production RLS and generated PGlite alignment.
+- [x] Shared create/void commands require an active company user and open tenant project;
+      actor scope comes from Session, and correction row-locks then preserves the original
+      hours while marking the entry void instead of deleting it.
+- [x] Demo/API resources expose bounded actor-owned weekly reads and audited writes.
+      Domain and authenticated HTTP tests prove date/precision/state validation, tenant
+      and actor isolation, Viewer denial, audit and idempotent void replay.
+- [x] `timesheet` is a five-language Canonical route with real create/void workflows,
+      active-only totals, visible void history and no fake capacity, copy or approval.
+- [x] Demo smoke, live in-app browser and the full desktop/375px route audit pass with
+      348 tests plus one expected skip, 41 migrations, 119 tables and maturity 107/7.

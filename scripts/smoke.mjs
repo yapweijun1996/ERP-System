@@ -558,6 +558,48 @@ async function checkViewport(browser, viewport) {
       await navigate('stock-aging');
       const biStockAgingCanonical = Boolean(document.querySelector('[data-bi-stock-aging="canonical"]'))
         && !document.querySelector('[data-preview-banner]');
+      const timeProjects = await adapter.list('project/projects', { limit: 100 });
+      const openTimeProject = timeProjects.data.find((row) => row.status === 'open');
+      if (!openTimeProject) return { error: 'no open project is available for the timesheet smoke proof' };
+      const timeEntry = await adapter.create('project/time-entries', {
+        projectId: openTimeProject.id,
+        workDate: '2026-07-23',
+        task: 'Smoke commissioning review',
+        hours: '2.50',
+      });
+      await navigate('timesheet', { weekStart: '2026-07-20' });
+      for (let attempt = 0; attempt < 50 && !document.querySelector('[data-canonical-timesheet="true"]'); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const timesheetBeforeVoid = Boolean(document.querySelector('[data-canonical-timesheet="true"]'))
+        && document.body.textContent.includes('Smoke commissioning review')
+        && !document.querySelector('[data-preview-banner]');
+      const timeVoided = await adapter.action(
+        'project/time-entries', timeEntry.data.id, 'void',
+        { reason: 'Smoke correction keeps the original fact.' },
+        `smoke-void-time-${timeEntry.data.id}`,
+      );
+      await navigate('timesheet', { weekStart: '2026-07-20' });
+      for (let attempt = 0; attempt < 50 && !document.querySelector('[data-canonical-timesheet="true"]'); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const storedTimeEntry = (await adapter.db.query(
+        'select actor_user_id, hours, status, version, void_reason from project_time_entry where master_fn=$1 and company_fn=$2 and id=$3',
+        ['M1', 'C-SG', timeEntry.data.id],
+      )).rows[0];
+      const signedInUser = (await adapter.db.query(
+        'select user_id from app_user where master_fn=$1 and email=$2',
+        ['M1', 'admin@acme.co'],
+      )).rows[0];
+      const timesheetCanonical = timesheetBeforeVoid
+        && document.body.textContent.includes('Smoke commissioning review')
+        && document.body.textContent.includes('Voided')
+        && timeVoided.data.status === 'voided'
+        && Number(storedTimeEntry?.actor_user_id) === Number(signedInUser?.user_id)
+        && Number(storedTimeEntry?.hours) === 2.5
+        && storedTimeEntry?.status === 'voided'
+        && Number(storedTimeEntry?.version) === 2
+        && storedTimeEntry?.void_reason === 'Smoke correction keeps the original fact.';
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -635,6 +677,7 @@ async function checkViewport(browser, viewport) {
             && Number(row.productRevenue) > 0)
           && reportingAnalytics.data.some((row) => row.kind === 'stock-aging'
             && Number(row.inventoryValue) > 0),
+        timesheetCanonical,
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -693,6 +736,9 @@ async function checkViewport(browser, viewport) {
       }
       if (!runtimeProof.reportingAnalyticsCanonical) {
         errors.push('[demo-esm] Reporting/BI did not rebuild and render canonical management, category and stock-aging facts');
+      }
+      if (!runtimeProof.timesheetCanonical) {
+        errors.push('[demo-esm] timesheet did not preserve an actor-owned Decimal entry and auditable void in its Canonical screen');
       }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');

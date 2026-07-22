@@ -1,8 +1,7 @@
 /* ============================================================
    ARIA ERP — screens: Projects (portfolio, project detail, timesheet)
-   project-pl/project-detail are wired to real project/progress_claim data
-   (EPIC-021); timesheet has no schema and stays mock, deferred alongside
-   payroll-run/payslip.
+   project-pl/project-detail are wired to real project/progress_claim data;
+   timesheet uses actor-owned project_time_entry facts with audited voids.
    ============================================================ */
 
 const PROJECT_STATUS_LABEL = { open:'Open', on_hold:'On hold', completed:'Completed' };
@@ -598,59 +597,297 @@ function recordReceiptForm(claim,allReceipts,onSaved){
   });
 }
 
-/* ---------------- TIMESHEET (weekly grid) ---------------- */
-SCREENS['timesheet'] = function(root){
-  const t=DB.timesheet;
-  const rowTot=r=>r.h.reduce((s,h)=>s+h,0);
-  const dayTot=di=>t.rows.reduce((s,r)=>s+r.h[di],0);
-  const grand=t.rows.reduce((s,r)=>s+rowTot(r),0);
-  function cell(v){ return `<input class="lineinput" style="text-align:center" value="${v?v:''}" placeholder="·">`; }
-  const bodyRows=t.rows.map(r=>`<tr>
-      <td class="l li-name"><b>${esc(r.proj)}</b><small>${esc(r.task)}</small></td>
-      ${r.h.map(h=>`<td class="c">${cell(h)}</td>`).join('')}
-      <td class="tnum"><b>${rowTot(r).toFixed(1)}</b></td>
-    </tr>`).join('');
-  const footCells=t.days.map((_,di)=>{ const dv=dayTot(di); return `<td class="c tnum" style="color:${dv>8?'var(--warn)':'var(--muted)'}">${dv?dv.toFixed(1):'—'}</td>`; }).join('');
+/* ---------------- TIMESHEET (Canonical user-owned time facts) ---------------- */
+function timesheetCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{
+      title:'Timesheet',sub:'Your audited project time facts for {week}. Voided entries remain visible.',
+      previous:'Previous week',next:'Next week',current:'Current week',add:'Log time',
+      total:'Active hours',projects:'Projects',days:'Days worked',entries:'entries',
+      date:'Date',project:'Project',task:'Task',hours:'Hours',status:'Status',action:'Action',
+      active:'Active',voided:'Voided',empty:'No time logged for this week',
+      emptyBody:'Log time against an open project. Approval and payroll are separate workflows and are not fabricated here.',
+      loading:'Loading your timesheet…',loadError:'Timesheet could not be loaded',retry:'Retry',
+      formTitle:'Log project time',selectProject:'Select an open project',workDate:'Work date',
+      taskPlaceholder:'e.g. Commissioning review',hoursHint:'0.01–24.00 hours',
+      projectRequired:'Choose a project.',dateRequired:'Choose a work date.',taskRequired:'Enter a task.',
+      hoursRequired:'Enter hours greater than 0 and no more than 24.',created:'Time entry saved.',
+      createError:'Time entry could not be saved.',noOpen:'No open project is available for time entry.',
+      void:'Void',voidTitle:'Void time entry',voidBody:'The original hours stay in the audit history and no longer count toward totals.',
+      reason:'Reason',reasonPlaceholder:'e.g. Logged to the wrong work package',reasonRequired:'Enter a void reason.',
+      confirmVoid:'Void entry',voidedToast:'Time entry voided.',voidError:'Time entry could not be voided.',
+      owner:'Signed-in user',bounded:'This weekly view is bounded to 100 entries.',
+    },
+    ms:{
+      title:'Lembaran masa',sub:'Fakta masa projek anda yang diaudit untuk {week}. Entri dibatalkan kekal kelihatan.',
+      previous:'Minggu sebelumnya',next:'Minggu seterusnya',current:'Minggu semasa',add:'Log masa',
+      total:'Jam aktif',projects:'Projek',days:'Hari bekerja',entries:'entri',
+      date:'Tarikh',project:'Projek',task:'Tugas',hours:'Jam',status:'Status',action:'Tindakan',
+      active:'Aktif',voided:'Dibatalkan',empty:'Tiada masa direkod untuk minggu ini',
+      emptyBody:'Log masa kepada projek terbuka. Kelulusan dan gaji ialah aliran berasingan dan tidak direka di sini.',
+      loading:'Memuatkan lembaran masa…',loadError:'Lembaran masa tidak dapat dimuatkan',retry:'Cuba lagi',
+      formTitle:'Log masa projek',selectProject:'Pilih projek terbuka',workDate:'Tarikh kerja',
+      taskPlaceholder:'cth. Semakan pentauliahan',hoursHint:'0.01–24.00 jam',
+      projectRequired:'Pilih projek.',dateRequired:'Pilih tarikh kerja.',taskRequired:'Masukkan tugas.',
+      hoursRequired:'Masukkan jam melebihi 0 dan tidak melebihi 24.',created:'Entri masa disimpan.',
+      createError:'Entri masa tidak dapat disimpan.',noOpen:'Tiada projek terbuka untuk entri masa.',
+      void:'Batal',voidTitle:'Batalkan entri masa',voidBody:'Jam asal kekal dalam sejarah audit dan tidak lagi dikira.',
+      reason:'Sebab',reasonPlaceholder:'cth. Dilog kepada pakej kerja yang salah',reasonRequired:'Masukkan sebab pembatalan.',
+      confirmVoid:'Batalkan entri',voidedToast:'Entri masa dibatalkan.',voidError:'Entri masa tidak dapat dibatalkan.',
+      owner:'Pengguna log masuk',bounded:'Paparan mingguan ini dihadkan kepada 100 entri.',
+    },
+    zh:{
+      title:'工时表',sub:'{week} 的个人项目工时审计记录。作废记录仍会保留显示。',
+      previous:'上一周',next:'下一周',current:'本周',add:'记录工时',
+      total:'有效工时',projects:'项目',days:'工作天数',entries:'条记录',
+      date:'日期',project:'项目',task:'任务',hours:'小时',status:'状态',action:'操作',
+      active:'有效',voided:'已作废',empty:'本周尚无工时记录',
+      emptyBody:'请将工时记录到开放项目。审批和薪资属于独立流程，此处不会虚构。',
+      loading:'正在加载工时表…',loadError:'无法加载工时表',retry:'重试',
+      formTitle:'记录项目工时',selectProject:'选择开放项目',workDate:'工作日期',
+      taskPlaceholder:'例如：调试验收评审',hoursHint:'0.01–24.00 小时',
+      projectRequired:'请选择项目。',dateRequired:'请选择工作日期。',taskRequired:'请输入任务。',
+      hoursRequired:'工时必须大于 0 且不超过 24。',created:'工时记录已保存。',
+      createError:'无法保存工时记录。',noOpen:'当前没有可记录工时的开放项目。',
+      void:'作废',voidTitle:'作废工时记录',voidBody:'原始工时会保留在审计历史中，但不再计入合计。',
+      reason:'原因',reasonPlaceholder:'例如：记录到了错误的工作包',reasonRequired:'请输入作废原因。',
+      confirmVoid:'确认作废',voidedToast:'工时记录已作废。',voidError:'无法作废工时记录。',
+      owner:'当前登录用户',bounded:'本周视图最多显示 100 条记录。',
+    },
+    ja:{
+      title:'タイムシート',sub:'{week} の監査可能なプロジェクト工数です。無効化した記録も表示されます。',
+      previous:'前週',next:'次週',current:'今週',add:'工数を記録',
+      total:'有効時間',projects:'プロジェクト',days:'作業日数',entries:'件',
+      date:'日付',project:'プロジェクト',task:'作業',hours:'時間',status:'状態',action:'操作',
+      active:'有効',voided:'無効',empty:'この週の工数はありません',
+      emptyBody:'進行中のプロジェクトに工数を記録します。承認と給与は別のワークフローです。',
+      loading:'タイムシートを読み込み中…',loadError:'タイムシートを読み込めません',retry:'再試行',
+      formTitle:'プロジェクト工数を記録',selectProject:'進行中のプロジェクトを選択',workDate:'作業日',
+      taskPlaceholder:'例：試運転レビュー',hoursHint:'0.01～24.00 時間',
+      projectRequired:'プロジェクトを選択してください。',dateRequired:'作業日を選択してください。',taskRequired:'作業を入力してください。',
+      hoursRequired:'0 より大きく 24 以下の時間を入力してください。',created:'工数を保存しました。',
+      createError:'工数を保存できませんでした。',noOpen:'工数を記録できる進行中のプロジェクトがありません。',
+      void:'無効化',voidTitle:'工数を無効化',voidBody:'元の時間は監査履歴に残り、合計から除外されます。',
+      reason:'理由',reasonPlaceholder:'例：誤った作業パッケージに記録',reasonRequired:'無効化の理由を入力してください。',
+      confirmVoid:'無効化する',voidedToast:'工数を無効化しました。',voidError:'工数を無効化できませんでした。',
+      owner:'ログインユーザー',bounded:'週次表示は 100 件までです。',
+    },
+    vi:{
+      title:'Bảng chấm công',sub:'Dữ liệu thời gian dự án có kiểm toán của bạn cho {week}. Mục hủy vẫn được hiển thị.',
+      previous:'Tuần trước',next:'Tuần sau',current:'Tuần hiện tại',add:'Ghi thời gian',
+      total:'Giờ hiệu lực',projects:'Dự án',days:'Ngày làm việc',entries:'mục',
+      date:'Ngày',project:'Dự án',task:'Công việc',hours:'Giờ',status:'Trạng thái',action:'Thao tác',
+      active:'Hiệu lực',voided:'Đã hủy',empty:'Chưa có thời gian trong tuần này',
+      emptyBody:'Ghi thời gian vào dự án đang mở. Phê duyệt và lương là quy trình riêng, không được giả lập ở đây.',
+      loading:'Đang tải bảng chấm công…',loadError:'Không thể tải bảng chấm công',retry:'Thử lại',
+      formTitle:'Ghi thời gian dự án',selectProject:'Chọn dự án đang mở',workDate:'Ngày làm việc',
+      taskPlaceholder:'vd. Đánh giá chạy thử',hoursHint:'0.01–24.00 giờ',
+      projectRequired:'Hãy chọn dự án.',dateRequired:'Hãy chọn ngày làm việc.',taskRequired:'Hãy nhập công việc.',
+      hoursRequired:'Giờ phải lớn hơn 0 và không quá 24.',created:'Đã lưu thời gian.',
+      createError:'Không thể lưu thời gian.',noOpen:'Không có dự án đang mở để ghi thời gian.',
+      void:'Hủy',voidTitle:'Hủy mục thời gian',voidBody:'Giờ ban đầu vẫn nằm trong lịch sử kiểm toán và không còn tính vào tổng.',
+      reason:'Lý do',reasonPlaceholder:'vd. Ghi nhầm gói công việc',reasonRequired:'Hãy nhập lý do hủy.',
+      confirmVoid:'Hủy mục',voidedToast:'Đã hủy mục thời gian.',voidError:'Không thể hủy mục thời gian.',
+      owner:'Người dùng đăng nhập',bounded:'Chế độ xem tuần giới hạn 100 mục.',
+    },
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
 
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,'Projects','Timesheet'])}
-      <div class="h1row"><h1>Timesheet</h1><span class="countchip">${esc(t.status)}</span>
-        <div class="headright">
-          <div class="kfig"><small>Logged this week</small><b class="tnum">${grand.toFixed(1)} h</b></div>
-          <div class="kfig"><small>Capacity</small><b class="tnum">${t.capacity} h</b></div>
-        </div></div>
-    </div>
-    <div class="toolbar">
-      <button class="viewsel" data-tip="Previous week" onclick="toast('Previous week','info')">${ic('chevL')}</button>
-      <button class="viewsel" style="font-weight:600">${ic('calendar')}${esc(t.week)}</button>
-      <button class="viewsel" data-tip="Next week" onclick="toast('Next week','info')">${ic('chevR')}</button>
-      <div class="grow"></div>
-      ${btn('Copy last week',{icon:'copy',cls:'soft',attrs:'onclick="toast(\'Last week copied\',\'ok\')"'})}
-      ${btn('Add line',{icon:'plus',cls:'soft',attrs:'onclick="toast(\'Add a project line\',\'info\')"'})}
-      ${btn('Submit for approval',{icon:'check',cls:'primary',attrs:'data-act="submit"'})}
-    </div>
-    <div class="docpage" style="max-width:none;margin:0;padding:0;border:none;background:transparent">
-      <div class="panel">
-        <div class="panel-h"><h3>${esc(t.employee)} · ${esc(t.week)}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${t.rows.length} lines</span></div>
-        <table class="lines tssheet">
-          <thead><tr><th class="l">Project / Task</th>${t.days.map(d=>`<th class="c">${d}</th>`).join('')}<th>Total</th></tr></thead>
-          <tbody>${bodyRows}</tbody>
-          <tfoot><tr><td class="l" style="font-weight:600">Daily total</td>${footCells}<td class="tnum"><b>${grand.toFixed(1)}</b></td></tr></tfoot>
-        </table>
-      </div>
-      <div style="max-width:420px;margin-top:14px">
-        <div class="indicator ${grand>t.capacity?'warn':'ok'}">
-          <div class="ind-top">${ic('clock')}<span>Utilisation</span><span class="ind-r">${Math.round(grand/t.capacity*100)}%</span></div>
-          <div class="track"><i style="width:${Math.min(100,grand/t.capacity*100)}%"></i></div>
-          <small>${grand.toFixed(1)} h logged of ${t.capacity} h capacity · ${(t.capacity-grand).toFixed(1)} h remaining.</small>
-        </div>
-      </div>
-      <div style="height:40px"></div>
-    </div>
-  </section></div>`;
+function timesheetAddDays(iso,days){
+  const date=new Date(iso+'T00:00:00Z');
+  date.setUTCDate(date.getUTCDate()+days);
+  return date.toISOString().slice(0,10);
+}
+function timesheetWeekStart(value){
+  let date=/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))
+    ?new Date(String(value)+'T00:00:00Z'):new Date();
+  if(Number.isNaN(date.getTime())) date=new Date();
+  const mondayOffset=(date.getUTCDay()+6)%7;
+  date.setUTCDate(date.getUTCDate()-mondayOffset);
+  return date.toISOString().slice(0,10);
+}
+function timesheetDateLabel(iso,includeYear){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const locale={en:'en-SG',ms:'ms-MY',zh:'zh-CN',ja:'ja-JP',vi:'vi-VN'}[lang]||'en-SG';
+  const normalized=typeof dateValue==='function'?dateValue(iso):String(iso||'').slice(0,10);
+  return new Intl.DateTimeFormat(locale,{day:'numeric',month:'short',year:includeYear?'numeric':undefined,timeZone:'UTC'})
+    .format(new Date(normalized+'T00:00:00Z'));
+}
+function timesheetWeekLabel(start,end){
+  return `${timesheetDateLabel(start,false)} – ${timesheetDateLabel(end,true)}`;
+}
+async function timesheetList(resource,query){
+  const response=await window.ErpSystemData.list(resource,query||{});
+  return Array.isArray(response)?response:(response&&Array.isArray(response.data)?response.data:[]);
+}
 
-  root.querySelector('[data-act="submit"]').addEventListener('click',()=>{
-    toast('Timesheet submitted for approval','ok');
+SCREENS['timesheet'] = function(root,params){
+  const s=timesheetCopy();
+  const weekStart=timesheetWeekStart(params&&params.weekStart);
+  const weekEnd=timesheetAddDays(weekStart,6);
+  const weekLabel=timesheetWeekLabel(weekStart,weekEnd);
+  const routeStillActive=()=>CURRENT_ROUTE==='timesheet'&&root.isConnected;
+
+  root.innerHTML=modulePage({
+    module:'project',route:'timesheet',active:'timesheet',title:s('title'),
+    sub:s('sub').replace('{week}',weekLabel),
+    body:statePanel({icon:'clock',title:s('loading'),body:weekLabel}),
   });
+
+  async function load(){
+    try{
+      const [entries,projects,session]=await Promise.all([
+        timesheetList('project/time-entries',{from:weekStart,to:weekEnd,limit:100}),
+        timesheetList('project/projects',{limit:100}),
+        window.ErpSystemData.session(),
+      ]);
+      if(!routeStillActive()) return;
+      render(entries,projects,session||{});
+    }catch(error){
+      if(!routeStillActive()) return;
+      root.innerHTML=modulePage({
+        module:'project',route:'timesheet',active:'timesheet',title:s('title'),
+        sub:s('sub').replace('{week}',weekLabel),
+        body:statePanel({
+          icon:'alert',title:s('loadError'),body:error&&error.message?error.message:s('loadError'),
+          action:btn(s('retry'),{icon:'refresh',cls:'primary',attrs:'data-ts-retry'}),
+        }),
+      });
+      root.querySelector('[data-ts-retry]')?.addEventListener('click',load);
+    }
+  }
+
+  function render(entries,projects,session){
+    const projectById=new Map(projects.map(project=>[Number(project.id),project]));
+    const openProjects=projects.filter(project=>project.status==='open');
+    const activeEntries=entries.filter(entry=>entry.status==='active');
+    const totalHours=activeEntries.reduce((sum,entry)=>sum+(Number(entry.hours)||0),0);
+    const projectCount=new Set(activeEntries.map(entry=>Number(entry.projectId))).size;
+    const dayCount=new Set(activeEntries.map(entry=>entry.workDate)).size;
+    const ownerName=session.fullName||(session.user&&session.user.name)||(DB.user&&DB.user.name)||s('owner');
+    const rows=entries.slice().sort((a,b)=>dateValue(a.workDate).localeCompare(dateValue(b.workDate))||Number(a.id)-Number(b.id));
+    const tableRows=rows.map(entry=>{
+      const project=projectById.get(Number(entry.projectId));
+      const isActive=entry.status==='active';
+      const action=isActive
+        ?btn(s('void'),{icon:'x',cls:'soft',attrs:`data-ts-void="${entry.id}" data-version="${entry.version}"`})
+        :`<span class="muted" title="${esc(entry.voidReason||'')}">—</span>`;
+      return `<tr class="${isActive?'':'muted'}">
+        <td class="l tnum">${esc(timesheetDateLabel(entry.workDate,false))}</td>
+        <td class="l li-name"><b>${esc(project&&project.projectNo||'#'+entry.projectId)}</b><small>${esc(project&&project.name||'')}</small></td>
+        <td class="l">${esc(entry.task)}</td>
+        <td class="tnum"><b>${Number(entry.hours).toFixed(2)}</b></td>
+        <td>${cap(isActive?s('active'):s('voided'),isActive?'ok':'neutral')}</td>
+        <td>${action}</td>
+      </tr>`;
+    }).join('');
+    const empty=statePanel({icon:'clock',title:s('empty'),body:s('emptyBody')});
+    const body=`<div data-canonical-timesheet="true">
+      <div class="toolbar">
+        <button class="viewsel" data-ts-week="${timesheetAddDays(weekStart,-7)}" data-tip="${esc(s('previous'))}">${ic('chevL')}</button>
+        <button class="viewsel" style="font-weight:600" aria-label="${esc(weekLabel)}">${ic('calendar')}${esc(weekLabel)}</button>
+        <button class="viewsel" data-ts-week="${timesheetAddDays(weekStart,7)}" data-tip="${esc(s('next'))}">${ic('chevR')}</button>
+        <button class="viewsel" data-ts-current>${esc(s('current'))}</button>
+        <div class="grow"></div>
+        <span class="muted" style="font-size:12px">${esc(ownerName)}</span>
+      </div>
+      <div class="docpage" style="max-width:none;margin:0;padding:0;border:none;background:transparent">
+        <div class="statgrid c3" style="margin-bottom:14px">
+          <div class="stat accentval"><small>${esc(s('total'))}</small><b class="tnum">${totalHours.toFixed(2)} h</b></div>
+          <div class="stat"><small>${esc(s('projects'))}</small><b class="tnum">${projectCount}</b></div>
+          <div class="stat"><small>${esc(s('days'))}</small><b class="tnum">${dayCount}</b></div>
+        </div>
+        ${rows.length?`<div class="panel"><div class="panel-h"><h3>${esc(ownerName)} · ${esc(weekLabel)}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${rows.length} ${esc(s('entries'))}</span></div>
+          <div style="overflow-x:auto"><table class="lines"><thead><tr>
+            <th class="l">${esc(s('date'))}</th><th class="l">${esc(s('project'))}</th><th class="l">${esc(s('task'))}</th>
+            <th>${esc(s('hours'))}</th><th>${esc(s('status'))}</th><th>${esc(s('action'))}</th>
+          </tr></thead><tbody>${tableRows}</tbody></table></div></div>`:empty}
+        <p class="muted" style="font-size:12px;margin:12px 2px 30px">${esc(s('bounded'))}</p>
+      </div>
+    </div>`;
+    root.innerHTML=modulePage({
+      module:'project',route:'timesheet',active:'timesheet',title:s('title'),count:activeEntries.length,
+      sub:s('sub').replace('{week}',weekLabel),
+      action:btn(s('add'),{icon:'plus',cls:'primary',attrs:`data-ts-add ${openProjects.length?'':'disabled'}`}),
+      body,
+    });
+    root.querySelectorAll('[data-ts-week]').forEach(button=>button.addEventListener('click',()=>{
+      navigate('timesheet',{weekStart:button.dataset.tsWeek});
+    }));
+    root.querySelector('[data-ts-current]')?.addEventListener('click',()=>navigate('timesheet'));
+    root.querySelector('[data-ts-add]')?.addEventListener('click',()=>openCreate(openProjects));
+    root.querySelectorAll('[data-ts-void]').forEach(button=>button.addEventListener('click',()=>openVoid(
+      Number(button.dataset.tsVoid),Number(button.dataset.version),
+    )));
+  }
+
+  function openCreate(openProjects){
+    if(!openProjects.length){ toast(s('noOpen'),'warn'); return; }
+    const today=new Date().toISOString().slice(0,10);
+    const defaultDate=today>=weekStart&&today<=weekEnd?today:weekStart;
+    appModal({
+      icon:'clock',title:s('formTitle'),
+      body:`<div class="set-grid">
+        <label class="fld" style="grid-column:1/-1"><span>${esc(s('project'))} <span class="req">*</span></span>
+          <select id="tsProject"><option value="">${esc(s('selectProject'))}</option>${openProjects.map(project=>`<option value="${project.id}">${esc(project.projectNo)} · ${esc(project.name)}</option>`).join('')}</select></label>
+        <label class="fld"><span>${esc(s('workDate'))} <span class="req">*</span></span><input id="tsDate" type="date" min="${weekStart}" max="${weekEnd}" value="${defaultDate}"></label>
+        <label class="fld"><span>${esc(s('hours'))} <span class="req">*</span></span><input id="tsHours" type="number" min="0.01" max="24" step="0.25" value="1.00"><span class="hint">${esc(s('hoursHint'))}</span></label>
+        <label class="fld" style="grid-column:1/-1"><span>${esc(s('task'))} <span class="req">*</span></span><input id="tsTask" maxlength="200" placeholder="${esc(s('taskPlaceholder'))}"></label>
+      </div>`,
+      actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('add'),{icon:'plus',cls:'primary',attrs:'data-ts-save'})}`,
+    });
+    const save=$('#modalEl').querySelector('[data-ts-save]');
+    save.addEventListener('click',async()=>{
+      const projectId=Number($('#tsProject').value);
+      const workDate=$('#tsDate').value;
+      const task=$('#tsTask').value.trim();
+      const hours=$('#tsHours').value.trim();
+      if(!Number.isSafeInteger(projectId)||projectId<=0){ toast(s('projectRequired'),'warn'); $('#tsProject').focus(); return; }
+      if(!workDate||workDate<weekStart||workDate>weekEnd){ toast(s('dateRequired'),'warn'); $('#tsDate').focus(); return; }
+      if(!task){ toast(s('taskRequired'),'warn'); $('#tsTask').focus(); return; }
+      const hourNumber=Number(hours);
+      if(!Number.isFinite(hourNumber)||hourNumber<=0||hourNumber>24){ toast(s('hoursRequired'),'warn'); $('#tsHours').focus(); return; }
+      save.disabled=true;
+      try{
+        await window.ErpSystemData.create('project/time-entries',{projectId,workDate,task,hours});
+        closeModal();
+        toast(s('created'),'ok');
+        navigate('timesheet',{weekStart});
+      }catch(error){
+        save.disabled=false;
+        toast(error&&error.message?error.message:s('createError'),'danger');
+      }
+    });
+  }
+
+  function openVoid(entryId,version){
+    appModal({
+      icon:'x',title:s('voidTitle'),
+      body:`<p class="muted" style="margin:0 0 14px">${esc(s('voidBody'))}</p>
+        <label class="fld"><span>${esc(s('reason'))} <span class="req">*</span></span><textarea id="tsVoidReason" maxlength="300" rows="3" placeholder="${esc(s('reasonPlaceholder'))}"></textarea></label>`,
+      actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('confirmVoid'),{icon:'x',cls:'danger',attrs:'data-ts-confirm-void'})}`,
+    });
+    const confirm=$('#modalEl').querySelector('[data-ts-confirm-void]');
+    confirm.addEventListener('click',async()=>{
+      const reason=$('#tsVoidReason').value.trim();
+      if(!reason){ toast(s('reasonRequired'),'warn'); $('#tsVoidReason').focus(); return; }
+      confirm.disabled=true;
+      try{
+        await window.ErpSystemData.action(
+          'project/time-entries',entryId,'void',{reason},`void-time-entry-${entryId}-${version}`,
+        );
+        closeModal();
+        toast(s('voidedToast'),'ok');
+        navigate('timesheet',{weekStart});
+      }catch(error){
+        confirm.disabled=false;
+        toast(error&&error.message?error.message:s('voidError'),'danger');
+      }
+    });
+  }
+
+  load();
 };

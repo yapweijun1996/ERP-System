@@ -75,6 +75,7 @@ import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
 import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
 import { postPayrollRunWithin } from '../modules/payroll/payrollRun';
 import { postProgressClaimWithin } from '../modules/project/progressClaim';
+import { voidProjectTimeEntryWithin } from '../modules/project/timeEntry';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 import {
   postManualJournalWithin,
@@ -513,6 +514,28 @@ const ACTIONS: Record<string, ActionDefinition> = {
     audit: 'required',
     async execute(tx, scope, input) {
       return postProgressClaimWithin(tx, scope, input.resourceId);
+    },
+  },
+  'project/time-entries/void': {
+    permission: 'project.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const reason = (input.payload as { reason?: unknown } | undefined)?.reason;
+      if (typeof reason !== 'string' || !reason.trim()) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'A void reason is required.',
+        );
+      }
+      return voidProjectTimeEntryWithin(
+        tx,
+        scope,
+        input.actorUserId,
+        input.resourceId,
+        reason,
+      );
     },
   },
   'service/tickets/assign': {

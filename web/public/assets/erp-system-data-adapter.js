@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 39;
+  var DEMO_SCHEMA_VERSION = 40;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -143,9 +143,13 @@
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
       "('supplier_price_list','supplier_price_list_line')")).rows[0];
+    var projectTimeSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name='project_time_entry'")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
-      && supplierPricingSignature && Number(supplierPricingSignature.n) === 2;
+      && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
+      && projectTimeSignature && Number(projectTimeSignature.n) === 1;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -1373,6 +1377,7 @@
     'payroll/run-lines':'payroll_run_line',
     'project/projects':'project',
     'project/progress-claims':'progress_claim',
+    'project/time-entries':'project_time_entry',
     'service/contracts':'service_contract',
     'service/tickets':'service_ticket',
   };
@@ -1465,6 +1470,28 @@
     var params=[SCOPE.masterFn,SCOPE.companyFn,cursor];
     var sql='select * from '+table+
       ' where master_fn=$1 and company_fn=$2 and id>$3';
+    if(key==='project/time-entries'){
+      var actorUserId=Number(state.activeUserId);
+      if(!Number.isSafeInteger(actorUserId)||actorUserId<=0){
+        throw new Error('An authenticated user is required.');
+      }
+      params.push(actorUserId);
+      sql+=' and actor_user_id=$'+params.length;
+      ['from','to'].forEach(function(filter){
+        if(query[filter]==null||query[filter]==='') return;
+        var value=String(query[filter]);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(filter+' must use YYYY-MM-DD.');
+        var parsedDate=new Date(value+'T00:00:00Z');
+        if(Number.isNaN(parsedDate.getTime())||parsedDate.toISOString().slice(0,10)!==value){
+          throw new Error(filter+' must be a real calendar date.');
+        }
+        params.push(value);
+        sql+=' and work_date '+(filter==='from'?'>=':'<=')+' $'+params.length;
+      });
+      if(query.from&&query.to&&String(query.from)>String(query.to)){
+        throw new Error('from must be on or before to.');
+      }
+    }
     var numericFilters={
       'sales/commission-lines':{runId:'run_id'},
       'sales/commission-sources':{runId:'run_id'},
@@ -1496,9 +1523,13 @@
     if(!table) throw new Error('Unsupported ERP resource: '+key);
     var numericId=Number(id);
     if(!Number.isInteger(numericId)||numericId<=0) throw new Error('Resource id must be a positive integer.');
-    var row=(await requireDemoDb().query(
-      'select * from '+table+' where master_fn=$1 and company_fn=$2 and id=$3 limit 1',
-      [SCOPE.masterFn,SCOPE.companyFn,numericId])).rows[0];
+    var params=[SCOPE.masterFn,SCOPE.companyFn,numericId];
+    var sql='select * from '+table+' where master_fn=$1 and company_fn=$2 and id=$3';
+    if(key==='project/time-entries'){
+      params.push(Number(state.activeUserId));
+      sql+=' and actor_user_id=$4';
+    }
+    var row=(await requireDemoDb().query(sql+' limit 1',params)).rows[0];
     if(!row) throw new Error('ERP resource not found: '+key+'/'+numericId);
     return {data:contractRow(row),meta:{}};
   }
@@ -1838,6 +1869,14 @@
       });
       await refresh();
       return {data:newProgressClaim,meta:{}};
+    }
+    if(key==='project/time-entries'){
+      var newTimeEntry = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createProjectTimeEntryWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(state.activeUserId), payload);
+      });
+      await refresh();
+      return {data:newTimeEntry,meta:{}};
     }
     if(key==='service/contracts'){
       var newServiceContract = await requireDemoDb().transaction(function(tx){
@@ -2235,6 +2274,15 @@
       });
       await refresh();
       return {data:postedProgressClaim,meta:{}};
+    }
+    if(key==='project/time-entries'&&name==='void'){
+      var voidedTimeEntry = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.voidProjectTimeEntryWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(state.activeUserId),
+          Number(id), payload&&payload.reason);
+      });
+      await refresh();
+      return {data:voidedTimeEntry,meta:{}};
     }
     if(key==='service/tickets'&&name==='assign'){
       var assignedServiceTicket = await requireDemoDb().transaction(function(tx){

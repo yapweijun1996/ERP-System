@@ -46,7 +46,7 @@ DECLARE
     'activity', 'opportunity', 'contact',
     'asset', 'depreciation_run', 'depreciation_run_line',
     'employee', 'leave_request',
-    'project', 'progress_claim',
+    'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line',
     'api_idempotency'

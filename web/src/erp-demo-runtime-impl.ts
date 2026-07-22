@@ -215,6 +215,11 @@ import {
   type CreateProgressClaimInput,
 } from '../../src/modules/project/progressClaim';
 import {
+  createProjectTimeEntryWithin,
+  voidProjectTimeEntryWithin,
+  type CreateProjectTimeEntryInput,
+} from '../../src/modules/project/timeEntry';
+import {
   createServiceContractWithin,
   type CreateServiceContractInput,
 } from '../../src/modules/service/serviceContract';
@@ -588,6 +593,23 @@ export const erpDemoRuntime = Object.freeze({
     },
     postProgressClaimWithin(db: DemoOrm, scope: Scope, claimId: number) {
       return postProgressClaimWithin(asDomainDb(db), scope, claimId);
+    },
+    createProjectTimeEntryWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: CreateProjectTimeEntryInput,
+    ) {
+      return createProjectTimeEntryWithin(asDomainDb(db), scope, actorUserId, input);
+    },
+    voidProjectTimeEntryWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      entryId: number,
+      reason: string,
+    ) {
+      return voidProjectTimeEntryWithin(asDomainDb(db), scope, actorUserId, entryId, reason);
     },
     createServiceContractWithin(db: DemoOrm, scope: Scope, input: CreateServiceContractInput) {
       return createServiceContractWithin(asDomainDb(db), scope, input);

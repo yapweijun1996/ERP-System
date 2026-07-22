@@ -213,8 +213,9 @@ Order of attack:
    EPIC-021 (TASK-051/052, 2026-07-20) covers the first two sub-phases — a real project
    register and real Progress Claim billing (draft → post a balanced AR/Revenue/Tax
    journal, reusing `debitNote.ts`'s exact posting shape, no new CoA codes). Cost/budget/
-   team/milestone-schedule tracking stays mock (no timesheet or expense-capture schema
-   exists to back it — a materially separate feature). Project-scoped AP linkage and
+   team/milestone-schedule tracking stayed out of this slice (no expense-capture schema
+   exists to back it); the separate Timesheet gap was later closed by EPIC-044/TASK-080.
+   Project-scoped AP linkage and
    dedicated Bank Receipt/Payment documents were the third sub-phase, closed by EPIC-024
    (TASK-058/059, 2026-07-21): `purchase_order`/`supplier_invoice` gained a nullable
    `project_id`; a real Bank Receipt settles a posted progress claim's AR; a real Payment
@@ -596,9 +597,24 @@ Exit criteria: atomic duplicate-SKU conflict, validation/tenant/RBAC/audit API p
 zero opening stock, real Demo form submission, five-language desktop/375px rendering
 and the full release suite pass.
 
-## Remaining productionization backlog — 8 Preview routes
+## Phase 27 — Canonical Project Timesheet ✅
 
-This is the authoritative work breakdown after TASK-079. `tasks/tasks.jsonl` records
+1. **Actor-owned project time facts** (EPIC-044, TASK-080 done 2026-07-23) replace
+   the weekly sample grid with tenant/user-scoped `project_time_entry` rows. Entries
+   use Decimal hours and real dates against an open project; the signed-in actor comes
+   from Session, never the payload. Corrections preserve the original fact and mark it
+   void with a required reason rather than delete or rewrite it. The weekly five-language
+   route counts active entries only, keeps voided history visible and removes unsupported
+   capacity, copy-last-week, approval and payroll claims. Service-worker v68 moves
+   maturity to **107/7**.
+
+Exit criteria: domain and authenticated API validation/tenant/actor/RBAC/audit/idempotency
+proof, real create/void Demo smoke, Chinese desktop/375px live browser verification and
+the full 114-route release suite pass.
+
+## Remaining productionization backlog — 7 Preview routes
+
+This is the authoritative work breakdown after TASK-080. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
@@ -609,9 +625,7 @@ workstreams in dependency order:
 2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-3. **Small vertical gap — 1 route:** Project `timesheet`. Reuse the existing project
-   schema and add only the missing time-entry command and audit rules.
-4. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
+3. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
    with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
 
 Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared
