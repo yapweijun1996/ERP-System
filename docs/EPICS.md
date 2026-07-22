@@ -1469,3 +1469,23 @@ Acceptance criteria:
 - [x] `sales-commission` is a five-language Canonical route with real create, activate,
       calculate, trace and approve flows. Smoke and full desktop/375px audit pass at
       99 Canonical / 15 Preview.
+
+## EPIC-039 — Canonical Sales Enquiry Transaction Workspace
+
+**Goal:** close Sales' final Preview route without retaining a second document model or
+passing mutable presentation records between screens.
+
+Acceptance criteria:
+
+- [x] `txn-view` stores only an enquiry ID and re-reads the selected tenant-scoped
+      enquiry, customer and uniquely linked quotation through formal Demo/API resources.
+- [x] `sales/quotations` exposes an allowlisted positive `enquiryId` filter with unit and
+      authenticated HTTP coverage; unsupported or zero identifiers remain rejected.
+- [x] The enquiry register opens the record workspace. Conversion delegates to the
+      existing audited/idempotent command; quotation and all later sales documents keep
+      their dedicated Canonical detail routes.
+- [x] Fabricated activity, actors, PDF/payment/export actions and toast-only state changes
+      are removed from the route. Only timestamps, ownership, status and relationships
+      present in canonical records are displayed.
+- [x] The five-language workspace, Demo/API build, browser smoke and full desktop/375px
+      audit pass at 100 Canonical / 14 Preview.

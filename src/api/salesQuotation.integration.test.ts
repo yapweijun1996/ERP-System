@@ -145,6 +145,27 @@ describe('sales enquiry and quotation API vertical slice', () => {
     expect(replayResponse.headers.get('idempotency-replayed')).toBe('true');
     expect((await replayResponse.json()).data).toEqual(converted);
 
+    const enquiryDetailResponse = await fetch(
+      `${baseUrl}/api/sales/enquiries/${enquiry.id}`,
+      { headers: { cookie: cookies.header } },
+    );
+    expect(enquiryDetailResponse.status).toBe(200);
+    expect((await enquiryDetailResponse.json()).data).toMatchObject({
+      id: enquiry.id,
+      docNo: 'ENQ-API-1',
+      status: 'quoted',
+    });
+    const linkedQuotationResponse = await fetch(
+      `${baseUrl}/api/sales/quotations?limit=100&enquiryId=${enquiry.id}`,
+      { headers: { cookie: cookies.header } },
+    );
+    expect(linkedQuotationResponse.status).toBe(200);
+    expect((await linkedQuotationResponse.json()).data).toMatchObject([{
+      id: converted.quotationId,
+      enquiryId: enquiry.id,
+      docNo: 'Q-API-1',
+    }]);
+
     expect((await action(
       'quotations', converted.quotationId, 'issue', 'sales-api-quote-issue', {},
     )).status).toBe(200);

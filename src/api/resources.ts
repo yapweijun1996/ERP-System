@@ -289,6 +289,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'sales/quotations': resource(salesQuotation, 'sales.read', {
     status: salesQuotation.status,
     versionColumn: salesQuotation.version,
+    numericFilters: { enquiryId: salesQuotation.enquiryId },
     allowedActions: ['issue', 'accept', 'convert-to-order'],
     createPermission: 'sales.write',
   }),

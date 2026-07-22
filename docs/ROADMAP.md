@@ -530,30 +530,40 @@ Exit criteria: effective-date/overlap/tenant/Decimal/immutability domain proof,
 authenticated RBAC/idempotency/audit API proof, no-payroll/no-GL browser smoke,
 desktop/375px rendering and the full 114-route audit pass.
 
-## Remaining productionization backlog — 15 Preview routes
+## Phase 22 — Canonical Sales Transaction Workspace ✅
 
-This is the authoritative work breakdown after TASK-074. `tasks/tasks.jsonl` records
+1. **Record-specific enquiry context** (EPIC-039, TASK-075 done 2026-07-22) replaces
+   the last shared sales prototype detail with one ID-only Canonical workspace. It
+   re-reads the selected enquiry, customer and uniquely linked quotation from bounded
+   Demo/API resources; conversion reuses the existing audited command, while every later
+   document type opens its dedicated Canonical detail route. Fabricated activity, actors
+   and toast-only document actions are removed. Route maturity is **100/14**.
+
+Exit criteria: tenant-scoped detail and linked-quotation filter proof, five-language
+browser workflow, desktop/375px rendering and the full 114-route audit pass.
+
+## Remaining productionization backlog — 14 Preview routes
+
+This is the authoritative work breakdown after TASK-075. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Sales completion — 1 route:** `txn-view` needs record-specific canonical transaction
-   context rather than the remaining shared prototype shell.
-2. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
+1. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
    header/line post/reverse and bank statement/reconciliation commands before promoting
    either screen.
-3. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
+2. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
    every metric from Canonical tables or rebuildable views; large outputs use report jobs.
-4. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
+3. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
    Requires import jobs/row errors, encrypted credentials and transactional outbox
    delivery before writes are enabled.
-5. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
+4. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-6. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
+5. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
    Reuse existing product/project schemas and add only the missing server commands and
    audit rules.
-7. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
+6. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
    with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
 
 Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared

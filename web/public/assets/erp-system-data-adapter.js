@@ -1462,6 +1462,7 @@
     var numericFilters={
       'sales/commission-lines':{runId:'run_id'},
       'sales/commission-sources':{runId:'run_id'},
+      'sales/quotations':{enquiryId:'enquiry_id'},
     }[key]||{};
     Object.keys(numericFilters).forEach(function(filter){
       if(query[filter]==null||query[filter]==='') return;

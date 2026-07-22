@@ -149,6 +149,11 @@
     window.ACTIVE_SALES_QUOTATION_ID=Number(id);
     navigate('quotation');
   }
+  function openEnquiry(id){
+    window.ACTIVE_SALES_ENQUIRY_ID=Number(id);
+    return navigate('txn-view');
+  }
+  window.openSalesEnquiry=openEnquiry;
 
   async function loadFrontData(){
     const a=adapter();
@@ -247,6 +252,10 @@
       }catch(error){ button.disabled=false; toast(error&&error.message||'Conversion failed','danger'); }
     });
   }
+  /* txn-view owns the record-specific read workspace, while this module owns
+     the already-audited conversion command and its product-entry form. Share
+     that one workflow rather than grow a second browser-side implementation. */
+  window.openCanonicalEnquiryConversion=openEnquiryConversion;
 
   SCREENS['enquiries']=async function(root){
     const s=copy(),data=await loadFrontData();
@@ -286,8 +295,7 @@
     function wire(){
       wireTable(tableRoot,{onRow:id=>{
         const enquiry=data.enquiries.find(row=>Number(row.id)===Number(id));
-        if(enquiry?.status==='new') openEnquiryConversion(enquiry,data);
-        else toast(`${enquiry.docNo} · ${statusLabel(s,enquiry.status)}`,'info');
+        if(enquiry) openEnquiry(enquiry.id);
       }});
     }
     wire();

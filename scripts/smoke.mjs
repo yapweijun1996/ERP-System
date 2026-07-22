@@ -284,6 +284,43 @@ async function checkViewport(browser, viewport) {
       const salesApprovalGlAfter = Number((await adapter.db.query(
         "select count(*)::int as count from gl_entry where master_fn='M1' and company_fn='C-SG'",
       )).rows[0].count);
+      const workspaceEnquiry = await adapter.create('sales/enquiries', {
+        docNo: 'ENQ-SMOKE-WORKSPACE',
+        customerId: Number(salesApprovalRefs.customer_id),
+        subject: 'Canonical enquiry workspace browser proof',
+        channel: 'web',
+        estimatedValue: '37.50',
+        currency: 'SGD',
+        ownerName: 'Smoke Sales',
+        enquiryDate: '2026-07-22',
+      });
+      const workspaceConversion = await adapter.action(
+        'sales/enquiries',
+        workspaceEnquiry.data.id,
+        'convert-to-quotation',
+        {
+          docNo: 'Q-SMOKE-WORKSPACE',
+          quoteDate: '2026-07-22',
+          validUntil: '2026-08-22',
+          currency: 'SGD',
+          probability: '50',
+          lines: [{
+            productId: Number(salesApprovalRefs.product_id),
+            qty: '1',
+            unitPrice: '37.50',
+            taxCode: 'SR',
+          }],
+        },
+        'smoke-enquiry-workspace-convert',
+      );
+      await openTxn('enquiry', { id: workspaceEnquiry.data.id });
+      const salesTransaction = document.querySelector('[data-sales-transaction="canonical"]');
+      const salesTransactionCanonical = Number(salesTransaction?.dataset.recordId) === Number(workspaceEnquiry.data.id)
+        && Number(salesTransaction?.dataset.relatedCount) === 1
+        && document.body.textContent.includes('ENQ-SMOKE-WORKSPACE')
+        && document.body.textContent.includes('Q-SMOKE-WORKSPACE')
+        && Number(workspaceConversion.data.quotationId) > 0
+        && !document.querySelector('[data-preview-banner]');
       const draftStockBefore = (await adapter.db.query(
         "select p.sku, s.qty::float as qty from stock_level s join product p on p.id=s.product_id join warehouse w on w.id=s.warehouse_id where p.master_fn='M1' and p.company_fn='C-SG' and w.code='WH-SALES' and p.sku in ('SG-WIDGET','SG-GADGET') order by p.sku",
       )).rows;
@@ -432,6 +469,7 @@ async function checkViewport(browser, viewport) {
         purchasingReportsCanonical,
         salesOrderAuthoringCanonical,
         salesOrderApprovalCanonical,
+        salesTransactionCanonical,
         salesAnalyticsCanonical,
         salesReportsCanonical,
         salesReportRoutesCanonical: reportMarkers.every(Boolean),
@@ -478,6 +516,7 @@ async function checkViewport(browser, viewport) {
       if (!runtimeProof.purchasingReportsCanonical) errors.push('[demo-esm] purchasing reports did not render from canonical derived resources');
       if (!runtimeProof.salesOrderAuthoringCanonical) errors.push('[demo-esm] new sales order did not render its Canonical authoring workspace');
       if (!runtimeProof.salesOrderApprovalCanonical) errors.push('[demo-esm] sales order approval queue did not render the created canonical order');
+      if (!runtimeProof.salesTransactionCanonical) errors.push('[demo-esm] sales txn-view did not render its selected canonical enquiry and linked quotation');
       if (!runtimeProof.salesAnalyticsCanonical) errors.push('[demo-esm] sales dashboard did not render canonical derived analytics');
       if (!runtimeProof.salesReportsCanonical || !runtimeProof.salesReportRoutesCanonical) {
         errors.push('[demo-esm] one or more sales analytics reports did not render as Canonical routes');
