@@ -625,16 +625,30 @@ the full 114-route release suite pass.
 Exit criteria: tenant/cursor/auth/sanitization domain and HTTP proof, secret-bearing
 Demo smoke, desktop/375px rendering and the full 114-route release suite pass.
 
-## Remaining productionization backlog — 6 Preview routes
+## Phase 29 — Canonical Bounded Customer CSV Import ✅
 
-This is the authoritative work breakdown after TASK-081. `tasks/tasks.jsonl` records
+1. **Staged customer import facts** (EPIC-046, TASK-082 done 2026-07-23) replace the
+   sample all-module wizard with one honest small-file workflow. A job accepts only
+   `code,name,industry`, at most 250 rows and an explicit update-or-skip duplicate
+   policy. Validation persists normalized rows and row errors before a permission-
+   gated, audited and idempotent atomic run. Demo/API share the same TypeScript commands
+   and newest-first keyset history. The five-language UI supports file or pasted CSV,
+   exposes every validation fact and moves maturity to **109/5**.
+
+Exit criteria: domain and authenticated API validation/rollback/tenant/RBAC/audit/
+idempotency proof, real Demo smoke, desktop/375px rendering and the full 114-route
+release suite pass.
+
+## Remaining productionization backlog — 5 Preview routes
+
+This is the authoritative work breakdown after TASK-082. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Integration/import — 2 routes:** `integration`, `data-import`. The delivery-log
-   route is now a real sanitized outbox read model; connector configuration still
-   requires encrypted credentials, while imports require job/row-error persistence.
+1. **Integration — 1 route:** `integration`. Delivery history and bounded customer CSV
+   import are now Canonical; the connector hub still requires server-side encrypted
+   credentials, connector-specific health checks and authorised retry/configuration.
 2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.

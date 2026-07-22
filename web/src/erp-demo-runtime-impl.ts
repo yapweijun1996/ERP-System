@@ -85,6 +85,12 @@ import { listSalesAnalyticsWithin } from '../../src/modules/sales/analytics';
 import { listReportingAnalyticsWithin } from '../../src/modules/reporting/analytics';
 import { listIntegrationEventsWithin } from '../../src/modules/integration/eventLog';
 import {
+  createCustomerImportJobWithin,
+  listCustomerImportJobsWithin,
+  runCustomerImportJobWithin,
+  type CreateCustomerImportJobInput,
+} from '../../src/modules/integration/customerImport';
+import {
   completeDemoSetupWithin,
   type CompleteDemoSetupInput,
 } from '../../src/modules/setup/completeDemoSetup';
@@ -346,12 +352,30 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    createCustomerImportJobWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: CreateCustomerImportJobInput,
+    ) {
+      return createCustomerImportJobWithin(asDomainDb(db), scope, actorUserId, input);
+    },
+    runCustomerImportJobWithin(db: DemoOrm, scope: Scope, jobId: number) {
+      return runCustomerImportJobWithin(asDomainDb(db), scope, jobId);
+    },
     listIntegrationEventsWithin(
       db: DemoOrm,
       scope: Scope,
       input: { cursor?: number; limit?: number },
     ) {
       return listIntegrationEventsWithin(asDomainDb(db), scope, input);
+    },
+    listCustomerImportJobsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { cursor?: number; limit?: number },
+    ) {
+      return listCustomerImportJobsWithin(asDomainDb(db), scope, input);
     },
     listReportingAnalyticsWithin(
       db: DemoOrm,

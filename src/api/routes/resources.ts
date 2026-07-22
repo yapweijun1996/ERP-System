@@ -56,6 +56,7 @@ import {
   InventoryProductValidationError,
 } from '../../modules/inventory/product';
 import { ProjectTimeEntryError } from '../../modules/project/timeEntry';
+import { CustomerImportValidationError } from '../../modules/integration/customerImport';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -129,6 +130,7 @@ export function createResourceRouter(db: DB): Router {
       }
       if (
         error instanceof InventoryProductValidationError
+        || error instanceof CustomerImportValidationError
         || error instanceof ProjectTimeEntryError
         || error instanceof InventoryAdjustmentValidationError
         || error instanceof StockTransferValidationError

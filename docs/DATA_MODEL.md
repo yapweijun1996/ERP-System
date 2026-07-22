@@ -17,6 +17,7 @@ purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt,
              purchase_order_approval, landed_cost(+line)
 finance/     account (chart of accounts), gl_entry
 system/      audit_log
+integration/ import_job, import_job_row, import_row_error, outbox_event
 ```
 
 `master` / `company` define the tenant hierarchy ([MULTI_TENANCY.md](MULTI_TENANCY.md));
@@ -29,6 +30,12 @@ product/warehouse projection, while `stock_location_balance` is the rebuildable
 product/warehouse/bin/tracking projection. Production commands update both
 projections only while appending the corresponding movement in the same transaction;
 ordinary API resources cannot directly update either balance.
+
+`import_job` is the bounded user-import header and summary. `import_job_row` stores only
+normalized fields supported by the target command; `import_row_error` preserves
+row/field/error facts. Raw arbitrary files and tenant identifiers are not stored. The
+current Canonical target is customer CSV (`code,name,industry`, maximum 250 rows); a
+validated job applies all ready rows atomically with an explicit update-or-skip policy.
 
 ## 2. Conventions
 

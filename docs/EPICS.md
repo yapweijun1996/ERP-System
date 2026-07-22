@@ -1621,3 +1621,27 @@ Acceptance criteria:
       replay, export or connector-configuration writes.
 - [x] Demo smoke seeds a secret-bearing outbox event and proves the topic renders while
       the secret does not. The full desktop/375px audit passes at 108 Canonical / 6 Preview.
+
+## EPIC-046 — Canonical Bounded Customer CSV Import
+
+**Goal:** replace the sample import wizard with a real, deliberately bounded customer
+CSV workflow that validates first, preserves row-level evidence and commits valid rows
+atomically in both Demo and production API modes.
+
+Acceptance criteria:
+
+- [x] Migration 0041 adds tenant-scoped/versioned `import_job`, normalized
+      `import_job_row` and append-only `import_row_error` facts with production RLS and
+      generated PGlite alignment.
+- [x] The shared command accepts only `code,name,industry`, rejects tenant fields and
+      files over 250 rows, normalizes customer codes and persists duplicate/validation
+      decisions before any customer write.
+- [x] A validated job runs once in one transaction, uses an explicit update-or-skip
+      policy and rolls back every customer/row/job change if any ready row is corrupt.
+      The run action is permission-gated, audited and idempotent.
+- [x] Demo/API expose newest-first keyset-paginated jobs plus bounded row/error reads;
+      authenticated tests prove tenant isolation, Viewer read-only access, query guards,
+      audit and replay.
+- [x] `data-import` is a five-language Canonical workspace with file/paste input,
+      template download, validation summary, row errors and explicit customer-only/
+      small-file boundaries. Smoke and desktop/375px audit pass at 109/5.

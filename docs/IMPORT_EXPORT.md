@@ -27,9 +27,16 @@ month's invoices.
   doesn't duplicate.
 - Large imports run as a **background job**, not a blocking request.
 
+**Implemented bounded slice (EPIC-046/TASK-082):** `data-import` now supports customer
+CSV in Demo and API modes. It accepts only `code,name,industry`, stages at most 250 rows,
+persists normalized row decisions and row-level errors, then imports ready rows in one
+audited/idempotent transaction using an explicit update-or-skip policy. This deliberately
+does **not** claim Excel, arbitrary modules or large background-file support yet.
+
 ### Demo mode
-In the PGlite demo, export = download a JSON/CSV file from the browser; import = upload a
-file parsed into PGlite. Same UI, no server round-trip.
+In the PGlite demo, customer import parses the CSV in the browser but sends normalized
+rows through the same shared TypeScript command used by PostgreSQL. The UI and persisted
+job/row/error model are the same; only the adapter transport differs.
 
 ---
 

@@ -99,6 +99,9 @@ import {
   progressClaim,
   projectTimeEntry,
   outboxEvent,
+  importJob,
+  importJobRow,
+  importRowError,
   serviceContract,
   serviceTicket,
 } from '../data/schema';
@@ -111,6 +114,7 @@ import { listSalesAnalyticsWithin } from '../modules/sales/analytics';
 import { listSalespeopleWithin } from '../modules/sales/commission';
 import { listReportingAnalyticsWithin } from '../modules/reporting/analytics';
 import { listIntegrationEventsWithin } from '../modules/integration/eventLog';
+import { listCustomerImportJobsWithin } from '../modules/integration/customerImport';
 
 export interface ApiScope {
   masterFn: string;
@@ -239,6 +243,22 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     'integration.read',
     (db, scope, input) => listIntegrationEventsWithin(db, scope, input),
   ),
+  'integration/import-jobs': {
+    ...resource(importJob, 'integration.read', {
+      status: importJob.status,
+      versionColumn: importJob.version,
+      allowedActions: ['run'],
+      createPermission: 'integration.import',
+    }),
+    listHandler: (db, scope, input) => listCustomerImportJobsWithin(db, scope, input),
+  },
+  'integration/import-rows': resource(importJobRow, 'integration.read', {
+    status: importJobRow.status,
+    numericFilters: { jobId: importJobRow.jobId },
+  }),
+  'integration/import-errors': resource(importRowError, 'integration.read', {
+    numericFilters: { jobId: importRowError.jobId },
+  }),
   'sales/customers': resource(customer, 'sales.read'),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),
   'sales/deliveries': resource(salesDelivery, 'sales.read', {

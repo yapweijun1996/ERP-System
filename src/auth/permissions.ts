@@ -33,6 +33,7 @@ export const PERMISSIONS = {
   serviceWrite: 'service.write',
   reportingRead: 'reporting.read',
   integrationRead: 'integration.read',
+  integrationImport: 'integration.import',
   payrollRead: 'payroll.read',
   payrollWrite: 'payroll.write',
   companySwitch: 'session.switch_company',

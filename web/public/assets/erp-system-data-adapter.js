@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 40;
+  var DEMO_SCHEMA_VERSION = 41;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -146,10 +146,15 @@
     var projectTimeSignature = (await db.query(
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name='project_time_entry'")).rows[0];
+    var importSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('import_job','import_job_row','import_row_error')")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
-      && projectTimeSignature && Number(projectTimeSignature.n) === 1;
+      && projectTimeSignature && Number(projectTimeSignature.n) === 1
+      && importSignature && Number(importSignature.n) === 3;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -1378,6 +1383,9 @@
     'project/projects':'project',
     'project/progress-claims':'progress_claim',
     'project/time-entries':'project_time_entry',
+    'integration/import-jobs':'import_job',
+    'integration/import-rows':'import_job_row',
+    'integration/import-errors':'import_row_error',
     'service/contracts':'service_contract',
     'service/tickets':'service_ticket',
   };
@@ -1438,7 +1446,7 @@
     var key=normalizeResource(resource);
     var adminResult=await listAdminResource(key, query);
     if(adminResult) return adminResult;
-    if(key==='sales/analytics'||key==='sales/salespeople'||key==='bi/analytics'||key==='integration/events'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
+    if(key==='sales/analytics'||key==='sales/salespeople'||key==='bi/analytics'||key==='integration/events'||key==='integration/import-jobs'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
       query=query||{};
       var derivedCommand=key==='sales/analytics'
         ?state.runtime.commands.listSalesAnalyticsWithin
@@ -1448,6 +1456,8 @@
         ?state.runtime.commands.listReportingAnalyticsWithin
         :key==='integration/events'
         ?state.runtime.commands.listIntegrationEventsWithin
+        :key==='integration/import-jobs'
+        ?state.runtime.commands.listCustomerImportJobsWithin
         :key==='purchasing/vendor-performance'
         ?state.runtime.commands.listVendorPerformanceWithin
         :key==='purchasing/analytics'
@@ -1502,6 +1512,8 @@
       'finance/gl-entries':{accountId:'account_id'},
       'finance/bank-statements':{bankAccountId:'bank_account_id'},
       'finance/bank-statement-lines':{statementId:'statement_id'},
+      'integration/import-rows':{jobId:'job_id'},
+      'integration/import-errors':{jobId:'job_id'},
     }[key]||{};
     Object.keys(numericFilters).forEach(function(filter){
       if(query[filter]==null||query[filter]==='') return;
@@ -1564,6 +1576,13 @@
   }
   async function createInner(resource,payload){
     var key=normalizeResource(resource);
+    if(key==='integration/import-jobs'){
+      var importJob = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createCustomerImportJobWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(state.activeUserId), payload);
+      });
+      return {data:importJob,meta:{}};
+    }
     if(key==='admin/roles'){
       var newRole = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createRoleWithin(
@@ -1964,6 +1983,14 @@
   }
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='integration/import-jobs'&&name==='run'){
+      var completedImport = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.runCustomerImportJobWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:completedImport,meta:{}};
+    }
     if(key==='finance/bank-statements'&&name==='reconcile'){
       var reconciledBankStatement = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.reconcileBankStatementWithin(

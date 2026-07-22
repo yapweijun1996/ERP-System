@@ -88,8 +88,27 @@ import {
   unmatchBankStatementLineWithin,
   type MatchBankStatementLineInput,
 } from '../modules/finance/bankReconciliation';
+import {
+  runCustomerImportJobWithin,
+  CustomerImportStateError,
+} from '../modules/integration/customerImport';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'integration/import-jobs/run': {
+    permission: 'integration.import',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      try {
+        return await runCustomerImportJobWithin(tx, scope, input.resourceId);
+      } catch (error) {
+        if (error instanceof CustomerImportStateError) {
+          throw new ActionDispatchError(409, 'invalid_import_state', error.message);
+        }
+        throw error;
+      }
+    },
+  },
   'finance/bank-statements/reconcile': {
     permission: 'finance.write',
     idempotency: 'required',

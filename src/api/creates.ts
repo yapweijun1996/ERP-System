@@ -167,6 +167,10 @@ import {
   createBankStatementWithin,
   type CreateBankStatementInput,
 } from '../modules/finance/bankReconciliation';
+import {
+  createCustomerImportJobWithin,
+  type CreateCustomerImportJobInput,
+} from '../modules/integration/customerImport';
 
 export interface CreateDefinition {
   permission: string;
@@ -180,6 +184,18 @@ export interface CreateDefinition {
 }
 
 const CREATES: Record<string, CreateDefinition> = {
+  'integration/import-jobs': {
+    permission: 'integration.import',
+    audit: 'required',
+    execute(tx, scope, payload, actorUserId) {
+      return createCustomerImportJobWithin(
+        tx,
+        scope,
+        actorUserId,
+        payload as unknown as CreateCustomerImportJobInput,
+      );
+    },
+  },
   'finance/bank-statements': {
     permission: 'finance.write',
     audit: 'required',

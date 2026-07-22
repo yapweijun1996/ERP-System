@@ -614,6 +614,46 @@ async function checkViewport(browser, viewport) {
         && !document.body.textContent.includes('SMOKE-SECRET-MUST-NOT-RENDER')
         && !JSON.stringify(integrationEvents).includes('SMOKE-SECRET-MUST-NOT-RENDER')
         && !document.querySelector('[data-preview-banner]');
+      const importCode = `SMOKE-CUST-${Date.now()}`;
+      const customerImport = await adapter.create('integration/import-jobs', {
+        fileName: 'smoke-customers.csv',
+        duplicateStrategy: 'update_existing',
+        rows: [
+          { code: importCode, name: 'Smoke Fictional Customer', industry: 'Testing' },
+          { code: '', name: 'Persisted invalid row' },
+        ],
+      });
+      await navigate('data-import');
+      for (let attempt = 0; attempt < 50 && !document.querySelector('[data-customer-import-canonical="true"]'); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const customerImportBeforeRun = Boolean(document.querySelector('[data-customer-import-canonical="true"]'))
+        && document.body.textContent.includes('smoke-customers.csv')
+        && !document.querySelector('[data-preview-banner]');
+      const customerImportCompleted = await adapter.action(
+        'integration/import-jobs', customerImport.data.id, 'run', {},
+        `smoke-customer-import-${customerImport.data.id}`,
+      );
+      await navigate('data-import');
+      for (let attempt = 0; attempt < 50 && !document.body.textContent.includes('Smoke Fictional Customer'); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const importedCustomer = (await adapter.db.query(
+        'select code, name from customer where master_fn=$1 and company_fn=$2 and code=$3',
+        ['M1', 'C-SG', importCode],
+      )).rows[0];
+      const persistedImportError = (await adapter.db.query(
+        'select error_code from import_row_error where master_fn=$1 and company_fn=$2 and job_id=$3',
+        ['M1', 'C-SG', customerImport.data.id],
+      )).rows[0];
+      const customerImportCanonical = customerImportBeforeRun
+        && customerImportCompleted.data.status === 'completed'
+        && Number(customerImportCompleted.data.importedRows) === 1
+        && Number(customerImportCompleted.data.errorRows) === 1
+        && importedCustomer?.name === 'Smoke Fictional Customer'
+        && persistedImportError?.error_code === 'required'
+        && document.body.textContent.includes('Smoke Fictional Customer')
+        && !document.querySelector('[data-preview-banner]');
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -693,6 +733,7 @@ async function checkViewport(browser, viewport) {
             && Number(row.inventoryValue) > 0),
         timesheetCanonical,
         integrationLogCanonical,
+        customerImportCanonical,
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -757,6 +798,9 @@ async function checkViewport(browser, viewport) {
       }
       if (!runtimeProof.integrationLogCanonical) {
         errors.push('[demo-esm] integration log did not render bounded sanitized transactional outbox facts');
+      }
+      if (!runtimeProof.customerImportCanonical) {
+        errors.push('[demo-esm] customer CSV import did not persist validation facts and atomically import ready rows');
       }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
