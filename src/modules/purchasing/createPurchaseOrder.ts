@@ -12,6 +12,7 @@ import {
   product,
   project,
   purchaseOrder,
+  purchaseOrderApproval,
   purchaseOrderLine,
   purchaseRequisition,
   purchaseRfq,
@@ -156,8 +157,15 @@ export async function createPurchaseOrderWithin(exec: DB, scope: Scope, input: C
   const [order] = await exec.insert(purchaseOrder).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
     docNo: input.docNo, supplierId: input.supplierId, requisitionId, supplierQuotationId, projectId,
-    status: 'open', orderDate: input.orderDate, currency: input.currency,
+    status: 'pending_approval', orderDate: input.orderDate, currency: input.currency,
   }).returning({ id: purchaseOrder.id });
+
+  const [approval] = await exec.insert(purchaseOrderApproval).values({
+    masterFn: scope.masterFn,
+    companyFn: scope.companyFn,
+    orderId: order.id,
+    status: 'pending',
+  }).returning({ id: purchaseOrderApproval.id });
 
   let netTotal = new Decimal(0);
   let taxTotal = new Decimal(0);
@@ -190,7 +198,10 @@ export async function createPurchaseOrderWithin(exec: DB, scope: Scope, input: C
   }).where(eq(purchaseOrder.id, order.id));
 
   return {
+    id: order.id,
     orderId: order.id,
+    approvalId: approval.id,
+    status: 'pending_approval' as const,
     net: netTotal.toNumber(),
     tax: taxTotal.toNumber(),
     total: grandTotal.toNumber(),

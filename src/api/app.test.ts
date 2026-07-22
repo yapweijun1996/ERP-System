@@ -16,6 +16,7 @@ import {
   opportunity,
   product,
   purchaseOrder,
+  purchaseOrderApproval,
   purchaseOrderLine,
   purchaseRfq,
   purchaseRfqLine,
@@ -485,7 +486,7 @@ describe('production API security contract', () => {
     ]);
   });
 
-  it('runs the canonical purchasing create, receive and supplier-invoice chain over HTTP', async () => {
+  it('runs the canonical purchasing approval, receive and supplier-invoice chain over HTTP', async () => {
     const [item] = await db.select({ id: product.id }).from(product)
       .where(eq(product.sku, 'SG-WIDGET'));
     const [vendor] = await db.select({ id: supplier.id }).from(supplier)
@@ -502,6 +503,7 @@ describe('production API security contract', () => {
       'content-type': 'application/json',
       'x-csrf-token': cookies.csrf,
     };
+    const movementCountBefore = (await db.select().from(stockMovement)).length;
 
     const created = await fetch(`${running.baseUrl}/api/purchasing/purchase-orders`, {
       method: 'POST',
@@ -522,12 +524,81 @@ describe('production API security contract', () => {
     expect(created.status).toBe(201);
     const createdBody = await created.json();
     expect(createdBody.data).toMatchObject({
+      status: 'pending_approval',
       net: 20,
       tax: 1.8,
       total: 21.8,
       lines: 1,
     });
     const orderId = createdBody.data.orderId as number;
+
+    const blockedReceipt = await fetch(
+      `${running.baseUrl}/api/purchasing/purchase-orders/${orderId}/actions/receive`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'po-receive-before-approval' },
+        body: JSON.stringify({
+          warehouseId: location.id,
+          docNo: 'GR-BLOCKED-API',
+          receivedDate: '2026-07-19',
+        }),
+      },
+    );
+    expect(blockedReceipt.status).toBe(409);
+    expect(await db.select().from(stockMovement)).toHaveLength(movementCountBefore);
+    expect(await db.select().from(glEntry).where(eq(glEntry.journalRef, 'PO-API-1'))).toHaveLength(0);
+
+    const missingNote = await fetch(
+      `${running.baseUrl}/api/purchasing/purchase-orders/${orderId}/actions/approve`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'po-approve-missing-note' },
+        body: '{}',
+      },
+    );
+    expect(missingNote.status).toBe(400);
+    expect((await missingNote.json()).error.code).toBe('invalid_action_payload');
+    const viewerApprovalAuth = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const deniedApproval = await fetch(
+      `${running.baseUrl}/api/purchasing/purchase-orders/${orderId}/actions/approve`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: viewerApprovalAuth.header,
+          'content-type': 'application/json',
+          'x-csrf-token': viewerApprovalAuth.csrf,
+          'idempotency-key': 'viewer-po-approve-denied',
+        },
+        body: JSON.stringify({ note: 'Viewer must not approve.' }),
+      },
+    );
+    expect(deniedApproval.status).toBe(403);
+    expect((await deniedApproval.json()).error.code).toBe('permission_denied');
+
+    const approve = () => fetch(
+      `${running.baseUrl}/api/purchasing/purchase-orders/${orderId}/actions/approve`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'idempotency-key': 'po-approve-api-1',
+          'x-request-id': 'po-approve-api',
+        },
+        body: JSON.stringify({ note: 'Approved for the production requirement.' }),
+      },
+    );
+    const approved = await approve();
+    expect(approved.status).toBe(200);
+    expect((await approved.json()).data).toMatchObject({
+      status: 'open',
+      approvalStatus: 'approved',
+      decidedByName: 'Admin',
+    });
+    const approvalReplay = await approve();
+    expect(approvalReplay.status).toBe(200);
+    expect(approvalReplay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await db.select().from(stockMovement)).toHaveLength(movementCountBefore);
+    expect(await db.select().from(glEntry).where(eq(glEntry.journalRef, 'PO-API-1'))).toHaveLength(0);
 
     const lineResponse = await fetch(
       `${running.baseUrl}/api/purchasing/purchase-order-lines?limit=100`,
@@ -587,6 +658,14 @@ describe('production API security contract', () => {
     // Filtered to this test's own order (seedDemo() also seeds an unrelated
     // PO/invoice — EPIC-024's Payment Voucher demo fixture).
     expect(await db.select().from(purchaseOrder).where(eq(purchaseOrder.id, orderId))).toHaveLength(1);
+    expect(await db.select().from(purchaseOrderApproval)
+      .where(eq(purchaseOrderApproval.orderId, orderId))).toEqual([
+      expect.objectContaining({
+        status: 'approved',
+        decidedByName: 'Admin',
+        decisionNote: 'Approved for the production requirement.',
+      }),
+    ]);
     expect(await db.select().from(purchaseOrderLine).where(eq(purchaseOrderLine.orderId, orderId))).toHaveLength(1);
     expect(await db.select().from(goodsReceipt).where(eq(goodsReceipt.orderId, orderId))).toHaveLength(1);
     expect(await db.select().from(supplierInvoice).where(eq(supplierInvoice.orderId, orderId))).toHaveLength(1);
@@ -602,7 +681,13 @@ describe('production API security contract', () => {
       .where(eq(glEntry.journalRef, 'SINV-API-1')))).toHaveLength(3);
     expect((await db.select().from(auditLog)
       .where(eq(auditLog.requestId, 'po-create-api')))).toEqual([
-      expect.objectContaining({ entity: 'purchasing/purchase-orders', action: 'create' }),
+      expect.objectContaining({
+        entity: 'purchasing/purchase-orders', entityId: String(orderId), action: 'create',
+      }),
+    ]);
+    expect((await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'po-approve-api')))).toEqual([
+      expect.objectContaining({ entity: 'purchasing/purchase-orders', action: 'approve' }),
     ]);
 
     const viewer = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
@@ -689,7 +774,8 @@ describe('production API security contract', () => {
     const awarded = await award();
     expect(awarded.status).toBe(200);
     expect((await awarded.json()).data).toMatchObject({
-      quotationId: winner.id, rfqId, purchaseOrderNo: 'PO-RFQ-API-1', totalAmount: '26.16',
+      quotationId: winner.id, rfqId, purchaseOrderNo: 'PO-RFQ-API-1',
+      status: 'pending_approval', totalAmount: '26.16',
     });
     const replay = await award();
     expect(replay.status).toBe(200);
@@ -699,7 +785,11 @@ describe('production API security contract', () => {
     expect(quotes.map((row) => row.status).sort()).toEqual(['converted', 'rejected']);
     const [order] = await db.select().from(purchaseOrder)
       .where(eq(purchaseOrder.supplierQuotationId, winner.id));
-    expect(order.docNo).toBe('PO-RFQ-API-1');
+    expect(order).toMatchObject({ docNo: 'PO-RFQ-API-1', status: 'pending_approval' });
+    expect(await db.select().from(purchaseOrderApproval)
+      .where(eq(purchaseOrderApproval.orderId, order.id))).toEqual([
+      expect.objectContaining({ status: 'pending' }),
+    ]);
     const [audit] = await db.select().from(auditLog)
       .where(eq(auditLog.requestId, 'rfq-award-api'));
     expect(audit).toMatchObject({

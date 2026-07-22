@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { describe, it, expect } from 'vitest';
 import type { DB } from '../../data/db';
-import { product, project, purchaseOrder, purchaseRequisition, supplier, taxRule } from '../../data/schema';
+import {
+  product, project, purchaseOrder, purchaseOrderApproval, purchaseRequisition, supplier, taxRule,
+} from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { PostingError } from './errors';
@@ -37,6 +39,12 @@ describe('createPurchaseOrder', () => {
     expect(res.tax).toBe(11.01);
     expect(res.total).toBe(133.34);
     expect(res.lines).toBe(2);
+    expect(res.status).toBe('pending_approval');
+    const [order] = await db.select().from(purchaseOrder).where(eq(purchaseOrder.id, res.orderId));
+    const [approval] = await db.select().from(purchaseOrderApproval)
+      .where(eq(purchaseOrderApproval.orderId, res.orderId));
+    expect(order).toMatchObject({ status: 'pending_approval', version: 1 });
+    expect(approval).toMatchObject({ id: res.approvalId, status: 'pending', version: 1 });
   });
 
   it('throws PostingError (not a silent wrong rate) when no tax rule covers the order date', async () => {

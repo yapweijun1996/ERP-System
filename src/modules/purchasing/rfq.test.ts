@@ -5,6 +5,7 @@ import {
   glEntry,
   product,
   purchaseOrder,
+  purchaseOrderApproval,
   purchaseRequisition,
   purchaseRequisitionLine,
   purchaseRfq,
@@ -189,15 +190,20 @@ describe('purchasing RFQ and supplier quotation chain', () => {
       quotationId: first.id,
       rfqId: fx.rfq.id,
       purchaseOrderNo: 'PO-FROM-RFQ',
-      status: 'open',
+      status: 'pending_approval',
       totalAmount: '54.50',
     });
     const [order] = await db.select().from(purchaseOrder).where(eq(purchaseOrder.id, result.purchaseOrderId));
     expect(order).toMatchObject({
+      status: 'pending_approval',
       requisitionId: fx.requisition.id,
       supplierQuotationId: first.id,
       supplierId: fx.first.id,
     });
+    expect(await db.select().from(purchaseOrderApproval)
+      .where(eq(purchaseOrderApproval.orderId, result.purchaseOrderId))).toEqual([
+      expect.objectContaining({ status: 'pending' }),
+    ]);
     const quotes = await db.select({ id: supplierQuotation.id, status: supplierQuotation.status })
       .from(supplierQuotation).where(eq(supplierQuotation.rfqId, fx.rfq.id));
     expect(quotes).toEqual(expect.arrayContaining([

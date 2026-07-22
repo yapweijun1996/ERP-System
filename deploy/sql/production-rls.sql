@@ -31,7 +31,7 @@ DECLARE
     'sales_price_list', 'sales_price_list_line', 'sales_discount_rule',
     'sales_credit_profile',
     'account', 'gl_entry',
-    'goods_receipt', 'purchase_order', 'purchase_order_line',
+    'goods_receipt', 'purchase_order', 'purchase_order_approval', 'purchase_order_line',
     'purchase_requisition', 'purchase_requisition_line',
     'purchase_rfq', 'purchase_rfq_line', 'purchase_rfq_supplier',
     'purchase_return', 'purchase_return_line',

@@ -5,35 +5,93 @@
    ============================================================ */
 
 /* ---------------- PO APPROVALS (queue) ---------------- */
+function poApprovalCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Purchase Order Approvals',unit:'requests',sub:'Review every newly created purchase order before it can be received. Decisions are audited and never post inventory or accounting entries.',all:'All',pending:'Pending',approved:'Approved',rejected:'Rejected',awaiting:'Awaiting approval',queueValue:'Value awaiting approval',approvedCount:'Approved',rejectedCount:'Rejected',po:'Purchase order',supplier:'Supplier',date:'Order date',total:'Total',submitted:'Submitted',status:'Decision',review:'Review request',details:'Approval request',lineItems:'Order lines',item:'Item',qty:'Quantity',unitCost:'Unit cost',tax:'Tax',net:'Net amount',decision:'Decision record',decidedBy:'Decided by',decidedAt:'Decided at',note:'Decision note',approve:'Approve PO',reject:'Reject PO',approveTitle:'Approve purchase order?',rejectTitle:'Reject purchase order?',approvePrompt:'Record why this purchase order may proceed to receiving.',rejectPrompt:'Record why this purchase order must not proceed.',notePlaceholder:'Enter a concise, auditable reason…',cancel:'Cancel',confirm:'Confirm decision',approvedDone:'Purchase order approved',rejectedDone:'Purchase order rejected',back:'Back to approvals',orderStatus:'Order status',accountingNote:'Approval changes document status only. Stock movements begin at goods receipt; accounting begins at supplier-invoice posting.',empty:'There are no purchase-order approval requests in this company.',pendingDecision:'Awaiting an authorised decision.'},
+    ms:{title:'Kelulusan Pesanan Belian',unit:'permintaan',sub:'Semak setiap pesanan belian baharu sebelum penerimaan barang. Keputusan diaudit dan tidak pernah mempost inventori atau perakaunan.',all:'Semua',pending:'Menunggu',approved:'Diluluskan',rejected:'Ditolak',awaiting:'Menunggu kelulusan',queueValue:'Nilai menunggu kelulusan',approvedCount:'Diluluskan',rejectedCount:'Ditolak',po:'Pesanan belian',supplier:'Pembekal',date:'Tarikh pesanan',total:'Jumlah',submitted:'Dihantar',status:'Keputusan',review:'Semak permintaan',details:'Permintaan kelulusan',lineItems:'Baris pesanan',item:'Item',qty:'Kuantiti',unitCost:'Kos seunit',tax:'Cukai',net:'Amaun bersih',decision:'Rekod keputusan',decidedBy:'Diputuskan oleh',decidedAt:'Masa keputusan',note:'Nota keputusan',approve:'Luluskan PO',reject:'Tolak PO',approveTitle:'Luluskan pesanan belian?',rejectTitle:'Tolak pesanan belian?',approvePrompt:'Catat sebab pesanan ini boleh diteruskan ke penerimaan.',rejectPrompt:'Catat sebab pesanan ini tidak boleh diteruskan.',notePlaceholder:'Masukkan sebab ringkas yang boleh diaudit…',cancel:'Batal',confirm:'Sahkan keputusan',approvedDone:'Pesanan belian diluluskan',rejectedDone:'Pesanan belian ditolak',back:'Kembali ke kelulusan',orderStatus:'Status pesanan',accountingNote:'Kelulusan hanya mengubah status dokumen. Pergerakan stok bermula semasa penerimaan; perakaunan bermula semasa invois pembekal diposting.',empty:'Tiada permintaan kelulusan pesanan belian untuk syarikat ini.',pendingDecision:'Menunggu keputusan pengguna yang diberi kuasa.'},
+    zh:{title:'采购订单审批',unit:'项申请',sub:'每张新采购订单必须先审批才能收货。所有决定均可审计，审批本身不会过账库存或会计分录。',all:'全部',pending:'待审批',approved:'已批准',rejected:'已拒绝',awaiting:'待审批数量',queueValue:'待审批金额',approvedCount:'已批准',rejectedCount:'已拒绝',po:'采购订单',supplier:'供应商',date:'订单日期',total:'总额',submitted:'提交时间',status:'审批结果',review:'审核申请',details:'审批申请',lineItems:'订单明细',item:'物料',qty:'数量',unitCost:'单位成本',tax:'税额',net:'未税金额',decision:'审批记录',decidedBy:'审批人',decidedAt:'审批时间',note:'审批备注',approve:'批准订单',reject:'拒绝订单',approveTitle:'批准这张采购订单？',rejectTitle:'拒绝这张采购订单？',approvePrompt:'请记录允许此采购订单进入收货流程的原因。',rejectPrompt:'请记录不允许此采购订单继续执行的原因。',notePlaceholder:'请输入简洁、可审计的原因…',cancel:'取消',confirm:'确认决定',approvedDone:'采购订单已批准',rejectedDone:'采购订单已拒绝',back:'返回审批列表',orderStatus:'订单状态',accountingNote:'审批只改变单据状态；库存流水从收货开始，会计分录从供应商发票过账开始。',empty:'当前公司没有采购订单审批申请。',pendingDecision:'等待授权用户作出决定。'},
+    ja:{title:'購買発注承認',unit:'件',sub:'新しい購買発注は入荷前に承認します。判断は監査され、承認自体は在庫・会計を転記しません。',all:'すべて',pending:'承認待ち',approved:'承認済',rejected:'却下',awaiting:'承認待ち',queueValue:'承認待ち金額',approvedCount:'承認済',rejectedCount:'却下',po:'購買発注',supplier:'仕入先',date:'発注日',total:'合計',submitted:'申請日時',status:'判断',review:'申請を確認',details:'承認申請',lineItems:'発注明細',item:'品目',qty:'数量',unitCost:'単価',tax:'税額',net:'税抜金額',decision:'判断記録',decidedBy:'判断者',decidedAt:'判断日時',note:'判断メモ',approve:'発注を承認',reject:'発注を却下',approveTitle:'購買発注を承認しますか？',rejectTitle:'購買発注を却下しますか？',approvePrompt:'この発注を入荷へ進める理由を記録してください。',rejectPrompt:'この発注を進めない理由を記録してください。',notePlaceholder:'簡潔で監査可能な理由を入力…',cancel:'キャンセル',confirm:'判断を確定',approvedDone:'購買発注を承認しました',rejectedDone:'購買発注を却下しました',back:'承認一覧へ戻る',orderStatus:'発注ステータス',accountingNote:'承認は伝票ステータスのみ変更します。在庫移動は入荷、会計転記は仕入先請求書から始まります。',empty:'この会社には購買発注承認申請がありません。',pendingDecision:'権限を持つユーザーの判断待ちです。'},
+    vi:{title:'Phê duyệt đơn mua hàng',unit:'yêu cầu',sub:'Mọi đơn mua hàng mới phải được duyệt trước khi nhận hàng. Quyết định được kiểm toán và không tự ghi sổ kho hay kế toán.',all:'Tất cả',pending:'Chờ duyệt',approved:'Đã duyệt',rejected:'Đã từ chối',awaiting:'Đang chờ duyệt',queueValue:'Giá trị chờ duyệt',approvedCount:'Đã duyệt',rejectedCount:'Đã từ chối',po:'Đơn mua hàng',supplier:'Nhà cung cấp',date:'Ngày đặt hàng',total:'Tổng',submitted:'Đã gửi',status:'Quyết định',review:'Xem yêu cầu',details:'Yêu cầu phê duyệt',lineItems:'Dòng đơn hàng',item:'Mặt hàng',qty:'Số lượng',unitCost:'Đơn giá',tax:'Thuế',net:'Giá trị chưa thuế',decision:'Biên bản quyết định',decidedBy:'Người quyết định',decidedAt:'Thời điểm quyết định',note:'Ghi chú quyết định',approve:'Duyệt PO',reject:'Từ chối PO',approveTitle:'Duyệt đơn mua hàng?',rejectTitle:'Từ chối đơn mua hàng?',approvePrompt:'Ghi rõ lý do cho phép đơn hàng chuyển sang nhận hàng.',rejectPrompt:'Ghi rõ lý do không cho phép đơn hàng tiếp tục.',notePlaceholder:'Nhập lý do ngắn gọn, có thể kiểm toán…',cancel:'Hủy',confirm:'Xác nhận quyết định',approvedDone:'Đã duyệt đơn mua hàng',rejectedDone:'Đã từ chối đơn mua hàng',back:'Quay lại danh sách duyệt',orderStatus:'Trạng thái đơn',accountingNote:'Phê duyệt chỉ đổi trạng thái chứng từ. Biến động kho bắt đầu khi nhận hàng; bút toán bắt đầu khi ghi sổ hóa đơn nhà cung cấp.',empty:'Không có yêu cầu phê duyệt đơn mua hàng trong công ty này.',pendingDecision:'Đang chờ quyết định của người có thẩm quyền.'},
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+function poApprovalLabel(status){const s=poApprovalCopy();return s(status==='pending'?'pending':status==='approved'?'approved':'rejected');}
+function poApprovalTone(status){return status==='approved'?'ok':status==='rejected'?'danger':'warn';}
+function openPoApprovalDecision(request,decision){
+  const s=poApprovalCopy();
+  const approve=decision==='approve';
+  appModal({icon:approve?'checkc':'x',title:s(approve?'approveTitle':'rejectTitle'),width:560,body:
+    `<p style="color:var(--muted);font-size:13.5px;margin-top:0">${esc(s(approve?'approvePrompt':'rejectPrompt'))}</p><div class="fld"><span>${esc(s('note'))}</span><textarea id="poApprovalNote" maxlength="1000" placeholder="${esc(s('notePlaceholder'))}"></textarea></div>`,
+    actions:btn(s('cancel'),{cls:'soft',attrs:'data-po-decision-cancel'})+btn(s('confirm'),{icon:approve?'check':'x',cls:approve?'primary':'danger',attrs:'data-po-decision-confirm'})});
+  document.querySelector('[data-po-decision-cancel]')?.addEventListener('click',closeModal);
+  document.querySelector('[data-po-decision-confirm]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;const note=document.querySelector('#poApprovalNote').value.trim();
+    if(!note){toast(s('notePlaceholder'),'warn');return;}
+    button.disabled=true;
+    try{
+      await window.ErpSystemData.action('purchasing/purchase-orders',request.orderId,decision,{note},`po-approval-${request.id}-v${request.version}-${decision}`);
+      closeModal();toast(s(approve?'approvedDone':'rejectedDone'),'ok');
+      navigate('po-approval',{purchaseOrderId:request.orderId});
+    }catch(error){button.disabled=false;toast(error&&error.message||'Decision failed','danger');}
+  });
+}
 makePurList({
-  route:'po-approvals', active:'po-approvals', title:'Purchase Order Approvals', unit:'in queue',
-  sub:'Purchase orders held for sign-off — triggered by value over the approval limit, budget breach, price above last purchase, or an unapproved supplier. Approve, reject or request changes.',
-  rows:()=>DB.purchaseOrders.filter(p=>p.status==='Pending Approval'), rowId:p=>p.no,
-  chips:[['all','All'],['budget','Over budget'],['highval','High value']],
-  filterFn:(p,f)=>f==='budget'?!!p.flag:p.total>=50000,
+  route:'po-approvals', active:'po-approvals', title:()=>poApprovalCopy()('title'), unit:()=>poApprovalCopy()('unit'),
+  sub:()=>poApprovalCopy()('sub'),prepare:prepareCanonicalPurchasingData,
+  rows:()=>DB.purchaseOrderApprovals, rowId:p=>p.id,
+  chips:[['all',()=>poApprovalCopy()('all')],['pending',()=>poApprovalCopy()('pending')],['approved',()=>poApprovalCopy()('approved')],['rejected',()=>poApprovalCopy()('rejected')]],
+  filterFn:(p,f)=>p.status===f,
   kpis:(r)=>[
-    {label:'Awaiting approval', val:r.length, accent:true},
-    {label:'Value in queue', val:money0(r.reduce((a,p)=>a+p.total,0))},
-    {label:'Over budget', val:r.filter(p=>p.flag).length, neg:true, f:'budget'},
-    {label:'High value (≥$50k)', val:r.filter(p=>p.total>=50000).length, f:'highval'},
+    {label:()=>poApprovalCopy()('awaiting'),val:r.filter(p=>p.status==='pending').length,accent:true,f:'pending'},
+    {label:()=>poApprovalCopy()('queueValue'),val:money0(r.filter(p=>p.status==='pending').reduce((a,p)=>a+p.total,0))},
+    {label:()=>poApprovalCopy()('approvedCount'),val:r.filter(p=>p.status==='approved').length,f:'approved'},
+    {label:()=>poApprovalCopy()('rejectedCount'),val:r.filter(p=>p.status==='rejected').length,neg:true,f:'rejected'},
   ],
   columns:[
-    {label:'PO Number', w:'minmax(150px,1.3fr)', render:p=>docNoCell(p.no, p.supp)},
-    {label:'Buyer', align:'l', w:'minmax(100px,1fr)', render:p=>esc(p.buyer)},
-    {label:'Date', align:'l', w:'minmax(96px,0.9fr)', render:p=>esc(p.date)},
-    {label:'Trigger', align:'l', w:'minmax(160px,1.7fr)', render:p=>p.flag?`<span style="color:var(--warn)">${ic('warn')} ${esc(p.flag)}</span>`:p.total>=50000?`<span style="color:var(--muted)">Value ≥ $50k tier</span>`:`<span style="color:var(--muted)">Standard approval</span>`},
-    {label:'Total', align:'r', sortable:true, w:'minmax(108px,1fr)', render:p=>`<b class="tnum">${money(p.total,p.currency)}</b>${p.currency!=='USD'?`<div style="font-size:11px;color:var(--muted)">${p.currency}</div>`:''}`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(130px,1.2fr)', render:p=>cap(p.status,'warn')},
+    {label:()=>poApprovalCopy()('po'),w:'minmax(145px,1.2fr)',render:p=>docNoCell(p.no,p.orderDate)},
+    {label:()=>poApprovalCopy()('supplier'),align:'l',w:'minmax(170px,1.6fr)',render:p=>suppCell(p.supplier,p.supplierCode)},
+    {label:()=>poApprovalCopy()('total'),align:'r',sortable:true,w:'minmax(110px,1fr)',render:p=>`<b class="tnum">${money(p.total,p.currency)}</b>`},
+    {label:()=>poApprovalCopy()('submitted'),align:'l',w:'minmax(135px,1.2fr)',render:p=>`<span style="color:var(--muted)">${esc(p.submittedAt)}</span>`},
+    {label:()=>poApprovalCopy()('status'),align:'l',cls:'cap-cell',w:'minmax(120px,1fr)',render:p=>cap(poApprovalLabel(p.status),poApprovalTone(p.status))},
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
-  rowMenu:(p)=>[
-    {id:'review',icon:'ext',label:'Review PO',run:()=>navigate('po-approval')},
-    {id:'approve',icon:'check',label:'Approve',run:()=>toast(`${p.no} approved`,'ok')},
-    {id:'changes',icon:'edit',label:'Request changes',run:()=>toast(`Change request sent for ${p.no}`,'info')},
-    {id:'reject',icon:'x',label:'Reject',danger:true,sep:true,run:()=>toast(`${p.no} rejected`,'danger')},
-  ],
-  onOpen:(p)=>{ if(p.no==='PO-26-0291'){ navigate('po-approval'); return; } toast('Opening '+p.no,'info'); },
+  rowMenu:(p)=>[{id:'review',icon:'ext',label:poApprovalCopy()('review'),run:()=>navigate('po-approval',{purchaseOrderId:p.orderId})}],
+  onOpen:(p)=>navigate('po-approval',{purchaseOrderId:p.orderId}),
 });
+
+SCREENS['po-approval']=async function(root,params){
+  const s=poApprovalCopy();
+  await prepareCanonicalPurchasingData();
+  const requestedId=params&&params.purchaseOrderId?Number(params.purchaseOrderId):null;
+  const requests=DB.purchaseOrderApprovals||[];
+  const request=(requestedId?requests.find(row=>row.orderId===requestedId):null)
+    ||requests.find(row=>row.status==='pending')||requests[0];
+  if(!request){root.innerHTML=purPage({route:'po-approval',active:'po-approvals',title:s('details'),sub:s('sub'),body:`<div class="emptystate"><b>${esc(s('empty'))}</b></div>`});return;}
+  const lines=buildTable({rowId:line=>line.id,columns:[
+    {label:s('item'),w:'minmax(190px,1.8fr)',render:line=>`<div class="cellsub"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></div>`},
+    {label:s('qty'),align:'r',w:'minmax(80px,.7fr)',render:line=>`<span class="tnum">${num(line.qty)} ${esc(line.uom)}</span>`},
+    {label:s('unitCost'),align:'r',w:'minmax(100px,.9fr)',render:line=>`<span class="tnum">${money(line.unitCost,request.currency)}</span>`},
+    {label:s('tax'),align:'r',w:'minmax(92px,.8fr)',render:line=>`<span class="tnum">${money(line.tax,request.currency)}</span><small style="display:block;color:var(--muted)">${esc(line.taxCode)} · ${num(line.taxRate)}%</small>`},
+    {label:s('net'),align:'r',w:'minmax(110px,1fr)',render:line=>`<b class="tnum">${money(line.net,request.currency)}</b>`},
+  ],rows:request.lines});
+  const decision=request.status==='pending'
+    ?`<div class="callout info">${ic('clock')}<span>${esc(s('pendingDecision'))}</span></div>`
+    :`<div class="timeline"><div class="tl ${request.status==='approved'?'ok':'danger'}"><span class="tldot"></span><div class="tlbody"><div class="when">${esc(request.decidedAt||'—')}</div><div class="what">${esc(poApprovalLabel(request.status))} · ${esc(request.decidedByName||'—')}</div><div class="det">${esc(request.decisionNote||'—')}</div></div></div></div>`;
+  root.innerHTML=`<div class="content full"><section class="master"><div class="scrollarea"><div class="docwrap"><div class="docpage">
+    ${crumbs([DB.company.name,{label:s('title'),route:'po-approvals'},{cur:request.no}])}${purNav('po-approvals')}
+    <div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('cart')} ${esc(s('details'))} <span class="dnum">${esc(request.no)}</span></div><div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(request.supplier)} · ${esc(request.supplierCode)}</div></div><div class="dactions">${cap(poApprovalLabel(request.status),poApprovalTone(request.status))}</div></div>
+      <div class="docmeta"><div class="dm"><small>${esc(s('supplier'))}</small><b>${esc(request.supplier)}</b></div><div class="dm"><small>${esc(s('date'))}</small><b>${esc(request.orderDate)}</b></div><div class="dm"><small>${esc(s('submitted'))}</small><b>${esc(request.submittedAt)}</b></div><div class="dm"><small>${esc(s('orderStatus'))}</small><b>${esc(request.orderStatus)}</b></div></div>
+    </div>
+    <div class="appr-layout"><div class="docmain"><div class="panel"><div class="panel-h"><h3>${esc(s('lineItems'))}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${request.lines.length}</span></div><div class="tablewrap">${lines}</div></div><div class="callout info" style="margin-top:14px">${ic('lock')}<span>${esc(s('accountingNote'))}</span></div></div>
+      <aside><div class="sumcard"><div class="sumrow"><span class="sk2">${esc(s('net'))}</span><span class="sv tnum">${money(request.net,request.currency)}</span></div><div class="sumrow"><span class="sk2">${esc(s('tax'))}</span><span class="sv tnum">${money(request.tax,request.currency)}</span></div><div class="sumrow total"><span class="sk2">${esc(s('total'))}</span><span class="sv tnum">${money(request.total,request.currency)}</span></div></div><div class="sumcard" style="margin-top:14px"><div class="sectitle" style="margin-top:0">${esc(s('decision'))}</div>${decision}</div></aside>
+    </div>
+  </div></div></div><div class="responsive-actionbar">${btn(s('back'),{icon:'chevleft',cls:'soft',attrs:'data-po-back'})}<div class="grow"></div>${request.status==='pending'?btn(s('reject'),{icon:'x',cls:'danger',attrs:'data-po-reject'})+btn(s('approve'),{icon:'check',cls:'primary',sm:false,attrs:'data-po-approve'}):''}</div></section></div>`;
+  root.querySelector('[data-po-back]')?.addEventListener('click',()=>navigate('po-approvals'));
+  root.querySelector('[data-po-approve]')?.addEventListener('click',()=>openPoApprovalDecision(request,'approve'));
+  root.querySelector('[data-po-reject]')?.addEventListener('click',()=>openPoApprovalDecision(request,'reject'));
+};
 
 /* ---------------- SUPPLIER PRICE LISTS / CONTRACTS ---------------- */
 makePurList({

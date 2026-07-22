@@ -14,7 +14,7 @@ inventory/   product, warehouse, stock_level, stock_movement,
              stock_transfer(+line)
 sales/       customer, sales_order, sales_order_line, delivery, invoice, payment
 purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt,
-             landed_cost(+line)
+             purchase_order_approval, landed_cost(+line)
 finance/     account (chart of accounts), gl_entry
 system/      audit_log
 ```
@@ -339,6 +339,10 @@ original invoice:
 
 ```
 company ||--o{ supplier ||--o{ purchase_order ||--o{ purchase_order_line }o--|| product
+purchase_order ||--|| purchase_order_approval
+purchase_order create → pending_approval; approve/reject snapshots actor + required note
+purchase_order approval writes no stock_movement or gl_entry
+goods receipt requires purchase_order.status = open (approved)
 purchase_order ||--o{ goods_receipt   (receive stock → stock_movement 'in')
 purchase_order ||--o{ supplier_invoice (Dr Inventory/Input Tax, Cr AP)
 goods_receipt ||--o{ purchase_return ||--o{ purchase_return_line

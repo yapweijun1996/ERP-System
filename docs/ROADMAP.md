@@ -391,7 +391,7 @@ only through registered commands, and passes domain/API/browser/audit verificati
 1. **RFQ → Supplier Quotation → Purchase Order** (EPIC-028, TASK-064 done
    2026-07-22) — added a real requisition-aware RFQ register, invited-supplier response
    capture, comparable Decimal/tax-snapshotted quotation totals and an atomic award
-   action that creates exactly one linked draft PO. Award closes the RFQ, converts the
+   action that creates exactly one linked pending-approval PO. Award closes the RFQ, converts the
    winner and rejects competitors without touching stock or GL. `rfqs` and
    `supplier-quotations` are now Canonical in Demo/API with five-language workflows,
    moving the route boundary from 70/44 to **72/42**. `pur-txn-view` remains Preview
@@ -438,19 +438,33 @@ stock movement and zero residual AP after the net voucher.
 Exit criteria: exact allocation, duplicate/tenant/zero-stock rollback, valuation/GL
 equality and no-stock-movement invariants pass domain, API and live-browser proof.
 
-## Remaining productionization backlog — 38 Preview routes
+## Phase 16 — Purchase Order Approval Gate ✅
 
-This is the authoritative work breakdown after TASK-067. `tasks/tasks.jsonl` records
+1. **PO approval queue and detail** (EPIC-032, TASK-068 done 2026-07-22) adds one
+   versioned approval record to every newly-created or RFQ-awarded purchase order.
+   Orders start `pending_approval`; an authorised, noted approve/reject decision records
+   the actor and changes only the PO/approval states. Approval creates no inventory or
+   GL facts, and receiving continues to require the approved `open` state. The queue and
+   per-order workspace are real Demo/API five-language routes. Domain/API, RBAC, audit,
+   idempotency, Chinese and 375px browser proof plus every release gate passed at
+   **78/36**.
+
+Exit criteria: pending/rejected orders cannot be received; authorised replay is stable;
+approval leaves stock and GL unchanged; both approval routes have no sample-data path.
+
+## Remaining productionization backlog — 36 Preview routes
+
+This is the authoritative work breakdown after TASK-068. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Purchasing depth — 13 routes:** `purchasing-home`, `po-approvals`, `goods-receipt`,
+1. **Purchasing depth — 12 routes:** `purchasing-home`, `goods-receipt`,
    `supplier-invoice`, `supplier-price-lists`,
    `vendor-performance`, `purchasing-reports`, `report-pur-supplier`,
    `report-pur-buyer`, `report-pur-price-var`, `report-pur-vendor`,
-   `report-pur-generic`, `pur-txn-view`. Implement approvals and transactional detail
-   next, then purchasing controls and reports.
+   `report-pur-generic`, `pur-txn-view`. Implement transactional detail next, then
+   purchasing controls and reports.
 2. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
    `sales-commission`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
    `report-quote-conversion`, `report-generic`, `txn-view`. Prefer the reusable new-order
@@ -466,9 +480,9 @@ workstreams in dependency order:
 6. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-7. **Small vertical gaps — 3 routes:** Inventory `new-item`, Project `timesheet`, and
-   Workflow `po-approval`. Reuse existing product/project/purchasing schemas and add only
-   the missing server commands and audit rules.
+7. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
+   Reuse existing product/project schemas and add only the missing server commands and
+   audit rules.
 8. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
    with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
 

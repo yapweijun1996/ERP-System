@@ -10,7 +10,7 @@ import {
   purchaseRequisition, purchaseRequisitionLine,
   purchaseRfq, purchaseRfqLine, purchaseRfqSupplier,
   supplierQuotation, supplierQuotationLine,
-  purchaseOrder, purchaseOrderLine, supplierInvoice, glEntry,
+  purchaseOrder, purchaseOrderApproval, purchaseOrderLine, supplierInvoice, glEntry,
   payrollRun, payrollRunLine,
 } from './schema';
 import { computeStatutoryContributions } from '../modules/payroll/statutory';
@@ -469,6 +469,23 @@ export async function seedDemo(db: DB): Promise<void> {
     masterFn: 'M1', companyFn: 'C-SG', orderId: poFin1.id, lineNo: 1,
     productId: sgWidget.id, qty: '100', unitCost: '10.00',
     netAmount: '1000.00', taxCode: 'SR', taxRate: '9.000', taxAmount: '90.00',
+  });
+
+  // TASK-068: one genuine pending PO makes the approval queue immediately useful.
+  // It has no receipt, stock movement, invoice or GL entries; those remain blocked
+  // until an authorised user records a real decision.
+  const [approvalPo] = await db.insert(purchaseOrder).values({
+    masterFn: 'M1', companyFn: 'C-SG', docNo: 'PO-APP-2026-0001', supplierId: supp1.id,
+    status: 'pending_approval', orderDate: '2026-07-20', currency: 'SGD',
+    netAmount: '350.00', taxAmount: '31.50', totalAmount: '381.50',
+  }).returning({ id: purchaseOrder.id });
+  await db.insert(purchaseOrderLine).values({
+    masterFn: 'M1', companyFn: 'C-SG', orderId: approvalPo.id, lineNo: 1,
+    productId: sgWidget.id, qty: '50', unitCost: '7.0000',
+    netAmount: '350.00', taxCode: 'SR', taxRate: '9.000', taxAmount: '31.50',
+  });
+  await db.insert(purchaseOrderApproval).values({
+    masterFn: 'M1', companyFn: 'C-SG', orderId: approvalPo.id, status: 'pending',
   });
   await db.insert(supplierInvoice).values({
     masterFn: 'M1', companyFn: 'C-SG', docNo: 'SINV-2026-0001', orderId: poFin1.id,

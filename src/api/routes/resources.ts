@@ -44,6 +44,7 @@ import { SalesReturnError } from '../../modules/sales/return';
 import { SalesDebitNoteError } from '../../modules/sales/debitNote';
 import { SalesPricingError } from '../../modules/sales/pricing';
 import { SalesCreditError } from '../../modules/sales/creditControl';
+import { PurchaseOrderApprovalError } from '../../modules/purchasing/purchaseOrderApproval';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -280,6 +281,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof InventorySnapshotConflictError
         || error instanceof InvalidStockTransferStateError
         || error instanceof InvalidPurchaseOrderStateError
+        || error instanceof PurchaseOrderApprovalError
       ) {
         apiError(res, 409, 'invalid_state', error.message);
         return;

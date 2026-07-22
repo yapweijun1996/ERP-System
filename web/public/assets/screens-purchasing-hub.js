@@ -93,6 +93,7 @@ async function prepareCanonicalPurchasingData(){
       &&Array.isArray(DB.purchaseOrders)
       &&Array.isArray(DB.goodsReceipts)
       &&Array.isArray(DB.supplierInvoices)
+      &&Array.isArray(DB.purchaseOrderApprovals)
     ) return;
     throw new Error('The offline canonical purchasing snapshot is unavailable.');
   }
@@ -123,6 +124,7 @@ async function prepareCanonicalPurchasingData(){
     listPage('inventory/location-balances'),
     listPage('purchasing/landed-costs'),
     listPage('purchasing/landed-cost-lines'),
+    listPage('purchasing/purchase-order-approvals'),
   ]);
   const [
     suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,
@@ -130,15 +132,21 @@ async function prepareCanonicalPurchasingData(){
     purchaseRfqs,purchaseRfqLines,purchaseRfqSuppliers,supplierQuotations,supplierQuotationLines,
     purchaseReturns,purchaseReturnLines,supplierCreditNotes,supplierCreditNoteLines,supplierDebitNotes,
     inventoryBins,inventoryLots,inventorySerials,locationBalances,landedCosts,landedCostLines,
+    purchaseOrderApprovals,
   ]=pages.map(page=>page.data);
   const productById=new Map(products.map(row=>[row.id,row]));
   const supplierById=new Map(suppliers.map(row=>[row.id,row]));
   const orderById=new Map(purchaseOrders.map(row=>[row.id,row]));
   const warehouseById=new Map(warehouses.map(row=>[row.id,row]));
   const lineCountByOrder=new Map();
+  const orderLinesByOrder=new Map();
   purchaseOrderLines.forEach(row=>{
     lineCountByOrder.set(row.orderId,(lineCountByOrder.get(row.orderId)||0)+1);
+    const rows=orderLinesByOrder.get(row.orderId)||[];
+    rows.push(row);
+    orderLinesByOrder.set(row.orderId,rows);
   });
+  const approvalByOrder=new Map(purchaseOrderApprovals.map(row=>[row.orderId,row]));
   const receiptByOrder=new Map(goodsReceipts.map(row=>[row.orderId,row]));
   const receiptById=new Map(goodsReceipts.map(row=>[row.id,row]));
   const payableBySupplier=new Map();
@@ -193,7 +201,10 @@ async function prepareCanonicalPurchasingData(){
     status:'Active',
     balance:payableBySupplier.get(row.id)||0,
   }));
-  const PO_STATUS_UI={open:'Approved',received:'Completed',cancelled:'Cancelled'};
+  const PO_STATUS_UI={
+    pending_approval:'Pending Approval',open:'Approved',received:'Completed',
+    rejected:'Rejected',cancelled:'Cancelled',
+  };
   DB.purchaseOrders=purchaseOrders.map(row=>{
     const supplier=supplierById.get(row.supplierId)||{};
     const lineCount=lineCountByOrder.get(row.id)||0;
@@ -215,6 +226,7 @@ async function prepareCanonicalPurchasingData(){
       buyer:DB.user&&DB.user.name||'System',
       items:lineCount,
       recv:row.status==='received'?100:0,
+      approval:approvalByOrder.get(row.id)||null,
     };
   });
   DB.goodsReceipts=goodsReceipts.map(row=>{
@@ -271,6 +283,31 @@ async function prepareCanonicalPurchasingData(){
     unitCost:purchasingNumber(row.unitCost),net:purchasingNumber(row.netAmount),
     taxCode:row.taxCode,taxRate:purchasingNumber(row.taxRate),tax:purchasingNumber(row.taxAmount),
   }; });
+  DB.purchaseOrderApprovals=purchaseOrderApprovals.map(row=>{
+    const order=orderById.get(row.orderId)||{};
+    const vendor=supplierById.get(order.supplierId)||{};
+    const lines=(orderLinesByOrder.get(row.orderId)||[]).sort((a,b)=>a.lineNo-b.lineNo).map(line=>{
+      const item=productById.get(line.productId)||{};
+      return {
+        id:line.id,lineNo:line.lineNo,productId:line.productId,
+        sku:item.sku||`#${line.productId}`,name:item.name||`Product #${line.productId}`,
+        uom:item.uom||'',qty:purchasingNumber(line.qty),unitCost:purchasingNumber(line.unitCost),
+        net:purchasingNumber(line.netAmount),taxCode:line.taxCode,
+        taxRate:purchasingNumber(line.taxRate),tax:purchasingNumber(line.taxAmount),
+      };
+    });
+    return {
+      id:row.id,version:row.version,orderId:row.orderId,no:order.docNo||`PO #${row.orderId}`,
+      orderDate:dateValue(order.orderDate),currency:order.currency||DB.company.currency,
+      supplierId:order.supplierId,supplier:vendor.name||`Supplier #${order.supplierId}`,
+      supplierCode:vendor.code||'—',net:purchasingNumber(order.netAmount),
+      tax:purchasingNumber(order.taxAmount),total:purchasingNumber(order.totalAmount),
+      status:row.status,orderStatus:order.status,submittedAt:dateTimeValue(row.submittedAt),
+      decidedAt:row.decidedAt?dateTimeValue(row.decidedAt):null,
+      decidedByName:row.decidedByName||null,decisionNote:row.decisionNote||null,
+      lines,
+    };
+  });
   const landedLinesByHeader=new Map();
   landedCostLines.forEach(row=>{
     const rows=landedLinesByHeader.get(row.landedCostId)||[];

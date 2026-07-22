@@ -54,6 +54,10 @@ import {
   type CreateLandedCostInput,
 } from '../../src/modules/purchasing/landedCost';
 import {
+  decidePurchaseOrderWithin,
+  type DecidePurchaseOrderInput,
+} from '../../src/modules/purchasing/purchaseOrderApproval';
+import {
   confirmDraftSalesOrderWithin,
   confirmSalesOrder,
   type ConfirmDraftOrderInput,
@@ -628,6 +632,14 @@ export const erpDemoRuntime = Object.freeze({
     },
     createPurchaseOrderWithin(db: DemoOrm, scope: Scope, input: CreatePurchaseOrderInput) {
       return createPurchaseOrderWithin(asDomainDb(db), scope, input);
+    },
+    decidePurchaseOrderWithin(
+      db: DemoOrm,
+      scope: Scope,
+      orderId: number,
+      input: DecidePurchaseOrderInput,
+    ) {
+      return decidePurchaseOrderWithin(asDomainDb(db), scope, orderId, input);
     },
     createPurchaseRfqWithin(db: DemoOrm, scope: Scope, input: CreatePurchaseRfqInput) {
       return createPurchaseRfqWithin(asDomainDb(db), scope, input);

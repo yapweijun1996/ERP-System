@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 33;
+  var DEMO_SCHEMA_VERSION = 34;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -293,7 +293,7 @@
       "from supplier s left join supplier_invoice si on si.supplier_id = s.id " +
       "where " + wc('s') + " group by s.id, s.code, s.name order by s.id");
     var purchaseOrders = await rows(
-      "select po.id, po.doc_no, po.status, po.order_date::text as order_date, po.currency, " +
+      "select po.id, po.version, po.doc_no, po.status, po.order_date::text as order_date, po.currency, " +
       "po.net_amount::float as net, po.tax_amount::float as tax, po.total_amount::float as total, " +
       "s.name as supplier, s.code as supplier_code, " +
       "(select count(*)::int from purchase_order_line l where l.order_id = po.id) as line_count " +
@@ -544,13 +544,13 @@
         onTime: 95, approved: true, status: 'Active', balance: s.balance,
       };
     });
-    /* 'open'/'received' (this schema's only two live states) map onto the
-       screen's richer status vocabulary as the two ends of that spectrum —
-       there is no schema-backed "pending approval" or "partially completed"
-       workflow to represent those tones honestly. */
-    var PO_STATUS_UI = { open: 'Approved', received: 'Completed', cancelled: 'Cancelled' };
+    var PO_STATUS_UI = {
+      pending_approval: 'Pending Approval', open: 'Approved', received: 'Completed',
+      rejected: 'Rejected', cancelled: 'Cancelled',
+    };
     DB.purchaseOrders = (d.purchaseOrders || []).map(function(p){
       return {
+        id: p.id, version: p.version, rawStatus: p.status,
         no: p.doc_no, supp: p.supplier, suppCode: p.supplier_code,
         date: p.order_date, expect: p.order_date, status: PO_STATUS_UI[p.status] || p.status,
         total: p.total, currency: p.currency, buyer: DB.user.name,
@@ -1297,6 +1297,7 @@
     'purchasing/suppliers':'supplier',
     'purchasing/orders':'purchase_order',
     'purchasing/purchase-orders':'purchase_order',
+    'purchasing/purchase-order-approvals':'purchase_order_approval',
     'purchasing/purchase-order-lines':'purchase_order_line',
     'purchasing/goods-receipts':'goods_receipt',
     'purchasing/supplier-invoices':'supplier_invoice',
@@ -2099,6 +2100,19 @@
       });
       await refresh();
       return {data:convertedSupplierQuotation,meta:{}};
+    }
+    if(key==='purchasing/purchase-orders'&&(name==='approve'||name==='reject')){
+      payload=payload||{};
+      var decidedPurchaseOrder = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.decidePurchaseOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), {
+            decision:name==='approve'?'approve':'reject',
+            note:payload.note,
+            actorUserId:Number(state.activeUserId),
+          });
+      });
+      await refresh();
+      return {data:decidedPurchaseOrder,meta:{}};
     }
     if(key==='sales/orders'&&name==='confirm'){
       if(Number.isSafeInteger(Number(id))&&payload&&Number.isSafeInteger(payload.warehouseId)){

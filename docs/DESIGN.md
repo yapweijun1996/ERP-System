@@ -98,7 +98,14 @@ GL, audit/outbox), update projections/status, and commit once. The action dispat
 adds permission, optimistic-version, idempotency and audit handling around that same
 transaction. Purchasing sourcing is intentionally pre-accounting: RFQ issue, supplier
 quote receipt and quote award create no stock or GL entries; award atomically creates
-one linked draft PO, marks the winner converted, rejects competitors and closes the RFQ.
+one linked pending-approval PO, marks the winner converted, rejects competitors and
+closes the RFQ.
+Every newly-created PO now starts `pending_approval` with exactly one
+`purchase_order_approval` row. An authorised approve/reject decision locks both rows,
+requires an auditable note, snapshots the deciding user, increments versions and changes
+only the document/approval states. Approval is deliberately stock- and GL-neutral;
+`receiveGoods` accepts only an approved/open PO, so inventory begins at receipt and
+accounting begins at supplier-invoice posting.
 
 ## 5. Production design (implemented — EPIC-005 onward)
 

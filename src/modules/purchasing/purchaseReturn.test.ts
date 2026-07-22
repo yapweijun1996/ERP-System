@@ -17,6 +17,7 @@ import {
   warehouse,
 } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
+import { markPurchaseOrderApprovedForFixture } from '../../test/purchasing';
 import { getStockQty, issueStock } from '../inventory/stock';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { postSupplierInvoice } from './postSupplierInvoice';
@@ -67,6 +68,7 @@ async function fixture(db: DB, suffix = '1') {
     currency: 'SGD',
     lines: [{ productId: item.id, qty: 20, unitCost: '6.125', taxCode: 'SR' }],
   });
+  await markPurchaseOrderApprovedForFixture(db, SCOPE, order.orderId);
   const receipt = await receiveGoods(db, SCOPE, {
     purchaseOrderId: order.orderId,
     warehouseId: location.id,

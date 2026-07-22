@@ -541,13 +541,13 @@ makePurList({
   ],
   rowMenu:(p)=>[
     {id:'view',icon:'ext',label:'Open PO',run:()=>openPO(p)},
-    {id:'approve',icon:'flow',label:'Review approval',run:()=>navigate('po-approval')},
+    ...(p.approval?[{id:'approve',icon:'flow',label:'Review approval',run:()=>navigate('po-approval',{purchaseOrderId:p.id})}]:[]),
     {id:'grn',icon:'receive',label:'Receive goods',run:()=>doReceiveGoods(p)},
     {id:'inv',icon:'receipt',label:'Post supplier invoice',run:()=>doPostSupplierInvoice(p)},
   ],
   onOpen:(p)=>openPO(p),
 });
-function openPO(p){ if(p.no==='PO-26-0291'){ navigate('po-approval'); return; } toast('Opening '+p.no,'info'); }
+function openPO(p){ if(p.approval){navigate('po-approval',{purchaseOrderId:p.id});return;} toast('Opening '+p.no,'info'); }
 
 /* TASK-023: the live counterparts of confirmOrder's UI pattern — await the
    real adapter transaction, toast the real result or the real error, and

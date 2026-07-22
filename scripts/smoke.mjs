@@ -171,6 +171,19 @@ async function checkViewport(browser, viewport) {
       });
       await adapter.action(
         'purchasing/purchase-orders',
+        purchaseOrder.data.orderId,
+        'approve',
+        { note: 'Smoke proof approval before stock receipt.' },
+      );
+      const approvedPurchase = (await adapter.db.query(
+        'select po.status, pa.status as approval_status from purchase_order po join purchase_order_approval pa on pa.order_id=po.id where po.id=$1',
+        [purchaseOrder.data.orderId],
+      )).rows[0];
+      const purchaseAfterApproval = Number((await adapter.db.query(
+        "select coalesce(sum(s.qty),0)::float as qty from stock_level s join product p on p.id=s.product_id where p.master_fn='M1' and p.company_fn='C-SG' and p.sku='SG-WIDGET'",
+      )).rows[0].qty);
+      await adapter.action(
+        'purchasing/purchase-orders',
         purchaseOrder.data.docNo,
         'receive',
         {},
@@ -273,6 +286,9 @@ async function checkViewport(browser, viewport) {
         won: won?.stage === 'won' && Number(won.order_id) === Number(converted.data.orderId),
         balanced: Number(gl.debit) === Number(gl.credit) && Number(gl.debit) > 0,
         purchaseStockDelta: purchaseAfter - purchaseBefore,
+        purchaseApprovalNoStock: approvedPurchase?.status === 'open'
+          && approvedPurchase?.approval_status === 'approved'
+          && purchaseAfterApproval === purchaseBefore,
         purchaseBalanced: Number(purchaseGl.debit) === Number(purchaseGl.credit) && Number(purchaseGl.debit) > 0,
         duplicateInvoiceBlocked,
         salesDraftWidgetDelta: draftAfterBySku['SG-WIDGET'] - draftBeforeBySku['SG-WIDGET'],
@@ -298,6 +314,7 @@ async function checkViewport(browser, viewport) {
       if (!runtimeProof.won) errors.push('[demo-esm] CRM opportunity was not atomically marked won and linked to its order');
       if (!runtimeProof.balanced) errors.push('[demo-esm] converted opportunity did not produce balanced GL entries');
       if (runtimeProof.purchaseStockDelta !== 2) errors.push(`[demo-esm] expected purchase stock delta +2, got ${runtimeProof.purchaseStockDelta}`);
+      if (!runtimeProof.purchaseApprovalNoStock) errors.push('[demo-esm] PO approval did not stay stock-neutral');
       if (!runtimeProof.purchaseBalanced) errors.push('[demo-esm] supplier invoice did not produce balanced GL entries');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
       if (runtimeProof.salesDraftWidgetDelta !== -5 || runtimeProof.salesDraftGadgetDelta !== -3) {

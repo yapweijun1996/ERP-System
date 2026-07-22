@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { product, warehouse, supplier, taxRule, account, glEntry, supplierInvoice, project } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
+import { markPurchaseOrderApprovedForFixture } from '../../test/purchasing';
 import { createPurchaseOrder } from './createPurchaseOrder';
 import { receiveGoods } from './receiveGoods';
 import { postSupplierInvoice } from './postSupplierInvoice';
@@ -38,6 +39,7 @@ describe('postSupplierInvoice', () => {
       docNo: 'PO-T1', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
       lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
     });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
     await receiveGoods(db, SCOPE, { purchaseOrderId: po.orderId, warehouseId: fx.warehouseId, docNo: 'GR-T1', receivedDate: '2024-06-05' });
 
     const res = await postSupplierInvoice(db, SCOPE, {
@@ -65,6 +67,7 @@ describe('postSupplierInvoice', () => {
       docNo: 'PO-T2', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
       lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
     });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
     // No receiveGoods call — PO is still 'open', not 'received'.
 
     await expect(postSupplierInvoice(db, SCOPE, {
@@ -84,6 +87,7 @@ describe('postSupplierInvoice', () => {
       docNo: 'PO-T4', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
       lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
     });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
     await receiveGoods(db, SCOPE, {
       purchaseOrderId: po.orderId, warehouseId: fx.warehouseId,
       docNo: 'GR-T4', receivedDate: '2024-06-05',
@@ -122,6 +126,7 @@ describe('postSupplierInvoice', () => {
       docNo: 'PO-T3', supplierId: sup.id, orderDate: '2024-06-01', currency: 'SGD',
       lines: [{ productId: widget.id, qty: 20, unitCost: 6, taxCode: 'SR' }],
     });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
     await receiveGoods(db, SCOPE, { purchaseOrderId: po.orderId, warehouseId: wh.id, docNo: 'GR-T3', receivedDate: '2024-06-05' });
 
     await expect(postSupplierInvoice(db, SCOPE, {
@@ -141,6 +146,7 @@ describe('postSupplierInvoice', () => {
       projectId: proj.id,
       lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
     });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
     await receiveGoods(db, SCOPE, { purchaseOrderId: po.orderId, warehouseId: fx.warehouseId, docNo: 'GR-T5', receivedDate: '2024-06-05' });
     await postSupplierInvoice(db, SCOPE, { purchaseOrderId: po.orderId, docNo: 'SINV-T5', invoiceDate: '2024-06-06' });
 
@@ -156,6 +162,7 @@ describe('postSupplierInvoice', () => {
       docNo: 'PO-T6', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
       lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
     });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
     await receiveGoods(db, SCOPE, { purchaseOrderId: po.orderId, warehouseId: fx.warehouseId, docNo: 'GR-T6', receivedDate: '2024-06-05' });
     await postSupplierInvoice(db, SCOPE, { purchaseOrderId: po.orderId, docNo: 'SINV-T6', invoiceDate: '2024-06-06' });
 

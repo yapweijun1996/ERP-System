@@ -12,6 +12,7 @@ import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { product, warehouse } from './inventory';
 import { project } from './project';
+import { appUser } from './tenancy';
 
 export const PURCHASE_REQUISITION_PRIORITIES = ['Urgent', 'Project', 'Stock'] as const;
 export const PURCHASE_REQUISITION_STATUSES = ['submitted', 'approved', 'rejected'] as const;
@@ -22,6 +23,10 @@ export const SUPPLIER_CREDIT_NOTE_STATUSES = ['posted'] as const;
 export const SUPPLIER_DEBIT_NOTE_STATUSES = ['draft', 'posted', 'cancelled'] as const;
 export const LANDED_COST_STATUSES = ['draft', 'allocated', 'cancelled'] as const;
 export const LANDED_COST_ALLOCATION_BASES = ['value', 'quantity'] as const;
+export const PURCHASE_ORDER_STATUSES = [
+  'pending_approval', 'open', 'received', 'rejected', 'cancelled',
+] as const;
+export const PURCHASE_ORDER_APPROVAL_STATUSES = ['pending', 'approved', 'rejected'] as const;
 
 export const supplier = pgTable('supplier', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -178,7 +183,7 @@ export const purchaseOrder = pgTable('purchase_order', {
   requisitionId: bigint('requisition_id', { mode: 'number' }).references(() => purchaseRequisition.id),
   supplierQuotationId: bigint('supplier_quotation_id', { mode: 'number' }).references(() => supplierQuotation.id),
   projectId: bigint('project_id', { mode: 'number' }).references(() => project.id),
-  status: text('status').notNull().default('open'),   // open | received | cancelled
+  status: text('status').notNull().default('pending_approval'),
   version: integer('version').notNull().default(1),
   orderDate: date('order_date').notNull(),
   currency: text('currency').notNull(),
@@ -192,6 +197,29 @@ export const purchaseOrder = pgTable('purchase_order', {
   index('idx_po_requisition').on(t.masterFn, t.companyFn, t.requisitionId),
   uniqueIndex('uq_po_supplier_quotation').on(t.masterFn, t.companyFn, t.supplierQuotationId),
   index('idx_po_project').on(t.masterFn, t.companyFn, t.projectId),
+  check('ck_purchase_order_status', sql`${t.status} in ('pending_approval', 'open', 'received', 'rejected', 'cancelled')`),
+]);
+
+/** One immutable submission/decision record per purchase order. New purchase orders
+ *  always start pending and can only move to `open` through the audited approval
+ *  command. `decided_by_name` is a historical display snapshot; the user FK remains
+ *  the authoritative actor identity. Approval itself has no stock or GL effect. */
+export const purchaseOrderApproval = pgTable('purchase_order_approval', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => purchaseOrder.id),
+  status: text('status').notNull().default('pending'),
+  version: integer('version').notNull().default(1),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  decidedByUserId: bigint('decided_by_user_id', { mode: 'number' }).references(() => appUser.userId),
+  decidedByName: text('decided_by_name'),
+  decisionNote: text('decision_note'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_purchase_order_approval_order').on(t.masterFn, t.companyFn, t.orderId),
+  index('idx_purchase_order_approval_status').on(t.masterFn, t.companyFn, t.status, t.submittedAt, t.id),
+  check('ck_purchase_order_approval_status', sql`${t.status} in ('pending', 'approved', 'rejected')`),
 ]);
 
 export const purchaseOrderLine = pgTable('purchase_order_line', {

@@ -152,8 +152,10 @@ SCREENS['purchase-orders'] = function(root){
   }));
 };
 
-/* ---------------- PO APPROVAL (approval template) ---------------- */
-SCREENS['po-approval'] = function(root){
+/* Historical prototype retained only as dead reference markup; the Canonical
+   SCREENS['po-approval'] implementation is registered later by
+   screens-purchasing-control.js and never reads this sample object. */
+function legacyPoApprovalPrototype(root){
   const d=DB.po0291;
   const subtotal=d.lines.reduce((s,l)=>s+l.qty*l.price,0);
   const budgetTotal=d.lines.reduce((s,l)=>s+l.qty*l.budgetPrice,0);

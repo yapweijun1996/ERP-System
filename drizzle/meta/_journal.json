@@ -239,6 +239,13 @@
       "when": 1784687781692,
       "tag": "0033_pretty_tarot",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1784689948096,
+      "tag": "0034_dapper_karnak",
+      "breakpoints": true
     }
   ]
 }

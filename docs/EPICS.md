@@ -1208,7 +1208,7 @@ Acceptance criteria:
 - [x] Only an invited supplier may submit a complete, exactly-once response. Quote
       totals use Decimal and an effective tax-rate snapshot; all invited responses move
       the RFQ to `responded`.
-- [x] Award is one atomic, idempotent action: create one linked draft PO, mark the winner
+- [x] Award is one atomic, idempotent action: create one linked pending-approval PO, mark the winner
       `converted`, reject competing quotes and mark the RFQ `awarded`. The sourcing
       stages write no stock movement or GL entry.
 - [x] Five purchasing resources, two creates and three actions are registered for both
@@ -1304,3 +1304,32 @@ Acceptance criteria:
       allocation preview, posted detail, inventory-valuation and GL trace links.
 - [x] Domain/API/browser proof covers exact rounding, duplicate allocation, tenant and
       zero-stock guards, atomic rollback, cost/GL equality, Chinese and 375px layout.
+
+## EPIC-032 — Purchase Order Approval Gate
+
+**Goal:** replace Purchasing's sample-only approval queue/detail with a real,
+auditable gate between PO creation and goods receipt, without inventing inventory or
+accounting effects at approval time.
+
+Acceptance criteria:
+
+- [x] Migration 0034 adds one tenant-scoped, versioned
+      `purchase_order_approval` per purchase order; every newly-created PO and every
+      RFQ-awarded PO starts `pending_approval` with a pending approval row in the same
+      transaction.
+- [x] Shared `approve`/`reject` commands lock and scope both rows, require a non-empty
+      decision note, validate the deciding active user and company assignment, snapshot
+      actor name/time, increment versions and reject terminal or cross-tenant decisions.
+- [x] Approval is stock- and GL-neutral. Approve opens the PO for receiving; reject
+      closes it as rejected. `receiveGoods` continues to accept only `open` orders, so
+      a pending or rejected PO cannot bypass the gate.
+- [x] Production API and Demo ESM expose the bounded approval resource and audited,
+      idempotent approve/reject actions under Purchasing RBAC. RLS and generated PGlite
+      schema remain aligned.
+- [x] `po-approvals` and `po-approval` use bounded real Demo/API data, five-language
+      copy, an auditable decision modal and honest inventory/accounting timing. Both
+      routes move to Canonical.
+- [x] Domain/API/browser proof covers missing note, inactive/cross-company actor,
+      Viewer denial, replay, audit, reject/duplicate-state guards, receipt gating and
+      no-stock/no-GL impact. Desktop, Chinese and 375px checks plus the complete
+      114-route audit pass at 78 Canonical / 36 Preview.

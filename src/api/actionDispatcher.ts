@@ -36,7 +36,7 @@ export interface ActionDefinition {
   execute(
     tx: DB,
     scope: { masterFn: string; companyFn: string },
-    input: { resourceId: number; payload: Record<string, unknown> },
+    input: { resourceId: number; payload: Record<string, unknown>; actorUserId: number },
   ): Promise<unknown>;
 }
 
@@ -103,6 +103,7 @@ export async function dispatchAction(
     const result = await definition.execute(tx, scope, {
       resourceId: context.resourceId,
       payload: context.payload,
+      actorUserId: context.session.userId,
     });
     const body = { data: result, meta: {} };
     if (definition.audit === 'required') {

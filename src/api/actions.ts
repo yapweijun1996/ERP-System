@@ -27,6 +27,7 @@ import {
 } from '../modules/purchasing/purchaseReturn';
 import { postSupplierDebitNoteWithin } from '../modules/purchasing/supplierDebitNote';
 import { allocateLandedCostWithin } from '../modules/purchasing/landedCost';
+import { decidePurchaseOrderWithin } from '../modules/purchasing/purchaseOrderApproval';
 import { decidePurchaseRequisitionWithin } from '../modules/purchasing/purchaseRequisition';
 import {
   convertSupplierQuotationToPurchaseOrderWithin,
@@ -71,6 +72,46 @@ import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'purchasing/purchase-orders/approve': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const note = (input.payload as { note?: unknown }).note;
+      if (typeof note !== 'string' || !note.trim()) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'A decision note is required to approve a purchase order.',
+        );
+      }
+      return decidePurchaseOrderWithin(tx, scope, input.resourceId, {
+        decision: 'approve',
+        note,
+        actorUserId: input.actorUserId,
+      });
+    },
+  },
+  'purchasing/purchase-orders/reject': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const note = (input.payload as { note?: unknown }).note;
+      if (typeof note !== 'string' || !note.trim()) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'A decision note is required to reject a purchase order.',
+        );
+      }
+      return decidePurchaseOrderWithin(tx, scope, input.resourceId, {
+        decision: 'reject',
+        note,
+        actorUserId: input.actorUserId,
+      });
+    },
+  },
   'purchasing/landed-costs/allocate': {
     permission: 'purchasing.write',
     idempotency: 'required',

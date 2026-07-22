@@ -18,6 +18,7 @@ import { createPurchaseOrder } from '../modules/purchasing/createPurchaseOrder';
 import { postSupplierInvoice } from '../modules/purchasing/postSupplierInvoice';
 import { receiveGoods } from '../modules/purchasing/receiveGoods';
 import { freshDb } from '../test/helpers';
+import { markPurchaseOrderApprovedForFixture } from '../test/purchasing';
 import { createApp } from './app';
 
 function cookies(response: Response) {
@@ -62,6 +63,9 @@ describe('purchase return API vertical slice', () => {
       docNo: 'PO-PRET-API', supplierId: vendor.id, orderDate: '2026-07-20', currency: 'SGD',
       lines: [{ productId: item.id, qty: '10', unitCost: '6.50', taxCode: 'SR' }],
     });
+    await markPurchaseOrderApprovedForFixture(
+      db, { masterFn: 'M1', companyFn: 'C-SG' }, order.orderId,
+    );
     const receipt = await receiveGoods(db, { masterFn: 'M1', companyFn: 'C-SG' }, {
       purchaseOrderId: order.orderId, warehouseId: location.id,
       docNo: 'GR-PRET-API', receivedDate: '2026-07-21',

@@ -23,6 +23,7 @@ import {
   confirmSalesOrder,
 } from './modules/sales/confirmOrder';
 import { createPurchaseOrder } from './modules/purchasing/createPurchaseOrder';
+import { decidePurchaseOrder } from './modules/purchasing/purchaseOrderApproval';
 import { receiveGoods } from './modules/purchasing/receiveGoods';
 import { postSupplierInvoice } from './modules/purchasing/postSupplierInvoice';
 import { createPurchaseReturn, shipAndCreditPurchaseReturn } from './modules/purchasing/purchaseReturn';
@@ -253,6 +254,11 @@ async function runPurchasingScenario(db: DB) {
     docNo: 'PO-1', supplierId: supp.id, orderDate: '2024-06-01', currency: 'SGD',
     lines: [{ productId: widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
   });
+  const approval = await decidePurchaseOrder(db, SCOPE, po.orderId, {
+    decision: 'approve',
+    note: 'Demo proof approval before receiving stock.',
+    actorUserId: 1,
+  });
   const stockBeforeReceipt = await getStockQty(db, SCOPE, widgetId, wh.id); // 0 — no prior stock in this warehouse
 
   const receipt = await receiveGoods(db, SCOPE, {
@@ -293,6 +299,9 @@ async function runPurchasingScenario(db: DB) {
     docNo: 'PO-2', supplierId: supp.id, orderDate: '2024-06-01', currency: 'SGD',
     lines: [{ productId: widgetId, qty: 5, unitCost: 6, taxCode: 'SR' }],
   });
+  await decidePurchaseOrder(db, SCOPE, po2.orderId, {
+    decision: 'approve', note: 'Demo proof for the early-invoice guard.', actorUserId: 1,
+  });
   let earlyInvoiceErr = '';
   try {
     await postSupplierInvoice(db, SCOPE, { purchaseOrderId: po2.orderId, docNo: 'SINV-2', invoiceDate: '2024-06-06' });
@@ -305,6 +314,9 @@ async function runPurchasingScenario(db: DB) {
   const po3 = await createPurchaseOrder(db, SCOPE, {
     docNo: 'PO-3', supplierId: supp.id, orderDate: '2024-06-01', currency: 'SGD',
     lines: [{ productId: widgetId, qty: 3, unitCost: 6, taxCode: 'SR' }],
+  });
+  await decidePurchaseOrder(db, SCOPE, po3.orderId, {
+    decision: 'approve', note: 'Demo concurrency proof order.', actorUserId: 1,
   });
   await receiveGoods(db, SCOPE, {
     purchaseOrderId: po3.orderId, warehouseId: wh.id, docNo: 'GR-3', receivedDate: '2024-06-05',
@@ -373,6 +385,11 @@ async function runPurchasingScenario(db: DB) {
 
   return {
     po: { net: po.net, tax: po.tax, total: po.total },
+    approval: {
+      status: approval.status,
+      approvalStatus: approval.approvalStatus,
+      decidedByName: approval.decidedByName,
+    },
     stockBeforeReceipt, stockAfterReceipt, movementsAfterReceipt,
     receiptLines: receipt.lines,
     invoice: { net: inv.net, tax: inv.tax, total: inv.total },
@@ -573,6 +590,10 @@ ok = check('PGlite existing Draft race: exactly one confirmation creates one inv
 ok = check('PGlite purchasing chain: PO net=120 tax=10.8 total=130.8, receipt creates stock from 0 → 20',
   p.purchasing.po.net === 120 && p.purchasing.po.tax === 10.8 && p.purchasing.po.total === 130.8
   && p.purchasing.stockBeforeReceipt === 0 && p.purchasing.stockAfterReceipt === 20 && p.purchasing.movementsAfterReceipt === 1) && ok;
+ok = check('PGlite purchasing approval: authorised decision opens the PO before stock receipt',
+  p.purchasing.approval.status === 'open'
+  && p.purchasing.approval.approvalStatus === 'approved'
+  && p.purchasing.approval.decidedByName === 'Admin') && ok;
 ok = check('PGlite purchasing chain: supplier invoice ledger balanced (Dr 130.8 = Cr 130.8)',
   p.purchasing.glBalanced && p.purchasing.glDebit === 130.8 && p.purchasing.invoice.total === 130.8) && ok;
 ok = check('PGlite purchasing rollback: double-receive and duplicate/early invoices are rejected without stock/GL duplication',
