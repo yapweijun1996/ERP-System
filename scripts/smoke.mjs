@@ -238,6 +238,52 @@ async function checkViewport(browser, viewport) {
       const purchasingReportsCanonical = Boolean(document.querySelector('[data-purchasing-reports="canonical"]'))
         && !document.querySelector('[data-preview-banner]')
         && Array.isArray(purchasingPriceVariance.data);
+      const salesApprovalStockBefore = Number((await adapter.db.query(
+        "select coalesce(sum(qty),0)::float as qty from stock_movement where master_fn='M1' and company_fn='C-SG'",
+      )).rows[0].qty);
+      const salesApprovalGlBefore = Number((await adapter.db.query(
+        "select count(*)::int as count from gl_entry where master_fn='M1' and company_fn='C-SG'",
+      )).rows[0].count);
+      const salesApprovalRefs = (await adapter.db.query(
+        "select c.id as customer_id, p.id as product_id from customer c cross join product p where c.master_fn='M1' and c.company_fn='C-SG' and c.code='CUST1' and p.master_fn='M1' and p.company_fn='C-SG' and p.sku='SG-WIDGET'",
+      )).rows[0];
+      const directSalesOrder = await adapter.create('sales/orders', {
+        docNo: 'SO-SMOKE-APPROVAL',
+        customerId: Number(salesApprovalRefs.customer_id),
+        orderDate: '2026-07-22',
+        currency: 'SGD',
+        approvalReason: 'Smoke proof for the direct-order approval boundary.',
+        lines: [{
+          productId: Number(salesApprovalRefs.product_id),
+          qty: '3',
+          unitPrice: '12.50',
+          taxCode: 'SR',
+        }],
+      });
+      await navigate('new-sales-order');
+      const salesOrderAuthoringCanonical = Boolean(document.querySelector('[data-canonical-sales-order-authoring="true"]'))
+        && !document.querySelector('[data-preview-banner]');
+      await navigate('so-approvals');
+      const salesOrderApprovalCanonical = Boolean(document.querySelector('[data-canonical-sales-order-approval="true"]'))
+        && document.body.textContent.includes('SO-SMOKE-APPROVAL')
+        && !document.querySelector('[data-preview-banner]');
+      await adapter.action(
+        'sales/orders',
+        directSalesOrder.data.orderId,
+        'approve',
+        { note: 'Smoke reviewer confirmed the commercial order details.' },
+        'smoke-sales-order-approval',
+      );
+      const salesApprovalState = (await adapter.db.query(
+        'select so.status, soa.status as approval_status, soa.decision_note from sales_order so join sales_order_approval soa on soa.order_id=so.id where so.id=$1',
+        [directSalesOrder.data.orderId],
+      )).rows[0];
+      const salesApprovalStockAfter = Number((await adapter.db.query(
+        "select coalesce(sum(qty),0)::float as qty from stock_movement where master_fn='M1' and company_fn='C-SG'",
+      )).rows[0].qty);
+      const salesApprovalGlAfter = Number((await adapter.db.query(
+        "select count(*)::int as count from gl_entry where master_fn='M1' and company_fn='C-SG'",
+      )).rows[0].count);
       const draftStockBefore = (await adapter.db.query(
         "select p.sku, s.qty::float as qty from stock_level s join product p on p.id=s.product_id join warehouse w on w.id=s.warehouse_id where p.master_fn='M1' and p.company_fn='C-SG' and w.code='WH-SALES' and p.sku in ('SG-WIDGET','SG-GADGET') order by p.sku",
       )).rows;
@@ -320,6 +366,13 @@ async function checkViewport(browser, viewport) {
         invoiceDetailCanonical,
         purchasingAnalyticsCanonical,
         purchasingReportsCanonical,
+        salesOrderAuthoringCanonical,
+        salesOrderApprovalCanonical,
+        salesApprovalBoundary: salesApprovalState?.status === 'draft'
+          && salesApprovalState?.approval_status === 'approved'
+          && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
+          && salesApprovalStockAfter === salesApprovalStockBefore
+          && salesApprovalGlAfter === salesApprovalGlBefore,
         duplicateInvoiceBlocked,
         salesDraftWidgetDelta: draftAfterBySku['SG-WIDGET'] - draftBeforeBySku['SG-WIDGET'],
         salesDraftGadgetDelta: draftAfterBySku['SG-GADGET'] - draftBeforeBySku['SG-GADGET'],
@@ -350,6 +403,9 @@ async function checkViewport(browser, viewport) {
       if (!runtimeProof.invoiceDetailCanonical) errors.push('[demo-esm] supplier-invoice detail did not render its balanced canonical GL trace');
       if (!runtimeProof.purchasingAnalyticsCanonical) errors.push('[demo-esm] purchasing dashboard did not render its canonical derived analytics');
       if (!runtimeProof.purchasingReportsCanonical) errors.push('[demo-esm] purchasing reports did not render from canonical derived resources');
+      if (!runtimeProof.salesOrderAuthoringCanonical) errors.push('[demo-esm] new sales order did not render its Canonical authoring workspace');
+      if (!runtimeProof.salesOrderApprovalCanonical) errors.push('[demo-esm] sales order approval queue did not render the created canonical order');
+      if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
       if (runtimeProof.salesDraftWidgetDelta !== -5 || runtimeProof.salesDraftGadgetDelta !== -3) {
         errors.push(`[demo-esm] expected draft sales stock deltas -5/-3, got ${runtimeProof.salesDraftWidgetDelta}/${runtimeProof.salesDraftGadgetDelta}`);

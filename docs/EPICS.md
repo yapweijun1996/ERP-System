@@ -1403,3 +1403,26 @@ Acceptance criteria:
       invited suppliers, responses and registered issue/respond/compare/convert actions.
 - [x] All eight Purchasing routes are five-language Canonical in Demo/API; CI smoke,
       301-test suite, schema/drift, desktop/375px and 114-route audit pass at 90/24.
+
+## EPIC-036 — Direct Sales Order Authoring and Approval Gate
+
+**Goal:** replace Sales' sample new-order form and disconnected approval queue with one
+real, auditable commercial-document boundary before inventory or accounting begins.
+
+Acceptance criteria:
+
+- [x] Migration 0036 adds one tenant-scoped, versioned `sales_order_approval` per order
+      and constrains sales-order lifecycle states to pending approval, draft, confirmed,
+      rejected or cancelled.
+- [x] Direct orders validate real company customers/products, snapshot effective tax with
+      Decimal arithmetic and atomically create their lines plus one pending approval.
+- [x] Approve/reject locks both records, requires a note, validates the active company
+      actor, snapshots the decision and changes only order/approval state. Approval writes
+      no stock movement, delivery, invoice or GL entry.
+- [x] Accepted quotations now create the same pending approval boundary rather than an
+      immediately confirmable draft; confirmation remains restricted to approved drafts.
+- [x] `new-sales-order` and `so-approvals` use bounded real Demo/API resources, five-language
+      copy and responsive Canonical UI. Domain/API/live-browser proof covers tax totals,
+      tenant and actor guards, replay, Viewer denial, audit and the no-stock/no-GL boundary.
+- [x] Full release gates pass at 92 Canonical / 22 Preview with 37 migrations and 110
+      exported tables.

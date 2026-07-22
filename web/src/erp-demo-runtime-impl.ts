@@ -74,6 +74,14 @@ import {
   type ConfirmOrderInput,
 } from '../../src/modules/sales/confirmOrder';
 import {
+  createSalesOrderWithin,
+  type CreateSalesOrderInput,
+} from '../../src/modules/sales/createSalesOrder';
+import {
+  decideSalesOrderWithin,
+  type DecideSalesOrderInput,
+} from '../../src/modules/sales/salesOrderApproval';
+import {
   completeDemoSetupWithin,
   type CompleteDemoSetupInput,
 } from '../../src/modules/setup/completeDemoSetup';
@@ -633,6 +641,17 @@ export const erpDemoRuntime = Object.freeze({
     },
     confirmDraftSalesOrderWithin(db: DemoOrm, scope: Scope, input: ConfirmDraftOrderInput) {
       return confirmDraftSalesOrderWithin(asDomainDb(db), scope, input);
+    },
+    createSalesOrderWithin(db: DemoOrm, scope: Scope, input: CreateSalesOrderInput) {
+      return createSalesOrderWithin(asDomainDb(db), scope, input);
+    },
+    decideSalesOrderWithin(
+      db: DemoOrm,
+      scope: Scope,
+      orderId: number,
+      input: DecideSalesOrderInput,
+    ) {
+      return decideSalesOrderWithin(asDomainDb(db), scope, orderId, input);
     },
     completeDemoSetupWithin(db: DemoOrm, input: CompleteDemoSetupInput) {
       return completeDemoSetupWithin(asDomainDb(db), input);

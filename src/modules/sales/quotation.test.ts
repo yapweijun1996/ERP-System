@@ -5,6 +5,7 @@ import {
   product,
   salesEnquiry,
   salesOrder,
+  salesOrderApproval,
   salesOrderLine,
   salesQuotation,
   salesQuotationLine,
@@ -89,7 +90,7 @@ describe('sales enquiry and quotation chain', () => {
     ]);
   });
 
-  it('issues, accepts and converts a quotation into an editable draft sales order', async () => {
+  it('issues, accepts and converts a quotation into an approval-gated sales order', async () => {
     const db = await freshDb();
     const fx = await fixture(db);
     const quote = await createSalesQuotation(db, SCOPE, {
@@ -108,12 +109,22 @@ describe('sales enquiry and quotation chain', () => {
       quote.id,
       { docNo: 'SO-Q-1', orderDate: '2026-07-20' },
     ));
-    expect(converted).toMatchObject({ orderDocNo: 'SO-Q-1', orderStatus: 'draft' });
+    expect(converted).toMatchObject({
+      orderDocNo: 'SO-Q-1',
+      orderStatus: 'pending_approval',
+    });
     expect(await db.select().from(salesQuotation)).toMatchObject([
       { status: 'converted', version: 4, orderId: converted.orderId },
     ]);
     expect(await db.select().from(salesOrder)).toMatchObject([
-      { status: 'draft', netAmount: '100.00', taxAmount: '9.00', totalAmount: '109.00' },
+      { status: 'pending_approval', netAmount: '100.00', taxAmount: '9.00', totalAmount: '109.00' },
+    ]);
+    expect(await db.select().from(salesOrderApproval)).toMatchObject([
+      {
+        id: converted.approvalId,
+        status: 'pending',
+        reason: 'Accepted quotation Q-ORDER requires order approval.',
+      },
     ]);
     expect(await db.select().from(salesOrderLine)).toMatchObject([
       { qty: '2.5000', unitPrice: '40.0000', taxRate: '9.000' },

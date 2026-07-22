@@ -2,7 +2,7 @@
 // See docs/DATA_MODEL.md. Document-level totals are denormalized for reporting; lines hold
 // the per-line tax snapshot so a confirmed order reproduces its tax even if rules change.
 import {
-  pgTable, text, bigint, integer, numeric, date, boolean, index, uniqueIndex, check,
+  pgTable, text, bigint, integer, numeric, date, boolean, timestamp, index, uniqueIndex, check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
@@ -26,7 +26,7 @@ export const salesOrder = pgTable('sales_order', {
   ...tenant,
   docNo: text('doc_no').notNull(),
   customerId: bigint('customer_id', { mode: 'number' }).notNull().references(() => customer.id),
-  status: text('status').notNull().default('draft'),   // draft | confirmed | cancelled
+  status: text('status').notNull().default('draft'),
   version: integer('version').notNull().default(1),
   orderDate: date('order_date').notNull(),
   currency: text('currency').notNull(),
@@ -37,6 +37,40 @@ export const salesOrder = pgTable('sales_order', {
 }, (t) => [
   uniqueIndex('uq_so_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_so_tenant_date').on(t.masterFn, t.companyFn, t.orderDate, t.id),
+  check(
+    'ck_sales_order_status',
+    sql`${t.status} in ('pending_approval', 'draft', 'confirmed', 'rejected', 'cancelled')`,
+  ),
+]);
+
+/** One submission/decision record for every order that enters the approval
+ *  policy. Directly-created and quotation-converted orders start pending;
+ *  approval releases the order to `draft`, while rejection is terminal. The
+ *  decision changes no stock, invoice or GL data — confirmation remains the
+ *  only posting boundary. Existing pre-migration drafts remain valid without a
+ *  synthetic approval row so deployed tenants can upgrade safely. */
+export const salesOrderApproval = pgTable('sales_order_approval', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => salesOrder.id),
+  status: text('status').notNull().default('pending'),
+  version: integer('version').notNull().default(1),
+  reason: text('reason').notNull(),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  decidedByUserId: bigint('decided_by_user_id', { mode: 'number' }).references(() => appUser.userId),
+  decidedByName: text('decided_by_name'),
+  decisionNote: text('decision_note'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_order_approval_order').on(t.masterFn, t.companyFn, t.orderId),
+  index('idx_sales_order_approval_status').on(
+    t.masterFn, t.companyFn, t.status, t.submittedAt, t.id,
+  ),
+  check(
+    'ck_sales_order_approval_status',
+    sql`${t.status} in ('pending', 'approved', 'rejected')`,
+  ),
 ]);
 
 export const salesOrderLine = pgTable('sales_order_line', {

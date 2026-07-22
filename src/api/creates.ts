@@ -102,6 +102,10 @@ import {
   type CreateCreditProfileInput,
 } from '../modules/sales/creditControl';
 import {
+  createSalesOrderWithin,
+  type CreateSalesOrderInput,
+} from '../modules/sales/createSalesOrder';
+import {
   createAssetWithin,
   type CreateAssetInput,
 } from '../modules/assets/createAsset';
@@ -383,6 +387,13 @@ const CREATES: Record<string, CreateDefinition> = {
         scope,
         payload as unknown as CreateSalesEnquiryInput,
       );
+    },
+  },
+  'sales/orders': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createSalesOrderWithin(tx, scope, payload as unknown as CreateSalesOrderInput);
     },
   },
   'sales/quotations': {

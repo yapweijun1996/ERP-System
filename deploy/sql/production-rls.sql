@@ -23,7 +23,7 @@ DECLARE
     'quality_inspection_plan', 'quality_inspection_plan_item',
     'quality_inspection', 'quality_inspection_result',
     'quality_ncr', 'quality_corrective_action',
-    'customer', 'invoice', 'sales_order', 'sales_order_line',
+    'customer', 'invoice', 'sales_order', 'sales_order_approval', 'sales_order_line',
     'sales_enquiry', 'sales_quotation', 'sales_quotation_line',
     'sales_delivery', 'sales_delivery_line',
     'sales_return', 'sales_return_line', 'sales_credit_note', 'sales_credit_note_line',

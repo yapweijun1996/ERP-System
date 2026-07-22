@@ -174,7 +174,7 @@ async function prepareCanonicalSalesData(){
     status:(onHandByProduct.get(row.id)||0)>0?'In stock':'No stock',
   }));
 
-  const ORDER_STATUS_UI={draft:'Draft',confirmed:'Closed',cancelled:'Cancelled'};
+  const ORDER_STATUS_UI={pending_approval:'Pending Approval',draft:'Draft',confirmed:'Closed',rejected:'Rejected',cancelled:'Cancelled'};
   const INVOICE_STATUS_UI={unpaid:'Posted',paid:'Paid',cancelled:'Cancelled'};
   DB.salesOrders=orders.map(row=>{
     const customer=customerById.get(row.customerId)||{};

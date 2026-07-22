@@ -7,11 +7,10 @@ import {
   customer,
   product,
   salesEnquiry,
-  salesOrder,
-  salesOrderLine,
   salesQuotation,
   salesQuotationLine,
 } from '../../data/schema';
+import { createSalesOrderWithin } from './createSalesOrder';
 
 export class SalesQuotationError extends Error {
   constructor(message: string) {
@@ -328,43 +327,32 @@ export async function convertQuotationToOrderWithin(
   )).orderBy(salesQuotationLine.lineNo);
   if (!lines.length) throw new SalesQuotationError('Quotation has no lines.');
 
-  const [order] = await exec.insert(salesOrder).values({
-    masterFn: scope.masterFn,
-    companyFn: scope.companyFn,
+  const order = await createSalesOrderWithin(exec, scope, {
     docNo,
     customerId: quotation.customerId,
-    status: 'draft',
     orderDate: input.orderDate,
     currency: quotation.currency,
-    netAmount: quotation.netAmount,
-    taxAmount: quotation.taxAmount,
-    totalAmount: quotation.totalAmount,
-  }).returning({ id: salesOrder.id, version: salesOrder.version });
-  await exec.insert(salesOrderLine).values(lines.map((line) => ({
-    masterFn: scope.masterFn,
-    companyFn: scope.companyFn,
-    orderId: order.id,
-    lineNo: line.lineNo,
-    productId: line.productId,
-    qty: line.qty,
-    unitPrice: line.unitPrice,
-    netAmount: line.netAmount,
-    taxCode: line.taxCode,
-    taxRate: line.taxRate,
-    taxAmount: line.taxAmount,
-  })));
+    approvalReason: `Accepted quotation ${quotation.docNo} requires order approval.`,
+    lines: lines.map((line) => ({
+      productId: line.productId,
+      qty: line.qty,
+      unitPrice: line.unitPrice,
+      taxCode: line.taxCode,
+    })),
+  });
   await exec.update(salesQuotation).set({
     status: 'converted',
-    orderId: order.id,
+    orderId: order.orderId,
     version: sql`${salesQuotation.version} + 1`,
     updatedAt: sql`now()`,
   }).where(eq(salesQuotation.id, quotation.id));
   return {
     quotationId: quotation.id,
-    orderId: order.id,
+    orderId: order.orderId,
     orderDocNo: docNo,
-    orderStatus: 'draft',
+    orderStatus: 'pending_approval',
     version: order.version,
+    approvalId: order.approvalId,
   };
 }
 

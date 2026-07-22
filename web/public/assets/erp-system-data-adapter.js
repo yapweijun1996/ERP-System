@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 35;
+  var DEMO_SCHEMA_VERSION = 36;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1290,6 +1290,7 @@
     'warehouse/reservations':'stock_reservation',
     'sales/customers':'customer',
     'sales/orders':'sales_order',
+    'sales/order-approvals':'sales_order_approval',
     'sales/order-lines':'sales_order_line',
     'sales/invoices':'invoice',
     'sales/enquiries':'sales_enquiry',
@@ -1581,6 +1582,14 @@
       });
       await refresh();
       return {data:warehousePick,meta:{}};
+    }
+    if(key==='sales/orders'){
+      var salesOrderDraft = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createSalesOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:salesOrderDraft,meta:{}};
     }
     if(key==='purchasing/orders'||key==='purchasing/purchase-orders'){
       if(Number.isSafeInteger(payload&&payload.supplierId)){
@@ -2180,6 +2189,19 @@
         return {data:confirmedOrder,meta:{}};
       }
       return {data:await confirmOrder(id),meta:{}};
+    }
+    if(key==='sales/orders'&&(name==='approve'||name==='reject')){
+      payload=payload||{};
+      var decidedSalesOrder = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.decideSalesOrderWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), {
+            decision:name==='approve'?'approve':'reject',
+            note:payload.note,
+            actorUserId:Number(state.activeUserId),
+          });
+      });
+      await refresh();
+      return {data:decidedSalesOrder,meta:{}};
     }
     if((key==='purchasing/orders'||key==='purchasing/purchase-orders')&&name==='receive'){
       if(payload&&Number.isSafeInteger(payload.warehouseId)){

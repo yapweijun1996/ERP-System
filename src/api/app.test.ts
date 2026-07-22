@@ -21,6 +21,7 @@ import {
   purchaseRfq,
   purchaseRfqLine,
   salesOrder,
+  salesOrderApproval,
   salesOrderLine,
   salesDelivery,
   salesDeliveryLine,
@@ -1071,6 +1072,112 @@ describe('production API security contract', () => {
       entityId: String(opp.id),
       action: 'mark-lost',
     });
+  });
+
+  it('creates and approves a sales order over HTTP with RBAC, audit and idempotency', async () => {
+    const [item] = await db.select({ id: product.id }).from(product)
+      .where(eq(product.sku, 'SG-WIDGET'));
+    const [buyer] = await db.select({ id: customer.id }).from(customer)
+      .where(eq(customer.code, 'CUST1'));
+    const stockBefore = (await db.select().from(stockMovement)).length;
+    const glBefore = (await db.select().from(glEntry)).length;
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+    const created = await fetch(`${running.baseUrl}/api/sales/orders`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'sales-order-create-api' },
+      body: JSON.stringify({
+        docNo: 'SO-APPROVAL-API-1',
+        customerId: buyer.id,
+        orderDate: '2026-07-22',
+        currency: 'SGD',
+        approvalReason: 'Direct API order requires sales approval.',
+        lines: [{ productId: item.id, qty: '3', unitPrice: '12.50', taxCode: 'SR' }],
+      }),
+    });
+    expect(created.status).toBe(201);
+    const createdBody = (await created.json()).data as {
+      orderId: number;
+      approvalId: number;
+      totalAmount: string;
+    };
+    expect(createdBody).toMatchObject({ totalAmount: '40.88' });
+    const [approval] = await db.select().from(salesOrderApproval)
+      .where(eq(salesOrderApproval.id, createdBody.approvalId));
+    expect(approval).toMatchObject({
+      orderId: createdBody.orderId,
+      status: 'pending',
+      reason: 'Direct API order requires sales approval.',
+    });
+    expect((await db.select().from(stockMovement)).length).toBe(stockBefore);
+    expect((await db.select().from(glEntry)).length).toBe(glBefore);
+
+    const blockedConfirm = await fetch(
+      `${running.baseUrl}/api/sales/orders/${createdBody.orderId}/actions/confirm`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'sales-order-confirm-before-approval' },
+        body: JSON.stringify({ warehouseId: 1 }),
+      },
+    );
+    expect(blockedConfirm.status).toBe(409);
+    expect((await blockedConfirm.json()).error.code).toBe('invalid_state');
+
+    const approve = () => fetch(
+      `${running.baseUrl}/api/sales/orders/${createdBody.orderId}/actions/approve`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'x-request-id': 'sales-order-approve-api',
+          'idempotency-key': 'sales-order-approve-api-1',
+        },
+        body: JSON.stringify({ note: 'Commercial terms reviewed and approved.' }),
+      },
+    );
+    const approved = await approve();
+    expect(approved.status).toBe(200);
+    expect((await approved.json()).data).toMatchObject({
+      id: createdBody.orderId,
+      status: 'draft',
+      approvalStatus: 'approved',
+      decidedByName: 'Admin',
+    });
+    const replay = await approve();
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect((await db.select().from(stockMovement)).length).toBe(stockBefore);
+    expect((await db.select().from(glEntry)).length).toBe(glBefore);
+    const [createAudit] = await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'sales-order-create-api'));
+    const [approveAudit] = await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'sales-order-approve-api'));
+    expect(createAudit).toMatchObject({
+      entity: 'sales/orders', action: 'create', entityId: String(createdBody.orderId),
+    });
+    expect(approveAudit).toMatchObject({
+      entity: 'sales/orders', action: 'approve', entityId: String(createdBody.orderId),
+    });
+
+    const viewer = await login(running.baseUrl, 'viewer@acme.co', 'viewer1234');
+    const denied = await fetch(`${running.baseUrl}/api/sales/orders`, {
+      method: 'POST',
+      headers: {
+        cookie: viewer.header,
+        'content-type': 'application/json',
+        'x-csrf-token': viewer.csrf,
+      },
+      body: JSON.stringify({
+        docNo: 'SO-DENIED', customerId: buyer.id, orderDate: '2026-07-22', currency: 'SGD',
+        lines: [{ productId: item.id, qty: 1, unitPrice: 1, taxCode: 'SR' }],
+      }),
+    });
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).error.code).toBe('permission_denied');
   });
 
   it('confirms an existing sales draft through the transactional action dispatcher', async () => {

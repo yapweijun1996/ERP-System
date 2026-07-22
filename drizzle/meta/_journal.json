@@ -253,6 +253,13 @@
       "when": 1784702079850,
       "tag": "0035_sad_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1784711827102,
+      "tag": "0036_lively_captain_cross",
+      "breakpoints": true
     }
   ]
 }

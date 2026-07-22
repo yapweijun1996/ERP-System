@@ -44,6 +44,8 @@ import { SalesReturnError } from '../../modules/sales/return';
 import { SalesDebitNoteError } from '../../modules/sales/debitNote';
 import { SalesPricingError } from '../../modules/sales/pricing';
 import { SalesCreditError } from '../../modules/sales/creditControl';
+import { SalesOrderValidationError } from '../../modules/sales/createSalesOrder';
+import { SalesOrderApprovalError } from '../../modules/sales/salesOrderApproval';
 import { PurchaseOrderApprovalError } from '../../modules/purchasing/purchaseOrderApproval';
 import { SupplierPricingError } from '../../modules/purchasing/supplierPricing';
 
@@ -126,6 +128,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof SalesPricingError
         || error instanceof SupplierPricingError
         || error instanceof SalesCreditError
+        || error instanceof SalesOrderValidationError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);
@@ -284,6 +287,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof InvalidStockTransferStateError
         || error instanceof InvalidPurchaseOrderStateError
         || error instanceof PurchaseOrderApprovalError
+        || error instanceof SalesOrderApprovalError
         || error instanceof SupplierPricingError
       ) {
         apiError(res, 409, 'invalid_state', error.message);
@@ -294,6 +298,7 @@ export function createResourceRouter(db: DB): Router {
         || error instanceof StockTransferValidationError
         || error instanceof InventoryTrackingError
         || error instanceof QualityInspectionError
+        || error instanceof SalesOrderValidationError
         || error instanceof RangeError
       ) {
         apiError(res, 422, 'validation_failed', error.message);

@@ -9,6 +9,7 @@ import {
   product,
   salesEnquiry,
   salesOrder,
+  salesOrderApproval,
   salesOrderLine,
   salesQuotation,
   salesQuotationLine,
@@ -71,7 +72,7 @@ describe('sales enquiry and quotation API vertical slice', () => {
       server.close((error) => error ? reject(error) : resolve()));
   });
 
-  it('converts an enquiry through an accepted quotation into a draft order idempotently', async () => {
+  it('converts an enquiry through an accepted quotation into an approval-gated order idempotently', async () => {
     const [buyer] = await db.select({ id: customer.id }).from(customer).limit(1);
     const [item] = await db.select({ id: product.id }).from(product).limit(1);
     const cookies = await login(baseUrl);
@@ -168,7 +169,13 @@ describe('sales enquiry and quotation API vertical slice', () => {
     expect(await db.select().from(salesQuotationLine))
       .toMatchObject([{ netAmount: '100.00', taxAmount: '9.00' }]);
     expect(await db.select().from(salesOrder).where(eq(salesOrder.id, orderResult.orderId)))
-      .toMatchObject([{ status: 'draft', totalAmount: '109.00' }]);
+      .toMatchObject([{ status: 'pending_approval', totalAmount: '109.00' }]);
+    expect(await db.select().from(salesOrderApproval)
+      .where(eq(salesOrderApproval.orderId, orderResult.orderId)))
+      .toMatchObject([{
+        status: 'pending',
+        reason: 'Accepted quotation Q-API-1 requires order approval.',
+      }]);
     expect(await db.select().from(salesOrderLine))
       .toMatchObject([{ netAmount: '100.00', taxAmount: '9.00' }]);
 

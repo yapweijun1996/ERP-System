@@ -433,6 +433,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'supplier-price-lists','vendor-performance',
   'purchasing-home','purchasing-reports','report-pur-supplier','report-pur-buyer',
   'report-pur-price-var','report-pur-vendor','report-pur-generic','pur-txn-view',
+  'new-sales-order','so-approvals',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -466,6 +467,7 @@ const API_SCREEN_ROUTES = new Set([
   'supplier-price-lists','vendor-performance',
   'purchasing-home','purchasing-reports','report-pur-supplier','report-pur-buyer',
   'report-pur-price-var','report-pur-vendor','report-pur-generic','pur-txn-view',
+  'new-sales-order','so-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',

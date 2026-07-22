@@ -490,17 +490,30 @@ Exit criteria: all eight promoted routes use formal bounded resources in Demo/AP
 analytics are rebuildable rather than stored KPIs; RFQ/quotation details expose only
 real sourcing facts/actions; desktop/375px, smoke and the full 114-route audit pass.
 
-## Remaining productionization backlog — 24 Preview routes
+## Phase 19 — Direct Sales Order Approval ✅
 
-This is the authoritative work breakdown after TASK-071. `tasks/tasks.jsonl` records
+1. **Canonical order authoring and approval** (EPIC-036, TASK-072 done 2026-07-22)
+   replaces the sample new-order form and approval list with one shared Demo/PostgreSQL
+   command path. Direct and quotation-converted orders start `pending_approval` with an
+   immutable tax snapshot and exactly one approval request. An authorised, noted decision
+   records the actor and releases an approved order to `draft`; inventory, delivery,
+   invoice and GL facts remain exclusive to the later confirmation boundary. Both routes
+   have five-language Canonical UI. Route maturity is **92/22**.
+
+Exit criteria: creation/decision tenant guards, Decimal tax, RBAC, audit, idempotency,
+no-stock/no-GL invariants, live browser workflow and the full release suite pass.
+
+## Remaining productionization backlog — 22 Preview routes
+
+This is the authoritative work breakdown after TASK-072. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
-   `sales-commission`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
-   `report-quote-conversion`, `report-generic`, `txn-view`. Prefer the reusable new-order
-   form and approval/commission rules before report-only shells.
+1. **Sales completion — 8 routes:** `sales-home`, `sales-commission`, `sales-reports`,
+   `report-sales-customer`, `report-sales-rep`, `report-quote-conversion`,
+   `report-generic`, `txn-view`. Prefer commission rules and rebuildable analytics before
+   promoting report-only shells.
 2. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
    header/line post/reverse and bank statement/reconciliation commands before promoting
    either screen.

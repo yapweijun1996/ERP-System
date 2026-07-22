@@ -107,6 +107,14 @@ only the document/approval states. Approval is deliberately stock- and GL-neutra
 `receiveGoods` accepts only an approved/open PO, so inventory begins at receipt and
 accounting begins at supplier-invoice posting.
 
+Direct and quotation-converted sales orders follow the symmetric commercial gate. Order
+creation validates tenant-owned customers/products, snapshots the effective tax on every
+line and inserts exactly one `sales_order_approval` row in the same transaction. Orders
+remain `pending_approval` until an authorised actor records a required note. Approval
+changes the order to `draft`; rejection changes it to `rejected`. Neither decision writes
+stock, delivery, invoice or GL facts. Only the existing draft confirmation command may
+cross the fulfilment/accounting boundary, preserving one authoritative posting path.
+
 ## 5. Production design (implemented — EPIC-005 onward)
 
 ```

@@ -7,6 +7,7 @@ import { markOpportunityLostWithin } from '../modules/crm/opportunityLifecycle';
 import {
   confirmDraftSalesOrderWithin,
 } from '../modules/sales/confirmOrder';
+import { decideSalesOrderWithin } from '../modules/sales/salesOrderApproval';
 import { postInventoryAdjustmentWithin } from '../modules/inventory/adjustment';
 import { completeStockTransferWithin } from '../modules/inventory/transfer';
 import {
@@ -553,6 +554,46 @@ const ACTIONS: Record<string, ActionDefinition> = {
       return confirmDraftSalesOrderWithin(tx, scope, {
         salesOrderId: input.resourceId,
         warehouseId: Number(payload.warehouseId),
+      });
+    },
+  },
+  'sales/orders/approve': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const note = (input.payload as { note?: unknown }).note;
+      if (typeof note !== 'string' || !note.trim()) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'A decision note is required to approve a sales order.',
+        );
+      }
+      return decideSalesOrderWithin(tx, scope, input.resourceId, {
+        decision: 'approve',
+        note,
+        actorUserId: input.actorUserId,
+      });
+    },
+  },
+  'sales/orders/reject': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const note = (input.payload as { note?: unknown }).note;
+      if (typeof note !== 'string' || !note.trim()) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'A decision note is required to reject a sales order.',
+        );
+      }
+      return decideSalesOrderWithin(tx, scope, input.resourceId, {
+        decision: 'reject',
+        note,
+        actorUserId: input.actorUserId,
       });
     },
   },
