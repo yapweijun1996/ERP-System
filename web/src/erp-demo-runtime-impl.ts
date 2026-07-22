@@ -81,6 +81,7 @@ import {
   decideSalesOrderWithin,
   type DecideSalesOrderInput,
 } from '../../src/modules/sales/salesOrderApproval';
+import { listSalesAnalyticsWithin } from '../../src/modules/sales/analytics';
 import {
   completeDemoSetupWithin,
   type CompleteDemoSetupInput,
@@ -652,6 +653,13 @@ export const erpDemoRuntime = Object.freeze({
       input: DecideSalesOrderInput,
     ) {
       return decideSalesOrderWithin(asDomainDb(db), scope, orderId, input);
+    },
+    listSalesAnalyticsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { cursor?: number; limit?: number },
+    ) {
+      return listSalesAnalyticsWithin(asDomainDb(db), scope, input);
     },
     completeDemoSetupWithin(db: DemoOrm, input: CompleteDemoSetupInput) {
       return completeDemoSetupWithin(asDomainDb(db), input);

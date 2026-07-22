@@ -97,6 +97,7 @@ import {
   listPurchasePriceVarianceWithin,
   listPurchasingAnalyticsWithin,
 } from '../modules/purchasing/analytics';
+import { listSalesAnalyticsWithin } from '../modules/sales/analytics';
 
 export interface ApiScope {
   masterFn: string;
@@ -201,6 +202,11 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     status: salesOrderApproval.status,
     versionColumn: salesOrderApproval.version,
   }),
+  'sales/analytics': derivedResource(
+    salesOrder,
+    'sales.read',
+    (db, scope, input) => listSalesAnalyticsWithin(db, scope, input),
+  ),
   'sales/customers': resource(customer, 'sales.read'),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),
   'sales/deliveries': resource(salesDelivery, 'sales.read', {

@@ -329,6 +329,21 @@ async function checkViewport(browser, viewport) {
       const overstockDraft = (await adapter.db.query(
         "select status, version from sales_order where master_fn='M1' and company_fn='C-SG' and doc_no='SO-3'",
       )).rows[0];
+      const salesAnalytics = await adapter.list('sales/analytics', { limit: 100 });
+      await navigate('sales-home');
+      const salesAnalyticsCanonical = Boolean(document.querySelector('[data-sales-analytics="canonical"]'))
+        && !document.querySelector('[data-preview-banner]')
+        && salesAnalytics.data.some((row) => row.kind === 'summary' && Number(row.recognizedRevenue) > 0)
+        && salesAnalytics.data.some((row) => row.kind === 'customer-revenue');
+      await navigate('sales-reports');
+      const salesReportsCanonical = Boolean(document.querySelector('[data-sales-reports="canonical"]'))
+        && !document.querySelector('[data-preview-banner]');
+      const reportMarkers = [];
+      for (const route of ['report-sales-customer', 'report-sales-rep', 'report-quote-conversion', 'report-generic']) {
+        await navigate(route);
+        reportMarkers.push(Boolean(document.querySelector('[data-sales-report]'))
+          && !document.querySelector('[data-preview-banner]'));
+      }
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -368,6 +383,9 @@ async function checkViewport(browser, viewport) {
         purchasingReportsCanonical,
         salesOrderAuthoringCanonical,
         salesOrderApprovalCanonical,
+        salesAnalyticsCanonical,
+        salesReportsCanonical,
+        salesReportRoutesCanonical: reportMarkers.every(Boolean),
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -405,6 +423,10 @@ async function checkViewport(browser, viewport) {
       if (!runtimeProof.purchasingReportsCanonical) errors.push('[demo-esm] purchasing reports did not render from canonical derived resources');
       if (!runtimeProof.salesOrderAuthoringCanonical) errors.push('[demo-esm] new sales order did not render its Canonical authoring workspace');
       if (!runtimeProof.salesOrderApprovalCanonical) errors.push('[demo-esm] sales order approval queue did not render the created canonical order');
+      if (!runtimeProof.salesAnalyticsCanonical) errors.push('[demo-esm] sales dashboard did not render canonical derived analytics');
+      if (!runtimeProof.salesReportsCanonical || !runtimeProof.salesReportRoutesCanonical) {
+        errors.push('[demo-esm] one or more sales analytics reports did not render as Canonical routes');
+      }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
       if (runtimeProof.salesDraftWidgetDelta !== -5 || runtimeProof.salesDraftGadgetDelta !== -3) {

@@ -1426,3 +1426,24 @@ Acceptance criteria:
       tenant and actor guards, replay, Viewer denial, audit and the no-stock/no-GL boundary.
 - [x] Full release gates pass at 92 Canonical / 22 Preview with 37 migrations and 110
       exported tables.
+
+## EPIC-037 — Canonical Sales Analytics
+
+**Goal:** replace Sales' sample dashboard, targets, forecasts and report shells with
+bounded analytics rebuilt from canonical commercial documents.
+
+Acceptance criteria:
+
+- [x] `sales/analytics` derives recognized revenue, open receivables, open commercial
+      work, monthly revenue, customer/owner revenue and document-status facts directly
+      from invoices, credit/debit notes, orders, enquiries, returns, quotations and
+      deliveries. No independent KPI, target or forecast table is introduced.
+- [x] Decimal calculations subtract posted credits and add posted debits at summary,
+      month and customer levels; tenant isolation and bounded cursor reads are covered
+      by domain and authenticated API tests.
+- [x] `sales-home`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
+      `report-quote-conversion` and `report-generic` use the formal resource in Demo/API,
+      remove fake export/run actions and include en/ms/zh/ja/vi copy.
+- [x] CI smoke creates a real confirmed sale, proves positive analytics and visits all
+      six Canonical routes. The full desktop/375px audit passes at 98 Canonical / 16
+      Preview without page, action-bar or active-subnav overflow.

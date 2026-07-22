@@ -503,17 +503,29 @@ real sourcing facts/actions; desktop/375px, smoke and the full 114-route audit p
 Exit criteria: creation/decision tenant guards, Decimal tax, RBAC, audit, idempotency,
 no-stock/no-GL invariants, live browser workflow and the full release suite pass.
 
-## Remaining productionization backlog — 22 Preview routes
+## Phase 20 — Canonical Sales Analytics ✅
 
-This is the authoritative work breakdown after TASK-072. `tasks/tasks.jsonl` records
+1. **Rebuildable dashboard and reports** (EPIC-037, TASK-073 done 2026-07-22)
+   replaces six sample-only Sales surfaces with one bounded Demo/API read model.
+   Recognized revenue reconciles posted invoices, credits and debits; open receivables,
+   monthly revenue, customer ownership and document statuses are recalculated from
+   canonical facts on every request. No KPI table, fake target, forecast, export or
+   queued-report action remains. All six routes include five-language copy and route
+   maturity is **98/16**.
+
+Exit criteria: tenant/cursor/Decimal domain and API proof, real-transaction browser
+smoke, desktop/375px rendering and the full 114-route audit pass.
+
+## Remaining productionization backlog — 16 Preview routes
+
+This is the authoritative work breakdown after TASK-073. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Sales completion — 8 routes:** `sales-home`, `sales-commission`, `sales-reports`,
-   `report-sales-customer`, `report-sales-rep`, `report-quote-conversion`,
-   `report-generic`, `txn-view`. Prefer commission rules and rebuildable analytics before
-   promoting report-only shells.
+1. **Sales completion — 2 routes:** `sales-commission` needs formal commission rules,
+   approvals and immutable runs; `txn-view` needs record-specific canonical transaction
+   context rather than the remaining shared prototype shell.
 2. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
    header/line post/reverse and bank statement/reconciliation commands before promoting
    either screen.
