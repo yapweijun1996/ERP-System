@@ -1424,10 +1424,15 @@
     var key=normalizeResource(resource);
     var adminResult=await listAdminResource(key, query);
     if(adminResult) return adminResult;
-    if(key==='purchasing/vendor-performance'){
+    if(key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
       query=query||{};
+      var derivedCommand=key==='purchasing/vendor-performance'
+        ?state.runtime.commands.listVendorPerformanceWithin
+        :key==='purchasing/analytics'
+          ?state.runtime.commands.listPurchasingAnalyticsWithin
+          :state.runtime.commands.listPurchasePriceVarianceWithin;
       var performancePage=await requireDemoDb().transaction(function(tx){
-        return state.runtime.commands.listVendorPerformanceWithin(
+        return derivedCommand(
           state.runtime.createOrm(tx),SCOPE,{
             cursor:Number(query.cursor)||0,
             limit:Math.max(1,Math.min(100,Number(query.limit)||50)),

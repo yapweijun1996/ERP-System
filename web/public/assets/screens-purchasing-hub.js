@@ -581,7 +581,11 @@ async function prepareCanonicalSupplierPriceData(){
 async function prepareCanonicalVendorPerformanceData(){
   await prepareCanonicalPurchasingData();
   const page=await listPage('purchasing/vendor-performance');
-  DB.vendorPerf=(page.data||[]).map(row=>({
+  applyCanonicalVendorPerformanceRows(page.data||[]);
+}
+
+function applyCanonicalVendorPerformanceRows(rows){
+  DB.vendorPerf=rows.map(row=>({
     id:row.id,code:row.supplierCode,supplier:row.supplierName,
     orders:row.orderCount,received:row.receivedCount,receivedPct:row.receivedPct==null?null:purchasingNumber(row.receivedPct),
     spend:purchasingNumber(row.invoicedSpend),leadTime:row.avgLeadDays==null?null:purchasingNumber(row.avgLeadDays),
@@ -590,6 +594,33 @@ async function prepareCanonicalVendorPerformanceData(){
     contractCoverage:row.contractCoveragePct==null?null:purchasingNumber(row.contractCoveragePct),
     rating:purchasingNumber(row.rating),
   }));
+}
+
+async function prepareCanonicalPurchasingAnalyticsData(){
+  await prepareCanonicalPurchasingData();
+  const pages=await Promise.all([
+    listPage('purchasing/analytics',{limit:100}),
+    listPage('purchasing/price-variance',{limit:100}),
+    listPage('purchasing/vendor-performance',{limit:100}),
+    listPage('purchasing/supplier-price-lists',{limit:100}),
+  ]);
+  const analytics=pages[0].data||[];
+  DB.purchasingAnalyticsSummary=analytics.find(row=>row.kind==='summary')||{
+    supplierCount:0,openOrderCount:0,openOrderValue:'0.00',pendingApprovalCount:0,
+    pendingReceiptCount:0,overdueOrderCount:0,receiptCount:0,uninvoicedReceiptCount:0,
+    invoiceMismatchCount:0,netUnpaidAp:'0.00',activeContractCount:0,openRequisitionCount:0,
+  };
+  DB.purchasingMonthlySpend=analytics.filter(row=>row.kind==='monthly-spend');
+  DB.purchasingBuyerSpend=analytics.filter(row=>row.kind==='buyer-spend');
+  DB.purchasingOrderStatus=analytics.filter(row=>row.kind==='order-status');
+  DB.purchasingInvoiceStatus=analytics.filter(row=>row.kind==='invoice-status');
+  DB.purchasingRequisitionStatus=analytics.filter(row=>row.kind==='requisition-status');
+  DB.purchasingPriceVariance=pages[1].data||[];
+  applyCanonicalVendorPerformanceRows(pages[2].data||[]);
+  const today=new Date().toISOString().slice(0,10);
+  DB.purchasingActiveContracts=(pages[3].data||[]).filter(row=>
+    row.status==='active'&&row.effectiveFrom<=today&&(row.effectiveTo==null||row.effectiveTo>=today));
+  DB.purchasingAnalyticsMeta={truncated:pages.some(page=>Boolean(page.nextCursor))};
 }
 
 /* ============================================================
@@ -887,4 +918,144 @@ SCREENS['report-pur-generic'] = function(root){
     params:PUR_REPORT_PARAMS + `<div class="fld"><span>Status</span><select><option>All</option><option>Open</option><option>Closed</option></select></div><div class="fld"><span>Group by</span><select><option>Supplier</option><option>Item</option><option>Buyer</option><option>Month</option></select></div>`,
     result:`<div class="rep-empty">${ic(m.icon)}<h3>${esc(m.name)}</h3><p>${esc(m.desc||'')}</p><p style="color:var(--faint);font-size:13px">Set the parameters on the left and run the report. This report shares the standard purchasing report engine — results render as a chart plus an exportable table.</p>${btn('Run report',{icon:'refresh',cls:'primary',sm:false,attrs:'onclick="toast(\'Report queued — results ready shortly\',\'info\')"'})}</div>`
   });
+};
+
+/* ============================================================
+   CANONICAL PURCHASING ANALYTICS (TASK-071)
+   These final registrations intentionally replace the old sample dashboard and
+   report renderers above while keeping shared shell/list helpers in one file.
+   ============================================================ */
+function canonicalPurCopy(key){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{purchasing:'Purchasing',dashboardSub:'Canonical procure-to-pay command centre rebuilt from requisitions, approvals, orders, receipts, invoices, returns and active contracts.',newPo:'New purchase order',openPOs:'Open POs',openValue:'Open PO value',pendingApproval:'Pending approval',pendingReceipt:'Pending receipt',overdue:'Overdue quoted lead',invoiceVariance:'Invoice variance',netAP:'Net unpaid AP',spendHistory:'Posted invoice spend',invoices:'invoices',topSuppliers:'Top suppliers by invoiced spend',approvedSpendByBuyer:'Approved PO value by buyer',realBuyerNote:'Buyer is the real PO approval actor snapshot; unapproved orders are excluded.',noData:'No canonical facts in the current company yet.',masterData:'Master Data',transactions:'Transactions',controls:'Controls',reports:'Purchasing Reports',reportsSub:'Bounded, rebuildable reports from canonical procure-to-pay facts. No sample metrics or independent KPI table.',spend:'Spend',performance:'Performance',operations:'Operations',bySupplier:'Purchase by Supplier',bySupplierDesc:'Invoiced spend, order coverage and credited-return rate by supplier.',byBuyer:'Purchase by Buyer',byBuyerDesc:'Approved PO value grouped by the real approval actor.',priceVariance:'Price Variance',priceVarianceDesc:'Immutable supplier-invoice total compared with its source PO total.',vendorPerformance:'Supplier Performance',vendorPerformanceDesc:'Delivery, returns, invoice match and active-contract coverage.',orderStatus:'Purchase Order Status',orderStatusDesc:'Order count and committed value by canonical state.',invoiceStatus:'Supplier Invoice Status',invoiceStatusDesc:'Invoice count and value by settlement state.',requisitionStatus:'Requisition Status',requisitionStatusDesc:'Request count and estimated value by decision state.',live:'Live',backReports:'Back to reports',allHistory:'Current company · all canonical history',supplier:'Supplier',spendValue:'Invoiced spend',orders:'Orders',received:'Received',share:'Share',buyerApprover:'Buyer / approver',approvedValue:'Approved PO value',invoice:'Supplier invoice',po:'Purchase order',invoiceTotal:'Invoice total',poTotal:'PO total',variance:'Variance',result:'Result',exactMatch:'Exact match',attention:'Review',headerNote:'Price variance is reported at immutable document-header level because supplier invoice lines are not a domain table. Posting currently enforces exact PO totals.',onTime:'On-time',leadDays:'Actual lead',returns:'Credited returns',match:'Invoice match',coverage:'Contract coverage',rating:'Rating',status:'Status',count:'Count',value:'Value',truncated:'The bounded result has more rows; use the source register for the complete ledger.',print:'Print'},
+    ms:{purchasing:'Pembelian',dashboardSub:'Pusat arahan perolehan-ke-bayaran kanonik yang dibina semula daripada permintaan, kelulusan, pesanan, penerimaan, invois, pulangan dan kontrak aktif.',newPo:'Pesanan belian baharu',openPOs:'PO terbuka',openValue:'Nilai PO terbuka',pendingApproval:'Menunggu kelulusan',pendingReceipt:'Menunggu penerimaan',overdue:'Lewat masa utama',invoiceVariance:'Varians invois',netAP:'AP belum bayar bersih',spendHistory:'Belanja invois dipos',invoices:'invois',topSuppliers:'Pembekal utama mengikut belanja invois',approvedSpendByBuyer:'Nilai PO diluluskan mengikut pembeli',realBuyerNote:'Pembeli ialah rekod pelaku kelulusan PO sebenar; pesanan belum lulus dikecualikan.',noData:'Belum ada fakta kanonik untuk syarikat semasa.',masterData:'Data Induk',transactions:'Transaksi',controls:'Kawalan',reports:'Laporan Pembelian',reportsSub:'Laporan terhad dan boleh dibina semula daripada fakta perolehan-ke-bayaran kanonik. Tiada metrik sampel atau jadual KPI berasingan.',spend:'Belanja',performance:'Prestasi',operations:'Operasi',bySupplier:'Pembelian mengikut Pembekal',bySupplierDesc:'Belanja invois, liputan pesanan dan kadar pulangan dikredit mengikut pembekal.',byBuyer:'Pembelian mengikut Pembeli',byBuyerDesc:'Nilai PO diluluskan dikelompokkan mengikut pelaku kelulusan sebenar.',priceVariance:'Varians Harga',priceVarianceDesc:'Jumlah invois pembekal tidak berubah dibandingkan dengan jumlah PO sumber.',vendorPerformance:'Prestasi Pembekal',vendorPerformanceDesc:'Penghantaran, pulangan, padanan invois dan liputan kontrak aktif.',orderStatus:'Status Pesanan Belian',orderStatusDesc:'Bilangan pesanan dan nilai komitmen mengikut status kanonik.',invoiceStatus:'Status Invois Pembekal',invoiceStatusDesc:'Bilangan dan nilai invois mengikut status penyelesaian.',requisitionStatus:'Status Permintaan',requisitionStatusDesc:'Bilangan permintaan dan anggaran nilai mengikut keputusan.',live:'Langsung',backReports:'Kembali ke laporan',allHistory:'Syarikat semasa · semua sejarah kanonik',supplier:'Pembekal',spendValue:'Belanja invois',orders:'Pesanan',received:'Diterima',share:'Bahagian',buyerApprover:'Pembeli / pelulus',approvedValue:'Nilai PO diluluskan',invoice:'Invois pembekal',po:'Pesanan belian',invoiceTotal:'Jumlah invois',poTotal:'Jumlah PO',variance:'Varians',result:'Keputusan',exactMatch:'Padan tepat',attention:'Semak',headerNote:'Varians harga dilapor pada tahap kepala dokumen yang tidak berubah kerana baris invois pembekal bukan jadual domain. Pengeposan kini menguatkuasakan jumlah PO yang tepat.',onTime:'Tepat masa',leadDays:'Masa sebenar',returns:'Pulangan dikredit',match:'Padanan invois',coverage:'Liputan kontrak',rating:'Penarafan',status:'Status',count:'Bilangan',value:'Nilai',truncated:'Hasil terhad mempunyai baris tambahan; gunakan daftar sumber untuk lejar lengkap.',print:'Cetak'},
+    zh:{purchasing:'采购',dashboardSub:'由请购、审批、采购订单、收货、供应商发票、退货和生效合同实时重建的标准采购中心。',newPo:'新建采购订单',openPOs:'未结采购订单',openValue:'未结订单金额',pendingApproval:'待审批',pendingReceipt:'待收货',overdue:'超出报价交期',invoiceVariance:'发票价差',netAP:'应付净额',spendHistory:'已过账发票采购额',invoices:'张发票',topSuppliers:'按已开票采购额排名的供应商',approvedSpendByBuyer:'按采购负责人统计已批准订单',realBuyerNote:'采购负责人取自真实采购订单审批人快照；未批准订单不计入。',noData:'当前公司尚无标准业务数据。',masterData:'主数据',transactions:'采购交易',controls:'采购控制',reports:'采购报表',reportsSub:'所有指标均由标准采购事实限量重建，不使用示例数字或独立 KPI 表。',spend:'采购额',performance:'绩效',operations:'运营',bySupplier:'按供应商采购',bySupplierDesc:'按供应商查看已开票采购额、订单覆盖及已贷记退货率。',byBuyer:'按采购负责人采购',byBuyerDesc:'按真实审批人汇总已批准采购订单金额。',priceVariance:'采购价差',priceVarianceDesc:'比较不可变的供应商发票总额与来源采购订单总额。',vendorPerformance:'供应商绩效',vendorPerformanceDesc:'交付、退货、发票匹配及生效合同覆盖率。',orderStatus:'采购订单状态',orderStatusDesc:'按标准状态汇总订单数量及承诺金额。',invoiceStatus:'供应商发票状态',invoiceStatusDesc:'按结算状态汇总发票数量及金额。',requisitionStatus:'请购单状态',requisitionStatusDesc:'按审批结果汇总申请数量及预计金额。',live:'实时',backReports:'返回报表',allHistory:'当前公司 · 全部标准历史数据',supplier:'供应商',spendValue:'已开票采购额',orders:'订单',received:'已收货',share:'占比',buyerApprover:'采购负责人 / 审批人',approvedValue:'已批准订单金额',invoice:'供应商发票',po:'采购订单',invoiceTotal:'发票总额',poTotal:'订单总额',variance:'价差',result:'结果',exactMatch:'完全匹配',attention:'需复核',headerNote:'由于系统没有供应商发票行领域表，价差仅按不可变单据头计算，不虚构物料行。目前过账规则要求发票总额与采购订单完全一致。',onTime:'准时率',leadDays:'实际周期',returns:'已贷记退货',match:'发票匹配',coverage:'合同覆盖',rating:'评分',status:'状态',count:'数量',value:'金额',truncated:'限量结果仍有后续记录；请从来源登记簿查看完整流水。',print:'打印'},
+    ja:{purchasing:'購買',dashboardSub:'購買依頼、承認、発注、入荷、仕入先請求、返品、有効契約から再構築する標準の購買管理センターです。',newPo:'購買発注を作成',openPOs:'未完了PO',openValue:'未完了PO金額',pendingApproval:'承認待ち',pendingReceipt:'入荷待ち',overdue:'見積納期超過',invoiceVariance:'請求差異',netAP:'未払AP純額',spendHistory:'転記済請求仕入額',invoices:'請求書',topSuppliers:'請求済仕入額上位の仕入先',approvedSpendByBuyer:'購買担当者別の承認済PO金額',realBuyerNote:'購買担当者は実際のPO承認者スナップショットです。未承認注文は除外されます。',noData:'現在の会社には標準データがありません。',masterData:'マスターデータ',transactions:'取引',controls:'統制',reports:'購買レポート',reportsSub:'標準の購買事実から再構築できる上限付きレポートです。サンプル指標や独立KPI表は使用しません。',spend:'仕入額',performance:'パフォーマンス',operations:'運用',bySupplier:'仕入先別購買',bySupplierDesc:'仕入先別の請求済仕入額、受領状況、貸方返品率。',byBuyer:'担当者別購買',byBuyerDesc:'実際の承認者ごとに承認済PO金額を集計します。',priceVariance:'価格差異',priceVarianceDesc:'不変の仕入先請求総額と元PO総額を比較します。',vendorPerformance:'仕入先パフォーマンス',vendorPerformanceDesc:'納品、返品、請求一致、有効契約カバー率。',orderStatus:'購買発注ステータス',orderStatusDesc:'標準状態別の件数と発注金額。',invoiceStatus:'仕入先請求ステータス',invoiceStatusDesc:'決済状態別の請求件数と金額。',requisitionStatus:'購買依頼ステータス',requisitionStatusDesc:'判断状態別の依頼件数と見積金額。',live:'ライブ',backReports:'レポートへ戻る',allHistory:'現在の会社 · 全標準履歴',supplier:'仕入先',spendValue:'請求済仕入額',orders:'発注',received:'入荷済',share:'構成比',buyerApprover:'購買担当 / 承認者',approvedValue:'承認済PO金額',invoice:'仕入先請求書',po:'購買発注',invoiceTotal:'請求総額',poTotal:'PO総額',variance:'差異',result:'結果',exactMatch:'完全一致',attention:'要確認',headerNote:'仕入先請求明細はドメイン表ではないため、価格差異は不変の伝票ヘッダー単位で表示します。現在の転記はPO総額との完全一致を必須とします。',onTime:'定時率',leadDays:'実リード',returns:'貸方返品',match:'請求一致',coverage:'契約カバー',rating:'評価',status:'ステータス',count:'件数',value:'金額',truncated:'上限付き結果には続きがあります。完全な台帳は元の一覧で確認してください。',print:'印刷'},
+    vi:{purchasing:'Mua hàng',dashboardSub:'Trung tâm mua-đến-thanh-toán chuẩn được dựng lại từ yêu cầu, phê duyệt, đơn mua, nhận hàng, hóa đơn, trả hàng và hợp đồng hiệu lực.',newPo:'Đơn mua hàng mới',openPOs:'PO đang mở',openValue:'Giá trị PO mở',pendingApproval:'Chờ duyệt',pendingReceipt:'Chờ nhận',overdue:'Quá thời gian báo giá',invoiceVariance:'Chênh lệch hóa đơn',netAP:'AP chưa trả ròng',spendHistory:'Chi tiêu hóa đơn đã ghi sổ',invoices:'hóa đơn',topSuppliers:'Nhà cung cấp hàng đầu theo chi tiêu hóa đơn',approvedSpendByBuyer:'Giá trị PO duyệt theo người mua',realBuyerNote:'Người mua là ảnh chụp người duyệt PO thực; đơn chưa duyệt bị loại.',noData:'Chưa có dữ kiện chuẩn cho công ty hiện tại.',masterData:'Dữ liệu chính',transactions:'Giao dịch',controls:'Kiểm soát',reports:'Báo cáo Mua hàng',reportsSub:'Báo cáo có giới hạn và có thể dựng lại từ dữ kiện mua-đến-thanh-toán chuẩn. Không dùng số mẫu hay bảng KPI riêng.',spend:'Chi tiêu',performance:'Hiệu suất',operations:'Vận hành',bySupplier:'Mua theo Nhà cung cấp',bySupplierDesc:'Chi tiêu hóa đơn, độ phủ đơn và tỷ lệ trả hàng ghi Có theo nhà cung cấp.',byBuyer:'Mua theo Người mua',byBuyerDesc:'Giá trị PO đã duyệt nhóm theo người phê duyệt thực.',priceVariance:'Chênh lệch Giá',priceVarianceDesc:'So sánh tổng hóa đơn nhà cung cấp bất biến với tổng PO nguồn.',vendorPerformance:'Hiệu suất Nhà cung cấp',vendorPerformanceDesc:'Giao hàng, trả hàng, khớp hóa đơn và phủ hợp đồng hiệu lực.',orderStatus:'Trạng thái Đơn mua',orderStatusDesc:'Số đơn và giá trị cam kết theo trạng thái chuẩn.',invoiceStatus:'Trạng thái Hóa đơn NCC',invoiceStatusDesc:'Số lượng và giá trị hóa đơn theo trạng thái quyết toán.',requisitionStatus:'Trạng thái Yêu cầu mua',requisitionStatusDesc:'Số yêu cầu và giá trị ước tính theo quyết định.',live:'Trực tiếp',backReports:'Quay lại báo cáo',allHistory:'Công ty hiện tại · toàn bộ lịch sử chuẩn',supplier:'Nhà cung cấp',spendValue:'Chi tiêu hóa đơn',orders:'Đơn mua',received:'Đã nhận',share:'Tỷ trọng',buyerApprover:'Người mua / duyệt',approvedValue:'Giá trị PO đã duyệt',invoice:'Hóa đơn NCC',po:'Đơn mua',invoiceTotal:'Tổng hóa đơn',poTotal:'Tổng PO',variance:'Chênh lệch',result:'Kết quả',exactMatch:'Khớp chính xác',attention:'Cần xem',headerNote:'Chênh lệch giá được báo cáo ở cấp đầu chứng từ bất biến vì dòng hóa đơn nhà cung cấp chưa là bảng miền. Ghi sổ hiện yêu cầu tổng PO khớp chính xác.',onTime:'Đúng hạn',leadDays:'Thời gian thực',returns:'Trả hàng ghi Có',match:'Khớp hóa đơn',coverage:'Phủ hợp đồng',rating:'Điểm',status:'Trạng thái',count:'Số lượng',value:'Giá trị',truncated:'Kết quả giới hạn còn dòng tiếp theo; dùng sổ nguồn để xem toàn bộ.',print:'In'},
+  };
+  const pack=packs[lang]||packs.en;
+  return pack[key]||packs.en[key]||key;
+}
+
+function canonicalPurStatus(status){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const labels={
+    en:{pending_approval:'Pending approval',open:'Open',received:'Received',rejected:'Rejected',cancelled:'Cancelled',unpaid:'Unpaid',paid:'Paid',submitted:'Submitted',approved:'Approved'},
+    ms:{pending_approval:'Menunggu kelulusan',open:'Terbuka',received:'Diterima',rejected:'Ditolak',cancelled:'Dibatalkan',unpaid:'Belum bayar',paid:'Dibayar',submitted:'Dihantar',approved:'Diluluskan'},
+    zh:{pending_approval:'待审批',open:'已批准 / 待收货',received:'已收货',rejected:'已拒绝',cancelled:'已取消',unpaid:'未付款',paid:'已付款',submitted:'已提交',approved:'已批准'},
+    ja:{pending_approval:'承認待ち',open:'承認済 / 入荷待ち',received:'入荷済',rejected:'却下',cancelled:'取消済',unpaid:'未払',paid:'支払済',submitted:'申請済',approved:'承認済'},
+    vi:{pending_approval:'Chờ duyệt',open:'Đã duyệt / chờ nhận',received:'Đã nhận',rejected:'Đã từ chối',cancelled:'Đã hủy',unpaid:'Chưa trả',paid:'Đã trả',submitted:'Đã gửi',approved:'Đã duyệt'},
+  };
+  return (labels[lang]||labels.en)[status]||status;
+}
+
+function canonicalPurMoney(value){ return money0(purchasingNumber(value)); }
+function canonicalPurEmpty(){ return `<div class="rep-empty">${ic('chart')}<p>${esc(canonicalPurCopy('noData'))}</p></div>`; }
+function canonicalPurReportCatalog(){
+  const c=canonicalPurCopy;
+  return [
+    {group:c('spend'),items:[
+      {id:'report-pur-supplier',name:c('bySupplier'),desc:c('bySupplierDesc'),icon:'truck'},
+      {id:'report-pur-buyer',name:c('byBuyer'),desc:c('byBuyerDesc'),icon:'user'},
+      {id:'report-pur-price-var',name:c('priceVariance'),desc:c('priceVarianceDesc'),icon:'percent'},
+    ]},
+    {group:c('performance'),items:[
+      {id:'report-pur-vendor',name:c('vendorPerformance'),desc:c('vendorPerformanceDesc'),icon:'shield'},
+    ]},
+    {group:c('operations'),items:[
+      {id:'report-pur-generic',key:'order-status',name:c('orderStatus'),desc:c('orderStatusDesc'),icon:'cart'},
+      {id:'report-pur-generic',key:'invoice-status',name:c('invoiceStatus'),desc:c('invoiceStatusDesc'),icon:'receipt'},
+      {id:'report-pur-generic',key:'requisition-status',name:c('requisitionStatus'),desc:c('requisitionStatusDesc'),icon:'list'},
+    ]},
+  ];
+}
+function openCanonicalPurReport(route,key){
+  PUR_REPORT_PENDING=key?{key}:null;
+  navigate(route);
+}
+function canonicalPurReportShell(title,meta,body,note){
+  const c=canonicalPurCopy;
+  return purPage({active:'purchasing-reports',title,sub:meta,
+    action:btn(c('backReports'),{icon:'chevL',cls:'soft',attrs:'onclick="navigate(\'purchasing-reports\')"'}),
+    body:`<div class="sales-body">${note?`<div class="alert info" style="margin:0 0 14px">${ic('info')}<span>${esc(note)}</span></div>`:''}${body}${DB.purchasingAnalyticsMeta&&DB.purchasingAnalyticsMeta.truncated?`<div class="alert warn" style="margin-top:14px">${ic('info')}<span>${esc(c('truncated'))}</span></div>`:''}</div>`});
+}
+
+SCREENS['purchasing-home']=async function(root){
+  await prepareCanonicalPurchasingAnalyticsData();
+  const c=canonicalPurCopy, summary=DB.purchasingAnalyticsSummary;
+  const kpis=[
+    [c('openPOs'),summary.openOrderCount,'purchase-orders'],
+    [c('openValue'),canonicalPurMoney(summary.openOrderValue),'purchase-orders'],
+    [c('pendingApproval'),summary.pendingApprovalCount,'po-approvals'],
+    [c('pendingReceipt'),summary.pendingReceiptCount,'goods-receipts'],
+    [c('overdue'),summary.overdueOrderCount,'purchase-orders'],
+    [c('invoiceVariance'),summary.invoiceMismatchCount,'report-pur-price-var'],
+    [c('netAP'),canonicalPurMoney(summary.netUnpaidAp),'supplier-invoices'],
+  ];
+  const kpiHtml=`<div class="so-kpibar">${kpis.map(([label,value,route],index)=>`<button class="so-kpi clickable ${index===4&&value?'neg':''}" onclick="navigate('${route}')"><small>${esc(label)}</small><b class="tnum">${value}</b></button>`).join('')}</div>`;
+  const months=DB.purchasingMonthlySpend, maxMonth=Math.max(1,...months.map(row=>purchasingNumber(row.spend)));
+  const monthBars=months.length?`<div class="mbars">${months.map(row=>`<div class="mbar" data-tip="${esc(row.period)} · ${canonicalPurMoney(row.spend)}"><span class="mbar-track"><i style="height:${Math.max(4,Math.round(purchasingNumber(row.spend)/maxMonth*100))}%"></i></span><span class="mbar-l">${esc(row.period.slice(5))}</span></div>`).join('')}</div>`:canonicalPurEmpty();
+  const suppliers=DB.vendorPerf.slice().sort((a,b)=>b.spend-a.spend).slice(0,6);
+  const supplierBars=suppliers.length?barList(suppliers.map(row=>({label:row.supplier,value:row.spend,text:canonicalPurMoney(row.spend),clr:'var(--accent)'}))):canonicalPurEmpty();
+  const buyers=DB.purchasingBuyerSpend;
+  const buyerBars=buyers.length?barList(buyers.map(row=>({label:row.buyer,value:purchasingNumber(row.approvedOrderValue),text:canonicalPurMoney(row.approvedOrderValue),clr:'var(--accent)'}))):canonicalPurEmpty();
+  function countFor(route){
+    const map={suppliers:summary.supplierCount,'purchase-requisitions':summary.openRequisitionCount,
+      'purchase-orders':summary.openOrderCount,'goods-receipts':summary.receiptCount,
+      'supplier-invoices':DB.supplierInvoices.length,'po-approvals':summary.pendingApprovalCount,
+      'supplier-price-lists':summary.activeContractCount,'vendor-performance':DB.vendorPerf.length,
+      'purchasing-reports':7};
+    if(Object.prototype.hasOwnProperty.call(map,route))return map[route];
+    const arrays={rfqs:DB.rfqs,'supplier-quotations':DB.supplierQuotes,'purchase-returns':DB.purchaseReturns,
+      'supplier-credit-notes':DB.supplierCreditNotes,'supplier-debit-notes':DB.supplierDebitNotes,'landed-cost':DB.landedCosts};
+    return arrays[route]?arrays[route].length:null;
+  }
+  function tile(item){const value=countFor(item.route);return `<button class="stile" onclick="navigate('${item.route}')"><span class="stile-ic">${ic(item.icon)}</span><span class="stile-main"><b>${esc(item.label)}</b><small>${esc(item.desc)}</small></span>${value!=null?`<span class="stile-meta">${value}</span>`:''}<span class="stile-go">${ic('chevR')}</span></button>`;}
+  function group(name,label){const section=PUR_SECTIONS.find(row=>row.group===name);return `<div class="dash-sectitle"><span>${esc(label)}</span><span class="ln"></span></div><div class="stile-grid">${section.items.map(tile).join('')}</div>`;}
+  root.innerHTML=purPage({active:'purchasing-home',title:c('purchasing'),crumb:[DB.company.name,{cur:c('purchasing')}],sub:c('dashboardSub'),action:btn(c('newPo'),{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-purchase-order\')"'}),body:`<div class="sales-body" data-purchasing-analytics="canonical">${kpiHtml}<div class="sb-grid"><div class="wcard sb-span2"><div class="sb-h"><h3>${esc(c('spendHistory'))}</h3><div class="sb-h-r"><b class="tnum">${canonicalPurMoney(months.reduce((sum,row)=>sum+purchasingNumber(row.spend),0))}</b><small>${months.reduce((sum,row)=>sum+Number(row.invoiceCount||0),0)} ${esc(c('invoices'))}</small></div></div>${monthBars}</div><div class="wcard"><div class="sb-h"><h3>${esc(c('topSuppliers'))}</h3><a class="sb-link" onclick="navigate('report-pur-supplier')">${esc(c('reports'))}</a></div>${supplierBars}</div><div class="wcard sb-span2"><div class="sb-h"><h3>${esc(c('approvedSpendByBuyer'))}</h3><a class="sb-link" onclick="navigate('report-pur-buyer')">${esc(c('reports'))}</a></div>${buyerBars}<p class="h1sub" style="margin-top:10px">${esc(c('realBuyerNote'))}</p></div></div>${group('Master Data',c('masterData'))}${group('Transactions',c('transactions'))}${group('Controls',c('controls'))}${group('Reports',c('reports'))}</div>`});
+};
+
+SCREENS['purchasing-reports']=async function(root){
+  await prepareCanonicalPurchasingAnalyticsData();
+  const c=canonicalPurCopy;
+  const groups=canonicalPurReportCatalog().map(group=>`<div class="dash-sectitle"><span>${esc(group.group)}</span><span class="ln"></span></div><div class="rep-grid">${group.items.map(item=>`<button class="rep-card built" onclick="openCanonicalPurReport('${item.id}','${item.key||''}')"><span class="rep-ic">${ic(item.icon)}</span><span class="rep-main"><b>${esc(item.name)}</b><small>${esc(item.desc)}</small></span><span class="rep-tag">${esc(c('live'))}</span>${ic('chevR')}</button>`).join('')}</div>`).join('');
+  root.innerHTML=purPage({active:'purchasing-reports',title:c('reports'),sub:c('reportsSub'),body:`<div class="sales-body" data-purchasing-reports="canonical">${groups}</div>`});
+};
+
+SCREENS['report-pur-supplier']=async function(root){
+  await prepareCanonicalPurchasingAnalyticsData();
+  const c=canonicalPurCopy,data=DB.vendorPerf.slice().sort((a,b)=>b.spend-a.spend),total=data.reduce((sum,row)=>sum+row.spend,0);
+  const rows=data.map((row,index)=>`<tr><td class="lineno">${index+1}</td><td class="l">${suppCell(row.supplier,row.code)}</td><td class="tnum">${row.orders}</td><td class="tnum">${row.received}</td><td class="tnum">${canonicalPurMoney(row.spend)}</td><td class="tnum">${total?Math.round(row.spend/total*1000)/10:0}%</td></tr>`).join('');
+  root.innerHTML=canonicalPurReportShell(c('bySupplier'),`${c('allHistory')} · ${canonicalPurMoney(total)}`,data.length?`<div class="panel"><div class="panel-h"><h3>${esc(c('bySupplier'))}</h3></div><table class="lines"><thead><tr><th>#</th><th class="l">${esc(c('supplier'))}</th><th>${esc(c('orders'))}</th><th>${esc(c('received'))}</th><th>${esc(c('spendValue'))}</th><th>${esc(c('share'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`:canonicalPurEmpty());
+};
+
+SCREENS['report-pur-buyer']=async function(root){
+  await prepareCanonicalPurchasingAnalyticsData();
+  const c=canonicalPurCopy,data=DB.purchasingBuyerSpend,total=data.reduce((sum,row)=>sum+purchasingNumber(row.approvedOrderValue),0);
+  const rows=data.map((row,index)=>`<tr><td class="lineno">${index+1}</td><td class="l"><b>${esc(row.buyer)}</b><small>${row.userId?'#'+row.userId:'—'}</small></td><td class="tnum">${row.orderCount}</td><td class="tnum">${canonicalPurMoney(row.approvedOrderValue)}</td><td class="tnum">${total?Math.round(purchasingNumber(row.approvedOrderValue)/total*1000)/10:0}%</td></tr>`).join('');
+  root.innerHTML=canonicalPurReportShell(c('byBuyer'),`${c('allHistory')} · ${canonicalPurMoney(total)}`,data.length?`<div class="panel"><div class="panel-h"><h3>${esc(c('approvedSpendByBuyer'))}</h3></div><table class="lines"><thead><tr><th>#</th><th class="l">${esc(c('buyerApprover'))}</th><th>${esc(c('orders'))}</th><th>${esc(c('approvedValue'))}</th><th>${esc(c('share'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`:canonicalPurEmpty(),c('realBuyerNote'));
+};
+
+SCREENS['report-pur-price-var']=async function(root){
+  await prepareCanonicalPurchasingAnalyticsData();
+  const c=canonicalPurCopy,data=DB.purchasingPriceVariance,total=data.reduce((sum,row)=>sum+purchasingNumber(row.variance),0);
+  const rows=data.map((row,index)=>`<tr><td class="lineno">${index+1}</td><td class="l"><b>${esc(row.invoiceNo)}</b><small>${esc(row.invoiceDate)}</small></td><td class="l">${suppCell(row.supplierName,row.supplierCode)}</td><td class="l mono">${esc(row.orderNo)}</td><td class="tnum">${money(purchasingNumber(row.invoiceTotal),row.currency)}</td><td class="tnum">${money(purchasingNumber(row.orderTotal),row.currency)}</td><td class="tnum" style="color:${purchasingNumber(row.variance)?'var(--warn)':'var(--ok)'}">${money(purchasingNumber(row.variance),row.currency)}</td><td class="l">${row.matchStatus==='matched'?cap(c('exactMatch'),'ok'):cap(c('attention'),'warn')}</td></tr>`).join('');
+  root.innerHTML=canonicalPurReportShell(c('priceVariance'),`${c('allHistory')} · ${canonicalPurMoney(total)} ${c('variance')}`,data.length?`<div class="panel"><div class="panel-h"><h3>${esc(c('priceVariance'))}</h3></div><table class="lines"><thead><tr><th>#</th><th class="l">${esc(c('invoice'))}</th><th class="l">${esc(c('supplier'))}</th><th class="l">${esc(c('po'))}</th><th>${esc(c('invoiceTotal'))}</th><th>${esc(c('poTotal'))}</th><th>${esc(c('variance'))}</th><th class="l">${esc(c('result'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`:canonicalPurEmpty(),c('headerNote'));
+};
+
+SCREENS['report-pur-vendor']=async function(root){
+  await prepareCanonicalPurchasingAnalyticsData();
+  const c=canonicalPurCopy,data=DB.vendorPerf.slice().sort((a,b)=>b.rating-a.rating);
+  const pct=value=>value==null?'—':purchasingNumber(value).toFixed(1)+'%';
+  const rows=data.map((row,index)=>`<tr><td class="lineno">${index+1}</td><td class="l">${suppCell(row.supplier,row.code)}</td><td class="tnum">${pct(row.onTime)}</td><td class="tnum">${row.leadTime==null?'—':purchasingNumber(row.leadTime).toFixed(1)+'d'}</td><td class="tnum">${pct(row.returnRate)}</td><td class="tnum">${pct(row.invoiceMatch)}</td><td class="tnum">${pct(row.contractCoverage)}</td><td class="l"><b class="tnum">${row.rating.toFixed(1)}</b></td></tr>`).join('');
+  root.innerHTML=canonicalPurReportShell(c('vendorPerformance'),c('allHistory'),data.length?`<div class="panel"><div class="panel-h"><h3>${esc(c('vendorPerformance'))}</h3></div><table class="lines"><thead><tr><th>#</th><th class="l">${esc(c('supplier'))}</th><th>${esc(c('onTime'))}</th><th>${esc(c('leadDays'))}</th><th>${esc(c('returns'))}</th><th>${esc(c('match'))}</th><th>${esc(c('coverage'))}</th><th class="l">${esc(c('rating'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`:canonicalPurEmpty());
+};
+
+SCREENS['report-pur-generic']=async function(root){
+  await prepareCanonicalPurchasingAnalyticsData();
+  const c=canonicalPurCopy,key=PUR_REPORT_PENDING&&PUR_REPORT_PENDING.key||'order-status';
+  const config=key==='invoice-status'?{title:c('invoiceStatus'),rows:DB.purchasingInvoiceStatus}:key==='requisition-status'?{title:c('requisitionStatus'),rows:DB.purchasingRequisitionStatus}:{title:c('orderStatus'),rows:DB.purchasingOrderStatus};
+  const rows=config.rows.map((row,index)=>`<tr><td class="lineno">${index+1}</td><td class="l">${cap(canonicalPurStatus(row.status),row.status==='rejected'||row.status==='cancelled'?'danger':row.status==='pending_approval'||row.status==='submitted'?'warn':row.status==='received'||row.status==='paid'||row.status==='approved'?'ok':'accent')}</td><td class="tnum">${row.count}</td><td class="tnum">${canonicalPurMoney(row.value)}</td></tr>`).join('');
+  root.innerHTML=canonicalPurReportShell(config.title,c('allHistory'),config.rows.length?`<div class="panel"><div class="panel-h"><h3>${esc(config.title)}</h3></div><table class="lines"><thead><tr><th>#</th><th class="l">${esc(c('status'))}</th><th>${esc(c('count'))}</th><th>${esc(c('value'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`:canonicalPurEmpty());
 };

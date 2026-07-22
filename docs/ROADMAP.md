@@ -474,35 +474,48 @@ receipt/invoice details expose real inventory/accounting facts; supplier contrac
 transactional and scorecards are rebuildable; five-language desktop/375px verification
 passes with no sample-only write path.
 
-## Remaining productionization backlog — 32 Preview routes
+## Phase 18 — Purchasing Analytics and Sourcing Documents ✅
 
-This is the authoritative work breakdown after TASK-070. `tasks/tasks.jsonl` records
+1. **Canonical purchasing command centre and reports** (EPIC-035, TASK-071 done
+   2026-07-22) replaces the disconnected purchasing dashboard/report metrics with two
+   bounded, rebuildable Demo/API read resources. Supplier spend, approved-buyer value,
+   price variance, delivery, returns, matching, contract coverage and document-state
+   summaries now reconcile to canonical procure-to-pay facts. Buyer identity is the real
+   PO approval-actor snapshot; unapproved orders are excluded. The shared RFQ/quotation
+   workspace now opens record-specific real documents and actions. All eight routes have
+   five-language copy, no fake export or budget action, and the CI smoke proves the
+   dashboard/report markers. Route maturity is **90/24**.
+
+Exit criteria: all eight promoted routes use formal bounded resources in Demo/API;
+analytics are rebuildable rather than stored KPIs; RFQ/quotation details expose only
+real sourcing facts/actions; desktop/375px, smoke and the full 114-route audit pass.
+
+## Remaining productionization backlog — 24 Preview routes
+
+This is the authoritative work breakdown after TASK-071. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Purchasing depth — 8 routes:** `purchasing-home`, `purchasing-reports`, `report-pur-supplier`,
-   `report-pur-buyer`, `report-pur-price-var`, `report-pur-vendor`,
-   `report-pur-generic`, `pur-txn-view`. Implement purchasing controls and reports next.
-2. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
+1. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
    `sales-commission`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
    `report-quote-conversion`, `report-generic`, `txn-view`. Prefer the reusable new-order
    form and approval/commission rules before report-only shells.
-3. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
+2. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
    header/line post/reverse and bank statement/reconciliation commands before promoting
    either screen.
-4. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
+3. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
    every metric from Canonical tables or rebuildable views; large outputs use report jobs.
-5. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
+4. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.
    Requires import jobs/row errors, encrypted credentials and transactional outbox
    delivery before writes are enabled.
-6. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
+5. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-7. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
+6. **Small vertical gaps — 2 routes:** Inventory `new-item` and Project `timesheet`.
    Reuse existing product/project schemas and add only the missing server commands and
    audit rules.
-8. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
+7. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
    with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
 
 Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared

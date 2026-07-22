@@ -8,7 +8,7 @@
 
 /* ---- shared quick-view detail (records without a bespoke doc screen) ---- */
 let PUR_TXN_OPEN = null;
-function openPurTxn(kind, rec){ PUR_TXN_OPEN = { kind, rec }; navigate('pur-txn-view'); }
+function openPurTxn(kind, rec){ PUR_TXN_OPEN = { kind, id:rec.id }; navigate('pur-txn-view'); }
 
 function buildPurTxn(kind, r){
   const C={ no:r.no, icon:'receipt', title:'Document', active:'', crumbLabel:'', crumbRoute:'',
@@ -395,12 +395,12 @@ makePurList({
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(r)=>[
-    {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openRfqDetails(r)},
+    {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openPurTxn('rfq',r)},
     ...(r.rawStatus==='draft'?[{id:'issue',icon:'send',label:sourcingCopy().issue,run:()=>runRfqAction(r,'issue')}]:[]),
     ...(['sent','responded'].includes(r.rawStatus)?[{id:'compare',icon:'flow',label:sourcingCopy().compare,run:()=>openQuoteCompare(r.no)},{id:'record',icon:'receipt',label:sourcingCopy().record,run:()=>newSupplierQuoteModal(r.id)}]:[]),
     ...(['draft','sent','responded'].includes(r.rawStatus)?[{id:'close',icon:'x',label:sourcingCopy().close,danger:true,sep:true,run:()=>runRfqAction(r,'close')}]:[]),
   ],
-  onOpen:(r)=>openRfqDetails(r),
+  onOpen:(r)=>openPurTxn('rfq',r),
 });
 
 /* ---------------- SUPPLIER QUOTATIONS + comparison ---------------- */
@@ -483,11 +483,11 @@ makePurList({
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(q)=>[
-    {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openSupplierQuoteDetails(q)},
+    {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openPurTxn('squote',q)},
     {id:'compare',icon:'flow',label:sourcingCopy().compare,run:()=>openQuoteCompare(q.rfq)},
     ...(q.rawStatus==='received'?[{id:'select',icon:'check',label:sourcingCopy().convert,run:()=>convertSupplierQuote(q.id)}]:[]),
   ],
-  onOpen:(q)=>openSupplierQuoteDetails(q),
+  onOpen:(q)=>openPurTxn('squote',q),
 });
 
 /* quotation comparison (modal) */
@@ -912,3 +912,46 @@ makePurList({
   ],
   onOpen:(d)=>openSupplierDebitDetails(d),
 });
+
+/* Canonical RFQ / supplier-quotation document workspace. It replaces the old
+   sample quick-view registered near the top of this classic script. */
+function canonicalSourcingDocCopy(key){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{rfq:'Request for Quotation',quote:'Supplier Quotation',back:'Back to register',source:'Source requisition',invited:'Invited suppliers',responses:'Supplier responses',lines:'Document lines',supplier:'Supplier',subject:'Subject',date:'Document date',due:'Response due',valid:'Valid until',terms:'Payment terms',warranty:'Warranty',lead:'Quoted lead',qty:'Quantity',unitCost:'Unit cost',net:'Net',tax:'Tax',total:'Total',status:'Status',noQuotes:'No supplier responses are linked yet.',immutable:'The response is an immutable sourcing snapshot. Selecting it creates one linked purchase order through the audited conversion command.',rfqNote:'Issuing and responding to an RFQ is sourcing-only: it creates no stock movement or GL entry.'},
+    ms:{rfq:'Permintaan Sebut Harga',quote:'Sebut Harga Pembekal',back:'Kembali ke daftar',source:'Permintaan sumber',invited:'Pembekal dijemput',responses:'Respons pembekal',lines:'Baris dokumen',supplier:'Pembekal',subject:'Subjek',date:'Tarikh dokumen',due:'Tarikh akhir respons',valid:'Sah hingga',terms:'Terma bayaran',warranty:'Waranti',lead:'Masa utama sebut harga',qty:'Kuantiti',unitCost:'Kos seunit',net:'Bersih',tax:'Cukai',total:'Jumlah',status:'Status',noQuotes:'Belum ada respons pembekal yang dipautkan.',immutable:'Respons ialah petikan sumber yang tidak berubah. Memilihnya mencipta satu pesanan belian terpaut melalui arahan penukaran yang diaudit.',rfqNote:'Mengeluarkan dan menjawab RFQ hanya proses sumber: tiada pergerakan stok atau catatan GL.'},
+    zh:{rfq:'询价单',quote:'供应商报价',back:'返回登记簿',source:'来源请购单',invited:'受邀供应商',responses:'供应商回复',lines:'单据明细',supplier:'供应商',subject:'主题',date:'单据日期',due:'回复期限',valid:'有效期至',terms:'付款条款',warranty:'保修',lead:'报价交期',qty:'数量',unitCost:'单位成本',net:'未税金额',tax:'税额',total:'合计',status:'状态',noQuotes:'尚无关联的供应商回复。',immutable:'报价回复是不可变的采购快照。选择报价会通过可审计转换命令创建唯一关联采购订单。',rfqNote:'发出及回复询价仅属于寻源流程，不会生成库存流水或总账分录。'},
+    ja:{rfq:'見積依頼',quote:'仕入先見積',back:'一覧へ戻る',source:'元の購買依頼',invited:'招待仕入先',responses:'仕入先回答',lines:'伝票明細',supplier:'仕入先',subject:'件名',date:'伝票日',due:'回答期限',valid:'有効期限',terms:'支払条件',warranty:'保証',lead:'見積納期',qty:'数量',unitCost:'単価',net:'税抜',tax:'税',total:'合計',status:'ステータス',noQuotes:'紐づく仕入先回答はまだありません。',immutable:'回答は不変のソーシングスナップショットです。採用すると監査対象の変換コマンドで1件の発注書を作成します。',rfqNote:'RFQの発行・回答はソーシングのみで、在庫移動やGL仕訳を作成しません。'},
+    vi:{rfq:'Yêu cầu Báo giá',quote:'Báo giá Nhà cung cấp',back:'Quay lại sổ đăng ký',source:'Yêu cầu mua nguồn',invited:'Nhà cung cấp được mời',responses:'Phản hồi nhà cung cấp',lines:'Dòng chứng từ',supplier:'Nhà cung cấp',subject:'Chủ đề',date:'Ngày chứng từ',due:'Hạn phản hồi',valid:'Hiệu lực đến',terms:'Điều khoản thanh toán',warranty:'Bảo hành',lead:'Thời gian báo giá',qty:'Số lượng',unitCost:'Đơn giá',net:'Trước thuế',tax:'Thuế',total:'Tổng',status:'Trạng thái',noQuotes:'Chưa có phản hồi nhà cung cấp được liên kết.',immutable:'Phản hồi là ảnh chụp nguồn cung bất biến. Chọn nó sẽ tạo đúng một đơn mua liên kết qua lệnh chuyển đổi có kiểm toán.',rfqNote:'Phát hành và phản hồi RFQ chỉ là tìm nguồn: không tạo biến động kho hay bút toán GL.'},
+  };
+  const pack=packs[lang]||packs.en;return pack[key]||packs.en[key]||key;
+}
+
+SCREENS['pur-txn-view']=async function(root){
+  await prepareCanonicalPurchasingData();
+  const d=canonicalSourcingDocCopy,c=sourcingCopy();
+  let kind=PUR_TXN_OPEN&&PUR_TXN_OPEN.kind||'rfq';
+  let record=kind==='squote'
+    ?DB.supplierQuotes.find(row=>row.id===Number(PUR_TXN_OPEN&&PUR_TXN_OPEN.id))
+    :DB.rfqs.find(row=>row.id===Number(PUR_TXN_OPEN&&PUR_TXN_OPEN.id));
+  if(!record){kind=DB.rfqs.length?'rfq':'squote';record=kind==='rfq'?DB.rfqs[0]:DB.supplierQuotes[0];}
+  if(!record){root.innerHTML=purPage({active:'rfqs',title:d('rfq'),sub:d('rfqNote'),body:`<div class="sales-body"><div class="rep-empty">${ic('comment')}<p>${esc(d('noQuotes'))}</p></div></div>`});return;}
+  PUR_TXN_OPEN={kind,id:record.id};
+  if(kind==='rfq'){
+    const invited=record.supplierIds.map(id=>DB.suppliers.find(row=>row.id===id)).filter(Boolean);
+    const quotes=DB.supplierQuotes.filter(row=>row.rfqId===record.id);
+    const actions=`${btn(d('back'),{icon:'chevL',cls:'soft',attrs:'data-doc-back'})}${record.rawStatus==='draft'?btn(c.issue,{icon:'send',cls:'primary',attrs:'data-doc-issue'}):''}${['sent','responded'].includes(record.rawStatus)?btn(c.record,{icon:'receipt',cls:'soft',attrs:'data-doc-quote'})+btn(c.compare,{icon:'flow',cls:'primary',attrs:'data-doc-compare'}):''}`;
+    root.innerHTML=`<div class="content full"><section class="master" data-screen-label="${esc(d('rfq'))} ${esc(record.no)}"><div class="scrollarea"><div class="pagehead">${crumbs([DB.company.name,{label:d('rfq'),route:'rfqs'},{cur:record.no}])}${purNav('rfqs')}</div><div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('comment')}${esc(d('rfq'))} <span class="dnum">${esc(record.no)}</span></div><div class="h1sub">${esc(record.subject)}</div></div><div class="dactions">${cap(sourcingRfqStatus(record),RFQ_TONE[record.status]||'neutral')}</div></div><div class="docmeta"><div class="dm"><small>${esc(d('date'))}</small><b>${esc(record.date)}</b></div><div class="dm"><small>${esc(d('due'))}</small><b>${esc(record.due)}</b></div><div class="dm"><small>${esc(d('source'))}</small><b>${esc(record.pr||'—')}</b></div><div class="dm"><small>${esc(d('responses'))}</small><b>${record.responded} / ${record.suppliers}</b></div></div></div><div class="doclayout"><div class="docmain"><div class="panel"><div class="panel-h"><h3>${esc(d('lines'))}</h3></div><table class="lines"><thead><tr><th class="l">${esc(c.item)}</th><th>${esc(d('qty'))}</th></tr></thead><tbody>${record.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td class="tnum">${num(line.qty)} ${esc(line.uom)}</td></tr>`).join('')}</tbody></table></div><div class="alert info" style="margin-top:14px">${ic('info')}<span>${esc(d('rfqNote'))}</span></div></div><aside class="summary"><div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(d('invited'))}</div>${invited.map(row=>`<div class="sumrow"><span>${esc(row.code)}</span><b>${esc(row.name)}</b></div>`).join('')||'—'}</div><div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(d('responses'))}</div>${quotes.map(row=>`<button class="related" data-open-quote="${row.id}"><span><b>${esc(row.no)}</b><small>${esc(row.supplier)}</small></span>${cap(sourcingQuoteStatus(row),SQ_TONE[row.status]||'neutral')}</button>`).join('')||`<p class="h1sub">${esc(d('noQuotes'))}</p>`}</div></aside></div><div class="responsive-actionbar">${actions}<div class="grow"></div></div></div></div></div></section></div>`;
+    root.querySelector('[data-doc-back]')?.addEventListener('click',()=>navigate('rfqs'));
+    root.querySelector('[data-doc-issue]')?.addEventListener('click',()=>runRfqAction(record,'issue'));
+    root.querySelector('[data-doc-quote]')?.addEventListener('click',()=>newSupplierQuoteModal(record.id));
+    root.querySelector('[data-doc-compare]')?.addEventListener('click',()=>openQuoteCompare(record.no));
+    root.querySelectorAll('[data-open-quote]').forEach(button=>button.addEventListener('click',()=>{const quote=DB.supplierQuotes.find(row=>row.id===Number(button.dataset.openQuote));if(quote)openPurTxn('squote',quote);}));
+    return;
+  }
+  const rfq=DB.rfqs.find(row=>row.id===record.rfqId);
+  root.innerHTML=`<div class="content full"><section class="master" data-screen-label="${esc(d('quote'))} ${esc(record.no)}"><div class="scrollarea"><div class="pagehead">${crumbs([DB.company.name,{label:d('quote'),route:'supplier-quotations'},{cur:record.no}])}${purNav('supplier-quotations')}</div><div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('receipt')}${esc(d('quote'))} <span class="dnum">${esc(record.no)}</span></div><div class="h1sub">${esc(record.supplier)} · ${esc(record.rfq)}</div></div><div class="dactions">${cap(sourcingQuoteStatus(record),SQ_TONE[record.status]||'neutral')}</div></div><div class="docmeta"><div class="dm"><small>${esc(d('supplier'))}</small><b>${esc(record.supplier)}</b></div><div class="dm"><small>${esc(d('date'))}</small><b>${esc(record.quoteDate)}</b></div><div class="dm"><small>${esc(d('valid'))}</small><b>${esc(record.validity)}</b></div><div class="dm"><small>${esc(d('lead'))}</small><b>${record.leadTime}d</b></div><div class="dm"><small>${esc(d('terms'))}</small><b>${esc(record.terms)}</b></div></div></div><div class="doclayout"><div class="docmain"><div class="panel"><div class="panel-h"><h3>${esc(d('lines'))}</h3></div><table class="lines"><thead><tr><th class="l">${esc(c.item)}</th><th>${esc(d('qty'))}</th><th>${esc(d('unitCost'))}</th><th>${esc(d('net'))}</th><th>${esc(d('tax'))}</th></tr></thead><tbody>${record.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td class="tnum">${num(line.qty)}</td><td class="tnum">${money(line.unitCost,record.currency)}</td><td class="tnum">${money(line.net,record.currency)}</td><td class="tnum">${money(line.tax,record.currency)}</td></tr>`).join('')}</tbody></table></div><div class="alert info" style="margin-top:14px">${ic('info')}<span>${esc(d('immutable'))}</span></div></div><aside class="summary"><div class="sumcard"><div class="sumrow"><span>${esc(d('net'))}</span><b>${money(record.net,record.currency)}</b></div><div class="sumrow"><span>${esc(d('tax'))}</span><b>${money(record.tax,record.currency)}</b></div><div class="sumrow total"><span>${esc(d('total'))}</span><b>${money(record.total,record.currency)}</b></div></div>${rfq?`<div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(d('rfq'))}</div><button class="related" data-open-rfq><span><b>${esc(rfq.no)}</b><small>${esc(rfq.subject)}</small></span>${ic('chevR')}</button></div>`:''}</aside></div><div class="responsive-actionbar">${btn(d('back'),{icon:'chevL',cls:'soft',attrs:'data-doc-back'})}<div class="grow"></div>${record.rawStatus==='received'?btn(c.convert,{icon:'check',cls:'primary',sm:false,attrs:'data-doc-convert'}):''}</div></div></div></div></section></div>`;
+  root.querySelector('[data-doc-back]')?.addEventListener('click',()=>navigate('supplier-quotations'));
+  root.querySelector('[data-open-rfq]')?.addEventListener('click',()=>openPurTxn('rfq',rfq));
+  root.querySelector('[data-doc-convert]')?.addEventListener('click',()=>convertSupplierQuote(record.id));
+};

@@ -431,6 +431,8 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'po-approvals','po-approval',
   'goods-receipt','supplier-invoice',
   'supplier-price-lists','vendor-performance',
+  'purchasing-home','purchasing-reports','report-pur-supplier','report-pur-buyer',
+  'report-pur-price-var','report-pur-vendor','report-pur-generic','pur-txn-view',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -462,6 +464,8 @@ const API_SCREEN_ROUTES = new Set([
   'po-approvals','po-approval',
   'goods-receipt','supplier-invoice',
   'supplier-price-lists','vendor-performance',
+  'purchasing-home','purchasing-reports','report-pur-supplier','report-pur-buyer',
+  'report-pur-price-var','report-pur-vendor','report-pur-generic','pur-txn-view',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -548,7 +552,6 @@ const MODULE_READ_PERMISSION = {
 };
 const SCREEN_FIXTURES = {
   'txn-view':'sales-enquiry',
-  'pur-txn-view':'purchasing-rfq',
 };
 const SCREEN_META = {};
 Object.keys(SCREENS).forEach(route=>{

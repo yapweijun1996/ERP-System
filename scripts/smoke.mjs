@@ -226,6 +226,18 @@ async function checkViewport(browser, viewport) {
         && Number(invoiceDetail?.dataset.traceCount) === 3
         && invoiceDetail?.dataset.journalBalanced === 'true'
         && !document.querySelector('[data-preview-banner]');
+      const purchasingAnalytics = await adapter.list('purchasing/analytics', { limit: 50 });
+      const purchasingPriceVariance = await adapter.list('purchasing/price-variance', { limit: 50 });
+      await navigate('purchasing-home');
+      const purchasingAnalyticsCanonical = Boolean(document.querySelector('[data-purchasing-analytics="canonical"]'))
+        && !document.querySelector('[data-preview-banner]')
+        && Array.isArray(purchasingAnalytics.data)
+        && purchasingAnalytics.data.some((row) => row.kind === 'summary')
+        && purchasingAnalytics.data.some((row) => row.kind === 'monthly-spend');
+      await navigate('purchasing-reports');
+      const purchasingReportsCanonical = Boolean(document.querySelector('[data-purchasing-reports="canonical"]'))
+        && !document.querySelector('[data-preview-banner]')
+        && Array.isArray(purchasingPriceVariance.data);
       const draftStockBefore = (await adapter.db.query(
         "select p.sku, s.qty::float as qty from stock_level s join product p on p.id=s.product_id join warehouse w on w.id=s.warehouse_id where p.master_fn='M1' and p.company_fn='C-SG' and w.code='WH-SALES' and p.sku in ('SG-WIDGET','SG-GADGET') order by p.sku",
       )).rows;
@@ -306,6 +318,8 @@ async function checkViewport(browser, viewport) {
         purchaseBalanced: Number(purchaseGl.debit) === Number(purchaseGl.credit) && Number(purchaseGl.debit) > 0,
         receiptDetailCanonical,
         invoiceDetailCanonical,
+        purchasingAnalyticsCanonical,
+        purchasingReportsCanonical,
         duplicateInvoiceBlocked,
         salesDraftWidgetDelta: draftAfterBySku['SG-WIDGET'] - draftBeforeBySku['SG-WIDGET'],
         salesDraftGadgetDelta: draftAfterBySku['SG-GADGET'] - draftBeforeBySku['SG-GADGET'],
@@ -334,6 +348,8 @@ async function checkViewport(browser, viewport) {
       if (!runtimeProof.purchaseBalanced) errors.push('[demo-esm] supplier invoice did not produce balanced GL entries');
       if (!runtimeProof.receiptDetailCanonical) errors.push('[demo-esm] goods-receipt detail did not render its canonical stock trace');
       if (!runtimeProof.invoiceDetailCanonical) errors.push('[demo-esm] supplier-invoice detail did not render its balanced canonical GL trace');
+      if (!runtimeProof.purchasingAnalyticsCanonical) errors.push('[demo-esm] purchasing dashboard did not render its canonical derived analytics');
+      if (!runtimeProof.purchasingReportsCanonical) errors.push('[demo-esm] purchasing reports did not render from canonical derived resources');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');
       if (runtimeProof.salesDraftWidgetDelta !== -5 || runtimeProof.salesDraftGadgetDelta !== -3) {
         errors.push(`[demo-esm] expected draft sales stock deltas -5/-3, got ${runtimeProof.salesDraftWidgetDelta}/${runtimeProof.salesDraftGadgetDelta}`);

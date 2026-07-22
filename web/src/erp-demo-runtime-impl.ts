@@ -60,6 +60,10 @@ import {
 } from '../../src/modules/purchasing/supplierPricing';
 import { listVendorPerformanceWithin } from '../../src/modules/purchasing/vendorPerformance';
 import {
+  listPurchasePriceVarianceWithin,
+  listPurchasingAnalyticsWithin,
+} from '../../src/modules/purchasing/analytics';
+import {
   decidePurchaseOrderWithin,
   type DecidePurchaseOrderInput,
 } from '../../src/modules/purchasing/purchaseOrderApproval';
@@ -729,6 +733,20 @@ export const erpDemoRuntime = Object.freeze({
       input: { cursor?: number; limit?: number },
     ) {
       return listVendorPerformanceWithin(asDomainDb(db), scope, input);
+    },
+    listPurchasingAnalyticsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { cursor?: number; limit?: number },
+    ) {
+      return listPurchasingAnalyticsWithin(asDomainDb(db), scope, input);
+    },
+    listPurchasePriceVarianceWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { cursor?: number; limit?: number },
+    ) {
+      return listPurchasePriceVarianceWithin(asDomainDb(db), scope, input);
     },
     createOpportunity(db: DemoOrm, scope: Scope, input: CreateOpportunityInput) {
       return createOpportunity(asDomainDb(db), scope, input);

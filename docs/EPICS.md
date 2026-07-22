@@ -1384,3 +1384,22 @@ Acceptance criteria:
       PGlite schema remain aligned.
 - [x] `supplier-price-lists` and `vendor-performance` are five-language Canonical Demo/API
       routes. Domain/API/browser and full release gates pass at 82 Canonical / 32 Preview.
+
+## EPIC-035 — Canonical Purchasing Analytics and Sourcing Documents
+
+**Goal:** close Purchasing's remaining Preview boundary without introducing a parallel
+KPI store or fabricating supplier-invoice lines that the domain does not own.
+
+Acceptance criteria:
+
+- [x] Add bounded `purchasing/analytics` and `purchasing/price-variance` derived
+      resources under Purchasing read permission, tenant scope and keyset-style cursors.
+- [x] Dashboard and reports derive supplier spend, real approval-actor buyer value,
+      order/receipt/invoice/requisition status, net AP and contract coverage directly
+      from canonical facts with Decimal arithmetic.
+- [x] Price variance compares immutable invoice and PO headers and explicitly discloses
+      that line variance is unavailable; no fake item rows, budgets or export actions.
+- [x] `pur-txn-view` becomes a record-specific RFQ/quotation workspace with real lines,
+      invited suppliers, responses and registered issue/respond/compare/convert actions.
+- [x] All eight Purchasing routes are five-language Canonical in Demo/API; CI smoke,
+      301-test suite, schema/drift, desktop/375px and 114-route audit pass at 90/24.

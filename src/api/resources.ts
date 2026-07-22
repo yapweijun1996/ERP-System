@@ -92,6 +92,10 @@ import {
   serviceTicket,
 } from '../data/schema';
 import { listVendorPerformanceWithin } from '../modules/purchasing/vendorPerformance';
+import {
+  listPurchasePriceVarianceWithin,
+  listPurchasingAnalyticsWithin,
+} from '../modules/purchasing/analytics';
 
 export interface ApiScope {
   masterFn: string;
@@ -340,6 +344,16 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     supplier,
     'purchasing.read',
     (db, scope, input) => listVendorPerformanceWithin(db, scope, input),
+  ),
+  'purchasing/analytics': derivedResource(
+    purchaseOrder,
+    'purchasing.read',
+    (db, scope, input) => listPurchasingAnalyticsWithin(db, scope, input),
+  ),
+  'purchasing/price-variance': derivedResource(
+    supplierInvoice,
+    'purchasing.read',
+    (db, scope, input) => listPurchasePriceVarianceWithin(db, scope, input),
   ),
   'crm/opportunities': resource(opportunity, 'crm.read', {
     status: opportunity.stage,
