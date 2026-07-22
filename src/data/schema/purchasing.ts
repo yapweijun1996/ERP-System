@@ -17,6 +17,8 @@ export const PURCHASE_REQUISITION_PRIORITIES = ['Urgent', 'Project', 'Stock'] as
 export const PURCHASE_REQUISITION_STATUSES = ['submitted', 'approved', 'rejected'] as const;
 export const PURCHASE_RFQ_STATUSES = ['draft', 'sent', 'responded', 'awarded', 'closed'] as const;
 export const SUPPLIER_QUOTATION_STATUSES = ['received', 'converted', 'rejected'] as const;
+export const PURCHASE_RETURN_STATUSES = ['requested', 'credited', 'rejected'] as const;
+export const SUPPLIER_CREDIT_NOTE_STATUSES = ['posted'] as const;
 
 export const supplier = pgTable('supplier', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -241,4 +243,91 @@ export const supplierInvoice = pgTable('supplier_invoice', {
   uniqueIndex('uq_si_docno').on(t.masterFn, t.companyFn, t.docNo),
   index('idx_si_order').on(t.masterFn, t.companyFn, t.orderId),
   index('idx_si_project').on(t.masterFn, t.companyFn, t.projectId),
+]);
+
+/** A supplier return is anchored to the real goods receipt and its posted AP invoice.
+ *  Quantities and purchase-cost/tax snapshots live on the lines so later PO edits cannot
+ *  change the return valuation. `requested` has no stock or GL impact; the atomic
+ *  ship-and-credit command performs both exactly once. */
+export const purchaseReturn = pgTable('purchase_return', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  goodsReceiptId: bigint('goods_receipt_id', { mode: 'number' }).notNull().references(() => goodsReceipt.id),
+  supplierInvoiceId: bigint('supplier_invoice_id', { mode: 'number' }).notNull().references(() => supplierInvoice.id),
+  warehouseId: bigint('warehouse_id', { mode: 'number' }).notNull().references(() => warehouse.id),
+  returnDate: date('return_date').notNull(),
+  reason: text('reason').notNull(),
+  status: text('status').notNull().default('requested'),
+  version: integer('version').notNull().default(1),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_purchase_return_docno').on(t.masterFn, t.companyFn, t.docNo),
+  index('idx_purchase_return_invoice').on(t.masterFn, t.companyFn, t.supplierInvoiceId, t.id),
+  index('idx_purchase_return_status').on(t.masterFn, t.companyFn, t.status, t.returnDate, t.id),
+  check('ck_purchase_return_status', sql`${t.status} in ('requested', 'credited', 'rejected')`),
+]);
+
+export const purchaseReturnLine = pgTable('purchase_return_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  returnId: bigint('return_id', { mode: 'number' }).notNull().references(() => purchaseReturn.id),
+  lineNo: integer('line_no').notNull(),
+  purchaseOrderLineId: bigint('purchase_order_line_id', { mode: 'number' }).notNull().references(() => purchaseOrderLine.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  unitCost: numeric('unit_cost', { precision: 18, scale: 4 }).notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxCode: text('tax_code').notNull(),
+  taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_purchase_return_line_no').on(t.masterFn, t.companyFn, t.returnId, t.lineNo),
+  uniqueIndex('uq_purchase_return_source_line').on(t.masterFn, t.companyFn, t.returnId, t.purchaseOrderLineId),
+  index('idx_purchase_return_line_product').on(t.masterFn, t.companyFn, t.productId, t.returnId),
+  check('ck_purchase_return_line_values', sql`${t.qty} > 0 and ${t.unitCost} >= 0`),
+]);
+
+/** Posted AP credit created only by shipping an approved purchase return. It remains a
+ *  separate immutable document rather than rewriting the supplier invoice. */
+export const supplierCreditNote = pgTable('supplier_credit_note', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  returnId: bigint('return_id', { mode: 'number' }).notNull().references(() => purchaseReturn.id),
+  supplierInvoiceId: bigint('supplier_invoice_id', { mode: 'number' }).notNull().references(() => supplierInvoice.id),
+  supplierId: bigint('supplier_id', { mode: 'number' }).notNull().references(() => supplier.id),
+  status: text('status').notNull().default('posted'),
+  noteDate: date('note_date').notNull(),
+  currency: text('currency').notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_supplier_credit_note_docno').on(t.masterFn, t.companyFn, t.docNo),
+  uniqueIndex('uq_supplier_credit_note_return').on(t.masterFn, t.companyFn, t.returnId),
+  index('idx_supplier_credit_note_invoice').on(t.masterFn, t.companyFn, t.supplierInvoiceId, t.id),
+  check('ck_supplier_credit_note_status', sql`${t.status} = 'posted'`),
+]);
+
+export const supplierCreditNoteLine = pgTable('supplier_credit_note_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  creditNoteId: bigint('credit_note_id', { mode: 'number' }).notNull().references(() => supplierCreditNote.id),
+  lineNo: integer('line_no').notNull(),
+  returnLineId: bigint('return_line_id', { mode: 'number' }).notNull().references(() => purchaseReturnLine.id),
+  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_supplier_credit_note_line').on(t.masterFn, t.companyFn, t.creditNoteId, t.lineNo),
+  uniqueIndex('uq_supplier_credit_note_return_line').on(t.masterFn, t.companyFn, t.returnLineId),
+  index('idx_supplier_credit_note_line_product').on(t.masterFn, t.companyFn, t.productId, t.creditNoteId),
 ]);

@@ -21,6 +21,10 @@ import {
   postSupplierInvoiceWithin,
   type PostSupplierInvoiceInput,
 } from '../modules/purchasing/postSupplierInvoice';
+import {
+  rejectPurchaseReturnWithin,
+  shipAndCreditPurchaseReturnWithin,
+} from '../modules/purchasing/purchaseReturn';
 import { decidePurchaseRequisitionWithin } from '../modules/purchasing/purchaseRequisition';
 import {
   convertSupplierQuotationToPurchaseOrderWithin,
@@ -535,6 +539,44 @@ const ACTIONS: Record<string, ActionDefinition> = {
         docNo: payload.docNo,
         invoiceDate: payload.invoiceDate,
       });
+    },
+  },
+  'purchasing/purchase-returns/ship-and-credit': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as {
+        creditDocNo?: unknown;
+        noteDate?: unknown;
+        tracking?: unknown;
+      };
+      if (
+        typeof payload.creditDocNo !== 'string'
+        || !payload.creditDocNo.trim()
+        || typeof payload.noteDate !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}$/.test(payload.noteDate)
+        || (payload.tracking !== undefined && !Array.isArray(payload.tracking))
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'creditDocNo and noteDate are required to ship and credit a purchase return.',
+        );
+      }
+      return shipAndCreditPurchaseReturnWithin(tx, scope, input.resourceId, {
+        creditDocNo: payload.creditDocNo,
+        noteDate: payload.noteDate,
+        tracking: payload.tracking as never,
+      });
+    },
+  },
+  'purchasing/purchase-returns/reject': {
+    permission: 'purchasing.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return rejectPurchaseReturnWithin(tx, scope, input.resourceId);
     },
   },
   'purchasing/purchase-requisitions/approve': {

@@ -399,20 +399,32 @@ only through registered commands, and passes domain/API/browser/audit verificati
 
 Exit criteria: met when the domain/API/browser and 114-route gates below pass.
 
-## Remaining productionization backlog — 42 Preview routes
+## Phase 13 — Purchasing Returns & Supplier Credits ✅
 
-This is the authoritative work breakdown after TASK-064. `tasks/tasks.jsonl` records
+1. **Purchase Return → Supplier Credit Note** (EPIC-029, TASK-065 done 2026-07-22) — adds
+   immutable cost/tax-snapshotted return lines against a real receipt and unpaid AP
+   invoice. Shipping the return atomically issues stock, creates one posted supplier
+   credit and posts balanced Dr AP / Cr Inventory / Cr Input Tax legs. The two list and
+   detail workflows use bounded Demo/API resources with five-language copy. Live browser
+   proof covered create → ship/credit → inventory movement → balanced GL at desktop and
+   375px, and every release gate passed at **74/40**.
+
+Exit criteria: real create/ship/credit trace passes domain, API, browser and 114-route
+verification; no Preview action or sample detail remains on either promoted route.
+
+## Remaining productionization backlog — 40 Preview routes
+
+This is the authoritative work breakdown after TASK-065. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Purchasing depth — 17 routes:** `purchasing-home`, `po-approvals`, `goods-receipt`,
-   `supplier-invoice`, `purchase-returns`, `supplier-credit-notes`,
-   `supplier-debit-notes`, `supplier-price-lists`, `landed-cost`,
+1. **Purchasing depth — 15 routes:** `purchasing-home`, `po-approvals`, `goods-receipt`,
+   `supplier-invoice`, `supplier-debit-notes`, `supplier-price-lists`, `landed-cost`,
    `vendor-performance`, `purchasing-reports`, `report-pur-supplier`,
    `report-pur-buyer`, `report-pur-price-var`, `report-pur-vendor`,
    `report-pur-generic`, `pur-txn-view`. First implement return/credit/debit and landed
-   cost because they affect inventory and GL; then approvals, controls and reports.
+   cost next because they affect inventory and GL; then approvals, controls and reports.
 2. **Sales completion — 10 routes:** `sales-home`, `new-sales-order`, `so-approvals`,
    `sales-commission`, `sales-reports`, `report-sales-customer`, `report-sales-rep`,
    `report-quote-conversion`, `report-generic`, `txn-view`. Prefer the reusable new-order

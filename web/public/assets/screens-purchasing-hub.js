@@ -112,11 +112,21 @@ async function prepareCanonicalPurchasingData(){
     listPage('purchasing/rfq-suppliers'),
     listPage('purchasing/supplier-quotations'),
     listPage('purchasing/supplier-quotation-lines'),
+    listPage('purchasing/purchase-returns'),
+    listPage('purchasing/purchase-return-lines'),
+    listPage('purchasing/supplier-credit-notes'),
+    listPage('purchasing/supplier-credit-note-lines'),
+    listPage('inventory/bins'),
+    listPage('inventory/lots'),
+    listPage('inventory/serials'),
+    listPage('inventory/location-balances'),
   ]);
   const [
     suppliers,purchaseOrders,purchaseOrderLines,goodsReceipts,supplierInvoices,
     products,stockLevels,warehouses,purchaseRequisitions,purchaseRequisitionLines,
     purchaseRfqs,purchaseRfqLines,purchaseRfqSuppliers,supplierQuotations,supplierQuotationLines,
+    purchaseReturns,purchaseReturnLines,supplierCreditNotes,supplierCreditNoteLines,
+    inventoryBins,inventoryLots,inventorySerials,locationBalances,
   ]=pages.map(page=>page.data);
   const productById=new Map(products.map(row=>[row.id,row]));
   const supplierById=new Map(suppliers.map(row=>[row.id,row]));
@@ -127,6 +137,7 @@ async function prepareCanonicalPurchasingData(){
     lineCountByOrder.set(row.orderId,(lineCountByOrder.get(row.orderId)||0)+1);
   });
   const receiptByOrder=new Map(goodsReceipts.map(row=>[row.orderId,row]));
+  const receiptById=new Map(goodsReceipts.map(row=>[row.id,row]));
   const payableBySupplier=new Map();
   supplierInvoices.forEach(row=>{
     if(row.status==='unpaid'){
@@ -147,6 +158,7 @@ async function prepareCanonicalPurchasingData(){
   DB.purchasingWarehouses=warehouses.map(row=>({
     id:row.id,code:row.code,name:row.name,
   }));
+  DB.purchasingTracking={bins:inventoryBins,lots:inventoryLots,serials:inventorySerials,balances:locationBalances};
   DB.items=products.map(row=>({
     id:row.id,
     sku:row.sku,
@@ -211,6 +223,7 @@ async function prepareCanonicalPurchasingData(){
       date:dateValue(row.receivedDate),
       po:order.docNo||`PO #${row.orderId}`,
       orderId:row.orderId,
+      warehouseId:row.warehouseId,
       supplier:supplier.name||'Unknown supplier',
       code:supplier.code||'—',
       warehouse:location.code||`Warehouse #${row.warehouseId}`,
@@ -243,9 +256,17 @@ async function prepareCanonicalPurchasingData(){
       status,
       rawStatus:row.status,
       supplierId:row.supplierId,
+      orderId:row.orderId,
       projectId:row.projectId,
     };
   });
+  DB.purchaseOrderLines=purchaseOrderLines.map(row=>{ const item=productById.get(row.productId)||{}; return {
+    id:row.id,orderId:row.orderId,lineNo:row.lineNo,productId:row.productId,
+    sku:item.sku||`#${row.productId}`,name:item.name||`Product #${row.productId}`,
+    uom:item.uom||'',trackingType:item.trackingType||'none',qty:purchasingNumber(row.qty),
+    unitCost:purchasingNumber(row.unitCost),net:purchasingNumber(row.netAmount),
+    taxCode:row.taxCode,taxRate:purchasingNumber(row.taxRate),tax:purchasingNumber(row.taxAmount),
+  }; });
   const requisitionLinesByReq=new Map();
   purchaseRequisitionLines.forEach(row=>{
     const arr=requisitionLinesByReq.get(row.requisitionId)||[];
@@ -358,6 +379,63 @@ async function prepareCanonicalPurchasingData(){
         unitCost:purchasingNumber(line.unitCost),taxCode:line.taxCode,net:purchasingNumber(line.netAmount),
         tax:purchasingNumber(line.taxAmount),
       }; }),
+    };
+  });
+  const invoiceById=new Map(supplierInvoices.map(row=>[row.id,row]));
+  const returnLinesByReturn=new Map();
+  purchaseReturnLines.forEach(row=>{
+    const rows=returnLinesByReturn.get(row.returnId)||[];
+    const item=productById.get(row.productId)||{};
+    rows.push({
+      id:row.id,returnId:row.returnId,lineNo:row.lineNo,purchaseOrderLineId:row.purchaseOrderLineId,
+      productId:row.productId,sku:item.sku||`#${row.productId}`,name:item.name||`Product #${row.productId}`,
+      uom:item.uom||'',trackingType:item.trackingType||'none',qty:purchasingNumber(row.qty),
+      unitCost:purchasingNumber(row.unitCost),net:purchasingNumber(row.netAmount),
+      taxCode:row.taxCode,taxRate:purchasingNumber(row.taxRate),tax:purchasingNumber(row.taxAmount),
+    });
+    returnLinesByReturn.set(row.returnId,rows);
+  });
+  const RETURN_STATUS_UI={requested:'Requested',credited:'Credited',rejected:'Rejected'};
+  DB.purchaseReturns=purchaseReturns.map(row=>{
+    const invoice=invoiceById.get(row.supplierInvoiceId)||{};
+    const vendor=supplierById.get(invoice.supplierId)||{};
+    const receipt=receiptById.get(row.goodsReceiptId)||{};
+    const lines=(returnLinesByReturn.get(row.id)||[]).sort((a,b)=>a.lineNo-b.lineNo);
+    return {
+      id:row.id,version:row.version,no:row.docNo,date:dateValue(row.returnDate),
+      goodsReceiptId:row.goodsReceiptId,supplierInvoiceId:row.supplierInvoiceId,
+      warehouseId:row.warehouseId,grn:receipt.docNo||`GR #${row.goodsReceiptId}`,
+      invoice:invoice.docNo||`Invoice #${row.supplierInvoiceId}`,
+      supplierId:invoice.supplierId,supplier:vendor.name||'Unknown supplier',code:vendor.code||'—',
+      reason:row.reason,status:RETURN_STATUS_UI[row.status]||row.status,rawStatus:row.status,
+      qty:lines.reduce((sum,line)=>sum+line.qty,0),value:purchasingNumber(row.totalAmount),
+      net:purchasingNumber(row.netAmount),tax:purchasingNumber(row.taxAmount),
+      currency:invoice.currency||DB.company.currency,lines,
+    };
+  });
+  const purchaseReturnById=new Map(DB.purchaseReturns.map(row=>[row.id,row]));
+  const creditLinesByCredit=new Map();
+  supplierCreditNoteLines.forEach(row=>{
+    const rows=creditLinesByCredit.get(row.creditNoteId)||[];
+    const item=productById.get(row.productId)||{};
+    rows.push({
+      id:row.id,lineNo:row.lineNo,returnLineId:row.returnLineId,productId:row.productId,
+      sku:item.sku||`#${row.productId}`,name:item.name||`Product #${row.productId}`,
+      qty:purchasingNumber(row.qty),net:purchasingNumber(row.netAmount),tax:purchasingNumber(row.taxAmount),
+    });
+    creditLinesByCredit.set(row.creditNoteId,rows);
+  });
+  DB.supplierCreditNotes=supplierCreditNotes.map(row=>{
+    const vendor=supplierById.get(row.supplierId)||{};
+    const originalReturn=purchaseReturnById.get(row.returnId)||{};
+    return {
+      id:row.id,no:row.docNo,date:dateValue(row.noteDate),returnId:row.returnId,
+      supplierInvoiceId:row.supplierInvoiceId,supplierId:row.supplierId,
+      supplier:vendor.name||'Unknown supplier',code:vendor.code||'—',
+      ref:originalReturn.no||`Return #${row.returnId}`,reason:originalReturn.reason||'Purchase return',
+      amount:purchasingNumber(row.totalAmount),net:purchasingNumber(row.netAmount),
+      tax:purchasingNumber(row.taxAmount),currency:row.currency,status:'Posted',rawStatus:row.status,
+      lines:(creditLinesByCredit.get(row.id)||[]).sort((a,b)=>a.lineNo-b.lineNo),
     };
   });
   DB.purchasingReadMeta={

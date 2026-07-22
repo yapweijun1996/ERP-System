@@ -12,7 +12,7 @@ import { seedDemo } from './data/seed';
 import { listCompanies, listProducts, addProduct, getEffectiveTaxRate, type Scope } from './data/repo';
 import {
   product, warehouse, stockLevel, customer, salesOrder, salesOrderLine, invoice, glEntry,
-  supplier, supplierInvoice, opportunity,
+  supplier, supplierInvoice, purchaseOrderLine, opportunity,
 } from './data/schema';
 import {
   issueStock, getStockQty, countMovements, setStockQtyForFixture, InsufficientStockError,
@@ -24,6 +24,7 @@ import {
 import { createPurchaseOrder } from './modules/purchasing/createPurchaseOrder';
 import { receiveGoods } from './modules/purchasing/receiveGoods';
 import { postSupplierInvoice } from './modules/purchasing/postSupplierInvoice';
+import { createPurchaseReturn, shipAndCreditPurchaseReturn } from './modules/purchasing/purchaseReturn';
 import { createOpportunity } from './modules/crm/createOpportunity';
 import { convertOpportunityToSalesOrder } from './modules/crm/convertOpportunityToSalesOrder';
 import { createPayrollRun, postPayrollRun } from './modules/payroll/payrollRun';
@@ -322,6 +323,26 @@ async function runPurchasingScenario(db: DB) {
       eq(supplierInvoice.orderId, po3.orderId),
     ));
 
+  // Reverse procure-to-pay proof: the return request is non-posting; shipping it
+  // atomically issues stock and posts the supplier credit's balanced AP reversal.
+  const [poLine] = await db.select({ id: purchaseOrderLine.id }).from(purchaseOrderLine)
+    .where(and(
+      eq(purchaseOrderLine.masterFn, SCOPE.masterFn),
+      eq(purchaseOrderLine.companyFn, SCOPE.companyFn),
+      eq(purchaseOrderLine.orderId, po.orderId),
+    ));
+  const purchaseReturn = await createPurchaseReturn(db, SCOPE, {
+    docNo: 'PRET-1', goodsReceiptId: receipt.receiptId, supplierInvoiceId: inv.invoiceId,
+    returnDate: '2024-06-07', reason: 'Demo supplier-return proof',
+    lines: [{ purchaseOrderLineId: poLine.id, qty: '2' }],
+  });
+  const stockBeforeReturn = await getStockQty(db, SCOPE, widgetId, wh.id);
+  const supplierCredit = await shipAndCreditPurchaseReturn(db, SCOPE, purchaseReturn.id, {
+    creditDocNo: 'SCN-1', noteDate: '2024-06-07',
+  });
+  const stockAfterReturn = await getStockQty(db, SCOPE, widgetId, wh.id);
+  const supplierCreditGl = await glBalance(db, supplierCredit.creditDocNo);
+
   return {
     po: { net: po.net, tax: po.tax, total: po.total },
     stockBeforeReceipt, stockAfterReceipt, movementsAfterReceipt,
@@ -338,6 +359,16 @@ async function runPurchasingScenario(db: DB) {
     invoiceRaceFulfilled: invoiceRace.filter((result) => result.status === 'fulfilled').length,
     invoiceRaceRejected: invoiceRace.filter((result) => result.status === 'rejected').length,
     invoiceRaceCount: invoiceRaceCount.n,
+    purchaseReturn: {
+      status: supplierCredit.status,
+      total: supplierCredit.totalAmount,
+      stockBefore: stockBeforeReturn,
+      stockAfter: stockAfterReturn,
+      movementCount: supplierCredit.movementIds.length,
+      glDebit: supplierCreditGl.debit,
+      glCredit: supplierCreditGl.credit,
+      glBalanced: supplierCreditGl.debit === supplierCreditGl.credit,
+    },
   };
 }
 
@@ -514,6 +545,13 @@ ok = check('PGlite purchasing rollback: double-receive and duplicate/early invoi
   && p.purchasing.earlyInvoiceGlDebit === 0 && p.purchasing.earlyInvoiceGlCredit === 0
   && p.purchasing.invoiceRaceFulfilled === 1 && p.purchasing.invoiceRaceRejected === 1
   && p.purchasing.invoiceRaceCount === 1) && ok;
+ok = check('PGlite purchase return: stock -2 and balanced supplier credit (Dr AP = Cr Inventory/Input Tax = 13.08)',
+  p.purchasing.purchaseReturn.status === 'credited'
+  && p.purchasing.purchaseReturn.total === '13.08'
+  && p.purchasing.purchaseReturn.stockBefore - p.purchasing.purchaseReturn.stockAfter === 2
+  && p.purchasing.purchaseReturn.movementCount === 1
+  && p.purchasing.purchaseReturn.glBalanced
+  && p.purchasing.purchaseReturn.glDebit === 13.08) && ok;
 ok = check('PGlite CRM chain: converting an opportunity creates a real order (net=50 tax=4.5 total=54.5), stock 50→45, balanced GL',
   p.crm.conv.net === 50 && p.crm.conv.tax === 4.5 && p.crm.conv.total === 54.5
   && p.crm.stockAfter === 45 && p.crm.glBalanced && p.crm.glDebit === 54.5) && ok;

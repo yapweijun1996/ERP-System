@@ -37,6 +37,13 @@ import {
   type ReceiveGoodsInput,
 } from '../../src/modules/purchasing/receiveGoods';
 import {
+  createPurchaseReturnWithin,
+  rejectPurchaseReturnWithin,
+  shipAndCreditPurchaseReturnWithin,
+  type CreatePurchaseReturnInput,
+  type ShipAndCreditPurchaseReturnInput,
+} from '../../src/modules/purchasing/purchaseReturn';
+import {
   confirmDraftSalesOrderWithin,
   confirmSalesOrder,
   type ConfirmDraftOrderInput,
@@ -651,6 +658,20 @@ export const erpDemoRuntime = Object.freeze({
     },
     postSupplierInvoiceWithin(db: DemoOrm, scope: Scope, input: PostSupplierInvoiceInput) {
       return postSupplierInvoiceWithin(asDomainDb(db), scope, input);
+    },
+    createPurchaseReturnWithin(db: DemoOrm, scope: Scope, input: CreatePurchaseReturnInput) {
+      return createPurchaseReturnWithin(asDomainDb(db), scope, input);
+    },
+    shipAndCreditPurchaseReturnWithin(
+      db: DemoOrm,
+      scope: Scope,
+      returnId: number,
+      input: ShipAndCreditPurchaseReturnInput,
+    ) {
+      return shipAndCreditPurchaseReturnWithin(asDomainDb(db), scope, returnId, input);
+    },
+    rejectPurchaseReturnWithin(db: DemoOrm, scope: Scope, returnId: number) {
+      return rejectPurchaseReturnWithin(asDomainDb(db), scope, returnId);
     },
     createOpportunity(db: DemoOrm, scope: Scope, input: CreateOpportunityInput) {
       return createOpportunity(asDomainDb(db), scope, input);

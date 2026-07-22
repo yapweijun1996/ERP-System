@@ -135,7 +135,7 @@ const TONES = {
   supplierQuote:     { Draft:'neutral', Received:'info', Selected:'accent', Rejected:'danger', Expired:'warn', Converted:'ok' },
   grn:               { Draft:'neutral', Received:'info', 'Partially Received':'warn', 'Pending QC':'warn', Accepted:'ok', Rejected:'danger', Posted:'teal', Cancelled:'neutral' },
   supplierInvoice:   { Draft:'neutral', 'Pending Matching':'warn', Matched:'accent', Mismatch:'danger', Posted:'teal', 'Partially Paid':'info', Paid:'ok', Overdue:'danger', Cancelled:'neutral' },
-  purchaseReturn:    { Draft:'neutral', Submitted:'info', Approved:'accent', Returned:'warn', Credited:'ok', Closed:'neutral', Cancelled:'neutral' },
+  purchaseReturn:    { Draft:'neutral', Submitted:'info', Approved:'accent', Requested:'info', Returned:'warn', Credited:'ok', Rejected:'danger', Closed:'neutral', Cancelled:'neutral' },
   supplierCreditNote:{ Draft:'neutral', Applied:'ok', Posted:'teal', Cancelled:'neutral' },
   supplierDebitNote: { Draft:'neutral', Posted:'teal', Cancelled:'neutral' },
   supplierPriceList: { Active:'ok', Expiring:'warn', Expired:'danger', Draft:'neutral' },

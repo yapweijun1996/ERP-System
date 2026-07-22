@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 29;
+  var DEMO_SCHEMA_VERSION = 30;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -118,7 +118,7 @@
     var currentVersion = row ? Number(row.version) : 0;
     /* A service-worker update can briefly mix a newer adapter with an older
        cached migration asset. Never trust the version marker alone: verify the
-       v16 manufacturing/MRP/quality/sales signature before declaring the schema current.
+       manufacturing/MRP/quality/sales/purchasing-return signature before declaring the schema current.
        Replaying the generated compatibility bundle is safe and repairs a
        marker that was written after a stale/no-op migration response. */
     var signature = (await db.query(
@@ -135,7 +135,12 @@
       "'sales_return','sales_return_line','sales_credit_note','sales_credit_note_line'," +
       "'sales_debit_note','sales_price_list','sales_price_list_line'," +
       "'sales_discount_rule','sales_credit_profile')")).rows[0];
-    var hasCurrentSignature = signature && Number(signature.n) === 31;
+    var purchaseReturnSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('purchase_return','purchase_return_line','supplier_credit_note','supplier_credit_note_line')")).rows[0];
+    var hasCurrentSignature = signature && Number(signature.n) === 31
+      && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -1294,6 +1299,10 @@
     'purchasing/purchase-order-lines':'purchase_order_line',
     'purchasing/goods-receipts':'goods_receipt',
     'purchasing/supplier-invoices':'supplier_invoice',
+    'purchasing/purchase-returns':'purchase_return',
+    'purchasing/purchase-return-lines':'purchase_return_line',
+    'purchasing/supplier-credit-notes':'supplier_credit_note',
+    'purchasing/supplier-credit-note-lines':'supplier_credit_note_line',
     'purchasing/purchase-requisitions':'purchase_requisition',
     'purchasing/purchase-requisition-lines':'purchase_requisition_line',
     'purchasing/rfqs':'purchase_rfq',
@@ -1541,6 +1550,14 @@
         return {data:Object.assign({docNo:payload.docNo},canonicalOrder),meta:{}};
       }
       return {data:await createPurchaseOrder(payload),meta:{}};
+    }
+    if(key==='purchasing/purchase-returns'){
+      var purchaseReturn = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createPurchaseReturnWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:purchaseReturn,meta:{}};
     }
     if(key==='crm/opportunities'){
       if(Number.isSafeInteger(payload&&payload.customerId)){
@@ -2107,6 +2124,23 @@
         return {data:Object.assign({docNo:payload.docNo},canonicalInvoice),meta:{}};
       }
       return {data:await postSupplierInvoice(id),meta:{}};
+    }
+    if(key==='purchasing/purchase-returns'&&name==='ship-and-credit'){
+      payload=payload||{};
+      var creditedPurchaseReturn = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.shipAndCreditPurchaseReturnWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload);
+      });
+      await refresh();
+      return {data:creditedPurchaseReturn,meta:{}};
+    }
+    if(key==='purchasing/purchase-returns'&&name==='reject'){
+      var rejectedPurchaseReturn = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.rejectPurchaseReturnWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:rejectedPurchaseReturn,meta:{}};
     }
     if(key==='crm/opportunities'&&name==='convert'){
       payload=payload||{};

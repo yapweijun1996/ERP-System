@@ -667,67 +667,168 @@ makePurList({
 function openSINV(i){ if(i.no==='SI-26-0615'){ navigate('supplier-invoice'); return; } openPurTxn('sinvoice', i); }
 
 /* ---------------- PURCHASE RETURNS ---------------- */
+function purchaseReturnCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{returns:'Purchase Returns',returnUnit:'returns',returnSub:'Request a return against a real goods receipt and unpaid supplier invoice. Shipping posts the inventory issue and supplier credit atomically.',credits:'Supplier Credit Notes',creditUnit:'credit notes',creditSub:'Posted credits created from shipped purchase returns, with direct invoice, inventory movement and GL traceability.',all:'All',requested:'Requested',credited:'Credited',rejected:'Rejected',open:'Open returns',returnValue:'Return value',newReturn:'New return',returnNo:'Return',supplier:'Supplier',againstGrn:'Against GRN',invoice:'Supplier invoice',reason:'Reason',qty:'Qty',value:'Value',status:'Status',view:'View details',shipCredit:'Ship & create credit',reject:'Reject return',date:'Return date',lines:'Return lines',item:'Item',unitCost:'Unit cost',net:'Net',tax:'Tax',total:'Total',cancel:'Cancel',create:'Create return',chooseSource:'Choose a received invoice',source:'Received invoice',noSource:'No unpaid supplier invoice with a goods receipt is available.',addQty:'Return qty',required:'Complete the required fields and enter at least one quantity.',created:'Purchase return created',shipped:'Goods returned and supplier credit posted',rejectedMsg:'Purchase return rejected',creditNo:'Credit note',noteDate:'Credit date',warehouse:'Warehouse',tracking:'Stock tracking',lot:'Lot',serial:'Serial',noTracking:'No eligible stock tracking record is available.',posted:'Posted',creditValue:'Credit value',againstReturn:'Against return',originalInvoice:'Original invoice',accounting:'AP debit · Inventory and input-tax credit',immutable:'Posted supplier credits are immutable and can only originate from a purchase return.'},
+    ms:{returns:'Pulangan Belian',returnUnit:'pulangan',returnSub:'Mohon pulangan terhadap penerimaan barang dan invois pembekal belum dibayar. Penghantaran mempos keluaran stok dan kredit pembekal secara atomik.',credits:'Nota Kredit Pembekal',creditUnit:'nota kredit',creditSub:'Kredit dipos daripada pulangan belian yang dihantar, dengan jejak invois, pergerakan inventori dan lejar.',all:'Semua',requested:'Dimohon',credited:'Dikreditkan',rejected:'Ditolak',open:'Pulangan terbuka',returnValue:'Nilai pulangan',newReturn:'Pulangan baharu',returnNo:'Pulangan',supplier:'Pembekal',againstGrn:'Terhadap GRN',invoice:'Invois pembekal',reason:'Sebab',qty:'Kuantiti',value:'Nilai',status:'Status',view:'Lihat butiran',shipCredit:'Hantar & cipta kredit',reject:'Tolak pulangan',date:'Tarikh pulangan',lines:'Baris pulangan',item:'Item',unitCost:'Kos unit',net:'Bersih',tax:'Cukai',total:'Jumlah',cancel:'Batal',create:'Cipta pulangan',chooseSource:'Pilih invois diterima',source:'Invois diterima',noSource:'Tiada invois pembekal belum dibayar dengan penerimaan barang tersedia.',addQty:'Kuantiti pulangan',required:'Lengkapkan medan wajib dan masukkan sekurang-kurangnya satu kuantiti.',created:'Pulangan belian dicipta',shipped:'Barang dipulangkan dan kredit pembekal dipos',rejectedMsg:'Pulangan belian ditolak',creditNo:'Nota kredit',noteDate:'Tarikh kredit',warehouse:'Gudang',tracking:'Penjejakan stok',lot:'Lot',serial:'Siri',noTracking:'Tiada rekod penjejakan stok yang layak.',posted:'Dipos',creditValue:'Nilai kredit',againstReturn:'Terhadap pulangan',originalInvoice:'Invois asal',accounting:'Debit AP · Kredit inventori dan cukai input',immutable:'Kredit pembekal yang dipos tidak boleh diubah dan hanya berasal daripada pulangan belian.'},
+    zh:{returns:'采购退货',returnUnit:'张退货单',returnSub:'基于真实收货单和未付款供应商发票申请退货；发货时原子执行库存出库并生成供应商贷项。',credits:'供应商贷项通知单',creditUnit:'张贷项单',creditSub:'由已发出的采购退货生成的已过账贷项，可直接追溯原发票、库存流水和总账。',all:'全部',requested:'待退货',credited:'已贷项',rejected:'已拒绝',open:'待处理退货',returnValue:'退货金额',newReturn:'新建退货',returnNo:'退货单',supplier:'供应商',againstGrn:'对应收货单',invoice:'供应商发票',reason:'退货原因',qty:'数量',value:'金额',status:'状态',view:'查看详情',shipCredit:'发出退货并生成贷项',reject:'拒绝退货',date:'退货日期',lines:'退货明细',item:'物料',unitCost:'单位成本',net:'未税金额',tax:'税额',total:'合计',cancel:'取消',create:'创建退货单',chooseSource:'选择已收货发票',source:'已收货发票',noSource:'没有同时具备收货单的未付款供应商发票。',addQty:'退货数量',required:'请填写必填项，并至少输入一个退货数量。',created:'采购退货单已创建',shipped:'货物已退回，供应商贷项已过账',rejectedMsg:'采购退货已拒绝',creditNo:'贷项单号',noteDate:'贷项日期',warehouse:'仓库',tracking:'库存追踪',lot:'批次',serial:'序列号',noTracking:'没有符合条件的库存追踪记录。',posted:'已过账',creditValue:'贷项金额',againstReturn:'对应退货单',originalInvoice:'原供应商发票',accounting:'借记应付账款 · 贷记库存及进项税',immutable:'已过账供应商贷项不可修改，且只能由采购退货生成。'},
+    ja:{returns:'仕入返品',returnUnit:'件',returnSub:'実際の入荷と未払仕入先請求書に対して返品を申請し、出荷時に在庫払出と仕入先クレジットを同一取引で計上します。',credits:'仕入先クレジットノート',creditUnit:'件',creditSub:'出荷済み仕入返品から作成された計上済みクレジットを、請求書・在庫移動・GLまで追跡します。',all:'すべて',requested:'返品待ち',credited:'クレジット済み',rejected:'却下',open:'未処理返品',returnValue:'返品額',newReturn:'返品作成',returnNo:'返品',supplier:'仕入先',againstGrn:'入荷参照',invoice:'仕入先請求書',reason:'理由',qty:'数量',value:'金額',status:'状態',view:'詳細を表示',shipCredit:'返品出荷・クレジット作成',reject:'返品を却下',date:'返品日',lines:'返品明細',item:'品目',unitCost:'単位原価',net:'税抜',tax:'税',total:'合計',cancel:'キャンセル',create:'返品を作成',chooseSource:'入荷済み請求書を選択',source:'入荷済み請求書',noSource:'入荷に紐づく未払仕入先請求書がありません。',addQty:'返品数量',required:'必須項目と1件以上の返品数量を入力してください。',created:'仕入返品を作成しました',shipped:'返品を出荷し仕入先クレジットを計上しました',rejectedMsg:'仕入返品を却下しました',creditNo:'クレジット番号',noteDate:'クレジット日',warehouse:'倉庫',tracking:'在庫追跡',lot:'ロット',serial:'シリアル',noTracking:'利用可能な在庫追跡レコードがありません。',posted:'計上済み',creditValue:'クレジット額',againstReturn:'返品参照',originalInvoice:'元請求書',accounting:'AP借方・在庫/仮払税金貸方',immutable:'計上済み仕入先クレジットは変更不可で、仕入返品からのみ作成されます。'},
+    vi:{returns:'Trả hàng mua',returnUnit:'phiếu trả',returnSub:'Yêu cầu trả theo phiếu nhận hàng và hóa đơn nhà cung cấp chưa thanh toán; khi xuất trả sẽ ghi xuất kho và tín dụng nhà cung cấp trong một giao dịch.',credits:'Phiếu tín dụng nhà cung cấp',creditUnit:'phiếu tín dụng',creditSub:'Tín dụng đã ghi sổ từ phiếu trả hàng, truy vết trực tiếp đến hóa đơn, biến động tồn kho và sổ cái.',all:'Tất cả',requested:'Chờ trả',credited:'Đã ghi tín dụng',rejected:'Đã từ chối',open:'Phiếu trả mở',returnValue:'Giá trị trả',newReturn:'Tạo phiếu trả',returnNo:'Phiếu trả',supplier:'Nhà cung cấp',againstGrn:'Theo GRN',invoice:'Hóa đơn NCC',reason:'Lý do',qty:'Số lượng',value:'Giá trị',status:'Trạng thái',view:'Xem chi tiết',shipCredit:'Xuất trả & tạo tín dụng',reject:'Từ chối trả',date:'Ngày trả',lines:'Dòng trả hàng',item:'Mặt hàng',unitCost:'Đơn giá vốn',net:'Trước thuế',tax:'Thuế',total:'Tổng',cancel:'Hủy',create:'Tạo phiếu trả',chooseSource:'Chọn hóa đơn đã nhận',source:'Hóa đơn đã nhận',noSource:'Không có hóa đơn nhà cung cấp chưa thanh toán kèm phiếu nhận hàng.',addQty:'SL trả',required:'Hoàn tất trường bắt buộc và nhập ít nhất một số lượng.',created:'Đã tạo phiếu trả hàng mua',shipped:'Đã xuất trả và ghi sổ tín dụng nhà cung cấp',rejectedMsg:'Đã từ chối phiếu trả hàng',creditNo:'Số phiếu tín dụng',noteDate:'Ngày tín dụng',warehouse:'Kho',tracking:'Theo dõi tồn kho',lot:'Lô',serial:'Sê-ri',noTracking:'Không có bản ghi theo dõi tồn kho phù hợp.',posted:'Đã ghi sổ',creditValue:'Giá trị tín dụng',againstReturn:'Theo phiếu trả',originalInvoice:'Hóa đơn gốc',accounting:'Nợ AP · Có tồn kho và thuế đầu vào',immutable:'Tín dụng nhà cung cấp đã ghi sổ là bất biến và chỉ được tạo từ phiếu trả hàng mua.'},
+  };
+  return packs[lang]||packs.en;
+}
+
+function purchaseReturnStatus(row){ const c=purchaseReturnCopy(); return c[row.rawStatus]||row.status; }
+
+function eligiblePurchaseReturnInvoices(){
+  return (DB.supplierInvoices||[]).filter(invoice=>invoice.rawStatus==='unpaid'&&DB.goodsReceipts.some(receipt=>receipt.orderId===invoice.orderId));
+}
+
+function nextPurchaseReturnNo(){ return nextSourcingNo(DB.purchaseReturns,'PRET'); }
+function nextSupplierCreditNo(){ return nextSourcingNo(DB.supplierCreditNotes,'SCN'); }
+
+function newPurchaseReturnModal(preselectedInvoiceId){
+  const c=purchaseReturnCopy(), invoices=eligiblePurchaseReturnInvoices();
+  if(!invoices.length){ toast(c.noSource,'info'); return; }
+  const docNo=nextPurchaseReturnNo(), today=new Date().toISOString().slice(0,10);
+  appModal({icon:'refresh',title:c.newReturn,width:760,body:`<div class="set-grid">
+    <div class="fld"><span>${c.returnNo}</span><input value="${esc(docNo)}" readonly></div>
+    <div class="fld"><span>${c.date} *</span><input id="pretDate" type="date" value="${today}"></div>
+    <div class="fld" style="grid-column:1/-1"><span>${c.source} *</span><select id="pretInvoice">${invoices.map(invoice=>`<option value="${invoice.id}" ${invoice.id===preselectedInvoiceId?'selected':''}>${esc(invoice.no)} · ${esc(invoice.supplier)} · ${money(invoice.total,invoice.currency)}</option>`).join('')}</select></div>
+    <div class="fld" style="grid-column:1/-1"><span>${c.reason} *</span><textarea id="pretReason" placeholder="${esc(c.reason)}"></textarea></div>
+  </div><div class="panel"><div class="panel-h"><h3>${c.lines}</h3></div><div class="panel-body"><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th><th>${c.unitCost}</th><th>${c.addQty}</th></tr></thead><tbody id="pretLines"></tbody></table></div></div>`,actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c.create,{icon:'plus',cls:'primary',attrs:'data-save="1"'})}`});
+  const render=()=>{
+    const invoice=invoices.find(row=>row.id===Number($('#pretInvoice').value));
+    const lines=invoice?(DB.purchaseOrderLines||[]).filter(line=>line.orderId===invoice.orderId):[];
+    $('#pretLines').innerHTML=lines.map(line=>{
+      const returned=(DB.purchaseReturns||[]).filter(ret=>ret.rawStatus!=='rejected').flatMap(ret=>ret.lines||[]).filter(retLine=>retLine.purchaseOrderLineId===line.id).reduce((sum,retLine)=>sum+retLine.qty,0);
+      const remaining=Math.max(0,line.qty-returned), max=line.trackingType==='serial'?Math.min(1,remaining):remaining;
+      return `<tr data-line="${line.id}"><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)} · ${esc(line.trackingType)}</small></td><td class="tnum">${num(remaining)} / ${num(line.qty)}</td><td class="tnum">${money(line.unitCost,invoice.currency)}</td><td><input class="lineinput pretQty" type="number" min="0" max="${max}" step="${line.trackingType==='serial'?'1':'0.0001'}" value="0" ${max<=0?'disabled':''}></td></tr>`;
+    }).join('')||`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:18px">${c.noSource}</td></tr>`;
+  };
+  $('#pretInvoice').addEventListener('change',render); render();
+  $('#modalEl [data-save]').addEventListener('click',async function(){
+    const invoice=invoices.find(row=>row.id===Number($('#pretInvoice').value));
+    const receipt=invoice&&DB.goodsReceipts.find(row=>row.orderId===invoice.orderId);
+    const lines=$$('#pretLines tr[data-line]').map(row=>({purchaseOrderLineId:Number(row.dataset.line),qty:Number(row.querySelector('.pretQty').value)})).filter(line=>line.qty>0);
+    const reason=$('#pretReason').value.trim();
+    if(!invoice||!receipt||!reason||!$('#pretDate').value||!lines.length){ toast(c.required,'danger'); return; }
+    this.disabled=true;
+    try{
+      await window.ErpSystemData.create('purchasing/purchase-returns',{docNo,goodsReceiptId:receipt.id,supplierInvoiceId:invoice.id,returnDate:$('#pretDate').value,reason,lines});
+      closeModal(); toast(c.created,'ok'); navigate('purchase-returns');
+    }catch(error){ this.disabled=false; toast(error&&error.message||c.required,'danger'); }
+  });
+}
+
+function purchaseTrackingField(line,returnRow,c){
+  if(line.trackingType==='none') return '';
+  const data=DB.purchasingTracking||{bins:[],lots:[],serials:[],balances:[]};
+  const balances=data.balances.filter(row=>row.productId===line.productId&&row.warehouseId===returnRow.warehouseId&&Number(row.qty)>0);
+  const binById=new Map(data.bins.map(row=>[row.id,row]));
+  let options;
+  if(line.trackingType==='lot'){
+    options=balances.filter(row=>row.lotId&&Number(row.qty)>=line.qty).map(row=>{ const lot=data.lots.find(item=>item.id===row.lotId); const bin=binById.get(row.binId); return {value:`${row.binId}|${row.lotId}|`,label:`${lot&&lot.lotNo||'#'+row.lotId} · ${bin&&bin.code||'#'+row.binId} · ${num(row.qty)}`}; });
+  }else{
+    options=balances.filter(row=>row.serialId&&Number(row.qty)>=1).map(row=>{ const serial=data.serials.find(item=>item.id===row.serialId); const bin=binById.get(row.binId); return {value:`${row.binId}||${row.serialId}`,label:`${serial&&serial.serialNo||'#'+row.serialId} · ${bin&&bin.code||'#'+row.binId}`}; });
+  }
+  return `<div class="fld" style="margin-top:8px"><span>${line.trackingType==='lot'?c.lot:c.serial} · ${esc(line.sku)}</span><select class="pretTracking" data-line="${line.id}"><option value="">${c.tracking}</option>${options.map(option=>`<option value="${option.value}">${esc(option.label)}</option>`).join('')}</select>${options.length?'':`<small style="color:var(--danger)">${c.noTracking}</small>`}</div>`;
+}
+
+function shipPurchaseReturnModal(returnRow){
+  const c=purchaseReturnCopy(), creditDocNo=nextSupplierCreditNo(), today=new Date().toISOString().slice(0,10);
+  appModal({icon:'coins',title:c.shipCredit,width:680,body:`<div class="set-grid"><div class="fld"><span>${c.creditNo}</span><input id="pretCreditNo" value="${esc(creditDocNo)}"></div><div class="fld"><span>${c.noteDate}</span><input id="pretNoteDate" type="date" value="${today}"></div></div><div class="panel"><div class="panel-h"><h3>${c.lines}</h3></div><div class="panel-body">${returnRow.lines.map(line=>`<div class="sumrow"><span><b>${esc(line.name)}</b><small>${esc(line.sku)} · ${num(line.qty)} ${esc(line.uom)}</small></span><b>${money(line.net+line.tax,returnRow.currency)}</b></div>${purchaseTrackingField(line,returnRow,c)}`).join('')}<div class="sumrow total"><span>${c.total}</span><b>${money(returnRow.value,returnRow.currency)}</b></div></div></div><div class="callout info" style="margin-top:12px">${ic('info')}<span>${c.accounting}</span></div>`,actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c.shipCredit,{icon:'coins',cls:'primary',attrs:'data-save="1"'})}`});
+  $('#modalEl [data-save]').addEventListener('click',async function(){
+    const tracking=[];
+    for(const line of returnRow.lines){
+      if(line.trackingType==='none') continue;
+      const select=$(`.pretTracking[data-line="${line.id}"]`), parts=select&&select.value.split('|');
+      if(!parts||!select.value){ toast(c.noTracking,'danger'); return; }
+      tracking.push({returnLineId:line.id,binId:Number(parts[0]),lotId:parts[1]?Number(parts[1]):undefined,serialId:parts[2]?Number(parts[2]):undefined});
+    }
+    const creditNo=$('#pretCreditNo').value.trim(), noteDate=$('#pretNoteDate').value;
+    if(!creditNo||!noteDate){ toast(c.required,'danger'); return; }
+    this.disabled=true;
+    try{
+      await window.ErpSystemData.action('purchasing/purchase-returns',returnRow.id,'ship-and-credit',{creditDocNo:creditNo,noteDate,tracking},`purchase-return-credit-${returnRow.id}-v${returnRow.version}`);
+      closeModal(); toast(c.shipped,'ok'); navigate('supplier-credit-notes');
+    }catch(error){ this.disabled=false; toast(error&&error.message||c.required,'danger'); }
+  });
+}
+
+async function rejectPurchaseReturn(returnRow){
+  const c=purchaseReturnCopy();
+  try{
+    await window.ErpSystemData.action('purchasing/purchase-returns',returnRow.id,'reject',{},`purchase-return-reject-${returnRow.id}-v${returnRow.version}`);
+    closeModal(); toast(c.rejectedMsg,'ok'); navigate('purchase-returns');
+  }catch(error){ toast(error&&error.message||c.required,'danger'); }
+}
+
+function openPurchaseReturnDetails(returnRow){
+  const c=purchaseReturnCopy();
+  appModal({icon:'refresh',title:`${returnRow.no} · ${returnRow.supplier}`,width:760,body:`<div class="docmeta" style="margin-bottom:16px"><div class="dm"><small>${c.againstGrn}</small><b>${esc(returnRow.grn)}</b></div><div class="dm"><small>${c.invoice}</small><b>${esc(returnRow.invoice)}</b></div><div class="dm"><small>${c.status}</small>${cap(purchaseReturnStatus(returnRow),PRET_TONE[returnRow.status]||'neutral')}</div></div><div class="sectitle">${c.reason}</div><p>${esc(returnRow.reason)}</p><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th><th>${c.unitCost}</th><th>${c.total}</th></tr></thead><tbody>${returnRow.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td>${num(line.qty)}</td><td>${money(line.unitCost,returnRow.currency)}</td><td>${money(line.net+line.tax,returnRow.currency)}</td></tr>`).join('')}</tbody></table><div class="sumrow"><span>${c.net}</span><b>${money(returnRow.net,returnRow.currency)}</b></div><div class="sumrow"><span>${c.tax}</span><b>${money(returnRow.tax,returnRow.currency)}</b></div><div class="sumrow total"><span>${c.total}</span><b>${money(returnRow.value,returnRow.currency)}</b></div>`,actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${returnRow.rawStatus==='requested'?btn(c.reject,{icon:'x',cls:'soft',attrs:`onclick="rejectPurchaseReturn(DB.purchaseReturns.find(r=>r.id===${returnRow.id}))"`}):''}${returnRow.rawStatus==='requested'?btn(c.shipCredit,{icon:'coins',cls:'primary',attrs:`onclick="closeModal();shipPurchaseReturnModal(DB.purchaseReturns.find(r=>r.id===${returnRow.id}))"`}):''}`});
+}
+
 makePurList({
-  route:'purchase-returns', title:'Purchase Returns', unit:'returns',
-  sub:'Returns of received goods to suppliers — damaged, wrong item, quality failure or over-delivery. Accepted returns update inventory and link to a supplier credit note.',
+  route:'purchase-returns', title:()=>purchaseReturnCopy().returns, unit:()=>purchaseReturnCopy().returnUnit, prepare:prepareCanonicalPurchasingData,
+  sub:()=>purchaseReturnCopy().returnSub,
   rows:()=>DB.purchaseReturns, rowId:r=>r.no,
-  chips:[['all','All'],['open','Open'],['returned','Returned'],['credited','Credited']],
-  filterFn:(r,f)=>f==='open'?['Draft','Submitted','Approved'].includes(r.status):f==='returned'?r.status==='Returned':r.status==='Credited',
+  chips:[['all',()=>purchaseReturnCopy().all],['requested',()=>purchaseReturnCopy().requested],['credited',()=>purchaseReturnCopy().credited],['rejected',()=>purchaseReturnCopy().rejected]],
+  filterFn:(r,f)=>r.rawStatus===f,
   kpis:(r)=>[
-    {label:'Open returns', val:r.filter(x=>['Draft','Submitted','Approved'].includes(x.status)).length, f:'open'},
-    {label:'Return value', val:money0(r.reduce((a,x)=>a+x.value,0))},
-    {label:'Awaiting credit', val:r.filter(x=>x.status==='Returned').length, accent:true, f:'returned'},
-    {label:'Credited', val:r.filter(x=>x.status==='Credited').length, f:'credited'},
+    {label:()=>purchaseReturnCopy().open, val:r.filter(x=>x.rawStatus==='requested').length, accent:true, f:'requested'},
+    {label:()=>purchaseReturnCopy().returnValue, val:money0(r.reduce((a,x)=>a+x.value,0))},
+    {label:()=>purchaseReturnCopy().credited, val:r.filter(x=>x.rawStatus==='credited').length, f:'credited'},
+    {label:()=>purchaseReturnCopy().rejected, val:r.filter(x=>x.rawStatus==='rejected').length, f:'rejected'},
   ],
-  newBtn:{label:'New return', onClick:()=>toast('New return — link to a goods receipt','info')},
+  newBtn:{label:()=>purchaseReturnCopy().newReturn, onClick:()=>newPurchaseReturnModal()},
   columns:[
-    {label:'Return', w:'minmax(140px,1.3fr)', render:r=>docNoCell(r.no, r.date)},
-    {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:r=>suppCell(r.supplier,r.code)},
-    {label:'Against GRN', align:'l', w:'minmax(116px,1fr)', render:r=>`<span class="mono" style="font-size:12px">${esc(r.grn)}</span>`},
-    {label:'Reason', align:'l', w:'minmax(170px,1.8fr)', render:r=>`<span class="li-subj">${esc(r.reason)}</span>`},
-    {label:'Qty', align:'r', w:'minmax(60px,0.6fr)', render:r=>num(r.qty)},
-    {label:'Value', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:r=>`<b class="tnum">${money0(r.value)}</b>`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(116px,1.1fr)', render:r=>cap(r.status,PRET_TONE[r.status])},
+    {label:()=>purchaseReturnCopy().returnNo, w:'minmax(140px,1.3fr)', render:r=>docNoCell(r.no, r.date)},
+    {label:()=>purchaseReturnCopy().supplier, align:'l', w:'minmax(160px,1.6fr)', render:r=>suppCell(r.supplier,r.code)},
+    {label:()=>purchaseReturnCopy().againstGrn, align:'l', w:'minmax(116px,1fr)', render:r=>`<span class="mono" style="font-size:12px">${esc(r.grn)}</span>`},
+    {label:()=>purchaseReturnCopy().reason, align:'l', w:'minmax(170px,1.8fr)', render:r=>`<span class="li-subj">${esc(r.reason)}</span>`},
+    {label:()=>purchaseReturnCopy().qty, align:'r', w:'minmax(60px,0.6fr)', render:r=>num(r.qty)},
+    {label:()=>purchaseReturnCopy().value, align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:r=>`<b class="tnum">${money(r.value,r.currency)}</b>`},
+    {label:()=>purchaseReturnCopy().status, align:'l', cls:'cap-cell', w:'minmax(116px,1.1fr)', render:r=>cap(purchaseReturnStatus(r),PRET_TONE[r.status]||'neutral')},
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(r)=>[
-    {id:'view',icon:'ext',label:'Open return',run:()=>openPurTxn('preturn',r)},
-    {id:'approve',icon:'check',label:'Approve return',run:()=>toast(`${r.no} approved`,'ok')},
-    {id:'cn',icon:'coins',label:'Issue credit note',run:()=>navigate('supplier-credit-notes')},
-    {id:'reject',icon:'x',label:'Reject return',danger:true,sep:true,run:()=>toast(`${r.no} rejected`,'danger')},
+    {id:'view',icon:'ext',label:purchaseReturnCopy().view,run:()=>openPurchaseReturnDetails(r)},
+    ...(r.rawStatus==='requested'?[{id:'ship',icon:'coins',label:purchaseReturnCopy().shipCredit,run:()=>shipPurchaseReturnModal(r)},{id:'reject',icon:'x',label:purchaseReturnCopy().reject,danger:true,sep:true,run:()=>rejectPurchaseReturn(r)}]:[]),
   ],
-  onOpen:(r)=>openPurTxn('preturn', r),
+  onOpen:(r)=>openPurchaseReturnDetails(r),
 });
 
 /* ---------------- SUPPLIER CREDIT NOTES ---------------- */
+function openSupplierCreditDetails(credit){
+  const c=purchaseReturnCopy();
+  appModal({icon:'coins',title:`${credit.no} · ${credit.supplier}`,width:720,body:`<div class="docmeta" style="margin-bottom:16px"><div class="dm"><small>${c.againstReturn}</small><b>${esc(credit.ref)}</b></div><div class="dm"><small>${c.originalInvoice}</small><b>${esc((DB.purchaseReturns.find(row=>row.id===credit.returnId)||{}).invoice||'—')}</b></div><div class="dm"><small>${c.status}</small>${cap(c.posted,'teal')}</div></div><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th><th>${c.net}</th><th>${c.tax}</th></tr></thead><tbody>${credit.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td>${num(line.qty)}</td><td>${money(line.net,credit.currency)}</td><td>${money(line.tax,credit.currency)}</td></tr>`).join('')}</tbody></table><div class="sumrow total"><span>${c.creditValue}</span><b>${money(credit.amount,credit.currency)}</b></div><div class="callout info" style="margin-top:12px">${ic('lock')}<span>${c.immutable}<br>${c.accounting}</span></div>`,actions:btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})});
+}
+
 makePurList({
-  route:'supplier-credit-notes', title:'Supplier Credit Notes', unit:'credit notes',
-  sub:'Credit adjustments from suppliers — returns, overcharges, price or tax corrections. Applying a credit note reduces the outstanding payable balance.',
+  route:'supplier-credit-notes', title:()=>purchaseReturnCopy().credits, unit:()=>purchaseReturnCopy().creditUnit, prepare:prepareCanonicalPurchasingData,
+  sub:()=>purchaseReturnCopy().creditSub,
   rows:()=>DB.supplierCreditNotes, rowId:c=>c.no,
-  chips:[['all','All'],['draft','Draft'],['applied','Applied'],['posted','Posted']],
-  filterFn:(c,f)=>f==='draft'?c.status==='Draft':f==='applied'?c.status==='Applied':c.status==='Posted',
+  chips:[['all',()=>purchaseReturnCopy().all],['posted',()=>purchaseReturnCopy().posted]],
+  filterFn:(c,f)=>c.rawStatus===f,
   kpis:(r)=>[
-    {label:'Draft', val:r.filter(c=>c.status==='Draft').length, f:'draft'},
-    {label:'Credit value', val:money0(r.reduce((a,c)=>a+c.amount,0))},
-    {label:'Applied', val:r.filter(c=>c.status==='Applied').length, f:'applied'},
-    {label:'Posted', val:r.filter(c=>c.status==='Posted').length, f:'posted'},
+    {label:()=>purchaseReturnCopy().posted, val:r.length, f:'posted'},
+    {label:()=>purchaseReturnCopy().creditValue, val:money0(r.reduce((a,c)=>a+c.amount,0))},
   ],
-  newBtn:{label:'New credit note', onClick:()=>toast('New supplier credit note','info')},
   columns:[
-    {label:'Credit note', w:'minmax(140px,1.2fr)', render:c=>docNoCell(c.no, c.date)},
-    {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:c=>suppCell(c.supplier,c.code)},
-    {label:'Against', align:'l', w:'minmax(116px,1fr)', render:c=>`<span class="mono" style="font-size:12px">${esc(c.ref)}</span>`},
-    {label:'Reason', align:'l', w:'minmax(180px,1.9fr)', render:c=>`<span class="li-subj">${esc(c.reason)}</span>`},
-    {label:'Amount', align:'r', sortable:true, w:'minmax(100px,0.9fr)', render:c=>`<b class="tnum">${money0(c.amount)}</b>`},
-    {label:'Status', align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:c=>cap(c.status,SCN_TONE[c.status])},
+    {label:()=>purchaseReturnCopy().creditNo, w:'minmax(140px,1.2fr)', render:c=>docNoCell(c.no, c.date)},
+    {label:()=>purchaseReturnCopy().supplier, align:'l', w:'minmax(160px,1.6fr)', render:c=>suppCell(c.supplier,c.code)},
+    {label:()=>purchaseReturnCopy().againstReturn, align:'l', w:'minmax(116px,1fr)', render:c=>`<span class="mono" style="font-size:12px">${esc(c.ref)}</span>`},
+    {label:()=>purchaseReturnCopy().reason, align:'l', w:'minmax(180px,1.9fr)', render:c=>`<span class="li-subj">${esc(c.reason)}</span>`},
+    {label:()=>purchaseReturnCopy().value, align:'r', sortable:true, w:'minmax(100px,0.9fr)', render:c=>`<b class="tnum">${money(c.amount,c.currency)}</b>`},
+    {label:()=>purchaseReturnCopy().status, align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:()=>cap(purchaseReturnCopy().posted,'teal')},
     {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
   ],
   rowMenu:(c)=>[
-    {id:'view',icon:'ext',label:'Open credit note',run:()=>openPurTxn('screditnote',c)},
-    {id:'apply',icon:'check',label:'Apply to AP',run:()=>toast(`${c.no} applied`,'ok')},
-    {id:'pdf',icon:'filepdf',label:'Download PDF',sep:true,run:()=>toast('Credit note PDF generated','ok')},
+    {id:'view',icon:'ext',label:purchaseReturnCopy().view,run:()=>openSupplierCreditDetails(c)},
   ],
-  onOpen:(c)=>openPurTxn('screditnote', c),
+  onOpen:(c)=>openSupplierCreditDetails(c),
 });
 
 /* ---------------- SUPPLIER DEBIT NOTES ---------------- */

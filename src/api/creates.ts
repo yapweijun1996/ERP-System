@@ -35,6 +35,10 @@ import {
   type CreateSupplierQuotationInput,
 } from '../modules/purchasing/rfq';
 import {
+  createPurchaseReturnWithin,
+  type CreatePurchaseReturnInput,
+} from '../modules/purchasing/purchaseReturn';
+import {
   createOpportunity,
   type CreateOpportunityInput,
 } from '../modules/crm/createOpportunity';
@@ -256,6 +260,13 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createPurchaseRfqWithin(tx, scope, payload as unknown as CreatePurchaseRfqInput);
+    },
+  },
+  'purchasing/purchase-returns': {
+    permission: 'purchasing.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createPurchaseReturnWithin(tx, scope, payload as unknown as CreatePurchaseReturnInput);
     },
   },
   'purchasing/supplier-quotations': {

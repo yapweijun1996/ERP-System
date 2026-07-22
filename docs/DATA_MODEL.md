@@ -329,14 +329,21 @@ erDiagram
     }
 ```
 
-### Future modules (not yet implemented)
+### Additional implemented modules
 
-**Purchasing** (supplier, purchase_order, goods_receipt) follows the same conventions and
-will extend this diagram:
+**Purchasing** follows the same tenant, immutable-line-snapshot and movement-ledger
+conventions. The outbound return is not a negative receipt and never rewrites the
+original invoice:
 
 ```
 company ||--o{ supplier ||--o{ purchase_order ||--o{ purchase_order_line }o--|| product
 purchase_order ||--o{ goods_receipt   (receive stock → stock_movement 'in')
+purchase_order ||--o{ supplier_invoice (Dr Inventory/Input Tax, Cr AP)
+goods_receipt ||--o{ purchase_return ||--o{ purchase_return_line
+purchase_return ||--|| supplier_credit_note ||--o{ supplier_credit_note_line
+purchase_return ship-and-credit → stock_movement 'out' + Dr AP / Cr Inventory/Input Tax
 ```
 
-Also planned: `delivery` and `payment` to extend the sales flow.
+Sales delivery/returns, purchasing sourcing, treasury payments, manufacturing, quality,
+assets, projects, service, HR and payroll are also implemented in Drizzle; the route-level
+production boundary remains authoritative in [STATUS.md](STATUS.md).

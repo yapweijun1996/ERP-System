@@ -81,7 +81,7 @@ hardcoded fictional customer regardless of the active company.
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
 | Canonical schema (99 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 30 ordered migrations through `drizzle/0029_zippy_epoch.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
-| Purchasing chain: requisition/RFQ/quote → PO → goods receipt → supplier invoice, end-to-end incl. screens | ✅ Canonical Demo/API data and writes | Requisitions, RFQs, invited supplier quotations and the existing PO/receipt/invoice chain use bounded formal resources in both modes. RFQ issue, complete invited responses and atomic quote award use shared commands with RBAC, versions, idempotency and audit; award creates one linked draft PO, rejects competitors, and deliberately creates no stock or GL. Receipt then uses `receiveStockWithin`, keeping aggregate/bin/location projections and movements aligned, while supplier-invoice posting creates balanced GL. Purchase returns, supplier credit/debit notes, price lists, landed cost and vendor performance remain Preview. |
+| Purchasing chain: requisition/RFQ/quote → PO → goods receipt → supplier invoice → return/credit, end-to-end incl. screens | ✅ Canonical Demo/API data and writes | Requisitions, RFQs, invited supplier quotations and the PO/receipt/invoice chain use bounded formal resources in both modes. RFQ award creates one linked draft PO without stock/GL effects. Receipt uses `receiveStockWithin`; supplier-invoice posting creates balanced GL. A receipt/invoice-linked purchase return now snapshots Decimal cost/tax and atomically issues stock, creates an immutable supplier credit and posts Dr AP / Cr Inventory / Cr Input Tax. Supplier debit notes, price lists, landed cost and vendor performance remain Preview. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
 | Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. The 114-route audit explicitly proves the loading/race/error contract at desktop + 375px. |
 | Bundled Demo ESM runtime | ✅ Current Canonical writes migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. CRM create/convert, Purchasing create/receive/post, Sales enquiry/quotation/order actions, Sales Draft confirmation and Demo Setup all use TypeScript commands instead of browser business SQL mirrors — including the base demo seed itself (`seedDemo()`, TASK-034), which now runs directly on first boot instead of a hand-written `erp-system-seed.sql` mirror. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
@@ -130,15 +130,15 @@ hardcoded fictional customer regardless of the active company.
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
 | `make setup-interactive` (`scripts/setup.sh --interactive`) | ✅ Working | Prompts for bundled-vs-external database, auto-generates strong secrets on a blank answer (validated: e.g. a manually-typed `ERP_TOKEN_ENCRYPTION_KEY` must satisfy `tokenCrypto.ts`'s exact 32-byte contract or the script re-prompts, instead of letting `api` crash at boot), and checks WEB_PORT/API_PORT/DB_PORT for real collisions. `docker-compose.yml`'s `api`/`worker` `DATABASE_URL` now genuinely honors an external override instead of silently ignoring it. Verified live end-to-end three times against real Docker (plain non-interactive, `--interactive` bundled, `--interactive` external against a standalone `postgres:16-alpine` container) — the external run's `docker compose ps` confirmed the bundled `db` service was never created, and a direct `psql` query against the standalone container confirmed seed data genuinely landed there. TASK-060, EPIC-025. **Also fixed along the way**: the `web` service's Docker build had been silently broken since 2026-07-18 (build context couldn't reach `erp-demo-runtime-impl.ts`'s cross-workspace imports into `src/`) — nobody caught it because local dev/typecheck/`build:demo` all run from the repo root, where the paths resolve fine regardless of the Docker isolation bug. Fixed by widening `web`'s build context to the repo root, matching `Dockerfile.api`'s established pattern. |
 | PostgreSQL concurrency/parity proof | ✅ Working | `POSTGRES_URL=... npm run demo` — proven twice against real Postgres (host + inside verification), TASK-013 |
-| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Working | `erp-system-api-adapter.js` calls the authenticated API with no sample fallback. Dashboard, Inventory, Warehouse, Manufacturing, Quality, Purchasing, CRM, Sales, Finance and Settings all consume canonical resources/session data. **72 of 72 current Canonical routes support both Demo and API mode**; RFQs and supplier quotations joined in EPIC-028/TASK-064. Company switching re-fetches the authenticated tenant scope. |
+| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Working | `erp-system-api-adapter.js` calls the authenticated API with no sample fallback. Dashboard, Inventory, Warehouse, Manufacturing, Quality, Purchasing, CRM, Sales, Finance and Settings all consume canonical resources/session data. **74 of 74 current Canonical routes support both Demo and API mode**; purchase returns and supplier credits joined in EPIC-029/TASK-065. Company switching re-fetches the authenticated tenant scope. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production one-time setup | ✅ Working | The API-mode wizard collects the installer token in memory and calls `POST /api/setup/actions/complete` with `X-ERP-Setup-Token`. A database singleton locks concurrent attempts; the command only works with zero users and atomically creates tenant/company/admin/role/permissions/tax/accounts. |
-| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v45) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale signed-in state after logout. |
+| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v46) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale signed-in state after logout. |
 
 ## Canonical and Preview route boundary
 
 114 routes are registered in the live `SCREENS` registry. `SCREEN_META` is now the source
-of truth for production maturity at route level: **72 routes are Canonical and 42 are
+of truth for production maturity at route level: **74 routes are Canonical and 40 are
 Preview**. This replaces the old module-wide mock allowlist, which could not accurately
 represent partially migrated Purchasing and CRM modules.
 
@@ -239,13 +239,14 @@ Verified live end-to-end: created a real employee, approved one leave request,
 rejected another with a reason, and confirmed the employee detail's leave balance and
 history reflected both decisions correctly.
 
-**Purchasing remains partially converted, but the sourcing front-end is now Canonical
-(TASK-064, 2026-07-22).** Requisitions, RFQs, invited supplier quotations, award-to-PO,
-purchase orders, goods receipts and supplier invoices read/write real Demo/API data.
-Awarding is atomic, traceable and pre-accounting: it creates one linked draft PO,
-rejects competing quotes and touches neither stock nor GL. Purchase returns, supplier
-credit/debit notes, supplier price lists, landed cost, vendor performance, purchasing
-reports and the shared `pur-txn-view` remain Preview.
+**Purchasing remains partially converted, with sourcing and supplier returns now
+Canonical (TASK-064/065, 2026-07-22).** Requisitions, RFQs, invited supplier quotations,
+award-to-PO, purchase orders, goods receipts, supplier invoices, purchase returns and
+supplier credit notes read/write real Demo/API data. Awarding remains pre-accounting;
+shipping a return instead performs one atomic stock issue plus immutable supplier-credit
+and balanced AP/Inventory/Input-Tax reversal. Supplier debit notes, supplier price lists,
+landed cost, vendor performance, purchasing reports and the shared `pur-txn-view` remain
+Preview.
 
 **Manufacturing routes are now Canonical (2026-07-19).** Work-order list, detail,
 creation/release/execution, BOM detail and MRP use canonical schema and the Demo/API
@@ -269,8 +270,8 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Complete for the present Canonical boundary.** All 72 current Canonical routes use `ErpSystemData` in API mode with no sample fallback, confirmed via `npm run audit:screens`; RFQs and supplier quotations joined in EPIC-028. |
-| Every Canonical route has five-language coverage | **Not globally proven by CI.** Canonical slices are expected to ship en/ms/zh/ja/vi local packs (TASK-064 does), but `npm run audit:screens` does not yet enumerate every locale or detect every hardcoded UI string. A repository-wide locale-key/hardcoded-text gate remains part of final productionization. |
+| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Complete for the present Canonical boundary.** All 74 current Canonical routes use `ErpSystemData` in API mode with no sample fallback, confirmed via `npm run audit:screens`; purchase returns and supplier credits joined in EPIC-029. |
+| Every Canonical route has five-language coverage | **Not globally proven by CI.** Canonical slices are expected to ship en/ms/zh/ja/vi local packs (TASK-065 does), but `npm run audit:screens` does not yet enumerate every locale or detect every hardcoded UI string. A repository-wide locale-key/hardcoded-text gate remains part of final productionization. |
 | API server has all business **write** endpoints | Not yet. Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and remaining finance/commercial actions still need registration on the unified dispatcher. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` | Implemented with ESLint and part of the local/CI gate. |
@@ -419,9 +420,9 @@ over-limit confirmations inside the transaction. Commission remains Preview.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: TASK-001…016, TASK-018…064 (63)
+- Done: TASK-001…016, TASK-018…065 (64)
 - Blocked: TASK-017 (1)
-- Todo in the historical task registry: none. The remaining product work is the 42
+- Todo in the historical task registry: none. The remaining product work is the 40
   Preview-route backlog broken down in `docs/ROADMAP.md`; new vertical tasks are cut
   from that list as implementation proceeds.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)

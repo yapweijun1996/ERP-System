@@ -1222,3 +1222,31 @@ Acceptance criteria:
       responses, tenant isolation, idempotent issue/award, audit correlation, one-winner
       conversion and the no-stock/no-GL invariant. Live desktop/Chinese verification
       plus the complete 114-route desktop/375px audit pass at 72/42.
+
+## EPIC-029 — Purchase Return → Supplier Credit Note
+
+**Goal:** replace the sample-only purchase-return and supplier-credit registers with a
+tenant-scoped inverse procure-to-pay transaction that returns real stock and reverses
+the matching AP, inventory and input-tax amounts atomically.
+
+Acceptance criteria:
+
+- [x] Add versioned `purchase_return`/`purchase_return_line` and immutable
+      `supplier_credit_note`/`supplier_credit_note_line` tables with real links to the
+      goods receipt, supplier invoice, purchase-order line, supplier and product.
+- [x] Return creation accepts only a receipt and its still-unpaid supplier invoice,
+      snapshots Decimal purchase cost/tax, rejects duplicate source lines and prevents
+      cumulative quantities from exceeding the received quantity.
+- [x] `ship-and-credit` is one idempotent transaction: issue the returned stock through
+      `stock_movement`, create one posted supplier credit and balanced Dr AP / Cr
+      Inventory / Cr Input Tax GL legs, then move the request to `credited`. Any stock,
+      tracking, account or state failure rolls every effect back.
+- [x] Production API and Demo ESM expose four bounded resources, one create and two
+      audited actions under existing Purchasing RBAC; production RLS covers all four
+      tables and the migration-generated PGlite schema remains aligned.
+- [x] `purchase-returns` and `supplier-credit-notes` use real Demo/API resources,
+      five-language create/ship/reject/detail flows and no shared sample `pur-txn-view`.
+      Posted supplier credits are explicitly immutable and cannot be created directly.
+- [x] Complete live in-app browser proof for create → ship/credit, Chinese rendering,
+      stock/GL traceability and 375px layout, then run every release gate and close
+      TASK-065 at 74 Canonical / 40 Preview.
