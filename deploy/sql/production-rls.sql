@@ -32,7 +32,7 @@ DECLARE
     'sales_credit_profile',
     'sales_commission_plan', 'sales_commission_run', 'sales_commission_line',
     'sales_commission_source',
-    'account', 'gl_entry',
+    'account', 'gl_entry', 'journal_header', 'journal_line',
     'goods_receipt', 'purchase_order', 'purchase_order_approval', 'purchase_order_line',
     'purchase_requisition', 'purchase_requisition_line',
     'purchase_rfq', 'purchase_rfq_line', 'purchase_rfq_supplier',

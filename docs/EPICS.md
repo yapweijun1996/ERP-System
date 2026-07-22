@@ -1489,3 +1489,26 @@ Acceptance criteria:
       present in canonical records are displayed.
 - [x] The five-language workspace, Demo/API build, browser smoke and full desktop/375px
       audit pass at 100 Canonical / 14 Preview.
+
+## EPIC-040 — Canonical Manual Journal Posting and Reversal
+
+**Goal:** replace the sample new-journal form with one tenant-scoped, balanced and
+auditable finance command boundary whose posted history can only be corrected by a
+separately numbered reversal.
+
+Acceptance criteria:
+
+- [x] Migration 0038 adds versioned `journal_header` and immutable `journal_line`
+      tables with tenant/company/document uniqueness, status/type checks, exact-one-side
+      line checks, reversal linkage, production RLS and generated PGlite alignment.
+- [x] Shared Decimal commands create GL-neutral drafts, validate real company accounts
+      and calendar dates, post exactly balanced dated GL legs once, and create a linked
+      reversal by swapping every debit and credit without mutating the original facts.
+- [x] Demo/API resources expose bounded headers/lines plus audited, idempotent post and
+      reverse actions. Domain and authenticated HTTP tests cover rollback, cross-company
+      accounts, Viewer denial, replay, duplicate posting/reversal and date guards.
+- [x] `new-journal-entry` and the existing journal detail use real five-language data and
+      actions. The composer exposes loading/error/empty states; posted/reversal details
+      have no fake edit/export path and no Preview fallback.
+- [x] CI smoke creates, posts and reverses a balanced manual journal. The full desktop/
+      375px audit passes at 101 Canonical / 13 Preview.

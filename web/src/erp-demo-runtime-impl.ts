@@ -245,6 +245,13 @@ import {
   type CreatePaymentVoucherInput,
 } from '../../src/modules/finance/paymentVoucher';
 import {
+  createManualJournalWithin,
+  postManualJournalWithin,
+  reverseManualJournalWithin,
+  type CreateManualJournalInput,
+  type ReverseManualJournalInput,
+} from '../../src/modules/finance/manualJournal';
+import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
@@ -592,6 +599,20 @@ export const erpDemoRuntime = Object.freeze({
     },
     createPaymentVoucherWithin(db: DemoOrm, scope: Scope, input: CreatePaymentVoucherInput) {
       return createPaymentVoucherWithin(asDomainDb(db), scope, input);
+    },
+    createManualJournalWithin(db: DemoOrm, scope: Scope, input: CreateManualJournalInput) {
+      return createManualJournalWithin(asDomainDb(db), scope, input);
+    },
+    postManualJournalWithin(db: DemoOrm, scope: Scope, journalId: number) {
+      return postManualJournalWithin(asDomainDb(db), scope, journalId);
+    },
+    reverseManualJournalWithin(
+      db: DemoOrm,
+      scope: Scope,
+      journalId: number,
+      input: ReverseManualJournalInput,
+    ) {
+      return reverseManualJournalWithin(asDomainDb(db), scope, journalId, input);
     },
     listCompanyUsers(db: DemoOrm, scope: Scope) {
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);

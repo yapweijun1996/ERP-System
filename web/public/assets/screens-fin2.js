@@ -43,9 +43,11 @@ async function prepareCanonicalFinanceData(){
     listPage('finance/gl-entries'),
     listPage('sales/customers'),
     listPage('sales/invoices'),
+    listPage('finance/journals'),
   ]);
-  const [accounts,entries,customers,invoices]=pages.map(page=>page.data);
+  const [accounts,entries,customers,invoices,manualJournals]=pages.map(page=>page.data);
   const accountById=new Map(accounts.map(row=>[row.id,row]));
+  const manualByDocNo=new Map(manualJournals.map(row=>[row.docNo,row]));
   const entriesByAccountId=new Map();
   const entriesByJournalRef=new Map();
   entries.slice().sort((left,right)=>left.id-right.id).forEach(row=>{
@@ -89,23 +91,29 @@ async function prepareCanonicalFinanceData(){
   DB.journals=[];
   DB.journalDocs={};
   entriesByJournalRef.forEach((legs,ref)=>{
-    const date=dateValue(legs[0]&&legs[0].postedAt);
+    const manual=manualByDocNo.get(ref);
+    const date=dateValue((manual&&manual.postingDate)||(legs[0]&&legs[0].postedAt));
     const totalDebit=legs.reduce((sum,row)=>sum+financeNumber(row.debit),0);
-    const source=financeJournalSource(ref);
-    const memo=legs.map(row=>row.memo).filter(Boolean).join(' / ')||`Posted ${ref}`;
+    const source=manual?'Manual journal':financeJournalSource(ref);
+    const memo=(manual&&manual.memo)||legs.map(row=>row.memo).filter(Boolean).join(' / ')||`Posted ${ref}`;
+    const status=manual&&manual.status==='reversed'?'Reversed':'Posted';
     DB.journals.push({
-      no:ref,date,memo,status:'Posted',dr:totalDebit,
-      period:date?date.slice(0,7):'—',by:'System',
+      no:ref,date,memo,status,dr:totalDebit,
+      period:date?date.slice(0,7):'—',by:manual?'Audited finance action':'System',
     });
     DB.journalDocs[ref]={
       no:ref,
       date,
       memo,
       period:date?date.slice(0,7):'—',
-      status:'Posted',
-      rawStatus:'posted',
-      by:'System',
+      status,
+      rawStatus:(manual&&manual.status)||'posted',
+      by:manual?'Audited finance action':'System',
       source,
+      manualJournalId:manual&&manual.id,
+      journalType:manual&&manual.journalType,
+      reference:manual&&manual.reference,
+      reversalOfId:manual&&manual.reversalOfId,
       lines:legs.map(row=>{
         const accountRow=accountById.get(row.accountId)||{};
         return {

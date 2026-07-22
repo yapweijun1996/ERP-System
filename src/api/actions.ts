@@ -76,8 +76,34 @@ import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
 import { postPayrollRunWithin } from '../modules/payroll/payrollRun';
 import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { assignServiceTicketWithin, resolveServiceTicketWithin } from '../modules/service/serviceTicket';
+import {
+  postManualJournalWithin,
+  reverseManualJournalWithin,
+  type ReverseManualJournalInput,
+} from '../modules/finance/manualJournal';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'finance/journals/post': {
+    permission: 'finance.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return postManualJournalWithin(tx, scope, input.resourceId);
+    },
+  },
+  'finance/journals/reverse': {
+    permission: 'finance.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return reverseManualJournalWithin(
+        tx,
+        scope,
+        input.resourceId,
+        input.payload as unknown as ReverseManualJournalInput,
+      );
+    },
+  },
   'sales/commission-plans/activate': {
     permission: 'sales.write',
     idempotency: 'required',

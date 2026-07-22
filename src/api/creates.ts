@@ -155,6 +155,10 @@ import {
   createPaymentVoucherWithin,
   type CreatePaymentVoucherInput,
 } from '../modules/finance/paymentVoucher';
+import {
+  createManualJournalWithin,
+  type CreateManualJournalInput,
+} from '../modules/finance/manualJournal';
 
 export interface CreateDefinition {
   permission: string;
@@ -533,6 +537,13 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createBankReceiptWithin(tx, scope, payload as unknown as CreateBankReceiptInput);
+    },
+  },
+  'finance/journals': {
+    permission: 'finance.write',
+    audit: 'required',
+    execute(tx, scope, payload) {
+      return createManualJournalWithin(tx, scope, payload as unknown as CreateManualJournalInput);
     },
   },
   'finance/payment-vouchers': {

@@ -542,16 +542,29 @@ desktop/375px rendering and the full 114-route audit pass.
 Exit criteria: tenant-scoped detail and linked-quotation filter proof, five-language
 browser workflow, desktop/375px rendering and the full 114-route audit pass.
 
-## Remaining productionization backlog — 14 Preview routes
+## Phase 23 — Canonical Manual Journals ✅
 
-This is the authoritative work breakdown after TASK-075. `tasks/tasks.jsonl` records
+1. **Balanced draft, immutable posting and linked reversal** (EPIC-040, TASK-076 done
+   2026-07-22) replaces the sample new-journal form with tenant-scoped header/line facts
+   and one shared Demo/PostgreSQL command path. Draft creation is GL-neutral; posting
+   appends balanced dated GL legs once; correction creates a separately numbered posted
+   reversal with every debit/credit swapped. Five-language composer/detail UI, audited
+   idempotent actions and live Chinese browser proof move maturity to **101/13**.
+
+Exit criteria: cross-company/date/balance/state/duplicate guards, rollback, Viewer/RBAC,
+idempotency and audit proof, PGlite/PostgreSQL schema alignment, real create/post/reverse
+browser workflow, desktop/375px rendering and the full release suite pass.
+
+## Remaining productionization backlog — 13 Preview routes
+
+This is the authoritative work breakdown after TASK-076. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
 
-1. **Finance depth — 2 routes:** `new-journal-entry`, `bank-rec`. Build formal journal
-   header/line post/reverse and bank statement/reconciliation commands before promoting
-   either screen.
+1. **Finance depth — 1 route:** `bank-rec`. Manual journal header/line post/reverse is
+   complete; build bank statement/import/matching/reconciliation commands before
+   promoting the remaining Finance screen.
 2. **Reporting/BI — 3 routes:** `bi-dashboard`, `sales-analysis`, `stock-aging`. Derive
    every metric from Canonical tables or rebuildable views; large outputs use report jobs.
 3. **Integration/import — 3 routes:** `integration`, `integration-logs`, `data-import`.

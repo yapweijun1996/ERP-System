@@ -471,14 +471,26 @@ SCREENS['sales-order'] = async function(root, params){
 };
 
 /* ---------------- JOURNAL ENTRY (finance transaction) ---------------- */
+function manualJournalViewCopy(){
+  const packs={
+    en:{back:'Back to journals',reverse:'Reverse journal',title:'Reverse this journal?',body:'A reversal never edits the posted facts. It creates a separately numbered journal with every debit and credit swapped.',number:'Reversal number',date:'Posting date',reason:'Correction reason',reasonPh:'Explain why this posted journal must be reversed',cancel:'Cancel',confirm:'Create reversal',working:'Reversing…',done:'Reversal journal posted',required:'Number, posting date and reason are required.',immutable:'Posted journal legs are immutable.',correct:'Corrections require a separately numbered reversal journal.',postedAudit:'Posted to GL — balanced debit and credit',sourceAudit:'Created from canonical source'},
+    ms:{back:'Kembali ke jurnal',reverse:'Balikkan jurnal',title:'Balikkan jurnal ini?',body:'Pembalikan tidak mengubah fakta yang telah dipos. Ia mencipta jurnal bernombor berasingan dengan debit dan kredit ditukar.',number:'Nombor pembalikan',date:'Tarikh posting',reason:'Sebab pembetulan',reasonPh:'Terangkan sebab jurnal ini perlu dibalikkan',cancel:'Batal',confirm:'Cipta pembalikan',working:'Membalikkan…',done:'Jurnal pembalikan dipos',required:'Nombor, tarikh posting dan sebab diperlukan.',immutable:'Baris jurnal yang telah dipos tidak boleh diubah.',correct:'Pembetulan memerlukan jurnal pembalikan bernombor berasingan.',postedAudit:'Dipos ke GL — debit dan kredit seimbang',sourceAudit:'Dicipta daripada sumber kanonik'},
+    zh:{back:'返回凭证列表',reverse:'冲销凭证',title:'冲销此凭证？',body:'冲销不会修改已过账事实，而是创建独立编号、借贷方向完全相反的新凭证。',number:'冲销凭证编号',date:'过账日期',reason:'更正原因',reasonPh:'说明为什么必须冲销此已过账凭证',cancel:'取消',confirm:'创建冲销凭证',working:'冲销中…',done:'冲销凭证已过账',required:'必须填写编号、过账日期和原因。',immutable:'已过账凭证明细不可修改。',correct:'更正必须使用独立编号的冲销凭证。',postedAudit:'已过账至总账 — 借贷平衡',sourceAudit:'由真实数据源创建'},
+    ja:{back:'仕訳一覧へ戻る',reverse:'仕訳を取消',title:'この仕訳を逆仕訳しますか？',body:'逆仕訳は転記済事実を編集せず、借方と貸方を入れ替えた別番号の仕訳を作成します。',number:'逆仕訳番号',date:'転記日',reason:'訂正理由',reasonPh:'転記済仕訳を取り消す理由を入力',cancel:'取消',confirm:'逆仕訳を作成',working:'処理中…',done:'逆仕訳を転記しました',required:'番号、転記日、理由は必須です。',immutable:'転記済仕訳明細は変更できません。',correct:'訂正には別番号の逆仕訳が必要です。',postedAudit:'GLへ転記 — 貸借一致',sourceAudit:'標準ソースから作成'},
+    vi:{back:'Về danh sách bút toán',reverse:'Đảo bút toán',title:'Đảo bút toán này?',body:'Bút toán đảo không sửa dữ kiện đã ghi sổ. Nó tạo bút toán số riêng với toàn bộ Nợ và Có được hoán đổi.',number:'Số bút toán đảo',date:'Ngày ghi sổ',reason:'Lý do điều chỉnh',reasonPh:'Giải thích vì sao phải đảo bút toán đã ghi sổ',cancel:'Hủy',confirm:'Tạo bút toán đảo',working:'Đang đảo…',done:'Đã ghi sổ bút toán đảo',required:'Bắt buộc có số, ngày ghi sổ và lý do.',immutable:'Các dòng đã ghi sổ là bất biến.',correct:'Điều chỉnh phải dùng bút toán đảo có số riêng.',postedAudit:'Đã ghi vào GL — Nợ và Có cân bằng',sourceAudit:'Tạo từ nguồn chuẩn'},
+  };
+  return packs[typeof getLang==='function'?getLang():'en']||packs.en;
+}
 SCREENS['journal-entry'] = async function(root, params){
   await prepareCanonicalFinanceData();
+  const mj=manualJournalViewCopy();
   const j=(params&&params.no&&DB.journalDocs&&DB.journalDocs[params.no])||DB.je0611;
   if(!j) throw new Error('No canonical journal entry is available.');
   const totDr=j.lines.reduce((s,l)=>s+l.dr,0), totCr=j.lines.reduce((s,l)=>s+l.cr,0);
   const balanced=Math.abs(totDr-totCr)<0.005;
   // listing of journals on the left as a compact table, detail on right
-  root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
+  const canReverse=!!(j.manualJournalId&&j.rawStatus==='posted'&&j.journalType!=='reversal');
+  root.innerHTML=`<div class="content full"><section class="master" ${j.manualJournalId?'data-manual-journal-detail="canonical"':''}><div class="docwrap"><div class="docpage">
     ${crumbs([DB.company.name,t('nav.finance'),t('je.title'),{cur:j.no}])}
     <div class="dochead">
       <div class="dh-row1"><div><div class="dt">${ic('book')}${esc(t('je.title'))} <span class="dnum">${esc(j.no)}</span></div>
@@ -486,7 +498,7 @@ SCREENS['journal-entry'] = async function(root, params){
         <div class="dactions">${statusBadge(j.status)}</div></div>
       <div class="docmeta">
         <div class="dm"><small>${esc(t('common.date'))}</small><b>${esc(j.date)}</b></div>
-        <div class="dm"><small>${esc(t('je.period'))}</small><b>${esc(j.period)} · ${esc(t('je.open'))}</b></div>
+        <div class="dm"><small>${esc(t('je.period'))}</small><b>${esc(j.period)}${j.manualJournalId?'':` · ${esc(t('je.open'))}`}</b></div>
         <div class="dm"><small>${esc(t('je.prepared'))}</small><b>${esc(j.by)}</b></div>
         <div class="dm"><small>${esc(t('qc.col.type'))}</small><b>${esc(j.source)}</b></div>
       </div>
@@ -510,8 +522,8 @@ SCREENS['journal-entry'] = async function(root, params){
         </div>
         <div class="panel"><div class="panel-h"><h3>${esc(t('doc.tab.audit'))}</h3></div><div class="panel-body">
           ${auditTrail([
-            {kind:'current',when:esc(j.date),what:'Posted to GL — balanced Dr/Cr',who:j.by},
-            {kind:'add',when:esc(j.date),what:'Auto-generated by '+esc(j.source)+' — '+esc(j.memo),who:'System'},
+            {kind:'current',when:esc(j.date),what:mj.postedAudit,who:j.by},
+            {kind:'add',when:esc(j.date),what:mj.sourceAudit+' — '+esc(j.memo),who:j.by},
           ])}
         </div></div>
       </div>
@@ -523,15 +535,33 @@ SCREENS['journal-entry'] = async function(root, params){
           <div style="margin-top:10px">${balanced?indicator({tone:'ok',icon:'checkc',label:t('je.entrybalances'),value:'Dr = Cr'}):indicator({tone:'danger',icon:'warn',label:t('je.mustbalance'),value:'≠'})}</div>
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(t('je.posttogl'))}</div>
-          <p style="font-size:12.5px;color:var(--muted);margin:0">${esc(t('je.postirrev').replaceAll('{p}',j.period))} This canonical posting is immutable; corrections require a reversal journal.</p>
+          <p style="font-size:12.5px;color:var(--muted);margin:0">${esc(j.manualJournalId?`${mj.immutable} ${mj.correct}`:t('je.postirrev').replaceAll('{p}',j.period))}</p>
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(t('je.periodstatus'))}</div>
-          ${indicator({tone:'neutral',icon:'lock',label:j.period,value:'Posted',sub:'Canonical journal legs are read-only.'})}
+          ${indicator({tone:'neutral',icon:'lock',label:j.period,value:j.status,sub:mj.immutable})}
         </div>
       </aside>
     </div>
     <div style="height:40px"></div>
-  </div></div></section></div>`;
+  </div></div>${j.manualJournalId?`<div class="responsive-actionbar">${btn(mj.back,{icon:'chevleft',cls:'soft',attrs:'data-manual-journal-back'})}<div class="grow"></div>${canReverse?btn(mj.reverse,{icon:'refresh',cls:'primary',sm:false,attrs:'data-manual-journal-reverse'}):''}</div>`:''}</section></div>`;
+  root.querySelector('[data-manual-journal-back]')?.addEventListener('click',()=>navigate('journal-entry'));
+  root.querySelector('[data-manual-journal-reverse]')?.addEventListener('click',()=>{
+    const date=new Date().toISOString().slice(0,10);
+    appModal({icon:'refresh',title:mj.title,body:`<div class="risk warn">${ic('warn')}<div><b>${esc(mj.body)}</b></div></div><div class="fldrow c2" style="margin-top:14px"><div class="fld"><span>${esc(mj.number)}</span><input data-reversal-number value="${esc(j.no+'-REV')}"></div><div class="fld"><span>${esc(mj.date)}</span><input type="date" data-reversal-date value="${date}"></div></div><div class="fld" style="margin-top:12px"><span>${esc(mj.reason)}</span><textarea data-reversal-reason placeholder="${esc(mj.reasonPh)}"></textarea></div>`,actions:`${btn(mj.cancel,{cls:'soft',attrs:'data-reversal-cancel'})}${btn(mj.confirm,{icon:'refresh',cls:'primary',attrs:'data-reversal-confirm'})}`});
+    document.querySelector('[data-reversal-cancel]')?.addEventListener('click',closeModal);
+    document.querySelector('[data-reversal-confirm]')?.addEventListener('click',async event=>{
+      const button=event.currentTarget;
+      const docNo=document.querySelector('[data-reversal-number]')?.value.trim();
+      const postingDate=document.querySelector('[data-reversal-date]')?.value;
+      const reason=document.querySelector('[data-reversal-reason]')?.value.trim();
+      if(!docNo||!postingDate||!reason){toast(mj.required,'danger');return;}
+      button.disabled=true;button.querySelector('span')&&(button.querySelector('span').textContent=mj.working);
+      try{
+        const response=await window.ErpSystemData.action('finance/journals',j.manualJournalId,'reverse',{docNo,postingDate,reason},`manual-journal-reverse-${j.manualJournalId}-${docNo}`);
+        closeModal();toast(mj.done,'ok');await prepareCanonicalFinanceData();navigate('journal-entry',{no:response.data.reversal.docNo});
+      }catch(error){toast((error&&error.message)||mj.required,'danger');button.disabled=false;button.querySelector('span')&&(button.querySelector('span').textContent=mj.confirm);}
+    });
+  });
 };
 
 /* ---------------- PAYMENT VOUCHER ----------------

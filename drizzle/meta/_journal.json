@@ -267,6 +267,13 @@
       "when": 1784720134326,
       "tag": "0037_acoustic_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1784728602350,
+      "tag": "0038_overjoyed_black_knight",
+      "breakpoints": true
     }
   ]
 }

@@ -430,6 +430,38 @@ async function checkViewport(browser, viewport) {
       const commissionCanonical = Boolean(document.querySelector('[data-sales-commission="canonical"]'))
         && !document.querySelector('[data-preview-banner]')
         && document.body.textContent.includes('COMRUN-SMOKE-2024-06');
+      const financeAccounts = await adapter.list('finance/accounts', { limit: 100 });
+      const arAccount = financeAccounts.data.find((row) => row.code === '1100');
+      const revenueAccount = financeAccounts.data.find((row) => row.code === '4000');
+      const manualJournal = await adapter.create('finance/journals', {
+        docNo: 'MJ-SMOKE-1', postingDate: '2026-07-22', journalType: 'standard',
+        memo: 'Smoke manual journal', reference: 'SMOKE',
+        lines: [
+          { accountId: arAccount.id, dimension: 'SG', debit: '42.50', credit: '0' },
+          { accountId: revenueAccount.id, dimension: 'SG', debit: '0', credit: '42.50' },
+        ],
+      });
+      const manualBefore = Number((await adapter.db.query(
+        "select count(*)::int as count from gl_entry where master_fn='M1' and company_fn='C-SG' and journal_ref='MJ-SMOKE-1'",
+      )).rows[0].count);
+      await adapter.action('finance/journals', manualJournal.data.id, 'post', {}, 'smoke-manual-post');
+      const manualPosting = (await adapter.db.query(
+        "select count(*)::int as count, coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn='M1' and company_fn='C-SG' and journal_ref='MJ-SMOKE-1'",
+      )).rows[0];
+      const reversedManual = await adapter.action(
+        'finance/journals', manualJournal.data.id, 'reverse',
+        { docNo: 'MJ-SMOKE-REV-1', postingDate: '2026-07-23', reason: 'Smoke correction' },
+        'smoke-manual-reverse',
+      );
+      const reversalPosting = (await adapter.db.query(
+        "select count(*)::int as count, coalesce(sum(debit),0)::float as debit, coalesce(sum(credit),0)::float as credit from gl_entry where master_fn='M1' and company_fn='C-SG' and journal_ref='MJ-SMOKE-REV-1'",
+      )).rows[0];
+      await navigate('new-journal-entry');
+      const manualJournalComposerCanonical = Boolean(document.querySelector('[data-manual-journal="canonical"]'))
+        && !document.querySelector('[data-preview-banner]');
+      await navigate('journal-entry', { no: 'MJ-SMOKE-REV-1' });
+      const manualJournalDetailCanonical = Boolean(document.querySelector('[data-manual-journal-detail="canonical"]'))
+        && !document.querySelector('[data-manual-journal-reverse]');
       const setup = await adapter.completeSetup({
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
@@ -479,6 +511,15 @@ async function checkViewport(browser, viewport) {
           && commissionLines.data.length === 1
           && Number(commissionRun.data.commissionAmount) > 0
           && commissionGlAfter === commissionGlBefore,
+        manualJournalCanonical: manualJournalComposerCanonical && manualJournalDetailCanonical
+          && manualBefore === 0
+          && Number(manualPosting.count) === 2
+          && Number(manualPosting.debit) === 42.5
+          && Number(manualPosting.credit) === 42.5
+          && reversedManual.data.original.status === 'reversed'
+          && Number(reversalPosting.count) === 2
+          && Number(reversalPosting.debit) === 42.5
+          && Number(reversalPosting.credit) === 42.5,
         salesApprovalBoundary: salesApprovalState?.status === 'draft'
           && salesApprovalState?.approval_status === 'approved'
           && salesApprovalState?.decision_note === 'Smoke reviewer confirmed the commercial order details.'
@@ -523,6 +564,9 @@ async function checkViewport(browser, viewport) {
       }
       if (!runtimeProof.commissionCanonical || !runtimeProof.commissionTrace) {
         errors.push('[demo-esm] Sales commission did not render an immutable canonical source trace without GL posting');
+      }
+      if (!runtimeProof.manualJournalCanonical) {
+        errors.push('[demo-esm] manual journal draft/post/reversal or its Canonical composer/detail boundary failed');
       }
       if (!runtimeProof.salesApprovalBoundary) errors.push('[demo-esm] sales approval did not preserve the no-stock/no-GL boundary');
       if (!runtimeProof.duplicateInvoiceBlocked) errors.push('[demo-esm] duplicate supplier invoice was not blocked');

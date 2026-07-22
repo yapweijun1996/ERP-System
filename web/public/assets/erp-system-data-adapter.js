@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 37;
+  var DEMO_SCHEMA_VERSION = 38;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1313,6 +1313,8 @@
     'sales/commission-sources':'sales_commission_source',
     'finance/accounts':'account',
     'finance/gl-entries':'gl_entry',
+    'finance/journals':'journal_header',
+    'finance/journal-lines':'journal_line',
     'finance/bank-receipts':'bank_receipt',
     'finance/payment-vouchers':'payment_voucher',
     'finance/payment-voucher-lines':'payment_voucher_line',
@@ -1463,6 +1465,7 @@
       'sales/commission-lines':{runId:'run_id'},
       'sales/commission-sources':{runId:'run_id'},
       'sales/quotations':{enquiryId:'enquiry_id'},
+      'finance/journal-lines':{journalId:'journal_id'},
     }[key]||{};
     Object.keys(numericFilters).forEach(function(filter){
       if(query[filter]==null||query[filter]==='') return;
@@ -1877,6 +1880,14 @@
       await refresh();
       return {data:newBankReceipt,meta:{}};
     }
+    if(key==='finance/journals'){
+      var newManualJournal = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createManualJournalWithin(
+          state.runtime.createOrm(tx), SCOPE, payload);
+      });
+      await refresh();
+      return {data:newManualJournal,meta:{}};
+    }
     if(key==='finance/payment-vouchers'){
       var newPaymentVoucher = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createPaymentVoucherWithin(
@@ -1897,6 +1908,22 @@
   }
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='finance/journals'&&name==='post'){
+      var postedManualJournal = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.postManualJournalWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id));
+      });
+      await refresh();
+      return {data:postedManualJournal,meta:{}};
+    }
+    if(key==='finance/journals'&&name==='reverse'){
+      var reversedManualJournal = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.reverseManualJournalWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload||{});
+      });
+      await refresh();
+      return {data:reversedManualJournal,meta:{}};
+    }
     if(key==='admin/users'&&name==='toggle-active'){
       var toggledUser = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.setUserActiveWithin(

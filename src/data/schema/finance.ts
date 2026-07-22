@@ -10,6 +10,7 @@
 // product/warehouse from inventory.ts).
 import {
   pgTable, text, bigint, integer, numeric, date, timestamp, index, uniqueIndex, check,
+  foreignKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
@@ -40,6 +41,57 @@ export const glEntry = pgTable('gl_entry', {
 }, (t) => [
   index('idx_gl_tenant_posted').on(t.masterFn, t.companyFn, t.postedAt, t.id),
   index('idx_gl_journal').on(t.masterFn, t.companyFn, t.journalRef),
+]);
+
+/** A manual journal is authored as a versioned draft before any GL fact exists.
+ * Posting copies its validated lines into immutable gl_entry legs. Corrections never
+ * mutate those facts: reverse creates a second posted journal with swapped legs and
+ * links it back to the original. */
+export const journalHeader = pgTable('journal_header', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  docNo: text('doc_no').notNull(),
+  postingDate: date('posting_date').notNull(),
+  journalType: text('journal_type').notNull().default('standard'),
+  memo: text('memo').notNull(),
+  reference: text('reference'),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  reversalOfId: bigint('reversal_of_id', { mode: 'number' }),
+  postedAt: timestamp('posted_at', { withTimezone: true }),
+  reversedAt: timestamp('reversed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_journal_header_docno').on(t.masterFn, t.companyFn, t.docNo),
+  uniqueIndex('uq_journal_header_reversal').on(t.masterFn, t.companyFn, t.reversalOfId),
+  index('idx_journal_header_status').on(t.masterFn, t.companyFn, t.status, t.id),
+  foreignKey({
+    name: 'fk_journal_header_reversal',
+    columns: [t.reversalOfId],
+    foreignColumns: [t.id],
+  }),
+  check('ck_journal_header_type', sql`${t.journalType} in ('standard', 'accrual', 'reclassification', 'reversal')`),
+  check('ck_journal_header_status', sql`${t.status} in ('draft', 'posted', 'reversed')`),
+]);
+
+export const journalLine = pgTable('journal_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  journalId: bigint('journal_id', { mode: 'number' }).notNull().references(() => journalHeader.id),
+  lineNo: integer('line_no').notNull(),
+  accountId: bigint('account_id', { mode: 'number' }).notNull().references(() => account.id),
+  dimension: text('dimension'),
+  debit: numeric('debit', { precision: 18, scale: 2 }).notNull().default('0'),
+  credit: numeric('credit', { precision: 18, scale: 2 }).notNull().default('0'),
+  memo: text('memo'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_journal_line_number').on(t.masterFn, t.companyFn, t.journalId, t.lineNo),
+  index('idx_journal_line_journal').on(t.masterFn, t.companyFn, t.journalId, t.id),
+  check('ck_journal_line_side', sql`(
+    (${t.debit} > 0 and ${t.credit} = 0)
+    or (${t.credit} > 0 and ${t.debit} = 0)
+  )`),
 ]);
 
 /** Collects a posted progress claim's AR in full — one receipt per claim, no partial
