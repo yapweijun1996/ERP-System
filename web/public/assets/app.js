@@ -567,7 +567,7 @@ const SCREEN_FIXTURES = {
 };
 const SCREEN_LAYOUT_GROUPS = Object.freeze({
   'transaction-list-v1':[
-    'enquiries','quotations','so-approvals','delivery-orders','sales-invoices',
+    'enquiries','quotations','sales-orders','so-approvals','delivery-orders','sales-invoices',
     'sales-returns','credit-notes','debit-notes','price-lists','discount-mgmt',
     'credit-control','suppliers','purchase-requisitions','rfqs',
     'supplier-quotations','purchase-orders','goods-receipts','supplier-invoices',
@@ -600,7 +600,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   'master-detail':[
     'asset-detail','bom','crm-customer','item-master','leave-approval',
-    'role-permission','sales-orders','stock-on-hand',
+    'role-permission','stock-on-hand',
   ],
   workspace:[
     'bank-rec','data-import','depreciation','integration','master-control',

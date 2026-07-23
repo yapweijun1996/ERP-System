@@ -6,8 +6,6 @@
 SCREENS['sales-orders'] = async function(root){
   await prepareCanonicalSalesData();
   const NOW=DB.soNow||'2026-06-12';
-  let filter='all';
-  let selected=null;
 
   const isOpen = s => s.status!=='Closed' && s.status!=='Cancelled';
   const daysTo = d => Math.round((new Date(d)-new Date(NOW))/86400000);
@@ -31,7 +29,6 @@ SCREENS['sales-orders'] = async function(root){
 
   const chips=[['all',t('common.all')],['draft',ts('Draft')],['approval',ts('Pending Approval')],['approved',ts('Approved')],['closed',ts('Closed')],['cancelled',ts('Cancelled')]];
   const chipMap={draft:'Draft',approval:'Pending Approval',approved:'Approved',closed:'Closed',cancelled:'Cancelled'};
-  function rows(){ return DB.salesOrders.filter(s=> filter==='all' ? true : s.status===chipMap[filter]); }
 
   /* ---- KPI summary ---- */
   function kpiData(){
@@ -48,61 +45,13 @@ SCREENS['sales-orders'] = async function(root){
       {label:t('so.kpi.dueweek'),val:dueWeek},
     ];
   }
-  function kpiBar(){
-    return kpiData().map(k=>`<button class="so-kpi ${k.neg?'neg':''} ${k.accent?'accent':''} ${k.f?'clickable':''}" ${k.f?`data-f="${k.f}"`:'disabled'}>
-      <small>${esc(k.label)}</small><b class="tnum">${k.val}</b></button>`).join('');
-  }
 
   /* ---- main table ---- */
   function fulCell(s){ const f=fulfil(s); const pct=Math.round(s.done/Math.max(1,s.items)*100);
     return `<span class="fulcell"><span class="minibar"><i class="${f.bar}" style="width:${pct}%"></i></span><b class="fnum" data-tip="${esc(f.label)}">${s.done} / ${s.items}</b></span>`; }
   function dueCell(s){ const u=urgency(s); return `<span class="duecell ${u?('due-'+u.tone):''}">${esc(s.deliver)}${u?`<small>${esc(u.label)}</small>`:''}</span>`; }
-  function table(){
-    const compact = !!selected;  // detail panel open → condensed columns so nothing is cut off
-    const colFull=[
-        {label:t('so.col.no'),sticky:true,w:'minmax(140px,1.4fr)',render:s=>`<div class="cellsub"><b class="docnum">${esc(s.no)}</b><small><span class="posttag ${s.posted?'posted':''}">${esc(s.posted?t('so.post.posted'):t('so.post.unposted'))}</span></small></div>`},
-        {label:t('so.col.customer'),align:'l',sortable:true,w:'minmax(140px,1.6fr)',render:s=>`<div class="partnercell"><span class="pmini">${esc(initials(s.cust))}</span><span class="cellsub"><b>${esc(s.cust)}</b><small>${esc(s.custCode)}</small></span></div>`},
-        {label:t('so.col.date'),align:'l',sortable:true,w:'minmax(92px,0.9fr)',render:s=>`<span class="muted-date">${esc(s.date)}</span>`},
-        {label:t('so.col.deliver'),align:'l',w:'minmax(100px,1fr)',render:dueCell},
-        {label:t('col.owner'),align:'l',w:'minmax(84px,0.9fr)',render:s=>esc(s.owner)},
-        {label:t('so.col.fulfilled'),align:'l',w:'minmax(116px,1.1fr)',render:fulCell},
-        {label:t('col.payment'),align:'l',w:'minmax(90px,1fr)',render:s=>cap(ts(s.payStatus),payTone(s.payStatus))},
-        {label:t('col.total'),align:'r',sortable:true,w:'minmax(108px,0.9fr)',render:s=>`<b class="tnum">${money(s.total)}</b>`},
-        {label:t('so.col.order'),align:'l',cls:'cap-cell',w:'minmax(146px,1.3fr)',render:s=>statusBadge(s.status)+(s.flag?` <span class="flagic" data-tip="${esc(s.flag)}">${ic('warn')}</span>`:'')},
-        {label:'',align:'c',w:'56px',render:s=>`<span class="rowact"><button class="so-menu" data-tip="${esc(t('so.act.menu'))}" aria-haspopup="menu" aria-label="${esc(t('so.act.menu'))}" data-no="${esc(s.no)}">${ic('more')}</button></span>`},
-    ];
-    const colCompact=[
-        {label:t('so.col.no'),sticky:true,w:'minmax(150px,1.7fr)',render:s=>`<div class="partnercell"><span class="pmini">${esc(initials(s.cust))}</span><span class="cellsub"><b class="docnum">${esc(s.no)}</b><small>${esc(s.cust)}</small></span></div>`},
-        {label:t('so.col.deliver'),align:'l',w:'minmax(94px,1fr)',render:dueCell},
-        {label:t('so.col.fulfilled'),align:'l',w:'minmax(96px,1fr)',render:fulCell},
-        {label:t('col.total'),align:'r',sortable:true,w:'minmax(104px,0.9fr)',render:s=>`<b class="tnum">${money(s.total)}</b>`},
-        {label:t('so.col.order'),align:'l',cls:'cap-cell',w:'minmax(140px,1.4fr)',render:s=>statusBadge(s.status)+(s.flag?` <span class="flagic" data-tip="${esc(s.flag)}">${ic('warn')}</span>`:'')},
-        // no per-row ⋯ in compact: the open preview panel already carries the row's actions
-    ];
-    return buildTable({ checkable:true, rowId:s=>s.no, columns: compact?colCompact:colFull, rows:rows() });
-  }
-
-  /* ---- mobile cards ---- */
-  function cards(){
-    return rows().map(s=>{ const u=urgency(s), pa=primaryAction(s);
-      return `<div class="so-card" data-no="${esc(s.no)}">
-        <div class="sc-top"><b class="docnum">${esc(s.no)}</b>${statusBadge(s.status)}</div>
-        <div class="sc-cust"><span class="pmini">${esc(initials(s.cust))}</span><b>${esc(s.cust)}</b></div>
-        <div class="sc-grid">
-          <div><small>${esc(t('col.total'))}</small><b class="tnum">${money(s.total)}</b></div>
-          <div><small>${esc(t('so.col.deliver'))}</small><b class="${u?('due-'+u.tone):''}">${esc(s.deliver)}${u?` · ${esc(u.label)}`:''}</b></div>
-          <div><small>${esc(t('col.payment'))}</small>${cap(ts(s.payStatus),payTone(s.payStatus))}</div>
-          <div><small>${esc(t('so.dt.fulfilment'))}</small><b>${s.done} / ${s.items}</b></div>
-        </div>
-        <div class="sc-act">${btn(pa.label,{icon:pa.icon,cls:'primary',attrs:`data-act="${pa.id}" data-no="${esc(s.no)}"`})}</div>
-      </div>`;
-    }).join('');
-  }
 
   /* ---- actions ---- */
-  function primaryAction(){
-    return {id:'view',icon:'ext',label:t('so.act.view')};
-  }
   function menuItems(){
     return [
       {id:'view',icon:'ext',label:t('so.act.view')},
@@ -116,147 +65,44 @@ SCREENS['sales-orders'] = async function(root){
     const tone={print:'info'}[id]||'info';
     toast(msg+' · '+s.no,tone);
   }
-  function openRowMenu(btnEl,s){
-    closeAllPops();
-    const r=btnEl.getBoundingClientRect();
-    const m=document.createElement('div'); m.className='pop show somenu';
-    m.style.cssText=`width:224px;top:${r.bottom+6}px;left:auto;right:${Math.max(8,window.innerWidth-r.right)}px;padding:6px;transform-origin:top right`;
-    m.innerHTML=menuItems(s).map(x=>`${x.sep?'<div class="menusep"></div>':''}<button class="menu-item ${x.danger?'danger':''}" data-id="${x.id}">${ic(x.icon)}<span>${esc(x.label)}</span></button>`).join('');
-    document.body.appendChild(m);
-    const close=()=>{m.remove();document.removeEventListener('click',out);};
-    const out=e=>{ if(!m.contains(e.target)&&e.target!==btnEl) close(); };
-    m.querySelectorAll('[data-id]').forEach(b=>b.addEventListener('click',()=>{ runAction(b.dataset.id,s); close(); }));
-    setTimeout(()=>document.addEventListener('click',out),10);
-  }
-
-  /* ---- detail preview panel ---- */
-  function lifecycle(s){
-    if(s.status==='Cancelled') return `<div class="tl-step danger"><span class="tl-dot">${ic('x')}</span>${esc(ts('Cancelled'))}</div>`;
-    const stages=[ts('Draft'),ts('Pending Approval'),ts('Approved'),t('so.ful.full'),ts('Closed')];
-    let reached={Draft:0,'Pending Approval':1,Approved:2,Closed:4}[s.status];
-    if(s.status==='Approved'&&s.done>=s.items) reached=3;
-    return stages.map((lbl,i)=>{
-      const st=i<reached?'done':(i===reached?'current':'');
-      return `<div class="tl-step ${st}"><span class="tl-dot">${i<reached?ic('check'):''}</span>${esc(lbl)}</div>`;
-    }).join('');
-  }
-  function detailHTML(){
-    const s=DB.salesOrders.find(x=>x.no===selected);
-    if(!s) return `<div class="sd-empty">${ic('bag')}<b>${esc(t('so.dt.empty'))}</b><span>${esc(t('so.dt.emptysub'))}</span></div>`;
-    const f=fulfil(s), u=urgency(s), pct=Math.round(s.done/Math.max(1,s.items)*100);
-    const cust=(DB.customers||[]).find(c=>c.code===s.custCode);
-    return `<div class="sd-head">
-        <div class="sd-id"><div class="sd-no">${esc(s.no)}</div><div class="sd-cust"><span class="pmini">${esc(initials(s.cust))}</span><b>${esc(s.cust)}</b></div></div>
-        <div class="sd-headr">${statusBadge(s.status)}<button class="sd-close" data-sd-close data-tip="Close preview" aria-label="Close preview">${ic('x')}</button></div>
-      </div>
-      ${s.flag?`<div class="sd-flag">${ic('warn')}<span>${esc(s.flag)}</span></div>`:''}
-      <div class="sd-amt"><div><small>${esc(t('col.total'))}</small><b class="tnum">${money(s.total)}</b></div>${cap(ts(s.payStatus),payTone(s.payStatus))}</div>
-      <div class="sd-facts">
-        <div><small>${esc(t('so.col.date'))}</small><b>${esc(s.date)}</b></div>
-        <div><small>${esc(t('so.col.deliver'))}</small><b class="${u?('due-'+u.tone):''}">${esc(s.deliver)}${u?` · ${esc(u.label)}`:''}</b></div>
-        <div><small>${esc(t('col.owner'))}</small><b>${esc(s.owner)}</b></div>
-        <div><small>${esc(t('so.dt.posting'))}</small><b>${esc(s.posted?t('so.post.posted'):t('so.post.unposted'))}</b></div>
-      </div>
-      <div class="sd-sec">
-        <div class="sd-sec-h"><span>${esc(t('so.dt.fulfilment'))}</span>${cap(f.label,f.tone)}</div>
-        <div class="sd-ful"><span class="minibar lg"><i class="${f.bar}" style="width:${pct}%"></i></span><b>${s.done} / ${s.items} ${esc(t('common.lines.suffix'))}</b></div>
-      </div>
-      <div class="sd-sec">
-        <div class="sd-sec-h"><span>${esc(t('so.dt.lifecycle'))}</span></div>
-        <div class="sd-timeline">${lifecycle(s)}</div>
-      </div>
-      ${cust?`<div class="sd-sec"><div class="sd-sec-h"><span>${esc(t('so.dt.creditpos'))}</span></div>
-        ${indicator({tone:cust.overdue>0?'warn':'ok',icon:'handshake',label:esc(cust.terms||t('common.customer')),value:money0(cust.balance)+' / '+money0(cust.limit),sub:cust.overdue>0?money0(cust.overdue)+' overdue':t('doc.withinlimit')})}</div>`:''}
-      <div class="sd-actions">
-        ${btn(t('so.dt.open'),{icon:'ext',cls:'primary',sm:false,attrs:`data-act="view" data-no="${esc(s.no)}"`})}
-        <div class="sd-actrow">
-          ${btn(t('common.print'),{icon:'print',cls:'soft',attrs:`data-act="print" data-no="${esc(s.no)}"`})}
-        </div>
-      </div>`;
-  }
-
-  /* ---- compose ---- */
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">${crumbs([DB.company.name,t('so.crumb'),t('so.title')])}
-      ${typeof salesNav==='function'?salesNav('sales-orders'):''}
-      <div class="h1row"><h1>${esc(t('so.title'))}</h1><span class="countchip" id="soCount"></span></div>
-    </div>
-    <div class="so-kpibar" id="soKpis">${kpiBar()}</div>
-    <div class="toolbar">
-      <div class="filterchips" id="soChips">${chips.map(c=>`<button class="chip ${c[0]===filter?'on':''}" data-f="${c[0]}">${esc(c[1])}</button>`).join('')}</div>
-      <div class="grow"></div>
-      <button class="viewsel" id="soViews">${ic('star')}<span class="star"></span>${esc(t('so.view.allopen'))}${ic('chevD')}</button>
-      ${btn(t('common.filter'),{icon:'filter',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}
-    </div>
-    <div class="so-split">
-      <div class="so-tablewrap" id="soTable">${table()}</div>
-      <aside class="so-detailwrap ${selected?'':'is-empty'}" id="soDetail">${detailHTML()}</aside>
-    </div>
-    <div class="so-cards" id="soCards">${cards()}</div>
-    <div id="soBulk"></div>
-  </section></div>`;
-
-  const setCount=()=>{ $('#soCount').textContent=rows().length+' '+t('so.orders'); };
-  setCount();
-
-  function selectRow(no){
-    const wasOpen=!!selected;
-    selected = (no===selected) ? null : no;   // click selected row again to close
-    const nowOpen=!!selected;
-    const d=$('#soDetail'); d.classList.toggle('is-empty',!selected); d.innerHTML=detailHTML();
-    if(wasOpen!==nowOpen){ $('#soTable').innerHTML=table(); rewire(); }  // swap full ⇄ condensed columns
-    $('#soTable').querySelectorAll('.dt-r.sel').forEach(x=>x.classList.remove('sel'));
-    if(selected){ const tr=$('#soTable').querySelector(`.dt-r[data-row="${selected}"]`); if(tr) tr.classList.add('sel'); }
-    wireDetail();
-  }
-  function wireDetail(){
-    $('#soDetail').querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>{
-      const s=DB.salesOrders.find(x=>x.no===b.dataset.no); if(s) runAction(b.dataset.act,s);
-    }));
-    const x=$('#soDetail').querySelector('[data-sd-close]'); if(x) x.addEventListener('click',()=>selectRow(selected));
-  }
-  function wireMenus(scope){
-    scope.querySelectorAll('.so-menu').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation(); const s=DB.salesOrders.find(x=>x.no===b.dataset.no); if(s) openRowMenu(b,s);
-    }));
-  }
-  function wireCards(){
-    $('#soCards').querySelectorAll('.so-card').forEach(card=>{
-      card.addEventListener('click',e=>{ if(e.target.closest('[data-act]')) return; openDoc(card.dataset.no); });
-    });
-    $('#soCards').querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation(); const s=DB.salesOrders.find(x=>x.no===b.dataset.no); if(s) runAction(b.dataset.act,s);
-    }));
-  }
-  function rewire(){
-    wireTable($('#soTable'),{
-      onRow:(id)=>selectRow(id),
-      onSelectionChange:(n)=>{ $('#soBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('common.print'),{icon:'print',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}</div>`:''; }
-    });
-    wireMenus($('#soTable'));
-    $('#soTable').querySelectorAll('.docnum').forEach(el=>{
-      el.classList.add('linknum');
-      el.addEventListener('click',e=>{
-        e.stopPropagation();
-        const tr=el.closest('[data-row]'); openDoc(tr?tr.dataset.row:el.textContent.trim());
-      });
-    });
-    if(selected){ const tr=$('#soTable').querySelector(`.dt-r[data-row="${selected}"]`); if(tr) tr.classList.add('sel'); }
-  }
-  function refreshList(){ $('#soTable').innerHTML=table(); $('#soCards').innerHTML=cards(); setCount(); $('#soBulk').innerHTML=''; rewire(); wireCards(); }
-
-  rewire(); wireCards(); wireDetail();
-
-  function setFilter(f){
-    filter=f;
-    $('#soChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f));
-    $('#soKpis .so-kpi').forEach(k=>k.classList.toggle('active',k.dataset.f===f&&f!=='all'));
-    refreshList();
-  }
-  $('#soChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.f)));
-  $('#soKpis').querySelectorAll('.so-kpi.clickable').forEach(k=>k.addEventListener('click',()=>setFilter(k.dataset.f)));
-  $('#soViews').addEventListener('click',()=>{
-    togglePopList('#soViews', DB.savedViews['sales-orders'].map(v=>({label:v,icon:v.includes('My')?'user':'list'})), (v)=>toast('View: '+v,'info'));
+  const columns=[
+    {label:t('so.col.no'),sticky:true,w:'minmax(140px,1.4fr)',render:s=>`<div class="cellsub"><b class="docnum">${esc(s.no)}</b><small><span class="posttag ${s.posted?'posted':''}">${esc(s.posted?t('so.post.posted'):t('so.post.unposted'))}</span></small></div>`},
+    {label:t('so.col.customer'),align:'l',sortable:true,w:'minmax(140px,1.6fr)',render:s=>`<div class="partnercell"><span class="pmini">${esc(initials(s.cust))}</span><span class="cellsub"><b>${esc(s.cust)}</b><small>${esc(s.custCode)}</small></span></div>`},
+    {label:t('so.col.date'),align:'l',sortable:true,w:'minmax(92px,0.9fr)',render:s=>`<span class="muted-date">${esc(s.date)}</span>`},
+    {label:t('so.col.deliver'),align:'l',w:'minmax(100px,1fr)',render:dueCell},
+    {label:t('col.owner'),align:'l',w:'minmax(84px,0.9fr)',render:s=>esc(s.owner)},
+    {label:t('so.col.fulfilled'),align:'l',w:'minmax(116px,1.1fr)',render:fulCell},
+    {label:t('col.payment'),align:'l',w:'minmax(90px,1fr)',render:s=>cap(ts(s.payStatus),payTone(s.payStatus))},
+    {label:t('col.total'),align:'r',sortable:true,w:'minmax(108px,0.9fr)',render:s=>`<b class="tnum">${money(s.total)}</b>`},
+    {label:t('so.col.order'),align:'l',cls:'cap-cell',w:'minmax(146px,1.3fr)',render:s=>statusBadge(s.status)+(s.flag?` <span class="flagic" data-tip="${esc(s.flag)}">${ic('warn')}</span>`:'')},
+    {label:'',align:'c',w:'56px',render:()=>transactionRowMenuButton(t('so.act.menu'))},
+  ];
+  transactionListPage(root,{
+    module:'sales',
+    route:'sales-orders',
+    title:t('so.title'),
+    description:t('so.subtitle'),
+    rows:DB.salesOrders,
+    rowId:s=>s.no,
+    count:visible=>`${visible.length} ${t('so.orders')}`,
+    checkable:true,
+    primaryAction:{label:t('so.new'),icon:'plus',onClick:()=>navigate('new-sales-order')},
+    kpis:kpiData().map(k=>({
+      label:k.label,
+      value:k.val,
+      filter:k.f,
+      negative:k.neg,
+      accent:k.accent,
+    })),
+    filters:chips,
+    filterFn:(s,key)=>s.status===chipMap[key],
+    columns,
+    rowMenu:s=>menuItems(s).map(item=>({
+      ...item,
+      run:()=>runAction(item.id,s),
+    })),
+    onOpen:s=>openDoc(s.no),
+    empty:{icon:'bag',title:t('so.empty')},
   });
 };
 

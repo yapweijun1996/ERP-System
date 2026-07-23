@@ -1748,3 +1748,6 @@ Delivery slices:
       sanitization boundaries intact.
 - [x] **TASK-091 — enforcement/cleanup.** Classify every route layout, delete the
       obsolete list factories and reject new page-level hand-authored list chrome.
+- [x] **TASK-092 — Sales Orders correction.** Reclassify the Sales Orders register
+      from master-detail to `transaction-list-v1`, retain real detail navigation and
+      row actions, and remove its unsupported Filter/Export and inline preview chrome.

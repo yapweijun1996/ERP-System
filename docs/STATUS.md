@@ -543,7 +543,7 @@ for bounded migration batches and wired into CI. Service-worker v75 delivers the
 
 ## Transaction-list UI SSOT rollout and enforcement (TASK-088–091, 2026-07-23)
 
-All **34 transaction-register routes** now render through the shared
+All **35 transaction-register routes** now render through the shared
 `transactionListPage()` contract at desktop and 375px. Sales, Purchasing, operational
 and back-office registers share the same KPI, filter, toolbar, table/empty and
 pagination structure; unsupported placeholder Filter/Export actions were removed.
@@ -556,15 +556,23 @@ factories, while runtime audits verify declared list structure and detect undecl
 list-shaped pages. Suppliers, Enquiries and Work Orders remain the visual references.
 Service-worker v76 delivers the completed rollout. Local release gates pass with
 lint, dual typecheck, 379 tests plus one expected skip, 45-migration/127-table
-alignment, PGlite proof, API/Demo builds, desktop/mobile smoke, the 34-route list
+alignment, PGlite proof, API/Demo builds, desktop/mobile smoke, the 35-route list
 audit and the full 114-route desktop/375px audit.
+
+## Sales Orders SSOT correction (TASK-092, 2026-07-23)
+
+The Sales Orders register had been incorrectly exempted as `master-detail` because it
+contained an optional inline preview. Its primary surface is a transaction register,
+so it now renders through `transactionListPage()` as the 35th SSOT list. Clicking an
+order still opens the canonical document detail, while the duplicate preview chrome
+and unsupported Filter/Export controls are gone. Service-worker v77 delivers the fix.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 90 tasks, including TASK-091
+- Done: 91 tasks, including TASK-092
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
-  complete at 114 Canonical / 0 Preview and 34/34 transaction registers on the SSOT.
+  complete at 114 Canonical / 0 Preview and 35/35 transaction registers on the SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
