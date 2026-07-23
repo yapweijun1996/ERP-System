@@ -17,6 +17,7 @@ import { createAuthRouter } from './routes/auth';
 import { createResourceRouter } from './routes/resources';
 import { parseTokenEncryptionKey } from '../auth/tokenCrypto';
 import { createSetupRouter } from './routes/setup';
+import { createAccountRouter } from './routes/account';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -89,6 +90,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   }));
 
   app.use('/api/admin', createAdminRouter(db, { lifecycle }));
+  app.use('/api/account', createAccountRouter(db));
 
   app.get('/api/dashboard', async (req, res) => {
     const session = await requireSession(db, req, res);

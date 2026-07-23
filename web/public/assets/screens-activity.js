@@ -1,231 +1,59 @@
 /* ============================================================
-   ARIA ERP — screen: Your activity (personal account log)
+   ARIA ERP — canonical personal activity + notification center
    ============================================================ */
 
-SCREENS['my-activity'] = function(root){
-  const A = DB.myActivity;
-  const u = DB.user;
-
-  /* type -> icon + tone (reuses dashboard wc-ic tones) */
-  const TYPE = {
-    approve:{ icon:'flow',    tone:'accent', label:'Approval' },
-    reject: {  icon:'xc',      tone:'danger', label:'Rejection' },
-    post:   {  icon:'book',    tone:'violet', label:'Posting' },
-    edit:   {  icon:'edit',    tone:'warn',   label:'Edit' },
-    create: {  icon:'plus',    tone:'teal',   label:'Created' },
-    comment:{  icon:'comment', tone:'teal',   label:'Comment' },
-    export: {  icon:'download',tone:'slate',  label:'Export' },
-    login:  {  icon:'shield',  tone:'ok',     label:'Sign-in' },
+/* Canonical personal activity projection. This intentionally exposes only the
+   current actor's sanitized, company-scoped write history. Session, IP,
+   security posture and audit payloads belong to separate protected models. */
+SCREENS['my-activity'] = async function(root){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Your activity',sub:'Recorded application changes made by you in this company.',notice:'This history covers recorded application writes only. Sign-in, device and session history are not part of this log.',all:'All',today:'Today',week:'Last 7 days',categories:'Categories',loaded:'Loaded events',empty:'No recorded activity yet',emptyBody:'Actions you complete in this company will appear here.',records:'records',actions:{create:'Created',approve:'Approved',reject:'Rejected',post:'Posted',reverse:'Reversed',update:'Updated',other:'Changed'}},
+    ms:{title:'Aktiviti anda',sub:'Perubahan aplikasi yang direkodkan oleh anda dalam syarikat ini.',notice:'Sejarah ini hanya merangkumi penulisan aplikasi yang direkodkan. Sejarah log masuk, peranti dan sesi tidak termasuk.',all:'Semua',today:'Hari ini',week:'7 hari lalu',categories:'Kategori',loaded:'Acara dimuat',empty:'Belum ada aktiviti direkodkan',emptyBody:'Tindakan yang anda lengkapkan dalam syarikat ini akan dipaparkan di sini.',records:'rekod',actions:{create:'Dicipta',approve:'Diluluskan',reject:'Ditolak',post:'Dipost',reverse:'Diterbalikkan',update:'Dikemas kini',other:'Diubah'}},
+    zh:{title:'我的活动',sub:'您在当前公司中产生的已记录应用变更。',notice:'此记录仅涵盖已记录的应用写入；登录、设备和会话历史不属于此日志。',all:'全部',today:'今天',week:'近 7 天',categories:'类别',loaded:'已载入事件',empty:'暂无活动记录',emptyBody:'您在当前公司完成的操作将显示在这里。',records:'条记录',actions:{create:'已创建',approve:'已批准',reject:'已拒绝',post:'已过账',reverse:'已冲销',update:'已更新',other:'已变更'}},
+    ja:{title:'自分のアクティビティ',sub:'この会社で自分が行った記録済みの変更です。',notice:'記録済みのアプリ書き込みのみを表示します。サインイン、端末、セッション履歴は含まれません。',all:'すべて',today:'今日',week:'過去7日',categories:'カテゴリ',loaded:'読込イベント',empty:'記録された活動はありません',emptyBody:'この会社で完了した操作がここに表示されます。',records:'件',actions:{create:'作成',approve:'承認',reject:'却下',post:'転記',reverse:'取消',update:'更新',other:'変更'}},
+    vi:{title:'Hoạt động của bạn',sub:'Các thay đổi ứng dụng đã ghi nhận do bạn thực hiện trong công ty này.',notice:'Lịch sử này chỉ gồm các thao tác ghi ứng dụng đã được ghi nhận; không gồm lịch sử đăng nhập, thiết bị hoặc phiên.',all:'Tất cả',today:'Hôm nay',week:'7 ngày qua',categories:'Danh mục',loaded:'Sự kiện đã tải',empty:'Chưa có hoạt động được ghi nhận',emptyBody:'Các thao tác bạn hoàn tất trong công ty này sẽ xuất hiện tại đây.',records:'bản ghi',actions:{create:'Đã tạo',approve:'Đã duyệt',reject:'Đã từ chối',post:'Đã ghi sổ',reverse:'Đã đảo',update:'Đã cập nhật',other:'Đã thay đổi'}},
   };
-  /* filter chip -> set of types */
-  const FILTERS = [
-    ['all',      'All',         null],
-    ['approve',  'Approvals',   ['approve','reject']],
-    ['post',     'Postings',    ['post']],
-    ['edit',     'Edits',       ['edit','create']],
-    ['comment',  'Comments',    ['comment']],
-    ['login',    'Sign-ins',    ['login']],
-  ];
-  let filter = 'all';
-
-  function itemRow(it){
-    const ty = TYPE[it.type] || TYPE.edit;
-    const clickable = it.route ? `data-route="${esc(it.route)}"` : '';
-    return `<div class="act-row ${it.route?'':'noclick'}" ${clickable}>
-      <span class="act-ic ${ty.tone}">${ic(ty.icon)}</span>
-      <div class="act-main">
-        <div class="act-line">${esc(it.what)}${it.obj?` <span class="obj">${esc(it.obj)}</span>`:''}</div>
-        ${it.sub?`<small>${esc(it.sub)}</small>`:''}
-        ${it.chg?`<div class="act-chg"><span class="cf">${esc(it.chg.field)}</span><span class="old">${esc(it.chg.old)}</span>${ic('arrowR')}<span class="new">${esc(it.chg.new)}</span></div>`:''}
-      </div>
-      <div class="act-right"><span class="act-time">${esc(it.time)}</span><span class="act-typ">${ty.label}</span></div>
-    </div>`;
-  }
-
-  function feedHtml(){
-    const allow = FILTERS.find(f=>f[0]===filter)[2];
-    let out = '';
-    A.feed.forEach(grp=>{
-      const items = allow ? grp.items.filter(i=>allow.includes(i.type)) : grp.items;
-      if(!items.length) return;
-      out += `<div class="act-day"><span>${esc(grp.day)}</span>${grp.date?`<span class="dt">${esc(grp.date)}</span>`:''}<span class="ln"></span><span class="ct">${items.length} ${items.length===1?'action':'actions'}</span></div>
-        <div class="act-feed">${items.map(itemRow).join('')}</div>`;
-    });
-    if(!out) out = statePanel({icon:'inbox',title:'Nothing of this kind yet',body:'Try another filter — your full history is under “All”.'});
-    return out;
-  }
-
-  /* ---- right rail ---- */
-  const maxMod = Math.max(...A.byModule.map(m=>m.ct));
-  const modBars = A.byModule.map(m=>`<div class="modbar">
-    <span class="nm">${esc(m.m)}</span>
-    <span class="track"><i style="width:${Math.round(m.ct/maxMod*100)}%"></i></span>
-    <span class="ct tnum">${m.ct}</span>
-  </div>`).join('');
-
-  const sessions = A.sessions.map((sx,i)=>`<div class="sess ${sx.current?'cur':''}">
-    <span class="sess-ic">${ic(sx.current?'asset':'globe')}</span>
-    <div class="sess-main">
-      <div class="sess-h"><b>${esc(sx.device)}</b>${sx.current?cap('This device','ok'):''}${sx.flag?`<span class="sess-flag" data-tip="${esc(sx.flag)}">${ic('warn')}</span>`:''}</div>
-      <small>${esc(sx.meta)} · ${esc(sx.loc)}</small>
-      <small class="mono">${esc(sx.ip)} · ${esc(sx.last)}</small>
+  const p=packs[lang]||packs.en;
+  const categoryLabels={sales:'Sales',purchasing:'Purchasing',crm:'CRM',inventory:'Inventory',warehouse:'Warehouse',manufacturing:'Manufacturing',quality:'Quality',finance:'Finance',assets:'Assets',project:'Projects',service:'Service',hr:'HR',payroll:'Payroll',admin:'Administration',integration:'Integration',system:'System'};
+  const entityLabels={orders:'Order',invoices:'Invoice',enquiries:'Enquiry',quotations:'Quotation',deliveries:'Delivery',returns:'Return',products:'Product',adjustments:'Adjustment',transfers:'Transfer',journals:'Journal',opportunities:'Opportunity',users:'User',user:'User',role:'Role',permission:'Permission',module:'Module',invitation:'Invitation',session:'Session',system:'System'};
+  const result=await listPage('account/activity',{limit:100});
+  const rows=(result.data||[]).map(row=>({...row,occurredAt:new Date(row.occurredAt)}));
+  const now=new Date();
+  const todayKey=dateValue(now);
+  const weekStart=new Date(now);weekStart.setDate(weekStart.getDate()-7);
+  const today=rows.filter(row=>dateValue(row.occurredAt)===todayKey).length;
+  const week=rows.filter(row=>row.occurredAt>=weekStart).length;
+  const cats=[...new Set(rows.map(row=>row.category))];
+  const tone={create:'teal',approve:'ok',reject:'danger',post:'violet',reverse:'warn',update:'accent',other:'slate'};
+  const icon={create:'plus',approve:'checkc',reject:'xc',post:'book',reverse:'refresh',update:'edit',other:'history'};
+  const rowHtml=row=>`<div class="act-row" data-category="${esc(row.category)}">
+    <span class="act-ic ${tone[row.actionKind]||'slate'}">${ic(icon[row.actionKind]||'history')}</span>
+    <div class="act-main"><div class="act-line">${esc(p.actions[row.actionKind]||p.actions.other)} <span class="obj">${esc(entityLabels[row.entityKey]||String(row.entityKey).replaceAll('-',' '))}${row.entityId?` · ${esc(row.entityId)}`:''}</span></div><small>${esc(categoryLabels[row.category]||row.category)}</small></div>
+    <div class="act-right"><span class="act-time">${esc(dateTimeValue(row.occurredAt))}</span></div>
+  </div>`;
+  const body=`<style>
+    .activity-canonical{padding:8px 24px 44px}.activity-notice{display:flex;gap:9px;align-items:flex-start;margin-bottom:14px;padding:11px 13px;border:1px solid var(--accent-border);border-radius:var(--r-m);background:var(--accent-tint);color:var(--muted);font-size:12.5px;line-height:1.45}.activity-notice svg{width:16px;height:16px;flex:none;color:var(--accent);margin-top:1px}
+    .activity-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}.activity-kpi{padding:13px 15px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--surface)}.activity-kpi small{display:block;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.activity-kpi b{display:block;margin-top:5px;font-size:22px;font-variant-numeric:tabular-nums}
+    .activity-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:10px}.activity-toolbar .filterchips{display:flex;flex-wrap:wrap;gap:6px}.activity-count{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap}.activity-canonical .act-feed{overflow:hidden;border:1px solid var(--hairline);border-radius:var(--r-l);background:var(--surface)}.activity-canonical .act-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:13px;align-items:center;padding:13px 15px;border-bottom:1px solid var(--hairline)}.activity-canonical .act-row:last-child{border-bottom:0}.activity-canonical .act-ic{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--surface-2);color:var(--muted)}.activity-canonical .act-ic svg{width:17px;height:17px}.activity-canonical .act-ic.accent{background:var(--accent-tint);color:var(--accent)}.activity-canonical .act-ic.ok,.activity-canonical .act-ic.teal{background:var(--ok-tint);color:var(--ok)}.activity-canonical .act-ic.danger{background:var(--danger-tint);color:var(--danger)}.activity-canonical .act-ic.violet{background:var(--violet-tint);color:var(--violet)}.activity-canonical .act-ic.warn{background:var(--warn-tint);color:var(--warn)}.activity-canonical .act-main{min-width:0}.activity-canonical .act-line{font-size:13.5px;font-weight:500}.activity-canonical .act-line .obj{color:var(--accent);font-weight:600}.activity-canonical .act-main small{display:block;margin-top:2px;color:var(--muted);font-size:12px}.activity-canonical .act-time{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    @media(max-width:700px){.activity-canonical{padding:6px 14px 32px}.activity-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.activity-canonical .act-row{grid-template-columns:34px minmax(0,1fr)}.activity-canonical .act-right{grid-column:2}.activity-count{display:none}}
+  </style><div class="activity-canonical" data-personal-activity-canonical="true">
+    <div class="activity-notice">${ic('info')}<span>${esc(p.notice)}</span></div>
+    <div class="activity-kpis">
+      <div class="activity-kpi"><small>${esc(p.loaded)}</small><b>${rows.length}</b></div>
+      <div class="activity-kpi"><small>${esc(p.today)}</small><b>${today}</b></div>
+      <div class="activity-kpi"><small>${esc(p.week)}</small><b>${week}</b></div>
+      <div class="activity-kpi"><small>${esc(p.categories)}</small><b>${cats.length}</b></div>
     </div>
-    ${sx.current?'':`<button class="btn plain sm sess-out" data-sess="${i}">${ic('signout')}<span>Sign out</span></button>`}
-  </div>`).join('');
-
-  root.innerHTML = `
-  <style>
-    .act-grid{display:grid;grid-template-columns:minmax(0,1fr) 326px;gap:20px;align-items:start;padding:8px 24px 44px;}
-    @media(max-width:1080px){.act-grid{grid-template-columns:1fr;}}
-    .act-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--hairline);border:1px solid var(--hairline);border-radius:var(--r-m);overflow:hidden;}
-    .act-stat{background:var(--surface);padding:14px 16px;}
-    .act-stat small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
-    .act-stat b{font-size:25px;font-weight:600;letter-spacing:-.02em;display:block;}
-    .act-stat .d{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.35;}
-
-    .act-tools{display:flex;align-items:center;gap:8px;margin:18px 0 4px;}
-    .act-tools .filterchips{display:flex;gap:6px;flex-wrap:wrap;}
-
-    .act-day{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:20px 0 9px;display:flex;align-items:center;gap:9px;}
-    .act-day .dt{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0;font-size:11.5px;}
-    .act-day .ln{flex:1;height:1px;background:var(--hairline);}
-    .act-day .ct{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0;}
-
-    .act-feed{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-l);overflow:hidden;}
-    .act-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:13px;align-items:start;padding:13px 15px;border-bottom:1px solid var(--hairline);cursor:pointer;transition:background .12s;}
-    .act-row:last-child{border-bottom:none;}
-    .act-row:hover{background:var(--surface-2);}
-    .act-row.noclick{cursor:default;}
-    .act-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;margin-top:1px;}
-    .act-ic svg{width:17px;height:17px;}
-    .act-ic.accent{background:var(--accent-tint);color:var(--accent);}
-    .act-ic.ok{background:var(--ok-tint);color:var(--ok);}
-    .act-ic.warn{background:var(--warn-tint);color:var(--warn);}
-    .act-ic.danger{background:var(--danger-tint);color:var(--danger);}
-    .act-ic.violet{background:var(--violet-tint);color:var(--violet);}
-    .act-ic.teal{background:var(--teal-tint);color:var(--teal);}
-    .act-ic.slate{background:var(--surface-2);color:var(--muted);}
-    .act-main{min-width:0;}
-    .act-line{font-size:13.5px;font-weight:500;letter-spacing:-.005em;}
-    .act-line .obj{color:var(--accent);font-weight:600;}
-    .act-main small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;}
-    .act-chg{display:inline-flex;align-items:center;gap:7px;margin-top:7px;font-size:12px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:8px;padding:4px 9px;}
-    .act-chg svg{width:13px;height:13px;color:var(--muted);}
-    .act-chg .cf{color:var(--muted);}
-    .act-chg .old{color:var(--danger);text-decoration:line-through;}
-    .act-chg .new{color:var(--ok);font-weight:600;}
-    .act-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;white-space:nowrap;}
-    .act-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
-    .act-typ{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
-
-    .act-aside{display:flex;flex-direction:column;gap:16px;position:sticky;top:8px;}
-    .act-aside .panel-body{padding:13px 15px;}
-    .sess{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--hairline);}
-    .sess:first-child{padding-top:2px;}
-    .sess:last-child{border-bottom:none;padding-bottom:2px;}
-    .sess-ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--surface-2);color:var(--muted);}
-    .sess.cur .sess-ic{background:var(--ok-tint);color:var(--ok);}
-    .sess-ic svg{width:16px;height:16px;}
-    .sess-main{flex:1;min-width:0;}
-    .sess-h{display:flex;align-items:center;gap:7px;}
-    .sess-h b{font-size:13px;font-weight:600;}
-    .sess-flag{color:var(--warn);display:inline-flex;}
-    .sess-flag svg{width:14px;height:14px;}
-    .sess-main small{display:block;color:var(--muted);font-size:11.5px;margin-top:1px;}
-    .sess-main small.mono{font-variant-numeric:tabular-nums;color:var(--faint);}
-    .sess-out{flex:none;margin-top:2px;}
-
-    .modbar{display:flex;align-items:center;gap:11px;padding:6px 0;font-size:12.5px;}
-    .modbar .nm{width:86px;flex:none;color:var(--fg);}
-    .modbar .track{flex:1;height:7px;border-radius:4px;background:var(--surface-2);overflow:hidden;}
-    .modbar .track i{display:block;height:100%;background:var(--accent);border-radius:4px;}
-    .modbar .ct{width:24px;text-align:right;font-weight:600;color:var(--muted);}
-
-    .sec-foot{display:flex;align-items:center;gap:8px;padding:11px 15px;border-top:1px solid var(--hairline);font-size:12px;color:var(--muted);}
-    .sec-foot svg{width:14px;height:14px;color:var(--ok);flex:none;}
-  </style>
-
-  <div class="content full"><section class="master"><div class="scrollarea">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,'Account','Your activity'])}
-      <div class="h1row">
-        <h1>Your activity</h1>
-        <div class="headright">
-          <div class="kfig"><small>Today</small><b class="tnum">${A.stats.today}</b></div>
-          <div class="kfig"><small>This week</small><b class="tnum">${A.stats.week}</b></div>
-          <div class="kfig"><small>This period</small><b class="tnum">${A.stats.period}</b></div>
-        </div>
-      </div>
-      <div class="h1sub">${esc(u.name)} · ${esc(u.role)} — a private log of everything you’ve done in Aria. Only you and auditors can see this.</div>
-    </div>
-
-    <div class="act-grid">
-      <div>
-        <div class="act-stats">
-          ${A.summary.map(sx=>`<div class="act-stat"><small>${esc(sx.k)}</small><b class="tnum">${sx.v}</b><div class="d">${esc(sx.d)}</div></div>`).join('')}
-        </div>
-
-        <div class="act-tools">
-          <div class="filterchips" id="actChips">
-            ${FILTERS.map(f=>`<button class="chip ${f[0]==='all'?'on':''}" data-f="${f[0]}">${esc(f[1])}</button>`).join('')}
-          </div>
-          <div class="grow"></div>
-          ${btn('Export log',{icon:'download',cls:'soft',attrs:'onclick="toast(\'Activity log exported\',\'ok\')"'})}
-        </div>
-
-        <div id="actFeed">${feedHtml()}</div>
-      </div>
-
-      <aside class="act-aside">
-        <div class="panel">
-          <div class="panel-h"><h3>Active sessions</h3><span style="margin-left:auto;font-size:11.5px;color:var(--muted)">${A.sessions.length} devices</span></div>
-          <div class="panel-body">${sessions}</div>
-          <div class="sec-foot" style="cursor:pointer" id="signOutAll">${ic('signout')}<span>Sign out all other sessions</span></div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-h"><h3>This week by module</h3></div>
-          <div class="panel-body">${modBars}</div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-h"><h3>Security</h3><button class="btn plain sm" style="margin-left:auto" onclick="navigate('settings')">${ic('gear')}<span>Manage</span></button></div>
-          <div class="panel-body" style="padding-top:6px">
-            <div class="field"><span class="k">Password</span><span class="v">${esc(A.security.password)}</span></div>
-            <div class="field"><span class="k">Two-factor</span><span class="v">${esc(A.security.mfa)}</span></div>
-            <div class="field"><span class="k">Recovery codes</span><span class="v">${esc(A.security.recovery)}</span></div>
-          </div>
-          <div class="sec-foot">${ic('checkc')}<span>No unusual sign-in activity detected.</span></div>
-        </div>
-      </aside>
-    </div>
-  </div></section></div>`;
-
-  /* ---- wiring ---- */
-  function wireRows(){
-    root.querySelectorAll('.act-row[data-route]').forEach(r=>r.addEventListener('click',()=>{ const rt=r.dataset.route; if(rt) navigate(rt); }));
-  }
-  wireRows();
-
-  root.querySelectorAll('#actChips .chip').forEach(c=>c.addEventListener('click',()=>{
-    filter = c.dataset.f;
-    root.querySelectorAll('#actChips .chip').forEach(x=>x.classList.toggle('on',x===c));
-    $('#actFeed').innerHTML = feedHtml();
-    wireRows();
+    <div class="activity-toolbar"><div class="filterchips" id="personalActivityFilters"><button class="chip on" data-filter="all">${esc(p.all)}</button>${cats.map(cat=>`<button class="chip" data-filter="${esc(cat)}">${esc(categoryLabels[cat]||cat)}</button>`).join('')}</div><span class="activity-count">${rows.length} ${esc(p.records)}</span></div>
+    <div class="act-feed" id="personalActivityFeed">${rows.length?rows.map(rowHtml).join(''):statePanel({icon:'history',title:p.empty,body:p.emptyBody})}</div>
+  </div>`;
+  root.innerHTML=modulePage({module:'admin',route:'my-activity',active:'my-activity',title:p.title,count:rows.length,sub:p.sub,body});
+  root.querySelectorAll('#personalActivityFilters .chip').forEach(button=>button.addEventListener('click',()=>{
+    const filter=button.dataset.filter;
+    root.querySelectorAll('#personalActivityFilters .chip').forEach(chip=>chip.classList.toggle('on',chip===button));
+    root.querySelectorAll('#personalActivityFeed .act-row').forEach(row=>{row.hidden=filter!=='all'&&row.dataset.category!==filter;});
   }));
-
-  root.querySelectorAll('.sess-out').forEach(b=>b.addEventListener('click',e=>{
-    e.stopPropagation();
-    const card = b.closest('.sess');
-    card.style.transition='opacity .2s'; card.style.opacity='0';
-    setTimeout(()=>card.remove(),200);
-    toast('Session signed out','ok');
-  }));
-  const soAll = root.querySelector('#signOutAll');
-  if(soAll) soAll.addEventListener('click',()=>{
-    root.querySelectorAll('.sess:not(.cur)').forEach(c=>{ c.style.transition='opacity .2s'; c.style.opacity='0'; setTimeout(()=>c.remove(),200); });
-    toast('All other sessions signed out','ok');
-  });
 };
 
 /* ============================================================

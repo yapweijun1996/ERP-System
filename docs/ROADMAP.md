@@ -639,9 +639,22 @@ Exit criteria: domain and authenticated API validation/rollback/tenant/RBAC/audi
 idempotency proof, real Demo smoke, desktop/375px rendering and the full 114-route
 release suite pass.
 
-## Remaining productionization backlog — 5 Preview routes
+## Phase 30 — Canonical Personal Activity ✅
 
-This is the authoritative work breakdown after TASK-082. `tasks/tasks.jsonl` records
+1. **Actor-owned activity projection** (EPIC-047, TASK-083 done 2026-07-23) replaces
+   the fabricated device/session/security feed with a sanitized newest-first query over
+   the existing append-only audit log. Session supplies actor and tenant scope; the
+   response exposes only bounded category/entity/action vocabulary, reference and time.
+   Demo/API, five-language UI, opaque API cursor, 375px and full route audit move
+   maturity to **110/4**. The Enquiries register was also aligned to the approved
+   Suppliers-list visual standard (KPI strip, filter/action toolbar and rounded table).
+
+Exit criteria: actor/company isolation, sanitization, opaque cursor, Demo/API browser
+proof, PostgreSQL parity/security, desktop/375px and all 114 routes pass.
+
+## Remaining productionization backlog — 4 Preview routes
+
+This is the authoritative work breakdown after TASK-083. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
@@ -652,8 +665,9 @@ workstreams in dependency order:
 2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-3. **Personal utility surfaces — 2 routes:** `notifications`, `my-activity`. Back them
-   with tenant/user-scoped audit/outbox read models, then add read/dismiss actions.
+3. **Personal utility surfaces — 1 route:** `notifications`. Back notification delivery
+   and read/dismiss state with a tenant/user-scoped model; do not infer it from the
+   operational outbox or personal audit projection.
 
 Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared
 Demo/PostgreSQL command path, RBAC/audit/idempotency, five-language copy and desktop/

@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 41;
+  var DEMO_SCHEMA_VERSION = 42;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1446,6 +1446,23 @@
     var key=normalizeResource(resource);
     var adminResult=await listAdminResource(key, query);
     if(adminResult) return adminResult;
+    if(key==='account/activity'){
+      query=query||{};
+      var personalActorUserId=Number(state.activeUserId);
+      if(!Number.isSafeInteger(personalActorUserId)||personalActorUserId<=0){
+        throw new Error('An authenticated user is required.');
+      }
+      var activityPage=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listPersonalActivityWithin(
+          state.runtime.createOrm(tx),SCOPE,personalActorUserId,{
+            limit:Math.max(1,Math.min(100,Number(query.limit)||50)),
+            cursor:Number(query.cursor)||undefined,
+          });
+      });
+      return {data:activityPage.data,meta:{
+        nextCursor:activityPage.nextCursor==null?null:String(activityPage.nextCursor),
+      }};
+    }
     if(key==='sales/analytics'||key==='sales/salespeople'||key==='bi/analytics'||key==='integration/events'||key==='integration/import-jobs'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
       query=query||{};
       var derivedCommand=key==='sales/analytics'

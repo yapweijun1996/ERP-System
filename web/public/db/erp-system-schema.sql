@@ -2891,3 +2891,6 @@ CREATE INDEX "idx_import_job_tenant_status" ON "import_job" USING btree ("master
 CREATE UNIQUE INDEX "uq_import_job_row_number" ON "import_job_row" USING btree ("master_fn","company_fn","job_id","row_number");--> statement-breakpoint
 CREATE INDEX "idx_import_job_row_job" ON "import_job_row" USING btree ("master_fn","company_fn","job_id","id");--> statement-breakpoint
 CREATE INDEX "idx_import_row_error_job" ON "import_row_error" USING btree ("master_fn","company_fn","job_id","row_number","id");
+
+-- 0042_lovely_ma_gnuci
+CREATE INDEX "idx_audit_actor_activity" ON "audit_log" USING btree ("master_fn","company_fn","actor_user_id","id");

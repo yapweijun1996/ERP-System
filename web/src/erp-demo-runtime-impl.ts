@@ -287,6 +287,7 @@ import {
 } from '../../src/auth/adminLifecycle';
 import { listMasterModules, setMasterModuleWithin } from '../../src/auth/moduleAccess';
 import type { SessionData } from '../../src/auth/session';
+import { listPersonalActivityWithin } from '../../src/modules/account/activity';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -712,6 +713,14 @@ export const erpDemoRuntime = Object.freeze({
     },
     listAuditLog(db: DemoOrm, scope: Scope, query: { limit?: number; cursor?: number } = {}) {
       return listAuditLog(asDomainDb(db), scope.masterFn, scope.companyFn, query);
+    },
+    listPersonalActivityWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      query: { limit?: number; cursor?: number } = {},
+    ) {
+      return listPersonalActivityWithin(asDomainDb(db), scope, actorUserId, query);
     },
     listMasterModules(db: DemoOrm, scope: Scope) {
       return listMasterModules(asDomainDb(db), scope.masterFn);

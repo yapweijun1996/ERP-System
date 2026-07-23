@@ -438,6 +438,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
   'bank-rec',
   'bi-dashboard','sales-analysis','stock-aging',
+  'my-activity',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -476,6 +477,7 @@ const API_SCREEN_ROUTES = new Set([
   'report-pur-price-var','report-pur-vendor','report-pur-generic','pur-txn-view',
   'new-sales-order','so-approvals',
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
+  'my-activity',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',

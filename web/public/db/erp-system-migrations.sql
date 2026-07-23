@@ -3963,3 +3963,6 @@ CREATE INDEX IF NOT EXISTS "idx_import_job_row_job" ON "import_job_row" USING bt
 --> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "idx_import_row_error_job" ON "import_row_error" USING btree ("master_fn","company_fn","job_id","row_number","id");
+
+-- 0042_lovely_ma_gnuci
+CREATE INDEX IF NOT EXISTS "idx_audit_actor_activity" ON "audit_log" USING btree ("master_fn","company_fn","actor_user_id","id");

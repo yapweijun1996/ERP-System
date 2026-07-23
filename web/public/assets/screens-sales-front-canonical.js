@@ -24,7 +24,7 @@
         enquiryHelp:'Capture a customer request before pricing and formal quotation.',
         quotationHelp:'Formal offers with tax snapshots, validity and controlled conversion to an order.',
         orderNo:'Sales order number',quotationNo:'Quotation number',enquiryNo:'Enquiry number',
-        direct:'Direct',email:'Email',phone:'Phone',web:'Web',back:'Back',
+        direct:'Direct',email:'Email',phone:'Phone',web:'Web',back:'Back',totalEnquiries:'Total enquiries',newEnquiries:'New',quotedEnquiries:'Quoted',pipelineValue:'Pipeline value',filter:'Filter',export:'Export',
       },
       ms:{
         enquiries:'Pertanyaan',quotations:'Sebut harga',newEnquiry:'Pertanyaan baharu',
@@ -44,7 +44,7 @@
         enquiryHelp:'Rekod permintaan pelanggan sebelum harga dan sebut harga rasmi.',
         quotationHelp:'Tawaran rasmi dengan petikan cukai, tempoh sah dan penukaran pesanan terkawal.',
         orderNo:'Nombor pesanan jualan',quotationNo:'Nombor sebut harga',enquiryNo:'Nombor pertanyaan',
-        direct:'Terus',email:'E-mel',phone:'Telefon',web:'Web',back:'Kembali',
+        direct:'Terus',email:'E-mel',phone:'Telefon',web:'Web',back:'Kembali',totalEnquiries:'Jumlah pertanyaan',newEnquiries:'Baharu',quotedEnquiries:'Telah disebut',pipelineValue:'Nilai saluran',filter:'Tapis',export:'Eksport',
       },
       zh:{
         enquiries:'询价',quotations:'报价单',newEnquiry:'新建询价',
@@ -64,7 +64,7 @@
         enquiryHelp:'在定价和正式报价前记录客户需求。',
         quotationHelp:'包含税率快照、有效期及受控订单转换的正式报价。',
         orderNo:'销售订单编号',quotationNo:'报价单编号',enquiryNo:'询价编号',
-        direct:'直接',email:'电邮',phone:'电话',web:'网站',back:'返回',
+        direct:'直接',email:'电邮',phone:'电话',web:'网站',back:'返回',totalEnquiries:'询价总数',newEnquiries:'新建',quotedEnquiries:'已报价',pipelineValue:'预计总额',filter:'筛选',export:'导出',
       },
       ja:{
         enquiries:'引合',quotations:'見積書',newEnquiry:'引合を作成',
@@ -84,7 +84,7 @@
         enquiryHelp:'価格設定と正式見積の前に顧客要求を記録します。',
         quotationHelp:'税率スナップショット、有効期限、受注変換管理を持つ正式提案です。',
         orderNo:'受注番号',quotationNo:'見積番号',enquiryNo:'引合番号',
-        direct:'直接',email:'メール',phone:'電話',web:'Web',back:'戻る',
+        direct:'直接',email:'メール',phone:'電話',web:'Web',back:'戻る',totalEnquiries:'引合総数',newEnquiries:'新規',quotedEnquiries:'見積済',pipelineValue:'見込総額',filter:'フィルター',export:'エクスポート',
       },
       vi:{
         enquiries:'Yêu cầu báo giá',quotations:'Báo giá',newEnquiry:'Tạo yêu cầu',
@@ -104,7 +104,7 @@
         enquiryHelp:'Ghi nhận yêu cầu khách hàng trước khi định giá và báo giá chính thức.',
         quotationHelp:'Đề nghị chính thức với thuế chụp tại thời điểm tạo, hiệu lực và chuyển đổi có kiểm soát.',
         orderNo:'Số đơn bán hàng',quotationNo:'Số báo giá',enquiryNo:'Số yêu cầu',
-        direct:'Trực tiếp',email:'Email',phone:'Điện thoại',web:'Web',back:'Quay lại',
+        direct:'Trực tiếp',email:'Email',phone:'Điện thoại',web:'Web',back:'Quay lại',totalEnquiries:'Tổng yêu cầu',newEnquiries:'Mới',quotedEnquiries:'Đã báo giá',pipelineValue:'Giá trị tiềm năng',filter:'Lọc',export:'Xuất',
       },
     };
     const pack=packs[lang]||packs.en;
@@ -278,17 +278,27 @@
         ],rows:filtered(),
       });
     }
+    const totalValue=data.enquiries.reduce((sum,row)=>sum+Number(row.estimatedValue||0),0);
+    function kpis(){
+      const values=[
+        [s('totalEnquiries'),data.enquiries.length,'all'],
+        [s('newEnquiries'),data.enquiries.filter(row=>row.status==='new').length,'new'],
+        [s('quotedEnquiries'),data.enquiries.filter(row=>row.status==='quoted').length,'quoted'],
+        [s('pipelineValue'),amountLabel(totalValue,currency()),null],
+      ];
+      return `<div class="so-kpibar">${values.map(([label,value,status])=>`<button class="so-kpi ${status?'clickable':''}" ${status?`data-kpi-status="${status}"`:'disabled'}><small>${esc(label)}</small><b class="tnum">${esc(String(value))}</b></button>`).join('')}</div>`;
+    }
     root.innerHTML=`<div class="content full"><section class="master">
       <div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),s('enquiries')])}${typeof salesNav==='function'?salesNav('enquiries'):''}
         <div class="h1row"><h1>${esc(s('enquiries'))}</h1><span class="countchip" id="salesEnquiryCount">${data.enquiries.length}</span>
           <div class="headright">${btn(s('newEnquiry'),{icon:'plus',cls:'primary',attrs:'data-new-enquiry'})}</div>
         </div><div class="h1sub">${esc(s('enquiryHelp'))}</div>
       </div>
-      <div class="toolbar"><div class="filterchips" data-enquiry-filters>
+      <div class="sales-body" data-enquiry-standard-layout="true">${kpis()}<div class="toolbar"><div class="filterchips" data-enquiry-filters>
         ${[['all',s('all')],['new',s('newStatus')],['quoted',s('quoted')],['lost',s('lost')]]
           .map(([key,label])=>`<button class="chip ${key==='all'?'on':''}" data-status="${key}">${esc(label)}</button>`).join('')}
-      </div><div class="grow"></div><small style="color:var(--muted)">${esc(s('dataLimit'))}</small></div>
-      <div class="tablewrap" data-enquiry-table>${renderTable()}</div>
+      </div><div class="grow"></div>${btn(s('filter'),{icon:'filter',cls:'soft'})}${btn(s('export'),{icon:'download',cls:'soft',attrs:'data-enquiry-export'})}</div>
+      <div class="sales-tablewrap" data-enquiry-table>${renderTable()}</div><small style="display:block;margin-top:9px;color:var(--muted);text-align:right">${esc(s('dataLimit'))}</small></div>
       ${!data.enquiries.length?`<div class="statepanel empty">${ic('chat')}<h3>${esc(s('emptyEnquiry'))}</h3><p>${esc(s('emptyHelp'))}</p></div>`:''}
     </section></div>`;
     const tableRoot=root.querySelector('[data-enquiry-table]');
@@ -300,6 +310,11 @@
     }
     wire();
     root.querySelector('[data-new-enquiry]')?.addEventListener('click',()=>openNewEnquiry(data,()=>navigate('enquiries')));
+    root.querySelector('[data-enquiry-export]')?.addEventListener('click',()=>toast(`${s('enquiries')} ${s('export').toLowerCase()}`,'ok'));
+    root.querySelectorAll('[data-kpi-status]').forEach(button=>button.addEventListener('click',()=>{
+      const chip=root.querySelector(`[data-enquiry-filters] [data-status="${button.dataset.kpiStatus}"]`);
+      if(chip) chip.click();
+    }));
     root.querySelectorAll('[data-enquiry-filters] [data-status]').forEach(button=>button.addEventListener('click',()=>{
       root.querySelector('[data-enquiry-filters] .chip.on')?.classList.remove('on');
       button.classList.add('on'); active=button.dataset.status;

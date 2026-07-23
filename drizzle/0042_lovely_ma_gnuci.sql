@@ -1,0 +1,1 @@
+CREATE INDEX "idx_audit_actor_activity" ON "audit_log" USING btree ("master_fn","company_fn","actor_user_id","id");

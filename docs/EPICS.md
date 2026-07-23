@@ -1645,3 +1645,24 @@ Acceptance criteria:
 - [x] `data-import` is a five-language Canonical workspace with file/paste input,
       template download, validation summary, row errors and explicit customer-only/
       small-file boundaries. Smoke and desktop/375px audit pass at 109/5.
+
+## EPIC-047 — Canonical Actor-Owned Personal Activity
+
+**Goal:** replace the fictional personal account feed with a private, sanitized view of
+the current user's recorded application writes for the active company.
+
+Acceptance criteria:
+
+- [x] `account/activity` filters exact Session master/company/actor scope, returns newest
+      first with keyset pagination and uses an actor-leading audit index.
+- [x] The public row shape contains only id, bounded category/entity/action vocabulary,
+      entity reference and timestamp. It never returns before/after payloads, request ID,
+      actor identity, raw internal names, device/IP or security/session information.
+- [x] Demo and API call the same TypeScript query; the API uses an opaque cursor and
+      rejects offset, unknown filters, malformed cursors and limits above 100.
+- [x] `my-activity` is a five-language Canonical read-only workspace with explicit scope,
+      loading/error/empty behavior and no invented export, sign-in, comments or session
+      controls. The Enquiries register also follows the approved Suppliers-list layout.
+- [x] Lint, dual typecheck, 365 tests plus one expected skip, 43-migration/122-table
+      alignment, PGlite/PostgreSQL parity, smoke, live in-app browser and all 114
+      desktop/375px routes pass at 110 Canonical / 4 Preview.

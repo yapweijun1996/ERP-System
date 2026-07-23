@@ -85,6 +85,7 @@ export const auditLog = pgTable('audit_log', {
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('idx_audit_tenant_time').on(t.masterFn, t.companyFn, t.occurredAt, t.id),
+  index('idx_audit_actor_activity').on(t.masterFn, t.companyFn, t.actorUserId, t.id),
   index('idx_audit_entity').on(t.masterFn, t.companyFn, t.entity, t.entityId, t.occurredAt),
   index('idx_audit_request').on(t.requestId),
 ]);
