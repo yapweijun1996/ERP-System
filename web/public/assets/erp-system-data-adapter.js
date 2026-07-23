@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 43;
+  var DEMO_SCHEMA_VERSION = 44;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1426,6 +1426,24 @@
       });
       return {data:modules,meta:{}};
     }
+    if(key==='admin/master-control'){
+      var masterControl = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.getMasterControlWithin(state.runtime.createOrm(tx), SCOPE);
+      });
+      return {data:masterControl,meta:{}};
+    }
+    if(key==='integration/connectors'){
+      var connectors = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listConnectorsWithin(state.runtime.createOrm(tx), SCOPE);
+      });
+      return {data:connectors,meta:{}};
+    }
+    if(key==='settings/overview'){
+      var settingsOverview = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.getSystemSettingsWithin(state.runtime.createOrm(tx), SCOPE);
+      });
+      return {data:settingsOverview,meta:{}};
+    }
     return null;
   }
   async function list(resource, query){
@@ -2003,6 +2021,39 @@
   }
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='integration/connectors'){
+      if(name==='configure') throw new Error('Offline Demo never stores connector credentials. Use API mode with server-side encryption.');
+      var connectorActor=Number(state.activeUserId);
+      var connectorResult=await requireDemoDb().transaction(function(tx){
+        if(name==='check-health') return state.runtime.commands.checkConnectorHealthWithin(
+          state.runtime.createOrm(tx),SCOPE,connectorActor,Number(id));
+        if(name==='pause'||name==='resume') return state.runtime.commands.setConnectorEnabledWithin(
+          state.runtime.createOrm(tx),SCOPE,connectorActor,Number(id),name==='resume');
+        throw new Error('Unknown connector action.');
+      });
+      return {data:connectorResult,meta:{}};
+    }
+    if(key==='settings/policy'&&name==='update'){
+      var policyResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateCompanyPolicyWithin(
+          state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),payload||{});
+      });
+      return {data:policyResult,meta:{}};
+    }
+    if(key==='settings/sequences'&&name==='update'){
+      var sequenceResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateDocumentSequenceWithin(
+          state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),Number(id),payload||{});
+      });
+      return {data:sequenceResult,meta:{}};
+    }
+    if(key==='settings/periods'&&name==='set-status'){
+      var periodResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.setAccountingPeriodStatusWithin(
+          state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),Number(id),String(payload&&payload.status||''));
+      });
+      return {data:periodResult,meta:{}};
+    }
     if(key==='account/notifications'&&(name==='mark-read'||name==='dismiss')){
       var notificationActorUserId=Number(state.activeUserId);
       if(!Number.isSafeInteger(notificationActorUserId)||notificationActorUserId<=0){

@@ -1689,3 +1689,23 @@ Acceptance criteria:
 - [x] The route follows the approved KPI/filter/rounded-list visual standard and moves
       maturity to 111 Canonical / 3 Preview with 371 tests plus one expected skip,
       44 migrations, 123 tables and service-worker v72.
+
+## EPIC-049 — Final Canonical Control Plane
+
+**Goal:** remove the final three Preview routes without introducing browser-held
+production secrets or a misleading cross-tenant administration surface.
+
+Acceptance criteria:
+
+- [x] Migration 0044 adds tenant-scoped connector, company-policy, document-sequence
+      and accounting-period tables with generated PGlite alignment and production RLS.
+- [x] Production connector configuration encrypts credentials with AES-GCM; public
+      responses omit the envelope and offline Demo refuses to store secrets.
+- [x] Master Control exposes only the Session tenant’s real companies, active-company
+      users, roles and module state. System Settings provides audited policy, sequence
+      and period actions plus effective-dated tax facts.
+- [x] Demo/API use shared TypeScript commands behind RBAC, CSRF, tenant validation and
+      append-only audit. First-run setup creates usable control-plane defaults.
+- [x] Five-language route copy, service-worker v73, 379 tests plus one expected skip,
+      45 migrations/127 tables, builds, smoke, in-app browser proof and all 114 routes
+      pass at 114 Canonical / 0 Preview.

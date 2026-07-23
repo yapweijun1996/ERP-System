@@ -12,6 +12,7 @@ import {
   userCompany,
 } from '../../data/schema';
 import { PERMISSIONS } from '../../auth/permissions';
+import { createDefaultControlPlane } from './defaultControlPlane';
 
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
 
@@ -116,6 +117,7 @@ export async function completeDemoSetupWithin(
     rate: defaults.taxRate,
     validFrom: defaults.taxValidFrom,
   });
+  await createDefaultControlPlane(exec, { masterFn, companyFn }, input.country);
   await exec.insert(account).values([
     { masterFn, companyFn, code: '1100', name: 'Accounts Receivable', type: 'asset' },
     { masterFn, companyFn, code: '1200', name: 'Input Tax', type: 'asset' },

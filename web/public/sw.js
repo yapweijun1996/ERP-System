@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v72';
+const CACHE_VERSION = 'erp-system-pwa-v73';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -41,7 +41,6 @@ const staticUrls = [
   './assets/data-integration.js',
   './assets/data-bi.js',
   './assets/data-admin.js',
-  './assets/master-db.js',
   './assets/sales-data.js',
   './assets/erp-system-data-adapter.js',
   './assets/erp-system-api-adapter.js',
@@ -95,6 +94,7 @@ const staticUrls = [
   './assets/screens-inv-adjust.js',
   './assets/screens-inv-new.js',
   './assets/screens-activity.js',
+  './assets/screens-control-plane-canonical.js',
   './assets/app.js',
   './assets/pwa.js',
   './db/erp-system-schema.sql',

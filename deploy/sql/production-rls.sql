@@ -50,6 +50,10 @@ DECLARE
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line',
     'app_notification',
+    'integration_connector',
+    'company_policy',
+    'document_sequence',
+    'accounting_period',
     'api_idempotency',
     'import_job', 'import_job_row', 'import_row_error'
   ];

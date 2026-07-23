@@ -25,6 +25,8 @@ import {
 import { listMasterModules, setMasterModule } from '../../auth/moduleAccess';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
 import { apiError, context, requireSession } from '../http';
+import { getMasterControlWithin } from '../../modules/admin/controlPlane';
+import { withTenantTransaction } from '../../data/tenantTransaction';
 
 export interface AdminRouterOptions {
   lifecycle?: LifecycleOptions;
@@ -50,6 +52,17 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
     }
     const result = await listCompanyUsers(db, session.masterFn, session.activeCompanyFn);
     res.json({ data: result, meta: {} });
+  });
+
+  router.get('/master-control', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.masterControlRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read tenant control data.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    res.json({ data: await withTenantTransaction(db, scope, (tx) => getMasterControlWithin(tx, scope)), meta: {} });
   });
 
   router.post('/users/:userId/actions/toggle-active', async (req, res) => {

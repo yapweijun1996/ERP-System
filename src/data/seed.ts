@@ -13,6 +13,7 @@ import {
   supplierPriceList, supplierPriceListLine,
   purchaseOrder, purchaseOrderApproval, purchaseOrderLine, supplierInvoice, glEntry,
   payrollRun, payrollRunLine, appNotification,
+  integrationConnector, companyPolicy, documentSequence, accountingPeriod,
 } from './schema';
 import { computeStatutoryContributions } from '../modules/payroll/statutory';
 import { fixedUnits, fixedString } from '../modules/inventory/decimal';
@@ -144,6 +145,53 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-SG', taxRegime: 'GST', taxCode: 'SR', rate: '9.000', validFrom: '2024-01-01', validTo: null },
     // MY SST service tax 8%.
     { masterFn: 'M1', companyFn: 'C-MY', taxRegime: 'SST', taxCode: 'SV', rate: '8.000', validFrom: '2025-07-01', validTo: null },
+  ]);
+
+  // Canonical control-plane state. Demo connectors never contain a real secret:
+  // no-auth connectors are usable; credentialed connectors remain in Setup until
+  // configured by the production API with AES-GCM.
+  await db.insert(integrationConnector).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', connectorKey: 'customer-csv',
+      displayName: 'Customer CSV import', category: 'Data import', direction: 'inbound',
+      schedule: 'manual', status: 'connected', health: 'healthy', credentialRequired: false,
+      recordsProcessed: 0, enabled: true,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', connectorKey: 'warehouse-webhook',
+      displayName: 'Warehouse webhook', category: 'Warehouse', direction: 'outbound',
+      schedule: 'realtime', status: 'setup', health: 'unknown', credentialRequired: true,
+      endpointHost: 'wms.example.test', recordsProcessed: 0, enabled: false,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', connectorKey: 'bank-statement-csv',
+      displayName: 'Bank statement CSV', category: 'Banking', direction: 'inbound',
+      schedule: 'manual', status: 'connected', health: 'healthy', credentialRequired: false,
+      recordsProcessed: 0, enabled: true,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', connectorKey: 'customer-csv',
+      displayName: 'Customer CSV import', category: 'Data import', direction: 'inbound',
+      schedule: 'manual', status: 'connected', health: 'healthy', credentialRequired: false,
+      recordsProcessed: 0, enabled: true,
+    },
+  ]);
+
+  await db.insert(companyPolicy).values([
+    { masterFn: 'M1', companyFn: 'C-SG', approvalThreshold: '50000.00', defaultWarehouseCode: 'WH-SALES' },
+    { masterFn: 'M1', companyFn: 'C-MY', dateFormat: 'DD/MM/YYYY', approvalThreshold: '30000.00' },
+  ]);
+  const sequenceSeed = (companyFn: string, types: Array<[string, string]>) => types.map(([documentType, prefix]) => ({
+    masterFn: 'M1', companyFn, documentType, prefix, nextNumber: 1, padding: 4, resetPolicy: 'yearly',
+  }));
+  await db.insert(documentSequence).values([
+    ...sequenceSeed('C-SG', [['sales_order', 'SO'], ['sales_invoice', 'INV'], ['purchase_order', 'PO'], ['journal_entry', 'JE']]),
+    ...sequenceSeed('C-MY', [['sales_order', 'SO'], ['sales_invoice', 'INV'], ['purchase_order', 'PO'], ['journal_entry', 'JE']]),
+  ]);
+  await db.insert(accountingPeriod).values([
+    { masterFn: 'M1', companyFn: 'C-SG', fiscalYear: 2026, periodNo: 5, label: 'May 2026', startDate: '2026-05-01', endDate: '2026-05-31', status: 'locked', lockedAt: new Date('2026-06-03T00:00:00Z'), lockedByUserId: adminUser.id },
+    { masterFn: 'M1', companyFn: 'C-SG', fiscalYear: 2026, periodNo: 6, label: 'June 2026', startDate: '2026-06-01', endDate: '2026-06-30', status: 'open' },
+    { masterFn: 'M1', companyFn: 'C-MY', fiscalYear: 2026, periodNo: 6, label: 'June 2026', startDate: '2026-06-01', endDate: '2026-06-30', status: 'open' },
   ]);
 
   // A customer for the SG company.

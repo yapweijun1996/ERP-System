@@ -666,19 +666,16 @@ proof, PostgreSQL parity/security, desktop/375px and all 114 routes pass.
 Exit criteria: actor/company isolation, sanitized public shape, RBAC/CSRF/idempotency/
 audit proof, Demo/API state persistence, desktop/375px and all 114 routes pass.
 
-## Remaining productionization backlog — 3 Preview routes
+## Phase 32 — Final Canonical Control Plane ✅
 
-This is the authoritative work breakdown after TASK-084. `tasks/tasks.jsonl` records
-completed vertical slices; it is not a claim that the remaining Preview routes are
-finished merely because no pre-written task is open. New tasks should be cut from these
-workstreams in dependency order:
+1. **Connector registry and tenant administration** (EPIC-049, TASK-085 done
+   2026-07-23) replace the last three sample pages. Integration credentials are
+   encrypted server-side and never exposed; Demo stores no secrets. Master Control is
+   intentionally current-tenant only. System Settings persists audited company policy,
+   document sequences and period locks over effective-dated tax facts.
+2. Migration 0044, generated PGlite schema, production RLS and service-worker v73 align
+   at 127 tables. Demo/API adapters share the same TypeScript commands.
 
-1. **Integration — 1 route:** `integration`. Delivery history and bounded customer CSV
-   import are now Canonical; the connector hub still requires server-side encrypted
-   credentials, connector-specific health checks and authorised retry/configuration.
-2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
-   configuration, sequences, tax and period policies in the database; no localStorage
-   control plane.
-Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared
-Demo/PostgreSQL command path, RBAC/audit/idempotency, five-language copy and desktop/
-375px verification all exist. The final release gate remains 114/114 Canonical.
+Exit criteria: **114/114 Canonical, Preview=0**, 379 tests plus one expected skip,
+desktop/375px route audit and in-app browser proof pass. TASK-017 physical iPhone and
+Android verification remains the only human-only release check.

@@ -293,6 +293,20 @@ import {
   listNotificationsWithin,
   markNotificationReadWithin,
 } from '../../src/modules/account/notification';
+import {
+  checkConnectorHealthWithin,
+  listConnectorsWithin,
+  setConnectorEnabledWithin,
+} from '../../src/modules/integration/connector';
+import {
+  getMasterControlWithin,
+  getSystemSettingsWithin,
+  setAccountingPeriodStatusWithin,
+  updateCompanyPolicyWithin,
+  updateDocumentSequenceWithin,
+  type UpdateCompanyPolicyInput,
+  type UpdateSequenceInput,
+} from '../../src/modules/admin/controlPlane';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -757,6 +771,48 @@ export const erpDemoRuntime = Object.freeze({
     },
     listMasterModules(db: DemoOrm, scope: Scope) {
       return listMasterModules(asDomainDb(db), scope.masterFn);
+    },
+    listConnectorsWithin(db: DemoOrm, scope: Scope) {
+      return listConnectorsWithin(asDomainDb(db), scope);
+    },
+    setConnectorEnabledWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, connectorId: number, enabled: boolean,
+    ) {
+      return setConnectorEnabledWithin(
+        asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, connectorId, enabled,
+      );
+    },
+    checkConnectorHealthWithin(db: DemoOrm, scope: Scope, actorUserId: number, connectorId: number) {
+      return checkConnectorHealthWithin(
+        asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, connectorId,
+      );
+    },
+    getMasterControlWithin(db: DemoOrm, scope: Scope) {
+      return getMasterControlWithin(asDomainDb(db), scope);
+    },
+    getSystemSettingsWithin(db: DemoOrm, scope: Scope) {
+      return getSystemSettingsWithin(asDomainDb(db), scope);
+    },
+    updateCompanyPolicyWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, input: UpdateCompanyPolicyInput,
+    ) {
+      return updateCompanyPolicyWithin(
+        asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, input,
+      );
+    },
+    updateDocumentSequenceWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, id: number, input: UpdateSequenceInput,
+    ) {
+      return updateDocumentSequenceWithin(
+        asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, id, input,
+      );
+    },
+    setAccountingPeriodStatusWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, id: number, status: string,
+    ) {
+      return setAccountingPeriodStatusWithin(
+        asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, id, status,
+      );
     },
     setMasterModuleWithin(
       db: DemoOrm,

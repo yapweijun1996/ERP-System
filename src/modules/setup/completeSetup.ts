@@ -16,6 +16,7 @@ import {
 import { appendAudit } from '../../api/audit';
 import { hashPassword } from '../../auth/password';
 import { PERMISSIONS } from '../../auth/permissions';
+import { createDefaultControlPlane } from './defaultControlPlane';
 
 const SETUP_STATE_KEY = 'production_setup';
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
@@ -185,6 +186,7 @@ export async function completeProductionSetup(
       rate: defaults.taxRate,
       validFrom: defaults.taxValidFrom,
     });
+    await createDefaultControlPlane(tx, { masterFn, companyFn }, country as 'SG' | 'MY');
     await tx.insert(account).values([
       { masterFn, companyFn, code: '1100', name: 'Accounts Receivable', type: 'asset' },
       { masterFn, companyFn, code: '1200', name: 'Input Tax', type: 'asset' },

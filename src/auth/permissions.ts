@@ -34,6 +34,7 @@ export const PERMISSIONS = {
   reportingRead: 'reporting.read',
   integrationRead: 'integration.read',
   integrationImport: 'integration.import',
+  integrationManage: 'integration.manage',
   notificationsRead: 'notifications.read',
   notificationsManage: 'notifications.manage',
   payrollRead: 'payroll.read',
@@ -46,6 +47,9 @@ export const PERMISSIONS = {
   rolesRead: 'admin.roles.read',
   rolesWrite: 'admin.roles.write',
   modulesManage: 'admin.modules.manage',
+  masterControlRead: 'admin.master.read',
+  settingsRead: 'settings.read',
+  settingsManage: 'settings.manage',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS] | (string & {});

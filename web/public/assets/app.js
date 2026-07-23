@@ -435,6 +435,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'bank-rec',
   'bi-dashboard','sales-analysis','stock-aging',
   'my-activity','notifications',
+  'integration','master-control','sys-settings',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -475,6 +476,7 @@ const API_SCREEN_ROUTES = new Set([
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
   'my-activity',
   'notifications',
+  'integration','master-control','sys-settings',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',

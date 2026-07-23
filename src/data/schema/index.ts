@@ -17,3 +17,4 @@ export * from './service';
 export * from './payroll';
 export * from './integration';
 export * from './notifications';
+export * from './controlPlane';

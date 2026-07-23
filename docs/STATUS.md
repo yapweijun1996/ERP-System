@@ -508,13 +508,25 @@ cost-layer semantics the schema cannot support.
    Directory/Leave Approval all render clean dates with zero console
    errors.
 
+## Final control-plane milestone (TASK-085, 2026-07-23)
+
+The final three Preview routes are now Canonical. `integration` reads a real
+company-scoped connector registry and supports audited health/pause/resume actions;
+production credential configuration encrypts secrets with AES-GCM and never returns
+the envelope to the browser, while offline Demo explicitly refuses to store secrets.
+`master-control` is now a bounded current-tenant view over real companies, users,
+roles and module state rather than a fictional cross-tenant console. `sys-settings`
+now reads and writes audited company policy, document sequences and accounting-period
+locks while presenting effective-dated tax and currency facts. Migration 0044 brings
+the shared Drizzle/PGlite/PostgreSQL schema to 127 tables. All **114 routes are now
+Canonical and API-capable; Preview=0**.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 83 tasks, including TASK-084 (all registered tasks except TASK-017)
+- Done: 84 tasks, including TASK-085 (all registered tasks except TASK-017)
 - Blocked: TASK-017 (1)
-- Todo in the historical task registry: none. The remaining product work is the 3
-  Preview-route backlog broken down in `docs/ROADMAP.md`; new vertical tasks are cut
-  from that list as implementation proceeds.
+- Todo in the historical task registry: none. Route productionization is complete at
+  114 Canonical / 0 Preview; only the human-only physical-device release check remains.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
