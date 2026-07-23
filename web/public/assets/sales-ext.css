@@ -18,6 +18,9 @@
 .sales-tablewrap{margin-top:4px;border:1px solid var(--hairline);border-radius:var(--r-l);overflow:hidden;background:var(--surface);}
 .sales-body .so-kpibar{padding:2px 0 14px;}
 .sales-body .toolbar{padding-left:0;padding-right:0;}
+.transaction-list-note{color:var(--muted);font-size:calc(11.5px * var(--fs,1));}
+.transaction-list-body [data-list-empty]{height:auto;min-height:240px;}
+.transaction-list-pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 0;}
 .li-subj{color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;}
 .muted-date{color:var(--muted);}
 .linknum{cursor:pointer;}

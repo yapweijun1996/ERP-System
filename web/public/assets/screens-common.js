@@ -23,6 +23,164 @@ async function listPage(resource, query){
 }
 
 /**
+ * Page-level SSOT for canonical transaction registers.
+ *
+ * `modulePage()` owns the shared ERP shell and `buildTable()`/`wireTable()` own
+ * the low-level grid. This helper owns the missing layer between them: title
+ * action, KPI strip, filters, toolbar actions, table/empty state and pagination
+ * regions. Screen modules provide facts and behaviour only; they must not
+ * rebuild this chrome independently.
+ */
+function transactionListPage(root, config){
+  if(!root) throw new Error('transactionListPage requires a render root.');
+  const cfg=config||{};
+  const value=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
+  let activeFilter=cfg.initialFilter||'all';
+
+  function allRows(){
+    const rows=value(cfg.rows);
+    return Array.isArray(rows)?rows:[];
+  }
+  function visibleRows(){
+    const rows=allRows();
+    if(activeFilter==='all'||typeof cfg.filterFn!=='function') return rows;
+    return rows.filter(row=>cfg.filterFn(row,activeFilter));
+  }
+  function renderKpis(rows){
+    const items=value(cfg.kpis,rows)||[];
+    if(!items.length) return '<div class="so-kpibar" data-list-kpis hidden></div>';
+    return `<div class="so-kpibar" data-list-kpis>${items.map(item=>{
+      const filter=value(item.filter,item,rows);
+      const clickable=filter!=null;
+      const classes=[
+        'so-kpi',clickable?'clickable':'',filter===activeFilter?'active':'',
+        item.negative?'neg':'',item.accent?'accent':'',
+      ].filter(Boolean).join(' ');
+      return `<button class="${classes}" ${clickable?`data-list-kpi-filter="${esc(String(filter))}"`:'disabled'}>
+        <small>${esc(String(value(item.label,item,rows)||''))}</small>
+        <b class="tnum">${esc(String(value(item.value,item,rows)??''))}</b>
+      </button>`;
+    }).join('')}</div>`;
+  }
+  function renderFilters(){
+    const chips=value(cfg.filters)||[];
+    if(!chips.length) return '<div class="filterchips" data-list-filters hidden></div>';
+    return `<div class="filterchips" data-list-filters>${chips.map(item=>{
+      const key=Array.isArray(item)?item[0]:item.key;
+      const label=Array.isArray(item)?item[1]:item.label;
+      return `<button class="chip ${key===activeFilter?'on':''}" data-list-filter="${esc(String(key))}">
+        ${esc(String(value(label,item)||''))}
+      </button>`;
+    }).join('')}</div>`;
+  }
+  function renderToolbarActions(rows){
+    const actions=value(cfg.toolbarActions,rows)||[];
+    return actions.map((action,index)=>btn(String(value(action.label,action,rows)||''),{
+      icon:action.icon||null,
+      cls:action.cls||'soft',
+      attrs:`data-list-toolbar-action="${index}"${action.disabled?' disabled':''}`,
+    })).join('');
+  }
+  function renderEmpty(){
+    const empty=cfg.empty||{};
+    return `<div class="statepanel empty" data-list-empty>
+      ${ic(empty.icon||'inbox')}
+      <h3>${esc(String(value(empty.title)||'No records'))}</h3>
+      ${empty.description?`<p>${esc(String(value(empty.description)))}</p>`:''}
+    </div>`;
+  }
+  function renderTable(rows){
+    if(!rows.length) return renderEmpty();
+    const columns=(value(cfg.columns,rows)||[]).map(column=>({
+      ...column,
+      label:value(column.label,column,rows),
+    }));
+    return buildTable({
+      checkable:Boolean(cfg.checkable),
+      rowId:cfg.rowId,
+      columns,
+      rows,
+    });
+  }
+  function renderPagination(rows){
+    const pagination=value(cfg.pagination,rows);
+    if(!pagination) return '<div class="transaction-list-pagination" data-list-pagination hidden></div>';
+    return `<div class="transaction-list-pagination" data-list-pagination>${pagination}</div>`;
+  }
+  function render(){
+    const rows=visibleRows();
+    const source=allRows();
+    const primary=cfg.primaryAction;
+    const primaryHtml=primary?btn(String(value(primary.label,source)||''),{
+      icon:primary.icon||'plus',
+      cls:primary.cls||'primary',
+      attrs:`data-list-primary-action${primary.disabled?' disabled':''}`,
+    }):'';
+    const note=value(cfg.note,source);
+    const body=`<div class="sales-body transaction-list-body"
+        data-layout="transaction-list-v1" data-list-route="${esc(String(cfg.route||''))}">
+      ${renderKpis(source)}
+      <div class="toolbar" data-list-toolbar>
+        ${renderFilters()}<div class="grow"></div>
+        ${note?`<small class="transaction-list-note">${esc(String(note))}</small>`:''}
+        ${renderToolbarActions(rows)}
+      </div>
+      <div class="sales-tablewrap" data-list-table>${renderTable(rows)}</div>
+      ${renderPagination(rows)}
+    </div>`;
+    root.innerHTML=modulePage({
+      module:cfg.module,
+      route:cfg.route,
+      active:cfg.active||cfg.route,
+      title:String(value(cfg.title,source)||''),
+      crumb:value(cfg.crumb,source),
+      sub:value(cfg.description,source),
+      count:value(cfg.count,rows,source)??rows.length,
+      action:primaryHtml,
+      body,
+    });
+    wire(rows);
+  }
+  function setFilter(filter){
+    activeFilter=filter||'all';
+    render();
+  }
+  function wire(rows){
+    const tableRoot=root.querySelector('[data-list-table]');
+    if(rows.length){
+      wireTable(tableRoot,{
+        onRow:typeof cfg.onOpen==='function'
+          ? id=>cfg.onOpen(rows.find(row=>String(cfg.rowId(row))===String(id)),id)
+          : null,
+        onSelectionChange:cfg.onSelectionChange,
+      });
+    }
+    root.querySelectorAll('[data-list-filter]').forEach(button=>button.addEventListener('click',()=>{
+      setFilter(button.dataset.listFilter);
+    }));
+    root.querySelectorAll('[data-list-kpi-filter]').forEach(button=>button.addEventListener('click',()=>{
+      setFilter(button.dataset.listKpiFilter);
+    }));
+    root.querySelector('[data-list-primary-action]')?.addEventListener('click',event=>{
+      if(primaryEnabled(cfg.primaryAction)) cfg.primaryAction.onClick(event);
+    });
+    const actions=value(cfg.toolbarActions,rows)||[];
+    root.querySelectorAll('[data-list-toolbar-action]').forEach(button=>button.addEventListener('click',event=>{
+      const action=actions[Number(button.dataset.listToolbarAction)];
+      if(action&&typeof action.onClick==='function'&&!action.disabled) action.onClick(event,rows);
+    }));
+    if(typeof cfg.afterRender==='function') cfg.afterRender({root,rows,allRows:allRows(),activeFilter,setFilter,render});
+  }
+  function primaryEnabled(primary){
+    return primary&&typeof primary.onClick==='function'&&!primary.disabled;
+  }
+
+  render();
+  return {render,setFilter,getFilter:()=>activeFilter,rows:visibleRows};
+}
+window.transactionListPage=transactionListPage;
+
+/**
  * Shared horizontal comparison bars used by Sales and Purchasing dashboards.
  * This helper originally lived in the sample BI screen even though unrelated
  * modules called it through classic-script global scope. Keeping it here makes

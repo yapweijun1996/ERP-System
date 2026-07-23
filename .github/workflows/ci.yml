@@ -104,3 +104,6 @@ jobs:
 
       - name: Screen audit (every SCREENS route, zero errors + no leftover prototype data on canonical screens)
         run: npm run audit:screens
+
+      - name: Transaction list layout audit (declared SSOT routes, desktop + mobile)
+        run: npm run audit:list-layouts

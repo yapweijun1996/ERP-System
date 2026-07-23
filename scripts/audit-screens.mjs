@@ -18,6 +18,9 @@
 //   - every route has route-level SCREEN_META, Preview routes render the
 //     visible Sample Data banner, active module tabs stay visible on mobile,
 //     and standard action bars do not overflow.
+//   - routes declaring a page-level layout contract render every required
+//     region in canonical order. Set LIST_LAYOUT_ONLY=1 to audit only those
+//     routes while migrating legacy screens in bounded batches.
 //   - stateful transaction detail routes are opened through real fixtures
 //     instead of silently redirecting because no record was selected.
 //
@@ -34,6 +37,7 @@ const DIST_INDEX = path.join(WEB_DIR, 'dist', 'index.html');
 const PORT = process.env.AUDIT_PORT || '4311';
 const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
+const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
 const VIEWPORTS = [
@@ -175,9 +179,15 @@ async function auditRoutes(browser, viewport) {
     throw new Error(`Async SCREENS contract failed: ${asyncRenderIssues.join(' | ')}`);
   }
 
-  const routes = await page.evaluate(() => Object.keys(SCREENS).sort());
+  const allRoutes = await page.evaluate(() => Object.keys(SCREENS).sort());
   const routeModule = await page.evaluate(() => Object.assign({}, ROUTE_MODULE));
   const screenMeta = await page.evaluate(() => JSON.parse(JSON.stringify(window.SCREEN_META || {})));
+  const routes = LIST_LAYOUT_ONLY
+    ? allRoutes.filter((route) => screenMeta[route]?.layout === 'transaction-list-v1')
+    : allRoutes;
+  if (LIST_LAYOUT_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare layout=transaction-list-v1.');
+  }
   const missingAdapterMethods = await page.evaluate(() => {
     const required = ['list','get','create','update','action','refresh','session','switchCompany'];
     if (!window.ErpSystemData) return ['ErpSystemData'];
@@ -236,19 +246,54 @@ async function auditRoutes(browser, viewport) {
           layoutIssues.push(`${bar.className} overflow ${bar.scrollWidth}>${bar.clientWidth}`);
         }
       });
+      const listRoot = el.querySelector('[data-layout="transaction-list-v1"]');
+      const listRegions = listRoot ? [
+        listRoot.querySelector('[data-list-kpis]'),
+        listRoot.querySelector('[data-list-toolbar]'),
+        listRoot.querySelector('[data-list-table]'),
+        listRoot.querySelector('[data-list-pagination]'),
+      ] : [];
+      const listRegionOrder = listRegions.length === 4
+        && listRegions.every(Boolean)
+        && listRegions.every((node, index) => index === 0
+          || Boolean(listRegions[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
       return {
         text: el.innerText || '',
         previewBanner: Boolean(el.querySelector('[data-preview-banner]')),
         enabledPreviewWrites,
         layoutIssues,
+        listLayout: {
+          present: Boolean(listRoot),
+          missingRegions: listRoot
+            ? ['kpis','toolbar','table','pagination'].filter((_, index) => !listRegions[index])
+            : [],
+          ordered: listRegionOrder,
+        },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
         renderError: Boolean(el.querySelector('.screen-render-error')),
       };
-    }).catch(() => ({ text: '', previewBanner: false, enabledPreviewWrites: [], layoutIssues: ['render inspection failed'], moduleShell: false, renderError: true }));
+    }).catch(() => ({
+      text: '', previewBanner: false, enabledPreviewWrites: [],
+      layoutIssues: ['render inspection failed'],
+      listLayout: { present: false, missingRegions: [], ordered: false },
+      moduleShell: false, renderError: true,
+    }));
 
     const moduleId = routeModule[route] || null;
     const canonical = meta && meta.maturity === 'canonical';
     const leaks = canonical ? findIdentityLeak(rendered.text || '') : [];
+    if (meta?.layout === 'transaction-list-v1') {
+      if (!rendered.listLayout.present) {
+        rendered.layoutIssues.push('transaction-list-v1 root missing');
+      } else {
+        if (rendered.listLayout.missingRegions.length) {
+          rendered.layoutIssues.push(`transaction-list-v1 regions missing: ${rendered.listLayout.missingRegions.join(', ')}`);
+        }
+        if (!rendered.listLayout.ordered) {
+          rendered.layoutIssues.push('transaction-list-v1 regions are outside canonical order');
+        }
+      }
+    }
 
     results.push({
       route,
@@ -358,7 +403,7 @@ try {
       console.error(`\n${layoutFailed.length} layout failure(s):\n`);
       for (const r of layoutFailed) console.error(`LAYOUT [${r.viewport}:${r.route}] ${r.layoutIssues.join(' | ')}`);
     } else {
-      console.log('Desktop/mobile layout contract passed: no page, active-tab, or standard action-bar overflow.');
+      console.log('Desktop/mobile layout contract passed: no page, active-tab, standard action-bar or declared list-contract failures.');
     }
 
     if (shellFailed.length) {

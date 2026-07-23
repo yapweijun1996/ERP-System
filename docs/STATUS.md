@@ -531,12 +531,23 @@ resolves. The route audit proves the unresolved loading state at desktop and 375
 live browser checks confirm matching font size/weight, no overflow and zero console
 errors. Service-worker v74 delivers the corrected shell to existing PWA sessions.
 
+## Transaction-list UI SSOT foundation (TASK-087, 2026-07-23)
+
+Canonical data maturity no longer implies that a route has passed the page-level list
+design contract. The new `transactionListPage()` composes the shared module shell and
+grid primitives into one approved Suppliers/Enquiries-style register with explicit KPI,
+filter toolbar, table/empty and pagination regions. Work Orders is the first migrated
+route and declares `SCREEN_META.layout = transaction-list-v1`. The screen audit now
+validates this contract at desktop and 375px, with `npm run audit:list-layouts` available
+for bounded migration batches and wired into CI. Service-worker v75 delivers the pilot.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 85 tasks, including TASK-086 (all registered tasks except TASK-017)
+- Done: 86 tasks, including TASK-087
 - Blocked: TASK-017 (1)
-- Todo in the historical task registry: none. Route productionization is complete at
-  114 Canonical / 0 Preview; only the human-only physical-device release check remains.
+- Todo: TASK-088 through TASK-091 (4 actionable UI-SSOT migration slices). Route
+  productionization remains complete at 114 Canonical / 0 Preview; these tasks address
+  visual layout convergence rather than data/API maturity.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

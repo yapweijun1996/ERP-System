@@ -565,6 +565,9 @@ const MODULE_READ_PERMISSION = {
 const SCREEN_FIXTURES = {
   'txn-view':'sales-enquiry',
 };
+const SCREEN_LAYOUTS = Object.freeze({
+  'work-orders':'transaction-list-v1',
+});
 const SCREEN_META = {};
 Object.keys(SCREENS).forEach(route=>{
   const moduleId=ROUTE_MODULE[route]||(
@@ -582,6 +585,7 @@ Object.keys(SCREENS).forEach(route=>{
     activeSection:SCREEN_ACTIVE_ALIASES[route]||route,
     permission:MODULE_READ_PERMISSION[moduleId]||null,
     fixture:SCREEN_FIXTURES[route]||null,
+    layout:SCREEN_LAYOUTS[route]||null,
   });
 });
 window.SCREEN_META=SCREEN_META;
@@ -590,7 +594,7 @@ function getScreenMeta(route){
   return SCREEN_META[route]||{
     route, module:ROUTE_MODULE[route]||'unmapped', maturity:'preview',
     dataSource:'sample', supportedModes:['demo'], activeSection:route,
-    permission:null, fixture:null,
+    permission:null, fixture:null, layout:null,
   };
 }
 function moduleMaturity(moduleId){

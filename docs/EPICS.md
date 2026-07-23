@@ -1723,3 +1723,28 @@ Acceptance criteria:
 - [x] The desktop and 375px route audit proves the Purchasing loader says `Purchasing`
       before the asynchronous page resolves.
 - [x] The PWA cache version advances and the standard local quality gates pass.
+
+## EPIC-051 — Transaction-list UI SSOT
+
+**Goal:** make the approved Suppliers/Enquiries register layout a real page-level
+contract instead of a visual convention that each module may reconstruct differently.
+Canonical data maturity and visual-layout compliance remain separate metadata.
+
+Delivery slices:
+
+- [x] **TASK-087 — foundation + Work Orders pilot.** `transactionListPage()` owns
+      the KPI/filter/toolbar/table/empty/pagination regions, composes `modulePage()`
+      with `buildTable()`/`wireTable()`, and emits
+      `data-layout="transaction-list-v1"`. `SCREEN_META.layout` and the desktop/375px
+      runtime audit enforce the declared structure. Work Orders is migrated without
+      changing its real data or commands; service worker v75 delivers the UI.
+- [ ] **TASK-088 — Sales/Purchasing.** Migrate both register families, then remove
+      their duplicated high-level page chrome while retaining real row actions.
+- [ ] **TASK-089 — manufacturing operations.** Migrate qualifying Inventory,
+      Warehouse, Manufacturing and Quality registers without force-fitting intentional
+      master-detail or document-detail workspaces.
+- [ ] **TASK-090 — back office/platform.** Migrate Finance, CRM, HR, Projects,
+      Service, Assets, Admin and Integration registers with their permission and
+      sanitization boundaries intact.
+- [ ] **TASK-091 — enforcement/cleanup.** Classify every route layout, delete the
+      obsolete list factories and reject new page-level hand-authored list chrome.

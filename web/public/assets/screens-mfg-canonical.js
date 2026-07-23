@@ -105,61 +105,47 @@
     ]);
     const orders=orderPage.data||[];
     const products=byId(productPage.data);
-    let active='all';
-    function filtered(){
-      return active==='all'?orders:orders.filter(order=>order.status===active);
-    }
-    function table(){
-      return buildTable({
-        rowId:row=>row.id,
-        columns:[
-          {label:s('orders'),sticky:true,render:row=>{
-            const item=products.get(Number(row.productId))||{};
-            return `<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b>
-              <small>${esc(item.sku||'#'+row.productId)} · ${esc(item.name||s('product'))}</small></div>`;
-          }},
-          {label:s('quantity'),align:'r',render:row=>`<span class="tnum">${num(Number(row.plannedQty))}</span>`},
-          {label:s('start'),render:row=>esc(dateLabel(row.startDate))},
-          {label:s('due'),render:row=>esc(dateLabel(row.dueDate))},
-          {label:s('priority'),render:row=>cap(row.priority,row.priority==='urgent'?'danger':row.priority==='high'?'warn':'neutral')},
-          {label:s('progress'),align:'r',render:row=>{
-            const pct=Number(row.plannedQty)?Math.round(Number(row.completedQty)/Number(row.plannedQty)*100):0;
-            return `<span class="minibar"><i class="${pct>=100?'ok':pct>0?'warn':''}" style="width:${pct}%"></i></span> ${pct}%`;
-          }},
-          {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
-        ],
-        rows:filtered(),
-      });
-    }
-    const chips=[
-      ['all',t('common.all')],['planned',s('planned')],['released',s('releasedStatus')],
-      ['in_progress',s('inProgress')],['completed',s('completed')],
-    ];
-    root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,t('nav.manufacturing'),s('orders')])}
-        <div class="h1row"><h1>${esc(s('orders'))}</h1><span class="countchip" id="mfgCount">${orders.length}</span>
-          <div class="headright">${btn(s('newOrder'),{icon:'plus',cls:'primary',attrs:'data-new-work-order'})}</div>
-        </div>
-      </div>
-      <div class="toolbar"><div class="filterchips" id="mfgFilters">
-        ${chips.map(([key,label])=>`<button class="chip ${key==='all'?'on':''}" data-status="${key}">${esc(label)}</button>`).join('')}
-      </div><div class="grow"></div><small style="color:var(--muted)">${esc(s('dataLimit'))}</small></div>
-      <div class="tablewrap" id="mfgOrders">${orders?table():''}</div>
-      ${!orders.length?`<div class="statepanel empty">${ic('factory')}<h3>${esc(s('empty'))}</h3><p>${esc(s('emptyDesc'))}</p></div>`:''}
-    </section></div>`;
-    const tableRoot=root.querySelector('#mfgOrders');
-    function wire(){
-      if(tableRoot) wireTable(tableRoot,{onRow:id=>openWorkOrder(id)});
-    }
-    wire();
-    root.querySelector('[data-new-work-order]')?.addEventListener('click',()=>navigate('new-work-order'));
-    root.querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',()=>{
-      root.querySelector('.chip.on')?.classList.remove('on');
-      button.classList.add('on');
-      active=button.dataset.status;
-      if(tableRoot){ tableRoot.innerHTML=table(); wire(); }
-      root.querySelector('#mfgCount').textContent=String(filtered().length);
-    }));
+    transactionListPage(root,{
+      module:'manufacturing',
+      route:'work-orders',
+      title:s('orders'),
+      rows:orders,
+      rowId:row=>row.id,
+      count:rows=>rows.length,
+      primaryAction:{
+        label:s('newOrder'),icon:'plus',onClick:()=>navigate('new-work-order'),
+      },
+      kpis:rows=>[
+        {label:s('orders'),value:rows.length,filter:'all'},
+        {label:s('planned'),value:rows.filter(row=>row.status==='planned').length,filter:'planned'},
+        {label:s('inProgress'),value:rows.filter(row=>row.status==='in_progress').length,filter:'in_progress'},
+        {label:s('completed'),value:rows.filter(row=>row.status==='completed').length,filter:'completed'},
+      ],
+      filters:[
+        ['all',t('common.all')],['planned',s('planned')],['released',s('releasedStatus')],
+        ['in_progress',s('inProgress')],['completed',s('completed')],
+      ],
+      filterFn:(row,filter)=>row.status===filter,
+      note:s('dataLimit'),
+      columns:[
+        {label:s('orders'),sticky:true,render:row=>{
+          const item=products.get(Number(row.productId))||{};
+          return `<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b>
+            <small>${esc(item.sku||'#'+row.productId)} · ${esc(item.name||s('product'))}</small></div>`;
+        }},
+        {label:s('quantity'),align:'r',render:row=>`<span class="tnum">${num(Number(row.plannedQty))}</span>`},
+        {label:s('start'),render:row=>esc(dateLabel(row.startDate))},
+        {label:s('due'),render:row=>esc(dateLabel(row.dueDate))},
+        {label:s('priority'),render:row=>cap(row.priority,row.priority==='urgent'?'danger':row.priority==='high'?'warn':'neutral')},
+        {label:s('progress'),align:'r',render:row=>{
+          const pct=Number(row.plannedQty)?Math.round(Number(row.completedQty)/Number(row.plannedQty)*100):0;
+          return `<span class="minibar"><i class="${pct>=100?'ok':pct>0?'warn':''}" style="width:${pct}%"></i></span> ${pct}%`;
+        }},
+        {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
+      ],
+      empty:{icon:'factory',title:s('empty'),description:s('emptyDesc')},
+      onOpen:row=>row&&openWorkOrder(row.id),
+    });
   };
 
   SCREENS['work-order']=async function(root){
