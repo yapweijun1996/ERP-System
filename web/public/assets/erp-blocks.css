@@ -308,6 +308,7 @@ table.lines tr.editing td{background:var(--accent-tint);}
 /* ===== immutable accounting posting detail SSOT ===== */
 .posting-detail{padding:2px 24px 86px;min-width:0;}
 .posting-detail-overview{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-l);padding:15px 16px;margin-bottom:16px;min-width:0;}
+.posting-detail-overview[hidden],.posting-detail-context[hidden],.posting-detail-actions[hidden]{display:none;}
 .posting-detail-identity{display:flex;align-items:baseline;gap:9px;min-width:0;}
 .posting-detail-identity>span{font-size:calc(16px * var(--fs,1));font-weight:700;}
 .posting-detail-identity>b{font-family:var(--mono);font-size:calc(12px * var(--fs,1));color:var(--accent);}
@@ -334,6 +335,8 @@ table.lines tr.editing td{background:var(--accent-tint);}
 .posting-lines-footer{display:flex;align-items:center;justify-content:flex-end;gap:22px;flex-wrap:wrap;background:var(--surface-2);padding:11px 14px;font-size:calc(12px * var(--fs,1));font-weight:650;}
 .posting-lines-footer>small{color:var(--muted);font-weight:600;}
 .posting-audit-body{padding:14px 16px;}
+.posting-inline-empty{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--muted);padding:24px 14px;}
+.posting-inline-empty .ico{width:18px;height:18px;color:var(--faint);}
 .posting-context-card{padding:15px;}
 .posting-context-card>small{display:block;margin-bottom:10px;}
 .posting-balance-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;font-size:calc(12.5px * var(--fs,1));}
@@ -341,7 +344,9 @@ table.lines tr.editing td{background:var(--accent-tint);}
 .posting-balance-row.total{margin-top:4px;padding-top:12px;font-weight:700;font-size:calc(14px * var(--fs,1));}
 .posting-context-card .indicator{margin-top:10px;}
 .posting-context-card p{font-size:calc(12.5px * var(--fs,1));color:var(--muted);margin:0;line-height:1.5;}
-.posting-detail-empty{margin:0;min-height:280px;}
+.posting-detail.is-empty{padding-bottom:24px;}
+.posting-detail.is-empty .posting-detail-grid{display:block;}
+.posting-detail-empty{margin:0;min-height:360px;padding:68px 30px;}
 .posting-detail-actions{display:flex;align-items:center;gap:10px;position:sticky;bottom:0;z-index:8;margin-top:16px;padding:11px 14px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--material);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);box-shadow:var(--shadow);}
 
 /* indicators: credit limit, stock, balance */

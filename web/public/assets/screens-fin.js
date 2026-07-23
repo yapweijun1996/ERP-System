@@ -483,53 +483,91 @@ async function prepareCanonicalPaymentVoucherData(){
     };
   }).sort((a,b)=>b.id-a.id);
 }
+
+function paymentVoucherCopy(){
+  const packs={
+    en:{title:'Payment Voucher',sub:'Canonical supplier settlement',posted:'Posted',payTo:'Pay to',date:'Date',bankRef:'Bank reference',invoiceCount:'Invoices settled',invoices:'Invoices settled',supplierInvoice:'Supplier invoice',amount:'Amount',net:'Net payment',balance:'Payment balances',debit:'Debit · Accounts Payable',credit:'Credit · Cash & Bank',difference:'Difference',balanced:'Posting balances',supplierBalance:'Supplier balance',remaining:'Remaining open balance',outstanding:'unpaid invoices still outstanding.',recent:'Recent vouchers',audit:'Audit trail',postedAudit:'Payment posted — supplier invoices settled',sourceAudit:'Created from canonical payment voucher',newVoucher:'New voucher',empty:'No payment vouchers yet',emptyHelp:'Settle a real unpaid supplier invoice to see it here.',error:'Payment vouchers could not be loaded.',retry:'Retry'},
+    ms:{title:'Baucar Bayaran',sub:'Penyelesaian pembekal kanonik',posted:'Dipos',payTo:'Bayar kepada',date:'Tarikh',bankRef:'Rujukan bank',invoiceCount:'Invois diselesaikan',invoices:'Invois diselesaikan',supplierInvoice:'Invois pembekal',amount:'Amaun',net:'Bayaran bersih',balance:'Baki posting',debit:'Debit · Akaun Belum Bayar',credit:'Kredit · Tunai & Bank',difference:'Perbezaan',balanced:'Posting seimbang',supplierBalance:'Baki pembekal',remaining:'Baki terbuka',outstanding:'invois belum bayar masih tertunggak.',recent:'Baucar terkini',audit:'Jejak audit',postedAudit:'Bayaran dipos — invois pembekal diselesaikan',sourceAudit:'Dicipta daripada baucar bayaran kanonik',newVoucher:'Baucar baharu',empty:'Belum ada baucar bayaran',emptyHelp:'Selesaikan invois pembekal sebenar yang belum dibayar untuk melihatnya di sini.',error:'Baucar bayaran tidak dapat dimuatkan.',retry:'Cuba lagi'},
+    zh:{title:'付款凭证',sub:'Canonical 供应商结算',posted:'已过账',payTo:'付款对象',date:'日期',bankRef:'银行参考号',invoiceCount:'已结算发票',invoices:'已结算发票',supplierInvoice:'供应商发票',amount:'金额',net:'付款净额',balance:'过账平衡',debit:'借方 · 应付账款',credit:'贷方 · 现金与银行',difference:'差额',balanced:'借贷平衡',supplierBalance:'供应商余额',remaining:'剩余未结余额',outstanding:'未付款发票仍待结算。',recent:'最近付款凭证',audit:'审计轨迹',postedAudit:'付款已过账 — 供应商发票已结算',sourceAudit:'由 Canonical 付款凭证创建',newVoucher:'新建付款凭证',empty:'尚无付款凭证',emptyHelp:'结算一张真实的未付款供应商发票后即可在此查看。',error:'无法加载付款凭证。',retry:'重试'},
+    ja:{title:'支払伝票',sub:'Canonical 仕入先決済',posted:'転記済',payTo:'支払先',date:'日付',bankRef:'銀行参照',invoiceCount:'決済済請求書',invoices:'決済済請求書',supplierInvoice:'仕入先請求書',amount:'金額',net:'正味支払額',balance:'転記残高',debit:'借方 · 買掛金',credit:'貸方 · 現金・預金',difference:'差額',balanced:'転記は貸借一致',supplierBalance:'仕入先残高',remaining:'未決済残高',outstanding:'未払請求書が残っています。',recent:'最近の伝票',audit:'監査証跡',postedAudit:'支払を転記 — 仕入先請求書を決済',sourceAudit:'Canonical 支払伝票から作成',newVoucher:'新規伝票',empty:'支払伝票はまだありません',emptyHelp:'実際の未払仕入先請求書を決済すると、ここに表示されます。',error:'支払伝票を読み込めませんでした。',retry:'再試行'},
+    vi:{title:'Phiếu chi',sub:'Thanh toán nhà cung cấp Canonical',posted:'Đã ghi sổ',payTo:'Thanh toán cho',date:'Ngày',bankRef:'Tham chiếu ngân hàng',invoiceCount:'Hóa đơn đã thanh toán',invoices:'Hóa đơn đã thanh toán',supplierInvoice:'Hóa đơn nhà cung cấp',amount:'Số tiền',net:'Thanh toán ròng',balance:'Cân đối ghi sổ',debit:'Nợ · Phải trả người bán',credit:'Có · Tiền mặt & Ngân hàng',difference:'Chênh lệch',balanced:'Bút toán cân bằng',supplierBalance:'Số dư nhà cung cấp',remaining:'Số dư còn mở',outstanding:'hóa đơn chưa thanh toán vẫn còn.',recent:'Phiếu gần đây',audit:'Dấu vết kiểm toán',postedAudit:'Đã ghi sổ thanh toán — hóa đơn nhà cung cấp đã tất toán',sourceAudit:'Tạo từ phiếu chi Canonical',newVoucher:'Phiếu mới',empty:'Chưa có phiếu chi',emptyHelp:'Thanh toán một hóa đơn nhà cung cấp thực tế để xem tại đây.',error:'Không thể tải phiếu chi.',retry:'Thử lại'},
+  };
+  return packs[typeof getLang==='function'?getLang():'en']||packs.en;
+}
+
 SCREENS['payment-voucher'] = async function(root, params){
-  await prepareCanonicalPaymentVoucherData();
+  const copy=paymentVoucherCopy();
+  const newVoucherAction={label:copy.newVoucher,icon:'plus',cls:'primary',onClick:()=>navigate('new-payment-voucher')};
+  try{
+    await prepareCanonicalPaymentVoucherData();
+  }catch(error){
+    postingDetailPage(root,{
+      module:'finance',route:'payment-voucher',title:copy.title,description:copy.error,
+      error:{title:copy.error,description:error&&error.message||copy.error,retryLabel:copy.retry,onRetry:()=>navigate('payment-voucher',params)},
+      empty:{icon:'coins',title:copy.empty,description:copy.emptyHelp},
+      headerAction:newVoucherAction,
+    });
+    return;
+  }
   const requestedId=params&&params.voucherId?Number(params.voucherId):null;
   const v=requestedId?DB.paymentVouchers.find(x=>x.id===requestedId):DB.paymentVouchers[0];
   if(!v){
-    root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,'Finance',{cur:'Payment Voucher'}])}
-      <div class="h1row"><h1>Payment Voucher</h1></div></div>
-      ${statePanel({icon:'coins',title:'No payment vouchers yet',body:'Settle a real unpaid supplier invoice to see it here.'})}
-      <div style="padding:0 24px">${btn('New voucher',{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-payment-voucher\')"'})}</div>
-    </section></div>`;
+    postingDetailPage(root,{
+      module:'finance',route:'payment-voucher',title:copy.title,description:copy.emptyHelp,
+      headerAction:newVoucherAction,
+      empty:{icon:'coins',title:copy.empty,description:copy.emptyHelp,action:newVoucherAction},
+    });
     return;
   }
   const supplier=DB.suppliers.find(s=>s.id===v.supplierId);
-  const lineRows=v.lines.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
-    <td class="l li-name"><b>${esc(l.invoiceNo)}</b></td>
-    <td class="tnum"><b>${money(l.amount)}</b></td></tr>`).join('');
   const recent=DB.paymentVouchers.slice(0,8);
-  root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:960px">
-    ${crumbs([DB.company.name,'Finance','Payment Voucher',{cur:v.no}])}
-    <div class="dochead">
-      <div class="dh-row1"><div><div class="dt">${ic('coins')}Payment Voucher <span class="dnum">${esc(v.no)}</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(v.supplierName)} settlement</div></div>
-        <div class="dactions">${btn('New voucher',{icon:'plus',cls:'soft',attrs:'onclick="navigate(\'new-payment-voucher\')"'})}${cap('Posted','ok')}</div></div>
-      <div class="docmeta">
-        <div class="dm"><small>Pay to</small><div class="partner"><span class="pav">${esc((v.supplierName.match(/\b\w/g)||['—']).slice(0,2).join('').toUpperCase())}</span><b>${esc(v.supplierName)}</b></div></div>
-        <div class="dm"><small>Date</small><b>${esc(v.date)}</b></div>
-        <div class="dm"><small>Bank reference</small><b>${v.bankRef?esc(v.bankRef):'—'}</b></div>
+  const main=`<section class="posting-detail-card" data-posting-lines>
+      <div class="posting-detail-card-head"><h3>${esc(copy.invoices)}</h3><span class="grow"></span><small class="tnum">${v.lines.length}</small></div>
+      <div class="posting-lines-scroll">
+        <table class="posting-lines-table"><thead><tr>
+          <th class="c">#</th><th class="l">${esc(copy.supplierInvoice)}</th><th class="r">${esc(copy.amount)}</th>
+        </tr></thead><tbody>${v.lines.length?v.lines.map((line,index)=>`<tr>
+          <td class="c">${index+1}</td><td class="l"><b>${esc(line.invoiceNo)}</b></td>
+          <td class="r tnum"><b>${money(line.amount)}</b></td>
+        </tr>`).join(''):`<tr><td colspan="3"><div class="posting-inline-empty">${ic('receipt')}<span>${esc(copy.emptyHelp)}</span></div></td></tr>`}</tbody></table>
       </div>
-    </div>
-    <div class="doclayout">
-      <div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>Invoices settled</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${v.lines.length} invoice${v.lines.length===1?'':'s'}</span></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Supplier invoice</th><th>Amount</th></tr></thead><tbody>${lineRows}</tbody>
-          <tfoot><tr><td></td><td class="l" style="font-weight:600">Net payment</td><td class="tnum"><b>${money(v.total)}</b></td></tr></tfoot></table>
-        </div>
-      </div>
-      <aside class="summary">
-        <div class="sumcard">
-          <div class="sumrow total"><span class="sk2">Net payment</span><span class="sv tnum">${money(v.total)}</span></div>
-        </div>
-        ${supplier?`<div class="sumcard"><div class="sectitle" style="margin-top:0">Supplier balance</div>
-          ${indicator({tone:'ok',icon:'bank',label:'Remaining open balance',value:money0(supplier.balance),sub:`${esc(supplier.name)} · unpaid invoices still outstanding.`})}
-        </div>`:''}
-        ${recent.length>1?`<div class="sumcard"><div class="sectitle" style="margin-top:0">Recent vouchers</div>${relatedDocs(recent.map(r=>({no:r.no,label:r.supplierName,meta:money0(r.total),status:'Posted'})))}</div>`:''}
-      </aside>
-    </div>
-    <div style="height:40px"></div>
-  </div></div></section></div>`;
-  root.querySelectorAll('.sumcard .mli').forEach((el,i)=>el.addEventListener('click',()=>navigate('payment-voucher',{voucherId:recent[i].id})));
+      <div class="posting-lines-footer" data-posting-totals><small>${esc(copy.net)}</small><span class="tnum">${money(v.total)}</span>${cap(copy.posted,'ok')}</div>
+    </section>
+    <section class="posting-detail-card" data-posting-audit>
+      <div class="posting-detail-card-head"><h3>${esc(copy.audit)}</h3></div>
+      <div class="posting-audit-body">${auditTrail([
+        {kind:'current',when:esc(v.date),what:copy.postedAudit,who:'System'},
+        {kind:'add',when:esc(v.date),what:`${copy.sourceAudit} — ${esc(v.supplierName)}`,who:'System'},
+      ])}</div>
+    </section>`;
+  const context={body:`<section class="posting-context-card" data-posting-balance>
+      <small>${esc(copy.balance)}</small>
+      <div class="posting-balance-row"><span>${esc(copy.debit)}</span><b class="tnum">${money(v.total)}</b></div>
+      <div class="posting-balance-row"><span>${esc(copy.credit)}</span><b class="tnum">${money(v.total)}</b></div>
+      <div class="posting-balance-row total"><span>${esc(copy.difference)}</span><b class="tnum">${money(0)}</b></div>
+      ${indicator({tone:'ok',icon:'checkc',label:copy.balanced,value:'Dr = Cr'})}
+    </section>
+    ${supplier?`<section class="posting-context-card"><small>${esc(copy.supplierBalance)}</small>
+      ${indicator({tone:'ok',icon:'bank',label:copy.remaining,value:money0(supplier.balance),sub:`${esc(supplier.name)} · ${esc(copy.outstanding)}`})}
+    </section>`:''}
+    ${recent.length>1?`<section class="posting-context-card"><small>${esc(copy.recent)}</small>
+      <div data-related-vouchers>${relatedDocs(recent.map(row=>({no:row.no,label:row.supplierName,meta:money0(row.total),status:copy.posted})))}</div>
+    </section>`:''}`};
+  const postingRoot=postingDetailPage(root,{
+    module:'finance',route:'payment-voucher',title:copy.title,
+    description:`${v.supplierName} · ${copy.sub}`,
+    identity:{title:copy.title,code:v.no,meta:v.supplierName},
+    status:{label:copy.posted,tone:'ok'},
+    facts:[
+      {label:copy.payTo,value:v.supplierName},
+      {label:copy.date,value:v.date},
+      {label:copy.bankRef,value:v.bankRef||'—'},
+      {label:copy.invoiceCount,value:v.lines.length,numeric:true},
+    ],
+    main,context,headerAction:newVoucherAction,
+  });
+  postingRoot?.setAttribute('data-payment-voucher-detail','canonical');
+  postingRoot?.querySelectorAll('[data-related-vouchers] .mli').forEach((element,index)=>{
+    element.addEventListener('click',()=>navigate('payment-voucher',{voucherId:recent[index].id}));
+  });
 };

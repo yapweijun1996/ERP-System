@@ -401,6 +401,7 @@ function postingDetailPage(root, config){
   const identity=cfg.identity||{};
   const facts=Array.isArray(cfg.facts)?cfg.facts:[];
   const actions=Array.isArray(cfg.actions)?cfg.actions:[];
+  const headerAction=cfg.headerAction||null;
   const status=cfg.status||null;
   const error=cfg.error||null;
   const empty=cfg.empty||null;
@@ -419,14 +420,27 @@ function postingDetailPage(root, config){
     sm:action.sm,
     attrs:`data-posting-action="${index}" ${action.attrs||''}${action.disabled?' disabled':''}`,
   })).join('');
+  const headerActionHtml=headerAction?btn(String(headerAction.label||''),{
+    icon:headerAction.icon||null,
+    cls:headerAction.cls||'primary',
+    sm:headerAction.sm,
+    attrs:`data-posting-header-action ${headerAction.attrs||''}${headerAction.disabled?' disabled':''}`,
+  }):'';
+  const emptyAction=empty&&empty.action||null;
   const errorHtml=error?`${ic('warn')}<div><b>${esc(String(error.title||'Posting unavailable'))}</b>
       ${error.description?`<span>${esc(String(error.description))}</span>`:''}</div>
       ${typeof error.onRetry==='function'?btn(String(error.retryLabel||'Retry'),{icon:'refresh',cls:'soft',attrs:'data-posting-retry'}):''}`:'';
   const emptyHtml=empty?`<div class="statepanel empty posting-detail-empty" data-posting-empty>
       ${ic(empty.icon||'book')}<h3>${esc(String(empty.title||'No posting available'))}</h3>
       ${empty.description?`<p>${esc(String(empty.description))}</p>`:''}
+      ${emptyAction?btn(String(emptyAction.label||''),{
+        icon:emptyAction.icon||null,
+        cls:emptyAction.cls||'primary',
+        sm:emptyAction.sm,
+        attrs:`data-posting-empty-action ${emptyAction.attrs||''}${emptyAction.disabled?' disabled':''}`,
+      }):''}
     </div>`:'';
-  const body=`<section class="posting-detail"
+  const body=`<section class="posting-detail${empty?' is-empty':''}"
       data-layout="posting-detail-v1"
       data-posting-route="${esc(String(cfg.route||''))}"
       data-posting-code="${esc(String(identity.code||''))}">
@@ -454,6 +468,7 @@ function postingDetailPage(root, config){
     title:String(cfg.title||identity.title||''),
     crumb:cfg.crumb,
     sub:cfg.description,
+    action:headerActionHtml,
     body,
   });
   const postingRoot=root.querySelector('[data-layout="posting-detail-v1"]');
@@ -461,6 +476,12 @@ function postingDetailPage(root, config){
     postingRoot?.querySelector(`[data-posting-action="${index}"]`)?.addEventListener('click',event=>{
       if(typeof action.onClick==='function'&&!action.disabled) action.onClick(event);
     });
+  });
+  postingRoot?.closest('.master')?.querySelector('[data-posting-header-action]')?.addEventListener('click',event=>{
+    if(typeof headerAction?.onClick==='function'&&!headerAction.disabled) headerAction.onClick(event);
+  });
+  postingRoot?.querySelector('[data-posting-empty-action]')?.addEventListener('click',event=>{
+    if(typeof emptyAction?.onClick==='function'&&!emptyAction.disabled) emptyAction.onClick(event);
   });
   postingRoot?.querySelector('[data-posting-retry]')?.addEventListener('click',event=>error.onRetry(event));
   if(typeof cfg.afterRender==='function'){

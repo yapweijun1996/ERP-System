@@ -126,6 +126,12 @@ const obsoleteJournalChrome = ['docwrap','docpage','dochead','docmeta','doclayou
 if (obsoleteJournalChrome.length) {
   throw new Error(`Journal Entry still rebuilds legacy document chrome: ${obsoleteJournalChrome.join(', ')}`);
 }
+const paymentVoucherScreenSource = primaryFinanceScreenSource.split("SCREENS['payment-voucher'] =")[1] || '';
+const obsoletePaymentVoucherChrome = ['docwrap','docpage','dochead','docmeta','doclayout','summary']
+  .filter((token) => paymentVoucherScreenSource.includes(token));
+if (obsoletePaymentVoucherChrome.length) {
+  throw new Error(`Payment Voucher still rebuilds legacy document chrome: ${obsoletePaymentVoucherChrome.join(', ')}`);
+}
 
 function waitForServer(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -529,10 +535,10 @@ async function auditRoutes(browser, viewport) {
       if (postingDetailRoot && postingDetailRegions[2] && postingDetailRegions[3]) {
         const mainRect = postingDetailRegions[2].getBoundingClientRect();
         const contextRect = postingDetailRegions[3].getBoundingClientRect();
-        if (window.innerWidth <= 980 && contextRect.offsetParent !== null && contextRect.top < mainRect.bottom - 1) {
+        if (window.innerWidth <= 980 && postingDetailRegions[3].offsetParent !== null && contextRect.top < mainRect.bottom - 1) {
           layoutIssues.push('posting detail context does not follow the main area on mobile');
         }
-        if (window.innerWidth > 980 && contextRect.offsetParent !== null && contextRect.left < mainRect.right - 1) {
+        if (window.innerWidth > 980 && postingDetailRegions[3].offsetParent !== null && contextRect.left < mainRect.right - 1) {
           layoutIssues.push('posting detail main and context are not separate desktop columns');
         }
       }
@@ -628,6 +634,8 @@ async function auditRoutes(browser, viewport) {
           pageheads: el.querySelectorAll('.pagehead').length,
           errorRegion: Boolean(postingDetailRoot?.querySelector('[data-posting-error]')),
           legacyDocumentChrome: Boolean(postingDetailRoot?.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.summary')),
+          emptyState: Boolean(postingDetailRoot?.querySelector('[data-posting-empty]')),
+          errorVisible: Boolean(postingDetailRoot?.querySelector('[data-posting-error]:not([hidden])')),
           lines: Boolean(postingDetailRoot?.querySelector('[data-posting-lines]')),
           totals: Boolean(postingDetailRoot?.querySelector('[data-posting-totals]')),
           balance: Boolean(postingDetailRoot?.querySelector('[data-posting-balance]')),
@@ -680,6 +688,7 @@ async function auditRoutes(browser, viewport) {
       postingDetailLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
+        emptyState: false, errorVisible: false,
         lines: false, totals: false, balance: false, audit: false, controlledTable: false,
       },
       layoutProfile: {
@@ -856,14 +865,16 @@ async function auditRoutes(browser, viewport) {
         if (rendered.postingDetailLayout.legacyDocumentChrome) {
           rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} contains legacy document chrome`);
         }
-        if (!rendered.postingDetailLayout.lines
-            || !rendered.postingDetailLayout.totals
-            || !rendered.postingDetailLayout.balance
-            || !rendered.postingDetailLayout.audit) {
-          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} is missing lines, totals, balance or audit content`);
-        }
-        if (!rendered.postingDetailLayout.controlledTable) {
-          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} lines table lacks controlled horizontal scrolling`);
+        if (!rendered.postingDetailLayout.emptyState && !rendered.postingDetailLayout.errorVisible) {
+          if (!rendered.postingDetailLayout.lines
+              || !rendered.postingDetailLayout.totals
+              || !rendered.postingDetailLayout.balance
+              || !rendered.postingDetailLayout.audit) {
+            rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} is missing lines, totals, balance or audit content`);
+          }
+          if (!rendered.postingDetailLayout.controlledTable) {
+            rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} lines table lacks controlled horizontal scrolling`);
+          }
         }
       }
     }
@@ -1296,6 +1307,118 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'journal-entry');
     if (result) {
       result.layoutIssues.push(...postingIssues.map((issue)=>`Posting state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('payment-voucher')) {
+    const voucherIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const originalNavigate = window.navigate;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const expectedTitles = {
+        en:'Payment Voucher',
+        ms:'Baucar Bayaran',
+        zh:'付款凭证',
+        ja:'支払伝票',
+        vi:'Phiếu chi',
+      };
+      const issues = [];
+      const postingRoot = () => document.querySelector('#viewRoot [data-layout="posting-detail-v1"]');
+      try {
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          window.getLang = () => locale;
+          await navigate('payment-voucher');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (!heading.startsWith(title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          const root = postingRoot();
+          if (!root) {
+            issues.push(`${locale} posting detail root missing`);
+            continue;
+          }
+          if (!root.querySelector('[data-posting-empty]')) issues.push(`${locale} voucher empty state missing`);
+          if (!document.querySelector('#viewRoot [data-posting-header-action]')) issues.push(`${locale} header New voucher action missing`);
+          if (!root.querySelector('[data-posting-empty-action]')) issues.push(`${locale} empty-state New voucher action missing`);
+          if (root.querySelector('[data-posting-overview]:not([hidden])')) issues.push(`${locale} empty overview is visible`);
+        }
+
+        window.getLang = () => 'en';
+        await navigate('payment-voucher');
+        const emptyRoot = postingRoot();
+        if (emptyRoot?.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.summary')) {
+          issues.push('legacy payment voucher document chrome remains');
+        }
+        const createButton = emptyRoot?.querySelector('[data-posting-empty-action]');
+        if (createButton) {
+          let captured = null;
+          window.navigate = async (route,params) => { captured={route,params}; };
+          createButton.click();
+          window.navigate = originalNavigate;
+          if (captured?.route !== 'new-payment-voucher') issues.push('New voucher action does not open the create flow');
+        } else {
+          issues.push('empty voucher state has no primary action');
+        }
+
+        const supplierId = DB.suppliers?.[0]?.id || 1;
+        const invoiceId = DB.supplierInvoices?.[0]?.id || 1;
+        const vouchers = [
+          {id:901,docNo:'PV-AUDIT-901',paymentDate:'2026-07-23',bankRef:'BANK-901',supplierId,totalAmount:'125.00'},
+          {id:902,docNo:'PV-AUDIT-902',paymentDate:'2026-07-22',bankRef:null,supplierId,totalAmount:'75.00'},
+        ];
+        adapter.list = async (resource,query) => {
+          if (resource === 'finance/payment-vouchers') return {data:vouchers,meta:{nextCursor:null}};
+          if (resource === 'finance/payment-voucher-lines') return {
+            data:[
+              {id:1,paymentVoucherId:901,supplierInvoiceId:invoiceId,amount:'125.00'},
+              {id:2,paymentVoucherId:902,supplierInvoiceId:invoiceId,amount:'75.00'},
+            ],
+            meta:{nextCursor:null},
+          };
+          return originalList.call(adapter,resource,query);
+        };
+        await navigate('payment-voucher');
+        const detailRoot = postingRoot();
+        if (!detailRoot?.querySelector('[data-posting-lines]')) issues.push('voucher detail lines missing');
+        if (!detailRoot?.querySelector('[data-posting-totals]')) issues.push('voucher detail totals missing');
+        if (!detailRoot?.querySelector('[data-posting-balance]')) issues.push('voucher posting balance missing');
+        if (!detailRoot?.querySelector('[data-posting-audit]')) issues.push('voucher audit trail missing');
+        await SCREENS['payment-voucher'](document.getElementById('viewRoot'),{voucherId:902});
+        if (postingRoot()?.getAttribute('data-posting-code') !== 'PV-AUDIT-902') {
+          issues.push('requested payment voucher did not render');
+        }
+
+        adapter.list = async (resource,query) => {
+          if (resource === 'finance/payment-vouchers') throw new Error('voucher audit failure');
+          return originalList.call(adapter,resource,query);
+        };
+        await navigate('payment-voucher');
+        const errorRoot = postingRoot();
+        if (!errorRoot?.querySelector('[data-posting-error]:not([hidden])')) {
+          issues.push('voucher read failure did not render the standard error state');
+        }
+        adapter.list = originalList;
+        errorRoot?.querySelector('[data-posting-retry]')?.click();
+        for (let attempt=0; attempt<20; attempt+=1) {
+          await new Promise((resolve) => setTimeout(resolve,100));
+          if (postingRoot()&&!postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) break;
+        }
+        if (!postingRoot() || postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) {
+          issues.push('Retry did not recover Payment Voucher');
+        }
+      } finally {
+        adapter.list = originalList;
+        window.navigate = originalNavigate;
+        window.getLang = originalGetLang;
+        await navigate('payment-voucher');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'payment-voucher');
+    if (result) {
+      result.layoutIssues.push(...voucherIssues.map((issue)=>`Payment voucher smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }

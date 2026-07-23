@@ -595,7 +595,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'account-ledger',
   ],
   'posting-detail-v1':[
-    'journal-entry',
+    'journal-entry','payment-voucher',
   ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
@@ -624,7 +624,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   workspace:[
     'bank-rec','data-import','depreciation','integration','master-control',
-    'module-activation-control','mrp','payment-voucher','payroll-run',
+    'module-activation-control','mrp','payroll-run',
     'sales-commission','settings','sys-settings','timesheet',
   ],
   board:['crm-pipeline'],
