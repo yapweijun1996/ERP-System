@@ -591,13 +591,29 @@ semantics without pretending to be a writable transaction register. The list aud
 covers **38 shared tabular pages** at desktop and 375px. Service-worker v79 delivers
 the corrected page.
 
+## Warehouse Picking operational-workspace SSOT (TASK-095, 2026-07-23)
+
+Warehouse Picking remains an execution workspace rather than being forced into the
+transaction-register template. The shared `operationalWorkspacePage()` now owns its
+module header/status, bounded progress, main work area, context rail, empty/error
+states and responsive action zone under `operational-workspace-v1`. The Warehouse
+screen supplies only canonical pick facts, line cards and the existing idempotent
+pick-line/complete commands. Action failures remain visible with a retry control, and
+an action finishing after navigation cannot pull the user back to Picking.
+
+The dedicated workspace audit validates all four regions, progress bounds, canonical
+DOM order, one module header, mobile stacking, action overflow and en/ms/zh/ja/vi
+screen copy at desktop and 375px. The full 114-route audit enforces the same contract;
+service-worker v80 delivers the shared renderer and styles.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 93 tasks, including TASK-094
+- Done: 94 tasks, including TASK-095
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
-  complete at 114 Canonical / 0 Preview, 35/35 transaction registers and 2/2 Inventory
-  master-detail registers plus Inventory Valuation on their shared SSOT contracts.
+  complete at 114 Canonical / 0 Preview, 35/35 transaction registers, 2/2 Inventory
+  master-detail registers, Inventory Valuation and Warehouse Picking on their shared
+  SSOT contracts.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

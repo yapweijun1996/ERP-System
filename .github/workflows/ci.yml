@@ -107,3 +107,6 @@ jobs:
 
       - name: Transaction list layout audit (declared SSOT routes, desktop + mobile)
         run: npm run audit:list-layouts
+
+      - name: Operational workspace layout audit (declared SSOT routes, desktop + mobile)
+        run: npm run audit:workspaces

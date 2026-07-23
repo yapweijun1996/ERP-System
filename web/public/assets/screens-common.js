@@ -23,6 +23,91 @@ async function listPage(resource, query){
 }
 
 /**
+ * Page-level SSOT for operational execution workspaces.
+ *
+ * Unlike a transaction register, an operational workspace centres one active
+ * task and its commands. Module screens provide business-specific work cards,
+ * context facts and actions; this helper owns the shared module header, status,
+ * progress, main/context split, empty/error regions and responsive action zone.
+ */
+function operationalWorkspacePage(root, config){
+  if(!root) throw new Error('operationalWorkspacePage requires a render root.');
+  const cfg=config||{};
+  const progress=cfg.progress||{};
+  const rawPercent=Number(progress.percent);
+  const percent=Number.isFinite(rawPercent)?Math.max(0,Math.min(100,Math.round(rawPercent))):0;
+  const progressLabel=String(progress.label||'Progress');
+  const progressValue=String(progress.value??`${percent}%`);
+  const progressMeta=progress.meta==null?'':String(progress.meta);
+  const status=cfg.status&&cfg.status.label
+    ? cap(String(cfg.status.label),cfg.status.tone||'neutral')
+    : '';
+  const empty=cfg.empty||null;
+  const main=empty
+    ? `<div class="statepanel empty operational-workspace-empty" data-workspace-empty>
+        ${ic(empty.icon||'inbox')}
+        <h3>${esc(String(empty.title||'No work available'))}</h3>
+        ${empty.description?`<p>${esc(String(empty.description))}</p>`:''}
+      </div>`
+    : (cfg.main||'');
+  const context=cfg.context||{};
+  const contextTitle=context.title
+    ? `<div class="sectitle operational-workspace-context-title">${esc(String(context.title))}</div>`
+    : '';
+  const actions=cfg.actions||'';
+  const body=`<section class="operational-workspace"
+      data-layout="operational-workspace-v1"
+      data-workspace-route="${esc(String(cfg.route||''))}">
+    <div class="operational-workspace-progress" data-workspace-progress
+        data-progress-value="${percent}" role="progressbar"
+        aria-label="${esc(progressLabel)}" aria-valuemin="0" aria-valuemax="100"
+        aria-valuenow="${percent}">
+      <div class="operational-workspace-progress-head">
+        <span>${esc(progressLabel)}</span>
+        <b class="tnum">${esc(progressValue)}</b>
+      </div>
+      <div class="operational-workspace-progress-track" aria-hidden="true">
+        <i style="width:${percent}%"></i>
+      </div>
+      ${progressMeta?`<small>${esc(progressMeta)}</small>`:''}
+    </div>
+    <div class="operational-workspace-grid">
+      <main class="operational-workspace-main" data-workspace-main>
+        <div class="operational-workspace-error" data-workspace-error role="alert" hidden></div>
+        ${main}
+      </main>
+      <aside class="operational-workspace-context" data-workspace-context>
+        ${contextTitle}${context.body||''}
+      </aside>
+    </div>
+    <div class="responsive-actionbar operational-workspace-actions"
+        data-workspace-actions ${actions?'':'hidden'}>
+      ${actions}
+    </div>
+  </section>`;
+  root.innerHTML=modulePage({
+    module:cfg.module,
+    route:cfg.route,
+    active:cfg.active||cfg.route,
+    title:String(cfg.title||''),
+    crumb:cfg.crumb,
+    sub:cfg.description,
+    action:status,
+    body,
+  });
+  const workspace=root.querySelector('[data-layout="operational-workspace-v1"]');
+  if(typeof cfg.afterRender==='function'){
+    cfg.afterRender({
+      root,
+      workspace,
+      errorRoot:workspace&&workspace.querySelector('[data-workspace-error]'),
+    });
+  }
+  return workspace;
+}
+window.operationalWorkspacePage=operationalWorkspacePage;
+
+/**
  * Page-level SSOT for canonical transaction registers.
  *
  * `modulePage()` owns the shared ERP shell and `buildTable()`/`wireTable()` own

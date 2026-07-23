@@ -35,6 +35,7 @@ SCREENS['picking'] = async function(root){
       status:'Status', priority:'Priority', dataLimit:'Showing the first 100 canonical rows per resource.',
       statusOpen:'Open', statusProgress:'In progress', statusPicked:'Picked', statusCancelled:'Cancelled',
       priorityLow:'Low', priorityNormal:'Normal', priorityHigh:'High', priorityUrgent:'Urgent',
+      retry:'Retry', actionFailed:'The warehouse action could not be completed.',
     },
     ms:{
       title:'Pungutan gudang', queue:'Barisan pungutan', empty:'Tiada tugas pungutan kanonik tersedia.',
@@ -50,6 +51,7 @@ SCREENS['picking'] = async function(root){
       status:'Status', priority:'Keutamaan', dataLimit:'Menunjukkan 100 baris kanonik pertama bagi setiap sumber.',
       statusOpen:'Terbuka', statusProgress:'Sedang dipungut', statusPicked:'Dipungut', statusCancelled:'Dibatalkan',
       priorityLow:'Rendah', priorityNormal:'Biasa', priorityHigh:'Tinggi', priorityUrgent:'Segera',
+      retry:'Cuba lagi', actionFailed:'Tindakan gudang tidak dapat diselesaikan.',
     },
     zh:{
       title:'仓库拣货', queue:'拣货队列', empty:'目前没有标准拣货任务。',
@@ -65,6 +67,39 @@ SCREENS['picking'] = async function(root){
       status:'状态', priority:'优先级', dataLimit:'每项资源显示前 100 条标准记录。',
       statusOpen:'待拣', statusProgress:'拣货中', statusPicked:'已拣完', statusCancelled:'已取消',
       priorityLow:'低', priorityNormal:'普通', priorityHigh:'高', priorityUrgent:'紧急',
+      retry:'重试', actionFailed:'无法完成仓库操作。',
+    },
+    ja:{
+      title:'倉庫ピッキング', queue:'ピッキング作業', empty:'標準ピッキングタスクはありません。',
+      emptyDesc:'API またはリリース済み受注から倉庫ピッキングを作成してください。',
+      assigned:'担当者', unassigned:'未割当', date:'ピッキング日', warehouse:'倉庫',
+      order:'受注', noOrder:'未連携', progress:'進捗', lines:'行完了',
+      units:'単位', bin:'棚番', picked:'ピッキング済み', remaining:'残数',
+      confirm:'ピッキング確認', next:'次の行をピッキング', complete:'ピッキング完了',
+      completed:'ピッキングを完了しました', recorded:'ピッキング数量を記録しました',
+      fullyPicked:'全行のピッキングが完了しました。タスクを完了して在庫を出庫してください。',
+      issued:'在庫を出庫し、引当を同一トランザクションで消費しました。',
+      reserved:'引当在庫はピッキング全体の完了時にのみ出庫されます。',
+      status:'ステータス', priority:'優先度', dataLimit:'各リソースの先頭100件の標準データを表示しています。',
+      statusOpen:'未着手', statusProgress:'作業中', statusPicked:'完了', statusCancelled:'キャンセル済み',
+      priorityLow:'低', priorityNormal:'通常', priorityHigh:'高', priorityUrgent:'緊急',
+      retry:'再試行', actionFailed:'倉庫操作を完了できませんでした。',
+    },
+    vi:{
+      title:'Soạn hàng kho', queue:'Công việc soạn hàng', empty:'Không có tác vụ soạn hàng chuẩn.',
+      emptyDesc:'Tạo phiếu soạn hàng qua API hoặc từ đơn bán hàng đã phát hành.',
+      assigned:'Người phụ trách', unassigned:'Chưa phân công', date:'Ngày soạn', warehouse:'Kho',
+      order:'Đơn bán hàng', noOrder:'Chưa liên kết', progress:'Tiến độ', lines:'dòng hoàn tất',
+      units:'đơn vị', bin:'Vị trí', picked:'Đã soạn', remaining:'Còn lại',
+      confirm:'Xác nhận soạn', next:'Soạn dòng tiếp theo', complete:'Hoàn tất soạn hàng',
+      completed:'Đã hoàn tất soạn hàng', recorded:'Đã ghi nhận số lượng soạn',
+      fullyPicked:'Tất cả dòng đã được soạn đủ. Hoàn tất tác vụ để xuất kho.',
+      issued:'Hàng đã được xuất và phần giữ chỗ được sử dụng trong cùng giao dịch.',
+      reserved:'Hàng giữ chỗ chỉ được xuất khi toàn bộ tác vụ soạn hàng hoàn tất.',
+      status:'Trạng thái', priority:'Ưu tiên', dataLimit:'Hiển thị 100 bản ghi chuẩn đầu tiên của mỗi tài nguyên.',
+      statusOpen:'Mở', statusProgress:'Đang soạn', statusPicked:'Đã soạn', statusCancelled:'Đã hủy',
+      priorityLow:'Thấp', priorityNormal:'Bình thường', priorityHigh:'Cao', priorityUrgent:'Khẩn cấp',
+      retry:'Thử lại', actionFailed:'Không thể hoàn tất thao tác kho.',
     },
   };
   const copy=COPY[lang]||COPY.en;
@@ -80,12 +115,29 @@ SCREENS['picking'] = async function(root){
   };
 
   if(!pick){
-    root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([company,t('nav.warehouse'),s('queue')])}
-        <div class="h1row"><h1>${esc(s('title'))}</h1></div></div>
-      <div class="statepanel empty">${ic('warehouse')}<h3>${esc(s('empty'))}</h3>
-        <p>${esc(s('emptyDesc'))}</p></div>
-    </section></div>`;
+    operationalWorkspacePage(root,{
+      module:'warehouse',
+      route:'picking',
+      active:'picking',
+      title:s('title'),
+      description:s('emptyDesc'),
+      crumb:[company,t('nav.warehouse'),{cur:s('queue')}],
+      progress:{
+        label:s('progress'),
+        value:'0%',
+        percent:0,
+        meta:`0/0 ${s('lines')}`,
+      },
+      empty:{
+        icon:'warehouse',
+        title:s('empty'),
+        description:s('emptyDesc'),
+      },
+      context:{
+        title:s('queue'),
+        body:`<p class="operational-workspace-context-note">${esc(s('dataLimit'))}</p>`,
+      },
+    });
     return;
   }
 
@@ -131,56 +183,75 @@ SCREENS['picking'] = async function(root){
     </div>`;
   }).join('');
 
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">${crumbs([company,t('nav.warehouse'),s('queue'),{cur:pick.docNo}])}
-      <div class="h1row"><h1>${esc(s('title'))} ${esc(pick.docNo)}</h1>
-        ${cap(statusLabel[pick.status]||pick.status,statusTone)}
-        <div class="headright"><div class="kfig"><small>${esc(s('progress'))}</small>
-          <b class="tnum">${progress}%</b></div></div>
-      </div>
-      <div class="h1sub">${esc(s('assigned'))} ${esc(pick.assignee||s('unassigned'))} ·
-        ${esc(s('date'))} ${esc(dateLabel(pick.pickDate))}</div>
-    </div>
-    <div class="pick-layout">
-      <div class="pick-main">
-        <div class="progressbig"><i style="width:${progress}%"></i></div>
-        <div class="pick-tools"><div style="font-size:12.5px;color:var(--muted)">
-          ${completeLines}/${lines.length} ${esc(s('lines'))} · ${num(picked)}/${num(required)} ${esc(s('units'))}
-        </div><div class="grow"></div>
-          ${activeLine&&!locked?btn(s('next'),{icon:'scan',cls:'primary',attrs:`data-pick-line="${activeLine.id}" data-pick-qty="${activeLine.required-activeLine.picked}"`}):''}
-        </div>
-        ${lineRows||`<div class="statepanel empty">${ic('box')}<h3>${esc(s('empty'))}</h3></div>`}
-      </div>
-      <aside class="pick-side">
-        <div class="sectitle" style="margin-top:0">${esc(s('queue'))}</div>
-        <div class="field"><span class="k">${esc(s('warehouse'))}</span>
-          <span class="v">${esc(location?`${location.code} · ${location.name}`:`#${pick.warehouseId}`)}</span></div>
-        <div class="field"><span class="k">${esc(s('order'))}</span>
-          <span class="v">${pick.salesOrderId?`#${esc(String(pick.salesOrderId))}`:esc(s('noOrder'))}</span></div>
-        <div class="field"><span class="k">${esc(s('priority'))}</span>
-          <span class="v">${cap(priorityLabel[pick.priority]||pick.priority,pick.priority==='high'||pick.priority==='urgent'?'danger':'neutral')}</span></div>
-        <div class="field"><span class="k">${esc(s('status'))}</span>
-          <span class="v">${cap(statusLabel[pick.status]||pick.status,statusTone)}</span></div>
-        <div class="sectitle">${esc(s('remaining'))}</div>
-        <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px">
-          ${esc(locked&&pick.status==='picked'?s('issued'):allPicked?s('fullyPicked'):s('reserved'))}</p>
-        ${!locked?btn(s('complete'),{
-          icon:'check',cls:allPicked?'ok-solid':'soft',sm:false,
-          attrs:`data-complete-pick="${pick.id}" ${allPicked?'':'disabled aria-disabled="true"'}`,
-        }):''}
-        <p style="font-size:11px;color:var(--faint);margin-top:14px">${esc(s('dataLimit'))}</p>
-      </aside>
-    </div>
-  </section></div>`;
+  const contextBody=`
+    <div class="field"><span class="k">${esc(s('warehouse'))}</span>
+      <span class="v">${esc(location?`${location.code} · ${location.name}`:`#${pick.warehouseId}`)}</span></div>
+    <div class="field"><span class="k">${esc(s('order'))}</span>
+      <span class="v">${pick.salesOrderId?`#${esc(String(pick.salesOrderId))}`:esc(s('noOrder'))}</span></div>
+    <div class="field"><span class="k">${esc(s('priority'))}</span>
+      <span class="v">${cap(priorityLabel[pick.priority]||pick.priority,pick.priority==='high'||pick.priority==='urgent'?'danger':'neutral')}</span></div>
+    <div class="field"><span class="k">${esc(s('status'))}</span>
+      <span class="v">${cap(statusLabel[pick.status]||pick.status,statusTone)}</span></div>
+    <div class="sectitle">${esc(s('remaining'))}</div>
+    <p class="operational-workspace-context-note">
+      ${esc(locked&&pick.status==='picked'?s('issued'):allPicked?s('fullyPicked'):s('reserved'))}</p>
+    <p class="operational-workspace-data-limit">${esc(s('dataLimit'))}</p>`;
+  const actions=locked?'':`
+    <span class="operational-workspace-action-note hideonsmall">
+      ${completeLines}/${lines.length} ${esc(s('lines'))} ·
+      ${num(picked)}/${num(required)} ${esc(s('units'))}
+    </span>
+    <div class="grow"></div>
+    ${activeLine?btn(s('next'),{
+      icon:'scan',cls:'soft',
+      attrs:`data-pick-line="${activeLine.id}" data-pick-qty="${activeLine.required-activeLine.picked}"`,
+    }):''}
+    ${btn(s('complete'),{
+      icon:'check',cls:allPicked?'ok-solid':'primary',sm:false,
+      attrs:`data-complete-pick="${pick.id}" ${allPicked?'':'disabled aria-disabled="true"'}`,
+    })}`;
+  operationalWorkspacePage(root,{
+    module:'warehouse',
+    route:'picking',
+    active:'picking',
+    title:`${s('title')} ${pick.docNo}`,
+    description:`${s('assigned')} ${pick.assignee||s('unassigned')} · ${s('date')} ${dateLabel(pick.pickDate)}`,
+    crumb:[company,t('nav.warehouse'),s('queue'),{cur:pick.docNo}],
+    status:{label:statusLabel[pick.status]||pick.status,tone:statusTone},
+    progress:{
+      label:s('progress'),
+      value:`${progress}%`,
+      percent:progress,
+      meta:`${completeLines}/${lines.length} ${s('lines')} · ${num(picked)}/${num(required)} ${s('units')}`,
+    },
+    main:lineRows||`<div class="statepanel empty operational-workspace-empty">
+      ${ic('box')}<h3>${esc(s('empty'))}</h3></div>`,
+    context:{title:s('queue'),body:contextBody},
+    actions,
+  });
 
   async function runAction(button,operation){
+    const errorRoot=root.querySelector('[data-workspace-error]');
+    if(errorRoot){
+      errorRoot.hidden=true;
+      errorRoot.innerHTML='';
+    }
     button.disabled=true;
     try{
       await operation();
-      await navigate('picking');
+      if(root.isConnected&&CURRENT_ROUTE==='picking') await navigate('picking');
     }catch(error){
       button.disabled=false;
-      toast(error&&error.message||'Warehouse action failed','danger');
+      const message=error&&error.message||s('actionFailed');
+      if(errorRoot&&root.isConnected&&CURRENT_ROUTE==='picking'){
+        errorRoot.hidden=false;
+        errorRoot.innerHTML=`<div><b>${esc(s('actionFailed'))}</b><span>${esc(message)}</span></div>
+          ${btn(s('retry'),{icon:'refresh',cls:'soft',attrs:'data-workspace-retry'})}`;
+        errorRoot.querySelector('[data-workspace-retry]')?.addEventListener('click',event=>{
+          runAction(event.currentTarget,operation);
+        });
+      }
+      toast(message,'danger');
     }
   }
   root.querySelectorAll('[data-pick-line]').forEach(button=>button.addEventListener('click',()=>{

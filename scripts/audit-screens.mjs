@@ -20,7 +20,8 @@
 //     and standard action bars do not overflow.
 //   - routes declaring a page-level layout contract render every required
 //     region in canonical order. Set LIST_LAYOUT_ONLY=1 to audit only those
-//     routes while migrating legacy screens in bounded batches.
+//     routes while migrating legacy screens in bounded batches, or
+//     WORKSPACE_LAYOUT_ONLY=1 for operational workspaces.
 //   - stateful transaction detail routes are opened through real fixtures
 //     instead of silently redirecting because no record was selected.
 //
@@ -38,12 +39,18 @@ const PORT = process.env.AUDIT_PORT || '4311';
 const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
+const WORKSPACE_LAYOUT_ONLY = process.env.WORKSPACE_LAYOUT_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
+const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
 const VALID_LAYOUTS = new Set([
-  ...LIST_LAYOUTS,'dashboard','report','document-detail','form',
+  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
 ]);
+
+if (LIST_LAYOUT_ONLY && WORKSPACE_LAYOUT_ONLY) {
+  throw new Error('LIST_LAYOUT_ONLY and WORKSPACE_LAYOUT_ONLY are mutually exclusive.');
+}
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
 const VIEWPORTS = [
@@ -67,6 +74,13 @@ const legacyListFactoryHits = readdirSync(assetDir)
   });
 if (legacyListFactoryHits.length) {
   throw new Error(`Obsolete page-level list factories remain: ${legacyListFactoryHits.join(', ')}`);
+}
+
+const warehouseScreenSource = readFileSync(path.join(assetDir, 'screens-warehouse.js'), 'utf8');
+const obsoleteWorkspaceChrome = ['pick-layout','pick-main','pick-side','pick-tools','progressbig']
+  .filter((token) => warehouseScreenSource.includes(token));
+if (obsoleteWorkspaceChrome.length) {
+  throw new Error(`Warehouse Picking still rebuilds page-level workspace chrome: ${obsoleteWorkspaceChrome.join(', ')}`);
 }
 
 function waitForServer(url, timeoutMs) {
@@ -211,9 +225,14 @@ async function auditRoutes(browser, viewport) {
   }
   const routes = LIST_LAYOUT_ONLY
     ? allRoutes.filter((route) => LIST_LAYOUTS.has(screenMeta[route]?.layout))
-    : allRoutes;
+    : WORKSPACE_LAYOUT_ONLY
+      ? allRoutes.filter((route) => screenMeta[route]?.layout === OPERATIONAL_WORKSPACE_LAYOUT)
+      : allRoutes;
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a shared list layout.');
+  }
+  if (WORKSPACE_LAYOUT_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare an operational workspace layout.');
   }
   const missingAdapterMethods = await page.evaluate(() => {
     const required = ['list','get','create','update','action','refresh','session','switchCompany'];
@@ -293,6 +312,34 @@ async function auditRoutes(browser, viewport) {
         && listRegions.every(Boolean)
         && listRegions.every((node, index) => index === 0
           || Boolean(listRegions[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+      const workspaceRoot = el.querySelector('[data-layout="operational-workspace-v1"]');
+      const workspaceRegions = workspaceRoot ? [
+        workspaceRoot.querySelector('[data-workspace-progress]'),
+        workspaceRoot.querySelector('[data-workspace-main]'),
+        workspaceRoot.querySelector('[data-workspace-context]'),
+        workspaceRoot.querySelector('[data-workspace-actions]'),
+      ] : [];
+      const workspaceRegionOrder = workspaceRegions.length === 4
+        && workspaceRegions.every(Boolean)
+        && workspaceRegions.every((node, index) => index === 0
+          || Boolean(workspaceRegions[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+      const workspaceProgress = workspaceRegions[0]
+        ? Number(workspaceRegions[0].getAttribute('data-progress-value'))
+        : null;
+      if (workspaceRoot && (!Number.isFinite(workspaceProgress) || workspaceProgress < 0 || workspaceProgress > 100)) {
+        layoutIssues.push(`operational workspace progress is invalid: ${workspaceProgress}`);
+      }
+      if (workspaceRoot && workspaceRegions[3] && workspaceRegions[3].offsetParent !== null
+          && workspaceRegions[3].scrollWidth > workspaceRegions[3].clientWidth + 1) {
+        layoutIssues.push(`operational workspace actions overflow ${workspaceRegions[3].scrollWidth}>${workspaceRegions[3].clientWidth}`);
+      }
+      if (workspaceRoot && window.innerWidth <= 980 && workspaceRegions[1] && workspaceRegions[2]) {
+        const mainRect = workspaceRegions[1].getBoundingClientRect();
+        const contextRect = workspaceRegions[2].getBoundingClientRect();
+        if (contextRect.top < mainRect.bottom - 1) {
+          layoutIssues.push('operational workspace context does not follow the main work area on mobile');
+        }
+      }
       return {
         text: el.innerText || '',
         previewBanner: Boolean(el.querySelector('[data-preview-banner]')),
@@ -309,6 +356,21 @@ async function auditRoutes(browser, viewport) {
             ? ['workspace','detail-panel'].filter((_,index)=>!masterDetailRegions[index])
             : [],
         },
+        workspaceLayout: {
+          present: Boolean(workspaceRoot),
+          actualLayout: workspaceRoot?.getAttribute('data-layout') || null,
+          missingRegions: workspaceRoot
+            ? ['progress','main','context','actions'].filter((_,index)=>!workspaceRegions[index])
+            : [],
+          ordered: workspaceRegionOrder,
+          progress: workspaceProgress,
+          pageheads: el.querySelectorAll('.pagehead').length,
+          errorRegion: Boolean(workspaceRoot?.querySelector('[data-workspace-error]')),
+          incompleteCompletionEnabled: Boolean(
+            workspaceProgress < 100
+            && workspaceRoot?.querySelector('[data-complete-pick]:not([disabled])')
+          ),
+        },
         layoutProfile: {
           heading: el.querySelector('h1')?.textContent?.trim() || '',
           gridTables: el.querySelectorAll('.dt-page').length,
@@ -320,7 +382,7 @@ async function auditRoutes(browser, viewport) {
           formSurface: Boolean(el.querySelector('form,.formgrid,.set-grid,.wizard-card')),
           splitSurface: Boolean(el.querySelector('.split,.so-split,.doclayout,.master-detail,[data-master-detail-workspace]')),
           dashboardSurface: Boolean(el.querySelector('.dashgrid,.db-grid,.sb-grid,.analytics-status-grid')),
-          actualLayout: actualListLayout,
+          actualLayout: actualListLayout || workspaceRoot?.getAttribute('data-layout') || null,
         },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
         renderError: Boolean(el.querySelector('.screen-render-error')),
@@ -329,6 +391,10 @@ async function auditRoutes(browser, viewport) {
       text: '', previewBanner: false, enabledPreviewWrites: [],
       layoutIssues: ['render inspection failed'],
       listLayout: { present: false, actualLayout: null, missingRegions: [], ordered: false, missingMasterDetailRegions: [] },
+      workspaceLayout: {
+        present: false, actualLayout: null, missingRegions: [], ordered: false,
+        progress: null, pageheads: 0, errorRegion: false, incompleteCompletionEnabled: false,
+      },
       layoutProfile: {
         heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
         salesBody: false, documentPage: false, formSurface: false,
@@ -361,12 +427,39 @@ async function auditRoutes(browser, viewport) {
     if (rendered.listLayout.present && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`rendered ${rendered.listLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
     }
+    if (meta?.layout === OPERATIONAL_WORKSPACE_LAYOUT) {
+      if (!rendered.workspaceLayout.present) {
+        rendered.layoutIssues.push(`${OPERATIONAL_WORKSPACE_LAYOUT} root missing`);
+      } else {
+        if (rendered.workspaceLayout.actualLayout !== meta.layout) {
+          rendered.layoutIssues.push(`rendered ${rendered.workspaceLayout.actualLayout} but declared ${meta.layout}`);
+        }
+        if (rendered.workspaceLayout.missingRegions.length) {
+          rendered.layoutIssues.push(`${OPERATIONAL_WORKSPACE_LAYOUT} regions missing: ${rendered.workspaceLayout.missingRegions.join(', ')}`);
+        }
+        if (!rendered.workspaceLayout.ordered) {
+          rendered.layoutIssues.push(`${OPERATIONAL_WORKSPACE_LAYOUT} regions are outside canonical order`);
+        }
+        if (rendered.workspaceLayout.pageheads !== 1) {
+          rendered.layoutIssues.push(`${OPERATIONAL_WORKSPACE_LAYOUT} rendered ${rendered.workspaceLayout.pageheads} module page headers`);
+        }
+        if (!rendered.workspaceLayout.errorRegion) {
+          rendered.layoutIssues.push(`${OPERATIONAL_WORKSPACE_LAYOUT} error region missing`);
+        }
+        if (rendered.workspaceLayout.incompleteCompletionEnabled) {
+          rendered.layoutIssues.push(`${OPERATIONAL_WORKSPACE_LAYOUT} enabled completion before 100% progress`);
+        }
+      }
+    }
+    if (rendered.workspaceLayout.present && meta?.layout !== OPERATIONAL_WORKSPACE_LAYOUT) {
+      rendered.layoutIssues.push(`rendered ${rendered.workspaceLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
     const highConfidenceRegister = rendered.layoutProfile.gridTables > 0
       && !rendered.layoutProfile.documentPage
       && !rendered.layoutProfile.formSurface
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
-      && !['report','master-detail','workspace'].includes(meta?.layout);
+      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT].includes(meta?.layout);
     if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
     }
@@ -390,6 +483,42 @@ async function auditRoutes(browser, viewport) {
     });
 
     events.length = 0; // fully consumed this route's window; reset for the next
+  }
+
+  if (routes.includes('picking')) {
+    const localeIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const expected = {
+        en: 'Warehouse picking',
+        ms: 'Pungutan gudang',
+        zh: '仓库拣货',
+        ja: '倉庫ピッキング',
+        vi: 'Soạn hàng kho',
+      };
+      const issues = [];
+      try {
+        for (const [locale,title] of Object.entries(expected)) {
+          window.getLang = () => locale;
+          await navigate('picking');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (!heading.startsWith(title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          if (!document.querySelector('#viewRoot [data-layout="operational-workspace-v1"]')) {
+            issues.push(`${locale} operational workspace root missing`);
+          }
+        }
+      } finally {
+        window.getLang = originalGetLang;
+        await navigate('picking');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'picking');
+    if (result) {
+      result.layoutIssues.push(...localeIssues.map((issue) => `locale smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
+      result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
+    }
+    events.length = 0;
   }
 
   // Responsive shells must also reveal the active section when an already-open
@@ -495,7 +624,7 @@ try {
       console.error(`\n${layoutFailed.length} layout failure(s):\n`);
       for (const r of layoutFailed) console.error(`LAYOUT [${r.viewport}:${r.route}] ${r.layoutIssues.join(' | ')}`);
     } else {
-      console.log('Desktop/mobile layout contract passed: no page, active-tab, standard action-bar or declared list-contract failures.');
+      console.log('Desktop/mobile layout contract passed: no page, active-tab, standard action-bar or declared page-contract failures.');
     }
 
     if (shellFailed.length) {

@@ -1760,3 +1760,7 @@ Delivery slices:
       `report-list-v1` specialization of the list contract and migrate Inventory
       Valuation from its hand-built parameter/result split. Retain canonical valuation
       facts, KPIs and category filtering while removing unsupported report controls.
+- [x] **TASK-095 — Warehouse Picking operational-workspace SSOT.** Add
+      `operational-workspace-v1` for one active execution task, then migrate Picking
+      onto its shared progress, work area, context rail, responsive actions and
+      retryable error regions without changing canonical warehouse commands.

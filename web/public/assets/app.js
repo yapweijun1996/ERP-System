@@ -582,6 +582,9 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   'report-list-v1':[
     'inv-valuation',
   ],
+  'operational-workspace-v1':[
+    'picking',
+  ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
@@ -609,7 +612,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   workspace:[
     'bank-rec','data-import','depreciation','integration','master-control',
-    'module-activation-control','mrp','payment-voucher','payroll-run','picking',
+    'module-activation-control','mrp','payment-voucher','payroll-run',
     'sales-commission','settings','sys-settings','timesheet',
   ],
   board:['crm-pipeline'],

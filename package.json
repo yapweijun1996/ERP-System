@@ -24,6 +24,7 @@
     "smoke": "node scripts/smoke.mjs",
     "audit:screens": "node scripts/audit-screens.mjs",
     "audit:list-layouts": "LIST_LAYOUT_ONLY=1 node scripts/audit-screens.mjs",
+    "audit:workspaces": "WORKSPACE_LAYOUT_ONLY=1 node scripts/audit-screens.mjs",
     "test": "vitest run",
     "test:postgres": "vitest run src/api/postgresSecurity.integration.test.ts"
   },
