@@ -1709,3 +1709,17 @@ Acceptance criteria:
 - [x] Five-language route copy, service-worker v73, 379 tests plus one expected skip,
       45 migrations/127 tables, builds, smoke, in-app browser proof and all 114 routes
       pass at 114 Canonical / 0 Preview.
+
+## EPIC-050 — Stable Async Navigation Feedback
+
+**Goal:** keep the shared async loading shell visually and semantically stable with the
+page that replaces it, without exposing internal hash-route slugs to users.
+
+Acceptance criteria:
+
+- [x] Loading and error headings resolve from translated module/navigation metadata.
+- [x] Module home routes use the module label; other known routes use their declared
+      navigation label; unknown routes fall back to readable title case.
+- [x] The desktop and 375px route audit proves the Purchasing loader says `Purchasing`
+      before the asynchronous page resolves.
+- [x] The PWA cache version advances and the standard local quality gates pass.

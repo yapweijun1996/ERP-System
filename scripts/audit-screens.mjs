@@ -124,7 +124,18 @@ async function auditRoutes(browser, viewport) {
     const issues = [];
     const dashboardScreen = SCREENS.dashboard;
     const stockScreen = SCREENS['stock-on-hand'];
+    const purchasingScreen = SCREENS['purchasing-home'];
     try {
+      SCREENS['purchasing-home'] = () => new Promise((resolve) => {
+        setTimeout(() => resolve('<div data-async-contract="purchasing">loaded purchasing</div>'), 20);
+      });
+      const purchasingNavigation = navigate('purchasing-home');
+      const purchasingLoadingTitle = document.querySelector('#viewRoot h1')?.textContent?.trim();
+      if (purchasingLoadingTitle !== t('nav.purchasing')) {
+        issues.push(`Purchasing async loader title drifted: ${purchasingLoadingTitle || 'missing'}`);
+      }
+      await purchasingNavigation;
+
       SCREENS.dashboard = () => new Promise((resolve) => {
         setTimeout(() => resolve('<div data-async-contract="slow">stale dashboard</div>'), 80);
       });
@@ -155,6 +166,7 @@ async function auditRoutes(browser, viewport) {
     } finally {
       SCREENS.dashboard = dashboardScreen;
       SCREENS['stock-on-hand'] = stockScreen;
+      SCREENS['purchasing-home'] = purchasingScreen;
       await navigate('dashboard');
     }
     return issues;

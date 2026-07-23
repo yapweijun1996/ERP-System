@@ -521,9 +521,19 @@ locks while presenting effective-dated tax and currency facts. Migration 0044 br
 the shared Drizzle/PGlite/PostgreSQL schema to 127 tables. All **114 routes are now
 Canonical and API-capable; Preview=0**.
 
+## Stable async navigation feedback (TASK-086, 2026-07-23)
+
+The shared async loader and error shell no longer exposes lower-case hash-route slugs.
+It resolves headings from route translations, module-home labels, declared module
+navigation labels and sidebar metadata, with readable acronym-aware title case only as
+the final fallback. Purchasing now stays `Purchasing` before and after its Promise
+resolves. The route audit proves the unresolved loading state at desktop and 375px;
+live browser checks confirm matching font size/weight, no overflow and zero console
+errors. Service-worker v74 delivers the corrected shell to existing PWA sessions.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 84 tasks, including TASK-085 (all registered tasks except TASK-017)
+- Done: 85 tasks, including TASK-086 (all registered tasks except TASK-017)
 - Blocked: TASK-017 (1)
 - Todo in the historical task registry: none. Route productionization is complete at
   114 Canonical / 0 Preview; only the human-only physical-device release check remains.

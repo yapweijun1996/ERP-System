@@ -774,9 +774,43 @@ function setActiveNav(route){
 }
 
 /* ---------- router ---------- */
+const ROUTE_TITLE_ACRONYMS=new Set(['ap','ar','bi','bom','crm','gl','hr','mrp','ncr','po','qc','rfq','rma','sku']);
+function readableRouteTitle(route){
+  return String(route||'')
+    .split('-')
+    .filter(Boolean)
+    .map(word=>ROUTE_TITLE_ACRONYMS.has(word.toLowerCase())?word.toUpperCase():word.charAt(0).toUpperCase()+word.slice(1))
+    .join(' ');
+}
+function declaredModuleItems(def){
+  if(!def) return [];
+  return def.sections?def.sections.flatMap(section=>section.items||[]):(def.items||[]);
+}
+function screenRouteTitle(route){
+  const translated=tf('route.'+route,'');
+  if(translated) return translated;
+
+  const meta=getScreenMeta(route);
+  const def=MODULE_DEFS[meta.module];
+  if(def&&def.home===route) return t(def.labelKey);
+
+  const item=declaredModuleItems(def).find(candidate=>(Array.isArray(candidate)?candidate[0]:candidate.route)===route);
+  if(item){
+    const label=Array.isArray(item)?item[1]:item.label;
+    const labelKey=Array.isArray(item)?item[3]:item.labelKey;
+    return labelKey?t(labelKey):tf('route.'+route,label);
+  }
+
+  const sidebarItem=DB.nav.flatMap(group=>group.items).find(candidate=>candidate.route===route);
+  if(sidebarItem) return tf('nav.'+sidebarItem.id,sidebarItem.label);
+  if(route==='settings') return t('nav.settings');
+  return readableRouteTitle(route);
+}
+window.screenRouteTitle=screenRouteTitle;
+
 function screenLoadingHtml(route){
   const meta=getScreenMeta(route);
-  const title=tf('route.'+route, route.replace(/-/g,' '));
+  const title=screenRouteTitle(route);
   const body=`<div class="screen-loading" role="status" aria-live="polite" aria-label="${esc(title)}">
     ${skeletonRows(7)}
   </div>`;
@@ -802,7 +836,7 @@ function screenErrorHtml(route,error){
   if(meta.module && meta.module!=='home' && meta.module!=='settings'){
     return modulePage({
       module:meta.module,route,active:meta.activeSection,
-      title:tf('route.'+route,route.replace(/-/g,' ')),body:panel,
+      title:screenRouteTitle(route),body:panel,
     });
   }
   return `<div class="content full"><section class="master screen-render-error">${panel}</section></div>`;
