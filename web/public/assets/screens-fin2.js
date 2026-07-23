@@ -487,16 +487,49 @@ SCREENS['pnl'] = async function(root){
     const companies=options&&options.companies||[];
     const periods=options&&options.periods||[];
     const comparisonLabels={budget:t('pnl.budget'),prior_period:t('pnl.priorPeriod'),prior_year:t('pnl.priorYear')};
+    const activeCompanyFn=(DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn)||companies[0]?.companyFn||'';
+    const selectedCompanyScope=selected.companyScope==='active'?activeCompanyFn:selected.companyScope;
+    const companyOptions=[
+      ...(companies.length>1?[{
+        value:'all',
+        label:t('pnl.allCompanies'),
+        sub:`${companies.length} ${t('pnl.companies')}`,
+      }]:[]),
+      ...companies.map(company=>({
+        value:company.companyFn,
+        label:company.name,
+        sub:[company.companyFn,company.currency].filter(Boolean).join(' · '),
+      })),
+    ];
+    const periodOptions=periods.map(period=>({
+      value:String(period.id),
+      label:period.label,
+      sub:`${String(period.startDate)} → ${String(period.endDate)}`,
+    }));
+    const comparisonOptions=(options&&options.comparisons||[]).map(value=>({
+      value,
+      label:comparisonLabels[value]||value,
+    }));
+    const currencyOptions=(options&&options.presentationCurrencies||[selected.currency]).map(value=>({
+      value,
+      label:value,
+      sub:t('pnl.currency'),
+    }));
     const warnings=report&&report.data.warnings||[];
     const warning=warnings.some(item=>item.code==='no_approved_budget')
       ?`<div class="risk warn">${ic('warn')}<span>${esc(t('pnl.noBudget'))}</span></div>`:'';
-    const companyControl=`<select data-pnl-company>
-      ${companies.length>1?`<option value="all" ${selected.companyScope==='all'?'selected':''}>${esc(t('pnl.allCompanies'))}</option>`:''}
-      ${companies.map(company=>`<option value="${esc(company.companyFn)}" ${selected.companyScope===company.companyFn||selected.companyScope==='active'&&company.companyFn===((DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn)||companies[0]?.companyFn)?'selected':''}>${esc(company.name)}</option>`).join('')}
-    </select>`;
-    const periodControl=`<select data-pnl-period>${periods.map(period=>`<option value="${period.id}" ${Number(selected.periodId)===Number(period.id)?'selected':''}>${esc(period.label)} · ${esc(String(period.startDate))} → ${esc(String(period.endDate))}</option>`).join('')}</select>`;
-    const comparisonControl=`<select data-pnl-comparison>${(options&&options.comparisons||[]).map(value=>`<option value="${esc(value)}" ${selected.comparison===value?'selected':''}>${esc(comparisonLabels[value]||value)}</option>`).join('')}</select>`;
-    const currencyControl=`<select data-pnl-currency>${(options&&options.presentationCurrencies||[selected.currency]).map(value=>`<option value="${esc(value)}" ${selected.currency===value?'selected':''}>${esc(value)}</option>`).join('')}</select>`;
+    const companyControl=combobox({
+      id:'pnlCompanyCombo',value:selectedCompanyScope,options:companyOptions,placeholder:t('pnl.company'),
+    });
+    const periodControl=combobox({
+      id:'pnlPeriodCombo',value:String(selected.periodId??''),options:periodOptions,placeholder:t('pnl.period'),
+    });
+    const comparisonControl=combobox({
+      id:'pnlComparisonCombo',value:selected.comparison,options:comparisonOptions,placeholder:t('pnl.comparison'),
+    });
+    const currencyControl=combobox({
+      id:'pnlCurrencyCombo',value:selected.currency,options:currencyOptions,placeholder:t('pnl.currency'),
+    });
     financialStatementPage(root,{
       module:'finance',route:'pnl',title:t('pnl.title'),description:t('pnl.description'),
       filterLabel:t('pnl.filters'),runLabel:t('pnl.run'),retryLabel:t('pnl.retry'),
@@ -533,10 +566,18 @@ SCREENS['pnl'] = async function(root){
       afterRender:()=>{
         root.querySelector('[data-financial-run]')?.addEventListener('click',runReport);
         root.querySelector('[data-financial-retry]')?.addEventListener('click',runReport);
-        root.querySelector('[data-pnl-company]')?.addEventListener('change',event=>{selected.companyScope=event.target.value;});
-        root.querySelector('[data-pnl-period]')?.addEventListener('change',event=>{selected.periodId=Number(event.target.value);});
-        root.querySelector('[data-pnl-comparison]')?.addEventListener('change',event=>{selected.comparison=event.target.value;});
-        root.querySelector('[data-pnl-currency]')?.addEventListener('change',event=>{selected.currency=event.target.value;});
+        wireCombobox('pnlCompanyCombo',{
+          options:companyOptions,onChange:value=>{selected.companyScope=value;},
+        });
+        wireCombobox('pnlPeriodCombo',{
+          options:periodOptions,onChange:value=>{selected.periodId=Number(value);},
+        });
+        wireCombobox('pnlComparisonCombo',{
+          options:comparisonOptions,onChange:value=>{selected.comparison=value;},
+        });
+        wireCombobox('pnlCurrencyCombo',{
+          options:currencyOptions,onChange:value=>{selected.currency=value;},
+        });
         root.querySelector('[data-pnl-budget]')?.addEventListener('click',openBudgetManager);
         root.querySelector('[data-financial-action="xlsx"]')?.addEventListener('click',()=>startExport('xlsx'));
         root.querySelector('[data-financial-action="pdf"]')?.addEventListener('click',()=>startExport('pdf'));

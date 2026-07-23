@@ -2037,6 +2037,7 @@ Object.assign(I18N.en,{
   'pnl.filters':'Filters',
   'pnl.company':'Company scope',
   'pnl.allCompanies':'All authorised companies',
+  'pnl.companies':'companies',
   'pnl.period':'Accounting period',
   'pnl.comparison':'Comparison',
   'pnl.currency':'Presentation currency',
@@ -2083,6 +2084,7 @@ Object.assign(I18N.en,{
 Object.assign(I18N.ms,{
   'pnl.title':'Untung & Rugi','pnl.description':'Akruan · Catatan dipos sahaja · Lejar Am kanonik',
   'pnl.filters':'Penapis','pnl.company':'Skop syarikat','pnl.allCompanies':'Semua syarikat dibenarkan',
+  'pnl.companies':'syarikat',
   'pnl.period':'Tempoh perakaunan','pnl.comparison':'Perbandingan','pnl.currency':'Mata wang pembentangan',
   'pnl.budget':'Bajet','pnl.priorPeriod':'Tempoh sebelumnya','pnl.priorYear':'Tahun sebelumnya',
   'pnl.run':'Jalankan laporan','pnl.retry':'Cuba lagi','pnl.revenue':'Hasil',
@@ -2104,6 +2106,7 @@ Object.assign(I18N.ms,{
 Object.assign(I18N.zh,{
   'pnl.title':'损益表','pnl.description':'权责制 · 仅已过账分录 · 规范总账',
   'pnl.filters':'筛选','pnl.company':'公司范围','pnl.allCompanies':'所有获授权公司',
+  'pnl.companies':'家公司',
   'pnl.period':'会计期间','pnl.comparison':'比较','pnl.currency':'列报货币',
   'pnl.budget':'预算','pnl.priorPeriod':'上期','pnl.priorYear':'上年同期',
   'pnl.run':'运行报表','pnl.retry':'重试','pnl.revenue':'收入','pnl.grossProfit':'毛利',
@@ -2124,6 +2127,7 @@ Object.assign(I18N.zh,{
 I18N.ja=Object.assign({},I18N.en,{
   'pnl.title':'損益計算書','pnl.description':'発生主義 · 転記済仕訳のみ · 正規総勘定元帳',
   'pnl.filters':'フィルター','pnl.company':'会社範囲','pnl.allCompanies':'承認済みの全会社',
+  'pnl.companies':'社',
   'pnl.period':'会計期間','pnl.comparison':'比較','pnl.currency':'表示通貨',
   'pnl.budget':'予算','pnl.priorPeriod':'前期','pnl.priorYear':'前年同期',
   'pnl.run':'レポート実行','pnl.retry':'再試行','pnl.revenue':'売上高','pnl.grossProfit':'売上総利益',
@@ -2144,6 +2148,7 @@ I18N.ja=Object.assign({},I18N.en,{
 I18N.vi=Object.assign({},I18N.en,{
   'pnl.title':'Báo cáo lãi lỗ','pnl.description':'Dồn tích · Chỉ bút toán đã ghi sổ · Sổ cái chuẩn',
   'pnl.filters':'Bộ lọc','pnl.company':'Phạm vi công ty','pnl.allCompanies':'Tất cả công ty được cấp quyền',
+  'pnl.companies':'công ty',
   'pnl.period':'Kỳ kế toán','pnl.comparison':'So sánh','pnl.currency':'Tiền tệ trình bày',
   'pnl.budget':'Ngân sách','pnl.priorPeriod':'Kỳ trước','pnl.priorYear':'Cùng kỳ năm trước',
   'pnl.run':'Chạy báo cáo','pnl.retry':'Thử lại','pnl.revenue':'Doanh thu','pnl.grossProfit':'Lợi nhuận gộp',

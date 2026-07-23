@@ -692,6 +692,8 @@ async function auditRoutes(browser, viewport) {
           legacyReportChrome: Boolean(financialStatementRoot?.querySelector('.report,.report-params,.report-result')),
           runHandler: Boolean(financialStatementRoot?.querySelector('[data-financial-run]')),
           exportActions: financialStatementRoot?.querySelectorAll('[data-financial-action]').length || 0,
+          comboboxes: financialStatementRoot?.querySelectorAll('[data-financial-filters] input[role="combobox"]').length || 0,
+          nativeSelects: financialStatementRoot?.querySelectorAll('[data-financial-filters] select').length || 0,
         },
         layoutProfile: {
           heading: el.querySelector('h1')?.textContent?.trim() || '',
@@ -965,6 +967,12 @@ async function auditRoutes(browser, viewport) {
         }
         if (!rendered.financialStatementLayout.runHandler) {
           rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} Run report control missing`);
+        }
+        if (rendered.financialStatementLayout.comboboxes !== 4) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} expected 4 SSOT combobox filters, found ${rendered.financialStatementLayout.comboboxes}`);
+        }
+        if (rendered.financialStatementLayout.nativeSelects) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} contains ${rendered.financialStatementLayout.nativeSelects} native select filters`);
         }
       }
     }
