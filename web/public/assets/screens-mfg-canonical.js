@@ -1,7 +1,7 @@
 /* ============================================================
    ARIA ERP — canonical manufacturing work-order screens
-   Formal ErpSystemData resources only. BOM/MRP master screens remain Preview
-   until their authoring and run commands are delivered.
+   Formal ErpSystemData resources only. BOM/MRP remain read-oriented canonical
+   master screens until their authoring and run commands are delivered.
    ============================================================ */
 (function canonicalManufacturingScreens(){
   function mfgCopy(){
@@ -21,8 +21,13 @@
         completed:'Completed',closed:'Closed',cancelled:'Cancelled',required:'Required',
         issued:'Issued',available:'Available',cost:'Unit cost',workCenter:'Work centre',
         plannedHours:'Planned hours',actualHours:'Actual hours',dataLimit:'Showing the first 100 canonical rows per resource.',
-        bomTitle:'Bill of materials',components:'Components',revision:'Revision',effective:'Effective',
+        bomTitle:'Bill of materials',bomDescription:'Versioned product structure, material usage, routing and rolled cost.',
+        components:'Components',revision:'Revision',effective:'Effective',output:'Output',
         qtyPer:'Qty / output',scrap:'Scrap',rolled:'Rolled material cost',routingTitle:'Production routing',
+        componentCount:'Component count',setupHours:'Setup hours',runHours:'Run hours / unit',
+        noComponents:'This BOM version has no component lines.',noRouting:'No active routing operations are linked.',
+        costContext:'Cost and production context',bomEmptyDesc:'No active canonical BOM version is available.',
+        active:'Active',draft:'Draft',inactive:'Inactive',
         runMrp:'Run MRP',mrpTitle:'Material requirements planning',planningDate:'Planning horizon',
         suggestions:'Planning suggestions',gross:'Gross requirement',onHand:'On hand',onOrder:'On order',
         net:'Net requirement',action:'Action',purchase:'Purchase',sufficient:'Sufficient',
@@ -42,8 +47,13 @@
         completed:'Selesai',closed:'Ditutup',cancelled:'Dibatalkan',required:'Diperlukan',
         issued:'Dikeluarkan',available:'Tersedia',cost:'Kos unit',workCenter:'Pusat kerja',
         plannedHours:'Jam dirancang',actualHours:'Jam sebenar',dataLimit:'Menunjukkan 100 baris kanonik pertama bagi setiap sumber.',
-        bomTitle:'Bil bahan',components:'Komponen',revision:'Semakan',effective:'Berkuat kuasa',
+        bomTitle:'Bil bahan',bomDescription:'Struktur produk bersemakan, penggunaan bahan, laluan dan kos terkumpul.',
+        components:'Komponen',revision:'Semakan',effective:'Berkuat kuasa',output:'Output',
         qtyPer:'Kuantiti / output',scrap:'Susut',rolled:'Kos bahan terkumpul',routingTitle:'Laluan pengeluaran',
+        componentCount:'Bilangan komponen',setupHours:'Jam persediaan',runHours:'Jam operasi / unit',
+        noComponents:'Versi BOM ini tidak mempunyai baris komponen.',noRouting:'Tiada operasi laluan aktif dipautkan.',
+        costContext:'Konteks kos dan pengeluaran',bomEmptyDesc:'Tiada versi BOM kanonik aktif.',
+        active:'Aktif',draft:'Draf',inactive:'Tidak aktif',
         runMrp:'Jalankan MRP',mrpTitle:'Perancangan keperluan bahan',planningDate:'Horizon perancangan',
         suggestions:'Cadangan perancangan',gross:'Keperluan kasar',onHand:'Stok sedia ada',onOrder:'Dalam pesanan',
         net:'Keperluan bersih',action:'Tindakan',purchase:'Beli',sufficient:'Mencukupi',
@@ -63,12 +73,37 @@
         completed:'已完成',closed:'已关闭',cancelled:'已取消',required:'需求',
         issued:'已领料',available:'可用',cost:'单位成本',workCenter:'工作中心',
         plannedHours:'计划工时',actualHours:'实际工时',dataLimit:'每项资源显示前 100 条标准记录。',
-        bomTitle:'物料清单',components:'组件',revision:'版本',effective:'生效日期',
+        bomTitle:'物料清单',bomDescription:'管理版本化产品结构、物料用量、工艺路线和滚算成本。',
+        components:'组件',revision:'版本',effective:'生效日期',output:'产出',
         qtyPer:'每产出用量',scrap:'损耗',rolled:'物料滚算成本',routingTitle:'生产工艺路线',
+        componentCount:'组件数量',setupHours:'准备工时',runHours:'单位运行工时',
+        noComponents:'此 BOM 版本没有组件明细。',noRouting:'没有关联的有效工艺路线工序。',
+        costContext:'成本与生产信息',bomEmptyDesc:'当前没有有效的标准 BOM 版本。',
+        active:'有效',draft:'草稿',inactive:'停用',
         runMrp:'运行 MRP',mrpTitle:'物料需求计划',planningDate:'计划范围',
         suggestions:'计划建议',gross:'总需求',onHand:'现有库存',onOrder:'在途采购',
         net:'净需求',action:'建议动作',purchase:'采购',sufficient:'库存足够',
         noRun:'尚未运行 MRP。',runComplete:'MRP 运算完成',
+      },
+      ja:{
+        bomTitle:'部品表',bomDescription:'版管理された製品構成、材料使用量、工程、積上原価を表示します。',
+        components:'構成部品',revision:'版',effective:'適用日',output:'生産数量',
+        product:'製品',quantity:'数量',cost:'単価',routing:'工程',
+        qtyPer:'生産単位当たり数量',scrap:'廃棄率',rolled:'積上材料原価',routingTitle:'生産工程',
+        componentCount:'構成部品数',setupHours:'段取時間',runHours:'単位当たり運転時間',
+        noComponents:'このBOM版には構成部品がありません。',noRouting:'有効な工程作業が関連付けられていません。',
+        costContext:'原価と生産情報',bomEmptyDesc:'有効な標準BOM版がありません。',
+        active:'有効',draft:'下書き',inactive:'無効',
+      },
+      vi:{
+        bomTitle:'Định mức nguyên vật liệu',bomDescription:'Cấu trúc sản phẩm theo phiên bản, mức sử dụng vật liệu, quy trình và chi phí tổng hợp.',
+        components:'Thành phần',revision:'Phiên bản',effective:'Hiệu lực',output:'Sản lượng',
+        product:'Sản phẩm',quantity:'Số lượng',cost:'Đơn giá',routing:'Quy trình',
+        qtyPer:'Số lượng / sản lượng',scrap:'Hao hụt',rolled:'Chi phí vật liệu tổng hợp',routingTitle:'Quy trình sản xuất',
+        componentCount:'Số thành phần',setupHours:'Giờ chuẩn bị',runHours:'Giờ chạy / đơn vị',
+        noComponents:'Phiên bản BOM này chưa có dòng thành phần.',noRouting:'Chưa liên kết công đoạn quy trình đang hoạt động.',
+        costContext:'Chi phí và thông tin sản xuất',bomEmptyDesc:'Không có phiên bản BOM chuẩn đang hoạt động.',
+        active:'Hoạt động',draft:'Bản nháp',inactive:'Ngừng hoạt động',
       },
     };
     const copy=all[lang]||all.en;
@@ -86,6 +121,9 @@
       planned:'neutral',released:'accent',in_progress:'info',on_hold:'warn',
       completed:'ok',closed:'neutral',cancelled:'danger',
     })[status]||'neutral';
+  }
+  function bomStatusLabel(s,status){
+    return ({active:s('active'),draft:s('draft'),inactive:s('inactive')})[status]||status;
   }
   function adapter(){
     if(!window.ErpSystemData) throw new Error('ERP data adapter is unavailable.');
@@ -413,8 +451,13 @@
     const version=versions.find(row=>row.status==='active')||versions[0];
     const bom=version&&boms.find(row=>Number(row.id)===Number(version.bomId));
     if(!bom||!version){
-      root.innerHTML=`<div class="content full"><section class="master"><div class="statepanel empty">
-        ${ic('box')}<h3>${esc(s('bomTitle'))}</h3><p>${esc(s('emptyDesc'))}</p></div></section></div>`;
+      masterDetailEditorPage(root,{
+        module:'manufacturing',
+        route:'bom',
+        title:s('bomTitle'),
+        description:s('bomDescription'),
+        empty:{icon:'box',title:s('bomTitle'),description:s('bomEmptyDesc')},
+      });
       return;
     }
     const products=byId(pages[3].data),centers=byId(pages[6].data);
@@ -439,27 +482,45 @@
       const center=centers.get(Number(operation.workCenterId))||{};
       return `<div class="oprow"><span class="opseq">${operation.sequence}</span>
         <div class="opmain"><b>${esc(operation.name)}</b><small>${esc(center.code||'')} · ${esc(center.name||'')}</small></div>
-        <div class="tnum">${num(Number(operation.setupHours))} h + ${num(Number(operation.runHoursPerUnit))} h/unit</div>
+        <div class="tnum">${esc(s('setupHours'))}: ${num(Number(operation.setupHours))} h · ${esc(s('runHours'))}: ${num(Number(operation.runHoursPerUnit))} h</div>
       </div>`;
     }).join('');
-    root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
-      ${crumbs([DB.company.name,t('nav.manufacturing'),{cur:s('bomTitle')}])}
-      <div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('box')}${esc(bom.code)} <span class="dnum">${esc(finished.sku||'')}</span></div>
-        <div class="h1sub">${esc(finished.name||bom.name)} · ${esc(s('revision'))} ${esc(version.revision)} · ${esc(s('effective'))} ${esc(dateLabel(version.effectiveFrom))}</div>
-      </div>${cap(statusLabel(s,version.status),version.status==='active'?'ok':'neutral')}</div></div>
-      <div class="doclayout"><div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>${esc(s('components'))}</h3></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('product'))}</th>
-            <th>${esc(s('qtyPer'))}</th><th>${esc(s('scrap'))}</th><th>${esc(s('cost'))}</th></tr></thead>
-            <tbody>${componentRows}</tbody></table></div>
-        <div class="panel"><div class="panel-h"><h3>${esc(s('routingTitle'))}</h3></div>
-          <div class="panel-body" style="padding:6px 0">${operationRows}</div></div>
-      </div><aside class="summary"><div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(s('rolled'))}</div>
-        <div class="sumrow total"><span class="sk2">${esc(s('components'))}</span><span class="sv tnum">${money(rolled)}</span></div>
-        <div class="sumrow"><span class="sk2">${esc(s('quantity'))}</span><span class="sv">${num(Number(version.outputQty))} ${esc(version.uom)}</span></div>
-        <div class="sumrow"><span class="sk2">${esc(s('routing'))}</span><span class="sv">${esc(routing&&routing.code||'—')}</span></div>
-      </div></aside></div>
-    </div></div></section></div>`;
+    const componentsBody=componentRows
+      ? `<div class="master-detail-editor-table-scroll"><table class="lines"><thead><tr>
+          <th class="lineno">#</th><th class="l">${esc(s('product'))}</th>
+          <th>${esc(s('qtyPer'))}</th><th>${esc(s('scrap'))}</th><th>${esc(s('cost'))}</th>
+        </tr></thead><tbody>${componentRows}</tbody></table></div>`
+      : `<div class="master-detail-editor-inline-empty" data-master-detail-components-empty>${ic('box')}<span>${esc(s('noComponents'))}</span></div>`;
+    const routingBody=operationRows
+      ? `<div class="panel-body" style="padding:6px 0">${operationRows}</div>`
+      : `<div class="master-detail-editor-inline-empty" data-master-detail-routing-empty>${ic('flow')}<span>${esc(s('noRouting'))}</span></div>`;
+    masterDetailEditorPage(root,{
+      module:'manufacturing',
+      route:'bom',
+      title:s('bomTitle'),
+      description:s('bomDescription'),
+      status:{label:bomStatusLabel(s,version.status),tone:version.status==='active'?'ok':'neutral'},
+      overview:{
+        title:finished.name||bom.name||bom.code,
+        code:[bom.code,finished.sku].filter(Boolean).join(' · '),
+        facts:[
+          {label:s('revision'),value:version.revision||'—'},
+          {label:s('effective'),value:dateLabel(version.effectiveFrom)},
+          {label:s('output'),value:`${num(Number(version.outputQty))} ${version.uom||''}`,numeric:true},
+        ],
+      },
+      main:`
+        <div class="panel"><div class="panel-h"><h3>${esc(s('components'))}</h3></div>${componentsBody}</div>
+        <div class="panel"><div class="panel-h"><h3>${esc(s('routingTitle'))}</h3></div>${routingBody}</div>`,
+      context:{
+        title:s('costContext'),
+        body:`
+          <div class="sumrow total"><span class="sk2">${esc(s('rolled'))}</span><span class="sv tnum">${money(rolled)}</span></div>
+          <div class="sumrow"><span class="sk2">${esc(s('output'))}</span><span class="sv tnum">${num(Number(version.outputQty))} ${esc(version.uom||'')}</span></div>
+          <div class="sumrow"><span class="sk2">${esc(s('routing'))}</span><span class="sv">${esc(routing&&routing.code||'—')}</span></div>
+          <div class="sumrow"><span class="sk2">${esc(s('componentCount'))}</span><span class="sv tnum">${components.length}</span></div>`,
+      },
+    });
   };
 
   SCREENS['mrp']=async function(root){

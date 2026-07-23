@@ -108,6 +108,87 @@ function operationalWorkspacePage(root, config){
 window.operationalWorkspacePage=operationalWorkspacePage;
 
 /**
+ * Page-level SSOT for versioned master-data detail and authoring surfaces.
+ *
+ * These screens are not transaction registers: one selected master record is
+ * the subject, while its lines/configuration live in the main region and
+ * derived facts live in the context rail. The helper owns the module shell,
+ * overview, empty/error states, responsive split and action region so modules
+ * do not rebuild document-detail chrome.
+ */
+function masterDetailEditorPage(root, config){
+  if(!root) throw new Error('masterDetailEditorPage requires a render root.');
+  const cfg=config||{};
+  const overview=cfg.overview||{};
+  const facts=Array.isArray(overview.facts)?overview.facts:[];
+  const status=cfg.status&&cfg.status.label
+    ? cap(String(cfg.status.label),cfg.status.tone||'neutral')
+    : '';
+  const hasOverview=Boolean(overview.title||overview.code||overview.meta||facts.length);
+  const overviewHtml=hasOverview?`
+    <div class="master-detail-editor-identity">
+      <div>
+        <h2>${esc(String(overview.title||''))}</h2>
+        ${overview.code?`<span class="master-detail-editor-code">${esc(String(overview.code))}</span>`:''}
+      </div>
+      ${overview.meta?`<p>${esc(String(overview.meta))}</p>`:''}
+    </div>
+    <div class="master-detail-editor-facts">
+      ${facts.map(fact=>`<div class="master-detail-editor-fact">
+        <small>${esc(String(fact.label||''))}</small>
+        <b class="${fact.numeric?'tnum':''}">${esc(String(fact.value??'—'))}</b>
+      </div>`).join('')}
+    </div>`:'';
+  const empty=cfg.empty||null;
+  const main=empty
+    ? `<div class="statepanel empty master-detail-editor-empty" data-master-detail-empty>
+        ${ic(empty.icon||'inbox')}
+        <h3>${esc(String(empty.title||'No record available'))}</h3>
+        ${empty.description?`<p>${esc(String(empty.description))}</p>`:''}
+      </div>`
+    : (cfg.main||'');
+  const context=cfg.context||{};
+  const actions=cfg.actions||'';
+  const body=`<section class="master-detail-editor"
+      data-layout="master-detail-editor-v1"
+      data-master-detail-route="${esc(String(cfg.route||''))}">
+    <div class="master-detail-editor-overview" data-master-detail-overview
+        ${hasOverview?'':'hidden'}>${overviewHtml}</div>
+    <div class="master-detail-editor-error" data-master-detail-error role="alert" hidden></div>
+    <div class="master-detail-editor-grid" data-master-detail-grid>
+      <main class="master-detail-editor-main" data-master-detail-main>${main}</main>
+      <aside class="master-detail-editor-context" data-master-detail-context
+          ${empty&&!context.body?'hidden':''}>
+        ${context.title?`<div class="sectitle">${esc(String(context.title))}</div>`:''}
+        ${context.body||''}
+      </aside>
+    </div>
+    <div class="responsive-actionbar master-detail-editor-actions"
+        data-master-detail-actions ${actions?'':'hidden'}>${actions}</div>
+  </section>`;
+  root.innerHTML=modulePage({
+    module:cfg.module,
+    route:cfg.route,
+    active:cfg.active||cfg.route,
+    title:String(cfg.title||''),
+    crumb:cfg.crumb,
+    sub:cfg.description,
+    action:status,
+    body,
+  });
+  const editor=root.querySelector('[data-layout="master-detail-editor-v1"]');
+  if(typeof cfg.afterRender==='function'){
+    cfg.afterRender({
+      root,
+      editor,
+      errorRoot:editor&&editor.querySelector('[data-master-detail-error]'),
+    });
+  }
+  return editor;
+}
+window.masterDetailEditorPage=masterDetailEditorPage;
+
+/**
  * Page-level SSOT for canonical transaction registers.
  *
  * `modulePage()` owns the shared ERP shell and `buildTable()`/`wireTable()` own

@@ -21,7 +21,8 @@
 //   - routes declaring a page-level layout contract render every required
 //     region in canonical order. Set LIST_LAYOUT_ONLY=1 to audit only those
 //     routes while migrating legacy screens in bounded batches, or
-//     WORKSPACE_LAYOUT_ONLY=1 for operational workspaces.
+//     WORKSPACE_LAYOUT_ONLY=1 for operational workspaces, or
+//     MASTER_DETAIL_EDITOR_ONLY=1 for versioned master-data detail editors.
 //   - stateful transaction detail routes are opened through real fixtures
 //     instead of silently redirecting because no record was selected.
 //
@@ -40,16 +41,19 @@ const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 const WORKSPACE_LAYOUT_ONLY = process.env.WORKSPACE_LAYOUT_ONLY === '1';
+const MASTER_DETAIL_EDITOR_ONLY = process.env.MASTER_DETAIL_EDITOR_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
+const MASTER_DETAIL_EDITOR_LAYOUT = 'master-detail-editor-v1';
 const VALID_LAYOUTS = new Set([
-  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,'dashboard','report','document-detail','form',
+  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,
+  'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
 ]);
 
-if (LIST_LAYOUT_ONLY && WORKSPACE_LAYOUT_ONLY) {
-  throw new Error('LIST_LAYOUT_ONLY and WORKSPACE_LAYOUT_ONLY are mutually exclusive.');
+if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY].filter(Boolean).length > 1) {
+  throw new Error('LIST_LAYOUT_ONLY, WORKSPACE_LAYOUT_ONLY and MASTER_DETAIL_EDITOR_ONLY are mutually exclusive.');
 }
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
@@ -227,12 +231,17 @@ async function auditRoutes(browser, viewport) {
     ? allRoutes.filter((route) => LIST_LAYOUTS.has(screenMeta[route]?.layout))
     : WORKSPACE_LAYOUT_ONLY
       ? allRoutes.filter((route) => screenMeta[route]?.layout === OPERATIONAL_WORKSPACE_LAYOUT)
-      : allRoutes;
+      : MASTER_DETAIL_EDITOR_ONLY
+        ? allRoutes.filter((route) => screenMeta[route]?.layout === MASTER_DETAIL_EDITOR_LAYOUT)
+        : allRoutes;
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a shared list layout.');
   }
   if (WORKSPACE_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare an operational workspace layout.');
+  }
+  if (MASTER_DETAIL_EDITOR_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare a master-detail editor layout.');
   }
   const missingAdapterMethods = await page.evaluate(() => {
     const required = ['list','get','create','update','action','refresh','session','switchCompany'];
@@ -340,6 +349,41 @@ async function auditRoutes(browser, viewport) {
           layoutIssues.push('operational workspace context does not follow the main work area on mobile');
         }
       }
+      const masterDetailEditorRoot = el.querySelector('[data-layout="master-detail-editor-v1"]');
+      const masterDetailEditorRegions = masterDetailEditorRoot ? [
+        masterDetailEditorRoot.querySelector('[data-master-detail-overview]'),
+        masterDetailEditorRoot.querySelector('[data-master-detail-error]'),
+        masterDetailEditorRoot.querySelector('[data-master-detail-main]'),
+        masterDetailEditorRoot.querySelector('[data-master-detail-context]'),
+        masterDetailEditorRoot.querySelector('[data-master-detail-actions]'),
+      ] : [];
+      const masterDetailEditorOrder = masterDetailEditorRegions.length === 5
+        && masterDetailEditorRegions.every(Boolean)
+        && masterDetailEditorRegions.every((node,index)=>index === 0
+          || Boolean(masterDetailEditorRegions[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+      if (masterDetailEditorRoot && masterDetailEditorRegions[4]
+          && masterDetailEditorRegions[4].offsetParent !== null
+          && masterDetailEditorRegions[4].scrollWidth > masterDetailEditorRegions[4].clientWidth + 1) {
+        layoutIssues.push(`master-detail editor actions overflow ${masterDetailEditorRegions[4].scrollWidth}>${masterDetailEditorRegions[4].clientWidth}`);
+      }
+      if (masterDetailEditorRoot && masterDetailEditorRegions[2] && masterDetailEditorRegions[3]) {
+        const mainRect = masterDetailEditorRegions[2].getBoundingClientRect();
+        const contextRect = masterDetailEditorRegions[3].getBoundingClientRect();
+        if (window.innerWidth <= 980 && contextRect.top < mainRect.bottom - 1) {
+          layoutIssues.push('master-detail editor context does not follow the main area on mobile');
+        }
+        if (window.innerWidth > 980 && contextRect.left < mainRect.right - 1) {
+          layoutIssues.push('master-detail editor main and context are not separate desktop columns');
+        }
+      }
+      if (masterDetailEditorRoot && masterDetailEditorRoot.querySelector('.docpage,.doclayout')) {
+        layoutIssues.push('master-detail editor still renders legacy document chrome');
+      }
+      [...(masterDetailEditorRoot?.querySelectorAll('table.lines')||[])].forEach((table)=>{
+        if (!table.closest('.master-detail-editor-table-scroll')) {
+          layoutIssues.push('master-detail editor table is missing its bounded scroll container');
+        }
+      });
       return {
         text: el.innerText || '',
         previewBanner: Boolean(el.querySelector('[data-preview-banner]')),
@@ -371,6 +415,17 @@ async function auditRoutes(browser, viewport) {
             && workspaceRoot?.querySelector('[data-complete-pick]:not([disabled])')
           ),
         },
+        masterDetailEditorLayout: {
+          present: Boolean(masterDetailEditorRoot),
+          actualLayout: masterDetailEditorRoot?.getAttribute('data-layout') || null,
+          missingRegions: masterDetailEditorRoot
+            ? ['overview','error','main','context','actions'].filter((_,index)=>!masterDetailEditorRegions[index])
+            : [],
+          ordered: masterDetailEditorOrder,
+          pageheads: el.querySelectorAll('.pagehead').length,
+          errorRegion: Boolean(masterDetailEditorRoot?.querySelector('[data-master-detail-error]')),
+          legacyDocumentChrome: Boolean(masterDetailEditorRoot?.querySelector('.docpage,.doclayout')),
+        },
         layoutProfile: {
           heading: el.querySelector('h1')?.textContent?.trim() || '',
           gridTables: el.querySelectorAll('.dt-page').length,
@@ -382,7 +437,10 @@ async function auditRoutes(browser, viewport) {
           formSurface: Boolean(el.querySelector('form,.formgrid,.set-grid,.wizard-card')),
           splitSurface: Boolean(el.querySelector('.split,.so-split,.doclayout,.master-detail,[data-master-detail-workspace]')),
           dashboardSurface: Boolean(el.querySelector('.dashgrid,.db-grid,.sb-grid,.analytics-status-grid')),
-          actualLayout: actualListLayout || workspaceRoot?.getAttribute('data-layout') || null,
+          actualLayout: actualListLayout
+            || workspaceRoot?.getAttribute('data-layout')
+            || masterDetailEditorRoot?.getAttribute('data-layout')
+            || null,
         },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
         renderError: Boolean(el.querySelector('.screen-render-error')),
@@ -394,6 +452,10 @@ async function auditRoutes(browser, viewport) {
       workspaceLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         progress: null, pageheads: 0, errorRegion: false, incompleteCompletionEnabled: false,
+      },
+      masterDetailEditorLayout: {
+        present: false, actualLayout: null, missingRegions: [], ordered: false,
+        pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
       },
       layoutProfile: {
         heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
@@ -454,12 +516,39 @@ async function auditRoutes(browser, viewport) {
     if (rendered.workspaceLayout.present && meta?.layout !== OPERATIONAL_WORKSPACE_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.workspaceLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
     }
+    if (meta?.layout === MASTER_DETAIL_EDITOR_LAYOUT) {
+      if (!rendered.masterDetailEditorLayout.present) {
+        rendered.layoutIssues.push(`${MASTER_DETAIL_EDITOR_LAYOUT} root missing`);
+      } else {
+        if (rendered.masterDetailEditorLayout.actualLayout !== meta.layout) {
+          rendered.layoutIssues.push(`rendered ${rendered.masterDetailEditorLayout.actualLayout} but declared ${meta.layout}`);
+        }
+        if (rendered.masterDetailEditorLayout.missingRegions.length) {
+          rendered.layoutIssues.push(`${MASTER_DETAIL_EDITOR_LAYOUT} regions missing: ${rendered.masterDetailEditorLayout.missingRegions.join(', ')}`);
+        }
+        if (!rendered.masterDetailEditorLayout.ordered) {
+          rendered.layoutIssues.push(`${MASTER_DETAIL_EDITOR_LAYOUT} regions are outside canonical order`);
+        }
+        if (rendered.masterDetailEditorLayout.pageheads !== 1) {
+          rendered.layoutIssues.push(`${MASTER_DETAIL_EDITOR_LAYOUT} rendered ${rendered.masterDetailEditorLayout.pageheads} module page headers`);
+        }
+        if (!rendered.masterDetailEditorLayout.errorRegion) {
+          rendered.layoutIssues.push(`${MASTER_DETAIL_EDITOR_LAYOUT} error region missing`);
+        }
+        if (rendered.masterDetailEditorLayout.legacyDocumentChrome) {
+          rendered.layoutIssues.push(`${MASTER_DETAIL_EDITOR_LAYOUT} contains legacy document chrome`);
+        }
+      }
+    }
+    if (rendered.masterDetailEditorLayout.present && meta?.layout !== MASTER_DETAIL_EDITOR_LAYOUT) {
+      rendered.layoutIssues.push(`rendered ${rendered.masterDetailEditorLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
     const highConfidenceRegister = rendered.layoutProfile.gridTables > 0
       && !rendered.layoutProfile.documentPage
       && !rendered.layoutProfile.formSurface
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
-      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT].includes(meta?.layout);
+      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT].includes(meta?.layout);
     if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
     }
@@ -517,6 +606,70 @@ async function auditRoutes(browser, viewport) {
       result.layoutIssues.push(...localeIssues.map((issue) => `locale smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
       result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('bom')) {
+    const bomIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const expected = {
+        en:'Bill of materials',
+        ms:'Bil bahan',
+        zh:'物料清单',
+        ja:'部品表',
+        vi:'Định mức nguyên vật liệu',
+      };
+      const issues = [];
+      try {
+        for (const [locale,title] of Object.entries(expected)) {
+          window.getLang = () => locale;
+          await navigate('bom');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (!heading.startsWith(title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          if (!document.querySelector('#viewRoot [data-layout="master-detail-editor-v1"]')) {
+            issues.push(`${locale} master-detail editor root missing`);
+          }
+        }
+        window.getLang = () => 'en';
+        adapter.list = async (resource,query) => resource === 'manufacturing/bom-components'
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('bom');
+        if (!document.querySelector('#viewRoot [data-master-detail-components-empty]')) {
+          issues.push('component-empty state missing');
+        }
+        adapter.list = async (resource,query) => ['manufacturing/routings','manufacturing/routing-operations'].includes(resource)
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('bom');
+        if (!document.querySelector('#viewRoot [data-master-detail-routing-empty]')) {
+          issues.push('routing-empty state missing');
+        }
+        adapter.list = async (resource,query) => ['manufacturing/boms','manufacturing/bom-versions'].includes(resource)
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('bom');
+        if (!document.querySelector('#viewRoot [data-master-detail-empty]')) {
+          issues.push('BOM-empty state missing');
+        }
+        if (!document.querySelector('#viewRoot [data-layout="master-detail-editor-v1"]')) {
+          issues.push('BOM-empty state left the shared editor shell');
+        }
+      } finally {
+        adapter.list = originalList;
+        window.getLang = originalGetLang;
+        await navigate('bom');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'bom');
+    if (result) {
+      result.layoutIssues.push(...bomIssues.map((issue)=>`BOM state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }
     events.length = 0;
   }

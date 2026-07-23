@@ -585,6 +585,9 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   'operational-workspace-v1':[
     'picking',
   ],
+  'master-detail-editor-v1':[
+    'bom',
+  ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
@@ -608,7 +611,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'new-stock-adjustment','new-work-order',
   ],
   'master-detail':[
-    'asset-detail','bom','crm-customer','leave-approval','role-permission',
+    'asset-detail','crm-customer','leave-approval','role-permission',
   ],
   workspace:[
     'bank-rec','data-import','depreciation','integration','master-control',
