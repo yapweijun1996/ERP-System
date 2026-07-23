@@ -18,3 +18,4 @@ export * from './payroll';
 export * from './integration';
 export * from './notifications';
 export * from './controlPlane';
+export * from './reporting';

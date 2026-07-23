@@ -7,7 +7,10 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import * as schema from '../data/schema';
 import type { DB } from '../data/db';
-import { withTenantTransaction } from '../data/tenantTransaction';
+import {
+  withReportingWorkerTransaction,
+  withTenantTransaction,
+} from '../data/tenantTransaction';
 import { completeProductionSetup } from '../modules/setup/completeSetup';
 import { createInvitation, acceptInvitation, requestPasswordReset, confirmPasswordReset } from '../auth/lifecycle';
 import { decryptToken, type EncryptedToken } from '../auth/tokenCrypto';
@@ -109,6 +112,30 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       .where(eq(schema.appUser.userId, setup.userId));
     const [adminRole] = await db.select().from(schema.role)
       .where(eq(schema.role.masterFn, setup.masterFn));
+    const [queuedReport] = await withTenantTransaction(db, {
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+    }, (tx) => tx.insert(schema.reportJob).values({
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+      actorUserId: admin.userId,
+      reportKey: 'profit_loss',
+      format: 'xlsx',
+      locale: 'en',
+      presentationCurrency: 'SGD',
+      filters: {
+        companyFns: [setup.companyFn],
+        presentationCurrency: 'SGD',
+        comparison: 'budget',
+      },
+      expiresAt: new Date(Date.now() + 60_000),
+    }).returning());
+    expect(await db.select().from(schema.reportJob)).toHaveLength(0);
+    expect(await withReportingWorkerTransaction(
+      db,
+      (tx) => tx.select().from(schema.reportJob)
+        .where(eq(schema.reportJob.id, queuedReport.id)),
+    )).toHaveLength(1);
     const key = Buffer.alloc(32, 11);
     const lifecycle = {
       tokenEncryptionKey: key,

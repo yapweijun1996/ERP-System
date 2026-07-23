@@ -9,8 +9,8 @@
 //
 // For each route this asserts:
 //   - no console.error / uncaught pageerror / synchronous throw while
-//     rendering it (the exact bug class TASK-018 was opened for: SCREENS['pnl']
-//     indexed DB.pnl[3] when the adapter only supplied 2 groups)
+//     rendering it (the exact stale data / partial route failure class
+//     TASK-018 was opened to prevent)
 //   - the rendered text never contains a leftover identity marker from the
 //     original Aria/Northwind prototype template (data-core.js's pre-adapter
 //     defaults: "Northwind Manufacturing" / "Dana Reyes" / "dana.reyes@northwind.co")
@@ -48,6 +48,7 @@ const MASTER_DETAIL_EDITOR_ONLY = process.env.MASTER_DETAIL_EDITOR_ONLY === '1';
 const CASE_DETAIL_ONLY = process.env.CASE_DETAIL_ONLY === '1';
 const LEDGER_DETAIL_ONLY = process.env.LEDGER_DETAIL_ONLY === '1';
 const POSTING_DETAIL_ONLY = process.env.POSTING_DETAIL_ONLY === '1';
+const FINANCIAL_STATEMENT_ONLY = process.env.FINANCIAL_STATEMENT_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
@@ -55,14 +56,15 @@ const MASTER_DETAIL_EDITOR_LAYOUT = 'master-detail-editor-v1';
 const CASE_DETAIL_LAYOUT = 'case-detail-v1';
 const LEDGER_DETAIL_LAYOUT = 'ledger-detail-v1';
 const POSTING_DETAIL_LAYOUT = 'posting-detail-v1';
+const FINANCIAL_STATEMENT_LAYOUT = 'financial-statement-v1';
 const VALID_LAYOUTS = new Set([
-  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,
+  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT,
   'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
 ]);
 
-if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY].filter(Boolean).length > 1) {
-  throw new Error('LIST_LAYOUT_ONLY, WORKSPACE_LAYOUT_ONLY, MASTER_DETAIL_EDITOR_ONLY, CASE_DETAIL_ONLY, LEDGER_DETAIL_ONLY and POSTING_DETAIL_ONLY are mutually exclusive.');
+if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY,FINANCIAL_STATEMENT_ONLY].filter(Boolean).length > 1) {
+  throw new Error('Layout-only audit switches are mutually exclusive.');
 }
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
@@ -285,7 +287,9 @@ async function auditRoutes(browser, viewport) {
             ? allRoutes.filter((route) => screenMeta[route]?.layout === LEDGER_DETAIL_LAYOUT)
             : POSTING_DETAIL_ONLY
               ? allRoutes.filter((route) => screenMeta[route]?.layout === POSTING_DETAIL_LAYOUT)
-              : allRoutes;
+              : FINANCIAL_STATEMENT_ONLY
+                ? allRoutes.filter((route) => screenMeta[route]?.layout === FINANCIAL_STATEMENT_LAYOUT)
+                : allRoutes;
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a shared list layout.');
   }
@@ -303,6 +307,9 @@ async function auditRoutes(browser, viewport) {
   }
   if (POSTING_DETAIL_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a posting detail layout.');
+  }
+  if (FINANCIAL_STATEMENT_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare a financial statement layout.');
   }
   const missingAdapterMethods = await page.evaluate(() => {
     const required = ['list','get','create','update','action','refresh','session','switchCompany'];
@@ -555,6 +562,35 @@ async function auditRoutes(browser, viewport) {
       if (postingDetailRoot?.querySelector('[data-posting-lines]') && !postingLinesBounded) {
         layoutIssues.push('posting lines table is missing its bounded scroll container');
       }
+      const financialStatementRoot = el.querySelector('[data-layout="financial-statement-v1"]');
+      const financialStatementRegions = financialStatementRoot ? [
+        financialStatementRoot.querySelector('[data-financial-summary]'),
+        financialStatementRoot.querySelector('[data-financial-filters]'),
+        financialStatementRoot.querySelector('[data-financial-error]'),
+        financialStatementRoot.querySelector('[data-financial-statement]'),
+        financialStatementRoot.querySelector('[data-financial-actions]'),
+        financialStatementRoot.querySelector('[data-financial-export-status]'),
+      ] : [];
+      const financialStatementOrder = financialStatementRegions.length === 6
+        && financialStatementRegions.every(Boolean)
+        && financialStatementRegions.every((node,index)=>index === 0
+          || Boolean(financialStatementRegions[index - 1].compareDocumentPosition(node)
+            & Node.DOCUMENT_POSITION_FOLLOWING));
+      const financialTable = financialStatementRoot?.querySelector('.financial-statement-body');
+      const financialTableStyle = financialTable ? getComputedStyle(financialTable) : null;
+      const financialTableBounded = Boolean(
+        financialTable && financialTableStyle
+        && ['auto','scroll'].includes(financialTableStyle.overflowX)
+      );
+      if (financialStatementRoot && financialStatementRoot.querySelector('.report,.report-params,.report-result')) {
+        layoutIssues.push('financial statement still renders legacy report chrome');
+      }
+      if (financialStatementRoot && !financialTableBounded) {
+        layoutIssues.push('financial statement table is missing bounded horizontal scrolling');
+      }
+      if (financialStatementRoot && /cash|actual reference|reference equals actual/i.test(financialStatementRoot.innerText || '')) {
+        layoutIssues.push('financial statement exposes a fake Cash or Actual-as-Budget control');
+      }
       return {
         text: el.innerText || '',
         previewBanner: Boolean(el.querySelector('[data-preview-banner]')),
@@ -642,6 +678,21 @@ async function auditRoutes(browser, viewport) {
           audit: Boolean(postingDetailRoot?.querySelector('[data-posting-audit]')),
           controlledTable: postingLinesBounded,
         },
+        financialStatementLayout: {
+          present: Boolean(financialStatementRoot),
+          actualLayout: financialStatementRoot?.getAttribute('data-layout') || null,
+          missingRegions: financialStatementRoot
+            ? ['summary','filters','error','statement','actions','export-status']
+              .filter((_,index)=>!financialStatementRegions[index])
+            : [],
+          ordered: financialStatementOrder,
+          pageheads: el.querySelectorAll('.pagehead').length,
+          errorRegion: Boolean(financialStatementRoot?.querySelector('[data-financial-error]')),
+          controlledTable: financialTableBounded,
+          legacyReportChrome: Boolean(financialStatementRoot?.querySelector('.report,.report-params,.report-result')),
+          runHandler: Boolean(financialStatementRoot?.querySelector('[data-financial-run]')),
+          exportActions: financialStatementRoot?.querySelectorAll('[data-financial-action]').length || 0,
+        },
         layoutProfile: {
           heading: el.querySelector('h1')?.textContent?.trim() || '',
           gridTables: el.querySelectorAll('.dt-page').length,
@@ -659,6 +710,7 @@ async function auditRoutes(browser, viewport) {
             || caseDetailRoot?.getAttribute('data-layout')
             || ledgerDetailRoot?.getAttribute('data-layout')
             || postingDetailRoot?.getAttribute('data-layout')
+            || financialStatementRoot?.getAttribute('data-layout')
             || null,
         },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
@@ -690,6 +742,11 @@ async function auditRoutes(browser, viewport) {
         pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
         emptyState: false, errorVisible: false,
         lines: false, totals: false, balance: false, audit: false, controlledTable: false,
+      },
+      financialStatementLayout: {
+        present: false, actualLayout: null, missingRegions: [], ordered: false,
+        pageheads: 0, errorRegion: false, controlledTable: false,
+        legacyReportChrome: false, runHandler: false, exportActions: 0,
       },
       layoutProfile: {
         heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
@@ -881,12 +938,45 @@ async function auditRoutes(browser, viewport) {
     if (rendered.postingDetailLayout.present && meta?.layout !== POSTING_DETAIL_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.postingDetailLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
     }
+    if (meta?.layout === FINANCIAL_STATEMENT_LAYOUT) {
+      if (!rendered.financialStatementLayout.present) {
+        rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} root missing`);
+      } else {
+        if (rendered.financialStatementLayout.actualLayout !== meta.layout) {
+          rendered.layoutIssues.push(`rendered ${rendered.financialStatementLayout.actualLayout} but declared ${meta.layout}`);
+        }
+        if (rendered.financialStatementLayout.missingRegions.length) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} regions missing: ${rendered.financialStatementLayout.missingRegions.join(', ')}`);
+        }
+        if (!rendered.financialStatementLayout.ordered) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} regions are outside canonical order`);
+        }
+        if (rendered.financialStatementLayout.pageheads !== 1) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} rendered ${rendered.financialStatementLayout.pageheads} module page headers`);
+        }
+        if (!rendered.financialStatementLayout.errorRegion) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} error region missing`);
+        }
+        if (!rendered.financialStatementLayout.controlledTable) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} lacks controlled statement scrolling`);
+        }
+        if (rendered.financialStatementLayout.legacyReportChrome) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} contains legacy report chrome`);
+        }
+        if (!rendered.financialStatementLayout.runHandler) {
+          rendered.layoutIssues.push(`${FINANCIAL_STATEMENT_LAYOUT} Run report control missing`);
+        }
+      }
+    }
+    if (rendered.financialStatementLayout.present && meta?.layout !== FINANCIAL_STATEMENT_LAYOUT) {
+      rendered.layoutIssues.push(`rendered ${rendered.financialStatementLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
     const highConfidenceRegister = rendered.layoutProfile.gridTables > 0
       && !rendered.layoutProfile.documentPage
       && !rendered.layoutProfile.formSurface
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
-      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT].includes(meta?.layout);
+      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT].includes(meta?.layout);
     if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
     }
@@ -1421,6 +1511,60 @@ async function auditRoutes(browser, viewport) {
       result.layoutIssues.push(...voucherIssues.map((issue)=>`Payment voucher smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('pnl')) {
+    const financialIssues = await page.evaluate(async () => {
+      const originalLanguage = getLang();
+      const expectedTitles = {
+        en: 'Profit & Loss',
+        ms: 'Untung & Rugi',
+        zh: '损益表',
+        ja: '損益計算書',
+        vi: 'Báo cáo lãi lỗ',
+      };
+      const issues = [];
+      try {
+        for (const [locale, title] of Object.entries(expectedTitles)) {
+          setLang(locale);
+          await navigate('pnl');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (!heading.startsWith(title)) {
+            issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          }
+          const root = document.querySelector(
+            '#viewRoot [data-layout="financial-statement-v1"]',
+          );
+          if (!root) {
+            issues.push(`${locale} financial statement root missing`);
+            continue;
+          }
+          if (!root.querySelector('[data-financial-run]')) {
+            issues.push(`${locale} Run report action missing`);
+          }
+          if (root.textContent.includes('Cash') || root.textContent.includes('Actual reference')) {
+            issues.push(`${locale} contains a legacy fake report option`);
+          }
+        }
+      } finally {
+        setLang(originalLanguage);
+        await navigate('pnl');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'pnl');
+    if (result) {
+      result.layoutIssues.push(
+        ...financialIssues.map((issue) => `Financial statement smoke: ${issue}`),
+      );
+      result.consoleErrors.push(
+        ...events.filter((event) => event.kind === 'console.error').map((event) => event.message),
+      );
+      result.pageErrors.push(
+        ...events.filter((event) => event.kind === 'pageerror').map((event) => event.message),
+      );
     }
     events.length = 0;
   }

@@ -20,6 +20,8 @@ import { createSetupRouter } from './routes/setup';
 import { createAccountRouter } from './routes/account';
 import { createIntegrationRouter } from './routes/integration';
 import { createSettingsRouter } from './routes/settings';
+import { createFinanceReportsRouter } from './routes/financeReports';
+import { createReportingRouter } from './routes/reporting';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -95,6 +97,8 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/account', createAccountRouter(db));
   app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey));
   app.use('/api/settings', createSettingsRouter(db));
+  app.use('/api/finance', createFinanceReportsRouter(db));
+  app.use('/api/reporting', createReportingRouter(db));
 
   app.get('/api/dashboard', async (req, res) => {
     const session = await requireSession(db, req, res);

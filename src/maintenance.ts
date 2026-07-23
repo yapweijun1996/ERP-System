@@ -1,5 +1,6 @@
 import {
   and,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -10,8 +11,11 @@ import {
   apiIdempotency,
   outboxEvent,
   passwordResetToken,
+  reportArtifact,
+  reportJob,
   userInvitation,
 } from './data/schema';
+import { withReportingWorkerTransaction } from './data/tenantTransaction';
 import { cleanupLoginRateLimits } from './auth/rateLimit';
 import { cleanupExpiredSessions } from './auth/session';
 
@@ -22,6 +26,8 @@ export interface CleanupResult {
   invitations: number;
   passwordResets: number;
   outbox: number;
+  reportArtifacts: number;
+  reportJobs: number;
 }
 
 export async function runMaintenance(db: DB, now = new Date()): Promise<CleanupResult> {
@@ -46,6 +52,23 @@ export async function runMaintenance(db: DB, now = new Date()): Promise<CleanupR
     lt(outboxEvent.deliveredAt, oldDeliveredOutbox),
     isNull(outboxEvent.lockedAt),
   )).returning({ id: outboxEvent.id });
+  const reportCleanup = await withReportingWorkerTransaction(db, async (tx) => {
+    const artifacts = await tx.delete(reportArtifact)
+      .where(lt(reportArtifact.expiresAt, now))
+      .returning({ id: reportArtifact.id });
+    await tx.update(reportJob).set({
+      status: 'expired',
+      updatedAt: now,
+    }).where(and(
+      lt(reportJob.expiresAt, now),
+      inArray(reportJob.status, ['queued', 'running', 'succeeded']),
+    ));
+    const jobs = await tx.delete(reportJob).where(and(
+      lt(reportJob.expiresAt, oldConsumedToken),
+      inArray(reportJob.status, ['failed', 'expired']),
+    )).returning({ id: reportJob.id });
+    return { artifacts, jobs };
+  });
   return {
     sessions,
     rateLimits,
@@ -53,5 +76,7 @@ export async function runMaintenance(db: DB, now = new Date()): Promise<CleanupR
     invitations: invitations.length,
     passwordResets: passwordResets.length,
     outbox: outbox.length,
+    reportArtifacts: reportCleanup.artifacts.length,
+    reportJobs: reportCleanup.jobs.length,
   };
 }

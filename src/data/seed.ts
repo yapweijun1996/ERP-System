@@ -14,6 +14,7 @@ import {
   purchaseOrder, purchaseOrderApproval, purchaseOrderLine, supplierInvoice, glEntry,
   payrollRun, payrollRunLine, appNotification,
   integrationConnector, companyPolicy, documentSequence, accountingPeriod,
+  financialStatementAccountMap, budgetVersion, budgetLine, consolidationRate,
 } from './schema';
 import { computeStatutoryContributions } from '../modules/payroll/statutory';
 import { fixedUnits, fixedString } from '../modules/inventory/decimal';
@@ -69,6 +70,7 @@ export async function seedDemo(db: DB): Promise<void> {
     'inventory.read',
     'sales.read',
     'finance.read',
+    'finance.report.export',
     'purchasing.read',
     'crm.read',
     'manufacturing.read',
@@ -191,6 +193,7 @@ export async function seedDemo(db: DB): Promise<void> {
   await db.insert(accountingPeriod).values([
     { masterFn: 'M1', companyFn: 'C-SG', fiscalYear: 2026, periodNo: 5, label: 'May 2026', startDate: '2026-05-01', endDate: '2026-05-31', status: 'locked', lockedAt: new Date('2026-06-03T00:00:00Z'), lockedByUserId: adminUser.id },
     { masterFn: 'M1', companyFn: 'C-SG', fiscalYear: 2026, periodNo: 6, label: 'June 2026', startDate: '2026-06-01', endDate: '2026-06-30', status: 'open' },
+    { masterFn: 'M1', companyFn: 'C-MY', fiscalYear: 2026, periodNo: 5, label: 'Mei 2026', startDate: '2026-05-01', endDate: '2026-05-31', status: 'locked', lockedAt: new Date('2026-06-03T00:00:00Z'), lockedByUserId: adminUser.id },
     { masterFn: 'M1', companyFn: 'C-MY', fiscalYear: 2026, periodNo: 6, label: 'June 2026', startDate: '2026-06-01', endDate: '2026-06-30', status: 'open' },
   ]);
 
@@ -284,6 +287,90 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', companyFn: 'C-MY', code: '2310', name: 'Statutory Contributions Payable', type: 'liability' },
     { masterFn: 'M1', companyFn: 'C-MY', code: '2320', name: 'Income Tax Payable', type: 'liability' },
   ]);
+
+  // Financial statement presentation is canonical configuration, not a code-prefix
+  // heuristic at query time. Budget lines are natural positive account amounts;
+  // the mapping's sign policy controls their contribution to statement totals.
+  const reportAccounts = await db.select({
+    id: account.id,
+    companyFn: account.companyFn,
+    code: account.code,
+    type: account.type,
+  }).from(account).where(eq(account.masterFn, 'M1'));
+  await db.insert(financialStatementAccountMap).values(
+    reportAccounts
+      .filter((row) => row.type === 'income' || row.type === 'expense')
+      .map((row) => ({
+        masterFn: 'M1',
+        companyFn: row.companyFn,
+        accountId: row.id,
+        section: row.type === 'income'
+          ? 'revenue'
+          : row.code === '5800'
+            ? 'cost_of_sales'
+            : 'operating_expense',
+        displayOrder: Number(row.code),
+        signPolicy: row.type === 'income' ? 'positive' : 'negative',
+      })),
+  );
+  const [sgBudget, myBudget] = await db.insert(budgetVersion).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', fiscalYear: 2026,
+      name: 'Approved FY2026 operating budget', currency: 'SGD',
+      status: 'approved', isActive: true, version: 2,
+      approvedByUserId: adminUser.id, approvedAt: new Date('2026-01-02T00:00:00Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', fiscalYear: 2026,
+      name: 'Approved FY2026 operating budget', currency: 'MYR',
+      status: 'approved', isActive: true, version: 2,
+      approvedByUserId: adminUser.id, approvedAt: new Date('2026-01-02T00:00:00Z'),
+    },
+  ]).returning({ id: budgetVersion.id, companyFn: budgetVersion.companyFn });
+  const budgetByCompany = new Map([
+    [sgBudget.companyFn, sgBudget.id],
+    [myBudget.companyFn, myBudget.id],
+  ]);
+  const demoBudgetByCode: Record<string, Record<string, string>> = {
+    'C-SG': {
+      '4000': '48000.00',
+      '5800': '500.00',
+      '6200': '1500.00',
+      '6100': '26500.00',
+      '6110': '4600.00',
+    },
+    'C-MY': {
+      '6100': '9700.00',
+      '6110': '1700.00',
+    },
+  };
+  const budgetRows = reportAccounts.flatMap((row) => {
+    const amount = demoBudgetByCode[row.companyFn]?.[row.code];
+    const versionId = budgetByCompany.get(row.companyFn);
+    return amount && versionId ? [{
+      masterFn: 'M1',
+      companyFn: row.companyFn,
+      budgetVersionId: versionId,
+      accountId: row.id,
+      periodNo: 6,
+      amount,
+    }] : [];
+  });
+  if (budgetRows.length) await db.insert(budgetLine).values(budgetRows);
+  await db.insert(consolidationRate).values({
+    masterFn: 'M1',
+    companyFn: 'C-MY',
+    fiscalYear: 2026,
+    periodNo: 6,
+    fromCurrency: 'MYR',
+    toCurrency: 'SGD',
+    averageRate: '0.30000000',
+    source: 'Fictional approved demo consolidation rate',
+    status: 'approved',
+    version: 2,
+    approvedByUserId: adminUser.id,
+    approvedAt: new Date('2026-07-01T00:00:00Z'),
+  });
 
   // Fixed Assets register (TASK-035) — a few seeded assets so the register isn't
   // empty on first boot; none pre-depreciated, so the demo's first "Run depreciation"
@@ -605,14 +692,17 @@ export async function seedDemo(db: DB): Promise<void> {
     {
       masterFn: 'M1', companyFn: 'C-SG', journalRef: 'SINV-2026-0001',
       accountId: await acctId('1400'), debit: '1000.00', credit: '0', memo: 'Inventory',
+      postedAt: new Date('2026-06-05T09:00:00Z'),
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', journalRef: 'SINV-2026-0001',
       accountId: await acctId('1200'), debit: '90.00', credit: '0', memo: 'Input tax',
+      postedAt: new Date('2026-06-05T09:00:00Z'),
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', journalRef: 'SINV-2026-0001',
       accountId: await acctId('2100'), debit: '0', credit: '1090.00', memo: 'AP',
+      postedAt: new Date('2026-06-05T09:00:00Z'),
     },
   ]);
 
@@ -626,14 +716,17 @@ export async function seedDemo(db: DB): Promise<void> {
     {
       masterFn: 'M1', companyFn: 'C-SG', journalRef: 'PC-2026-0003',
       accountId: await acctId('1100'), debit: '54500.00', credit: '0', memo: 'AR progress claim',
+      postedAt: new Date('2026-06-25T10:00:00Z'),
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', journalRef: 'PC-2026-0003',
       accountId: await acctId('4000'), debit: '0', credit: '50000.00', memo: 'Progress claim revenue',
+      postedAt: new Date('2026-06-25T10:00:00Z'),
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', journalRef: 'PC-2026-0003',
       accountId: await acctId('2200'), debit: '0', credit: '4500.00', memo: 'Output tax',
+      postedAt: new Date('2026-06-25T10:00:00Z'),
     },
   ]);
   await db.update(project).set({

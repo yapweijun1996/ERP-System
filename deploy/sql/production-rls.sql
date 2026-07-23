@@ -54,6 +54,10 @@ DECLARE
     'company_policy',
     'document_sequence',
     'accounting_period',
+    'financial_statement_account_map',
+    'budget_version', 'budget_line',
+    'consolidation_rate',
+    'report_job', 'report_artifact',
     'api_idempotency',
     'import_job', 'import_job_row', 'import_row_error'
   ];
@@ -65,14 +69,28 @@ BEGIN
     EXECUTE format(
       'CREATE POLICY tenant_scope ON %I
        USING (
-         master_fn = current_setting(''app.master_fn'', true)
-         AND company_fn = current_setting(''app.company_fn'', true)
+         (
+           master_fn = current_setting(''app.master_fn'', true)
+           AND company_fn = current_setting(''app.company_fn'', true)
+         )
+         OR (
+           %L
+           AND current_setting(''app.reporting_worker'', true) = ''on''
+         )
        )
        WITH CHECK (
-         master_fn = current_setting(''app.master_fn'', true)
-         AND company_fn = current_setting(''app.company_fn'', true)
+         (
+           master_fn = current_setting(''app.master_fn'', true)
+           AND company_fn = current_setting(''app.company_fn'', true)
+         )
+         OR (
+           %L
+           AND current_setting(''app.reporting_worker'', true) = ''on''
+         )
        )',
-      table_name
+      table_name,
+      table_name IN ('report_job', 'report_artifact'),
+      table_name IN ('report_job', 'report_artifact')
     );
   END LOOP;
 END $$;

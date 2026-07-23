@@ -287,6 +287,20 @@ import {
 } from '../../src/auth/adminLifecycle';
 import { listMasterModules, setMasterModuleWithin } from '../../src/auth/moduleAccess';
 import type { SessionData } from '../../src/auth/session';
+import ExcelJS from 'exceljs';
+import {
+  buildProfitLossReport,
+  getProfitLossOptions,
+  type ProfitLossRequest,
+} from '../../src/modules/finance/profitLoss';
+import {
+  approveBudgetWithin,
+  createBudgetVersionWithin,
+  importBudgetLinesWithin,
+  listBudgetLinesWithin,
+  listBudgetVersionsWithin,
+  type BudgetImportRow,
+} from '../../src/modules/finance/budget';
 import { listPersonalActivityWithin } from '../../src/modules/account/activity';
 import {
   dismissNotificationWithin,
@@ -372,6 +386,78 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    getProfitLossOptions(
+      db: DemoOrm,
+      input: Pick<ProfitLossRequest, 'masterFn' | 'activeCompanyFn' | 'actorUserId'>,
+    ) {
+      return getProfitLossOptions(asDomainDb(db), input);
+    },
+    buildProfitLossReport(db: DemoOrm, input: ProfitLossRequest) {
+      return buildProfitLossReport(asDomainDb(db), input);
+    },
+    listBudgetVersionsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      fiscalYear?: number,
+    ) {
+      return listBudgetVersionsWithin(asDomainDb(db), scope, fiscalYear);
+    },
+    listBudgetLinesWithin(db: DemoOrm, scope: Scope, budgetVersionId: number) {
+      return listBudgetLinesWithin(asDomainDb(db), scope, budgetVersionId);
+    },
+    createBudgetVersionWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: { fiscalYear: unknown; name: unknown; currency: unknown },
+    ) {
+      return createBudgetVersionWithin(asDomainDb(db), scope, input);
+    },
+    importBudgetLinesWithin(
+      db: DemoOrm,
+      scope: Scope,
+      budgetVersionId: number,
+      rows: BudgetImportRow[],
+    ) {
+      return importBudgetLinesWithin(asDomainDb(db), scope, budgetVersionId, rows);
+    },
+    approveBudgetWithin(
+      db: DemoOrm,
+      scope: Scope,
+      budgetVersionId: number,
+      actorUserId: number,
+    ) {
+      return approveBudgetWithin(asDomainDb(db), scope, budgetVersionId, actorUserId);
+    },
+    async buildProfitLossXlsx(report: Awaited<ReturnType<typeof buildProfitLossReport>>) {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Profit & Loss');
+      sheet.columns = [
+        { header: 'Account', key: 'account', width: 38 },
+        { header: 'This period', key: 'period', width: 18 },
+        { header: 'YTD', key: 'ytd', width: 18 },
+        { header: 'Comparison', key: 'comparison', width: 18 },
+        { header: 'Variance', key: 'variance', width: 18 },
+      ];
+      for (const section of report.data.sections) {
+        const subtotal = sheet.addRow({
+          account: section.key.replaceAll('_', ' '),
+          period: Number(section.actualPeriod),
+          ytd: Number(section.actualYtd),
+          comparison: Number(section.comparisonYtd),
+          variance: Number(section.varianceYtd),
+        });
+        subtotal.font = { bold: true };
+        section.rows.forEach((row) => sheet.addRow({
+          account: `${row.accountCode} · ${row.accountName}`,
+          period: Number(row.actualPeriod),
+          ytd: Number(row.actualYtd),
+          comparison: Number(row.comparisonYtd),
+          variance: Number(row.varianceYtd),
+        }));
+      }
+      const bytes = await workbook.xlsx.writeBuffer();
+      return new Uint8Array(bytes);
+    },
     createCustomerImportJobWithin(
       db: DemoOrm,
       scope: Scope,

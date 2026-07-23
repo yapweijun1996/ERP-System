@@ -597,11 +597,14 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   'posting-detail-v1':[
     'journal-entry','payment-voucher',
   ],
+  'financial-statement-v1':[
+    'pnl',
+  ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
   report:[
-    'ar-aging','audit-log','pnl','purchasing-reports',
+    'ar-aging','audit-log','purchasing-reports',
     'report-generic','report-pur-buyer','report-pur-generic','report-pur-price-var',
     'report-pur-supplier','report-pur-vendor','report-quote-conversion',
     'report-sales-customer','report-sales-rep','sales-analysis','sales-reports',

@@ -18,3 +18,18 @@ export function withTenantTransaction<T>(
     return command(tx);
   });
 }
+
+/**
+ * Reporting workers need to claim jobs before a tenant is known. Production
+ * RLS grants this transaction-local flag only to the report queue/artifact
+ * policies; business tables still require the tenant context above.
+ */
+export function withReportingWorkerTransaction<T>(
+  db: DB,
+  command: (tx: DB) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.reporting_worker', 'on', true)`);
+    return command(tx);
+  });
+}

@@ -159,6 +159,43 @@
       method:'POST',headers:headers,body:payload||{},
     });
   }
+  var financeReports={
+    options:function(){
+      return apiRequest('finance/reports/profit-loss/options');
+    },
+    profitLoss:function(query){
+      return apiRequest('finance/reports/profit-loss'+queryString(query));
+    },
+    listBudgets:function(fiscalYear){
+      return apiRequest('finance/budgets'+queryString({fiscalYear:fiscalYear}));
+    },
+    budgetLines:function(id){
+      return apiRequest('finance/budgets/'+encodeURIComponent(id)+'/lines');
+    },
+    createBudget:function(payload){
+      return apiRequest('finance/budgets',{method:'POST',body:payload||{}});
+    },
+    budgetAction:function(id,name,payload,idempotencyKey){
+      return apiRequest('finance/budgets/'+encodeURIComponent(id)+'/actions/'+encodeURIComponent(name),{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    exportProfitLoss:function(payload,idempotencyKey){
+      return apiRequest('finance/reports/profit-loss/actions/export',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    reportJob:function(id){
+      return apiRequest('reporting/jobs/'+encodeURIComponent(id));
+    },
+    artifactUrl:function(id){
+      return API_BASE+'/reporting/artifacts/'+encodeURIComponent(id)+'/download';
+    },
+  };
 
   async function fetchDashboard(){
     var url = API_BASE + '/dashboard';
@@ -363,6 +400,7 @@
     update:update,
     action:action,
     session:fetchSession,
+    financeReports:financeReports,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
     completeSetup: completeSetup,
     switchCompany: switchCompany,

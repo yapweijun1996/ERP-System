@@ -83,25 +83,6 @@ DB.bankRec = {
     { date:'Jun 20', desc:'INTEREST CREDIT — operating a/c', amount:3400, je:null, matched:false },
   ],
 };
-DB.pnl = [
-  { grp:'Revenue', kind:'head', rows:[
-    { name:'Product sales', cur:486200, ytd:4820000, bud:4650000 },
-    { name:'Service & contracts', cur:54800, ytd:612000, bud:640000 },
-    { name:'Returns & allowances', cur:-6200, ytd:-84200, bud:-70000 },
-  ], total:'Net revenue' },
-  { grp:'Cost of sales', kind:'head', rows:[
-    { name:'Cost of goods sold', cur:-291000, ytd:-2910000, bud:-2820000 },
-  ], total:'Cost of sales' },
-  { grp:'Gross profit', kind:'subtotal' },
-  { grp:'Operating expenses', kind:'head', rows:[
-    { name:'Salaries & wages', cur:-96200, ytd:-962000, bud:-940000 },
-    { name:'Rent & utilities', cur:-18400, ytd:-184000, bud:-180000 },
-    { name:'Depreciation', cur:-23700, ytd:-142000, bud:-150000 },
-    { name:'Marketing & selling', cur:-14200, ytd:-96400, bud:-110000 },
-    { name:'Other operating', cur:-7800, ytd:-78200, bud:-80000 },
-  ], total:'Total opex' },
-  { grp:'Operating profit', kind:'subtotal' },
-];
 DB.arAging = [
   { cust:'Meridian Robotics', code:'CUST-0007', cur:84200, b30:46600, b60:0, b90:0, b90p:0 },
   { cust:'Apex Industrial', code:'CUST-0102', cur:118400, b30:22100, b60:14600, b90:0, b90p:0 },

@@ -496,6 +496,114 @@ function postingDetailPage(root, config){
 window.postingDetailPage=postingDetailPage;
 
 /**
+ * Page-level SSOT for hierarchical financial statements.
+ */
+function financialStatementPage(root, config){
+  if(!root) throw new Error('financialStatementPage requires a render root.');
+  const cfg=config||{};
+  const filters=Array.isArray(cfg.filters)?cfg.filters:[];
+  const metrics=Array.isArray(cfg.metrics)?cfg.metrics:[];
+  const sections=Array.isArray(cfg.sections)?cfg.sections:[];
+  const columns=Array.isArray(cfg.columns)?cfg.columns:[];
+  const actions=Array.isArray(cfg.actions)?cfg.actions:[];
+  const error=cfg.error||null;
+  const empty=cfg.empty||null;
+  const amount=typeof cfg.formatAmount==='function'
+    ?cfg.formatAmount
+    :(value=>esc(String(value??'—')));
+  const variance=typeof cfg.formatVariance==='function'
+    ?cfg.formatVariance
+    :((value,pct)=>`${amount(value)}${pct==null?'':` <small>${esc(String(pct))}%</small>`}`);
+  const filterHtml=filters.map(filter=>`<label class="financial-filter">
+      <span>${esc(String(filter.label||''))}</span>${filter.control||''}
+    </label>`).join('');
+  const metricHtml=metrics.map(metric=>`<div class="so-kpi ${metric.tone||''}">
+      <small>${esc(String(metric.label||''))}</small>
+      <b class="tnum">${esc(String(metric.value??'—'))}</b>
+    </div>`).join('');
+  const headerHtml=columns.map((column,index)=>`<div class="financial-cell ${index?'r':'l'}">
+      ${esc(String(column.label||''))}
+    </div>`).join('');
+  const statementHtml=sections.map(section=>`<section class="financial-section"
+      data-financial-section="${esc(String(section.key||''))}">
+    <div class="financial-row financial-subtotal">
+      <div class="financial-cell l"><b>${esc(String(section.label||section.key||''))}</b></div>
+      <div class="financial-cell r tnum">${amount(section.actualPeriod)}</div>
+      <div class="financial-cell r tnum">${amount(section.actualYtd)}</div>
+      <div class="financial-cell r tnum">${amount(section.comparisonYtd)}</div>
+      <div class="financial-cell r tnum">${variance(section.varianceYtd,section.variancePercentYtd,section.favorableYtd)}</div>
+    </div>
+    ${(section.rows||[]).map(row=>`<div class="financial-row financial-account-row">
+      <div class="financial-cell l"><span>${esc(String(row.accountCode||''))}</span>
+        <b>${esc(String(row.accountName||''))}</b>
+        ${row.mapped===false?`<small class="financial-unmapped">${esc(String(cfg.unmappedLabel||'Unmapped'))}</small>`:''}
+      </div>
+      <div class="financial-cell r tnum">${amount(row.actualPeriod)}</div>
+      <div class="financial-cell r tnum">${amount(row.actualYtd)}</div>
+      <div class="financial-cell r tnum">${amount(row.comparisonYtd)}</div>
+      <div class="financial-cell r tnum">${variance(row.varianceYtd,row.variancePercentYtd,row.favorableYtd)}</div>
+    </div>`).join('')}
+  </section>`).join('');
+  const total=cfg.totals||null;
+  const totalHtml=total?`<div class="financial-row financial-grandtotal">
+    <div class="financial-cell l"><b>${esc(String(total.label||''))}</b></div>
+    <div class="financial-cell r tnum">${amount(total.actualPeriod)}</div>
+    <div class="financial-cell r tnum">${amount(total.actualYtd)}</div>
+    <div class="financial-cell r tnum">${amount(total.comparisonYtd)}</div>
+    <div class="financial-cell r tnum">${variance(total.varianceYtd,total.variancePercentYtd,total.favorableYtd)}</div>
+  </div>`:'';
+  const actionHtml=actions.map((action,index)=>btn(String(action.label||''),{
+    icon:action.icon||null,cls:action.cls||'soft',
+    attrs:`data-financial-action="${esc(String(action.key||index))}" ${action.disabled?'disabled':''}`,
+  })).join('');
+  const body=`<section class="financial-statement" data-layout="financial-statement-v1"
+      data-financial-route="${esc(String(cfg.route||''))}">
+    <div class="financial-summary so-kpis" data-financial-summary>${metricHtml}</div>
+    <div class="financial-filters" data-financial-filters>
+      <button class="btn soft financial-filter-toggle" data-financial-filter-toggle>
+        ${ic('filter')}<span>${esc(String(cfg.filterLabel||'Filters'))}</span></button>
+      <div class="financial-filter-fields">${filterHtml}</div><div class="grow"></div>
+      ${cfg.runLabel?btn(String(cfg.runLabel),{icon:'play',cls:'primary',attrs:'data-financial-run'}):''}
+    </div>
+    <div class="financial-error" data-financial-error role="alert" ${error?'':'hidden'}>
+      ${error?`<div>${ic('warn')}<span>${esc(String(error.message||error))}</span>
+        ${cfg.retryLabel?btn(String(cfg.retryLabel),{icon:'refresh',cls:'soft',attrs:'data-financial-retry'}):''}</div>`:''}
+    </div>
+    <div class="financial-statement-body" data-financial-statement>
+      ${empty?`<div class="statepanel empty">${ic(empty.icon||'chart')}
+        <h3>${esc(String(empty.title||''))}</h3>
+        ${empty.description?`<p>${esc(String(empty.description))}</p>`:''}</div>`:
+        `<div class="financial-tablewrap"><div class="financial-row financial-head">${headerHtml}</div>
+          ${statementHtml}${totalHtml}</div>`}
+    </div>
+    <div class="responsive-actionbar financial-actions" data-financial-actions ${actionHtml?'':'hidden'}>
+      <span class="financial-report-meta">${esc(String(cfg.reportMeta||''))}</span>
+      <div class="grow"></div>${actionHtml}
+    </div>
+    <div class="financial-export-status" data-financial-export-status
+        ${cfg.exportJob?'':'hidden'}>${cfg.exportJob||''}</div>
+  </section>`;
+  root.innerHTML=modulePage({
+    module:cfg.module,route:cfg.route,active:cfg.active||cfg.route,
+    title:String(cfg.title||''),crumb:cfg.crumb,sub:cfg.description,
+    action:cfg.pageAction||'',body,
+  });
+  const statement=root.querySelector('[data-layout="financial-statement-v1"]');
+  root.querySelector('[data-financial-filter-toggle]')?.addEventListener('click',()=>{
+    statement?.classList.toggle('filters-open');
+  });
+  if(typeof cfg.afterRender==='function'){
+    cfg.afterRender({
+      root,statement,
+      errorRoot:statement&&statement.querySelector('[data-financial-error]'),
+      exportRoot:statement&&statement.querySelector('[data-financial-export-status]'),
+    });
+  }
+  return statement;
+}
+window.financialStatementPage=financialStatementPage;
+
+/**
  * Page-level SSOT for canonical transaction registers.
  *
  * `modulePage()` owns the shared ERP shell and `buildTable()`/`wireTable()` own

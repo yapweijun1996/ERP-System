@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 44;
+  var DEMO_SCHEMA_VERSION = 45;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -150,11 +150,17 @@
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
       "('import_job','import_job_row','import_row_error')")).rows[0];
+    var reportingSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('financial_statement_account_map','budget_version','budget_line'," +
+      "'consolidation_rate','report_job','report_artifact')")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
       && projectTimeSignature && Number(projectTimeSignature.n) === 1
-      && importSignature && Number(importSignature.n) === 3;
+      && importSignature && Number(importSignature.n) === 3
+      && reportingSignature && Number(reportingSignature.n) === 6;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -800,15 +806,6 @@
     };
     var revAcct = d.accounts.filter(function(a){ return a.code === '4000'; })[0];
     var revenueTotal = revAcct ? Math.round((revAcct.credit - revAcct.debit) * 100) / 100 : orderNet;
-    /* shape must match the pnl screen: [0] revenue, [1] cost of sales,
-       [2] gross-profit subtotal, [3] opex, [4] operating-profit subtotal */
-    DB.pnl = [
-      { grp: 'Revenue', kind: 'head', rows: [{ name: 'Product sales', cur: revenueTotal, ytd: revenueTotal, bud: revenueTotal }], total: 'Net revenue' },
-      { grp: 'Cost of sales', kind: 'head', rows: [{ name: 'Cost of goods sold', cur: 0, ytd: 0, bud: 0 }], total: 'Cost of sales' },
-      { grp: 'Gross profit', kind: 'subtotal' },
-      { grp: 'Operating expenses', kind: 'head', rows: [{ name: 'Operating costs (not modelled in canonical seed yet)', cur: 0, ytd: 0, bud: 0 }], total: 'Total opex' },
-      { grp: 'Operating profit', kind: 'subtotal' },
-    ];
     DB.arAging = d.customers.map(function(c){
       return { cust: c.name, code: c.code, cur: c.balance, b30: 0, b60: 0, b90: 0, b90p: 0 };
     });
@@ -2591,6 +2588,96 @@
     };
   }
 
+  function reportActorUserId(){
+    var actorUserId=Number(state.activeUserId);
+    if(!Number.isSafeInteger(actorUserId)||actorUserId<=0){
+      throw new Error('An authenticated demo user is required.');
+    }
+    return actorUserId;
+  }
+  async function profitLossOptions(){
+    return {
+      data:await state.runtime.commands.getProfitLossOptions(state.orm,{
+        masterFn:SCOPE.masterFn,
+        activeCompanyFn:SCOPE.companyFn,
+        actorUserId:reportActorUserId(),
+      }).then(function(data){
+        return Object.assign({},data,{capabilities:{
+          manageBudget:true,approveBudget:true,exportReport:true,
+        }});
+      }),
+      meta:{},
+    };
+  }
+  async function profitLoss(query){
+    query=query||{};
+    return state.runtime.commands.buildProfitLossReport(state.orm,{
+      masterFn:SCOPE.masterFn,
+      activeCompanyFn:SCOPE.companyFn,
+      actorUserId:reportActorUserId(),
+      periodId:query.periodId==null?undefined:Number(query.periodId),
+      companyFns:Array.isArray(query.companyFns)?query.companyFns:undefined,
+      presentationCurrency:query.presentationCurrency,
+      comparison:query.comparison,
+    });
+  }
+  async function listBudgets(fiscalYear){
+    var data=await requireDemoDb().transaction(function(tx){
+      return state.runtime.commands.listBudgetVersionsWithin(
+        state.runtime.createOrm(tx),SCOPE,fiscalYear==null?undefined:Number(fiscalYear));
+    });
+    return {data:data,meta:{}};
+  }
+  async function budgetLines(id){
+    var data=await requireDemoDb().transaction(function(tx){
+      return state.runtime.commands.listBudgetLinesWithin(
+        state.runtime.createOrm(tx),SCOPE,Number(id));
+    });
+    return {data:data,meta:{}};
+  }
+  async function createBudget(payload){
+    var data=await requireDemoDb().transaction(function(tx){
+      return state.runtime.commands.createBudgetVersionWithin(
+        state.runtime.createOrm(tx),SCOPE,payload||{});
+    });
+    return {data:data,meta:{}};
+  }
+  async function budgetAction(id,name,payload){
+    var data=await requireDemoDb().transaction(function(tx){
+      var orm=state.runtime.createOrm(tx);
+      if(name==='import') return state.runtime.commands.importBudgetLinesWithin(
+        orm,SCOPE,Number(id),Array.isArray(payload&&payload.rows)?payload.rows:[]);
+      if(name==='approve') return state.runtime.commands.approveBudgetWithin(
+        orm,SCOPE,Number(id),reportActorUserId());
+      throw new Error('Unknown budget action.');
+    });
+    return {data:data,meta:{}};
+  }
+  async function exportProfitLoss(payload){
+    payload=payload||{};
+    var report=await profitLoss(payload.filters||{});
+    if(payload.format==='xlsx'){
+      var bytes=await state.runtime.commands.buildProfitLossXlsx(report);
+      var url=URL.createObjectURL(new Blob([bytes],{
+        type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }));
+      return {data:{status:'succeeded',format:'xlsx',downloadUrl:url,
+        fileName:'profit-loss-'+report.data.period.fiscalYear+'-'+report.data.period.periodNo+'.xlsx'},meta:{}};
+    }
+    return {data:{status:'print-ready',format:'pdf',report:report},meta:{}};
+  }
+  var financeReports={
+    options:profitLossOptions,
+    profitLoss:profitLoss,
+    listBudgets:listBudgets,
+    budgetLines:budgetLines,
+    createBudget:createBudget,
+    budgetAction:budgetAction,
+    exportProfitLoss:exportProfitLoss,
+    reportJob:function(){return Promise.reject(new Error('Demo exports complete immediately.'));},
+    artifactUrl:function(id){return String(id||'');},
+  };
+
   var adapter = {
     ready: ready,
     reset: reset,
@@ -2601,6 +2688,7 @@
     update: update,
     action: action,
     session: session,
+    financeReports:financeReports,
     confirmOrder: confirmOrder,
     createPurchaseOrder: createPurchaseOrder,
     receiveGoods: receiveGoods,

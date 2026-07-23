@@ -5,7 +5,6 @@
 
 function glTypeTone(t){ return {Assets:'accent',Liabilities:'warn',Equity:'violet',Income:'ok',Expenses:'teal'}[t]||'neutral'; }
 function signed0(n){ return (n<0?'−':'')+money0(Math.abs(n)); }
-function pnlCell(v){ return v<0?`<span style="color:var(--muted)">(${money0(-v)})</span>`:money0(v); }
 
 function financeNumber(value){
   const parsed=Number(value);
@@ -33,7 +32,6 @@ async function prepareCanonicalFinanceData(){
       Array.isArray(DB.coa)
       &&DB.acctLedgerDocs
       &&DB.journalDocs
-      &&Array.isArray(DB.pnl)
       &&Array.isArray(DB.arAging)
     ) return;
     throw new Error('The offline canonical finance snapshot is unavailable.');
@@ -157,32 +155,6 @@ async function prepareCanonicalFinanceData(){
   DB.acctLedger=DB.acctLedgerDocs['1100']
     ||DB.acctLedgerDocs[accounts[0]&&accounts[0].code]
     ||null;
-
-  const incomeRows=accounts.filter(row=>row.type==='income').map(row=>{
-    const legs=entriesByAccountId.get(row.id)||[];
-    const actual=legs.reduce(
-      (sum,entry)=>sum+financeNumber(entry.credit)-financeNumber(entry.debit),0,
-    );
-    return {name:row.name,cur:actual,ytd:actual,bud:actual};
-  });
-  const expenseRows=accounts.filter(row=>row.type==='expense').map(row=>{
-    const legs=entriesByAccountId.get(row.id)||[];
-    const actual=-legs.reduce(
-      (sum,entry)=>sum+financeNumber(entry.debit)-financeNumber(entry.credit),0,
-    );
-    return {name:row.name,cur:actual,ytd:actual,bud:actual};
-  });
-  const costRows=expenseRows.filter((_row,index)=>String(
-    accounts.filter(row=>row.type==='expense')[index]&&accounts.filter(row=>row.type==='expense')[index].code,
-  ).startsWith('5'));
-  const operatingRows=expenseRows.filter(row=>!costRows.includes(row));
-  DB.pnl=[
-    {grp:'Revenue',kind:'head',rows:incomeRows.length?incomeRows:[{name:'No posted revenue',cur:0,ytd:0,bud:0}],total:'Net revenue'},
-    {grp:'Cost of sales',kind:'head',rows:costRows.length?costRows:[{name:'No posted cost of sales',cur:0,ytd:0,bud:0}],total:'Cost of sales'},
-    {grp:'Gross profit',kind:'subtotal'},
-    {grp:'Operating expenses',kind:'head',rows:operatingRows.length?operatingRows:[{name:'No posted operating expenses',cur:0,ytd:0,bud:0}],total:'Total opex'},
-    {grp:'Operating profit',kind:'subtotal'},
-  ];
 
   const customerById=new Map(customers.map(row=>[row.id,row]));
   const agingByCustomerId=new Map();
@@ -470,48 +442,194 @@ SCREENS['bank-rec'] = async function(root,params){
 
 /* ---------------- INCOME STATEMENT (P&L report) ---------------- */
 SCREENS['pnl'] = async function(root){
-  await prepareCanonicalFinanceData();
-  function sum(rows,k){ return rows.reduce((s,r)=>s+r[k],0); }
-  // compute running subtotals
-  const rev=DB.pnl[0], cos=DB.pnl[1], opex=DB.pnl[3];
-  const gp={cur:sum(rev.rows,'cur')+sum(cos.rows,'cur'), ytd:sum(rev.rows,'ytd')+sum(cos.rows,'ytd'), bud:sum(rev.rows,'bud')+sum(cos.rows,'bud')};
-  const op={cur:gp.cur+sum(opex.rows,'cur'), ytd:gp.ytd+sum(opex.rows,'ytd'), bud:gp.bud+sum(opex.rows,'bud')};
-  function varCell(ytd,bud){ const v=ytd-bud, pct=bud?v/Math.abs(bud)*100:0; const cls=v>=0?'pos':'neg'; return `<b class="tnum delta ${cls}">${v>=0?'+':''}${pct.toFixed(1)}%</b>`; }
-  const tpl='minmax(220px,2.4fr) 130px 150px 150px 90px';
-  let body='';
-  function headRow(g){
-    const cur=sum(g.rows,'cur'), ytd=sum(g.rows,'ytd'), bud=sum(g.rows,'bud');
-    body+=`<div class="dt-r" style="background:var(--surface-3);font-weight:700"><div class="dt-c l">${esc(g.grp)}</div><div class="dt-c r tnum">${pnlCell(cur)}</div><div class="dt-c r tnum">${pnlCell(ytd)}</div><div class="dt-c r tnum" style="color:var(--muted)">${pnlCell(bud)}</div><div class="dt-c r">${varCell(ytd,bud)}</div></div>`;
-    g.rows.forEach(r=>{ body+=`<div class="dt-r"><div class="dt-c l indent1">${esc(r.name)}</div><div class="dt-c r tnum">${pnlCell(r.cur)}</div><div class="dt-c r tnum">${pnlCell(r.ytd)}</div><div class="dt-c r tnum" style="color:var(--muted)">${pnlCell(r.bud)}</div><div class="dt-c r">${varCell(r.ytd,r.bud)}</div></div>`; });
+  const adapter=window.ErpSystemData&&window.ErpSystemData.financeReports;
+  let options=null,report=null,error=null,exportStatus='',requestSequence=0;
+  let selected={periodId:null,companyScope:'active',comparison:'budget',currency:(DB.company&&DB.company.currency)||'SGD'};
+  function currency(value){
+    return new Intl.NumberFormat(getLang(),{
+      style:'currency',currency:selected.currency,currencyDisplay:'narrowSymbol',
+      minimumFractionDigits:2,maximumFractionDigits:2,
+    }).format(Number(value)||0);
   }
-  function subtotal(label,o){
-    body+=`<div class="dt-r grandtotal"><div class="dt-c l">${esc(label)}</div><div class="dt-c r tnum">${pnlCell(o.cur)}</div><div class="dt-c r tnum">${pnlCell(o.ytd)}</div><div class="dt-c r tnum" style="color:var(--muted)">${pnlCell(o.bud)}</div><div class="dt-c r">${varCell(o.ytd,o.bud)}</div></div>`;
+  function amount(value){
+    const number=Number(value)||0;
+    return number<0
+      ?`<span class="financial-negative">(${esc(currency(Math.abs(number)))})</span>`
+      :esc(currency(number));
   }
-  headRow(rev); headRow(cos); subtotal('Gross profit',gp); headRow(opex); subtotal('Operating profit (Net)',op);
-  const revenueYtd=sum(rev.rows,'ytd');
-  const gpMargin=(revenueYtd?op.ytd/revenueYtd*100:0).toFixed(1);
-
-  root.innerHTML=`<div class="content full"><section class="master"><div class="report">
-    <aside class="report-params">
-      <h3>Parameters</h3>
-      <div class="fld"><span>Company</span><select><option>${esc(DB.company.name)}</option><option>All companies (consolidated)</option></select></div>
-      <div class="fld"><span>Period</span><select><option>All canonical postings</option></select></div>
-      <div class="fld"><span>Compare to</span><select><option>Actual reference</option></select></div>
-      <div class="fld"><span>Basis</span><select><option>Accrual</option><option>Cash</option></select></div>
-      ${btn('Run report',{icon:'play',cls:'primary',sm:false,attrs:'onclick="toast(\'Income statement refreshed\',\'ok\')"'})}
-    </aside>
-    <div class="report-result">
-      <div class="report-toolbar">
-        <div><b style="font-size:15px">Income Statement (P&amp;L)</b><div class="report-meta">${DB.company.name} · canonical posted entries${DB.financeReadMeta&&DB.financeReadMeta.truncated?' · first 100 rows':''} · net margin ${gpMargin}% · reference equals actual until budgets are modeled</div></div>
-        <div class="grow"></div>
-        ${btn('Excel',{icon:'filexls',cls:'soft'})}${btn('Print',{icon:'print',cls:'soft'})}
-      </div>
-      <div class="tablewrap"><div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-        <div class="dt-r dt-head"><div class="dt-c l">Account</div><div class="dt-c r">This period</div><div class="dt-c r">YTD</div><div class="dt-c r">Actual reference</div><div class="dt-c r">Var %</div></div>
-        <div class="dt-body">${body}</div>
-      </div></div></div>
-    </div>
-  </div></section></div>`;
+  function variance(value,pct,favorable){
+    const percentage=pct==null?'—':`${Number(pct)>0?'+':''}${Number(pct).toFixed(1)}%`;
+    const tone=favorable==null?'':favorable?'ok':'bad';
+    return `<span class="financial-var ${tone}">${amount(value)} <small>${esc(percentage)}</small></span>`;
+  }
+  function query(){
+    const companies=options&&options.companies||[];
+    return {
+      periodId:selected.periodId||undefined,
+      companyFns:selected.companyScope==='all'
+        ?companies.map(company=>company.companyFn)
+        :[selected.companyScope==='active'
+          ?(DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn)||companies[0]?.companyFn
+          :selected.companyScope],
+      presentationCurrency:selected.currency,
+      comparison:selected.comparison,
+    };
+  }
+  function copySection(section){
+    return Object.assign({},section,{label:tf(`pnl.sections.${section.key}`,section.key)});
+  }
+  function reportMeta(){
+    if(!report) return '';
+    const companies=report.meta.companies.map(company=>company.name).join(', ');
+    return `${companies} · ${report.data.period.label} · ${report.data.presentationCurrency} · ${t('pnl.generated')} ${new Date(report.meta.generatedAt).toLocaleString(getLang())}`;
+  }
+  function render(){
+    const companies=options&&options.companies||[];
+    const periods=options&&options.periods||[];
+    const comparisonLabels={budget:t('pnl.budget'),prior_period:t('pnl.priorPeriod'),prior_year:t('pnl.priorYear')};
+    const warnings=report&&report.data.warnings||[];
+    const warning=warnings.some(item=>item.code==='no_approved_budget')
+      ?`<div class="risk warn">${ic('warn')}<span>${esc(t('pnl.noBudget'))}</span></div>`:'';
+    const companyControl=`<select data-pnl-company>
+      ${companies.length>1?`<option value="all" ${selected.companyScope==='all'?'selected':''}>${esc(t('pnl.allCompanies'))}</option>`:''}
+      ${companies.map(company=>`<option value="${esc(company.companyFn)}" ${selected.companyScope===company.companyFn||selected.companyScope==='active'&&company.companyFn===((DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn)||companies[0]?.companyFn)?'selected':''}>${esc(company.name)}</option>`).join('')}
+    </select>`;
+    const periodControl=`<select data-pnl-period>${periods.map(period=>`<option value="${period.id}" ${Number(selected.periodId)===Number(period.id)?'selected':''}>${esc(period.label)} · ${esc(String(period.startDate))} → ${esc(String(period.endDate))}</option>`).join('')}</select>`;
+    const comparisonControl=`<select data-pnl-comparison>${(options&&options.comparisons||[]).map(value=>`<option value="${esc(value)}" ${selected.comparison===value?'selected':''}>${esc(comparisonLabels[value]||value)}</option>`).join('')}</select>`;
+    const currencyControl=`<select data-pnl-currency>${(options&&options.presentationCurrencies||[selected.currency]).map(value=>`<option value="${esc(value)}" ${selected.currency===value?'selected':''}>${esc(value)}</option>`).join('')}</select>`;
+    financialStatementPage(root,{
+      module:'finance',route:'pnl',title:t('pnl.title'),description:t('pnl.description'),
+      filterLabel:t('pnl.filters'),runLabel:t('pnl.run'),retryLabel:t('pnl.retry'),
+      filters:options?[
+        {label:t('pnl.company'),control:companyControl},
+        {label:t('pnl.period'),control:periodControl},
+        {label:t('pnl.comparison'),control:comparisonControl},
+        {label:t('pnl.currency'),control:currencyControl},
+      ]:[],
+      metrics:report?[
+        {label:t('pnl.revenue'),value:currency(report.data.metrics.revenue)},
+        {label:t('pnl.grossProfit'),value:currency(report.data.metrics.grossProfit)},
+        {label:t('pnl.operatingExpenses'),value:currency(report.data.metrics.operatingExpenses)},
+        {label:t('pnl.netProfit'),value:currency(report.data.metrics.netProfit),tone:Number(report.data.metrics.netProfit)<0?'neg':''},
+        {label:t('pnl.netMargin'),value:report.data.metrics.netMargin==null?'—':`${report.data.metrics.netMargin}%`},
+      ]:[],
+      columns:[
+        {label:t('pnl.account')},{label:t('pnl.thisPeriod')},{label:t('pnl.ytd')},
+        {label:comparisonLabels[selected.comparison]||selected.comparison},{label:t('pnl.variance')},
+      ],
+      sections:report?report.data.sections.map(copySection):[],
+      totals:report?Object.assign({label:t('pnl.netProfit')},report.data.totals):null,
+      unmappedLabel:t('pnl.unmapped'),formatAmount:amount,formatVariance:variance,
+      reportMeta:reportMeta(),
+      pageAction:options&&options.capabilities&&options.capabilities.manageBudget
+        ?btn(t('pnl.budgetManager'),{icon:'settings',cls:'soft',attrs:'data-pnl-budget'}):'',
+      actions:options&&options.capabilities&&options.capabilities.exportReport&&report?[
+        {key:'xlsx',label:t('pnl.exportXlsx'),icon:'filexls'},
+        {key:'pdf',label:t('pnl.exportPdf'),icon:'print'},
+      ]:[],
+      empty:!report&&!error?{icon:'chart',title:t('pnl.empty'),description:t('pnl.emptyHelp')}:null,
+      error:error?{message:error.message||String(error)}:null,
+      exportJob:warning+exportStatus,
+      afterRender:()=>{
+        root.querySelector('[data-financial-run]')?.addEventListener('click',runReport);
+        root.querySelector('[data-financial-retry]')?.addEventListener('click',runReport);
+        root.querySelector('[data-pnl-company]')?.addEventListener('change',event=>{selected.companyScope=event.target.value;});
+        root.querySelector('[data-pnl-period]')?.addEventListener('change',event=>{selected.periodId=Number(event.target.value);});
+        root.querySelector('[data-pnl-comparison]')?.addEventListener('change',event=>{selected.comparison=event.target.value;});
+        root.querySelector('[data-pnl-currency]')?.addEventListener('change',event=>{selected.currency=event.target.value;});
+        root.querySelector('[data-pnl-budget]')?.addEventListener('click',openBudgetManager);
+        root.querySelector('[data-financial-action="xlsx"]')?.addEventListener('click',()=>startExport('xlsx'));
+        root.querySelector('[data-financial-action="pdf"]')?.addEventListener('click',()=>startExport('pdf'));
+      },
+    });
+  }
+  async function runReport(){
+    const sequence=++requestSequence;
+    error=null;exportStatus='';render();
+    try{
+      const response=await adapter.profitLoss(query());
+      if(sequence!==requestSequence)return;
+      report=response;selected.currency=response.data.presentationCurrency;render();
+    }catch(caught){
+      if(sequence!==requestSequence)return;
+      error=caught;report=null;render();
+    }
+  }
+  function download(url,fileName){
+    const link=document.createElement('a');link.href=url;link.download=fileName||'';link.rel='noopener';
+    document.body.appendChild(link);link.click();link.remove();
+  }
+  async function pollJob(jobId){
+    try{
+      const response=await adapter.reportJob(jobId),job=response.data;
+      if(job.status==='succeeded'){
+        exportStatus=`<div>${ic('check')} <b>${esc(t('pnl.exportReady'))}</b> ${btn(t('pnl.download'),{icon:'download',cls:'primary',attrs:`data-pnl-download="${job.artifactId}"`})}</div>`;
+        render();root.querySelector('[data-pnl-download]')?.addEventListener('click',()=>download(adapter.artifactUrl(job.artifactId),job.fileName));return;
+      }
+      if(job.status==='failed'||job.status==='expired'){
+        exportStatus=`<div>${ic('warn')} <b>${esc(t('pnl.exportFailed'))}</b> ${esc(job.lastError||'')}</div>`;render();return;
+      }
+      setTimeout(()=>pollJob(jobId),1000);
+    }catch(caught){exportStatus=`<div>${ic('warn')} ${esc(caught.message||String(caught))}</div>`;render();}
+  }
+  async function startExport(format){
+    try{
+      exportStatus=`<div>${ic('refresh')} ${esc(t('pnl.exportQueued'))}</div>`;render();
+      const response=await adapter.exportProfitLoss({
+        format,locale:getLang(),filters:query(),
+      },`pnl-export-${format}-${Date.now()}`);
+      if(response.data.downloadUrl){download(response.data.downloadUrl,response.data.fileName);URL.revokeObjectURL(response.data.downloadUrl);exportStatus='';render();return;}
+      if(response.data.status==='print-ready'){window.print();exportStatus='';render();return;}
+      pollJob(response.data.id);
+    }catch(caught){exportStatus=`<div>${ic('warn')} ${esc(caught.message||String(caught))}</div>`;render();}
+  }
+  async function openBudgetManager(){
+    const fiscalYear=report?.data.period.fiscalYear||new Date().getFullYear();
+    try{
+      const response=await adapter.listBudgets(fiscalYear),budgets=response.data||[];
+      appModal({icon:'settings',title:t('pnl.budgetManager'),wide:true,body:`
+        <div class="fldrow c2"><div class="fld"><span>${esc(t('pnl.budgetName'))}</span>
+          <input data-budget-name value="FY${fiscalYear} Budget"></div>
+          <div class="fld"><span>${esc(t('pnl.budgetFile'))}</span>
+          <input type="file" accept=".csv,.xlsx" data-budget-file></div></div>
+        <div class="set-savebar" style="margin-top:14px">${btn(t('pnl.createDraft'),{icon:'plus',cls:'primary',attrs:'data-budget-create'})}</div>
+        <div class="sectitle">${esc(t('pnl.budget'))}</div>
+        ${budgets.length?budgets.map(item=>`<div class="sumrow"><span>${esc(item.name)} · ${esc(item.status)}</span>
+          <span>${item.status==='draft'?btn(t('pnl.approve'),{icon:'check',cls:'soft',attrs:`data-budget-approve="${item.id}"`}):cap(item.status,item.isActive?'ok':'neutral')}</span></div>`).join(''):`<div class="statepanel empty"><p>${esc(t('pnl.noBudget'))}</p></div>`}`,
+        actions:btn(t('pnl.close'),{cls:'soft',attrs:'data-budget-close'}),
+      });
+      document.querySelector('[data-budget-close]')?.addEventListener('click',closeModal);
+      document.querySelector('[data-budget-create]')?.addEventListener('click',async event=>{
+        const button=event.currentTarget,file=document.querySelector('[data-budget-file]')?.files?.[0];
+        const name=document.querySelector('[data-budget-name]')?.value.trim();
+        if(!file||!name){toast(t('pnl.budgetFile'),'warn');return;}
+        button.disabled=true;
+        try{
+          const rows=await window.ErpReportRuntime.parseBudgetFile(file);
+          const created=await adapter.createBudget({fiscalYear,name,currency:(DB.company&&DB.company.currency)||selected.currency});
+          await adapter.budgetAction(created.data.id,'import',{rows},`budget-import-${created.data.id}-${Date.now()}`);
+          closeModal();toast(t('pnl.import'),'ok');openBudgetManager();
+        }catch(caught){toast(caught.message||String(caught),'danger');button.disabled=false;}
+      });
+      document.querySelectorAll('[data-budget-approve]').forEach(button=>button.addEventListener('click',async()=>{
+        button.disabled=true;
+        try{await adapter.budgetAction(Number(button.dataset.budgetApprove),'approve',{},`budget-approve-${button.dataset.budgetApprove}`);closeModal();toast(t('pnl.approve'),'ok');await runReport();}
+        catch(caught){toast(caught.message||String(caught),'danger');button.disabled=false;}
+      }));
+    }catch(caught){toast(caught.message||String(caught),'danger');}
+  }
+  if(!adapter){
+    error=new Error('The canonical financial reporting adapter is unavailable.');render();return;
+  }
+  try{
+    const response=await adapter.options();options=response.data;
+    const latest=options.periods&&options.periods[0];
+    selected.periodId=latest&&latest.id;
+    selected.currency=(DB.company&&DB.company.currency)||options.presentationCurrencies[0]||'SGD';
+    const active=(DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn)||options.companies[0]?.companyFn;
+    selected.companyScope=active||'active';
+    await runReport();
+  }catch(caught){error=caught;render();}
 };
 
 /* ---------------- AR AGING (report) ---------------- */

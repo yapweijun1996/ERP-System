@@ -6,12 +6,20 @@
 # image — `npm run migrate` needs drizzle-kit at runtime too (`docker compose exec api
 # npm run migrate`). Optimizing this to a compiled build is a future improvement, not
 # required for this scaffold.
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
+
+# The reporting worker renders durable PDF artifacts with the same HTML
+# statement service used online. Debian Chromium plus local Noto fonts keeps
+# English, Malay, Chinese, Japanese and Vietnamese exports deterministic.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends chromium fonts-noto-cjk fonts-noto-core \
+  && rm -rf /var/lib/apt/lists/*
+ENV CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
 COPY tsconfig.json drizzle.config.ts ./
 COPY src ./src
