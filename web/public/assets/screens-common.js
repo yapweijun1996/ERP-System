@@ -189,6 +189,90 @@ function masterDetailEditorPage(root, config){
 window.masterDetailEditorPage=masterDetailEditorPage;
 
 /**
+ * Page-level SSOT for actionable lifecycle cases.
+ *
+ * A case detail is neither a transaction register nor a versioned master-data
+ * editor. It presents one governed event, its source and facts, the work
+ * performed against it, decision context and lifecycle actions. The helper
+ * owns that chrome so case screens do not rebuild legacy document layouts.
+ */
+function caseDetailPage(root, config){
+  if(!root) throw new Error('caseDetailPage requires a render root.');
+  const cfg=config||{};
+  const identity=cfg.identity||{};
+  const statuses=Array.isArray(cfg.statuses)?cfg.statuses.filter(status=>status&&status.label):[];
+  const facts=Array.isArray(cfg.facts)?cfg.facts:[];
+  const hasOverview=Boolean(identity.title||identity.code||identity.meta||identity.related||statuses.length||facts.length);
+  const overviewHtml=hasOverview?`
+    <div class="case-detail-overview-head">
+      <div class="case-detail-identity">
+        <div>
+          <h2>${esc(String(identity.title||''))}</h2>
+          ${identity.code?`<span class="case-detail-code">${esc(String(identity.code))}</span>`:''}
+        </div>
+        ${identity.meta?`<p>${esc(String(identity.meta))}</p>`:''}
+      </div>
+      <div class="case-detail-overview-actions">
+        ${statuses.length?`<div class="case-detail-statuses">${statuses.map(status=>
+          cap(String(status.label),status.tone||'neutral')).join('')}</div>`:''}
+        ${identity.related||''}
+      </div>
+    </div>
+    <div class="case-detail-facts">
+      ${facts.map(fact=>`<div class="case-detail-fact">
+        <small>${esc(String(fact.label||''))}</small>
+        <b class="${fact.numeric?'tnum':''}">${esc(String(fact.value??'—'))}</b>
+      </div>`).join('')}
+    </div>`:'';
+  const empty=cfg.empty||null;
+  const main=empty
+    ? `<div class="statepanel empty case-detail-empty" data-case-empty>
+        ${ic(empty.icon||'inbox')}
+        <h3>${esc(String(empty.title||'No case available'))}</h3>
+        ${empty.description?`<p>${esc(String(empty.description))}</p>`:''}
+      </div>`
+    : (cfg.main||'');
+  const context=cfg.context||{};
+  const actions=cfg.actions||'';
+  const body=`<section class="case-detail"
+      data-layout="case-detail-v1"
+      data-case-route="${esc(String(cfg.route||''))}">
+    <div class="case-detail-overview" data-case-overview
+        ${hasOverview?'':'hidden'}>${overviewHtml}</div>
+    <div class="case-detail-error" data-case-error role="alert" hidden></div>
+    <div class="case-detail-grid" data-case-grid>
+      <main class="case-detail-main" data-case-main>${main}</main>
+      <aside class="case-detail-context" data-case-context
+          ${empty&&!context.body?'hidden':''}>
+        ${context.title?`<div class="sectitle">${esc(String(context.title))}</div>`:''}
+        ${context.body||''}
+      </aside>
+    </div>
+    <div class="responsive-actionbar case-detail-actions"
+        data-case-actions ${actions?'':'hidden'}>${actions}</div>
+  </section>`;
+  root.innerHTML=modulePage({
+    module:cfg.module,
+    route:cfg.route,
+    active:cfg.active||cfg.route,
+    title:String(cfg.title||''),
+    crumb:cfg.crumb,
+    sub:cfg.description,
+    body,
+  });
+  const caseRoot=root.querySelector('[data-layout="case-detail-v1"]');
+  if(typeof cfg.afterRender==='function'){
+    cfg.afterRender({
+      root,
+      caseRoot,
+      errorRoot:caseRoot&&caseRoot.querySelector('[data-case-error]'),
+    });
+  }
+  return caseRoot;
+}
+window.caseDetailPage=caseDetailPage;
+
+/**
  * Page-level SSOT for canonical transaction registers.
  *
  * `modulePage()` owns the shared ERP shell and `buildTable()`/`wireTable()` own

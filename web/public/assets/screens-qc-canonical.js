@@ -14,10 +14,15 @@
         measured:'Measured value',outcome:'Outcome',completePass:'Complete as pass',
         completeFail:'Complete with failure',completed:'Inspection completed',
         ncrs:'Non-conformance',raiseNcr:'Raise NCR',ncrRaised:'NCR raised',
+        ncrDescription:'Review the affected material, corrective work and final quality disposition.',
         severity:'Severity',affected:'Affected quantity',defect:'Defect description',
         disposition:'Disposition',corrective:'Corrective actions',release:'Release',
         reject:'Reject / scrap',released:'NCR closed and material released',
         rejected:'NCR closed and material rejected',empty:'No canonical quality records.',
+        caseContext:'Quality context',qualityHold:'Quality hold',sourceInspection:'Source inspection',
+        held:'Material held',releasedHold:'Material released',rejectedHold:'Material rejected',
+        noCorrective:'No corrective actions have been recorded.',actionNote:'Choose the final material disposition.',
+        dispositionFailed:'NCR disposition failed',
         emptyHelp:'Create an inspection from an active plan.',all:'All',scheduled:'Scheduled',
         inInspection:'In inspection',passed:'Passed',failed:'Failed',closed:'Closed',
         incoming:'Incoming',inProcess:'In process',final:'Final',open:'Open',
@@ -32,10 +37,15 @@
         measured:'Nilai diukur',outcome:'Hasil',completePass:'Selesaikan sebagai lulus',
         completeFail:'Selesaikan dengan kegagalan',completed:'Pemeriksaan selesai',
         ncrs:'Ketidakpatuhan',raiseNcr:'Buka NCR',ncrRaised:'NCR dibuka',
+        ncrDescription:'Semak bahan terjejas, kerja pembetulan dan keputusan akhir kualiti.',
         severity:'Keparahan',affected:'Kuantiti terjejas',defect:'Keterangan kecacatan',
         disposition:'Pelupusan',corrective:'Tindakan pembetulan',release:'Lepaskan',
         reject:'Tolak / lupus',released:'NCR ditutup dan bahan dilepaskan',
         rejected:'NCR ditutup dan bahan ditolak',empty:'Tiada rekod kualiti kanonik.',
+        caseContext:'Konteks kualiti',qualityHold:'Sekatan kualiti',sourceInspection:'Pemeriksaan sumber',
+        held:'Bahan disekat',releasedHold:'Bahan dilepaskan',rejectedHold:'Bahan ditolak',
+        noCorrective:'Tiada tindakan pembetulan direkodkan.',actionNote:'Pilih keputusan akhir bahan.',
+        dispositionFailed:'Pelupusan NCR gagal',
         emptyHelp:'Cipta pemeriksaan daripada pelan aktif.',all:'Semua',scheduled:'Dijadualkan',
         inInspection:'Sedang diperiksa',passed:'Lulus',failed:'Gagal',closed:'Ditutup',
         incoming:'Masuk',inProcess:'Dalam proses',final:'Akhir',open:'Terbuka',
@@ -50,10 +60,15 @@
         measured:'实测值',outcome:'判定',completePass:'全部合格并完成',
         completeFail:'记录不合格并完成',completed:'检验已完成',
         ncrs:'不合格报告',raiseNcr:'创建 NCR',ncrRaised:'NCR 已创建',
+        ncrDescription:'审核受影响物料、纠正工作和最终质量处置。',
         severity:'严重程度',affected:'影响数量',defect:'缺陷说明',
         disposition:'处置',corrective:'纠正措施',release:'放行',
         reject:'拒收 / 报废',released:'NCR 已关闭，物料已放行',
         rejected:'NCR 已关闭，物料已拒收',empty:'目前没有标准质量记录。',
+        caseContext:'质量上下文',qualityHold:'质量冻结',sourceInspection:'来源检验',
+        held:'物料已冻结',releasedHold:'物料已放行',rejectedHold:'物料已拒收',
+        noCorrective:'尚未记录纠正措施。',actionNote:'选择最终物料处置。',
+        dispositionFailed:'NCR 处置失败',
         emptyHelp:'可从有效检验计划创建检验单。',all:'全部',scheduled:'待检',
         inInspection:'检验中',passed:'合格',failed:'不合格',closed:'已关闭',
         incoming:'来料',inProcess:'过程',final:'完工',open:'未关闭',
@@ -68,10 +83,15 @@
         measured:'測定値',outcome:'判定',completePass:'合格として完了',
         completeFail:'不合格として完了',completed:'検査が完了しました',
         ncrs:'不適合',raiseNcr:'NCRを作成',ncrRaised:'NCRを作成しました',
+        ncrDescription:'影響を受けた材料、是正作業、最終品質処置を確認します。',
         severity:'重大度',affected:'影響数量',defect:'不具合内容',
         disposition:'処置',corrective:'是正措置',release:'リリース',
         reject:'拒否 / 廃棄',released:'NCRを閉じて材料をリリースしました',
         rejected:'NCRを閉じて材料を拒否しました',empty:'品質レコードがありません。',
+        caseContext:'品質コンテキスト',qualityHold:'品質保留',sourceInspection:'元の検査',
+        held:'材料を保留中',releasedHold:'材料をリリース済み',rejectedHold:'材料を拒否済み',
+        noCorrective:'是正措置は記録されていません。',actionNote:'材料の最終処置を選択してください。',
+        dispositionFailed:'NCR の処置に失敗しました',
         emptyHelp:'有効な計画から検査を作成してください。',all:'すべて',scheduled:'予定',
         inInspection:'検査中',passed:'合格',failed:'不合格',closed:'終了',
         incoming:'受入',inProcess:'工程内',final:'最終',open:'未処理',
@@ -86,10 +106,15 @@
         measured:'Giá trị đo',outcome:'Kết luận',completePass:'Hoàn tất đạt',
         completeFail:'Hoàn tất không đạt',completed:'Đã hoàn tất kiểm tra',
         ncrs:'Không phù hợp',raiseNcr:'Tạo NCR',ncrRaised:'Đã tạo NCR',
+        ncrDescription:'Xem xét vật tư bị ảnh hưởng, công việc khắc phục và quyết định chất lượng cuối cùng.',
         severity:'Mức độ',affected:'Số lượng ảnh hưởng',defect:'Mô tả lỗi',
         disposition:'Xử lý',corrective:'Hành động khắc phục',release:'Giải phóng',
         reject:'Từ chối / loại bỏ',released:'Đã đóng NCR và giải phóng vật tư',
         rejected:'Đã đóng NCR và từ chối vật tư',empty:'Không có hồ sơ chất lượng.',
+        caseContext:'Bối cảnh chất lượng',qualityHold:'Giữ chất lượng',sourceInspection:'Kiểm tra nguồn',
+        held:'Vật tư đang bị giữ',releasedHold:'Vật tư đã được giải phóng',rejectedHold:'Vật tư đã bị từ chối',
+        noCorrective:'Chưa ghi nhận hành động khắc phục.',actionNote:'Chọn quyết định cuối cùng cho vật tư.',
+        dispositionFailed:'Xử lý NCR thất bại',
         emptyHelp:'Tạo kiểm tra từ kế hoạch đang hoạt động.',all:'Tất cả',scheduled:'Đã lên lịch',
         inInspection:'Đang kiểm tra',passed:'Đạt',failed:'Không đạt',closed:'Đã đóng',
         incoming:'Đầu vào',inProcess:'Trong quy trình',final:'Cuối',open:'Mở',
@@ -283,8 +308,13 @@
     const id=Number(window.ACTIVE_QUALITY_NCR_ID)||Number(ncrs[0]?.id);
     const ncr=ncrs.find(row=>Number(row.id)===id)||ncrs[0];
     if(!ncr){
-      root.innerHTML=`<div class="content full"><section class="master"><div class="statepanel empty">
-        ${ic('shield')}<h3>${esc(s('empty'))}</h3><p>${esc(s('emptyHelp'))}</p></div></section></div>`;
+      caseDetailPage(root,{
+        module:'quality',
+        route:'ncr',
+        title:s('ncrs'),
+        description:s('ncrDescription'),
+        empty:{icon:'shield',title:s('empty'),description:s('emptyHelp')},
+      });
       return;
     }
     window.ACTIVE_QUALITY_NCR_ID=Number(ncr.id);
@@ -295,34 +325,55 @@
     const actionRows=actions.map((action,index)=>`<div class="oprow"><span class="opseq">A${index+1}</span>
       <div class="opmain"><b>${esc(action.action)}</b><small>${esc(action.ownerName)} · ${esc(dateLabel(action.dueDate))}</small></div>
       ${cap(statusLabel(s,action.status),statusTone(action.status))}</div>`).join('');
-    root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
-      ${crumbs([DB.company.name,t('nav.quality'),s('ncrs'),{cur:ncr.docNo}])}
-      <div class="dochead"><div class="dh-row1"><div>
-        <div class="dt">${ic('shield')}${esc(s('ncrs'))} <span class="dnum">${esc(ncr.docNo)}</span></div>
-        <div class="h1sub">${esc(item.sku||'#'+ncr.productId)} · ${esc(item.name||s('product'))}</div>
-      </div><div class="dactions">${cap(ncr.severity,ncr.severity==='critical'?'danger':'warn')}
-        ${cap(statusLabel(s,ncr.status),statusTone(ncr.status))}
-        ${btn(inspection.docNo||s('inspection'),{icon:'checkc',cls:'soft',attrs:`data-open-inspection="${ncr.inspectionId}"`})}
-      </div></div></div>
-      <div class="doclayout"><div class="docmain">
+    const holdLabel=ncr.status!=='closed'
+      ? s('held')
+      : ncr.disposition==='release'?s('releasedHold'):s('rejectedHold');
+    caseDetailPage(root,{
+      module:'quality',
+      route:'ncr',
+      title:s('ncrs'),
+      description:s('ncrDescription'),
+      identity:{
+        title:item.name||s('product'),
+        code:ncr.docNo,
+        meta:item.sku||'#'+ncr.productId,
+        related:inspection.id
+          ? btn(inspection.docNo||s('inspection'),{icon:'checkc',cls:'soft',attrs:`data-open-inspection="${inspection.id}"`})
+          : '',
+      },
+      statuses:[
+        {label:s(ncr.severity),tone:ncr.severity==='critical'?'danger':'warn'},
+        {label:statusLabel(s,ncr.status),tone:statusTone(ncr.status)},
+      ],
+      facts:[
+        {label:s('affected'),value:num(Number(ncr.affectedQty)),numeric:true},
+        {label:s('severity'),value:s(ncr.severity)},
+        {label:s('status'),value:statusLabel(s,ncr.status)},
+        {label:s('sourceInspection'),value:inspection.docNo||'—'},
+      ],
+      main:`
         <div class="panel"><div class="panel-h"><h3>${esc(s('defect'))}</h3></div>
-          <div class="panel-body"><p style="margin:0;white-space:normal">${esc(ncr.defectDescription)}</p></div></div>
+          <div class="panel-body"><p style="margin:0;white-space:normal">${esc(ncr.defectDescription||'—')}</p></div></div>
         <div class="panel"><div class="panel-h"><h3>${esc(s('corrective'))}</h3></div>
-          <div class="panel-body" style="padding:6px 0">${actionRows||`<div class="empty">${esc(s('empty'))}</div>`}</div></div>
-      </div><aside class="summary"><div class="sumcard">
-        <div class="sectitle" style="margin-top:0">${esc(s('disposition'))}</div>
-        <div class="sumrow"><span class="sk2">${esc(s('affected'))}</span><span class="sv tnum">${num(Number(ncr.affectedQty))}</span></div>
-        <div class="sumrow"><span class="sk2">${esc(s('severity'))}</span><span class="sv">${esc(ncr.severity)}</span></div>
-        <div class="sumrow total"><span class="sk2">${esc(s('disposition'))}</span><span class="sv">${esc(ncr.disposition||s('quarantine'))}</span></div>
-      </div></aside></div>
-    </div></div>
-    ${ncr.status!=='closed'?`<div class="set-savebar"><div class="grow"></div>
-      ${btn(s('reject'),{icon:'warn',cls:'soft',attrs:'data-dispose-ncr="reject"'})}
-      ${btn(s('release'),{icon:'check',cls:'primary',attrs:'data-dispose-ncr="release"'})}
-    </div>`:''}</section></div>`;
+          <div class="panel-body" style="padding:6px 0">${actionRows||`<div class="case-detail-inline-empty" data-case-corrective-empty>${ic('flow')}<span>${esc(s('noCorrective'))}</span></div>`}</div></div>`,
+      context:{
+        title:s('caseContext'),
+        body:`
+          <div class="sumrow"><span class="sk2">${esc(s('qualityHold'))}</span><span class="sv">${esc(holdLabel)}</span></div>
+          <div class="sumrow"><span class="sk2">${esc(s('sourceInspection'))}</span><span class="sv">${esc(inspection.docNo||'—')}</span></div>
+          <div class="sumrow"><span class="sk2">${esc(s('product'))}</span><span class="sv">${esc(item.sku||'—')}</span></div>
+          <div class="sumrow total"><span class="sk2">${esc(s('disposition'))}</span><span class="sv">${esc(ncr.disposition?s(ncr.disposition):s('quarantine'))}</span></div>`,
+      },
+      actions:ncr.status!=='closed'?`
+        <span class="case-detail-action-note">${esc(s('actionNote'))}</span><div class="grow"></div>
+        ${btn(s('reject'),{icon:'warn',cls:'danger',attrs:'data-dispose-ncr="reject"'})}
+        ${btn(s('release'),{icon:'check',cls:'primary',attrs:'data-dispose-ncr="release"'})}`:'',
+    });
     root.querySelector('[data-open-inspection]')?.addEventListener('click',event=>openInspection(event.currentTarget.dataset.openInspection));
     root.querySelectorAll('[data-dispose-ncr]').forEach(button=>button.addEventListener('click',async()=>{
       const disposition=button.dataset.disposeNcr;
+      const errorRoot=root.querySelector('[data-case-error]');
+      if(errorRoot){errorRoot.hidden=true;errorRoot.textContent='';}
       root.querySelectorAll('[data-dispose-ncr]').forEach(node=>{node.disabled=true;});
       try{
         await a.action('quality/ncrs',ncr.id,disposition,{},`dispose-quality-ncr-${ncr.id}-${disposition}`);
@@ -330,7 +381,12 @@
         await navigate('ncr');
       }catch(error){
         root.querySelectorAll('[data-dispose-ncr]').forEach(node=>{node.disabled=false;});
-        toast(error&&error.message||'NCR disposition failed','danger');
+        const message=error&&error.message||s('dispositionFailed');
+        if(errorRoot){
+          errorRoot.innerHTML=`${ic('warn')}<span>${esc(message)}</span>`;
+          errorRoot.hidden=false;
+        }
+        toast(message,'danger');
       }
     }));
   };

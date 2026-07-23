@@ -588,6 +588,9 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   'master-detail-editor-v1':[
     'bom',
   ],
+  'case-detail-v1':[
+    'ncr',
+  ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
@@ -600,7 +603,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   'document-detail':[
     'account-ledger','credit-note','delivery-order','employee','goods-receipt',
-    'journal-entry','ncr','opportunity','payslip','po-approval','project-detail',
+    'journal-entry','opportunity','payslip','po-approval','project-detail',
     'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
     'sales-order','sales-return','service-order','supplier-invoice','txn-view',
     'work-order',
