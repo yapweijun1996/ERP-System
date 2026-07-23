@@ -104,6 +104,7 @@ import {
   importRowError,
   serviceContract,
   serviceTicket,
+  appNotification,
 } from '../data/schema';
 import { listVendorPerformanceWithin } from '../modules/purchasing/vendorPerformance';
 import {
@@ -115,6 +116,7 @@ import { listSalespeopleWithin } from '../modules/sales/commission';
 import { listReportingAnalyticsWithin } from '../modules/reporting/analytics';
 import { listIntegrationEventsWithin } from '../modules/integration/eventLog';
 import { listCustomerImportJobsWithin } from '../modules/integration/customerImport';
+import { listNotificationsWithin } from '../modules/account/notification';
 
 export interface ApiScope {
   masterFn: string;
@@ -169,6 +171,19 @@ export interface ResourceDefinition {
  * allowlist: route parameters can never become SQL identifiers.
  */
 const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
+  'account/notifications': {
+    ...resource(appNotification, 'notifications.read', {
+      allowedActions: ['mark-read', 'dismiss'],
+      actorUserIdColumn: appNotification.recipientUserId,
+    }),
+    listOnly: true,
+    listHandler: (db, scope, input) => listNotificationsWithin(
+      db,
+      { masterFn: scope.masterFn, companyFn: scope.companyFn },
+      Number(scope.actorUserId),
+      input,
+    ),
+  },
   'inventory/products': resource(product, 'inventory.read', {
     versionColumn: product.version,
     allowedActions: ['update'],

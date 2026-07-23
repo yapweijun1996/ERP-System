@@ -235,63 +235,59 @@ function moduleState(moduleId){
   if(isModuleAdmin()) return { visible:true, active:true };
   return readModuleControl()[moduleId]||{ visible:true, active:true };
 }
-function notificationStateKey(){ return 'aria-notification-state:'+currentMasterFn(); }
-function readNotificationState(){
+const NOTIFICATION_VISUALS={
+  approval:{ic:'flow',clr:'accent'},inventory:{ic:'box',clr:'warn'},quality:{ic:'shield',clr:'danger'},
+  finance:{ic:'receipt',clr:'violet'},sales:{ic:'handshake',clr:'teal'},integration:{ic:'plug',clr:'accent'},
+  system:{ic:'checkc',clr:'ok'},
+};
+function notificationUiRow(row){
+  const category=row.category||'system';
+  const visual=NOTIFICATION_VISUALS[category]||NOTIFICATION_VISUALS.system;
+  const delivered=row.deliveredAt||new Date().toISOString();
+  return {
+    id:String(row.id), rawId:Number(row.id), kind:row.kind, version:Number(row.version)||1,
+    ic:visual.ic, clr:visual.clr, cat:category,
+    group:dateValue(delivered)===dateValue(new Date())?'today':'earlier',
+    title:row.subject||'', body:row.detail||'', t:dateTimeValue(delivered),
+    unread:!row.readAt, dismissed:!!row.dismissedAt, route:row.route||'', entityRef:row.entityRef||null,
+  };
+}
+function applyCanonicalNotifications(rows){
+  DB.notifications=(Array.isArray(rows)?rows:[]).map(notificationUiRow);
+  return DB.notifications;
+}
+async function loadNotifications(){
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.list!=='function') throw new Error('The canonical notification service is unavailable.');
   try{
-    const saved=JSON.parse(localStorage.getItem(notificationStateKey())||'{}');
-    return saved&&typeof saved==='object'&&saved.items&&typeof saved.items==='object'?saved:{ items:{} };
-  }catch{ return { items:{} }; }
+    const result=await adapter.list('account/notifications',{limit:100});
+    applyCanonicalNotifications(result&&result.data);
+    return DB.notifications;
+  }catch(error){
+    DB.notifications=[];
+    throw error;
+  }
 }
-function writeNotificationState(state){
-  try{ localStorage.setItem(notificationStateKey(),JSON.stringify(state)); }catch{}
+async function notificationAction(id,action){
+  const row=(DB.notifications||[]).find(item=>String(item.id)===String(id));
+  if(!row) return null;
+  const adapter=window.ErpSystemData;
+  if(!adapter||typeof adapter.action!=='function') throw new Error('The canonical notification service is unavailable.');
+  const key=`notification:${row.rawId}:${action}:v${row.version}`;
+  const result=await adapter.action('account/notifications',row.rawId,action,{},key);
+  const updated=notificationUiRow(result.data);
+  const index=DB.notifications.indexOf(row);
+  if(action==='dismiss') DB.notifications.splice(index,1);
+  else DB.notifications[index]=updated;
+  return updated;
 }
-function saveNotificationState(id, patch){
-  if(!id) return;
-  const state=readNotificationState();
-  state.items[id]={ ...(state.items[id]||{}), ...patch };
-  writeNotificationState(state);
+function markNotificationRead(id){ return notificationAction(id,'mark-read'); }
+function dismissNotification(id){ return notificationAction(id,'dismiss'); }
+async function markAllNotificationsRead(){
+  await Promise.all((DB.notifications||[]).filter(n=>n.unread&&!n.dismissed).map(n=>markNotificationRead(n.id)));
 }
-function applyNotificationState(){
-  const state=readNotificationState();
-  (DB.notifications||[]).forEach(n=>{
-    const st=state.items[n.id];
-    if(!st) return;
-    if(st.read) n.unread=false;
-    if(st.dismissed){ n.dismissed=true; n.unread=false; }
-  });
-}
-function markNotificationRead(id){
-  const n=(DB.notifications||[]).find(x=>x.id===id);
-  if(!n) return null;
-  n.unread=false;
-  saveNotificationState(id,{ read:true });
-  return n;
-}
-function dismissNotification(id){
-  const n=(DB.notifications||[]).find(x=>x.id===id);
-  if(!n) return null;
-  n.dismissed=true;
-  n.unread=false;
-  saveNotificationState(id,{ read:true, dismissed:true });
-  return n;
-}
-function markAllNotificationsRead(){
-  const state=readNotificationState();
-  (DB.notifications||[]).forEach(n=>{
-    if(n.dismissed) return;
-    n.unread=false;
-    state.items[n.id]={ ...(state.items[n.id]||{}), read:true };
-  });
-  writeNotificationState(state);
-}
-function dismissAllNotifications(){
-  const state=readNotificationState();
-  (DB.notifications||[]).forEach(n=>{
-    n.dismissed=true;
-    n.unread=false;
-    state.items[n.id]={ ...(state.items[n.id]||{}), read:true, dismissed:true };
-  });
-  writeNotificationState(state);
+async function dismissAllNotifications(){
+  await Promise.all((DB.notifications||[]).filter(n=>!n.dismissed).map(n=>dismissNotification(n.id)));
 }
 function routeModuleId(route){ return ROUTE_MODULE[route]; }
 function routeAllowed(route){
@@ -391,7 +387,7 @@ const SUBROUTES = {
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
-  workflow:['po-approval'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control'],
+  workflow:['po-approval'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
@@ -438,7 +434,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
   'bank-rec',
   'bi-dashboard','sales-analysis','stock-aging',
-  'my-activity',
+  'my-activity','notifications',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -478,6 +474,7 @@ const API_SCREEN_ROUTES = new Set([
   'new-sales-order','so-approvals',
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
   'my-activity',
+  'notifications',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -552,6 +549,7 @@ const MODULE_DEFS = {
     ['user-mgmt','Users','people'],['role-permission','Roles & Permissions','shield'],
     ['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
     ['sys-settings','System Settings','gear'],['module-activation-control','Module Activation','sliders'],
+    ['notifications','Notifications','bell'],
   ]},
 };
 const MODULE_READ_PERMISSION = {
@@ -1054,7 +1052,7 @@ function updateBellBadge(){
   else { el.textContent=''; el.classList.remove('count'); el.style.display='none'; }
 }
 function notifRow(n){
-  return `<div class="nc-item ${n.unread?'unread':''}" data-route="${esc(n.route)}" data-id="${esc(n.id)}">
+  return `<div class="nc-item ${n.unread?'unread':''}" ${n.route?`data-route="${esc(n.route)}"`:''} data-id="${esc(n.id)}">
     <span class="ni wc-ic ${n.clr}">${ic(n.ic)}</span>
     <div class="nc-body">
       <b>${esc(n.title)}</b>
@@ -1080,7 +1078,6 @@ function buildNotifCenter(){
     <div class="nc-head">
       <div class="nc-title">${esc(t('notif.title'))} ${unread?`<span class="nc-count">${unread}</span>`:''}</div>
       <button class="nc-act" type="button" data-nc="readall" data-tip="${esc(t('notif.readall'))}" aria-label="${esc(t('notif.readall'))}" ${unread?'':'disabled'}>${ic('checkc')}</button>
-      <button class="nc-act" type="button" data-nc="settings" data-tip="${esc(t('notif.settings'))}" aria-label="${esc(t('notif.settings'))}">${ic('gear')}</button>
     </div>
     <div class="nc-tabs">${tabs.map(t2=>`<button class="nc-tab ${t2[0]===notifFilter?'on':''}" data-tab="${t2[0]}">${esc(t2[1])}${t2[0]==='unread'&&unread?`<span class="nc-tabn">${unread}</span>`:''}</button>`).join('')}</div>
     <div class="nc-list">${body}</div>
@@ -1089,22 +1086,27 @@ function buildNotifCenter(){
 function wireNotifCenter(){
   const menu=$('#notifMenu');
   menu.querySelectorAll('.nc-tab').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();notifFilter=b.dataset.tab;refreshNotifs();}));
-  menu.querySelectorAll('.nc-item[data-route]').forEach(it=>it.addEventListener('click',e=>{
+  menu.querySelectorAll('.nc-item').forEach(it=>it.addEventListener('click',async e=>{
     if(e.target.closest('[data-dismiss]')) return;
-    markNotificationRead(it.dataset.id);
-    refreshNotifs();
-    navigate(it.dataset.route);
+    try{
+      await markNotificationRead(it.dataset.id);
+      refreshNotifs();
+      if(it.dataset.route) navigate(it.dataset.route);
+    }catch(error){ toast((error&&error.message)||'Notification could not be updated.','danger'); }
   }));
-  menu.querySelectorAll('[data-dismiss]').forEach(b=>b.addEventListener('click',e=>{
+  menu.querySelectorAll('[data-dismiss]').forEach(b=>b.addEventListener('click',async e=>{
     e.stopPropagation();
-    dismissNotification(b.dataset.dismiss);
-    refreshNotifs(); toast('Notification dismissed','info');
+    try{ await dismissNotification(b.dataset.dismiss); refreshNotifs(); toast('Notification dismissed','info'); }
+    catch(error){ toast((error&&error.message)||'Notification could not be dismissed.','danger'); }
   }));
-  const ra=menu.querySelector('[data-nc="readall"]'); ra&&ra.addEventListener('click',e=>{e.stopPropagation();markAllNotificationsRead();refreshNotifs();toast('All caught up','ok');});
-  const st=menu.querySelector('[data-nc="settings"]'); st&&st.addEventListener('click',e=>{e.stopPropagation();closeAllPops();navigate('settings',{section:'set-notifications'});});
+  const ra=menu.querySelector('[data-nc="readall"]'); ra&&ra.addEventListener('click',async e=>{
+    e.stopPropagation();
+    try{ await markAllNotificationsRead(); refreshNotifs(); toast('All caught up','ok'); }
+    catch(error){ toast((error&&error.message)||'Notifications could not be updated.','danger'); }
+  });
   const va=menu.querySelector('[data-nc="viewall"]'); va&&va.addEventListener('click',e=>{e.stopPropagation();closeAllPops();navigate('notifications');});
 }
-function refreshNotifs(){ applyNotificationState(); const m=$('#notifMenu'); if(m){ m.innerHTML=buildNotifCenter(); wireNotifCenter(); } updateBellBadge(); }
+function refreshNotifs(){ const m=$('#notifMenu'); if(m){ m.innerHTML=buildNotifCenter(); wireNotifCenter(); } updateBellBadge(); }
 function buildQuickCreate(){
   const items=[[t('qc.so'),'bag','new-sales-order'],[t('qc.po'),'cart','new-purchase-order'],[t('qc.wo'),'factory','new-work-order'],[t('qc.je'),'book','new-journal-entry'],[t('qc.pv'),'coins','new-payment-voucher'],[t('qc.adj'),'adjust','new-stock-adjustment'],[t('qc.item'),'tag','new-item']];
   return `<div class="menu-section"><div class="menu-head">${esc(t('quickCreate.title'))}</div>`+items.map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
@@ -1135,14 +1137,16 @@ function buildCompanyMenu(){
    list itself changes (checkmark moves to the newly active company). */
 function wireCompanyMenu(){
   $('#companyMenu').innerHTML=buildCompanyMenu();
-  $('#companyMenu').querySelectorAll('[data-co]').forEach(b=>b.addEventListener('click',()=>{
+  $('#companyMenu').querySelectorAll('[data-co]').forEach(b=>b.addEventListener('click',async()=>{
     closeAllPops();
     const fn=b.dataset.co;
     if(!window.ErpSystemDemo||!window.ErpSystemDemo.switchCompany){ toast('Company switch needs the PGlite adapter.','warn'); return; }
     if(!DB.erpSystem||!DB.erpSystem.scope||fn===DB.erpSystem.scope.companyFn) return;
-    window.ErpSystemDemo.switchCompany(fn).then(()=>{
+    window.ErpSystemDemo.switchCompany(fn).then(async()=>{
+      await loadNotifications();
       $('#ctxCompany').innerHTML=`<b>${esc(DB.company.name)} ${ic('chevD')}</b><small>${esc(DB.company.branch)}</small>`;
       wireCompanyMenu();
+      refreshNotifs();
       if(CURRENT_ROUTE) navigate(CURRENT_ROUTE);
       toast('Switched to '+DB.company.name,'ok');
     }).catch(e=>toast('Switch failed: '+((e&&e.message)||e),'danger'));
@@ -1302,6 +1306,7 @@ async function boot(){
   try{ if(localStorage.getItem('aria-density')==='compact') document.documentElement.setAttribute('data-density','compact'); }catch{}
   try{ const ts=localStorage.getItem('aria-textsize'); if(ts && ts!=='1') document.documentElement.style.setProperty('--fs',ts); }catch{}
   await loadModuleControl();
+  try{ await loadNotifications(); }catch(error){ console.error('Notification load failed',error); }
   renderSidebar(); renderTabbar(); initTooltip();
   // default/restore sidebar collapse state (+ sets the toggle icon)
   autoNav();
@@ -1312,7 +1317,6 @@ async function boot(){
   syncAccountUi();
   ensureModuleActivationMenuItem();
   ensureUserSwitcherMenuItem();
-  applyNotificationState();
   // restore persisted working period, then paint the fiscal-period switcher
   try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch{}
   applyPeriod(DB.fiscal.selectedPeriod);

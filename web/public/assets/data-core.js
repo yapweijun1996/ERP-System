@@ -69,18 +69,8 @@ DB.approvals = [
   { no:'PV-26-0203', kind:'Payment Voucher', who:'A. Costa', amt:42600, age:'2d', risk:'low', route:'payment-voucher' },
 ];
 
-/* ---- notifications (notification center) ---- */
-DB.notifications = [
-  { id:'n1', ic:'flow', clr:'accent', cat:'approval', group:'today', title:'PO-26-0291 needs your approval', body:'$88.5k · flagged 34% over budget line.', t:'12m ago', unread:true, route:'po-approval' },
-  { id:'n2', ic:'error', clr:'danger', cat:'system', group:'today', title:'Failed GL posting', body:'INV-26-0901 — target period P05 is locked.', t:'18m ago', unread:true, route:'journal-entry' },
-  { id:'n3', ic:'box', clr:'warn', cat:'inventory', group:'today', title:'Control Module PCB out of stock', body:'NW-1180 — 24 allocated, 0 on hand. Blocks WO-26-0081.', t:'1h ago', unread:true, route:'stock-on-hand' },
-  { id:'n4', ic:'shield', clr:'danger', cat:'quality', group:'today', title:'NCR-26-0021 raised', body:'EuroSteel sheet failed incoming inspection on thickness.', t:'2h ago', unread:true, route:'ncr' },
-  { id:'n5', ic:'people', clr:'violet', cat:'approval', group:'today', title:'Leave request exceeds balance', body:'Tom Becker requested 5 days — 2 over balance.', t:'3h ago', unread:true, route:'leave-approval' },
-  { id:'n6', ic:'receipt', clr:'warn', cat:'finance', group:'earlier', title:'$46.6k overdue receivables', body:'Coastal Packaging — 3 invoices past due.', t:'5h ago', unread:false, route:'dashboard' },
-  { id:'n7', ic:'handshake', clr:'accent', cat:'sales', group:'earlier', title:'Meridian quote accepted', body:'OPP-26-0091 moved to Negotiation ($96.4k).', t:'Yesterday', unread:false, route:'opportunity' },
-  { id:'n8', ic:'truck', clr:'accent', cat:'sales', group:'earlier', title:'SO-26-0417 ready to pick', body:'Apex Industrial — 9 lines released to warehouse.', t:'Yesterday', unread:false, route:'picking' },
-  { id:'n9', ic:'checkc', clr:'ok', cat:'system', group:'earlier', title:'Period P05 closed', body:'May close completed by P. Nwosu.', t:'2d ago', unread:false, route:'journal-entry' },
-];
+/* Canonical notifications are loaded from account/notifications after auth. */
+DB.notifications = [];
 DB.notifCats = { approval:'Approval', system:'System', inventory:'Inventory', quality:'Quality', finance:'Finance', sales:'Sales' };
 
 /* saved views per listing */

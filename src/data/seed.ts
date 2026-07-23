@@ -12,7 +12,7 @@ import {
   supplierQuotation, supplierQuotationLine,
   supplierPriceList, supplierPriceListLine,
   purchaseOrder, purchaseOrderApproval, purchaseOrderLine, supplierInvoice, glEntry,
-  payrollRun, payrollRunLine,
+  payrollRun, payrollRunLine, appNotification,
 } from './schema';
 import { computeStatutoryContributions } from '../modules/payroll/statutory';
 import { fixedUnits, fixedString } from '../modules/inventory/decimal';
@@ -78,12 +78,50 @@ export async function seedDemo(db: DB): Promise<void> {
     'service.read',
     'reporting.read',
     'integration.read',
+    'notifications.read',
+    'notifications.manage',
     'session.switch_company',
   ].map((permissionKey) => ({
     masterFn: 'M1',
     roleId: viewerRole.id,
     permissionKey,
   })));
+
+  // First-class, actor-addressed notifications. These rows intentionally stay
+  // separate from audit/outbox infrastructure: they model user-visible
+  // delivery plus read/dismiss state and prove both user and company isolation.
+  await db.insert(appNotification).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', recipientUserId: adminUser.id,
+      kind: 'approval_required', severity: 'warning',
+      subject: 'Purchase order approval required',
+      detail: 'PO-0001 is waiting for your review.', route: 'purchase-orders', entityRef: 'PO-0001',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', recipientUserId: adminUser.id,
+      kind: 'inventory_attention', severity: 'critical',
+      subject: 'Inventory below reorder point',
+      detail: 'SG-WIDGET requires replenishment planning.', route: 'stock-on-hand', entityRef: 'SG-WIDGET',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', recipientUserId: adminUser.id,
+      kind: 'system_notice', severity: 'info',
+      subject: 'ERP workspace is ready',
+      detail: 'Your Singapore company workspace is available.', route: 'dashboard', readAt: new Date('2026-07-19T08:00:00Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', recipientUserId: viewerUser.id,
+      kind: 'system_notice', severity: 'info',
+      subject: 'Viewer workspace is ready',
+      detail: 'Your read-only Singapore workspace is available.', route: 'dashboard',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', recipientUserId: adminUser.id,
+      kind: 'system_notice', severity: 'success',
+      subject: 'Malaysia workspace is ready',
+      detail: 'Your Malaysia company workspace is available.', route: 'dashboard',
+    },
+  ]);
 
   await db.insert(product).values([
     {

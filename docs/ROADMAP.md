@@ -652,9 +652,23 @@ release suite pass.
 Exit criteria: actor/company isolation, sanitization, opaque cursor, Demo/API browser
 proof, PostgreSQL parity/security, desktop/375px and all 114 routes pass.
 
-## Remaining productionization backlog — 4 Preview routes
+## Phase 31 — Canonical Notifications ✅
 
-This is the authoritative work breakdown after TASK-083. `tasks/tasks.jsonl` records
+1. **Recipient delivery and persistent attention state** (EPIC-048, TASK-084 done
+   2026-07-23) replace the sample alert feed and master-level localStorage flags with
+   one tenant/company/user-addressed `app_notification` model. Server-only delivery
+   validates company membership; bounded list/read/dismiss commands share one
+   Demo/PostgreSQL path. API actions are permission-gated, CSRF-protected, audited and
+   idempotent. The bell and five-language full page reload on company switch and expose
+   no tenant/user IDs, fake preferences, outbox payloads or audit internals. The route
+   follows the approved KPI/filter/rounded-list reference and moves maturity to **111/3**.
+
+Exit criteria: actor/company isolation, sanitized public shape, RBAC/CSRF/idempotency/
+audit proof, Demo/API state persistence, desktop/375px and all 114 routes pass.
+
+## Remaining productionization backlog — 3 Preview routes
+
+This is the authoritative work breakdown after TASK-084. `tasks/tasks.jsonl` records
 completed vertical slices; it is not a claim that the remaining Preview routes are
 finished merely because no pre-written task is open. New tasks should be cut from these
 workstreams in dependency order:
@@ -665,10 +679,6 @@ workstreams in dependency order:
 2. **Administration — 2 routes:** `master-control`, `sys-settings`. Store tenant/company
    configuration, sequences, tax and period policies in the database; no localStorage
    control plane.
-3. **Personal utility surfaces — 1 route:** `notifications`. Back notification delivery
-   and read/dismiss state with a tenant/user-scoped model; do not infer it from the
-   operational outbox or personal audit projection.
-
 Every route keeps `Preview · Sample Data` and disabled writes until its schema, shared
 Demo/PostgreSQL command path, RBAC/audit/idempotency, five-language copy and desktop/
 375px verification all exist. The final release gate remains 114/114 Canonical.

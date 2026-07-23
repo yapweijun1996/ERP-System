@@ -92,8 +92,28 @@ import {
   runCustomerImportJobWithin,
   CustomerImportStateError,
 } from '../modules/integration/customerImport';
+import {
+  dismissNotificationWithin,
+  markNotificationReadWithin,
+} from '../modules/account/notification';
 
 const ACTIONS: Record<string, ActionDefinition> = {
+  'account/notifications/mark-read': {
+    permission: 'notifications.manage',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return markNotificationReadWithin(tx, scope, input.actorUserId, input.resourceId);
+    },
+  },
+  'account/notifications/dismiss': {
+    permission: 'notifications.manage',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      return dismissNotificationWithin(tx, scope, input.actorUserId, input.resourceId);
+    },
+  },
   'integration/import-jobs/run': {
     permission: 'integration.import',
     idempotency: 'required',

@@ -56,158 +56,83 @@ SCREENS['my-activity'] = async function(root){
   }));
 };
 
-/* ============================================================
-   NOTIFICATION CENTER (full page) — the bell popover, expanded
-   ============================================================ */
-SCREENS['notifications'] = function(root){
-  const CATS = DB.notifCats;
-  let filter = 'all';
-  const live = ()=>DB.notifications.filter(n=>!n.dismissed);
-  const catTone = c=>({approval:'accent',system:'slate',inventory:'warn',quality:'danger',finance:'violet',sales:'teal'}[c]||'slate');
-
-  function chips(){
-    const it=live();
-    const base=[['all','All',it.length],['unread','Unread',it.filter(n=>n.unread).length]];
-    const cats=[...new Set(it.map(n=>n.cat))];
-    cats.forEach(c=>base.push([c, CATS[c]||c, it.filter(n=>n.cat===c).length]));
-    return base;
+/* First-class, actor-addressed notification feed. Read/dismiss state is stored
+   in app_notification, never inferred from audit/outbox or localStorage. */
+SCREENS['notifications'] = async function(root){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Notifications',sub:'Items delivered to you in this company.',notice:'Only notifications addressed to your user and active company are shown.',total:'Active notifications',unread:'Unread',today:'Today',categories:'Categories',all:'All',earlier:'Earlier',markAll:'Mark all read',dismissAll:'Dismiss all',mark:'Mark as read',dismiss:'Dismiss',open:'Open',empty:'You’re all caught up',emptyBody:'No notifications match this filter.',loadError:'Notifications could not be loaded',retry:'Retry',done:'All notifications marked read',cleared:'Notifications dismissed',cats:{approval:'Approvals',inventory:'Inventory',quality:'Quality',finance:'Finance',sales:'Sales',integration:'Integration',system:'System'}},
+    ms:{title:'Pemberitahuan',sub:'Perkara yang dihantar kepada anda dalam syarikat ini.',notice:'Hanya pemberitahuan untuk pengguna dan syarikat aktif anda dipaparkan.',total:'Pemberitahuan aktif',unread:'Belum dibaca',today:'Hari ini',categories:'Kategori',all:'Semua',earlier:'Terdahulu',markAll:'Tanda semua dibaca',dismissAll:'Tutup semua',mark:'Tanda dibaca',dismiss:'Tutup',open:'Buka',empty:'Semuanya selesai',emptyBody:'Tiada pemberitahuan sepadan dengan penapis ini.',loadError:'Pemberitahuan tidak dapat dimuatkan',retry:'Cuba lagi',done:'Semua pemberitahuan ditanda dibaca',cleared:'Pemberitahuan ditutup',cats:{approval:'Kelulusan',inventory:'Inventori',quality:'Kualiti',finance:'Kewangan',sales:'Jualan',integration:'Integrasi',system:'Sistem'}},
+    zh:{title:'通知中心',sub:'当前公司中发送给您的事项。',notice:'这里只显示发送给当前用户及当前公司的通知。',total:'有效通知',unread:'未读',today:'今天',categories:'类别',all:'全部',earlier:'较早',markAll:'全部标为已读',dismissAll:'全部关闭',mark:'标为已读',dismiss:'关闭',open:'打开',empty:'目前没有待处理通知',emptyBody:'没有符合此筛选条件的通知。',loadError:'无法载入通知',retry:'重试',done:'所有通知已标为已读',cleared:'通知已关闭',cats:{approval:'审批',inventory:'库存',quality:'质量',finance:'财务',sales:'销售',integration:'集成',system:'系统'}},
+    ja:{title:'通知',sub:'この会社で自分宛に配信された項目です。',notice:'現在のユーザーと会社に配信された通知だけを表示します。',total:'有効な通知',unread:'未読',today:'今日',categories:'カテゴリ',all:'すべて',earlier:'以前',markAll:'すべて既読にする',dismissAll:'すべて閉じる',mark:'既読にする',dismiss:'閉じる',open:'開く',empty:'対応は完了しています',emptyBody:'このフィルターに一致する通知はありません。',loadError:'通知を読み込めませんでした',retry:'再試行',done:'すべて既読にしました',cleared:'通知を閉じました',cats:{approval:'承認',inventory:'在庫',quality:'品質',finance:'財務',sales:'販売',integration:'連携',system:'システム'}},
+    vi:{title:'Thông báo',sub:'Các mục được gửi cho bạn trong công ty này.',notice:'Chỉ hiển thị thông báo dành cho người dùng và công ty hiện tại.',total:'Thông báo đang hoạt động',unread:'Chưa đọc',today:'Hôm nay',categories:'Danh mục',all:'Tất cả',earlier:'Trước đó',markAll:'Đánh dấu tất cả đã đọc',dismissAll:'Đóng tất cả',mark:'Đánh dấu đã đọc',dismiss:'Đóng',open:'Mở',empty:'Bạn đã xử lý xong',emptyBody:'Không có thông báo phù hợp với bộ lọc này.',loadError:'Không thể tải thông báo',retry:'Thử lại',done:'Đã đánh dấu tất cả là đã đọc',cleared:'Đã đóng thông báo',cats:{approval:'Phê duyệt',inventory:'Tồn kho',quality:'Chất lượng',finance:'Tài chính',sales:'Bán hàng',integration:'Tích hợp',system:'Hệ thống'}},
+  };
+  const p=packs[lang]||packs.en;
+  let rows=[];
+  try{ rows=await loadNotifications(); }
+  catch(error){
+    const body=`<div class="notification-error">${statePanel({icon:'error',title:p.loadError,body:(error&&error.message)||p.loadError})}<button class="btn primary" data-notification-retry>${ic('refresh')}<span>${esc(p.retry)}</span></button></div>`;
+    root.innerHTML=modulePage({module:'admin',route:'notifications',active:'notifications',title:p.title,sub:p.sub,body});
+    root.querySelector('[data-notification-retry]')?.addEventListener('click',()=>navigate('notifications'));
+    return;
   }
-  function filtered(){ const it=live(); return filter==='all'?it:filter==='unread'?it.filter(n=>n.unread):it.filter(n=>n.cat===filter); }
-
-  function row(n){
-    return `<div class="ntf ${n.unread?'unread':''}" data-id="${esc(n.id)}" ${n.route?`data-route="${esc(n.route)}"`:''}>
-      <span class="wc-ic ${n.clr}">${ic(n.ic)}</span>
-      <div class="ntf-main">
-        <div class="ntf-h"><b>${esc(n.title)}</b>${n.unread?'<span class="ntf-dot"></span>':''}</div>
-        <p>${esc(n.body)}</p>
-        <span class="ntf-meta"><span class="ntf-cat">${esc(CATS[n.cat]||n.cat)}</span> · ${esc(n.t)}${n.route?` · <span class="ntf-go">Open${ic('arrowR')}</span>`:''}</span>
-      </div>
-      <div class="ntf-actions">
-        ${n.unread?`<button class="iconbtn" data-act="read" data-tip="Mark as read" aria-label="Mark as read">${ic('check')}</button>`:''}
-        <button class="iconbtn" data-act="dismiss" data-tip="Dismiss" aria-label="Dismiss">${ic('x')}</button>
-      </div>
-    </div>`;
-  }
-  function feed(){
-    let out='';
-    [['today','Today'],['earlier','Earlier']].forEach(([g,lbl])=>{
-      const rows=filtered().filter(n=>n.group===g);
-      if(!rows.length) return;
-      out+=`<div class="ntf-day"><span>${lbl}</span><span class="ln"></span><span class="ct">${rows.length}</span></div><div class="ntf-list">${rows.map(row).join('')}</div>`;
-    });
-    if(!out) out=statePanel({icon:'checkc',title:'You’re all caught up',body:'No notifications match this filter — try “All”.'});
-    return out;
-  }
-  function rail(){
-    const it=live(); const cats=[...new Set(it.map(n=>n.cat))];
-    const max=Math.max(1,...cats.map(c=>it.filter(n=>n.cat===c).length));
-    const bars=cats.map(c=>{ const ct=it.filter(n=>n.cat===c).length; return `<button class="ntf-modbar" data-cat="${c}">
-      <span class="nm">${esc(CATS[c]||c)}</span>
-      <span class="track"><i style="width:${Math.round(ct/max*100)}%;background:var(--${catTone(c)==='slate'?'muted':catTone(c)})"></i></span>
-      <span class="ct tnum">${ct}</span></button>`; }).join('');
-    return `<aside class="ntf-aside">
-      <div class="panel">
-        <div class="panel-h"><h3>By category</h3></div>
-        <div class="panel-body">${bars||'<div style="color:var(--muted);font-size:13px">No notifications.</div>'}</div>
-      </div>
-      <div class="panel">
-        <div class="panel-h"><h3>Preferences</h3><button class="btn plain sm" style="margin-left:auto" onclick="navigate('settings')">${ic('gear')}<span>Manage</span></button></div>
-        <div class="panel-body" style="padding-top:6px">
-          <div class="field"><span class="k">Email digest</span><span class="v">Daily · 8:00</span></div>
-          <div class="field"><span class="k">Approvals</span><span class="v">Push + email</span></div>
-          <div class="field"><span class="k">Mentions</span><span class="v">Push</span></div>
-        </div>
-        <div class="sec-foot2">${ic('checkc')}<span>Only you receive these alerts.</span></div>
-      </div>
-    </aside>`;
-  }
-
+  let filter='all';
+  let busy=false;
+  const filtered=()=>filter==='all'?rows:filter==='unread'?rows.filter(row=>row.unread):rows.filter(row=>row.cat===filter);
+  const rowHtml=row=>`<div class="notification-row ${row.unread?'unread':''}" data-id="${esc(row.id)}" ${row.route?`data-route="${esc(row.route)}"`:''}>
+    <span class="wc-ic ${esc(row.clr)}">${ic(row.ic)}</span>
+    <div class="notification-main"><div class="notification-subject"><b>${esc(row.title)}</b>${row.unread?'<span class="notification-dot"></span>':''}</div><p>${esc(row.body)}</p><small>${esc(p.cats[row.cat]||row.cat)} · ${esc(row.t)}${row.entityRef?` · ${esc(row.entityRef)}`:''}${row.route?` · <span>${esc(p.open)} ${ic('arrowR')}</span>`:''}</small></div>
+    <div class="notification-actions">${row.unread?`<button class="iconbtn" data-notification-action="read" aria-label="${esc(p.mark)}" data-tip="${esc(p.mark)}">${ic('check')}</button>`:''}<button class="iconbtn" data-notification-action="dismiss" aria-label="${esc(p.dismiss)}" data-tip="${esc(p.dismiss)}">${ic('x')}</button></div>
+  </div>`;
   function render(){
-    const it=live(); const unread=it.filter(n=>n.unread).length;
-    root.innerHTML=`
-    <style>
-      .ntf-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start;padding:8px 24px 44px;}
-      @media(max-width:1080px){.ntf-grid{grid-template-columns:1fr;}}
-      .ntf-tools{display:flex;align-items:center;gap:8px;margin:4px 0 2px;flex-wrap:wrap;}
-      .ntf-tools .filterchips{display:flex;gap:6px;flex-wrap:wrap;}
-      .ntf-tools .chip .n{margin-left:6px;color:var(--faint);font-variant-numeric:tabular-nums;}
-      .ntf-tools .chip.on .n{color:var(--accent);}
-      .ntf-day{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:20px 0 9px;display:flex;align-items:center;gap:9px;}
-      .ntf-day .ln{flex:1;height:1px;background:var(--hairline);}
-      .ntf-day .ct{color:var(--faint);font-weight:600;}
-      .ntf-list{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-l);overflow:hidden;}
-      .ntf{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:13px;align-items:start;padding:14px 15px;border-bottom:1px solid var(--hairline);cursor:pointer;transition:background .12s;position:relative;}
-      .ntf:last-child{border-bottom:none;}
-      .ntf:hover{background:var(--surface-2);}
-      .ntf.unread{background:color-mix(in srgb,var(--accent) 4%,transparent);}
-      .ntf.unread:hover{background:color-mix(in srgb,var(--accent) 7%,transparent);}
-      .ntf-main{min-width:0;}
-      .ntf-h{display:flex;align-items:center;gap:8px;}
-      .ntf-h b{font-size:13.5px;font-weight:600;letter-spacing:-.005em;}
-      .ntf-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none;}
-      .ntf-main p{margin:3px 0 0;color:var(--muted);font-size:12.5px;line-height:1.45;}
-      .ntf-meta{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:11.5px;color:var(--faint);}
-      .ntf-cat{color:var(--muted);font-weight:600;}
-      .ntf-go{display:inline-flex;align-items:center;gap:2px;color:var(--accent);font-weight:600;}
-      .ntf-go svg{width:13px;height:13px;}
-      .ntf-actions{display:flex;gap:4px;align-items:center;opacity:0;transition:opacity .12s;}
-      .ntf:hover .ntf-actions{opacity:1;}
-      .ntf-aside{display:flex;flex-direction:column;gap:16px;position:sticky;top:8px;}
-      .ntf-aside .panel-body{padding:13px 15px;}
-      .ntf-modbar{display:flex;align-items:center;gap:11px;padding:6px 0;font-size:12.5px;width:100%;text-align:left;cursor:pointer;}
-      .ntf-modbar:hover .nm{color:var(--accent);}
-      .ntf-modbar .nm{width:84px;flex:none;color:var(--fg);}
-      .ntf-modbar .track{flex:1;height:7px;border-radius:4px;background:var(--surface-2);overflow:hidden;}
-      .ntf-modbar .track i{display:block;height:100%;border-radius:4px;}
-      .ntf-modbar .ct{width:22px;text-align:right;font-weight:600;color:var(--muted);}
-      .sec-foot2{display:flex;align-items:center;gap:8px;padding:11px 15px;border-top:1px solid var(--hairline);font-size:12px;color:var(--muted);}
-      .sec-foot2 svg{width:14px;height:14px;color:var(--ok);flex:none;}
-    </style>
-    <div class="content full"><section class="master"><div class="scrollarea">
-      <div class="pagehead">
-        ${crumbs([DB.company.name,'Account','Notifications'])}
-        <div class="h1row"><h1>Notifications</h1>${unread?`<span class="countchip">${unread} unread</span>`:''}
-          <div class="headright">
-            ${btn('Mark all read',{icon:'checkc',cls:'soft',attrs:`data-nc="readall" ${unread?'':'disabled style="opacity:.5;pointer-events:none"'}`})}
-            ${btn('Clear all',{icon:'trash',cls:'soft',attrs:`data-nc="clearall" ${it.length?'':'disabled style="opacity:.5;pointer-events:none"'}`})}
-          </div></div>
-        <div class="h1sub">Everything that needs your attention across Aria — approvals, exceptions and system events. Click any item to jump to its source.</div>
-      </div>
-      <div class="ntf-grid">
-        <div>
-          <div class="ntf-tools"><div class="filterchips" id="ntfChips">
-            ${chips().map(c=>`<button class="chip ${c[0]===filter?'on':''}" data-f="${c[0]}">${esc(c[1])}<span class="n">${c[2]}</span></button>`).join('')}
-          </div></div>
-          <div id="ntfFeed">${feed()}</div>
-        </div>
-        ${rail()}
-      </div>
-    </div></section></div>`;
+    const categories=[...new Set(rows.map(row=>row.cat))];
+    if(filter!=='all'&&filter!=='unread'&&!categories.includes(filter))filter='all';
+    const shown=filtered();
+    const unread=rows.filter(row=>row.unread).length;
+    const today=rows.filter(row=>row.group==='today').length;
+    const chips=[['all',p.all,rows.length],['unread',p.unread,unread],...categories.map(cat=>[cat,p.cats[cat]||cat,rows.filter(row=>row.cat===cat).length])];
+    const feed=[['today',p.today],['earlier',p.earlier]].map(([group,label])=>{
+      const grouped=shown.filter(row=>row.group===group);
+      return grouped.length?`<section class="notification-group"><div class="notification-group-title"><span>${esc(label)}</span><i></i><span>${grouped.length}</span></div><div class="notification-list">${grouped.map(rowHtml).join('')}</div></section>`:'';
+    }).join('')||statePanel({icon:'checkc',title:p.empty,body:p.emptyBody});
+    const body=`<style>
+      .notifications-canonical{padding:8px 24px 44px}.notification-notice{display:flex;gap:9px;align-items:flex-start;margin-bottom:14px;padding:11px 13px;border:1px solid var(--accent-border);border-radius:var(--r-m);background:var(--accent-tint);color:var(--muted);font-size:12.5px;line-height:1.45}.notification-notice svg{width:16px;height:16px;color:var(--accent);flex:none;margin-top:1px}
+      .notification-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}.notification-kpi{padding:13px 15px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--surface)}.notification-kpi small{display:block;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.notification-kpi b{display:block;margin-top:5px;font-size:22px;font-variant-numeric:tabular-nums}
+      .notification-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}.notification-toolbar .filterchips{display:flex;flex-wrap:wrap;gap:6px}.notification-toolbar .notification-bulk{display:flex;gap:7px;margin-left:auto}.notification-group{margin-top:15px}.notification-group-title{display:flex;align-items:center;gap:9px;margin-bottom:8px;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.notification-group-title i{height:1px;flex:1;background:var(--hairline)}
+      .notification-list{overflow:hidden;border:1px solid var(--hairline);border-radius:var(--r-l);background:var(--surface)}.notification-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:13px;align-items:start;padding:14px 15px;border-bottom:1px solid var(--hairline);cursor:pointer}.notification-row:last-child{border-bottom:0}.notification-row:hover{background:var(--surface-2)}.notification-row.unread{background:color-mix(in srgb,var(--accent) 4%,transparent)}.notification-main{min-width:0}.notification-subject{display:flex;gap:8px;align-items:center}.notification-subject b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}.notification-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}.notification-main p{margin:3px 0 0;color:var(--muted);font-size:12.5px;line-height:1.45}.notification-main small{display:flex;align-items:center;gap:4px;margin-top:7px;color:var(--faint);font-size:11.5px}.notification-main small span{display:inline-flex;align-items:center;color:var(--accent);font-weight:600}.notification-main small svg{width:13px;height:13px}.notification-actions{display:flex;gap:4px;opacity:0}.notification-row:hover .notification-actions,.notification-actions:focus-within{opacity:1}.notification-error{padding:40px 24px;text-align:center}.notification-error .btn{margin-top:12px}
+      @media(max-width:700px){.notifications-canonical{padding:6px 14px 32px}.notification-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.notification-toolbar{align-items:flex-start;flex-direction:column}.notification-toolbar .notification-bulk{margin-left:0;width:100%}.notification-toolbar .notification-bulk .btn{flex:1}.notification-row{grid-template-columns:34px minmax(0,1fr)}.notification-actions{grid-column:2;opacity:1}.notification-main small{flex-wrap:wrap}}
+    </style><div class="notifications-canonical" data-notifications-canonical="true">
+      <div class="notification-notice">${ic('info')}<span>${esc(p.notice)}</span></div>
+      <div class="notification-kpis"><div class="notification-kpi"><small>${esc(p.total)}</small><b>${rows.length}</b></div><div class="notification-kpi"><small>${esc(p.unread)}</small><b>${unread}</b></div><div class="notification-kpi"><small>${esc(p.today)}</small><b>${today}</b></div><div class="notification-kpi"><small>${esc(p.categories)}</small><b>${categories.length}</b></div></div>
+      <div class="notification-toolbar"><div class="filterchips" id="notificationFilters">${chips.map(([key,label,count])=>`<button class="chip ${filter===key?'on':''}" data-filter="${esc(key)}">${esc(label)} <span>${count}</span></button>`).join('')}</div><div class="notification-bulk"><button class="btn soft" data-notification-bulk="read" ${unread?'':'disabled'}>${ic('checkc')}<span>${esc(p.markAll)}</span></button><button class="btn soft" data-notification-bulk="dismiss" ${rows.length?'':'disabled'}>${ic('x')}<span>${esc(p.dismissAll)}</span></button></div></div>
+      <div id="notificationFeed">${feed}</div>
+    </div>`;
+    root.innerHTML=modulePage({module:'admin',route:'notifications',active:'notifications',title:p.title,count:rows.length,sub:p.sub,body});
     wire();
   }
-
-  function wire(){
-    root.querySelectorAll('#ntfChips .chip').forEach(c=>c.addEventListener('click',()=>{ filter=c.dataset.f; render(); }));
-    root.querySelectorAll('.ntf-modbar').forEach(b=>b.addEventListener('click',()=>{ filter=b.dataset.cat; render(); }));
-    root.querySelectorAll('.ntf').forEach(rw=>rw.addEventListener('click',e=>{
-      if(e.target.closest('[data-act]')) return;
-      markNotificationRead(rw.dataset.id);
-      updateBellBadge(); refreshNotifs();
-      if(rw.dataset.route) navigate(rw.dataset.route);
-    }));
-    root.querySelectorAll('[data-act="read"]').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation();
-      markNotificationRead(b.closest('.ntf').dataset.id);
-      updateBellBadge(); refreshNotifs(); render();
-    }));
-    root.querySelectorAll('[data-act="dismiss"]').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation();
-      dismissNotification(b.closest('.ntf').dataset.id);
-      updateBellBadge(); refreshNotifs(); render(); toast('Notification dismissed','info');
-    }));
-    const ra=root.querySelector('[data-nc="readall"]'); ra&&ra.addEventListener('click',()=>{ markAllNotificationsRead(); updateBellBadge(); refreshNotifs(); render(); toast('All caught up','ok'); });
-    const ca=root.querySelector('[data-nc="clearall"]'); ca&&ca.addEventListener('click',()=>{ dismissAllNotifications(); updateBellBadge(); refreshNotifs(); render(); toast('Notifications cleared','info'); });
+  async function run(action,id){
+    if(busy)return;busy=true;
+    try{
+      if(action==='read')await markNotificationRead(id);
+      else if(action==='dismiss')await dismissNotification(id);
+      else if(action==='readall')await markAllNotificationsRead();
+      else await dismissAllNotifications();
+      refreshNotifs();
+      rows=DB.notifications.slice();
+      render();
+      if(action==='readall')toast(p.done,'ok');
+      if(action==='dismissall')toast(p.cleared,'info');
+    }catch(error){toast((error&&error.message)||p.loadError,'danger');}finally{busy=false;}
   }
-
+  function wire(){
+    root.querySelectorAll('#notificationFilters .chip').forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;render();}));
+    root.querySelectorAll('.notification-row').forEach(row=>row.addEventListener('click',async event=>{
+      if(event.target.closest('[data-notification-action]'))return;
+      try{if(row.classList.contains('unread'))await markNotificationRead(row.dataset.id);refreshNotifs();if(row.dataset.route)navigate(row.dataset.route);else{rows=DB.notifications.slice();render();}}catch(error){toast((error&&error.message)||p.loadError,'danger');}
+    }));
+    root.querySelectorAll('[data-notification-action]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();run(button.dataset.notificationAction,button.closest('.notification-row').dataset.id);}));
+    root.querySelector('[data-notification-bulk="read"]')?.addEventListener('click',()=>run('readall'));
+    root.querySelector('[data-notification-bulk="dismiss"]')?.addEventListener('click',()=>run('dismissall'));
+  }
   render();
 };

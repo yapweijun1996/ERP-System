@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 42;
+  var DEMO_SCHEMA_VERSION = 43;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -819,20 +819,6 @@
       return { no: o.doc_no, kind: 'Sales Order Draft', who: 'Admin', amt: o.net,
                age: 'today', risk: o.total > 1000 ? 'med' : 'low', route: 'sales-orders' };
     }));
-    DB.notifications = [
-      { id: 'erp1', ic: 'checkc', clr: 'ok', cat: 'system', group: 'today',
-        title: mode === 'pglite' ? 'PGlite demo database ready' : 'ERP-System demo seed loaded (offline fallback)',
-        body: mode === 'pglite'
-          ? 'Canonical schema seeded into in-browser PostgreSQL (IndexedDB).'
-          : 'PGlite unavailable — showing the same canonical values statically.',
-        t: 'now', unread: true, route: 'dashboard' },
-      { id: 'erp2', ic: 'receipt', clr: 'accent', cat: 'finance', group: 'today',
-        title: (inv ? inv.doc_no : 'INV-SO-1') + ' posted',
-        body: money(orderTotal) + ' balanced to AR, revenue and GST output tax.',
-        t: 'now', unread: true, route: 'gl' },
-    ];
-    if (typeof window.applyNotificationState === 'function') window.applyNotificationState();
-
     DB.salesByMonth = [
       { m: 'Jan', val: 0 }, { m: 'Feb', val: 0 }, { m: 'Mar', val: 0 },
       { m: 'Apr', val: 0 }, { m: 'May', val: 0 }, { m: 'Jun', val: revenueTotal },
@@ -1463,6 +1449,23 @@
         nextCursor:activityPage.nextCursor==null?null:String(activityPage.nextCursor),
       }};
     }
+    if(key==='account/notifications'){
+      query=query||{};
+      var notificationActorUserId=Number(state.activeUserId);
+      if(!Number.isSafeInteger(notificationActorUserId)||notificationActorUserId<=0){
+        throw new Error('An authenticated user is required.');
+      }
+      var notificationPage=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listNotificationsWithin(
+          state.runtime.createOrm(tx),SCOPE,notificationActorUserId,{
+            limit:Math.max(1,Math.min(100,Number(query.limit)||50)),
+            cursor:Number(query.cursor)||undefined,
+          });
+      });
+      return {data:notificationPage.data,meta:{
+        nextCursor:notificationPage.nextCursor==null?null:String(notificationPage.nextCursor),
+      }};
+    }
     if(key==='sales/analytics'||key==='sales/salespeople'||key==='bi/analytics'||key==='integration/events'||key==='integration/import-jobs'||key==='purchasing/vendor-performance'||key==='purchasing/analytics'||key==='purchasing/price-variance'){
       query=query||{};
       var derivedCommand=key==='sales/analytics'
@@ -2000,6 +2003,20 @@
   }
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='account/notifications'&&(name==='mark-read'||name==='dismiss')){
+      var notificationActorUserId=Number(state.activeUserId);
+      if(!Number.isSafeInteger(notificationActorUserId)||notificationActorUserId<=0){
+        throw new Error('An authenticated user is required.');
+      }
+      var notificationCommand=name==='mark-read'
+        ?state.runtime.commands.markNotificationReadWithin
+        :state.runtime.commands.dismissNotificationWithin;
+      var updatedNotification=await requireDemoDb().transaction(function(tx){
+        return notificationCommand(
+          state.runtime.createOrm(tx),SCOPE,notificationActorUserId,Number(id));
+      });
+      return {data:updatedNotification,meta:{}};
+    }
     if(key==='integration/import-jobs'&&name==='run'){
       var completedImport = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.runCustomerImportJobWithin(

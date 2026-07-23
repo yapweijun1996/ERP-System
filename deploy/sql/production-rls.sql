@@ -49,6 +49,7 @@ DECLARE
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line',
+    'app_notification',
     'api_idempotency',
     'import_job', 'import_job_row', 'import_row_error'
   ];

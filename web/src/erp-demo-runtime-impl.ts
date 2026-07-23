@@ -288,6 +288,11 @@ import {
 import { listMasterModules, setMasterModuleWithin } from '../../src/auth/moduleAccess';
 import type { SessionData } from '../../src/auth/session';
 import { listPersonalActivityWithin } from '../../src/modules/account/activity';
+import {
+  dismissNotificationWithin,
+  listNotificationsWithin,
+  markNotificationReadWithin,
+} from '../../src/modules/account/notification';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -721,6 +726,34 @@ export const erpDemoRuntime = Object.freeze({
       query: { limit?: number; cursor?: number } = {},
     ) {
       return listPersonalActivityWithin(asDomainDb(db), scope, actorUserId, query);
+    },
+    listNotificationsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      query: { limit?: number; cursor?: number } = {},
+    ) {
+      return listNotificationsWithin(asDomainDb(db), scope, actorUserId, query);
+    },
+    markNotificationReadWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      notificationId: number,
+    ) {
+      return markNotificationReadWithin(
+        asDomainDb(db), scope, actorUserId, notificationId,
+      );
+    },
+    dismissNotificationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      notificationId: number,
+    ) {
+      return dismissNotificationWithin(
+        asDomainDb(db), scope, actorUserId, notificationId,
+      );
     },
     listMasterModules(db: DemoOrm, scope: Scope) {
       return listMasterModules(asDomainDb(db), scope.masterFn);

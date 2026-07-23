@@ -57,6 +57,7 @@ import {
 } from '../../modules/inventory/product';
 import { ProjectTimeEntryError } from '../../modules/project/timeEntry';
 import { CustomerImportValidationError } from '../../modules/integration/customerImport';
+import { NotificationError } from '../../modules/account/notification';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -284,6 +285,16 @@ export function createResourceRouter(db: DB): Router {
     } catch (error) {
       if (error instanceof ActionDispatchError) {
         apiError(res, error.status, error.code, error.message);
+        return;
+      }
+      if (error instanceof NotificationError) {
+        const unavailable = error.message.includes('unavailable');
+        apiError(
+          res,
+          unavailable ? 404 : 409,
+          unavailable ? 'notification_not_found' : 'notification_conflict',
+          error.message,
+        );
         return;
       }
       if (error instanceof InsufficientStockError) {

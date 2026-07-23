@@ -34,6 +34,8 @@ export const PERMISSIONS = {
   reportingRead: 'reporting.read',
   integrationRead: 'integration.read',
   integrationImport: 'integration.import',
+  notificationsRead: 'notifications.read',
+  notificationsManage: 'notifications.manage',
   payrollRead: 'payroll.read',
   payrollWrite: 'payroll.write',
   companySwitch: 'session.switch_company',

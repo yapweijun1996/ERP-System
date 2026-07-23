@@ -1666,3 +1666,26 @@ Acceptance criteria:
 - [x] Lint, dual typecheck, 365 tests plus one expected skip, 43-migration/122-table
       alignment, PGlite/PostgreSQL parity, smoke, live in-app browser and all 114
       desktop/375px routes pass at 110 Canonical / 4 Preview.
+
+## EPIC-048 — Canonical Actor-Addressed Notifications
+
+**Goal:** replace the fictional notification feed and browser-local read state with a
+first-class delivery model owned by one recipient in one active company.
+
+Acceptance criteria:
+
+- [x] Migration 0043 adds tenant/company/recipient-scoped `app_notification` facts with
+      bounded kind/severity vocabulary, delivery/read/dismiss timestamps, versioning,
+      an actor-leading feed index, production RLS and generated PGlite alignment.
+- [x] Server-only delivery validates an active company recipient; public reads expose
+      only safe notification content and never tenant/user identifiers. The notification
+      model is independent of operational outbox delivery and append-only audit history.
+- [x] Demo/API use shared TypeScript list/read/dismiss commands. Authenticated actions
+      require explicit permissions, CSRF, idempotency and audit, while cross-user and
+      cross-company rows remain unavailable.
+- [x] The bell and five-language `notifications` workspace read the same canonical feed;
+      read/dismiss state persists in the database, company switching reloads it, and no
+      localStorage state, fake preference or sample fallback remains.
+- [x] The route follows the approved KPI/filter/rounded-list visual standard and moves
+      maturity to 111 Canonical / 3 Preview with 371 tests plus one expected skip,
+      44 migrations, 123 tables and service-worker v72.
