@@ -591,6 +591,9 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   'case-detail-v1':[
     'ncr',
   ],
+  'ledger-detail-v1':[
+    'account-ledger',
+  ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
@@ -602,7 +605,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'stock-aging','vendor-performance',
   ],
   'document-detail':[
-    'account-ledger','credit-note','delivery-order','employee','goods-receipt',
+    'credit-note','delivery-order','employee','goods-receipt',
     'journal-entry','opportunity','payslip','po-approval','project-detail',
     'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
     'sales-order','sales-return','service-order','supplier-invoice','txn-view',

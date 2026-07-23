@@ -273,6 +273,38 @@ table.lines tr.editing td{background:var(--accent-tint);}
 .case-detail-actions{display:flex;align-items:center;gap:10px;position:sticky;bottom:0;z-index:8;margin-top:16px;padding:11px 14px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--material);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);box-shadow:var(--shadow);}
 .case-detail-action-note{font-size:calc(12px * var(--fs,1));color:var(--muted);min-width:0;}
 
+/* ===== immutable financial ledger detail SSOT ===== */
+.ledger-detail{padding:2px 24px 86px;min-width:0;}
+.ledger-detail-overview{display:flex;align-items:center;gap:18px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-l);padding:14px 16px;margin-bottom:14px;min-width:0;}
+.ledger-detail-account{display:flex;flex-direction:column;gap:2px;min-width:180px;max-width:280px;}
+.ledger-detail-account b{font-family:var(--mono);font-size:calc(12px * var(--fs,1));color:var(--accent);}
+.ledger-detail-account span{font-size:calc(15px * var(--fs,1));font-weight:650;overflow-wrap:anywhere;}
+.ledger-detail-account small{font-size:calc(11.5px * var(--fs,1));color:var(--muted);overflow-wrap:anywhere;}
+.ledger-detail-overview .so-kpibar{padding:0;flex:1;justify-content:flex-end;}
+.ledger-detail-overview .so-kpi{flex:1;max-width:190px;}
+.ledger-detail-error:not([hidden]){display:flex;align-items:center;gap:12px;background:var(--danger-tint);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 24%,transparent);border-radius:var(--r-m);padding:11px 12px;margin-bottom:14px;}
+.ledger-detail-error>div{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+.ledger-detail-error span{font-size:calc(12px * var(--fs,1));overflow-wrap:anywhere;}
+.ledger-detail-toolbar{padding:8px 0 12px;border:0;background:transparent;min-width:0;}
+.ledger-detail-table-scroll{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--hairline);border-radius:var(--r-l);background:var(--surface);}
+.ledger-detail-table{width:100%;min-width:720px;border-collapse:collapse;font-size:calc(12.5px * var(--fs,1));font-variant-numeric:tabular-nums;}
+.ledger-detail-table th,.ledger-detail-table td{padding:10px 12px;border-bottom:1px solid var(--hairline);vertical-align:middle;}
+.ledger-detail-table th{font-size:calc(10.5px * var(--fs,1));font-weight:650;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--surface-2);white-space:nowrap;}
+.ledger-detail-table th.l,.ledger-detail-table td.l{text-align:left;}
+.ledger-detail-table th.r,.ledger-detail-table td.r{text-align:right;}
+.ledger-detail-table th.c,.ledger-detail-table td.c{text-align:center;}
+.ledger-detail-table tbody tr[data-ledger-row]{cursor:pointer;transition:background .12s;}
+.ledger-detail-table tbody tr[data-ledger-row]:hover,.ledger-detail-table tbody tr[data-ledger-row]:focus-visible{background:var(--accent-tint);outline:none;}
+.ledger-detail-table tbody tr[data-ledger-row] td:nth-child(2) b{display:block;font-weight:650;}
+.ledger-detail-table tbody tr[data-ledger-row] td:nth-child(2) small{display:block;color:var(--muted);font-size:calc(11px * var(--fs,1));margin-top:2px;}
+.ledger-detail-opening{background:var(--surface-2);color:var(--muted);font-weight:600;}
+.ledger-detail-footer{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(120px,180px));align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--hairline);border-top:0;border-radius:0 0 var(--r-l) var(--r-l);padding:10px 12px;font-size:calc(12px * var(--fs,1));}
+.ledger-detail-footer>span{display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;min-width:0;}
+.ledger-detail-footer small{color:var(--muted);font-size:calc(10.5px * var(--fs,1));text-transform:uppercase;letter-spacing:.04em;}
+.ledger-detail-footer strong{white-space:nowrap;}
+.ledger-detail-table-scroll:has(+.ledger-detail-footer){border-radius:var(--r-l) var(--r-l) 0 0;}
+.ledger-detail-empty{min-height:190px;margin:0;border:0;border-radius:0;}
+
 /* indicators: credit limit, stock, balance */
 .indicator{display:flex;flex-direction:column;gap:7px;padding:12px 14px;border-radius:var(--r-m);border:1px solid var(--hairline);background:var(--surface-2);font-size:calc(12.5px * var(--fs,1));}
 .indicator .ind-top{display:flex;align-items:center;gap:7px;font-weight:600;}
@@ -470,6 +502,14 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .case-detail-statuses{justify-content:flex-start;}
   .case-detail-grid{grid-template-columns:1fr;}
   .case-detail-context{position:static;}
+  .ledger-detail{padding:2px 16px 86px;}
+  .ledger-detail-overview{align-items:flex-start;flex-direction:column;}
+  .ledger-detail-account{min-width:0;max-width:none;width:100%;}
+  .ledger-detail-overview .so-kpibar{width:100%;justify-content:flex-start;}
+  .ledger-detail-overview .so-kpi{max-width:none;}
+  .ledger-detail-footer{grid-template-columns:1fr 1fr;}
+  .ledger-detail-footer>b{grid-column:1/-1;}
+  .ledger-detail-footer>span{justify-content:space-between;}
   .report{grid-template-columns:1fr;}
   .report-params{border-right:none;border-bottom:1px solid var(--hairline);max-height:none;}
   .operational-workspace{padding:2px 16px 86px;}
@@ -536,6 +576,16 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .case-detail-actions{bottom:calc(58px + env(safe-area-inset-bottom));margin-left:-1px;margin-right:-1px;flex-wrap:wrap;justify-content:flex-end;}
   .case-detail-actions>.grow,.case-detail-action-note{display:none;}
   .case-detail-actions .btn{min-width:0;max-width:100%;}
+  .ledger-detail{padding:2px 12px 90px;}
+  .ledger-detail-overview,.ledger-detail-table-scroll{border-radius:var(--r-m);}
+  .ledger-detail-table-scroll:has(+.ledger-detail-footer){border-radius:var(--r-m) var(--r-m) 0 0;}
+  .ledger-detail-footer{border-radius:0 0 var(--r-m) var(--r-m);grid-template-columns:1fr;padding:11px;}
+  .ledger-detail-footer>b{grid-column:auto;}
+  .ledger-detail-overview{padding:13px;}
+  .ledger-detail-overview .so-kpibar{margin:0 -13px;width:calc(100% + 26px);padding:0 13px 2px;}
+  .ledger-detail-toolbar{flex-wrap:nowrap;}
+  .ledger-detail-toolbar .transaction-list-note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ledger-detail-toolbar .btn{flex:none;}
   .pickrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px 10px;padding:12px;}
   .pick-check{grid-column:1;grid-row:1 / span 3;}
   .pick-bin{grid-column:2;grid-row:1;}

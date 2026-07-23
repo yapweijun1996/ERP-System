@@ -262,45 +262,122 @@ SCREENS['gl'] = async function(root){
 };
 
 /* ---------------- ACCOUNT LEDGER (drill target) ---------------- */
+function accountLedgerCopy(){
+  const packs={
+    en:{
+      title:'Account ledger',posted:'Canonical posted ledger',entries:'entries',firstRows:'first 100 rows',
+      opening:'Opening balance',debits:'Total debits',credits:'Total credits',closing:'Closing balance',
+      transactions:'Transactions',running:'Running balance',date:'Date',reference:'Reference',
+      debit:'Debit',credit:'Credit',balance:'Balance',back:'Back to General Ledger',
+      empty:'No posted entries',emptyHelp:'This account has no canonical journal entries yet.',
+      unavailable:'No account ledger is available',unavailableHelp:'Return to General Ledger and select an available account.',
+      loadError:'Account ledger could not be loaded.',retry:'Retry',
+    },
+    ms:{
+      title:'Lejar akaun',posted:'Lejar kanonik telah dipos',entries:'catatan',firstRows:'100 baris pertama',
+      opening:'Baki awal',debits:'Jumlah debit',credits:'Jumlah kredit',closing:'Baki akhir',
+      transactions:'Transaksi',running:'Baki berjalan',date:'Tarikh',reference:'Rujukan',
+      debit:'Debit',credit:'Kredit',balance:'Baki',back:'Kembali ke Lejar Am',
+      empty:'Tiada catatan dipos',emptyHelp:'Akaun ini belum mempunyai catatan jurnal kanonik.',
+      unavailable:'Lejar akaun tidak tersedia',unavailableHelp:'Kembali ke Lejar Am dan pilih akaun yang tersedia.',
+      loadError:'Lejar akaun tidak dapat dimuatkan.',retry:'Cuba lagi',
+    },
+    zh:{
+      title:'科目账',posted:'Canonical 已过账明细',entries:'笔记录',firstRows:'前100行',
+      opening:'期初余额',debits:'借方合计',credits:'贷方合计',closing:'期末余额',
+      transactions:'交易流水',running:'运行余额',date:'日期',reference:'凭证',
+      debit:'借方',credit:'贷方',balance:'余额',back:'返回总账',
+      empty:'暂无已过账流水',emptyHelp:'此科目目前没有 Canonical 会计分录。',
+      unavailable:'没有可用的科目账',unavailableHelp:'请返回总账并选择可用科目。',
+      loadError:'无法加载科目账。',retry:'重试',
+    },
+    ja:{
+      title:'勘定元帳',posted:'Canonical 転記済元帳',entries:'件',firstRows:'最初の100行',
+      opening:'開始残高',debits:'借方合計',credits:'貸方合計',closing:'終了残高',
+      transactions:'取引明細',running:'累計残高',date:'日付',reference:'参照',
+      debit:'借方',credit:'貸方',balance:'残高',back:'総勘定元帳に戻る',
+      empty:'転記済明細がありません',emptyHelp:'この勘定にはまだ Canonical 仕訳がありません。',
+      unavailable:'勘定元帳を利用できません',unavailableHelp:'総勘定元帳に戻り、利用可能な勘定を選択してください。',
+      loadError:'勘定元帳を読み込めませんでした。',retry:'再試行',
+    },
+    vi:{
+      title:'Sổ tài khoản',posted:'Sổ Canonical đã ghi',entries:'bút toán',firstRows:'100 dòng đầu',
+      opening:'Số dư đầu',debits:'Tổng nợ',credits:'Tổng có',closing:'Số dư cuối',
+      transactions:'Giao dịch',running:'Số dư lũy kế',date:'Ngày',reference:'Tham chiếu',
+      debit:'Nợ',credit:'Có',balance:'Số dư',back:'Quay lại Sổ Cái',
+      empty:'Không có bút toán đã ghi',emptyHelp:'Tài khoản này chưa có bút toán Canonical.',
+      unavailable:'Không có sổ tài khoản',unavailableHelp:'Quay lại Sổ Cái và chọn một tài khoản khả dụng.',
+      loadError:'Không thể tải sổ tài khoản.',retry:'Thử lại',
+    },
+  };
+  return packs[typeof getLang==='function'?getLang():'en']||packs.en;
+}
+
 SCREENS['account-ledger'] = async function(root, params){
-  await prepareCanonicalFinanceData();
+  const copy=accountLedgerCopy();
+  const columns=[
+    {label:copy.date,key:'date'},
+    {label:copy.reference,render:r=>`<b>${esc(r.je)}</b><small>${esc(r.memo)}</small>`},
+    {label:copy.debit,align:'r',render:r=>r.dr?money(r.dr):'—'},
+    {label:copy.credit,align:'r',render:r=>r.cr?money(r.cr):'—'},
+    {label:copy.balance,align:'r',render:r=>`<b>${money(r.balance)}</b>`},
+  ];
+  try{
+    await prepareCanonicalFinanceData();
+  }catch(error){
+    ledgerDetailPage(root,{
+      module:'finance',route:'account-ledger',title:copy.title,description:copy.loadError,
+      columns,rows:[],rowId:r=>r.id,
+      opening:{label:copy.opening,balance:money(0)},
+      totals:{label:copy.closing,debit:money0(0),credit:money0(0),balance:money(0)},
+      error:{
+        title:copy.loadError,description:error&&error.message||copy.loadError,
+        retryLabel:copy.retry,onRetry:()=>navigate('account-ledger',params),
+      },
+      empty:{icon:'book',title:copy.unavailable,description:copy.unavailableHelp},
+      actions:[{label:copy.back,icon:'chevL',onClick:()=>navigate('gl')}],
+    });
+    return;
+  }
   const a=(params&&params.code&&DB.acctLedgerDocs&&DB.acctLedgerDocs[params.code])||DB.acctLedger;
-  if(!a) throw new Error('No canonical account ledger is available.');
+  if(!a){
+    ledgerDetailPage(root,{
+      module:'finance',route:'account-ledger',title:copy.title,description:copy.unavailableHelp,
+      columns,rows:[],rowId:r=>r.id,
+      opening:{label:copy.opening,balance:money(0)},
+      totals:{label:copy.closing,debit:money0(0),credit:money0(0),balance:money(0)},
+      empty:{icon:'book',title:copy.unavailable,description:copy.unavailableHelp},
+      actions:[{label:copy.back,icon:'chevL',onClick:()=>navigate('gl')}],
+    });
+    return;
+  }
   let run=a.open;
-  const rows=a.rows.map((r,i)=>{ run+=r.dr-r.cr; return `<tr class="je-link" data-je="${esc(r.je)}" style="cursor:pointer">
-      <td class="lineno">${i+1}</td>
-      <td class="l">${esc(r.date)}</td>
-      <td class="l li-name"><b>${esc(r.je)}</b><small>${esc(r.memo)}</small></td>
-      <td class="tnum">${r.dr?money(r.dr):'—'}</td>
-      <td class="tnum">${r.cr?money(r.cr):'—'}</td>
-      <td class="tnum"><b>${money(run)}</b></td></tr>`; }).join('');
+  const rows=a.rows.map((r,index)=>{
+    run+=r.dr-r.cr;
+    return {...r,id:`${r.je}-${index}`,balance:run};
+  });
   const totDr=a.rows.reduce((s,r)=>s+r.dr,0), totCr=a.rows.reduce((s,r)=>s+r.cr,0);
-  root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:960px">
-    ${crumbs([DB.company.name,'Finance','General Ledger',{cur:a.code}])}
-    <div class="dochead">
-      <div class="dh-row1"><div><div class="dt">${ic('book')}${esc(a.name)} <span class="dnum">${esc(a.code)}</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(a.period)} · ${a.rows.length} entries${DB.financeReadMeta&&DB.financeReadMeta.truncated?' · first 100 rows':''}</div></div>
-        <div class="dactions">${btn('Back to GL',{icon:'chevL',cls:'soft',attrs:'onclick="navigate(\'gl\')"'})}${btn('Export',{icon:'download',cls:'soft'})}</div></div>
-      <div class="docmeta">
-        <div class="dm"><small>Opening balance</small><b>${money0(a.open)}</b></div>
-        <div class="dm"><small>Total debits</small><b>${money0(totDr)}</b></div>
-        <div class="dm"><small>Total credits</small><b>${money0(totCr)}</b></div>
-        <div class="dm"><small>Closing balance</small><b>${money0(a.close)}</b></div>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-h"><h3>Transactions</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">running balance</span></div>
-      <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Date</th><th class="l">Reference</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
-      <tbody><tr style="background:var(--surface-2)"><td></td><td class="l" colspan="2" style="font-weight:600;color:var(--muted)">Opening balance</td><td></td><td></td><td class="tnum"><b>${money(a.open)}</b></td></tr>${rows}</tbody>
-      <tfoot><tr><td></td><td class="l" colspan="2" style="font-weight:600">Closing balance</td><td class="tnum"><b>${money0(totDr)}</b></td><td class="tnum"><b>${money0(totCr)}</b></td><td class="tnum"><b>${money(a.close)}</b></td></tr></tfoot>
-      </table>
-    </div>
-    <div style="height:40px"></div>
-  </div></div></section></div>`;
-  root.querySelectorAll('tr.je-link').forEach(tr=>tr.addEventListener('click',()=>{
-    const ref=tr.dataset.je;
-    (DB.journalDocs&&DB.journalDocs[ref])?navigate('journal-entry',{no:ref}):toast('Open journal · '+ref,'info');
-  }));
+  const truncated=Boolean(DB.financeReadMeta&&DB.financeReadMeta.truncated);
+  ledgerDetailPage(root,{
+    module:'finance',route:'account-ledger',title:a.name,
+    description:`${a.code} · ${copy.posted} · ${a.rows.length} ${copy.entries}${truncated?` · ${copy.firstRows}`:''}`,
+    account:{code:a.code,name:a.name,meta:a.period},
+    metrics:[
+      {label:copy.opening,value:money0(a.open)},
+      {label:copy.debits,value:money0(totDr)},
+      {label:copy.credits,value:money0(totCr)},
+      {label:copy.closing,value:money0(a.close)},
+    ],
+    columns,rows,rowId:r=>r.id,
+    opening:{label:copy.opening,balance:money(a.open)},
+    totals:{label:copy.closing,debit:money0(totDr),credit:money0(totCr),balance:money(a.close)},
+    note:`${copy.transactions} · ${copy.running}`,
+    actions:[{label:copy.back,icon:'chevL',onClick:()=>navigate('gl')}],
+    empty:{icon:'book',title:copy.empty,description:copy.emptyHelp},
+    onOpen:row=>(DB.journalDocs&&DB.journalDocs[row.je])
+      ?navigate('journal-entry',{no:row.je})
+      :toast(`${copy.reference} · ${row.je}`,'info'),
+  });
 };
 
 /* ---------------- CANONICAL BANK RECONCILIATION ----------------

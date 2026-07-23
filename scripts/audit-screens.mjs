@@ -23,7 +23,8 @@
 //     routes while migrating legacy screens in bounded batches, or
 //     WORKSPACE_LAYOUT_ONLY=1 for operational workspaces, or
 //     MASTER_DETAIL_EDITOR_ONLY=1 for versioned master-data detail editors, or
-//     CASE_DETAIL_ONLY=1 for actionable lifecycle case details.
+//     CASE_DETAIL_ONLY=1 for actionable lifecycle case details, or
+//     LEDGER_DETAIL_ONLY=1 for immutable financial account ledgers.
 //   - stateful transaction detail routes are opened through real fixtures
 //     instead of silently redirecting because no record was selected.
 //
@@ -44,19 +45,21 @@ const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 const WORKSPACE_LAYOUT_ONLY = process.env.WORKSPACE_LAYOUT_ONLY === '1';
 const MASTER_DETAIL_EDITOR_ONLY = process.env.MASTER_DETAIL_EDITOR_ONLY === '1';
 const CASE_DETAIL_ONLY = process.env.CASE_DETAIL_ONLY === '1';
+const LEDGER_DETAIL_ONLY = process.env.LEDGER_DETAIL_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
 const MASTER_DETAIL_EDITOR_LAYOUT = 'master-detail-editor-v1';
 const CASE_DETAIL_LAYOUT = 'case-detail-v1';
+const LEDGER_DETAIL_LAYOUT = 'ledger-detail-v1';
 const VALID_LAYOUTS = new Set([
-  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,
+  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,
   'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
 ]);
 
-if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY].filter(Boolean).length > 1) {
-  throw new Error('LIST_LAYOUT_ONLY, WORKSPACE_LAYOUT_ONLY, MASTER_DETAIL_EDITOR_ONLY and CASE_DETAIL_ONLY are mutually exclusive.');
+if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY].filter(Boolean).length > 1) {
+  throw new Error('LIST_LAYOUT_ONLY, WORKSPACE_LAYOUT_ONLY, MASTER_DETAIL_EDITOR_ONLY, CASE_DETAIL_ONLY and LEDGER_DETAIL_ONLY are mutually exclusive.');
 }
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
@@ -96,6 +99,20 @@ const obsoleteNcrChrome = ['docwrap','docpage','dochead','doclayout','set-saveba
   .filter((token) => ncrScreenSource.includes(token));
 if (obsoleteNcrChrome.length) {
   throw new Error(`NCR still rebuilds legacy document chrome: ${obsoleteNcrChrome.join(', ')}`);
+}
+
+const financeScreenSource = readFileSync(path.join(assetDir, 'screens-fin2.js'), 'utf8');
+const accountLedgerScreenSource = (financeScreenSource.split("SCREENS['account-ledger'] =")[1] || '')
+  .split('/* ---------------- CANONICAL BANK RECONCILIATION')[0];
+const obsoleteAccountLedgerChrome = ['docwrap','docpage','dochead','docmeta']
+  .filter((token) => accountLedgerScreenSource.includes(token));
+if (obsoleteAccountLedgerChrome.length) {
+  throw new Error(`Account Ledger still rebuilds legacy document chrome: ${obsoleteAccountLedgerChrome.join(', ')}`);
+}
+const unimplementedAccountLedgerActions = ['Export','Print']
+  .filter((token) => new RegExp(`\\b${token}\\b`).test(accountLedgerScreenSource));
+if (unimplementedAccountLedgerActions.length) {
+  throw new Error(`Account Ledger still exposes an unimplemented action: ${unimplementedAccountLedgerActions.join(', ')}`);
 }
 
 function waitForServer(url, timeoutMs) {
@@ -246,7 +263,9 @@ async function auditRoutes(browser, viewport) {
         ? allRoutes.filter((route) => screenMeta[route]?.layout === MASTER_DETAIL_EDITOR_LAYOUT)
         : CASE_DETAIL_ONLY
           ? allRoutes.filter((route) => screenMeta[route]?.layout === CASE_DETAIL_LAYOUT)
-          : allRoutes;
+          : LEDGER_DETAIL_ONLY
+            ? allRoutes.filter((route) => screenMeta[route]?.layout === LEDGER_DETAIL_LAYOUT)
+            : allRoutes;
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a shared list layout.');
   }
@@ -258,6 +277,9 @@ async function auditRoutes(browser, viewport) {
   }
   if (CASE_DETAIL_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a case detail layout.');
+  }
+  if (LEDGER_DETAIL_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare a ledger detail layout.');
   }
   const missingAdapterMethods = await page.evaluate(() => {
     const required = ['list','get','create','update','action','refresh','session','switchCompany'];
@@ -430,6 +452,46 @@ async function auditRoutes(browser, viewport) {
       if (caseDetailRoot && caseDetailRoot.querySelector('.docpage,.doclayout')) {
         layoutIssues.push('case detail still renders legacy document chrome');
       }
+      const ledgerDetailRoot = el.querySelector('[data-layout="ledger-detail-v1"]');
+      const ledgerDetailRegions = ledgerDetailRoot ? [
+        ledgerDetailRoot.querySelector('[data-ledger-overview]'),
+        ledgerDetailRoot.querySelector('[data-ledger-error]'),
+        ledgerDetailRoot.querySelector('[data-ledger-toolbar]'),
+        ledgerDetailRoot.querySelector('[data-ledger-table]'),
+        ledgerDetailRoot.querySelector('[data-ledger-footer]'),
+      ] : [];
+      const ledgerDetailOrder = ledgerDetailRegions.length === 5
+        && ledgerDetailRegions.every(Boolean)
+        && ledgerDetailRegions.every((node,index)=>index === 0
+          || Boolean(ledgerDetailRegions[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+      const ledgerTableStyle = ledgerDetailRegions[3] ? getComputedStyle(ledgerDetailRegions[3]) : null;
+      const ledgerTableBounded = Boolean(
+        ledgerDetailRegions[3]
+        && ledgerTableStyle
+        && ['auto','scroll'].includes(ledgerTableStyle.overflowX)
+      );
+      if (ledgerDetailRoot && ledgerDetailRegions[2]
+          && ledgerDetailRegions[2].offsetParent !== null
+          && ledgerDetailRegions[2].scrollWidth > ledgerDetailRegions[2].clientWidth + 1) {
+        layoutIssues.push(`ledger detail toolbar overflow ${ledgerDetailRegions[2].scrollWidth}>${ledgerDetailRegions[2].clientWidth}`);
+      }
+      if (ledgerDetailRoot && ledgerDetailRegions[4]
+          && ledgerDetailRegions[4].offsetParent !== null
+          && ledgerDetailRegions[4].scrollWidth > ledgerDetailRegions[4].clientWidth + 1) {
+        layoutIssues.push(`ledger detail footer overflow ${ledgerDetailRegions[4].scrollWidth}>${ledgerDetailRegions[4].clientWidth}`);
+      }
+      if (ledgerDetailRoot && !ledgerTableBounded) {
+        layoutIssues.push('ledger detail table is missing its bounded scroll container');
+      }
+      if (ledgerDetailRoot && ledgerDetailRoot.querySelector('.docwrap,.docpage,.dochead,.docmeta')) {
+        layoutIssues.push('ledger detail still renders legacy document chrome');
+      }
+      const ledgerUnhandledActions = ledgerDetailRoot
+        ? [...ledgerDetailRoot.querySelectorAll('button')].filter((button) => /\b(export|print)\b/i.test(button.textContent || ''))
+        : [];
+      if (ledgerUnhandledActions.length) {
+        layoutIssues.push('ledger detail exposes Export or Print without an implementation');
+      }
       return {
         text: el.innerText || '',
         previewBanner: Boolean(el.querySelector('[data-preview-banner]')),
@@ -483,6 +545,22 @@ async function auditRoutes(browser, viewport) {
           errorRegion: Boolean(caseDetailRoot?.querySelector('[data-case-error]')),
           legacyDocumentChrome: Boolean(caseDetailRoot?.querySelector('.docpage,.doclayout')),
         },
+        ledgerDetailLayout: {
+          present: Boolean(ledgerDetailRoot),
+          actualLayout: ledgerDetailRoot?.getAttribute('data-layout') || null,
+          missingRegions: ledgerDetailRoot
+            ? ['overview','error','toolbar','table','footer'].filter((_,index)=>!ledgerDetailRegions[index])
+            : [],
+          ordered: ledgerDetailOrder,
+          pageheads: el.querySelectorAll('.pagehead').length,
+          errorRegion: Boolean(ledgerDetailRoot?.querySelector('[data-ledger-error]')),
+          legacyDocumentChrome: Boolean(ledgerDetailRoot?.querySelector('.docwrap,.docpage,.dochead,.docmeta')),
+          openingRow: Boolean(ledgerDetailRoot?.querySelector('[data-ledger-opening]')),
+          rowCount: ledgerDetailRoot?.querySelectorAll('[data-ledger-row]').length || 0,
+          runningBalance: Boolean(ledgerDetailRoot?.querySelector('[data-ledger-row] td:last-child')),
+          controlledTable: ledgerTableBounded,
+          unhandledActions: ledgerUnhandledActions.map((button) => (button.textContent || '').trim()),
+        },
         layoutProfile: {
           heading: el.querySelector('h1')?.textContent?.trim() || '',
           gridTables: el.querySelectorAll('.dt-page').length,
@@ -498,6 +576,7 @@ async function auditRoutes(browser, viewport) {
             || workspaceRoot?.getAttribute('data-layout')
             || masterDetailEditorRoot?.getAttribute('data-layout')
             || caseDetailRoot?.getAttribute('data-layout')
+            || ledgerDetailRoot?.getAttribute('data-layout')
             || null,
         },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
@@ -518,6 +597,11 @@ async function auditRoutes(browser, viewport) {
       caseDetailLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
+      },
+      ledgerDetailLayout: {
+        present: false, actualLayout: null, missingRegions: [], ordered: false,
+        pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
+        openingRow: false, rowCount: 0, runningBalance: false, controlledTable: false, unhandledActions: [],
       },
       layoutProfile: {
         heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
@@ -632,12 +716,51 @@ async function auditRoutes(browser, viewport) {
     if (rendered.caseDetailLayout.present && meta?.layout !== CASE_DETAIL_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.caseDetailLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
     }
+    if (meta?.layout === LEDGER_DETAIL_LAYOUT) {
+      if (!rendered.ledgerDetailLayout.present) {
+        rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} root missing`);
+      } else {
+        if (rendered.ledgerDetailLayout.actualLayout !== meta.layout) {
+          rendered.layoutIssues.push(`rendered ${rendered.ledgerDetailLayout.actualLayout} but declared ${meta.layout}`);
+        }
+        if (rendered.ledgerDetailLayout.missingRegions.length) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} regions missing: ${rendered.ledgerDetailLayout.missingRegions.join(', ')}`);
+        }
+        if (!rendered.ledgerDetailLayout.ordered) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} regions are outside canonical order`);
+        }
+        if (rendered.ledgerDetailLayout.pageheads !== 1) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} rendered ${rendered.ledgerDetailLayout.pageheads} module page headers`);
+        }
+        if (!rendered.ledgerDetailLayout.errorRegion) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} error region missing`);
+        }
+        if (rendered.ledgerDetailLayout.legacyDocumentChrome) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} contains legacy document chrome`);
+        }
+        if (!rendered.ledgerDetailLayout.openingRow) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} opening balance row missing`);
+        }
+        if (rendered.ledgerDetailLayout.rowCount > 0 && !rendered.ledgerDetailLayout.runningBalance) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} running balance cells missing`);
+        }
+        if (!rendered.ledgerDetailLayout.controlledTable) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} table lacks controlled horizontal scrolling`);
+        }
+        if (rendered.ledgerDetailLayout.unhandledActions.length) {
+          rendered.layoutIssues.push(`${LEDGER_DETAIL_LAYOUT} contains unimplemented actions: ${rendered.ledgerDetailLayout.unhandledActions.join(', ')}`);
+        }
+      }
+    }
+    if (rendered.ledgerDetailLayout.present && meta?.layout !== LEDGER_DETAIL_LAYOUT) {
+      rendered.layoutIssues.push(`rendered ${rendered.ledgerDetailLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
     const highConfidenceRegister = rendered.layoutProfile.gridTables > 0
       && !rendered.layoutProfile.documentPage
       && !rendered.layoutProfile.formSurface
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
-      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT].includes(meta?.layout);
+      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT].includes(meta?.layout);
     if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
     }
@@ -859,6 +982,119 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'ncr');
     if (result) {
       result.layoutIssues.push(...ncrIssues.map((issue)=>`NCR state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('account-ledger')) {
+    const ledgerIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const originalNavigate = window.navigate;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const expectedBack = {
+        en:'Back to General Ledger',
+        ms:'Kembali ke Lejar Am',
+        zh:'返回总账',
+        ja:'総勘定元帳に戻る',
+        vi:'Quay lại Sổ Cái',
+      };
+      const issues = [];
+      const ledgerRoot = () => document.querySelector('#viewRoot [data-layout="ledger-detail-v1"]');
+      try {
+        for (const [locale,backLabel] of Object.entries(expectedBack)) {
+          window.getLang = () => locale;
+          await navigate('account-ledger');
+          const root = ledgerRoot();
+          if (!root) {
+            issues.push(`${locale} ledger detail root missing`);
+            continue;
+          }
+          const back = [...root.querySelectorAll('button')]
+            .find((button) => button.textContent?.trim() === backLabel);
+          if (!back) issues.push(`${locale} Back action missing or untranslated`);
+          if (!root.querySelector('[data-ledger-opening]')) issues.push(`${locale} opening balance row missing`);
+          if (!root.querySelector('[data-ledger-footer]')) issues.push(`${locale} closing totals missing`);
+        }
+
+        window.getLang = () => 'en';
+        await navigate('account-ledger');
+        const defaultRoot = ledgerRoot();
+        if (!defaultRoot) {
+          issues.push('default account did not render the ledger shell');
+        } else {
+          const firstRow = defaultRoot.querySelector('[data-ledger-row]');
+          if (firstRow) {
+            let captured = null;
+            window.navigate = async (route,params) => { captured={route,params}; };
+            firstRow.click();
+            window.navigate = originalNavigate;
+            if (captured?.route !== 'journal-entry' || captured?.params?.no !== firstRow.querySelector('b')?.textContent?.trim()) {
+              issues.push('journal row did not navigate to its Journal Entry');
+            }
+          }
+          if (defaultRoot.querySelector('[data-ledger-opening][data-ledger-row], [data-ledger-footer] [data-ledger-row]')) {
+            issues.push('opening or totals row is incorrectly interactive');
+          }
+          if ([...defaultRoot.querySelectorAll('button')].some((button) => /\b(export|print)\b/i.test(button.textContent || ''))) {
+            issues.push('unimplemented Export or Print action is visible');
+          }
+        }
+
+        window.navigate = originalNavigate;
+        const defaultCode = ledgerRoot()?.getAttribute('data-ledger-account') || '';
+        const otherCode = Object.keys(DB.acctLedgerDocs || {}).find((code) => code !== defaultCode);
+        if (otherCode) {
+          await SCREENS['account-ledger'](document.getElementById('viewRoot'),{code:otherCode});
+          if (ledgerRoot()?.getAttribute('data-ledger-account') !== otherCode) {
+            issues.push(`requested account ${otherCode} did not render`);
+          }
+        }
+
+        adapter.list = async (resource,query) => resource === 'finance/gl-entries'
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('account-ledger');
+        if (!ledgerRoot()?.querySelector('[data-ledger-empty]')) issues.push('zero-entry empty state missing');
+        if (!ledgerRoot()?.querySelector('[data-ledger-opening]') || !ledgerRoot()?.querySelector('[data-ledger-footer]')) {
+          issues.push('zero-entry state lost opening or closing summaries');
+        }
+
+        adapter.list = async (resource,query) => resource === 'finance/accounts'
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('account-ledger');
+        if (!ledgerRoot()?.querySelector('[data-ledger-empty]')) issues.push('no-account empty state missing');
+        if (!ledgerRoot()) issues.push('no-account state left the shared ledger shell');
+
+        adapter.list = async (resource,query) => {
+          if (resource === 'finance/accounts') throw new Error('ledger audit failure');
+          return originalList.call(adapter,resource,query);
+        };
+        await navigate('account-ledger');
+        const errorRoot = ledgerRoot();
+        if (!errorRoot?.querySelector('[data-ledger-error]:not([hidden])')) {
+          issues.push('read failure did not render the standard error state');
+        }
+        adapter.list = originalList;
+        errorRoot?.querySelector('[data-ledger-retry]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,250));
+        if (!ledgerRoot() || ledgerRoot()?.querySelector('[data-ledger-error]:not([hidden])')) {
+          issues.push('Retry did not recover the Account Ledger');
+        }
+      } finally {
+        adapter.list = originalList;
+        window.navigate = originalNavigate;
+        window.getLang = originalGetLang;
+        await navigate('account-ledger');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'account-ledger');
+    if (result) {
+      result.layoutIssues.push(...ledgerIssues.map((issue)=>`Ledger state smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }

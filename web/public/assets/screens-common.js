@@ -273,6 +273,122 @@ function caseDetailPage(root, config){
 window.caseDetailPage=caseDetailPage;
 
 /**
+ * Page-level SSOT for immutable financial account ledgers.
+ *
+ * A ledger is a drill target with accounting-specific opening/running/closing
+ * balance semantics. It follows the standard module/list visual language while
+ * keeping those rows structurally distinct from real journal entries.
+ */
+function ledgerDetailPage(root, config){
+  if(!root) throw new Error('ledgerDetailPage requires a render root.');
+  const cfg=config||{};
+  const account=cfg.account||{};
+  const metrics=Array.isArray(cfg.metrics)?cfg.metrics:[];
+  const columns=Array.isArray(cfg.columns)?cfg.columns:[];
+  const rows=Array.isArray(cfg.rows)?cfg.rows:[];
+  const opening=cfg.opening||{};
+  const totals=cfg.totals||{};
+  const actions=Array.isArray(cfg.actions)?cfg.actions:[];
+  const error=cfg.error||null;
+  const empty=cfg.empty||{};
+  const hasAccount=Boolean(account.code||account.name||account.meta);
+  const metricHtml=metrics.length?metrics.map(metric=>`<div class="so-kpi ${metric.tone||''}">
+      <small>${esc(String(metric.label||''))}</small>
+      <b class="tnum">${esc(String(metric.value??'—'))}</b>
+    </div>`).join(''):'';
+  const actionHtml=actions.map((action,index)=>btn(String(action.label||''),{
+    icon:action.icon||null,
+    cls:action.cls||'soft',
+    attrs:`data-ledger-action="${index}"${action.disabled?' disabled':''}`,
+  })).join('');
+  const columnHtml=columns.map(column=>`<th class="${column.align==='r'?'r':column.align==='c'?'c':'l'}">${esc(String(column.label||''))}</th>`).join('');
+  const rowHtml=rows.map(row=>{
+    const id=typeof cfg.rowId==='function'?cfg.rowId(row):'';
+    return `<tr data-ledger-row="${esc(String(id??''))}" ${typeof cfg.onOpen==='function'?'tabindex="0"':''}>
+      ${columns.map(column=>`<td class="${column.align==='r'?'r tnum':column.align==='c'?'c':'l'}">${column.render?column.render(row):esc(String(row[column.key]??''))}</td>`).join('')}
+    </tr>`;
+  }).join('');
+  const emptyHtml=!rows.length?`<tr data-ledger-empty><td colspan="${Math.max(1,columns.length)}">
+    <div class="statepanel empty ledger-detail-empty">
+      ${ic(empty.icon||'book')}
+      <h3>${esc(String(empty.title||'No ledger entries'))}</h3>
+      ${empty.description?`<p>${esc(String(empty.description))}</p>`:''}
+    </div>
+  </td></tr>`:'';
+  const openingCells=columns.length>=2
+    ? `<td class="l" colspan="${columns.length-1}">${esc(String(opening.label||'Opening balance'))}</td>
+       <td class="r tnum"><b>${esc(String(opening.balance??'—'))}</b></td>`
+    : `<td class="r tnum"><b>${esc(String(opening.balance??'—'))}</b></td>`;
+  const errorHtml=error?`${ic('warn')}<div><b>${esc(String(error.title||'Ledger unavailable'))}</b>
+      ${error.description?`<span>${esc(String(error.description))}</span>`:''}</div>
+      ${typeof error.onRetry==='function'?btn(String(error.retryLabel||'Retry'),{icon:'refresh',cls:'soft',attrs:'data-ledger-retry'}):''}`:'';
+  const body=`<section class="ledger-detail"
+      data-layout="ledger-detail-v1"
+      data-ledger-route="${esc(String(cfg.route||''))}"
+      data-ledger-account="${esc(String(account.code||''))}">
+    <div class="ledger-detail-overview" data-ledger-overview ${hasAccount?'':'hidden'}>
+      <div class="ledger-detail-account">
+        <b>${esc(String(account.code||''))}</b>
+        <span>${esc(String(account.name||''))}</span>
+        ${account.meta?`<small>${esc(String(account.meta))}</small>`:''}
+      </div>
+      <div class="so-kpibar">${metricHtml}</div>
+    </div>
+    <div class="ledger-detail-error" data-ledger-error role="alert" ${error?'':'hidden'}>${errorHtml}</div>
+    <div class="toolbar ledger-detail-toolbar" data-ledger-toolbar>
+      ${cfg.note?`<small class="transaction-list-note">${esc(String(cfg.note))}</small>`:''}
+      <div class="grow"></div>${actionHtml}
+    </div>
+    <div class="ledger-detail-table-scroll" data-ledger-table>
+      <table class="ledger-detail-table">
+        <thead><tr>${columnHtml}</tr></thead>
+        <tbody>
+          <tr class="ledger-detail-opening" data-ledger-opening>${openingCells}</tr>
+          ${rowHtml}${emptyHtml}
+        </tbody>
+      </table>
+    </div>
+    <div class="ledger-detail-footer" data-ledger-footer>
+      <b>${esc(String(totals.label||'Closing balance'))}</b>
+      <span><small>${esc(String(metrics[1]?.label||''))}</small><strong class="tnum">${esc(String(totals.debit??'—'))}</strong></span>
+      <span><small>${esc(String(metrics[2]?.label||''))}</small><strong class="tnum">${esc(String(totals.credit??'—'))}</strong></span>
+      <span><small>${esc(String(metrics[3]?.label||totals.label||''))}</small><strong class="tnum">${esc(String(totals.balance??'—'))}</strong></span>
+    </div>
+  </section>`;
+  root.innerHTML=modulePage({
+    module:cfg.module,
+    route:cfg.route,
+    active:cfg.active||cfg.route,
+    title:String(cfg.title||account.name||''),
+    crumb:cfg.crumb,
+    sub:cfg.description,
+    count:error?null:rows.length,
+    body,
+  });
+  const ledgerRoot=root.querySelector('[data-layout="ledger-detail-v1"]');
+  actions.forEach((action,index)=>{
+    ledgerRoot?.querySelector(`[data-ledger-action="${index}"]`)?.addEventListener('click',event=>{
+      if(typeof action.onClick==='function'&&!action.disabled) action.onClick(event);
+    });
+  });
+  ledgerRoot?.querySelector('[data-ledger-retry]')?.addEventListener('click',event=>error.onRetry(event));
+  if(typeof cfg.onOpen==='function'){
+    ledgerRoot?.querySelectorAll('[data-ledger-row]').forEach(row=>{
+      const open=()=>cfg.onOpen(rows.find(candidate=>String(cfg.rowId(candidate))===String(row.dataset.ledgerRow)),row.dataset.ledgerRow);
+      row.addEventListener('click',open);
+      row.addEventListener('keydown',event=>{
+        if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}
+      });
+    });
+  }
+  if(typeof cfg.afterRender==='function'){
+    cfg.afterRender({root,ledgerRoot,errorRoot:ledgerRoot&&ledgerRoot.querySelector('[data-ledger-error]')});
+  }
+  return ledgerRoot;
+}
+window.ledgerDetailPage=ledgerDetailPage;
+
+/**
  * Page-level SSOT for canonical transaction registers.
  *
  * `modulePage()` owns the shared ERP shell and `buildTable()`/`wireTable()` own
