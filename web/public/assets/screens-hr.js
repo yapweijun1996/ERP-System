@@ -317,58 +317,32 @@ function hrStatusTone(status){ return {active:'ok',onleave:'info',inactive:'neut
 SCREENS['hr-directory'] = async function(root){
   const s=hrCopy();
   const {employees,leaveRequests}=await prepareHrData();
-  let filter='all';
   const depts=[...new Set(employees.map(e=>e.department))];
   const chips=[['all',t('common.all')]].concat(depts.map(d=>[d,d]));
-  function rows(){ return filter==='all'?employees:employees.filter(e=>e.department===filter); }
-  function table(){
-    return buildTable({
-      rowId:e=>e.id,
-      columns:[
-        {label:t('hr.col.employee'),render:e=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:${hrAvatarColor(e.fullName)};width:30px;height:30px;font-size:11px">${esc(hrInitials(e.fullName))}</span><div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.employeeNo)}</small></div></div>`},
-        {label:t('hr.col.dept'),align:'l',render:e=>esc(e.department)},
-        {label:t('hr.col.role'),align:'l',render:e=>esc(e.jobTitle)},
-        {label:t('qc.col.type'),align:'l',render:e=>e.employmentType==='Contract'?cap(t('hr.emp.contract'),'violet'):cap(hrEmploymentTypeLabel(s,e.employmentType),'neutral')},
-        {label:t('hr.col.joined'),align:'l',render:e=>esc(dateValue(e.startDate))},
-        {label:t('col.status'),align:'l',render:e=>{ const st=hrStatusOf(e,leaveRequests); return cap(hrStatusLabel(s,st),hrStatusTone(st)); }},
-        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
-      ],
-      rows:rows(),
-    });
-  }
   const onLeave=employees.filter(e=>hrIsOnLeaveToday(e.id,leaveRequests)).length;
   const pending=leaveRequests.filter(l=>l.status==='pending').length;
-  function statTile(label,value,sub,tone){
-    return `<div class="card" style="padding:13px 15px"><small style="display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${label}</small>
-      <b class="tnum" style="font-size:23px;font-weight:600;letter-spacing:-.02em;color:${tone||'var(--fg)'}">${value}</b>
-      <small style="display:block;color:var(--muted);font-size:12px;margin-top:3px">${sub}</small></div>`;
-  }
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,t('nav.hr'),t('hr.crumb')])}
-      <div class="h1row"><h1>${esc(t('hr.title'))}</h1><span class="countchip" id="hrCount"></span></div>
-    </div>
-    <div class="statwrap"><div class="statcards">
-      ${statTile(t('hr.t.headcount'),employees.length,t('hr.acrossdepts').replaceAll('{n}',depts.length))}
-      ${statTile(t('hr.t.onleave'),onLeave,t('hr.t.onleavesub'),'var(--accent)')}
-      ${statTile(t('hr.t.pending'),pending,t('hr.t.pendingsub'),'var(--warn)')}
-    </div></div>
-    <div class="toolbar">
-      <div class="filterchips" id="hrChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${esc(c[0])}">${esc(c[1])}</button>`).join('')}</div>
-      <div class="grow"></div>
-      <button class="viewsel" data-tip="${esc(t('hr.leavetip'))}" onclick="navigate('leave-approval')">${ic('calendar')}${esc(t('hr.leave'))}</button>
-      ${btn(t('hr.add'),{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-employee\')"'})}
-    </div>
-    <div class="tablewrap" id="hrTable">${table()}</div>
-  </section></div>`;
-  $('#hrCount').textContent=rows().length+' '+t('hr.employees');
-  function openEmployee(id){ navigate('employee',{employeeId:Number(id)}); }
-  function rewire(){
-    wireTable($('#hrTable'),{ onRow:openEmployee });
-    $('#hrTable').querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEmployee(b.closest('.dt-r').dataset.row);}));
-  }
-  rewire();
-  $('#hrChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#hrChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f; $('#hrTable').innerHTML=table(); $('#hrCount').textContent=rows().length+' '+t('hr.employees'); rewire(); }));
+  transactionListPage(root,{
+    module:'hr',route:'hr-directory',title:t('hr.title'),
+    rows:employees,rowId:e=>e.id,
+    filters:chips,filterFn:(employee,department)=>employee.department===department,
+    kpis:[
+      {label:t('hr.t.headcount'),value:employees.length},
+      {label:t('hr.t.onleave'),value:onLeave,accent:true},
+      {label:t('hr.t.pending'),value:pending,filter:null,negative:pending>0},
+    ],
+    primaryAction:{label:t('hr.add'),icon:'plus',onClick:()=>navigate('new-employee')},
+    toolbarActions:[{label:t('hr.leave'),icon:'calendar',onClick:()=>navigate('leave-approval')}],
+    columns:[
+      {label:t('hr.col.employee'),render:e=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:${hrAvatarColor(e.fullName)};width:30px;height:30px;font-size:11px">${esc(hrInitials(e.fullName))}</span><div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.employeeNo)}</small></div></div>`},
+      {label:t('hr.col.dept'),align:'l',render:e=>esc(e.department)},
+      {label:t('hr.col.role'),align:'l',render:e=>esc(e.jobTitle)},
+      {label:t('qc.col.type'),align:'l',render:e=>e.employmentType==='Contract'?cap(t('hr.emp.contract'),'violet'):cap(hrEmploymentTypeLabel(s,e.employmentType),'neutral')},
+      {label:t('hr.col.joined'),align:'l',render:e=>esc(dateValue(e.startDate))},
+      {label:t('col.status'),align:'l',render:e=>{ const st=hrStatusOf(e,leaveRequests); return cap(hrStatusLabel(s,st),hrStatusTone(st)); }},
+    ],
+    onOpen:e=>navigate('employee',{employeeId:Number(e.id)}),
+    empty:{icon:'people',title:'No employees'},
+  });
 };
 
 /* ---------------- EMPLOYEE PROFILE (master) ---------------- */

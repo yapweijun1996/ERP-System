@@ -27,7 +27,7 @@
 // Usage: npm run build:demo && node scripts/audit-screens.mjs
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -38,16 +38,34 @@ const PORT = process.env.AUDIT_PORT || '4311';
 const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
+const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
+const VALID_LAYOUTS = new Set([
+  'transaction-list-v1','dashboard','report','document-detail','form',
+  'master-detail','workspace','board','activity-feed',
+]);
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
 const VIEWPORTS = [
   { label: 'desktop', width: 1280, height: 800 },
   { label: 'mobile', width: 375, height: 812 },
-];
+].filter((viewport) => !process.env.AUDIT_VIEWPORT || process.env.AUDIT_VIEWPORT === viewport.label);
 
 if (!existsSync(DIST_INDEX)) {
   console.error(`web/dist/index.html not found. Run "npm run build:demo" before this script.`);
   process.exit(1);
+}
+
+const assetDir = path.join(WEB_DIR, 'public', 'assets');
+const legacyListFactoryHits = readdirSync(assetDir)
+  .filter((name) => name.endsWith('.js'))
+  .flatMap((name) => {
+    const source = readFileSync(path.join(assetDir, name), 'utf8');
+    return ['makeSalesList','makePurList','rowMenuBtn']
+      .filter((token) => new RegExp(`\\b${token}\\b`).test(source))
+      .map((token) => `${name}:${token}`);
+  });
+if (legacyListFactoryHits.length) {
+  throw new Error(`Obsolete page-level list factories remain: ${legacyListFactoryHits.join(', ')}`);
 }
 
 function waitForServer(url, timeoutMs) {
@@ -182,6 +200,14 @@ async function auditRoutes(browser, viewport) {
   const allRoutes = await page.evaluate(() => Object.keys(SCREENS).sort());
   const routeModule = await page.evaluate(() => Object.assign({}, ROUTE_MODULE));
   const screenMeta = await page.evaluate(() => JSON.parse(JSON.stringify(window.SCREEN_META || {})));
+  const missingLayoutMeta = allRoutes.filter((route) => !screenMeta[route]?.layout);
+  const invalidLayoutMeta = allRoutes.filter((route) => !VALID_LAYOUTS.has(screenMeta[route]?.layout));
+  if (missingLayoutMeta.length || invalidLayoutMeta.length) {
+    throw new Error([
+      missingLayoutMeta.length ? `Routes without an explicit layout: ${missingLayoutMeta.join(', ')}` : '',
+      invalidLayoutMeta.length ? `Routes with an invalid layout: ${invalidLayoutMeta.join(', ')}` : '',
+    ].filter(Boolean).join(' | '));
+  }
   const routes = LIST_LAYOUT_ONLY
     ? allRoutes.filter((route) => screenMeta[route]?.layout === 'transaction-list-v1')
     : allRoutes;
@@ -269,6 +295,19 @@ async function auditRoutes(browser, viewport) {
             : [],
           ordered: listRegionOrder,
         },
+        layoutProfile: {
+          heading: el.querySelector('h1')?.textContent?.trim() || '',
+          gridTables: el.querySelectorAll('.dt-page').length,
+          semanticTables: el.querySelectorAll('table.lines').length,
+          visibleRows: [...el.querySelectorAll('.dt-body .dt-r,table.lines tbody tr')]
+            .filter((row) => row.getClientRects().length > 0).length,
+          salesBody: Boolean(el.querySelector('.sales-body')),
+          documentPage: Boolean(el.querySelector('.docpage,.doclayout')),
+          formSurface: Boolean(el.querySelector('form,.formgrid,.set-grid,.wizard-card')),
+          splitSurface: Boolean(el.querySelector('.split,.so-split,.doclayout,.master-detail')),
+          dashboardSurface: Boolean(el.querySelector('.dashgrid,.db-grid,.sb-grid,.analytics-status-grid')),
+          actualLayout: listRoot ? 'transaction-list-v1' : null,
+        },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
         renderError: Boolean(el.querySelector('.screen-render-error')),
       };
@@ -276,6 +315,11 @@ async function auditRoutes(browser, viewport) {
       text: '', previewBanner: false, enabledPreviewWrites: [],
       layoutIssues: ['render inspection failed'],
       listLayout: { present: false, missingRegions: [], ordered: false },
+      layoutProfile: {
+        heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
+        salesBody: false, documentPage: false, formSurface: false,
+        splitSurface: false, dashboardSurface: false, actualLayout: null,
+      },
       moduleShell: false, renderError: true,
     }));
 
@@ -294,6 +338,18 @@ async function auditRoutes(browser, viewport) {
         }
       }
     }
+    if (rendered.listLayout.present && meta?.layout !== 'transaction-list-v1') {
+      rendered.layoutIssues.push(`rendered transaction-list-v1 but declared ${meta?.layout || 'none'}`);
+    }
+    const highConfidenceRegister = rendered.layoutProfile.gridTables > 0
+      && !rendered.layoutProfile.documentPage
+      && !rendered.layoutProfile.formSurface
+      && !rendered.layoutProfile.splitSurface
+      && !rendered.layoutProfile.dashboardSurface
+      && !['report','master-detail','workspace'].includes(meta?.layout);
+    if (highConfidenceRegister && meta?.layout !== 'transaction-list-v1') {
+      rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
+    }
 
     results.push({
       route,
@@ -309,6 +365,7 @@ async function auditRoutes(browser, viewport) {
       missingPreviewBanner: Boolean(meta && meta.maturity === 'preview' && !rendered.previewBanner),
       enabledPreviewWrites: meta && meta.maturity === 'preview' ? rendered.enabledPreviewWrites : [],
       layoutIssues: rendered.layoutIssues,
+      layoutProfile: rendered.layoutProfile,
       missingModuleShell: !['dashboard','settings'].includes(route) && !rendered.moduleShell,
     });
 
@@ -362,6 +419,21 @@ try {
     const previewContractFailed = results.filter((r) => r.missingPreviewBanner || r.enabledPreviewWrites.length);
     const layoutFailed = results.filter((r) => r.layoutIssues.length);
     const shellFailed = results.filter((r) => r.missingModuleShell);
+
+    if (REPORT_LAYOUTS) {
+      console.log('\nRoute layout profile (desktop):');
+      for (const row of desktopMeta) {
+        const p = row.layoutProfile;
+        console.log([
+          row.route, row.moduleId || '-', JSON.stringify(p.heading),
+          `grid=${p.gridTables}`, `lines=${p.semanticTables}`, `rows=${p.visibleRows}`,
+          `salesBody=${Number(p.salesBody)}`, `doc=${Number(p.documentPage)}`,
+          `form=${Number(p.formSurface)}`, `split=${Number(p.splitSurface)}`,
+          `dash=${Number(p.dashboardSurface)}`, `actual=${p.actualLayout || '-'}`,
+          `declared=${row.meta?.layout || '-'}`,
+        ].join('\t'));
+      }
+    }
 
     if (failed.length) {
       exitCode = 1;

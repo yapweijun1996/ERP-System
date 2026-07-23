@@ -18,23 +18,17 @@
     ja:{title:'割引管理',sub:'有効日と承認しきい値を持つ制限付き割引ルールです。',new:'ルールを作成',code:'コード',name:'名称',type:'種類',standard:'標準',customer:'顧客',product:'製品',quantity:'数量',campaign:'キャンペーン',target:'対象',discount:'割引率',approval:'承認しきい値',minOrder:'最小注文額',from:'開始日',to:'終了日',status:'ステータス',activate:'有効化',create:'ドラフト作成',cancel:'キャンセル',empty:'標準割引ルールはありません。',created:'割引ルールを作成しました',activated:'割引ルールを有効化しました'},
     vi:{title:'Quản lý chiết khấu',sub:'Quy tắc chiết khấu có giới hạn, ngày hiệu lực và ngưỡng phê duyệt rõ ràng.',new:'Tạo quy tắc',code:'Mã',name:'Tên',type:'Loại',standard:'Chuẩn',customer:'Khách hàng',product:'Sản phẩm',quantity:'Số lượng',campaign:'Chiến dịch',target:'Đối tượng',discount:'Chiết khấu',approval:'Ngưỡng phê duyệt',minOrder:'Đơn hàng tối thiểu',from:'Hiệu lực từ',to:'Hiệu lực đến',status:'Trạng thái',activate:'Kích hoạt',create:'Tạo nháp',cancel:'Hủy',empty:'Chưa có quy tắc chiết khấu chuẩn.',created:'Đã tạo nháp quy tắc',activated:'Đã kích hoạt quy tắc'},
   };
-  function shell(active,d,title,sub,count,action,table,empty,icon){
-    return `<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),title])}${salesNav(active)}
-      <div class="h1row"><h1>${esc(title)}</h1><span class="countchip">${count}</span><div class="headright">${action}</div></div><div class="h1sub">${esc(sub)}</div></div>
-      <div class="tablewrap">${table}</div>${!count?`<div class="statepanel empty">${ic(icon)}<h3>${esc(empty)}</h3><p>${esc(sub)}</p></div>`:''}</section></div>`;
-  }
   SCREENS['price-lists']=async function(root){
     const d=pack(priceText),a=adapter(),pages=await Promise.all([a.list('sales/price-lists',{limit:100}),a.list('sales/price-list-lines',{limit:100}),a.list('inventory/products',{limit:100}),a.list('sales/customers',{limit:100})]);
     const lists=pages[0].data||[],lines=pages[1].data||[],products=pages[2].data||[],customers=pages[3].data||[],customerMap=byId(customers),counts=new Map();
     lines.forEach(line=>counts.set(Number(line.priceListId),(counts.get(Number(line.priceListId))||0)+1));
-    const table=buildTable({rowId:r=>r.id,columns:[
+    const columns=[
       {label:d.title,render:r=>`<div class="cellsub"><b>${esc(r.name)}${r.isDefault?` <span class="pl-def">${esc(d.default)}</span>`:''}</b><small class="mono">${esc(r.code)}</small></div>`},
       {label:d.basis,render:r=>esc(d[r.basis]||r.basis)},{label:d.customer,render:r=>esc((customerMap.get(Number(r.customerId))||{}).name||'—')},{label:d.currency,render:r=>esc(r.currency)},
       {label:d.from,render:r=>esc(r.effectiveFrom)},{label:d.lines,align:'r',render:r=>String(counts.get(Number(r.id))||0)},{label:d.status,render:r=>cap(r.status,tone(r.status))},
       {label:'',align:'r',render:r=>r.status==='draft'?`<span class="rowact">${btn(d.activate,{icon:'check',cls:'primary',attrs:`data-activate-price="${r.id}"`})}</span>`:''},
-    ],rows:lists});
-    root.innerHTML=shell('price-lists',d,d.title,d.sub,lists.length,btn(d.new,{icon:'plus',cls:'primary',attrs:'data-new-price'}),table,d.empty,'tag');
-    root.querySelector('[data-new-price]')?.addEventListener('click',()=>{
+    ];
+    function openCreate(){
       const itemOptions=products.map(r=>`<option value="${r.id}">${esc(r.sku)} · ${esc(r.name)}</option>`).join(''),customerOptions=`<option value="">—</option>`+customers.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
       appModal({icon:'tag',title:d.new,width:680,body:`<div class="fldrow c2"><div class="fld"><span>${esc(d.code)}</span><input id="priceCode" value="${esc(seq('PL'))}"></div><div class="fld"><span>${esc(d.name)}</span><input id="priceName"></div></div>
         <div class="fldrow c3"><div class="fld"><span>${esc(d.basis)}</span><select id="priceBasis"><option value="standard">${esc(d.standard)}</option><option value="customer">${esc(d.customer)}</option><option value="promotion">${esc(d.promotion)}</option></select></div><div class="fld"><span>${esc(d.customer)}</span><select id="priceCustomer">${customerOptions}</select></div><div class="fld"><span>${esc(d.currency)}</span><input id="priceCurrency" value="${esc(DB.company.currency||'SGD')}"></div></div>
@@ -44,19 +38,26 @@
       document.querySelector('[data-price-cancel]')?.addEventListener('click',closeModal);
       document.querySelector('[data-price-create]')?.addEventListener('click',async event=>{const b=event.currentTarget;b.disabled=true;const basis=document.querySelector('#priceBasis').value,customer=document.querySelector('#priceCustomer').value;
         try{await a.create('sales/price-lists',{code:document.querySelector('#priceCode').value.trim(),name:document.querySelector('#priceName').value.trim(),basis,customerId:basis==='customer'?Number(customer):null,currency:document.querySelector('#priceCurrency').value.trim().toUpperCase(),effectiveFrom:document.querySelector('#priceFrom').value,effectiveTo:document.querySelector('#priceTo').value||null,lines:[{productId:Number(document.querySelector('#priceProduct').value),minQty:document.querySelector('#priceMinQty').value,unitPrice:document.querySelector('#priceUnit').value,floorPrice:document.querySelector('#priceFloor').value}]});closeModal();toast(d.created,'ok');navigate('price-lists');}catch(e){b.disabled=false;toast(err(e,'Create failed'),'danger');}});
+    }
+    transactionListPage(root,{
+      module:'sales',route:'price-lists',title:d.title,description:d.sub,
+      rows:lists,rowId:r=>r.id,columns,
+      primaryAction:{label:d.new,icon:'plus',onClick:openCreate},
+      empty:{icon:'tag',title:d.empty,description:d.sub},
+      afterRender:({root:pageRoot})=>{
+        pageRoot.querySelectorAll('[data-activate-price]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();b.disabled=true;try{await a.action('sales/price-lists',Number(b.dataset.activatePrice),'activate',{},`activate-price-list-${b.dataset.activatePrice}`);toast(d.activated,'ok');navigate('price-lists');}catch(x){b.disabled=false;toast(err(x,'Activation failed'),'danger');}}));
+      },
     });
-    root.querySelectorAll('[data-activate-price]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();b.disabled=true;try{await a.action('sales/price-lists',Number(b.dataset.activatePrice),'activate',{},`activate-price-list-${b.dataset.activatePrice}`);toast(d.activated,'ok');navigate('price-lists');}catch(x){b.disabled=false;toast(err(x,'Activation failed'),'danger');}}));
   };
   SCREENS['discount-mgmt']=async function(root){
     const d=pack(discountText),a=adapter(),pages=await Promise.all([a.list('sales/discount-rules',{limit:100}),a.list('sales/customers',{limit:100}),a.list('inventory/products',{limit:100})]);
     const rules=pages[0].data||[],customers=pages[1].data||[],products=pages[2].data||[],customerMap=byId(customers),productMap=byId(products),target=r=>(customerMap.get(Number(r.customerId))||productMap.get(Number(r.productId))||{}).name||'—';
-    const table=buildTable({rowId:r=>r.id,columns:[
+    const columns=[
       {label:d.name,render:r=>`<div class="cellsub"><b>${esc(r.name)}</b><small class="mono">${esc(r.code)}</small></div>`},{label:d.type,render:r=>esc(d[r.ruleType]||r.ruleType)},{label:d.target,render:r=>esc(target(r))},
       {label:d.discount,align:'r',render:r=>`<b>${esc(Number(r.discountPct).toFixed(2))}%</b>`},{label:d.approval,align:'r',render:r=>r.approvalThresholdPct==null?'—':`${esc(Number(r.approvalThresholdPct).toFixed(2))}%`},
       {label:d.from,render:r=>esc(r.effectiveFrom)},{label:d.status,render:r=>cap(r.status,tone(r.status))},{label:'',align:'r',render:r=>r.status==='draft'?`<span class="rowact">${btn(d.activate,{icon:'check',cls:'primary',attrs:`data-activate-discount="${r.id}"`})}</span>`:''},
-    ],rows:rules});
-    root.innerHTML=shell('discount-mgmt',d,d.title,d.sub,rules.length,btn(d.new,{icon:'plus',cls:'primary',attrs:'data-new-discount'}),table,d.empty,'percent');
-    root.querySelector('[data-new-discount]')?.addEventListener('click',()=>{
+    ];
+    function openCreate(){
       const customerOptions=`<option value="">—</option>`+customers.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join(''),productOptions=`<option value="">—</option>`+products.map(r=>`<option value="${r.id}">${esc(r.sku)} · ${esc(r.name)}</option>`).join('');
       appModal({icon:'percent',title:d.new,width:680,body:`<div class="fldrow c2"><div class="fld"><span>${esc(d.code)}</span><input id="discountCode" value="${esc(seq('DR'))}"></div><div class="fld"><span>${esc(d.name)}</span><input id="discountName"></div></div>
         <div class="fldrow c3"><div class="fld"><span>${esc(d.type)}</span><select id="discountType"><option value="standard">${esc(d.standard)}</option><option value="customer">${esc(d.customer)}</option><option value="product">${esc(d.product)}</option><option value="quantity">${esc(d.quantity)}</option><option value="campaign">${esc(d.campaign)}</option></select></div><div class="fld"><span>${esc(d.customer)}</span><select id="discountCustomer">${customerOptions}</select></div><div class="fld"><span>${esc(d.product)}</span><select id="discountProduct">${productOptions}</select></div></div>
@@ -66,8 +67,16 @@
       document.querySelector('[data-discount-cancel]')?.addEventListener('click',closeModal);
       document.querySelector('[data-discount-create]')?.addEventListener('click',async event=>{const b=event.currentTarget;b.disabled=true,type=document.querySelector('#discountType').value;
         try{await a.create('sales/discount-rules',{code:document.querySelector('#discountCode').value.trim(),name:document.querySelector('#discountName').value.trim(),ruleType:type,customerId:type==='customer'?Number(document.querySelector('#discountCustomer').value):null,productId:type==='product'?Number(document.querySelector('#discountProduct').value):null,discountPct:document.querySelector('#discountPct').value,approvalThresholdPct:document.querySelector('#discountApproval').value||null,minOrderAmount:document.querySelector('#discountMinOrder').value||null,minQty:type==='quantity'?'1':null,effectiveFrom:document.querySelector('#discountFrom').value,effectiveTo:document.querySelector('#discountTo').value||null});closeModal();toast(d.created,'ok');navigate('discount-mgmt');}catch(x){b.disabled=false;toast(err(x,'Create failed'),'danger');}});
+    }
+    transactionListPage(root,{
+      module:'sales',route:'discount-mgmt',title:d.title,description:d.sub,
+      rows:rules,rowId:r=>r.id,columns,
+      primaryAction:{label:d.new,icon:'plus',onClick:openCreate},
+      empty:{icon:'percent',title:d.empty,description:d.sub},
+      afterRender:({root:pageRoot})=>{
+        pageRoot.querySelectorAll('[data-activate-discount]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();b.disabled=true;try{await a.action('sales/discount-rules',Number(b.dataset.activateDiscount),'activate',{},`activate-discount-${b.dataset.activateDiscount}`);toast(d.activated,'ok');navigate('discount-mgmt');}catch(x){b.disabled=false;toast(err(x,'Activation failed'),'danger');}}));
+      },
     });
-    root.querySelectorAll('[data-activate-discount]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();b.disabled=true;try{await a.action('sales/discount-rules',Number(b.dataset.activateDiscount),'activate',{},`activate-discount-${b.dataset.activateDiscount}`);toast(d.activated,'ok');navigate('discount-mgmt');}catch(x){b.disabled=false;toast(err(x,'Activation failed'),'danger');}}));
   };
   SCREENS['credit-control']=async function(root){
     const packs={
@@ -80,22 +89,29 @@
     const d=pack(packs),a=adapter(),pages=await Promise.all([a.list('sales/credit-profiles',{limit:100}),a.list('sales/customers',{limit:100}),a.list('sales/invoices',{limit:100})]);
     const profiles=pages[0].data||[],customers=pages[1].data||[],invoices=pages[2].data||[],customerMap=byId(customers),profileCustomers=new Set(profiles.map(r=>Number(r.customerId))),exposure=new Map();
     invoices.filter(i=>i.status==='unpaid').forEach(i=>exposure.set(Number(i.customerId),(exposure.get(Number(i.customerId))||0)+Number(i.totalAmount)));
-    const table=buildTable({rowId:r=>r.id,columns:[
+    const columns=[
       {label:d.customer,render:r=>{const c=customerMap.get(Number(r.customerId))||{};return `<div class="cellsub"><b>${esc(c.name||'—')}</b><small class="mono">${esc(c.code||'')}</small></div>`;}},
       {label:d.limit,align:'r',render:r=>esc(money(r.creditLimit,r.currency))},{label:d.exposure,align:'r',render:r=>esc(money(exposure.get(Number(r.customerId))||0,r.currency))},
       {label:d.available,align:'r',render:r=>esc(money(Number(r.creditLimit)-(exposure.get(Number(r.customerId))||0),r.currency))},
       {label:d.util,align:'r',render:r=>`${Math.round((exposure.get(Number(r.customerId))||0)/Math.max(Number(r.creditLimit),1)*100)}%`},
       {label:d.status,render:r=>cap(r.status==='held'?d.held:d.open,r.status==='held'?'danger':'ok')},
       {label:'',align:'r',render:r=>`<span class="rowact">${r.status==='held'?btn(d.release,{icon:'unlock',cls:'primary',attrs:`data-credit-release="${r.id}"`}):btn(d.hold,{icon:'lock',cls:'soft',attrs:`data-credit-hold="${r.id}"`})}</span>`},
-    ],rows:profiles});
-    root.innerHTML=shell('credit-control',d,d.title,d.sub,profiles.length,btn(d.new,{icon:'plus',cls:'primary',attrs:'data-new-credit'}),table,d.empty,'shield');
-    root.querySelector('[data-new-credit]')?.addEventListener('click',()=>{
+    ];
+    function openCreate(){
       const options=customers.filter(c=>!profileCustomers.has(Number(c.id))).map(c=>`<option value="${c.id}">${esc(c.code)} · ${esc(c.name)}</option>`).join('');
       appModal({icon:'shield',title:d.new,width:520,body:`<div class="fld"><span>${esc(d.customer)}</span><select id="creditCustomer">${options}</select></div><div class="fldrow c2"><div class="fld"><span>${esc(d.currency)}</span><input id="creditCurrency" value="${esc(DB.company.currency||'SGD')}"></div><div class="fld"><span>${esc(d.limit)}</span><input id="creditLimit" type="number" min="0" step="0.01" value="5000"></div></div>`,actions:btn(d.cancel,{cls:'soft',attrs:'data-credit-cancel'})+btn(d.create,{icon:'plus',cls:'primary',attrs:'data-credit-create'})});
       document.querySelector('[data-credit-cancel]')?.addEventListener('click',closeModal);
       document.querySelector('[data-credit-create]')?.addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;try{await a.create('sales/credit-profiles',{customerId:Number(document.querySelector('#creditCustomer').value),currency:document.querySelector('#creditCurrency').value.trim().toUpperCase(),creditLimit:document.querySelector('#creditLimit').value});closeModal();toast(d.created,'ok');navigate('credit-control');}catch(x){b.disabled=false;toast(err(x,'Create failed'),'danger');}});
+    }
+    transactionListPage(root,{
+      module:'sales',route:'credit-control',title:d.title,description:d.sub,
+      rows:profiles,rowId:r=>r.id,columns,
+      primaryAction:{label:d.new,icon:'plus',onClick:openCreate},
+      empty:{icon:'shield',title:d.empty,description:d.sub},
+      afterRender:({root:pageRoot})=>{
+        pageRoot.querySelectorAll('[data-credit-hold]').forEach(b=>b.addEventListener('click',async()=>{const reason=prompt(d.reason,'Fictional overdue review');if(!reason)return;b.disabled=true;try{await a.action('sales/credit-profiles',Number(b.dataset.creditHold),'hold',{reason},`credit-hold-${b.dataset.creditHold}`);toast(d.heldMsg,'ok');navigate('credit-control');}catch(x){b.disabled=false;toast(err(x,'Hold failed'),'danger');}}));
+        pageRoot.querySelectorAll('[data-credit-release]').forEach(b=>b.addEventListener('click',async()=>{b.disabled=true;try{await a.action('sales/credit-profiles',Number(b.dataset.creditRelease),'release',{},`credit-release-${b.dataset.creditRelease}`);toast(d.released,'ok');navigate('credit-control');}catch(x){b.disabled=false;toast(err(x,'Release failed'),'danger');}}));
+      },
     });
-    root.querySelectorAll('[data-credit-hold]').forEach(b=>b.addEventListener('click',async()=>{const reason=prompt(d.reason,'Fictional overdue review');if(!reason)return;b.disabled=true;try{await a.action('sales/credit-profiles',Number(b.dataset.creditHold),'hold',{reason},`credit-hold-${b.dataset.creditHold}`);toast(d.heldMsg,'ok');navigate('credit-control');}catch(x){b.disabled=false;toast(err(x,'Hold failed'),'danger');}}));
-    root.querySelectorAll('[data-credit-release]').forEach(b=>b.addEventListener('click',async()=>{b.disabled=true;try{await a.action('sales/credit-profiles',Number(b.dataset.creditRelease),'release',{},`credit-release-${b.dataset.creditRelease}`);toast(d.released,'ok');navigate('credit-control');}catch(x){b.disabled=false;toast(err(x,'Release failed'),'danger');}}));
   };
 })();

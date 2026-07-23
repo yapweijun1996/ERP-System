@@ -1,7 +1,7 @@
 /* ============================================================
    ARIA ERP — Sales module: transaction list screens
    Enquiries · Quotations · Approvals · Delivery Orders · Invoices
-   (built on the shared makeSalesList factory)
+   (registered through the shared transactionListPage SSOT)
    ============================================================ */
 
 /* read-only quick-view (master-data records) — routes through the shared appModal builder */
@@ -17,7 +17,7 @@ function miniProgress(done,total){
 
 /* ---------------- ENQUIRIES ---------------- */
 /* ENQ_TONE → TONES.enquiry (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'enquiries', title:'Enquiries', unit:'enquiries',
   sub:'Customer requests captured before a quotation — availability, pricing, lead-time and special terms. Convert a qualified enquiry straight to a quotation.',
   rows:()=>DB.enquiries, rowId:e=>e.no,
@@ -38,7 +38,7 @@ makeSalesList({
     {label:'Owner', align:'l', w:'minmax(90px,0.9fr)', render:e=>esc(e.owner)},
     {label:'Est. value', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:e=>`<b class="tnum">${money0(e.value)}</b>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:e=>cap(e.status,ENQ_TONE[e.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(e)=>[
     {id:'view',icon:'ext',label:'View enquiry',run:()=>openEnquiry(e)},
@@ -51,7 +51,7 @@ function openEnquiry(e){ openTxn('enquiry', e); }
 
 /* ---------------- QUOTATIONS ---------------- */
 /* QUO_TONE → TONES.quotation (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'quotations', title:'Quotations', unit:'quotes',
   sub:'Formal offers issued to customers with validity, pricing and terms. Accepted quotations convert to a sales order in one step.',
   rows:()=>DB.quotations, rowId:q=>q.no,
@@ -72,7 +72,7 @@ makeSalesList({
     {label:'Win %', align:'l', w:'minmax(96px,1fr)', render:q=>`<span class="wincell"><span class="bartrack" style="width:60px;display:inline-block;vertical-align:middle"><i style="width:${q.prob}%;background:${q.prob>=75?'var(--ok)':q.prob>=40?'var(--accent)':'var(--warn)'}"></i></span> <b class="tnum" style="font-size:12px">${q.prob}%</b></span>`},
     {label:'Total', align:'r', sortable:true, w:'minmax(104px,0.9fr)', render:q=>`<b class="tnum">${money(q.total)}</b>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(118px,1.1fr)', render:q=>cap(q.status,QUO_TONE[q.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(q)=>[
     {id:'view',icon:'ext',label:'Open quotation',run:()=>openQuote(q)},
@@ -102,7 +102,7 @@ function confirmDeleteQuotation(no){
 
 /* ---------------- SALES ORDER APPROVALS ---------------- */
 function soApprove(no, ok){ toast(`${no} ${ok?'approved — released to fulfilment':'rejected — returned to sales'}`, ok?'ok':'danger'); }
-makeSalesList({
+registerSalesTransactionList({
   route:'so-approvals', active:'so-approvals', title:'Sales Order Approvals',
   sub:'Orders held for sign-off by business rules — credit limit, discount threshold, overdue customer or special terms. Approve to release to fulfilment.',
   rows:()=>DB.salesOrders.filter(s=>s.status==='Pending Approval'),
@@ -126,7 +126,7 @@ makeSalesList({
 
 /* ---------------- DELIVERY ORDERS ---------------- */
 /* DO_TONE → TONES.delivery (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'delivery-orders', active:'delivery-orders', title:'Delivery Orders', unit:'deliveries',
   sub:'Outbound fulfilment from approved orders — pick, pack, dispatch and proof of delivery. Supports partial shipments and backorders.',
   rows:()=>DB.deliveries, rowId:d=>d.no,
@@ -147,7 +147,7 @@ makeSalesList({
     {label:'Carrier', align:'l', w:'minmax(92px,0.9fr)', render:d=>esc(d.carrier)},
     {label:'Progress', align:'l', w:'minmax(116px,1.1fr)', render:d=>miniProgress(d.done,d.items)},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(130px,1.2fr)', render:d=>cap(d.status,DO_TONE[d.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(d)=>[
     {id:'view',icon:'ext',label:'Open delivery',run:()=>openDelivery(d)},
@@ -164,7 +164,7 @@ function openDelivery(d){
 
 /* ---------------- SALES INVOICES ---------------- */
 /* INV_TONE → TONES.invoice (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'sales-invoices', active:'sales-invoices', title:'Sales Invoices', unit:'invoices',
   prepare:prepareCanonicalSalesData,
   sub:'Customer billing posted to Accounts Receivable. Track payment status and outstanding balance; raise credit notes against any invoice.',
@@ -185,7 +185,7 @@ makeSalesList({
     {label:'Total', align:'r', sortable:true, w:'minmax(104px,0.9fr)', render:i=>`<b class="tnum">${money(i.total)}</b>`},
     {label:'Balance', align:'r', w:'minmax(100px,0.9fr)', render:i=>{const b=i.total-i.paid;return `<b class="tnum" style="color:${b>0?(i.status==='Overdue'?'var(--danger)':'var(--fg)'):'var(--ok)'}">${b>0?money(b):'—'}</b>`;}},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(120px,1.1fr)', render:i=>cap(i.status,INV_TONE[i.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(i)=>[
     {id:'view',icon:'ext',label:'Open invoice',run:()=>openInvoice(i)},

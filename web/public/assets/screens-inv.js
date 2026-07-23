@@ -553,44 +553,40 @@ SCREENS['item-master'] = async function(root){
 SCREENS['stock-movement'] = async function(root){
   await prepareCanonicalInventoryData();
   function tone(t){ return t.startsWith('Goods Receipt')||t.includes('Receipt')||t==='Transfer In'?'ok':t.includes('Issue')||t==='Transfer Out'||t==='Adjustment'?'danger':'accent'; }
+  function movementKind(movement){
+    const type=String(movement.type||'').toLowerCase();
+    if(type.includes('receipt')||type==='transfer in') return 'receipts';
+    if(type.includes('issue')) return 'issues';
+    if(type.includes('transfer')) return 'transfers';
+    if(type.includes('adjustment')) return 'adjustments';
+    return 'other';
+  }
   const netChange=DB.movements.reduce((s,m)=>s+m.qty,0);
   const mvDates=DB.movements.map(m=>m.date.slice(0,10)).sort();
   const fmtD=d=>{ const [,mo,da]=d.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+(+da); };
   const rangeLabel=mvDates.length?fmtD(mvDates[0])+' – '+fmtD(mvDates[mvDates.length-1]):'No movements';
-  root.innerHTML=`<div class="content full"><section class="master">
-    ${inventoryPageHead({
-      active:'stock-movement',
-      title:t('inv.nav.movements'),
-      count:DB.movements.length+(DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?'+ entries':' entries'),
-      kpiLabel:'Net change',
-      kpiValue:(netChange>0?'+':'')+num(netChange),
-      kpiClass:netChange>=0?'pos':'neg',
-      sub:'Every posted in/out and adjustment — the shared truth behind on-hand balances. Drill any row to its source document.',
-    })}
-    <div class="toolbar">
-      <div class="filterchips"><button class="chip on">All types</button><button class="chip">Receipts</button><button class="chip">Issues</button><button class="chip">Transfers</button><button class="chip">Adjustments</button></div>
-      <div class="grow"></div>
-      <button class="viewsel">${ic('calendar')}${rangeLabel}${ic('chevD')}</button>
-      ${btn('Export',{icon:'download',cls:'soft'})}
-      ${btn('New adjustment',{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-stock-adjustment\')"'})}
-    </div>
-    <div class="tablewrap">${buildTable({
-      rowId:m=>m.no,
-      columns:[
-        {label:'Movement',sticky:true,render:m=>`<div class="cellsub"><b class="docnum">${esc(m.no)}</b><small>${esc(m.date)}</small></div>`},
-        {label:'Item',align:'l',render:m=>`<div class="cellsub"><b>${esc(m.name)}</b><small>${esc(m.item)}</small></div>`},
-        {label:'Type',align:'l',render:m=>cap(m.type,tone(m.type))},
-        {label:'Source doc',align:'l',render:m=>`<span class="docnum">${esc(m.ref)}</span>`},
-        {label:'Warehouse',align:'l',render:m=>esc(m.wh)},
-        {label:'Qty',align:'r',sortable:true,render:m=>`<b class="tnum delta ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${num(m.qty)}</b>`},
-        {label:'Balance',align:'r',render:m=>`<span class="tnum">${num(m.bal)}</span>`},
-        {label:'By',align:'l',render:m=>esc(m.by)},
-      ],
-      rows:DB.movements,
-    })}</div>
-  </section></div>`;
-  wireInventoryNav(root);
-  wireTable(root.querySelector('.tablewrap'),{onRow:(id)=>{ const m=DB.movements.find(x=>x.no===id); toast('Drill to source: '+m.ref,'info'); }});
+  transactionListPage(root,{
+    module:'inventory',route:'stock-movement',title:t('inv.nav.movements'),
+    description:'Every posted in/out and adjustment — the shared truth behind on-hand balances. Drill any row to its source document.',
+    rows:DB.movements,rowId:m=>m.no,
+    filters:[['all','All types'],['receipts','Receipts'],['issues','Issues'],['transfers','Transfers'],['adjustments','Adjustments']],
+    filterFn:(movement,filter)=>movementKind(movement)===filter,
+    kpis:[{label:'Net change',value:(netChange>0?'+':'')+num(netChange),negative:netChange<0}],
+    primaryAction:{label:'New adjustment',icon:'plus',onClick:()=>navigate('new-stock-adjustment')},
+    note:rangeLabel,
+    columns:[
+      {label:'Movement',sticky:true,render:m=>`<div class="cellsub"><b class="docnum">${esc(m.no)}</b><small>${esc(m.date)}</small></div>`},
+      {label:'Item',align:'l',render:m=>`<div class="cellsub"><b>${esc(m.name)}</b><small>${esc(m.item)}</small></div>`},
+      {label:'Type',align:'l',render:m=>cap(m.type,tone(m.type))},
+      {label:'Source doc',align:'l',render:m=>`<span class="docnum">${esc(m.ref)}</span>`},
+      {label:'Warehouse',align:'l',render:m=>esc(m.wh)},
+      {label:'Qty',align:'r',sortable:true,render:m=>`<b class="tnum delta ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${num(m.qty)}</b>`},
+      {label:'Balance',align:'r',render:m=>`<span class="tnum">${num(m.bal)}</span>`},
+      {label:'By',align:'l',render:m=>esc(m.by)},
+    ],
+    onOpen:m=>toast('Drill to source: '+m.ref,'info'),
+    empty:{icon:'transfer',title:'No stock movements'},
+  });
 };
 
 /* ---------------- INVENTORY VALUATION REPORT ---------------- */

@@ -168,17 +168,29 @@ SCREENS['user-mgmt'] = async function(root){
   const s=adminCopy();
   const usersPage=(await listPage('admin/users')).data;
   const rows=[...usersPage.users, ...usersPage.invitations];
-  let filter='all';
   const roleNames=[...new Set(usersPage.users.map(u=>u.roleName))];
   const chips=[['all',t('common.all')]].concat(roleNames.map(r=>[r,r]));
-  function filtered(){ return filter==='all'?rows:rows.filter(u=>u.roleName===filter); }
   function initialsOf(text){
     return (text||'?').replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean).slice(0,2)
       .map(w=>w[0]).join('').toUpperCase()||'?';
   }
-  function table(){
-    return buildTable({
-      rowId:u=>u.kind+'-'+u.id,
+  async function render(){
+    const active=usersPage.users.filter(u=>u.status==='Active').length;
+    const invited=usersPage.invitations.length;
+    transactionListPage(root,{
+      module:'admin',route:'user-mgmt',title:t('usr.title'),
+      rows,rowId:u=>u.kind+'-'+u.id,
+      filters:chips,filterFn:(user,role)=>user.roleName===role,
+      kpis:[
+        {label:t('usr.t.total'),value:usersPage.users.length},
+        {label:t('usr.t.active'),value:active},
+        {label:t('usr.t.invites'),value:invited,negative:invited>0},
+      ],
+      primaryAction:{label:t('usr.invite'),icon:'plus',onClick:openInviteModal},
+      toolbarActions:[
+        {label:t('usr.roles'),icon:'shield',onClick:()=>navigate('role-permission')},
+        {label:t('usr.audit'),icon:'history',onClick:()=>navigate('audit-log')},
+      ],
       columns:[
         {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:#0a84ff;width:30px;height:30px;font-size:11px">${esc(initialsOf(u.fullName||u.email))}</span><div class="cellsub"><b>${esc(u.fullName||u.email)}</b><small>${esc(u.email)}</small></div></div>`},
         {label:t('hr.col.role'),align:'l',render:u=>esc(u.roleName)},
@@ -188,64 +200,29 @@ SCREENS['user-mgmt'] = async function(root){
           ?`<span class="rowact"><button data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button></span>`
           :(u.kind==='user'?`<span class="rowact" data-tip="${esc(s('you'))}"><button disabled>${ic('user')}</button></span>`:'')},
       ],
-      rows:filtered(),
+      onOpen:()=>navigate('role-permission'),
+      empty:{icon:'people',title:'No users'},
+      afterRender:({root:pageRoot})=>{
+        pageRoot.querySelectorAll('[data-act="toggle"]').forEach(b=>b.addEventListener('click',async e=>{
+          e.stopPropagation();
+          const userId=Number(b.dataset.id);
+          const wasActive=b.dataset.active==='true';
+          const row=usersPage.users.find(u=>u.id===userId);
+          b.disabled=true;
+          try{
+            await window.ErpSystemData.action('admin/users',userId,'toggle-active',{isActive:!wasActive});
+            toast(s(wasActive?'toggleDisabled':'toggleEnabled').replace('{email}',row?row.email:''),'ok');
+            const refreshed=(await listPage('admin/users')).data;
+            usersPage.users=refreshed.users; usersPage.invitations=refreshed.invitations;
+            rows.length=0; rows.push(...usersPage.users,...usersPage.invitations);
+            await render();
+          }catch(error){
+            b.disabled=false;
+            toast(error&&error.message?error.message:s('toggleError'),'danger');
+          }
+        }));
+      },
     });
-  }
-  function statTile(label,value,sub,tone){
-    return `<div class="card" style="padding:13px 15px"><small style="display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${label}</small>
-      <b class="tnum" style="font-size:23px;font-weight:600;letter-spacing:-.02em;color:${tone||'var(--fg)'}">${value}</b>
-      <small style="display:block;color:var(--muted);font-size:12px;margin-top:3px">${sub}</small></div>`;
-  }
-  async function render(){
-    const active=usersPage.users.filter(u=>u.status==='Active').length;
-    const invited=usersPage.invitations.length;
-    root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,t('nav.admin'),t('usr.crumb')])}
-        <div class="h1row"><h1>${esc(t('usr.title'))}</h1><span class="countchip" id="usrCount"></span></div>
-      </div>
-      <div class="statwrap"><div class="statcards">
-        ${statTile(t('usr.t.total'),usersPage.users.length,t('usr.t.totalsub'))}
-        ${statTile(t('usr.t.active'),active,t('usr.t.activesub'),'var(--ok)')}
-        ${statTile(t('usr.t.invites'),invited,t('usr.t.invitessub'),invited?'var(--warn)':undefined)}
-      </div></div>
-      <div class="toolbar">
-        <div class="filterchips" id="usrChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${esc(c[0])}">${esc(c[1])}</button>`).join('')}</div>
-        <div class="grow"></div>
-        <button class="viewsel" data-tip="${esc(t('usr.rolestip'))}" onclick="navigate('role-permission')">${ic('shield')}${esc(t('usr.roles'))}</button>
-        <button class="viewsel" data-tip="${esc(t('usr.audit'))}" onclick="navigate('audit-log')">${ic('history')}${esc(t('usr.audit'))}</button>
-        ${btn(t('usr.invite'),{icon:'plus',cls:'primary',attrs:'data-act="invite"'})}
-      </div>
-      <div class="tablewrap" id="usrTable">${table()}</div>
-    </section></div>`;
-    $('#usrCount').textContent=filtered().length+' '+t('usr.users');
-    rewire();
-  }
-  function rewire(){
-    wireTable($('#usrTable'),{ onRow:()=>navigate('role-permission') });
-    $('#usrTable').querySelectorAll('[data-act="toggle"]').forEach(b=>b.addEventListener('click',async e=>{
-      e.stopPropagation();
-      const userId=Number(b.dataset.id);
-      const wasActive=b.dataset.active==='true';
-      const row=usersPage.users.find(u=>u.id===userId);
-      b.disabled=true;
-      try{
-        await window.ErpSystemData.action('admin/users',userId,'toggle-active',{isActive:!wasActive});
-        toast(s(wasActive?'toggleDisabled':'toggleEnabled').replace('{email}',row?row.email:''),'ok');
-        const refreshed=(await listPage('admin/users')).data;
-        usersPage.users=refreshed.users; usersPage.invitations=refreshed.invitations;
-        rows.length=0; rows.push(...usersPage.users,...usersPage.invitations);
-        await render();
-      }catch(error){
-        b.disabled=false;
-        toast(error&&error.message?error.message:s('toggleError'),'danger');
-      }
-    }));
-    $('#usrChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
-      $('#usrChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f;
-      $('#usrTable').innerHTML=table(); $('#usrCount').textContent=filtered().length+' '+t('usr.users'); rewire();
-    }));
-    const inviteBtn=root.querySelector('[data-act="invite"]');
-    inviteBtn&&inviteBtn.addEventListener('click',()=>openInviteModal());
   }
   function openInviteModal(){
     appModal({

@@ -6,7 +6,7 @@
 
 /* ---------------- SALES RETURNS / RMA ---------------- */
 /* RMA_TONE → TONES.rma (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'sales-returns', active:'sales-returns', title:'Sales Returns / RMA', unit:'returns',
   sub:'Customer returns linked to the original invoice or delivery — approve, receive, inspect, then decide credit, replacement or rejection. Accepted goods update inventory.',
   rows:()=>DB.salesReturns, rowId:r=>r.no,
@@ -27,7 +27,7 @@ makeSalesList({
     {label:'Disposition', align:'l', w:'minmax(120px,1.1fr)', render:r=>`<span style="color:var(--muted)">${esc(r.disposition)}</span>`},
     {label:'Value', align:'r', sortable:true, w:'minmax(92px,0.9fr)', render:r=>`<b class="tnum">${money0(r.value)}</b>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(112px,1fr)', render:r=>cap(r.status,RMA_TONE[r.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(r)=>[
     {id:'view',icon:'ext',label:'Open RMA',run:()=>openReturn(r)},
@@ -115,7 +115,7 @@ SCREENS['sales-return'] = function(root){
 
 /* ---------------- CREDIT NOTES ---------------- */
 /* CN_TONE → TONES.creditNote (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'credit-notes', active:'credit-notes', title:'Credit Notes', unit:'notes',
   sub:'Customer credit adjustments from returns, overcharges, price corrections or damage. Posted credits reduce the receivable and can be applied to open invoices.',
   rows:()=>DB.creditNotes, rowId:c=>c.no,
@@ -136,7 +136,7 @@ makeSalesList({
     {label:'Amount', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:c=>`<b class="tnum">${money(c.amount)}</b>`},
     {label:'Applied', align:'r', w:'minmax(92px,0.9fr)', render:c=>`<span class="tnum" style="color:${c.applied>=c.amount?'var(--ok)':'var(--muted)'}">${c.applied?money(c.applied):'—'}</span>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(104px,1fr)', render:c=>cap(c.status,CN_TONE[c.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(c)=>[
     {id:'view',icon:'ext',label:'Open credit note',run:()=>openCredit(c)},
@@ -209,7 +209,7 @@ SCREENS['credit-note'] = function(root){
 
 /* ---------------- DEBIT NOTES ---------------- */
 /* DN_TONE → TONES.debitNote (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'debit-notes', active:'debit-notes', title:'Debit Notes', unit:'notes',
   sub:'Additional charges raised to a customer — freight, services, undercharges or late-payment fees. Posted debit notes increase the receivable.',
   rows:()=>DB.debitNotes, rowId:d=>d.no,
@@ -229,7 +229,7 @@ makeSalesList({
     {label:'Reason', align:'l', w:'minmax(170px,1.9fr)', render:d=>`<span class="li-subj">${esc(d.reason)}</span>`},
     {label:'Amount', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:d=>`<b class="tnum">${money(d.amount)}</b>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(104px,1fr)', render:d=>cap(d.status,DN_TONE[d.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(d)=>[
     {id:'view',icon:'ext',label:'View debit note',run:()=>openTxn('debit', d)},
@@ -278,7 +278,7 @@ SCREENS['price-lists'] = function(root){
 
 /* ---------------- DISCOUNT MANAGEMENT ---------------- */
 /* DRULE_TONE → TONES.discountRule (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'discount-mgmt', active:'discount-mgmt', title:'Discount Management', unit:'rules',
   sub:'Standard, customer, item, quantity and campaign discounts — with maximum-discount control that routes over-threshold deals for approval.',
   rows:()=>DB.discountRules, rowId:d=>d.code,
@@ -299,7 +299,7 @@ makeSalesList({
     {label:'Threshold', align:'l', w:'minmax(96px,1fr)', render:d=>`<span style="color:var(--muted)">${esc(d.threshold)}</span>`},
     {label:'Approval', align:'l', w:'minmax(96px,1fr)', render:d=>d.approval==='None'?'<span style="color:var(--muted)">Auto</span>':cap(d.approval,'warn')},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(96px,0.9fr)', render:d=>cap(d.status,DRULE_TONE[d.status]||'neutral')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(d)=>[
     {id:'edit',icon:'edit',label:'Edit rule',run:()=>toast('Editing '+d.code,'info')},
@@ -352,7 +352,7 @@ SCREENS['credit-control'] = function(root){
 
 /* ---------------- SALES COMMISSION ---------------- */
 /* COMM_TONE → TONES.commission (defined in data-core.js) */
-makeSalesList({
+registerSalesTransactionList({
   route:'sales-commission', active:'sales-commission', title:'Sales Commission', unit:'runs',
   sub:'Commission calculated on collected revenue or gross profit by salesperson and period. Review and approve before payout.',
   rows:()=>DB.commissions, rowId:c=>c.rep+'·'+c.period,
@@ -372,7 +372,7 @@ makeSalesList({
     {label:'Rate', align:'l', w:'minmax(80px,0.8fr)', render:c=>esc(c.rate)},
     {label:'Commission', align:'r', sortable:true, w:'minmax(104px,1fr)', render:c=>`<b class="tnum">${money(c.commission)}</b>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(100px,1fr)', render:c=>cap(c.status,COMM_TONE[c.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(c)=>[
     {id:'view',icon:'ext',label:'View statement',run:()=>openTxn('commission', c)},

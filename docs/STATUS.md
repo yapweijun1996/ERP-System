@@ -541,13 +541,30 @@ route and declares `SCREEN_META.layout = transaction-list-v1`. The screen audit 
 validates this contract at desktop and 375px, with `npm run audit:list-layouts` available
 for bounded migration batches and wired into CI. Service-worker v75 delivers the pilot.
 
+## Transaction-list UI SSOT rollout and enforcement (TASK-088–091, 2026-07-23)
+
+All **34 transaction-register routes** now render through the shared
+`transactionListPage()` contract at desktop and 375px. Sales, Purchasing, operational
+and back-office registers share the same KPI, filter, toolbar, table/empty and
+pagination structure; unsupported placeholder Filter/Export actions were removed.
+Intentional dashboards, reports, forms, document details and master-detail workspaces
+remain on their appropriate layouts instead of being force-fit into a list.
+
+Every one of the 114 routes now declares one of nine explicit layout categories.
+Static audit guards reject the obsolete `makeSalesList`, `makePurList` and `rowMenuBtn`
+factories, while runtime audits verify declared list structure and detect undeclared
+list-shaped pages. Suppliers, Enquiries and Work Orders remain the visual references.
+Service-worker v76 delivers the completed rollout. Local release gates pass with
+lint, dual typecheck, 379 tests plus one expected skip, 45-migration/127-table
+alignment, PGlite proof, API/Demo builds, desktop/mobile smoke, the 34-route list
+audit and the full 114-route desktop/375px audit.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 86 tasks, including TASK-087
+- Done: 90 tasks, including TASK-091
 - Blocked: TASK-017 (1)
-- Todo: TASK-088 through TASK-091 (4 actionable UI-SSOT migration slices). Route
-  productionization remains complete at 114 Canonical / 0 Preview; these tasks address
-  visual layout convergence rather than data/API maturity.
+- Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
+  complete at 114 Canonical / 0 Preview and 34/34 transaction registers on the SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

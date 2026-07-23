@@ -565,9 +565,55 @@ const MODULE_READ_PERMISSION = {
 const SCREEN_FIXTURES = {
   'txn-view':'sales-enquiry',
 };
-const SCREEN_LAYOUTS = Object.freeze({
-  'work-orders':'transaction-list-v1',
+const SCREEN_LAYOUT_GROUPS = Object.freeze({
+  'transaction-list-v1':[
+    'enquiries','quotations','so-approvals','delivery-orders','sales-invoices',
+    'sales-returns','credit-notes','debit-notes','price-lists','discount-mgmt',
+    'credit-control','suppliers','purchase-requisitions','rfqs',
+    'supplier-quotations','purchase-orders','goods-receipts','supplier-invoices',
+    'purchase-returns','supplier-credit-notes','supplier-debit-notes','po-approvals',
+    'supplier-price-lists','landed-cost','stock-movement','work-orders',
+    'qc-inspection','gl','hr-directory','project-pl','service-ticket',
+    'service-contracts','asset-register','user-mgmt',
+  ],
+  dashboard:[
+    'dashboard','sales-home','purchasing-home','bi-dashboard',
+  ],
+  report:[
+    'ar-aging','audit-log','inv-valuation','pnl','purchasing-reports',
+    'report-generic','report-pur-buyer','report-pur-generic','report-pur-price-var',
+    'report-pur-supplier','report-pur-vendor','report-quote-conversion',
+    'report-sales-customer','report-sales-rep','sales-analysis','sales-reports',
+    'stock-aging','vendor-performance',
+  ],
+  'document-detail':[
+    'account-ledger','credit-note','delivery-order','employee','goods-receipt',
+    'journal-entry','ncr','opportunity','payslip','po-approval','project-detail',
+    'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
+    'sales-order','sales-return','service-order','supplier-invoice','txn-view',
+    'work-order',
+  ],
+  form:[
+    'new-employee','new-item','new-journal-entry','new-opportunity',
+    'new-payment-voucher','new-purchase-order','new-quotation','new-sales-order',
+    'new-stock-adjustment','new-work-order',
+  ],
+  'master-detail':[
+    'asset-detail','bom','crm-customer','item-master','leave-approval',
+    'role-permission','sales-orders','stock-on-hand',
+  ],
+  workspace:[
+    'bank-rec','data-import','depreciation','integration','master-control',
+    'module-activation-control','mrp','payment-voucher','payroll-run','picking',
+    'sales-commission','settings','sys-settings','timesheet',
+  ],
+  board:['crm-pipeline'],
+  'activity-feed':['integration-logs','my-activity','notifications'],
 });
+const SCREEN_LAYOUTS = Object.freeze(Object.fromEntries(
+  Object.entries(SCREEN_LAYOUT_GROUPS)
+    .flatMap(([layout,routes])=>routes.map(route=>[route,layout])),
+));
 const SCREEN_META = {};
 Object.keys(SCREENS).forEach(route=>{
   const moduleId=ROUTE_MODULE[route]||(

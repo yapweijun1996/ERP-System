@@ -192,62 +192,35 @@ async function prepareCanonicalAssetData(){
 SCREENS['asset-register'] = async function(root){
   await prepareCanonicalAssetData();
   const s=assetCopy();
-  let filter='all';
   const cats=[...new Set(DB.assets.map(a=>a.cat))];
   const chips=[['all',t('common.all')],...cats.map(c=>[c,s(ASSET_CATEGORY_KEY[c]||c)])];
-  function rows(){ return filter==='all'?DB.assets:DB.assets.filter(a=>a.cat===filter); }
   const totCost=DB.assets.reduce((sum,a)=>sum+a.cost,0);
   const totNbv=DB.assets.reduce((sum,a)=>sum+a.nbv,0);
   const totMo=DB.assets.reduce((sum,a)=>sum+a.monthly,0);
-  function table(){
-    return buildTable({
-      rowId:a=>a.id,
-      columns:[
-        {label:t('fa.col.asset'),sticky:true,render:a=>`<div class="cellsub"><b>${esc(a.name)}</b><small>${esc(a.assetNo||a.id)}${a.loc?' · '+esc(a.loc):''}</small></div>`},
-        {label:t('fa.col.category'),align:'l',render:a=>esc(s(ASSET_CATEGORY_KEY[a.cat]||a.cat))},
-        {label:t('fa.col.acquired'),align:'l',sortable:true,render:a=>esc(a.acq)},
-        {label:t('fa.col.cost'),align:'r',sortable:true,render:a=>`<span class="tnum">${money0(a.cost)}</span>`},
-        {label:t('fa.col.accdep'),align:'r',render:a=>`<span class="tnum" style="color:var(--muted)">${money0(a.accDep)}</span>`},
-        {label:t('fa.col.nbv'),align:'r',sortable:true,render:a=>`<b class="tnum">${money0(a.nbv)}</b>`},
-        {label:t('fa.col.depmo'),align:'r',render:a=>`<span class="tnum">${money0(a.monthly)}</span>`},
-        {label:t('col.status'),align:'l',render:a=>statusBadge(a.status)},
-        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
-      ],
-      rows:rows(),
-    });
-  }
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,t('nav.asset'),t('fa.crumb')])}
-      <div class="h1row"><h1>${esc(t('fa.title'))}</h1><span class="countchip" id="faCount"></span>
-        <div class="headright">
-          <div class="kfig"><small>${esc(t('fa.kpi.gross'))}</small><b class="tnum">${money0(totCost)}</b></div>
-          <div class="kfig"><small>${esc(t('fa.col.nbv'))}</small><b class="tnum">${money0(totNbv)}</b></div>
-          <div class="kfig"><small>${esc(t('fa.kpi.depmo'))}</small><b class="tnum">${money0(totMo)}</b></div>
-        </div></div>
-    </div>
-    <div class="toolbar">
-      <div class="filterchips" id="faChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${esc(c[0])}">${esc(c[1])}</button>`).join('')}</div>
-      <div class="grow"></div>
-      <button class="viewsel" data-tip="${esc(t('fa.deprun'))}" onclick="navigate('depreciation')">${ic('chart')}${esc(t('fa.deprun'))}</button>
-      ${btn(t('common.export'),{icon:'download',cls:'soft'})}
-      ${btn(t('fa.new'),{icon:'plus',cls:'primary',attrs:'data-new="1"'})}
-    </div>
-    <div class="tablewrap" id="faTable">${table()}</div>
-  </section></div>`;
-  const wrap=$('#faTable');
-  $('#faCount').textContent=rows().length+' '+t('fa.assets');
-  function openAsset(id){ navigate('asset-detail',{assetId:Number(id)}); }
-  function rewire(){
-    wireTable(wrap,{ onRow:openAsset });
-    wrap.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openAsset(b.closest('.dt-r').dataset.row);}));
-  }
-  rewire();
-  $('#faChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
-    $('#faChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f;
-    wrap.innerHTML=table(); $('#faCount').textContent=rows().length+' '+t('fa.assets'); rewire();
-  }));
-  root.querySelector('[data-new]').addEventListener('click',()=>assetForm(s));
+  transactionListPage(root,{
+    module:'asset',route:'asset-register',title:t('fa.title'),
+    rows:DB.assets,rowId:a=>a.id,
+    filters:chips,filterFn:(asset,category)=>asset.cat===category,
+    kpis:[
+      {label:t('fa.kpi.gross'),value:money0(totCost)},
+      {label:t('fa.col.nbv'),value:money0(totNbv)},
+      {label:t('fa.kpi.depmo'),value:money0(totMo)},
+    ],
+    primaryAction:{label:t('fa.new'),icon:'plus',onClick:()=>assetForm(s)},
+    toolbarActions:[{label:t('fa.deprun'),icon:'chart',onClick:()=>navigate('depreciation')}],
+    columns:[
+      {label:t('fa.col.asset'),sticky:true,render:a=>`<div class="cellsub"><b>${esc(a.name)}</b><small>${esc(a.assetNo||a.id)}${a.loc?' · '+esc(a.loc):''}</small></div>`},
+      {label:t('fa.col.category'),align:'l',render:a=>esc(s(ASSET_CATEGORY_KEY[a.cat]||a.cat))},
+      {label:t('fa.col.acquired'),align:'l',sortable:true,render:a=>esc(a.acq)},
+      {label:t('fa.col.cost'),align:'r',sortable:true,render:a=>`<span class="tnum">${money0(a.cost)}</span>`},
+      {label:t('fa.col.accdep'),align:'r',render:a=>`<span class="tnum" style="color:var(--muted)">${money0(a.accDep)}</span>`},
+      {label:t('fa.col.nbv'),align:'r',sortable:true,render:a=>`<b class="tnum">${money0(a.nbv)}</b>`},
+      {label:t('fa.col.depmo'),align:'r',render:a=>`<span class="tnum">${money0(a.monthly)}</span>`},
+      {label:t('col.status'),align:'l',render:a=>statusBadge(a.status)},
+    ],
+    onOpen:a=>navigate('asset-detail',{assetId:Number(a.id)}),
+    empty:{icon:'asset',title:'No assets'},
+  });
 };
 
 function nextAssetNo(){

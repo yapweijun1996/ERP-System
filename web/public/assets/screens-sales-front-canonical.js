@@ -260,111 +260,54 @@
   SCREENS['enquiries']=async function(root){
     const s=copy(),data=await loadFrontData();
     const customers=byId(data.customers);
-    let active='all';
-    function filtered(){
-      return active==='all'?data.enquiries:data.enquiries.filter(row=>row.status===active);
-    }
-    function renderTable(){
-      return buildTable({
-        rowId:row=>row.id,
-        columns:[
-          {label:s('enquiries'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.enquiryDate))}</small></div>`},
-          {label:s('customer'),render:row=>esc((customers.get(Number(row.customerId))||{}).name||'#'+row.customerId)},
-          {label:s('subject'),render:row=>esc(row.subject)},
-          {label:s('channel'),render:row=>esc(row.channel)},
-          {label:s('owner'),render:row=>esc(row.ownerName)},
-          {label:s('estimated'),align:'r',render:row=>`<b class="tnum">${esc(amountLabel(row.estimatedValue,row.currency))}</b>`},
-          {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
-        ],rows:filtered(),
-      });
-    }
     const totalValue=data.enquiries.reduce((sum,row)=>sum+Number(row.estimatedValue||0),0);
-    function kpis(){
-      const values=[
-        [s('totalEnquiries'),data.enquiries.length,'all'],
-        [s('newEnquiries'),data.enquiries.filter(row=>row.status==='new').length,'new'],
-        [s('quotedEnquiries'),data.enquiries.filter(row=>row.status==='quoted').length,'quoted'],
-        [s('pipelineValue'),amountLabel(totalValue,currency()),null],
-      ];
-      return `<div class="so-kpibar">${values.map(([label,value,status])=>`<button class="so-kpi ${status?'clickable':''}" ${status?`data-kpi-status="${status}"`:'disabled'}><small>${esc(label)}</small><b class="tnum">${esc(String(value))}</b></button>`).join('')}</div>`;
-    }
-    root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),s('enquiries')])}${typeof salesNav==='function'?salesNav('enquiries'):''}
-        <div class="h1row"><h1>${esc(s('enquiries'))}</h1><span class="countchip" id="salesEnquiryCount">${data.enquiries.length}</span>
-          <div class="headright">${btn(s('newEnquiry'),{icon:'plus',cls:'primary',attrs:'data-new-enquiry'})}</div>
-        </div><div class="h1sub">${esc(s('enquiryHelp'))}</div>
-      </div>
-      <div class="sales-body" data-enquiry-standard-layout="true">${kpis()}<div class="toolbar"><div class="filterchips" data-enquiry-filters>
-        ${[['all',s('all')],['new',s('newStatus')],['quoted',s('quoted')],['lost',s('lost')]]
-          .map(([key,label])=>`<button class="chip ${key==='all'?'on':''}" data-status="${key}">${esc(label)}</button>`).join('')}
-      </div><div class="grow"></div>${btn(s('filter'),{icon:'filter',cls:'soft'})}${btn(s('export'),{icon:'download',cls:'soft',attrs:'data-enquiry-export'})}</div>
-      <div class="sales-tablewrap" data-enquiry-table>${renderTable()}</div><small style="display:block;margin-top:9px;color:var(--muted);text-align:right">${esc(s('dataLimit'))}</small></div>
-      ${!data.enquiries.length?`<div class="statepanel empty">${ic('chat')}<h3>${esc(s('emptyEnquiry'))}</h3><p>${esc(s('emptyHelp'))}</p></div>`:''}
-    </section></div>`;
-    const tableRoot=root.querySelector('[data-enquiry-table]');
-    function wire(){
-      wireTable(tableRoot,{onRow:id=>{
-        const enquiry=data.enquiries.find(row=>Number(row.id)===Number(id));
-        if(enquiry) openEnquiry(enquiry.id);
-      }});
-    }
-    wire();
-    root.querySelector('[data-new-enquiry]')?.addEventListener('click',()=>openNewEnquiry(data,()=>navigate('enquiries')));
-    root.querySelector('[data-enquiry-export]')?.addEventListener('click',()=>toast(`${s('enquiries')} ${s('export').toLowerCase()}`,'ok'));
-    root.querySelectorAll('[data-kpi-status]').forEach(button=>button.addEventListener('click',()=>{
-      const chip=root.querySelector(`[data-enquiry-filters] [data-status="${button.dataset.kpiStatus}"]`);
-      if(chip) chip.click();
-    }));
-    root.querySelectorAll('[data-enquiry-filters] [data-status]').forEach(button=>button.addEventListener('click',()=>{
-      root.querySelector('[data-enquiry-filters] .chip.on')?.classList.remove('on');
-      button.classList.add('on'); active=button.dataset.status;
-      tableRoot.innerHTML=renderTable(); wire();
-      root.querySelector('#salesEnquiryCount').textContent=String(filtered().length);
-    }));
+    transactionListPage(root,{
+      module:'sales',route:'enquiries',title:s('enquiries'),description:s('enquiryHelp'),
+      rows:data.enquiries,rowId:row=>row.id,
+      filters:[['all',s('all')],['new',s('newStatus')],['quoted',s('quoted')],['lost',s('lost')]],
+      filterFn:(row,status)=>row.status===status,
+      kpis:[
+        {label:s('totalEnquiries'),value:data.enquiries.length,filter:'all'},
+        {label:s('newEnquiries'),value:data.enquiries.filter(row=>row.status==='new').length,filter:'new'},
+        {label:s('quotedEnquiries'),value:data.enquiries.filter(row=>row.status==='quoted').length,filter:'quoted'},
+        {label:s('pipelineValue'),value:amountLabel(totalValue,currency())},
+      ],
+      primaryAction:{label:s('newEnquiry'),icon:'plus',onClick:()=>openNewEnquiry(data,()=>navigate('enquiries'))},
+      note:s('dataLimit'),
+      columns:[
+        {label:s('enquiries'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.enquiryDate))}</small></div>`},
+        {label:s('customer'),render:row=>esc((customers.get(Number(row.customerId))||{}).name||'#'+row.customerId)},
+        {label:s('subject'),render:row=>esc(row.subject)},
+        {label:s('channel'),render:row=>esc(row.channel)},
+        {label:s('owner'),render:row=>esc(row.ownerName)},
+        {label:s('estimated'),align:'r',render:row=>`<b class="tnum">${esc(amountLabel(row.estimatedValue,row.currency))}</b>`},
+        {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
+      ],
+      onOpen:row=>openEnquiry(row.id),
+      empty:{icon:'chat',title:s('emptyEnquiry'),description:s('emptyHelp')},
+    });
   };
 
   SCREENS['quotations']=async function(root){
     const s=copy(),data=await loadFrontData(),customers=byId(data.customers);
-    let active='all';
-    function filtered(){
-      return active==='all'?data.quotations:data.quotations.filter(row=>row.status===active);
-    }
-    function renderTable(){
-      return buildTable({
-        rowId:row=>row.id,
-        columns:[
-          {label:s('quotations'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.quoteDate))}</small></div>`},
-          {label:s('customer'),render:row=>esc((customers.get(Number(row.customerId))||{}).name||'#'+row.customerId)},
-          {label:s('validUntil'),render:row=>esc(dateValue(row.validUntil))},
-          {label:s('probability'),align:'r',render:row=>`<span class="tnum">${num(Number(row.probability))}%</span>`},
-          {label:s('total'),align:'r',render:row=>`<b class="tnum">${esc(amountLabel(row.totalAmount,row.currency))}</b>`},
-          {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
-        ],rows:filtered(),
-      });
-    }
-    root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),s('quotations')])}${typeof salesNav==='function'?salesNav('quotations'):''}
-        <div class="h1row"><h1>${esc(s('quotations'))}</h1><span class="countchip" id="salesQuoteCount">${data.quotations.length}</span>
-          <div class="headright">${btn(s('newQuotation'),{icon:'plus',cls:'primary',attrs:'data-new-quotation'})}</div>
-        </div><div class="h1sub">${esc(s('quotationHelp'))}</div>
-      </div>
-      <div class="toolbar"><div class="filterchips" data-quote-filters>
-        ${[['all',s('all')],['draft',s('draft')],['sent',s('sent')],['accepted',s('acceptedStatus')],['converted',s('convertedStatus')]]
-          .map(([key,label])=>`<button class="chip ${key==='all'?'on':''}" data-status="${key}">${esc(label)}</button>`).join('')}
-      </div><div class="grow"></div><small style="color:var(--muted)">${esc(s('dataLimit'))}</small></div>
-      <div class="tablewrap" data-quote-table>${renderTable()}</div>
-      ${!data.quotations.length?`<div class="statepanel empty">${ic('receipt')}<h3>${esc(s('emptyQuotation'))}</h3><p>${esc(s('emptyHelp'))}</p></div>`:''}
-    </section></div>`;
-    const tableRoot=root.querySelector('[data-quote-table]');
-    function wire(){ wireTable(tableRoot,{onRow:id=>openQuote(id)}); }
-    wire();
-    root.querySelector('[data-new-quotation]')?.addEventListener('click',()=>navigate('new-quotation'));
-    root.querySelectorAll('[data-quote-filters] [data-status]').forEach(button=>button.addEventListener('click',()=>{
-      root.querySelector('[data-quote-filters] .chip.on')?.classList.remove('on');
-      button.classList.add('on'); active=button.dataset.status;
-      tableRoot.innerHTML=renderTable(); wire();
-      root.querySelector('#salesQuoteCount').textContent=String(filtered().length);
-    }));
+    transactionListPage(root,{
+      module:'sales',route:'quotations',title:s('quotations'),description:s('quotationHelp'),
+      rows:data.quotations,rowId:row=>row.id,
+      filters:[['all',s('all')],['draft',s('draft')],['sent',s('sent')],['accepted',s('acceptedStatus')],['converted',s('convertedStatus')]],
+      filterFn:(row,status)=>row.status===status,
+      primaryAction:{label:s('newQuotation'),icon:'plus',onClick:()=>navigate('new-quotation')},
+      note:s('dataLimit'),
+      columns:[
+        {label:s('quotations'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.quoteDate))}</small></div>`},
+        {label:s('customer'),render:row=>esc((customers.get(Number(row.customerId))||{}).name||'#'+row.customerId)},
+        {label:s('validUntil'),render:row=>esc(dateValue(row.validUntil))},
+        {label:s('probability'),align:'r',render:row=>`<span class="tnum">${num(Number(row.probability))}%</span>`},
+        {label:s('total'),align:'r',render:row=>`<b class="tnum">${esc(amountLabel(row.totalAmount,row.currency))}</b>`},
+        {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
+      ],
+      onOpen:row=>openQuote(row.id),
+      empty:{icon:'receipt',title:s('emptyQuotation'),description:s('emptyHelp')},
+    });
   };
 
   SCREENS['quotation']=async function(root){

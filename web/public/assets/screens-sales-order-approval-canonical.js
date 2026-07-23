@@ -117,18 +117,39 @@
   }
 
   SCREENS['so-approvals']=async function(root){
-    const s=copy(),requests=await loadApprovals();let filter='all';
-    function filtered(){return filter==='all'?requests:requests.filter(row=>row.status===filter);}
-    function renderTable(){
-      const rows=filtered();
-      return buildTable({rowId:row=>row.id,columns:[{label:s('order'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.order.docNo||'#'+row.orderId)}</b><small>${esc(dateValue(row.order.orderDate||row.submittedAt))}</small></div>`},{label:s('customer'),render:row=>`<div class="cellsub"><b>${esc(row.customer.name||'#'+row.order.customerId)}</b><small>${esc(row.customer.code||'')}</small></div>`},{label:s('reason'),render:row=>`<span style="color:var(--muted)">${esc(row.reason)}</span>`},{label:s('queueValue'),align:'r',render:row=>`<b class="tnum">${amount(row.order.totalAmount,row.order.currency)}</b>`},{label:s('submitted'),render:row=>esc(dateValue(row.submittedAt))},{label:s('status'),render:row=>cap(label(s,row.status),tone(row.status))},{label:'',align:'r',render:row=>btn(s('review'),{icon:'ext',cls:'soft',attrs:`data-review-approval="${row.id}" onclick="event.stopPropagation()"`})}],rows});
-    }
+    const s=copy(),requests=await loadApprovals();
     const pending=requests.filter(row=>row.status==='pending');
-    root.innerHTML=`<div class="content full"><section class="master" data-canonical-sales-order-approval="true"><div class="scrollarea"><div class="pagehead">${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{cur:s('approvals')}])}${salesNav('so-approvals')}<div class="h1row" style="margin-top:13px"><h1>${esc(s('approvals'))}</h1><span class="countchip" data-approval-count>${requests.length}</span><div class="grow"></div>${btn(s('newOrder'),{icon:'plus',cls:'primary',attrs:'data-new-sales-order'})}</div><div class="h1sub">${esc(s('approvalSub'))}</div></div><div class="kpis"><div class="kpi accent"><small>${esc(s('awaiting'))}</small><b>${pending.length}</b></div><div class="kpi"><small>${esc(s('queueValue'))}</small><b>${amount(pending.reduce((sum,row)=>sum+Number(row.order.totalAmount||0),0))}</b></div><div class="kpi"><small>${esc(s('approved'))}</small><b>${requests.filter(row=>row.status==='approved').length}</b></div><div class="kpi"><small>${esc(s('rejected'))}</small><b>${requests.filter(row=>row.status==='rejected').length}</b></div></div><div class="toolbar"><div class="filterchips" data-approval-filters>${[['all',s('all')],['pending',s('pending')],['approved',s('approved')],['rejected',s('rejected')]].map(([key,text])=>`<button class="chip ${key==='all'?'on':''}" data-status="${key}">${esc(text)}</button>`).join('')}</div><div class="grow"></div><small style="color:var(--muted)">${esc(s('dataLimit'))}</small></div><div class="tablewrap" data-approval-table>${renderTable()}</div>${!requests.length?`<div class="statepanel empty">${ic('flow')}<h3>${esc(s('empty'))}</h3></div>`:''}</div></section></div>`;
-    const tableRoot=root.querySelector('[data-approval-table]');
-    function wire(){wireTable(tableRoot,{onRow:id=>{const request=requests.find(row=>Number(row.id)===Number(id));if(request)openReview(request);}});tableRoot.querySelectorAll('[data-review-approval]').forEach(button=>button.addEventListener('click',()=>{const request=requests.find(row=>Number(row.id)===Number(button.dataset.reviewApproval));if(request)openReview(request);}));}
-    wire();
-    root.querySelector('[data-new-sales-order]').addEventListener('click',()=>navigate('new-sales-order'));
-    root.querySelectorAll('[data-approval-filters] [data-status]').forEach(button=>button.addEventListener('click',()=>{root.querySelector('[data-approval-filters] .chip.on')?.classList.remove('on');button.classList.add('on');filter=button.dataset.status;tableRoot.innerHTML=renderTable();root.querySelector('[data-approval-count]').textContent=String(filtered().length);wire();}));
+    transactionListPage(root,{
+      module:'sales',route:'so-approvals',title:s('approvals'),description:s('approvalSub'),
+      rows:requests,rowId:row=>row.id,
+      filters:[['all',s('all')],['pending',s('pending')],['approved',s('approved')],['rejected',s('rejected')]],
+      filterFn:(row,status)=>row.status===status,
+      kpis:[
+        {label:s('awaiting'),value:pending.length,filter:'pending',accent:true},
+        {label:s('queueValue'),value:amount(pending.reduce((sum,row)=>sum+Number(row.order.totalAmount||0),0))},
+        {label:s('approved'),value:requests.filter(row=>row.status==='approved').length,filter:'approved'},
+        {label:s('rejected'),value:requests.filter(row=>row.status==='rejected').length,filter:'rejected'},
+      ],
+      primaryAction:{label:s('newOrder'),icon:'plus',onClick:()=>navigate('new-sales-order')},
+      note:s('dataLimit'),
+      columns:[
+        {label:s('order'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.order.docNo||'#'+row.orderId)}</b><small>${esc(dateValue(row.order.orderDate||row.submittedAt))}</small></div>`},
+        {label:s('customer'),render:row=>`<div class="cellsub"><b>${esc(row.customer.name||'#'+row.order.customerId)}</b><small>${esc(row.customer.code||'')}</small></div>`},
+        {label:s('reason'),render:row=>`<span style="color:var(--muted)">${esc(row.reason)}</span>`},
+        {label:s('queueValue'),align:'r',render:row=>`<b class="tnum">${amount(row.order.totalAmount,row.order.currency)}</b>`},
+        {label:s('submitted'),render:row=>esc(dateValue(row.submittedAt))},
+        {label:s('status'),render:row=>cap(label(s,row.status),tone(row.status))},
+        {label:'',align:'r',render:row=>btn(s('review'),{icon:'ext',cls:'soft',attrs:`data-review-approval="${row.id}" onclick="event.stopPropagation()"`})},
+      ],
+      onOpen:row=>openReview(row),
+      empty:{icon:'flow',title:s('empty')},
+      afterRender:({root:pageRoot,rows})=>{
+        pageRoot.querySelector('[data-module-shell]')?.setAttribute('data-canonical-sales-order-approval','true');
+        pageRoot.querySelectorAll('[data-review-approval]').forEach(button=>button.addEventListener('click',()=>{
+          const request=rows.find(row=>Number(row.id)===Number(button.dataset.reviewApproval));
+          if(request) openReview(request);
+        }));
+      },
+    });
   };
 })();

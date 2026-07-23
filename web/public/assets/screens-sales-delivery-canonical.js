@@ -67,44 +67,26 @@
   SCREENS['delivery-orders']=async function(root){
     const s=copy(),data=await load();
     const orders=byId(data.orders),customers=byId(data.customers),invoices=byId(data.invoices);
-    let active='all';
-    function filtered(){ return active==='all'?data.deliveries:data.deliveries.filter(row=>row.status===active); }
-    function table(){
-      return buildTable({
-        rowId:row=>row.id,
-        columns:[
-          {label:s('delivery'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.deliveryDate))}</small></div>`},
-          {label:s('customer'),render:row=>{
-            const order=orders.get(Number(row.orderId))||{};
-            return esc((customers.get(Number(order.customerId))||{}).name||'#'+order.customerId);
-          }},
-          {label:s('order'),render:row=>`<span class="mono">${esc((orders.get(Number(row.orderId))||{}).docNo||'#'+row.orderId)}</span>`},
-          {label:s('invoice'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
-          {label:s('date'),render:row=>esc(dateValue(row.deliveryDate))},
-          {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
-        ],rows:filtered(),
-      });
-    }
-    root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),s('deliveries')])}${typeof salesNav==='function'?salesNav('delivery-orders'):''}
-        <div class="h1row"><h1>${esc(s('deliveries'))}</h1><span class="countchip" data-delivery-count>${data.deliveries.length}</span></div>
-        <div class="h1sub">${esc(s('help'))}</div></div>
-      <div class="toolbar"><div class="filterchips" data-delivery-filters>
-        ${[['all',s('all')],['draft',s('draft')],['delivered',s('delivered')],['cancelled',s('cancelled')]]
-          .map(([key,label])=>`<button class="chip ${key==='all'?'on':''}" data-status="${key}">${esc(label)}</button>`).join('')}
-      </div><div class="grow"></div><small style="color:var(--muted)">${esc(s('limit'))}</small></div>
-      <div class="tablewrap" data-delivery-table>${table()}</div>
-      ${!data.deliveries.length?`<div class="statepanel empty">${ic('truck')}<h3>${esc(s('empty'))}</h3><p>${esc(s('help'))}</p></div>`:''}
-    </section></div>`;
-    const tableRoot=root.querySelector('[data-delivery-table]');
-    function wire(){ wireTable(tableRoot,{onRow:id=>openDelivery(id)}); }
-    wire();
-    root.querySelectorAll('[data-delivery-filters] [data-status]').forEach(button=>button.addEventListener('click',()=>{
-      root.querySelector('[data-delivery-filters] .chip.on')?.classList.remove('on');
-      button.classList.add('on'); active=button.dataset.status;
-      tableRoot.innerHTML=table(); wire();
-      root.querySelector('[data-delivery-count]').textContent=String(filtered().length);
-    }));
+    transactionListPage(root,{
+      module:'sales',route:'delivery-orders',title:s('deliveries'),description:s('help'),
+      rows:data.deliveries,rowId:row=>row.id,
+      filters:[['all',s('all')],['draft',s('draft')],['delivered',s('delivered')],['cancelled',s('cancelled')]],
+      filterFn:(row,status)=>row.status===status,
+      note:s('limit'),
+      columns:[
+        {label:s('delivery'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.deliveryDate))}</small></div>`},
+        {label:s('customer'),render:row=>{
+          const order=orders.get(Number(row.orderId))||{};
+          return esc((customers.get(Number(order.customerId))||{}).name||'#'+order.customerId);
+        }},
+        {label:s('order'),render:row=>`<span class="mono">${esc((orders.get(Number(row.orderId))||{}).docNo||'#'+row.orderId)}</span>`},
+        {label:s('invoice'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
+        {label:s('date'),render:row=>esc(dateValue(row.deliveryDate))},
+        {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
+      ],
+      onOpen:row=>openDelivery(row.id),
+      empty:{icon:'truck',title:s('empty'),description:s('help')},
+    });
   };
 
   SCREENS['delivery-order']=async function(root){

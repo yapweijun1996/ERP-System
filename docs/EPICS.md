@@ -1738,13 +1738,13 @@ Delivery slices:
       `data-layout="transaction-list-v1"`. `SCREEN_META.layout` and the desktop/375px
       runtime audit enforce the declared structure. Work Orders is migrated without
       changing its real data or commands; service worker v75 delivers the UI.
-- [ ] **TASK-088 — Sales/Purchasing.** Migrate both register families, then remove
+- [x] **TASK-088 — Sales/Purchasing.** Migrate both register families, then remove
       their duplicated high-level page chrome while retaining real row actions.
-- [ ] **TASK-089 — manufacturing operations.** Migrate qualifying Inventory,
+- [x] **TASK-089 — manufacturing operations.** Migrate qualifying Inventory,
       Warehouse, Manufacturing and Quality registers without force-fitting intentional
       master-detail or document-detail workspaces.
-- [ ] **TASK-090 — back office/platform.** Migrate Finance, CRM, HR, Projects,
+- [x] **TASK-090 — back office/platform.** Migrate Finance, CRM, HR, Projects,
       Service, Assets, Admin and Integration registers with their permission and
       sanitization boundaries intact.
-- [ ] **TASK-091 — enforcement/cleanup.** Classify every route layout, delete the
+- [x] **TASK-091 — enforcement/cleanup.** Classify every route layout, delete the
       obsolete list factories and reject new page-level hand-authored list chrome.

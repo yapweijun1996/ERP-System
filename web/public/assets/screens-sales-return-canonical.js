@@ -135,22 +135,21 @@
 
   SCREENS['sales-returns']=async function(root){
     const s=copy(),data=await load(),deliveries=byId(data.deliveries),invoices=byId(data.invoices);
-    const table=buildTable({rowId:row=>row.id,columns:[
-      {label:s('returnDoc'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.returnDate))}</small></div>`},
-      {label:s('customer'),render:row=>esc(customerFor(data,deliveries.get(Number(row.deliveryId))).name||'—')},
-      {label:s('against'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
-      {label:s('reason'),render:row=>esc(row.reason)},{label:s('total'),align:'r',render:row=>`<b>${esc(money(returnTotal(data,row),(invoices.get(Number(row.invoiceId))||{}).currency))}</b>`},
-      {label:s('status'),render:row=>cap(s(row.status),tone(row.status))},
-    ],rows:data.returns});
-    root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">
-      ${crumbs([DB.company.name,t('nav.sales'),s('returns')])}${typeof salesNav==='function'?salesNav('sales-returns'):''}
-      <div class="h1row"><h1>${esc(s('returns'))}</h1><span class="countchip">${data.returns.length}</span>
-      <div class="headright">${btn(s('newReturn'),{icon:'plus',cls:'primary',attrs:'data-new-return'})}</div></div>
-      <div class="h1sub">${esc(s('help'))}</div></div><div class="toolbar"><div class="grow"></div><small>${esc(s('limit'))}</small></div>
-      <div class="tablewrap" data-return-table>${table}</div>
-      ${!data.returns.length?`<div class="statepanel empty">${ic('refresh')}<h3>${esc(s('empty'))}</h3><p>${esc(s('help'))}</p></div>`:''}</section></div>`;
-    wireTable(root.querySelector('[data-return-table]'),{onRow:id=>openReturn(id)});
-    root.querySelector('[data-new-return]')?.addEventListener('click',()=>newReturnModal(data,id=>openReturn(id)));
+    transactionListPage(root,{
+      module:'sales',route:'sales-returns',title:s('returns'),description:s('help'),
+      rows:data.returns,rowId:row=>row.id,note:s('limit'),
+      primaryAction:{label:s('newReturn'),icon:'plus',onClick:()=>newReturnModal(data,id=>openReturn(id))},
+      columns:[
+        {label:s('returnDoc'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.returnDate))}</small></div>`},
+        {label:s('customer'),render:row=>esc(customerFor(data,deliveries.get(Number(row.deliveryId))).name||'—')},
+        {label:s('against'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
+        {label:s('reason'),render:row=>esc(row.reason)},
+        {label:s('total'),align:'r',render:row=>`<b>${esc(money(returnTotal(data,row),(invoices.get(Number(row.invoiceId))||{}).currency))}</b>`},
+        {label:s('status'),render:row=>cap(s(row.status),tone(row.status))},
+      ],
+      onOpen:row=>openReturn(row.id),
+      empty:{icon:'refresh',title:s('empty'),description:s('help')},
+    });
   };
 
   SCREENS['sales-return']=async function(root){
@@ -184,17 +183,20 @@
 
   SCREENS['credit-notes']=async function(root){
     const s=copy(),data=await load(),invoices=byId(data.invoices);
-    const table=buildTable({rowId:row=>row.id,columns:[
-      {label:s('creditNote'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.noteDate))}</small></div>`},
-      {label:s('against'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
-      {label:s('net'),align:'r',render:row=>esc(money(row.netAmount,row.currency))},{label:s('tax'),align:'r',render:row=>esc(money(row.taxAmount,row.currency))},
-      {label:s('total'),align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},{label:s('status'),render:row=>cap(s(row.status),tone(row.status))},
-    ],rows:data.credits});
-    root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),s('creditNotes')])}${salesNav('credit-notes')}
-      <div class="h1row"><h1>${esc(s('creditNotes'))}</h1><span class="countchip">${data.credits.length}</span></div><div class="h1sub">${esc(s('creditHelp'))}</div></div>
-      <div class="toolbar"><div class="grow"></div><small>${esc(s('limit'))}</small></div><div class="tablewrap" data-credit-table>${table}</div>
-      ${!data.credits.length?`<div class="statepanel empty">${ic('coins')}<h3>${esc(s('emptyCredit'))}</h3><p>${esc(s('creditHelp'))}</p></div>`:''}</section></div>`;
-    wireTable(root.querySelector('[data-credit-table]'),{onRow:id=>openCredit(id)});
+    transactionListPage(root,{
+      module:'sales',route:'credit-notes',title:s('creditNotes'),description:s('creditHelp'),
+      rows:data.credits,rowId:row=>row.id,note:s('limit'),
+      columns:[
+        {label:s('creditNote'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.noteDate))}</small></div>`},
+        {label:s('against'),render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
+        {label:s('net'),align:'r',render:row=>esc(money(row.netAmount,row.currency))},
+        {label:s('tax'),align:'r',render:row=>esc(money(row.taxAmount,row.currency))},
+        {label:s('total'),align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},
+        {label:s('status'),render:row=>cap(s(row.status),tone(row.status))},
+      ],
+      onOpen:row=>openCredit(row.id),
+      empty:{icon:'coins',title:s('emptyCredit'),description:s('creditHelp')},
+    });
   };
 
   SCREENS['credit-note']=async function(root){
@@ -229,19 +231,7 @@
       a.list('sales/debit-notes',{limit:100}),a.list('sales/invoices',{limit:100}),
     ]);
     const notes=pages[0].data||[],invoices=byId(pages[1].data||[]);
-    const table=buildTable({rowId:row=>row.id,columns:[
-      {label:d.title,render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.noteDate))}</small></div>`},
-      {label:d.invoice,render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
-      {label:d.reason,render:row=>esc(row.reason)},{label:d.net,align:'r',render:row=>esc(money(row.netAmount,row.currency))},
-      {label:d.tax,align:'r',render:row=>esc(money(row.taxAmount,row.currency))},{label:d.total,align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},
-      {label:d.status,render:row=>cap(row.status,row.status==='posted'?'ok':'neutral')},
-      {label:'',align:'r',render:row=>row.status==='draft'?`<span class="rowact">${btn(d.post,{icon:'check',cls:'primary',attrs:`data-post-debit="${row.id}"`})}</span>`:''},
-    ],rows:notes});
-    root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,t('nav.sales'),d.title])}${salesNav('debit-notes')}
-      <div class="h1row"><h1>${esc(d.title)}</h1><span class="countchip">${notes.length}</span><div class="headright">${btn(d.newNote,{icon:'plus',cls:'primary',attrs:'data-new-debit'})}</div></div>
-      <div class="h1sub">${esc(d.help)}</div></div><div class="tablewrap">${table}</div>
-      ${!notes.length?`<div class="statepanel empty">${ic('coins')}<h3>${esc(d.empty)}</h3><p>${esc(d.help)}</p></div>`:''}</section></div>`;
-    root.querySelector('[data-new-debit]')?.addEventListener('click',()=>{
+    function openCreate(){
       const opts=(pages[1].data||[]).map(inv=>`<option value="${inv.id}">${esc(inv.docNo)} · ${esc(money(inv.totalAmount,inv.currency))}</option>`).join('');
       appModal({icon:'coins',title:d.newNote,width:560,body:`<div class="fldrow c2"><div class="fld"><span>${esc(d.number)}</span><input id="debitNo" value="${esc(seq('DN'))}"></div>
         <div class="fld"><span>${esc(d.date)}</span><input id="debitDate" type="date" value="${today()}"></div></div>
@@ -256,11 +246,29 @@
           noteDate:document.querySelector('#debitDate').value,reason:document.querySelector('#debitReason').value.trim(),netAmount:document.querySelector('#debitNet').value,taxCode:'SR'});
           closeModal();toast(d.created,'ok');navigate('debit-notes');}catch(error){button.disabled=false;toast(error&&error.message||'Create failed','danger');}
       });
+    }
+    transactionListPage(root,{
+      module:'sales',route:'debit-notes',title:d.title,description:d.help,
+      rows:notes,rowId:row=>row.id,
+      primaryAction:{label:d.newNote,icon:'plus',onClick:openCreate},
+      columns:[
+        {label:d.title,render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.noteDate))}</small></div>`},
+        {label:d.invoice,render:row=>`<span class="mono">${esc((invoices.get(Number(row.invoiceId))||{}).docNo||'—')}</span>`},
+        {label:d.reason,render:row=>esc(row.reason)},
+        {label:d.net,align:'r',render:row=>esc(money(row.netAmount,row.currency))},
+        {label:d.tax,align:'r',render:row=>esc(money(row.taxAmount,row.currency))},
+        {label:d.total,align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},
+        {label:d.status,render:row=>cap(row.status,row.status==='posted'?'ok':'neutral')},
+        {label:'',align:'r',render:row=>row.status==='draft'?`<span class="rowact">${btn(d.post,{icon:'check',cls:'primary',attrs:`data-post-debit="${row.id}"`})}</span>`:''},
+      ],
+      empty:{icon:'coins',title:d.empty,description:d.help},
+      afterRender:({root:pageRoot})=>{
+        pageRoot.querySelectorAll('[data-post-debit]').forEach(button=>button.addEventListener('click',async event=>{
+          event.stopPropagation();button.disabled=true;
+          try{await a.action('sales/debit-notes',Number(button.dataset.postDebit),'post',{},`post-sales-debit-${button.dataset.postDebit}`);
+            toast(d.posted,'ok');navigate('debit-notes');}catch(error){button.disabled=false;toast(error&&error.message||'Post failed','danger');}
+        }));
+      },
     });
-    root.querySelectorAll('[data-post-debit]').forEach(button=>button.addEventListener('click',async event=>{
-      event.stopPropagation();button.disabled=true;
-      try{await a.action('sales/debit-notes',Number(button.dataset.postDebit),'post',{},`post-sales-debit-${button.dataset.postDebit}`);
-        toast(d.posted,'ok');navigate('debit-notes');}catch(error){button.disabled=false;toast(error&&error.message||'Post failed','danger');}
-    }));
   };
 })();

@@ -190,38 +190,18 @@ function nextProjectNo(projects){
 SCREENS['project-pl'] = async function(root){
   await prepareCanonicalProjectData();
   const s=projectCopy();
-  let filter='all';
   const chips=[['all',t('common.all'),null],['customer',ts('Customer'),'accent'],['internal',ts('Internal'),'teal'],['on_hold',ts('On hold'),'warn'],['completed',ts('Completed'),'ok']];
-  function rows(){
-    return DB.projects.filter(p=>{
-      if(filter==='all') return true;
-      if(filter==='customer') return p.client!=null;
-      if(filter==='internal') return p.client==null;
-      if(filter==='on_hold') return p.status==='on_hold';
-      if(filter==='completed') return p.status==='completed';
-      return true;
-    });
+  function matches(p,filter){
+    if(filter==='customer') return p.client!=null;
+    if(filter==='internal') return p.client==null;
+    if(filter==='on_hold') return p.status==='on_hold';
+    if(filter==='completed') return p.status==='completed';
+    return true;
   }
   function headroomCell(p){
     const hr=p.contract-p.billed;
     const cls=hr<0?'neg':'pos';
     return `<b class="tnum delta ${cls}">${hr<0?'−':''}${money0(Math.abs(hr))}</b>`;
-  }
-  function table(){
-    return buildTable({
-      rowId:p=>p.id,
-      columns:[
-        {label:t('prj.col.project'),render:p=>`<div class="cellsub"><b class="docnum">${esc(p.no)}</b><small>${esc(p.name)}${p.client?' · '+esc(p.client):''}</small></div>`},
-        {label:t('qc.col.type'),align:'l',render:p=>p.client?cap(ts('Customer'),'accent'):cap(ts('Internal'),'teal')},
-        {label:t('prj.col.manager'),align:'l',render:p=>esc(p.pm)},
-        {label:t('prj.col.contract'),align:'r',render:p=>`<span class="tnum">${money0(p.contract)}</span>`},
-        {label:s('colBilled'),align:'r',render:p=>`<span class="tnum">${money0(p.billed)}</span>`},
-        {label:t('prj.col.headroom'),align:'r',render:headroomCell},
-        {label:t('col.status'),align:'l',render:p=>projectStatusBadge(p.status)},
-        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
-      ],
-      rows:rows(),
-    });
   }
   const openProjects=DB.projects.filter(p=>p.status==='open');
   const contractTotal=openProjects.reduce((sum,p)=>sum+p.contract,0);
@@ -229,40 +209,30 @@ SCREENS['project-pl'] = async function(root){
   const headroomTotal=openProjects.reduce((sum,p)=>sum+(p.contract-p.billed),0);
   const overBilled=DB.projects.filter(p=>p.billed>p.contract);
 
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,t('nav.project'),t('prj.crumb')])}
-      <div class="h1row"><h1>${esc(t('nav.project'))}</h1><span class="countchip" id="prjCount"></span>
-        <div class="headright">
-          <div class="kfig"><small>${esc(t('prj.kpi.acv'))}</small><b class="tnum">${money0(contractTotal)}</b></div>
-          <div class="kfig"><small>${esc(s('colBilled'))}</small><b class="tnum">${money0(billedTotal)}</b></div>
-          <div class="kfig"><small>${esc(t('prj.col.headroom'))}</small><b class="tnum">${money0(headroomTotal)}</b></div>
-        </div></div>
-    </div>
-    ${overBilled.length?`<div class="alert warn"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="grow"><b>${esc(s('overBilledAlert').replace('{n}',overBilled.length))}</b></span></div>`:''}
-    <div class="toolbar">
-      <div class="filterchips" id="prjChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${c[2]?`<span class="dot" style="background:var(--${c[2]})"></span>`:''}${esc(c[1])}</button>`).join('')}</div>
-      <div class="grow"></div>
-      <button class="viewsel" data-tip="${esc(t('prj.timesheettip'))}" onclick="navigate('timesheet')">${ic('clock')}${esc(t('prj.timesheet'))}</button>
-      ${btn(t('common.export'),{icon:'download',cls:'soft'})}
-      ${btn(t('prj.new'),{icon:'plus',cls:'primary',attrs:'data-new="1"'})}
-    </div>
-    <div class="tablewrap" id="prjTable">${table()}</div>
-  </section></div>`;
-  const wrap=$('#prjTable');
-  $('#prjCount').textContent=rows().length+' '+t('prj.projects');
-  function openProject(id){ navigate('project-detail',{projectId:Number(id)}); }
-  function rewire(){
-    wireTable(wrap,{ onRow:openProject });
-    wrap.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openProject(b.closest('.dt-r').dataset.row);}));
-  }
-  rewire();
-  $('#prjChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
-    $('#prjChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f;
-    wrap.innerHTML=table(); $('#prjCount').textContent=rows().length+' '+t('prj.projects'); rewire();
-  }));
-  root.querySelector('[data-new]').addEventListener('click',()=>projectForm(s));
+  transactionListPage(root,{
+    module:'project',route:'project-pl',title:t('nav.project'),
+    rows:DB.projects,rowId:p=>p.id,
+    filters:chips.map(([key,label])=>[key,label]),filterFn:matches,
+    kpis:[
+      {label:t('prj.kpi.acv'),value:money0(contractTotal)},
+      {label:s('colBilled'),value:money0(billedTotal)},
+      {label:t('prj.col.headroom'),value:money0(headroomTotal),negative:headroomTotal<0},
+      {label:s('overBilledAlert').replace('{n}',overBilled.length),value:overBilled.length,negative:overBilled.length>0},
+    ],
+    primaryAction:{label:t('prj.new'),icon:'plus',onClick:()=>projectForm(s)},
+    toolbarActions:[{label:t('prj.timesheet'),icon:'clock',onClick:()=>navigate('timesheet')}],
+    columns:[
+      {label:t('prj.col.project'),render:p=>`<div class="cellsub"><b class="docnum">${esc(p.no)}</b><small>${esc(p.name)}${p.client?' · '+esc(p.client):''}</small></div>`},
+      {label:t('qc.col.type'),align:'l',render:p=>p.client?cap(ts('Customer'),'accent'):cap(ts('Internal'),'teal')},
+      {label:t('prj.col.manager'),align:'l',render:p=>esc(p.pm)},
+      {label:t('prj.col.contract'),align:'r',render:p=>`<span class="tnum">${money0(p.contract)}</span>`},
+      {label:s('colBilled'),align:'r',render:p=>`<span class="tnum">${money0(p.billed)}</span>`},
+      {label:t('prj.col.headroom'),align:'r',render:headroomCell},
+      {label:t('col.status'),align:'l',render:p=>projectStatusBadge(p.status)},
+    ],
+    onOpen:p=>navigate('project-detail',{projectId:Number(p.id)}),
+    empty:{icon:'project',title:'No projects'},
+  });
 };
 
 function projectForm(s){

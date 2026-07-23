@@ -37,7 +37,7 @@ function openPoApprovalDecision(request,decision){
     }catch(error){button.disabled=false;toast(error&&error.message||'Decision failed','danger');}
   });
 }
-makePurList({
+registerPurchasingTransactionList({
   route:'po-approvals', active:'po-approvals', title:()=>poApprovalCopy()('title'), unit:()=>poApprovalCopy()('unit'),
   sub:()=>poApprovalCopy()('sub'),prepare:prepareCanonicalPurchasingData,
   rows:()=>DB.purchaseOrderApprovals, rowId:p=>p.id,
@@ -55,7 +55,7 @@ makePurList({
     {label:()=>poApprovalCopy()('total'),align:'r',sortable:true,w:'minmax(110px,1fr)',render:p=>`<b class="tnum">${money(p.total,p.currency)}</b>`},
     {label:()=>poApprovalCopy()('submitted'),align:'l',w:'minmax(135px,1.2fr)',render:p=>`<span style="color:var(--muted)">${esc(p.submittedAt)}</span>`},
     {label:()=>poApprovalCopy()('status'),align:'l',cls:'cap-cell',w:'minmax(120px,1fr)',render:p=>cap(poApprovalLabel(p.status),poApprovalTone(p.status))},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(p)=>[{id:'review',icon:'ext',label:poApprovalCopy()('review'),run:()=>navigate('po-approval',{purchaseOrderId:p.orderId})}],
   onOpen:(p)=>navigate('po-approval',{purchaseOrderId:p.orderId}),
@@ -132,7 +132,7 @@ function openSupplierPriceList(){
     }catch(error){button.disabled=false;toast(error&&error.message||'Create failed','danger');}
   });
 }
-makePurList({
+registerPurchasingTransactionList({
   route:'supplier-price-lists', title:()=>supplierPricingCopy()('title'), unit:()=>supplierPricingCopy()('unit'),
   sub:()=>supplierPricingCopy()('sub'),prepare:prepareCanonicalSupplierPriceData,
   rows:()=>DB.supplierPriceLists, rowId:p=>p.id,
@@ -225,7 +225,7 @@ function newLandedCostModal(){
     }catch(error){button.disabled=false;toast(error&&error.message||'Create failed','danger');}
   });
 }
-makePurList({
+registerPurchasingTransactionList({
   route:'landed-cost', title:()=>landedCostCopy()('title'), unit:()=>landedCostCopy()('unit'), prepare:prepareCanonicalPurchasingData,
   sub:()=>landedCostCopy()('sub'),
   rows:()=>DB.landedCosts, rowId:l=>l.no,
@@ -246,7 +246,7 @@ makePurList({
     {label:()=>landedCostCopy()('goods'), align:'r', w:'minmax(100px,1fr)', render:l=>`<span class="tnum">${money(l.goods,l.currency)}</span>`},
     {label:()=>landedCostCopy()('addedCost'), align:'r', sortable:true, w:'minmax(100px,1fr)', render:l=>`<b class="tnum">${money(l.added,l.currency)}</b>`},
     {label:()=>landedCostCopy()('status'), align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:l=>cap(landedCostCopy()(l.rawStatus),l.rawStatus==='allocated'?'ok':'neutral')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(l)=>[
     {id:'view',icon:'ext',label:landedCostCopy()('open'),run:()=>openLanded(l)},

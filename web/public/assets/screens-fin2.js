@@ -218,7 +218,6 @@ async function prepareCanonicalFinanceData(){
 /* ---------------- GENERAL LEDGER / CHART OF ACCOUNTS (module landing) ---------------- */
 SCREENS['gl'] = async function(root){
   await prepareCanonicalFinanceData();
-  let filter='all';
   const flat=DB.coa.flatMap(g=>g.accts.map(a=>({...a,type:g.grp})));
   const get=c=>flat.find(a=>a.code===c)?.bal||0;
   const cash=get('1000')+get('1010');
@@ -232,53 +231,34 @@ SCREENS['gl'] = async function(root){
   const canonicalMeta=DB.financeReadMeta||{invoiceCount:0,journalCount:0};
 
   const chips=[['all',t('common.all'),null],['Assets',ts('Assets'),'accent'],['Liabilities',ts('Liabilities'),'warn'],['Income',ts('Income'),'ok'],['Expenses',ts('Expenses'),'teal']];
-  function table(){
-    const tpl='minmax(240px,2.4fr) minmax(120px,1.2fr) 130px 150px 54px';
-    let h=`<div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-      <div class="dt-r dt-head"><div class="dt-c l">${esc(t('gl.col.account'))}</div><div class="dt-c l">${esc(t('qc.col.type'))}</div><div class="dt-c r">${esc(t('gl.col.movement'))}</div><div class="dt-c r">${esc(t('gl.col.balance'))}</div><div class="dt-c c">${esc(t('gl.col.drcr'))}</div></div>
-      <div class="dt-body">`;
-    DB.coa.forEach(g=>{
-      if(filter!=='all'&&filter!==g.grp) return;
-      const gtot=g.accts.reduce((s,a)=>s+(a.dc==='Cr'?-a.bal:a.bal),0);
-      h+=`<div class="dt-r" style="background:var(--surface-3);font-weight:700"><div class="dt-c l" style="grid-column:1/3">${esc(ts(g.grp))}</div><div class="dt-c r" style="color:var(--muted)">${g.accts.length} ${esc(t('gl.accounts'))}</div><div class="dt-c r tnum">${signed0(gtot)}</div><div class="dt-c c"></div></div>`;
-      g.accts.forEach(a=>{
-        h+=`<div class="dt-r drill" data-code="${esc(a.code)}">
-          <div class="dt-c l"><div class="cellsub"><b>${esc(a.code)} · ${esc(a.name)}</b></div></div>
-          <div class="dt-c l">${cap(ts(g.grp),glTypeTone(g.grp))}</div>
-          <div class="dt-c r tnum delta ${a.mvt<0?'neg':'pos'}">${a.mvt?signed0(a.mvt):'—'}</div>
-          <div class="dt-c r tnum"><b>${money0(a.bal)}</b></div>
-          <div class="dt-c c" style="color:var(--muted);font-size:12px">${esc(a.dc)}</div></div>`;
-      });
-    });
-    h+=`</div></div></div>`; return h;
-  }
-  function statTile(label,value,sub,tone){
-    return `<div class="card" style="padding:13px 15px"><small style="display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${label}</small>
-      <b class="tnum" style="font-size:23px;font-weight:600;letter-spacing:-.02em;color:${tone||'var(--fg)'}">${value}</b>
-      <small style="display:block;color:var(--muted);font-size:12px;margin-top:3px">${sub}</small></div>`;
-  }
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,t('nav.finance'),t('gl.title')])}
-      <div class="h1row"><h1>${esc(t('gl.title'))}</h1><span class="countchip">${flat.length} ${esc(t('gl.accounts'))} · ${DB.company.period}${canonicalMeta.truncated?' · first 100 rows':''}</span></div>
-    </div>
-    <div class="statwrap"><div class="statcards">
-      ${statTile(t('gl.t.cash'),money0(cash),'Canonical posted balance')}
-      ${statTile(t('gl.t.ar'),money0(ar),`${canonicalMeta.invoiceCount} canonical invoice${canonicalMeta.invoiceCount===1?'':'s'}`,'var(--warn)')}
-      ${statTile(t('gl.t.ap'),money0(ap),'Canonical posted balance')}
-      ${statTile(t('gl.t.net'),money0(net),`${canonicalMeta.journalCount} posted journal${canonicalMeta.journalCount===1?'':'s'}`,'var(--ok)')}
-    </div></div>
-    <div class="toolbar">
-      <div class="filterchips" id="glChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${c[2]?`<span class="dot" style="background:var(--${c[2]})"></span>`:''}${esc(c[1])}</button>`).join('')}</div>
-      <div class="grow"></div>
-      <button class="viewsel" data-tip="${esc(t('gl.pnltip'))}" onclick="navigate('pnl')">${ic('chart')}${esc(t('gl.pnl'))}</button>
-      <button class="viewsel" data-tip="${esc(t('gl.bankrectip'))}" onclick="navigate('bank-rec')">${ic('bank')}${esc(t('gl.reconcile'))}</button>
-    </div>
-    <div class="tablewrap" id="glTable">${table()}</div>
-  </section></div>`;
-  function rewire(){ root.querySelectorAll('#glTable .dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{ const c=tr.dataset.code; (DB.acctLedgerDocs&&DB.acctLedgerDocs[c])?navigate('account-ledger',{code:c}):(c==='1000'?navigate('account-ledger'):toast('Open ledger · '+c,'info')); })); }
-  rewire();
-  $('#glChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#glChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f; $('#glTable').innerHTML=table(); rewire(); }));
+  transactionListPage(root,{
+    module:'finance',route:'gl',title:t('gl.title'),
+    description:`${DB.company.period}${canonicalMeta.truncated?' · first 100 rows':''}`,
+    rows:flat,rowId:a=>a.code,
+    filters:chips.map(([key,label])=>[key,label]),
+    filterFn:(account,type)=>account.type===type,
+    kpis:[
+      {label:t('gl.t.cash'),value:money0(cash)},
+      {label:t('gl.t.ar'),value:money0(ar)},
+      {label:t('gl.t.ap'),value:money0(ap)},
+      {label:t('gl.t.net'),value:money0(net),negative:net<0},
+    ],
+    toolbarActions:[
+      {label:t('gl.pnl'),icon:'chart',onClick:()=>navigate('pnl')},
+      {label:t('gl.reconcile'),icon:'bank',onClick:()=>navigate('bank-rec')},
+    ],
+    columns:[
+      {label:t('gl.col.account'),render:a=>`<div class="cellsub"><b>${esc(a.code)} · ${esc(a.name)}</b></div>`},
+      {label:t('qc.col.type'),render:a=>cap(ts(a.type),glTypeTone(a.type))},
+      {label:t('gl.col.movement'),align:'r',render:a=>`<span class="tnum delta ${a.mvt<0?'neg':'pos'}">${a.mvt?signed0(a.mvt):'—'}</span>`},
+      {label:t('gl.col.balance'),align:'r',render:a=>`<b class="tnum">${money0(a.bal)}</b>`},
+      {label:t('gl.col.drcr'),align:'c',render:a=>esc(a.dc)},
+    ],
+    onOpen:a=>(DB.acctLedgerDocs&&DB.acctLedgerDocs[a.code])
+      ?navigate('account-ledger',{code:a.code})
+      :(a.code==='1000'?navigate('account-ledger'):toast('Open ledger · '+a.code,'info')),
+    empty:{icon:'book',title:'No ledger accounts'},
+  });
 };
 
 /* ---------------- ACCOUNT LEDGER (drill target) ---------------- */

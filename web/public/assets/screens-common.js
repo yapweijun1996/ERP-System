@@ -117,12 +117,14 @@ function transactionListPage(root, config){
       attrs:`data-list-primary-action${primary.disabled?' disabled':''}`,
     }):'';
     const note=value(cfg.note,source);
+    const toolbarContent=value(cfg.toolbarContent,rows,source)||'';
     const body=`<div class="sales-body transaction-list-body"
         data-layout="transaction-list-v1" data-list-route="${esc(String(cfg.route||''))}">
       ${renderKpis(source)}
       <div class="toolbar" data-list-toolbar>
         ${renderFilters()}<div class="grow"></div>
         ${note?`<small class="transaction-list-note">${esc(String(note))}</small>`:''}
+        ${toolbarContent}
         ${renderToolbarActions(rows)}
       </div>
       <div class="sales-tablewrap" data-list-table>${renderTable(rows)}</div>
@@ -169,6 +171,14 @@ function transactionListPage(root, config){
       const action=actions[Number(button.dataset.listToolbarAction)];
       if(action&&typeof action.onClick==='function'&&!action.disabled) action.onClick(event,rows);
     }));
+    if(typeof cfg.rowMenu==='function'){
+      tableRoot.querySelectorAll('.transaction-row-menu').forEach(button=>button.addEventListener('click',event=>{
+        event.stopPropagation();
+        const rowElement=button.closest('[data-row]');
+        const row=rows.find(candidate=>String(cfg.rowId(candidate))===String(rowElement?.dataset.row));
+        if(row) openTransactionRowMenu(button,cfg.rowMenu(row));
+      }));
+    }
     if(typeof cfg.afterRender==='function') cfg.afterRender({root,rows,allRows:allRows(),activeFilter,setFilter,render});
   }
   function primaryEnabled(primary){
@@ -179,6 +189,104 @@ function transactionListPage(root, config){
   return {render,setFilter,getFilter:()=>activeFilter,rows:visibleRows};
 }
 window.transactionListPage=transactionListPage;
+
+function transactionRowMenuButton(label){
+  return `<span class="rowact"><button class="transaction-row-menu" data-tip="${esc(label||'Actions')}" aria-label="${esc(label||'Row actions')}">${ic('more')}</button></span>`;
+}
+window.transactionRowMenuButton=transactionRowMenuButton;
+
+function openTransactionRowMenu(button,items){
+  const entries=(items||[]).filter(Boolean);
+  if(!entries.length) return;
+  closeAllPops();
+  const rect=button.getBoundingClientRect();
+  const menu=document.createElement('div');
+  menu.className='pop show somenu';
+  menu.style.cssText=`width:212px;top:${rect.bottom+6}px;left:auto;right:${Math.max(8,window.innerWidth-rect.right)}px;padding:6px;transform-origin:top right`;
+  menu.innerHTML=entries.map(item=>`${item.sep?'<div class="menusep"></div>':''}
+    <button class="menu-item ${item.danger?'danger':''}" data-list-menu-id="${esc(String(item.id))}">
+      ${ic(item.icon)}<span>${esc(item.label)}</span>
+    </button>`).join('');
+  document.body.appendChild(menu);
+  const close=()=>{
+    menu.remove();
+    document.removeEventListener('click',outside);
+  };
+  const outside=event=>{
+    if(!menu.contains(event.target)&&event.target!==button) close();
+  };
+  menu.querySelectorAll('[data-list-menu-id]').forEach(itemButton=>itemButton.addEventListener('click',()=>{
+    const item=entries.find(candidate=>String(candidate.id)===itemButton.dataset.listMenuId);
+    if(item&&typeof item.run==='function') item.run();
+    close();
+  }));
+  setTimeout(()=>document.addEventListener('click',outside),10);
+}
+
+/**
+ * Registers a data-backed transaction list screen while preserving the compact
+ * declarative configs used by the Sales/Purchasing modules. This is registration
+ * sugar only: every route renders through transactionListPage().
+ */
+function registerTransactionList(config){
+  const cfg=config||{};
+  SCREENS[cfg.route]=async function(root){
+    if(typeof cfg.prepare==='function') await cfg.prepare();
+    const value=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
+    const sourceRows=()=> {
+      const rows=value(cfg.rows);
+      return Array.isArray(rows)?rows:[];
+    };
+    const unit=()=>value(cfg.unit);
+    const truncated=()=>Boolean(
+      value(cfg.truncated)
+      ||(cfg.module==='sales'&&DB.salesReadMeta&&DB.salesReadMeta.truncated)
+      ||(cfg.module==='purchasing'&&DB.purchasingReadMeta&&DB.purchasingReadMeta.truncated)
+    );
+    transactionListPage(root,{
+      module:cfg.module,
+      route:cfg.route,
+      active:cfg.active||cfg.route,
+      title:()=>value(cfg.title),
+      description:()=>value(cfg.sub),
+      crumb:()=>value(cfg.crumb),
+      rows:sourceRows,
+      rowId:cfg.rowId,
+      checkable:cfg.checkable!==false,
+      count:rows=>`${rows.length}${truncated()?'+':''}${unit()?` ${unit()}`:''}`,
+      primaryAction:cfg.newBtn?{
+        label:()=>value(cfg.newBtn.label),
+        icon:cfg.newBtn.icon||'plus',
+        onClick:cfg.newBtn.onClick,
+        disabled:cfg.newBtn.disabled,
+      }:null,
+      kpis:rows=>(value(cfg.kpis,rows)||[]).map(item=>({
+        label:()=>value(item.label),
+        value:()=>value(item.value??item.val),
+        filter:item.filter??item.f,
+        negative:item.negative??item.neg,
+        accent:item.accent,
+      })),
+      filters:(value(cfg.chips)||[]).map(item=>[
+        item[0],()=>value(item[1]),
+      ]),
+      filterFn:cfg.filterFn,
+      columns:cfg.columns,
+      toolbarContent:()=>value(cfg.actions)||'',
+      toolbarActions:()=>value(cfg.toolbarActions)||[],
+      empty:cfg.empty,
+      pagination:cfg.pagination,
+      onOpen:cfg.onOpen,
+      rowMenu:cfg.rowMenu,
+      onSelectionChange:cfg.onSelectionChange,
+      afterRender:context=>{
+        if(typeof cfg.wire==='function') cfg.wire(root,context.allRows);
+        if(typeof cfg.afterRender==='function') cfg.afterRender(context);
+      },
+    });
+  };
+}
+window.registerTransactionList=registerTransactionList;
 
 /**
  * Shared horizontal comparison bars used by Sales and Purchasing dashboards.

@@ -137,52 +137,8 @@
       a.list('quality/plans',{limit:100}),
     ]);
     const inspections=inspectionPage.data||[],products=byId(productPage.data),plans=planPage.data||[];
-    let active='all';
-    function filtered(){ return active==='all'?inspections:inspections.filter(row=>row.status===active); }
-    function table(){
-      return buildTable({
-        rowId:row=>row.id,
-        columns:[
-          {label:s('inspection'),sticky:true,render:row=>{
-            const item=products.get(Number(row.productId))||{};
-            return `<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b>
-              <small>${esc(item.sku||'#'+row.productId)} · ${esc(item.name||s('product'))}</small></div>`;
-          }},
-          {label:s('type'),render:row=>cap(typeLabel(s,row.inspectionType),'accent')},
-          {label:s('source'),render:row=>`<div class="cellsub"><b>${esc(row.sourceRef||row.sourceType)}</b><small>${esc(row.sourceType)}</small></div>`},
-          {label:s('lotQty'),align:'r',render:row=>`<span class="tnum">${num(Number(row.lotQty))}</span>`},
-          {label:s('sampleQty'),align:'r',render:row=>`<span class="tnum">${num(Number(row.sampleQty))}</span>`},
-          {label:s('inspector'),render:row=>esc(row.inspectorName)},
-          {label:s('date'),render:row=>esc(dateLabel(row.inspectionDate))},
-          {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
-        ],
-        rows:filtered(),
-      });
-    }
     const chips=[['all',s('all')],['scheduled',s('scheduled')],['passed',s('passed')],['failed',s('failed')],['closed',s('closed')]];
-    root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,t('nav.quality'),s('inspections')])}
-        <div class="h1row"><h1>${esc(s('inspections'))}</h1><span class="countchip" id="qualityCount">${inspections.length}</span>
-          <div class="headright">${btn(s('newInspection'),{icon:'plus',cls:'primary',attrs:'data-create-inspection'})}</div>
-        </div>
-      </div>
-      <div class="toolbar"><div class="filterchips" id="qualityFilters">
-        ${chips.map(([key,label])=>`<button class="chip ${key==='all'?'on':''}" data-status="${key}">${esc(label)}</button>`).join('')}
-      </div><div class="grow"></div><small style="color:var(--muted)">${esc(s('dataLimit'))}</small></div>
-      <div class="tablewrap" id="qualityTable">${table()}</div>
-      ${!inspections.length?`<div class="statepanel empty">${ic('checkc')}<h3>${esc(s('empty'))}</h3><p>${esc(s('emptyHelp'))}</p></div>`:''}
-    </section></div>`;
-    const tableRoot=root.querySelector('#qualityTable');
-    function wire(){ if(tableRoot) wireTable(tableRoot,{onRow:id=>openInspection(id)}); }
-    wire();
-    root.querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',()=>{
-      root.querySelector('.chip.on')?.classList.remove('on');
-      button.classList.add('on');
-      active=button.dataset.status;
-      tableRoot.innerHTML=table(); wire();
-      root.querySelector('#qualityCount').textContent=String(filtered().length);
-    }));
-    root.querySelector('[data-create-inspection]')?.addEventListener('click',async event=>{
+    async function createInspection(event){
       const button=event.currentTarget,plan=plans.find(row=>row.isActive!==false);
       if(!plan){ toast(s('emptyHelp'),'warn'); return; }
       const item=products.get(Number(plan.productId))||productPage.data?.[0];
@@ -200,6 +156,29 @@
       }catch(error){
         button.disabled=false; toast(error&&error.message||'Quality create failed','danger');
       }
+    }
+    transactionListPage(root,{
+      module:'quality',route:'qc-inspection',title:s('inspections'),
+      rows:inspections,rowId:row=>row.id,
+      filters:chips,filterFn:(row,status)=>row.status===status,
+      primaryAction:{label:s('newInspection'),icon:'plus',onClick:createInspection},
+      note:s('dataLimit'),
+      columns:[
+        {label:s('inspection'),sticky:true,render:row=>{
+          const item=products.get(Number(row.productId))||{};
+          return `<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b>
+            <small>${esc(item.sku||'#'+row.productId)} · ${esc(item.name||s('product'))}</small></div>`;
+        }},
+        {label:s('type'),render:row=>cap(typeLabel(s,row.inspectionType),'accent')},
+        {label:s('source'),render:row=>`<div class="cellsub"><b>${esc(row.sourceRef||row.sourceType)}</b><small>${esc(row.sourceType)}</small></div>`},
+        {label:s('lotQty'),align:'r',render:row=>`<span class="tnum">${num(Number(row.lotQty))}</span>`},
+        {label:s('sampleQty'),align:'r',render:row=>`<span class="tnum">${num(Number(row.sampleQty))}</span>`},
+        {label:s('inspector'),render:row=>esc(row.inspectorName)},
+        {label:s('date'),render:row=>esc(dateLabel(row.inspectionDate))},
+        {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
+      ],
+      onOpen:row=>openInspection(row.id),
+      empty:{icon:'checkc',title:s('empty'),description:s('emptyHelp')},
     });
   };
 

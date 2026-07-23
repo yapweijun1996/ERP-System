@@ -1,6 +1,6 @@
 /* ============================================================
    ARIA ERP — Purchasing module: hub, shared shell, list factory, reports
-   Provides:  PUR_SECTIONS, purNav(), purPage(), makePurList()
+   Provides:  PUR_SECTIONS, purNav(), purPage(), registerPurchasingTransactionList()
    Screens:   purchasing-home, purchasing-reports, report-pur-supplier,
               report-pur-buyer, report-pur-price-var, report-pur-vendor,
               report-pur-generic
@@ -623,67 +623,8 @@ async function prepareCanonicalPurchasingAnalyticsData(){
   DB.purchasingAnalyticsMeta={truncated:pages.some(page=>Boolean(page.nextCursor))};
 }
 
-/* ============================================================
-   GENERIC PURCHASING LIST FACTORY  (mirror of makeSalesList)
-   ============================================================ */
-function makePurList(cfg){
-  SCREENS[cfg.route] = async function(root){
-    if(cfg.prepare) await cfg.prepare();
-    const value=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
-    let filter = 'all';
-    const allRows = () => (typeof cfg.rows==='function' ? cfg.rows() : cfg.rows);
-    const rows = () => { const r=allRows(); return filter==='all' ? r : r.filter(x=>cfg.filterFn(x,filter)); };
-
-    function kpibar(){
-      if(!cfg.kpis) return '';
-      return `<div class="so-kpibar">`+cfg.kpis(allRows()).map(k=>
-        `<button class="so-kpi ${k.neg?'neg':''} ${k.accent?'accent':''} ${k.f?'clickable':''}" ${k.f?`data-f="${k.f}"`:'disabled'}>
-          <small>${esc(value(k.label))}</small><b class="tnum">${k.val}</b></button>`).join('')+`</div>`;
-    }
-    function toolbar(){
-      const chips = cfg.chips ? `<div class="filterchips" id="plChips">${cfg.chips.map(c=>`<button class="chip ${c[0]===filter?'on':''}" data-f="${c[0]}">${esc(value(c[1]))}</button>`).join('')}</div>` : '<div></div>';
-      const right = `${btn('Filter',{icon:'filter',cls:'soft'})}${btn('Export',{icon:'download',cls:'soft',attrs:'data-export'})}${cfg.newBtn?btn(value(cfg.newBtn.label),{icon:'plus',cls:'primary',attrs:'data-new'}):''}`;
-      return `<div class="toolbar">${chips}<div class="grow"></div>${value(cfg.actions)||''}${right}</div>`;
-    }
-    function table(){ return buildTable({ checkable:true, rowId:cfg.rowId, columns:cfg.columns.map(column=>({...column,label:value(column.label)})), rows:rows() }); }
-    function body(){ return `<div class="sales-body">${kpibar()}${toolbar()}<div class="sales-tablewrap" id="plTable">${table()}</div></div>`; }
-
-    function render(){
-      root.innerHTML = purPage({ active:cfg.active||cfg.route, title:value(cfg.title), crumb:cfg.crumb, sub:value(cfg.sub),
-        count: rows().length
-          +(cfg.prepare&&DB.purchasingReadMeta&&DB.purchasingReadMeta.truncated?'+':'')
-          +(cfg.unit?(' '+value(cfg.unit)):''), body: body() });
-      wire();
-    }
-    function setFilter(f){ filter=f; render(); }
-    function openRowMenu(btnEl,row){
-      closeAllPops();
-      const items=cfg.rowMenu(row); const r=btnEl.getBoundingClientRect();
-      const m=document.createElement('div'); m.className='pop show somenu';
-      m.style.cssText=`width:212px;top:${r.bottom+6}px;left:auto;right:${Math.max(8,window.innerWidth-r.right)}px;padding:6px;transform-origin:top right`;
-      m.innerHTML=items.map(x=>`${x.sep?'<div class="menusep"></div>':''}<button class="menu-item ${x.danger?'danger':''}" data-id="${x.id}">${ic(x.icon)}<span>${esc(x.label)}</span></button>`).join('');
-      document.body.appendChild(m);
-      const close=()=>{m.remove();document.removeEventListener('click',out);};
-      const out=e=>{ if(!m.contains(e.target)&&e.target!==btnEl) close(); };
-      m.querySelectorAll('[data-id]').forEach(b=>b.addEventListener('click',()=>{ const it=items.find(i=>i.id===b.dataset.id); it&&it.run&&it.run(); close(); }));
-      setTimeout(()=>document.addEventListener('click',out),10);
-    }
-    function wire(){
-      wireTable($('#plTable'),{ onRow: cfg.onOpen ? (id)=>cfg.onOpen(allRows().find(r=>String(cfg.rowId(r))===String(id))) : null });
-      if(cfg.onOpen) $('#plTable').querySelectorAll('.linknum').forEach(el=>el.addEventListener('click',e=>{
-        e.stopPropagation(); const tr=el.closest('[data-row]'); if(tr) cfg.onOpen(allRows().find(r=>String(cfg.rowId(r))===String(tr.dataset.row)));
-      }));
-      $('#plChips') && $$('#plChips .chip').forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.f)));
-      $$('#viewRoot .so-kpi.clickable').forEach(k=>k.addEventListener('click',()=>setFilter(k.dataset.f)));
-      const nb=$('#viewRoot [data-new]'); nb&&cfg.newBtn&&nb.addEventListener('click',cfg.newBtn.onClick);
-      const ex=$('#viewRoot [data-export]'); ex&&ex.addEventListener('click',()=>toast(value(cfg.title)+' exported to Excel','ok'));
-      if(cfg.rowMenu) $('#plTable').querySelectorAll('.row-menu').forEach(b=>b.addEventListener('click',e=>{
-        e.stopPropagation(); const tr=b.closest('[data-row]'); const row=allRows().find(r=>String(cfg.rowId(r))===String(tr.dataset.row)); openRowMenu(b,row);
-      }));
-      if(cfg.wire) cfg.wire(root,allRows());
-    }
-    render();
-  };
+function registerPurchasingTransactionList(config){
+  registerTransactionList({...config,module:'purchasing'});
 }
 
 /* ============================================================

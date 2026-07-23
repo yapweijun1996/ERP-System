@@ -3,7 +3,7 @@
    Suppliers · Requisitions · RFQs · Supplier Quotations ·
    Purchase Orders · Goods Receipts · Supplier Invoices ·
    Purchase Returns · Supplier Credit / Debit Notes
-   (built on the shared makePurList factory)
+   (registered through the shared transactionListPage SSOT)
    ============================================================ */
 
 /* ---- shared quick-view detail (records without a bespoke doc screen) ---- */
@@ -114,7 +114,7 @@ SCREENS['pur-txn-view'] = function(root){
 };
 
 /* ---------------- SUPPLIERS (master data) ---------------- */
-makePurList({
+registerPurchasingTransactionList({
   route:'suppliers', title:'Suppliers', unit:'suppliers',
   prepare:prepareCanonicalPurchasingData,
   sub:'Vendor master used across RFQ, quotation, purchase order, receipt, invoice and payment. Maintain terms, currency, lead-time, category and approved-supplier status.',
@@ -137,7 +137,7 @@ makePurList({
     {label:'Rating', align:'r', sortable:true, w:'minmax(70px,0.7fr)', render:s=>s.rating==null?'—':`<b class="tnum">${s.rating.toFixed(1)}</b>`},
     {label:'Balance', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:s=>`<b class="tnum">${money0(s.balance)}</b>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(96px,0.9fr)', render:s=>s.approved==null?cap(s.status,'ok'):s.approved?cap('Approved','ok'):cap('Review','warn')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(s)=>[
     {id:'view',icon:'ext',label:'Open supplier',run:()=>toast(`Opening ${s.name}`,'info')},
@@ -148,7 +148,7 @@ makePurList({
 });
 
 /* ---------------- PURCHASE REQUISITIONS ---------------- */
-makePurList({
+registerPurchasingTransactionList({
   route:'purchase-requisitions', title:'Purchase Requisitions', unit:'requisitions',
   prepare:prepareCanonicalPurchasingData,
   sub:'Internal purchase requests from warehouse, production, projects and admin. Approve, then convert directly to a purchase order.',
@@ -170,7 +170,7 @@ makePurList({
     {label:'Lines', align:'r', w:'minmax(54px,0.5fr)', render:r=>r.lines},
     {label:'Est. value', align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:r=>`<b class="tnum">${money0(r.value)}</b>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(120px,1.1fr)', render:r=>cap(r.status,PR_TONE[r.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(r)=>[
     {id:'view',icon:'ext',label:'View requisition',run:()=>openReq(r)},
@@ -372,7 +372,7 @@ function newRfqModal(){
   });
 }
 
-makePurList({
+registerPurchasingTransactionList({
   route:'rfqs', title:()=>sourcingCopy().rfqs, unit:()=>sourcingCopy().rfqUnit, prepare:prepareCanonicalPurchasingData,
   sub:()=>sourcingCopy().rfqSub,
   rows:()=>DB.rfqs, rowId:r=>r.no,
@@ -392,7 +392,7 @@ makePurList({
     {label:()=>sourcingCopy().suppliers, align:'c', w:'minmax(86px,0.9fr)', render:r=>miniProgress(r.responded, r.suppliers)},
     {label:()=>sourcingCopy().responseBy, align:'l', w:'minmax(96px,0.9fr)', render:r=>`<span style="color:var(--muted)">${esc(r.due)}</span>`},
     {label:()=>sourcingCopy().status, align:'l', cls:'cap-cell', w:'minmax(130px,1.2fr)', render:r=>cap(sourcingRfqStatus(r),RFQ_TONE[r.status]||'neutral')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(r)=>[
     {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openPurTxn('rfq',r)},
@@ -458,7 +458,7 @@ async function convertSupplierQuote(quotationId){
   }catch(error){ toast(error&&error.message||c.required,'danger'); }
 }
 
-makePurList({
+registerPurchasingTransactionList({
   route:'supplier-quotations', title:()=>sourcingCopy().quotes, unit:()=>sourcingCopy().quoteUnit, prepare:prepareCanonicalPurchasingData,
   sub:()=>sourcingCopy().quoteSub,
   rows:()=>DB.supplierQuotes, rowId:q=>q.no,
@@ -480,7 +480,7 @@ makePurList({
     {label:()=>sourcingCopy().validUntil, align:'l', w:'minmax(94px,0.9fr)', render:q=>`<span style="color:var(--muted)">${esc(q.validity)}</span>`},
     {label:()=>sourcingCopy().total, align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:q=>`<b class="tnum">${money(q.total,q.currency)}</b>`},
     {label:()=>sourcingCopy().status, align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:q=>cap(sourcingQuoteStatus(q),SQ_TONE[q.status]||'neutral')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(q)=>[
     {id:'view',icon:'ext',label:sourcingCopy().view,run:()=>openPurTxn('squote',q)},
@@ -514,7 +514,7 @@ function openQuoteCompare(rfqNo){
 
 /* ---------------- PURCHASE ORDERS (rebuilt on the factory) ---------------- */
 /* PO_TONE → TONES.po (defined in data-core.js) */
-makePurList({
+registerPurchasingTransactionList({
   route:'purchase-orders', active:'purchase-orders', title:'Purchase Orders', unit:'orders',
   prepare:prepareCanonicalPurchasingData,
   sub:'Confirmed orders issued to suppliers after approval or supplier selection. Track approval, receiving, invoicing and payment status through to close.',
@@ -537,7 +537,7 @@ makePurList({
     {label:'Received', align:'l', w:'minmax(110px,1.1fr)', render:p=>miniProgress(Math.round(p.recv/100*p.items), p.items)},
     {label:'Total', align:'r', sortable:true, w:'minmax(108px,1fr)', render:p=>`<b class="tnum">${money(p.total,p.currency)}</b>${p.currency!=='USD'?`<div style="font-size:11px;color:var(--muted)">${p.currency}</div>`:''}`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(132px,1.2fr)', render:p=>cap(p.status,PO_TONE[p.status])+(p.flag?` <span data-tip="${esc(p.flag)}" style="color:var(--warn)">${ic('warn')}</span>`:'')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(p)=>[
     {id:'view',icon:'ext',label:'Open PO',run:()=>openPO(p)},
@@ -555,7 +555,7 @@ function openPO(p){ if(p.approval){navigate('po-approval',{purchaseOrderId:p.id}
    adapter calls refresh() itself before these promises resolve). Guarded by
    the PO's real status ('Approved'/'Completed' — this schema's only two live
    states, see erp-system-data-adapter.js) rather than hidden/disabled menu
-   items, since makePurList's row menu doesn't support conditional items. */
+   items, since the transaction list row menu supports conditional items. */
 async function doReceiveGoods(p){
   if(p.status!=='Approved'){ toast(`${p.no} is '${p.status}' — cannot receive goods (already received, or cancelled).`,'warn'); return; }
   const adapter=window.ErpSystemData;
@@ -599,7 +599,7 @@ async function doPostSupplierInvoice(p){
 }
 
 /* ---------------- GOODS RECEIPTS ---------------- */
-makePurList({
+registerPurchasingTransactionList({
   route:'goods-receipts', active:'goods-receipts', title:'Goods Receipts', unit:'receipts',
   prepare:prepareCanonicalPurchasingData,
   sub:'Receiving against purchase orders — full or partial, with QC disposition and putaway. Posting updates inventory and feeds the 3-way match.',
@@ -621,7 +621,7 @@ makePurList({
     {label:'Received', align:'l', w:'minmax(110px,1.1fr)', render:g=>{const p=g.recvPct,tone=p>=100?'ok':p>0?'warn':'';return `<span class="fulcell"><span class="minibar"><i class="${tone}" style="width:${p}%"></i></span><b class="fnum">${p}%</b></span>`;}},
     {label:'QC', align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:g=>cap(g.qc, g.qc==='Accepted'?'ok':g.qc==='Rejected'?'danger':'warn')},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(128px,1.2fr)', render:g=>cap(g.status,GRN_TONE[g.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(g)=>[
     {id:'view',icon:'ext',label:'Open receipt',run:()=>openGRN(g)},
@@ -634,7 +634,7 @@ makePurList({
 function openGRN(g){ navigate('goods-receipt',{receiptId:g.id}); }
 
 /* ---------------- SUPPLIER INVOICES ---------------- */
-makePurList({
+registerPurchasingTransactionList({
   route:'supplier-invoices', active:'supplier-invoices', title:'Supplier Invoices', unit:'invoices',
   prepare:prepareCanonicalPurchasingData,
   sub:'AP invoices captured against purchase orders and goods receipts. 3-way matching flags quantity and price variances before posting and payment.',
@@ -655,7 +655,7 @@ makePurList({
     {label:'Match', align:'l', cls:'cap-cell', w:'minmax(106px,1fr)', render:i=>cap(i.match, i.match==='Matched'?'ok':i.match==='Mismatch'?'danger':i.match==='No GRN'?'warn':'info')},
     {label:'Total', align:'r', sortable:true, w:'minmax(108px,1fr)', render:i=>`<b class="tnum">${money(i.total,i.currency)}</b>${i.currency!=='USD'?`<div style="font-size:11px;color:var(--muted)">${i.currency}</div>`:''}`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(128px,1.2fr)', render:i=>cap(i.status,SINV_TONE[i.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(i)=>[
     {id:'view',icon:'ext',label:'Open invoice',run:()=>openSINV(i)},
@@ -770,7 +770,7 @@ function openPurchaseReturnDetails(returnRow){
   appModal({icon:'refresh',title:`${returnRow.no} · ${returnRow.supplier}`,width:760,body:`<div class="docmeta" style="margin-bottom:16px"><div class="dm"><small>${c.againstGrn}</small><b>${esc(returnRow.grn)}</b></div><div class="dm"><small>${c.invoice}</small><b>${esc(returnRow.invoice)}</b></div><div class="dm"><small>${c.status}</small>${cap(purchaseReturnStatus(returnRow),PRET_TONE[returnRow.status]||'neutral')}</div></div><div class="sectitle">${c.reason}</div><p>${esc(returnRow.reason)}</p><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th><th>${c.unitCost}</th><th>${c.total}</th></tr></thead><tbody>${returnRow.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td>${num(line.qty)}</td><td>${money(line.unitCost,returnRow.currency)}</td><td>${money(line.net+line.tax,returnRow.currency)}</td></tr>`).join('')}</tbody></table><div class="sumrow"><span>${c.net}</span><b>${money(returnRow.net,returnRow.currency)}</b></div><div class="sumrow"><span>${c.tax}</span><b>${money(returnRow.tax,returnRow.currency)}</b></div><div class="sumrow total"><span>${c.total}</span><b>${money(returnRow.value,returnRow.currency)}</b></div>`,actions:`${btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})}${returnRow.rawStatus==='requested'?btn(c.reject,{icon:'x',cls:'soft',attrs:`onclick="rejectPurchaseReturn(DB.purchaseReturns.find(r=>r.id===${returnRow.id}))"`}):''}${returnRow.rawStatus==='requested'?btn(c.shipCredit,{icon:'coins',cls:'primary',attrs:`onclick="closeModal();shipPurchaseReturnModal(DB.purchaseReturns.find(r=>r.id===${returnRow.id}))"`}):''}`});
 }
 
-makePurList({
+registerPurchasingTransactionList({
   route:'purchase-returns', title:()=>purchaseReturnCopy().returns, unit:()=>purchaseReturnCopy().returnUnit, prepare:prepareCanonicalPurchasingData,
   sub:()=>purchaseReturnCopy().returnSub,
   rows:()=>DB.purchaseReturns, rowId:r=>r.no,
@@ -791,7 +791,7 @@ makePurList({
     {label:()=>purchaseReturnCopy().qty, align:'r', w:'minmax(60px,0.6fr)', render:r=>num(r.qty)},
     {label:()=>purchaseReturnCopy().value, align:'r', sortable:true, w:'minmax(96px,0.9fr)', render:r=>`<b class="tnum">${money(r.value,r.currency)}</b>`},
     {label:()=>purchaseReturnCopy().status, align:'l', cls:'cap-cell', w:'minmax(116px,1.1fr)', render:r=>cap(purchaseReturnStatus(r),PRET_TONE[r.status]||'neutral')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(r)=>[
     {id:'view',icon:'ext',label:purchaseReturnCopy().view,run:()=>openPurchaseReturnDetails(r)},
@@ -806,7 +806,7 @@ function openSupplierCreditDetails(credit){
   appModal({icon:'coins',title:`${credit.no} · ${credit.supplier}`,width:720,body:`<div class="docmeta" style="margin-bottom:16px"><div class="dm"><small>${c.againstReturn}</small><b>${esc(credit.ref)}</b></div><div class="dm"><small>${c.originalInvoice}</small><b>${esc((DB.purchaseReturns.find(row=>row.id===credit.returnId)||{}).invoice||'—')}</b></div><div class="dm"><small>${c.status}</small>${cap(c.posted,'teal')}</div></div><table class="lines"><thead><tr><th class="l">${c.item}</th><th>${c.qty}</th><th>${c.net}</th><th>${c.tax}</th></tr></thead><tbody>${credit.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td>${num(line.qty)}</td><td>${money(line.net,credit.currency)}</td><td>${money(line.tax,credit.currency)}</td></tr>`).join('')}</tbody></table><div class="sumrow total"><span>${c.creditValue}</span><b>${money(credit.amount,credit.currency)}</b></div><div class="callout info" style="margin-top:12px">${ic('lock')}<span>${c.immutable}<br>${c.accounting}</span></div>`,actions:btn(c.cancel,{cls:'soft',attrs:'onclick="closeModal()"'})});
 }
 
-makePurList({
+registerPurchasingTransactionList({
   route:'supplier-credit-notes', title:()=>purchaseReturnCopy().credits, unit:()=>purchaseReturnCopy().creditUnit, prepare:prepareCanonicalPurchasingData,
   sub:()=>purchaseReturnCopy().creditSub,
   rows:()=>DB.supplierCreditNotes, rowId:c=>c.no,
@@ -823,7 +823,7 @@ makePurList({
     {label:()=>purchaseReturnCopy().reason, align:'l', w:'minmax(180px,1.9fr)', render:c=>`<span class="li-subj">${esc(c.reason)}</span>`},
     {label:()=>purchaseReturnCopy().value, align:'r', sortable:true, w:'minmax(100px,0.9fr)', render:c=>`<b class="tnum">${money(c.amount,c.currency)}</b>`},
     {label:()=>purchaseReturnCopy().status, align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:()=>cap(purchaseReturnCopy().posted,'teal')},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(c)=>[
     {id:'view',icon:'ext',label:purchaseReturnCopy().view,run:()=>openSupplierCreditDetails(c)},
@@ -885,7 +885,7 @@ function newSupplierDebitModal(){
     }catch(error){button.disabled=false;toast(error&&error.message||'Create failed','danger');}
   });
 }
-makePurList({
+registerPurchasingTransactionList({
   route:'supplier-debit-notes', title:()=>supplierDebitCopy()('title'), unit:()=>supplierDebitCopy()('unit'), prepare:prepareCanonicalPurchasingData,
   sub:()=>supplierDebitCopy()('sub'),
   rows:()=>DB.supplierDebitNotes, rowId:d=>d.no,
@@ -904,7 +904,7 @@ makePurList({
     {label:()=>supplierDebitCopy()('reason'), align:'l', w:'minmax(180px,2fr)', render:d=>`<span class="li-subj">${esc(d.reason)}</span>`},
     {label:()=>supplierDebitCopy()('total'), align:'r', sortable:true, w:'minmax(100px,0.9fr)', render:d=>`<b class="tnum">${money(d.amount,d.currency)}</b>`},
     {label:()=>supplierDebitCopy()('status'), align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:d=>cap(supplierDebitCopy()(d.rawStatus),SDN_TONE[d.status])},
-    {label:'', align:'c', w:'52px', render:()=>rowMenuBtn()},
+    {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(d)=>[
     {id:'view',icon:'ext',label:supplierDebitCopy()('open'),run:()=>openSupplierDebitDetails(d)},

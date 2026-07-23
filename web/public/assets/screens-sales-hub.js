@@ -1,6 +1,6 @@
 /* ============================================================
    ARIA ERP — Sales module: hub, shared shell, list factory, reports
-   Provides:  SALES_SECTIONS, salesNav(), salesPage(), makeSalesList()
+   Provides:  SALES_SECTIONS, salesNav(), salesPage(), registerSalesTransactionList()
    Screens:   sales-home, sales-reports, report-sales-customer,
               report-sales-rep, report-quote-conversion, report-generic
    ============================================================ */
@@ -301,70 +301,9 @@ async function prepareCanonicalSalesData(){
   };
 }
 
-/* ============================================================
-   GENERIC SALES LIST FACTORY
-   cfg: { route, active, title, crumb, sub, unit, rows, rowId,
-          chips:[[key,label]], filterFn(row,key), kpis(rows)->[{label,val,f,neg,accent}],
-          columns:[...], onOpen(row), newBtn:{label,onClick}, actions, rowMenu(row)->[{id,icon,label,run}] }
-   ============================================================ */
-function makeSalesList(cfg){
-  SCREENS[cfg.route] = async function(root){
-    if(cfg.prepare) await cfg.prepare();
-    let filter = 'all';
-    const allRows = () => (typeof cfg.rows==='function' ? cfg.rows() : cfg.rows);
-    const rows = () => { const r=allRows(); return filter==='all' ? r : r.filter(x=>cfg.filterFn(x,filter)); };
-
-    function kpibar(){
-      if(!cfg.kpis) return '';
-      return `<div class="so-kpibar">`+cfg.kpis(allRows()).map(k=>
-        `<button class="so-kpi ${k.neg?'neg':''} ${k.accent?'accent':''} ${k.f?'clickable':''}" ${k.f?`data-f="${k.f}"`:'disabled'}>
-          <small>${esc(k.label)}</small><b class="tnum">${k.val}</b></button>`).join('')+`</div>`;
-    }
-    function toolbar(){
-      const chips = cfg.chips ? `<div class="filterchips" id="slChips">${cfg.chips.map(c=>`<button class="chip ${c[0]===filter?'on':''}" data-f="${c[0]}">${esc(c[1])}</button>`).join('')}</div>` : '<div></div>';
-      const right = `${btn('Filter',{icon:'filter',cls:'soft'})}${btn('Export',{icon:'download',cls:'soft',attrs:'data-export'})}${cfg.newBtn?btn(cfg.newBtn.label,{icon:'plus',cls:'primary',attrs:'data-new'}):''}`;
-      return `<div class="toolbar">${chips}<div class="grow"></div>${cfg.actions||''}${right}</div>`;
-    }
-    function table(){ return buildTable({ checkable:true, rowId:cfg.rowId, columns:cfg.columns, rows:rows() }); }
-    function body(){ return `<div class="sales-body">${kpibar()}${toolbar()}<div class="sales-tablewrap" id="slTable">${table()}</div></div>`; }
-
-    function render(){
-      root.innerHTML = salesPage({ active:cfg.active||cfg.route, title:cfg.title, crumb:cfg.crumb, sub:cfg.sub,
-        count: rows().length + (cfg.unit?(' '+cfg.unit):''), body: body() });
-      wire();
-    }
-    function setFilter(f){ filter=f; render(); }
-    function openRowMenu(btnEl,row){
-      closeAllPops();
-      const items=cfg.rowMenu(row); const r=btnEl.getBoundingClientRect();
-      const m=document.createElement('div'); m.className='pop show somenu';
-      m.style.cssText=`width:212px;top:${r.bottom+6}px;left:auto;right:${Math.max(8,window.innerWidth-r.right)}px;padding:6px;transform-origin:top right`;
-      m.innerHTML=items.map(x=>`${x.sep?'<div class="menusep"></div>':''}<button class="menu-item ${x.danger?'danger':''}" data-id="${x.id}">${ic(x.icon)}<span>${esc(x.label)}</span></button>`).join('');
-      document.body.appendChild(m);
-      const close=()=>{m.remove();document.removeEventListener('click',out);};
-      const out=e=>{ if(!m.contains(e.target)&&e.target!==btnEl) close(); };
-      m.querySelectorAll('[data-id]').forEach(b=>b.addEventListener('click',()=>{ const it=items.find(i=>i.id===b.dataset.id); it&&it.run&&it.run(); close(); }));
-      setTimeout(()=>document.addEventListener('click',out),10);
-    }
-    function wire(){
-      wireTable($('#slTable'),{ onRow: cfg.onOpen ? (id)=>cfg.onOpen(allRows().find(r=>String(cfg.rowId(r))===String(id))) : null });
-      // doc-number deep open
-      if(cfg.onOpen) $('#slTable').querySelectorAll('.linknum').forEach(el=>el.addEventListener('click',e=>{
-        e.stopPropagation(); const tr=el.closest('[data-row]'); if(tr) cfg.onOpen(allRows().find(r=>String(cfg.rowId(r))===String(tr.dataset.row)));
-      }));
-      $('#slChips') && $$('#slChips .chip').forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.f)));
-      $$('#viewRoot .so-kpi.clickable').forEach(k=>k.addEventListener('click',()=>setFilter(k.dataset.f)));
-      const nb=$('#viewRoot [data-new]'); nb&&cfg.newBtn&&nb.addEventListener('click',cfg.newBtn.onClick);
-      const ex=$('#viewRoot [data-export]'); ex&&ex.addEventListener('click',()=>toast(cfg.title+' exported to Excel','ok'));
-      if(cfg.rowMenu) $('#slTable').querySelectorAll('.row-menu').forEach(b=>b.addEventListener('click',e=>{
-        e.stopPropagation(); const tr=b.closest('[data-row]'); const row=allRows().find(r=>String(cfg.rowId(r))===String(tr.dataset.row)); openRowMenu(b,row);
-      }));
-    }
-    render();
-  };
+function registerSalesTransactionList(config){
+  registerTransactionList({...config,module:'sales'});
 }
-/* a ⋯ row-action button for use in a column render */
-function rowMenuBtn(){ return `<span class="rowact"><button class="row-menu" data-tip="Actions" aria-label="Row actions">${ic('more')}</button></span>`; }
 
 /* ============================================================
    SALES DASHBOARD (module landing)

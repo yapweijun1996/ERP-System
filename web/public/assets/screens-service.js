@@ -270,65 +270,32 @@ function nextContractNo(contracts){
 SCREENS['service-ticket'] = async function(root){
   await prepareCanonicalServiceData();
   const s=serviceCopy();
-  let filter='all';
   const chips=[['all',t('common.all'),null],['open',ts('Open'),'warn'],['in_progress',ts('In Progress'),'info'],['closed',ts('Closed'),'ok']];
-  function rows(){
-    return DB.serviceTickets.filter(x=>{
-      if(filter==='all')return true;
-      return x.status===filter;
-    });
-  }
-  function table(){
-    return buildTable({
-      rowId:x=>x.id,
-      columns:[
-        {label:t('svc.col.ticket'),sticky:true,render:x=>`<div class="cellsub"><b class="docnum">${esc(x.no)}</b><small>${esc(x.cust)}</small></div>`},
-        {label:t('svc.col.asset'),align:'l',render:x=>`<div class="cellsub"><b>${esc(x.asset)}</b>${x.sn?`<small>SN ${esc(x.sn)}</small>`:''}</div>`},
-        {label:t('svc.col.issue'),align:'l',render:x=>`<span style="color:var(--muted)">${esc(x.issue)}</span>`},
-        {label:t('svc.col.priority'),align:'l',render:x=>cap(ts(x.priority),svcPriorityTone(x.priority))},
-        {label:t('svc.col.cover'),align:'l',render:x=>cap(ts(SERVICE_COVERAGE_LABEL[x.coverage]),coverTone(SERVICE_COVERAGE_LABEL[x.coverage]))},
-        {label:t('svc.col.tech'),align:'l',render:x=>x.tech?esc(x.tech):`<span style="color:var(--warn)">${esc(s('unassigned'))}</span>`},
-        {label:'SLA',align:'l',render:x=>x.dueAt?(x.overdue?`<span style="color:var(--danger)">${esc(s('overdueBy').replace('{t}',formatDuration(Date.now()-x.dueAt.getTime())))}</span>`:`<span class="tnum">${esc(s('timeLeft').replace('{t}',formatDuration(x.dueAt.getTime()-Date.now())))}</span>`):'—'},
-        {label:t('col.status'),align:'l',render:x=>svcTicketStatusBadge(x.status)},
-        {label:'',align:'c',render:()=>`<span class="rowact"><button data-tip="${esc(t('common.open'))}" data-act="open">${ic('ext')}</button></span>`},
-      ],
-      rows:rows(),
-    });
-  }
   const activeN=DB.serviceTickets.filter(x=>x.status==='open'||x.status==='in_progress').length;
   const overdueN=DB.serviceTickets.filter(x=>x.overdue).length;
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,t('nav.service'),t('svc.crumb')])}
-      <div class="h1row"><h1>${esc(t('svc.title'))}</h1><span class="countchip" id="svcCount"></span>
-        <div class="headright">
-          <div class="kfig"><small>${esc(t('svc.kpi.open'))}</small><b class="tnum">${activeN}</b></div>
-          <div class="kfig"><small>${esc(s('kpiOverdue'))}</small><b class="tnum" style="color:${overdueN?'var(--danger)':'var(--fg)'}">${overdueN}</b></div>
-        </div></div>
-    </div>
-    ${overdueN?`<div class="alert warn"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="grow"><b>${esc(s('overdueAlert').replace('{n}',overdueN))}</b></span></div>`:''}
-    <div class="toolbar">
-      <div class="filterchips" id="svcChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${c[2]?`<span class="dot" style="background:var(--${c[2]})"></span>`:''}${esc(c[1])}</button>`).join('')}</div>
-      <div class="grow"></div>
-      <button class="viewsel" data-tip="${esc(t('svc.contractstip'))}" onclick="navigate('service-contracts')">${ic('receipt')}${esc(t('svc.contracts'))}</button>
-      ${btn(t('svc.new'),{icon:'plus',cls:'primary',attrs:'data-new="1"'})}
-    </div>
-    <div class="tablewrap" id="svcTable">${table()}</div>
-  </section></div>`;
-  const wrap=$('#svcTable');
-  $('#svcCount').textContent=rows().length+' '+t('svc.tickets');
-  function openTicket(id){ navigate('service-order',{ticketId:Number(id)}); }
-  function rewire(){
-    wireTable(wrap,{ onRow:openTicket });
-    wrap.querySelectorAll('[data-act="open"]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openTicket(b.closest('.dt-r').dataset.row);}));
-  }
-  rewire();
-  $('#svcChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
-    $('#svcChips .chip.on').classList.remove('on'); c.classList.add('on'); filter=c.dataset.f;
-    wrap.innerHTML=table(); $('#svcCount').textContent=rows().length+' '+t('svc.tickets'); rewire();
-  }));
-  root.querySelector('[data-new]').addEventListener('click',()=>serviceTicketForm(s));
+  transactionListPage(root,{
+    module:'service',route:'service-ticket',title:t('svc.title'),
+    rows:DB.serviceTickets,rowId:x=>x.id,
+    filters:chips.map(([key,label])=>[key,label]),filterFn:(ticket,status)=>ticket.status===status,
+    kpis:[
+      {label:t('svc.kpi.open'),value:activeN,filter:'open'},
+      {label:s('kpiOverdue'),value:overdueN,negative:overdueN>0},
+    ],
+    primaryAction:{label:t('svc.new'),icon:'plus',onClick:()=>serviceTicketForm(s)},
+    toolbarActions:[{label:t('svc.contracts'),icon:'receipt',onClick:()=>navigate('service-contracts')}],
+    columns:[
+      {label:t('svc.col.ticket'),sticky:true,render:x=>`<div class="cellsub"><b class="docnum">${esc(x.no)}</b><small>${esc(x.cust)}</small></div>`},
+      {label:t('svc.col.asset'),align:'l',render:x=>`<div class="cellsub"><b>${esc(x.asset)}</b>${x.sn?`<small>SN ${esc(x.sn)}</small>`:''}</div>`},
+      {label:t('svc.col.issue'),align:'l',render:x=>`<span style="color:var(--muted)">${esc(x.issue)}</span>`},
+      {label:t('svc.col.priority'),align:'l',render:x=>cap(ts(x.priority),svcPriorityTone(x.priority))},
+      {label:t('svc.col.cover'),align:'l',render:x=>cap(ts(SERVICE_COVERAGE_LABEL[x.coverage]),coverTone(SERVICE_COVERAGE_LABEL[x.coverage]))},
+      {label:t('svc.col.tech'),align:'l',render:x=>x.tech?esc(x.tech):`<span style="color:var(--warn)">${esc(s('unassigned'))}</span>`},
+      {label:'SLA',align:'l',render:x=>x.dueAt?(x.overdue?`<span style="color:var(--danger)">${esc(s('overdueBy').replace('{t}',formatDuration(Date.now()-x.dueAt.getTime())))}</span>`:`<span class="tnum">${esc(s('timeLeft').replace('{t}',formatDuration(x.dueAt.getTime()-Date.now())))}</span>`):'—'},
+      {label:t('col.status'),align:'l',render:x=>svcTicketStatusBadge(x.status)},
+    ],
+    onOpen:x=>navigate('service-order',{ticketId:Number(x.id)}),
+    empty:{icon:'wrench',title:'No service tickets'},
+  });
 };
 
 function serviceTicketForm(s){
@@ -548,37 +515,29 @@ SCREENS['service-contracts'] = async function(root){
   const activeN=DB.serviceContracts.filter(c=>c.computedStatus==='active').length;
   const expiringN=DB.serviceContracts.filter(c=>c.computedStatus==='expiring').length;
   const arr=DB.serviceContracts.reduce((sum,c)=>sum+c.value,0);
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="pagehead">
-      ${crumbs([DB.company.name,t('nav.service'),t('svc.contracts')])}
-      <div class="h1row"><h1>${esc(t('svc.contracts'))}</h1><span class="countchip">${DB.serviceContracts.length} ${esc(t('svc.contracts')).toLowerCase()}</span>
-        <div class="headright">
-          <div class="kfig"><small>${esc(s('activeContracts'))}</small><b class="tnum">${activeN}</b></div>
-          <div class="kfig"><small>${esc(s('annualValueKpi'))}</small><b class="tnum">${money0(arr)}</b></div>
-        </div></div>
-      ${expiringN?`<div class="h1sub">${esc(s('expiringSoon').replace('{n}',expiringN))}</div>`:''}
-    </div>
-    <div class="toolbar">
-      <div class="grow"></div>
-      ${btn(t('svc.title'),{icon:'wrench',cls:'soft',attrs:'onclick="navigate(\'service-ticket\')"'})}
-      ${btn(s('createContract'),{icon:'plus',cls:'primary',attrs:'data-new="1"'})}
-    </div>
-    <div class="tablewrap" id="scTable">${buildTable({
-      rowId:c=>c.id,
-      columns:[
-        {label:'Contract',sticky:true,render:c=>`<div class="cellsub"><b class="docnum">${esc(c.no)}</b><small>${esc(c.cust)}</small></div>`},
-        {label:'Plan',align:'l',render:c=>cap(c.plan,planTone(c.plan))},
-        {label:'SLA',align:'l',render:c=>c.slaResponseHours!=null?`${c.slaResponseHours}h`:'—'},
-        {label:'Assets',align:'r',render:c=>`<span class="tnum">${c.assets}</span>`},
-        {label:'Start',align:'l',render:c=>esc(c.start)},
-        {label:'Expiry',align:'l',render:c=>c.computedStatus==='expiring'?`<span style="color:var(--warn)">${esc(c.expiry)}</span>`:esc(c.expiry)},
-        {label:'Annual value',align:'r',sortable:true,render:c=>`<b class="tnum">${money(c.value)}</b>`},
-        {label:'Status',align:'l',render:c=>cap(ts(SERVICE_CONTRACT_STATUS_LABEL[c.computedStatus]),SERVICE_CONTRACT_STATUS_TONE[c.computedStatus])},
-      ],
-      rows:DB.serviceContracts,
-    })}</div>
-  </section></div>`;
-  root.querySelector('[data-new]').addEventListener('click',()=>serviceContractForm(s));
+  transactionListPage(root,{
+    module:'service',route:'service-contracts',title:t('svc.contracts'),
+    description:expiringN?s('expiringSoon').replace('{n}',expiringN):'',
+    rows:DB.serviceContracts,rowId:c=>c.id,
+    kpis:[
+      {label:s('activeContracts'),value:activeN},
+      {label:s('annualValueKpi'),value:money0(arr)},
+      {label:s('expiringSoon').replace('{n}',expiringN),value:expiringN,negative:expiringN>0},
+    ],
+    primaryAction:{label:s('createContract'),icon:'plus',onClick:()=>serviceContractForm(s)},
+    toolbarActions:[{label:t('svc.title'),icon:'wrench',onClick:()=>navigate('service-ticket')}],
+    columns:[
+      {label:'Contract',sticky:true,render:c=>`<div class="cellsub"><b class="docnum">${esc(c.no)}</b><small>${esc(c.cust)}</small></div>`},
+      {label:'Plan',align:'l',render:c=>cap(c.plan,planTone(c.plan))},
+      {label:'SLA',align:'l',render:c=>c.slaResponseHours!=null?`${c.slaResponseHours}h`:'—'},
+      {label:'Assets',align:'r',render:c=>`<span class="tnum">${c.assets}</span>`},
+      {label:'Start',align:'l',render:c=>esc(c.start)},
+      {label:'Expiry',align:'l',render:c=>c.computedStatus==='expiring'?`<span style="color:var(--warn)">${esc(c.expiry)}</span>`:esc(c.expiry)},
+      {label:'Annual value',align:'r',sortable:true,render:c=>`<b class="tnum">${money(c.value)}</b>`},
+      {label:'Status',align:'l',render:c=>cap(ts(SERVICE_CONTRACT_STATUS_LABEL[c.computedStatus]),SERVICE_CONTRACT_STATUS_TONE[c.computedStatus])},
+    ],
+    empty:{icon:'receipt',title:'No service contracts'},
+  });
 };
 
 function serviceContractForm(s){
