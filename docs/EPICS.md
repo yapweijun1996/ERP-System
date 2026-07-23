@@ -1751,3 +1751,8 @@ Delivery slices:
 - [x] **TASK-092 — Sales Orders correction.** Reclassify the Sales Orders register
       from master-detail to `transaction-list-v1`, retain real detail navigation and
       row actions, and remove its unsupported Filter/Export and inline preview chrome.
+- [x] **TASK-093 — Inventory master-detail register SSOT.** Extend the shared list
+      contract with an optional desktop detail pane/mobile drawer, then migrate Stock
+      on Hand and Item Master off their hand-built page heads, toolbars and tables.
+      Both routes declare `master-detail-register-v1`; the list audit validates all
+      six required regions at desktop and 375px.

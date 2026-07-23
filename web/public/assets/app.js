@@ -576,6 +576,9 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'qc-inspection','gl','hr-directory','project-pl','service-ticket',
     'service-contracts','asset-register','user-mgmt',
   ],
+  'master-detail-register-v1':[
+    'item-master','stock-on-hand',
+  ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
@@ -599,8 +602,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'new-stock-adjustment','new-work-order',
   ],
   'master-detail':[
-    'asset-detail','bom','crm-customer','item-master','leave-approval',
-    'role-permission','stock-on-hand',
+    'asset-detail','bom','crm-customer','leave-approval','role-permission',
   ],
   workspace:[
     'bank-rec','data-import','depreciation','integration','master-control',

@@ -567,12 +567,25 @@ so it now renders through `transactionListPage()` as the 35th SSOT list. Clickin
 order still opens the canonical document detail, while the duplicate preview chrome
 and unsupported Filter/Export controls are gone. Service-worker v77 delivers the fix.
 
+## Inventory master-detail register SSOT (TASK-093, 2026-07-23)
+
+Stock on Hand and Item Master no longer maintain a separate inventory-only list shell.
+The shared `masterDetailRegisterPage()` extends `transactionListPage()` with one
+optional selected-row detail pane: persistent on desktop and the existing drawer on
+mobile. KPI, filter, toolbar, table/empty and pagination regions remain owned by the
+same SSOT, while the Inventory module supplies only data, columns and detail content.
+The two routes declare `master-detail-register-v1`; unsupported Columns/Export controls
+and dead inventory split-shell CSS were removed. The list audit now covers **37 shared
+registers** (35 transaction lists plus 2 master-detail registers) at desktop and 375px.
+Service-worker v78 delivers the change.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 91 tasks, including TASK-092
+- Done: 92 tasks, including TASK-093
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
-  complete at 114 Canonical / 0 Preview and 35/35 transaction registers on the SSOT.
+  complete at 114 Canonical / 0 Preview, 35/35 transaction registers and 2/2 Inventory
+  master-detail registers on their shared SSOT contracts.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

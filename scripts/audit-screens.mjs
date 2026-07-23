@@ -39,8 +39,9 @@ const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
+const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1']);
 const VALID_LAYOUTS = new Set([
-  'transaction-list-v1','dashboard','report','document-detail','form',
+  ...LIST_LAYOUTS,'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
 ]);
 
@@ -209,10 +210,10 @@ async function auditRoutes(browser, viewport) {
     ].filter(Boolean).join(' | '));
   }
   const routes = LIST_LAYOUT_ONLY
-    ? allRoutes.filter((route) => screenMeta[route]?.layout === 'transaction-list-v1')
+    ? allRoutes.filter((route) => LIST_LAYOUTS.has(screenMeta[route]?.layout))
     : allRoutes;
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
-    throw new Error('No SCREEN_META routes declare layout=transaction-list-v1.');
+    throw new Error('No SCREEN_META routes declare a shared list layout.');
   }
   const missingAdapterMethods = await page.evaluate(() => {
     const required = ['list','get','create','update','action','refresh','session','switchCompany'];
@@ -272,12 +273,17 @@ async function auditRoutes(browser, viewport) {
           layoutIssues.push(`${bar.className} overflow ${bar.scrollWidth}>${bar.clientWidth}`);
         }
       });
-      const listRoot = el.querySelector('[data-layout="transaction-list-v1"]');
+      const listRoot = el.querySelector('[data-layout="transaction-list-v1"],[data-layout="master-detail-register-v1"]');
+      const actualListLayout = listRoot?.getAttribute('data-layout') || null;
       const listRegions = listRoot ? [
         listRoot.querySelector('[data-list-kpis]'),
         listRoot.querySelector('[data-list-toolbar]'),
         listRoot.querySelector('[data-list-table]'),
         listRoot.querySelector('[data-list-pagination]'),
+      ] : [];
+      const masterDetailRegions = actualListLayout === 'master-detail-register-v1' ? [
+        listRoot.querySelector('[data-master-detail-workspace]'),
+        listRoot.querySelector('[data-master-detail-panel]'),
       ] : [];
       const listRegionOrder = listRegions.length === 4
         && listRegions.every(Boolean)
@@ -290,10 +296,14 @@ async function auditRoutes(browser, viewport) {
         layoutIssues,
         listLayout: {
           present: Boolean(listRoot),
+          actualLayout: actualListLayout,
           missingRegions: listRoot
             ? ['kpis','toolbar','table','pagination'].filter((_, index) => !listRegions[index])
             : [],
           ordered: listRegionOrder,
+          missingMasterDetailRegions: actualListLayout === 'master-detail-register-v1'
+            ? ['workspace','detail-panel'].filter((_,index)=>!masterDetailRegions[index])
+            : [],
         },
         layoutProfile: {
           heading: el.querySelector('h1')?.textContent?.trim() || '',
@@ -304,9 +314,9 @@ async function auditRoutes(browser, viewport) {
           salesBody: Boolean(el.querySelector('.sales-body')),
           documentPage: Boolean(el.querySelector('.docpage,.doclayout')),
           formSurface: Boolean(el.querySelector('form,.formgrid,.set-grid,.wizard-card')),
-          splitSurface: Boolean(el.querySelector('.split,.so-split,.doclayout,.master-detail')),
+          splitSurface: Boolean(el.querySelector('.split,.so-split,.doclayout,.master-detail,[data-master-detail-workspace]')),
           dashboardSurface: Boolean(el.querySelector('.dashgrid,.db-grid,.sb-grid,.analytics-status-grid')),
-          actualLayout: listRoot ? 'transaction-list-v1' : null,
+          actualLayout: actualListLayout,
         },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
         renderError: Boolean(el.querySelector('.screen-render-error')),
@@ -314,7 +324,7 @@ async function auditRoutes(browser, viewport) {
     }).catch(() => ({
       text: '', previewBanner: false, enabledPreviewWrites: [],
       layoutIssues: ['render inspection failed'],
-      listLayout: { present: false, missingRegions: [], ordered: false },
+      listLayout: { present: false, actualLayout: null, missingRegions: [], ordered: false, missingMasterDetailRegions: [] },
       layoutProfile: {
         heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
         salesBody: false, documentPage: false, formSurface: false,
@@ -326,20 +336,26 @@ async function auditRoutes(browser, viewport) {
     const moduleId = routeModule[route] || null;
     const canonical = meta && meta.maturity === 'canonical';
     const leaks = canonical ? findIdentityLeak(rendered.text || '') : [];
-    if (meta?.layout === 'transaction-list-v1') {
+    if (LIST_LAYOUTS.has(meta?.layout)) {
       if (!rendered.listLayout.present) {
-        rendered.layoutIssues.push('transaction-list-v1 root missing');
+        rendered.layoutIssues.push(`${meta.layout} root missing`);
       } else {
+        if (rendered.listLayout.actualLayout !== meta.layout) {
+          rendered.layoutIssues.push(`rendered ${rendered.listLayout.actualLayout} but declared ${meta.layout}`);
+        }
         if (rendered.listLayout.missingRegions.length) {
-          rendered.layoutIssues.push(`transaction-list-v1 regions missing: ${rendered.listLayout.missingRegions.join(', ')}`);
+          rendered.layoutIssues.push(`${meta.layout} regions missing: ${rendered.listLayout.missingRegions.join(', ')}`);
         }
         if (!rendered.listLayout.ordered) {
-          rendered.layoutIssues.push('transaction-list-v1 regions are outside canonical order');
+          rendered.layoutIssues.push(`${meta.layout} regions are outside canonical order`);
+        }
+        if (meta.layout === 'master-detail-register-v1' && rendered.listLayout.missingMasterDetailRegions.length) {
+          rendered.layoutIssues.push(`master-detail-register-v1 regions missing: ${rendered.listLayout.missingMasterDetailRegions.join(', ')}`);
         }
       }
     }
-    if (rendered.listLayout.present && meta?.layout !== 'transaction-list-v1') {
-      rendered.layoutIssues.push(`rendered transaction-list-v1 but declared ${meta?.layout || 'none'}`);
+    if (rendered.listLayout.present && !LIST_LAYOUTS.has(meta?.layout)) {
+      rendered.layoutIssues.push(`rendered ${rendered.listLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
     }
     const highConfidenceRegister = rendered.layoutProfile.gridTables > 0
       && !rendered.layoutProfile.documentPage
@@ -347,7 +363,7 @@ async function auditRoutes(browser, viewport) {
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
       && !['report','master-detail','workspace'].includes(meta?.layout);
-    if (highConfidenceRegister && meta?.layout !== 'transaction-list-v1') {
+    if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
     }
 

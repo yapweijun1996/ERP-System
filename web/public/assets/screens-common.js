@@ -35,7 +35,10 @@ function transactionListPage(root, config){
   if(!root) throw new Error('transactionListPage requires a render root.');
   const cfg=config||{};
   const value=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
+  const layout=cfg.layout||'transaction-list-v1';
+  const detailPane=cfg.detailPane||null;
   let activeFilter=cfg.initialFilter||'all';
+  let selectedId=null;
 
   function allRows(){
     const rows=value(cfg.rows);
@@ -107,6 +110,31 @@ function transactionListPage(root, config){
     if(!pagination) return '<div class="transaction-list-pagination" data-list-pagination hidden></div>';
     return `<div class="transaction-list-pagination" data-list-pagination>${pagination}</div>`;
   }
+  function selectedRow(rows=allRows()){
+    return selectedId==null
+      ? null
+      : rows.find(row=>String(cfg.rowId(row))===String(selectedId))||null;
+  }
+  function renderDetail(rows){
+    if(!detailPane) return '';
+    const row=selectedRow(rows);
+    const content=row
+      ? value(detailPane.content,row,{selectedId,render,select})
+      : value(detailPane.empty,{selectedId,render,select});
+    return `<aside class="detail master-detail-register-detail ${row?'open':'is-empty'}"
+        data-master-detail-panel>
+      ${content||'<div class="detail-empty"></div>'}
+    </aside>`;
+  }
+  function renderListBody(rows){
+    const table=`<div class="sales-tablewrap" data-list-table>${renderTable(rows)}</div>`;
+    const pagination=renderPagination(rows);
+    if(!detailPane) return `${table}${pagination}`;
+    return `<div class="master-detail-register-workspace" data-master-detail-workspace>
+      <div class="master-detail-register-list">${table}${pagination}</div>
+      ${renderDetail(rows)}
+    </div>`;
+  }
   function render(){
     const rows=visibleRows();
     const source=allRows();
@@ -118,8 +146,8 @@ function transactionListPage(root, config){
     }):'';
     const note=value(cfg.note,source);
     const toolbarContent=value(cfg.toolbarContent,rows,source)||'';
-    const body=`<div class="sales-body transaction-list-body"
-        data-layout="transaction-list-v1" data-list-route="${esc(String(cfg.route||''))}">
+    const body=`<div class="sales-body transaction-list-body ${detailPane?'master-detail-register-body':''}"
+        data-layout="${esc(layout)}" data-list-route="${esc(String(cfg.route||''))}">
       ${renderKpis(source)}
       <div class="toolbar" data-list-toolbar>
         ${renderFilters()}<div class="grow"></div>
@@ -127,8 +155,7 @@ function transactionListPage(root, config){
         ${toolbarContent}
         ${renderToolbarActions(rows)}
       </div>
-      <div class="sales-tablewrap" data-list-table>${renderTable(rows)}</div>
-      ${renderPagination(rows)}
+      ${renderListBody(rows)}
     </div>`;
     root.innerHTML=modulePage({
       module:cfg.module,
@@ -145,17 +172,29 @@ function transactionListPage(root, config){
   }
   function setFilter(filter){
     activeFilter=filter||'all';
+    if(selectedId!=null&&!selectedRow(visibleRows())) selectedId=null;
+    render();
+  }
+  function select(id){
+    selectedId=id==null?null:String(id);
     render();
   }
   function wire(rows){
     const tableRoot=root.querySelector('[data-list-table]');
     if(rows.length){
       wireTable(tableRoot,{
-        onRow:typeof cfg.onOpen==='function'
-          ? id=>cfg.onOpen(rows.find(row=>String(cfg.rowId(row))===String(id)),id)
-          : null,
+        onRow:detailPane
+          ? id=>select(id)
+          : (typeof cfg.onOpen==='function'
+            ? id=>cfg.onOpen(rows.find(row=>String(cfg.rowId(row))===String(id)),id)
+            : null),
         onSelectionChange:cfg.onSelectionChange,
       });
+      if(detailPane&&selectedId!=null){
+        tableRoot.querySelectorAll('.dt-r[data-row]').forEach(row=>{
+          row.classList.toggle('sel',String(row.dataset.row)===String(selectedId));
+        });
+      }
     }
     root.querySelectorAll('[data-list-filter]').forEach(button=>button.addEventListener('click',()=>{
       setFilter(button.dataset.listFilter);
@@ -179,16 +218,52 @@ function transactionListPage(root, config){
         if(row) openTransactionRowMenu(button,cfg.rowMenu(row));
       }));
     }
+    root.querySelector('[data-master-detail-close]')?.addEventListener('click',()=>select(null));
+    if(detailPane&&typeof detailPane.afterRender==='function'){
+      detailPane.afterRender({
+        root,
+        detailRoot:root.querySelector('[data-master-detail-panel]'),
+        row:selectedRow(rows),
+        selectedId,
+        select,
+        render,
+      });
+    }
     if(typeof cfg.afterRender==='function') cfg.afterRender({root,rows,allRows:allRows(),activeFilter,setFilter,render});
   }
   function primaryEnabled(primary){
     return primary&&typeof primary.onClick==='function'&&!primary.disabled;
   }
 
+  if(detailPane){
+    const initial=value(detailPane.initialSelectedId,allRows());
+    if(initial!=null) selectedId=String(initial);
+  }
   render();
-  return {render,setFilter,getFilter:()=>activeFilter,rows:visibleRows};
+  return {
+    render,
+    setFilter,
+    getFilter:()=>activeFilter,
+    rows:visibleRows,
+    select,
+    getSelected:()=>selectedRow(),
+  };
 }
 window.transactionListPage=transactionListPage;
+
+/**
+ * SSOT for registers whose row selection opens a persistent desktop detail pane
+ * and a mobile drawer. It intentionally reuses transactionListPage() so KPI,
+ * filter, toolbar, table, empty and pagination behaviour cannot drift.
+ */
+function masterDetailRegisterPage(root,config){
+  return transactionListPage(root,{
+    ...(config||{}),
+    layout:'master-detail-register-v1',
+    detailPane:(config||{}).detailPane||{},
+  });
+}
+window.masterDetailRegisterPage=masterDetailRegisterPage;
 
 function transactionRowMenuButton(label){
   return `<span class="rowact"><button class="transaction-row-menu" data-tip="${esc(label||'Actions')}" aria-label="${esc(label||'Row actions')}">${ic('more')}</button></span>`;

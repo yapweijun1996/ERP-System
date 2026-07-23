@@ -177,61 +177,11 @@ async function prepareCanonicalInventoryData(){
 /* ---------------- STOCK ON HAND (master + detail) ---------------- */
 SCREENS['stock-on-hand'] = async function(root){
   await prepareCanonicalInventoryData();
-  let filter='all';
   const totVal=DB.items.reduce((s,it)=>s+it.onHand*it.cost,0);
-  const chips=[['all',t('common.all')],['reorder',ts('Reorder')],['low',ts('Low')],['backorder',ts('Backordered')],['instock',ts('In stock')]];
-  function rows(){
-    return DB.items.filter(it=>{
-      if(filter==='all')return true;
-      if(filter==='reorder')return it.status==='Reorder';
-      if(filter==='low')return it.status==='Low';
-      if(filter==='backorder')return it.status==='Backordered';
-      if(filter==='instock')return it.status==='In stock';
-      return true;
-    });
-  }
-  function table(){
-    return buildTable({
-      checkable:true, rowId:it=>it.sku,
-      columns:[
-        {label:t('inv.col.item'),sticky:true,render:it=>`<div class="cellsub"><b>${esc(it.name)}</b><small>${esc(it.sku)} · ${esc(it.cat)}</small></div>`},
-        {label:t('inv.col.onhand'),align:'r',sortable:true,render:it=>`<span class="tnum">${num(it.onHand)}</span>`},
-        {label:t('inv.col.alloc'),align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.alloc)}</span>`},
-        {label:'Available',align:'r',sortable:true,render:it=>{const a=it.onHand-it.alloc;return `<b class="tnum" style="color:${a<=0?'var(--danger)':a<it.reorder?'var(--warn)':'var(--accent)'}">${num(a)}</b>`;}},
-        {label:t('inv.col.reorder'),align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.reorder)}</span>`},
-        {label:t('inv.col.unitcost'),align:'r',render:it=>`<span class="tnum">${money(it.cost)}</span>`},
-        {label:t('inv.col.value'),align:'r',sortable:true,render:it=>`<b class="tnum">${money0(it.onHand*it.cost)}</b>`},
-        {label:t('col.status'),align:'l',render:it=>statusBadge(it.status)},
-      ],
-      rows:rows(),
-    });
-  }
-  root.innerHTML=`<div class="content inventory-content" id="invContent">
-    ${inventoryPageHead({
-      active:'stock-on-hand',
-      title:t('inv.title'),
-      count:rows().length+(DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?'+ ':' ')+t('common.items'),
-      kpiLabel:t('inv.kpi.value'),
-      kpiValue:money0(totVal),
-    })}
-    <section class="master">
-      <div class="toolbar">
-        <div class="filterchips" id="invChips">${chips.map(c=>`<button class="chip ${c[0]==='all'?'on':''}" data-f="${c[0]}">${esc(c[1])}</button>`).join('')}</div>
-        <div class="grow"></div>
-        ${btn(t('common.columns'),{icon:'columns',cls:'soft'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}
-        ${btn(t('inv.newitem'),{icon:'plus',cls:'primary',attrs:'onclick="navigate(\'new-item\')"'})}
-        <div class="seg" id="densSeg"><button data-d="comfortable" class="on">${ic('rows')}${esc(t('common.comfortable'))}</button><button data-d="compact">${ic('rows-sm')}${esc(t('common.compact'))}</button></div>
-      </div>
-      <div class="tablewrap" id="invTable">${table()}</div>
-      <div id="invBulk"></div>
-    </section>
-    <aside class="detail" id="invDetail"><div class="detail-empty">${ic('box')}<div>${esc(t('inv.empty'))}</div></div></aside>
-  </div>`;
-  wireInventoryNav(root);
-  const content=$('#invContent');
-  function showDetail(sku){
-    const it=DB.items.find(x=>x.sku===sku); if(!it)return;
-    const avail=it.onHand-it.alloc;
+  const available=DB.items.reduce((sum,it)=>sum+it.onHand-it.alloc,0);
+  const needsAttention=DB.items.filter(it=>['Reorder','Low','Backordered'].includes(it.status)).length;
+
+  function detailContent(it){
     const itemMovements=DB.movements.filter(row=>row.item===it.sku);
     const related=itemMovements.slice(-5).reverse().map(row=>({
       no:row.no,
@@ -239,22 +189,23 @@ SCREENS['stock-on-hand'] = async function(root){
       meta:`${row.ref} · ${row.wh} · ${row.qty>0?'+':''}${num(row.qty)} ${it.uom}`,
       status:'Posted',
     }));
-    content.classList.remove('detail-collapsed');
-    $('#invDetail').classList.add('open');
-    $('#invDetail').innerHTML=`
+    return `
       <div class="detail-head">
         <span class="grabber"></span>
-        <button class="close" onclick="document.getElementById('invContent').classList.add('detail-collapsed');document.getElementById('invDetail').classList.remove('open')">${ic('chevL')}${esc(t('common.close'))}</button>
+        <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
         <div class="dh-top"><div><h2>${esc(it.name)}</h2><span class="sub">${esc(it.sku)} · ${esc(it.cat)} · ${esc(t('inv.peruom'))} ${esc(it.uom)}</span></div><div style="margin-left:auto">${statusBadge(it.status)}</div></div>
         <div class="dh-actions">${btn(t('inv.reorder'),{icon:'reorder',cls:'soft',attrs:'disabled title="Replenishment workflow is not implemented yet."'})}${btn(t('inv.receive'),{icon:'receive',cls:'soft',attrs:'disabled title="Use a canonical purchase receipt to receive stock."'})}${btn(t('inv.adjust'),{icon:'adjust',cls:'primary',attrs:'onclick="navigate(\'new-stock-adjustment\')"'})}</div>
-        <div class="tabs" id="invTabs"><button class="tab on" data-t="overview">${esc(t('inv.tab.overview'))}</button><button class="tab" data-t="locations">${esc(t('inv.tab.locations'))}<span class="tc">${it.bins.length}</span></button><button class="tab" data-t="history">${esc(t('inv.tab.history'))}</button></div>
+        <div class="tabs" data-inventory-tabs><button class="tab on" data-t="overview">${esc(t('inv.tab.overview'))}</button><button class="tab" data-t="locations">${esc(t('inv.tab.locations'))}<span class="tc">${it.bins.length}</span></button><button class="tab" data-t="history">${esc(t('inv.tab.history'))}</button></div>
       </div>
-      <div class="detail-body" id="invTabBody"></div>`;
-    const body=$('#invTabBody');
-    function tab(tabName){
-      $$('#invTabs .tab').forEach(x=>x.classList.toggle('on',x.dataset.t===tabName));
-      if(tabName==='overview'){
-        body.innerHTML=`
+      <div class="detail-body" data-inventory-tab-body>
+        ${detailTab(it,'overview',itemMovements,related)}
+      </div>`;
+  }
+
+  function detailTab(it,tabName,itemMovements,related){
+    const avail=it.onHand-it.alloc;
+    if(tabName==='overview'){
+      return `
           <div class="statgrid"><div class="stat"><small>${esc(t('inv.col.onhand'))}</small><b class="tnum">${num(it.onHand)}</b></div><div class="stat"><small>${esc(t('inv.col.alloc'))}</small><b class="tnum">${num(it.alloc)}</b></div><div class="stat accentval"><small>${esc(t('inv.col.avail'))}</small><b class="tnum">${num(avail)}</b></div><div class="stat"><small>${esc(t('inv.reorderpoint'))}</small><b class="tnum">${num(it.reorder)}</b></div></div>
           ${avail<=it.reorder?`<div class="indicator ${avail<=0?'danger':'warn'}"><div class="ind-top">${ic('warn')}<span>${avail<=0?esc(t('inv.belowzero')):esc(t('inv.atreorder'))}</span><span class="ind-r">${num(avail)} / ${num(it.reorder)}</span></div><div class="track"><i style="width:${Math.max(4,Math.min(100,avail/it.reorder*100))}%"></i></div><small>${esc(t('inv.suggested').replaceAll('{n}',num(it.roq)).replaceAll('{uom}',it.uom))}</small></div>`:''}
           <div class="card" style="margin-top:14px">
@@ -266,34 +217,80 @@ SCREENS['stock-on-hand'] = async function(root){
           </div>
           <div class="sectitle">${esc(t('inv.commitments'))}</div>
           ${related.length?relatedDocs(related):`<div class="card" style="color:var(--muted);font-size:13px">${esc(ts('No activity yet.'))}</div>`}`;
-      } else if(tabName==='locations'){
-        const sum=it.bins.reduce((s,b)=>s+b[1],0);
-        body.innerHTML=`<div class="card">${it.bins.length?it.bins.map(b=>`<div class="field"><span class="k mono">${esc(b[0])}</span><span class="v tnum">${num(b[1])} ${esc(it.uom)}</span></div>`).join(''):`<div style="color:var(--muted);font-size:13px">${esc(t('inv.nobins'))}</div>`}
-          ${it.bins.length?`<div class="field" style="border-top:2px solid var(--border);margin-top:4px"><span class="k"><b>${esc(t('inv.totalbins'))}</b></span><span class="v tnum"><b>${num(sum)} ${esc(it.uom)}</b> ${sum===it.onHand?cap(t('inv.reconciled'),'ok'):cap(t('inv.mismatch'),'warn')}</span></div>`:''}</div>
-          <div style="margin-top:12px">${btn(t('inv.movebins'),{icon:'transfer',cls:'soft'})} ${btn(t('inv.cyclecount'),{icon:'count',cls:'soft',attrs:'onclick="toast(\'Cycle count task created\',\'ok\')"'})}</div>`;
-      } else {
-        const events=itemMovements.slice().reverse().map(row=>({
-          kind:row.qty<0?'sub':'add',
-          when:row.date||'—',
-          what:esc(`${row.type} ${row.qty>0?'+':''}${num(row.qty)} · ${row.ref}`),
-          who:`${row.by} · ${row.wh} · bal ${num(row.bal)}`,
-        }));
-        body.innerHTML=events.length
-          ?auditTrail(events)
-          :`<div class="card" style="color:var(--muted);font-size:13px">${esc(ts('No activity yet.'))}</div>`;
-      }
     }
-    $$('#invTabs .tab').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.t)));
-    tab('overview');
+    if(tabName==='locations'){
+      const sum=it.bins.reduce((s,b)=>s+b[1],0);
+      return `<div class="card">${it.bins.length?it.bins.map(b=>`<div class="field"><span class="k mono">${esc(b[0])}</span><span class="v tnum">${num(b[1])} ${esc(it.uom)}</span></div>`).join(''):`<div style="color:var(--muted);font-size:13px">${esc(t('inv.nobins'))}</div>`}
+        ${it.bins.length?`<div class="field" style="border-top:2px solid var(--border);margin-top:4px"><span class="k"><b>${esc(t('inv.totalbins'))}</b></span><span class="v tnum"><b>${num(sum)} ${esc(it.uom)}</b> ${sum===it.onHand?cap(t('inv.reconciled'),'ok'):cap(t('inv.mismatch'),'warn')}</span></div>`:''}</div>
+        <div style="margin-top:12px">${btn(t('inv.movebins'),{icon:'transfer',cls:'soft'})} ${btn(t('inv.cyclecount'),{icon:'count',cls:'soft',attrs:'onclick="toast(\'Cycle count task created\',\'ok\')"'})}</div>`;
+    }
+    const events=itemMovements.slice().reverse().map(row=>({
+      kind:row.qty<0?'sub':'add',
+      when:row.date||'—',
+      what:esc(`${row.type} ${row.qty>0?'+':''}${num(row.qty)} · ${row.ref}`),
+      who:`${row.by} · ${row.wh} · bal ${num(row.bal)}`,
+    }));
+    return events.length
+      ?auditTrail(events)
+      :`<div class="card" style="color:var(--muted);font-size:13px">${esc(ts('No activity yet.'))}</div>`;
   }
-  function rewire(){
-    wireTable($('#invTable'),{ onRow:showDetail, onSelectionChange:(n)=>{ $('#invBulk').innerHTML=n?`<div class="bulkbar"><b>${n} ${esc(t('common.selected'))}</b><div class="grow"></div>${btn(t('inv.reorder'),{icon:'reorder',cls:'soft',attrs:'disabled title="Replenishment workflow is not implemented yet."'})}${btn(t('inv.adjust'),{icon:'adjust',cls:'soft',attrs:'onclick="navigate(\'new-stock-adjustment\')"'})}${btn(t('common.export'),{icon:'download',cls:'soft'})}</div>`:''; } });
-  }
-  rewire();
-  $('#invChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ $('#invChips .chip.on').classList.remove('on');c.classList.add('on');filter=c.dataset.f; $('#invTable').innerHTML=table(); const cc=root.querySelector('.inventory-pagehead .countchip'); if(cc)cc.textContent=rows().length+' '+t('common.items'); $('#invBulk').innerHTML=''; rewire(); }));
-  $('#densSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ $('#densSeg button.on').classList.remove('on');b.classList.add('on'); $('#invContent').setAttribute('data-density',b.dataset.d); }));
-  // preselect first reorder item for a populated look
-  setTimeout(()=>{ const tr=$('#invTable .dt-body .dt-r'); if(tr){tr.classList.add('sel');showDetail(tr.dataset.row);} },30);
+
+  masterDetailRegisterPage(root,{
+    module:'inventory',
+    route:'stock-on-hand',
+    title:t('inv.title'),
+    description:ts('Live quantities, availability, reorder points and inventory value by item.'),
+    rows:()=>DB.items,
+    rowId:it=>it.sku,
+    count:rows=>rows.length+(DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?'+':''),
+    filters:[['all',t('common.all')],['reorder',ts('Reorder')],['low',ts('Low')],['backorder',ts('Backordered')],['instock',ts('In stock')]],
+    filterFn:(it,filter)=>filter==='reorder'
+      ?it.status==='Reorder'
+      :filter==='low'
+        ?it.status==='Low'
+        :filter==='backorder'
+          ?it.status==='Backordered'
+          :it.status==='In stock',
+    kpis:[
+      {label:t('inv.kpi.value'),value:money0(totVal)},
+      {label:t('common.items'),value:DB.items.length},
+      {label:t('inv.col.avail'),value:num(available)},
+      {label:ts('Needs attention'),value:needsAttention,accent:needsAttention>0},
+    ],
+    primaryAction:{label:t('inv.newitem'),icon:'plus',onClick:()=>navigate('new-item')},
+    note:DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?ts('Showing first 100 items'):null,
+    columns:[
+      {label:t('inv.col.item'),sticky:true,render:it=>`<div class="cellsub"><b>${esc(it.name)}</b><small>${esc(it.sku)} · ${esc(it.cat)}</small></div>`},
+      {label:t('inv.col.onhand'),align:'r',sortable:true,render:it=>`<span class="tnum">${num(it.onHand)}</span>`},
+      {label:t('inv.col.alloc'),align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.alloc)}</span>`},
+      {label:t('inv.col.avail'),align:'r',sortable:true,render:it=>{const qty=it.onHand-it.alloc;return `<b class="tnum" style="color:${qty<=0?'var(--danger)':qty<it.reorder?'var(--warn)':'var(--accent)'}">${num(qty)}</b>`;}},
+      {label:t('inv.col.reorder'),align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.reorder)}</span>`},
+      {label:t('inv.col.unitcost'),align:'r',render:it=>`<span class="tnum">${money(it.cost)}</span>`},
+      {label:t('inv.col.value'),align:'r',sortable:true,render:it=>`<b class="tnum">${money0(it.onHand*it.cost)}</b>`},
+      {label:t('col.status'),align:'l',render:it=>statusBadge(it.status)},
+    ],
+    empty:{icon:'box',title:t('inv.empty')},
+    detailPane:{
+      initialSelectedId:DB.items[0]&&DB.items[0].sku,
+      empty:`<div class="detail-empty">${ic('box')}<div>${esc(t('inv.empty'))}</div></div>`,
+      content:detailContent,
+      afterRender:({detailRoot,row})=>{
+        if(!detailRoot||!row) return;
+        const movements=DB.movements.filter(entry=>entry.item===row.sku);
+        const related=movements.slice(-5).reverse().map(entry=>({
+          no:entry.no,label:entry.type,
+          meta:`${entry.ref} · ${entry.wh} · ${entry.qty>0?'+':''}${num(entry.qty)} ${row.uom}`,
+          status:'Posted',
+        }));
+        const tabs=detailRoot.querySelectorAll('[data-inventory-tabs] .tab');
+        const body=detailRoot.querySelector('[data-inventory-tab-body]');
+        tabs.forEach(button=>button.addEventListener('click',()=>{
+          tabs.forEach(candidate=>candidate.classList.toggle('on',candidate===button));
+          body.innerHTML=detailTab(row,button.dataset.t,movements,related);
+        }));
+      },
+    },
+  });
 };
 
 /* ---------------- ITEM MASTER (master data) ---------------- */
@@ -411,33 +408,16 @@ SCREENS['item-master'] = async function(root){
   const CATS=['Components','Raw Materials','Finished Goods','Consumables','Packaging'];
   const CAT_KEYS={Components:'catComponents','Raw Materials':'catRawMaterials','Finished Goods':'catFinishedGoods',Consumables:'catConsumables',Packaging:'catPackaging'};
   const UOMS=['ea','kg','m','sheet','L','box','pair','set'];
-  let selSku = DB.items[0] ? DB.items[0].sku : null;
+  let page=null;
 
-  function listTable(){
-    return buildTable({
-      rowId:it=>it.sku,
-      columns:[
-        {label:s('colItem'),sticky:true,render:it=>`<div class="cellsub"><b>${esc(it.name)}</b><small>${esc(it.sku)}</small></div>`},
-        {label:t('inv.category'),align:'l',render:it=>esc(s(CAT_KEYS[it.cat]||it.cat))},
-        {label:s('colUom'),align:'l',render:it=>esc(it.uom)},
-        {label:s('colReorderPt'),align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.reorder)}</span>`},
-        {label:s('colUnitCost'),align:'r',sortable:true,render:it=>`<span class="tnum">${money(it.cost)}</span>`},
-        {label:t('inv.col.onhand'),align:'r',sortable:true,render:it=>`<span class="tnum">${num(it.onHand)}</span>`},
-        {label:s('colStatus'),align:'l',render:it=>statusBadge(it.status)},
-      ],
-      rows:DB.items,
-    });
-  }
-
-  function detail(){
-    const it=DB.items.find(x=>x.sku===selSku);
+  function detail(it){
     if(!it) return `<div class="detail-empty">${ic('tag')}<div>${esc(s('selectItem'))}</div></div>`;
     const avail=it.onHand-it.alloc;
     const catLabel=s(CAT_KEYS[it.cat]||it.cat);
     return `
       <div class="detail-head">
         <span class="grabber"></span>
-        <button class="close" data-close="1">${ic('chevL')}${esc(t('common.close'))}</button>
+        <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
         <div class="dh-top"><div><h2>${esc(it.name)}</h2><span class="sub">${esc(it.sku)} · ${esc(catLabel)} · ${esc(t('inv.peruom'))} ${esc(it.uom)}</span></div><div style="margin-left:auto">${statusBadge(it.status)}</div></div>
         <div class="dh-actions">${btn(s('edit'),{icon:'edit',cls:'primary',attrs:'data-edit="1"'})}${btn(s('newTransaction'),{icon:'transfer',cls:'soft',attrs:'onclick="navigate(\'stock-movement\')"'})}${btn(s('delete'),{icon:'trash',cls:'soft',attrs:'data-del="1"'})}</div>
       </div>
@@ -497,8 +477,8 @@ SCREENS['item-master'] = async function(root){
         }
         closeModal();
         await prepareCanonicalInventoryData();
-        selSku=sku;
-        render();
+        page.render();
+        page.select(sku);
       }catch(error){
         saveBtn.disabled=false;
         toast(error&&error.message?error.message:s('itemSaveError'),'danger');
@@ -515,38 +495,44 @@ SCREENS['item-master'] = async function(root){
     });
   }
 
-  function render(){
-    const totVal=DB.items.reduce((s,it)=>s+it.onHand*it.cost,0);
-    root.innerHTML=`<div class="content inventory-content" id="imContent">
-      ${inventoryPageHead({
-        active:'item-master',
-        title:t('inv.nav.items'),
-        count:DB.items.length+' '+t('common.items'),
-        kpiLabel:t('inv.kpi.value'),
-        kpiValue:money0(totVal),
-        sub:s('subHeader'),
-      })}
-      <section class="master">
-        <div class="toolbar"><div class="grow"></div>${btn(t('common.export'),{icon:'download',cls:'soft'})}${btn(t('inv.newitem'),{icon:'plus',cls:'primary',attrs:'data-new="1"'})}</div>
-        <div class="tablewrap" id="imTable">${listTable()}</div>
-      </section>
-      <aside class="detail ${selSku?'open':''}" id="imDetail">${detail()}</aside>
-    </div>`;
-    wireInventoryNav(root);
-    wire();
-  }
-
-  function wire(){
-    wireTable($('#imTable'),{ onRow:(sku)=>{ selSku=sku; const c=$('#imContent'); if(c)c.classList.remove('detail-collapsed'); render(); } });
-    $('#imTable').querySelectorAll('.dt-r[data-row]').forEach(tr=>tr.classList.toggle('sel',tr.dataset.row===selSku));
-    const nb=root.querySelector('[data-new]'); nb&&nb.addEventListener('click',()=>itemForm(null));
-    const d=root.querySelector('#imDetail'); if(!d) return;
-    const cl=d.querySelector('[data-close]'); cl&&cl.addEventListener('click',()=>{ $('#imContent').classList.add('detail-collapsed'); d.classList.remove('open'); selSku=null; });
-    const ed=d.querySelector('[data-edit]'); ed&&ed.addEventListener('click',()=>{ const it=DB.items.find(x=>x.sku===selSku); if(it)itemForm(it); });
-    const de=d.querySelector('[data-del]'); de&&de.addEventListener('click',()=>{ const it=DB.items.find(x=>x.sku===selSku); if(it)confirmDelete(it); });
-  }
-
-  render();
+  const totVal=DB.items.reduce((sum,it)=>sum+it.onHand*it.cost,0);
+  const totalOnHand=DB.items.reduce((sum,it)=>sum+it.onHand,0);
+  page=masterDetailRegisterPage(root,{
+    module:'inventory',
+    route:'item-master',
+    title:t('inv.nav.items'),
+    description:s('subHeader'),
+    rows:()=>DB.items,
+    rowId:it=>it.sku,
+    filters:[['all',t('common.all')],...CATS.map(category=>[category,s(CAT_KEYS[category])])],
+    filterFn:(it,category)=>it.cat===category,
+    kpis:[
+      {label:t('common.items'),value:DB.items.length},
+      {label:t('inv.col.onhand'),value:num(totalOnHand)},
+      {label:t('inv.kpi.value'),value:money0(totVal)},
+    ],
+    primaryAction:{label:t('inv.newitem'),icon:'plus',onClick:()=>itemForm(null)},
+    columns:[
+      {label:s('colItem'),sticky:true,render:it=>`<div class="cellsub"><b>${esc(it.name)}</b><small>${esc(it.sku)}</small></div>`},
+      {label:t('inv.category'),align:'l',render:it=>esc(s(CAT_KEYS[it.cat]||it.cat))},
+      {label:s('colUom'),align:'l',render:it=>esc(it.uom)},
+      {label:s('colReorderPt'),align:'r',render:it=>`<span class="tnum" style="color:var(--muted)">${num(it.reorder)}</span>`},
+      {label:s('colUnitCost'),align:'r',sortable:true,render:it=>`<span class="tnum">${money(it.cost)}</span>`},
+      {label:t('inv.col.onhand'),align:'r',sortable:true,render:it=>`<span class="tnum">${num(it.onHand)}</span>`},
+      {label:s('colStatus'),align:'l',render:it=>statusBadge(it.status)},
+    ],
+    empty:{icon:'tag',title:s('selectItem')},
+    detailPane:{
+      initialSelectedId:DB.items[0]&&DB.items[0].sku,
+      empty:`<div class="detail-empty">${ic('tag')}<div>${esc(s('selectItem'))}</div></div>`,
+      content:detail,
+      afterRender:({detailRoot,row})=>{
+        if(!detailRoot||!row) return;
+        detailRoot.querySelector('[data-edit]')?.addEventListener('click',()=>itemForm(row));
+        detailRoot.querySelector('[data-del]')?.addEventListener('click',()=>confirmDelete(row));
+      },
+    },
+  });
 };
 
 /* ---------------- STOCK MOVEMENT LEDGER ---------------- */
