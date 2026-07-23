@@ -265,6 +265,18 @@ function masterDetailRegisterPage(root,config){
 }
 window.masterDetailRegisterPage=masterDetailRegisterPage;
 
+/**
+ * SSOT for tabular reports. It shares the approved register chrome without
+ * pretending that an analytical snapshot is a mutable transaction register.
+ */
+function reportListPage(root,config){
+  return transactionListPage(root,{
+    ...(config||{}),
+    layout:'report-list-v1',
+  });
+}
+window.reportListPage=reportListPage;
+
 function transactionRowMenuButton(label){
   return `<span class="rowact"><button class="transaction-row-menu" data-tip="${esc(label||'Actions')}" aria-label="${esc(label||'Row actions')}">${ic('more')}</button></span>`;
 }

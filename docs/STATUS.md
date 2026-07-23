@@ -579,13 +579,25 @@ and dead inventory split-shell CSS were removed. The list audit now covers **37 
 registers** (35 transaction lists plus 2 master-detail registers) at desktop and 375px.
 Service-worker v78 delivers the change.
 
+## Inventory Valuation report-list SSOT (TASK-094, 2026-07-23)
+
+Inventory Valuation no longer renders a bespoke full-height parameter sidebar and
+independent result toolbar. Those controls implied historical dates, warehouse
+filtering, saved templates and Excel/PDF/Print exports that had no implementation.
+The new shared `reportListPage()` specializes the approved register SSOT as
+`report-list-v1`: canonical current valuation rows, real KPI totals, category filters,
+snapshot metadata and the standard table/empty/pagination regions. It preserves report
+semantics without pretending to be a writable transaction register. The list audit now
+covers **38 shared tabular pages** at desktop and 375px. Service-worker v79 delivers
+the corrected page.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 92 tasks, including TASK-093
+- Done: 93 tasks, including TASK-094
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 114 Canonical / 0 Preview, 35/35 transaction registers and 2/2 Inventory
-  master-detail registers on their shared SSOT contracts.
+  master-detail registers plus Inventory Valuation on their shared SSOT contracts.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

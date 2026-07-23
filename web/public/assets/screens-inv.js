@@ -578,66 +578,45 @@ SCREENS['stock-movement'] = async function(root){
 /* ---------------- INVENTORY VALUATION REPORT ---------------- */
 SCREENS['inv-valuation'] = async function(root){
   await prepareCanonicalInventoryData();
-  const open=new Set();
-  const asAt=new Date().toISOString().slice(0,10);
-  function grand(){ return DB.valuation.reduce((s,g)=>s+g.items.reduce((a,it)=>a+it.qty*it.cost,0),0); }
-  function table(){
-    const gt=grand();
-    if(!DB.valuation.length){
-      return statePanel({
-        icon:'box',
-        title:'No inventory to value',
-        body:'No canonical product or stock balance exists for this company.',
-      });
-    }
-    const pct=value=>gt?(value/gt*100).toFixed(1):'0.0';
-    const tpl='minmax(220px,2.4fr) 110px 90px 110px 140px 96px';
-    let h=`<div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-      <div class="dt-r dt-head"><div class="dt-c l">Category / Item</div><div class="dt-c c">SKU</div><div class="dt-c r">Qty</div><div class="dt-c r">Unit cost</div><div class="dt-c r">Value</div><div class="dt-c r">% of total</div></div>
-      <div class="dt-body">`;
-    DB.valuation.forEach((g,gi)=>{
-      const gv=g.items.reduce((a,it)=>a+it.qty*it.cost,0);
-      const isOpen=open.has(gi);
-      h+=`<div class="dt-r drill ${isOpen?'open':''}" data-g="${gi}"><div class="dt-c l"><span class="twirl">${ic('chevR')}</span><b>${esc(g.cat)}</b></div><div class="dt-c c" style="color:var(--muted)">${g.items.length} items</div><div class="dt-c r"></div><div class="dt-c r"></div><div class="dt-c r"><b>${money(gv)}</b></div><div class="dt-c r tnum">${pct(gv)}%</div></div>`;
-      if(isOpen) g.items.forEach(it=>{ const v=it.qty*it.cost;
-        h+=`<div class="dt-r drillrow"><div class="dt-c l indent1">${esc(it.name)}</div><div class="dt-c c"><span class="docnum">${esc(it.sku)}</span></div><div class="dt-c r tnum">${num(it.qty)}</div><div class="dt-c r tnum">${money(it.cost)}</div><div class="dt-c r tnum">${money(v)}</div><div class="dt-c r tnum" style="color:var(--muted)">${pct(v)}%</div></div>`; });
-    });
-    h+=`<div class="dt-r grandtotal"><div class="dt-c l">Total inventory valuation</div><div class="dt-c"></div><div class="dt-c"></div><div class="dt-c"></div><div class="dt-c r tnum">${money(gt)}</div><div class="dt-c r tnum">100%</div></div>`;
-    h+=`</div></div></div>`; return h;
-  }
-  root.innerHTML=`<div class="content full"><section class="master">
-    ${inventoryPageHead({
-      active:'inv-valuation',
-      title:t('inv.nav.valuation'),
-      sub:'Inventory value by category and item at standard cost.',
-    })}
-    <div class="report">
-    <aside class="report-params">
-      <h3>Parameters</h3>
-      <div class="fld"><span>As at date</span><input type="date" value="${asAt}"></div>
-      <div class="fld"><span>Company</span><select><option>${esc(DB.company.name)}</option></select></div>
-      <div class="fld"><span>Warehouse</span><select><option>All warehouses</option>${(DB.inventoryWarehouses||[]).map(row=>`<option>${esc(row.code)} · ${esc(row.name)}</option>`).join('')}</select></div>
-      <div class="fld"><span>Costing basis</span><select><option>Standard cost</option></select></div>
-      <div class="fld"><span>Group by</span><select><option>Category</option></select></div>
-      <div class="fld"><span>Include zero qty</span><select><option>Yes</option><option>No</option></select></div>
-      ${btn('Run report',{icon:'play',cls:'primary',sm:false,attrs:'onclick="toast(\'Report refreshed\',\'ok\')"'})}
-      <div style="border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px">${btn('Save template',{icon:'save',cls:'soft'})}</div>
-    </aside>
-      <div class="report-result">
-      <div class="report-toolbar">
-        <div><b style="font-size:15px">Inventory Valuation</b><div class="report-meta">As at ${esc(asAt)} · standard cost · all warehouses${DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?' · first 100 rows per resource':''}</div></div>
-        <div class="grow"></div>
-        ${btn('Expand all',{icon:'list',cls:'soft',attrs:'data-act="expand"'})}
-        ${btn('Excel',{icon:'filexls',cls:'soft'})}${btn('PDF',{icon:'filepdf',cls:'soft'})}${btn('Print',{icon:'print',cls:'soft'})}
-      </div>
-      <div class="tablewrap" id="valTable">${table()}</div>
-    </div>
-  </div></section></div>`;
-  wireInventoryNav(root);
-  function rewire(){
-    root.querySelectorAll('.dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{ const g=+tr.dataset.g; open.has(g)?open.delete(g):open.add(g); $('#valTable').innerHTML=table(); rewire(); }));
-    root.querySelectorAll('.dt-r.drillrow').forEach(tr=>tr.addEventListener('click',()=>toast('Drill: item balance → stock movements','info')));
-  }
-  rewire();
-  root.querySelector('[data-act="expand"]').addEventListener('click',()=>{ if(open.size===DB.valuation.length){open.clear();}else{DB.valuation.forEach((_,i)=>open.add(i));} $('#valTable').innerHTML=table(); rewire(); });
+  const rows=DB.valuation.flatMap(group=>(group.items||[]).map(item=>({
+    ...item,
+    category:group.cat,
+    value:item.qty*item.cost,
+  })));
+  const totalValue=rows.reduce((sum,row)=>sum+row.value,0);
+  const totalQty=rows.reduce((sum,row)=>sum+row.qty,0);
+  const categories=[...new Set(rows.map(row=>row.category))].sort();
+  const locale=({en:'en-SG',ms:'ms-MY',zh:'zh-CN',ja:'ja-JP',vi:'vi-VN'})[getLang()]||'en-SG';
+  const asAt=new Intl.DateTimeFormat(locale,{dateStyle:'medium'}).format(new Date());
+
+  reportListPage(root,{
+    module:'inventory',
+    route:'inv-valuation',
+    title:t('inv.nav.valuation'),
+    description:ts('Current inventory value by item and category at standard cost.'),
+    rows,
+    rowId:row=>row.sku,
+    filters:[['all',t('common.all')],...categories.map(category=>[category,category])],
+    filterFn:(row,category)=>row.category===category,
+    kpis:[
+      {label:t('inv.kpi.value'),value:money(totalValue)},
+      {label:t('common.items'),value:num(rows.length)},
+      {label:t('inv.col.onhand'),value:num(totalQty)},
+      {label:t('inv.category'),value:num(categories.length)},
+    ],
+    note:`${ts('As at')} ${asAt} · ${ts('Standard cost')} · ${ts('All warehouses')}${DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?` · ${ts('First 100 rows per resource')}`:''}`,
+    columns:[
+      {label:t('inv.col.item'),sticky:true,render:row=>`<div class="cellsub"><b>${esc(row.name)}</b><small>${esc(row.sku)}</small></div>`},
+      {label:t('inv.category'),align:'l',render:row=>esc(row.category)},
+      {label:t('inv.col.onhand'),align:'r',sortable:true,render:row=>`<span class="tnum">${num(row.qty)}</span>`},
+      {label:t('inv.col.unitcost'),align:'r',sortable:true,render:row=>`<span class="tnum">${money(row.cost)}</span>`},
+      {label:t('inv.col.value'),align:'r',sortable:true,render:row=>`<b class="tnum">${money(row.value)}</b>`},
+      {label:ts('Share'),align:'r',render:row=>`<span class="tnum">${totalValue?(row.value/totalValue*100).toFixed(1):'0.0'}%</span>`},
+    ],
+    empty:{
+      icon:'box',
+      title:ts('No inventory to value'),
+      description:ts('No canonical product or stock balance exists for this company.'),
+    },
+  });
 };

@@ -1756,3 +1756,7 @@ Delivery slices:
       on Hand and Item Master off their hand-built page heads, toolbars and tables.
       Both routes declare `master-detail-register-v1`; the list audit validates all
       six required regions at desktop and 375px.
+- [x] **TASK-094 — Inventory Valuation report-list SSOT.** Add the analytical
+      `report-list-v1` specialization of the list contract and migrate Inventory
+      Valuation from its hand-built parameter/result split. Retain canonical valuation
+      facts, KPIs and category filtering while removing unsupported report controls.

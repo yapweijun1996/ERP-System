@@ -579,11 +579,14 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   'master-detail-register-v1':[
     'item-master','stock-on-hand',
   ],
+  'report-list-v1':[
+    'inv-valuation',
+  ],
   dashboard:[
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
   report:[
-    'ar-aging','audit-log','inv-valuation','pnl','purchasing-reports',
+    'ar-aging','audit-log','pnl','purchasing-reports',
     'report-generic','report-pur-buyer','report-pur-generic','report-pur-price-var',
     'report-pur-supplier','report-pur-vendor','report-quote-conversion',
     'report-sales-customer','report-sales-rep','sales-analysis','sales-reports',

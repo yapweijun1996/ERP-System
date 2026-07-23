@@ -39,7 +39,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
-const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1']);
+const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const VALID_LAYOUTS = new Set([
   ...LIST_LAYOUTS,'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
@@ -273,7 +273,11 @@ async function auditRoutes(browser, viewport) {
           layoutIssues.push(`${bar.className} overflow ${bar.scrollWidth}>${bar.clientWidth}`);
         }
       });
-      const listRoot = el.querySelector('[data-layout="transaction-list-v1"],[data-layout="master-detail-register-v1"]');
+      const listRoot = el.querySelector([
+        '[data-layout="transaction-list-v1"]',
+        '[data-layout="master-detail-register-v1"]',
+        '[data-layout="report-list-v1"]',
+      ].join(','));
       const actualListLayout = listRoot?.getAttribute('data-layout') || null;
       const listRegions = listRoot ? [
         listRoot.querySelector('[data-list-kpis]'),
