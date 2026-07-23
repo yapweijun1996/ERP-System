@@ -389,6 +389,92 @@ function ledgerDetailPage(root, config){
 window.ledgerDetailPage=ledgerDetailPage;
 
 /**
+ * Page-level SSOT for immutable balanced accounting postings.
+ *
+ * The shell owns posting identity, status, facts, main/context placement,
+ * responsive actions and standard empty/error states. Finance screens provide
+ * only the journal-specific line, audit and action content.
+ */
+function postingDetailPage(root, config){
+  if(!root) throw new Error('postingDetailPage requires a render root.');
+  const cfg=config||{};
+  const identity=cfg.identity||{};
+  const facts=Array.isArray(cfg.facts)?cfg.facts:[];
+  const actions=Array.isArray(cfg.actions)?cfg.actions:[];
+  const status=cfg.status||null;
+  const error=cfg.error||null;
+  const empty=cfg.empty||null;
+  const hasIdentity=Boolean(identity.code||identity.title||identity.meta);
+  const factHtml=facts.map(fact=>`<div class="posting-detail-fact">
+      <small>${esc(String(fact.label||''))}</small>
+      <b class="${fact.numeric?'tnum':''}">${esc(String(fact.value??'—'))}</b>
+    </div>`).join('');
+  const statusHtml=status?cap(
+    String(status.label||''),
+    status.tone||'neutral',
+  ):'';
+  const actionHtml=actions.map((action,index)=>btn(String(action.label||''),{
+    icon:action.icon||null,
+    cls:action.cls||'soft',
+    sm:action.sm,
+    attrs:`data-posting-action="${index}" ${action.attrs||''}${action.disabled?' disabled':''}`,
+  })).join('');
+  const errorHtml=error?`${ic('warn')}<div><b>${esc(String(error.title||'Posting unavailable'))}</b>
+      ${error.description?`<span>${esc(String(error.description))}</span>`:''}</div>
+      ${typeof error.onRetry==='function'?btn(String(error.retryLabel||'Retry'),{icon:'refresh',cls:'soft',attrs:'data-posting-retry'}):''}`:'';
+  const emptyHtml=empty?`<div class="statepanel empty posting-detail-empty" data-posting-empty>
+      ${ic(empty.icon||'book')}<h3>${esc(String(empty.title||'No posting available'))}</h3>
+      ${empty.description?`<p>${esc(String(empty.description))}</p>`:''}
+    </div>`:'';
+  const body=`<section class="posting-detail"
+      data-layout="posting-detail-v1"
+      data-posting-route="${esc(String(cfg.route||''))}"
+      data-posting-code="${esc(String(identity.code||''))}">
+    <div class="posting-detail-overview" data-posting-overview ${hasIdentity?'':'hidden'}>
+      <div class="posting-detail-identity">
+        <span>${esc(String(identity.title||''))}</span>
+        <b>${esc(String(identity.code||''))}</b>
+        ${identity.meta?`<small>${esc(String(identity.meta))}</small>`:''}
+      </div>
+      <div class="grow"></div>${statusHtml}
+      <div class="posting-detail-facts">${factHtml}</div>
+    </div>
+    <div class="posting-detail-error" data-posting-error role="alert" ${error?'':'hidden'}>${errorHtml}</div>
+    <div class="posting-detail-grid" data-posting-grid>
+      <main class="posting-detail-main" data-posting-main>${emptyHtml||String(cfg.main||'')}</main>
+      <aside class="posting-detail-context" data-posting-context ${empty?'hidden':''}>${String(cfg.context?.body||'')}</aside>
+    </div>
+    <div class="responsive-actionbar posting-detail-actions"
+        data-posting-actions ${actionHtml?'':'hidden'}>${actionHtml}</div>
+  </section>`;
+  root.innerHTML=modulePage({
+    module:cfg.module,
+    route:cfg.route,
+    active:cfg.active||cfg.route,
+    title:String(cfg.title||identity.title||''),
+    crumb:cfg.crumb,
+    sub:cfg.description,
+    body,
+  });
+  const postingRoot=root.querySelector('[data-layout="posting-detail-v1"]');
+  actions.forEach((action,index)=>{
+    postingRoot?.querySelector(`[data-posting-action="${index}"]`)?.addEventListener('click',event=>{
+      if(typeof action.onClick==='function'&&!action.disabled) action.onClick(event);
+    });
+  });
+  postingRoot?.querySelector('[data-posting-retry]')?.addEventListener('click',event=>error.onRetry(event));
+  if(typeof cfg.afterRender==='function'){
+    cfg.afterRender({
+      root,
+      postingRoot,
+      errorRoot:postingRoot&&postingRoot.querySelector('[data-posting-error]'),
+    });
+  }
+  return postingRoot;
+}
+window.postingDetailPage=postingDetailPage;
+
+/**
  * Page-level SSOT for canonical transaction registers.
  *
  * `modulePage()` owns the shared ERP shell and `buildTable()`/`wireTable()` own

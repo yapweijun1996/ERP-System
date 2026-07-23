@@ -28,6 +28,7 @@
     "audit:master-detail-editors": "MASTER_DETAIL_EDITOR_ONLY=1 node scripts/audit-screens.mjs",
     "audit:case-details": "CASE_DETAIL_ONLY=1 node scripts/audit-screens.mjs",
     "audit:ledger-details": "LEDGER_DETAIL_ONLY=1 node scripts/audit-screens.mjs",
+    "audit:posting-details": "POSTING_DETAIL_ONLY=1 node scripts/audit-screens.mjs",
     "test": "vitest run",
     "test:postgres": "vitest run src/api/postgresSecurity.integration.test.ts"
   },

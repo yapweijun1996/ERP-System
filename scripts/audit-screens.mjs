@@ -24,7 +24,8 @@
 //     WORKSPACE_LAYOUT_ONLY=1 for operational workspaces, or
 //     MASTER_DETAIL_EDITOR_ONLY=1 for versioned master-data detail editors, or
 //     CASE_DETAIL_ONLY=1 for actionable lifecycle case details, or
-//     LEDGER_DETAIL_ONLY=1 for immutable financial account ledgers.
+//     LEDGER_DETAIL_ONLY=1 for immutable financial account ledgers, or
+//     POSTING_DETAIL_ONLY=1 for immutable balanced accounting postings.
 //   - stateful transaction detail routes are opened through real fixtures
 //     instead of silently redirecting because no record was selected.
 //
@@ -46,20 +47,22 @@ const WORKSPACE_LAYOUT_ONLY = process.env.WORKSPACE_LAYOUT_ONLY === '1';
 const MASTER_DETAIL_EDITOR_ONLY = process.env.MASTER_DETAIL_EDITOR_ONLY === '1';
 const CASE_DETAIL_ONLY = process.env.CASE_DETAIL_ONLY === '1';
 const LEDGER_DETAIL_ONLY = process.env.LEDGER_DETAIL_ONLY === '1';
+const POSTING_DETAIL_ONLY = process.env.POSTING_DETAIL_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
 const MASTER_DETAIL_EDITOR_LAYOUT = 'master-detail-editor-v1';
 const CASE_DETAIL_LAYOUT = 'case-detail-v1';
 const LEDGER_DETAIL_LAYOUT = 'ledger-detail-v1';
+const POSTING_DETAIL_LAYOUT = 'posting-detail-v1';
 const VALID_LAYOUTS = new Set([
-  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,
+  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,
   'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
 ]);
 
-if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY].filter(Boolean).length > 1) {
-  throw new Error('LIST_LAYOUT_ONLY, WORKSPACE_LAYOUT_ONLY, MASTER_DETAIL_EDITOR_ONLY, CASE_DETAIL_ONLY and LEDGER_DETAIL_ONLY are mutually exclusive.');
+if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY].filter(Boolean).length > 1) {
+  throw new Error('LIST_LAYOUT_ONLY, WORKSPACE_LAYOUT_ONLY, MASTER_DETAIL_EDITOR_ONLY, CASE_DETAIL_ONLY, LEDGER_DETAIL_ONLY and POSTING_DETAIL_ONLY are mutually exclusive.');
 }
 
 const IDENTITY_MARKERS = ['northwind', 'dana reyes', 'dana.reyes@northwind.co'];
@@ -113,6 +116,15 @@ const unimplementedAccountLedgerActions = ['Export','Print']
   .filter((token) => new RegExp(`\\b${token}\\b`).test(accountLedgerScreenSource));
 if (unimplementedAccountLedgerActions.length) {
   throw new Error(`Account Ledger still exposes an unimplemented action: ${unimplementedAccountLedgerActions.join(', ')}`);
+}
+
+const primaryFinanceScreenSource = readFileSync(path.join(assetDir, 'screens-fin.js'), 'utf8');
+const journalEntryScreenSource = (primaryFinanceScreenSource.split("SCREENS['journal-entry'] =")[1] || '')
+  .split('/* ---------------- PAYMENT VOUCHER')[0];
+const obsoleteJournalChrome = ['docwrap','docpage','dochead','docmeta','doclayout','summary']
+  .filter((token) => journalEntryScreenSource.includes(token));
+if (obsoleteJournalChrome.length) {
+  throw new Error(`Journal Entry still rebuilds legacy document chrome: ${obsoleteJournalChrome.join(', ')}`);
 }
 
 function waitForServer(url, timeoutMs) {
@@ -265,7 +277,9 @@ async function auditRoutes(browser, viewport) {
           ? allRoutes.filter((route) => screenMeta[route]?.layout === CASE_DETAIL_LAYOUT)
           : LEDGER_DETAIL_ONLY
             ? allRoutes.filter((route) => screenMeta[route]?.layout === LEDGER_DETAIL_LAYOUT)
-            : allRoutes;
+            : POSTING_DETAIL_ONLY
+              ? allRoutes.filter((route) => screenMeta[route]?.layout === POSTING_DETAIL_LAYOUT)
+              : allRoutes;
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a shared list layout.');
   }
@@ -280,6 +294,9 @@ async function auditRoutes(browser, viewport) {
   }
   if (LEDGER_DETAIL_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a ledger detail layout.');
+  }
+  if (POSTING_DETAIL_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare a posting detail layout.');
   }
   const missingAdapterMethods = await page.evaluate(() => {
     const required = ['list','get','create','update','action','refresh','session','switchCompany'];
@@ -492,6 +509,46 @@ async function auditRoutes(browser, viewport) {
       if (ledgerUnhandledActions.length) {
         layoutIssues.push('ledger detail exposes Export or Print without an implementation');
       }
+      const postingDetailRoot = el.querySelector('[data-layout="posting-detail-v1"]');
+      const postingDetailRegions = postingDetailRoot ? [
+        postingDetailRoot.querySelector('[data-posting-overview]'),
+        postingDetailRoot.querySelector('[data-posting-error]'),
+        postingDetailRoot.querySelector('[data-posting-main]'),
+        postingDetailRoot.querySelector('[data-posting-context]'),
+        postingDetailRoot.querySelector('[data-posting-actions]'),
+      ] : [];
+      const postingDetailOrder = postingDetailRegions.length === 5
+        && postingDetailRegions.every(Boolean)
+        && postingDetailRegions.every((node,index)=>index === 0
+          || Boolean(postingDetailRegions[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+      if (postingDetailRoot && postingDetailRegions[4]
+          && postingDetailRegions[4].offsetParent !== null
+          && postingDetailRegions[4].scrollWidth > postingDetailRegions[4].clientWidth + 1) {
+        layoutIssues.push(`posting detail actions overflow ${postingDetailRegions[4].scrollWidth}>${postingDetailRegions[4].clientWidth}`);
+      }
+      if (postingDetailRoot && postingDetailRegions[2] && postingDetailRegions[3]) {
+        const mainRect = postingDetailRegions[2].getBoundingClientRect();
+        const contextRect = postingDetailRegions[3].getBoundingClientRect();
+        if (window.innerWidth <= 980 && contextRect.offsetParent !== null && contextRect.top < mainRect.bottom - 1) {
+          layoutIssues.push('posting detail context does not follow the main area on mobile');
+        }
+        if (window.innerWidth > 980 && contextRect.offsetParent !== null && contextRect.left < mainRect.right - 1) {
+          layoutIssues.push('posting detail main and context are not separate desktop columns');
+        }
+      }
+      if (postingDetailRoot && postingDetailRoot.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.summary')) {
+        layoutIssues.push('posting detail still renders legacy document chrome');
+      }
+      const postingLinesScroll = postingDetailRoot?.querySelector('.posting-lines-scroll');
+      const postingLinesStyle = postingLinesScroll ? getComputedStyle(postingLinesScroll) : null;
+      const postingLinesBounded = Boolean(
+        postingLinesScroll
+        && postingLinesStyle
+        && ['auto','scroll'].includes(postingLinesStyle.overflowX)
+      );
+      if (postingDetailRoot?.querySelector('[data-posting-lines]') && !postingLinesBounded) {
+        layoutIssues.push('posting lines table is missing its bounded scroll container');
+      }
       return {
         text: el.innerText || '',
         previewBanner: Boolean(el.querySelector('[data-preview-banner]')),
@@ -561,6 +618,22 @@ async function auditRoutes(browser, viewport) {
           controlledTable: ledgerTableBounded,
           unhandledActions: ledgerUnhandledActions.map((button) => (button.textContent || '').trim()),
         },
+        postingDetailLayout: {
+          present: Boolean(postingDetailRoot),
+          actualLayout: postingDetailRoot?.getAttribute('data-layout') || null,
+          missingRegions: postingDetailRoot
+            ? ['overview','error','main','context','actions'].filter((_,index)=>!postingDetailRegions[index])
+            : [],
+          ordered: postingDetailOrder,
+          pageheads: el.querySelectorAll('.pagehead').length,
+          errorRegion: Boolean(postingDetailRoot?.querySelector('[data-posting-error]')),
+          legacyDocumentChrome: Boolean(postingDetailRoot?.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.summary')),
+          lines: Boolean(postingDetailRoot?.querySelector('[data-posting-lines]')),
+          totals: Boolean(postingDetailRoot?.querySelector('[data-posting-totals]')),
+          balance: Boolean(postingDetailRoot?.querySelector('[data-posting-balance]')),
+          audit: Boolean(postingDetailRoot?.querySelector('[data-posting-audit]')),
+          controlledTable: postingLinesBounded,
+        },
         layoutProfile: {
           heading: el.querySelector('h1')?.textContent?.trim() || '',
           gridTables: el.querySelectorAll('.dt-page').length,
@@ -577,6 +650,7 @@ async function auditRoutes(browser, viewport) {
             || masterDetailEditorRoot?.getAttribute('data-layout')
             || caseDetailRoot?.getAttribute('data-layout')
             || ledgerDetailRoot?.getAttribute('data-layout')
+            || postingDetailRoot?.getAttribute('data-layout')
             || null,
         },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
@@ -602,6 +676,11 @@ async function auditRoutes(browser, viewport) {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
         openingRow: false, rowCount: 0, runningBalance: false, controlledTable: false, unhandledActions: [],
+      },
+      postingDetailLayout: {
+        present: false, actualLayout: null, missingRegions: [], ordered: false,
+        pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
+        lines: false, totals: false, balance: false, audit: false, controlledTable: false,
       },
       layoutProfile: {
         heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
@@ -755,12 +834,48 @@ async function auditRoutes(browser, viewport) {
     if (rendered.ledgerDetailLayout.present && meta?.layout !== LEDGER_DETAIL_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.ledgerDetailLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
     }
+    if (meta?.layout === POSTING_DETAIL_LAYOUT) {
+      if (!rendered.postingDetailLayout.present) {
+        rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} root missing`);
+      } else {
+        if (rendered.postingDetailLayout.actualLayout !== meta.layout) {
+          rendered.layoutIssues.push(`rendered ${rendered.postingDetailLayout.actualLayout} but declared ${meta.layout}`);
+        }
+        if (rendered.postingDetailLayout.missingRegions.length) {
+          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} regions missing: ${rendered.postingDetailLayout.missingRegions.join(', ')}`);
+        }
+        if (!rendered.postingDetailLayout.ordered) {
+          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} regions are outside canonical order`);
+        }
+        if (rendered.postingDetailLayout.pageheads !== 1) {
+          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} rendered ${rendered.postingDetailLayout.pageheads} module page headers`);
+        }
+        if (!rendered.postingDetailLayout.errorRegion) {
+          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} error region missing`);
+        }
+        if (rendered.postingDetailLayout.legacyDocumentChrome) {
+          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} contains legacy document chrome`);
+        }
+        if (!rendered.postingDetailLayout.lines
+            || !rendered.postingDetailLayout.totals
+            || !rendered.postingDetailLayout.balance
+            || !rendered.postingDetailLayout.audit) {
+          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} is missing lines, totals, balance or audit content`);
+        }
+        if (!rendered.postingDetailLayout.controlledTable) {
+          rendered.layoutIssues.push(`${POSTING_DETAIL_LAYOUT} lines table lacks controlled horizontal scrolling`);
+        }
+      }
+    }
+    if (rendered.postingDetailLayout.present && meta?.layout !== POSTING_DETAIL_LAYOUT) {
+      rendered.layoutIssues.push(`rendered ${rendered.postingDetailLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
     const highConfidenceRegister = rendered.layoutProfile.gridTables > 0
       && !rendered.layoutProfile.documentPage
       && !rendered.layoutProfile.formSurface
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
-      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT].includes(meta?.layout);
+      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT].includes(meta?.layout);
     if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
     }
@@ -1095,6 +1210,92 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'account-ledger');
     if (result) {
       result.layoutIssues.push(...ledgerIssues.map((issue)=>`Ledger state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('journal-entry')) {
+    const postingIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const expectedTitles = {
+        en:'Journal Entry',
+        ms:'Catatan Jurnal',
+        zh:'会计凭证',
+        ja:'仕訳伝票',
+        vi:'Bút toán nhật ký',
+      };
+      const issues = [];
+      const postingRoot = () => document.querySelector('#viewRoot [data-layout="posting-detail-v1"]');
+      try {
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          window.getLang = () => locale;
+          await navigate('journal-entry');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (!heading.startsWith(title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          const root = postingRoot();
+          if (!root) {
+            issues.push(`${locale} posting detail root missing`);
+            continue;
+          }
+          if (!root.querySelector('[data-posting-lines]')) issues.push(`${locale} journal lines missing`);
+          if (!root.querySelector('[data-posting-balance]')) issues.push(`${locale} balance context missing`);
+        }
+
+        window.getLang = () => 'en';
+        await navigate('journal-entry');
+        const defaultRoot = postingRoot();
+        if (!defaultRoot?.querySelector('[data-posting-totals]')) issues.push('journal totals missing');
+        if (!defaultRoot?.querySelector('[data-posting-audit]')) issues.push('journal audit trail missing');
+        if (!defaultRoot?.textContent?.includes('Dr = Cr')) issues.push('balanced journal indicator missing');
+        if (defaultRoot?.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.summary')) {
+          issues.push('legacy journal document chrome remains');
+        }
+
+        const defaultNo = defaultRoot?.getAttribute('data-posting-code') || '';
+        const otherNo = Object.keys(DB.journalDocs || {}).find((no) => no !== defaultNo);
+        if (otherNo) {
+          await SCREENS['journal-entry'](document.getElementById('viewRoot'),{no:otherNo});
+          if (postingRoot()?.getAttribute('data-posting-code') !== otherNo) {
+            issues.push(`requested journal ${otherNo} did not render`);
+          }
+        }
+
+        adapter.list = async (resource,query) => ['finance/gl-entries','finance/journals'].includes(resource)
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('journal-entry');
+        if (!postingRoot()?.querySelector('[data-posting-empty]')) issues.push('no-journal empty state missing');
+        if (!postingRoot()) issues.push('no-journal state left the shared posting shell');
+
+        adapter.list = async (resource,query) => {
+          if (resource === 'finance/accounts') throw new Error('posting audit failure');
+          return originalList.call(adapter,resource,query);
+        };
+        await navigate('journal-entry');
+        const errorRoot = postingRoot();
+        if (!errorRoot?.querySelector('[data-posting-error]:not([hidden])')) {
+          issues.push('read failure did not render the standard posting error state');
+        }
+        adapter.list = originalList;
+        errorRoot?.querySelector('[data-posting-retry]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,250));
+        if (!postingRoot() || postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) {
+          issues.push('Retry did not recover the Journal Entry');
+        }
+      } finally {
+        adapter.list = originalList;
+        window.getLang = originalGetLang;
+        await navigate('journal-entry');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'journal-entry');
+    if (result) {
+      result.layoutIssues.push(...postingIssues.map((issue)=>`Posting state smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }

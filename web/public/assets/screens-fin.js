@@ -327,87 +327,117 @@ function manualJournalViewCopy(){
   };
   return packs[typeof getLang==='function'?getLang():'en']||packs.en;
 }
+
+function journalDetailCopy(){
+  const packs={
+    en:{title:'Journal Entry',source:'source',date:'Date',period:'Period',prepared:'Prepared by',type:'Type',lines:'Journal lines',account:'Account',dimension:'Dimension',debit:'Debit',credit:'Credit',totals:'Totals',balanced:'Balanced',out:'Out of balance',audit:'Audit trail',totalDebit:'Total debit',totalCredit:'Total credit',difference:'Difference',entryBalances:'Entry balances',mustBalance:'Entry must balance',postToGl:'Posted to General Ledger',postIrrev:'Posting is irreversible and writes to the ledger for period {p}.',periodStatus:'Period status',open:'Open',empty:'No journal entry is available',emptyHelp:'No canonical posted journal exists for the current company.',error:'Journal entry could not be loaded.',retry:'Retry'},
+    ms:{title:'Catatan Jurnal',source:'sumber',date:'Tarikh',period:'Tempoh',prepared:'Disediakan oleh',type:'Jenis',lines:'Baris jurnal',account:'Akaun',dimension:'Dimensi',debit:'Debit',credit:'Kredit',totals:'Jumlah',balanced:'Seimbang',out:'Tidak seimbang',audit:'Jejak audit',totalDebit:'Jumlah debit',totalCredit:'Jumlah kredit',difference:'Perbezaan',entryBalances:'Catatan seimbang',mustBalance:'Catatan mesti seimbang',postToGl:'Dipos ke Lejar Am',postIrrev:'Posting tidak boleh dibatalkan dan menulis ke lejar untuk tempoh {p}.',periodStatus:'Status tempoh',open:'Terbuka',empty:'Tiada catatan jurnal tersedia',emptyHelp:'Tiada jurnal kanonik dipos untuk syarikat semasa.',error:'Catatan jurnal tidak dapat dimuatkan.',retry:'Cuba lagi'},
+    zh:{title:'会计凭证',source:'来源',date:'日期',period:'期间',prepared:'制单人',type:'类型',lines:'凭证明细',account:'科目',dimension:'维度',debit:'借方',credit:'贷方',totals:'合计',balanced:'已平衡',out:'不平衡',audit:'审计轨迹',totalDebit:'借方合计',totalCredit:'贷方合计',difference:'差额',entryBalances:'借贷平衡',mustBalance:'凭证必须平衡',postToGl:'已过账至总账',postIrrev:'过账不可撤销，并写入 {p} 期间的总账。',periodStatus:'期间状态',open:'开放',empty:'没有可用的会计凭证',emptyHelp:'当前公司尚无 Canonical 已过账凭证。',error:'无法加载会计凭证。',retry:'重试'},
+    ja:{title:'仕訳伝票',source:'ソース',date:'日付',period:'期間',prepared:'作成者',type:'種類',lines:'仕訳明細',account:'勘定科目',dimension:'ディメンション',debit:'借方',credit:'貸方',totals:'合計',balanced:'貸借一致',out:'貸借不一致',audit:'監査証跡',totalDebit:'借方合計',totalCredit:'貸方合計',difference:'差額',entryBalances:'仕訳は貸借一致',mustBalance:'仕訳は一致が必要',postToGl:'総勘定元帳へ転記済',postIrrev:'転記は取り消せず、期間 {p} の元帳に記録されます。',periodStatus:'期間ステータス',open:'オープン',empty:'利用可能な仕訳がありません',emptyHelp:'現在の会社には Canonical 転記済仕訳がありません。',error:'仕訳を読み込めませんでした。',retry:'再試行'},
+    vi:{title:'Bút toán nhật ký',source:'nguồn',date:'Ngày',period:'Kỳ',prepared:'Người lập',type:'Loại',lines:'Dòng bút toán',account:'Tài khoản',dimension:'Chiều phân tích',debit:'Nợ',credit:'Có',totals:'Tổng cộng',balanced:'Cân bằng',out:'Không cân bằng',audit:'Dấu vết kiểm toán',totalDebit:'Tổng Nợ',totalCredit:'Tổng Có',difference:'Chênh lệch',entryBalances:'Bút toán cân bằng',mustBalance:'Bút toán phải cân bằng',postToGl:'Đã ghi vào Sổ Cái',postIrrev:'Việc ghi sổ không thể hoàn tác và được ghi vào kỳ {p}.',periodStatus:'Trạng thái kỳ',open:'Mở',empty:'Không có bút toán khả dụng',emptyHelp:'Công ty hiện tại chưa có bút toán Canonical đã ghi sổ.',error:'Không thể tải bút toán.',retry:'Thử lại'},
+  };
+  return packs[typeof getLang==='function'?getLang():'en']||packs.en;
+}
+
+function openJournalReversal(j,mj){
+  const date=new Date().toISOString().slice(0,10);
+  appModal({icon:'refresh',title:mj.title,body:`<div class="risk warn">${ic('warn')}<div><b>${esc(mj.body)}</b></div></div><div class="fldrow c2" style="margin-top:14px"><div class="fld"><span>${esc(mj.number)}</span><input data-reversal-number value="${esc(j.no+'-REV')}"></div><div class="fld"><span>${esc(mj.date)}</span><input type="date" data-reversal-date value="${date}"></div></div><div class="fld" style="margin-top:12px"><span>${esc(mj.reason)}</span><textarea data-reversal-reason placeholder="${esc(mj.reasonPh)}"></textarea></div>`,actions:`${btn(mj.cancel,{cls:'soft',attrs:'data-reversal-cancel'})}${btn(mj.confirm,{icon:'refresh',cls:'primary',attrs:'data-reversal-confirm'})}`});
+  document.querySelector('[data-reversal-cancel]')?.addEventListener('click',closeModal);
+  document.querySelector('[data-reversal-confirm]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    const docNo=document.querySelector('[data-reversal-number]')?.value.trim();
+    const postingDate=document.querySelector('[data-reversal-date]')?.value;
+    const reason=document.querySelector('[data-reversal-reason]')?.value.trim();
+    if(!docNo||!postingDate||!reason){toast(mj.required,'danger');return;}
+    button.disabled=true;button.querySelector('span')&&(button.querySelector('span').textContent=mj.working);
+    try{
+      const response=await window.ErpSystemData.action('finance/journals',j.manualJournalId,'reverse',{docNo,postingDate,reason},`manual-journal-reverse-${j.manualJournalId}-${docNo}`);
+      closeModal();toast(mj.done,'ok');await prepareCanonicalFinanceData();navigate('journal-entry',{no:response.data.reversal.docNo});
+    }catch(error){toast((error&&error.message)||mj.required,'danger');button.disabled=false;button.querySelector('span')&&(button.querySelector('span').textContent=mj.confirm);}
+  });
+}
+
 SCREENS['journal-entry'] = async function(root, params){
-  await prepareCanonicalFinanceData();
   const mj=manualJournalViewCopy();
+  const copy=journalDetailCopy();
+  try{
+    await prepareCanonicalFinanceData();
+  }catch(error){
+    postingDetailPage(root,{
+      module:'finance',route:'journal-entry',title:copy.title,description:copy.error,
+      error:{title:copy.error,description:error&&error.message||copy.error,retryLabel:copy.retry,onRetry:()=>navigate('journal-entry',params)},
+      empty:{icon:'book',title:copy.empty,description:copy.emptyHelp},
+    });
+    return;
+  }
   const j=(params&&params.no&&DB.journalDocs&&DB.journalDocs[params.no])||DB.je0611;
-  if(!j) throw new Error('No canonical journal entry is available.');
+  if(!j){
+    postingDetailPage(root,{
+      module:'finance',route:'journal-entry',title:copy.title,description:copy.emptyHelp,
+      empty:{icon:'book',title:copy.empty,description:copy.emptyHelp},
+    });
+    return;
+  }
   const totDr=j.lines.reduce((s,l)=>s+l.dr,0), totCr=j.lines.reduce((s,l)=>s+l.cr,0);
   const balanced=Math.abs(totDr-totCr)<0.005;
-  // listing of journals on the left as a compact table, detail on right
   const canReverse=!!(j.manualJournalId&&j.rawStatus==='posted'&&j.journalType!=='reversal');
-  root.innerHTML=`<div class="content full"><section class="master" ${j.manualJournalId?'data-manual-journal-detail="canonical"':''}><div class="docwrap"><div class="docpage">
-    ${crumbs([DB.company.name,t('nav.finance'),t('je.title'),{cur:j.no}])}
-    <div class="dochead">
-      <div class="dh-row1"><div><div class="dt">${ic('book')}${esc(t('je.title'))} <span class="dnum">${esc(j.no)}</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(j.memo)} · ${esc(t('je.source'))} ${esc(j.source)}</div></div>
-        <div class="dactions">${statusBadge(j.status)}</div></div>
-      <div class="docmeta">
-        <div class="dm"><small>${esc(t('common.date'))}</small><b>${esc(j.date)}</b></div>
-        <div class="dm"><small>${esc(t('je.period'))}</small><b>${esc(j.period)}${j.manualJournalId?'':` · ${esc(t('je.open'))}`}</b></div>
-        <div class="dm"><small>${esc(t('je.prepared'))}</small><b>${esc(j.by)}</b></div>
-        <div class="dm"><small>${esc(t('qc.col.type'))}</small><b>${esc(j.source)}</b></div>
+  const main=`<section class="posting-detail-card" data-posting-lines>
+      <div class="posting-detail-card-head"><h3>${esc(copy.lines)}</h3></div>
+      <div class="posting-lines-scroll">
+        <table class="posting-lines-table"><thead><tr>
+          <th class="c">#</th><th class="l">${esc(copy.account)}</th><th class="l">${esc(copy.dimension)}</th>
+          <th class="r">${esc(copy.debit)}</th><th class="r">${esc(copy.credit)}</th>
+        </tr></thead><tbody>${j.lines.map((line,index)=>`<tr>
+          <td class="c">${index+1}</td>
+          <td class="l"><b>${esc(line.acct)} · ${esc(line.name)}</b></td>
+          <td class="l"><small>${esc(line.dim)}</small></td>
+          <td class="r tnum">${line.dr?money(line.dr):'—'}</td>
+          <td class="r tnum">${line.cr?money(line.cr):'—'}</td>
+        </tr>`).join('')}</tbody></table>
       </div>
-    </div>
-    <div class="doclayout">
-      <div class="docmain">
-        <div class="panel">
-          <div class="panel-h"><h3>${esc(t('je.lines'))}</h3></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('gl.col.account'))}</th><th class="l">${esc(t('je.col.dim'))}</th><th>${esc(t('je.col.debit'))}</th><th>${esc(t('je.col.credit'))}</th></tr></thead><tbody>
-            ${j.lines.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
-              <td class="l li-name"><b>${esc(l.acct)} · ${esc(l.name)}</b></td>
-              <td class="l" style="color:var(--muted)">${esc(l.dim)}</td>
-              <td class="tnum">${l.dr?money(l.dr):'—'}</td>
-              <td class="tnum">${l.cr?money(l.cr):'—'}</td></tr>`).join('')}
-          </tbody></table>
-          <div class="linefoot" style="display:flex;justify-content:flex-end;gap:30px;font-weight:600">
-            <span style="color:var(--muted)">${esc(t('je.totals'))}</span>
-            <span class="tnum">Dr ${money(totDr)}</span><span class="tnum">Cr ${money(totCr)}</span>
-            <span>${balanced?cap(t('je.balanced'),'ok'):cap(t('je.outofbalance'),'danger')}</span>
-          </div>
-        </div>
-        <div class="panel"><div class="panel-h"><h3>${esc(t('doc.tab.audit'))}</h3></div><div class="panel-body">
-          ${auditTrail([
-            {kind:'current',when:esc(j.date),what:mj.postedAudit,who:j.by},
-            {kind:'add',when:esc(j.date),what:mj.sourceAudit+' — '+esc(j.memo),who:j.by},
-          ])}
-        </div></div>
+      <div class="posting-lines-footer" data-posting-totals>
+        <small>${esc(copy.totals)}</small><span class="tnum">Dr ${money(totDr)}</span>
+        <span class="tnum">Cr ${money(totCr)}</span>${balanced?cap(copy.balanced,'ok'):cap(copy.out,'danger')}
       </div>
-      <aside class="summary">
-        <div class="sumcard">
-          <div class="sumrow"><span class="sk2">${esc(t('je.totaldebit'))}</span><span class="sv tnum">${money(totDr)}</span></div>
-          <div class="sumrow"><span class="sk2">${esc(t('je.totalcredit'))}</span><span class="sv tnum">${money(totCr)}</span></div>
-          <div class="sumrow total"><span class="sk2">${esc(t('je.difference'))}</span><span class="sv tnum">${money(Math.abs(totDr-totCr))}</span></div>
-          <div style="margin-top:10px">${balanced?indicator({tone:'ok',icon:'checkc',label:t('je.entrybalances'),value:'Dr = Cr'}):indicator({tone:'danger',icon:'warn',label:t('je.mustbalance'),value:'≠'})}</div>
-        </div>
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(t('je.posttogl'))}</div>
-          <p style="font-size:12.5px;color:var(--muted);margin:0">${esc(j.manualJournalId?`${mj.immutable} ${mj.correct}`:t('je.postirrev').replaceAll('{p}',j.period))}</p>
-        </div>
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(t('je.periodstatus'))}</div>
-          ${indicator({tone:'neutral',icon:'lock',label:j.period,value:j.status,sub:mj.immutable})}
-        </div>
-      </aside>
-    </div>
-    <div style="height:40px"></div>
-  </div></div>${j.manualJournalId?`<div class="responsive-actionbar">${btn(mj.back,{icon:'chevleft',cls:'soft',attrs:'data-manual-journal-back'})}<div class="grow"></div>${canReverse?btn(mj.reverse,{icon:'refresh',cls:'primary',sm:false,attrs:'data-manual-journal-reverse'}):''}</div>`:''}</section></div>`;
-  root.querySelector('[data-manual-journal-back]')?.addEventListener('click',()=>navigate('journal-entry'));
-  root.querySelector('[data-manual-journal-reverse]')?.addEventListener('click',()=>{
-    const date=new Date().toISOString().slice(0,10);
-    appModal({icon:'refresh',title:mj.title,body:`<div class="risk warn">${ic('warn')}<div><b>${esc(mj.body)}</b></div></div><div class="fldrow c2" style="margin-top:14px"><div class="fld"><span>${esc(mj.number)}</span><input data-reversal-number value="${esc(j.no+'-REV')}"></div><div class="fld"><span>${esc(mj.date)}</span><input type="date" data-reversal-date value="${date}"></div></div><div class="fld" style="margin-top:12px"><span>${esc(mj.reason)}</span><textarea data-reversal-reason placeholder="${esc(mj.reasonPh)}"></textarea></div>`,actions:`${btn(mj.cancel,{cls:'soft',attrs:'data-reversal-cancel'})}${btn(mj.confirm,{icon:'refresh',cls:'primary',attrs:'data-reversal-confirm'})}`});
-    document.querySelector('[data-reversal-cancel]')?.addEventListener('click',closeModal);
-    document.querySelector('[data-reversal-confirm]')?.addEventListener('click',async event=>{
-      const button=event.currentTarget;
-      const docNo=document.querySelector('[data-reversal-number]')?.value.trim();
-      const postingDate=document.querySelector('[data-reversal-date]')?.value;
-      const reason=document.querySelector('[data-reversal-reason]')?.value.trim();
-      if(!docNo||!postingDate||!reason){toast(mj.required,'danger');return;}
-      button.disabled=true;button.querySelector('span')&&(button.querySelector('span').textContent=mj.working);
-      try{
-        const response=await window.ErpSystemData.action('finance/journals',j.manualJournalId,'reverse',{docNo,postingDate,reason},`manual-journal-reverse-${j.manualJournalId}-${docNo}`);
-        closeModal();toast(mj.done,'ok');await prepareCanonicalFinanceData();navigate('journal-entry',{no:response.data.reversal.docNo});
-      }catch(error){toast((error&&error.message)||mj.required,'danger');button.disabled=false;button.querySelector('span')&&(button.querySelector('span').textContent=mj.confirm);}
-    });
+    </section>
+    <section class="posting-detail-card" data-posting-audit>
+      <div class="posting-detail-card-head"><h3>${esc(copy.audit)}</h3></div>
+      <div class="posting-audit-body">${auditTrail([
+        {kind:'current',when:esc(j.date),what:mj.postedAudit,who:j.by},
+        {kind:'add',when:esc(j.date),what:mj.sourceAudit+' — '+esc(j.memo),who:j.by},
+      ])}</div>
+    </section>`;
+  const context={body:`<section class="posting-context-card" data-posting-balance>
+      <small>${esc(copy.entryBalances)}</small>
+      <div class="posting-balance-row"><span>${esc(copy.totalDebit)}</span><b class="tnum">${money(totDr)}</b></div>
+      <div class="posting-balance-row"><span>${esc(copy.totalCredit)}</span><b class="tnum">${money(totCr)}</b></div>
+      <div class="posting-balance-row total"><span>${esc(copy.difference)}</span><b class="tnum">${money(Math.abs(totDr-totCr))}</b></div>
+      ${balanced?indicator({tone:'ok',icon:'checkc',label:copy.entryBalances,value:'Dr = Cr'}):indicator({tone:'danger',icon:'warn',label:copy.mustBalance,value:'≠'})}
+    </section>
+    <section class="posting-context-card"><small>${esc(copy.postToGl)}</small>
+      <p>${esc(j.manualJournalId?`${mj.immutable} ${mj.correct}`:copy.postIrrev.replaceAll('{p}',j.period))}</p>
+    </section>
+    <section class="posting-context-card"><small>${esc(copy.periodStatus)}</small>
+      ${indicator({tone:'neutral',icon:'lock',label:j.period,value:j.status,sub:mj.immutable})}
+    </section>`};
+  const actions=j.manualJournalId?[
+    {label:mj.back,icon:'chevleft',cls:'soft',attrs:'data-manual-journal-back',onClick:()=>navigate('journal-entry')},
+    ...(canReverse?[{label:mj.reverse,icon:'refresh',cls:'primary',sm:false,attrs:'data-manual-journal-reverse',onClick:()=>openJournalReversal(j,mj)}]:[]),
+  ]:[];
+  const postingRoot=postingDetailPage(root,{
+    module:'finance',route:'journal-entry',title:copy.title,
+    description:`${j.memo} · ${copy.source} ${j.source}`,
+    identity:{title:copy.title,code:j.no,meta:j.memo},
+    status:{label:j.status,tone:j.status==='Posted'?'teal':'neutral'},
+    facts:[
+      {label:copy.date,value:j.date},
+      {label:copy.period,value:`${j.period}${j.manualJournalId?'':` · ${copy.open}`}`},
+      {label:copy.prepared,value:j.by},
+      {label:copy.type,value:j.source},
+    ],
+    main,context,actions,
   });
+  if(j.manualJournalId)postingRoot?.setAttribute('data-manual-journal-detail','canonical');
 };
 
 /* ---------------- PAYMENT VOUCHER ----------------
