@@ -35,7 +35,10 @@ registerSalesTransactionList({
     {id:'cn',icon:'coins',label:'Issue credit note',run:()=>{navigate('credit-notes');}},
     {id:'reject',icon:'x',label:'Reject return',danger:true,sep:true,run:()=>toast(`${r.no} rejected`,'danger')},
   ],
-  onOpen:(r)=>openReturn(r),
+  rowAction:{
+    label:r=>`${t('common.open')} ${r.no}`,
+    run:r=>openReturn(r),
+  },
 });
 function openReturn(r){
   if(r.no==='RMA-26-0044'){ navigate('sales-return'); return; }
@@ -143,7 +146,10 @@ registerSalesTransactionList({
     {id:'pdf',icon:'filepdf',label:'Download PDF',run:()=>toast('Credit note PDF generated','ok')},
     {id:'apply',icon:'check',label:'Apply to invoice',run:()=>toast(`${c.no} applied to ${c.ref}`,'ok')},
   ],
-  onOpen:(c)=>openCredit(c),
+  rowAction:{
+    label:c=>`${t('common.open')} ${c.no}`,
+    run:c=>openCredit(c),
+  },
 });
 function openCredit(c){
   if(c.no==='CN-26-0028'){ navigate('credit-note'); return; }
@@ -236,7 +242,10 @@ registerSalesTransactionList({
     {id:'pdf',icon:'filepdf',label:'Download PDF',run:()=>toast('Debit note PDF generated','ok')},
     {id:'post',icon:'check',label:'Post to finance',run:()=>toast(`${d.no} posted`,'ok')},
   ],
-  onOpen:(d)=>openTxn('debit', d),
+  rowAction:{
+    label:d=>`${t('common.open')} ${d.no}`,
+    run:d=>openTxn('debit',d),
+  },
 });
 
 /* ---------------- PRICE LISTS ---------------- */
@@ -306,7 +315,10 @@ registerSalesTransactionList({
     {id:'dup',icon:'copy',label:'Duplicate',run:()=>toast(d.code+' duplicated','info')},
     {id:'off',icon:'x',label:'Deactivate',danger:true,sep:true,run:()=>toast(d.code+' deactivated','danger')},
   ],
-  onOpen:(d)=>salesModal({icon:'percent',no:d.code,title:d.name,metaRows:[['Type',esc(d.type)],['Scope',esc(d.scope)],['Value',esc(d.value)],['Threshold',esc(d.threshold)],['Approval',esc(d.approval)],['Status',cap(d.status,DRULE_TONE[d.status]||'neutral')]]}),
+  rowAction:{
+    label:d=>`${t('common.open')} ${d.code}`,
+    run:d=>salesModal({icon:'percent',no:d.code,title:d.name,metaRows:[['Type',esc(d.type)],['Scope',esc(d.scope)],['Value',esc(d.value)],['Threshold',esc(d.threshold)],['Approval',esc(d.approval)],['Status',cap(d.status,DRULE_TONE[d.status]||'neutral')]]}),
+  },
 });
 
 /* ---------------- CREDIT CONTROL ---------------- */
@@ -379,5 +391,8 @@ registerSalesTransactionList({
     {id:'approve',icon:'check',label:'Approve',run:()=>toast(`${c.rep} ${c.period} commission approved`,'ok')},
     {id:'export',icon:'download',label:'Export',sep:true,run:()=>toast('Commission report exported','ok')},
   ],
-  onOpen:(c)=>openTxn('commission', c),
+  rowAction:{
+    label:c=>`${t('common.open')} ${c.rep} ${c.period}`,
+    run:c=>openTxn('commission',c),
+  },
 });

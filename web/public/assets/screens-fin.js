@@ -51,13 +51,14 @@ SCREENS['sales-orders'] = async function(root){
   function dueCell(s){ const u=urgency(s); return `<span class="duecell ${u?('due-'+u.tone):''}">${esc(s.deliver)}${u?`<small>${esc(u.label)}</small>`:''}</span>`; }
 
   /* ---- actions ---- */
-  function menuItems(){
+  function canOpen(no){ return Boolean(DB.salesOrderDocs&&DB.salesOrderDocs[no]); }
+  function menuItems(s){
     return [
-      {id:'view',icon:'ext',label:t('so.act.view')},
+      ...(canOpen(s.no)?[{id:'view',icon:'ext',label:t('so.act.view')}]:[]),
       {id:'print',icon:'print',label:t('so.act.print')},
     ];
   }
-  function openDoc(no){ (DB.salesOrderDocs&&DB.salesOrderDocs[no]) ? navigate('sales-order',{no}) : toast(t('so.act.view')+' · '+no,'info'); }
+  function openDoc(no){ if(canOpen(no)) navigate('sales-order',{no}); }
   function runAction(id,s){
     if(id==='view'){ openDoc(s.no); return; }
     const msg={print:'Sales order sent to printer'}[id]||id;
@@ -100,7 +101,11 @@ SCREENS['sales-orders'] = async function(root){
       ...item,
       run:()=>runAction(item.id,s),
     })),
-    onOpen:s=>openDoc(s.no),
+    rowAction:{
+      label:s=>`${t('common.open')} ${s.no}`,
+      enabled:s=>canOpen(s.no),
+      run:s=>openDoc(s.no),
+    },
     empty:{icon:'bag',title:t('so.empty')},
   });
 };

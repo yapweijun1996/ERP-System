@@ -16,7 +16,7 @@ section for the path you are releasing. Deployment mechanics live in
 - [ ] `npm run check:demo-schema && npm run check:drift` — generated PGlite artifacts
       and all Drizzle migrations agree
 - [ ] `npm run build:demo` then `npm run smoke` and `npm run audit:screens`
-      (114 routes, desktop + 375 px, zero console errors)
+      (115 routes, desktop + 375 px, zero console errors)
 - [ ] `tasks/tasks.jsonl` statuses current; `docs/STATUS.md` updated if an epic-level
       milestone lands in this release
 - [ ] No secrets in the diff or the bundle: no provider API keys, nothing

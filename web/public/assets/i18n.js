@@ -2125,6 +2125,7 @@ Object.assign(I18N.zh,{
   'pnl.close':'关闭','pnl.generated':'生成时间',
 });
 I18N.ja=Object.assign({},I18N.en,{
+  'common.open':'開く',
   'pnl.title':'損益計算書','pnl.description':'発生主義 · 転記済仕訳のみ · 正規総勘定元帳',
   'pnl.filters':'フィルター','pnl.company':'会社範囲','pnl.allCompanies':'承認済みの全会社',
   'pnl.companies':'社',
@@ -2146,6 +2147,7 @@ I18N.ja=Object.assign({},I18N.en,{
   'pnl.close':'閉じる','pnl.generated':'生成日時',
 });
 I18N.vi=Object.assign({},I18N.en,{
+  'common.open':'Mở',
   'pnl.title':'Báo cáo lãi lỗ','pnl.description':'Dồn tích · Chỉ bút toán đã ghi sổ · Sổ cái chuẩn',
   'pnl.filters':'Bộ lọc','pnl.company':'Phạm vi công ty','pnl.allCompanies':'Tất cả công ty được cấp quyền',
   'pnl.companies':'công ty',

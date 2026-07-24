@@ -119,6 +119,29 @@ if (obsoleteEmployeeChrome.length) {
 }
 
 const serviceScreenSource = readFileSync(path.join(assetDir, 'screens-service.js'), 'utf8');
+const serviceContractScreenSource = serviceScreenSource.split("SCREENS['service-contract'] =")[1] || '';
+const obsoleteServiceContractChrome = [
+  'docwrap','docpage','dochead','doclayout','position:sticky',
+].filter((token) => serviceContractScreenSource.includes(token));
+if (!serviceContractScreenSource.includes('masterDetailEditorPage(root')) {
+  throw new Error('Service Contract does not render through masterDetailEditorPage().');
+}
+if (obsoleteServiceContractChrome.length) {
+  throw new Error(`Service Contract still rebuilds legacy document chrome: ${obsoleteServiceContractChrome.join(', ')}`);
+}
+
+const fakeListOpenTokens = [
+  ['screens-admin.js',"onOpen:()=>navigate('role-permission')"],
+  ['screens-purchasing-lists.js',"toast('Opening '+p.no"],
+  ['screens-sales-list.js','toast(`Opening ${s.no}`'],
+  ['screens-inv.js',"toast('Drill into"],
+];
+const fakeListOpenHits = fakeListOpenTokens.filter(([name,token])=>
+  readFileSync(path.join(assetDir,name),'utf8').includes(token));
+if (fakeListOpenHits.length) {
+  throw new Error(`Placeholder list-row open behaviour remains: ${fakeListOpenHits.map(([name])=>name).join(', ')}`);
+}
+
 const serviceOrderScreenSource = (serviceScreenSource.split("SCREENS['service-order'] =")[1] || '')
   .split('function assignTicketForm')[0];
 const obsoleteServiceOrderChrome = [
@@ -440,6 +463,25 @@ async function auditRoutes(browser, viewport) {
         '[data-layout="report-list-v1"]',
       ].join(','));
       const actualListLayout = listRoot?.getAttribute('data-layout') || null;
+      const listRows = [...(listRoot?.querySelectorAll('[data-list-table] .dt-body .dt-r[data-row]')||[])];
+      const interactiveListRows = listRows.filter((row)=>row.dataset.rowInteraction!=='none');
+      const staticListRows = listRows.filter((row)=>row.dataset.rowInteraction==='none');
+      const invalidInteractiveRows = interactiveListRows.filter((row)=>{
+        const style=getComputedStyle(row);
+        return !['open','select'].includes(row.dataset.rowInteraction)
+          || row.tabIndex!==0
+          || !row.getAttribute('aria-label')
+          || !row.classList.contains('is-interactive')
+          || style.cursor!=='pointer';
+      }).map((row)=>row.dataset.row);
+      const invalidStaticRows = staticListRows.filter((row)=>{
+        const style=getComputedStyle(row);
+        return row.hasAttribute('tabindex')
+          || row.hasAttribute('aria-label')
+          || row.classList.contains('is-interactive')
+          || row.classList.contains('sel')
+          || style.cursor==='pointer';
+      }).map((row)=>row.dataset.row);
       const timesheetRoot = el.querySelector('[data-layout="transaction-list-v1"][data-list-route="timesheet"]');
       const listRegions = listRoot ? [
         listRoot.querySelector('[data-list-kpis]'),
@@ -507,7 +549,8 @@ async function auditRoutes(browser, viewport) {
           && masterDetailEditorRegions[4].scrollWidth > masterDetailEditorRegions[4].clientWidth + 1) {
         layoutIssues.push(`master-detail editor actions overflow ${masterDetailEditorRegions[4].scrollWidth}>${masterDetailEditorRegions[4].clientWidth}`);
       }
-      if (masterDetailEditorRoot && masterDetailEditorRegions[2] && masterDetailEditorRegions[3]) {
+      if (masterDetailEditorRoot && masterDetailEditorRegions[2] && masterDetailEditorRegions[3]
+          && masterDetailEditorRegions[3].offsetParent !== null) {
         const mainRect = masterDetailEditorRegions[2].getBoundingClientRect();
         const contextRect = masterDetailEditorRegions[3].getBoundingClientRect();
         if (window.innerWidth <= 980 && contextRect.top < mainRect.bottom - 1) {
@@ -690,6 +733,11 @@ async function auditRoutes(browser, viewport) {
         listLayout: {
           present: Boolean(listRoot),
           actualLayout: actualListLayout,
+          rowCount:listRows.length,
+          interactiveRows:interactiveListRows.length,
+          staticRows:staticListRows.length,
+          invalidInteractiveRows,
+          invalidStaticRows,
           missingRegions: listRoot
             ? ['kpis','toolbar','table','pagination'].filter((_, index) => !listRegions[index])
             : [],
@@ -726,6 +774,15 @@ async function auditRoutes(browser, viewport) {
           footerHidden: Boolean(masterDetailEditorRegions[4]?.hasAttribute('hidden')),
           backActions: el.querySelectorAll('[data-employee-back]').length,
           legacyChrome: Boolean(masterDetailEditorRoot?.querySelector('.docwrap,.docpage,.dochead,.doclayout,.summary,.sumcard')),
+        },
+        serviceContractLayout: {
+          canonicalMarker: masterDetailEditorRoot?.getAttribute('data-canonical-service-contract') === 'true',
+          factCount: masterDetailEditorRoot?.querySelectorAll('[data-master-detail-overview] .master-detail-editor-fact').length || 0,
+          customerActions: masterDetailEditorPageActions?.querySelectorAll('[data-service-contract-customer]').length || 0,
+          commercialTerms: Boolean(masterDetailEditorRoot?.querySelector('[data-service-contract-commercial]')),
+          renewalContext: Boolean(masterDetailEditorRoot?.querySelector('[data-service-contract-renewal]')),
+          footerActions: masterDetailEditorRegions[4]?.querySelectorAll('button').length || 0,
+          footerHidden: Boolean(masterDetailEditorRegions[4]?.hasAttribute('hidden')),
         },
         arAgingLayout: {
           pageheads: el.querySelectorAll('.pagehead').length,
@@ -889,7 +946,11 @@ async function auditRoutes(browser, viewport) {
     }).catch(() => ({
       text: '', previewBanner: false, enabledPreviewWrites: [],
       layoutIssues: ['render inspection failed'],
-      listLayout: { present: false, actualLayout: null, missingRegions: [], ordered: false, missingMasterDetailRegions: [] },
+      listLayout: {
+        present: false, actualLayout: null, rowCount: 0, interactiveRows: 0, staticRows: 0,
+        invalidInteractiveRows: [], invalidStaticRows: [],
+        missingRegions: [], ordered: false, missingMasterDetailRegions: [],
+      },
       timesheetLayout: {
         pageheads: 0, canonicalMarker: false, kpis: 0, weekButtons: 0, weekLabels: 0,
         primaryActions: 0, semanticTables: 0, legacyChrome: false, unsupportedActions: [],
@@ -899,6 +960,10 @@ async function auditRoutes(browser, viewport) {
         readonlyInputs: 0, leaveBalance: false, controlledLeaveTable: false,
         headerStatuses: 0, headerReviewActions: 0, footerActions: 0,
         footerHidden: false, backActions: 0, legacyChrome: false,
+      },
+      serviceContractLayout: {
+        canonicalMarker: false, factCount: 0, customerActions: 0,
+        commercialTerms: false, renewalContext: false, footerActions: 0, footerHidden: false,
       },
       workspaceLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
@@ -964,6 +1029,16 @@ async function auditRoutes(browser, viewport) {
         }
         if (meta.layout === 'master-detail-register-v1' && rendered.listLayout.missingMasterDetailRegions.length) {
           rendered.layoutIssues.push(`master-detail-register-v1 regions missing: ${rendered.listLayout.missingMasterDetailRegions.join(', ')}`);
+        }
+        if (rendered.listLayout.invalidInteractiveRows.length) {
+          rendered.layoutIssues.push(
+            `interactive list rows violate focus/name/cursor contract: ${rendered.listLayout.invalidInteractiveRows.join(', ')}`,
+          );
+        }
+        if (rendered.listLayout.invalidStaticRows.length) {
+          rendered.layoutIssues.push(
+            `static list rows expose false interaction affordances: ${rendered.listLayout.invalidStaticRows.join(', ')}`,
+          );
         }
       }
     }
@@ -1167,6 +1242,16 @@ async function auditRoutes(browser, viewport) {
         rendered.layoutIssues.push('Employee contains legacy or duplicated detail chrome');
       }
     }
+    if (route === 'service-contract') {
+      if (!rendered.serviceContractLayout.canonicalMarker) {
+        rendered.layoutIssues.push('Service Contract canonical compatibility marker missing');
+      }
+      if (!rendered.serviceContractLayout.footerHidden || rendered.serviceContractLayout.footerActions) {
+        rendered.layoutIssues.push(
+          `Service Contract footer actions must remain hidden and empty, found hidden=${rendered.serviceContractLayout.footerHidden} buttons=${rendered.serviceContractLayout.footerActions}`,
+        );
+      }
+    }
     if (meta?.layout === CASE_DETAIL_LAYOUT) {
       if (!rendered.caseDetailLayout.present) {
         rendered.layoutIssues.push(`${CASE_DETAIL_LAYOUT} root missing`);
@@ -1367,6 +1452,64 @@ async function auditRoutes(browser, viewport) {
     });
 
     events.length = 0; // fully consumed this route's window; reset for the next
+  }
+
+  if (routes.includes('service-contracts')) {
+    const listInteractionIssues = await page.evaluate(async () => {
+      const issues = [];
+      const settle = () => new Promise((resolve)=>setTimeout(resolve,250));
+      await navigate('service-contracts');
+      let row=document.querySelector('#viewRoot [data-list-route="service-contracts"] .dt-r[data-row]');
+      if (!row) {
+        issues.push('Service Contracts has no row for interaction proof');
+      } else {
+        const expectedId=Number(row.dataset.row);
+        if (row.dataset.rowInteraction!=='open'||row.tabIndex!==0||!row.getAttribute('aria-label')) {
+          issues.push('Service Contract row lacks explicit open/focus/name metadata');
+        }
+        const checkbox=row.querySelector('[data-rowcheck]');
+        checkbox?.click();
+        await settle();
+        if (CURRENT_ROUTE!=='service-contracts') {
+          issues.push('row checkbox bubbled into the detail action');
+        }
+        row.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+        await settle();
+        if (CURRENT_ROUTE!=='service-contract'||Number(CURRENT_ROUTE_PARAMS?.contractId)!==expectedId) {
+          issues.push('Enter did not open the selected Service Contract');
+        }
+        await navigate('service-contracts');
+        row=document.querySelector('#viewRoot [data-list-route="service-contracts"] .dt-r[data-row]');
+        row?.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));
+        await settle();
+        if (CURRENT_ROUTE!=='service-contract'||Number(CURRENT_ROUTE_PARAMS?.contractId)!==expectedId) {
+          issues.push('Space did not open the selected Service Contract');
+        }
+      }
+
+      await navigate('user-mgmt');
+      const staticRow=document.querySelector('#viewRoot [data-list-route="user-mgmt"] .dt-r[data-row]');
+      if (!staticRow) {
+        issues.push('User Management has no static row for interaction proof');
+      } else {
+        staticRow.click();
+        await settle();
+        if (CURRENT_ROUTE!=='user-mgmt') issues.push('static User row unexpectedly navigated');
+        if (staticRow.classList.contains('sel')) issues.push('static User row acquired a false selected state');
+        if (staticRow.dataset.rowInteraction!=='none'||staticRow.hasAttribute('tabindex')
+            ||getComputedStyle(staticRow).cursor==='pointer') {
+          issues.push('static User row exposes open affordances');
+        }
+      }
+      return issues;
+    });
+    const result = results.find((row)=>row.route==='service-contracts');
+    if (result) {
+      result.layoutIssues.push(...listInteractionIssues.map((issue)=>`List interaction smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind==='console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind==='pageerror').map((event)=>event.message));
+    }
+    events.length=0;
   }
 
   if (routes.includes('timesheet')) {
@@ -1971,6 +2114,144 @@ async function auditRoutes(browser, viewport) {
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }
     events.length = 0;
+  }
+
+  if (routes.includes('service-contract')) {
+    const serviceContractIssues = await page.evaluate(async () => {
+      const originalGetLang=window.getLang;
+      const adapter=window.ErpSystemData;
+      const originalGet=adapter.get;
+      const expectedTitles={
+        en:'Service contract',
+        ms:'Kontrak servis',
+        zh:'服务合约',
+        ja:'サービス契約',
+        vi:'Hợp đồng dịch vụ',
+      };
+      const customer={id:9911,code:'CUST-9911',name:'Contract Audit Customer'};
+      const baseContract={
+        id:9921,contractNo:'SC-2099-9921',customerId:customer.id,plan:'Gold',
+        slaResponseHours:4,assetsCovered:6,startDate:'2026-01-01',
+        expiryDate:'2027-12-31',annualValue:'48000.00',
+      };
+      const isoAfter=(days)=>{
+        const date=new Date();
+        date.setHours(0,0,0,0);
+        date.setDate(date.getDate()+days);
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+      };
+      let contract={...baseContract,expiryDate:isoAfter(120)};
+      let customerMissing=false;
+      let unknownContract=false;
+      let readFailure=false;
+      const installGetStub=()=>{
+        adapter.get=async (resource,id)=>{
+          if (readFailure&&resource==='service/contracts') throw new Error('service contract audit failure');
+          if ((unknownContract&&resource==='service/contracts')||customerMissing&&resource==='sales/customers') {
+            throw new Error(`ERP resource not found: ${resource}/${id}`);
+          }
+          if (resource==='service/contracts') return {data:contract,meta:{}};
+          if (resource==='sales/customers') return {data:customer,meta:{}};
+          return originalGet.call(adapter,resource,id);
+        };
+      };
+      const root=()=>document.querySelector(
+        '#viewRoot [data-layout="master-detail-editor-v1"][data-master-detail-route="service-contract"]',
+      );
+      const issues=[];
+      try {
+        installGetStub();
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          window.getLang=()=>locale;
+          await navigate('service-contract',{contractId:contract.id});
+          const heading=document.querySelector('#viewRoot h1')?.textContent?.trim()||'';
+          if (heading!==title) issues.push(`${locale} heading rendered as ${heading||'missing'}`);
+          if (root()?.querySelectorAll('[data-master-detail-overview] .master-detail-editor-fact').length!==4) {
+            issues.push(`${locale} expected four overview facts`);
+          }
+        }
+
+        window.getLang=()=> 'en';
+        contract={...baseContract,expiryDate:isoAfter(120)};
+        await navigate('service-contract',{contractId:contract.id});
+        let detail=root();
+        if (!detail?.querySelector('[data-service-contract-commercial]')
+            ||!detail?.querySelector('[data-service-contract-renewal]')) {
+          issues.push('active contract commercial or renewal context missing');
+        }
+        const customerAction=document.querySelector('#viewRoot [data-service-contract-customer]');
+        if (Number(customerAction?.dataset.serviceContractCustomer)!==customer.id) {
+          issues.push('Customer 360 is not bound to the contract customer');
+        }
+        customerAction?.click();
+        await new Promise((resolve)=>setTimeout(resolve,250));
+        if (CURRENT_ROUTE!=='crm-customer'||Number(CURRENT_ROUTE_PARAMS?.customerId)!==customer.id) {
+          issues.push('Customer 360 did not open the contract customer');
+        }
+
+        contract={...baseContract,slaResponseHours:null,assetsCovered:0,expiryDate:isoAfter(30)};
+        await navigate('service-contract',{contractId:contract.id});
+        detail=root();
+        const facts=[...(detail?.querySelectorAll('[data-master-detail-overview] .master-detail-editor-fact b')||[])]
+          .map((node)=>node.textContent.trim());
+        if (!facts.includes('—')||!facts.includes('0')) {
+          issues.push('no-SLA or zero-asset contract facts are not preserved');
+        }
+        if (!document.querySelector('#viewRoot [data-master-detail-page-actions]')?.textContent.includes('Expiring')) {
+          issues.push('expiring contract status missing');
+        }
+
+        contract={...baseContract,expiryDate:isoAfter(-10)};
+        await navigate('service-contract',{contractId:contract.id});
+        if (!document.querySelector('#viewRoot [data-master-detail-page-actions]')?.textContent.includes('Expired')) {
+          issues.push('expired contract status missing');
+        }
+
+        customerMissing=true;
+        contract={...baseContract,expiryDate:isoAfter(120)};
+        await navigate('service-contract',{contractId:contract.id});
+        if (!root()?.textContent.includes('Customer unavailable')) {
+          issues.push('missing-customer fallback absent');
+        }
+        customerMissing=false;
+
+        await navigate('service-contract');
+        if (!root()?.querySelector('[data-master-detail-empty]')) {
+          issues.push('missing contract id does not render the shared empty state');
+        }
+        unknownContract=true;
+        await navigate('service-contract',{contractId:999999});
+        if (!root()?.querySelector('[data-master-detail-empty]')) {
+          issues.push('unknown contract id does not render the shared empty state');
+        }
+        unknownContract=false;
+
+        readFailure=true;
+        await navigate('service-contract',{contractId:contract.id});
+        if (!document.querySelector('#viewRoot .screen-render-error .statepanel button')) {
+          issues.push('contract read failure does not expose the global Retry state');
+        }
+        readFailure=false;
+
+        await navigate('service-contract',{contractId:contract.id});
+        const footer=root()?.querySelector('[data-master-detail-actions]');
+        if (!footer?.hasAttribute('hidden')||footer?.querySelectorAll('button').length) {
+          issues.push('read-only Service Contract footer actions are visible or populated');
+        }
+      } finally {
+        adapter.get=originalGet;
+        window.getLang=originalGetLang;
+        await navigate('service-contract');
+      }
+      return issues;
+    });
+    const result=results.find((row)=>row.route==='service-contract');
+    if (result) {
+      result.layoutIssues.push(...serviceContractIssues.map((issue)=>`Service Contract state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind==='console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind==='pageerror').map((event)=>event.message));
+    }
+    events.length=0;
   }
 
   if (routes.includes('ncr')) {

@@ -141,7 +141,10 @@
         {label:s('status'),render:row=>cap(label(s,row.status),tone(row.status))},
         {label:'',align:'r',render:row=>btn(s('review'),{icon:'ext',cls:'soft',attrs:`data-review-approval="${row.id}" onclick="event.stopPropagation()"`})},
       ],
-      onOpen:row=>openReview(row),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.order.docNo||row.orderId}`,
+        run:row=>openReview(row),
+      },
       empty:{icon:'flow',title:s('empty')},
       afterRender:({root:pageRoot,rows})=>{
         pageRoot.querySelector('[data-module-shell]')?.setAttribute('data-canonical-sales-order-approval','true');

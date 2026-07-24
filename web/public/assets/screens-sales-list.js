@@ -45,7 +45,10 @@ registerSalesTransactionList({
     {id:'quote',icon:'receipt',label:'Convert to quotation',run:()=>{navigate('quotations');setTimeout(()=>toast(`Quotation drafted from ${e.no}`,'ok'),180);}},
     {id:'lost',icon:'x',label:'Mark as lost',danger:true,sep:true,run:()=>toast(`${e.no} marked lost`,'danger')},
   ],
-  onOpen:(e)=>openEnquiry(e),
+  rowAction:{
+    label:e=>`${t('common.open')} ${e.no}`,
+    run:e=>openEnquiry(e),
+  },
 });
 function openEnquiry(e){ openTxn('enquiry', e); }
 
@@ -82,7 +85,10 @@ registerSalesTransactionList({
     {id:'dup',icon:'copy',label:'Duplicate',sep:true,run:()=>toast(`${q.no} duplicated`,'info')},
     {id:'del',icon:'trash',label:'Delete',danger:true,run:()=>deleteQuotation(q)},
   ],
-  onOpen:(q)=>openQuote(q),
+  rowAction:{
+    label:q=>`${t('common.open')} ${q.no}`,
+    run:q=>openQuote(q),
+  },
 });
 function openQuote(q){
   if(q.doc){ navigate('quotation'); return; }
@@ -121,7 +127,11 @@ registerSalesTransactionList({
     {label:'Total', align:'r', sortable:true, w:'minmax(104px,0.9fr)', render:s=>`<b class="tnum">${money(s.total)}</b>`},
     {label:'', align:'r', w:'minmax(168px,168px)', render:s=>`<span class="appr-acts">${btn('Reject',{icon:'x',cls:'soft',attrs:`onclick="event.stopPropagation();soApprove('${s.no}',false)"`})}${btn('Approve',{icon:'check',cls:'primary',attrs:`onclick="event.stopPropagation();soApprove('${s.no}',true)"`})}</span>`},
   ],
-  onOpen:(s)=>{ s.no==='SO-26-0418' ? navigate('sales-order') : toast(`Opening ${s.no}`,'info'); },
+  rowAction:{
+    label:s=>`${t('common.open')} ${s.no}`,
+    enabled:s=>s.no==='SO-26-0418',
+    run:()=>navigate('sales-order'),
+  },
 });
 
 /* ---------------- DELIVERY ORDERS ---------------- */
@@ -155,7 +165,10 @@ registerSalesTransactionList({
     {id:'track',icon:'location',label:'Track shipment',run:()=>toast(`Tracking ${d.no} — ${d.carrier}`,'info')},
     {id:'inv',icon:'receipt',label:'Create invoice',sep:true,run:()=>{navigate('sales-invoices');}},
   ],
-  onOpen:(d)=>openDelivery(d),
+  rowAction:{
+    label:d=>`${t('common.open')} ${d.no}`,
+    run:d=>openDelivery(d),
+  },
 });
 function openDelivery(d){
   if(d.doc){ navigate('delivery-order'); return; }
@@ -191,7 +204,10 @@ registerSalesTransactionList({
     {id:'view',icon:'ext',label:'Open invoice',run:()=>openInvoice(i)},
     {id:'pdf',icon:'filepdf',label:'Download PDF',run:()=>toast('Invoice PDF generated','ok')},
   ],
-  onOpen:(i)=>openInvoice(i),
+  rowAction:{
+    label:i=>`${t('common.open')} ${i.no}`,
+    run:i=>openInvoice(i),
+  },
 });
 function openInvoice(i){
   if(DB.salesInvoiceDocs&&DB.salesInvoiceDocs[i.no]){ navigate('sales-invoice',{no:i.no}); return; }

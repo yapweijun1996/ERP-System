@@ -155,6 +155,7 @@ SCREENS['leave-approval'] = async function(root){
       description:s('noLeaveRequestsBody'),
     },
     detailPane:{
+      rowLabel:leaveRequest=>`${t('common.open')} ${empOf(leaveRequest).fullName}`,
       initialSelectedId:()=>isDesktop()
         ?leaveRequests.find(row=>row.status==='pending')?.id??null
         :null,

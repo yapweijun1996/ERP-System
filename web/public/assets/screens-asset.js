@@ -218,7 +218,10 @@ SCREENS['asset-register'] = async function(root){
       {label:t('fa.col.depmo'),align:'r',render:a=>`<span class="tnum">${money0(a.monthly)}</span>`},
       {label:t('col.status'),align:'l',render:a=>statusBadge(a.status)},
     ],
-    onOpen:a=>navigate('asset-detail',{assetId:Number(a.id)}),
+    rowAction:{
+      label:a=>`${t('common.open')} ${a.assetNo||a.id}`,
+      run:a=>navigate('asset-detail',{assetId:Number(a.id)}),
+    },
     empty:{icon:'asset',title:'No assets'},
   });
 };

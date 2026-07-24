@@ -386,7 +386,7 @@ const SUBROUTES = {
   crm:['crm-pipeline','opportunity','new-opportunity','crm-customer'],
   manufacturing:['work-orders','work-order','new-work-order','bom','mrp'],
   quality:['qc-inspection','qc-report','ncr'],
-  service:['service-ticket','service-order','service-contracts'],
+  service:['service-ticket','service-order','service-contracts','service-contract'],
   asset:['asset-register','asset-detail','depreciation'],
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
@@ -424,7 +424,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
   'integration-logs','data-import',
-  'service-ticket','service-order','service-contracts',
+  'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
   'payment-voucher','new-payment-voucher',
   'rfqs','supplier-quotations',
@@ -466,7 +466,7 @@ const API_SCREEN_ROUTES = new Set([
   'integration-logs','data-import',
   'bank-rec',
   'bi-dashboard','sales-analysis','stock-aging',
-  'service-ticket','service-order','service-contracts',
+  'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
   'payment-voucher','new-payment-voucher',
   'rfqs','supplier-quotations',
@@ -496,6 +496,7 @@ const SCREEN_ACTIVE_ALIASES = {
   employee:'hr-directory','new-employee':'hr-directory','payslip':'payroll-run',
   'project-detail':'project-pl',
   'asset-detail':'asset-register',
+  'service-contract':'service-contracts',
   'new-journal-entry':'journal-entry','new-payment-voucher':'payment-voucher',
 };
 const MODULE_DEFS = {
@@ -590,7 +591,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'picking',
   ],
   'master-detail-editor-v1':[
-    'bom','employee',
+    'bom','employee','service-contract',
   ],
   'case-detail-v1':[
     'ncr','service-order',

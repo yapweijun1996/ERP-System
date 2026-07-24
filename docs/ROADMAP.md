@@ -676,13 +676,13 @@ audit proof, Demo/API state persistence, desktop/375px and all 114 routes pass.
 2. Migration 0044, generated PGlite schema, production RLS and service-worker v73 align
    at 127 tables. Demo/API adapters share the same TypeScript commands.
 
-Exit criteria: **114/114 Canonical, Preview=0**, 379 tests plus one expected skip,
+Exit criteria: **115/115 Canonical, Preview=0**, 392 tests plus one expected skip,
 desktop/375px route audit and in-app browser proof pass. TASK-017 physical iPhone and
 Android verification remains the only human-only release check.
 
 ## Phase 33 — Page-level UI SSOT Convergence ✅
 
-1. **Shared list and workspace contracts** (EPIC-051, TASK-087–100, completed
+1. **Shared list and workspace contracts** (EPIC-051, TASK-087–101, completed
    2026-07-24) separate data maturity from visual-layout compliance. The approved
    transaction-list renderer owns KPI, toolbar, table/empty and pagination regions;
    master-detail registers, tabular reports and operational workspaces extend that
@@ -708,9 +708,14 @@ Android verification remains the only human-only release check.
    read-only lifecycle rail now joins the canonical overview, diagnosis,
    SLA/contract context and responsive action regions without changing Assign or
    Resolve commands.
+7. **List-row interaction and Service Contract detail** (TASK-101) makes openability
+   an explicit shared contract instead of a visual side effect. Static registers no
+   longer pretend to open, actionable rows support mouse/Enter/Space without nested
+   control bubbling, and the Contracts register now opens a real read-only
+   `master-detail-editor-v1` record.
 
-Exit criteria: 42 shared list-layout routes and all 114 routes pass desktop/375px
+Exit criteria: 42 shared list-layout routes and all 115 routes pass desktop/375px
 structural audits; Timesheet and Employee pass their dedicated five-language/state
-proofs, and the two master-detail editor routes pass focused and live browser
+proofs, and the three master-detail editor routes pass focused and live browser
 verification; Payroll modal initial/error/mobile states and both Case Detail routes
-pass focused state proofs with service-worker v98.
+pass focused state proofs with service-worker v99.

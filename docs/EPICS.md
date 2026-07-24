@@ -1796,3 +1796,10 @@ Delivery slices:
       remove the `.dt` title collision that caused mobile clipping. Static and
       five-language state audits enforce the corrected desktop/375px layout, while
       Service worker v98 delivers the change without altering service commands.
+- [x] **TASK-101 — List-row interaction SSOT and Service Contract detail.** Add an
+      explicit `rowAction` contract so only rows with a real route, detail pane or
+      dialog receive pointer/hover/selection and keyboard affordances. Migrate all
+      42 shared lists, remove toast-only and wrong-target opens, and add the missing
+      read-only `service-contract` route through `master-detail-editor-v1`.
+      Mouse, Enter and Space share one action while nested controls are isolated.
+      Focused list/master-detail audits and service worker v99 enforce the change.

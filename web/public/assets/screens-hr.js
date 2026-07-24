@@ -452,7 +452,10 @@ SCREENS['hr-directory'] = async function(root){
       {label:t('hr.col.joined'),align:'l',render:e=>esc(dateValue(e.startDate))},
       {label:t('col.status'),align:'l',render:e=>{ const st=hrStatusOf(e,leaveRequests); return cap(hrStatusLabel(s,st),hrStatusTone(st)); }},
     ],
-    onOpen:e=>navigate('employee',{employeeId:Number(e.id)}),
+    rowAction:{
+      label:e=>`${t('common.open')} ${e.employeeNo}`,
+      run:e=>navigate('employee',{employeeId:Number(e.id)}),
+    },
     empty:{icon:'people',title:'No employees'},
   });
 };
@@ -809,6 +812,7 @@ SCREENS['payroll-run'] = async function(root){
     ],
     empty:{icon:'coins',title:s('noRunYet'),description:s('noRunBody')},
     detailPane:{
+      rowLabel:run=>`${t('common.open')} ${run.docNo}`,
       initialSelectedId:()=>isDesktop()?runs[0]?.id??null:null,
       selectionOnFilter:rows=>isDesktop()?rows[0]?.id??null:null,
       empty:`<div class="detail-empty">${ic('coins')}<div><b>${esc(s('selectPayrollRun'))}</b><small>${esc(s('selectPayrollRunBody'))}</small></div></div>`,

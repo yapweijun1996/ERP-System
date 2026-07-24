@@ -54,7 +54,7 @@ docs/                    This documentation suite
   4. Add the `<script>` tag to `web/index.html` (order matters: data → adapter →
      screens → app).
   5. Add five-language copy, set the route Canonical only after Demo/API parity, then
-     run the type/test/schema/build/114-route gates and live desktop + 375 px checks.
+     run the type/test/schema/build/115-route gates and live desktop + 375 px checks.
 
 ## 3. Data layer design
 
@@ -185,7 +185,7 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 ## 7. Testing design
 
 - Required local gates are root/web typecheck, ESLint, Vitest, `npm run demo`, generated
-  schema/drift checks, Demo and API builds, and the 114-route desktop/375px audit.
+  schema/drift checks, Demo and API builds, and the 115-route desktop/375px audit.
 - CI adds PostgreSQL 16 migration/RLS/integration coverage and the same schema and route
   gates. Stateful browser fixtures ensure detail routes are not skipped for lack of
   context.

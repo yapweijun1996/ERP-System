@@ -85,7 +85,7 @@ hardcoded fictional customer regardless of the active company.
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
-| Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. The 114-route audit explicitly proves the loading/race/error contract at desktop + 375px. |
+| Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. The 115-route audit explicitly proves the loading/race/error contract at desktop + 375px. |
 | Bundled Demo ESM runtime | ✅ Current Canonical writes migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. CRM create/convert, Purchasing create/receive/post, Sales enquiry/quotation/order actions, Sales Draft confirmation and Demo Setup all use TypeScript commands instead of browser business SQL mirrors — including the base demo seed itself (`seedDemo()`, TASK-034), which now runs directly on first boot instead of a hand-written `erp-system-seed.sql` mirror. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
 | Transaction proof script | ✅ Working | `npm run demo` → `src/demo.ts` (PGlite always; PostgreSQL if `POSTGRES_URL` set) |
 | Sales screens (orders, detail, invoices and idempotent confirmation) | ✅ Canonical Demo/API data and writes | Four Canonical routes read bounded formal customer/order/line/invoice resources in both modes. Confirmation executes the shared transactional command with a real warehouse, inventory movements, invoice and balanced GL; unsupported prototype actions are not exposed. |
@@ -115,7 +115,7 @@ hardcoded fictional customer regardless of the active company.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. Its dashboard locator survives service-worker navigation and has a 45-second budget above PGlite's bounded 20-second cold-start watchdog, avoiding slow-runner races without suppressing console/page errors. |
-| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 114 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **111 Canonical / 3 Preview**. Preview pages show `Preview · Sample Data` consistently and their write-like actions are disabled with an explanation. |
+| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 115 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **115 Canonical / 0 Preview**. Preview pages would show `Preview · Sample Data` consistently and lock write-like actions. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; both `item-master` and the separate five-language `new-item` composer write through that audited Demo/API command. `new-item` now stores only real product fields, accepts a company-unique SKU and removes the sample form's fabricated USD/GST, accounting, costing, shelf-life and negative-stock controls. New items start at 0 on hand with no stock projection or movement — initial quantity must use Purchase Receipt or Stock Adjustment. Duplicate SKU is an atomic 409; delete remains honestly unsupported rather than mutating local sample data. |
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
@@ -133,7 +133,7 @@ hardcoded fictional customer regardless of the active company.
 | Landed Cost allocation & moving-average revaluation | ✅ Canonical Demo/API data and writes | Migration 0033 adds versioned receipt-linked `landed_cost` headers, immutable allocation snapshots, `product.average_cost` and upgrade-safe account `2300`. Shared Decimal commands allocate by received value or quantity with deterministic whole-cent residuals. Allocation locks the draft/products/current balances, requires positive on-hand, revalues moving-average cost and posts balanced Dr Inventory / Cr Landed Cost Accrual without a `stock_movement`. Demo/API create and idempotent audited allocate actions, production RLS, five-language UI and inventory/GL trace links are live. Browser proof allocated S$14.00 against GR-1: Widget cost S$6.50→S$6.64, Dr/Cr S$14.00 and unchanged quantity. |
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
-| Full screen audit — every route in `SCREENS` (114), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
+| Full screen audit — every route in `SCREENS` (115), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, and active-tab visibility. |
 | Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 371 passing tests plus 1 expected skip and one gated PostgreSQL 16 integration proof (also run in CI). Coverage includes Session/CSRF/RBAC, idempotency/audit, inventory/warehouse/manufacturing/quality invariants, sales/purchasing/CRM lifecycles, finance/assets/project/service/HR/payroll postings, rebuildable BI and migration compatibility. Notification tests prove delivery validation, sanitized actor/company isolation, permissions, audit and idempotent read/dismiss replay. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production Setup remains a separate deployment-token/zero-user command. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
@@ -153,8 +153,8 @@ hardcoded fictional customer regardless of the active company.
 
 ## Canonical and Preview route boundary
 
-114 routes are registered in the live `SCREENS` registry. `SCREEN_META` is now the source
-of truth for production maturity at route level: **111 routes are Canonical and 3 are
+115 routes are registered in the live `SCREENS` registry. `SCREEN_META` is the source
+of truth for production maturity at route level: **115 routes are Canonical and 0 are
 Preview**. This replaces the old module-wide mock allowlist, which could not accurately
 represent partially migrated Purchasing and CRM modules.
 
@@ -518,8 +518,9 @@ the envelope to the browser, while offline Demo explicitly refuses to store secr
 roles and module state rather than a fictional cross-tenant console. `sys-settings`
 now reads and writes audited company policy, document sequences and accounting-period
 locks while presenting effective-dated tax and currency facts. Migration 0044 brings
-the shared Drizzle/PGlite/PostgreSQL schema to 127 tables. All **114 routes are now
-Canonical and API-capable; Preview=0**.
+the shared Drizzle/PGlite/PostgreSQL schema to 127 tables. All routes at that milestone
+were Canonical and API-capable; TASK-101 subsequently adds Service Contract detail,
+bringing the current registry to **115 Canonical routes with Preview=0**.
 
 ## Stable async navigation feedback (TASK-086, 2026-07-23)
 
@@ -687,15 +688,32 @@ bound to the current customer ID, and five-language state smoke covers SLA,
 contract, diagnosis, empty, Assign/Resolve and failure recovery. Service-worker v98
 delivers the shared renderer, Service screen, layout metadata and styles.
 
+## List-row interaction SSOT and Service Contract detail (TASK-101, 2026-07-24)
+
+Shared list rows now advertise an explicit `open`, `select` or `none` interaction.
+Only real actions receive pointer/hover/selected styling, `tabindex="0"` and an
+accessible label; mouse, Enter and Space share the same action, while checkboxes,
+row menus, links and inline controls do not bubble into it. All 42 shared lists use
+this contract. Static analytical/rule/history rows remain honest, and the former
+toast-only or wrong-target opens have been removed.
+
+Service Contracts now opens the selected Canonical record through the third
+`master-detail-editor-v1` route. The read-only detail shows customer, contract,
+plan/status, dates, SLA, covered assets, annual value, term and renewal context;
+Customer 360 is bound to the current contract customer. Focused audits cover
+Active/Expiring/Expired, no SLA, zero assets, missing/unknown/failed records,
+customer fallback, five languages and desktop/375px behavior. Service-worker v99
+delivers the shared table, list screens, new route and audit updates.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 99 tasks, including TASK-100
+- Done: 100 tasks, including TASK-101
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
-  complete at 114 Canonical / 0 Preview and 42 audited list-layout routes, including
+  complete at 115 Canonical / 0 Preview and 42 audited list-layout routes, including
   36 transaction lists, 4 master-detail registers and 2 report lists; Warehouse
-  Picking remains on its dedicated operational-workspace SSOT, and BOM plus Employee
-  use the shared master-detail editor SSOT with Employee's actions in the page header.
+  Picking remains on its dedicated operational-workspace SSOT, and BOM, Employee plus
+  Service Contract use the shared master-detail editor SSOT.
   NCR and Service Order use the shared actionable Case Detail SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.

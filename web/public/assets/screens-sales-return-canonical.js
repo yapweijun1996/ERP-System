@@ -147,7 +147,10 @@
         {label:s('total'),align:'r',render:row=>`<b>${esc(money(returnTotal(data,row),(invoices.get(Number(row.invoiceId))||{}).currency))}</b>`},
         {label:s('status'),render:row=>cap(s(row.status),tone(row.status))},
       ],
-      onOpen:row=>openReturn(row.id),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.docNo}`,
+        run:row=>openReturn(row.id),
+      },
       empty:{icon:'refresh',title:s('empty'),description:s('help')},
     });
   };
@@ -194,7 +197,10 @@
         {label:s('total'),align:'r',render:row=>`<b>${esc(money(row.totalAmount,row.currency))}</b>`},
         {label:s('status'),render:row=>cap(s(row.status),tone(row.status))},
       ],
-      onOpen:row=>openCredit(row.id),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.docNo}`,
+        run:row=>openCredit(row.id),
+      },
       empty:{icon:'coins',title:s('emptyCredit'),description:s('creditHelp')},
     });
   };
@@ -250,6 +256,7 @@
     transactionListPage(root,{
       module:'sales',route:'debit-notes',title:d.title,description:d.help,
       rows:notes,rowId:row=>row.id,
+      rowAction:null,
       primaryAction:{label:d.newNote,icon:'plus',onClick:openCreate},
       columns:[
         {label:d.title,render:row=>`<div class="cellsub"><b class="docnum">${esc(row.docNo)}</b><small>${esc(dateValue(row.noteDate))}</small></div>`},

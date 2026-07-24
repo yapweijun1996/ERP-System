@@ -202,7 +202,10 @@
         {label:s('date'),render:row=>esc(dateLabel(row.inspectionDate))},
         {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
       ],
-      onOpen:row=>openInspection(row.id),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.docNo}`,
+        run:row=>openInspection(row.id),
+      },
       empty:{icon:'checkc',title:s('empty'),description:s('emptyHelp')},
     });
   };

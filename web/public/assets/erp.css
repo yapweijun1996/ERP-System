@@ -395,9 +395,11 @@ h1{font-size:calc(27px * var(--fs,1));font-weight:600;letter-spacing:-.02em;marg
 .dt-c .sortarrow{opacity:0;margin-left:4px;font-size:calc(9px * var(--fs,1));display:inline-block;transition:opacity .12s;}
 .dt-c.sorted{color:var(--accent);}
 .dt-c.sorted .sortarrow{opacity:1;}
-.dt-body .dt-r{cursor:pointer;transition:background .1s;}
-.dt-body .dt-r:hover{background:var(--surface-2);}
-.dt-body .dt-r.sel{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent);}
+.dt-body .dt-r{cursor:default;transition:background .1s;}
+.dt-body .dt-r.is-interactive{cursor:pointer;}
+.dt-body .dt-r.is-interactive:hover{background:var(--surface-2);}
+.dt-body .dt-r.is-interactive:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.dt-body .dt-r.is-interactive.sel{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent);}
 .dt-body .dt-r.checked{background:var(--accent-tint);}
 .dt-body .dt-r:last-child{border-bottom:none;}
 .cellsub{display:flex;flex-direction:column;line-height:1.25;min-width:0;}

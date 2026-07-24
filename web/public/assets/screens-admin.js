@@ -196,7 +196,7 @@ SCREENS['user-mgmt'] = async function(root){
           ?`<span class="rowact"><button data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button></span>`
           :(u.kind==='user'?`<span class="rowact" data-tip="${esc(s('you'))}"><button disabled>${ic('user')}</button></span>`:'')},
       ],
-      onOpen:()=>navigate('role-permission'),
+      rowAction:null,
       empty:{icon:'people',title:'No users'},
       afterRender:({root:pageRoot})=>{
         pageRoot.querySelectorAll('[data-act="toggle"]').forEach(b=>b.addEventListener('click',async e=>{

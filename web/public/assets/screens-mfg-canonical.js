@@ -182,7 +182,10 @@
         {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
       ],
       empty:{icon:'factory',title:s('empty'),description:s('emptyDesc')},
-      onOpen:row=>row&&openWorkOrder(row.id),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.docNo}`,
+        run:row=>openWorkOrder(row.id),
+      },
     });
   };
 

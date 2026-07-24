@@ -84,7 +84,10 @@
         {label:s('date'),render:row=>esc(dateValue(row.deliveryDate))},
         {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
       ],
-      onOpen:row=>openDelivery(row.id),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.docNo}`,
+        run:row=>openDelivery(row.id),
+      },
       empty:{icon:'truck',title:s('empty'),description:s('help')},
     });
   };

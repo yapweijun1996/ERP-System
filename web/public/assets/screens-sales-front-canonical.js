@@ -283,7 +283,10 @@
         {label:s('estimated'),align:'r',render:row=>`<b class="tnum">${esc(amountLabel(row.estimatedValue,row.currency))}</b>`},
         {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
       ],
-      onOpen:row=>openEnquiry(row.id),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.docNo}`,
+        run:row=>openEnquiry(row.id),
+      },
       empty:{icon:'chat',title:s('emptyEnquiry'),description:s('emptyHelp')},
     });
   };
@@ -305,7 +308,10 @@
         {label:s('total'),align:'r',render:row=>`<b class="tnum">${esc(amountLabel(row.totalAmount,row.currency))}</b>`},
         {label:s('status'),render:row=>cap(statusLabel(s,row.status),statusTone(row.status))},
       ],
-      onOpen:row=>openQuote(row.id),
+      rowAction:{
+        label:row=>`${t('common.open')} ${row.docNo}`,
+        run:row=>openQuote(row.id),
+      },
       empty:{icon:'receipt',title:s('emptyQuotation'),description:s('emptyHelp')},
     });
   };

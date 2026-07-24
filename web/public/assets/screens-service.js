@@ -53,6 +53,12 @@ function serviceCopy(){
       fieldAnnualValue:'Annual value',contractCreated:'Contract {no} registered',
       contractSaveError:'Contract could not be registered',createContract:'Register contract',
       activeContracts:'Active',annualValueKpi:'Annual value',expiringSoon:'{n} renewal(s) due within 60 days.',
+      serviceContractTitle:'Service contract',serviceContractDescription:'Review the customer, coverage and renewal facts for the selected contract.',
+      noServiceContract:'No service contract found',noServiceContractBody:'Choose a contract from the Contracts register to view its details.',
+      commercialTerms:'Commercial terms',contractTerm:'Contract term',renewalContext:'Renewal context',
+      renewalDue:'Renewal is due in {n} days.',renewalExpired:'This contract expired {n} days ago.',
+      renewalHealthy:'The contract has {n} days remaining.',days:'days',customerUnavailable:'Customer unavailable',
+      contractsEmpty:'No service contracts',
     },
     ms:{
       contractExpiring:'Akan tamat',contractExpired:'Tamat tempoh',
@@ -89,6 +95,12 @@ function serviceCopy(){
       fieldAnnualValue:'Nilai tahunan',contractCreated:'Kontrak {no} didaftarkan',
       contractSaveError:'Kontrak tidak dapat didaftarkan',createContract:'Daftar kontrak',
       activeContracts:'Aktif',annualValueKpi:'Nilai tahunan',expiringSoon:'{n} pembaharuan perlu dalam 60 hari.',
+      serviceContractTitle:'Kontrak servis',serviceContractDescription:'Semak pelanggan, liputan dan fakta pembaharuan untuk kontrak yang dipilih.',
+      noServiceContract:'Kontrak servis tidak ditemui',noServiceContractBody:'Pilih kontrak daripada daftar Kontrak untuk melihat butirannya.',
+      commercialTerms:'Terma komersial',contractTerm:'Tempoh kontrak',renewalContext:'Konteks pembaharuan',
+      renewalDue:'Pembaharuan perlu dalam {n} hari.',renewalExpired:'Kontrak ini tamat {n} hari lalu.',
+      renewalHealthy:'Kontrak mempunyai baki {n} hari.',days:'hari',customerUnavailable:'Pelanggan tidak tersedia',
+      contractsEmpty:'Tiada kontrak servis',
     },
     zh:{
       contractExpiring:'即将到期',contractExpired:'已过期',
@@ -125,6 +137,12 @@ function serviceCopy(){
       fieldAnnualValue:'年度价值',contractCreated:'合约 {no} 已登记',
       contractSaveError:'合约登记失败',createContract:'登记合约',
       activeContracts:'生效中',annualValueKpi:'年度价值',expiringSoon:'{n} 份合约将于60天内需要续约。',
+      serviceContractTitle:'服务合约',serviceContractDescription:'查看所选合约的客户、覆盖范围与续约信息。',
+      noServiceContract:'未找到服务合约',noServiceContractBody:'请从合约列表选择一份合约以查看详情。',
+      commercialTerms:'商业条款',contractTerm:'合约期限',renewalContext:'续约信息',
+      renewalDue:'距离续约还有 {n} 天。',renewalExpired:'此合约已过期 {n} 天。',
+      renewalHealthy:'此合约剩余 {n} 天。',days:'天',customerUnavailable:'客户资料不可用',
+      contractsEmpty:'暂无服务合约',
     },
     ja:{
       contractExpiring:'まもなく期限切れ',contractExpired:'期限切れ',
@@ -161,6 +179,12 @@ function serviceCopy(){
       fieldAnnualValue:'年間契約額',contractCreated:'契約 {no} を登録しました',
       contractSaveError:'契約を登録できませんでした',createContract:'契約を登録',
       activeContracts:'有効',annualValueKpi:'年間契約額',expiringSoon:'{n} 件の契約が60日以内に更新期限を迎えます。',
+      serviceContractTitle:'サービス契約',serviceContractDescription:'選択した契約の顧客、対象範囲、更新情報を確認します。',
+      noServiceContract:'サービス契約が見つかりません',noServiceContractBody:'契約一覧から契約を選択して詳細を表示してください。',
+      commercialTerms:'契約条件',contractTerm:'契約期間',renewalContext:'更新情報',
+      renewalDue:'更新まであと {n} 日です。',renewalExpired:'この契約は {n} 日前に期限切れとなりました。',
+      renewalHealthy:'契約の残存期間は {n} 日です。',days:'日',customerUnavailable:'顧客情報なし',
+      contractsEmpty:'サービス契約はありません',
     },
     vi:{
       contractExpiring:'Sắp hết hạn',contractExpired:'Đã hết hạn',
@@ -197,6 +221,12 @@ function serviceCopy(){
       fieldAnnualValue:'Giá trị hàng năm',contractCreated:'Đã đăng ký hợp đồng {no}',
       contractSaveError:'Không thể đăng ký hợp đồng',createContract:'Đăng ký hợp đồng',
       activeContracts:'Đang hiệu lực',annualValueKpi:'Giá trị hàng năm',expiringSoon:'{n} hợp đồng cần gia hạn trong 60 ngày tới.',
+      serviceContractTitle:'Hợp đồng dịch vụ',serviceContractDescription:'Xem khách hàng, phạm vi và thông tin gia hạn của hợp đồng đã chọn.',
+      noServiceContract:'Không tìm thấy hợp đồng dịch vụ',noServiceContractBody:'Chọn một hợp đồng từ danh sách Hợp đồng để xem chi tiết.',
+      commercialTerms:'Điều khoản thương mại',contractTerm:'Thời hạn hợp đồng',renewalContext:'Thông tin gia hạn',
+      renewalDue:'Cần gia hạn trong {n} ngày.',renewalExpired:'Hợp đồng đã hết hạn {n} ngày trước.',
+      renewalHealthy:'Hợp đồng còn {n} ngày.',days:'ngày',customerUnavailable:'Không có thông tin khách hàng',
+      contractsEmpty:'Chưa có hợp đồng dịch vụ',
     },
   };
   const pack=packs[lang]||packs.en;
@@ -323,7 +353,10 @@ SCREENS['service-ticket'] = async function(root){
       {label:'SLA',align:'l',render:x=>x.dueAt?(x.overdue?`<span style="color:var(--danger)">${esc(s('overdueBy').replace('{t}',formatDuration(Date.now()-x.dueAt.getTime())))}</span>`:`<span class="tnum">${esc(s('timeLeft').replace('{t}',formatDuration(x.dueAt.getTime()-Date.now())))}</span>`):'—'},
       {label:t('col.status'),align:'l',render:x=>svcTicketStatusBadge(x.status)},
     ],
-    onOpen:x=>navigate('service-order',{ticketId:Number(x.id)}),
+    rowAction:{
+      label:x=>`${t('common.open')} ${x.no}`,
+      run:x=>navigate('service-order',{ticketId:Number(x.id)}),
+    },
     empty:{icon:'wrench',title:'No service tickets'},
   });
 };
@@ -597,7 +630,129 @@ SCREENS['service-contracts'] = async function(root){
       {label:'Annual value',align:'r',sortable:true,render:c=>`<b class="tnum">${money(c.value)}</b>`},
       {label:'Status',align:'l',render:c=>cap(ts(SERVICE_CONTRACT_STATUS_LABEL[c.computedStatus]),SERVICE_CONTRACT_STATUS_TONE[c.computedStatus])},
     ],
-    empty:{icon:'receipt',title:'No service contracts'},
+    rowAction:{
+      label:c=>`${t('common.open')} ${c.no}`,
+      run:c=>navigate('service-contract',{contractId:Number(c.id)}),
+    },
+    empty:{icon:'receipt',title:s('contractsEmpty')},
+  });
+};
+
+function serviceContractNotFound(error){
+  const message=String(error&&error.message||'');
+  return error&&(error.code==='record_not_found'||Number(error.status)===404||/resource not found/i.test(message));
+}
+
+function serviceContractRenewalText(s,status,daysRemaining){
+  const days=Math.abs(daysRemaining);
+  if(status==='expired') return s('renewalExpired').replace('{n}',days);
+  if(status==='expiring') return s('renewalDue').replace('{n}',days);
+  return s('renewalHealthy').replace('{n}',days);
+}
+
+function renderEmptyServiceContract(root,s){
+  masterDetailEditorPage(root,{
+    module:'service',route:'service-contract',active:'service-contracts',
+    title:s('serviceContractTitle'),description:s('serviceContractDescription'),
+    crumb:[DB.company.name,{label:t('nav.service'),route:'service-ticket'},{label:t('svc.contracts'),route:'service-contracts'},{cur:s('serviceContractTitle')}],
+    empty:{icon:'receipt',title:s('noServiceContract'),description:s('noServiceContractBody')},
+    afterRender:({editor})=>editor?.setAttribute('data-canonical-service-contract','true'),
+  });
+}
+
+SCREENS['service-contract'] = async function(root,params){
+  const s=serviceCopy();
+  const contractId=Number(params&&params.contractId);
+  if(!Number.isSafeInteger(contractId)||contractId<=0){
+    await Promise.resolve();
+    renderEmptyServiceContract(root,s);
+    return;
+  }
+  let contract;
+  try{
+    contract=(await window.ErpSystemData.get('service/contracts',contractId)).data;
+  }catch(error){
+    if(serviceContractNotFound(error)){
+      renderEmptyServiceContract(root,s);
+      return;
+    }
+    throw error;
+  }
+  let customer=null;
+  try{
+    customer=(await window.ErpSystemData.get('sales/customers',Number(contract.customerId))).data;
+  }catch(error){
+    if(!serviceContractNotFound(error)) throw error;
+  }
+  const customerName=customer&&customer.name
+    ? customer.name
+    : `${s('customerUnavailable')} · #${contract.customerId}`;
+  const status=serviceContractStatus(contract.expiryDate);
+  const start=dateValue(contract.startDate);
+  const expiry=dateValue(contract.expiryDate);
+  const today=new Date();
+  today.setHours(0,0,0,0);
+  const expiryDate=new Date(`${expiry}T00:00:00`);
+  const daysRemaining=Math.ceil((expiryDate.getTime()-today.getTime())/86400000);
+  const termDays=Math.max(0,Math.ceil((new Date(`${expiry}T00:00:00`)-new Date(`${start}T00:00:00`))/86400000));
+  const currency=DB.company&&DB.company.currency||'SGD';
+  const sla=contract.slaResponseHours==null?'—':`${serviceNumber(contract.slaResponseHours)}h`;
+  const assets=serviceNumber(contract.assetsCovered);
+  masterDetailEditorPage(root,{
+    module:'service',route:'service-contract',active:'service-contracts',
+    title:s('serviceContractTitle'),description:s('serviceContractDescription'),
+    crumb:[DB.company.name,{label:t('nav.service'),route:'service-ticket'},{label:t('svc.contracts'),route:'service-contracts'},{cur:contract.contractNo}],
+    status:{
+      label:ts(SERVICE_CONTRACT_STATUS_LABEL[status]),
+      tone:SERVICE_CONTRACT_STATUS_TONE[status],
+    },
+    headerActions:btn(s('customer360'),{
+      icon:'user',cls:'soft',sm:false,
+      attrs:`data-service-contract-customer="${Number(contract.customerId)}"`,
+    }),
+    overview:{
+      title:customerName,
+      code:contract.contractNo,
+      meta:contract.plan,
+      facts:[
+        {label:s('fieldStartDate'),value:start},
+        {label:s('fieldExpiryDate'),value:expiry},
+        {label:s('fieldSlaHours'),value:sla},
+        {label:s('fieldAssetsCovered'),value:assets,numeric:true},
+      ],
+    },
+    main:`
+      <div class="panel" data-service-contract-commercial>
+        <div class="panel-h"><h3>${esc(s('commercialTerms'))}</h3></div>
+        <div class="master-detail-editor-facts">
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('fieldAnnualValue'))}</small>
+            <b class="tnum">${esc(money(serviceNumber(contract.annualValue),currency))}</b>
+          </div>
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('contractTerm'))}</small>
+            <b class="tnum">${termDays} ${esc(s('days'))}</b>
+          </div>
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('fieldPlan'))}</small>
+            <b>${esc(contract.plan)}</b>
+          </div>
+        </div>
+      </div>`,
+    context:{
+      title:s('renewalContext'),
+      body:`<div class="indicator ${status==='active'?'ok':status==='expiring'?'warn':'neutral'}" data-service-contract-renewal>
+        <div class="ind-top">${ic('calendar')}<span>${esc(ts(SERVICE_CONTRACT_STATUS_LABEL[status]))}</span>
+          <span class="ind-r tnum">${Math.abs(daysRemaining)} ${esc(s('days'))}</span></div>
+        <small>${esc(serviceContractRenewalText(s,status,daysRemaining))}</small>
+      </div>`,
+    },
+    afterRender:({editor})=>{
+      editor?.setAttribute('data-canonical-service-contract','true');
+      root.querySelector('[data-service-contract-customer]')?.addEventListener('click',event=>{
+        navigate('crm-customer',{customerId:Number(event.currentTarget.dataset.serviceContractCustomer)});
+      });
+    },
   });
 };
 

@@ -271,6 +271,7 @@ SCREENS['stock-on-hand'] = async function(root){
     ],
     empty:{icon:'box',title:t('inv.empty')},
     detailPane:{
+      rowLabel:it=>`${t('common.open')} ${it.sku}`,
       initialSelectedId:DB.items[0]&&DB.items[0].sku,
       empty:`<div class="detail-empty">${ic('box')}<div>${esc(t('inv.empty'))}</div></div>`,
       content:detailContent,
@@ -523,6 +524,7 @@ SCREENS['item-master'] = async function(root){
     ],
     empty:{icon:'tag',title:s('selectItem')},
     detailPane:{
+      rowLabel:it=>`${t('common.open')} ${it.sku}`,
       initialSelectedId:DB.items[0]&&DB.items[0].sku,
       empty:`<div class="detail-empty">${ic('tag')}<div>${esc(s('selectItem'))}</div></div>`,
       content:detail,
@@ -570,7 +572,7 @@ SCREENS['stock-movement'] = async function(root){
       {label:'Balance',align:'r',render:m=>`<span class="tnum">${num(m.bal)}</span>`},
       {label:'By',align:'l',render:m=>esc(m.by)},
     ],
-    onOpen:m=>toast('Drill to source: '+m.ref,'info'),
+    rowAction:null,
     empty:{icon:'transfer',title:'No stock movements'},
   });
 };
@@ -596,6 +598,7 @@ SCREENS['inv-valuation'] = async function(root){
     description:ts('Current inventory value by item and category at standard cost.'),
     rows,
     rowId:row=>row.sku,
+    rowAction:null,
     filters:[['all',t('common.all')],...categories.map(category=>[category,category])],
     filterFn:(row,category)=>row.category===category,
     kpis:[

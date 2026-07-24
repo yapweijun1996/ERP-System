@@ -42,6 +42,7 @@
     transactionListPage(root,{
       module:'sales',route:'price-lists',title:d.title,description:d.sub,
       rows:lists,rowId:r=>r.id,columns,
+      rowAction:null,
       primaryAction:{label:d.new,icon:'plus',onClick:openCreate},
       empty:{icon:'tag',title:d.empty,description:d.sub},
       afterRender:({root:pageRoot})=>{
@@ -71,6 +72,7 @@
     transactionListPage(root,{
       module:'sales',route:'discount-mgmt',title:d.title,description:d.sub,
       rows:rules,rowId:r=>r.id,columns,
+      rowAction:null,
       primaryAction:{label:d.new,icon:'plus',onClick:openCreate},
       empty:{icon:'percent',title:d.empty,description:d.sub},
       afterRender:({root:pageRoot})=>{
@@ -106,6 +108,7 @@
     transactionListPage(root,{
       module:'sales',route:'credit-control',title:d.title,description:d.sub,
       rows:profiles,rowId:r=>r.id,columns,
+      rowAction:null,
       primaryAction:{label:d.new,icon:'plus',onClick:openCreate},
       empty:{icon:'shield',title:d.empty,description:d.sub},
       afterRender:({root:pageRoot})=>{

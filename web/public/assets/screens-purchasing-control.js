@@ -58,7 +58,10 @@ registerPurchasingTransactionList({
     {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(p)=>[{id:'review',icon:'ext',label:poApprovalCopy()('review'),run:()=>navigate('po-approval',{purchaseOrderId:p.orderId})}],
-  onOpen:(p)=>navigate('po-approval',{purchaseOrderId:p.orderId}),
+  rowAction:{
+    label:p=>`${t('common.open')} ${p.no}`,
+    run:p=>navigate('po-approval',{purchaseOrderId:p.orderId}),
+  },
 });
 
 SCREENS['po-approval']=async function(root,params){
@@ -136,6 +139,7 @@ registerPurchasingTransactionList({
   route:'supplier-price-lists', title:()=>supplierPricingCopy()('title'), unit:()=>supplierPricingCopy()('unit'),
   sub:()=>supplierPricingCopy()('sub'),prepare:prepareCanonicalSupplierPriceData,
   rows:()=>DB.supplierPriceLists, rowId:p=>p.id,
+  rowAction:null,
   chips:[['all',()=>supplierPricingCopy()('all')],['active',()=>supplierPricingCopy()('active')],['draft',()=>supplierPricingCopy()('draft')],['expired',()=>supplierPricingCopy()('expired')],['preferred',()=>supplierPricingCopy()('preferred')]],
   filterFn:(p,f)=>f==='active'?p.status==='Active':f==='draft'?p.status==='Draft':f==='expired'?p.status==='Expired':p.preferred,
   kpis:(r)=>[
@@ -252,7 +256,10 @@ registerPurchasingTransactionList({
     {id:'view',icon:'ext',label:landedCostCopy()('open'),run:()=>openLanded(l)},
     ...(l.rawStatus==='draft'?[{id:'alloc',icon:'flow',label:landedCostCopy()('allocate'),run:()=>openLanded(l)}]:[]),
   ],
-  onOpen:(l)=>openLanded(l),
+  rowAction:{
+    label:l=>`${t('common.open')} ${l.no}`,
+    run:l=>openLanded(l),
+  },
 });
 
 /* ---------------- VENDOR PERFORMANCE ---------------- */

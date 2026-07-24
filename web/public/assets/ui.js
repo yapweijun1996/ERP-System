@@ -291,7 +291,15 @@ function buildTable(cfg){
   h+=`</div><div class="dt-body">`;
   cfg.rows.forEach(row=>{
     const id=cfg.rowId?cfg.rowId(row):'';
-    h+=`<div class="dt-r" role="row" data-row="${esc(id)}">`;
+    const interaction=typeof cfg.rowInteraction==='function'
+      ?cfg.rowInteraction(row,id)
+      :null;
+    const interactive=Boolean(interaction&&interaction.kind&&interaction.kind!=='none');
+    const kind=interactive?String(interaction.kind):'none';
+    const label=interactive?String(interaction.label||id):'';
+    h+=`<div class="dt-r ${interactive?'is-interactive':''}" role="row"
+        data-row="${esc(id)}" data-row-interaction="${esc(kind)}"
+        ${interactive?`tabindex="0" aria-label="${esc(label)}"`:''}>`;
     if(cfg.checkable) h+=`<div class="dt-c colcheck"><input type="checkbox" class="checkbox" data-rowcheck aria-label="Select row"></div>`;
     cfg.columns.forEach(c=>{
       const al=c.align==='r'?'r':(c.align==='c'?'c':'l');
@@ -307,11 +315,18 @@ function buildTable(cfg){
 function wireTable(scope, {onRow, onSelectionChange}={}){
   const tbl=scope.querySelector('.dt[role="table"]'); if(!tbl) return;
   tbl.querySelectorAll('.dt-body .dt-r[data-row]').forEach(tr=>{
-    tr.addEventListener('click',e=>{
-      if(e.target.closest('[data-rowcheck]')||e.target.closest('.rowact')) return;
+    if(typeof onRow!=='function'||tr.dataset.rowInteraction==='none') return;
+    const activate=e=>{
+      if(e.target.closest('[data-rowcheck],.rowact,button,a,input,select,textarea,[role="button"]')) return;
       tbl.querySelectorAll('.dt-r.sel').forEach(x=>x.classList.remove('sel'));
       tr.classList.add('sel');
-      onRow && onRow(tr.dataset.row, tr);
+      onRow(tr.dataset.row,tr);
+    };
+    tr.addEventListener('click',activate);
+    tr.addEventListener('keydown',e=>{
+      if(e.key!=='Enter'&&e.key!==' ') return;
+      e.preventDefault();
+      activate(e);
     });
   });
   const all=tbl.querySelector('[data-checkall]');

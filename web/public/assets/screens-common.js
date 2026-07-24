@@ -667,6 +667,32 @@ function transactionListPage(root, config){
     if(activeFilter==='all'||typeof cfg.filterFn!=='function') return rows;
     return rows.filter(row=>cfg.filterFn(row,activeFilter));
   }
+  function rowActionFor(row,id){
+    if(detailPane){
+      const label=value(detailPane.rowLabel,row,id)
+        ||value(cfg.rowLabel,row,id)
+        ||`${t('common.open')} ${id}`;
+      return {kind:'select',label:String(label),run:()=>select(id)};
+    }
+    const configured=cfg.rowAction;
+    if(configured&&typeof configured.run==='function'){
+      const enabled=configured.enabled==null||Boolean(value(configured.enabled,row,id));
+      if(!enabled) return null;
+      const label=value(configured.label,row,id)
+        ||value(cfg.rowLabel,row,id)
+        ||`${t('common.open')} ${id}`;
+      return {
+        kind:configured.kind||'open',
+        label:String(label),
+        run:()=>configured.run(row,id),
+      };
+    }
+    if(typeof cfg.onOpen==='function'){
+      const label=value(cfg.rowLabel,row,id)||`${t('common.open')} ${id}`;
+      return {kind:'open',label:String(label),run:()=>cfg.onOpen(row,id)};
+    }
+    return null;
+  }
   function renderKpis(rows){
     const items=value(cfg.kpis,rows)||[];
     if(!items.length) return '<div class="so-kpibar" data-list-kpis hidden></div>';
@@ -719,6 +745,12 @@ function transactionListPage(root, config){
     return buildTable({
       checkable:Boolean(cfg.checkable),
       rowId:cfg.rowId,
+      rowInteraction:(row,id)=>{
+        const action=rowActionFor(row,id);
+        return action
+          ?{kind:action.kind,label:action.label}
+          :{kind:'none',label:''};
+      },
       columns,
       rows,
     });
@@ -807,11 +839,11 @@ function transactionListPage(root, config){
     const tableRoot=root.querySelector('[data-list-table]');
     if(rows.length){
       wireTable(tableRoot,{
-        onRow:detailPane
-          ? id=>select(id)
-          : (typeof cfg.onOpen==='function'
-            ? id=>cfg.onOpen(rows.find(row=>String(cfg.rowId(row))===String(id)),id)
-            : null),
+        onRow:id=>{
+          const row=rows.find(candidate=>String(cfg.rowId(candidate))===String(id));
+          const action=row&&rowActionFor(row,id);
+          if(action) action.run();
+        },
         onSelectionChange:cfg.onSelectionChange,
       });
       if(detailPane&&selectedId!=null){
@@ -987,6 +1019,8 @@ function registerTransactionList(config){
       toolbarActions:()=>value(cfg.toolbarActions)||[],
       empty:cfg.empty,
       pagination:cfg.pagination,
+      rowAction:cfg.rowAction,
+      rowLabel:cfg.rowLabel,
       onOpen:cfg.onOpen,
       rowMenu:cfg.rowMenu,
       onSelectionChange:cfg.onSelectionChange,

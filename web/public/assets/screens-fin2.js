@@ -169,6 +169,9 @@ SCREENS['gl'] = async function(root){
   const expense=['5000','6000','6100','6200','6300','6900'].reduce((s,c)=>s+get(c),0);
   const net=income-expense;
   const canonicalMeta=DB.financeReadMeta||{invoiceCount:0,journalCount:0};
+  const hasLedger=account=>Boolean(
+    (DB.acctLedgerDocs&&DB.acctLedgerDocs[account.code])||account.code==='1000'
+  );
 
   const chips=[['all',t('common.all'),null],['Assets',ts('Assets'),'accent'],['Liabilities',ts('Liabilities'),'warn'],['Income',ts('Income'),'ok'],['Expenses',ts('Expenses'),'teal']];
   transactionListPage(root,{
@@ -194,9 +197,11 @@ SCREENS['gl'] = async function(root){
       {label:t('gl.col.balance'),align:'r',render:a=>`<b class="tnum">${money0(a.bal)}</b>`},
       {label:t('gl.col.drcr'),align:'c',render:a=>esc(a.dc)},
     ],
-    onOpen:a=>(DB.acctLedgerDocs&&DB.acctLedgerDocs[a.code])
-      ?navigate('account-ledger',{code:a.code})
-      :(a.code==='1000'?navigate('account-ledger'):toast('Open ledger · '+a.code,'info')),
+    rowAction:{
+      label:a=>`${t('common.open')} ${a.code}`,
+      enabled:hasLedger,
+      run:a=>navigate('account-ledger',{code:a.code}),
+    },
     empty:{icon:'book',title:'No ledger accounts'},
   });
 };
@@ -689,6 +694,7 @@ SCREENS['ar-aging'] = async function(root){
     reportListPage(root,{
       module:'finance',route:'ar-aging',title:t('ar.title'),description:t('ar.description'),
       rows,rowId:row=>String(row.customerId),count:report?report.meta.totalCount:0,
+      rowAction:null,
       kpis:report?[
         {label:t('ar.totalReceivables'),value:formatAmount(report.data.metrics.totalReceivables)},
         {label:t('ar.overdue'),value:formatAmount(report.data.metrics.overdue),negative:Number(report.data.metrics.overdue)>0},

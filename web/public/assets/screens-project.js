@@ -230,7 +230,10 @@ SCREENS['project-pl'] = async function(root){
       {label:t('prj.col.headroom'),align:'r',render:headroomCell},
       {label:t('col.status'),align:'l',render:p=>projectStatusBadge(p.status)},
     ],
-    onOpen:p=>navigate('project-detail',{projectId:Number(p.id)}),
+    rowAction:{
+      label:p=>`${t('common.open')} ${p.no}`,
+      run:p=>navigate('project-detail',{projectId:Number(p.id)}),
+    },
     empty:{icon:'project',title:'No projects'},
   });
 };
@@ -745,6 +748,7 @@ SCREENS['timesheet'] = function(root,params){
       module:'project',route:'timesheet',active:'timesheet',title:s('title'),
       description:s('sub').replace('{week}',weekLabel),
       rows,rowId:entry=>entry.id,count:ready?activeEntries.length:0,
+      rowAction:null,
       kpis:ready?[
         {label:s('total'),value:`${totalHours.toFixed(2)} h`},
         {label:s('projects'),value:projectCount},

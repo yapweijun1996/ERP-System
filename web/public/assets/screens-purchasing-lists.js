@@ -139,12 +139,11 @@ registerPurchasingTransactionList({
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(96px,0.9fr)', render:s=>s.approved==null?cap(s.status,'ok'):s.approved?cap('Approved','ok'):cap('Review','warn')},
     {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
-  rowMenu:(s)=>[
-    {id:'view',icon:'ext',label:'Open supplier',run:()=>toast(`Opening ${s.name}`,'info')},
+  rowMenu:()=>[
     {id:'po',icon:'cart',label:'New purchase order',run:()=>navigate('new-purchase-order')},
     {id:'perf',icon:'shield',label:'View performance',run:()=>navigate('vendor-performance')},
   ],
-  onOpen:(s)=>toast(`Opening ${s.name}`,'info'),
+  rowAction:null,
 });
 
 /* ---------------- PURCHASE REQUISITIONS ---------------- */
@@ -182,7 +181,10 @@ registerPurchasingTransactionList({
       {id:'po',icon:'cart',label:'Convert to PO',sep:true,run:()=>navigate('new-purchase-order',{requisitionId:r.id})},
     ]:[]),
   ],
-  onOpen:(r)=>openReq(r),
+  rowAction:{
+    label:r=>`${t('common.open')} ${r.no}`,
+    run:r=>openReq(r),
+  },
 });
 function openReq(r){ navigate('purchase-request',{requisitionId:r.id}); }
 
@@ -400,7 +402,10 @@ registerPurchasingTransactionList({
     ...(['sent','responded'].includes(r.rawStatus)?[{id:'compare',icon:'flow',label:sourcingCopy().compare,run:()=>openQuoteCompare(r.no)},{id:'record',icon:'receipt',label:sourcingCopy().record,run:()=>newSupplierQuoteModal(r.id)}]:[]),
     ...(['draft','sent','responded'].includes(r.rawStatus)?[{id:'close',icon:'x',label:sourcingCopy().close,danger:true,sep:true,run:()=>runRfqAction(r,'close')}]:[]),
   ],
-  onOpen:(r)=>openPurTxn('rfq',r),
+  rowAction:{
+    label:r=>`${t('common.open')} ${r.no}`,
+    run:r=>openPurTxn('rfq',r),
+  },
 });
 
 /* ---------------- SUPPLIER QUOTATIONS + comparison ---------------- */
@@ -487,7 +492,10 @@ registerPurchasingTransactionList({
     {id:'compare',icon:'flow',label:sourcingCopy().compare,run:()=>openQuoteCompare(q.rfq)},
     ...(q.rawStatus==='received'?[{id:'select',icon:'check',label:sourcingCopy().convert,run:()=>convertSupplierQuote(q.id)}]:[]),
   ],
-  onOpen:(q)=>openPurTxn('squote',q),
+  rowAction:{
+    label:q=>`${t('common.open')} ${q.no}`,
+    run:q=>openPurTxn('squote',q),
+  },
 });
 
 /* quotation comparison (modal) */
@@ -540,14 +548,18 @@ registerPurchasingTransactionList({
     {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(p)=>[
-    {id:'view',icon:'ext',label:'Open PO',run:()=>openPO(p)},
+    ...(p.approval?[{id:'view',icon:'ext',label:'Open PO',run:()=>openPO(p)}]:[]),
     ...(p.approval?[{id:'approve',icon:'flow',label:'Review approval',run:()=>navigate('po-approval',{purchaseOrderId:p.id})}]:[]),
     {id:'grn',icon:'receive',label:'Receive goods',run:()=>doReceiveGoods(p)},
     {id:'inv',icon:'receipt',label:'Post supplier invoice',run:()=>doPostSupplierInvoice(p)},
   ],
-  onOpen:(p)=>openPO(p),
+  rowAction:{
+    label:p=>`${t('common.open')} ${p.no}`,
+    enabled:p=>Boolean(p.approval),
+    run:p=>openPO(p),
+  },
 });
-function openPO(p){ if(p.approval){navigate('po-approval',{purchaseOrderId:p.id});return;} toast('Opening '+p.no,'info'); }
+function openPO(p){ if(p.approval) navigate('po-approval',{purchaseOrderId:p.id}); }
 
 /* TASK-023: the live counterparts of confirmOrder's UI pattern — await the
    real adapter transaction, toast the real result or the real error, and
@@ -629,7 +641,10 @@ registerPurchasingTransactionList({
     {id:'inv',icon:'receipt',label:'Match to invoice',run:()=>navigate('supplier-invoices')},
     {id:'ret',icon:'refresh',label:'Create return',danger:false,sep:true,run:()=>navigate('purchase-returns')},
   ],
-  onOpen:(g)=>openGRN(g),
+  rowAction:{
+    label:g=>`${t('common.open')} ${g.no}`,
+    run:g=>openGRN(g),
+  },
 });
 function openGRN(g){ navigate('goods-receipt',{receiptId:g.id}); }
 
@@ -662,7 +677,10 @@ registerPurchasingTransactionList({
     {id:'match',icon:'flow',label:'Open 3-way match',run:()=>openSINV(i)},
     {id:'pay',icon:'coins',label:'Schedule payment',run:()=>navigate('payment-voucher')},
   ],
-  onOpen:(i)=>openSINV(i),
+  rowAction:{
+    label:i=>`${t('common.open')} ${i.no}`,
+    run:i=>openSINV(i),
+  },
 });
 function openSINV(i){ navigate('supplier-invoice',{invoiceId:i.id}); }
 
@@ -797,7 +815,10 @@ registerPurchasingTransactionList({
     {id:'view',icon:'ext',label:purchaseReturnCopy().view,run:()=>openPurchaseReturnDetails(r)},
     ...(r.rawStatus==='requested'?[{id:'ship',icon:'coins',label:purchaseReturnCopy().shipCredit,run:()=>shipPurchaseReturnModal(r)},{id:'reject',icon:'x',label:purchaseReturnCopy().reject,danger:true,sep:true,run:()=>rejectPurchaseReturn(r)}]:[]),
   ],
-  onOpen:(r)=>openPurchaseReturnDetails(r),
+  rowAction:{
+    label:r=>`${t('common.open')} ${r.no}`,
+    run:r=>openPurchaseReturnDetails(r),
+  },
 });
 
 /* ---------------- SUPPLIER CREDIT NOTES ---------------- */
@@ -828,7 +849,10 @@ registerPurchasingTransactionList({
   rowMenu:(c)=>[
     {id:'view',icon:'ext',label:purchaseReturnCopy().view,run:()=>openSupplierCreditDetails(c)},
   ],
-  onOpen:(c)=>openSupplierCreditDetails(c),
+  rowAction:{
+    label:c=>`${t('common.open')} ${c.no}`,
+    run:c=>openSupplierCreditDetails(c),
+  },
 });
 
 /* ---------------- SUPPLIER DEBIT NOTES ---------------- */
@@ -910,7 +934,10 @@ registerPurchasingTransactionList({
     {id:'view',icon:'ext',label:supplierDebitCopy()('open'),run:()=>openSupplierDebitDetails(d)},
     ...(d.rawStatus==='draft'?[{id:'post',icon:'check',label:supplierDebitCopy()('post'),run:()=>openSupplierDebitDetails(d)}]:[]),
   ],
-  onOpen:(d)=>openSupplierDebitDetails(d),
+  rowAction:{
+    label:d=>`${t('common.open')} ${d.no}`,
+    run:d=>openSupplierDebitDetails(d),
+  },
 });
 
 /* Canonical RFQ / supplier-quotation document workspace. It replaces the old
