@@ -590,7 +590,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'picking',
   ],
   'master-detail-editor-v1':[
-    'bom',
+    'bom','employee',
   ],
   'case-detail-v1':[
     'ncr',
@@ -615,7 +615,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'stock-aging','vendor-performance',
   ],
   'document-detail':[
-    'credit-note','delivery-order','employee','goods-receipt',
+    'credit-note','delivery-order','goods-receipt',
     'opportunity','payslip','po-approval','project-detail',
     'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
     'sales-order','sales-return','service-order','supplier-invoice','txn-view',

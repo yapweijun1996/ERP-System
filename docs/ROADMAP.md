@@ -682,7 +682,7 @@ Android verification remains the only human-only release check.
 
 ## Phase 33 — Page-level UI SSOT Convergence ✅
 
-1. **Shared list and workspace contracts** (EPIC-051, TASK-087–096, completed
+1. **Shared list and workspace contracts** (EPIC-051, TASK-087–097, completed
    2026-07-24) separate data maturity from visual-layout compliance. The approved
    transaction-list renderer owns KPI, toolbar, table/empty and pagination regions;
    master-detail registers, tabular reports and operational workspaces extend that
@@ -691,7 +691,13 @@ Android verification remains the only human-only release check.
    workspace onto `transaction-list-v1`. Weekly navigation, active-only KPIs,
    responsive rows and audited void history now use the same page structure as the
    other registers without changing the canonical time-entry domain or API.
+3. **Employee detail correction** (TASK-097) moves the HR master profile from the
+   unstructured `document-detail` exemption onto `master-detail-editor-v1`. The shared
+   overview now supports an optional structured avatar, while contact facts, bounded
+   leave history, leave-balance context and responsive navigation actions follow the
+   same audited detail contract as BOM.
 
 Exit criteria: 42 shared list-layout routes and all 114 routes pass desktop/375px
-structural audits; Timesheet passes five-language loading/error/empty/populated state
-proof, create/void smoke and live browser verification with service-worker v94.
+structural audits; Timesheet and Employee pass their dedicated five-language/state
+proofs, and the two master-detail editor routes pass focused and live browser
+verification with service-worker v95.

@@ -1770,3 +1770,10 @@ Delivery slices:
       `transactionListPage()`, preserve actor-owned create/void behavior, replace its
       hand-built KPI/toolbar/document-table chrome with the standard list regions and
       add five-language/state audit coverage. Service worker v94 delivers the change.
+- [x] **TASK-097 — Employee master-detail editor SSOT.** Reclassify the canonical
+      employee profile from the unstructured `document-detail` exemption to
+      `master-detail-editor-v1`. Reuse `masterDetailEditorPage()` for the standard
+      overview/main/context/actions regions, add optional structured avatar support,
+      replace read-only contact inputs and duplicate employment chrome with display
+      facts, bound leave-history scrolling, and add five-language/state enforcement.
+      Service worker v95 delivers the change without changing HR data or commands.

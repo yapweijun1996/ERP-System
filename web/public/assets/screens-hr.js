@@ -8,13 +8,17 @@ function hrCopy(){
   const packs={
     en:{
       statusActive:'Active',statusOnLeave:'On leave',statusInactive:'Inactive',
+      employeeProfileTitle:'Employee profile',
+      employeeProfileDescription:'Review current employment, contact and leave facts for the selected employee.',
       typeParttime:'Part-time',typeIntern:'Intern',
       personalContact:'Personal & contact',fieldEmail:'Email',fieldPhone:'Phone',noPhone:'Not on file',
       fieldDept:'Department',fieldEmployment:'Employment',fieldJoined:'Joined',fieldManager:'Reports to',
       noManager:'— (top of reporting line)',
       leaveBalanceTitle:'Leave balance',annualLeaveLabel:'Annual leave',
       annualLeaveUsed:'{used} of {total} days used this year',
+      annualLeaveRemaining:'{remaining} of {total} days remaining',
       recentLeaveTitle:'Leave requests',noLeaveRequests:'No leave requests yet.',
+      noEmployeeFound:'No employee found',noEmployeeBody:'No employee exists for the active company yet.',
       backToDirectory:'Back to directory',reviewLeave:'Review leave',
       newEmployeeTitle:'Add employee',fieldFullName:'Full name',fullNamePlaceholder:'e.g. Nadia Hassan',
       emailPlaceholder:'name@company.com',phonePlaceholder:'+60 12-345 6789',
@@ -79,13 +83,17 @@ function hrCopy(){
     },
     ms:{
       statusActive:'Aktif',statusOnLeave:'Bercuti',statusInactive:'Tidak aktif',
+      employeeProfileTitle:'Profil pekerja',
+      employeeProfileDescription:'Semak fakta pekerjaan, hubungan dan cuti semasa untuk pekerja yang dipilih.',
       typeParttime:'Sambilan',typeIntern:'Intern',
       personalContact:'Peribadi & hubungan',fieldEmail:'E-mel',fieldPhone:'Telefon',noPhone:'Tiada rekod',
       fieldDept:'Jabatan',fieldEmployment:'Pekerjaan',fieldJoined:'Tarikh sertai',fieldManager:'Melapor kepada',
       noManager:'— (paling atas dalam struktur)',
       leaveBalanceTitle:'Baki cuti',annualLeaveLabel:'Cuti tahunan',
       annualLeaveUsed:'{used} daripada {total} hari digunakan tahun ini',
+      annualLeaveRemaining:'{remaining} daripada {total} hari berbaki',
       recentLeaveTitle:'Permohonan cuti',noLeaveRequests:'Belum ada permohonan cuti.',
+      noEmployeeFound:'Pekerja tidak ditemui',noEmployeeBody:'Belum ada pekerja untuk syarikat aktif.',
       backToDirectory:'Kembali ke direktori',reviewLeave:'Semak cuti',
       newEmployeeTitle:'Tambah pekerja',fieldFullName:'Nama penuh',fullNamePlaceholder:'cth. Nadia Hassan',
       emailPlaceholder:'nama@syarikat.com',phonePlaceholder:'+60 12-345 6789',
@@ -150,13 +158,17 @@ function hrCopy(){
     },
     zh:{
       statusActive:'在职',statusOnLeave:'休假中',statusInactive:'已离职',
+      employeeProfileTitle:'员工档案',
+      employeeProfileDescription:'查看所选员工当前的雇佣、联系方式和请假资料。',
       typeParttime:'兼职',typeIntern:'实习',
       personalContact:'个人与联系方式',fieldEmail:'邮箱',fieldPhone:'电话',noPhone:'未登记',
       fieldDept:'部门',fieldEmployment:'雇佣类型',fieldJoined:'入职日期',fieldManager:'汇报对象',
       noManager:'—(汇报链顶端)',
       leaveBalanceTitle:'假期余额',annualLeaveLabel:'年假',
       annualLeaveUsed:'今年已使用 {used}/{total} 天',
+      annualLeaveRemaining:'剩余 {remaining}/{total} 天',
       recentLeaveTitle:'请假记录',noLeaveRequests:'暂无请假记录。',
+      noEmployeeFound:'未找到员工',noEmployeeBody:'当前公司尚无员工。',
       backToDirectory:'返回通讯录',reviewLeave:'审批请假',
       newEmployeeTitle:'新增员工',fieldFullName:'姓名',fullNamePlaceholder:'例如:Nadia Hassan',
       emailPlaceholder:'name@company.com',phonePlaceholder:'+60 12-345 6789',
@@ -221,13 +233,17 @@ function hrCopy(){
     },
     ja:{
       statusActive:'在籍',statusOnLeave:'休暇中',statusInactive:'退職',
+      employeeProfileTitle:'従業員プロフィール',
+      employeeProfileDescription:'選択した従業員の現在の雇用、連絡先、休暇情報を確認します。',
       typeParttime:'パートタイム',typeIntern:'インターン',
       personalContact:'個人情報・連絡先',fieldEmail:'メール',fieldPhone:'電話',noPhone:'未登録',
       fieldDept:'部署',fieldEmployment:'雇用形態',fieldJoined:'入社日',fieldManager:'上長',
       noManager:'—(組織の最上位)',
       leaveBalanceTitle:'休暇残日数',annualLeaveLabel:'年次有給休暇',
       annualLeaveUsed:'今年 {total} 日中 {used} 日使用済み',
+      annualLeaveRemaining:'{total} 日中 {remaining} 日残り',
       recentLeaveTitle:'休暇申請',noLeaveRequests:'休暇申請はまだありません。',
+      noEmployeeFound:'従業員が見つかりません',noEmployeeBody:'現在の会社には従業員がまだいません。',
       backToDirectory:'ディレクトリに戻る',reviewLeave:'休暇を確認',
       newEmployeeTitle:'従業員を追加',fieldFullName:'氏名',fullNamePlaceholder:'例:Nadia Hassan',
       emailPlaceholder:'name@company.com',phonePlaceholder:'+60 12-345 6789',
@@ -292,13 +308,17 @@ function hrCopy(){
     },
     vi:{
       statusActive:'Đang làm việc',statusOnLeave:'Đang nghỉ phép',statusInactive:'Đã nghỉ việc',
+      employeeProfileTitle:'Hồ sơ nhân viên',
+      employeeProfileDescription:'Xem thông tin việc làm, liên hệ và nghỉ phép hiện tại của nhân viên đã chọn.',
       typeParttime:'Bán thời gian',typeIntern:'Thực tập',
       personalContact:'Thông tin cá nhân & liên hệ',fieldEmail:'Email',fieldPhone:'Điện thoại',noPhone:'Chưa có',
       fieldDept:'Phòng ban',fieldEmployment:'Loại hình làm việc',fieldJoined:'Ngày vào làm',fieldManager:'Báo cáo cho',
       noManager:'— (cấp cao nhất)',
       leaveBalanceTitle:'Số ngày phép còn lại',annualLeaveLabel:'Phép năm',
       annualLeaveUsed:'Đã dùng {used}/{total} ngày trong năm nay',
+      annualLeaveRemaining:'Còn {remaining}/{total} ngày',
       recentLeaveTitle:'Đơn xin nghỉ phép',noLeaveRequests:'Chưa có đơn xin nghỉ phép nào.',
+      noEmployeeFound:'Không tìm thấy nhân viên',noEmployeeBody:'Công ty hiện tại chưa có nhân viên.',
       backToDirectory:'Quay lại danh bạ',reviewLeave:'Xem xét nghỉ phép',
       newEmployeeTitle:'Thêm nhân viên',fieldFullName:'Họ tên',fullNamePlaceholder:'vd: Nadia Hassan',
       emailPlaceholder:'ten@congty.com',phonePlaceholder:'+60 12-345 6789',
@@ -397,6 +417,13 @@ function hrStatusLabel(s,status){
   return {active:s('statusActive'),onleave:s('statusOnLeave'),inactive:s('statusInactive')}[status]||status;
 }
 function hrStatusTone(status){ return {active:'ok',onleave:'info',inactive:'neutral'}[status]||'neutral'; }
+function hrLeaveStatusLabel(s,status){
+  return {
+    pending:s('statusPending'),
+    approved:s('statusApproved'),
+    rejected:s('statusRejected'),
+  }[status]||status;
+}
 
 /* ---------------- EMPLOYEE DIRECTORY (listing — module landing) ---------------- */
 SCREENS['hr-directory'] = async function(root){
@@ -436,63 +463,99 @@ SCREENS['employee'] = async function(root, params){
   const {employees,leaveRequests}=await prepareHrData();
   const requestedId=params&&params.employeeId?Number(params.employeeId):null;
   const e=requestedId?employees.find(row=>row.id===requestedId):employees[0];
-  if(!e){ root.innerHTML=statePanel({icon:'people',title:'No employee found',body:'No employee exists for the active company yet.'}); return; }
+  const backAction=btn(s('backToDirectory'),{
+    icon:'chevL',cls:'soft',attrs:'data-employee-back',
+  });
+  if(!e){
+    masterDetailEditorPage(root,{
+      module:'hr',route:'employee',title:s('employeeProfileTitle'),
+      description:s('employeeProfileDescription'),
+      crumb:[DB.company.name,{label:t('nav.hr'),route:'hr-directory'},{cur:t('hr.crumb')}],
+      empty:{icon:'people',title:s('noEmployeeFound'),description:s('noEmployeeBody')},
+      actions:`<div class="grow"></div>${backAction}`,
+      afterRender:({editor})=>{
+        editor?.setAttribute('data-canonical-employee','true');
+        root.querySelector('[data-employee-back]')?.addEventListener('click',()=>navigate('hr-directory'));
+      },
+    });
+    return;
+  }
   const manager=e.managerId?employees.find(m=>m.id===e.managerId):null;
   const status=hrStatusOf(e,leaveRequests);
   const used=hrAnnualLeaveUsed(e.id,leaveRequests);
   const total=e.annualLeaveDays;
-  const pct=total>0?Math.max(0,Math.min(100,Math.round((total-used)/total*100))):0;
+  const remaining=Math.max(0,total-used);
+  const pct=total>0?Math.max(0,Math.min(100,Math.round(remaining/total*100))):0;
   const myLeave=leaveRequests.filter(lv=>lv.employeeId===e.id).sort((a,b)=>dateValue(b.startDate).localeCompare(dateValue(a.startDate)));
   const leaveStatusTone={pending:'warn',approved:'ok',rejected:'danger'};
-  const leaveRows=myLeave.length?myLeave.map(lv=>`<tr>
-      <td class="l li-name"><b>${esc(lv.leaveType)}</b><small>${esc(dateValue(lv.startDate))} → ${esc(dateValue(lv.endDate))}</small></td>
-      <td class="tnum">${lv.days}</td>
-      <td class="l">${cap(lv.status,leaveStatusTone[lv.status]||'neutral')}</td>
-    </tr>`).join('') : `<tr><td colspan="3" style="color:var(--muted);padding:14px 0">${esc(s('noLeaveRequests'))}</td></tr>`;
-  root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:980px">
-    ${crumbs([DB.company.name,t('nav.hr'),{label:t('hr.crumb'),route:'hr-directory'},{cur:e.employeeNo}])}
-    <div class="dochead">
-      <div class="dh-row1">
-        <div style="display:flex;gap:14px;align-items:center">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,size:48})}
-          <div><div class="dt">${esc(e.fullName)} <span class="dnum">${esc(e.employeeNo)}</span></div>
-          <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(e.jobTitle)} · ${esc(e.department)}${manager?' · '+esc(s('fieldManager')).toLowerCase()+' '+esc(manager.fullName):''}</div></div></div>
-        <div class="dactions">${cap(hrStatusLabel(s,status),hrStatusTone(status))}</div>
-      </div>
-      <div class="docmeta">
-        <div class="dm"><small>${esc(s('fieldDept'))}</small><b>${esc(e.department)}</b></div>
-        <div class="dm"><small>${esc(s('fieldEmployment'))}</small><b>${esc(hrEmploymentTypeLabel(s,e.employmentType))}</b></div>
-        <div class="dm"><small>${esc(s('fieldJoined'))}</small><b>${esc(dateValue(e.startDate))}</b></div>
-        <div class="dm"><small>${esc(s('fieldManager'))}</small><b>${manager?esc(manager.fullName):esc(s('noManager'))}</b></div>
-      </div>
-    </div>
-    <div class="doclayout">
-      <div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>${esc(s('personalContact'))}</h3></div><div class="panel-body">
-          <div class="fldrow c2">
-            <div class="fld"><span>${esc(s('fieldEmail'))}</span><input value="${esc(e.email)}" readonly></div>
-            <div class="fld"><span>${esc(s('fieldPhone'))}</span><input value="${e.phone?esc(e.phone):esc(s('noPhone'))}" readonly></div>
+  const leaveRows=myLeave.map(lv=>`<tr data-employee-leave-row>
+      <td class="l li-name"><b>${esc(lv.leaveType)}</b></td>
+      <td class="l tnum">${esc(dateValue(lv.startDate))} → ${esc(dateValue(lv.endDate))}</td>
+      <td class="tnum">${esc(String(lv.days))}</td>
+      <td class="l">${cap(hrLeaveStatusLabel(s,lv.status),leaveStatusTone[lv.status]||'neutral')}</td>
+    </tr>`).join('');
+  const leaveBody=leaveRows
+    ? `<div class="master-detail-editor-table-scroll"><table class="lines">
+        <thead><tr><th class="l">${esc(s('colLeaveType'))}</th><th class="l">${esc(s('colDates'))}</th>
+          <th>${esc(s('colDays'))}</th><th class="l">${esc(t('col.status'))}</th></tr></thead>
+        <tbody>${leaveRows}</tbody></table></div>`
+    : `<div class="master-detail-editor-inline-empty" data-employee-leave-empty>
+        ${ic('calendar')}<span>${esc(s('noLeaveRequests'))}</span></div>`;
+  const remainingLabel=s('annualLeaveRemaining')
+    .replace('{remaining}',remaining)
+    .replace('{total}',total);
+  const usedLabel=s('annualLeaveUsed').replace('{used}',used).replace('{total}',total);
+  masterDetailEditorPage(root,{
+    module:'hr',route:'employee',title:s('employeeProfileTitle'),
+    description:s('employeeProfileDescription'),
+    crumb:[DB.company.name,{label:t('nav.hr'),route:'hr-directory'},{label:t('hr.crumb'),route:'hr-directory'},{cur:e.employeeNo}],
+    status:{label:hrStatusLabel(s,status),tone:hrStatusTone(status)},
+    overview:{
+      avatar:{name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,size:48},
+      title:e.fullName,
+      code:e.employeeNo,
+      meta:`${e.jobTitle} · ${e.department}`,
+      facts:[
+        {label:s('fieldDept'),value:e.department},
+        {label:s('fieldEmployment'),value:hrEmploymentTypeLabel(s,e.employmentType)},
+        {label:s('fieldJoined'),value:dateValue(e.startDate)},
+        {label:s('fieldManager'),value:manager?manager.fullName:s('noManager')},
+      ],
+    },
+    main:`
+      <div class="panel" data-employee-contact>
+        <div class="panel-h"><h3>${esc(s('personalContact'))}</h3></div>
+        <div class="master-detail-editor-facts employee-contact-facts">
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('fieldEmail'))}</small><b title="${esc(e.email)}">${esc(e.email)}</b>
           </div>
-        </div></div>
-        <div class="panel"><div class="panel-h"><h3>${esc(s('leaveBalanceTitle'))}</h3></div><div class="panel-body" style="padding-top:12px">
-          <div class="indicator ok"><div class="ind-top">${ic('calendar')}<span>${esc(s('annualLeaveLabel'))}</span><span class="ind-r">${Math.max(0,total-used)} / ${total} days</span></div><div class="track"><i style="width:${pct}%"></i></div><small>${esc(s('annualLeaveUsed').replace('{used}',used).replace('{total}',total))}</small></div>
-        </div></div>
-        <div class="panel"><div class="panel-h"><h3>${esc(s('recentLeaveTitle'))}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${myLeave.length}</span></div>
-          <table class="lines"><tbody>${leaveRows}</tbody></table>
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('fieldPhone'))}</small><b title="${e.phone?esc(e.phone):esc(s('noPhone'))}">${e.phone?esc(e.phone):esc(s('noPhone'))}</b>
+          </div>
         </div>
       </div>
-      <aside class="summary">
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(s('fieldEmployment'))}</div>
-          <div class="field"><span class="k">${esc(t('col.status'))}</span><span class="v">${esc(hrStatusLabel(s,status))}</span></div>
-          <div class="field"><span class="k">${esc(s('fieldJoined'))}</span><span class="v">${esc(dateValue(e.startDate))}</span></div>
-        </div>
-      </aside>
-    </div>
-    <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
-      <div class="grow"></div>
-      ${btn(s('backToDirectory'),{icon:'chevL',cls:'soft',attrs:'onclick="navigate(\'hr-directory\')"'})}
-      ${btn(s('reviewLeave'),{icon:'check',cls:'primary',sm:false,attrs:'onclick="navigate(\'leave-approval\')"'})}
-    </div>
-  </div></div></section></div>`;
+      <div class="panel" data-employee-leave-history>
+        <div class="panel-h"><h3>${esc(s('recentLeaveTitle'))}</h3><span class="grow"></span><small class="tnum">${myLeave.length}</small></div>
+        ${leaveBody}
+      </div>`,
+    context:{
+      title:s('leaveBalanceTitle'),
+      body:`<div class="indicator ok" data-employee-leave-balance>
+        <div class="ind-top">${ic('calendar')}<span>${esc(s('annualLeaveLabel'))}</span><span class="ind-r tnum">${remaining} / ${total}</span></div>
+        <div class="track"><i style="width:${pct}%"></i></div>
+        <small>${esc(remainingLabel)}</small>
+        <small>${esc(usedLabel)}</small>
+      </div>`,
+    },
+    actions:`<span class="master-detail-editor-action-note">${esc(e.employeeNo)}</span><div class="grow"></div>
+      ${backAction}
+      ${btn(s('reviewLeave'),{icon:'check',cls:'primary',sm:false,attrs:'data-employee-review'})}`,
+    afterRender:({editor})=>{
+      editor?.setAttribute('data-canonical-employee','true');
+      root.querySelector('[data-employee-back]')?.addEventListener('click',()=>navigate('hr-directory'));
+      root.querySelector('[data-employee-review]')?.addEventListener('click',()=>navigate('leave-approval'));
+    },
+  });
 };
 
 /* ---- shared payroll data prep (payroll-run and payslip both need runs +

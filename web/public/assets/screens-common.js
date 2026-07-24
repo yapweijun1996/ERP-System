@@ -121,19 +121,29 @@ function masterDetailEditorPage(root, config){
   const cfg=config||{};
   const overview=cfg.overview||{};
   const facts=Array.isArray(overview.facts)?overview.facts:[];
+  const avatar=overview.avatar&&overview.avatar.name
+    ? `<div class="master-detail-editor-avatar">${profileAvatar({
+        name:String(overview.avatar.name),
+        src:overview.avatar.src||'',
+        size:Number(overview.avatar.size)||48,
+      })}</div>`
+    : '';
   const status=cfg.status&&cfg.status.label
     ? cap(String(cfg.status.label),cfg.status.tone||'neutral')
     : '';
-  const hasOverview=Boolean(overview.title||overview.code||overview.meta||facts.length);
+  const hasOverview=Boolean(avatar||overview.title||overview.code||overview.meta||facts.length);
   const overviewHtml=hasOverview?`
-    <div class="master-detail-editor-identity">
-      <div>
-        <h2>${esc(String(overview.title||''))}</h2>
-        ${overview.code?`<span class="master-detail-editor-code">${esc(String(overview.code))}</span>`:''}
+    <div class="master-detail-editor-subject">
+      ${avatar}
+      <div class="master-detail-editor-identity">
+        <div>
+          <h2>${esc(String(overview.title||''))}</h2>
+          ${overview.code?`<span class="master-detail-editor-code">${esc(String(overview.code))}</span>`:''}
+        </div>
+        ${overview.meta?`<p>${esc(String(overview.meta))}</p>`:''}
       </div>
-      ${overview.meta?`<p>${esc(String(overview.meta))}</p>`:''}
     </div>
-    <div class="master-detail-editor-facts">
+    <div class="master-detail-editor-facts ${facts.length>=4?'c4':''}">
       ${facts.map(fact=>`<div class="master-detail-editor-fact">
         <small>${esc(String(fact.label||''))}</small>
         <b class="${fact.numeric?'tnum':''}">${esc(String(fact.value??'—'))}</b>

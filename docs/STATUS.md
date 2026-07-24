@@ -622,14 +622,33 @@ loading/error/empty/populated states, active-only totals, one active row action 
 the absence of Capacity, Copy, Approval, Payroll or Export actions. Service-worker
 v94 delivers the corrected page, and the shared list-layout audit now covers 42 routes.
 
+## Employee master-detail editor SSOT (TASK-097, 2026-07-24)
+
+The canonical Employee profile no longer relies on the unstructured
+`document-detail` exemption or rebuilds `docwrap`, `docpage`, `dochead`, `doclayout`
+and sticky action chrome. It now renders through `masterDetailEditorPage()` under
+`data-layout="master-detail-editor-v1"` with one page header and standard overview,
+error, main, context and responsive action regions.
+
+The overview supports a structured avatar and presents name, employee number, role,
+department, status and four employment facts once. Contact details are display facts
+instead of read-only inputs; leave history remains sorted and uses bounded horizontal
+scrolling; the context rail owns the annual-leave balance. Existing employee
+selection, manager resolution, leave calculations and navigation actions are
+unchanged. Static and desktop/375px runtime guards cover avatar/fallback, five
+languages, top-level manager, empty employee/leave states and Pending/Approved/Rejected
+history. Service-worker v95 delivers the corrected page, and the focused
+master-detail editor audit now covers BOM and Employee.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 95 tasks, including TASK-096
+- Done: 96 tasks, including TASK-097
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 114 Canonical / 0 Preview and 42 audited list-layout routes, including
   36 transaction lists, 4 master-detail registers and 2 report lists; Warehouse
-  Picking remains on its dedicated operational-workspace SSOT.
+  Picking remains on its dedicated operational-workspace SSOT, and BOM plus Employee
+  use the shared master-detail editor SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

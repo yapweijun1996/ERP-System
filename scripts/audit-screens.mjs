@@ -100,6 +100,22 @@ if (obsoleteTimesheetChrome.length) {
   throw new Error(`Timesheet still rebuilds page-level list chrome: ${obsoleteTimesheetChrome.join(', ')}`);
 }
 
+const hrScreenSource = readFileSync(path.join(assetDir, 'screens-hr.js'), 'utf8');
+const employeeScreenSource = (hrScreenSource.split("SCREENS['employee'] =")[1] || '')
+  .split('/* ---- shared payroll data prep')[0];
+const obsoleteEmployeeChrome = [
+  '<div class="content full"',
+  'docwrap',
+  'docpage',
+  'dochead',
+  'doclayout',
+  'readonly',
+  'position:sticky',
+].filter((token) => employeeScreenSource.includes(token));
+if (obsoleteEmployeeChrome.length) {
+  throw new Error(`Employee still rebuilds legacy document chrome: ${obsoleteEmployeeChrome.join(', ')}`);
+}
+
 const warehouseScreenSource = readFileSync(path.join(assetDir, 'screens-warehouse.js'), 'utf8');
 const obsoleteWorkspaceChrome = ['pick-layout','pick-main','pick-side','pick-tools','progressbig']
   .filter((token) => warehouseScreenSource.includes(token));
@@ -650,6 +666,19 @@ async function auditRoutes(browser, viewport) {
             .map((button) => (button.textContent || '').replace(/\s+/g,' ').trim())
             .filter((label) => /\b(capacity|copy last week|submit for approval|payroll|export)\b/i.test(label)),
         },
+        employeeLayout: {
+          canonicalMarker: masterDetailEditorRoot?.getAttribute('data-canonical-employee') === 'true',
+          avatar: Boolean(masterDetailEditorRoot?.querySelector('.master-detail-editor-avatar .profile-avatar')),
+          factCount: masterDetailEditorRoot?.querySelectorAll('[data-master-detail-overview] .master-detail-editor-fact').length || 0,
+          contactFacts: masterDetailEditorRoot?.querySelectorAll('[data-employee-contact] .master-detail-editor-fact').length || 0,
+          readonlyInputs: masterDetailEditorRoot?.querySelectorAll('input[readonly]').length || 0,
+          leaveBalance: Boolean(masterDetailEditorRoot?.querySelector('[data-employee-leave-balance]')),
+          controlledLeaveTable: [...(masterDetailEditorRoot?.querySelectorAll('[data-employee-leave-history] table.lines') || [])]
+            .every((table) => Boolean(table.closest('.master-detail-editor-table-scroll'))),
+          backActions: masterDetailEditorRoot?.querySelectorAll('[data-employee-back]').length || 0,
+          reviewActions: masterDetailEditorRoot?.querySelectorAll('[data-employee-review]').length || 0,
+          legacyChrome: Boolean(masterDetailEditorRoot?.querySelector('.docwrap,.docpage,.dochead,.doclayout,.summary,.sumcard')),
+        },
         arAgingLayout: {
           pageheads: el.querySelectorAll('.pagehead').length,
           legacyReportChrome: Boolean(listRoot?.querySelector('.report,.report-params,.report-result')),
@@ -802,6 +831,11 @@ async function auditRoutes(browser, viewport) {
       timesheetLayout: {
         pageheads: 0, canonicalMarker: false, kpis: 0, weekButtons: 0, weekLabels: 0,
         primaryActions: 0, semanticTables: 0, legacyChrome: false, unsupportedActions: [],
+      },
+      employeeLayout: {
+        canonicalMarker: false, avatar: false, factCount: 0, contactFacts: 0,
+        readonlyInputs: 0, leaveBalance: false, controlledLeaveTable: false,
+        backActions: 0, reviewActions: 0, legacyChrome: false,
       },
       workspaceLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
@@ -1025,6 +1059,37 @@ async function auditRoutes(browser, viewport) {
     }
     if (rendered.masterDetailEditorLayout.present && meta?.layout !== MASTER_DETAIL_EDITOR_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.masterDetailEditorLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
+    if (route === 'employee') {
+      if (!rendered.employeeLayout.canonicalMarker) {
+        rendered.layoutIssues.push('Employee canonical compatibility marker missing');
+      }
+      if (!rendered.employeeLayout.avatar) {
+        rendered.layoutIssues.push('Employee overview avatar missing');
+      }
+      if (rendered.employeeLayout.factCount !== 4) {
+        rendered.layoutIssues.push(`Employee expected 4 overview facts, found ${rendered.employeeLayout.factCount}`);
+      }
+      if (rendered.employeeLayout.contactFacts !== 2) {
+        rendered.layoutIssues.push(`Employee expected 2 contact facts, found ${rendered.employeeLayout.contactFacts}`);
+      }
+      if (rendered.employeeLayout.readonlyInputs) {
+        rendered.layoutIssues.push('Employee contact details still use read-only input controls');
+      }
+      if (!rendered.employeeLayout.leaveBalance) {
+        rendered.layoutIssues.push('Employee leave balance context missing');
+      }
+      if (!rendered.employeeLayout.controlledLeaveTable) {
+        rendered.layoutIssues.push('Employee leave history table is missing bounded horizontal scrolling');
+      }
+      if (rendered.employeeLayout.backActions !== 1 || rendered.employeeLayout.reviewActions !== 1) {
+        rendered.layoutIssues.push(
+          `Employee expected one Back and one Review action, found ${rendered.employeeLayout.backActions} and ${rendered.employeeLayout.reviewActions}`,
+        );
+      }
+      if (rendered.employeeLayout.legacyChrome) {
+        rendered.layoutIssues.push('Employee contains legacy or duplicated detail chrome');
+      }
     }
     if (meta?.layout === CASE_DETAIL_LAYOUT) {
       if (!rendered.caseDetailLayout.present) {
@@ -1642,6 +1707,111 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'bom');
     if (result) {
       result.layoutIssues.push(...bomIssues.map((issue)=>`BOM state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('employee')) {
+    const employeeIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const employees = [
+        {
+          id:9901,employeeNo:'EMP-9901',fullName:'Top Employee',email:'top@example.test',
+          phone:'',jobTitle:'Managing Director',department:'Management',employmentType:'Full-time',
+          startDate:'2019-02-01',managerId:null,annualLeaveDays:20,isActive:true,photoUrl:'',
+        },
+        {
+          id:9902,employeeNo:'EMP-9902',fullName:'Audited Employee',email:'employee@example.test',
+          phone:'+65 6000 9902',jobTitle:'Operations Lead',department:'Operations',employmentType:'Full-time',
+          startDate:'2022-04-11',managerId:9901,annualLeaveDays:20,isActive:true,
+          photoUrl:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Crect width="24" height="24" fill="%230b72e7"/%3E%3C/svg%3E',
+        },
+      ];
+      const leaveRequests = [
+        {id:9911,employeeId:9902,leaveType:'Annual',startDate:'2026-06-01',endDate:'2026-06-02',days:2,status:'pending'},
+        {id:9912,employeeId:9902,leaveType:'Annual',startDate:'2026-05-01',endDate:'2026-05-02',days:2,status:'approved'},
+        {id:9913,employeeId:9902,leaveType:'Medical',startDate:'2026-04-01',endDate:'2026-04-01',days:1,status:'rejected'},
+      ];
+      const expected = {
+        en:{title:'Employee profile',statuses:['Pending','Approved','Rejected']},
+        ms:{title:'Profil pekerja',statuses:['Belum diputuskan','Diluluskan','Ditolak']},
+        zh:{title:'员工档案',statuses:['待审批','已批准','已拒绝']},
+        ja:{title:'従業員プロフィール',statuses:['承認待ち','承認済み','却下']},
+        vi:{title:'Hồ sơ nhân viên',statuses:['Chờ duyệt','Đã duyệt','Đã từ chối']},
+      };
+      const issues = [];
+      const stub = (employeeRows=employees,leaveRows=leaveRequests) => {
+        adapter.list = async (resource,query) => {
+          if (resource === 'hr/employees') return {data:employeeRows,meta:{nextCursor:null}};
+          if (resource === 'hr/leave-requests') return {data:leaveRows,meta:{nextCursor:null}};
+          return originalList.call(adapter,resource,query);
+        };
+      };
+      try {
+        stub();
+        for (const [locale,copy] of Object.entries(expected)) {
+          window.getLang = () => locale;
+          await navigate('employee',{employeeId:9902});
+          const root = document.querySelector('#viewRoot [data-layout="master-detail-editor-v1"]');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          const text = root?.textContent || '';
+          if (!heading.startsWith(copy.title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          if (!root) issues.push(`${locale} master-detail editor root missing`);
+          if (root?.querySelectorAll('[data-master-detail-overview] .master-detail-editor-fact').length !== 4) {
+            issues.push(`${locale} expected four overview facts`);
+          }
+          if (root?.querySelectorAll('[data-employee-contact] input[readonly]').length) {
+            issues.push(`${locale} contact facts use read-only inputs`);
+          }
+          if (root?.querySelectorAll('[data-employee-leave-row]').length !== 3) {
+            issues.push(`${locale} expected three leave-history rows`);
+          }
+          copy.statuses.forEach((status) => {
+            if (!text.includes(status)) issues.push(`${locale} leave status missing: ${status}`);
+          });
+        }
+
+        window.getLang = () => 'en';
+        await navigate('employee',{employeeId:9901});
+        const topRoot = document.querySelector('#viewRoot [data-layout="master-detail-editor-v1"]');
+        if (!topRoot?.textContent.includes('— (top of reporting line)')) {
+          issues.push('top-level employee manager fallback missing');
+        }
+        if (!topRoot?.querySelector('.master-detail-editor-avatar .profile-avatar-fallback:not([hidden])')) {
+          issues.push('employee avatar fallback missing');
+        }
+        if (!topRoot?.querySelector('[data-employee-leave-empty]')) {
+          issues.push('no-leave state missing for top-level employee');
+        }
+
+        stub(employees,[]);
+        await navigate('employee',{employeeId:9902});
+        if (!document.querySelector('#viewRoot [data-employee-leave-empty]')) {
+          issues.push('employee leave-history empty state missing');
+        }
+
+        stub([],[]);
+        await navigate('employee');
+        if (!document.querySelector('#viewRoot [data-master-detail-empty]')) {
+          issues.push('employee-empty state missing');
+        }
+        if (!document.querySelector('#viewRoot [data-layout="master-detail-editor-v1"][data-canonical-employee="true"]')) {
+          issues.push('employee-empty state left the canonical shared editor shell');
+        }
+      } finally {
+        adapter.list = originalList;
+        window.getLang = originalGetLang;
+        await navigate('employee');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'employee');
+    if (result) {
+      result.layoutIssues.push(...employeeIssues.map((issue)=>`Employee state smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }
