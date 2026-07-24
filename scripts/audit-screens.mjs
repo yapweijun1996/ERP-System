@@ -1604,14 +1604,44 @@ async function auditRoutes(browser, viewport) {
         } else {
           const start = modal.querySelector('#prStart');
           const end = modal.querySelector('#prEnd');
-          if (!start || !end) {
+          const payDate = modal.querySelector('#prPayDate');
+          const create = modal.querySelector('[data-payroll-create]');
+          const error = modal.querySelector('[data-payroll-create-error]');
+          const localIso = (date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+          const now = new Date();
+          const expectedStart = localIso(new Date(now.getFullYear(),now.getMonth(),1));
+          const expectedEnd = localIso(new Date(now.getFullYear(),now.getMonth()+1,0));
+          const expectedPayDate = localIso(now);
+          const modalRect = modal.getBoundingClientRect();
+          const createRect = create?.getBoundingClientRect();
+          if (!start || !end || !payDate || !create || !error) {
             issues.push('new payroll run modal is missing its period fields');
           } else {
+            if (start.value !== expectedStart || end.value !== expectedEnd || payDate.value !== expectedPayDate) {
+              issues.push(`new payroll run defaults are not local calendar dates: ${start.value}/${end.value}/${payDate.value}`);
+            }
+            if (!error.hidden || getComputedStyle(error).display !== 'none') {
+              issues.push('new payroll run modal exposes its empty error before validation');
+            }
+            if (modalRect.left < 8 || modalRect.right > innerWidth - 8
+                || modal.scrollWidth > modal.clientWidth + 1) {
+              issues.push(`new payroll run modal exceeds the ${innerWidth}px viewport`);
+            }
+            if (!createRect || createRect.left < 8 || createRect.right > innerWidth - 8) {
+              issues.push('new payroll run primary action is outside the clickable viewport');
+            }
             start.value = '2026-07-31';
             end.value = '2026-07-01';
-            modal.querySelector('[data-payroll-create]')?.click();
-            if (modal.querySelector('[data-payroll-create-error]')?.hidden !== false) {
+            create.click();
+            if (error.hidden !== false || getComputedStyle(error).display === 'none'
+                || !error.textContent.trim()) {
               issues.push('invalid payroll period did not render the inline modal error');
+            }
+            const errorRect = error.getBoundingClientRect();
+            const formRect = modal.querySelector('.payroll-run-form')?.getBoundingClientRect();
+            if (!formRect || Math.abs(errorRect.left - formRect.left) > 1
+                || Math.abs(errorRect.right - formRect.right) > 1) {
+              issues.push('payroll modal error does not align with the form fields');
             }
           }
           closeModal();

@@ -199,7 +199,13 @@ function appModal({icon, title, body='', actions='', width}={}){
   openModal(`<div class="modal-head">${icon?ic(icon):''}<h3>${esc(title)}</h3><button class="iconbtn x" onclick="closeModal()" aria-label="Close">${ic('x')}</button></div>
     <div class="modal-body">${body}</div>
     ${actions?`<div class="modal-foot">${actions}</div>`:''}`);
-  if(width){ const m=$('#modalEl'); if(m) m.style.width=(typeof width==='number'?width+'px':width); }
+  if(width){
+    const m=$('#modalEl');
+    if(m){
+      m.style.width=typeof width==='number'?`min(${width}px, calc(100vw - 24px))`:width;
+      m.style.maxWidth='calc(100vw - 24px)';
+    }
+  }
 }
 /* confirm dialog — pass a GLOBAL fn name string for onConfirm so the inline handler can reach it */
 function confirmModal({icon='warn', title, message, confirmLabel='Confirm', cancelLabel='Cancel', danger=false, onConfirm}){

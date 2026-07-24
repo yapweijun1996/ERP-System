@@ -113,6 +113,7 @@
 .payroll-lines-empty{min-height:180px;height:auto!important;}
 .payroll-run-action-error{margin:0;}
 .payroll-run-modal-description{margin:0 0 16px;}
+.payroll-run-modal-error{margin:0 0 14px;}
 .payroll-run-form{grid-template-columns:repeat(2,minmax(0,1fr));}
 .payroll-run-confirm{margin:0;color:var(--muted);font-size:calc(13.5px * var(--fs,1));line-height:1.55;}
 .li-subj{color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;}

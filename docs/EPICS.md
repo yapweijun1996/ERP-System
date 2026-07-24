@@ -1783,3 +1783,9 @@ Delivery slices:
       Back button and visible footer action bar while preserving the hidden actions
       region, Directory navigation and five-language behavior. Service worker v96
       delivers the corrected hierarchy.
+- [x] **TASK-099 — Payroll run modal correctness and responsiveness.** Restore the
+      native hidden contract for inline alerts, constrain shared modal widths to the
+      viewport and generate Payroll period defaults from the local calendar instead
+      of UTC-converted local midnight. Align the modal error with its form and extend
+      desktop/375px Payroll audits to cover initial, invalid and clickable states.
+      Service worker v97 delivers the fix without changing payroll commands or data.

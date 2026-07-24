@@ -655,9 +655,23 @@ Static and runtime guards reject a reintroduced footer note, Back button or popu
 footer, and verify five-language header copy plus zero action-group overflow.
 Service-worker v96 delivers the updated shared renderer and styles.
 
+## Payroll run modal correctness (TASK-099, 2026-07-24)
+
+The New payroll run dialog no longer renders an empty danger alert before validation.
+The shared CSS now preserves native `hidden` semantics, while the Payroll-specific
+error remains aligned with the form when a real validation message is present.
+
+`appModal()` now constrains every configured width to the visible viewport, preventing
+the 620px Payroll dialog and its primary action from being clipped at 375px. Payroll
+period and pay-date defaults are generated from local calendar fields rather than
+converting local midnight through UTC, so July correctly opens as July 1–31 in
+UTC-positive timezones. The Payroll state audit verifies desktop/mobile bounds,
+clickable actions, initial hidden error, local date defaults and the invalid-period
+message. Service-worker v97 delivers the shared modal, CSS and HR screen updates.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 97 tasks, including TASK-098
+- Done: 98 tasks, including TASK-099
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 114 Canonical / 0 Preview and 42 audited list-layout routes, including

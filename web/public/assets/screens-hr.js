@@ -592,9 +592,12 @@ SCREENS['payroll-run'] = async function(root){
   const routeStillActive=()=>root.isConnected&&CURRENT_ROUTE==='payroll-run';
   const statusLabel=status=>status==='posted'?s('statusPosted'):s('statusDraft');
   const statusTone=status=>status==='posted'?'ok':'warn';
-  function todayIso(){ return new Date().toISOString().slice(0,10); }
-  function firstOfMonthIso(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10); }
-  function lastOfMonthIso(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10); }
+  function localDateIso(date){
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  }
+  function todayIso(){ return localDateIso(new Date()); }
+  function firstOfMonthIso(){ const d=new Date(); return localDateIso(new Date(d.getFullYear(),d.getMonth(),1)); }
+  function lastOfMonthIso(){ const d=new Date(); return localDateIso(new Date(d.getFullYear(),d.getMonth()+1,0)); }
   function linesFor(run){ return lines.filter(line=>String(line.runId)===String(run.id)); }
   function summaryFor(run){
     const runLines=linesFor(run);
@@ -628,7 +631,7 @@ SCREENS['payroll-run'] = async function(root){
       title:s('newRunButton'),
       width:620,
       body:`<p class="h1sub payroll-run-modal-description">${esc(s('newRunDescription'))}</p>
-        <div class="alert danger" data-payroll-create-error hidden>${ic('warn')}<span></span></div>
+        <div class="alert danger payroll-run-modal-error" data-payroll-create-error hidden>${ic('warn')}<span></span></div>
         <div class="set-grid payroll-run-form">
           <div class="fld"><span>${esc(s('fieldRunNo'))}</span><input id="prDocNo" value="${esc(nextPayrollDocNo(runs))}" readonly></div>
           <div class="fld"><span>${esc(s('fieldPeriodStart'))}</span><input id="prStart" type="date" value="${firstOfMonthIso()}"></div>
