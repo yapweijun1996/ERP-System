@@ -753,7 +753,13 @@ function transactionListPage(root, config){
   }
   function setFilter(filter){
     activeFilter=filter||'all';
-    if(selectedId!=null&&!selectedRow(visibleRows())) selectedId=null;
+    const rows=visibleRows();
+    if(detailPane&&Object.prototype.hasOwnProperty.call(detailPane,'selectionOnFilter')){
+      const next=value(detailPane.selectionOnFilter,rows,activeFilter);
+      selectedId=next==null?null:String(next);
+    }else if(selectedId!=null&&!selectedRow(rows)){
+      selectedId=null;
+    }
     render();
   }
   function select(id){

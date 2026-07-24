@@ -634,6 +634,16 @@ async function auditRoutes(browser, viewport) {
               .test(button.textContent || '')).length,
           customerToast: /customer detail/i.test(listRoot?.textContent || ''),
         },
+        leaveApprovalLayout: {
+          pageheads: el.querySelectorAll('.pagehead').length,
+          legacyChrome: Boolean(el.querySelector('#lvContent,#lvDetail,.approvebar,[data-lv],[data-f]')),
+          exportActions: [...el.querySelectorAll('button')]
+            .filter((button) => /\b(export|excel|print)\b/i.test(button.textContent || '')).length,
+          detailPresent: Boolean(el.querySelector('[data-master-detail-panel]')),
+          detailOpen: Boolean(el.querySelector('[data-master-detail-panel].open')),
+          visibleRows: el.querySelectorAll('[data-list-table] .dt-r[data-row]').length,
+          pendingActions: el.querySelectorAll('[data-leave-action]:not([disabled])').length,
+        },
         workspaceLayout: {
           present: Boolean(workspaceRoot),
           actualLayout: workspaceRoot?.getAttribute('data-layout') || null,
@@ -830,6 +840,35 @@ async function auditRoutes(browser, viewport) {
       }
       if (rendered.arAgingLayout.customerToast) {
         rendered.layoutIssues.push('AR Aging still exposes the placeholder customer detail toast');
+      }
+    }
+    if (route === 'leave-approval') {
+      if (rendered.leaveApprovalLayout.pageheads !== 1) {
+        rendered.layoutIssues.push(`Leave Approval rendered ${rendered.leaveApprovalLayout.pageheads} module page headers`);
+      }
+      if (rendered.leaveApprovalLayout.legacyChrome) {
+        rendered.layoutIssues.push('Leave Approval still renders legacy master-detail chrome');
+      }
+      if (rendered.leaveApprovalLayout.exportActions) {
+        rendered.layoutIssues.push('Leave Approval exposes an unsupported Export, Excel or Print action');
+      }
+      if (!rendered.leaveApprovalLayout.detailPresent) {
+        rendered.layoutIssues.push('Leave Approval detail panel contract is missing');
+      }
+      if (viewport.width <= 980
+          && rendered.leaveApprovalLayout.visibleRows
+          && rendered.leaveApprovalLayout.detailOpen) {
+        rendered.layoutIssues.push('Leave Approval opens its mobile detail drawer before a row is selected');
+      }
+      if (viewport.width > 980
+          && rendered.leaveApprovalLayout.visibleRows
+          && !rendered.leaveApprovalLayout.detailOpen) {
+        rendered.layoutIssues.push('Leave Approval did not select the first visible desktop request');
+      }
+      if (viewport.width > 980
+          && rendered.leaveApprovalLayout.detailOpen
+          && rendered.leaveApprovalLayout.pendingActions !== 2) {
+        rendered.layoutIssues.push(`Leave Approval expected 2 pending disposition actions, found ${rendered.leaveApprovalLayout.pendingActions}`);
       }
     }
     if (meta?.layout === OPERATIONAL_WORKSPACE_LAYOUT) {
@@ -1058,6 +1097,102 @@ async function auditRoutes(browser, viewport) {
     });
 
     events.length = 0; // fully consumed this route's window; reset for the next
+  }
+
+  if (routes.includes('leave-approval')) {
+    const leaveIssues = await page.evaluate(async ({ mobile }) => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const originalAction = adapter.action;
+      const expected = {
+        en:'Leave Approval',
+        ms:'Kelulusan Cuti',
+        zh:'请假审批',
+        ja:'休暇承認',
+        vi:'Phê duyệt nghỉ phép',
+      };
+      const issues = [];
+      const leaveRoot = () => document.querySelector('#viewRoot [data-layout="master-detail-register-v1"][data-list-route="leave-approval"]');
+      const row = () => leaveRoot()?.querySelector('[data-list-table] .dt-r[data-row]');
+      try {
+        for (const [locale,title] of Object.entries(expected)) {
+          window.getLang = () => locale;
+          await navigate('leave-approval');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (!heading.startsWith(title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          if (!leaveRoot()) issues.push(`${locale} master-detail register root missing`);
+        }
+
+        window.getLang = () => 'en';
+        await navigate('leave-approval');
+        if (mobile && row()) {
+          if (leaveRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile detail drawer opened before row selection');
+          }
+          row().click();
+          if (!leaveRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile row selection did not open the detail drawer');
+          }
+          leaveRoot()?.querySelector('[data-master-detail-close]')?.click();
+          if (leaveRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile detail close did not return to the queue');
+          }
+          row()?.click();
+        }
+
+        const approve = leaveRoot()?.querySelector('[data-leave-action="approve"]');
+        if (!approve) {
+          issues.push('pending request is missing the Approve action');
+        } else {
+          adapter.action = async () => { throw new Error('leave action audit failure'); };
+          approve.click();
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          if (!leaveRoot()?.querySelector('[data-leave-action-error]')) {
+            issues.push('failed leave action did not render the inline detail error');
+          }
+          if (leaveRoot()?.querySelectorAll('[data-leave-action]:not([disabled])').length !== 2) {
+            issues.push('failed leave action did not re-enable both disposition actions');
+          }
+          adapter.action = originalAction;
+        }
+
+        adapter.list = async (resource,query) => resource === 'hr/leave-requests'
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('leave-approval');
+        if (!leaveRoot()?.querySelector('[data-list-empty]')) {
+          issues.push('leave-request empty state missing');
+        }
+        if (!leaveRoot()?.querySelector('[data-master-detail-panel].is-empty')) {
+          issues.push('leave-request empty state left the detail contract open');
+        }
+
+        adapter.list = async (resource,query) => resource === 'hr/employees'
+          ? {data:[],meta:{nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+        await navigate('leave-approval');
+        if (mobile) row()?.click();
+        if (!leaveRoot()) issues.push('missing employee relation left the shared register shell');
+        if (leaveRoot()?.querySelector('[data-master-detail-panel].open')
+            && !leaveRoot()?.querySelector('[data-master-detail-panel] svg.profile-avatar-fallback')) {
+          issues.push('missing employee relation did not render the SVG avatar fallback');
+        }
+      } finally {
+        adapter.list = originalList;
+        adapter.action = originalAction;
+        window.getLang = originalGetLang;
+        await navigate('leave-approval');
+      }
+      return issues;
+    }, { mobile: viewport.width <= 980 });
+    const result = results.find((row) => row.route === 'leave-approval');
+    if (result) {
+      result.layoutIssues.push(...leaveIssues.map((issue) => `Leave Approval smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
+      result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
+    }
+    events.length = 0;
   }
 
   if (routes.includes('picking')) {

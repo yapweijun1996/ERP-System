@@ -8,107 +8,186 @@ SCREENS['leave-approval'] = async function(root){
   const leaveStatusTone={pending:'warn',approved:'ok',rejected:'danger'};
   const leaveStatusLabel=st=>({pending:s('statusPending'),approved:s('statusApproved'),rejected:s('statusRejected')}[st]||st);
   let {employees,leaveRequests}=await prepareHrData();
-  function empOf(lv){ return employees.find(e=>e.id===lv.employeeId)||{fullName:'—',department:'—'}; }
-  let filter='pending';
-  let selected=leaveRequests[0]&&leaveRequests[0].id;
-
-  function rows(){ return filter==='all'?leaveRequests:leaveRequests.filter(l=>l.status===filter); }
+  let page=null;
+  let busyId=null;
+  let actionError=null;
+  let skipSelectionId=null;
+  const isDesktop=()=>!window.matchMedia('(max-width:980px)').matches;
+  const routeStillActive=()=>root.isConnected&&CURRENT_ROUTE==='leave-approval';
+  function empOf(lv){
+    return employees.find(e=>e.id===lv.employeeId)||{
+      fullName:s('unknownEmployee'),department:'—',jobTitle:'—',
+    };
+  }
   async function reload(){
     const fresh=await prepareHrData();
     employees=fresh.employees; leaveRequests=fresh.leaveRequests;
   }
-
-  function render(){
-    const pendingCount=leaveRequests.filter(l=>l.status==='pending').length;
-    const pendingDays=leaveRequests.filter(l=>l.status==='pending').reduce((sum,l)=>sum+l.days,0);
-    const list=rows();
-    const sel=list.find(l=>l.id===selected)||list[0]||leaveRequests[0];
-    selected=sel&&sel.id;
-    const listCols=[
-      {label:t('hr.col.employee'),align:'l',w:'minmax(190px,2fr)',render:l=>{ const e=empOf(l); return `<div style="display:flex;align-items:center;gap:10px;min-width:0">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,cls:'cav',size:30})}<div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.department)}</small></div></div>`; }},
-      {label:'Type',align:'l',render:l=>cap(l.leaveType,l.leaveType==='Medical'?'violet':l.leaveType==='Unpaid'?'neutral':'accent')},
-      {label:s('colDates'),align:'l',w:'minmax(150px,1.4fr)',render:l=>`${esc(dateValue(l.startDate))} → ${esc(dateValue(l.endDate))}`},
-      {label:'Days',align:'r',w:'70px',render:l=>l.days},
-      {label:t('col.status'),align:'l',render:l=>cap(leaveStatusLabel(l.status),leaveStatusTone[l.status]||'neutral')},
-    ];
-    const table=list.length?buildTable({rowId:l=>l.id, columns:listCols, rows:list}):statePanel({icon:'calendar',title:s('noLeaveRequests'),body:''});
-
-    const detail=sel?(()=>{
-      const e=empOf(sel);
-      const decided=sel.status!=='pending';
-      return `
+  function detailContent(leaveRequest){
+    const employee=empOf(leaveRequest);
+    const pending=leaveRequest.status==='pending';
+    const busy=String(busyId)===String(leaveRequest.id);
+    const error=actionError&&String(actionError.id)===String(leaveRequest.id)
+      ?actionError.message:null;
+    return `
       <div class="detail-head">
         <span class="grabber"></span>
-        <button class="close" onclick="document.getElementById('lvContent').classList.add('detail-collapsed');document.getElementById('lvDetail').classList.remove('open')">${ic('chevL')}Close</button>
-        <div class="dh-top">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,cls:'cav',size:42})}
-          <div><h2>${esc(e.fullName)}</h2><span class="sub">${esc(e.department)} · ${esc(e.jobTitle||'')}</span></div>
-          <div style="margin-left:auto">${cap(leaveStatusLabel(sel.status),leaveStatusTone[sel.status]||'neutral')}</div></div>
+        <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
+        <div class="dh-top">
+          ${profileAvatar({name:employee.fullName,src:employee.photoUrl||employee.imageUrl||employee.avatarUrl,cls:'cav',size:42})}
+          <div><h2>${esc(employee.fullName)}</h2><span class="sub">${esc(employee.department)} · ${esc(employee.jobTitle||'—')}</span></div>
+          <div style="margin-left:auto">${cap(leaveStatusLabel(leaveRequest.status),leaveStatusTone[leaveRequest.status]||'neutral')}</div>
+        </div>
       </div>
       <div class="detail-body">
-        <div class="statgrid c3"><div class="stat"><small>Requested</small><b>${sel.days}d</b></div></div>
+        ${error?`<div class="alert danger" data-leave-action-error>${ic('warn')}<span>${esc(error)}</span></div>`:''}
+        <div class="statgrid c3"><div class="stat"><small>${esc(s('requestedDays'))}</small><b class="tnum">${esc(s('daysValue').replace('{count}',String(leaveRequest.days)))}</b></div></div>
         <div class="card">
-          <div class="field"><span class="k">Leave type</span><span class="v">${esc(sel.leaveType)}</span></div>
-          <div class="field"><span class="k">From</span><span class="v">${esc(dateValue(sel.startDate))}</span></div>
-          <div class="field"><span class="k">To</span><span class="v">${esc(dateValue(sel.endDate))}</span></div>
-          <div class="field"><span class="k">${esc(s('rejectReasonLabel'))}</span><span class="v">${sel.reason?esc(sel.reason):'—'}</span></div>
-          ${sel.status==='rejected'?`<div class="field"><span class="k">${esc(s('rejectReasonLabel'))} (HR)</span><span class="v">${esc(sel.rejectionReason||'')}</span></div>`:''}
-          ${decided&&sel.decidedAt?`<div class="field"><span class="k">Decided</span><span class="v">${esc(dateValue(sel.decidedAt))}</span></div>`:''}
+          <div class="field"><span class="k">${esc(s('colLeaveType'))}</span><span class="v">${esc(leaveRequest.leaveType||'—')}</span></div>
+          <div class="field"><span class="k">${esc(s('fromDate'))}</span><span class="v">${esc(dateValue(leaveRequest.startDate))}</span></div>
+          <div class="field"><span class="k">${esc(s('toDate'))}</span><span class="v">${esc(dateValue(leaveRequest.endDate))}</span></div>
+          <div class="field"><span class="k">${esc(s('employeeReason'))}</span><span class="v">${leaveRequest.reason?esc(leaveRequest.reason):'—'}</span></div>
+          ${leaveRequest.status==='rejected'?`<div class="field"><span class="k">${esc(s('hrDecisionReason'))}</span><span class="v">${leaveRequest.rejectionReason?esc(leaveRequest.rejectionReason):'—'}</span></div>`:''}
+          ${leaveRequest.status!=='pending'?`<div class="field"><span class="k">${esc(s('decidedAt'))}</span><span class="v">${leaveRequest.decidedAt?esc(dateValue(leaveRequest.decidedAt)):'—'}</span></div>`:''}
         </div>
       </div>
-      <div class="approvebar">
-        ${btn(s('reject'),{icon:'x',cls:'danger',sm:false,attrs:decided?'disabled':`data-lv="reject"`})}
-        ${btn(sel.status==='approved'?s('statusApproved'):s('approve'),{icon:'check',cls:sel.status==='approved'?'soft':'primary',sm:false,attrs:decided?'disabled':`data-lv="approve"`})}
-      </div>`;
-    })():'';
-
-    root.innerHTML=`<div class="content" id="lvContent">
-      <section class="master">
-        <div class="pagehead">${crumbs([DB.company.name,t('nav.hr'),t('hr.leave')])}
-          <div class="h1row"><h1>${esc(s('leaveApprovalTitle'))}</h1><span class="countchip">${pendingCount} ${esc(s('statusPending').toLowerCase())}</span>
-            <div class="headright"><div class="kfig"><small>${esc(s('statusPending'))}</small><b class="tnum">${pendingDays}d</b></div></div></div>
-        </div>
-        <div class="toolbar"><div class="filterchips" id="lvChips">
-          ${[['pending',s('statusPending')],['approved',s('statusApproved')],['rejected',s('statusRejected')],['all',s('filterAllStatus')]]
-            .map(([v,l])=>`<button class="chip ${v===filter?'on':''}" data-f="${v}">${esc(l)}</button>`).join('')}
-        </div>
-          <div class="grow"></div>${btn(t('common.export'),{icon:'download',cls:'soft',attrs:'onclick="toast(\'Export — not in this build\',\'info\')"'})}</div>
-        <div class="tablewrap" id="lvTable">${table}</div>
-      </section>
-      <aside class="detail open" id="lvDetail">${detail}</aside>
-    </div>`;
-
-    $('#lvTable').querySelectorAll('.dt-r[data-row]').forEach(tr=>{ tr.classList.toggle('sel',Number(tr.dataset.row)===selected); tr.addEventListener('click',()=>{ selected=Number(tr.dataset.row); render(); $('#lvContent').classList.remove('detail-collapsed'); }); });
-    $('#lvChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ filter=c.dataset.f; selected=null; render(); }));
-    const ap=root.querySelector('[data-lv="approve"]'); if(ap)ap.addEventListener('click',async()=>{
-      ap.disabled=true;
-      try{
-        await window.ErpSystemData.action('hr/leave-requests',sel.id,'approve',{});
-        await reload();
-        toast(s('approvedToast').replace('{name}',empOf(sel).fullName),'ok');
-        render();
-      }catch{ toast(s('actionError'),'danger'); ap.disabled=false; }
-    });
-    const rj=root.querySelector('[data-lv="reject"]'); if(rj)rj.addEventListener('click',()=>{
-      appModal({
-        icon: 'xc',
-        title: s('rejectTitle').replace('{name}',empOf(sel).fullName),
-        body: `<div class="fld err"><span>${esc(s('rejectReasonLabel'))} <span class="req">*</span></span><textarea id="lvRejectReason" placeholder="${esc(s('rejectReasonPlaceholder'))}"></textarea><span class="hint bad">${esc(s('rejectReasonRequired'))}</span></div>`,
-        actions: `${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('reject'),{icon:'x',cls:'danger-solid',attrs:'data-save="1"'})}`,
-      });
-      $('#modalEl').querySelector('[data-save]').addEventListener('click', async()=>{
-        const reason=$('#lvRejectReason').value.trim();
-        if(!requireField(reason, s('rejectReasonRequired'), '#lvRejectReason')) return;
-        try{
-          await window.ErpSystemData.action('hr/leave-requests',sel.id,'reject',{rejectionReason:reason});
-          closeModal();
-          await reload();
-          toast(s('rejectedToast').replace('{name}',empOf(sel).fullName),'danger');
-          render();
-        }catch{ toast(s('actionError'),'danger'); }
-      });
-    });
+      ${pending?`<div class="set-savebar" data-leave-actions>
+        <div class="grow"></div>
+        ${btn(s('reject'),{icon:'x',cls:'danger',sm:false,attrs:`data-leave-action="reject"${busy?' disabled':''}`})}
+        ${btn(s('approve'),{icon:'check',cls:'primary',sm:false,attrs:`data-leave-action="approve"${busy?' disabled':''}`})}
+      </div>`:''}`;
   }
-  render();
+
+  async function decide(leaveRequest,action,payload){
+    busyId=leaveRequest.id;
+    actionError=null;
+    page.render();
+    try{
+      await window.ErpSystemData.action('hr/leave-requests',leaveRequest.id,action,payload);
+      if(!routeStillActive()) return;
+      await reload();
+      if(!routeStillActive()) return;
+      busyId=null;
+      actionError=null;
+      skipSelectionId=leaveRequest.id;
+      toast(
+        s(action==='approve'?'approvedToast':'rejectedToast').replace('{name}',empOf(leaveRequest).fullName),
+        action==='approve'?'ok':'danger',
+      );
+      page.setFilter(page.getFilter());
+    }catch{
+      if(!routeStillActive()) return;
+      busyId=null;
+      actionError={id:leaveRequest.id,message:s('actionError')};
+      page.render();
+    }
+  }
+
+  page=masterDetailRegisterPage(root,{
+    module:'hr',
+    route:'leave-approval',
+    title:s('leaveApprovalTitle'),
+    description:s('leaveApprovalDescription'),
+    rows:()=>leaveRequests,
+    rowId:leaveRequest=>leaveRequest.id,
+    initialFilter:'pending',
+    filters:[
+      ['pending',s('statusPending')],
+      ['approved',s('statusApproved')],
+      ['rejected',s('statusRejected')],
+      ['all',s('filterAllStatus')],
+    ],
+    filterFn:(leaveRequest,status)=>leaveRequest.status===status,
+    kpis:()=>[
+      {
+        label:s('kpiPendingRequests'),
+        value:leaveRequests.filter(row=>row.status==='pending').length,
+        filter:'pending',
+      },
+      {
+        label:s('kpiPendingDays'),
+        value:leaveRequests.filter(row=>row.status==='pending').reduce((sum,row)=>sum+row.days,0),
+        filter:'pending',
+      },
+      {
+        label:s('kpiApprovedRequests'),
+        value:leaveRequests.filter(row=>row.status==='approved').length,
+        filter:'approved',
+      },
+      {
+        label:s('kpiRejectedRequests'),
+        value:leaveRequests.filter(row=>row.status==='rejected').length,
+        filter:'rejected',
+        negative:leaveRequests.some(row=>row.status==='rejected'),
+      },
+    ],
+    columns:[
+      {
+        label:t('hr.col.employee'),align:'l',w:'minmax(190px,2fr)',
+        render:leaveRequest=>{
+          const employee=empOf(leaveRequest);
+          return `<div style="display:flex;align-items:center;gap:10px;min-width:0">
+            ${profileAvatar({name:employee.fullName,src:employee.photoUrl||employee.imageUrl||employee.avatarUrl,cls:'cav',size:30})}
+            <div class="cellsub"><b>${esc(employee.fullName)}</b><small>${esc(employee.department)}</small></div>
+          </div>`;
+        },
+      },
+      {
+        label:s('colLeaveType'),align:'l',
+        render:leaveRequest=>cap(
+          leaveRequest.leaveType||'—',
+          leaveRequest.leaveType==='Medical'?'violet':leaveRequest.leaveType==='Unpaid'?'neutral':'accent',
+        ),
+      },
+      {
+        label:s('colDates'),align:'l',w:'minmax(150px,1.4fr)',
+        render:leaveRequest=>`${esc(dateValue(leaveRequest.startDate))} → ${esc(dateValue(leaveRequest.endDate))}`,
+      },
+      {label:s('colDays'),align:'r',w:'70px',render:leaveRequest=>`<span class="tnum">${leaveRequest.days}</span>`},
+      {
+        label:t('col.status'),align:'l',
+        render:leaveRequest=>cap(leaveStatusLabel(leaveRequest.status),leaveStatusTone[leaveRequest.status]||'neutral'),
+      },
+    ],
+    empty:{
+      icon:'calendar',
+      title:s('noLeaveRequests'),
+      description:s('noLeaveRequestsBody'),
+    },
+    detailPane:{
+      initialSelectedId:()=>isDesktop()
+        ?leaveRequests.find(row=>row.status==='pending')?.id??null
+        :null,
+      selectionOnFilter:rows=>{
+        const skipped=skipSelectionId;
+        skipSelectionId=null;
+        if(!isDesktop()) return null;
+        return (rows.find(row=>String(row.id)!==String(skipped))||rows[0])?.id??null;
+      },
+      empty:`<div class="detail-empty">${ic('calendar')}<div><b>${esc(s('selectLeaveRequest'))}</b><small>${esc(s('selectLeaveRequestBody'))}</small></div></div>`,
+      content:detailContent,
+      afterRender:({detailRoot,row})=>{
+        if(!detailRoot||!row) return;
+        detailRoot.querySelector('[data-leave-action="approve"]')?.addEventListener('click',()=>{
+          decide(row,'approve',{});
+        });
+        detailRoot.querySelector('[data-leave-action="reject"]')?.addEventListener('click',()=>{
+          appModal({
+            icon:'xc',
+            title:s('rejectTitle').replace('{name}',empOf(row).fullName),
+            body:`<div class="fld err"><span>${esc(s('rejectReasonLabel'))} <span class="req">*</span></span><textarea id="lvRejectReason" placeholder="${esc(s('rejectReasonPlaceholder'))}"></textarea><span class="hint bad">${esc(s('rejectReasonRequired'))}</span></div>`,
+            actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('reject'),{icon:'x',cls:'danger-solid',attrs:'data-save="1"'})}`,
+          });
+          $('#modalEl').querySelector('[data-save]').addEventListener('click',()=>{
+            const reason=$('#lvRejectReason').value.trim();
+            if(!requireField(reason,s('rejectReasonRequired'),'#lvRejectReason')) return;
+            closeModal();
+            decide(row,'reject',{rejectionReason:reason});
+          });
+        });
+      },
+    },
+  });
 };
 
 /* ---------------- ADMIN ROLE PERMISSION (matrix) ----------------
