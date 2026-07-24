@@ -49,6 +49,7 @@ function hrCopy(){
       colRun:'Run',colPeriod:'Payroll period',colPayDate:'Pay date',colHeadcount:'Headcount',colStatus:'Status',
       selectPayrollRun:'Select a payroll run',selectPayrollRunBody:'Choose a payroll run from the register to review its details.',
       noPayrollLines:'No payroll lines',noPayrollLinesBody:'This payroll run does not contain any employee payroll lines.',
+      employeePayrollLines:'Employee payroll lines',
       newRunDescription:'Set the payroll period and pay date. Active employees are calculated by the canonical payroll command.',
       createRun:'Create payroll run',creatingRun:'Creating…',
       dateRequired:'Complete every payroll date.',invalidPayrollPeriod:'Period end cannot be earlier than period start.',
@@ -119,6 +120,7 @@ function hrCopy(){
       colRun:'Larian',colPeriod:'Tempoh gaji',colPayDate:'Tarikh bayaran',colHeadcount:'Bilangan pekerja',colStatus:'Status',
       selectPayrollRun:'Pilih larian gaji',selectPayrollRunBody:'Pilih larian daripada daftar untuk menyemak butirannya.',
       noPayrollLines:'Tiada baris gaji',noPayrollLinesBody:'Larian gaji ini tidak mempunyai baris gaji pekerja.',
+      employeePayrollLines:'Baris gaji pekerja',
       newRunDescription:'Tetapkan tempoh gaji dan tarikh bayaran. Pekerja aktif dikira oleh arahan gaji kanonik.',
       createRun:'Cipta larian gaji',creatingRun:'Mencipta…',
       dateRequired:'Lengkapkan semua tarikh gaji.',invalidPayrollPeriod:'Akhir tempoh tidak boleh lebih awal daripada mula tempoh.',
@@ -189,6 +191,7 @@ function hrCopy(){
       colRun:'批次',colPeriod:'薪资周期',colPayDate:'发薪日期',colHeadcount:'员工人数',colStatus:'状态',
       selectPayrollRun:'选择薪资批次',selectPayrollRunBody:'请从批次列表选择一项以查看详情。',
       noPayrollLines:'暂无薪资明细',noPayrollLinesBody:'此薪资批次没有员工薪资明细。',
+      employeePayrollLines:'员工薪资明细',
       newRunDescription:'设置薪资周期和发薪日期；系统将通过正式薪资命令计算所有在职员工。',
       createRun:'创建薪资批次',creatingRun:'创建中…',
       dateRequired:'请填写全部薪资日期。',invalidPayrollPeriod:'周期结束日期不得早于开始日期。',
@@ -259,6 +262,7 @@ function hrCopy(){
       colRun:'バッチ',colPeriod:'給与期間',colPayDate:'支給日',colHeadcount:'在籍人数',colStatus:'ステータス',
       selectPayrollRun:'給与計算バッチを選択',selectPayrollRunBody:'台帳からバッチを選択して詳細を確認してください。',
       noPayrollLines:'給与明細行がありません',noPayrollLinesBody:'この給与計算バッチには従業員の給与明細行がありません。',
+      employeePayrollLines:'従業員給与明細',
       newRunDescription:'給与期間と支給日を設定します。在籍従業員は標準給与コマンドで計算されます。',
       createRun:'給与計算バッチを作成',creatingRun:'作成中…',
       dateRequired:'すべての給与日付を入力してください。',invalidPayrollPeriod:'期間終了日は期間開始日より前にできません。',
@@ -329,6 +333,7 @@ function hrCopy(){
       colRun:'Đợt',colPeriod:'Kỳ lương',colPayDate:'Ngày trả lương',colHeadcount:'Số nhân viên',colStatus:'Trạng thái',
       selectPayrollRun:'Chọn đợt tính lương',selectPayrollRunBody:'Chọn một đợt trong sổ đăng ký để xem chi tiết.',
       noPayrollLines:'Không có dòng lương',noPayrollLinesBody:'Đợt tính lương này không có dòng lương nhân viên.',
+      employeePayrollLines:'Dòng lương nhân viên',
       newRunDescription:'Đặt kỳ lương và ngày trả lương. Nhân viên đang làm việc được tính bởi lệnh tính lương chuẩn.',
       createRun:'Tạo đợt tính lương',creatingRun:'Đang tạo…',
       dateRequired:'Hãy nhập đầy đủ các ngày tính lương.',invalidPayrollPeriod:'Ngày kết thúc kỳ không được trước ngày bắt đầu.',
@@ -695,7 +700,7 @@ SCREENS['payroll-run'] = async function(root){
           <div class="field"><span class="k">${esc(s('colStatus'))}</span><span class="v">${cap(statusLabel(run.status),statusTone(run.status))}</span></div>
         </div>
         <div class="panel payroll-lines-panel">
-          <div class="panel-h"><h3>${esc(t('hr.employees'))}</h3><small>${esc(s('clickForPayslip'))}</small></div>
+          <div class="panel-h"><h3>${esc(s('employeePayrollLines'))}</h3><small>${esc(s('clickForPayslip'))}</small></div>
           ${summary.runLines.length?`<div class="payroll-lines-scroll">
             <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('hr.col.employee'))}</th><th>${esc(s('colGross'))}</th><th>${esc(s('colStatutory'))}</th><th>${esc(s('colTax'))}</th><th>${esc(s('colNet'))}</th></tr></thead>
               <tbody>${employeeRows}</tbody>
