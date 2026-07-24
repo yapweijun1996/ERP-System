@@ -701,13 +701,8 @@ SCREENS['timesheet'] = function(root,params){
   const weekLabel=timesheetWeekLabel(weekStart,weekEnd);
   const routeStillActive=()=>CURRENT_ROUTE==='timesheet'&&root.isConnected;
 
-  root.innerHTML=modulePage({
-    module:'project',route:'timesheet',active:'timesheet',title:s('title'),
-    sub:s('sub').replace('{week}',weekLabel),
-    body:statePanel({icon:'clock',title:s('loading'),body:weekLabel}),
-  });
-
   async function load(){
+    renderList({status:'loading'});
     try{
       const [entries,projects,session]=await Promise.all([
         timesheetList('project/time-entries',{from:weekStart,to:weekEnd,limit:100}),
@@ -715,22 +710,15 @@ SCREENS['timesheet'] = function(root,params){
         window.ErpSystemData.session(),
       ]);
       if(!routeStillActive()) return;
-      render(entries,projects,session||{});
+      renderList({status:'ready',entries,projects,session:session||{}});
     }catch(error){
       if(!routeStillActive()) return;
-      root.innerHTML=modulePage({
-        module:'project',route:'timesheet',active:'timesheet',title:s('title'),
-        sub:s('sub').replace('{week}',weekLabel),
-        body:statePanel({
-          icon:'alert',title:s('loadError'),body:error&&error.message?error.message:s('loadError'),
-          action:btn(s('retry'),{icon:'refresh',cls:'primary',attrs:'data-ts-retry'}),
-        }),
-      });
-      root.querySelector('[data-ts-retry]')?.addEventListener('click',load);
+      renderList({status:'error',error});
     }
   }
 
-  function render(entries,projects,session){
+  function renderList({status,entries=[],projects=[],session={},error=null}){
+    const ready=status==='ready';
     const projectById=new Map(projects.map(project=>[Number(project.id),project]));
     const openProjects=projects.filter(project=>project.status==='open');
     const activeEntries=entries.filter(entry=>entry.status==='active');
@@ -739,59 +727,65 @@ SCREENS['timesheet'] = function(root,params){
     const dayCount=new Set(activeEntries.map(entry=>entry.workDate)).size;
     const ownerName=session.fullName||(session.user&&session.user.name)||(DB.user&&DB.user.name)||s('owner');
     const rows=entries.slice().sort((a,b)=>dateValue(a.workDate).localeCompare(dateValue(b.workDate))||Number(a.id)-Number(b.id));
-    const tableRows=rows.map(entry=>{
-      const project=projectById.get(Number(entry.projectId));
-      const isActive=entry.status==='active';
-      const action=isActive
-        ?btn(s('void'),{icon:'x',cls:'soft',attrs:`data-ts-void="${entry.id}" data-version="${entry.version}"`})
-        :`<span class="muted" title="${esc(entry.voidReason||'')}">—</span>`;
-      return `<tr class="${isActive?'':'muted'}">
-        <td class="l tnum">${esc(timesheetDateLabel(entry.workDate,false))}</td>
-        <td class="l li-name"><b>${esc(project&&project.projectNo||'#'+entry.projectId)}</b><small>${esc(project&&project.name||'')}</small></td>
-        <td class="l">${esc(entry.task)}</td>
-        <td class="tnum"><b>${Number(entry.hours).toFixed(2)}</b></td>
-        <td>${cap(isActive?s('active'):s('voided'),isActive?'ok':'neutral')}</td>
-        <td>${action}</td>
-      </tr>`;
-    }).join('');
-    const empty=statePanel({icon:'clock',title:s('empty'),body:s('emptyBody')});
-    const body=`<div data-canonical-timesheet="true">
-      <div class="toolbar">
-        <button class="viewsel" data-ts-week="${timesheetAddDays(weekStart,-7)}" data-tip="${esc(s('previous'))}">${ic('chevL')}</button>
-        <button class="viewsel" style="font-weight:600" aria-label="${esc(weekLabel)}">${ic('calendar')}${esc(weekLabel)}</button>
-        <button class="viewsel" data-ts-week="${timesheetAddDays(weekStart,7)}" data-tip="${esc(s('next'))}">${ic('chevR')}</button>
-        <button class="viewsel" data-ts-current>${esc(s('current'))}</button>
-        <div class="grow"></div>
-        <span class="muted" style="font-size:12px">${esc(ownerName)}</span>
-      </div>
-      <div class="docpage" style="max-width:none;margin:0;padding:0;border:none;background:transparent">
-        <div class="statgrid c3" style="margin-bottom:14px">
-          <div class="stat accentval"><small>${esc(s('total'))}</small><b class="tnum">${totalHours.toFixed(2)} h</b></div>
-          <div class="stat"><small>${esc(s('projects'))}</small><b class="tnum">${projectCount}</b></div>
-          <div class="stat"><small>${esc(s('days'))}</small><b class="tnum">${dayCount}</b></div>
-        </div>
-        ${rows.length?`<div class="panel"><div class="panel-h"><h3>${esc(ownerName)} · ${esc(weekLabel)}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${rows.length} ${esc(s('entries'))}</span></div>
-          <div style="overflow-x:auto"><table class="lines"><thead><tr>
-            <th class="l">${esc(s('date'))}</th><th class="l">${esc(s('project'))}</th><th class="l">${esc(s('task'))}</th>
-            <th>${esc(s('hours'))}</th><th>${esc(s('status'))}</th><th>${esc(s('action'))}</th>
-          </tr></thead><tbody>${tableRows}</tbody></table></div></div>`:empty}
-        <p class="muted" style="font-size:12px;margin:12px 2px 30px">${esc(s('bounded'))}</p>
-      </div>
+    const empty=status==='loading'
+      ?{icon:'clock',title:s('loading'),description:weekLabel}
+      :status==='error'
+        ?{icon:'alert',title:s('loadError'),description:error&&error.message?error.message:s('loadError')}
+        :{icon:'clock',title:s('empty'),description:s('emptyBody')};
+    const toolbarContent=`<div class="filterchips" data-ts-week-controls>
+      <button class="viewsel" data-ts-week="${timesheetAddDays(weekStart,-7)}"
+        data-tip="${esc(s('previous'))}" aria-label="${esc(s('previous'))}">${ic('chevL')}</button>
+      <span class="viewsel" data-ts-week-label>${ic('calendar')}${esc(weekLabel)}</span>
+      <button class="viewsel" data-ts-week="${timesheetAddDays(weekStart,7)}"
+        data-tip="${esc(s('next'))}" aria-label="${esc(s('next'))}">${ic('chevR')}</button>
+      <button class="viewsel" data-ts-current>${esc(s('current'))}</button>
     </div>`;
-    root.innerHTML=modulePage({
-      module:'project',route:'timesheet',active:'timesheet',title:s('title'),count:activeEntries.length,
-      sub:s('sub').replace('{week}',weekLabel),
-      action:btn(s('add'),{icon:'plus',cls:'primary',attrs:`data-ts-add ${openProjects.length?'':'disabled'}`}),
-      body,
+
+    transactionListPage(root,{
+      module:'project',route:'timesheet',active:'timesheet',title:s('title'),
+      description:s('sub').replace('{week}',weekLabel),
+      rows,rowId:entry=>entry.id,count:ready?activeEntries.length:0,
+      kpis:ready?[
+        {label:s('total'),value:`${totalHours.toFixed(2)} h`},
+        {label:s('projects'),value:projectCount},
+        {label:s('days'),value:dayCount},
+      ]:[],
+      note:`${ownerName} · ${s('bounded')}`,
+      toolbarContent,
+      toolbarActions:status==='error'
+        ?[{label:s('retry'),icon:'refresh',onClick:load}]
+        :[],
+      primaryAction:{
+        label:s('add'),icon:'plus',
+        disabled:!ready||!openProjects.length,
+        onClick:()=>openCreate(openProjects),
+      },
+      columns:[
+        {label:s('date'),align:'l',render:entry=>`<span class="tnum">${esc(timesheetDateLabel(entry.workDate,false))}</span>`},
+        {label:s('project'),align:'l',render:entry=>{
+          const project=projectById.get(Number(entry.projectId));
+          return `<div class="cellsub"><b class="docnum">${esc(project&&project.projectNo||'#'+entry.projectId)}</b><small>${esc(project&&project.name||'')}</small></div>`;
+        }},
+        {label:s('task'),align:'l',render:entry=>esc(entry.task)},
+        {label:s('hours'),align:'r',render:entry=>`<b class="tnum">${Number(entry.hours).toFixed(2)}</b>`},
+        {label:s('status'),align:'l',render:entry=>cap(entry.status==='active'?s('active'):s('voided'),entry.status==='active'?'ok':'neutral')},
+        {label:s('action'),align:'c',render:entry=>entry.status==='active'
+          ?transactionRowMenuButton(s('action'))
+          :`<span class="muted" title="${esc(entry.voidReason||'')}">—</span>`},
+      ],
+      rowMenu:entry=>entry.status==='active'?[
+        {id:'void',label:s('void'),icon:'x',danger:true,run:()=>openVoid(Number(entry.id),Number(entry.version))},
+      ]:[],
+      empty,
+      afterRender:()=>{
+        const listRoot=root.querySelector('[data-list-route="timesheet"]');
+        if(ready) listRoot?.setAttribute('data-canonical-timesheet','true');
+        root.querySelectorAll('[data-ts-week]').forEach(button=>button.addEventListener('click',()=>{
+          navigate('timesheet',{weekStart:button.dataset.tsWeek});
+        }));
+        root.querySelector('[data-ts-current]')?.addEventListener('click',()=>navigate('timesheet'));
+      },
     });
-    root.querySelectorAll('[data-ts-week]').forEach(button=>button.addEventListener('click',()=>{
-      navigate('timesheet',{weekStart:button.dataset.tsWeek});
-    }));
-    root.querySelector('[data-ts-current]')?.addEventListener('click',()=>navigate('timesheet'));
-    root.querySelector('[data-ts-add]')?.addEventListener('click',()=>openCreate(openProjects));
-    root.querySelectorAll('[data-ts-void]').forEach(button=>button.addEventListener('click',()=>openVoid(
-      Number(button.dataset.tsVoid),Number(button.dataset.version),
-    )));
   }
 
   function openCreate(openProjects){

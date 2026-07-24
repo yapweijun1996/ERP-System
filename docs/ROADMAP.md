@@ -679,3 +679,19 @@ audit proof, Demo/API state persistence, desktop/375px and all 114 routes pass.
 Exit criteria: **114/114 Canonical, Preview=0**, 379 tests plus one expected skip,
 desktop/375px route audit and in-app browser proof pass. TASK-017 physical iPhone and
 Android verification remains the only human-only release check.
+
+## Phase 33 — Page-level UI SSOT Convergence ✅
+
+1. **Shared list and workspace contracts** (EPIC-051, TASK-087–096, completed
+   2026-07-24) separate data maturity from visual-layout compliance. The approved
+   transaction-list renderer owns KPI, toolbar, table/empty and pagination regions;
+   master-detail registers, tabular reports and operational workspaces extend that
+   contract only where their interaction model requires it.
+2. **Project Timesheet correction** (TASK-096) moves the last list-shaped generic
+   workspace onto `transaction-list-v1`. Weekly navigation, active-only KPIs,
+   responsive rows and audited void history now use the same page structure as the
+   other registers without changing the canonical time-entry domain or API.
+
+Exit criteria: 42 shared list-layout routes and all 114 routes pass desktop/375px
+structural audits; Timesheet passes five-language loading/error/empty/populated state
+proof, create/void smoke and live browser verification with service-worker v94.

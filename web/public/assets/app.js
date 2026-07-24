@@ -577,7 +577,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'supplier-quotations','purchase-orders','goods-receipts','supplier-invoices',
     'purchase-returns','supplier-credit-notes','supplier-debit-notes','po-approvals',
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
-    'qc-inspection','gl','hr-directory','project-pl','service-ticket',
+    'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
     'service-contracts','asset-register','user-mgmt',
   ],
   'master-detail-register-v1':[
@@ -632,7 +632,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   workspace:[
     'bank-rec','data-import','depreciation','integration','master-control',
     'module-activation-control','mrp',
-    'sales-commission','settings','sys-settings','timesheet',
+    'sales-commission','settings','sys-settings',
   ],
   board:['crm-pipeline'],
   'activity-feed':['integration-logs','my-activity','notifications'],

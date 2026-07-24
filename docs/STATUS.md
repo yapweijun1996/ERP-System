@@ -606,14 +606,30 @@ DOM order, one module header, mobile stacking, action overflow and en/ms/zh/ja/v
 screen copy at desktop and 375px. The full 114-route audit enforces the same contract;
 service-worker v80 delivers the shared renderer and styles.
 
+## Project Timesheet transaction-list SSOT (TASK-096, 2026-07-24)
+
+Timesheet no longer relies on the generic `workspace` exemption or reconstructs its
+own toolbar, full-width KPI strip, document surface and semantic line table. All four
+weekly states render through `transactionListPage()` under
+`data-layout="transaction-list-v1"` with standard KPI, toolbar, table/empty and
+pagination regions. Week navigation is real, the date range is non-interactive text,
+the 100-entry boundary lives in the toolbar note and only active rows expose the
+audited Void action.
+
+The migration changes no schema, API, permission or Decimal behavior. Static guards
+reject the old Timesheet chrome; desktop/375px runtime checks cover five languages,
+loading/error/empty/populated states, active-only totals, one active row action and
+the absence of Capacity, Copy, Approval, Payroll or Export actions. Service-worker
+v94 delivers the corrected page, and the shared list-layout audit now covers 42 routes.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 94 tasks, including TASK-095
+- Done: 95 tasks, including TASK-096
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
-  complete at 114 Canonical / 0 Preview, 35/35 transaction registers, 2/2 Inventory
-  master-detail registers, Inventory Valuation and Warehouse Picking on their shared
-  SSOT contracts.
+  complete at 114 Canonical / 0 Preview and 42 audited list-layout routes, including
+  36 transaction lists, 4 master-detail registers and 2 report lists; Warehouse
+  Picking remains on its dedicated operational-workspace SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

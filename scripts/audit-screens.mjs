@@ -92,6 +92,14 @@ if (legacyListFactoryHits.length) {
   throw new Error(`Obsolete page-level list factories remain: ${legacyListFactoryHits.join(', ')}`);
 }
 
+const projectScreenSource = readFileSync(path.join(assetDir, 'screens-project.js'), 'utf8');
+const timesheetScreenSource = projectScreenSource.split("SCREENS['timesheet'] =")[1] || '';
+const obsoleteTimesheetChrome = ['<div class="toolbar">','docpage','statgrid','<table class="lines"']
+  .filter((token) => timesheetScreenSource.includes(token));
+if (obsoleteTimesheetChrome.length) {
+  throw new Error(`Timesheet still rebuilds page-level list chrome: ${obsoleteTimesheetChrome.join(', ')}`);
+}
+
 const warehouseScreenSource = readFileSync(path.join(assetDir, 'screens-warehouse.js'), 'utf8');
 const obsoleteWorkspaceChrome = ['pick-layout','pick-main','pick-side','pick-tools','progressbig']
   .filter((token) => warehouseScreenSource.includes(token));
@@ -396,6 +404,7 @@ async function auditRoutes(browser, viewport) {
         '[data-layout="report-list-v1"]',
       ].join(','));
       const actualListLayout = listRoot?.getAttribute('data-layout') || null;
+      const timesheetRoot = el.querySelector('[data-layout="transaction-list-v1"][data-list-route="timesheet"]');
       const listRegions = listRoot ? [
         listRoot.querySelector('[data-list-kpis]'),
         listRoot.querySelector('[data-list-toolbar]'),
@@ -625,8 +634,21 @@ async function auditRoutes(browser, viewport) {
             : [],
           ordered: listRegionOrder,
           missingMasterDetailRegions: actualListLayout === 'master-detail-register-v1'
-            ? ['workspace','detail-panel'].filter((_,index)=>!masterDetailRegions[index])
-            : [],
+              ? ['workspace','detail-panel'].filter((_,index)=>!masterDetailRegions[index])
+              : [],
+        },
+        timesheetLayout: {
+          pageheads: el.querySelectorAll('.pagehead').length,
+          canonicalMarker: timesheetRoot?.getAttribute('data-canonical-timesheet') === 'true',
+          kpis: timesheetRoot?.querySelectorAll('[data-list-kpis] .so-kpi').length || 0,
+          weekButtons: timesheetRoot?.querySelectorAll('[data-ts-week-controls] button').length || 0,
+          weekLabels: timesheetRoot?.querySelectorAll('[data-ts-week-label]').length || 0,
+          primaryActions: el.querySelectorAll('[data-list-primary-action]').length,
+          semanticTables: el.querySelectorAll('table.lines').length,
+          legacyChrome: Boolean(el.querySelector('.docpage,.statgrid')),
+          unsupportedActions: [...el.querySelectorAll('button')]
+            .map((button) => (button.textContent || '').replace(/\s+/g,' ').trim())
+            .filter((label) => /\b(capacity|copy last week|submit for approval|payroll|export)\b/i.test(label)),
         },
         arAgingLayout: {
           pageheads: el.querySelectorAll('.pagehead').length,
@@ -777,6 +799,10 @@ async function auditRoutes(browser, viewport) {
       text: '', previewBanner: false, enabledPreviewWrites: [],
       layoutIssues: ['render inspection failed'],
       listLayout: { present: false, actualLayout: null, missingRegions: [], ordered: false, missingMasterDetailRegions: [] },
+      timesheetLayout: {
+        pageheads: 0, canonicalMarker: false, kpis: 0, weekButtons: 0, weekLabels: 0,
+        primaryActions: 0, semanticTables: 0, legacyChrome: false, unsupportedActions: [],
+      },
       workspaceLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         progress: null, pageheads: 0, errorRegion: false, incompleteCompletionEnabled: false,
@@ -841,6 +867,31 @@ async function auditRoutes(browser, viewport) {
     }
     if (rendered.listLayout.present && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`rendered ${rendered.listLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
+    if (route === 'timesheet') {
+      if (rendered.timesheetLayout.pageheads !== 1) {
+        rendered.layoutIssues.push(`Timesheet rendered ${rendered.timesheetLayout.pageheads} module page headers`);
+      }
+      if (!rendered.timesheetLayout.canonicalMarker) {
+        rendered.layoutIssues.push('Timesheet canonical compatibility marker missing');
+      }
+      if (rendered.timesheetLayout.kpis !== 3) {
+        rendered.layoutIssues.push(`Timesheet expected 3 KPI cards, found ${rendered.timesheetLayout.kpis}`);
+      }
+      if (rendered.timesheetLayout.weekButtons !== 3 || rendered.timesheetLayout.weekLabels !== 1) {
+        rendered.layoutIssues.push(
+          `Timesheet week navigation expected 3 buttons and 1 label, found ${rendered.timesheetLayout.weekButtons} and ${rendered.timesheetLayout.weekLabels}`,
+        );
+      }
+      if (rendered.timesheetLayout.primaryActions !== 1) {
+        rendered.layoutIssues.push(`Timesheet expected 1 primary action, found ${rendered.timesheetLayout.primaryActions}`);
+      }
+      if (rendered.timesheetLayout.semanticTables || rendered.timesheetLayout.legacyChrome) {
+        rendered.layoutIssues.push('Timesheet contains legacy document/list chrome');
+      }
+      if (rendered.timesheetLayout.unsupportedActions.length) {
+        rendered.layoutIssues.push(`Timesheet exposes unsupported actions: ${rendered.timesheetLayout.unsupportedActions.join(', ')}`);
+      }
     }
     if (route === 'ar-aging') {
       if (rendered.arAgingLayout.pageheads !== 1) {
@@ -1147,6 +1198,136 @@ async function auditRoutes(browser, viewport) {
     });
 
     events.length = 0; // fully consumed this route's window; reset for the next
+  }
+
+  if (routes.includes('timesheet')) {
+    const timesheetIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const originalSession = adapter.session;
+      const expectedTitles = {
+        en:'Timesheet',
+        ms:'Lembaran masa',
+        zh:'工时表',
+        ja:'タイムシート',
+        vi:'Bảng chấm công',
+      };
+      const projects = [{
+        id:901,projectNo:'PRJ-TS-901',name:'Timesheet SSOT Proof',status:'open',
+      }];
+      const activeEntry = {
+        id:9101,projectId:901,workDate:'2026-07-23',task:'SSOT active proof',
+        hours:'2.50',status:'active',version:1,voidReason:null,
+      };
+      const voidedEntry = {
+        id:9102,projectId:901,workDate:'2026-07-24',task:'SSOT void proof',
+        hours:'1.25',status:'voided',version:2,voidReason:'Audit correction',
+      };
+      const issues = [];
+      const root = () => document.querySelector(
+        '#viewRoot [data-layout="transaction-list-v1"][data-list-route="timesheet"]',
+      );
+      const waitFor = async (predicate) => {
+        for (let attempt = 0; attempt < 50; attempt += 1) {
+          if (predicate()) return true;
+          await new Promise((resolve) => setTimeout(resolve,20));
+        }
+        return false;
+      };
+      const stub = ({entries=[],projectRows=projects,error=null}) => {
+        adapter.list = async (resource,query) => {
+          if (resource === 'project/time-entries') {
+            if (error) throw error;
+            return entries;
+          }
+          if (resource === 'project/projects') return projectRows;
+          return originalList.call(adapter,resource,query);
+        };
+        adapter.session = async () => ({fullName:'Timesheet Auditor'});
+      };
+
+      try {
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          window.getLang = () => locale;
+          stub({entries:[]});
+          await navigate('timesheet',{weekStart:'2026-07-20'});
+          await waitFor(() => root()?.querySelectorAll('[data-list-kpis] .so-kpi').length === 3);
+          if (!root()) issues.push(`${locale} transaction-list root missing`);
+          if (document.querySelector('#viewRoot h1')?.textContent?.trim() !== title) {
+            issues.push(`${locale} title did not translate`);
+          }
+          if (!root()?.querySelector('[data-list-empty]')) {
+            issues.push(`${locale} empty state missing`);
+          }
+          if (root()?.querySelectorAll('[data-ts-week-controls] button').length !== 3) {
+            issues.push(`${locale} week controls missing`);
+          }
+        }
+
+        window.getLang = () => 'en';
+        let releaseLoading;
+        const loadingGate = new Promise((resolve) => { releaseLoading=resolve; });
+        adapter.list = async (resource,query) => {
+          if (resource === 'project/time-entries' || resource === 'project/projects') {
+            await loadingGate;
+            return resource === 'project/projects' ? projects : [];
+          }
+          return originalList.call(adapter,resource,query);
+        };
+        adapter.session = async () => ({fullName:'Timesheet Auditor'});
+        await navigate('timesheet',{weekStart:'2026-07-20'});
+        if (!root()?.querySelector('[data-list-empty]')) {
+          issues.push('loading state is outside the transaction-list contract');
+        }
+        if (root()?.getAttribute('data-canonical-timesheet') === 'true') {
+          issues.push('loading state exposed the ready-only canonical compatibility marker');
+        }
+        releaseLoading();
+        await waitFor(() => root()?.querySelectorAll('[data-list-kpis] .so-kpi').length === 3);
+
+        stub({error:new Error('Timesheet audit load failure')});
+        await navigate('timesheet',{weekStart:'2026-07-20'});
+        await waitFor(() => root()?.querySelector('[data-list-empty] h3')?.textContent?.includes('could not be loaded'));
+        if (!root()?.querySelector('[data-list-toolbar-action]')) {
+          issues.push('error state retry action missing');
+        }
+        if (!document.querySelector('#viewRoot [data-list-primary-action][disabled]')) {
+          issues.push('error state left Log time enabled');
+        }
+
+        stub({entries:[activeEntry,voidedEntry]});
+        await navigate('timesheet',{weekStart:'2026-07-20'});
+        await waitFor(() => root()?.querySelectorAll('[data-list-table] .dt-r[data-row]').length === 2);
+        const kpiText = root()?.querySelector('[data-list-kpis]')?.textContent || '';
+        if (!kpiText.includes('2.50 h')) issues.push('active hours KPI is not active-only');
+        if (document.querySelector('#viewRoot .countchip')?.textContent?.trim() !== '1') {
+          issues.push('header count is not active-only');
+        }
+        if (root()?.querySelectorAll('.transaction-row-menu').length !== 1) {
+          issues.push('active/voided row action boundary is incorrect');
+        }
+        if (root()?.querySelector('table.lines,.docpage,.statgrid')) {
+          issues.push('populated state contains legacy Timesheet chrome');
+        }
+        const unsupported = [...(root()?.querySelectorAll('button') || [])]
+          .map((button) => (button.textContent || '').replace(/\s+/g,' ').trim())
+          .filter((label) => /\b(capacity|copy last week|submit for approval|payroll|export)\b/i.test(label));
+        if (unsupported.length) issues.push(`unsupported actions remain: ${unsupported.join(', ')}`);
+      } finally {
+        window.getLang = originalGetLang;
+        adapter.list = originalList;
+        adapter.session = originalSession;
+        closeModal();
+        closeAllPops();
+        await navigate('dashboard');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'timesheet');
+    if (result && timesheetIssues.length) {
+      result.layoutIssues.push(...timesheetIssues.map((issue) => `Timesheet smoke: ${issue}`));
+    }
   }
 
   if (routes.includes('leave-approval')) {

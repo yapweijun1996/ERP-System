@@ -1764,3 +1764,9 @@ Delivery slices:
       `operational-workspace-v1` for one active execution task, then migrate Picking
       onto its shared progress, work area, context rail, responsive actions and
       retryable error regions without changing canonical warehouse commands.
+- [x] **TASK-096 — Project Timesheet transaction-list SSOT.** Correct the
+      data-canonical Timesheet route that remained under the unstructured `workspace`
+      exemption. Render loading, error, empty and populated weekly states through
+      `transactionListPage()`, preserve actor-owned create/void behavior, replace its
+      hand-built KPI/toolbar/document-table chrome with the standard list regions and
+      add five-language/state audit coverage. Service worker v94 delivers the change.
