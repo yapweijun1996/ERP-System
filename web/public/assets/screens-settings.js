@@ -31,8 +31,7 @@ SCREENS['settings'] = async function(root, params){
   const userName=sessionUser.fullName||sessionUser.name||DB.user.name||sessionUser.email;
   const userEmail=sessionUser.email||DB.user.email||'';
   const userRole=DB.user.role||'Signed in';
-  const userInitials=String(userName||'U').replace(/[^A-Za-z ]/g,'').split(' ')
-    .filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'U';
+  const userAvatarSrc=sessionUser.avatarUrl||sessionUser.imageUrl||sessionUser.photoUrl||'';
   const companyName=(currentCompany&&currentCompany.name)||DB.company.name;
   const companyCurrency=(currentCompany&&currentCompany.currency)||DB.company.currency||'—';
   const lang=typeof getLang==='function'?getLang():'en';
@@ -184,7 +183,7 @@ SCREENS['settings'] = async function(root, params){
   const profile=panel('set-profile','user',s('profile'),`
     <div class="set-row top">
       <div class="set-row-t" style="display:flex;gap:16px;align-items:center">
-        <span class="set-avatar">${esc(userInitials)}</span>
+        ${profileAvatar({name:userName,src:userAvatarSrc,cls:'set-avatar',size:62})}
         <div><b style="font-size:15px">${esc(userName)}</b>
           <small style="margin-top:3px">${esc(userRole)} · ${esc(companyName)}</small></div>
       </div>

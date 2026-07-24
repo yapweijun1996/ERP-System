@@ -25,7 +25,7 @@ SCREENS['leave-approval'] = async function(root){
     const sel=list.find(l=>l.id===selected)||list[0]||leaveRequests[0];
     selected=sel&&sel.id;
     const listCols=[
-      {label:t('hr.col.employee'),align:'l',w:'minmax(190px,2fr)',render:l=>{ const e=empOf(l); return `<div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="cav" style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;background:${hrAvatarColor(e.fullName)};flex:none">${esc(hrInitials(e.fullName))}</span><div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.department)}</small></div></div>`; }},
+      {label:t('hr.col.employee'),align:'l',w:'minmax(190px,2fr)',render:l=>{ const e=empOf(l); return `<div style="display:flex;align-items:center;gap:10px;min-width:0">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,cls:'cav',size:30})}<div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.department)}</small></div></div>`; }},
       {label:'Type',align:'l',render:l=>cap(l.leaveType,l.leaveType==='Medical'?'violet':l.leaveType==='Unpaid'?'neutral':'accent')},
       {label:s('colDates'),align:'l',w:'minmax(150px,1.4fr)',render:l=>`${esc(dateValue(l.startDate))} → ${esc(dateValue(l.endDate))}`},
       {label:'Days',align:'r',w:'70px',render:l=>l.days},
@@ -40,7 +40,7 @@ SCREENS['leave-approval'] = async function(root){
       <div class="detail-head">
         <span class="grabber"></span>
         <button class="close" onclick="document.getElementById('lvContent').classList.add('detail-collapsed');document.getElementById('lvDetail').classList.remove('open')">${ic('chevL')}Close</button>
-        <div class="dh-top"><span class="cav" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:600;background:${hrAvatarColor(e.fullName)};flex:none">${esc(hrInitials(e.fullName))}</span>
+        <div class="dh-top">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,cls:'cav',size:42})}
           <div><h2>${esc(e.fullName)}</h2><span class="sub">${esc(e.department)} · ${esc(e.jobTitle||'')}</span></div>
           <div style="margin-left:auto">${cap(leaveStatusLabel(sel.status),leaveStatusTone[sel.status]||'neutral')}</div></div>
       </div>

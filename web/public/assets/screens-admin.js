@@ -170,10 +170,6 @@ SCREENS['user-mgmt'] = async function(root){
   const rows=[...usersPage.users, ...usersPage.invitations];
   const roleNames=[...new Set(usersPage.users.map(u=>u.roleName))];
   const chips=[['all',t('common.all')]].concat(roleNames.map(r=>[r,r]));
-  function initialsOf(text){
-    return (text||'?').replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean).slice(0,2)
-      .map(w=>w[0]).join('').toUpperCase()||'?';
-  }
   async function render(){
     const active=usersPage.users.filter(u=>u.status==='Active').length;
     const invited=usersPage.invitations.length;
@@ -192,7 +188,7 @@ SCREENS['user-mgmt'] = async function(root){
         {label:t('usr.audit'),icon:'history',onClick:()=>navigate('audit-log')},
       ],
       columns:[
-        {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:#0a84ff;width:30px;height:30px;font-size:11px">${esc(initialsOf(u.fullName||u.email))}</span><div class="cellsub"><b>${esc(u.fullName||u.email)}</b><small>${esc(u.email)}</small></div></div>`},
+        {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px">${profileAvatar({name:u.fullName||u.email,src:u.avatarUrl||u.imageUrl||u.photoUrl,size:30})}<div class="cellsub"><b>${esc(u.fullName||u.email)}</b><small>${esc(u.email)}</small></div></div>`},
         {label:t('hr.col.role'),align:'l',render:u=>esc(u.roleName)},
         {label:t('usr.col.lastactive'),align:'l',render:u=>u.lastActiveAt?esc(dateTimeValue(u.lastActiveAt)):'—'},
         {label:t('col.status'),align:'l',render:u=>cap(ts(u.status),userStatusTone(u.status))},

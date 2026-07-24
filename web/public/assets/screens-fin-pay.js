@@ -93,7 +93,6 @@ SCREENS['new-payment-voucher'] = async function(root){
     const rows=S.invoices.filter(i=>i.sel).map((inv,idx)=>`<tr><td class="lineno">${idx+1}</td>
       <td class="l li-name"><b>${esc(inv.no)}</b></td>
       <td class="tnum"><b>${money(inv.amount)}</b></td></tr>`).join('');
-    const initials=(s.name.match(/\b\w/g)||['—']).slice(0,2).join('').toUpperCase();
     return `<div class="doclayout"><div class="docmain">
       <div class="panel">
         <div class="panel-h">${ic('bank')}<h3>Payment details</h3></div>
@@ -111,7 +110,7 @@ SCREENS['new-payment-voucher'] = async function(root){
     </div>
     <aside class="summary">
       <div class="docmeta" style="margin:0 0 14px;grid-template-columns:1fr">
-        <div class="dm"><small>Pay to</small><div class="partner"><span class="pav">${esc(initials)}</span><b>${esc(s.name)}</b></div></div>
+        <div class="dm"><small>Pay to</small><div class="partner">${profileAvatar({name:s.name,src:s.imageUrl||s.photoUrl||s.avatarUrl,cls:'pav',size:26})}<b>${esc(s.name)}</b></div></div>
       </div>
       ${summaryCard()}
       <div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Posting</div>

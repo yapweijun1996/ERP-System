@@ -161,9 +161,8 @@ SCREENS['new-purchase-order'] = async function(root, params){
       <td class="l li-name"><b>${esc(l.name)}</b><small>${esc(l.sku)}</small></td>
       <td class="tnum">${num(l.qty)} ${esc(l.uom)}</td><td class="tnum">${money(l.price)}</td>
       <td class="tnum"><b>${money(l.qty*l.price)}</b></td></tr>`).join('');
-    const initials=s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     return `<div class="docmeta" style="margin-bottom:16px">
-      <div class="dm"><small>Supplier</small><div class="partner"><span class="pav">${esc(initials)}</span><b>${esc(s.name)}</b></div></div>
+      <div class="dm"><small>Supplier</small><div class="partner">${profileAvatar({name:s.name,src:s.imageUrl||s.photoUrl||s.avatarUrl,cls:'pav',size:26})}<b>${esc(s.name)}</b></div></div>
         <div class="dm"><small>Order date</small><b>${esc(S.orderDate)}</b></div>
         <div class="dm"><small>Currency</small><b>${esc(DB.company.currency)}</b></div>
         <div class="dm"><small>PO number</small><b>${esc(poDocNo)}</b></div>

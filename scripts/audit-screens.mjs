@@ -369,6 +369,21 @@ async function auditRoutes(browser, viewport) {
           layoutIssues.push(`${bar.className} overflow ${bar.scrollWidth}>${bar.clientWidth}`);
         }
       });
+      const avatarNodes = [
+        ...document.querySelectorAll('#avatarBtn,.acct-head .av'),
+        ...el.querySelectorAll('.kc-av,.pav,.pmini,.cav,.set-avatar'),
+      ];
+      avatarNodes.forEach((avatar) => {
+        const media=avatar.querySelector('img,svg');
+        if (!media) {
+          const value=(avatar.textContent||'').trim().slice(0,24);
+          layoutIssues.push(`profile avatar is missing image/SVG fallback${value?`: ${value}`:''}`);
+        }
+        const image=avatar.querySelector('img');
+        if (image && !avatar.querySelector('svg.profile-avatar-fallback')) {
+          layoutIssues.push('profile image is missing its SVG error fallback');
+        }
+      });
       const listRoot = el.querySelector([
         '[data-layout="transaction-list-v1"]',
         '[data-layout="master-detail-register-v1"]',

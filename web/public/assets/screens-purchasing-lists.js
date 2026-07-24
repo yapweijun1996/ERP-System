@@ -84,7 +84,7 @@ function buildPurTxn(kind, r){
   }
   return C;
 }
-function suppCellInline(name){ return `<div class="partner"><span class="pav">${esc((String(name).trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')).toUpperCase())}</span><b>${esc(name)}</b></div>`; }
+function suppCellInline(name){ return `<div class="partner">${profileAvatar({name,cls:'pav',size:26})}<b>${esc(name)}</b></div>`; }
 
 SCREENS['pur-txn-view'] = function(root){
   if(!PUR_TXN_OPEN){ navigate('purchasing-home'); return; }

@@ -9,7 +9,6 @@ SCREENS['sales-orders'] = async function(root){
 
   const isOpen = s => s.status!=='Closed' && s.status!=='Cancelled';
   const daysTo = d => Math.round((new Date(d)-new Date(NOW))/86400000);
-  function initials(name){ const p=name.trim().split(/\s+/); return (((p[0]||'')[0]||'')+((p[1]||'')[0]||'')).toUpperCase(); }
   function payTone(p){ return {Paid:'ok',Partial:'info',Overdue:'danger',Unpaid:'neutral','—':'neutral'}[p]||'neutral'; }
 
   /* derived fulfilment status from done / items */
@@ -67,7 +66,7 @@ SCREENS['sales-orders'] = async function(root){
   }
   const columns=[
     {label:t('so.col.no'),sticky:true,w:'minmax(140px,1.4fr)',render:s=>`<div class="cellsub"><b class="docnum">${esc(s.no)}</b><small><span class="posttag ${s.posted?'posted':''}">${esc(s.posted?t('so.post.posted'):t('so.post.unposted'))}</span></small></div>`},
-    {label:t('so.col.customer'),align:'l',sortable:true,w:'minmax(140px,1.6fr)',render:s=>`<div class="partnercell"><span class="pmini">${esc(initials(s.cust))}</span><span class="cellsub"><b>${esc(s.cust)}</b><small>${esc(s.custCode)}</small></span></div>`},
+    {label:t('so.col.customer'),align:'l',sortable:true,w:'minmax(140px,1.6fr)',render:s=>`<div class="partnercell">${profileAvatar({name:s.cust,cls:'pmini',size:26})}<span class="cellsub"><b>${esc(s.cust)}</b><small>${esc(s.custCode)}</small></span></div>`},
     {label:t('so.col.date'),align:'l',sortable:true,w:'minmax(92px,0.9fr)',render:s=>`<span class="muted-date">${esc(s.date)}</span>`},
     {label:t('so.col.deliver'),align:'l',w:'minmax(100px,1fr)',render:dueCell},
     {label:t('col.owner'),align:'l',w:'minmax(84px,0.9fr)',render:s=>esc(s.owner)},
@@ -185,7 +184,7 @@ SCREENS['sales-order'] = async function(root, params){
       </div>
       ${stepperHtml}
       <div class="docmeta">
-        <div class="dm"><small>${esc(t('common.customer'))}</small><div class="partner"><span class="pav">MR</span><b>${esc(c.name)}</b></div></div>
+        <div class="dm"><small>${esc(t('common.customer'))}</small><div class="partner">${profileAvatar({name:c.name,cls:'pav',size:26})}<b>${esc(c.name)}</b></div></div>
         <div class="dm"><small>${esc(t('so.col.date'))}</small><b>${esc(d.date)}</b></div>
         <div class="dm"><small>${esc(t('so.col.deliver'))}</small><b>${esc(d.deliver)}</b></div>
         <div class="dm"><small>${esc(t('common.warehouse'))}</small><b>${esc(d.warehouse)}</b></div>

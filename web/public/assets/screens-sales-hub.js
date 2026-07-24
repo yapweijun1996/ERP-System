@@ -63,8 +63,7 @@ function salesPage(o){
 
 /* ---- shared cells ---- */
 function custCell(name, code){
-  const p=String(name).trim().split(/\s+/); const ini=(((p[0]||'')[0]||'')+((p[1]||'')[0]||'')).toUpperCase();
-  return `<div class="partnercell"><span class="pmini">${esc(ini)}</span><span class="cellsub"><b>${esc(name)}</b><small>${esc(code||'')}</small></span></div>`;
+  return `<div class="partnercell">${profileAvatar({name,cls:'pmini',size:26})}<span class="cellsub"><b>${esc(name)}</b><small>${esc(code||'')}</small></span></div>`;
 }
 function docNoCell(no, sub){ return `<div class="cellsub"><b class="docnum linknum">${esc(no)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div>`; }
 

@@ -4,15 +4,6 @@
    EPIC-020 for the deliberate scope boundary (no payroll schema).
    ============================================================ */
 
-const HR_AVATAR_COLORS=['#0a84ff','#1f9d57','#FF9500','#ff375f','#bf5af2','#0B6E7C','#9A6712','#3457D5'];
-function hrInitials(name){
-  const parts=(name||'').trim().split(/\s+/);
-  return ((parts[0]||'')[0]||'')+((parts[1]||'')[0]||'');
-}
-function hrAvatarColor(name){
-  const n=name||'x'; let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0;
-  return HR_AVATAR_COLORS[h%HR_AVATAR_COLORS.length];
-}
 function hrCopy(){
   const lang=typeof getLang==='function'?getLang():'en';
   const packs={
@@ -333,7 +324,7 @@ SCREENS['hr-directory'] = async function(root){
     primaryAction:{label:t('hr.add'),icon:'plus',onClick:()=>navigate('new-employee')},
     toolbarActions:[{label:t('hr.leave'),icon:'calendar',onClick:()=>navigate('leave-approval')}],
     columns:[
-      {label:t('hr.col.employee'),render:e=>`<div style="display:flex;align-items:center;gap:11px"><span class="kc-av" style="background:${hrAvatarColor(e.fullName)};width:30px;height:30px;font-size:11px">${esc(hrInitials(e.fullName))}</span><div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.employeeNo)}</small></div></div>`},
+      {label:t('hr.col.employee'),render:e=>`<div style="display:flex;align-items:center;gap:11px">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,size:30})}<div class="cellsub"><b>${esc(e.fullName)}</b><small>${esc(e.employeeNo)}</small></div></div>`},
       {label:t('hr.col.dept'),align:'l',render:e=>esc(e.department)},
       {label:t('hr.col.role'),align:'l',render:e=>esc(e.jobTitle)},
       {label:t('qc.col.type'),align:'l',render:e=>e.employmentType==='Contract'?cap(t('hr.emp.contract'),'violet'):cap(hrEmploymentTypeLabel(s,e.employmentType),'neutral')},
@@ -368,7 +359,7 @@ SCREENS['employee'] = async function(root, params){
     ${crumbs([DB.company.name,t('nav.hr'),{label:t('hr.crumb'),route:'hr-directory'},{cur:e.employeeNo}])}
     <div class="dochead">
       <div class="dh-row1">
-        <div style="display:flex;gap:14px;align-items:center"><span class="kc-av" style="background:${hrAvatarColor(e.fullName)};width:48px;height:48px;font-size:17px;border-radius:13px">${esc(hrInitials(e.fullName))}</span>
+        <div style="display:flex;gap:14px;align-items:center">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,size:48})}
           <div><div class="dt">${esc(e.fullName)} <span class="dnum">${esc(e.employeeNo)}</span></div>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(e.jobTitle)} · ${esc(e.department)}${manager?' · '+esc(s('fieldManager')).toLowerCase()+' '+esc(manager.fullName):''}</div></div></div>
         <div class="dactions">${cap(hrStatusLabel(s,status),hrStatusTone(status))}</div>
@@ -471,7 +462,7 @@ SCREENS['payroll-run'] = async function(root){
       const dept=emp?emp.department:'';
       return `<tr class="payrow" data-line="${line.id}">
         <td class="lineno">${i+1}</td>
-        <td class="l li-name"><div style="display:flex;align-items:center;gap:10px"><span class="kc-av" style="background:${hrAvatarColor(name)};width:26px;height:26px;font-size:10px">${esc(hrInitials(name))}</span><div><b>${esc(name)}</b><small>${esc(dept)}</small></div></div></td>
+        <td class="l li-name"><div style="display:flex;align-items:center;gap:10px">${profileAvatar({name,src:emp&&(emp.photoUrl||emp.imageUrl||emp.avatarUrl),size:26})}<div><b>${esc(name)}</b><small>${esc(dept)}</small></div></div></td>
         <td class="tnum">${money0(Number(line.grossPay))}</td>
         <td class="tnum" style="color:var(--muted)">${money0(Number(line.employeeStatutoryDeduction))}</td>
         <td class="tnum" style="color:var(--muted)">${money0(Number(line.incomeTaxDeduction))}</td>

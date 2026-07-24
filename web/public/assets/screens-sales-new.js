@@ -290,9 +290,8 @@ SCREENS['new-sales-order'] = function(root, params){
       <td class="tnum">${l.disc?`<span style="color:var(--warn)">${l.disc}%</span>`:'—'}</td>
       <td class="l">${esc(l.tax||'SR')}</td>
       <td class="tnum"><b>${money(lineNet(l))}</b></td></tr>`).join('');
-    const initials=c.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     return `<div class="docmeta" style="margin-bottom:16px">
-        <div class="dm"><small>Customer</small><div class="partner"><span class="pav">${esc(initials)}</span><b>${esc(c.name)}</b></div></div>
+        <div class="dm"><small>Customer</small><div class="partner">${profileAvatar({name:c.name,src:c.imageUrl||c.photoUrl||c.avatarUrl,cls:'pav',size:26})}<b>${esc(c.name)}</b></div></div>
         <div class="dm"><small>Order date</small><b>${esc(S.orderDate)}</b></div>
         <div class="dm"><small>Requested delivery</small><b>${esc(S.delivery)}</b></div>
         <div class="dm"><small>Terms</small><b>${esc(S.terms)} · ${esc(DB.company.currency)}</b></div>

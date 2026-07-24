@@ -292,7 +292,7 @@ SCREENS['vendor-performance'] = async function(root){
     return `<span class="minibar" style="width:64px"><i style="width:${pct}%;background:${clr}"></i></span>`;
   }
   const cards=data.map(v=>`<div class="wcard vp-card">
-      <div class="vp-h"><div class="partner"><span class="pav">${esc(v.supplier.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase())}</span><div><b>${esc(v.supplier)}</b><small>${esc(v.code)} · ${money0(v.spend)} ${esc(s('spend'))}</small></div></div><div class="vp-rate"><b class="tnum">${v.rating.toFixed(1)}</b>${ratingTag(v.rating)}</div></div>
+      <div class="vp-h"><div class="partner">${profileAvatar({name:v.supplier,cls:'pav',size:26})}<div><b>${esc(v.supplier)}</b><small>${esc(v.code)} · ${money0(v.spend)} ${esc(s('spend'))}</small></div></div><div class="vp-rate"><b class="tnum">${v.rating.toFixed(1)}</b>${ratingTag(v.rating)}</div></div>
       <div class="vp-metrics">
         <div class="vp-m"><span>${esc(s('orders'))}</span><div class="vp-mr">${bar(v.receivedPct,100,'high')}${v.receivedPct==null?'':`<b class="tnum">${v.receivedPct}%</b>`}</div></div>
         <div class="vp-m"><span>${esc(s('onTime'))}</span><div class="vp-mr">${bar(v.onTime,100,'high')}${v.onTime==null?'':`<b class="tnum">${v.onTime}%</b>`}</div></div>

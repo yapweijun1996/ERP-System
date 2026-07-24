@@ -67,7 +67,7 @@ SCREENS['sales-return'] = function(root){
         <div class="step"><span class="sdot"></span>Credited</div>
       </div>
       <div class="docmeta">
-        <div class="dm"><small>Customer</small><div class="partner"><span class="pav">MR</span><b>${esc(d.cust)}</b></div></div>
+        <div class="dm"><small>Customer</small><div class="partner">${profileAvatar({name:d.cust,cls:'pav',size:26})}<b>${esc(d.cust)}</b></div></div>
         <div class="dm"><small>Against invoice</small><b>${esc(d.ref)}</b></div>
         <div class="dm"><small>From delivery</small><b>${esc(d.do)}</b></div>
         <div class="dm"><small>Warehouse</small><b>${esc(d.warehouse)}</b></div>
@@ -164,7 +164,7 @@ SCREENS['credit-note'] = function(root){
         <div class="dactions">${cap(c.status,CN_TONE[c.status])}${btn('Download PDF',{icon:'filepdf',cls:'soft'})}</div>
       </div>
       <div class="docmeta">
-        <div class="dm"><small>Customer</small><div class="partner"><span class="pav">MR</span><b>${esc(c.cust)}</b></div></div>
+        <div class="dm"><small>Customer</small><div class="partner">${profileAvatar({name:c.cust,cls:'pav',size:26})}<b>${esc(c.cust)}</b></div></div>
         <div class="dm"><small>Date</small><b>${esc(c.date)}</b></div>
         <div class="dm"><small>Against invoice</small><b>${esc(c.ref)}</b></div>
         <div class="dm"><small>Source</small><b>RMA-26-0044</b></div>

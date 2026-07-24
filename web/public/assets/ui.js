@@ -7,6 +7,27 @@ const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---- small render helpers ---- */
+function profileAvatarMedia({name='',src='',title=''}={}){
+  const label=title||`${name||'User'} profile image`;
+  const candidate=String(src||'').trim();
+  const safeSrc=/^(https?:|data:image\/|blob:|\/|\.\/|\.\.\/)/i.test(candidate)?candidate:'';
+  const fallback=`<svg class="profile-avatar-fallback" xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+      stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="${esc(label)}"
+      ${safeSrc?'hidden':''}>
+    <title>${esc(label)}</title><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/>
+  </svg>`;
+  return `${safeSrc?`<img class="profile-avatar-image" src="${esc(safeSrc)}" alt="${esc(label)}"
+    onerror="this.hidden=true;this.nextElementSibling.hidden=false">`:''}${fallback}`;
+}
+function profileAvatar({name='',src='',cls='kc-av',size=null,title='',attrs=''}={}){
+  const style=size?` style="width:${Number(size)}px;height:${Number(size)}px"`:'';
+  return `<span class="${esc(cls)} profile-avatar"${style} ${attrs}>${
+    profileAvatarMedia({name,src,title})
+  }</span>`;
+}
+window.profileAvatarMedia=profileAvatarMedia;
+window.profileAvatar=profileAvatar;
 function cap(label, tone){ return `<span class="cap ${tone||statusCap(label)}"><span class="dot"></span>${esc(label)}</span>`; }
 function statusBadge(st){ return cap(typeof ts==='function'?ts(st):st, statusCap(st)); }
 function btn(label, {icon,cls='soft',sm=true,attrs=''}={}){
@@ -218,7 +239,7 @@ function attachments(list){
     +`<div style="margin-top:6px">${btn('Add attachment',{icon:'plus',cls:'plain'})}</div>`;
 }
 function comments(list){
-  const body=(list||[]).map(c=>`<div class="comment"><div class="cav" style="background:${c.clr}">${esc(c.av)}</div><div class="cb"><div class="ch"><b>${esc(c.who)}</b><small>${esc(c.when)}</small></div><p>${esc(c.text)}</p></div></div>`).join('');
+  const body=(list||[]).map(c=>`<div class="comment">${profileAvatar({name:c.who,src:c.imageUrl||c.photoUrl||c.avatarUrl,cls:'cav',size:30})}<div class="cb"><div class="ch"><b>${esc(c.who)}</b><small>${esc(c.when)}</small></div><p>${esc(c.text)}</p></div></div>`).join('');
   return body+`<div class="commentbox"><input placeholder="Write a comment…  @mention to notify" /><button class="btn primary sm">${ic('send')}</button></div>`;
 }
 

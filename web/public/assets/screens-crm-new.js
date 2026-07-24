@@ -10,9 +10,7 @@ SCREENS['new-opportunity'] = async function(root){
   const STAGES=[['Lead',10],['Qualified',30],['Proposal',50],['Negotiation',70]];
   const stageProb=st=>(STAGES.find(s=>s[0]===st)||[null,10])[1];
   const currentOwner=(DB.user&&DB.user.name)||'Unassigned';
-  const ownerInitials=(currentOwner.replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean)
-    .slice(0,2).map(word=>word[0]).join('').toUpperCase())||'U';
-  const OWNER={name:currentOwner,av:ownerInitials,clr:'#0a84ff'};
+  const OWNER={name:currentOwner,imageUrl:(DB.user&&(DB.user.avatarUrl||DB.user.imageUrl||DB.user.photoUrl))||''};
   const today=new Date().toISOString().slice(0,10);
   const closeDefault=new Date(Date.now()+42*24*60*60*1000).toISOString().slice(0,10);
   const opportunitySuffix=typeof crypto!=='undefined'&&crypto.randomUUID
@@ -38,7 +36,7 @@ SCREENS['new-opportunity'] = async function(root){
       <div class="kc-val">${money0(S.value)}</div>
       <div class="kprob"><i style="width:${S.prob}%;background:${clr}"></i></div>
       <div class="kc-foot">
-        <span class="kc-av" style="background:${o.clr}">${esc(o.av)}</span>
+        ${profileAvatar({name:o.name,src:o.imageUrl,size:22})}
         <span class="kc-close">${ic('calendar')} ${esc(S.close)}</span>
         <span class="kc-prob">${S.prob}%</span>
       </div></div>`;

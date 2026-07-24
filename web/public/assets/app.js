@@ -27,14 +27,18 @@ function setAuthShell(onLogin){
 function syncAccountUi(){
   const u=demoUser();
   const av=$('#avatarBtn');
-  if(av){ av.textContent=u.initials; av.setAttribute('data-tip','Account · '+u.name); }
+  const avatarSrc=u.avatarUrl||u.imageUrl||u.photoUrl||'';
+  if(av){
+    av.innerHTML=profileAvatarMedia({name:u.name,src:avatarSrc});
+    av.setAttribute('data-tip','Account · '+u.name);
+  }
   const menu=$('#acctMenu');
   if(menu){
     const headAv=menu.querySelector('.acct-head .av');
     const name=menu.querySelector('.acct-head .who b');
     const email=menu.querySelector('.acct-head .who small');
     const role=menu.querySelector('.acct-role');
-    if(headAv) headAv.textContent=u.initials;
+    if(headAv) headAv.innerHTML=profileAvatarMedia({name:u.name,src:avatarSrc});
     if(name) name.textContent=u.name;
     if(email) email.textContent=u.email;
     if(role) role.innerHTML=`${ic('shield')}${esc(u.role||'Demo user')}`;

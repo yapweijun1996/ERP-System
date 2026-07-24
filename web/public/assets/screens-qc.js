@@ -110,7 +110,7 @@ SCREENS['qc-report'] = function(root){
           <div class="step"><span class="sdot"></span>Closed</div>
         </div>
         <div class="docmeta">
-          <div class="dm"><small>Supplier</small><div class="partner"><span class="pav">ES</span><b>${esc(d.supplier)}</b></div></div>
+          <div class="dm"><small>Supplier</small><div class="partner">${profileAvatar({name:d.supplier,cls:'pav',size:26})}<b>${esc(d.supplier)}</b></div></div>
           <div class="dm"><small>Lot qty</small><b>${num(d.lot)} ${esc(d.uom)}</b></div>
           <div class="dm"><small>Sample / AQL</small><b>${d.sample} · ${esc(d.aql)}</b></div>
           <div class="dm"><small>Inspector</small><b>${esc(d.inspector)}</b></div>

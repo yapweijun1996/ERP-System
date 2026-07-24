@@ -37,7 +37,7 @@ SCREENS['quotation'] = function(root){
         <div class="step current"><span class="sdot">${ic('check')}</span>Converted</div>
       </div>
       <div class="docmeta">
-        <div class="dm"><small>Customer</small><div class="partner"><span class="pav">MR</span><b>${esc(d.cust)}</b></div></div>
+        <div class="dm"><small>Customer</small><div class="partner">${profileAvatar({name:d.cust,cls:'pav',size:26})}<b>${esc(d.cust)}</b></div></div>
         <div class="dm"><small>Quote date</small><b>${esc(d.date)}</b></div>
         <div class="dm"><small>Valid until</small><b>${esc(d.valid)}</b></div>
         <div class="dm"><small>Terms</small><b>${esc(d.terms)} · ${esc(d.currency)}</b></div>
@@ -119,7 +119,7 @@ SCREENS['delivery-order'] = function(root){
         <div class="step"><span class="sdot"></span>Delivered</div>
       </div>
       <div class="docmeta">
-        <div class="dm"><small>Customer</small><div class="partner"><span class="pav">MR</span><b>${esc(d.cust)}</b></div></div>
+        <div class="dm"><small>Customer</small><div class="partner">${profileAvatar({name:d.cust,cls:'pav',size:26})}<b>${esc(d.cust)}</b></div></div>
         <div class="dm"><small>Ship date</small><b>${esc(d.date)}</b></div>
         <div class="dm"><small>Warehouse</small><b>${esc(d.warehouse)}</b></div>
         <div class="dm"><small>Carrier</small><b>${esc(d.carrier)}</b></div>
@@ -193,7 +193,7 @@ SCREENS['sales-invoice'] = async function(root, params){
         <div class="step ${balance<=0?'done':''}"><span class="sdot">${balance<=0?ic('check'):''}</span>Paid</div>
       </div>
       <div class="docmeta">
-        <div class="dm"><small>Customer</small><div class="partner"><span class="pav">MR</span><b>${esc(d.cust)}</b></div></div>
+        <div class="dm"><small>Customer</small><div class="partner">${profileAvatar({name:d.cust,cls:'pav',size:26})}<b>${esc(d.cust)}</b></div></div>
         <div class="dm"><small>Invoice date</small><b>${esc(d.date)}</b></div>
         <div class="dm"><small>Due date</small><b>${esc(d.due)}</b></div>
         <div class="dm"><small>Terms</small><b>${esc(d.terms)} · ${esc(d.currency)}</b></div>

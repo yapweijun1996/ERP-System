@@ -71,8 +71,6 @@ async function prepareCanonicalCrmData(){
     const items=opportunities.filter(row=>row.stage===stage).map(row=>{
       const customer=customerById.get(row.customerId)||{};
       const ownerName=DB.user&&DB.user.name||'Unassigned';
-      const initials=(ownerName.replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean)
-        .slice(0,2).map(word=>word[0]).join('').toUpperCase())||'U';
       return {
         id:row.id,
         version:row.version,
@@ -84,8 +82,7 @@ async function prepareCanonicalCrmData(){
         value:crmNumber(row.value),
         currency:row.currency,
         owner:ownerName,
-        av:initials,
-        clr:'#0a84ff',
+        ownerImageUrl:(DB.user&&(DB.user.avatarUrl||DB.user.imageUrl||DB.user.photoUrl))||'',
         close:dateValue(row.closeDate),
         prob:crmNumber(row.probability),
         rawStage:row.stage,
@@ -119,7 +116,7 @@ SCREENS['crm-pipeline'] = async function(root){
         <div class="kc-val">${money0(o.value)}</div>
         <div class="kprob"><i style="width:${o.prob}%;background:${crmStageColor(col.stage)}"></i></div>
         <div class="kc-foot">
-          <span class="kc-av" style="background:${o.clr}">${esc(o.av)}</span>
+          ${profileAvatar({name:o.owner||o.ownerName||'Opportunity owner',src:o.ownerImageUrl||o.avatarUrl,size:22})}
           <span class="kc-close">${ic('calendar')} ${esc(o.close)}</span>
           <span class="kc-prob">${o.prob}%</span>
           ${col.stage!=='Won'?`<button class="iconbtn" data-tip="Convert to sales order" data-convert="${esc(o.no)}" style="margin-left:auto;width:24px;height:24px">${ic('bag')}</button>`:''}
@@ -575,10 +572,9 @@ SCREENS['crm-customer'] = async function(root, params){
             </div>
           </div></div>
           <div class="panel"><div class="panel-h"><h3>${esc(s('contacts'))}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${detail.contacts.length}</span>${btn(s('addContact'),{icon:'plus',cls:'soft',sm:true,attrs:'data-add-contact="1"'})}</div>
-            <div class="panel-body" style="padding:6px 0">${detail.contacts.length?detail.contacts.map(p=>{
-              const initials=(p.name||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
-              return `<div class="oprow"><span class="kc-av" style="background:#0a84ff;width:30px;height:30px;font-size:11px">${esc(initials)}</span><div class="opmain"><b>${esc(p.name)}</b><small>${esc(p.role)}${p.email?' · '+esc(p.email):''}</small></div></div>`;
-            }).join(''):`<div style="color:var(--muted);font-size:13px;padding:8px 0">${esc(s('noContactsYet'))}</div>`}</div>
+            <div class="panel-body" style="padding:6px 0">${detail.contacts.length?detail.contacts.map(p=>
+              `<div class="oprow">${profileAvatar({name:p.name,src:p.photoUrl||p.imageUrl||p.avatarUrl,size:30})}<div class="opmain"><b>${esc(p.name)}</b><small>${esc(p.role)}${p.email?' · '+esc(p.email):''}</small></div></div>`
+            ).join(''):`<div style="color:var(--muted);font-size:13px;padding:8px 0">${esc(s('noContactsYet'))}</div>`}</div>
           </div>
           <div class="panel"><div class="panel-h"><h3>${esc(s('openOrders'))}</h3></div><div class="panel-body">${openOrders.length?relatedDocs(openOrders):`<div style="color:var(--muted);font-size:13px;padding:8px 0">${esc(s('noOpenOrders'))}</div>`}</div></div>
           <div class="panel"><div class="panel-h"><h3>${esc(s('openOpportunities'))}</h3></div><div class="panel-body">${openOpps.length?relatedDocs(openOpps):`<div style="color:var(--muted);font-size:13px;padding:8px 0">${esc(s('noOpenOpportunities'))}</div>`}</div></div>

@@ -201,7 +201,7 @@ function legacyPoApprovalPrototype(root){
           <div class="step"><span class="sdot"></span>${esc(t('appr.step.sent'))}</div>
         </div>
         <div class="docmeta">
-          <div class="dm"><small>${esc(t('common.supplier'))}</small><div class="partner"><span class="pav">SM</span><b>${esc(d.supp.name)}</b></div></div>
+          <div class="dm"><small>${esc(t('common.supplier'))}</small><div class="partner">${profileAvatar({name:d.supp.name,cls:'pav',size:26})}<b>${esc(d.supp.name)}</b></div></div>
           <div class="dm"><small>${esc(t('so.col.date'))}</small><b>${esc(d.date)}</b></div>
           <div class="dm"><small>${esc(t('common.expected'))}</small><b>${esc(d.expect)}</b></div>
           <div class="dm"><small>${esc(t('common.warehouse'))}</small><b>${esc(d.warehouse)}</b></div>

@@ -160,7 +160,7 @@ SCREENS['goods-receipt'] = function(root){
         <div class="step"><span class="sdot"></span>Putaway</div>
       </div>
       <div class="docmeta">
-        <div class="dm"><small>Supplier</small><div class="partner"><span class="pav">SM</span><b>${esc(d.supplier)}</b></div></div>
+        <div class="dm"><small>Supplier</small><div class="partner">${profileAvatar({name:d.supplier,cls:'pav',size:26})}<b>${esc(d.supplier)}</b></div></div>
         <div class="dm"><small>Receipt date</small><b>${esc(d.date)}</b></div>
         <div class="dm"><small>Warehouse</small><b>${esc(d.warehouse)}</b></div>
         <div class="dm"><small>Received by</small><b>${esc(d.receiver)}</b></div>
@@ -251,7 +251,7 @@ SCREENS['supplier-invoice'] = function(root){
         <div class="step"><span class="sdot"></span>Posted to AP</div>
       </div>
       <div class="docmeta">
-        <div class="dm"><small>Supplier</small><div class="partner"><span class="pav">SM</span><b>${esc(d.supplier)}</b></div></div>
+        <div class="dm"><small>Supplier</small><div class="partner">${profileAvatar({name:d.supplier,cls:'pav',size:26})}<b>${esc(d.supplier)}</b></div></div>
         <div class="dm"><small>Invoice date</small><b>${esc(d.date)}</b></div>
         <div class="dm"><small>Due date</small><b>${esc(d.due)}</b></div>
         <div class="dm"><small>Terms</small><b>${esc(d.terms)} · ${esc(d.currency)}</b></div>
