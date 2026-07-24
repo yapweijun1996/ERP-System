@@ -581,7 +581,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'service-contracts','asset-register','user-mgmt',
   ],
   'master-detail-register-v1':[
-    'item-master','stock-on-hand','leave-approval',
+    'item-master','stock-on-hand','leave-approval','payroll-run',
   ],
   'report-list-v1':[
     'inv-valuation','ar-aging',
@@ -631,7 +631,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   workspace:[
     'bank-rec','data-import','depreciation','integration','master-control',
-    'module-activation-control','mrp','payroll-run',
+    'module-activation-control','mrp',
     'sales-commission','settings','sys-settings','timesheet',
   ],
   board:['crm-pipeline'],

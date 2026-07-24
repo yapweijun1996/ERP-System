@@ -59,6 +59,32 @@
 }
 .master-detail-register-detail .detail-empty{height:100%;}
 .master-detail-register-body .toolbar{min-height:44px;}
+.payroll-run-icon{
+  display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:42px;height:42px;border-radius:12px;background:var(--accent-tint);color:var(--accent);
+}
+.payroll-run-icon svg{width:21px;height:21px;}
+.payroll-run-status{margin-left:auto;}
+.payroll-run-detail-body{gap:14px;}
+.payroll-run-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.payroll-run-kpis .stat{min-width:0;padding:11px 12px;}
+.payroll-run-kpis .stat b{font-size:calc(16px * var(--fs,1));overflow:hidden;text-overflow:ellipsis;}
+.payroll-run-facts{margin:0;}
+.payroll-lines-panel{min-width:0;overflow:hidden;}
+.payroll-lines-panel .panel-h small{margin-left:auto;color:var(--muted);font-size:calc(11.5px * var(--fs,1));}
+.payroll-lines-scroll{max-width:100%;overflow:auto;overscroll-behavior-inline:contain;}
+.payroll-lines-scroll table{min-width:660px;}
+.payroll-line-row{cursor:pointer;}
+.payroll-line-row:hover{background:var(--surface-2);}
+.payroll-employee{display:flex;align-items:center;gap:9px;min-width:150px;}
+.payroll-employee>div{min-width:0;}
+.payroll-employee b,.payroll-employee small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.payroll-employee small{color:var(--muted);font-size:calc(11px * var(--fs,1));}
+.payroll-lines-empty{min-height:180px;height:auto!important;}
+.payroll-run-action-error{margin:0;}
+.payroll-run-modal-description{margin:0 0 16px;}
+.payroll-run-form{grid-template-columns:repeat(2,minmax(0,1fr));}
+.payroll-run-confirm{margin:0;color:var(--muted);font-size:calc(13.5px * var(--fs,1));line-height:1.55;}
 .li-subj{color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;}
 .muted-date{color:var(--muted);}
 .linknum{cursor:pointer;}
@@ -182,6 +208,8 @@
 }
 @media (max-width:760px){
   .sales-body{padding:2px 16px 80px;}
+  .payroll-run-form{grid-template-columns:1fr;}
+  .payroll-run-detail-body{padding-bottom:90px;}
   .comm-grid{padding:0 16px 18px;}
   .comm-grid .panel-h{align-items:flex-start;flex-direction:column;}
   .comm-grid .panel-h small{margin-left:0;text-align:left;}

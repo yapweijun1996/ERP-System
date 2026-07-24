@@ -23,6 +23,7 @@
     "check:drift": "node scripts/check-drift.mjs",
     "smoke": "node scripts/smoke.mjs",
     "audit:screens": "node scripts/audit-screens.mjs",
+    "audit:payroll-run": "PAYROLL_RUN_ONLY=1 node scripts/audit-screens.mjs",
     "audit:list-layouts": "LIST_LAYOUT_ONLY=1 node scripts/audit-screens.mjs",
     "audit:workspaces": "WORKSPACE_LAYOUT_ONLY=1 node scripts/audit-screens.mjs",
     "audit:master-detail-editors": "MASTER_DETAIL_EDITOR_ONLY=1 node scripts/audit-screens.mjs",

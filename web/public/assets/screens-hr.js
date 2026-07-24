@@ -1,7 +1,6 @@
 /* ============================================================
-   ARIA ERP — screens: HR (Employee Directory, Employee Profile)
-   Payroll Run and Payslip remain sample data — see docs/EPICS.md
-   EPIC-020 for the deliberate scope boundary (no payroll schema).
+   ARIA ERP — screens: HR (Employee Directory, Employee Profile,
+   canonical Payroll Run and Payslip)
    ============================================================ */
 
 function hrCopy(){
@@ -44,6 +43,15 @@ function hrCopy(){
       actionError:'Could not update this leave request',
       fieldBaseSalary:'Base salary (monthly)',baseSalaryRequired:'Base salary must be greater than 0',
       payrollRunTitle:'Payroll Run',payrollCrumb:'Payroll',
+      payrollRunDescription:'Create, review and post payroll runs for the active company.',
+      kpiTotalRuns:'Total runs',kpiDraftRuns:'Draft runs',kpiPostedRuns:'Posted runs',kpiLatestNet:'Latest net payroll',
+      filterAllRuns:'All',statusDraft:'Draft',statusPosted:'Posted',
+      colRun:'Run',colPeriod:'Payroll period',colPayDate:'Pay date',colHeadcount:'Headcount',colStatus:'Status',
+      selectPayrollRun:'Select a payroll run',selectPayrollRunBody:'Choose a payroll run from the register to review its details.',
+      noPayrollLines:'No payroll lines',noPayrollLinesBody:'This payroll run does not contain any employee payroll lines.',
+      newRunDescription:'Set the payroll period and pay date. Active employees are calculated by the canonical payroll command.',
+      createRun:'Create payroll run',creatingRun:'Creating…',
+      dateRequired:'Complete every payroll date.',invalidPayrollPeriod:'Period end cannot be earlier than period start.',
       fieldPeriodStart:'Period start',fieldPeriodEnd:'Period end',fieldPayDate:'Pay date',
       selectRun:'Payroll run',newRunButton:'New payroll run',postButton:'Approve & lock run',
       noRunYet:'No payroll run yet',noRunBody:'Create a payroll run to compute pay for every active employee.',
@@ -105,6 +113,15 @@ function hrCopy(){
       actionError:'Permohonan cuti ini tidak dapat dikemas kini',
       fieldBaseSalary:'Gaji asas (bulanan)',baseSalaryRequired:'Gaji asas mesti lebih daripada 0',
       payrollRunTitle:'Larian Gaji',payrollCrumb:'Gaji',
+      payrollRunDescription:'Cipta, semak dan pos larian gaji untuk syarikat aktif.',
+      kpiTotalRuns:'Jumlah larian',kpiDraftRuns:'Larian draf',kpiPostedRuns:'Larian dipos',kpiLatestNet:'Gaji bersih terkini',
+      filterAllRuns:'Semua',statusDraft:'Draf',statusPosted:'Dipos',
+      colRun:'Larian',colPeriod:'Tempoh gaji',colPayDate:'Tarikh bayaran',colHeadcount:'Bilangan pekerja',colStatus:'Status',
+      selectPayrollRun:'Pilih larian gaji',selectPayrollRunBody:'Pilih larian daripada daftar untuk menyemak butirannya.',
+      noPayrollLines:'Tiada baris gaji',noPayrollLinesBody:'Larian gaji ini tidak mempunyai baris gaji pekerja.',
+      newRunDescription:'Tetapkan tempoh gaji dan tarikh bayaran. Pekerja aktif dikira oleh arahan gaji kanonik.',
+      createRun:'Cipta larian gaji',creatingRun:'Mencipta…',
+      dateRequired:'Lengkapkan semua tarikh gaji.',invalidPayrollPeriod:'Akhir tempoh tidak boleh lebih awal daripada mula tempoh.',
       fieldPeriodStart:'Mula tempoh',fieldPeriodEnd:'Akhir tempoh',fieldPayDate:'Tarikh bayaran',
       selectRun:'Larian gaji',newRunButton:'Larian gaji baharu',postButton:'Luluskan & kunci larian',
       noRunYet:'Belum ada larian gaji',noRunBody:'Cipta larian gaji untuk mengira gaji setiap pekerja aktif.',
@@ -166,6 +183,15 @@ function hrCopy(){
       actionError:'无法更新此请假申请',
       fieldBaseSalary:'底薪(每月)',baseSalaryRequired:'底薪必须大于 0',
       payrollRunTitle:'薪资运行',payrollCrumb:'薪资',
+      payrollRunDescription:'创建、检查并过账当前公司的薪资批次。',
+      kpiTotalRuns:'批次总数',kpiDraftRuns:'草稿批次',kpiPostedRuns:'已过账批次',kpiLatestNet:'最新实发工资',
+      filterAllRuns:'全部',statusDraft:'草稿',statusPosted:'已过账',
+      colRun:'批次',colPeriod:'薪资周期',colPayDate:'发薪日期',colHeadcount:'员工人数',colStatus:'状态',
+      selectPayrollRun:'选择薪资批次',selectPayrollRunBody:'请从批次列表选择一项以查看详情。',
+      noPayrollLines:'暂无薪资明细',noPayrollLinesBody:'此薪资批次没有员工薪资明细。',
+      newRunDescription:'设置薪资周期和发薪日期；系统将通过正式薪资命令计算所有在职员工。',
+      createRun:'创建薪资批次',creatingRun:'创建中…',
+      dateRequired:'请填写全部薪资日期。',invalidPayrollPeriod:'周期结束日期不得早于开始日期。',
       fieldPeriodStart:'周期开始',fieldPeriodEnd:'周期结束',fieldPayDate:'发薪日期',
       selectRun:'薪资批次',newRunButton:'新建薪资批次',postButton:'批准并锁定',
       noRunYet:'暂无薪资批次',noRunBody:'创建一个薪资批次,为每位在职员工计算薪资。',
@@ -227,6 +253,15 @@ function hrCopy(){
       actionError:'この休暇申請を更新できませんでした',
       fieldBaseSalary:'基本給(月額)',baseSalaryRequired:'基本給は0より大きい必要があります',
       payrollRunTitle:'給与計算',payrollCrumb:'給与',
+      payrollRunDescription:'現在の会社の給与計算バッチを作成、確認、転記します。',
+      kpiTotalRuns:'バッチ総数',kpiDraftRuns:'下書きバッチ',kpiPostedRuns:'転記済みバッチ',kpiLatestNet:'最新手取り額',
+      filterAllRuns:'すべて',statusDraft:'下書き',statusPosted:'転記済み',
+      colRun:'バッチ',colPeriod:'給与期間',colPayDate:'支給日',colHeadcount:'在籍人数',colStatus:'ステータス',
+      selectPayrollRun:'給与計算バッチを選択',selectPayrollRunBody:'台帳からバッチを選択して詳細を確認してください。',
+      noPayrollLines:'給与明細行がありません',noPayrollLinesBody:'この給与計算バッチには従業員の給与明細行がありません。',
+      newRunDescription:'給与期間と支給日を設定します。在籍従業員は標準給与コマンドで計算されます。',
+      createRun:'給与計算バッチを作成',creatingRun:'作成中…',
+      dateRequired:'すべての給与日付を入力してください。',invalidPayrollPeriod:'期間終了日は期間開始日より前にできません。',
       fieldPeriodStart:'期間開始',fieldPeriodEnd:'期間終了',fieldPayDate:'支給日',
       selectRun:'給与計算バッチ',newRunButton:'新規給与計算',postButton:'承認してロック',
       noRunYet:'給与計算バッチはまだありません',noRunBody:'在籍中の全従業員の給与を計算するバッチを作成します。',
@@ -288,6 +323,15 @@ function hrCopy(){
       actionError:'Không thể cập nhật đơn nghỉ phép này',
       fieldBaseSalary:'Lương cơ bản (hàng tháng)',baseSalaryRequired:'Lương cơ bản phải lớn hơn 0',
       payrollRunTitle:'Đợt Tính Lương',payrollCrumb:'Lương',
+      payrollRunDescription:'Tạo, xem xét và ghi sổ các đợt tính lương cho công ty hiện tại.',
+      kpiTotalRuns:'Tổng số đợt',kpiDraftRuns:'Đợt nháp',kpiPostedRuns:'Đợt đã ghi sổ',kpiLatestNet:'Lương thực nhận mới nhất',
+      filterAllRuns:'Tất cả',statusDraft:'Nháp',statusPosted:'Đã ghi sổ',
+      colRun:'Đợt',colPeriod:'Kỳ lương',colPayDate:'Ngày trả lương',colHeadcount:'Số nhân viên',colStatus:'Trạng thái',
+      selectPayrollRun:'Chọn đợt tính lương',selectPayrollRunBody:'Chọn một đợt trong sổ đăng ký để xem chi tiết.',
+      noPayrollLines:'Không có dòng lương',noPayrollLinesBody:'Đợt tính lương này không có dòng lương nhân viên.',
+      newRunDescription:'Đặt kỳ lương và ngày trả lương. Nhân viên đang làm việc được tính bởi lệnh tính lương chuẩn.',
+      createRun:'Tạo đợt tính lương',creatingRun:'Đang tạo…',
+      dateRequired:'Hãy nhập đầy đủ các ngày tính lương.',invalidPayrollPeriod:'Ngày kết thúc kỳ không được trước ngày bắt đầu.',
       fieldPeriodStart:'Bắt đầu kỳ',fieldPeriodEnd:'Kết thúc kỳ',fieldPayDate:'Ngày trả lương',
       selectRun:'Đợt tính lương',newRunButton:'Đợt tính lương mới',postButton:'Duyệt & khóa đợt',
       noRunYet:'Chưa có đợt tính lương',noRunBody:'Tạo một đợt tính lương để tính lương cho mọi nhân viên đang làm việc.',
@@ -473,129 +517,246 @@ function payrollStatutoryLabel(s,kind){
   return isMY?s('additionalLabelMY'):s('additionalLabelSG');
 }
 
-/* ---------------- PAYROLL RUN (draft → post report, mirrors screens-asset.js's
-   depreciation-run screen) ---------------- */
+/* ---------------- PAYROLL RUN (canonical batch register → selected-run detail) ---------------- */
 SCREENS['payroll-run'] = async function(root){
   const s=hrCopy();
   let {runs,lines,employees}=await preparePayrollData();
   runs=runs.slice().sort((a,b)=>b.id-a.id);
-  let employeeById=new Map(employees.map(e=>[e.id,e]));
-  let selectedRunId=runs.length?runs[0].id:null;
-
-  function statTile(label,value,sub,tone){
-    return `<div class="card" style="padding:13px 15px"><small style="display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">${label}</small>
-      <b class="tnum" style="font-size:22px;font-weight:600;letter-spacing:-.02em;color:${tone||'var(--fg)'}">${value}</b>
-      <small style="display:block;color:var(--muted);font-size:12px;margin-top:3px">${sub}</small></div>`;
-  }
+  let employeeById=new Map(employees.map(employee=>[employee.id,employee]));
+  let page=null;
+  let busyId=null;
+  let actionError=null;
+  const isDesktop=()=>!window.matchMedia('(max-width:980px)').matches;
+  const routeStillActive=()=>root.isConnected&&CURRENT_ROUTE==='payroll-run';
+  const statusLabel=status=>status==='posted'?s('statusPosted'):s('statusDraft');
+  const statusTone=status=>status==='posted'?'ok':'warn';
   function todayIso(){ return new Date().toISOString().slice(0,10); }
   function firstOfMonthIso(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10); }
   function lastOfMonthIso(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10); }
-
-  async function render(){
-    const run=runs.find(r=>r.id===selectedRunId)||null;
-    const runLines=run?lines.filter(l=>l.runId===run.id):[];
-    const gross=runLines.reduce((sum,l)=>sum+Number(l.grossPay),0);
-    const statutory=runLines.reduce((sum,l)=>sum+Number(l.employeeStatutoryDeduction),0);
-    const tax=runLines.reduce((sum,l)=>sum+Number(l.incomeTaxDeduction),0);
-    const net=runLines.reduce((sum,l)=>sum+Number(l.netPay),0);
-    const isDraft=!!(run&&run.status==='draft');
-    const isPosted=!!(run&&run.status==='posted');
-
-    const rowHtml=runLines.map((line,i)=>{
-      const emp=employeeById.get(line.employeeId);
-      const name=emp?emp.fullName:('#'+line.employeeId);
-      const dept=emp?emp.department:'';
-      return `<tr class="payrow" data-line="${line.id}">
-        <td class="lineno">${i+1}</td>
-        <td class="l li-name"><div style="display:flex;align-items:center;gap:10px">${profileAvatar({name,src:emp&&(emp.photoUrl||emp.imageUrl||emp.avatarUrl),size:26})}<div><b>${esc(name)}</b><small>${esc(dept)}</small></div></div></td>
-        <td class="tnum">${money0(Number(line.grossPay))}</td>
-        <td class="tnum" style="color:var(--muted)">${money0(Number(line.employeeStatutoryDeduction))}</td>
-        <td class="tnum" style="color:var(--muted)">${money0(Number(line.incomeTaxDeduction))}</td>
-        <td class="tnum"><b>${money0(Number(line.netPay))}</b></td></tr>`;
-    }).join('');
-
-    root.innerHTML=`<div class="content full"><section class="master"><div class="report">
-      <aside class="report-params">
-        <h3>${esc(s('newRunButton'))}</h3>
-        <div class="fld"><span>${esc(s('fieldRunNo'))}</span><input id="prDocNo" value="${esc(nextPayrollDocNo(runs))}" readonly></div>
-        <div class="fld"><span>${esc(s('fieldPeriodStart'))}</span><input id="prStart" type="date" value="${firstOfMonthIso()}"></div>
-        <div class="fld"><span>${esc(s('fieldPeriodEnd'))}</span><input id="prEnd" type="date" value="${lastOfMonthIso()}"></div>
-        <div class="fld"><span>${esc(s('fieldPayDate'))}</span><input id="prPayDate" type="date" value="${todayIso()}"></div>
-        ${btn(s('newRunButton'),{icon:'plus',cls:'primary',sm:false,attrs:'data-act="new"'})}
-        ${run?`<div class="note rule" style="border:1px solid var(--hairline);border-left:3px solid ${isPosted?'var(--ok)':'var(--warn)'};background:var(--surface);border-radius:0 var(--r-m) var(--r-m) 0;padding:11px 13px;font-size:12.5px;margin-top:6px">
-          <b style="display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:3px">${esc(run.docNo)}</b>
-          ${esc(dateValue(run.periodStart))} → ${esc(dateValue(run.periodEnd))} · ${esc(isPosted?'Posted':'Draft')}
-        </div>`:''}
-      </aside>
-      <div class="report-result">
-        <div class="report-toolbar">
-          <select id="runPicker" class="viewsel">${runs.length?runs.map(r=>`<option value="${r.id}" ${r.id===selectedRunId?'selected':''}>${esc(r.docNo)} · ${esc(dateValue(r.periodStart))} → ${esc(dateValue(r.periodEnd))} · ${esc(r.status)}</option>`).join(''):`<option>${esc(s('noRunYet'))}</option>`}</select>
-          <div class="grow"></div>
-          ${isDraft?btn(s('postButton'),{icon:'check',cls:'primary',attrs:'data-act="post"'}):''}
-        </div>
-        <div class="statwrap"><div class="statcards">
-          ${statTile(s('statHeadcount'),runLines.length,run?dateValue(run.periodStart)+' → '+dateValue(run.periodEnd):'—')}
-          ${statTile(s('statGross'),money0(gross),'')}
-          ${statTile(s('statStatutoryTax'),money0(statutory+tax),'','var(--warn)')}
-          ${statTile(s('statNet'),money0(net),run?s('fieldPayDate')+' '+dateValue(run.payDate):'','var(--ok)')}
-        </div></div>
-        <div class="tablewrap" id="prTable">${run?`<div class="panel">
-          <div class="panel-h"><h3>${esc(t('hr.employees'))}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${esc(s('clickForPayslip'))}</span></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('hr.col.employee'))}</th><th>${esc(s('colGross'))}</th><th>${esc(s('colStatutory'))}</th><th>${esc(s('colTax'))}</th><th>${esc(s('colNet'))}</th></tr></thead>
-            <tbody>${rowHtml}</tbody>
-            <tfoot><tr><td></td><td class="l" style="font-weight:600">${esc(s('totalsLabel').replace('{n}',String(runLines.length)))}</td><td class="tnum"><b>${money0(gross)}</b></td><td class="tnum">${money0(statutory)}</td><td class="tnum">${money0(tax)}</td><td class="tnum"><b>${money0(net)}</b></td></tr></tfoot>
-          </table>
-        </div>`:statePanel({icon:'coins',title:s('noRunYet'),body:s('noRunBody')})}</div>
-      </div>
-    </div></section></div>`;
-    wire(run);
+  function linesFor(run){ return lines.filter(line=>String(line.runId)===String(run.id)); }
+  function summaryFor(run){
+    const runLines=linesFor(run);
+    return {
+      runLines,
+      headcount:runLines.length,
+      gross:runLines.reduce((sum,line)=>sum+Number(line.grossPay),0),
+      statutory:runLines.reduce((sum,line)=>sum+Number(line.employeeStatutoryDeduction),0),
+      tax:runLines.reduce((sum,line)=>sum+Number(line.incomeTaxDeduction),0),
+      net:runLines.reduce((sum,line)=>sum+Number(line.netPay),0),
+    };
   }
-
-  function wire(run){
-    root.querySelectorAll('.payrow').forEach(r=>{
-      r.style.cursor='pointer';
-      r.addEventListener('click',()=>navigate('payslip',{lineId:Number(r.dataset.line)}));
+  async function reload(){
+    const fresh=await preparePayrollData();
+    runs=fresh.runs.slice().sort((a,b)=>b.id-a.id);
+    lines=fresh.lines;
+    employees=fresh.employees;
+    employeeById=new Map(employees.map(employee=>[employee.id,employee]));
+  }
+  function createError(modal,message,input){
+    const error=modal.querySelector('[data-payroll-create-error]');
+    if(error){
+      error.hidden=false;
+      error.querySelector('span').textContent=message;
+    }
+    input?.focus();
+  }
+  function openCreateRun(){
+    appModal({
+      icon:'coins',
+      title:s('newRunButton'),
+      width:620,
+      body:`<p class="h1sub payroll-run-modal-description">${esc(s('newRunDescription'))}</p>
+        <div class="alert danger" data-payroll-create-error hidden>${ic('warn')}<span></span></div>
+        <div class="set-grid payroll-run-form">
+          <div class="fld"><span>${esc(s('fieldRunNo'))}</span><input id="prDocNo" value="${esc(nextPayrollDocNo(runs))}" readonly></div>
+          <div class="fld"><span>${esc(s('fieldPeriodStart'))}</span><input id="prStart" type="date" value="${firstOfMonthIso()}"></div>
+          <div class="fld"><span>${esc(s('fieldPeriodEnd'))}</span><input id="prEnd" type="date" value="${lastOfMonthIso()}"></div>
+          <div class="fld"><span>${esc(s('fieldPayDate'))}</span><input id="prPayDate" type="date" value="${todayIso()}"></div>
+        </div>`,
+      actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('createRun'),{icon:'plus',cls:'primary',attrs:'data-payroll-create'})}`,
     });
-    const picker=root.querySelector('#runPicker');
-    picker&&picker.addEventListener('change',()=>{ selectedRunId=Number(picker.value); render(); });
-    const newBtn=root.querySelector('[data-act="new"]');
-    newBtn&&newBtn.addEventListener('click',async()=>{
-      newBtn.disabled=true;
+    const modal=$('#modalEl');
+    const save=modal?.querySelector('[data-payroll-create]');
+    save?.addEventListener('click',async()=>{
+      const docNo=modal.querySelector('#prDocNo');
+      const start=modal.querySelector('#prStart');
+      const end=modal.querySelector('#prEnd');
+      const payDate=modal.querySelector('#prPayDate');
+      modal.querySelector('[data-payroll-create-error]').hidden=true;
+      if(!start.value||!end.value||!payDate.value){
+        createError(modal,s('dateRequired'),!start.value?start:!end.value?end:payDate);
+        return;
+      }
+      if(end.value<start.value){
+        createError(modal,s('invalidPayrollPeriod'),end);
+        return;
+      }
+      save.disabled=true;
+      save.setAttribute('aria-busy','true');
       try{
         const created=await window.ErpSystemData.create('payroll/runs',{
-          docNo:$('#prDocNo').value.trim(),
-          periodStart:$('#prStart').value, periodEnd:$('#prEnd').value, payDate:$('#prPayDate').value,
+          docNo:docNo.value.trim(),
+          periodStart:start.value,
+          periodEnd:end.value,
+          payDate:payDate.value,
         });
+        if(!routeStillActive()) return;
+        await reload();
+        if(!routeStillActive()) return;
+        closeModal();
+        page.select(created.data.id);
         toast(s('runCreated'),'ok');
-        const fresh=await preparePayrollData();
-        runs=fresh.runs.slice().sort((a,b)=>b.id-a.id); lines=fresh.lines; employees=fresh.employees;
-        employeeById=new Map(employees.map(e=>[e.id,e]));
-        selectedRunId=created.data.id;
-        await render();
       }catch(error){
-        toast(error&&error.message?error.message:s('runError'),'danger');
-        newBtn.disabled=false;
-      }
-    });
-    const postBtn=root.querySelector('[data-act="post"]');
-    postBtn&&postBtn.addEventListener('click',async()=>{
-      if(!run) return;
-      postBtn.disabled=true;
-      try{
-        await window.ErpSystemData.action('payroll/runs',run.id,'post',{},`post-payroll-run-${run.id}`);
-        toast(s('postSuccess'),'ok');
-        const fresh=await preparePayrollData();
-        runs=fresh.runs.slice().sort((a,b)=>b.id-a.id); lines=fresh.lines; employees=fresh.employees;
-        employeeById=new Map(employees.map(e=>[e.id,e]));
-        await render();
-      }catch(error){
-        toast(error&&error.message?error.message:s('postError'),'danger');
-        postBtn.disabled=false;
+        if(!routeStillActive()) return;
+        save.disabled=false;
+        save.removeAttribute('aria-busy');
+        createError(modal,error&&error.message?error.message:s('runError'));
       }
     });
   }
+  async function postRun(run){
+    busyId=run.id;
+    actionError=null;
+    page.render();
+    try{
+      await window.ErpSystemData.action('payroll/runs',run.id,'post',{},`post-payroll-run-${run.id}`);
+      if(!routeStillActive()) return;
+      await reload();
+      if(!routeStillActive()) return;
+      busyId=null;
+      actionError=null;
+      page.render();
+      toast(s('postSuccess'),'ok');
+    }catch(error){
+      if(!routeStillActive()) return;
+      busyId=null;
+      actionError={id:run.id,message:error&&error.message?error.message:s('postError')};
+      page.render();
+    }
+  }
+  function confirmPost(run){
+    const summary=summaryFor(run);
+    appModal({
+      icon:'lock',
+      title:s('postConfirmTitle'),
+      width:560,
+      body:`<p class="payroll-run-confirm">${esc(s('postConfirmBody')
+        .replace('{amount}',money0(summary.net))
+        .replace('{count}',String(summary.headcount))
+        .replace('{date}',dateValue(run.payDate)))}</p>`,
+      actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('postButton'),{icon:'check',cls:'primary',attrs:'data-payroll-post-confirm'})}`,
+    });
+    $('#modalEl')?.querySelector('[data-payroll-post-confirm]')?.addEventListener('click',()=>{
+      closeModal();
+      postRun(run);
+    });
+  }
+  function detailContent(run){
+    const summary=summaryFor(run);
+    const busy=String(busyId)===String(run.id);
+    const error=actionError&&String(actionError.id)===String(run.id)?actionError.message:null;
+    const employeeRows=summary.runLines.map((line,index)=>{
+      const employee=employeeById.get(line.employeeId);
+      const name=employee?.fullName||s('unknownEmployee');
+      const department=employee?.department||'—';
+      return `<tr class="payroll-line-row" data-payroll-line="${line.id}">
+        <td class="lineno">${index+1}</td>
+        <td class="l"><div class="payroll-employee">
+          ${profileAvatar({name,src:employee&&(employee.photoUrl||employee.imageUrl||employee.avatarUrl),size:28})}
+          <div><b>${esc(name)}</b><small>${esc(department)}</small></div>
+        </div></td>
+        <td class="tnum">${money0(Number(line.grossPay))}</td>
+        <td class="tnum muted">${money0(Number(line.employeeStatutoryDeduction))}</td>
+        <td class="tnum muted">${money0(Number(line.incomeTaxDeduction))}</td>
+        <td class="tnum"><b>${money0(Number(line.netPay))}</b></td>
+      </tr>`;
+    }).join('');
+    return `<div class="detail-head payroll-run-detail-head">
+        <span class="grabber"></span>
+        <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
+        <div class="dh-top">
+          <span class="payroll-run-icon">${ic('coins')}</span>
+          <div><h2>${esc(run.docNo)}</h2><span class="sub">${esc(dateValue(run.periodStart))} → ${esc(dateValue(run.periodEnd))}</span></div>
+          <div class="payroll-run-status">${cap(statusLabel(run.status),statusTone(run.status))}</div>
+        </div>
+      </div>
+      <div class="detail-body payroll-run-detail-body">
+        ${error?`<div class="alert danger payroll-run-action-error" data-payroll-action-error>${ic('warn')}<span>${esc(error)}</span></div>`:''}
+        <div class="payroll-run-kpis">
+          <div class="stat"><small>${esc(s('statHeadcount'))}</small><b class="tnum">${summary.headcount}</b></div>
+          <div class="stat"><small>${esc(s('statGross'))}</small><b class="tnum">${money0(summary.gross)}</b></div>
+          <div class="stat"><small>${esc(s('statStatutoryTax'))}</small><b class="tnum">${money0(summary.statutory+summary.tax)}</b></div>
+          <div class="stat"><small>${esc(s('statNet'))}</small><b class="tnum">${money0(summary.net)}</b></div>
+        </div>
+        <div class="card payroll-run-facts">
+          <div class="field"><span class="k">${esc(s('fieldPeriodStart'))}</span><span class="v">${esc(dateValue(run.periodStart))}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldPeriodEnd'))}</span><span class="v">${esc(dateValue(run.periodEnd))}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldPayDate'))}</span><span class="v">${esc(dateValue(run.payDate))}</span></div>
+          <div class="field"><span class="k">${esc(s('colStatus'))}</span><span class="v">${cap(statusLabel(run.status),statusTone(run.status))}</span></div>
+        </div>
+        <div class="panel payroll-lines-panel">
+          <div class="panel-h"><h3>${esc(t('hr.employees'))}</h3><small>${esc(s('clickForPayslip'))}</small></div>
+          ${summary.runLines.length?`<div class="payroll-lines-scroll">
+            <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('hr.col.employee'))}</th><th>${esc(s('colGross'))}</th><th>${esc(s('colStatutory'))}</th><th>${esc(s('colTax'))}</th><th>${esc(s('colNet'))}</th></tr></thead>
+              <tbody>${employeeRows}</tbody>
+              <tfoot><tr><td></td><td class="l"><b>${esc(s('totalsLabel').replace('{n}',String(summary.headcount)))}</b></td><td class="tnum"><b>${money0(summary.gross)}</b></td><td class="tnum">${money0(summary.statutory)}</td><td class="tnum">${money0(summary.tax)}</td><td class="tnum"><b>${money0(summary.net)}</b></td></tr></tfoot>
+            </table>
+          </div>`:`<div class="detail-empty payroll-lines-empty">${ic('people')}<div><b>${esc(s('noPayrollLines'))}</b><small>${esc(s('noPayrollLinesBody'))}</small></div></div>`}
+        </div>
+      </div>
+      ${run.status==='draft'?`<div class="set-savebar" data-payroll-actions>
+        <div class="grow"></div>
+        ${btn(s('postButton'),{icon:'check',cls:'primary',sm:false,attrs:`data-payroll-action="post"${busy?' disabled':''}`})}
+      </div>`:''}`;
+  }
 
-  await render();
+  page=masterDetailRegisterPage(root,{
+    module:'hr',
+    route:'payroll-run',
+    title:s('payrollRunTitle'),
+    description:s('payrollRunDescription'),
+    rows:()=>runs,
+    rowId:run=>run.id,
+    initialFilter:'all',
+    filters:[
+      ['all',s('filterAllRuns')],
+      ['draft',s('statusDraft')],
+      ['posted',s('statusPosted')],
+    ],
+    filterFn:(run,status)=>run.status===status,
+    kpis:()=>{
+      const latest=runs[0];
+      return [
+        {label:s('kpiTotalRuns'),value:runs.length,filter:'all'},
+        {label:s('kpiDraftRuns'),value:runs.filter(run=>run.status==='draft').length,filter:'draft'},
+        {label:s('kpiPostedRuns'),value:runs.filter(run=>run.status==='posted').length,filter:'posted'},
+        {label:s('kpiLatestNet'),value:latest?money0(summaryFor(latest).net):'—',accent:Boolean(latest)},
+      ];
+    },
+    primaryAction:{label:s('newRunButton'),icon:'plus',onClick:openCreateRun},
+    columns:[
+      {label:s('colRun'),align:'l',w:'minmax(150px,1.4fr)',render:run=>`<div class="cellsub"><b>${esc(run.docNo)}</b><small>${esc(dateValue(run.periodStart))} → ${esc(dateValue(run.periodEnd))}</small></div>`},
+      {label:s('colPeriod'),align:'l',w:'minmax(150px,1.5fr)',render:run=>`${esc(dateValue(run.periodStart))} → ${esc(dateValue(run.periodEnd))}`},
+      {label:s('colPayDate'),align:'l',render:run=>esc(dateValue(run.payDate))},
+      {label:s('colHeadcount'),align:'r',render:run=>`<span class="tnum">${summaryFor(run).headcount}</span>`},
+      {label:s('colNet'),align:'r',render:run=>`<b class="tnum">${money0(summaryFor(run).net)}</b>`},
+      {label:s('colStatus'),align:'l',render:run=>cap(statusLabel(run.status),statusTone(run.status))},
+    ],
+    empty:{icon:'coins',title:s('noRunYet'),description:s('noRunBody')},
+    detailPane:{
+      initialSelectedId:()=>isDesktop()?runs[0]?.id??null:null,
+      selectionOnFilter:rows=>isDesktop()?rows[0]?.id??null:null,
+      empty:`<div class="detail-empty">${ic('coins')}<div><b>${esc(s('selectPayrollRun'))}</b><small>${esc(s('selectPayrollRunBody'))}</small></div></div>`,
+      content:detailContent,
+      afterRender:({detailRoot,row})=>{
+        if(!detailRoot||!row) return;
+        detailRoot.querySelectorAll('[data-payroll-line]').forEach(line=>{
+          line.addEventListener('click',()=>navigate('payslip',{lineId:Number(line.dataset.payrollLine)}));
+        });
+        detailRoot.querySelector('[data-payroll-action="post"]')?.addEventListener('click',()=>confirmPost(row));
+      },
+    },
+  });
 };
 
 /* ---------------- PAYSLIP (document — one real payroll_run_line) ---------------- */

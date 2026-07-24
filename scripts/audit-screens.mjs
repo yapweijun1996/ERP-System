@@ -49,6 +49,7 @@ const CASE_DETAIL_ONLY = process.env.CASE_DETAIL_ONLY === '1';
 const LEDGER_DETAIL_ONLY = process.env.LEDGER_DETAIL_ONLY === '1';
 const POSTING_DETAIL_ONLY = process.env.POSTING_DETAIL_ONLY === '1';
 const FINANCIAL_STATEMENT_ONLY = process.env.FINANCIAL_STATEMENT_ONLY === '1';
+const PAYROLL_RUN_ONLY = process.env.PAYROLL_RUN_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
@@ -63,7 +64,7 @@ const VALID_LAYOUTS = new Set([
   'master-detail','workspace','board','activity-feed',
 ]);
 
-if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY,FINANCIAL_STATEMENT_ONLY].filter(Boolean).length > 1) {
+if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY,FINANCIAL_STATEMENT_ONLY,PAYROLL_RUN_ONLY].filter(Boolean).length > 1) {
   throw new Error('Layout-only audit switches are mutually exclusive.');
 }
 
@@ -275,7 +276,9 @@ async function auditRoutes(browser, viewport) {
       invalidLayoutMeta.length ? `Routes with an invalid layout: ${invalidLayoutMeta.join(', ')}` : '',
     ].filter(Boolean).join(' | '));
   }
-  const routes = LIST_LAYOUT_ONLY
+  const routes = PAYROLL_RUN_ONLY
+    ? allRoutes.filter((route) => route === 'payroll-run')
+    : LIST_LAYOUT_ONLY
     ? allRoutes.filter((route) => LIST_LAYOUTS.has(screenMeta[route]?.layout))
     : WORKSPACE_LAYOUT_ONLY
       ? allRoutes.filter((route) => screenMeta[route]?.layout === OPERATIONAL_WORKSPACE_LAYOUT)
@@ -292,6 +295,9 @@ async function auditRoutes(browser, viewport) {
                 : allRoutes;
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a shared list layout.');
+  }
+  if (PAYROLL_RUN_ONLY && routes.length === 0) {
+    throw new Error('Payroll Run screen is not registered.');
   }
   if (WORKSPACE_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare an operational workspace layout.');
@@ -644,6 +650,18 @@ async function auditRoutes(browser, viewport) {
           visibleRows: el.querySelectorAll('[data-list-table] .dt-r[data-row]').length,
           pendingActions: el.querySelectorAll('[data-leave-action]:not([disabled])').length,
         },
+        payrollRunLayout: {
+          pageheads: el.querySelectorAll('.pagehead').length,
+          legacyChrome: Boolean(el.querySelector('.report,.report-params,.report-result,#runPicker')),
+          nativeSelects: el.querySelectorAll('[data-list-route="payroll-run"] select').length,
+          detailPresent: Boolean(el.querySelector('[data-list-route="payroll-run"] [data-master-detail-panel]')),
+          detailOpen: Boolean(el.querySelector('[data-list-route="payroll-run"] [data-master-detail-panel].open')),
+          visibleRows: el.querySelectorAll('[data-list-route="payroll-run"] [data-list-table] .dt-r[data-row]').length,
+          postActions: el.querySelectorAll('[data-payroll-action="post"]:not([disabled])').length,
+          payrollLines: el.querySelectorAll('[data-payroll-line]').length,
+          controlledLines: [...el.querySelectorAll('[data-list-route="payroll-run"] table.lines')]
+            .every((table) => Boolean(table.closest('.payroll-lines-scroll'))),
+        },
         workspaceLayout: {
           present: Boolean(workspaceRoot),
           actualLayout: workspaceRoot?.getAttribute('data-layout') || null,
@@ -787,6 +805,11 @@ async function auditRoutes(browser, viewport) {
         pageheads: 0, errorRegion: false, controlledTable: false,
         legacyReportChrome: false, runHandler: false, exportActions: 0,
       },
+      payrollRunLayout: {
+        pageheads: 0, legacyChrome: false, nativeSelects: 0,
+        detailPresent: false, detailOpen: false, visibleRows: 0,
+        postActions: 0, payrollLines: 0, controlledLines: false,
+      },
       layoutProfile: {
         heading: '', gridTables: 0, semanticTables: 0, visibleRows: 0,
         salesBody: false, documentPage: false, formSurface: false,
@@ -869,6 +892,33 @@ async function auditRoutes(browser, viewport) {
           && rendered.leaveApprovalLayout.detailOpen
           && rendered.leaveApprovalLayout.pendingActions !== 2) {
         rendered.layoutIssues.push(`Leave Approval expected 2 pending disposition actions, found ${rendered.leaveApprovalLayout.pendingActions}`);
+      }
+    }
+    if (route === 'payroll-run') {
+      if (rendered.payrollRunLayout.pageheads !== 1) {
+        rendered.layoutIssues.push(`Payroll Run rendered ${rendered.payrollRunLayout.pageheads} module page headers`);
+      }
+      if (rendered.payrollRunLayout.legacyChrome) {
+        rendered.layoutIssues.push('Payroll Run still renders legacy report chrome');
+      }
+      if (rendered.payrollRunLayout.nativeSelects) {
+        rendered.layoutIssues.push(`Payroll Run contains ${rendered.payrollRunLayout.nativeSelects} native run selectors`);
+      }
+      if (!rendered.payrollRunLayout.detailPresent) {
+        rendered.layoutIssues.push('Payroll Run detail panel contract is missing');
+      }
+      if (rendered.payrollRunLayout.payrollLines && !rendered.payrollRunLayout.controlledLines) {
+        rendered.layoutIssues.push('Payroll Run employee lines are missing bounded horizontal scrolling');
+      }
+      if (viewport.width <= 980
+          && rendered.payrollRunLayout.visibleRows
+          && rendered.payrollRunLayout.detailOpen) {
+        rendered.layoutIssues.push('Payroll Run opens its mobile detail drawer before a row is selected');
+      }
+      if (viewport.width > 980
+          && rendered.payrollRunLayout.visibleRows
+          && !rendered.payrollRunLayout.detailOpen) {
+        rendered.layoutIssues.push('Payroll Run did not select the newest desktop run');
       }
     }
     if (meta?.layout === OPERATIONAL_WORKSPACE_LAYOUT) {
@@ -1189,6 +1239,128 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'leave-approval');
     if (result) {
       result.layoutIssues.push(...leaveIssues.map((issue) => `Leave Approval smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
+      result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('payroll-run')) {
+    const payrollIssues = await page.evaluate(async ({ mobile }) => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const originalAction = adapter.action;
+      const expected = {
+        en:'Payroll Run',
+        ms:'Larian Gaji',
+        zh:'薪资运行',
+        ja:'給与計算',
+        vi:'Đợt Tính Lương',
+      };
+      const issues = [];
+      const payrollRoot = () => document.querySelector('#viewRoot [data-layout="master-detail-register-v1"][data-list-route="payroll-run"]');
+      const row = () => payrollRoot()?.querySelector('[data-list-table] .dt-r[data-row]');
+      try {
+        const originalRuns = await originalList.call(adapter,'payroll/runs',{limit:100});
+        const draftRuns = (originalRuns.data || []).map((run,index) => index === 0
+          ? {...run,status:'draft'}
+          : run);
+        adapter.list = async (resource,query) => resource === 'payroll/runs'
+          ? {data:draftRuns,meta:{...(originalRuns.meta || {}),nextCursor:null}}
+          : originalList.call(adapter,resource,query);
+
+        for (const [locale,title] of Object.entries(expected)) {
+          window.getLang = () => locale;
+          await navigate('payroll-run');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (!heading.startsWith(title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          if (!payrollRoot()) issues.push(`${locale} master-detail register root missing`);
+        }
+
+        window.getLang = () => 'en';
+        await navigate('payroll-run');
+        if (mobile && row()) {
+          if (payrollRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile detail drawer opened before run selection');
+          }
+          row().click();
+          if (!payrollRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile run selection did not open the detail drawer');
+          }
+          payrollRoot()?.querySelector('[data-master-detail-close]')?.click();
+          if (payrollRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile detail close did not return to the register');
+          }
+          row()?.click();
+        }
+
+        const post = payrollRoot()?.querySelector('[data-payroll-action="post"]');
+        if (draftRuns.length && !post) {
+          issues.push('draft payroll run is missing the Post action');
+        } else if (post) {
+          adapter.action = async () => { throw new Error('payroll post audit failure'); };
+          post.click();
+          const confirm = document.querySelector('#modalEl [data-payroll-post-confirm]');
+          if (!confirm) {
+            issues.push('payroll post confirmation modal did not open');
+          } else {
+            confirm.click();
+            await new Promise((resolve) => setTimeout(resolve,20));
+            if (!payrollRoot()?.querySelector('[data-payroll-action-error]')) {
+              issues.push('failed payroll post did not render the inline detail error');
+            }
+            if (!payrollRoot()?.querySelector('[data-payroll-action="post"]:not([disabled])')) {
+              issues.push('failed payroll post did not re-enable the action');
+            }
+            await new Promise((resolve) => setTimeout(resolve,220));
+          }
+          adapter.action = originalAction;
+        }
+
+        adapter.list = async (resource,query) => resource === 'payroll/runs'
+          ? {data:[],meta:{nextCursor:null}}
+          : resource === 'payroll/run-lines'
+            ? {data:[],meta:{nextCursor:null}}
+            : originalList.call(adapter,resource,query);
+        await navigate('payroll-run');
+        if (!payrollRoot()?.querySelector('[data-list-empty]')) {
+          issues.push('payroll-run empty state missing');
+        }
+        if (!payrollRoot()?.querySelector('[data-master-detail-panel].is-empty')) {
+          issues.push('payroll-run empty state left the detail contract open');
+        }
+        payrollRoot()?.closest('.master')?.querySelector('[data-list-primary-action]')?.click();
+        const modal = document.querySelector('#modalEl');
+        if (!modal) {
+          issues.push('new payroll run modal did not open');
+        } else {
+          const start = modal.querySelector('#prStart');
+          const end = modal.querySelector('#prEnd');
+          if (!start || !end) {
+            issues.push('new payroll run modal is missing its period fields');
+          } else {
+            start.value = '2026-07-31';
+            end.value = '2026-07-01';
+            modal.querySelector('[data-payroll-create]')?.click();
+            if (modal.querySelector('[data-payroll-create-error]')?.hidden !== false) {
+              issues.push('invalid payroll period did not render the inline modal error');
+            }
+          }
+          closeModal();
+        }
+      } finally {
+        adapter.list = originalList;
+        adapter.action = originalAction;
+        window.getLang = originalGetLang;
+        closeModal();
+        await navigate('payroll-run');
+      }
+      return issues;
+    }, { mobile: viewport.width <= 980 });
+    const result = results.find((row) => row.route === 'payroll-run');
+    if (result) {
+      result.layoutIssues.push(...payrollIssues.map((issue) => `Payroll Run smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
       result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
     }
