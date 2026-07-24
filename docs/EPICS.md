@@ -1789,3 +1789,10 @@ Delivery slices:
       of UTC-converted local midnight. Align the modal error with its form and extend
       desktop/375px Payroll audits to cover initial, invalid and clickable states.
       Service worker v97 delivers the fix without changing payroll commands or data.
+- [x] **TASK-100 — Service Order case-detail SSOT.** Reclassify Service Order from
+      the unstructured `document-detail` exemption to `case-detail-v1`. Extend the
+      shared Case Detail renderer with an optional structured lifecycle, migrate the
+      overview/diagnosis/SLA/contract/actions surface, fix Customer 360 targeting and
+      remove the `.dt` title collision that caused mobile clipping. Static and
+      five-language state audits enforce the corrected desktop/375px layout, while
+      Service worker v98 delivers the change without altering service commands.

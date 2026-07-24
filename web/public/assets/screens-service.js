@@ -20,6 +20,12 @@ function serviceCopy(){
   const packs={
     en:{
       contractExpiring:'Expiring',contractExpired:'Expired',
+      serviceOrderTitle:'Service Order',
+      serviceOrderDescription:'Review the issue, service context and lifecycle of the selected ticket.',
+      serviceContext:'Service context',lifecycleLabel:'Ticket lifecycle',
+      fieldOpened:'Opened',fieldResolved:'Resolved',
+      noServiceOrder:'No service order found',
+      noServiceOrderBody:'No service ticket is available for the current company.',
       kpiOverdue:'Overdue',overdueAlert:'{n} ticket(s) are past their SLA response window.',
       fieldTicketNo:'Ticket no.',systemNumbered:'System-numbered',fieldCustomer:'Customer',
       fieldAssetDescription:'Asset',assetPlaceholder:'e.g. Conveyor Drive Unit',fieldSerialNo:'Serial no. (optional)',
@@ -50,6 +56,12 @@ function serviceCopy(){
     },
     ms:{
       contractExpiring:'Akan tamat',contractExpired:'Tamat tempoh',
+      serviceOrderTitle:'Pesanan Servis',
+      serviceOrderDescription:'Semak isu, konteks servis dan kitaran hayat tiket yang dipilih.',
+      serviceContext:'Konteks servis',lifecycleLabel:'Kitaran hayat tiket',
+      fieldOpened:'Dibuka',fieldResolved:'Diselesaikan',
+      noServiceOrder:'Pesanan servis tidak ditemui',
+      noServiceOrderBody:'Tiada tiket servis tersedia untuk syarikat semasa.',
       kpiOverdue:'Tertunggak',overdueAlert:'{n} tiket telah melepasi tempoh respons SLA.',
       fieldTicketNo:'No. tiket',systemNumbered:'Bernombor sistem',fieldCustomer:'Pelanggan',
       fieldAssetDescription:'Aset',assetPlaceholder:'cth. Unit Pemacu Konveyor',fieldSerialNo:'No. siri (pilihan)',
@@ -68,7 +80,7 @@ function serviceCopy(){
       slaTitle:'SLA',responseDue:'Respons perlu',overdueBy:'Tertunggak selama {t}',timeLeft:'{t} berbaki',
       noSla:'Tiada SLA pada tiket ini',noSlaSub:'Tiket ini tiada kontrak berkaitan dengan komitmen masa respons.',
       openedOn:'dibuka {d}',dueOn:'perlu {d}',coverageLabel:'Liputan',billable:'Boleh dibil',
-      billableYes:'Ya',billableNo:'Tidak — dalam waranti',customer360:'Customer 360',
+      billableYes:'Ya',billableNo:'Tidak — dalam waranti',customer360:'Pelanggan 360',
       contractsPanel:'Kontrak berkaitan',noContractLinked:'Tiada kontrak dikaitkan dengan tiket ini.',
       diagnosisPanel:'Diagnosis',reportedIssue:'Isu dilaporkan',technicianDiagnosis:'Diagnosis juruteknik',
       noDiagnosisYet:'Belum ada diagnosis dicatat — selesaikan tiket untuk menambah satu.',
@@ -80,6 +92,12 @@ function serviceCopy(){
     },
     zh:{
       contractExpiring:'即将到期',contractExpired:'已过期',
+      serviceOrderTitle:'服务工单',
+      serviceOrderDescription:'查看所选工单的问题、服务背景和生命周期。',
+      serviceContext:'服务背景',lifecycleLabel:'工单生命周期',
+      fieldOpened:'开单时间',fieldResolved:'解决时间',
+      noServiceOrder:'未找到服务工单',
+      noServiceOrderBody:'当前公司没有可用的服务工单。',
       kpiOverdue:'已逾期',overdueAlert:'{n} 张工单已超出 SLA 响应时限。',
       fieldTicketNo:'工单编号',systemNumbered:'系统编号',fieldCustomer:'客户',
       fieldAssetDescription:'设备',assetPlaceholder:'例如:输送驱动装置',fieldSerialNo:'序列号(可选)',
@@ -110,6 +128,12 @@ function serviceCopy(){
     },
     ja:{
       contractExpiring:'まもなく期限切れ',contractExpired:'期限切れ',
+      serviceOrderTitle:'サービスオーダー',
+      serviceOrderDescription:'選択したチケットの問題、サービス状況、ライフサイクルを確認します。',
+      serviceContext:'サービス状況',lifecycleLabel:'チケットのライフサイクル',
+      fieldOpened:'受付日時',fieldResolved:'解決日時',
+      noServiceOrder:'サービスオーダーが見つかりません',
+      noServiceOrderBody:'現在の会社に利用可能なサービスチケットはありません。',
       kpiOverdue:'期限超過',overdueAlert:'{n} 件のチケットがSLA対応時間を超過しています。',
       fieldTicketNo:'チケット番号',systemNumbered:'システム採番',fieldCustomer:'顧客',
       fieldAssetDescription:'設備',assetPlaceholder:'例:コンベアドライブユニット',fieldSerialNo:'シリアル番号(任意)',
@@ -140,6 +164,12 @@ function serviceCopy(){
     },
     vi:{
       contractExpiring:'Sắp hết hạn',contractExpired:'Đã hết hạn',
+      serviceOrderTitle:'Lệnh dịch vụ',
+      serviceOrderDescription:'Xem sự cố, bối cảnh dịch vụ và vòng đời của phiếu đã chọn.',
+      serviceContext:'Bối cảnh dịch vụ',lifecycleLabel:'Vòng đời phiếu',
+      fieldOpened:'Đã mở',fieldResolved:'Đã xử lý',
+      noServiceOrder:'Không tìm thấy lệnh dịch vụ',
+      noServiceOrderBody:'Không có phiếu dịch vụ cho công ty hiện tại.',
       kpiOverdue:'Quá hạn',overdueAlert:'{n} phiếu đã quá thời gian phản hồi SLA.',
       fieldTicketNo:'Số phiếu',systemNumbered:'Đánh số tự động',fieldCustomer:'Khách hàng',
       fieldAssetDescription:'Thiết bị',assetPlaceholder:'vd: Cụm truyền động băng tải',fieldSerialNo:'Số serial (tùy chọn)',
@@ -158,7 +188,7 @@ function serviceCopy(){
       slaTitle:'SLA',responseDue:'Hạn phản hồi',overdueBy:'Quá hạn {t}',timeLeft:'Còn {t}',
       noSla:'Phiếu này không có SLA',noSlaSub:'Phiếu này không liên kết với hợp đồng có cam kết thời gian phản hồi.',
       openedOn:'mở lúc {d}',dueOn:'hạn {d}',coverageLabel:'Loại bảo hành',billable:'Tính phí',
-      billableYes:'Có',billableNo:'Không — còn bảo hành',customer360:'Customer 360',
+      billableYes:'Có',billableNo:'Không — còn bảo hành',customer360:'Khách hàng 360',
       contractsPanel:'Hợp đồng liên quan',noContractLinked:'Phiếu này chưa liên kết hợp đồng nào.',
       diagnosisPanel:'Chẩn đoán',reportedIssue:'Sự cố báo cáo',technicianDiagnosis:'Chẩn đoán của kỹ thuật viên',
       noDiagnosisYet:'Chưa có chẩn đoán nào — xử lý phiếu để thêm.',
@@ -352,7 +382,7 @@ function serviceTicketForm(s){
 async function prepareServiceTicketDetail(ticketId){
   await prepareCanonicalServiceData();
   const ticket=ticketId?DB.serviceTickets.find(x=>x.id===ticketId):DB.serviceTickets[0];
-  if(!ticket) throw new Error('No service ticket found for the active company.');
+  if(!ticket) return {ticket:null,contract:null,customerRow:null};
   const contract=ticket.contractId!=null?DB.serviceContracts.find(c=>c.id===ticket.contractId):null;
   const customerRow=(DB.customers||[]).find(c=>c.id===ticket.custId);
   return {ticket,contract,customerRow};
@@ -363,97 +393,128 @@ SCREENS['service-order'] = async function(root, params){
   const requestedId=params&&params.ticketId?Number(params.ticketId):null;
   const detail=await prepareServiceTicketDetail(requestedId);
   const {ticket:d,contract}=detail;
-
-  const STEP_LABELS=[ts('Open'),ts('In Progress'),ts('Closed')];
-  const stepIdx={open:0,in_progress:1,closed:2}[d.status]??0;
-  const stepperHtml=`<div class="stepper">${STEP_LABELS.map((lbl,i)=>{
-    const cls=i<stepIdx?'done':(i===stepIdx?'current':'');
-    const dot=i<stepIdx?ic('check'):(i===stepIdx?ic('clock'):'');
-    return `<div class="step ${cls}"><span class="sdot">${dot}</span>${esc(lbl)}</div>`+(i<STEP_LABELS.length-1?`<span class="stepline ${i<stepIdx?'done':''}"></span>`:'');
-  }).join('')}</div>`;
+  const baseCrumb=[
+    DB.company.name,
+    {label:t('nav.service'),route:'service-ticket'},
+    {label:t('svc.crumb'),route:'service-ticket'},
+  ];
+  if(!d){
+    caseDetailPage(root,{
+      module:'service',
+      route:'service-order',
+      title:s('serviceOrderTitle'),
+      description:s('serviceOrderDescription'),
+      crumb:[...baseCrumb,{cur:s('serviceOrderTitle')}],
+      empty:{icon:'wrench',title:s('noServiceOrder'),description:s('noServiceOrderBody')},
+      afterRender:({caseRoot})=>{
+        caseRoot?.setAttribute('data-canonical-service-order','true');
+      },
+    });
+    return;
+  }
 
   function slaPanel(){
     if(!d.dueAt){
-      return `<div class="sumcard" style="margin-bottom:14px">
-        <div class="sectitle" style="margin-top:0">${esc(s('slaTitle'))}</div>
-        <div style="color:var(--muted);font-size:13px">${esc(s('noSla'))}</div>
-        <small style="color:var(--muted)">${esc(s('noSlaSub'))}</small>
+      return `<div class="service-order-context-section" data-service-sla>
+        <div class="sectitle">${esc(s('slaTitle'))}</div>
+        <div class="service-order-context-empty">
+          <span>${esc(s('noSla'))}</span>
+          <small>${esc(s('noSlaSub'))}</small>
+        </div>
       </div>`;
     }
     const tone=d.overdue?'danger':'ok';
     const label=d.overdue?s('overdueBy').replace('{t}',formatDuration(Date.now()-d.dueAt.getTime())):s('timeLeft').replace('{t}',formatDuration(d.dueAt.getTime()-Date.now()));
-    return `<div class="sumcard" style="margin-bottom:14px">
-      <div class="sectitle" style="margin-top:0">${esc(s('slaTitle'))}</div>
+    return `<div class="service-order-context-section" data-service-sla>
+      <div class="sectitle">${esc(s('slaTitle'))}</div>
       <div class="indicator ${tone}">
         <div class="ind-top">${ic('clock')}<span>${esc(s('responseDue'))}</span><span class="ind-r">${esc(label)}</span></div>
         <small>${esc(contract?contract.plan+' SLA · ':'')}${esc(s('openedOn').replace('{d}',dateTimeValue(d.openedAt)))} · ${esc(s('dueOn').replace('{d}',dateTimeValue(d.dueAt)))}</small>
       </div>
-      <div class="sumrow" style="margin-top:10px"><span class="sk2">${esc(s('coverageLabel'))}</span><span class="sv">${cap(ts(SERVICE_COVERAGE_LABEL[d.coverage]),coverTone(SERVICE_COVERAGE_LABEL[d.coverage]))}</span></div>
-      <div class="sumrow"><span class="sk2">${esc(s('billable'))}</span><span class="sv">${d.coverage==='in_warranty'?esc(s('billableNo')):esc(s('billableYes'))}</span></div>
+      <div class="service-order-sla-facts">
+        <div class="sumrow"><span class="sk2">${esc(s('coverageLabel'))}</span><span class="sv">${cap(ts(SERVICE_COVERAGE_LABEL[d.coverage]),coverTone(SERVICE_COVERAGE_LABEL[d.coverage]))}</span></div>
+        <div class="sumrow"><span class="sk2">${esc(s('billable'))}</span><span class="sv">${d.coverage==='in_warranty'?esc(s('billableNo')):esc(s('billableYes'))}</span></div>
+      </div>
     </div>`;
   }
 
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="docwrap"><div class="docpage">
-      ${crumbs([DB.company.name,{label:t('nav.service'),route:'service-ticket'},t('svc.crumb'),{cur:d.no}])}
-      <div class="dochead">
-        <div class="dh-row1">
-          <div>
-            <div class="dt">${ic('wrench')}Service Order <span class="dnum">${esc(d.no)}</span></div>
-            <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.asset)}${d.sn?' · SN '+esc(d.sn):''} · ${esc(d.cust)}</div>
-          </div>
-          <div class="dactions">${cap(ts(d.priority),svcPriorityTone(d.priority))}${svcTicketStatusBadge(d.status)}${btn(s('customer360'),{icon:'user',cls:'soft',attrs:'onclick="navigate(\'crm-customer\')"'})}</div>
-        </div>
-        ${stepperHtml}
-        <div class="docmeta">
-          <div class="dm"><small>${esc(s('technician'))}</small><b>${d.tech?esc(d.tech):esc(s('unassigned'))}</b></div>
-          <div class="dm"><small>${esc(s('coverageLabel'))}</small><b>${esc(ts(SERVICE_COVERAGE_LABEL[d.coverage]))}</b></div>
-          <div class="dm"><small>Contract</small><b>${contract?esc(contract.no):'—'}</b></div>
-          <div class="dm"><small>Opened</small><b>${esc(dateTimeValue(d.openedAt))}</b></div>
-          ${d.resolvedAt?`<div class="dm"><small>Resolved</small><b>${esc(dateTimeValue(d.resolvedAt))}</b></div>`:''}
-        </div>
+  const contractStatus=contract
+    ? {active:s('activeContracts'),expiring:s('contractExpiring'),expired:s('contractExpired')}[contract.computedStatus]
+      || s('activeContracts')
+    : '';
+  const relatedContract=`<div class="service-order-context-section" data-service-contract>
+    <div class="sectitle">${esc(s('contractsPanel'))}</div>
+    ${contract
+      ?relatedDocs([{no:contract.no,label:contract.plan+' SLA',meta:contract.cust,status:contractStatus}])
+      :`<div class="service-order-context-empty"><span>${esc(s('noContractLinked'))}</span></div>`}
+  </div>`;
+  const actions=d.status!=='closed'?`
+    <div class="grow"></div>
+    ${d.status==='open'?btn(s('assign'),{icon:'people',cls:'soft',attrs:'data-act="assign"'}):''}
+    ${btn(s('resolveClose'),{icon:'check',cls:'primary',sm:false,attrs:'data-act="resolve"'})}`:'';
+
+  caseDetailPage(root,{
+    module:'service',
+    route:'service-order',
+    title:s('serviceOrderTitle'),
+    description:s('serviceOrderDescription'),
+    crumb:[...baseCrumb,{cur:d.no}],
+    identity:{
+      title:d.asset,
+      code:d.no,
+      meta:`${d.sn?`SN ${d.sn} · `:''}${d.cust}`,
+      related:btn(s('customer360'),{
+        icon:'user',
+        cls:'soft',
+        attrs:`data-service-customer="${d.custId}"`,
+      }),
+    },
+    statuses:[
+      {label:ts(d.priority),tone:svcPriorityTone(d.priority)},
+      {label:ts(SERVICE_TICKET_STATUS_LABEL[d.status]||d.status),tone:SERVICE_TICKET_STATUS_TONE[d.status]||'neutral'},
+    ],
+    lifecycle:{
+      label:s('lifecycleLabel'),
+      current:d.status,
+      steps:[
+        {key:'open',label:ts('Open')},
+        {key:'in_progress',label:ts('In Progress')},
+        {key:'closed',label:ts('Closed')},
+      ],
+    },
+    facts:[
+      {label:s('technician'),value:d.tech||s('unassigned')},
+      {label:s('coverageLabel'),value:ts(SERVICE_COVERAGE_LABEL[d.coverage])},
+      {label:s('fieldOpened'),value:dateTimeValue(d.openedAt)},
+      {label:s('fieldResolved'),value:d.resolvedAt?dateTimeValue(d.resolvedAt):'—'},
+    ],
+    main:`<div class="panel service-order-diagnosis" data-service-diagnosis>
+      <div class="panel-h"><h3>${esc(s('diagnosisPanel'))}</h3></div>
+      <div class="panel-body">
+        <div class="risk warn">${ic('info')}<div><b>${esc(s('reportedIssue'))}</b><small>${esc(d.issue)}</small></div></div>
+        ${d.diagnosis
+          ?`<div class="risk ok">${ic('checkc')}<div><b>${esc(s('technicianDiagnosis'))}</b><small>${esc(d.diagnosis)}</small></div></div>`
+          :`<div class="case-detail-inline-empty" data-service-diagnosis-empty>${ic('wrench')}<span>${esc(s('noDiagnosisYet'))}</span></div>`}
       </div>
-
-      <div class="appr-layout">
-        <div class="docmain">
-          <div class="panel">
-            <div class="panel-h"><h3>${esc(s('diagnosisPanel'))}</h3></div>
-            <div class="panel-body" style="padding-top:12px">
-              <div class="risk warn">${ic('info')}<div><b>${esc(s('reportedIssue'))}</b><small>${esc(d.issue)}</small></div></div>
-              ${d.diagnosis
-                ?`<div class="risk ok">${ic('checkc')}<div><b>${esc(s('technicianDiagnosis'))}</b><small>${esc(d.diagnosis)}</small></div></div>`
-                :`<div style="color:var(--muted);font-size:13px;margin-top:10px">${esc(s('noDiagnosisYet'))}</div>`}
-            </div>
-          </div>
-        </div>
-
-        <aside>
-          ${slaPanel()}
-          <div class="sumcard">
-            <div class="sectitle" style="margin-top:0">${esc(s('contractsPanel'))}</div>
-            ${contract
-              ?relatedDocs([{no:contract.no,label:contract.plan+' SLA',meta:contract.cust,status:'Active'}])
-              :`<div style="color:var(--muted);font-size:13px">${esc(s('noContractLinked'))}</div>`}
-          </div>
-        </aside>
-      </div>
-    </div></div>
-
-    <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--hairline);padding:12px 24px;display:flex;gap:10px;align-items:center;flex:none">
-      <div class="grow"></div>
-      ${d.status==='open'?btn(s('assign'),{icon:'people',cls:'soft',attrs:'data-act="assign"'}):''}
-      ${d.status!=='closed'?btn(s('resolveClose'),{icon:'check',cls:'primary',sm:false,attrs:'data-act="resolve"'}):''}
-    </div>
-  </section></div>`;
-
-  const assignBtn=root.querySelector('[data-act="assign"]');
-  assignBtn&&assignBtn.addEventListener('click',()=>assignTicketForm(s,d,async()=>{
-    navigate('service-order',{ticketId:d.id});
-  }));
-  const resolveBtn=root.querySelector('[data-act="resolve"]');
-  resolveBtn&&resolveBtn.addEventListener('click',()=>resolveTicketForm(s,d,async()=>{
-    navigate('service-order',{ticketId:d.id});
-  }));
+    </div>`,
+    context:{
+      title:s('serviceContext'),
+      body:`${slaPanel()}${relatedContract}`,
+    },
+    actions,
+    afterRender:({caseRoot})=>{
+      caseRoot?.setAttribute('data-canonical-service-order','true');
+      root.querySelector('[data-service-customer]')?.addEventListener('click',event=>{
+        navigate('crm-customer',{customerId:Number(event.currentTarget.dataset.serviceCustomer)});
+      });
+      root.querySelector('[data-act="assign"]')?.addEventListener('click',()=>assignTicketForm(s,d,async()=>{
+        navigate('service-order',{ticketId:d.id});
+      }));
+      root.querySelector('[data-act="resolve"]')?.addEventListener('click',()=>resolveTicketForm(s,d,async()=>{
+        navigate('service-order',{ticketId:d.id});
+      }));
+    },
+  });
 };
 
 function assignTicketForm(s,ticket,onSaved){

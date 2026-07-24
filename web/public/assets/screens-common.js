@@ -218,7 +218,27 @@ function caseDetailPage(root, config){
   const identity=cfg.identity||{};
   const statuses=Array.isArray(cfg.statuses)?cfg.statuses.filter(status=>status&&status.label):[];
   const facts=Array.isArray(cfg.facts)?cfg.facts:[];
-  const hasOverview=Boolean(identity.title||identity.code||identity.meta||identity.related||statuses.length||facts.length);
+  const lifecycle=cfg.lifecycle||{};
+  const lifecycleSteps=Array.isArray(lifecycle.steps)
+    ? lifecycle.steps.filter(step=>step&&step.label)
+    : [];
+  const lifecycleIndex=lifecycleSteps.findIndex(step=>String(step.key)===String(lifecycle.current));
+  const lifecycleHtml=lifecycleSteps.length?`
+    <ol class="case-detail-lifecycle"
+        data-case-lifecycle
+        aria-label="${esc(String(lifecycle.label||'Lifecycle'))}">
+      ${lifecycleSteps.map((step,index)=>{
+        const state=index<lifecycleIndex?'done':index===lifecycleIndex?'current':'pending';
+        const marker=index<lifecycleIndex?ic('check'):index===lifecycleIndex?ic('clock'):'';
+        return `<li class="${state}" data-case-lifecycle-step="${esc(String(step.key))}"
+            ${state==='current'?'aria-current="step"':''}>
+          <span class="case-detail-lifecycle-marker" aria-hidden="true">${marker}</span>
+          <span>${esc(String(step.label))}</span>
+        </li>`;
+      }).join('')}
+    </ol>`:'';
+  const hasOverview=Boolean(identity.title||identity.code||identity.meta||identity.related
+    ||statuses.length||facts.length||lifecycleSteps.length);
   const overviewHtml=hasOverview?`
     <div class="case-detail-overview-head">
       <div class="case-detail-identity">
@@ -234,12 +254,13 @@ function caseDetailPage(root, config){
         ${identity.related||''}
       </div>
     </div>
-    <div class="case-detail-facts">
+    ${lifecycleHtml}
+    ${facts.length?`<div class="case-detail-facts">
       ${facts.map(fact=>`<div class="case-detail-fact">
         <small>${esc(String(fact.label||''))}</small>
         <b class="${fact.numeric?'tnum':''}">${esc(String(fact.value??'—'))}</b>
       </div>`).join('')}
-    </div>`:'';
+    </div>`:''}`:'';
   const empty=cfg.empty||null;
   const main=empty
     ? `<div class="statepanel empty case-detail-empty" data-case-empty>

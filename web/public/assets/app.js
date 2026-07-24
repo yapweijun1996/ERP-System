@@ -593,7 +593,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'bom','employee',
   ],
   'case-detail-v1':[
-    'ncr',
+    'ncr','service-order',
   ],
   'ledger-detail-v1':[
     'account-ledger',
@@ -618,7 +618,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'credit-note','delivery-order','goods-receipt',
     'opportunity','payslip','po-approval','project-detail',
     'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
-    'sales-order','sales-return','service-order','supplier-invoice','txn-view',
+    'sales-order','sales-return','supplier-invoice','txn-view',
     'work-order',
   ],
   form:[

@@ -669,15 +669,34 @@ UTC-positive timezones. The Payroll state audit verifies desktop/mobile bounds,
 clickable actions, initial hidden error, local date defaults and the invalid-period
 message. Service-worker v97 delivers the shared modal, CSS and HR screen updates.
 
+## Service Order case-detail SSOT (TASK-100, 2026-07-24)
+
+Service Order now renders through `caseDetailPage()` instead of rebuilding
+`docwrap`, `docpage`, `dochead`, `appr-layout`, the legacy Stepper and a separate
+sticky footer. This also removes the accidental `.dt` title collision with the
+760px-wide data-table class that produced internal scrolling and clipped titles at
+375px.
+
+The shared Case Detail interface now accepts an optional structured lifecycle.
+Service Order uses it for Open, In Progress and Closed while NCR remains unchanged.
+The standard overview contains ticket identity, priority/status and four service
+facts; Diagnosis is the main work area, SLA plus related contract form the context
+rail, and Open/In Progress actions use the standard responsive action region.
+Closed and empty states preserve a hidden, empty actions region. Customer 360 is
+bound to the current customer ID, and five-language state smoke covers SLA,
+contract, diagnosis, empty, Assign/Resolve and failure recovery. Service-worker v98
+delivers the shared renderer, Service screen, layout metadata and styles.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 98 tasks, including TASK-099
+- Done: 99 tasks, including TASK-100
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 114 Canonical / 0 Preview and 42 audited list-layout routes, including
   36 transaction lists, 4 master-detail registers and 2 report lists; Warehouse
   Picking remains on its dedicated operational-workspace SSOT, and BOM plus Employee
   use the shared master-detail editor SSOT with Employee's actions in the page header.
+  NCR and Service Order use the shared actionable Case Detail SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

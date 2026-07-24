@@ -118,6 +118,24 @@ if (obsoleteEmployeeChrome.length) {
   throw new Error(`Employee still rebuilds legacy document chrome: ${obsoleteEmployeeChrome.join(', ')}`);
 }
 
+const serviceScreenSource = readFileSync(path.join(assetDir, 'screens-service.js'), 'utf8');
+const serviceOrderScreenSource = (serviceScreenSource.split("SCREENS['service-order'] =")[1] || '')
+  .split('function assignTicketForm')[0];
+const obsoleteServiceOrderChrome = [
+  '<div class="content full"',
+  'docwrap',
+  'docpage',
+  'dochead',
+  'appr-layout',
+  'class="stepper"',
+  'class="dt"',
+  'sumcard',
+  'position:sticky',
+].filter((token) => serviceOrderScreenSource.includes(token));
+if (obsoleteServiceOrderChrome.length) {
+  throw new Error(`Service Order still rebuilds legacy case chrome: ${obsoleteServiceOrderChrome.join(', ')}`);
+}
+
 const warehouseScreenSource = readFileSync(path.join(assetDir, 'screens-warehouse.js'), 'utf8');
 const obsoleteWorkspaceChrome = ['pick-layout','pick-main','pick-side','pick-tools','progressbig']
   .filter((token) => warehouseScreenSource.includes(token));
@@ -534,8 +552,26 @@ async function auditRoutes(browser, viewport) {
           layoutIssues.push('case detail main and context are not separate desktop columns');
         }
       }
-      if (caseDetailRoot && caseDetailRoot.querySelector('.docpage,.doclayout')) {
+      if (caseDetailRoot && caseDetailRoot.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.appr-layout,.stepper')) {
         layoutIssues.push('case detail still renders legacy document chrome');
+      }
+      const serviceOrderRoot = caseDetailRoot?.getAttribute('data-case-route') === 'service-order'
+        ? caseDetailRoot
+        : null;
+      const serviceOrderOverflow = serviceOrderRoot
+        ? [
+            serviceOrderRoot,
+            serviceOrderRoot.querySelector('[data-case-overview]'),
+            serviceOrderRoot.querySelector('[data-case-lifecycle]'),
+            serviceOrderRoot.querySelector('.case-detail-facts'),
+            serviceOrderRoot.querySelector('[data-case-main]'),
+            serviceOrderRoot.querySelector('[data-case-context]'),
+            serviceOrderRoot.querySelector('[data-case-actions]'),
+          ].filter((node)=>node&&node.offsetParent!==null&&node.scrollWidth>node.clientWidth+1)
+            .map((node)=>`${node.className||node.tagName} ${node.scrollWidth}>${node.clientWidth}`)
+        : [];
+      if (serviceOrderOverflow.length) {
+        layoutIssues.push(`Service Order internal overflow: ${serviceOrderOverflow.join(', ')}`);
       }
       const ledgerDetailRoot = el.querySelector('[data-layout="ledger-detail-v1"]');
       const ledgerDetailRegions = ledgerDetailRoot ? [
@@ -760,7 +796,21 @@ async function auditRoutes(browser, viewport) {
           ordered: caseDetailOrder,
           pageheads: el.querySelectorAll('.pagehead').length,
           errorRegion: Boolean(caseDetailRoot?.querySelector('[data-case-error]')),
-          legacyDocumentChrome: Boolean(caseDetailRoot?.querySelector('.docpage,.doclayout')),
+          legacyDocumentChrome: Boolean(caseDetailRoot?.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.appr-layout,.stepper')),
+        },
+        serviceOrderLayout: {
+          canonicalMarker: serviceOrderRoot?.getAttribute('data-canonical-service-order') === 'true',
+          h1s: el.querySelectorAll('.pagehead h1').length,
+          lifecycleSteps: serviceOrderRoot?.querySelectorAll('[data-case-lifecycle-step]').length || 0,
+          lifecycleCurrent: serviceOrderRoot?.querySelectorAll('[data-case-lifecycle-step][aria-current="step"]').length || 0,
+          factCount: serviceOrderRoot?.querySelectorAll('.case-detail-fact').length || 0,
+          customerActions: serviceOrderRoot?.querySelectorAll('[data-service-customer]').length || 0,
+          diagnosis: Boolean(serviceOrderRoot?.querySelector('[data-service-diagnosis]')),
+          sla: Boolean(serviceOrderRoot?.querySelector('[data-service-sla]')),
+          contract: Boolean(serviceOrderRoot?.querySelector('[data-service-contract]')),
+          actionsHidden: Boolean(serviceOrderRoot?.querySelector('[data-case-actions][hidden]')),
+          actionButtons: serviceOrderRoot?.querySelectorAll('[data-case-actions] button').length || 0,
+          internalOverflow: serviceOrderOverflow,
         },
         ledgerDetailLayout: {
           present: Boolean(ledgerDetailRoot),
@@ -861,6 +911,11 @@ async function auditRoutes(browser, viewport) {
       caseDetailLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         pageheads: 0, errorRegion: false, legacyDocumentChrome: false,
+      },
+      serviceOrderLayout: {
+        canonicalMarker: false, h1s: 0, lifecycleSteps: 0, lifecycleCurrent: 0,
+        factCount: 0, customerActions: 0, diagnosis: false, sla: false, contract: false,
+        actionsHidden: false, actionButtons: 0, internalOverflow: [],
       },
       ledgerDetailLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
@@ -1138,6 +1193,34 @@ async function auditRoutes(browser, viewport) {
     }
     if (rendered.caseDetailLayout.present && meta?.layout !== CASE_DETAIL_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.caseDetailLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
+    if (route === 'service-order') {
+      if (!rendered.serviceOrderLayout.canonicalMarker) {
+        rendered.layoutIssues.push('Service Order canonical marker missing');
+      }
+      if (rendered.serviceOrderLayout.h1s !== 1) {
+        rendered.layoutIssues.push(`Service Order expected one semantic page heading, found ${rendered.serviceOrderLayout.h1s}`);
+      }
+      if (rendered.serviceOrderLayout.lifecycleSteps !== 3
+          || rendered.serviceOrderLayout.lifecycleCurrent !== 1) {
+        rendered.layoutIssues.push(
+          `Service Order lifecycle expected 3 steps and 1 current step, found ${rendered.serviceOrderLayout.lifecycleSteps} and ${rendered.serviceOrderLayout.lifecycleCurrent}`,
+        );
+      }
+      if (rendered.serviceOrderLayout.factCount !== 4) {
+        rendered.layoutIssues.push(`Service Order expected 4 overview facts, found ${rendered.serviceOrderLayout.factCount}`);
+      }
+      if (rendered.serviceOrderLayout.customerActions !== 1) {
+        rendered.layoutIssues.push(`Service Order expected 1 Customer 360 action, found ${rendered.serviceOrderLayout.customerActions}`);
+      }
+      if (!rendered.serviceOrderLayout.diagnosis
+          || !rendered.serviceOrderLayout.sla
+          || !rendered.serviceOrderLayout.contract) {
+        rendered.layoutIssues.push('Service Order is missing diagnosis, SLA or related-contract content');
+      }
+      if (rendered.serviceOrderLayout.internalOverflow.length) {
+        rendered.layoutIssues.push(`Service Order contains internal overflow: ${rendered.serviceOrderLayout.internalOverflow.join(', ')}`);
+      }
     }
     if (meta?.layout === LEDGER_DETAIL_LAYOUT) {
       if (!rendered.ledgerDetailLayout.present) {
@@ -1986,6 +2069,226 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'ncr');
     if (result) {
       result.layoutIssues.push(...ncrIssues.map((issue)=>`NCR state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('service-order')) {
+    const serviceOrderIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const originalAction = adapter.action;
+      const expectedTitles = {
+        en:'Service Order',
+        ms:'Pesanan Servis',
+        zh:'服务工单',
+        ja:'サービスオーダー',
+        vi:'Lệnh dịch vụ',
+      };
+      const customer = {
+        id:9901,code:'CUST-9901',name:'Service Audit Customer',
+        industry:'Manufacturing',createdAt:'2025-01-01',
+      };
+      const contract = {
+        id:9901,contractNo:'SC-2099-9901',customerId:customer.id,plan:'Gold',
+        slaResponseHours:4,assetsCovered:2,startDate:'2026-01-01',
+        expiryDate:'2027-12-31',annualValue:'12000.00',
+      };
+      const ticket = {
+        id:9901,ticketNo:'SVC-2099-9901',customerId:customer.id,contractId:contract.id,
+        assetDescription:'Audit Conveyor',serialNo:'AUD-9901',
+        issue:'Audit sensor failure',diagnosis:null,priority:'High',coverage:'contract',
+        status:'open',technicianName:null,openedAt:'2026-07-24T01:00:00.000Z',resolvedAt:null,
+      };
+      const issues = [];
+      let tickets = [ticket];
+      let contracts = [contract];
+      let customers = [customer];
+      const serviceRoot = () => document.querySelector(
+        '#viewRoot [data-layout="case-detail-v1"][data-case-route="service-order"]',
+      );
+      const installListStub = () => {
+        adapter.list = async (resource,query) => {
+          if (resource === 'service/tickets') return {data:tickets,meta:{nextCursor:null}};
+          if (resource === 'service/contracts') return {data:contracts,meta:{nextCursor:null}};
+          if (resource === 'sales/customers') return {data:customers,meta:{nextCursor:null}};
+          return originalList.call(adapter,resource,query);
+        };
+      };
+      try {
+        installListStub();
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          window.getLang = () => locale;
+          await navigate('service-order',{ticketId:ticket.id});
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (heading !== title) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          const root = serviceRoot();
+          if (!root?.querySelector('[data-case-lifecycle]')) {
+            issues.push(`${locale} lifecycle missing`);
+          }
+          if (root?.querySelectorAll('[data-case-lifecycle-step][aria-current="step"]').length !== 1) {
+            issues.push(`${locale} lifecycle current state is not unique`);
+          }
+        }
+
+        window.getLang = () => 'en';
+        await navigate('service-order',{ticketId:ticket.id});
+        let root = serviceRoot();
+        if (root?.querySelectorAll('[data-case-actions] button').length !== 2) {
+          issues.push('open ticket does not expose Assign and Resolve actions');
+        }
+        if (!root?.querySelector('[data-service-sla] .indicator')) {
+          issues.push('contract ticket SLA indicator missing');
+        }
+        if (!root?.querySelector('[data-service-contract] .minilist')) {
+          issues.push('related contract missing');
+        }
+        if (root?.querySelector('[data-case-lifecycle-step][aria-current="step"]')?.dataset.caseLifecycleStep !== 'open') {
+          issues.push('open lifecycle state is not current');
+        }
+
+        const customerAction = root?.querySelector('[data-service-customer]');
+        if (Number(customerAction?.dataset.serviceCustomer) !== customer.id) {
+          issues.push('Customer 360 is not bound to the current ticket customer id');
+        }
+        customerAction?.click();
+        await new Promise((resolve) => setTimeout(resolve,500));
+        if (CURRENT_ROUTE !== 'crm-customer'
+            || Number(CURRENT_ROUTE_PARAMS?.customerId) !== customer.id) {
+          issues.push('Customer 360 did not open the current ticket customer');
+        }
+
+        tickets = [{...ticket,contractId:null,coverage:'in_warranty',status:'in_progress',technicianName:'Audit Tech'}];
+        contracts = [];
+        await navigate('service-order',{ticketId:ticket.id});
+        root = serviceRoot();
+        if (root?.querySelectorAll('[data-case-actions] button').length !== 1
+            || !root?.querySelector('[data-act="resolve"]')) {
+          issues.push('in-progress ticket does not expose only Resolve');
+        }
+        if (!root?.querySelector('[data-service-diagnosis-empty]')) {
+          issues.push('missing-diagnosis state absent');
+        }
+        if (!root?.querySelector('[data-service-sla] .service-order-context-empty')
+            || !root?.querySelector('[data-service-contract] .service-order-context-empty')) {
+          issues.push('no-SLA or no-contract state absent');
+        }
+
+        tickets = [{
+          ...ticket,contractId:null,coverage:'out_of_warranty',status:'closed',
+          technicianName:'Audit Tech',diagnosis:'Replaced the audit sensor.',
+          resolvedAt:'2026-07-24T03:00:00.000Z',
+        }];
+        await navigate('service-order',{ticketId:ticket.id});
+        root = serviceRoot();
+        const closedActions = root?.querySelector('[data-case-actions]');
+        if (!closedActions?.hasAttribute('hidden') || closedActions?.querySelectorAll('button').length) {
+          issues.push('closed ticket action region is visible or populated');
+        }
+        if (root?.querySelector('[data-case-lifecycle-step][aria-current="step"]')?.dataset.caseLifecycleStep !== 'closed') {
+          issues.push('closed lifecycle state is not current');
+        }
+        if (!root?.textContent.includes('Replaced the audit sensor.')) {
+          issues.push('closed ticket diagnosis missing');
+        }
+
+        tickets = [];
+        await navigate('service-order');
+        root = serviceRoot();
+        if (!root?.querySelector('[data-case-empty]')
+            || root?.getAttribute('data-canonical-service-order') !== 'true') {
+          issues.push('no-ticket state left the canonical case shell');
+        }
+
+        tickets = [ticket];
+        contracts = [contract];
+        await navigate('service-order',{ticketId:999999});
+        if (!serviceRoot()?.querySelector('[data-case-empty]')) {
+          issues.push('invalid ticket id does not render the case empty state');
+        }
+
+        await navigate('service-order',{ticketId:ticket.id});
+        root = serviceRoot();
+        root?.querySelector('[data-act="assign"]')?.click();
+        document.querySelector('#modalEl [data-save]')?.click();
+        if (document.activeElement?.id !== 'afTech') {
+          issues.push('Assign does not require and focus the technician name');
+        }
+        closeModal();
+        root?.querySelector('[data-act="resolve"]')?.click();
+        document.querySelector('#modalEl [data-save]')?.click();
+        if (document.activeElement?.id !== 'rfDiagnosis') {
+          issues.push('Resolve does not require and focus the diagnosis');
+        }
+        closeModal();
+
+        const actionCalls = [];
+        adapter.action = async (resource,id,action,payload,idempotencyKey) => {
+          actionCalls.push({resource,id,action,payload,idempotencyKey});
+          if (action === 'assign') {
+            tickets = tickets.map((row)=>row.id===id
+              ? {...row,status:'in_progress',technicianName:payload.technicianName}
+              : row);
+          }
+          if (action === 'resolve') {
+            tickets = tickets.map((row)=>row.id===id
+              ? {...row,status:'closed',diagnosis:payload.diagnosis,resolvedAt:'2026-07-24T04:00:00.000Z'}
+              : row);
+          }
+          return {data:tickets.find((row)=>row.id===id)};
+        };
+        await navigate('service-order',{ticketId:ticket.id});
+        serviceRoot()?.querySelector('[data-act="assign"]')?.click();
+        const techInput = document.querySelector('#afTech');
+        if (techInput) techInput.value = 'Assigned Audit Tech';
+        document.querySelector('#modalEl [data-save]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,250));
+        root = serviceRoot();
+        if (actionCalls[0]?.action !== 'assign'
+            || !root?.textContent.includes('Assigned Audit Tech')
+            || root?.querySelectorAll('[data-case-actions] button').length !== 1) {
+          issues.push('successful Assign did not refresh technician, status and actions');
+        }
+
+        root?.querySelector('[data-act="resolve"]')?.click();
+        const diagnosisInput = document.querySelector('#rfDiagnosis');
+        if (diagnosisInput) diagnosisInput.value = 'Resolved by audit.';
+        document.querySelector('#modalEl [data-save]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,500));
+        root = serviceRoot();
+        if (!actionCalls.some((call)=>call.action === 'resolve')
+            || !root?.textContent.includes('Resolved by audit.')
+            || !root?.querySelector('[data-case-actions][hidden]')) {
+          issues.push('successful Resolve did not refresh diagnosis, lifecycle and actions');
+        }
+
+        tickets = [{...ticket,status:'in_progress',technicianName:'Audit Tech'}];
+        adapter.action = async () => { throw new Error('service action audit failure'); };
+        await navigate('service-order',{ticketId:ticket.id});
+        serviceRoot()?.querySelector('[data-act="resolve"]')?.click();
+        const failedInput = document.querySelector('#rfDiagnosis');
+        if (failedInput) failedInput.value = 'Will fail';
+        document.querySelector('#modalEl [data-save]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,100));
+        const failedSave = document.querySelector('#modalEl [data-save]');
+        if (!failedSave || failedSave.disabled) {
+          issues.push('failed Resolve did not remain recoverable in the modal');
+        }
+        closeModal();
+      } finally {
+        adapter.list = originalList;
+        adapter.action = originalAction;
+        window.getLang = originalGetLang;
+        await navigate('service-order');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'service-order');
+    if (result) {
+      result.layoutIssues.push(...serviceOrderIssues.map((issue)=>`Service Order state smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }
