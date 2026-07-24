@@ -2609,6 +2609,27 @@
       meta:{},
     };
   }
+  async function arAgingOptions(){
+    return {
+      data:await state.runtime.commands.getArAgingOptions(state.orm,{
+        masterFn:SCOPE.masterFn,
+        activeCompanyFn:SCOPE.companyFn,
+        actorUserId:reportActorUserId(),
+      }),
+      meta:{},
+    };
+  }
+  async function arAging(query){
+    query=query||{};
+    return state.runtime.commands.buildArAgingReport(state.orm,{
+      masterFn:SCOPE.masterFn,
+      activeCompanyFn:SCOPE.companyFn,
+      actorUserId:reportActorUserId(),
+      customerId:query.customerId==null||query.customerId===''?undefined:Number(query.customerId),
+      cursor:query.cursor||undefined,
+      limit:query.limit==null?undefined:Number(query.limit),
+    });
+  }
   async function profitLoss(query){
     query=query||{};
     return state.runtime.commands.buildProfitLossReport(state.orm,{
@@ -2667,6 +2688,8 @@
     return {data:{status:'print-ready',format:'pdf',report:report},meta:{}};
   }
   var financeReports={
+    arAgingOptions:arAgingOptions,
+    arAging:arAging,
     options:profitLossOptions,
     profitLoss:profitLoss,
     listBudgets:listBudgets,

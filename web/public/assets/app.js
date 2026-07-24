@@ -580,7 +580,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'item-master','stock-on-hand',
   ],
   'report-list-v1':[
-    'inv-valuation',
+    'inv-valuation','ar-aging',
   ],
   'operational-workspace-v1':[
     'picking',
@@ -604,7 +604,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
   report:[
-    'ar-aging','audit-log','purchasing-reports',
+    'audit-log','purchasing-reports',
     'report-generic','report-pur-buyer','report-pur-generic','report-pur-price-var',
     'report-pur-supplier','report-pur-vendor','report-quote-conversion',
     'report-sales-customer','report-sales-rep','sales-analysis','sales-reports',

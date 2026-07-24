@@ -607,6 +607,18 @@ async function auditRoutes(browser, viewport) {
             ? ['workspace','detail-panel'].filter((_,index)=>!masterDetailRegions[index])
             : [],
         },
+        arAgingLayout: {
+          pageheads: el.querySelectorAll('.pagehead').length,
+          legacyReportChrome: Boolean(listRoot?.querySelector('.report,.report-params,.report-result')),
+          nativeSelects: listRoot?.querySelectorAll('select').length || 0,
+          comboboxes: listRoot?.querySelectorAll('input[role="combobox"]').length || 0,
+          exportActions: [...(listRoot?.querySelectorAll('button') || [])]
+            .filter((button) => /\b(excel|export|print)\b/i.test(button.textContent || '')).length,
+          runActions: [...(listRoot?.querySelectorAll('button') || [])]
+            .filter((button) => /\b(run report|jalankan laporan|运行报表|レポート実行|chạy báo cáo)\b/i
+              .test(button.textContent || '')).length,
+          customerToast: /customer detail/i.test(listRoot?.textContent || ''),
+        },
         workspaceLayout: {
           present: Boolean(workspaceRoot),
           actualLayout: workspaceRoot?.getAttribute('data-layout') || null,
@@ -781,6 +793,29 @@ async function auditRoutes(browser, viewport) {
     }
     if (rendered.listLayout.present && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`rendered ${rendered.listLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
+    if (route === 'ar-aging') {
+      if (rendered.arAgingLayout.pageheads !== 1) {
+        rendered.layoutIssues.push(`AR Aging rendered ${rendered.arAgingLayout.pageheads} module page headers`);
+      }
+      if (rendered.arAgingLayout.legacyReportChrome) {
+        rendered.layoutIssues.push('AR Aging contains legacy report chrome');
+      }
+      if (rendered.arAgingLayout.nativeSelects) {
+        rendered.layoutIssues.push(`AR Aging contains ${rendered.arAgingLayout.nativeSelects} native select filters`);
+      }
+      if (rendered.arAgingLayout.comboboxes !== 1) {
+        rendered.layoutIssues.push(`AR Aging expected 1 customer combobox, found ${rendered.arAgingLayout.comboboxes}`);
+      }
+      if (rendered.arAgingLayout.exportActions) {
+        rendered.layoutIssues.push('AR Aging exposes an unsupported Export, Excel or Print action');
+      }
+      if (rendered.arAgingLayout.runActions !== 1) {
+        rendered.layoutIssues.push(`AR Aging expected 1 real Run report action, found ${rendered.arAgingLayout.runActions}`);
+      }
+      if (rendered.arAgingLayout.customerToast) {
+        rendered.layoutIssues.push('AR Aging still exposes the placeholder customer detail toast');
+      }
     }
     if (meta?.layout === OPERATIONAL_WORKSPACE_LAYOUT) {
       if (!rendered.workspaceLayout.present) {

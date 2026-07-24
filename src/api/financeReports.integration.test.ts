@@ -67,6 +67,43 @@ describe('finance reporting API', () => {
     });
   });
 
+  it('serves canonical AR aging options and bounded opaque pages', async () => {
+    const options = await fetch(`${baseUrl}/api/finance/reports/ar-aging/options`, {
+      headers: { cookie: auth.header },
+    });
+    expect(options.status).toBe(200);
+    expect(await options.json()).toMatchObject({
+      data: {
+        currency: 'SGD',
+        bucketPolicy: { dueDays: 30 },
+        customers: expect.any(Array),
+      },
+      meta: {},
+    });
+    const report = await fetch(`${baseUrl}/api/finance/reports/ar-aging?limit=1`, {
+      headers: { cookie: auth.header },
+    });
+    expect(report.status).toBe(200);
+    expect(await report.json()).toMatchObject({
+      data: {
+        currency: 'SGD',
+        metrics: { customerCount: expect.any(Number) },
+        rows: expect.any(Array),
+      },
+      meta: {
+        totalCount: expect.any(Number),
+        source: 'unpaid_sales_invoices',
+        balanceBasis: 'unpaid_invoice_total',
+      },
+    });
+    for (const query of ['limit=101', 'cursor=not-a-cursor', 'customerId=invalid']) {
+      const invalid = await fetch(`${baseUrl}/api/finance/reports/ar-aging?${query}`, {
+        headers: { cookie: auth.header },
+      });
+      expect(invalid.status).toBe(400);
+    }
+  });
+
   it('requires CSRF and idempotency for budget approval and export', async () => {
     const noCsrf = await fetch(`${baseUrl}/api/finance/budgets`, {
       method: 'POST',

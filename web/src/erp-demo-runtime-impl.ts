@@ -294,6 +294,11 @@ import {
   type ProfitLossRequest,
 } from '../../src/modules/finance/profitLoss';
 import {
+  buildArAgingReport,
+  getArAgingOptions,
+  type ArAgingRequest,
+} from '../../src/modules/finance/arAging';
+import {
   approveBudgetWithin,
   createBudgetVersionWithin,
   importBudgetLinesWithin,
@@ -386,6 +391,15 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    getArAgingOptions(
+      db: DemoOrm,
+      input: Pick<ArAgingRequest, 'masterFn' | 'activeCompanyFn' | 'actorUserId'>,
+    ) {
+      return getArAgingOptions(asDomainDb(db), input);
+    },
+    buildArAgingReport(db: DemoOrm, input: ArAgingRequest) {
+      return buildArAgingReport(asDomainDb(db), input);
+    },
     getProfitLossOptions(
       db: DemoOrm,
       input: Pick<ProfitLossRequest, 'masterFn' | 'activeCompanyFn' | 'actorUserId'>,

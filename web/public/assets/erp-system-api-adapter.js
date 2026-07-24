@@ -160,6 +160,12 @@
     });
   }
   var financeReports={
+    arAgingOptions:function(){
+      return apiRequest('finance/reports/ar-aging/options');
+    },
+    arAging:function(query){
+      return apiRequest('finance/reports/ar-aging'+queryString(query));
+    },
     options:function(){
       return apiRequest('finance/reports/profit-loss/options');
     },

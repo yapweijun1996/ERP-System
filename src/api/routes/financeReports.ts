@@ -20,6 +20,11 @@ import {
   type ProfitLossComparison,
 } from '../../modules/finance/profitLoss';
 import {
+  ArAgingError,
+  buildArAgingReport,
+  getArAgingOptions,
+} from '../../modules/finance/arAging';
+import {
   createProfitLossExportJobWithin,
   ReportJobError,
   type ProfitLossExportFilters,
@@ -62,6 +67,12 @@ function reportFilters(query: Record<string, unknown>): {
 }
 
 function sendKnownError(res: Parameters<typeof apiError>[0], error: unknown): boolean {
+  if (error instanceof ArAgingError) {
+    const status = error.code === 'customer_not_found' || error.code === 'company_not_found'
+      ? 404 : error.code === 'UNSUPPORTED_RECEIVABLE_CURRENCY' ? 422 : 400;
+    apiError(res, status, error.code, error.message);
+    return true;
+  }
   if (error instanceof ProfitLossError) {
     const status = error.code === 'company_access_denied' ? 403
       : error.code === 'period_not_found' ? 404
@@ -89,6 +100,56 @@ function sendKnownError(res: Parameters<typeof apiError>[0], error: unknown): bo
 
 export function createFinanceReportsRouter(db: DB): Router {
   const router = Router();
+
+  router.get('/reports/ar-aging/options', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.financeRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read financial reports.');
+      return;
+    }
+    try {
+      res.json({
+        data: await getArAgingOptions(db, {
+          masterFn: session.masterFn,
+          activeCompanyFn: session.activeCompanyFn,
+          actorUserId: session.userId,
+        }),
+        meta: {},
+      });
+    } catch (error) {
+      if (!sendKnownError(res, error)) throw error;
+    }
+  });
+
+  router.get('/reports/ar-aging', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.financeRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read financial reports.');
+      return;
+    }
+    const customerId = req.query.customerId == null || req.query.customerId === ''
+      ? undefined : positiveId(req.query.customerId);
+    if (req.query.customerId != null && req.query.customerId !== '' && customerId == null) {
+      apiError(res, 400, 'invalid_report_query', 'customerId must be a positive integer.');
+      return;
+    }
+    const limit = req.query.limit == null || req.query.limit === ''
+      ? undefined : Number(req.query.limit);
+    try {
+      res.json(await buildArAgingReport(db, {
+        masterFn: session.masterFn,
+        activeCompanyFn: session.activeCompanyFn,
+        actorUserId: session.userId,
+        ...(customerId ? { customerId } : {}),
+        ...(req.query.cursor ? { cursor: String(req.query.cursor) } : {}),
+        ...(limit == null ? {} : { limit }),
+      }));
+    } catch (error) {
+      if (!sendKnownError(res, error)) throw error;
+    }
+  });
 
   router.get('/reports/profit-loss/options', async (req, res) => {
     const session = await requireSession(db, req, res);

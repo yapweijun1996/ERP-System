@@ -11,11 +11,6 @@ function financeNumber(value){
   return Number.isFinite(parsed)?parsed:0;
 }
 
-function financeLocalDate(date){
-  const pad=value=>String(value).padStart(2,'0');
-  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
-}
-
 function financeJournalSource(ref){
   if(String(ref).startsWith('INV-SO-')) return 'Sales confirmation';
   if(String(ref).startsWith('SINV-')) return 'Supplier invoice';
@@ -32,18 +27,15 @@ async function prepareCanonicalFinanceData(){
       Array.isArray(DB.coa)
       &&DB.acctLedgerDocs
       &&DB.journalDocs
-      &&Array.isArray(DB.arAging)
     ) return;
     throw new Error('The offline canonical finance snapshot is unavailable.');
   }
   const pages=await Promise.all([
     listPage('finance/accounts'),
     listPage('finance/gl-entries'),
-    listPage('sales/customers'),
-    listPage('sales/invoices'),
     listPage('finance/journals'),
   ]);
-  const [accounts,entries,customers,invoices,manualJournals]=pages.map(page=>page.data);
+  const [accounts,entries,manualJournals]=pages.map(page=>page.data);
   const accountById=new Map(accounts.map(row=>[row.id,row]));
   const manualByDocNo=new Map(manualJournals.map(row=>[row.docNo,row]));
   const entriesByAccountId=new Map();
@@ -156,32 +148,8 @@ async function prepareCanonicalFinanceData(){
     ||DB.acctLedgerDocs[accounts[0]&&accounts[0].code]
     ||null;
 
-  const customerById=new Map(customers.map(row=>[row.id,row]));
-  const agingByCustomerId=new Map();
-  const asAt=new Date();
-  invoices.filter(row=>row.status==='unpaid').forEach(row=>{
-    const invoiceDate=dateValue(row.invoiceDate);
-    const due=new Date(`${invoiceDate}T00:00:00`);
-    due.setDate(due.getDate()+30);
-    const age=Math.floor((asAt.getTime()-due.getTime())/86400000);
-    const current=agingByCustomerId.get(row.customerId)||{
-      cust:customerById.get(row.customerId)?.name||`Customer #${row.customerId}`,
-      code:customerById.get(row.customerId)?.code||'—',
-      cur:0,b30:0,b60:0,b90:0,b90p:0,
-    };
-    const amount=financeNumber(row.totalAmount);
-    if(age<=0) current.cur+=amount;
-    else if(age<=30) current.b30+=amount;
-    else if(age<=60) current.b60+=amount;
-    else if(age<=90) current.b90+=amount;
-    else current.b90p+=amount;
-    agingByCustomerId.set(row.customerId,current);
-  });
-  DB.arAging=Array.from(agingByCustomerId.values());
-  DB.financeAsAt=financeLocalDate(asAt);
   DB.financeReadMeta={
     truncated:pages.some(page=>Boolean(page.nextCursor)),
-    invoiceCount:invoices.length,
     journalCount:entriesByJournalRef.size,
     nextCursors:pages.map(page=>page.nextCursor),
   };
@@ -675,54 +643,132 @@ SCREENS['pnl'] = async function(root){
 
 /* ---------------- AR AGING (report) ---------------- */
 SCREENS['ar-aging'] = async function(root){
-  await prepareCanonicalFinanceData();
-  const keys=['cur','b30','b60','b90','b90p'];
-  const colTot=k=>DB.arAging.reduce((s,r)=>s+r[k],0);
-  const rowTot=r=>keys.reduce((s,k)=>s+r[k],0);
-  const grand=DB.arAging.reduce((s,r)=>s+rowTot(r),0);
-  const overdue=colTot('b30')+colTot('b60')+colTot('b90')+colTot('b90p');
-  const overduePct=grand?Math.round(overdue/grand*100):0;
-  function amt(v){ return v?`<span class="tnum">${money0(v)}</span>`:`<span style="color:var(--faint)">—</span>`; }
-  const tpl='minmax(200px,2fr) 110px 110px 110px 110px 120px 130px';
-  let body='';
-  DB.arAging.slice().sort((a,b)=>rowTot(b)-rowTot(a)).forEach(r=>{
-    const od=r.b30+r.b60+r.b90+r.b90p;
-    body+=`<div class="dt-r drill" data-code="${esc(r.code)}">
-      <div class="dt-c l"><div class="cellsub"><b>${esc(r.cust)}</b><small>${esc(r.code)}</small></div></div>
-      <div class="dt-c r">${amt(r.cur)}</div>
-      <div class="dt-c r" style="color:${r.b30?'var(--fg)':''}">${amt(r.b30)}</div>
-      <div class="dt-c r" style="color:${r.b60?'var(--warn)':''}">${amt(r.b60)}</div>
-      <div class="dt-c r" style="color:${r.b90?'var(--warn)':''}">${amt(r.b90)}</div>
-      <div class="dt-c r" style="color:${r.b90p?'var(--danger)':''}">${amt(r.b90p)}</div>
-      <div class="dt-c r tnum"><b>${money0(rowTot(r))}</b>${od>0?`<small style="display:block;color:var(--danger);font-size:10.5px">${money0(od)} overdue</small>`:''}</div></div>`;
-  });
-  body+=`<div class="dt-r grandtotal"><div class="dt-c l">Total receivables</div><div class="dt-c r tnum">${money0(colTot('cur'))}</div><div class="dt-c r tnum">${money0(colTot('b30'))}</div><div class="dt-c r tnum">${money0(colTot('b60'))}</div><div class="dt-c r tnum">${money0(colTot('b90'))}</div><div class="dt-c r tnum">${money0(colTot('b90p'))}</div><div class="dt-c r tnum"><b>${money0(grand)}</b></div></div>`;
-
-  root.innerHTML=`<div class="content full"><section class="master"><div class="report">
-    <aside class="report-params">
-      <h3>Parameters</h3>
-      <div class="fld"><span>As at date</span><select><option>${esc(DB.financeAsAt)}</option></select></div>
-      <div class="fld"><span>Aging buckets</span><select><option>30 / 60 / 90 days</option><option>15 / 30 / 45 days</option></select></div>
-      <div class="fld"><span>Customer</span><select><option>All customers</option><option>Overdue only</option></select></div>
-      <div class="fld"><span>Currency</span><select><option>${esc(DB.company.currency)} (functional)</option></select></div>
-      ${btn('Run report',{icon:'play',cls:'primary',sm:false,attrs:'onclick="toast(\'Aging recalculated\',\'ok\')"'})}
-      <div style="border-top:1px solid var(--hairline);padding-top:12px;margin-top:4px">
-        <div class="indicator ${overduePct>20?'warn':'ok'}"><div class="ind-top">${ic('receipt')}<span>Overdue</span><span class="ind-r">${overduePct}%</span></div><div class="track"><i style="width:${overduePct}%"></i></div><small>${money0(overdue)} of ${money0(grand)} past due.</small></div>
-      </div>
-    </aside>
-    <div class="report-result">
-      <div class="report-toolbar">
-        <div><b style="font-size:15px">Accounts Receivable Aging</b><div class="report-meta">As at ${esc(DB.financeAsAt)} · ${DB.arAging.length} customers · ${money0(overdue)} overdue${DB.financeReadMeta&&DB.financeReadMeta.truncated?' · first 100 rows':''}</div></div>
-        <div class="grow"></div>
-        ${btn('Excel',{icon:'filexls',cls:'soft'})}
-      </div>
-      <div class="tablewrap"><div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-        <div class="dt-r dt-head"><div class="dt-c l">Customer</div><div class="dt-c r">Not due</div><div class="dt-c r">1–30</div><div class="dt-c r">31–60</div><div class="dt-c r">61–90</div><div class="dt-c r">90+</div><div class="dt-c r">Total</div></div>
-        <div class="dt-body">${body}</div>
-      </div></div></div>
-    </div>
-  </div></section></div>`;
-  root.querySelectorAll('.dt-r.drill').forEach(tr=>tr.addEventListener('click',()=>{
-    toast('Customer detail · '+tr.dataset.code,'info');
-  }));
+  const adapter=window.ErpSystemData&&window.ErpSystemData.financeReports;
+  let options=null,report=null,error=null,loading=true,requestSeq=0;
+  let customerId='',cursorStack=[null],pageIndex=0;
+  const formatAmount=value=>{
+    const parsed=Number(value||0);
+    return new Intl.NumberFormat(getLang(),{
+      style:'currency',currency:(report&&report.data.currency)||(options&&options.currency)||DB.company.currency,
+      minimumFractionDigits:2,maximumFractionDigits:2,
+    }).format(Number.isFinite(parsed)?parsed:0);
+  };
+  const amount=value=>Number(value||0)===0
+    ?'<span class="tnum" style="color:var(--faint)">—</span>'
+    :`<span class="tnum">${esc(formatAmount(value))}</span>`;
+  function pagination(){
+    if(!report) return '';
+    const hasNext=Boolean(report.meta.nextCursor);
+    return `${btn(t('ar.prev'),{icon:'chevL',cls:'soft',attrs:`data-ar-prev${pageIndex?'':' disabled'}`})}
+      <span class="transaction-list-note">${esc(t('ar.page'))} ${pageIndex+1}</span>
+      ${btn(t('ar.next'),{icon:'chevR',cls:'soft',attrs:`data-ar-next${hasNext?'':' disabled'}`})}`;
+  }
+  function render(){
+    const rows=report?report.data.rows.slice():[];
+    if(report&&rows.length){
+      rows.push({
+        customerId:'totals',customerCode:'',customerName:t('ar.total'),
+        ...report.data.totals,isTotal:true,
+      });
+    }
+    const customerOptions=[
+      {value:'',label:t('ar.allCustomers'),sub:t('ar.allCustomersHelp')},
+      ...((options&&options.customers)||[]).map(row=>({
+        value:String(row.id),label:row.name,sub:row.code,
+      })),
+    ];
+    const control=combobox({
+      id:'arCustomerCombo',value:customerId,options:customerOptions,placeholder:t('ar.customer'),
+    });
+    const note=options
+      ?`${t('ar.asOf')} ${options.asOf} · ${options.currency} · ${options.bucketPolicy.dueDays} ${t('ar.dayTerms')}`
+      :'';
+    const errorHtml=error?`<div class="risk danger" data-report-error>${ic('warn')}
+      <span>${esc(error.message||String(error))}</span>
+      ${btn(t('ar.retry'),{icon:'refresh',cls:'soft',attrs:'data-ar-retry'})}</div>`:'';
+    reportListPage(root,{
+      module:'finance',route:'ar-aging',title:t('ar.title'),description:t('ar.description'),
+      rows,rowId:row=>String(row.customerId),count:report?report.meta.totalCount:0,
+      kpis:report?[
+        {label:t('ar.totalReceivables'),value:formatAmount(report.data.metrics.totalReceivables)},
+        {label:t('ar.overdue'),value:formatAmount(report.data.metrics.overdue),negative:Number(report.data.metrics.overdue)>0},
+        {label:t('ar.overduePercent'),value:report.data.metrics.overduePercent==null?'—':`${report.data.metrics.overduePercent}%`},
+        {label:t('ar.customers'),value:num(report.data.metrics.customerCount)},
+      ]:[],
+      toolbarContent:`<div class="report-list-customer">${control}</div>${errorHtml}`,
+      toolbarActions:[{
+        label:loading?t('ar.loading'):t('ar.run'),icon:loading?'refresh':'play',
+        cls:'primary',disabled:loading,onClick:()=>loadReport({reset:true}),
+      }],
+      note,
+      columns:[
+        {label:t('ar.customer'),sticky:true,render:row=>row.isTotal
+          ?`<b>${esc(row.customerName)}</b>`
+          :`<div class="cellsub"><b>${esc(row.customerName)}</b><small>${esc(row.customerCode)}</small></div>`},
+        {label:t('ar.notDue'),align:'r',render:row=>amount(row.notDue)},
+        {label:t('ar.days1To30'),align:'r',render:row=>amount(row.days1To30)},
+        {label:t('ar.days31To60'),align:'r',render:row=>amount(row.days31To60)},
+        {label:t('ar.days61To90'),align:'r',render:row=>amount(row.days61To90)},
+        {label:t('ar.days90Plus'),align:'r',render:row=>amount(row.days90Plus)},
+        {label:t('ar.overdue'),align:'r',render:row=>`<span class="tnum ${Number(row.overdue)>0?'neg':''}">${esc(formatAmount(row.overdue))}</span>`},
+        {label:t('ar.total'),align:'r',render:row=>`<b class="tnum">${esc(formatAmount(row.total))}</b>`},
+      ],
+      pagination:pagination(),
+      empty:{
+        icon:error?'warn':'receipt',
+        title:error?t('ar.error'):loading?t('ar.loading'):t('ar.empty'),
+        description:error?t('ar.errorHelp'):loading?t('ar.loadingHelp'):t('ar.emptyHelp'),
+      },
+      afterRender:()=>{
+        wireCombobox('arCustomerCombo',{
+          options:customerOptions,
+          onChange:value=>{
+            customerId=String(value||'');
+            loadReport({reset:true});
+          },
+        });
+        root.querySelector('[data-ar-retry]')?.addEventListener('click',()=>loadReport({reset:false}));
+        root.querySelector('[data-ar-prev]')?.addEventListener('click',()=>{
+          if(pageIndex<=0||loading) return;
+          cursorStack.pop();pageIndex-=1;loadReport({reset:false});
+        });
+        root.querySelector('[data-ar-next]')?.addEventListener('click',()=>{
+          if(!report||!report.meta.nextCursor||loading) return;
+          cursorStack.push(report.meta.nextCursor);pageIndex+=1;loadReport({reset:false});
+        });
+      },
+    });
+  }
+  async function loadReport({reset}={reset:false}){
+    if(!adapter) {
+      error=new Error(t('ar.adapterMissing'));loading=false;render();return;
+    }
+    if(reset){cursorStack=[null];pageIndex=0;}
+    const seq=++requestSeq;
+    loading=true;error=null;render();
+    try{
+      const response=await adapter.arAging({
+        customerId:customerId||undefined,
+        cursor:cursorStack[pageIndex]||undefined,
+        limit:50,
+      });
+      if(seq!==requestSeq||!root.isConnected||CURRENT_ROUTE!=='ar-aging') return;
+      report=response;error=null;
+    }catch(caught){
+      if(seq!==requestSeq||!root.isConnected||CURRENT_ROUTE!=='ar-aging') return;
+      error=caught;
+    }finally{
+      if(seq===requestSeq&&root.isConnected&&CURRENT_ROUTE==='ar-aging'){loading=false;render();}
+    }
+  }
+  if(!adapter){
+    error=new Error(t('ar.adapterMissing'));loading=false;render();return;
+  }
+  try{
+    const response=await adapter.arAgingOptions();
+    options=response.data;
+    await loadReport({reset:true});
+  }catch(caught){
+    error=caught;loading=false;render();
+  }
 };

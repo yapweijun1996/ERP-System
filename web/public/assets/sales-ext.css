@@ -19,8 +19,23 @@
 .sales-body .so-kpibar{padding:2px 0 14px;}
 .sales-body .toolbar{padding-left:0;padding-right:0;}
 .transaction-list-note{color:var(--muted);font-size:calc(11.5px * var(--fs,1));}
+.report-list-customer{width:min(300px,100%);min-width:220px;}
+.report-list-customer .combo,.report-list-customer .combo-in{width:100%;min-width:0;}
+.report-list-customer .combo-in{
+  height:36px;padding:7px 34px 7px 32px;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface);color:var(--fg);font:inherit;
+  font-size:calc(13px * var(--fs,1));outline:none;text-overflow:ellipsis;
+}
+.report-list-customer .combo-in:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);
+}
 .transaction-list-body [data-list-empty]{height:auto;min-height:240px;}
 .transaction-list-pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 0;}
+@media(max-width:560px){
+  .report-list-customer{width:100%;min-width:0;order:-1;}
+  .transaction-list-body .toolbar>.grow{display:none;}
+  .transaction-list-pagination{justify-content:space-between;}
+}
 .master-detail-register-workspace{
   display:grid;
   grid-template-columns:minmax(0,1fr) 360px;
