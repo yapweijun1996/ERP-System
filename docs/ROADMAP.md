@@ -682,7 +682,7 @@ Android verification remains the only human-only release check.
 
 ## Phase 33 — Page-level UI SSOT Convergence ✅
 
-1. **Shared list and workspace contracts** (EPIC-051, TASK-087–097, completed
+1. **Shared list and workspace contracts** (EPIC-051, TASK-087–098, completed
    2026-07-24) separate data maturity from visual-layout compliance. The approved
    transaction-list renderer owns KPI, toolbar, table/empty and pagination regions;
    master-detail registers, tabular reports and operational workspaces extend that
@@ -696,8 +696,12 @@ Android verification remains the only human-only release check.
    overview now supports an optional structured avatar, while contact facts, bounded
    leave history, leave-balance context and responsive navigation actions follow the
    same audited detail contract as BOM.
+4. **Employee action hierarchy polish** (TASK-098) removes the malformed and
+   redundant profile footer. Active status and Review leave now share the standard
+   page-header action group; Directory remains available through the breadcrumb and
+   HR sub-navigation without a duplicate Back button.
 
 Exit criteria: 42 shared list-layout routes and all 114 routes pass desktop/375px
 structural audits; Timesheet and Employee pass their dedicated five-language/state
 proofs, and the two master-detail editor routes pass focused and live browser
-verification with service-worker v95.
+verification with service-worker v96.

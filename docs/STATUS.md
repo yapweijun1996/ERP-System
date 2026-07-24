@@ -640,15 +640,30 @@ languages, top-level manager, empty employee/leave states and Pending/Approved/R
 history. Service-worker v95 delivers the corrected page, and the focused
 master-detail editor audit now covers BOM and Employee.
 
+## Employee page-header action hierarchy (TASK-098, 2026-07-24)
+
+Employee no longer exposes a block-level, transparent footer that repeated the
+employee number and Directory navigation. `masterDetailEditorPage()` now accepts an
+optional `headerActions` fragment and composes it with the status inside one audited
+page-header action group. The populated Employee profile places Active and Review
+leave together at desktop and on a dedicated, balanced row at 375px.
+
+The standard `data-master-detail-actions` region remains in canonical DOM order but
+is hidden and empty for Employee. Directory navigation remains available through the
+breadcrumb and HR sub-navigation; empty Employee state exposes no false action.
+Static and runtime guards reject a reintroduced footer note, Back button or populated
+footer, and verify five-language header copy plus zero action-group overflow.
+Service-worker v96 delivers the updated shared renderer and styles.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 96 tasks, including TASK-097
+- Done: 97 tasks, including TASK-098
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 114 Canonical / 0 Preview and 42 audited list-layout routes, including
   36 transaction lists, 4 master-detail registers and 2 report lists; Warehouse
   Picking remains on its dedicated operational-workspace SSOT, and BOM plus Employee
-  use the shared master-detail editor SSOT.
+  use the shared master-detail editor SSOT with Employee's actions in the page header.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

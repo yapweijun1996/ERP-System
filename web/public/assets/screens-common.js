@@ -131,6 +131,12 @@ function masterDetailEditorPage(root, config){
   const status=cfg.status&&cfg.status.label
     ? cap(String(cfg.status.label),cfg.status.tone||'neutral')
     : '';
+  const headerActions=cfg.headerActions||'';
+  const pageActions=status||headerActions
+    ? `<div class="master-detail-editor-page-actions" data-master-detail-page-actions>
+        ${status}${headerActions}
+      </div>`
+    : '';
   const hasOverview=Boolean(avatar||overview.title||overview.code||overview.meta||facts.length);
   const overviewHtml=hasOverview?`
     <div class="master-detail-editor-subject">
@@ -183,7 +189,7 @@ function masterDetailEditorPage(root, config){
     title:String(cfg.title||''),
     crumb:cfg.crumb,
     sub:cfg.description,
-    action:status,
+    action:pageActions,
     body,
   });
   const editor=root.querySelector('[data-layout="master-detail-editor-v1"]');

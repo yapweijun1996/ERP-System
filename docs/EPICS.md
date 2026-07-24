@@ -1777,3 +1777,9 @@ Delivery slices:
       replace read-only contact inputs and duplicate employment chrome with display
       facts, bound leave-history scrolling, and add five-language/state enforcement.
       Service worker v95 delivers the change without changing HR data or commands.
+- [x] **TASK-098 — Employee profile action hierarchy polish.** Extend the shared
+      master-detail editor with optional page-header actions, then move Employee's
+      Review leave action beside its status. Remove the redundant employee number,
+      Back button and visible footer action bar while preserving the hidden actions
+      region, Directory navigation and five-language behavior. Service worker v96
+      delivers the corrected hierarchy.

@@ -463,19 +463,14 @@ SCREENS['employee'] = async function(root, params){
   const {employees,leaveRequests}=await prepareHrData();
   const requestedId=params&&params.employeeId?Number(params.employeeId):null;
   const e=requestedId?employees.find(row=>row.id===requestedId):employees[0];
-  const backAction=btn(s('backToDirectory'),{
-    icon:'chevL',cls:'soft',attrs:'data-employee-back',
-  });
   if(!e){
     masterDetailEditorPage(root,{
       module:'hr',route:'employee',title:s('employeeProfileTitle'),
       description:s('employeeProfileDescription'),
       crumb:[DB.company.name,{label:t('nav.hr'),route:'hr-directory'},{cur:t('hr.crumb')}],
       empty:{icon:'people',title:s('noEmployeeFound'),description:s('noEmployeeBody')},
-      actions:`<div class="grow"></div>${backAction}`,
       afterRender:({editor})=>{
         editor?.setAttribute('data-canonical-employee','true');
-        root.querySelector('[data-employee-back]')?.addEventListener('click',()=>navigate('hr-directory'));
       },
     });
     return;
@@ -510,6 +505,9 @@ SCREENS['employee'] = async function(root, params){
     description:s('employeeProfileDescription'),
     crumb:[DB.company.name,{label:t('nav.hr'),route:'hr-directory'},{label:t('hr.crumb'),route:'hr-directory'},{cur:e.employeeNo}],
     status:{label:hrStatusLabel(s,status),tone:hrStatusTone(status)},
+    headerActions:btn(s('reviewLeave'),{
+      icon:'check',cls:'primary',sm:false,attrs:'data-employee-review',
+    }),
     overview:{
       avatar:{name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,size:48},
       title:e.fullName,
@@ -547,12 +545,8 @@ SCREENS['employee'] = async function(root, params){
         <small>${esc(usedLabel)}</small>
       </div>`,
     },
-    actions:`<span class="master-detail-editor-action-note">${esc(e.employeeNo)}</span><div class="grow"></div>
-      ${backAction}
-      ${btn(s('reviewLeave'),{icon:'check',cls:'primary',sm:false,attrs:'data-employee-review'})}`,
     afterRender:({editor})=>{
       editor?.setAttribute('data-canonical-employee','true');
-      root.querySelector('[data-employee-back]')?.addEventListener('click',()=>navigate('hr-directory'));
       root.querySelector('[data-employee-review]')?.addEventListener('click',()=>navigate('leave-approval'));
     },
   });

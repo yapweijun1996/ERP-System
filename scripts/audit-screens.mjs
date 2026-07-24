@@ -111,6 +111,8 @@ const obsoleteEmployeeChrome = [
   'doclayout',
   'readonly',
   'position:sticky',
+  'master-detail-editor-action-note',
+  'data-employee-back',
 ].filter((token) => employeeScreenSource.includes(token));
 if (obsoleteEmployeeChrome.length) {
   throw new Error(`Employee still rebuilds legacy document chrome: ${obsoleteEmployeeChrome.join(', ')}`);
@@ -475,6 +477,13 @@ async function auditRoutes(browser, viewport) {
         && masterDetailEditorRegions.every(Boolean)
         && masterDetailEditorRegions.every((node,index)=>index === 0
           || Boolean(masterDetailEditorRegions[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+      const masterDetailEditorPageActions = el.querySelector('[data-master-detail-page-actions]');
+      if (masterDetailEditorPageActions && masterDetailEditorPageActions.offsetParent !== null
+          && masterDetailEditorPageActions.scrollWidth > masterDetailEditorPageActions.clientWidth + 1) {
+        layoutIssues.push(
+          `master-detail editor page actions overflow ${masterDetailEditorPageActions.scrollWidth}>${masterDetailEditorPageActions.clientWidth}`,
+        );
+      }
       if (masterDetailEditorRoot && masterDetailEditorRegions[4]
           && masterDetailEditorRegions[4].offsetParent !== null
           && masterDetailEditorRegions[4].scrollWidth > masterDetailEditorRegions[4].clientWidth + 1) {
@@ -675,8 +684,11 @@ async function auditRoutes(browser, viewport) {
           leaveBalance: Boolean(masterDetailEditorRoot?.querySelector('[data-employee-leave-balance]')),
           controlledLeaveTable: [...(masterDetailEditorRoot?.querySelectorAll('[data-employee-leave-history] table.lines') || [])]
             .every((table) => Boolean(table.closest('.master-detail-editor-table-scroll'))),
-          backActions: masterDetailEditorRoot?.querySelectorAll('[data-employee-back]').length || 0,
-          reviewActions: masterDetailEditorRoot?.querySelectorAll('[data-employee-review]').length || 0,
+          headerStatuses: masterDetailEditorPageActions?.querySelectorAll('.cap').length || 0,
+          headerReviewActions: masterDetailEditorPageActions?.querySelectorAll('[data-employee-review]').length || 0,
+          footerActions: masterDetailEditorRegions[4]?.querySelectorAll('button').length || 0,
+          footerHidden: Boolean(masterDetailEditorRegions[4]?.hasAttribute('hidden')),
+          backActions: el.querySelectorAll('[data-employee-back]').length,
           legacyChrome: Boolean(masterDetailEditorRoot?.querySelector('.docwrap,.docpage,.dochead,.doclayout,.summary,.sumcard')),
         },
         arAgingLayout: {
@@ -835,7 +847,8 @@ async function auditRoutes(browser, viewport) {
       employeeLayout: {
         canonicalMarker: false, avatar: false, factCount: 0, contactFacts: 0,
         readonlyInputs: 0, leaveBalance: false, controlledLeaveTable: false,
-        backActions: 0, reviewActions: 0, legacyChrome: false,
+        headerStatuses: 0, headerReviewActions: 0, footerActions: 0,
+        footerHidden: false, backActions: 0, legacyChrome: false,
       },
       workspaceLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
@@ -1082,10 +1095,18 @@ async function auditRoutes(browser, viewport) {
       if (!rendered.employeeLayout.controlledLeaveTable) {
         rendered.layoutIssues.push('Employee leave history table is missing bounded horizontal scrolling');
       }
-      if (rendered.employeeLayout.backActions !== 1 || rendered.employeeLayout.reviewActions !== 1) {
+      if (rendered.employeeLayout.headerStatuses !== 1 || rendered.employeeLayout.headerReviewActions !== 1) {
         rendered.layoutIssues.push(
-          `Employee expected one Back and one Review action, found ${rendered.employeeLayout.backActions} and ${rendered.employeeLayout.reviewActions}`,
+          `Employee expected one header status and one Review action, found ${rendered.employeeLayout.headerStatuses} and ${rendered.employeeLayout.headerReviewActions}`,
         );
+      }
+      if (!rendered.employeeLayout.footerHidden || rendered.employeeLayout.footerActions) {
+        rendered.layoutIssues.push(
+          `Employee footer actions must remain hidden and empty, found hidden=${rendered.employeeLayout.footerHidden} buttons=${rendered.employeeLayout.footerActions}`,
+        );
+      }
+      if (rendered.employeeLayout.backActions) {
+        rendered.layoutIssues.push(`Employee contains ${rendered.employeeLayout.backActions} redundant Back actions`);
       }
       if (rendered.employeeLayout.legacyChrome) {
         rendered.layoutIssues.push('Employee contains legacy or duplicated detail chrome');
@@ -1737,11 +1758,11 @@ async function auditRoutes(browser, viewport) {
         {id:9913,employeeId:9902,leaveType:'Medical',startDate:'2026-04-01',endDate:'2026-04-01',days:1,status:'rejected'},
       ];
       const expected = {
-        en:{title:'Employee profile',statuses:['Pending','Approved','Rejected']},
-        ms:{title:'Profil pekerja',statuses:['Belum diputuskan','Diluluskan','Ditolak']},
-        zh:{title:'员工档案',statuses:['待审批','已批准','已拒绝']},
-        ja:{title:'従業員プロフィール',statuses:['承認待ち','承認済み','却下']},
-        vi:{title:'Hồ sơ nhân viên',statuses:['Chờ duyệt','Đã duyệt','Đã từ chối']},
+        en:{title:'Employee profile',active:'Active',review:'Review leave',statuses:['Pending','Approved','Rejected']},
+        ms:{title:'Profil pekerja',active:'Aktif',review:'Semak cuti',statuses:['Belum diputuskan','Diluluskan','Ditolak']},
+        zh:{title:'员工档案',active:'在职',review:'审批请假',statuses:['待审批','已批准','已拒绝']},
+        ja:{title:'従業員プロフィール',active:'在籍',review:'休暇を確認',statuses:['承認待ち','承認済み','却下']},
+        vi:{title:'Hồ sơ nhân viên',active:'Đang làm việc',review:'Xem xét nghỉ phép',statuses:['Chờ duyệt','Đã duyệt','Đã từ chối']},
       };
       const issues = [];
       const stub = (employeeRows=employees,leaveRows=leaveRequests) => {
@@ -1757,6 +1778,8 @@ async function auditRoutes(browser, viewport) {
           window.getLang = () => locale;
           await navigate('employee',{employeeId:9902});
           const root = document.querySelector('#viewRoot [data-layout="master-detail-editor-v1"]');
+          const pageActions = document.querySelector('#viewRoot [data-master-detail-page-actions]');
+          const footer = root?.querySelector('[data-master-detail-actions]');
           const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
           const text = root?.textContent || '';
           if (!heading.startsWith(copy.title)) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
@@ -1769,6 +1792,18 @@ async function auditRoutes(browser, viewport) {
           }
           if (root?.querySelectorAll('[data-employee-leave-row]').length !== 3) {
             issues.push(`${locale} expected three leave-history rows`);
+          }
+          if (pageActions?.querySelectorAll('.cap').length !== 1
+              || !pageActions?.textContent.includes(copy.active)) {
+            issues.push(`${locale} active status missing from page header`);
+          }
+          const review = pageActions?.querySelector('[data-employee-review]')?.textContent?.trim() || '';
+          if (review !== copy.review) issues.push(`${locale} Review leave rendered as ${review || 'missing'}`);
+          if (!footer?.hasAttribute('hidden') || footer?.querySelectorAll('button').length) {
+            issues.push(`${locale} Employee footer actions are visible or populated`);
+          }
+          if (document.querySelector('#viewRoot [data-employee-back]')) {
+            issues.push(`${locale} redundant Back action remains`);
           }
           copy.statuses.forEach((status) => {
             if (!text.includes(status)) issues.push(`${locale} leave status missing: ${status}`);
@@ -1801,6 +1836,13 @@ async function auditRoutes(browser, viewport) {
         }
         if (!document.querySelector('#viewRoot [data-layout="master-detail-editor-v1"][data-canonical-employee="true"]')) {
           issues.push('employee-empty state left the canonical shared editor shell');
+        }
+        if (document.querySelector('#viewRoot [data-master-detail-page-actions]')) {
+          issues.push('employee-empty state exposes page actions');
+        }
+        const emptyFooter = document.querySelector('#viewRoot [data-master-detail-actions]');
+        if (!emptyFooter?.hasAttribute('hidden') || emptyFooter?.querySelectorAll('button').length) {
+          issues.push('employee-empty footer actions are visible or populated');
         }
       } finally {
         adapter.list = originalList;
