@@ -41,7 +41,7 @@ async function login(baseUrl: string, email = 'admin@acme.co', password = 'demo1
   const response = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ organizationCode: 'ACME', username: email.split('@')[0], password }),
   });
   expect(response.status).toBe(200);
   return responseCookies(response);
@@ -142,9 +142,11 @@ describe('auth lifecycle API', () => {
     server = running.server;
     const payload = JSON.stringify({
       organizationName: 'Example Group',
+      organizationCode: 'EXAMPLE',
       companyName: 'Example Malaysia',
       country: 'MY',
       adminName: 'System Admin',
+      adminUsername: 'admin',
       adminEmail: 'admin@example.test',
       adminPassword: 'safe-password',
       language: 'vi',

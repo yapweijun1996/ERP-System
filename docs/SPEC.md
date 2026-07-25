@@ -45,7 +45,7 @@ Source of truth: `src/data/schema/` → generated `drizzle/0000_init.sql`.
 
 | Domain | Tables |
 | --- | --- |
-| Tenancy/auth | `master`, `company`, `app_user`, `role`, `user_company` |
+| Tenancy/auth | `master`, `company`, `app_user`, `role`, `user_company`, `user_company_role` |
 | Localization | `currency`, `fx_rate`, `tax_rule` |
 | Inventory | `product`, `warehouse`, `stock_level`, `stock_movement` |
 | Sales | `customer`, `sales_order`, `sales_order_line`, `invoice` |
@@ -78,8 +78,10 @@ and [SCALABILITY.md](SCALABILITY.md).
   language → master/company → country (sets currency + tax regime) → first admin →
   optional sample seed. Demo can re-run via reset; production locks after first admin.
   Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
-- **Auth** (TASK-024): login validates against `app_user`; session carries
-  `master_fn`/`company_fn`/role; demo mode may auto-login a demo user but must label it.
+- **Auth** (TASK-024/TASK-106): production login resolves `master.login_code` before
+  the organisation-scoped `app_user.username`; session carries
+  `master_fn`/`company_fn` and authorization unions active `user_company_role`
+  grants. Demo mode may auto-login a demo user but must label it.
 - **Production API** (TASK-011 ✅ scaffolded, `src/server.ts`): Node/Express service,
   `DATABASE_URL` env. `GET /health` and `GET /api/dashboard` exist and are verified
   against real PostgreSQL. Still needed: more module reads, `POST` writes for
@@ -95,21 +97,19 @@ CRM, Manufacturing, Quality, HR/Payroll, Projects, Service, Fixed Assets, BI,
 Integration, Admin render sample data. Requirement: each such screen must be visibly
 marked as sample/demo content and must not crash under canonical data (TASK-018).
 
-### 4.4 Approved expansion, not yet implemented (EPIC-052–056)
+### 4.4 Approved expansion (EPIC-052–056)
 
-The following requirements are approved product scope but remain **Planned** until
-TASK-106–135 pass their individual acceptance gates. They must not be represented as
-current Canonical behavior.
+The following requirements are approved product scope. TASK-106 has implemented the
+organisation username and multi-role identity foundation; TASK-107–135 remain
+**Planned** until their individual acceptance gates pass. Planned capabilities must
+not be represented as current Canonical behavior.
 
-- **Employee identity:** production login adds organisation code + an
-  organisation-unique username. HR creates and company-links the employee account.
-  First login requires a password change and an email address. The encrypted
-  temporary password may be revealed to HR only before activation, every reveal is
-  audited, and activation permanently destroys the recoverable copy.
-- **Multiple roles:** one user may hold multiple roles in one company. Permissions are
-  the union of those roles, but company, employee and reporting-hierarchy scope still
-  limit accessible rows. Direct reports activate Manager capability; self-approval is
-  never permitted.
+- **Employee identity:** production login now uses organisation code + an
+  organisation-unique username, with nullable email before activation. HR employee
+  linking and the activation lifecycle remain TASK-107.
+- **Multiple roles:** one user may now hold multiple roles in one company. Permissions
+  are the union of those roles without widening the company boundary. Employee and
+  reporting-hierarchy row scope remain TASK-107/108.
 - **Actor-owned self service:** `/api/my/*` derives employee identity from Session and
   never accepts an employee identifier that could select another person's data.
   Offboarding revokes active sessions but retains statutory/audit history.

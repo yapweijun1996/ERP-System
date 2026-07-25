@@ -16,6 +16,7 @@ function adminCopy(){
       emailRequired:'Enter a valid email address',roleRequired:'Select a role',
       inviteSent:'Invitation sent to {email}',inviteError:'Invitation could not be sent',
       enable:'Enable',disable:'Disable',you:'you',
+      manageRoles:'Manage roles',saveRoles:'Save roles',rolesUpdated:'Roles updated',rolesUpdateError:'Could not update roles',
       toggleEnabled:'{email} enabled',toggleDisabled:'{email} disabled',toggleError:'Could not update this user',
       cannotDisableSelf:"You can't disable your own account",
       invitedRow:'Invitation pending',
@@ -43,6 +44,7 @@ function adminCopy(){
       emailRequired:'Masukkan alamat e-mel yang sah',roleRequired:'Pilih peranan',
       inviteSent:'Jemputan dihantar kepada {email}',inviteError:'Jemputan tidak dapat dihantar',
       enable:'Aktifkan',disable:'Lumpuhkan',you:'anda',
+      manageRoles:'Urus peranan',saveRoles:'Simpan peranan',rolesUpdated:'Peranan dikemas kini',rolesUpdateError:'Peranan tidak dapat dikemas kini',
       toggleEnabled:'{email} diaktifkan',toggleDisabled:'{email} dilumpuhkan',toggleError:'Pengguna ini tidak dapat dikemas kini',
       cannotDisableSelf:'Anda tidak boleh melumpuhkan akaun sendiri',
       invitedRow:'Jemputan belum diterima',
@@ -70,6 +72,7 @@ function adminCopy(){
       emailRequired:'请输入有效的邮箱地址',roleRequired:'请选择角色',
       inviteSent:'邀请已发送至 {email}',inviteError:'邀请发送失败',
       enable:'启用',disable:'停用',you:'您',
+      manageRoles:'管理角色',saveRoles:'保存角色',rolesUpdated:'角色已更新',rolesUpdateError:'无法更新角色',
       toggleEnabled:'{email} 已启用',toggleDisabled:'{email} 已停用',toggleError:'无法更新该用户',
       cannotDisableSelf:'无法停用自己的账户',
       invitedRow:'邀请待接受',
@@ -97,6 +100,7 @@ function adminCopy(){
       emailRequired:'有効なメールアドレスを入力してください',roleRequired:'役割を選択してください',
       inviteSent:'{email} に招待を送信しました',inviteError:'招待を送信できませんでした',
       enable:'有効化',disable:'無効化',you:'あなた',
+      manageRoles:'役割を管理',saveRoles:'役割を保存',rolesUpdated:'役割を更新しました',rolesUpdateError:'役割を更新できませんでした',
       toggleEnabled:'{email} を有効化しました',toggleDisabled:'{email} を無効化しました',toggleError:'このユーザーを更新できませんでした',
       cannotDisableSelf:'自分自身のアカウントは無効化できません',
       invitedRow:'招待は保留中です',
@@ -124,6 +128,7 @@ function adminCopy(){
       emailRequired:'Vui lòng nhập địa chỉ email hợp lệ',roleRequired:'Vui lòng chọn vai trò',
       inviteSent:'Đã gửi lời mời đến {email}',inviteError:'Không thể gửi lời mời',
       enable:'Kích hoạt',disable:'Vô hiệu hóa',you:'bạn',
+      manageRoles:'Quản lý vai trò',saveRoles:'Lưu vai trò',rolesUpdated:'Đã cập nhật vai trò',rolesUpdateError:'Không thể cập nhật vai trò',
       toggleEnabled:'Đã kích hoạt {email}',toggleDisabled:'Đã vô hiệu hóa {email}',toggleError:'Không thể cập nhật người dùng này',
       cannotDisableSelf:'Bạn không thể vô hiệu hóa tài khoản của chính mình',
       invitedRow:'Lời mời đang chờ',
@@ -168,7 +173,8 @@ SCREENS['user-mgmt'] = async function(root){
   const s=adminCopy();
   const usersPage=(await listPage('admin/users')).data;
   const rows=[...usersPage.users, ...usersPage.invitations];
-  const roleNames=[...new Set(usersPage.users.map(u=>u.roleName))];
+  const roleNames=[...new Set(usersPage.users.flatMap(u=>
+    Array.isArray(u.roles)&&u.roles.length?u.roles.map(role=>role.roleName):[u.roleName]).filter(Boolean))];
   const chips=[['all',t('common.all')]].concat(roleNames.map(r=>[r,r]));
   async function render(){
     const active=usersPage.users.filter(u=>u.status==='Active').length;
@@ -176,7 +182,9 @@ SCREENS['user-mgmt'] = async function(root){
     transactionListPage(root,{
       module:'admin',route:'user-mgmt',title:t('usr.title'),
       rows,rowId:u=>u.kind+'-'+u.id,
-      filters:chips,filterFn:(user,role)=>user.roleName===role,
+      filters:chips,filterFn:(user,role)=>Array.isArray(user.roles)
+        ? user.roles.some(grant=>grant.roleName===role)
+        : user.roleName===role,
       kpis:[
         {label:t('usr.t.total'),value:usersPage.users.length},
         {label:t('usr.t.active'),value:active},
@@ -188,13 +196,15 @@ SCREENS['user-mgmt'] = async function(root){
         {label:t('usr.audit'),icon:'history',onClick:()=>navigate('audit-log')},
       ],
       columns:[
-        {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px">${profileAvatar({name:u.fullName||u.email,src:u.avatarUrl||u.imageUrl||u.photoUrl,size:30})}<div class="cellsub"><b>${esc(u.fullName||u.email)}</b><small>${esc(u.email)}</small></div></div>`},
+        {label:t('usr.col.user'),render:u=>`<div style="display:flex;align-items:center;gap:11px">${profileAvatar({name:u.fullName||u.email||u.username,src:u.avatarUrl||u.imageUrl||u.photoUrl,size:30})}<div class="cellsub"><b>${esc(u.fullName||u.email||u.username)}</b><small>${esc((u.username?'@'+u.username:'')+(u.email?' · '+u.email:''))}</small></div></div>`},
         {label:t('hr.col.role'),align:'l',render:u=>esc(u.roleName)},
         {label:t('usr.col.lastactive'),align:'l',render:u=>u.lastActiveAt?esc(dateTimeValue(u.lastActiveAt)):'—'},
         {label:t('col.status'),align:'l',render:u=>cap(ts(u.status),userStatusTone(u.status))},
-        {label:'',align:'c',render:u=>u.kind==='user'&&u.email!==(DB.user&&DB.user.email)
-          ?`<span class="rowact"><button data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button></span>`
-          :(u.kind==='user'?`<span class="rowact" data-tip="${esc(s('you'))}"><button disabled>${ic('user')}</button></span>`:'')},
+        {label:'',align:'c',render:u=>u.kind==='user'
+          ?`<span class="rowact"><button data-tip="${esc(s('manageRoles'))}" data-act="roles" data-id="${u.id}">${ic('shield')}</button>${u.email!==(DB.user&&DB.user.email)
+            ?`<button data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button>`
+            :`<button data-tip="${esc(s('you'))}" disabled>${ic('user')}</button>`}</span>`
+          :''},
       ],
       rowAction:null,
       empty:{icon:'people',title:'No users'},
@@ -217,7 +227,40 @@ SCREENS['user-mgmt'] = async function(root){
             toast(error&&error.message?error.message:s('toggleError'),'danger');
           }
         }));
+        pageRoot.querySelectorAll('[data-act="roles"]').forEach(b=>b.addEventListener('click',async e=>{
+          e.stopPropagation();
+          const user=usersPage.users.find(row=>row.id===Number(b.dataset.id));
+          if(user) await openUserRolesModal(user);
+        }));
       },
+    });
+  }
+  async function openUserRolesModal(user){
+    const roles=(await listPage('admin/roles')).data;
+    const selected=new Set((user.roles||[]).map(grant=>Number(grant.roleId)));
+    appModal({
+      icon:'shield',
+      title:s('manageRoles'),
+      body:`<div class="panel-body" style="display:grid;gap:10px">${roles.map(role=>`<label style="display:flex;align-items:center;gap:9px"><input type="checkbox" data-role-id="${role.roleId}" ${selected.has(Number(role.roleId))?'checked':''}> <span>${esc(role.name)}</span></label>`).join('')}</div>`,
+      actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('saveRoles'),{icon:'check',cls:'primary',attrs:'data-save="1"'})}`,
+    });
+    const saveBtn=$('#modalEl').querySelector('[data-save]');
+    saveBtn.addEventListener('click',async()=>{
+      const roleIds=[...$('#modalEl').querySelectorAll('[data-role-id]:checked')].map(input=>Number(input.dataset.roleId));
+      if(!roleIds.length){ toast(s('roleRequired'),'danger'); return; }
+      saveBtn.disabled=true;
+      try{
+        await window.ErpSystemData.action('admin/users',user.id,'set-roles',{roleIds});
+        closeModal();
+        toast(s('rolesUpdated'),'ok');
+        const refreshed=(await listPage('admin/users')).data;
+        usersPage.users=refreshed.users; usersPage.invitations=refreshed.invitations;
+        rows.length=0; rows.push(...usersPage.users,...usersPage.invitations);
+        await render();
+      }catch(error){
+        saveBtn.disabled=false;
+        toast(error&&error.message?error.message:s('rolesUpdateError'),'danger');
+      }
     });
   }
   function openInviteModal(){
@@ -254,7 +297,17 @@ SCREENS['user-mgmt'] = async function(root){
   function roleOptions(){
     const uniqueRoles=[];
     const seen=new Set();
-    usersPage.users.forEach(u=>{ if(!seen.has(u.roleId)){ seen.add(u.roleId); uniqueRoles.push({roleId:u.roleId,roleName:u.roleName}); } });
+    usersPage.users.forEach(u=>{
+      const assignments=Array.isArray(u.roles)&&u.roles.length
+        ? u.roles
+        : [{roleId:u.roleId,roleName:u.roleName}];
+      assignments.forEach(r=>{
+        if(r.roleId!=null&&!seen.has(r.roleId)){
+          seen.add(r.roleId);
+          uniqueRoles.push({roleId:r.roleId,roleName:r.roleName});
+        }
+      });
+    });
     return uniqueRoles.map(r=>`<option value="${r.roleId}">${esc(r.roleName)}</option>`).join('');
   }
   await render();

@@ -18,6 +18,7 @@ describe('master module access control', () => {
       userId: admin.userId,
       masterFn: admin.masterFn,
       activeCompanyFn: 'C-SG',
+      username: admin.username,
       email: admin.email,
       fullName: admin.fullName,
     };
@@ -63,7 +64,11 @@ describe('master module access control', () => {
     const db = await freshDb();
     await seedDemo(db);
     const session = await adminSession(db);
-    await db.insert(master).values({ masterFn: 'OTHER-M3', name: 'Other Master 3' });
+    await db.insert(master).values({
+      masterFn: 'OTHER-M3',
+      loginCode: 'OTHER-M3',
+      name: 'Other Master 3',
+    });
 
     await setMasterModule(db, session, 'purchasing', false, 'disable-purchasing-m1');
     expect(await isModuleEnabled(db, session.masterFn, 'purchasing')).toBe(false);

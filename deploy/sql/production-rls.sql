@@ -96,7 +96,7 @@ BEGIN
 END $$;
 
 -- master, company, app_user, role, role_permission, app_session, user_company,
--- user_invitation, password_reset_token, auth_rate_limit, outbox_event and
+-- user_company_role, user_invitation, password_reset_token, auth_rate_limit, outbox_event and
 -- audit_log are security/configuration/worker
 -- infrastructure accessed before/around a tenant transaction. They are not
 -- exposed through generic resources and require separately restricted grants on

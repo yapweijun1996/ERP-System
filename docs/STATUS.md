@@ -777,13 +777,35 @@ no-movement, unknown, empty, failed-read and Retry states. Service-worker v103
 delivers the update, and the focused Posting Detail audit now covers Journal Entry,
 Payment Voucher and Goods Receipt.
 
-## Planned employee self-service, leave and expense programme (EPIC-052–056)
+## Organisation username and multi-role foundation (TASK-106, 2026-07-25)
+
+TASK-106 is complete without adding product routes. Migration 0046 adds a unique
+`master.login_code`, master-scoped `app_user.username`, nullable pre-activation email
+and the explicit `user_company_role` assignment table. The compatibility migration
+derives deterministic usernames for existing email accounts and copies each existing
+`user_company.role_id` grant exactly once; the legacy column remains as a
+compatibility/default role while all current authorization reads the role union.
+
+Production login now resolves the normalized organisation code before the normalized
+username and returns one generic invalid-credentials response for unknown
+organisations/users. Setup captures both identifiers in Demo/API mode. User Management
+can assign multiple roles through one audited company-bounded action, while permission
+checks union grants only inside the Session's active company. Service worker v104
+delivers the updated login, setup and User Management assets.
+
+Verification is green: lint, dual TypeScript, 399 tests passed with one expected skip,
+47-migration PGlite compatibility/retry proof, 134-table drift, Demo domain proof,
+Demo/API builds, desktop/375px smoke and all 115 Canonical routes at desktop/375px.
+The Canonical route baseline remains **115 / 0 Preview**. Employee linking,
+activation-secret lifecycle and offboarding remain TASK-107 and are not claimed here.
+
+## Employee self-service, leave and expense programme (EPIC-052–056)
 
 The current 115-route Canonical boundary does **not** yet include the newly approved
-employee self-service programme. EPIC-052 through EPIC-056 and TASK-106 through
-TASK-135 are planning records only; they must not be counted as implemented routes,
-tables, permissions, API contracts or tested behavior until their individual
-acceptance gates pass.
+employee self-service routes. TASK-106 has delivered the identity foundation above;
+TASK-107 through TASK-135 remain planning records and must not be counted as
+implemented routes, tables, permissions, API contracts or tested behavior until their
+individual acceptance gates pass.
 
 The programme is intentionally ordered:
 
@@ -817,9 +839,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 104 tasks, including TASK-105
+- Done: 105 tasks, including TASK-106
 - Blocked: TASK-017 (1)
-- Todo: 30 planned tasks (TASK-106–135) across EPIC-052–056. These extend the product
+- Todo: 29 planned tasks (TASK-107–135) across EPIC-052–056. These extend the product
   beyond the currently complete 115 Canonical / 0 Preview boundary; they do not reopen
   or downgrade existing routes. Current visual-layout convergence remains complete at
   43 audited list-layout routes, while future My Work/Leave/Receipt/Expense/Tax routes

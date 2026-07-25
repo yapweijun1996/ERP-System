@@ -284,6 +284,7 @@ import {
   createRoleWithin,
   setRolePermissionWithin,
   setUserActiveWithin,
+  setUserRolesWithin,
 } from '../../src/auth/adminLifecycle';
 import { listMasterModules, setMasterModuleWithin } from '../../src/auth/moduleAccess';
 import type { SessionData } from '../../src/auth/session';
@@ -346,6 +347,7 @@ function demoSession(scope: Scope, actorUserId: number): SessionData {
     userId: actorUserId,
     masterFn: scope.masterFn,
     activeCompanyFn: scope.companyFn,
+    username: 'demo',
     email: '',
     fullName: null,
   };
@@ -934,6 +936,17 @@ export const erpDemoRuntime = Object.freeze({
     ) {
       return setUserActiveWithin(
         asDomainDb(db), demoSession(scope, actorUserId), targetUserId, isActive, 'demo',
+      );
+    },
+    setUserRolesWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      targetUserId: number,
+      roleIds: number[],
+    ) {
+      return setUserRolesWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), targetUserId, roleIds, 'demo',
       );
     },
     createRoleWithin(db: DemoOrm, scope: Scope, actorUserId: number, name: string) {

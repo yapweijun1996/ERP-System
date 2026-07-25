@@ -12,10 +12,17 @@ import {
   systemState,
   taxRule,
   userCompany,
+  userCompanyRole,
 } from '../../data/schema';
 import { appendAudit } from '../../api/audit';
 import { hashPassword } from '../../auth/password';
 import { PERMISSIONS } from '../../auth/permissions';
+import {
+  isValidOrganizationCode,
+  isValidUsername,
+  normalizeOrganizationCode,
+  normalizeUsername,
+} from '../../auth/identifiers';
 import { createDefaultControlPlane } from './defaultControlPlane';
 
 const SETUP_STATE_KEY = 'production_setup';
@@ -65,9 +72,11 @@ export class SetupError extends Error {
 
 export interface CompleteSetupInput {
   organizationName: string;
+  organizationCode: string;
   companyName: string;
   country: string;
   adminName: string;
+  adminUsername: string;
   adminEmail: string;
   adminPassword: string;
   language?: string;
@@ -91,11 +100,33 @@ export async function completeProductionSetup(
   masterFn: string;
   companyFn: string;
   userId: number;
+  organizationCode: string;
+  username: string;
   email: string;
 }> {
   const organizationName = required(input.organizationName, 'organizationName', 'Organization name');
+  const organizationCode = normalizeOrganizationCode(required(
+    input.organizationCode,
+    'organizationCode',
+    'Organization code',
+  ));
+  if (!isValidOrganizationCode(organizationCode)) {
+    throw new SetupError(400, 'invalid_request', 'Enter a valid organization code.', {
+      organizationCode: 'Use 3–32 letters, numbers or hyphens.',
+    });
+  }
   const companyName = required(input.companyName, 'companyName', 'Company name');
   const adminName = required(input.adminName, 'adminName', 'Admin name');
+  const adminUsername = normalizeUsername(required(
+    input.adminUsername,
+    'adminUsername',
+    'Admin username',
+  ));
+  if (!isValidUsername(adminUsername)) {
+    throw new SetupError(400, 'invalid_request', 'Enter a valid admin username.', {
+      adminUsername: 'Use 3–64 lowercase letters, numbers, dots, underscores or hyphens.',
+    });
+  }
   const adminEmail = required(input.adminEmail, 'adminEmail', 'Admin email').toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
     throw new SetupError(400, 'invalid_request', 'Enter a valid admin email.', {
@@ -144,7 +175,11 @@ export async function completeProductionSetup(
       name: defaults.currencyName,
       symbol: defaults.currencySymbol,
     }).onConflictDoNothing();
-    await tx.insert(master).values({ masterFn, name: organizationName });
+    await tx.insert(master).values({
+      masterFn,
+      loginCode: organizationCode,
+      name: organizationName,
+    });
     await tx.insert(company).values({
       companyFn,
       masterFn,
@@ -161,12 +196,18 @@ export async function completeProductionSetup(
     }).returning({ roleId: role.roleId });
     const [admin] = await tx.insert(appUser).values({
       masterFn,
+      username: adminUsername,
       email: adminEmail,
       fullName: adminName,
       passwordHash: hashPassword(input.adminPassword),
       language,
     }).returning({ userId: appUser.userId });
     await tx.insert(userCompany).values({
+      userId: admin.userId,
+      companyFn,
+      roleId: adminRole.roleId,
+    });
+    await tx.insert(userCompanyRole).values({
       userId: admin.userId,
       companyFn,
       roleId: adminRole.roleId,
@@ -208,7 +249,15 @@ export async function completeProductionSetup(
       entity: 'system',
       entityId: SETUP_STATE_KEY,
       action: 'production_setup',
-      after: { masterFn, companyFn, userId: admin.userId, country, language },
+      after: {
+        masterFn,
+        companyFn,
+        organizationCode,
+        userId: admin.userId,
+        username: adminUsername,
+        country,
+        language,
+      },
     });
     await tx.update(systemState).set({
       value: {
@@ -219,6 +268,13 @@ export async function completeProductionSetup(
       },
       updatedAt: new Date(),
     }).where(eq(systemState.key, SETUP_STATE_KEY));
-    return { masterFn, companyFn, userId: admin.userId, email: adminEmail };
+    return {
+      masterFn,
+      companyFn,
+      userId: admin.userId,
+      email: adminEmail,
+      organizationCode,
+      username: adminUsername,
+    };
   });
 }

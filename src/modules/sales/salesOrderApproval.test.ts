@@ -30,7 +30,11 @@ import {
 import { confirmDraftSalesOrder } from './confirmOrder';
 
 async function seedFixture(db: DB) {
-  await db.insert(master).values({ masterFn: SCOPE.masterFn, name: 'Test Master' });
+  await db.insert(master).values({
+    masterFn: SCOPE.masterFn,
+    loginCode: 'SO-APPROVAL-TEST',
+    name: 'Test Master',
+  });
   await db.insert(currency).values({ code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' });
   await db.insert(company).values({
     masterFn: SCOPE.masterFn,
@@ -42,6 +46,7 @@ async function seedFixture(db: DB) {
   });
   const [approver] = await db.insert(appUser).values({
     masterFn: SCOPE.masterFn,
+    username: 'fictional.sales.approver',
     email: 'sales.approver@example.test',
     fullName: 'Fictional Sales Approver',
     passwordHash: 'test-only-hash',

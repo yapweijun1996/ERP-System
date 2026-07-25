@@ -7,25 +7,41 @@ import {
 } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  appSession, appUser, auditLog, role, rolePermission, userCompany, userInvitation,
+  appSession, appUser, auditLog, role, rolePermission, userCompany, userCompanyRole,
+  userInvitation,
 } from '../data/schema';
 
 export async function listCompanyUsers(db: DB, masterFn: string, companyFn: string) {
   const users = await db.select({
     userId: appUser.userId,
+    username: appUser.username,
     email: appUser.email,
     fullName: appUser.fullName,
     isActive: appUser.isActive,
-    roleId: role.roleId,
-    roleName: role.name,
   }).from(userCompany)
     .innerJoin(appUser, eq(appUser.userId, userCompany.userId))
-    .innerJoin(role, eq(role.roleId, userCompany.roleId))
     .where(and(
       eq(userCompany.companyFn, companyFn),
       eq(appUser.masterFn, masterFn),
     ))
     .orderBy(appUser.userId);
+  const userRoleRows = await db.select({
+    userId: userCompanyRole.userId,
+    roleId: role.roleId,
+    roleName: role.name,
+  }).from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .where(and(
+      eq(userCompanyRole.companyFn, companyFn),
+      eq(role.masterFn, masterFn),
+    ))
+    .orderBy(userCompanyRole.userId, role.roleId);
+  const rolesByUser = new Map<number, Array<{ roleId: number; roleName: string }>>();
+  for (const row of userRoleRows) {
+    const grants = rolesByUser.get(row.userId) ?? [];
+    grants.push({ roleId: row.roleId, roleName: row.roleName });
+    rolesByUser.set(row.userId, grants);
+  }
 
   const lastSeenRows = users.length ? await db.select({
     userId: appSession.userId,
@@ -58,16 +74,21 @@ export async function listCompanyUsers(db: DB, masterFn: string, companyFn: stri
     .orderBy(userInvitation.id);
 
   return {
-    users: users.map((u) => ({
-      kind: 'user' as const,
-      id: u.userId,
-      email: u.email,
-      fullName: u.fullName,
-      roleId: u.roleId,
-      roleName: u.roleName,
-      status: u.isActive ? 'Active' as const : 'Disabled' as const,
-      lastActiveAt: lastSeenByUser.get(u.userId) ?? null,
-    })),
+    users: users.map((u) => {
+      const grants = rolesByUser.get(u.userId) ?? [];
+      return {
+        kind: 'user' as const,
+        id: u.userId,
+        username: u.username,
+        email: u.email,
+        fullName: u.fullName,
+        roleId: grants[0]?.roleId ?? null,
+        roleName: grants.map((grant) => grant.roleName).join(', '),
+        roles: grants,
+        status: u.isActive ? 'Active' as const : 'Disabled' as const,
+        lastActiveAt: lastSeenByUser.get(u.userId) ?? null,
+      };
+    }),
     invitations: invitations.map((i) => ({
       kind: 'invitation' as const,
       id: i.id,

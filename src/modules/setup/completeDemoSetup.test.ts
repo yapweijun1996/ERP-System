@@ -4,9 +4,11 @@ import {
   account,
   appUser,
   company,
+  master,
   rolePermission,
   taxRule,
   userCompany,
+  userCompanyRole,
 } from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
@@ -25,10 +27,12 @@ describe('completeDemoSetup', () => {
     const result = await completeDemoSetup(db, {
       masterFn: 'M1',
       masterName: 'Demo Group',
+      organizationCode: 'DEMO-GROUP',
       companyFn: 'C-MY-NEW',
       companyName: 'Demo Malaysia',
       country: 'MY',
       adminName: 'Demo Administrator',
+      adminUsername: 'demo.administrator',
       adminEmail: 'new.admin@example.test',
       adminPasswordHash: PASSWORD_HASH,
       language: 'vi',
@@ -36,9 +40,18 @@ describe('completeDemoSetup', () => {
 
     expect(result).toMatchObject({
       masterFn: 'M1',
+      organizationCode: 'DEMO-GROUP',
       companyFn: 'C-MY-NEW',
+      username: 'demo.administrator',
       email: 'new.admin@example.test',
     });
+    expect(await db.select({
+      name: master.name,
+      loginCode: master.loginCode,
+    }).from(master).where(eq(master.masterFn, 'M1'))).toEqual([{
+      name: 'Demo Group',
+      loginCode: 'DEMO-GROUP',
+    }]);
     expect(await db.select().from(company)
       .where(eq(company.companyFn, 'C-MY-NEW'))).toMatchObject([{
       country: 'MY',
@@ -58,6 +71,8 @@ describe('completeDemoSetup', () => {
     expect(admin.language).toBe('vi');
     expect(await db.select().from(userCompany)
       .where(eq(userCompany.companyFn, 'C-MY-NEW'))).toHaveLength(1);
+    expect(await db.select().from(userCompanyRole)
+      .where(eq(userCompanyRole.companyFn, 'C-MY-NEW'))).toHaveLength(1);
     expect((await db.select().from(rolePermission)
       .where(eq(rolePermission.masterFn, 'M1'))).length).toBeGreaterThan(0);
   });
@@ -69,10 +84,12 @@ describe('completeDemoSetup', () => {
 
     await expect(completeDemoSetup(db, {
       masterFn: 'M1',
+      organizationCode: 'ACME',
       companyFn: 'C-SG',
       companyName: 'Duplicate company',
       country: 'SG',
       adminName: 'Should Roll Back',
+      adminUsername: 'rollback.admin',
       adminEmail: 'rollback@example.test',
       adminPasswordHash: PASSWORD_HASH,
       language: 'en',
@@ -89,10 +106,12 @@ describe('completeDemoSetup', () => {
 
     await expect(completeDemoSetup(db, {
       masterFn: 'M1',
+      organizationCode: 'ACME',
       companyFn: 'C-INVALID-HASH',
       companyName: 'Invalid',
       country: 'SG',
       adminName: 'Invalid',
+      adminUsername: 'invalid.admin',
       adminEmail: 'invalid@example.test',
       adminPasswordHash: 'plaintext-password',
     })).rejects.toThrow(DemoSetupError);

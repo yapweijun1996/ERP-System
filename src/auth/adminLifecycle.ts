@@ -14,11 +14,12 @@
 // callers that aren't already inside a transaction (mirrors createAssetWithin +
 // createAsset in src/modules/assets/createAsset.ts).
 import {
-  and, eq, gt, isNull, ne,
+  and, eq, gt, inArray, isNull, ne,
 } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  appSession, appUser, role, rolePermission, userCompany, userInvitation,
+  appSession, appUser, role, rolePermission, userCompany, userCompanyRole,
+  userInvitation,
 } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
@@ -54,21 +55,25 @@ export async function setUserActiveWithin(
     // bypasses rolePermission entirely, so losing the last one means nobody left who
     // can manage users/roles at all, including re-enabling this same account.
     const [targetSuperadminGrant] = await exec.select({ roleId: role.roleId })
-      .from(userCompany)
-      .innerJoin(role, eq(role.roleId, userCompany.roleId))
+      .from(userCompanyRole)
+      .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
       .where(and(
-        eq(userCompany.userId, userId),
+        eq(userCompanyRole.userId, userId),
+        eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        eq(role.masterFn, session.masterFn),
         eq(role.isSuperadmin, true),
       ))
       .limit(1);
     if (targetSuperadminGrant) {
       const [otherActiveSuperadmin] = await exec.select({ userId: appUser.userId })
         .from(appUser)
-        .innerJoin(userCompany, eq(userCompany.userId, appUser.userId))
-        .innerJoin(role, eq(role.roleId, userCompany.roleId))
+        .innerJoin(userCompanyRole, eq(userCompanyRole.userId, appUser.userId))
+        .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
         .where(and(
           eq(appUser.masterFn, session.masterFn),
           eq(appUser.isActive, true),
+          eq(userCompanyRole.companyFn, session.activeCompanyFn),
+          eq(role.masterFn, session.masterFn),
           eq(role.isSuperadmin, true),
           ne(appUser.userId, userId),
         ))
@@ -122,6 +127,137 @@ export function setUserActive(
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
   }, (tx) => setUserActiveWithin(tx, session, userId, isActive, requestId));
+}
+
+export async function setUserRolesWithin(
+  exec: DB,
+  session: SessionData,
+  userId: number,
+  roleIdsInput: number[],
+  requestId: string,
+  now = new Date(),
+): Promise<{
+  userId: number;
+  roles: Array<{ roleId: number; name: string; isSuperadmin: boolean }>;
+}> {
+  const roleIds = [...new Set(roleIdsInput)].sort((left, right) => left - right);
+  if (
+    !Number.isSafeInteger(userId)
+    || userId <= 0
+    || roleIds.length === 0
+    || roleIds.some((roleId) => !Number.isSafeInteger(roleId) || roleId <= 0)
+  ) {
+    throw new AuthLifecycleError(400, 'invalid_request', 'Select at least one valid role.', {
+      roleIds: 'At least one role is required.',
+    });
+  }
+
+  const [target] = await exec.select({
+    userId: appUser.userId,
+    companyFn: userCompany.companyFn,
+  }).from(userCompany)
+    .innerJoin(appUser, eq(appUser.userId, userCompany.userId))
+    .where(and(
+      eq(userCompany.userId, userId),
+      eq(userCompany.companyFn, session.activeCompanyFn),
+      eq(appUser.masterFn, session.masterFn),
+    ))
+    .limit(1)
+    .for('update');
+  if (!target) {
+    throw new AuthLifecycleError(404, 'user_not_found', 'User not found in this company.');
+  }
+
+  const selectedRoles = await exec.select({
+    roleId: role.roleId,
+    name: role.name,
+    isSuperadmin: role.isSuperadmin,
+  }).from(role).where(and(
+    eq(role.masterFn, session.masterFn),
+    inArray(role.roleId, roleIds),
+  )).orderBy(role.roleId);
+  if (selectedRoles.length !== roleIds.length) {
+    throw new AuthLifecycleError(400, 'invalid_role', 'One or more selected roles are unavailable.');
+  }
+
+  const before = await exec.select({
+    roleId: role.roleId,
+    name: role.name,
+    isSuperadmin: role.isSuperadmin,
+  }).from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .where(and(
+      eq(userCompanyRole.userId, userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(role.masterFn, session.masterFn),
+    ))
+    .orderBy(role.roleId);
+  const removesSuperadmin = before.some((grant) => grant.isSuperadmin)
+    && !selectedRoles.some((grant) => grant.isSuperadmin);
+  if (removesSuperadmin) {
+    const [otherActiveSuperadmin] = await exec.select({ userId: appUser.userId })
+      .from(appUser)
+      .innerJoin(userCompanyRole, eq(userCompanyRole.userId, appUser.userId))
+      .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+      .where(and(
+        eq(appUser.masterFn, session.masterFn),
+        eq(appUser.isActive, true),
+        eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        eq(role.masterFn, session.masterFn),
+        eq(role.isSuperadmin, true),
+        ne(appUser.userId, userId),
+      ))
+      .limit(1);
+    if (!otherActiveSuperadmin) {
+      throw new AuthLifecycleError(
+        400,
+        'cannot_remove_last_superadmin',
+        'At least one active superadmin must remain for this company.',
+      );
+    }
+  }
+
+  await exec.delete(userCompanyRole).where(and(
+    eq(userCompanyRole.userId, userId),
+    eq(userCompanyRole.companyFn, session.activeCompanyFn),
+  ));
+  await exec.insert(userCompanyRole).values(roleIds.map((roleId) => ({
+    userId,
+    companyFn: session.activeCompanyFn,
+    roleId,
+  })));
+  await exec.update(userCompany).set({
+    roleId: roleIds[0],
+    updatedAt: now,
+  }).where(and(
+    eq(userCompany.userId, userId),
+    eq(userCompany.companyFn, session.activeCompanyFn),
+  ));
+  await appendAudit(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+    actorUserId: session.userId,
+    requestId,
+    entity: 'user_company_role',
+    entityId: userId,
+    action: 'set_roles',
+    before: { roles: before.map((grant) => grant.roleId) },
+    after: { roles: roleIds },
+  });
+  return { userId, roles: selectedRoles };
+}
+
+export function setUserRoles(
+  db: DB,
+  session: SessionData,
+  userId: number,
+  roleIds: number[],
+  requestId: string,
+) {
+  return withTenantTransaction(db, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, (tx) => setUserRolesWithin(tx, session, userId, roleIds, requestId));
 }
 
 export async function createRoleWithin(

@@ -10,9 +10,16 @@ import {
   rolePermission,
   taxRule,
   userCompany,
+  userCompanyRole,
 } from '../../data/schema';
 import { PERMISSIONS } from '../../auth/permissions';
 import { createDefaultControlPlane } from './defaultControlPlane';
+import {
+  isValidOrganizationCode,
+  isValidUsername,
+  normalizeOrganizationCode,
+  normalizeUsername,
+} from '../../auth/identifiers';
 
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
 
@@ -40,10 +47,12 @@ const COUNTRY_DEFAULTS = {
 export interface CompleteDemoSetupInput {
   masterFn: string;
   masterName?: string;
+  organizationCode: string;
   companyFn: string;
   companyName: string;
   country: 'SG' | 'MY';
   adminName: string;
+  adminUsername: string;
   adminEmail: string;
   adminPasswordHash: string;
   language?: string;
@@ -67,9 +76,20 @@ export async function completeDemoSetupWithin(
   input: CompleteDemoSetupInput,
 ) {
   const masterFn = required(input.masterFn, 'Master');
+  const organizationCode = normalizeOrganizationCode(required(
+    input.organizationCode,
+    'Organization code',
+  ));
+  if (!isValidOrganizationCode(organizationCode)) {
+    throw new DemoSetupError('Use a 3–32 character organization code.');
+  }
   const companyFn = required(input.companyFn, 'Company identifier');
   const companyName = required(input.companyName, 'Company name');
   const adminName = required(input.adminName, 'Admin user name');
+  const adminUsername = normalizeUsername(required(input.adminUsername, 'Admin username'));
+  if (!isValidUsername(adminUsername)) {
+    throw new DemoSetupError('Use a valid 3–64 character admin username.');
+  }
   const adminEmail = required(input.adminEmail, 'Admin email').toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
     throw new DemoSetupError('Enter a valid admin email.');
@@ -91,10 +111,11 @@ export async function completeDemoSetupWithin(
   if (!existingMaster) throw new DemoSetupError(`Master ${masterFn} not found.`);
 
   const masterName = input.masterName?.trim();
-  if (masterName) {
-    await exec.update(master).set({ name: masterName, updatedAt: sql`now()` })
-      .where(eq(master.masterFn, masterFn));
-  }
+  await exec.update(master).set({
+    ...(masterName ? { name: masterName } : {}),
+    loginCode: organizationCode,
+    updatedAt: sql`now()`,
+  }).where(eq(master.masterFn, masterFn));
   await exec.insert(currency).values({
     code: defaults.currency,
     name: defaults.currencyName,
@@ -156,6 +177,7 @@ export async function completeDemoSetupWithin(
   if (!admin) {
     [admin] = await exec.insert(appUser).values({
       masterFn,
+      username: adminUsername,
       email: adminEmail,
       fullName: adminName,
       passwordHash: input.adminPasswordHash,
@@ -167,11 +189,18 @@ export async function completeDemoSetupWithin(
     companyFn,
     roleId: adminRole.roleId,
   }).onConflictDoNothing();
+  await exec.insert(userCompanyRole).values({
+    userId: admin.userId,
+    companyFn,
+    roleId: adminRole.roleId,
+  }).onConflictDoNothing();
 
   return {
     masterFn,
     companyFn,
     userId: admin.userId,
+    organizationCode,
+    username: adminUsername,
     email: adminEmail,
   };
 }

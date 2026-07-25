@@ -1,6 +1,8 @@
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { company, role, rolePermission, userCompany } from '../data/schema';
+import {
+  company, role, rolePermission, userCompanyRole,
+} from '../data/schema';
 import type { SessionData } from './session';
 
 export const PERMISSIONS = {
@@ -62,34 +64,39 @@ export async function hasPermission(
   session: SessionData,
   permissionKey: PermissionKey,
 ): Promise<boolean> {
-  const [assignment] = await db.select({
+  const [superadminGrant] = await db.select({
     roleId: role.roleId,
     roleMasterFn: role.masterFn,
     companyMasterFn: company.masterFn,
     isSuperadmin: role.isSuperadmin,
-  }).from(userCompany)
-    .innerJoin(role, eq(role.roleId, userCompany.roleId))
-    .innerJoin(company, eq(company.companyFn, userCompany.companyFn))
+  }).from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .innerJoin(company, eq(company.companyFn, userCompanyRole.companyFn))
     .where(and(
-      eq(userCompany.userId, session.userId),
-      eq(userCompany.companyFn, session.activeCompanyFn),
+      eq(userCompanyRole.userId, session.userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(role.masterFn, session.masterFn),
+      eq(company.masterFn, session.masterFn),
+      eq(role.isSuperadmin, true),
     ))
     .limit(1);
-
-  if (!assignment) return false;
-  if (
-    assignment.roleMasterFn !== session.masterFn
-    || assignment.companyMasterFn !== session.masterFn
-  ) return false;
   // Superadmin bypass is deliberately bounded to the current master/company
-  // assignment above; it is never a cross-master bypass.
-  if (assignment.isSuperadmin) return true;
+  // role grant above; it is never a cross-master bypass.
+  if (superadminGrant) return true;
 
   const [grant] = await db.select({ allowed: rolePermission.allowed })
-    .from(rolePermission)
-    .where(and(
+    .from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .innerJoin(company, eq(company.companyFn, userCompanyRole.companyFn))
+    .innerJoin(rolePermission, and(
+      eq(rolePermission.roleId, userCompanyRole.roleId),
       eq(rolePermission.masterFn, session.masterFn),
-      eq(rolePermission.roleId, assignment.roleId),
+    ))
+    .where(and(
+      eq(userCompanyRole.userId, session.userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(role.masterFn, session.masterFn),
+      eq(company.masterFn, session.masterFn),
       eq(rolePermission.permissionKey, permissionKey),
       eq(rolePermission.allowed, true),
     ))
@@ -111,12 +118,15 @@ export async function isSuperadminSession(db: DB, session: SessionData): Promise
     roleMasterFn: role.masterFn,
     companyMasterFn: company.masterFn,
     isSuperadmin: role.isSuperadmin,
-  }).from(userCompany)
-    .innerJoin(role, eq(role.roleId, userCompany.roleId))
-    .innerJoin(company, eq(company.companyFn, userCompany.companyFn))
+  }).from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .innerJoin(company, eq(company.companyFn, userCompanyRole.companyFn))
     .where(and(
-      eq(userCompany.userId, session.userId),
-      eq(userCompany.companyFn, session.activeCompanyFn),
+      eq(userCompanyRole.userId, session.userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(role.masterFn, session.masterFn),
+      eq(company.masterFn, session.masterFn),
+      eq(role.isSuperadmin, true),
     ))
     .limit(1);
   if (!assignment) return false;

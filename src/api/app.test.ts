@@ -84,7 +84,7 @@ async function login(baseUrl: string, email = 'admin@acme.co', password = 'demo1
   const response = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ organizationCode: 'ACME', username: email.split('@')[0], password }),
   });
   expect(response.status).toBe(200);
   return responseCookies(response);
@@ -116,6 +116,108 @@ describe('production API security contract', () => {
       masterFn: 'M1',
       activeCompanyFn: 'C-SG',
       email: 'admin@acme.co',
+    });
+  });
+
+  it('signs in with organization code and organization-scoped username', async () => {
+    const response = await fetch(`${running.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        organizationCode: ' acme ',
+        username: ' ADMIN ',
+        password: 'demo1234',
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      organizationCode: 'ACME',
+      username: 'admin',
+      email: 'admin@acme.co',
+      masterFn: 'M1',
+    });
+    const wrongOrganization = await fetch(`${running.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        organizationCode: 'UNKNOWN',
+        username: 'admin',
+        password: 'demo1234',
+      }),
+    });
+    expect(wrongOrganization.status).toBe(401);
+    expect((await wrongOrganization.json()).error.code).toBe('invalid_credentials');
+
+    const legacyEmailOnly = await fetch(`${running.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@acme.co', password: 'demo1234' }),
+    });
+    expect(legacyEmailOnly.status).toBe(400);
+    expect((await legacyEmailOnly.json()).error).toMatchObject({
+      code: 'invalid_request',
+      fieldErrors: {
+        organizationCode: 'Organization code is required.',
+        username: 'Username is required.',
+      },
+    });
+  });
+
+  it('manages an explicit union of company roles through the authenticated API', async () => {
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+    const createRole = await fetch(`${running.baseUrl}/api/admin/roles`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ name: 'Auditor' }),
+    });
+    expect(createRole.status).toBe(201);
+    const auditorRoleId = (await createRole.json()).data.id as number;
+
+    const usersBefore = await fetch(`${running.baseUrl}/api/admin/users`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(usersBefore.status).toBe(200);
+    const userPayload = (await usersBefore.json()).data;
+    const viewer = userPayload.users.find(
+      (user: { username: string }) => user.username === 'viewer',
+    );
+    expect(viewer.roles).toHaveLength(1);
+
+    const setRoles = await fetch(
+      `${running.baseUrl}/api/admin/users/${viewer.id}/actions/set-roles`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'x-request-id': 'set-viewer-role-union' },
+        body: JSON.stringify({
+          roleIds: [viewer.roles[0].roleId, auditorRoleId, auditorRoleId],
+        }),
+      },
+    );
+    expect(setRoles.status).toBe(200);
+    expect((await setRoles.json()).data.roles.map(
+      (assigned: { name: string }) => assigned.name,
+    )).toEqual(['Viewer', 'Auditor']);
+
+    const usersAfter = await fetch(`${running.baseUrl}/api/admin/users`, {
+      headers: { cookie: cookies.header },
+    });
+    const updatedViewer = (await usersAfter.json()).data.users.find(
+      (user: { username: string }) => user.username === 'viewer',
+    );
+    expect(updatedViewer.roles.map(
+      (assigned: { roleName: string }) => assigned.roleName,
+    )).toEqual(['Viewer', 'Auditor']);
+    const [audit] = await db.select().from(auditLog)
+      .where(eq(auditLog.requestId, 'set-viewer-role-union'));
+    expect(audit).toMatchObject({
+      entity: 'user_company_role',
+      action: 'set_roles',
+      entityId: String(viewer.id),
     });
   });
 

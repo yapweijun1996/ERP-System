@@ -40,7 +40,7 @@ describe('supplier debit note API vertical slice', () => {
   async function auth(email = 'admin@acme.co', password = 'demo1234') {
     const login = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ organizationCode: 'ACME', username: email.split('@')[0], password }),
     });
     const state = cookies(login);
     return { cookie: state.header, 'content-type': 'application/json', 'x-csrf-token': state.csrf };

@@ -33,9 +33,14 @@ import {
 } from './creditControl';
 
 async function seedSalesFixture(db: DB) {
-  await db.insert(master).values({ masterFn: SCOPE.masterFn, name: 'Test Master' });
+  await db.insert(master).values({
+    masterFn: SCOPE.masterFn,
+    loginCode: 'CONFIRM-ORDER-TEST',
+    name: 'Test Master',
+  });
   const [salesperson] = await db.insert(appUser).values({
     masterFn: SCOPE.masterFn,
+    username: 'fictional.salesperson',
     email: 'salesperson@example.test',
     fullName: 'Fictional Salesperson',
     passwordHash: 'test-only-hash',

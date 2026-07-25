@@ -8,12 +8,14 @@ import {
   passwordResetToken,
   role,
   userCompany,
+  userCompanyRole,
   userInvitation,
 } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import { hashPassword } from './password';
+import { usernameFromEmail } from './identifiers';
 import type { SessionData } from './session';
 import {
   encryptToken,
@@ -192,14 +194,31 @@ export async function acceptInvitation(
       throw new AuthLifecycleError(409, 'invitation_invalid', 'The invitation is invalid or expired.');
     }
 
+    const baseUsername = usernameFromEmail(invitation.email);
+    const [usernameTaken] = await tx.select({ userId: appUser.userId })
+      .from(appUser)
+      .where(and(
+        eq(appUser.masterFn, invitation.masterFn),
+        eq(appUser.username, baseUsername),
+      ))
+      .limit(1);
+    const username = usernameTaken
+      ? `${baseUsername.slice(0, Math.max(3, 63 - String(invitation.id).length))}-${invitation.id}`
+      : baseUsername;
     const [created] = await tx.insert(appUser).values({
       masterFn: invitation.masterFn,
+      username,
       email: invitation.email,
       fullName,
       passwordHash: hashPassword(input.password),
       language,
     }).returning({ userId: appUser.userId });
     await tx.insert(userCompany).values({
+      userId: created.userId,
+      companyFn: invitation.companyFn,
+      roleId: invitation.roleId,
+    });
+    await tx.insert(userCompanyRole).values({
       userId: created.userId,
       companyFn: invitation.companyFn,
       roleId: invitation.roleId,
@@ -216,7 +235,7 @@ export async function acceptInvitation(
       entity: 'user_invitation',
       entityId: invitation.id,
       action: 'accept',
-      after: { userId: created.userId },
+      after: { userId: created.userId, username },
     });
     return { userId: created.userId, email: invitation.email };
   });

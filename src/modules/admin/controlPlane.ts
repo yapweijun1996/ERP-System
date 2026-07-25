@@ -12,6 +12,7 @@ import {
   role,
   taxRule,
   userCompany,
+  userCompanyRole,
 } from '../../data/schema';
 import { appendAudit } from '../../api/audit';
 import { listMasterModules } from '../../auth/moduleAccess';
@@ -44,16 +45,32 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
     .where(eq(appUser.masterFn, scope.masterFn));
   const users = await exec.select({
     userId: appUser.userId,
+    username: appUser.username,
     email: appUser.email,
     fullName: appUser.fullName,
     isActive: appUser.isActive,
     companyFn: userCompany.companyFn,
-    roleName: role.name,
   }).from(userCompany)
     .innerJoin(appUser, eq(appUser.userId, userCompany.userId))
-    .innerJoin(role, eq(role.roleId, userCompany.roleId))
     .where(and(eq(appUser.masterFn, scope.masterFn), eq(userCompany.companyFn, scope.companyFn)))
     .orderBy(appUser.userId);
+  const userRoleRows = await exec.select({
+    userId: userCompanyRole.userId,
+    roleId: role.roleId,
+    roleName: role.name,
+  }).from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .where(and(
+      eq(userCompanyRole.companyFn, scope.companyFn),
+      eq(role.masterFn, scope.masterFn),
+    ))
+    .orderBy(userCompanyRole.userId, role.roleId);
+  const rolesByUser = new Map<number, Array<{ roleId: number; roleName: string }>>();
+  for (const row of userRoleRows) {
+    const grants = rolesByUser.get(row.userId) ?? [];
+    grants.push({ roleId: row.roleId, roleName: row.roleName });
+    rolesByUser.set(row.userId, grants);
+  }
   const roles = await exec.select({ roleId: role.roleId, name: role.name, isSuperadmin: role.isSuperadmin })
     .from(role).where(eq(role.masterFn, scope.masterFn)).orderBy(role.roleId);
   const modules = await listMasterModules(exec, scope.masterFn);
@@ -67,7 +84,15 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
     master: tenant,
     activeCompanyFn: scope.companyFn,
     companies: companies.map((row) => ({ ...row, userCount: counts.get(row.companyFn)?.size ?? 0 })),
-    users,
+    users: users.map((user) => {
+      const grants = rolesByUser.get(user.userId) ?? [];
+      return {
+        ...user,
+        roleId: grants[0]?.roleId ?? null,
+        roleName: grants.map((grant) => grant.roleName).join(', '),
+        roles: grants,
+      };
+    }),
     roles,
     modules,
   };

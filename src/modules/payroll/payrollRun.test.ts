@@ -17,7 +17,11 @@ import {
 const MY_SCOPE: Scope = { masterFn: SCOPE.masterFn, companyFn: 'TEST-C-MY' };
 
 async function seedCompany(db: DB, scope: Scope, country: 'SG' | 'MY') {
-  await db.insert(master).values({ masterFn: scope.masterFn, name: 'Test Master' });
+  await db.insert(master).values({
+    masterFn: scope.masterFn,
+    loginCode: `LOGIN-${scope.masterFn}`,
+    name: 'Test Master',
+  });
   const currencyCode = country === 'SG' ? 'SGD' : 'MYR';
   await db.insert(currency).values({ code: currencyCode, name: currencyCode, symbol: currencyCode });
   await db.insert(company).values({

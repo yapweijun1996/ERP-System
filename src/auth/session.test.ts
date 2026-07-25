@@ -27,7 +27,7 @@ describe('database session store', () => {
     const { db, userId } = await fixture();
     const created = await createSession(db, {
       userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
-      email: 'admin@acme.co', fullName: 'Admin',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
     });
     const [stored] = await db.select().from(appSession);
     expect(stored.tokenHash).toBe(hashSecret(created.sessionId));
@@ -35,7 +35,7 @@ describe('database session store', () => {
     expect(stored.csrfHash).toBe(hashSecret(created.csrfToken));
     expect(await getSession(db, created.sessionId)).toEqual({
       userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
-      email: 'admin@acme.co', fullName: 'Admin',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
     });
   });
 
@@ -43,7 +43,7 @@ describe('database session store', () => {
     const { db, userId } = await fixture();
     const created = await createSession(db, {
       userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
-      email: 'admin@acme.co', fullName: 'Admin',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
     });
     expect(await verifyCsrfToken(db, created.sessionId, created.csrfToken)).toBe(true);
     expect(await verifyCsrfToken(db, created.sessionId, 'wrong')).toBe(false);
@@ -53,7 +53,7 @@ describe('database session store', () => {
     const { db, userId } = await fixture();
     const created = await createSession(db, {
       userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
-      email: 'admin@acme.co', fullName: 'Admin',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
     });
     await destroySession(db, created.sessionId);
     expect(await getSession(db, created.sessionId)).toBeNull();
@@ -63,7 +63,7 @@ describe('database session store', () => {
     const { db, userId } = await fixture();
     const created = await createSession(db, {
       userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
-      email: 'admin@acme.co', fullName: 'Admin',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
     });
     expect((await switchSessionCompany(db, created.sessionId, 'C-MY'))?.activeCompanyFn).toBe('C-MY');
     expect(await switchSessionCompany(db, created.sessionId, 'NOT-ASSIGNED')).toBeNull();
@@ -73,7 +73,7 @@ describe('database session store', () => {
     const { db, userId } = await fixture();
     await expect(createSession(db, {
       userId, masterFn: 'M1', activeCompanyFn: 'NOT-ASSIGNED',
-      email: 'admin@acme.co', fullName: 'Admin',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
     })).rejects.toThrow('outside the user company assignment');
   });
 
@@ -81,7 +81,7 @@ describe('database session store', () => {
     const { db, userId } = await fixture();
     const created = await createSession(db, {
       userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
-      email: 'admin@acme.co', fullName: 'Admin', idleTtlMs: 1,
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin', idleTtlMs: 1,
     });
     const later = new Date(Date.now() + 10);
     expect(await getSession(db, created.sessionId, { now: later })).toBeNull();

@@ -655,9 +655,11 @@ async function checkViewport(browser, viewport) {
         && document.body.textContent.includes('Smoke Fictional Customer')
         && !document.querySelector('[data-preview-banner]');
       const setup = await adapter.completeSetup({
+        organizationCode: 'SMOKE-ORG',
         companyName: 'Smoke Setup Malaysia',
         country: 'MY',
         adminName: 'Smoke Administrator',
+        adminUsername: 'smoke.admin',
         adminEmail: 'smoke.setup@example.test',
         adminPassword: 'smoke-pass-123',
         language: 'vi',
@@ -671,8 +673,16 @@ async function checkViewport(browser, viewport) {
         ['M1', setup.companyFn],
       )).rows[0].n);
       const setupAdmin = (await adapter.db.query(
-        'select password_hash, language from app_user where master_fn=$1 and email=$2',
-        ['M1', 'smoke.setup@example.test'],
+        `select app_user.username, app_user.password_hash, app_user.language,
+                master.login_code,
+                count(user_company_role.role_id)::int as role_count
+         from app_user
+         join master on master.master_fn = app_user.master_fn
+         join user_company_role on user_company_role.user_id = app_user.user_id
+           and user_company_role.company_fn = $3
+         where app_user.master_fn=$1 and app_user.email=$2
+         group by app_user.user_id, master.login_code`,
+        ['M1', 'smoke.setup@example.test', setup.companyFn],
       )).rows[0];
       const stockBySku = (rows) => Object.fromEntries(rows.map((row) => [row.sku, Number(row.qty)]));
       const draftBeforeBySku = stockBySku(draftStockBefore);
@@ -751,6 +761,9 @@ async function checkViewport(browser, viewport) {
           && setupCompany?.tax_regime === 'SST'
           && setupCompany?.locale === 'vi'
           && setupAccountCount === 11
+          && setupAdmin?.username === 'smoke.admin'
+          && setupAdmin?.login_code === 'SMOKE-ORG'
+          && Number(setupAdmin?.role_count) === 1
           && setupAdmin?.language === 'vi'
           && /^pbkdf2\$/.test(setupAdmin?.password_hash || '')
           && setupAdmin?.password_hash !== 'smoke-pass-123',

@@ -14,7 +14,8 @@ export interface SessionData {
   userId: number;
   masterFn: string;
   activeCompanyFn: string;
-  email: string;
+  username: string;
+  email: string | null;
   fullName: string | null;
 }
 
@@ -95,6 +96,7 @@ export async function getSession(
       userId: appSession.userId,
       masterFn: appSession.masterFn,
       activeCompanyFn: appSession.activeCompanyFn,
+      username: appUser.username,
       email: appUser.email,
       fullName: appUser.fullName,
       expiresAt: appSession.expiresAt,
@@ -131,6 +133,7 @@ export async function getSession(
     userId: row.userId,
     masterFn: row.masterFn,
     activeCompanyFn: row.activeCompanyFn,
+    username: row.username,
     email: row.email,
     fullName: row.fullName,
   };

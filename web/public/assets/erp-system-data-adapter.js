@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 45;
+  var DEMO_SCHEMA_VERSION = 46;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -1175,8 +1175,10 @@
 
   /* Persist first-run setup wizard choices through the shared Drizzle command.
      Demo-adapter contract:
-     completeSetup({ masterName, companyName, country, adminName, adminEmail, language })
-       -> { masterFn, companyFn, userId }
+     completeSetup({
+       masterName, organizationCode, companyName, country,
+       adminName, adminUsername, adminEmail, language
+     }) -> { masterFn, organizationCode, companyFn, userId, username }
      Production setup intentionally remains a different zero-user command that
      creates a new master; Demo setup adds a company to the seeded M1 master.
      Password hashing stays in Web Crypto, while all database rules execute in
@@ -1185,10 +1187,14 @@
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Setup needs PGlite.');
     input = input || {};
     var companyName = String(input.companyName || '').trim();
+    var organizationCode = String(input.organizationCode || '').trim().toUpperCase();
     var adminName = String(input.adminName || '').trim();
+    var adminUsername = String(input.adminUsername || '').trim().toLowerCase();
     var adminEmail = String(input.adminEmail || '').trim().toLowerCase();
     var adminPassword = String(input.adminPassword || '');
     if (!companyName) throw new Error('Company name is required.');
+    if (!/^[A-Z0-9][A-Z0-9-]{2,31}$/.test(organizationCode)) throw new Error('Organization code is invalid.');
+    if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(adminUsername)) throw new Error('Admin username is invalid.');
     if (!adminName || !adminEmail) throw new Error('Admin user name and email are required.');
     if (adminPassword.length < 8) throw new Error('Admin password must be at least 8 characters.');
     var adminPasswordHash = await hashPasswordBrowser(adminPassword);
@@ -1204,10 +1210,12 @@
         {
           masterFn: SCOPE.masterFn,
           masterName: masterName,
+          organizationCode: organizationCode,
           companyFn: companyFn,
           companyName: companyName,
           country: country,
           adminName: adminName,
+          adminUsername: adminUsername,
           adminEmail: adminEmail,
           adminPasswordHash: adminPasswordHash,
           language: language,
@@ -2121,6 +2129,15 @@
       });
       await refresh();
       return {data:toggledUser,meta:{}};
+    }
+    if(key==='admin/users'&&name==='set-roles'){
+      var updatedUserRoles = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.setUserRolesWithin(
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, Number(id),
+          Array.isArray(payload&&payload.roleIds)?payload.roleIds.map(Number):[]);
+      });
+      await refresh();
+      return {data:updatedUserRoles,meta:{}};
     }
     if(key==='admin/roles'&&name==='set-permission'){
       var updatedPermission = await requireDemoDb().transaction(function(tx){

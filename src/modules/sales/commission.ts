@@ -96,6 +96,7 @@ async function companyActor(
   }
   const query = exec.select({
     userId: appUser.userId,
+    username: appUser.username,
     fullName: appUser.fullName,
     email: appUser.email,
   }).from(appUser).innerJoin(
@@ -119,7 +120,7 @@ async function companyActor(
   if (!actor) {
     throw new SalesCommissionError('The user is not active or assigned to this company.');
   }
-  return { ...actor, name: actor.fullName?.trim() || actor.email };
+  return { ...actor, name: actor.fullName?.trim() || actor.email || actor.username };
 }
 
 export async function listSalespeopleWithin(
@@ -365,6 +366,7 @@ export async function createCommissionRunWithin(
       effectiveTo: salesCommissionPlan.effectiveTo,
       salespersonName: appUser.fullName,
       salespersonEmail: appUser.email,
+      salespersonUsername: appUser.username,
     }).from(salesCommissionPlan).innerJoin(appUser, and(
       eq(appUser.userId, salesCommissionPlan.salespersonUserId),
       eq(appUser.masterFn, salesCommissionPlan.masterFn),
@@ -474,7 +476,9 @@ export async function createCommissionRunWithin(
       lineNo: index + 1,
       planId: group.plan.id,
       salespersonUserId: group.plan.salespersonUserId,
-      salespersonName: group.plan.salespersonName?.trim() || group.plan.salespersonEmail,
+      salespersonName: group.plan.salespersonName?.trim()
+        || group.plan.salespersonEmail
+        || group.plan.salespersonUsername,
       basis: group.plan.basis,
       ratePct: group.plan.ratePct,
       grossInvoiceRevenue: group.gross.toFixed(2),

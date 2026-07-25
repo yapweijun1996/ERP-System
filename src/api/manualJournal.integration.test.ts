@@ -49,7 +49,7 @@ describe('manual journal API vertical slice', () => {
   async function login(email = 'admin@acme.co', password = 'demo1234') {
     const response = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ organizationCode: 'ACME', username: email.split('@')[0], password }),
     });
     expect(response.status).toBe(200);
     return cookies(response);

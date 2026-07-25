@@ -4,7 +4,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from './db';
 import {
-  master, company, currency, appUser, role, rolePermission, userCompany,
+  master, company, currency, appUser, role, rolePermission, userCompany, userCompanyRole,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
   purchaseRequisition, purchaseRequisitionLine,
@@ -31,7 +31,7 @@ const ADMIN_PASSWORD_HASH = 'pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299
 const VIEWER_PASSWORD_HASH = 'pbkdf2$100000$da9fd51416f6c2fb48c282c0b370bdf1$072cf69c4fb68981cbb43a5af00b11435244a758e0a0ea4b538dd1074fac60a3';
 
 export async function seedDemo(db: DB): Promise<void> {
-  await db.insert(master).values({ masterFn: 'M1', name: 'Acme Group' });
+  await db.insert(master).values({ masterFn: 'M1', loginCode: 'ACME', name: 'Acme Group' });
 
   await db.insert(currency).values([
     { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
@@ -46,10 +46,10 @@ export async function seedDemo(db: DB): Promise<void> {
   // Two demo personas so "switch user" (TASK-024) is meaningful: a superadmin with
   // access to both companies, and a company-scoped viewer with access to SG only.
   const [adminUser] = await db.insert(appUser).values({
-    masterFn: 'M1', email: 'admin@acme.co', fullName: 'Admin', passwordHash: ADMIN_PASSWORD_HASH, language: 'zh',
+    masterFn: 'M1', username: 'admin', email: 'admin@acme.co', fullName: 'Admin', passwordHash: ADMIN_PASSWORD_HASH, language: 'zh',
   }).returning({ id: appUser.userId });
   const [viewerUser] = await db.insert(appUser).values({
-    masterFn: 'M1', email: 'viewer@acme.co', fullName: 'Demo Viewer', passwordHash: VIEWER_PASSWORD_HASH, language: 'en',
+    masterFn: 'M1', username: 'viewer', email: 'viewer@acme.co', fullName: 'Demo Viewer', passwordHash: VIEWER_PASSWORD_HASH, language: 'en',
   }).returning({ id: appUser.userId });
 
   const [superadminRole] = await db.insert(role).values({
@@ -60,6 +60,11 @@ export async function seedDemo(db: DB): Promise<void> {
   }).returning({ id: role.roleId });
 
   await db.insert(userCompany).values([
+    { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
+    { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
+    { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
+  ]);
+  await db.insert(userCompanyRole).values([
     { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
     { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },

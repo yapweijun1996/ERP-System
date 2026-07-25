@@ -90,7 +90,7 @@ describe('sales return API vertical slice', () => {
     const login = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@acme.co', password: 'demo1234' }),
+      body: JSON.stringify({ organizationCode: 'ACME', username: 'admin', password: 'demo1234' }),
     });
     const auth = cookies(login);
     const headers = {

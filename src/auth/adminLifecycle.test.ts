@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { seedDemo } from '../data/seed';
 import {
-  appUser, master, outboxEvent, role, rolePermission, userCompany, userInvitation,
+  appUser, master, outboxEvent, role, rolePermission, userCompany, userCompanyRole,
+  userInvitation,
 } from '../data/schema';
 import { freshDb } from '../test/helpers';
 import { createSession, getSession } from './session';
@@ -11,6 +12,7 @@ import {
   createRole,
   setRolePermission,
   setUserActive,
+  setUserRoles,
 } from './adminLifecycle';
 import { PERMISSIONS } from './permissions';
 
@@ -21,6 +23,7 @@ describe('admin user/role/permission lifecycle', () => {
       userId: admin.userId,
       masterFn: admin.masterFn,
       activeCompanyFn: 'C-SG',
+      username: admin.username,
       email: admin.email,
       fullName: admin.fullName,
     };
@@ -43,6 +46,7 @@ describe('admin user/role/permission lifecycle', () => {
       userId: viewer.userId,
       masterFn: viewer.masterFn,
       activeCompanyFn: 'C-SG',
+      username: viewer.username,
       email: viewer.email,
       fullName: viewer.fullName,
     });
@@ -67,6 +71,7 @@ describe('admin user/role/permission lifecycle', () => {
     ));
     const [secondAdmin] = await db.insert(appUser).values({
       masterFn: session.masterFn,
+      username: 'second.admin',
       email: 'second.admin@acme.co',
       passwordHash: 'pbkdf2$1$a$b',
     }).returning({ userId: appUser.userId });
@@ -75,10 +80,16 @@ describe('admin user/role/permission lifecycle', () => {
       companyFn: 'C-SG',
       roleId: superadminRole.roleId,
     });
+    await db.insert(userCompanyRole).values({
+      userId: secondAdmin.userId,
+      companyFn: 'C-SG',
+      roleId: superadminRole.roleId,
+    });
     const secondAdminSession = {
       userId: secondAdmin.userId,
       masterFn: session.masterFn,
       activeCompanyFn: 'C-SG',
+      username: 'second.admin',
       email: 'second.admin@acme.co',
       fullName: null,
     };
@@ -102,12 +113,57 @@ describe('admin user/role/permission lifecycle', () => {
     const db = await freshDb();
     await seedDemo(db);
     const session = await adminSession(db);
-    await db.insert(master).values({ masterFn: 'OTHER-M2', name: 'Other Master 2' });
+    await db.insert(master).values({
+      masterFn: 'OTHER-M2',
+      loginCode: 'OTHER-M2',
+      name: 'Other Master 2',
+    });
     const [otherUser] = await db.insert(appUser).values({
-      masterFn: 'OTHER-M2', email: 'outsider@example.test', passwordHash: 'pbkdf2$1$a$b',
+      masterFn: 'OTHER-M2',
+      username: 'outsider',
+      email: 'outsider@example.test',
+      passwordHash: 'pbkdf2$1$a$b',
     }).returning({ userId: appUser.userId });
     await expect(setUserActive(db, session, otherUser.userId, false, 'cross-master-disable'))
       .rejects.toMatchObject({ code: 'user_not_found' });
+  });
+
+  it('replaces company roles atomically while preserving the last superadmin', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const session = await adminSession(db);
+    const [viewer] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
+    const [viewerRole] = await db.select().from(role).where(eq(role.name, 'Viewer'));
+    const [operatorRole] = await db.insert(role).values({
+      masterFn: session.masterFn,
+      name: 'Operator',
+    }).returning({ roleId: role.roleId });
+
+    const updated = await setUserRoles(
+      db,
+      session,
+      viewer.userId,
+      [operatorRole.roleId, viewerRole.roleId, operatorRole.roleId],
+      'set-multiple-roles',
+    );
+    expect(updated.roles.map((grant) => grant.name)).toEqual(['Viewer', 'Operator']);
+    expect(await db.select().from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, viewer.userId),
+      eq(userCompanyRole.companyFn, 'C-SG'),
+    ))).toHaveLength(2);
+    const [legacyMembership] = await db.select().from(userCompany).where(and(
+      eq(userCompany.userId, viewer.userId),
+      eq(userCompany.companyFn, 'C-SG'),
+    ));
+    expect(legacyMembership.roleId).toBe(Math.min(viewerRole.roleId, operatorRole.roleId));
+
+    await expect(setUserRoles(
+      db,
+      session,
+      session.userId,
+      [viewerRole.roleId],
+      'remove-last-superadmin',
+    )).rejects.toMatchObject({ code: 'cannot_remove_last_superadmin' });
   });
 
   it('createInvitationRecordWithin (demo path) inserts with a pre-computed hash and no outbox event', async () => {

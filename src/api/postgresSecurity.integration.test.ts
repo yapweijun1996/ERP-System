@@ -91,9 +91,11 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
   it('runs setup, RLS, invitations, outbox and password reset as a non-superuser', async () => {
     const setup = await completeProductionSetup(db, {
       organizationName: 'PostgreSQL Security Proof',
+      organizationCode: 'PG-SECURITY',
       companyName: 'Security Proof Singapore',
       country: 'SG',
       adminName: 'System Administrator',
+      adminUsername: 'security.admin',
       adminEmail: 'admin@security-proof.example',
       adminPassword: 'initial-password',
       language: 'en',
@@ -145,6 +147,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       userId: admin.userId,
       masterFn: setup.masterFn,
       activeCompanyFn: setup.companyFn,
+      username: admin.username,
       email: admin.email,
       fullName: admin.fullName,
     }, {
@@ -257,6 +260,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         userId: admin.userId,
         masterFn: setup.masterFn,
         activeCompanyFn: setup.companyFn,
+        username: admin.username,
         email: admin.email,
         fullName: admin.fullName,
       },

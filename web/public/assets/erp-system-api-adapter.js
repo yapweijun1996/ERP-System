@@ -354,16 +354,20 @@
     }
   }
 
-  async function login(email, password){
+  async function login(organizationCode, username, password){
     var res = await fetch(API_BASE + '/auth/login', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: password }),
+      body: JSON.stringify({
+        organizationCode: organizationCode,
+        username: username,
+        password: password,
+      }),
     });
     if (!res.ok){
       var body = await jsonBody(res);
       var message = (body && body.error && body.error.message) || (body && body.message) || (res.status === 401
-        ? 'Incorrect email or password.'
+        ? 'Incorrect organization code, username or password.'
         : 'Sign in failed (HTTP ' + res.status + ').');
       throw new Error(message);
     }
@@ -385,9 +389,11 @@
       headers:{'X-ERP-Setup-Token':setupToken},
       body:{
         organizationName:input.masterName,
+        organizationCode:input.organizationCode,
         companyName:input.companyName,
         country:input.country,
         adminName:input.adminName,
+        adminUsername:input.adminUsername,
         adminEmail:input.adminEmail,
         adminPassword:input.adminPassword,
         language:input.language,

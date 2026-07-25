@@ -1,8 +1,16 @@
 import { Router, type Request } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
-import { appUser, company, userCompany } from '../../data/schema';
+import {
+  appUser, company, master, userCompany,
+} from '../../data/schema';
 import { verifyPassword } from '../../auth/password';
+import {
+  isValidOrganizationCode,
+  isValidUsername,
+  normalizeOrganizationCode,
+  normalizeUsername,
+} from '../../auth/identifiers';
 import {
   CSRF_COOKIE,
   DEFAULT_ABSOLUTE_TTL_MS,
@@ -69,16 +77,41 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   }
 
   router.post('/login', async (req, res) => {
-    const { email, password } = (req.body ?? {}) as { email?: unknown; password?: unknown };
-    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
+    const {
+      organizationCode,
+      username,
+      password,
+    } = (req.body ?? {}) as {
+      organizationCode?: unknown;
+      username?: unknown;
+      password?: unknown;
+    };
+    const normalizedOrganizationCode = typeof organizationCode === 'string'
+      ? normalizeOrganizationCode(organizationCode)
+      : '';
+    const normalizedUsername = typeof username === 'string' ? normalizeUsername(username) : '';
+    const validIdentity = isValidOrganizationCode(normalizedOrganizationCode)
+      && isValidUsername(normalizedUsername);
+    if (!validIdentity || typeof password !== 'string' || !password) {
       const fieldErrors: Record<string, string> = {};
-      if (typeof email !== 'string' || !email.trim()) fieldErrors.email = 'Email is required.';
+      if (!isValidOrganizationCode(normalizedOrganizationCode)) {
+        fieldErrors.organizationCode = 'Organization code is required.';
+      }
+      if (!isValidUsername(normalizedUsername)) {
+        fieldErrors.username = 'Username is required.';
+      }
       if (typeof password !== 'string' || !password) fieldErrors.password = 'Password is required.';
-      apiError(res, 400, 'invalid_request', 'Email and password are required.', fieldErrors);
+      apiError(
+        res,
+        400,
+        'invalid_request',
+        'Organization code, username and password are required.',
+        fieldErrors,
+      );
       return;
     }
-    const normalizedEmail = email.trim().toLowerCase();
-    const identifier = loginIdentifierHash(normalizedEmail, clientIp(req));
+    const loginIdentity = `${normalizedOrganizationCode}:${normalizedUsername}`;
+    const identifier = loginIdentifierHash(loginIdentity, clientIp(req));
     const rateLimit = await checkLoginRateLimit(db, identifier);
     if (!rateLimit.allowed) {
       res.setHeader('retry-after', String(rateLimit.retryAfterSeconds));
@@ -86,20 +119,35 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       return;
     }
 
-    const users = await db.select({
+    const userFields = {
       userId: appUser.userId,
       masterFn: appUser.masterFn,
+      organizationCode: master.loginCode,
+      username: appUser.username,
       email: appUser.email,
       fullName: appUser.fullName,
       passwordHash: appUser.passwordHash,
       isActive: appUser.isActive,
-    }).from(appUser).where(eq(appUser.email, normalizedEmail)).limit(2);
+    };
+    const users = await db.select(userFields)
+      .from(appUser)
+      .innerJoin(master, eq(master.masterFn, appUser.masterFn))
+      .where(and(
+        eq(master.loginCode, normalizedOrganizationCode),
+        eq(appUser.username, normalizedUsername),
+      ))
+      .limit(2);
     const user = users.length === 1 ? users[0] : null;
     if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
       const failure = await recordLoginFailure(db, identifier);
       if (failure.blocked) res.setHeader('retry-after', String(failure.retryAfterSeconds));
       // Identical response for unknown user, ambiguous email and wrong password.
-      apiError(res, 401, 'invalid_credentials', 'Incorrect email or password.');
+      apiError(
+        res,
+        401,
+        'invalid_credentials',
+        'Incorrect organization code, username or password.',
+      );
       return;
     }
 
@@ -121,6 +169,7 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       userId: user.userId,
       masterFn: user.masterFn,
       activeCompanyFn: assignment.companyFn,
+      username: user.username,
       email: user.email,
       fullName: user.fullName,
       userAgent: req.header('user-agent'),
@@ -137,6 +186,8 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
     });
     res.json({
       userId: user.userId,
+      organizationCode: user.organizationCode,
+      username: user.username,
       email: user.email,
       fullName: user.fullName,
       masterFn: user.masterFn,

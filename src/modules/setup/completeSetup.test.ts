@@ -11,6 +11,7 @@ import {
   systemState,
   taxRule,
   userCompany,
+  userCompanyRole,
 } from '../../data/schema';
 import { completeProductionSetup } from './completeSetup';
 
@@ -19,9 +20,11 @@ describe('production setup command', () => {
     const db = await freshDb();
     const result = await completeProductionSetup(db, {
       organizationName: 'Example Manufacturing Group',
+      organizationCode: 'EXAMPLE',
       companyName: 'Example Manufacturing Singapore',
       country: 'SG',
       adminName: 'System Administrator',
+      adminUsername: 'admin',
       adminEmail: 'admin@example.test',
       adminPassword: 'secure-password',
       language: 'ja',
@@ -30,6 +33,14 @@ describe('production setup command', () => {
     expect(await db.select().from(company)).toHaveLength(1);
     expect(await db.select().from(appUser)).toHaveLength(1);
     expect(await db.select().from(userCompany)).toHaveLength(1);
+    expect(await db.select().from(userCompanyRole)).toHaveLength(1);
+    expect((await db.select().from(master))[0]).toMatchObject({
+      loginCode: 'EXAMPLE',
+    });
+    expect((await db.select().from(appUser))[0]).toMatchObject({
+      username: 'admin',
+      email: 'admin@example.test',
+    });
     expect(await db.select().from(account)).toHaveLength(11);
     expect(await db.select().from(taxRule)).toHaveLength(1);
     expect((await db.select().from(role))[0].isSuperadmin).toBe(true);
@@ -43,9 +54,11 @@ describe('production setup command', () => {
 
     await expect(completeProductionSetup(db, {
       organizationName: 'Second',
+      organizationCode: 'SECOND',
       companyName: 'Second',
       country: 'MY',
       adminName: 'Second Admin',
+      adminUsername: 'second.admin',
       adminEmail: 'second@example.test',
       adminPassword: 'secure-password',
     }, 'setup-replay')).rejects.toMatchObject({ code: 'already_initialized' });
@@ -55,9 +68,11 @@ describe('production setup command', () => {
     const db = await freshDb();
     await expect(completeProductionSetup(db, {
       organizationName: 'Example',
+      organizationCode: 'EXAMPLE',
       companyName: 'Example',
       country: 'US',
       adminName: 'Admin',
+      adminUsername: 'admin',
       adminEmail: 'admin@example.test',
       adminPassword: 'secure-password',
     }, 'setup-invalid')).rejects.toMatchObject({ code: 'unsupported_country' });

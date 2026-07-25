@@ -103,7 +103,10 @@ function renderLogin(){
         : 'Use the demo account to open the ERP workspace. This static build stores only a local browser session.'}</p>
     </div>
     <form class="auth-form" id="loginForm">
-      <div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${apiMode?'':esc(u.email)}" placeholder="${apiMode?'admin@acme.co':''}"></div>
+      ${apiMode
+        ? `<div class="fld"><span>Organization code</span><input id="loginOrganizationCode" autocomplete="organization" placeholder="ACME"></div>
+           <div class="fld"><span>Username</span><input id="loginUsername" autocomplete="username" placeholder="admin"></div>`
+        : `<div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${esc(u.email)}"></div>`}
       <div class="fld"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Any demo password'}"></div>
       <div class="auth-error" id="loginError" role="alert"></div>
       <button class="btn primary lg" type="submit">${ic('signout')}<span>Sign in</span></button>
@@ -121,14 +124,16 @@ function renderLogin(){
   };
   $('#loginForm').addEventListener('submit',async e=>{
     e.preventDefault();
-    const email=$('#loginEmail').value.trim()||(apiMode?'':u.email);
+    const email=apiMode?'':($('#loginEmail').value.trim()||u.email);
     const pass=$('#loginPassword').value.trim();
     if(apiMode){
-      if(!email||!pass){ $('#loginError').textContent='Enter your email and password.'; return; }
+      const organizationCode=$('#loginOrganizationCode').value.trim();
+      const username=$('#loginUsername').value.trim();
+      if(!organizationCode||!username||!pass){ $('#loginError').textContent='Enter your organization code, username and password.'; return; }
       const btnEl=$('#loginForm').querySelector('button[type="submit"]');
       btnEl&&btnEl.setAttribute('disabled','');
       try{
-        await window.ErpSystemDemo.login(email,pass);
+        await window.ErpSystemDemo.login(organizationCode,username,pass);
         location.reload();
       }catch(err){
         $('#loginError').textContent=(err&&err.message)||'Sign in failed.';
@@ -157,7 +162,7 @@ function renderLogin(){
     }
     doLogin(u.email);
   });
-  setTimeout(()=>$('#loginPassword').focus(),60);
+  setTimeout(()=>$(apiMode?'#loginOrganizationCode':'#loginPassword').focus(),60);
 }
 async function signOutDemo(){
   /* api mode: destroy the real server-side session, not just a local flag. */

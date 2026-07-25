@@ -21,6 +21,7 @@ import {
   createRole,
   setRolePermission,
   setUserActive,
+  setUserRoles,
 } from '../../auth/adminLifecycle';
 import { listMasterModules, setMasterModule } from '../../auth/moduleAccess';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
@@ -87,6 +88,39 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
     try {
       const result = await setUserActive(
         db, session, userId, isActive, context(res).requestId,
+      );
+      res.json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/users/:userId/actions/set-roles', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersManage)) {
+      apiError(res, 403, 'permission_denied', 'You cannot manage users.');
+      return;
+    }
+    const userId = Number(req.params.userId);
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+      apiError(res, 400, 'invalid_id', 'userId must be a positive integer.');
+      return;
+    }
+    const rawRoleIds = (req.body as { roleIds?: unknown } | undefined)?.roleIds;
+    if (!Array.isArray(rawRoleIds)) {
+      apiError(res, 400, 'invalid_request', 'roleIds must be an array.', {
+        roleIds: 'Select at least one role.',
+      });
+      return;
+    }
+    try {
+      const result = await setUserRoles(
+        db,
+        session,
+        userId,
+        rawRoleIds.map((roleId) => Number(roleId)),
+        context(res).requestId,
       );
       res.json({ data: result, meta: {} });
     } catch (error) {

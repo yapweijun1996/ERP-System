@@ -27,7 +27,11 @@ describe('invitation and password reset lifecycle', () => {
     const db = await freshDb();
     await seedDemo(db);
     const [admin] = await db.select().from(appUser).where(eq(appUser.email, 'admin@acme.co'));
-    await db.insert(master).values({ masterFn: 'OTHER-M', name: 'Other Master' });
+    await db.insert(master).values({
+      masterFn: 'OTHER-M',
+      loginCode: 'OTHER-M',
+      name: 'Other Master',
+    });
     const [otherRole] = await db.insert(role).values({
       masterFn: 'OTHER-M',
       name: 'Other Role',
@@ -36,6 +40,7 @@ describe('invitation and password reset lifecycle', () => {
       userId: admin.userId,
       masterFn: admin.masterFn,
       activeCompanyFn: 'C-SG',
+      username: admin.username,
       email: admin.email,
       fullName: admin.fullName,
     };
@@ -73,6 +78,7 @@ describe('invitation and password reset lifecycle', () => {
       userId: admin.userId,
       masterFn: admin.masterFn,
       activeCompanyFn: 'C-SG',
+      username: admin.username,
       email: admin.email,
       fullName: admin.fullName,
     }, {
@@ -116,13 +122,14 @@ describe('invitation and password reset lifecycle', () => {
       userId: admin.userId,
       masterFn: admin.masterFn,
       activeCompanyFn: 'C-SG',
+      username: admin.username,
       email: admin.email,
       fullName: admin.fullName,
     });
     await requestPasswordReset(db, 'missing@example.test', 'missing-reset', options);
     expect(await db.select().from(outboxEvent)).toHaveLength(0);
 
-    await requestPasswordReset(db, admin.email, 'reset-test', options);
+    await requestPasswordReset(db, admin.email!, 'reset-test', options);
     const [event] = await db.select().from(outboxEvent)
       .where(eq(outboxEvent.topic, 'auth.password-reset.requested'));
     const token = decryptToken(

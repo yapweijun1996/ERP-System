@@ -187,16 +187,18 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 | Finance approval is the expense accounting boundary | Managers confirm business purpose, Finance confirms evidence/tax/GL, and line decisions never rewrite the employee's submission. Final Finance approval posts balanced expense/input-tax legs against Employee Payable or the configured company-paid account | EPIC-055 |
 | Reimbursement payment and tax reporting remain explicit controlled stages | Maker and releaser are distinct, nobody releases their own claim, bank outcomes post successful lines only, and tax packages are immutable snapshot artifacts with superseding corrections. No direct bank execution or tax filing is implied | EPIC-056 |
 
-## 7. Planned employee self-service architecture (EPIC-052–056)
+## 7. Employee self-service architecture (EPIC-052–056)
 
-This section is a target design, not current implementation.
+TASK-106 identity primitives are implemented; the remaining sections describe the
+target architecture for TASK-107–135.
 
 ### Identity and authorization
 
-- Add an organisation login code, organisation-scoped `app_user.username`, nullable
-  pre-activation email, company-unique `employee.user_id` and a separate
-  `user_company_role` assignment table. Backfill existing email users and current
-  `user_company.role_id` grants without changing their access.
+- Organisation login code, organisation-scoped `app_user.username`, nullable email
+  and the separate `user_company_role` assignment table are implemented by TASK-106.
+  Migration 0046 backfills existing email users and current `user_company.role_id`
+  grants without changing their access. The company-unique `employee.user_id` link
+  remains TASK-107.
 - Store the pre-activation credential as an AES-GCM encrypted temporary secret with
   expiry/reveal audit. First activation changes the password, captures email and
   destroys the encrypted copy. HR reset creates a new one-time credential and revokes

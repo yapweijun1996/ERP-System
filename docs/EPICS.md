@@ -1849,10 +1849,12 @@ change and an email address, but email verification, MFA and step-up authenticat
 remain optional by explicit product decision. One user may hold multiple roles in one
 company, and every self-service resource derives the employee identity from Session.
 
-- [ ] **TASK-106 — Add organisation username login and multi-role assignments.**
+- [x] **TASK-106 — Add organisation username login and multi-role assignments.**
       Add organisation login codes, organisation-scoped usernames, nullable
       pre-activation email, multiple company-role grants and a non-destructive
-      migration for existing email accounts and single-role assignments.
+      migration for existing email accounts and single-role assignments. Delivered
+      through migration 0046, the organisation-first production login, explicit
+      audited role-union management and service worker v104.
 - [ ] **TASK-107 — Link Employee to app_user and implement HR account lifecycle.**
       Create the company-unique employee/user link, encrypted activation credential,
       audited pre-activation reveal, forced first-login completion, HR one-time

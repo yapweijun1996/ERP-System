@@ -129,28 +129,30 @@ rules and the app-level-vs-RLS isolation model are in
 [MULTI_TENANCY.md](MULTI_TENANCY.md). The demo ships a sample user with access to both the
 SG and MY demo companies; production wires real auth.
 
-## 8. Planned target model — employee self-service, leave and expenses
+## 8. Employee self-service, leave and expenses
 
-> Planning boundary: the entities in this section are approved targets for
-> `EPIC-052`–`EPIC-056`; they are **not present in the current Drizzle schema**. Each
-> task must add migrations, tenant indexes, API contracts and cross-engine proofs before
-> the corresponding capability becomes Canonical.
+> Delivery boundary: TASK-106 identity fields and `user_company_role` are present in
+> the current Drizzle schema. The remaining entities in this section are approved
+> targets for TASK-107–135 and are **not yet present**. Each task must add migrations,
+> tenant indexes, API contracts and cross-engine proofs before its capability becomes
+> Canonical.
 
 ### 8.1 Identity, employment and delegated authority
 
 ```
-master                       + login_code (unique organization login code)
-app_user                     + username, activation_state, password_change_required
-                               email remains nullable until first activation
+master                         login_code (implemented, globally unique login code)
+app_user                       username + nullable email (implemented);
+                               activation_state/password_change_required planned
 employee                     + user_id (company-scoped unique binding)
-user_company_role              user ↔ company ↔ role, many roles per company
+user_company_role              user ↔ company ↔ role, many roles (implemented)
 user_activation_secret         encrypted recoverable one-time secret, pre-activation only
 manager_scope                  direct-report source plus authorized full-tree scope
 approval_delegation            effective-dated, bounded delegation
 ```
 
-`(master_fn, login_code)` and `(master_fn, username)` are unique. Authentication resolves
-the master from organization code before resolving the username. An employee identity is
+`master.login_code` is globally unique and `(master_fn, username)` is unique.
+Authentication resolves the master from organization code before resolving the
+username. An employee identity is
 derived from the authenticated session; `/api/my/*` resources never accept a client
 supplied `employee_id`. Activation-secret reads are audited, and the recoverable cipher
 text is permanently cleared after the employee sets a password. Role permissions are the

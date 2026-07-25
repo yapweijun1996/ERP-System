@@ -12,7 +12,7 @@ describe('outbox worker', () => {
     await seedDemo(db);
     const [admin] = await db.select().from(appUser).where(eq(appUser.email, 'admin@acme.co'));
     const key = Buffer.alloc(32, 4);
-    await requestPasswordReset(db, admin.email, 'worker-test', {
+    await requestPasswordReset(db, admin.email!, 'worker-test', {
       tokenEncryptionKey: key,
       publicUrl: 'https://erp.example.test',
     });
@@ -43,7 +43,7 @@ describe('outbox worker', () => {
     await seedDemo(db);
     const [admin] = await db.select().from(appUser).where(eq(appUser.email, 'admin@acme.co'));
     const key = Buffer.alloc(32, 5);
-    await requestPasswordReset(db, admin.email, 'worker-failure', {
+    await requestPasswordReset(db, admin.email!, 'worker-failure', {
       tokenEncryptionKey: key,
       publicUrl: 'https://erp.example.test',
     });

@@ -741,18 +741,20 @@ verification; Payroll modal initial/error/mobile states and all three Case Detai
 pass focused state proofs, and Fixed Assets detail/run states pass with
 service-worker v103. All three Posting Detail routes pass focused state proofs.
 
-## Phase 34 — Employee Identity & My Work (Planned)
+## Phase 34 — Employee Identity & My Work (In progress)
 
-1. **Organisation username and first activation** (EPIC-052, TASK-106/107) extend the
-   current email-only account with organisation code + username login, an
+1. **Organisation username and multiple roles** (TASK-106 done 2026-07-25) extend the
+   account with organisation code + username login, nullable pre-activation email and
+   explicit company-role unions. Migration 0046 preserves existing email accounts and
+   copies each legacy role exactly once without changing company access.
+2. **First activation and employee link** (TASK-107 planned) add the
    organisation-unique employee/user link, encrypted pre-activation credential and
-   forced first-login password/email completion. Existing users and roles migrate
-   without losing company access.
-2. **Multiple roles and actor-owned self service** (TASK-106/108) allow Employee,
-   Manager, HR and Finance capabilities to compose while every `/api/my/*` query
+   forced first-login password/email completion.
+3. **Actor-owned self service** (TASK-108 planned) allows Employee, Manager, HR and
+   Finance capabilities to compose while every `/api/my/*` query
    derives employee identity from Session. Direct reports automatically activate the
    Manager role; hierarchy limits the visible team.
-3. **My Work navigation and security proof** (TASK-109/110) adds five-language My
+4. **My Work navigation and security proof** (TASK-109/110 planned) adds five-language My
    Leave, My Claims and My Receipts entry points without reclassifying unfinished
    routes as Canonical. Offboarding revokes sessions; temporary password reveal is
    audited and ends permanently at first activation.

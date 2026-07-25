@@ -92,14 +92,23 @@ A user is **not** locked to a single company. An accountant may handle both the 
 entities under one master:
 
 ```
-app_user        (user_id, master_fn, email, …)        -- user belongs to ONE master
-user_company    (user_id, company_fn, role_id)         -- but MANY companies (M:N)
-role            (role_id, master_fn, name, is_superadmin)
+master              (master_fn, login_code, …)                 -- login tenant
+app_user            (user_id, master_fn, username, email, …)   -- ONE master
+user_company        (user_id, company_fn, role_id)              -- company membership
+user_company_role   (user_id, company_fn, role_id)              -- MANY active roles
+role                (role_id, master_fn, name, is_superadmin)
 ```
 
 - A user always belongs to exactly **one `master_fn`**.
-- A user can be granted access to **many `company_fn`** within that master, each with a
-  role (the `user_company` junction table).
+- Production login resolves the unique normalized `master.login_code` first and then
+  the normalized `app_user.username`, whose uniqueness is scoped to that master.
+- A user can be granted access to **many `company_fn`** within that master through
+  `user_company`.
+- `user_company_role` may assign several active roles to one membership. Authorization
+  unions their permissions without widening the membership's company boundary.
+- `user_company.role_id` remains a compatibility/default-role column for existing
+  integrations; current authorization reads `user_company_role`. Migration 0046
+  backfills exactly one role assignment from every existing membership.
 - On login the user picks an **active company**; the session carries
   `(master_fn, active company_fn)` and scopes all queries.
 - `is_superadmin` (master-level) can see all companies under its master; a platform root

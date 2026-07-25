@@ -27,6 +27,13 @@ describe('browser demo compatibility migrations', () => {
         );
         insert into app_user (master_fn, email, full_name, language)
         values ('M-LEGACY', 'legacy@example.com', 'Legacy Admin', 'en');
+        insert into role (master_fn, name, is_superadmin)
+        values ('M-LEGACY', 'Legacy Admin Role', true);
+        insert into user_company (user_id, company_fn, role_id)
+        select app_user.user_id, 'C-LEGACY', role.role_id
+        from app_user, role
+        where app_user.email = 'legacy@example.com'
+          and role.name = 'Legacy Admin Role';
         insert into product (master_fn, company_fn, sku, name)
         values ('M-LEGACY', 'C-LEGACY', 'LEGACY-SKU', 'Legacy Product');
         insert into warehouse (master_fn, company_fn, code, name)
@@ -64,11 +71,36 @@ describe('browser demo compatibility migrations', () => {
         is_nullable: 'NO',
       });
 
-      const legacyUser = await db.query<{ email: string; password_hash: string }>(`
-        select email, password_hash from app_user where email = 'legacy@example.com'
+      const legacyUser = await db.query<{
+        email: string;
+        username: string;
+        password_hash: string;
+      }>(`
+        select email, username, password_hash
+        from app_user
+        where email = 'legacy@example.com'
       `);
       expect(legacyUser.rows).toHaveLength(1);
+      expect(legacyUser.rows[0].username).toBe('legacy');
       expect(legacyUser.rows[0].password_hash).toMatch(/^pbkdf2\$100000\$/);
+
+      const migratedIdentity = await db.query<{
+        login_code: string;
+        role_name: string;
+      }>(`
+        select master.login_code, role.name as role_name
+        from app_user
+        join master on master.master_fn = app_user.master_fn
+        join user_company_role assignment
+          on assignment.user_id = app_user.user_id
+         and assignment.company_fn = 'C-LEGACY'
+        join role on role.role_id = assignment.role_id
+        where app_user.email = 'legacy@example.com'
+      `);
+      expect(migratedIdentity.rows).toEqual([{
+        login_code: 'M-LEGACY',
+        role_name: 'Legacy Admin Role',
+      }]);
 
       const addedTables = await db.query<{ table_name: string }>(`
         select table_name
@@ -143,12 +175,26 @@ describe('browser demo compatibility migrations', () => {
       expect(master.rows).toEqual([{ name: 'Legacy Group' }]);
 
       await db.query(
-        `insert into app_user (master_fn, email, full_name, password_hash, language)
-         values ($1, $2, $3, $4, $5)`,
+        `insert into app_user (
+           master_fn, username, email, full_name, password_hash, language
+         ) values ($1, $2, $3, $4, $5, $6)`,
         [
           'M-LEGACY',
+          'new-admin',
           'new-admin@example.com',
           'New Admin',
+          legacyUser.rows[0].password_hash,
+          'en',
+        ],
+      );
+      await db.query(
+        `insert into app_user (
+           master_fn, username, email, full_name, password_hash, language
+         ) values ($1, $2, null, $3, $4, $5)`,
+        [
+          'M-LEGACY',
+          'preactivated-user',
+          'Preactivated User',
           legacyUser.rows[0].password_hash,
           'en',
         ],
@@ -156,7 +202,7 @@ describe('browser demo compatibility migrations', () => {
       const count = await db.query<{ n: number }>(
         `select count(*)::int as n from app_user where master_fn = 'M-LEGACY'`,
       );
-      expect(count.rows[0].n).toBe(2);
+      expect(count.rows[0].n).toBe(3);
     } finally {
       await db.close();
     }
