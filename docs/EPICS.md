@@ -2022,9 +2022,14 @@ approval is the accounting boundary.
       High-risk final approval requires a Finance-permission override with a reason.
       Effective policy applies budget warning, extra approval or transactional block.
       PWA v125.
-- [ ] **TASK-126 — Add corporate-card statement reconciliation.** Import bounded
-      CSV/Excel statements, match holder/date/currency/amount to receipt evidence and
-      retain unmatched transactions and missing-receipt follow-up as auditable facts.
+- [x] **TASK-126 — Add corporate-card statement reconciliation.** Migration 0065
+      atomically imports one exact eight-column CSV/XLSX worksheet bounded to 5 MB and
+      1,000 rows after validating source schema, tenant, dates, amounts and duplicate
+      external/fingerprint facts. Holder/date/currency/amount matching persists up to
+      three explainable confidence-ranked candidates but requires Finance acceptance
+      or rejection. Unknown holders, missing receipts and rejected suggestions create
+      persistent assigned follow-up; resolve/waive actions and every review state are
+      append-only audited. PWA v126.
 - [ ] **TASK-127 — Add mileage, per diem and cash advances.** Calculate policy rates
       without inventing receipts, require advance settlement and post employee
       receivable/payable differences through explicit workflows.

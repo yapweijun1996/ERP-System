@@ -46,6 +46,7 @@ import {
   submitExpenseClaimByEmployee,
 } from '../modules/expenses/claims';
 import { configureExpenseControlPolicyVersion } from '../modules/expenses/controls';
+import { importCorporateCardStatement } from '../modules/expenses/corporateCards';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -367,6 +368,37 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       db,
       expenseScope,
       (tx) => tx.select().from(schema.expenseClaim),
+    )).toHaveLength(1);
+
+    const cardImport = await importCorporateCardStatement(
+      db,
+      expenseScope,
+      admin.userId,
+      {
+        importKey: 'pg-card-import-0001',
+        issuer: 'PostgreSQL Proof Bank',
+        statementRef: 'PG-JUL-2026',
+        fileName: 'pg-card.csv',
+        fileFormat: 'csv',
+        content: new TextEncoder().encode([
+          'external_transaction_id,holder_employee_no,card_last4,transaction_date,posted_date,merchant,currency,amount',
+          'PG-CARD-0001,PG-INVITED-001,4242,2026-07-26,2026-07-26,PostgreSQL Hotel,SGD,75.00',
+        ].join('\n')),
+      },
+    );
+    expect(cardImport).toMatchObject({
+      replayed: false,
+      transactions: [{
+        holderEmployeeId: expect.any(Number),
+        status: 'missing_receipt',
+      }],
+      matching: { suggestions: 0, followUps: 1 },
+    });
+    expect(await db.select().from(schema.corporateCardTransaction)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.corporateCardFollowUp),
     )).toHaveLength(1);
 
     const documentScope = {

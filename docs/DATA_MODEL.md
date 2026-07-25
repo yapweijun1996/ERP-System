@@ -151,7 +151,9 @@ SG and MY demo companies; production wires real auth.
 > events. TASK-123 adds the first five effective policy/snapshot entities in section
 > 8.4. TASK-124 adds the employee claim, line, allocation, authorization, revision and
 > event entities. TASK-125 adds the five control, assessment, signal, override and
-> line-approval entities listed below. The remaining targets for TASK-126–135 are
+> line-approval entities listed below. TASK-126 adds the corporate-card import,
+> transaction, candidate, follow-up and event entities. The remaining targets for
+> TASK-127–135 are
 > **not yet present**. Each task
 > must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
@@ -330,8 +332,12 @@ expense_control_policy_version  effective duplicate threshold and budget action
 expense_line_control_assessment immutable per-line duplicate/budget snapshot
 expense_duplicate_signal        immutable hash/image/business-key evidence
 expense_duplicate_override      reasoned Finance high-risk disposition
-expense_line_approval            line ↔ generic approval workflow projection
+expense_line_approval           line ↔ generic approval workflow projection
+corporate_card_import           immutable bounded source and statement identity
 corporate_card_transaction      imported statement line and reconciliation state
+corporate_card_match_candidate  reviewable confidence and reason evidence
+corporate_card_follow_up        unresolved holder/missing receipt work item
+corporate_card_event            append-only import/review/follow-up history
 cash_advance                    issue, application and outstanding balance
 expense_posting                 idempotent balanced GL linkage
 ```
@@ -369,6 +375,18 @@ Finance approval until a user holding the duplicate-override permission records 
 reason. Missing/exceeded budget follows the confirmed policy's warn, extra-approval or
 transactional-block action. The generic approval workflow now supports reasoned Return;
 all line facts, assessments, signals and override facts remain immutable.
+
+Migration 0065 implements `corporate_card_import`,
+`corporate_card_transaction`, `corporate_card_match_candidate`,
+`corporate_card_follow_up` and `corporate_card_event`. One exact eight-column CSV or
+single-sheet XLSX source is bounded to 5 MB and 1,000 rows, then completely validates
+before any row is applied. Source SHA-256, issuer/statement reference, external
+transaction ids and normalized line fingerprints prevent replay under another key.
+Candidate scoring requires the resolved card holder plus exact amount/currency and
+receipt date within two days; confidence and the contributing reasons remain visible
+until Finance explicitly accepts or rejects. Unknown holders, no candidate and
+exhausted suggestions persist as follow-up. Import facts and event history are
+append-only, while guarded projections allow only valid review and resolution changes.
 
 Approved employee-paid expenses post Dr Expense/Input Tax and Cr Employee Payable;
 company-paid expenses credit the configured bank/card clearing account. Original and

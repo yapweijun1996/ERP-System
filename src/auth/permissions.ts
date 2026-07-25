@@ -45,6 +45,7 @@ export const PERMISSIONS = {
   expensesFinanceApprove: 'expenses.approve.finance',
   expensesBudgetApprove: 'expenses.approve.budget',
   expensesDuplicateOverride: 'expenses.duplicate.override',
+  expensesCardManage: 'expenses.card.manage',
   employeeTeamRead: 'employee.team.read',
   projectRead: 'project.read',
   projectWrite: 'project.write',

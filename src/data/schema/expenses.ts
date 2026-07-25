@@ -20,6 +20,7 @@ import { currency } from './localization';
 import { documentVersion, receiptInboxItem } from './documents';
 import { budgetLine, budgetVersion } from './reporting';
 import { approvalInstance } from './approval';
+import { employee } from './hr';
 
 export const expenseCategory = pgTable('expense_category', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -534,4 +535,210 @@ export const expenseLineApproval = pgTable('expense_line_approval', {
   check('ck_expense_line_approval_version', sql`${t.claimVersion} > 0`),
   check('ck_expense_line_approval_status',
     sql`${t.status} in ('pending','approved','rejected','returned')`),
+]);
+
+/** Immutable source file and statement identity for a bounded card import. */
+export const corporateCardImport = pgTable('corporate_card_import', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  importKey: text('import_key').notNull(),
+  issuer: text('issuer').notNull(),
+  statementRef: text('statement_ref').notNull(),
+  fileName: text('file_name').notNull(),
+  fileFormat: text('file_format').notNull(),
+  sourceSha256: text('source_sha256').notNull(),
+  rowCount: integer('row_count').notNull(),
+  importedByUserId: bigint('imported_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_corporate_card_import_key')
+    .on(t.masterFn, t.companyFn, t.importKey),
+  uniqueIndex('uq_corporate_card_import_source')
+    .on(t.masterFn, t.companyFn, t.sourceSha256),
+  uniqueIndex('uq_corporate_card_import_statement')
+    .on(t.masterFn, t.companyFn, t.issuer, t.statementRef),
+  index('idx_corporate_card_import_time')
+    .on(t.masterFn, t.companyFn, t.importedAt, t.id),
+  check('ck_corporate_card_import_format', sql`${t.fileFormat} in ('csv','xlsx')`),
+  check('ck_corporate_card_import_hash',
+    sql`char_length(${t.sourceSha256}) = 64
+      and ${t.sourceSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_corporate_card_import_rows', sql`${t.rowCount} between 1 and 1000`),
+  check('ck_corporate_card_import_text',
+    sql`char_length(${t.importKey}) between 8 and 128
+      and char_length(${t.issuer}) between 2 and 120
+      and char_length(${t.statementRef}) between 2 and 120
+      and char_length(${t.fileName}) between 1 and 240`),
+]);
+
+/** Imported issuer facts plus reviewable evidence-match projection. */
+export const corporateCardTransaction = pgTable('corporate_card_transaction', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  importId: bigint('import_id', { mode: 'number' }).notNull()
+    .references(() => corporateCardImport.id),
+  lineNo: integer('line_no').notNull(),
+  externalTransactionId: text('external_transaction_id').notNull(),
+  holderEmployeeNo: text('holder_employee_no').notNull(),
+  holderEmployeeId: bigint('holder_employee_id', { mode: 'number' })
+    .references(() => employee.id),
+  cardLast4: text('card_last4').notNull(),
+  transactionDate: date('transaction_date').notNull(),
+  postedDate: date('posted_date').notNull(),
+  merchant: text('merchant').notNull(),
+  currency: text('currency').notNull(),
+  amount: numeric('amount', { precision: 18, scale: 4 }).notNull(),
+  lineFingerprint: text('line_fingerprint').notNull(),
+  status: text('status').notNull().default('unmatched'),
+  matchedReceiptInboxItemId: bigint('matched_receipt_inbox_item_id', { mode: 'number' })
+    .references(() => receiptInboxItem.id),
+  matchConfidence: numeric('match_confidence', { precision: 5, scale: 4 }),
+  matchMethod: text('match_method'),
+  matchedByUserId: bigint('matched_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  matchedAt: timestamp('matched_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_corporate_card_transaction_import_line')
+    .on(t.masterFn, t.companyFn, t.importId, t.lineNo),
+  uniqueIndex('uq_corporate_card_transaction_external')
+    .on(t.masterFn, t.companyFn, t.externalTransactionId),
+  uniqueIndex('uq_corporate_card_transaction_fingerprint')
+    .on(t.masterFn, t.companyFn, t.lineFingerprint),
+  uniqueIndex('uq_corporate_card_transaction_receipt')
+    .on(t.masterFn, t.companyFn, t.matchedReceiptInboxItemId)
+    .where(sql`${t.matchedReceiptInboxItemId} is not null`),
+  index('idx_corporate_card_transaction_queue')
+    .on(t.masterFn, t.companyFn, t.status, t.postedDate, t.id),
+  index('idx_corporate_card_transaction_holder')
+    .on(t.masterFn, t.companyFn, t.holderEmployeeId, t.status, t.id),
+  check('ck_corporate_card_transaction_line', sql`${t.lineNo} > 0`),
+  check('ck_corporate_card_transaction_card', sql`${t.cardLast4} ~ '^[0-9]{4}$'`),
+  check('ck_corporate_card_transaction_dates', sql`${t.postedDate} >= ${t.transactionDate}`),
+  check('ck_corporate_card_transaction_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_corporate_card_transaction_amount', sql`${t.amount} > 0`),
+  check('ck_corporate_card_transaction_hash',
+    sql`char_length(${t.lineFingerprint}) = 64
+      and ${t.lineFingerprint} ~ '^[0-9a-f]{64}$'`),
+  check('ck_corporate_card_transaction_status',
+    sql`${t.status} in ('unmatched','suggested','matched','missing_receipt','waived')`),
+  check('ck_corporate_card_transaction_match',
+    sql`(${t.status} = 'matched'
+      and ${t.matchedReceiptInboxItemId} is not null
+      and ${t.matchConfidence} between 0.0000 and 1.0000
+      and ${t.matchMethod} in ('automatic_review','manual')
+      and ${t.matchedByUserId} is not null
+      and ${t.matchedAt} is not null)
+      or (${t.status} <> 'matched'
+        and ${t.matchedReceiptInboxItemId} is null
+        and ${t.matchConfidence} is null
+        and ${t.matchMethod} is null
+        and ${t.matchedByUserId} is null
+        and ${t.matchedAt} is null)`),
+  check('ck_corporate_card_transaction_version', sql`${t.version} > 0`),
+]);
+
+/** Persisted, explainable automatic suggestion that Finance must accept or reject. */
+export const corporateCardMatchCandidate = pgTable('corporate_card_match_candidate', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  transactionId: bigint('transaction_id', { mode: 'number' }).notNull()
+    .references(() => corporateCardTransaction.id),
+  receiptInboxItemId: bigint('receipt_inbox_item_id', { mode: 'number' }).notNull()
+    .references(() => receiptInboxItem.id),
+  confidence: numeric('confidence', { precision: 5, scale: 4 }).notNull(),
+  reasons: jsonb('reasons').$type<string[]>().notNull(),
+  status: text('status').notNull().default('suggested'),
+  reviewedByUserId: bigint('reviewed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  reviewReason: text('review_reason'),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_corporate_card_match_candidate')
+    .on(t.masterFn, t.companyFn, t.transactionId, t.receiptInboxItemId),
+  index('idx_corporate_card_match_candidate_status')
+    .on(t.masterFn, t.companyFn, t.status, t.confidence, t.id),
+  check('ck_corporate_card_match_candidate_confidence',
+    sql`${t.confidence} between 0.0000 and 1.0000`),
+  check('ck_corporate_card_match_candidate_status',
+    sql`${t.status} in ('suggested','accepted','rejected')`),
+  check('ck_corporate_card_match_candidate_review',
+    sql`(${t.status} = 'suggested'
+      and ${t.reviewedByUserId} is null
+      and ${t.reviewReason} is null
+      and ${t.reviewedAt} is null)
+      or (${t.status} in ('accepted','rejected')
+        and ${t.reviewedByUserId} is not null
+        and char_length(${t.reviewReason}) between 3 and 1000
+        and ${t.reviewedAt} is not null)`),
+]);
+
+/** Persistent work item for unresolved holder, evidence, or rejected suggestions. */
+export const corporateCardFollowUp = pgTable('corporate_card_follow_up', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  transactionId: bigint('transaction_id', { mode: 'number' }).notNull()
+    .references(() => corporateCardTransaction.id),
+  followUpType: text('follow_up_type').notNull(),
+  status: text('status').notNull().default('open'),
+  assignedEmployeeId: bigint('assigned_employee_id', { mode: 'number' })
+    .references(() => employee.id),
+  reason: text('reason').notNull(),
+  resolutionReason: text('resolution_reason'),
+  resolvedByUserId: bigint('resolved_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  dueAt: timestamp('due_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_corporate_card_follow_up')
+    .on(t.masterFn, t.companyFn, t.transactionId, t.followUpType),
+  index('idx_corporate_card_follow_up_queue')
+    .on(t.masterFn, t.companyFn, t.status, t.dueAt, t.id),
+  check('ck_corporate_card_follow_up_type',
+    sql`${t.followUpType} in ('holder_unresolved','missing_receipt','unmatched_transaction')`),
+  check('ck_corporate_card_follow_up_status',
+    sql`${t.status} in ('open','resolved','waived')`),
+  check('ck_corporate_card_follow_up_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
+  check('ck_corporate_card_follow_up_resolution',
+    sql`(${t.status} = 'open'
+      and ${t.resolutionReason} is null
+      and ${t.resolvedByUserId} is null
+      and ${t.resolvedAt} is null)
+      or (${t.status} in ('resolved','waived')
+        and char_length(${t.resolutionReason}) between 3 and 1000
+        and ${t.resolvedByUserId} is not null
+        and ${t.resolvedAt} is not null)`),
+]);
+
+/** Append-only import, suggestion, review, and follow-up history. */
+export const corporateCardEvent = pgTable('corporate_card_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  importId: bigint('import_id', { mode: 'number' }).notNull()
+    .references(() => corporateCardImport.id),
+  transactionId: bigint('transaction_id', { mode: 'number' })
+    .references(() => corporateCardTransaction.id),
+  eventType: text('event_type').notNull(),
+  reason: text('reason').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  detail: jsonb('detail').notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_corporate_card_event_import')
+    .on(t.masterFn, t.companyFn, t.importId, t.id),
+  index('idx_corporate_card_event_transaction')
+    .on(t.masterFn, t.companyFn, t.transactionId, t.id),
+  check('ck_corporate_card_event_type',
+    sql`${t.eventType} in (
+      'imported','match_suggested','match_accepted','match_rejected',
+      'follow_up_opened','follow_up_resolved','follow_up_waived'
+    )`),
+  check('ck_corporate_card_event_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
 ]);

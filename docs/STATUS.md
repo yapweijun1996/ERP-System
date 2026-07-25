@@ -1248,6 +1248,24 @@ expected skip, 65 migrations at schema version 64, 192-table drift, API/Demo bui
 smoke, all 121 desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof. PWA
 v125.
 
+### Corporate-card statement reconciliation (TASK-126)
+
+Migration 0065 adds immutable card-import headers, normalized issuer transactions,
+reviewable match candidates, persistent unresolved work and append-only events.
+`/api/corporate-cards/imports` accepts only a 5 MB/1,000-row exact eight-column CSV or
+single-sheet XLSX source and validates the complete file before apply. Tenant-scoped
+source hash, statement identity, external id and normalized line fingerprints prevent
+duplicate application.
+
+Automatic matching resolves the active employee holder and compares receipt owner,
+transaction date (exact or within two days), currency and amount. Up to three
+confidence-ranked candidates retain their contributing reasons; no candidate is
+silently accepted. Finance accepts/rejects a suggestion or resolves/waives a persistent
+unknown-holder/missing-receipt follow-up, with guarded state transitions plus audit and
+event history. Final gates pass lint, dual typecheck, 488 tests plus one expected skip,
+66 migrations at schema version 65, 197-table drift, API/Demo builds, smoke, all 121
+desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof. PWA v126.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1263,7 +1281,8 @@ the confidence-governed receipt inbox, TASK-121 delivered document lifecycle,
 correction and two-person retention purge, TASK-122 delivered sensitive access audit
 plus storage parity, TASK-123 delivered effective tax/FX/GL expense policy and
 TASK-124 delivered employee-owned multi-line claims with exact allocation and TASK-125
-delivered line approval, duplicate risk and budget control. TASK-126 through TASK-135
+delivered line approval, duplicate risk and budget control, and TASK-126 delivered
+bounded corporate-card reconciliation. TASK-127 through TASK-135
 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
@@ -1302,9 +1321,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 124 tasks, including TASK-125
+- Done: 125 tasks, including TASK-126
 - Blocked: TASK-017 (1)
-- Todo: 10 planned tasks (TASK-126–135) across EPIC-055–056. These extend the product
+- Todo: 9 planned tasks (TASK-127–135) across EPIC-055–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

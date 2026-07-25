@@ -129,7 +129,7 @@ view/download/print/export and proves database/filesystem authorization, retenti
 integrity, quarantine and tenant parity. TASK-123 adds confirmed effective-dated
 expense category versions and immutable submission snapshots for Decimal-exact
 tax/FX/account mappings, plus Finance-only clean-evidence actual-bank overrides.
-TASK-126–135 remain **Planned** until their individual acceptance gates pass. Planned
+TASK-127–135 remain **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
