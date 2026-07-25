@@ -1208,6 +1208,26 @@ one expected skip, 63 migrations at schema version 62, 181-table drift, API/Demo
 builds, smoke, all 121 desktop/375px routes and a real PostgreSQL 16 non-superuser/RLS
 policy-snapshot proof. PWA v123.
 
+### Employee-owned multi-line expense claims (TASK-124)
+
+Migration 0063 adds employee-owned claim headers, multiple merchant/date/purpose/
+currency/tax/payment-source lines, linked governed receipt inbox evidence and
+department/cost-centre/project allocations. Amount splits reconcile exactly to line
+gross; percentage splits reconcile to exactly 100% and use deterministic final-line
+rounding. `/api/my/claims` derives the owner exclusively from Session and provides
+idempotent create, replace-lines and employee-submit commands. The Demo adapter reads
+the same PGlite facts.
+
+Only the employee owner can replace draft facts or perform final submission.
+Automatic final submission separately requires immutable prior claim authorization
+and an eligible employee-authorized system-submitted receipt on every line. Submission
+attaches the effective TASK-123 policy snapshot to each line, hashes a revision and
+appends an event. Database triggers reject post-submission line/allocation rewrites
+and make authorization, revision and event rows append-only. Final gates pass lint,
+dual typecheck, 480 tests plus one expected skip, 64 migrations at schema version 63,
+187-table drift, API/Demo builds, smoke, all 121 desktop/375px routes and a real
+PostgreSQL 16 non-superuser/RLS claim proof. PWA v124.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1221,8 +1241,9 @@ boundary, TASK-118 delivered bounded secure capture plus offline mobile drafts a
 TASK-119 delivered fail-closed scanning plus governed extraction, TASK-120 delivered
 the confidence-governed receipt inbox, TASK-121 delivered document lifecycle,
 correction and two-person retention purge, TASK-122 delivered sensitive access audit
-plus storage parity and TASK-123 delivered effective tax/FX/GL expense policy.
-TASK-124 through TASK-135 remain planning records
+plus storage parity, TASK-123 delivered effective tax/FX/GL expense policy and
+TASK-124 delivered employee-owned multi-line claims with exact allocation.
+TASK-125 through TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1260,9 +1281,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 122 tasks, including TASK-123
+- Done: 123 tasks, including TASK-124
 - Blocked: TASK-017 (1)
-- Todo: 12 planned tasks (TASK-124–135) across EPIC-055–056. These extend the product
+- Todo: 11 planned tasks (TASK-125–135) across EPIC-055–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

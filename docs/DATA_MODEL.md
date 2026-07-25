@@ -149,7 +149,8 @@ SG and MY demo companies; production wires real auth.
 > entities. TASK-121 adds the managed-document lifecycle, correction, governance-event,
 > purge-request and tombstone entities. TASK-122 adds immutable sensitive-access
 > events. TASK-123 adds the first five effective policy/snapshot entities in section
-> 8.4. The remaining targets for TASK-124–135 are
+> 8.4. TASK-124 adds the employee claim, line, allocation, authorization, revision and
+> event entities. The remaining targets for TASK-125–135 are
 > **not yet present**. Each task
 > must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
@@ -321,7 +322,7 @@ expense_category                GL/input-tax mapping and deductibility
 expense_line_policy_snapshot    immutable submitted original/base tax/FX/GL facts
 expense_bank_charge_override    Finance-verified actual FX + clean evidence
 expense_claim(+revision)        employee-owned header and workflow state
-expense_line                    merchant/date/purpose/currency/tax/payment-source facts
+expense_claim_line              merchant/date/purpose/currency/tax/payment-source facts
 expense_allocation              department/cost-centre/project split
 receipt_inbox_item              uploaded receipt before or during claim assembly
 corporate_card_transaction      imported statement line and reconciliation state
@@ -338,8 +339,19 @@ calculates with Decimal, and snapshots original currency amounts, functional-cur
 expense/input tax/gross, payment source and debit/credit account mappings. Snapshots
 and verified overrides are append-only. An actual bank charge is eligible only for a
 foreign-currency company-paid line whose policy allows it; Finance must link a
-tenant-scoped clean document version and reason. TASK-124 links these snapshots to
-employee-owned multi-line claims and exact allocation facts.
+tenant-scoped clean document version and reason.
+
+Migration 0063 implements `expense_claim`, `expense_claim_line`,
+`expense_allocation`, `expense_claim_submission_authorization`,
+`expense_claim_revision` and `expense_claim_event`. Amount allocations must sum
+exactly to line gross; percentage allocations must sum exactly to 100%, with
+deterministic final-line rounding so derived amounts also reconcile. Only the
+session-derived employee owner may replace a complete draft line set or submit it.
+Every line receives the applicable immutable TASK-123 policy snapshot during final
+submission. Explicit prior claim authorization and an eligible authorized
+system-submitted receipt on every line are mandatory for automatic submission.
+Database triggers keep submitted employee facts and all authorization/revision/event
+records immutable.
 
 Approved employee-paid expenses post Dr Expense/Input Tax and Cr Employee Payable;
 company-paid expenses credit the configured bank/card clearing account. Original and

@@ -129,7 +129,7 @@ view/download/print/export and proves database/filesystem authorization, retenti
 integrity, quarantine and tenant parity. TASK-123 adds confirmed effective-dated
 expense category versions and immutable submission snapshots for Decimal-exact
 tax/FX/account mappings, plus Finance-only clean-evidence actual-bank overrides.
-TASK-124–135 remain **Planned** until their individual acceptance gates pass. Planned
+TASK-125–135 remain **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
@@ -143,9 +143,9 @@ capabilities must not be represented as current Canonical behavior.
 - **Actor-owned self service:** `/api/my/*` now derives employee identity from Session,
   rejects client-selected employee IDs and separates self/team permissions. Direct
   reports plus effective-dated company-bound hierarchy grants determine manager
-  scope; manager leave projections omit private reason facts. Claim/receipt endpoints
-  declare `not_modelled` until their domain tasks. Offboarding revokes active sessions
-  but retains statutory/audit history.
+  scope; manager leave projections omit private reason facts. Receipt capture and
+  employee-owned multi-line claim endpoints are now Canonical domain behavior.
+  Offboarding revokes active sessions but retains statutory/audit history.
 - **Leave policy calendar:** confirmed effective-dated work patterns, confirmed
   company holidays and HR-confirmed official imports determine chargeable working
   days. Leave units are full day or AM/PM half day; hourly leave is rejected.

@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
+  account,
   appUser,
   employee,
   employeeHierarchyScope,
@@ -13,6 +14,7 @@ import {
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { createApp } from './app';
+import { configureExpensePolicyVersion } from '../modules/expenses/policy';
 
 function cookies(response: Response): string {
   const headers = response.headers as Headers & { getSetCookie?: () => string[] };
@@ -104,7 +106,7 @@ describe('actor-owned My Work API', () => {
         };
         employee: { id: number; employeeNo: string };
         capabilities: {
-          claims: { available: boolean; reason: string };
+          claims: { available: boolean; writable: boolean };
           receipts: { available: boolean; writable: boolean };
           team: { available: boolean };
         };
@@ -124,8 +126,8 @@ describe('actor-owned My Work API', () => {
     expect(contextBody.meta.actorDerived).toBe(true);
     expect(contextBody.data.capabilities.team.available).toBe(false);
     expect(contextBody.data.capabilities.claims).toEqual({
-      available: false,
-      reason: 'not_modelled',
+      available: true,
+      writable: true,
     });
     expect(contextBody.data.capabilities.receipts)
       .toEqual({ available: true, writable: true });
@@ -162,6 +164,7 @@ describe('actor-owned My Work API', () => {
     );
     for (const path of [
       'leave-requests',
+      'claims',
       'receipts/actions/upload',
       'leave-requests/1/actions/void',
     ]) {
@@ -183,7 +186,7 @@ describe('actor-owned My Work API', () => {
     expect(claims.status).toBe(200);
     expect(await claims.json()).toMatchObject({
       data: [],
-      meta: { actorDerived: true, availability: 'not_modelled' },
+      meta: { actorDerived: true, availability: 'canonical' },
     });
 
     const uploadHeaders = {
@@ -263,6 +266,136 @@ describe('actor-owned My Work API', () => {
     expect(invalidAuthorization.status).toBe(400);
     expect((await invalidAuthorization.json()).error.code)
       .toBe('receipt_auto_submit_authorization_invalid');
+  });
+
+  it('creates, replaces, submits and lists only the session employee expense claim', async () => {
+    const { viewer } = await linkViewer('EMP-1042', ['Employee']);
+    const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
+    const accounts = await db.select().from(account).where(and(
+      eq(account.masterFn, 'M1'),
+      eq(account.companyFn, 'C-SG'),
+    ));
+    const accountId = (code: string) => {
+      const row = accounts.find((candidate) => candidate.code === code);
+      if (!row) throw new Error(`Missing account ${code}`);
+      return row.id;
+    };
+    await configureExpensePolicyVersion(
+      db,
+      { masterFn: 'M1', companyFn: 'C-SG' },
+      admin.userId,
+      {
+        categoryCode: 'TRAVEL',
+        categoryName: 'Business travel',
+        policyKey: 'travel-api-claim',
+        policyName: 'Travel API claim policy',
+        versionNo: 1,
+        validFrom: '2026-01-01',
+        evidenceRequired: false,
+        taxTreatment: 'exempt',
+        employeePaidAllowed: true,
+        companyPaidAllowed: false,
+        expenseAccountId: accountId('5800'),
+        employeePayableAccountId: accountId('2100'),
+        companyPaidClearingAccountId: accountId('1000'),
+        fxMethod: 'table_rate',
+      },
+    );
+    const cookie = await login();
+    const csrf = decodeURIComponent(
+      cookie.match(/(?:^|;\s*)erp_csrf=([^;]+)/)?.[1] ?? '',
+    );
+    const jsonHeaders = (idempotencyKey: string) => ({
+      cookie,
+      'x-csrf-token': csrf,
+      'content-type': 'application/json',
+      'idempotency-key': idempotencyKey,
+    });
+    const created = await fetch(`${baseUrl}/api/my/claims`, {
+      method: 'POST',
+      headers: jsonHeaders('claim-api-create-0001'),
+      body: JSON.stringify({
+        claimKey: 'claim-api-0001',
+        claimNo: 'EC-API-0001',
+        title: 'API travel claim',
+      }),
+    });
+    expect(created.status).toBe(201);
+    const createdBody = await created.json() as {
+      data: { claim: { id: number; ownerUserId: number; version: number } };
+    };
+    expect(createdBody.data.claim.ownerUserId).toBe(viewer.userId);
+
+    const replaced = await fetch(
+      `${baseUrl}/api/my/claims/${createdBody.data.claim.id}/actions/replace-lines`,
+      {
+        method: 'POST',
+        headers: jsonHeaders('claim-api-lines-0001'),
+        body: JSON.stringify({
+          expectedVersion: createdBody.data.claim.version,
+          lines: [{
+            merchant: 'API Taxi',
+            transactionDate: '2026-07-20',
+            purpose: 'Customer visit',
+            categoryCode: 'TRAVEL',
+            paymentSource: 'employee_paid',
+            originalCurrency: 'SGD',
+            originalNet: '25.00',
+            originalTax: '0',
+            originalGross: '25.00',
+            allocationMode: 'percentage',
+            allocations: [{
+              dimensionType: 'department',
+              dimensionKey: 'SALES',
+              percentage: '100',
+            }],
+          }],
+        }),
+      },
+    );
+    expect(replaced.status).toBe(200);
+    const replacedBody = await replaced.json() as {
+      data: { claim: { version: number } };
+    };
+
+    const submitted = await fetch(
+      `${baseUrl}/api/my/claims/${createdBody.data.claim.id}/actions/submit`,
+      {
+        method: 'POST',
+        headers: jsonHeaders('claim-api-submit-0001'),
+        body: JSON.stringify({ expectedVersion: replacedBody.data.claim.version }),
+      },
+    );
+    expect(submitted.status).toBe(200);
+    expect(await submitted.json()).toMatchObject({
+      data: {
+        claim: {
+          ownerUserId: viewer.userId,
+          status: 'submitted',
+          submissionKind: 'employee',
+        },
+      },
+      meta: { actorDerived: true },
+    });
+
+    const list = await fetch(`${baseUrl}/api/my/claims`, { headers: { cookie } });
+    expect(list.status).toBe(200);
+    expect(await list.json()).toMatchObject({
+      data: [{
+        claimNo: 'EC-API-0001',
+        ownerUserId: viewer.userId,
+        status: 'submitted',
+        lines: [{
+          merchant: 'API Taxi',
+          allocations: [{
+            dimensionType: 'department',
+            dimensionKey: 'SALES',
+            amountOriginal: '25.0000',
+          }],
+        }],
+      }],
+      meta: { actorDerived: true, availability: 'canonical' },
+    });
   });
 
   it('lets an Employee-only account boot My Work without dashboard access', async () => {

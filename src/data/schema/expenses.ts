@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -16,7 +17,7 @@ import { tenant, timestamps } from './_shared';
 import { appUser } from './tenancy';
 import { account } from './finance';
 import { currency } from './localization';
-import { documentVersion } from './documents';
+import { documentVersion, receiptInboxItem } from './documents';
 
 export const expenseCategory = pgTable('expense_category', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -189,4 +190,187 @@ export const expenseBankChargeOverride = pgTable('expense_bank_charge_override',
     sql`${t.actualBaseGross} > 0 and ${t.actualFxRate} > 0`),
   check('ck_expense_bank_charge_override_reason',
     sql`char_length(${t.reason}) between 3 and 1000`),
+]);
+
+export const expenseClaim = pgTable('expense_claim', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  claimKey: text('claim_key').notNull(),
+  claimNo: text('claim_no').notNull(),
+  ownerUserId: bigint('owner_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  title: text('title').notNull(),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  submissionKind: text('submission_kind').notNull().default('none'),
+  submittedByUserId: bigint('submitted_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  systemActorKey: text('system_actor_key'),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  factsSha256: text('facts_sha256'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_expense_claim_key').on(t.masterFn, t.companyFn, t.claimKey),
+  uniqueIndex('uq_expense_claim_number').on(t.masterFn, t.companyFn, t.claimNo),
+  index('idx_expense_claim_owner_status')
+    .on(t.masterFn, t.companyFn, t.ownerUserId, t.status, t.id),
+  check('ck_expense_claim_key', sql`${t.claimKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_expense_claim_title', sql`char_length(${t.title}) between 3 and 160`),
+  check('ck_expense_claim_status',
+    sql`${t.status} in (
+      'draft','submitted','pending_approval','partially_approved',
+      'approved','rejected','returned','voided','posted'
+    )`),
+  check('ck_expense_claim_version', sql`${t.version} > 0`),
+  check('ck_expense_claim_submission',
+    sql`(${t.status} = 'draft'
+      and ${t.submissionKind} = 'none'
+      and ${t.submittedByUserId} is null
+      and ${t.systemActorKey} is null
+      and ${t.submittedAt} is null
+      and ${t.factsSha256} is null)
+      or (${t.status} <> 'draft'
+        and ${t.submissionKind} in ('employee','system')
+        and ${t.submittedByUserId} is not null
+        and (${t.submissionKind} = 'employee' and ${t.systemActorKey} is null
+          or ${t.submissionKind} = 'system'
+            and ${t.systemActorKey} = 'expense-auto-submit-v1')
+        and ${t.submittedAt} is not null
+        and char_length(${t.factsSha256}) = 64
+        and ${t.factsSha256} ~ '^[0-9a-f]{64}$')`),
+]);
+
+export const expenseClaimLine = pgTable('expense_claim_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  claimId: bigint('claim_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaim.id),
+  lineNo: integer('line_no').notNull(),
+  merchant: text('merchant').notNull(),
+  transactionDate: date('transaction_date').notNull(),
+  purpose: text('purpose').notNull(),
+  categoryCode: text('category_code').notNull(),
+  paymentSource: text('payment_source').notNull(),
+  originalCurrency: text('original_currency').notNull().references(() => currency.code),
+  originalNet: numeric('original_net', { precision: 18, scale: 4 }).notNull(),
+  originalTax: numeric('original_tax', { precision: 18, scale: 4 }).notNull(),
+  originalGross: numeric('original_gross', { precision: 18, scale: 4 }).notNull(),
+  receiptInboxItemId: bigint('receipt_inbox_item_id', { mode: 'number' })
+    .references(() => receiptInboxItem.id),
+  policySnapshotId: bigint('policy_snapshot_id', { mode: 'number' })
+    .references(() => expenseLinePolicySnapshot.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_claim_line_number')
+    .on(t.masterFn, t.companyFn, t.claimId, t.lineNo),
+  uniqueIndex('uq_expense_claim_line_receipt')
+    .on(t.masterFn, t.companyFn, t.receiptInboxItemId),
+  uniqueIndex('uq_expense_claim_line_snapshot')
+    .on(t.masterFn, t.companyFn, t.policySnapshotId),
+  index('idx_expense_claim_line_claim').on(t.masterFn, t.companyFn, t.claimId, t.id),
+  check('ck_expense_claim_line_no', sql`${t.lineNo} > 0`),
+  check('ck_expense_claim_line_text',
+    sql`char_length(${t.merchant}) between 1 and 160
+      and char_length(${t.purpose}) between 3 and 500
+      and ${t.categoryCode} ~ '^[A-Z][A-Z0-9_-]{1,31}$'`),
+  check('ck_expense_claim_line_payment',
+    sql`${t.paymentSource} in ('employee_paid','company_paid')`),
+  check('ck_expense_claim_line_amounts',
+    sql`${t.originalNet} >= 0 and ${t.originalTax} >= 0 and ${t.originalGross} > 0
+      and ${t.originalNet} + ${t.originalTax} = ${t.originalGross}`),
+]);
+
+export const expenseAllocation = pgTable('expense_allocation', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  lineId: bigint('line_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaimLine.id),
+  allocationNo: integer('allocation_no').notNull(),
+  mode: text('mode').notNull(),
+  dimensionType: text('dimension_type').notNull(),
+  dimensionKey: text('dimension_key').notNull(),
+  amountOriginal: numeric('amount_original', { precision: 18, scale: 4 }).notNull(),
+  percentage: numeric('percentage', { precision: 7, scale: 4 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_allocation_number')
+    .on(t.masterFn, t.companyFn, t.lineId, t.allocationNo),
+  index('idx_expense_allocation_dimension')
+    .on(t.masterFn, t.companyFn, t.dimensionType, t.dimensionKey, t.id),
+  check('ck_expense_allocation_no', sql`${t.allocationNo} > 0`),
+  check('ck_expense_allocation_mode', sql`${t.mode} in ('amount','percentage')`),
+  check('ck_expense_allocation_dimension',
+    sql`${t.dimensionType} in ('department','cost_center','project')
+      and char_length(${t.dimensionKey}) between 1 and 80`),
+  check('ck_expense_allocation_values',
+    sql`${t.amountOriginal} >= 0 and ${t.percentage} >= 0 and ${t.percentage} <= 100`),
+]);
+
+export const expenseClaimSubmissionAuthorization = pgTable(
+  'expense_claim_submission_authorization',
+  {
+    id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+    ...tenant,
+    claimId: bigint('claim_id', { mode: 'number' }).notNull()
+      .references(() => expenseClaim.id),
+    ownerUserId: bigint('owner_user_id', { mode: 'number' }).notNull()
+      .references(() => appUser.userId),
+    autoSubmitAuthorized: boolean('auto_submit_authorized').notNull().default(false),
+    authorizedAt: timestamp('authorized_at', { withTimezone: true }),
+    statementVersion: text('statement_version').notNull().default('expense-auto-submit-v1'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('uq_expense_claim_submission_authorization')
+      .on(t.masterFn, t.companyFn, t.claimId),
+    check('ck_expense_claim_submission_authorization',
+      sql`(${t.autoSubmitAuthorized} and ${t.authorizedAt} is not null)
+        or (not ${t.autoSubmitAuthorized} and ${t.authorizedAt} is null)`),
+    check('ck_expense_claim_submission_statement',
+      sql`${t.statementVersion} = 'expense-auto-submit-v1'`),
+  ],
+);
+
+export const expenseClaimRevision = pgTable('expense_claim_revision', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  claimId: bigint('claim_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaim.id),
+  claimVersion: integer('claim_version').notNull(),
+  factsSha256: text('facts_sha256').notNull(),
+  facts: jsonb('facts').notNull(),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_claim_revision')
+    .on(t.masterFn, t.companyFn, t.claimId, t.claimVersion),
+  check('ck_expense_claim_revision_version', sql`${t.claimVersion} > 0`),
+  check('ck_expense_claim_revision_hash',
+    sql`char_length(${t.factsSha256}) = 64
+      and ${t.factsSha256} ~ '^[0-9a-f]{64}$'`),
+]);
+
+export const expenseClaimEvent = pgTable('expense_claim_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  claimId: bigint('claim_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaim.id),
+  eventType: text('event_type').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  fromStatus: text('from_status'),
+  toStatus: text('to_status'),
+  reason: text('reason').notNull(),
+  claimVersion: integer('claim_version').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_expense_claim_event_claim')
+    .on(t.masterFn, t.companyFn, t.claimId, t.id),
+  check('ck_expense_claim_event_type',
+    sql`${t.eventType} in ('created','draft_replaced','submitted','system_submitted')`),
+  check('ck_expense_claim_event_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
+  check('ck_expense_claim_event_version', sql`${t.claimVersion} > 0`),
 ]);

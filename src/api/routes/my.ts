@@ -49,6 +49,15 @@ import {
   uploadReceiptDocument,
 } from '../../modules/documents/upload';
 import { DocumentStorageError } from '../../modules/documents/storage';
+import {
+  createExpenseClaimDraftWithin,
+  ExpenseClaimError,
+  listEmployeeExpenseClaimsWithin,
+  replaceExpenseClaimDraftLinesWithin,
+  submitExpenseClaimWithin,
+  type ExpenseClaimLineInput,
+} from '../../modules/expenses/claims';
+import { ExpensePolicyError } from '../../modules/expenses/policy';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import {
@@ -110,9 +119,13 @@ export function createMyRouter(db: DB): Router {
       || error instanceof LeaveBalanceError
       || error instanceof LeavePolicyError
       || error instanceof ApprovalWorkflowError
+      || error instanceof ExpenseClaimError
+      || error instanceof ExpensePolicyError
     ) {
       const status = error instanceof LeaveApplicationError
         || error instanceof ApprovalWorkflowError
+        || error instanceof ExpenseClaimError
+        || error instanceof ExpensePolicyError
         ? error.status
         : 422;
       const details = error instanceof LeaveApplicationError
@@ -164,6 +177,19 @@ export function createMyRouter(db: DB): Router {
     if (!session) return null;
     if (!await hasPermission(db, session, PERMISSIONS.employeeReceiptsWrite)) {
       apiError(res, 403, 'permission_denied', 'You cannot upload receipt evidence.');
+      return null;
+    }
+    return session;
+  }
+
+  async function requireClaimWrite(
+    req: import('express').Request,
+    res: import('express').Response,
+  ) {
+    const session = await requireSelf(req, res);
+    if (!session) return null;
+    if (!await hasPermission(db, session, PERMISSIONS.employeeClaimsWrite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot maintain your expense claims.');
       return null;
     }
     return session;
@@ -276,6 +302,64 @@ export function createMyRouter(db: DB): Router {
     res.status(status).json(body);
   }
 
+  async function runClaimCommand(
+    req: import('express').Request,
+    res: import('express').Response,
+    session: NonNullable<Awaited<ReturnType<typeof requireSession>>>,
+    operation: string,
+    payload: Record<string, unknown>,
+    execute: (
+      tx: DB,
+      scope: { masterFn: string; companyFn: string },
+    ) => Promise<unknown>,
+    status = 200,
+  ) {
+    const key = req.header('idempotency-key')?.trim() ?? '';
+    if (!key || key.length > 128) {
+      apiError(res, 428, 'idempotency_key_required', 'A valid Idempotency-Key is required.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const begun = await beginIdempotentRequest(db, {
+      ...scope,
+      actorUserId: session.userId,
+    }, key, operation, payload);
+    if (begun.kind === 'replay') {
+      res.setHeader('Idempotency-Replayed', 'true');
+      res.status(begun.status).json(begun.body);
+      return;
+    }
+    if (begun.kind === 'conflict') {
+      apiError(
+        res,
+        409,
+        begun.reason === 'different_request'
+          ? 'idempotency_key_reused'
+          : 'idempotency_request_in_progress',
+        'This Idempotency-Key cannot be used for this request.',
+      );
+      return;
+    }
+    const data = await withTenantTransaction(db, scope, async (tx) => {
+      await resolveActorEmployeeWithin(tx, scope, session.userId);
+      const result = await execute(tx, scope);
+      const claimId = Number((result as { claim?: { id?: unknown } }).claim?.id) || null;
+      await appendAudit(tx, {
+        ...scope,
+        actorUserId: session.userId,
+        requestId: context(res).requestId,
+        entity: 'my/claims',
+        entityId: claimId,
+        action: operation,
+        after: result,
+      });
+      return result;
+    });
+    const body = { data, meta: { actorDerived: true } };
+    await completeIdempotentRequest(db, begun.recordId, status, body);
+    res.status(status).json(body);
+  }
+
   router.get('/context', async (req, res) => {
     const session = await requireSelf(req, res);
     if (!session) return;
@@ -287,6 +371,11 @@ export function createMyRouter(db: DB): Router {
         db,
         session,
         PERMISSIONS.employeeReceiptsWrite,
+      );
+      const canWriteClaims = await hasPermission(
+        db,
+        session,
+        PERMISSIONS.employeeClaimsWrite,
       );
       const data = await withTenantTransaction(db, scope, async (tx) => {
         const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
@@ -317,7 +406,7 @@ export function createMyRouter(db: DB): Router {
           leaveTypes,
           capabilities: {
             leave: { available: true, writable: canWriteLeave },
-            claims: { available: false, reason: 'not_modelled' },
+            claims: { available: true, writable: canWriteClaims },
             receipts: { available: true, writable: canWriteReceipts },
             team: { available: canReadTeam, employeeCount: teamEmployeeIds.length },
           },
@@ -658,16 +747,114 @@ export function createMyRouter(db: DB): Router {
     if (!session) return;
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
-      await withTenantTransaction(db, scope, (tx) =>
-        resolveActorEmployeeWithin(tx, scope, session.userId));
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        await resolveActorEmployeeWithin(tx, scope, session.userId);
+        return listEmployeeExpenseClaimsWithin(tx, scope, session.userId);
+      });
       res.json({
-        data: [],
+        data,
         meta: {
           actorDerived: true,
-          availability: 'not_modelled',
-          plannedEpic: 'EPIC-055',
+          availability: 'canonical',
+          ownership: 'employee',
+          limit: 100,
         },
       });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/claims', async (req, res) => {
+    const session = await requireClaimWrite(req, res);
+    if (!session) return;
+    const payload = {
+      claimKey: String(req.body?.claimKey ?? ''),
+      claimNo: String(req.body?.claimNo ?? ''),
+      title: String(req.body?.title ?? ''),
+      autoSubmitAuthorized: req.body?.autoSubmitAuthorized === true,
+    };
+    try {
+      await runClaimCommand(
+        req,
+        res,
+        session,
+        'claim:create',
+        payload,
+        (tx, scope) => createExpenseClaimDraftWithin(
+          tx,
+          scope,
+          session.userId,
+          payload,
+        ),
+        201,
+      );
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/claims/:claimId/actions/replace-lines', async (req, res) => {
+    const session = await requireClaimWrite(req, res);
+    if (!session) return;
+    const claimId = positiveId(req.params.claimId);
+    if (!claimId) {
+      apiError(res, 400, 'invalid_id', 'claimId must be a positive integer.');
+      return;
+    }
+    const payload = {
+      expectedVersion: Number(req.body?.expectedVersion),
+      lines: Array.isArray(req.body?.lines)
+        ? req.body.lines as ExpenseClaimLineInput[]
+        : [],
+    };
+    try {
+      await runClaimCommand(
+        req,
+        res,
+        session,
+        `claim:replace-lines:${claimId}`,
+        payload,
+        (tx, scope) => replaceExpenseClaimDraftLinesWithin(
+          tx,
+          scope,
+          session.userId,
+          claimId,
+          payload.expectedVersion,
+          payload.lines,
+        ),
+      );
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/claims/:claimId/actions/submit', async (req, res) => {
+    const session = await requireClaimWrite(req, res);
+    if (!session) return;
+    const claimId = positiveId(req.params.claimId);
+    if (!claimId) {
+      apiError(res, 400, 'invalid_id', 'claimId must be a positive integer.');
+      return;
+    }
+    const payload = { expectedVersion: Number(req.body?.expectedVersion) };
+    try {
+      await runClaimCommand(
+        req,
+        res,
+        session,
+        `claim:submit:${claimId}`,
+        payload,
+        (tx, scope) => submitExpenseClaimWithin(
+          tx,
+          scope,
+          session.userId,
+          claimId,
+          payload.expectedVersion,
+          'employee',
+          new Date(),
+        ),
+      );
     } catch (error) {
       handleActorError(res, error);
     }

@@ -35,6 +35,7 @@ export const PERMISSIONS = {
   employeeSelfRead: 'employee.self.read',
   employeeLeaveWrite: 'employee.leave.write',
   employeeReceiptsWrite: 'employee.receipts.write',
+  employeeClaimsWrite: 'employee.claims.write',
   documentsGovernanceManage: 'documents.governance.manage',
   documentsRecordsManage: 'documents.records.manage',
   documentsFinanceReview: 'documents.finance.review',

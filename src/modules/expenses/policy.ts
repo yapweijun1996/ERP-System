@@ -293,8 +293,8 @@ export interface SubmittedExpenseLine {
   originalGross: string | number;
 }
 
-export async function snapshotSubmittedExpenseLine(
-  db: DB,
+export async function snapshotSubmittedExpenseLineWithin(
+  tx: DB,
   scope: Scope,
   ownerUserId: number,
   input: SubmittedExpenseLine,
@@ -320,7 +320,7 @@ export async function snapshotSubmittedExpenseLine(
     );
   }
   const originalCurrency = input.originalCurrency.trim().toUpperCase();
-  return withTenantTransaction(db, scope, async (tx) => {
+  {
     const [companyRow] = await tx.select({
       currency: company.currency,
     }).from(company).where(and(
@@ -491,7 +491,18 @@ export async function snapshotSubmittedExpenseLine(
     }
     const [snapshot] = await tx.insert(expenseLinePolicySnapshot).values(values).returning();
     return { snapshot, replayed: false };
-  });
+  }
+}
+
+export async function snapshotSubmittedExpenseLine(
+  db: DB,
+  scope: Scope,
+  ownerUserId: number,
+  input: SubmittedExpenseLine,
+  now = new Date(),
+) {
+  return withTenantTransaction(db, scope, (tx) =>
+    snapshotSubmittedExpenseLineWithin(tx, scope, ownerUserId, input, now));
 }
 
 export async function verifyActualBankCharge(

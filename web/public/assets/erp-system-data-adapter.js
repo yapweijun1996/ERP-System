@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 62;
+  var DEMO_SCHEMA_VERSION = 63;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -2912,6 +2912,8 @@
           orm,SCOPE,myActorUserId(),'employee.leave.write');
         var canWriteReceipts=await state.runtime.commands.hasPermissionWithin(
           orm,SCOPE,myActorUserId(),'employee.receipts.write');
+        var canWriteClaims=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.claims.write');
         var teamEmployeeIds=canReadTeam
           ?await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id)
           :[];
@@ -2929,7 +2931,7 @@
           leaveTypes:leaveTypes,
           capabilities:{
             leave:{available:true,writable:canWriteLeave},
-            claims:{available:false,reason:'not_modelled'},
+            claims:{available:true,writable:canWriteClaims},
             receipts:{available:true,writable:canWriteReceipts},
             team:{available:canReadTeam,employeeCount:teamEmployeeIds.length},
           },
@@ -2996,8 +2998,55 @@
       return {data:data,meta:{actorDerived:true}};
     },
     claims:async function(){
-      await withMyActor(function(){ return null; });
-      return {data:[],meta:{actorDerived:true,availability:'not_modelled',plannedEpic:'EPIC-055'}};
+      await withMyActor(function(){return null;});
+      var claimResult=await requireDemoDb().query(
+        `select * from expense_claim
+         where master_fn=$1 and company_fn=$2 and owner_user_id=$3
+         order by updated_at desc,id desc limit 100`,
+        [SCOPE.masterFn,SCOPE.companyFn,myActorUserId()]);
+      var lineResult=await requireDemoDb().query(
+        `select l.* from expense_claim_line l
+         join expense_claim c on c.id=l.claim_id
+          and c.master_fn=l.master_fn and c.company_fn=l.company_fn
+         where c.master_fn=$1 and c.company_fn=$2 and c.owner_user_id=$3
+         order by l.claim_id,l.line_no`,
+        [SCOPE.masterFn,SCOPE.companyFn,myActorUserId()]);
+      var allocationResult=await requireDemoDb().query(
+        `select a.* from expense_allocation a
+         join expense_claim_line l on l.id=a.line_id
+          and l.master_fn=a.master_fn and l.company_fn=a.company_fn
+         join expense_claim c on c.id=l.claim_id
+          and c.master_fn=l.master_fn and c.company_fn=l.company_fn
+         where c.master_fn=$1 and c.company_fn=$2 and c.owner_user_id=$3
+         order by a.line_id,a.allocation_no`,
+        [SCOPE.masterFn,SCOPE.companyFn,myActorUserId()]);
+      var allocations=allocationResult.rows.map(function(row){return {
+        id:Number(row.id),lineId:Number(row.line_id),allocationNo:Number(row.allocation_no),
+        mode:row.mode,dimensionType:row.dimension_type,dimensionKey:row.dimension_key,
+        amountOriginal:String(row.amount_original),percentage:String(row.percentage),
+        createdAt:row.created_at,
+      };});
+      var lines=lineResult.rows.map(function(row){return {
+        id:Number(row.id),claimId:Number(row.claim_id),lineNo:Number(row.line_no),
+        merchant:row.merchant,transactionDate:row.transaction_date,purpose:row.purpose,
+        categoryCode:row.category_code,paymentSource:row.payment_source,
+        originalCurrency:row.original_currency,originalNet:String(row.original_net),
+        originalTax:String(row.original_tax),originalGross:String(row.original_gross),
+        receiptInboxItemId:row.receipt_inbox_item_id==null?null:Number(row.receipt_inbox_item_id),
+        policySnapshotId:row.policy_snapshot_id==null?null:Number(row.policy_snapshot_id),
+        createdAt:row.created_at,updatedAt:row.updated_at,
+        allocations:allocations.filter(function(item){return item.lineId===Number(row.id);}),
+      };});
+      var data=claimResult.rows.map(function(row){return {
+        id:Number(row.id),claimKey:row.claim_key,claimNo:row.claim_no,
+        ownerUserId:Number(row.owner_user_id),title:row.title,status:row.status,
+        version:Number(row.version),submissionKind:row.submission_kind,
+        submittedByUserId:row.submitted_by_user_id==null?null:Number(row.submitted_by_user_id),
+        systemActorKey:row.system_actor_key,submittedAt:row.submitted_at,
+        factsSha256:row.facts_sha256,createdAt:row.created_at,updatedAt:row.updated_at,
+        lines:lines.filter(function(item){return item.claimId===Number(row.id);}),
+      };});
+      return {data:data,meta:{actorDerived:true,availability:'canonical',ownership:'employee',limit:100}};
     },
     receipts:async function(){
       await withMyActor(function(){ return null; });

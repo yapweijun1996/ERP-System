@@ -2005,10 +2005,14 @@ approval is the accounting boundary.
       Submission creates an immutable Decimal-exact original/base policy snapshot.
       Only Finance may attach clean immutable evidence and record an append-only actual
       bank-charge override; ordinary line facts are never rewritten. PWA v123.
-- [ ] **TASK-124 — Add multi-line claims, receipt inbox and allocation.** Support
-      direct claim creation plus quick receipt capture, multiple lines per claim,
-      department/cost-centre/project split by amount or percentage and employee-only
-      final submission semantics.
+- [x] **TASK-124 — Add multi-line claims, receipt inbox and allocation.** Migration
+      0063 adds employee-owned multi-line drafts, linked governed receipt inbox items
+      and Decimal-exact department/cost-centre/project allocation by amount or
+      percentage. Session-derived My Claims commands enforce owner-only draft changes
+      and final submission. System submission additionally requires immutable prior
+      employee authorization plus an eligible employee-authorized system-submitted
+      receipt on every line. Submitted facts, authorization, revisions and events are
+      database-protected from mutation. PWA v124.
 - [ ] **TASK-125 — Add line-level approval, duplicate and budget control.** Default to
       manager then Finance with configurable extra levels; allow approve/reject/return
       per line, forbid approver edits/self-approval, combine file/image/business-field

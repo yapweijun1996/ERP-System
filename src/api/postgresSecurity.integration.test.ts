@@ -40,6 +40,11 @@ import {
   configureExpensePolicyVersion,
   snapshotSubmittedExpenseLine,
 } from '../modules/expenses/policy';
+import {
+  createExpenseClaimDraft,
+  replaceExpenseClaimDraftLines,
+  submitExpenseClaimByEmployee,
+} from '../modules/expenses/claims';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -209,6 +214,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         policyName: 'PostgreSQL local expense policy',
         versionNo: 1,
         validFrom: '2026-01-01',
+        evidenceRequired: false,
         taxTreatment: 'exempt',
         employeePaidAllowed: true,
         companyPaidAllowed: false,
@@ -246,6 +252,59 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       db,
       expenseScope,
       (tx) => tx.select().from(schema.expenseLinePolicySnapshot),
+    )).toHaveLength(1);
+
+    const expenseClaim = await createExpenseClaimDraft(
+      db,
+      expenseScope,
+      accepted.userId,
+      {
+        claimKey: 'pg-expense-claim-0001',
+        claimNo: 'PG-EC-0001',
+        title: 'PostgreSQL RLS expense claim',
+      },
+    );
+    const expenseClaimLines = await replaceExpenseClaimDraftLines(
+      db,
+      expenseScope,
+      accepted.userId,
+      expenseClaim.claim.id,
+      expenseClaim.claim.version,
+      [{
+        merchant: 'PostgreSQL Taxi',
+        transactionDate: '2026-07-26',
+        purpose: 'RLS proof customer transport',
+        categoryCode: 'LOCAL',
+        paymentSource: 'employee_paid',
+        originalCurrency: 'SGD',
+        originalNet: '50.00',
+        originalTax: '0',
+        originalGross: '50.00',
+        allocationMode: 'percentage',
+        allocations: [{
+          dimensionType: 'department',
+          dimensionKey: 'SECURITY',
+          percentage: '100',
+        }],
+      }],
+    );
+    const submittedClaim = await submitExpenseClaimByEmployee(
+      db,
+      expenseScope,
+      accepted.userId,
+      expenseClaim.claim.id,
+      expenseClaimLines.claim.version,
+    );
+    expect(submittedClaim.claim).toMatchObject({
+      status: 'submitted',
+      ownerUserId: accepted.userId,
+      submissionKind: 'employee',
+    });
+    expect(await db.select().from(schema.expenseClaim)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.expenseClaim),
     )).toHaveLength(1);
 
     const documentScope = {

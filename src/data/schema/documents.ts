@@ -299,8 +299,8 @@ export const receiptUploadAuthorization = pgTable('receipt_upload_authorization'
 ]);
 
 /**
- * Receipt inbox projection. `submitted` is system-only in this slice; claim
- * authoring and employee/Finance submission arrive in EPIC-055.
+ * Receipt inbox projection. `submitted` is system-only; employee-owned claims
+ * link this governed evidence without rewriting the extraction facts.
  */
 export const receiptInboxItem = pgTable('receipt_inbox_item', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),

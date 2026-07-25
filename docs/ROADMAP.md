@@ -849,8 +849,10 @@ cleanup pass Demo/API, five-language and responsive proof.
 1. **Effective tax/GL/FX policy** (TASK-123 done 2026-07-26) snapshots category,
    evidence, limits, payment source, Decimal tax/FX and account mappings at submission;
    Finance-only clean evidence may append a verified actual bank charge. **Claim
-   authoring** (TASK-124) adds employee-paid/company-paid multi-line claims, receipt
-   inbox and exact department/cost-centre/project allocation.
+   authoring** (TASK-124 done 2026-07-26) adds employee-paid/company-paid multi-line
+   claims, governed receipt links and exact department/cost-centre/project allocation.
+   Employee-owned facts become immutable at final submission; automatic submission
+   needs separate claim authorization and an eligible authorized receipt on every line.
 2. **Approval and control** (TASK-125/126) add manager + Finance line decisions,
    configurable extra levels, multi-signal duplicate blocking, budget
    warning/add-level/block and corporate-card CSV/Excel reconciliation.
