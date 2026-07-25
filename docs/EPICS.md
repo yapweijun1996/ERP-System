@@ -1998,9 +1998,13 @@ expenses without treating employees as suppliers or mixing reimbursement into pa
 An authenticated upload may authorise 98%-confidence system submission; final finance
 approval is the accounting boundary.
 
-- [ ] **TASK-123 — Add effective-dated expense, tax, FX and GL policy.** Map categories
-      to expense/input-tax accounts, deductibility, evidence, limits and payment
-      sources; preserve original currency, policy FX and verified actual card charge.
+- [x] **TASK-123 — Add effective-dated expense, tax, FX and GL policy.** Migration
+      0062 adds confirmed non-overlapping category policy versions for evidence,
+      base-currency limits, payment sources, tax treatment/recovery, expense/input-tax
+      and employee-payable/company-clearing accounts plus table-rate or actual-bank FX.
+      Submission creates an immutable Decimal-exact original/base policy snapshot.
+      Only Finance may attach clean immutable evidence and record an append-only actual
+      bank-charge override; ordinary line facts are never rewritten. PWA v123.
 - [ ] **TASK-124 — Add multi-line claims, receipt inbox and allocation.** Support
       direct claim creation plus quick receipt capture, multiple lines per claim,
       department/cost-centre/project split by amount or percentage and employee-only

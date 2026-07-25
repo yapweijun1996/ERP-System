@@ -38,6 +38,8 @@ export const PERMISSIONS = {
   documentsGovernanceManage: 'documents.governance.manage',
   documentsRecordsManage: 'documents.records.manage',
   documentsFinanceReview: 'documents.finance.review',
+  expensesPolicyManage: 'expenses.policy.manage',
+  expensesFinanceVerify: 'expenses.finance.verify',
   employeeTeamRead: 'employee.team.read',
   projectRead: 'project.read',
   projectWrite: 'project.write',

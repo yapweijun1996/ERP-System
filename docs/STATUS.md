@@ -1188,6 +1188,26 @@ standard desktop/375px no-overflow route audit. Final gates pass lint, dual type
 API/Demo builds, smoke, all 121 desktop/375px routes and a real PostgreSQL 16
 non-superuser/RLS access-event proof. PWA v122.
 
+### Effective-dated expense tax, FX and GL policy (TASK-123)
+
+Migration 0062 introduces category policy headers and confirmed effective-dated
+versions. A version governs evidence requirement, base-currency limit, employee/company
+payment sources, input-tax/non-deductible/exempt treatment, recoverable percentage,
+expense/input-tax/payable/clearing accounts and table-rate versus eligible actual-bank
+FX. The command rejects overlapping confirmed category periods and invalid cross-tenant
+or account-type mappings.
+
+Line submission resolves policy, tax rule and FX rate on the transaction date using
+Decimal, then creates an immutable snapshot of original net/tax/gross, functional
+currency, policy rate, base expense/input-tax/gross and GL mappings. Tax must reconcile
+exactly to configured treatment. A foreign-currency company-paid line may use a
+verified actual bank charge only when its policy allows it; Finance permission, a
+reason and clean immutable document evidence are mandatory, and the override is a
+separate append-only audit fact. Final gates pass lint, dual typecheck, 477 tests plus
+one expected skip, 63 migrations at schema version 62, 181-table drift, API/Demo
+builds, smoke, all 121 desktop/375px routes and a real PostgreSQL 16 non-superuser/RLS
+policy-snapshot proof. PWA v123.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1200,8 +1220,9 @@ deduction/encashment boundary. TASK-117 delivered the managed-document storage
 boundary, TASK-118 delivered bounded secure capture plus offline mobile drafts and
 TASK-119 delivered fail-closed scanning plus governed extraction, TASK-120 delivered
 the confidence-governed receipt inbox, TASK-121 delivered document lifecycle,
-correction and two-person retention purge and TASK-122 delivered sensitive access
-audit plus storage parity. TASK-123 through TASK-135 remain planning records
+correction and two-person retention purge, TASK-122 delivered sensitive access audit
+plus storage parity and TASK-123 delivered effective tax/FX/GL expense policy.
+TASK-124 through TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1239,9 +1260,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 121 tasks, including TASK-122
+- Done: 122 tasks, including TASK-123
 - Blocked: TASK-017 (1)
-- Todo: 13 planned tasks (TASK-123–135) across EPIC-055–056. These extend the product
+- Todo: 12 planned tasks (TASK-124–135) across EPIC-055–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

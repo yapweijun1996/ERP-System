@@ -126,8 +126,10 @@ immutable posted/sealed correction versions, legal hold, paper custody and
 records-manager plus distinct-Finance post-retention purge with a permanent hash
 tombstone. TASK-122 adds purge-surviving, retry-stable audit for every sensitive
 view/download/print/export and proves database/filesystem authorization, retention,
-integrity, quarantine and tenant parity. TASK-123–135 remain **Planned** until their
-individual acceptance gates pass. Planned
+integrity, quarantine and tenant parity. TASK-123 adds confirmed effective-dated
+expense category versions and immutable submission snapshots for Decimal-exact
+tax/FX/account mappings, plus Finance-only clean-evidence actual-bank overrides.
+TASK-124–135 remain **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an

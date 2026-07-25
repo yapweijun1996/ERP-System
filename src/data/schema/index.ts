@@ -22,3 +22,4 @@ export * from './notifications';
 export * from './controlPlane';
 export * from './reporting';
 export * from './documents';
+export * from './expenses';

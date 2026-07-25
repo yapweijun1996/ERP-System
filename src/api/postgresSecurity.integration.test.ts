@@ -36,6 +36,10 @@ import {
   processDocumentJobBatch,
 } from '../modules/documents/processing';
 import { accessManagedDocument } from '../modules/documents/access';
+import {
+  configureExpensePolicyVersion,
+  snapshotSubmittedExpenseLine,
+} from '../modules/expenses/policy';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -189,6 +193,60 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       fullName: 'Replay',
       password: 'invited-password',
     }, 'pg-accept-replay')).rejects.toMatchObject({ code: 'invitation_invalid' });
+
+    const expenseAccount = visibleAccounts.find((row) => row.code === '5800')!;
+    const employeePayable = visibleAccounts.find((row) => row.code === '2100')!;
+    const companyClearing = visibleAccounts.find((row) => row.code === '1100')!;
+    const expenseScope = { masterFn: setup.masterFn, companyFn: setup.companyFn };
+    const configuredExpensePolicy = await configureExpensePolicyVersion(
+      db,
+      expenseScope,
+      admin.userId,
+      {
+        categoryCode: 'LOCAL',
+        categoryName: 'Local business expense',
+        policyKey: 'pg-local-expense',
+        policyName: 'PostgreSQL local expense policy',
+        versionNo: 1,
+        validFrom: '2026-01-01',
+        taxTreatment: 'exempt',
+        employeePaidAllowed: true,
+        companyPaidAllowed: false,
+        expenseAccountId: expenseAccount.id,
+        employeePayableAccountId: employeePayable.id,
+        companyPaidClearingAccountId: companyClearing.id,
+        fxMethod: 'table_rate',
+      },
+    );
+    const submittedExpense = await snapshotSubmittedExpenseLine(
+      db,
+      expenseScope,
+      accepted.userId,
+      {
+        lineKey: 'pg-expense-policy-line-0001',
+        categoryCode: 'LOCAL',
+        transactionDate: '2026-07-26',
+        paymentSource: 'employee_paid',
+        originalCurrency: 'SGD',
+        originalNet: '100.00',
+        originalTax: '0',
+        originalGross: '100.00',
+      },
+    );
+    expect(submittedExpense.snapshot).toMatchObject({
+      policyVersionId: configuredExpensePolicy.version.id,
+      ownerUserId: accepted.userId,
+      originalCurrency: 'SGD',
+      functionalCurrency: 'SGD',
+      policyFxRate: '1.00000000',
+      baseGross: '100.0000',
+    });
+    expect(await db.select().from(schema.expenseLinePolicySnapshot)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.expenseLinePolicySnapshot),
+    )).toHaveLength(1);
 
     const documentScope = {
       masterFn: setup.masterFn,

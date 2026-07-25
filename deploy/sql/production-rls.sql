@@ -60,6 +60,8 @@ DECLARE
     'document_extraction_field', 'receipt_upload_authorization', 'receipt_inbox_item',
     'document_governance_event', 'document_correction',
     'document_purge_request', 'document_tombstone', 'document_access_event',
+    'expense_category', 'expense_policy', 'expense_policy_version',
+    'expense_line_policy_snapshot', 'expense_bank_charge_override',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',

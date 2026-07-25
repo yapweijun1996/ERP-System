@@ -846,9 +846,11 @@ cleanup pass Demo/API, five-language and responsive proof.
 
 ## Phase 37 — Expense Claims & Accounting (Planned)
 
-1. **Policy and claim authoring** (EPIC-055, TASK-123/124) support employee-paid and
-   company-paid expense lines, receipt inbox, effective tax/GL/FX policy,
-   department/cost-centre/project allocation and verifiable actual card charges.
+1. **Effective tax/GL/FX policy** (TASK-123 done 2026-07-26) snapshots category,
+   evidence, limits, payment source, Decimal tax/FX and account mappings at submission;
+   Finance-only clean evidence may append a verified actual bank charge. **Claim
+   authoring** (TASK-124) adds employee-paid/company-paid multi-line claims, receipt
+   inbox and exact department/cost-centre/project allocation.
 2. **Approval and control** (TASK-125/126) add manager + Finance line decisions,
    configurable extra levels, multi-signal duplicate blocking, budget
    warning/add-level/block and corporate-card CSV/Excel reconciliation.
