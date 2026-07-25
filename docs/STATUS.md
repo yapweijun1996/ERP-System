@@ -115,7 +115,7 @@ hardcoded fictional customer regardless of the active company.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. Its dashboard locator survives service-worker navigation and has a 45-second budget above PGlite's bounded 20-second cold-start watchdog, avoiding slow-runner races without suppressing console/page errors. |
-| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 121 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **117 Canonical / 4 Preview**. Preview pages distinguish Sample Data from Canonical Data and lock write-like actions. |
+| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 121 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **118 Canonical / 3 Preview**. Preview pages distinguish Sample Data from Canonical Data and lock write-like actions. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; both `item-master` and the separate five-language `new-item` composer write through that audited Demo/API command. `new-item` now stores only real product fields, accepts a company-unique SKU and removes the sample form's fabricated USD/GST, accounting, costing, shelf-life and negative-stock controls. New items start at 0 on hand with no stock projection or movement — initial quantity must use Purchase Receipt or Stock Adjustment. Duplicate SKU is an atomic 409; delete remains honestly unsupported rather than mutating local sample data. |
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
@@ -146,22 +146,22 @@ hardcoded fictional customer regardless of the active company.
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
 | `make setup-interactive` (`scripts/setup.sh --interactive`) | ✅ Working | Prompts for bundled-vs-external database, auto-generates strong secrets on a blank answer (validated: e.g. a manually-typed `ERP_TOKEN_ENCRYPTION_KEY` must satisfy `tokenCrypto.ts`'s exact 32-byte contract or the script re-prompts, instead of letting `api` crash at boot), and checks WEB_PORT/API_PORT/DB_PORT for real collisions. `docker-compose.yml`'s `api`/`worker` `DATABASE_URL` now genuinely honors an external override instead of silently ignoring it. Verified live end-to-end three times against real Docker (plain non-interactive, `--interactive` bundled, `--interactive` external against a standalone `postgres:16-alpine` container) — the external run's `docker compose ps` confirmed the bundled `db` service was never created, and a direct `psql` query against the standalone container confirmed seed data genuinely landed there. TASK-060, EPIC-025. **Also fixed along the way**: the `web` service's Docker build had been silently broken since 2026-07-18 (build context couldn't reach `erp-demo-runtime-impl.ts`'s cross-workspace imports into `src/`) — nobody caught it because local dev/typecheck/`build:demo` all run from the repo root, where the paths resolve fine regardless of the Docker isolation bug. Fixed by widening `web`'s build context to the repo root, matching `Dockerfile.api`'s established pattern. |
 | PostgreSQL concurrency/parity proof | ✅ Working | `POSTGRES_URL=... npm run demo` — proven twice against real Postgres (host + inside verification), TASK-013 |
-| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Working | `erp-system-api-adapter.js` calls the authenticated API with no sample fallback. All **117 current Canonical routes** support Demo/API. My Leave and Leave Application are writable actor-owned routes; the other four My Work routes remain Canonical-data Preview shells. An Employee-only session can boot its restricted shell without `dashboard.read`. Company switching re-fetches the authenticated tenant scope and capability context. |
+| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Working | `erp-system-api-adapter.js` calls the authenticated API with no sample fallback. All **118 current Canonical routes** support Demo/API. My Leave, Leave Application and My Approvals are governed writable routes; Claims, Receipts and Team Calendar remain Canonical-data Preview shells. An Employee-only session can boot its restricted shell without `dashboard.read`. Company switching re-fetches the authenticated tenant scope and capability context. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production one-time setup | ✅ Working | The API-mode wizard collects the installer token in memory and calls `POST /api/setup/actions/complete` with `X-ERP-Setup-Token`. A database singleton locks concurrent attempts; the command only works with zero users and atomically creates tenant/company/admin/role/permissions/tax/accounts. |
-| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v111) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale signed-in state after logout. |
+| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v112) — the Cache API keys purely on URL and ignores cookies, so caching session-scoped responses could serve a stale signed-in state after logout. |
 
 ## Canonical and Preview route boundary
 
 121 routes are registered in the live `SCREENS` registry. `SCREEN_META` is the source
-of truth for production maturity at route level: **117 routes are Canonical and 4 are
+of truth for production maturity at route level: **118 routes are Canonical and 3 are
 Preview**. TASK-113 promotes the governed `my-leave` list and adds the Canonical
-`leave-application` detail; Claim, Receipt, Team Calendar and My Approvals remain
-Preview until their domain tasks.
+`leave-application` detail; TASK-114 promotes `my-approvals`. Claim, Receipt and Team
+Calendar remain Preview until their domain tasks.
 
 Preview routes remain open for evaluation. Sample-backed routes use
-`Preview · Sample Data`; TASK-109's governed actor-backed routes use
-`Preview · Canonical Data` because their complete Claim/Receipt/approval workflows are
+`Preview · Sample Data`; TASK-109's remaining actor-backed routes use
+`Preview · Canonical Data` because their complete Claim/Receipt/calendar workflows are
 not yet delivered. In both cases write-like actions are disabled. A route may move to
 Canonical only after its full workflow, permissions, tests and localization pass. The
 screen audit enforces both sides.
@@ -862,7 +862,7 @@ Session-bound employee's real requests. Claims and Receipts verify the actor and
 their explicit `not_modelled` ownership instead of sample transactions. Team Calendar
 and My Approvals are removed from navigation unless `/api/my/context` grants
 `team.available`; their rows omit reason/evidence and the approval entry remains
-read-only pending TASK-113/114.
+read-only at the TASK-109 boundary. TASK-114 later promotes My Approvals to Canonical.
 
 The API adapter now falls back from a denied management dashboard to an actor-derived
 restricted shell, so an Employee-only account can sign in without `dashboard.read`.
@@ -938,14 +938,56 @@ console error. That proof also caught and fixed the post-TASK-106 Demo setup col
 the seeded `admin` username is no longer reused for a different email, and username or
 email conflicts fail before setup writes.
 
+## Configurable approval governance (TASK-114, 2026-07-25)
+
+TASK-114 adds migration 0053 and ten tenant-scoped governance tables: effective-dated
+approval policies, versions and ordered steps; workflow instances and step authority
+snapshots; immutable decisions and events; bounded delegations; leave-capacity rules;
+and immutable capacity snapshots. Policy resolution ranks priority and specificity
+across employee, department, leave type, days, amount and currency, rejecting
+ambiguity. Steps support direct manager, named employee and permission authority with
+fallback/escalation. The command boundary forbids self-approval and preserves original
+authority alongside direct, delegated, permission or escalated decision provenance.
+
+Leave submission now creates its workflow inside the same reservation transaction.
+Intermediate approval advances the ordered step without consuming entitlement; final
+approval consumes the reservation, rejection releases it, and withdrawal/Void cancels
+the pending workflow. Time-bounded delegations are capped at 90 days, revocable and
+historically retained. Reminder and escalation events/notifications are idempotent.
+Capacity is snapshotted at submission and re-evaluated at decision, applying Warning,
+an additional approval level or a hard block.
+
+`/api/my/approvals` exposes only the signed-in actor's actionable queue and
+privacy-redacted detail. It never returns the employee's private reason or evidence
+reference. Decision endpoints use CSRF, idempotency, optimistic request versions and
+audit; delegation endpoints derive the delegator from Session. The five-language
+`my-approvals` page now renders through `master-detail-register-v1` with real Demo/API
+approve, reject, create-delegation and revoke commands. PWA v112 promotes the route,
+bringing the registry to **121 total: 118 Canonical / 3 Preview**.
+
+Live in-app-browser proof on a fresh organisation submitted a six-day Annual request,
+showed its Warehouse capacity Warning without exposing the private reason, completed
+direct-manager then HR approval in order, and confirmed the employee request became
+Approved only after the second decision. A future-dated delegation was created,
+reopened, revoked and still retained as historical fact. The same proof caught and
+fixed a real maturity-registry regression that had left approve/reject controls
+disabled after the page rewrite.
+
+Final verification passes lint, both TypeScript projects, 446 tests plus one expected
+skip, all 54 ordered migrations at schema version 53, 157-table drift, the PGlite
+transaction demo, API and Demo builds, desktop/mobile smoke, all 48 list layouts, all
+four Case Details and all 121 desktop/375px routes. The maturity contract is
+**118 Canonical / 3 Preview** with zero console/page errors or identity leaks.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
 five My Work shell routes and the identity security proof. TASK-111 delivered the
-policy/calendar foundation, TASK-112 the immutable ledger and TASK-113 the governed
-leave lifecycle plus two Canonical leave routes. TASK-114 through TASK-135 remain
-planning records and must not be counted as implemented tables, permissions, commands
-or Canonical workflows until their individual gates pass.
+policy/calendar foundation, TASK-112 the immutable ledger, TASK-113 the governed
+leave lifecycle plus two Canonical leave routes and TASK-114 the generic approval,
+delegation and capacity boundary. TASK-115 through TASK-135 remain planning records
+and must not be counted as implemented tables, permissions, commands or Canonical
+workflows until their individual gates pass.
 
 The programme is intentionally ordered:
 
@@ -981,10 +1023,10 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 112 tasks, including TASK-113
+- Done: 113 tasks, including TASK-114
 - Blocked: TASK-017 (1)
-- Todo: 22 planned tasks (TASK-114–135) across EPIC-053–056. These extend the product
-  beyond the current 117 Canonical / 4 Preview boundary; they do not reopen or
+- Todo: 21 planned tasks (TASK-115–135) across EPIC-053–056. These extend the product
+  beyond the current 118 Canonical / 3 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 48 audited
   list-layout routes. Future Leave/Receipt/Expense/Tax routes must join the appropriate
   existing SSOT or the planned `calendar-workspace-v1` only after governed Demo/API

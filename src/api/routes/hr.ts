@@ -31,6 +31,7 @@ import {
 } from '../../modules/hr/leaveApplication';
 import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
 import { LeavePolicyError } from '../../modules/hr/leavePolicy';
+import { ApprovalWorkflowError } from '../../modules/approval/workflow';
 
 export interface HrRouterOptions {
   tokenEncryptionKey?: Buffer;
@@ -53,9 +54,15 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       error instanceof LeaveApplicationError
       || error instanceof LeaveBalanceError
       || error instanceof LeavePolicyError
+      || error instanceof ApprovalWorkflowError
     ) {
-      const status = error instanceof LeaveApplicationError ? error.status : 422;
-      const details = error instanceof LeaveApplicationError || error instanceof LeaveBalanceError
+      const status = error instanceof LeaveApplicationError
+        || error instanceof ApprovalWorkflowError
+        ? error.status
+        : 422;
+      const details = error instanceof LeaveApplicationError
+        || error instanceof LeaveBalanceError
+        || error instanceof ApprovalWorkflowError
         ? error.details
         : undefined;
       apiError(res, status, error.code, error.message, details);

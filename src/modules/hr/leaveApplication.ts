@@ -19,6 +19,11 @@ import {
   settlePaidLeaveReservationWithin,
 } from './leaveBalance';
 import {
+  decideLeaveApprovalWithin,
+  startLeaveApprovalWithin,
+} from './leaveApproval';
+import { cancelApprovalForEntityWithin } from '../approval/workflow';
+import {
   calculateLeaveDuration,
   resolveLeavePolicyVersion,
   resolveWorkingCalendarVersion,
@@ -436,6 +441,16 @@ export async function submitLeaveApplicationWithin(
       actorUserId: actor.userId,
     });
   }
+  const approval = await startLeaveApprovalWithin(exec, scope, {
+    requestId: row.id,
+    revisionNo: row.currentRevisionNo,
+    employeeId: row.employeeId,
+    submittedByUserId: actor.userId,
+    leaveTypeId: revision.leaveTypeId,
+    startDate: revision.startDate,
+    endDate: revision.endDate,
+    days: revision.days,
+  }, now);
   const version = row.version + 1;
   await exec.update(leaveRequest).set({
     status: 'pending',
@@ -453,7 +468,7 @@ export async function submitLeaveApplicationWithin(
     actorUserId: actor.userId,
     occurredAt: now,
   });
-  return { id: row.id, status: 'pending' as const, version };
+  return { id: row.id, status: 'pending' as const, version, approval };
 }
 
 async function releaseReservationIfPaid(
@@ -496,6 +511,13 @@ export async function withdrawLeaveApplicationWithin(
     throw new LeaveApplicationError('leave_not_pending', 'Only Pending leave can be withdrawn.', 409);
   }
   const normalizedReason = requireReason(reason, 'withdrawal_reason_required');
+  await cancelApprovalForEntityWithin(exec, scope, {
+    domain: 'leave',
+    entityType: 'leave_request',
+    entityId: row.id,
+    actorUserId: actor.userId,
+    reason: normalizedReason,
+  }, now);
   await releaseReservationIfPaid(exec, scope, actor.userId, row, 'release');
   const version = row.version + 1;
   await exec.update(leaveRequest).set({
@@ -525,9 +547,6 @@ export async function decideGovernedLeaveWithin(
   reason?: string | null,
   now = new Date(),
 ) {
-  if (!actor.canManage) {
-    throw new LeaveApplicationError('permission_denied', 'Leave approval permission is required.', 403);
-  }
   const row = await requestForUpdate(exec, scope, requestId);
   assertVersion(row, expectedVersion);
   if (actor.employeeId === row.employeeId) {
@@ -536,9 +555,26 @@ export async function decideGovernedLeaveWithin(
   if (row.status !== 'pending') {
     throw new LeaveApplicationError('leave_not_pending', 'Only Pending leave can be decided.', 409);
   }
-  const decisionReason = decision === 'rejected'
-    ? requireReason(reason, 'rejection_reason_required')
-    : cleanReason(reason);
+  const approval = await decideLeaveApprovalWithin(exec, scope, {
+    requestId: row.id,
+    actorUserId: actor.userId,
+    decision,
+    reason,
+  }, now);
+  const decisionReason = cleanReason(reason);
+  if (approval.status === 'pending') {
+    const version = row.version + 1;
+    await exec.update(leaveRequest).set({
+      version,
+      updatedAt: now,
+    }).where(eq(leaveRequest.id, row.id));
+    return {
+      id: row.id,
+      status: 'pending' as const,
+      version,
+      approval,
+    };
+  }
   await releaseReservationIfPaid(
     exec, scope, actor.userId, row, decision === 'approved' ? 'use' : 'release',
   );
@@ -562,7 +598,7 @@ export async function decideGovernedLeaveWithin(
     actorUserId: actor.userId,
     occurredAt: now,
   });
-  return { id: row.id, status: decision, version };
+  return { id: row.id, status: decision, version, approval };
 }
 
 export async function voidLeaveApplicationWithin(
@@ -588,6 +624,13 @@ export async function voidLeaveApplicationWithin(
   }
   const voidReason = requireReason(reason, 'void_reason_required');
   if (row.status === 'pending') {
+    await cancelApprovalForEntityWithin(exec, scope, {
+      domain: 'leave',
+      entityType: 'leave_request',
+      entityId: row.id,
+      actorUserId: actor.userId,
+      reason: voidReason,
+    }, now);
     await releaseReservationIfPaid(exec, scope, actor.userId, row, 'release');
   }
   const version = row.version + 1;

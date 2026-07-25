@@ -503,7 +503,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
-  'my-leave','leave-application',
+  'my-leave','leave-application','my-approvals',
   'integration-logs','data-import',
   'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
@@ -523,7 +523,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'integration','master-control','sys-settings',
 ]);
 const CANONICAL_DATA_PREVIEW_ROUTES = new Set([
-  'my-claims','my-receipts','team-calendar','my-approvals',
+  'my-claims','my-receipts','team-calendar',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -673,10 +673,11 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
     'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
     'service-contracts','asset-register','user-mgmt',
-    'my-leave','my-claims','my-receipts','team-calendar','my-approvals',
+    'my-leave','my-claims','my-receipts','team-calendar',
   ],
   'master-detail-register-v1':[
     'item-master','stock-on-hand','leave-approval','payroll-run','depreciation',
+    'my-approvals',
   ],
   'report-list-v1':[
     'inv-valuation','ar-aging',

@@ -25,6 +25,7 @@ import {
 import {
   amendLeaveApplicationWithin,
   createLeaveDraftWithin,
+  decideGovernedLeaveWithin,
   readGovernedLeaveWithin,
   requestApprovedLeaveCancellationWithin,
   submitLeaveApplicationWithin,
@@ -33,6 +34,16 @@ import {
   type LeaveApplicationActor,
   type LeaveRevisionInput,
 } from '../../src/modules/hr/leaveApplication';
+import {
+  listMyLeaveApprovalsWithin,
+  readMyLeaveApprovalWithin,
+} from '../../src/modules/hr/leaveApproval';
+import {
+  createApprovalDelegationWithin,
+  listApprovalDelegationCandidatesWithin,
+  listApprovalDelegationsWithin,
+  revokeApprovalDelegationWithin,
+} from '../../src/modules/approval/workflow';
 import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
@@ -520,6 +531,64 @@ export const erpDemoRuntime = Object.freeze({
       return requestApprovedLeaveCancellationWithin(
         asDomainDb(db), scope, actor, requestId, expectedVersion, reason,
       );
+    },
+    listMyLeaveApprovalsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+    ) {
+      return listMyLeaveApprovalsWithin(asDomainDb(db), scope, actorUserId);
+    },
+    readMyLeaveApprovalWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      requestId: number,
+    ) {
+      return readMyLeaveApprovalWithin(asDomainDb(db), scope, actorUserId, requestId);
+    },
+    decideGovernedLeaveWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      requestId: number,
+      expectedVersion: number,
+      decision: 'approved' | 'rejected',
+      reason?: string | null,
+    ) {
+      return decideGovernedLeaveWithin(
+        asDomainDb(db), scope, actor, requestId, expectedVersion, decision, reason,
+      );
+    },
+    listApprovalDelegationsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      authorityEmployeeId: number,
+    ) {
+      return listApprovalDelegationsWithin(asDomainDb(db), scope, authorityEmployeeId);
+    },
+    listApprovalDelegationCandidatesWithin(
+      db: DemoOrm,
+      scope: Scope,
+      authorityEmployeeId: number,
+    ) {
+      return listApprovalDelegationCandidatesWithin(
+        asDomainDb(db), scope, authorityEmployeeId,
+      );
+    },
+    createApprovalDelegationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: Parameters<typeof createApprovalDelegationWithin>[2],
+    ) {
+      return createApprovalDelegationWithin(asDomainDb(db), scope, input);
+    },
+    revokeApprovalDelegationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: Parameters<typeof revokeApprovalDelegationWithin>[2],
+    ) {
+      return revokeApprovalDelegationWithin(asDomainDb(db), scope, input);
     },
     resolveTeamEmployeeIdsWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return resolveTeamEmployeeIdsWithin(asDomainDb(db), scope, employeeId);

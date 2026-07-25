@@ -984,8 +984,172 @@ async function renderMyWorkTeamRoute(root,{route,approvals=false}){
 SCREENS['team-calendar']=async function(root){
   return renderMyWorkTeamRoute(root,{route:'team-calendar'});
 };
+
+function myApprovalCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'My Approvals',description:'Decide policy-assigned leave steps, including delegated and escalated authority.',step:'Current step',submitted:'Submitted',due:'Escalation due',capacity:'Capacity control',privacy:'Employee reasons and document references remain private in this manager view.',approve:'Approve step',reject:'Reject',note:'Decision note',reason:'Rejection reason',reasonHint:'Required audit reason of at least 3 characters.',approved:'Approval step completed.',rejected:'Leave request rejected.',failed:'The approval decision could not be completed.',delegation:'Manage delegation',delegationTitle:'Approval delegation',delegate:'Delegate to',from:'Valid from',to:'Valid to',delegationReason:'Delegation reason',createDelegation:'Create delegation',revoke:'Revoke',activeDelegations:'Active and historical delegations',noDelegations:'No delegations created.',delegated:'Delegation created.',revoked:'Delegation revoked.',warn:'Warning only',extra:'Extra approval required',block:'Approval blocked',remaining:'staff remain',select:'Select an approval',selectBody:'Choose a policy-assigned leave request to review its governed decision step.'},
+    ms:{title:'Kelulusan Saya',description:'Putuskan langkah cuti yang ditugaskan dasar, termasuk kuasa wakil dan eskalasi.',step:'Langkah semasa',submitted:'Dihantar',due:'Eskalasi perlu',capacity:'Kawalan kapasiti',privacy:'Sebab pekerja dan rujukan dokumen kekal peribadi dalam paparan pengurus.',approve:'Luluskan langkah',reject:'Tolak',note:'Nota keputusan',reason:'Sebab penolakan',reasonHint:'Sebab audit sekurang-kurangnya 3 aksara diperlukan.',approved:'Langkah kelulusan selesai.',rejected:'Permohonan cuti ditolak.',failed:'Keputusan kelulusan gagal.',delegation:'Urus perwakilan',delegationTitle:'Perwakilan kelulusan',delegate:'Wakil kepada',from:'Sah dari',to:'Sah hingga',delegationReason:'Sebab perwakilan',createDelegation:'Cipta perwakilan',revoke:'Batalkan',activeDelegations:'Perwakilan aktif dan sejarah',noDelegations:'Tiada perwakilan.',delegated:'Perwakilan dicipta.',revoked:'Perwakilan dibatalkan.',warn:'Amaran sahaja',extra:'Kelulusan tambahan diperlukan',block:'Kelulusan disekat',remaining:'kakitangan kekal',select:'Pilih kelulusan',selectBody:'Pilih permohonan cuti yang ditugaskan untuk menyemak langkah keputusan.'},
+    zh:{title:'我的审批',description:'处理按政策分配的请假审批步骤，并支持限时代理与升级权限。',step:'当前步骤',submitted:'提交时间',due:'升级期限',capacity:'人力容量控制',privacy:'主管视图不会显示员工的私人原因及文件引用。',approve:'批准此步骤',reject:'拒绝',note:'决定备注',reason:'拒绝原因',reasonHint:'必须填写至少 3 个字符的审计原因。',approved:'审批步骤已完成。',rejected:'请假申请已拒绝。',failed:'无法完成审批决定。',delegation:'管理代理',delegationTitle:'审批代理',delegate:'代理人',from:'生效时间',to:'结束时间',delegationReason:'代理原因',createDelegation:'建立代理',revoke:'撤销',activeDelegations:'有效及历史代理',noDelegations:'尚未建立代理。',delegated:'审批代理已建立。',revoked:'审批代理已撤销。',warn:'仅警告',extra:'需要额外审批',block:'禁止批准',remaining:'名员工留岗',select:'选择审批事项',selectBody:'请选择一项按政策分配的请假，以处理当前受治理的审批步骤。'},
+    ja:{title:'自分の承認',description:'委任・エスカレーションを含む、ポリシーで割り当てられた休暇承認を決定します。',step:'現在のステップ',submitted:'提出日時',due:'エスカレーション期限',capacity:'要員管理',privacy:'管理者ビューでは従業員の理由と文書参照を表示しません。',approve:'ステップを承認',reject:'却下',note:'決定メモ',reason:'却下理由',reasonHint:'3文字以上の監査理由が必要です。',approved:'承認ステップが完了しました。',rejected:'休暇申請を却下しました。',failed:'承認を完了できませんでした。',delegation:'委任を管理',delegationTitle:'承認の委任',delegate:'委任先',from:'開始',to:'終了',delegationReason:'委任理由',createDelegation:'委任を作成',revoke:'取消',activeDelegations:'有効・過去の委任',noDelegations:'委任はありません。',delegated:'委任を作成しました。',revoked:'委任を取り消しました。',warn:'警告のみ',extra:'追加承認が必要',block:'承認をブロック',remaining:'人が残ります',select:'承認を選択',selectBody:'ポリシーで割り当てられた休暇申請を選択してください。'},
+    vi:{title:'Phê duyệt của tôi',description:'Quyết định bước nghỉ phép được chính sách giao, gồm ủy quyền và leo thang.',step:'Bước hiện tại',submitted:'Đã gửi',due:'Hạn leo thang',capacity:'Kiểm soát nhân lực',privacy:'Lý do riêng và tham chiếu tài liệu không hiển thị trong chế độ quản lý.',approve:'Duyệt bước',reject:'Từ chối',note:'Ghi chú quyết định',reason:'Lý do từ chối',reasonHint:'Cần lý do kiểm toán ít nhất 3 ký tự.',approved:'Đã hoàn tất bước phê duyệt.',rejected:'Đã từ chối đơn nghỉ phép.',failed:'Không thể hoàn tất quyết định.',delegation:'Quản lý ủy quyền',delegationTitle:'Ủy quyền phê duyệt',delegate:'Ủy quyền cho',from:'Hiệu lực từ',to:'Hiệu lực đến',delegationReason:'Lý do ủy quyền',createDelegation:'Tạo ủy quyền',revoke:'Thu hồi',activeDelegations:'Ủy quyền hiện tại và lịch sử',noDelegations:'Chưa có ủy quyền.',delegated:'Đã tạo ủy quyền.',revoked:'Đã thu hồi ủy quyền.',warn:'Chỉ cảnh báo',extra:'Cần thêm cấp duyệt',block:'Chặn phê duyệt',remaining:'nhân viên còn lại',select:'Chọn phê duyệt',selectBody:'Chọn đơn nghỉ phép được chính sách giao để xử lý bước quyết định.'},
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
 SCREENS['my-approvals']=async function(root){
-  return renderMyWorkTeamRoute(root,{route:'my-approvals',approvals:true});
+  const c=myApprovalCopy();
+  const w=myWorkCopy();
+  const adapter=myWorkAdapter();
+  let rows=[];
+  let loadError=null;
+  try{
+    rows=(await adapter.approvals()).data||[];
+  }catch(error){
+    loadError=error&&error.message||c('failed');
+  }
+  let busyId=null;
+  let actionError=null;
+  const tone={warn:'warn',extra_approval:'violet',block:'danger',none:'neutral'};
+  const capacityLabel=action=>c(action==='extra_approval'?'extra':action);
+  async function decide(row,action,reason){
+    busyId=row.requestId; actionError=null; page.render();
+    try{
+      const result=await adapter.approvalAction(row.requestId,action,{
+        expectedVersion:row.requestVersion,reason:reason||'',
+      });
+      rows=(await adapter.approvals()).data||[];
+      busyId=null;
+      toast(action==='approve'?c('approved'):c('rejected'),action==='approve'?'ok':'danger');
+      if(result.data&&result.data.status==='pending'){
+        navigate('my-approvals');
+      }else{
+        page.setFilter(page.getFilter());
+      }
+    }catch(error){
+      busyId=null;
+      actionError={id:row.requestId,message:error&&error.message||c('failed')};
+      page.render();
+    }
+  }
+  function detail(row){
+    const capacity=row.capacity;
+    const busy=String(busyId)===String(row.requestId);
+    const error=actionError&&String(actionError.id)===String(row.requestId)
+      ?actionError.message:null;
+    return `<div class="detail-head"><span class="grabber"></span>
+      <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
+      <div class="dh-top">${profileAvatar({name:row.employeeName,cls:'cav',size:42})}
+        <div><h2>${esc(row.employeeName)}</h2><span class="sub">${esc(row.department)} · ${esc(row.jobTitle||'—')}</span></div>
+        <div style="margin-left:auto">${cap(c('step')+' '+row.currentStepNo,'warn')}</div>
+      </div></div>
+      <div class="detail-body">
+        ${error?`<div class="alert danger">${ic('warn')}<span>${esc(error)}</span></div>`:''}
+        <div class="alert info">${ic('shield')}<span>${esc(c('privacy'))}</span></div>
+        <div class="statgrid c3">
+          <div class="stat"><small>${esc(c('step'))}</small><b>${esc(row.stepLabel)}</b></div>
+          <div class="stat"><small>${esc(c('submitted'))}</small><b>${esc(dateValue(row.stepActivatedAt||row.startDate))}</b></div>
+          <div class="stat"><small>${esc(w('days'))}</small><b class="tnum">${esc(String(row.days))}</b></div>
+        </div>
+        <div class="card">
+          <div class="field"><span class="k">${esc(w('leaveType'))}</span><span class="v">${esc(row.leaveType)}</span></div>
+          <div class="field"><span class="k">${esc(w('dates'))}</span><span class="v">${esc(dateValue(row.startDate))} → ${esc(dateValue(row.endDate))}</span></div>
+          <div class="field"><span class="k">${esc(c('due'))}</span><span class="v">${row.stepDueAt?esc(dateValue(row.stepDueAt)):'—'}</span></div>
+        </div>
+        ${capacity?`<div class="alert ${capacity.breached?(capacity.action==='block'?'danger':'warn'):'ok'}">
+          ${ic(capacity.action==='block'?'warn':'people')}<span><b>${esc(c('capacity'))} · ${esc(capacityLabel(capacity.action))}</b><br>
+          ${esc(String(capacity.remainingStaff))} ${esc(c('remaining'))} · minimum ${esc(String(capacity.minimumStaff))}</span></div>`:''}
+      </div>
+      <div class="set-savebar"><div class="grow"></div>
+        ${btn(c('reject'),{icon:'x',cls:'danger',attrs:`data-approval-action="reject"${busy?' disabled':''}`})}
+        ${btn(c('approve'),{icon:'check',cls:'primary',attrs:`data-approval-action="approve"${busy?' disabled':''}`})}
+      </div>`;
+  }
+  async function openDelegation(){
+    const [delegations,candidates]=await Promise.all([
+      adapter.approvalDelegations(),adapter.approvalDelegationCandidates(),
+    ]);
+    const history=delegations.data||[];
+    const choices=(candidates.data||[]).map(person=>`<option value="${person.id}">${esc(person.fullName)} · ${esc(person.department)}</option>`).join('');
+    const historyHtml=history.length?history.map(item=>`<div class="card" style="margin-bottom:8px">
+      <div class="field"><span class="k">${esc(item.delegateName)}</span><span class="v">${esc(dateValue(item.validFrom))} → ${esc(dateValue(item.validTo))}</span></div>
+      <div class="field"><span class="k">${esc(item.reason)}</span><span class="v">${item.revokedAt?cap(c('revoked'),'neutral'):btn(c('revoke'),{icon:'x',cls:'soft',sm:true,attrs:`data-revoke-delegation="${item.id}"`})}</span></div>
+    </div>`).join(''):`<p class="muted">${esc(c('noDelegations'))}</p>`;
+    appModal({icon:'flow',title:c('delegationTitle'),width:'min(760px, calc(100vw - 24px))',body:`
+      <div class="fldrow c3"><div class="fld"><span>${esc(c('delegate'))}</span><select id="approvalDelegate">${choices}</select></div>
+      <div class="fld"><span>${esc(c('from'))}</span><input id="approvalDelegateFrom" type="datetime-local"></div>
+      <div class="fld"><span>${esc(c('to'))}</span><input id="approvalDelegateTo" type="datetime-local"></div></div>
+      <div class="fld"><span>${esc(c('delegationReason'))}</span><input id="approvalDelegateReason"></div>
+      <h4>${esc(c('activeDelegations'))}</h4>${historyHtml}`,
+      actions:`${btn(t('common.close'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c('createDelegation'),{icon:'plus',cls:'primary',attrs:'data-create-delegation'})}`,
+    });
+    $('#modalEl').querySelector('[data-create-delegation]')?.addEventListener('click',async event=>{
+      const button=event.currentTarget;
+      const delegateId=Number($('#approvalDelegate').value);
+      const validFrom=$('#approvalDelegateFrom').value;
+      const validTo=$('#approvalDelegateTo').value;
+      const reason=$('#approvalDelegateReason').value.trim();
+      if(!delegateId||!validFrom||!validTo||reason.length<3){
+        toast(c('reasonHint'),'danger'); return;
+      }
+      button.disabled=true;
+      try{
+        await adapter.createApprovalDelegation({
+          domain:'leave',delegateId,
+          validFrom:new Date(validFrom).toISOString(),
+          validTo:new Date(validTo).toISOString(),reason,
+        });
+        closeModal(); toast(c('delegated'),'ok');
+      }catch(error){button.disabled=false;toast(error&&error.message||c('failed'),'danger');}
+    });
+    $('#modalEl').querySelectorAll('[data-revoke-delegation]').forEach(button=>button.addEventListener('click',async()=>{
+      button.disabled=true;
+      try{await adapter.revokeApprovalDelegation(Number(button.dataset.revokeDelegation));closeModal();toast(c('revoked'),'ok');}
+      catch(error){button.disabled=false;toast(error&&error.message||c('failed'),'danger');}
+    }));
+  }
+  let page=masterDetailRegisterPage(root,{
+    module:'mywork',route:'my-approvals',title:c('title'),description:c('description'),
+    rows:()=>rows,rowId:row=>row.requestId,filters:[],
+    note:()=>loadError,
+    toolbarActions:[{
+      label:c('delegation'),icon:'flow',onClick:openDelegation,disabled:!!loadError,
+    }],
+    kpis:()=>[
+      {label:c('title'),value:rows.length,accent:rows.length>0},
+      {label:c('block'),value:rows.filter(row=>row.capacity&&row.capacity.action==='block'&&row.capacity.breached).length,negative:true},
+    ],
+    columns:[
+      {label:w('employee'),align:'l',w:'minmax(180px,2fr)',render:row=>`<div class="cellsub"><b>${esc(row.employeeName)}</b><small>${esc(row.department)}</small></div>`},
+      {label:w('leaveType'),align:'l',render:row=>esc(row.leaveType)},
+      {label:w('dates'),align:'l',w:'minmax(160px,1.4fr)',render:row=>`${esc(dateValue(row.startDate))} → ${esc(dateValue(row.endDate))}`},
+      {label:c('step'),align:'l',render:row=>`<div class="cellsub"><b>${esc(row.stepLabel)}</b><small>#${esc(String(row.currentStepNo))}</small></div>`},
+      {label:c('capacity'),align:'l',render:row=>row.capacity?cap(capacityLabel(row.capacity.action),tone[row.capacity.action]||'neutral'):'—'},
+    ],
+    empty:{
+      icon:loadError?'warn':'check',
+      title:loadError?c('failed'):w('noApprovals'),
+      description:loadError||w('noApprovalsBody'),
+    },
+    detailPane:{
+      rowLabel:row=>`${c('title')} · ${row.employeeName}`,
+      initialSelectedId:()=>window.matchMedia('(max-width:980px)').matches?null:(rows[0]&&rows[0].requestId),
+      empty:`<div class="detail-empty">${ic('check')}<div><b>${esc(c('select'))}</b><small>${esc(c('selectBody'))}</small></div></div>`,
+      content:detail,
+      afterRender:({detailRoot,row})=>{
+        detailRoot?.querySelector('[data-approval-action="approve"]')?.addEventListener('click',()=>decide(row,'approve',''));
+        detailRoot?.querySelector('[data-approval-action="reject"]')?.addEventListener('click',()=>{
+          appModal({icon:'x',title:c('reject'),body:`<div class="fld"><span>${esc(c('reason'))}</span><textarea id="approvalRejectReason"></textarea><span class="hint">${esc(c('reasonHint'))}</span></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c('reject'),{icon:'x',cls:'danger-solid',attrs:'data-confirm-approval-reject'})}`});
+          $('#modalEl').querySelector('[data-confirm-approval-reject]')?.addEventListener('click',()=>{
+            const reason=$('#approvalRejectReason').value.trim();
+            if(reason.length<3){toast(c('reasonHint'),'danger');return;}
+            closeModal();decide(row,'reject',reason);
+          });
+        });
+      },
+    },
+  });
 };
 
 /* ---------------- EMPLOYEE DIRECTORY (listing — module landing) ---------------- */

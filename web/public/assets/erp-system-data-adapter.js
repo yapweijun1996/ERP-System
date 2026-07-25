@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 52;
+  var DEMO_SCHEMA_VERSION = 53;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -2932,6 +2932,74 @@
       return {data:data,meta:{
         actorDerived:true,privacy:'reason_and_evidence_redacted',limit:100,
       }};
+    },
+    approvals:async function(){
+      var data=await withMyActor(function(orm){
+        return state.runtime.commands.listMyLeaveApprovalsWithin(
+          orm,SCOPE,myActorUserId());
+      });
+      return {data:data,meta:{
+        actorDerived:true,privacy:'reason_and_evidence_redacted',
+        decisionCommands:true,limit:100,
+      }};
+    },
+    approval:async function(id){
+      var data=await withMyActor(function(orm){
+        return state.runtime.commands.readMyLeaveApprovalWithin(
+          orm,SCOPE,myActorUserId(),Number(id));
+      });
+      return {data:data,meta:{
+        actorDerived:true,privacy:'reason_and_evidence_redacted',
+      }};
+    },
+    approvalAction:async function(id,name,payload){
+      payload=payload||{};
+      var data=await withMyActor(function(orm,actor){
+        return state.runtime.commands.decideGovernedLeaveWithin(
+          orm,SCOPE,{userId:myActorUserId(),employeeId:actor.id},
+          Number(id),Number(payload.expectedVersion),
+          name==='approve'?'approved':'rejected',String(payload.reason||''));
+      });
+      return {data:data,meta:{actorDerived:true}};
+    },
+    approvalDelegations:async function(){
+      var data=await withMyActor(function(orm,actor){
+        return state.runtime.commands.listApprovalDelegationsWithin(
+          orm,SCOPE,actor.id);
+      });
+      return {data:data,meta:{actorDerived:true,maximumDays:90}};
+    },
+    approvalDelegationCandidates:async function(){
+      var data=await withMyActor(function(orm,actor){
+        return state.runtime.commands.listApprovalDelegationCandidatesWithin(
+          orm,SCOPE,actor.id);
+      });
+      return {data:data,meta:{actorDerived:true,fields:'business_identity_only'}};
+    },
+    createApprovalDelegation:async function(payload){
+      payload=payload||{};
+      var data=await withMyActor(function(orm,actor){
+        return state.runtime.commands.createApprovalDelegationWithin(orm,SCOPE,{
+          domain:String(payload.domain||'leave'),
+          authorityEmployeeId:actor.id,
+          delegateEmployeeId:Number(payload.delegateId),
+          validFrom:new Date(String(payload.validFrom||'')),
+          validTo:new Date(String(payload.validTo||'')),
+          reason:String(payload.reason||''),
+          createdByUserId:myActorUserId(),
+        });
+      });
+      return {data:data,meta:{actorDerived:true}};
+    },
+    revokeApprovalDelegation:async function(id){
+      var data=await withMyActor(function(orm,actor){
+        return state.runtime.commands.revokeApprovalDelegationWithin(orm,SCOPE,{
+          delegationId:Number(id),
+          authorityEmployeeId:actor.id,
+          actorUserId:myActorUserId(),
+        });
+      });
+      return {data:data,meta:{actorDerived:true}};
     },
   };
 

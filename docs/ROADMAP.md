@@ -791,9 +791,12 @@ explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof
    five-language My Leave list/detail. “Delete” is implemented as a reasoned Void
    tombstone; submitted and approved records follow withdrawal/cancellation instead
    of destructive erasure.
-4. **Governed approval** (TASK-114) adds multi-level approval, policy resolution,
-   delegation/escalation and configurable minimum-staff controls. TASK-113 already
-   prevents self-approval at the command boundary without pre-empting this policy work.
+4. **Governed approval** (TASK-114 done 2026-07-25) adds versioned multi-level
+   policy resolution across employee, department, leave type, days, amount and
+   currency; direct-manager defaults; immutable authority/decision history;
+   time-bounded delegation; reminders/escalation; and minimum-staff
+   warn/add-level/block controls. `my-approvals` is now a privacy-redacted
+   five-language Canonical workspace with real Demo/API decisions and delegation.
 5. **Team calendar and Payroll integration** (TASK-115/116) introduce
    `calendar-workspace-v1`, role-redacted team availability, optional one-way external
    calendar delivery, unpaid-leave deduction and policy-controlled encashment.

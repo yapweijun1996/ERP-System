@@ -16,12 +16,24 @@ import {
   LeaveApplicationError,
   amendLeaveApplicationWithin,
   createLeaveDraftWithin,
+  decideGovernedLeaveWithin,
   readGovernedLeaveWithin,
   requestApprovedLeaveCancellationWithin,
   submitLeaveApplicationWithin,
   voidOwnLeaveApplicationWithin,
   withdrawLeaveApplicationWithin,
 } from '../../modules/hr/leaveApplication';
+import {
+  listMyLeaveApprovalsWithin,
+  readMyLeaveApprovalWithin,
+} from '../../modules/hr/leaveApproval';
+import {
+  ApprovalWorkflowError,
+  createApprovalDelegationWithin,
+  listApprovalDelegationCandidatesWithin,
+  listApprovalDelegationsWithin,
+  revokeApprovalDelegationWithin,
+} from '../../modules/approval/workflow';
 import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
 import { LeavePolicyError } from '../../modules/hr/leavePolicy';
 import { appendAudit } from '../audit';
@@ -80,9 +92,15 @@ export function createMyRouter(db: DB): Router {
       error instanceof LeaveApplicationError
       || error instanceof LeaveBalanceError
       || error instanceof LeavePolicyError
+      || error instanceof ApprovalWorkflowError
     ) {
-      const status = error instanceof LeaveApplicationError ? error.status : 422;
-      const details = error instanceof LeaveApplicationError || error instanceof LeaveBalanceError
+      const status = error instanceof LeaveApplicationError
+        || error instanceof ApprovalWorkflowError
+        ? error.status
+        : 422;
+      const details = error instanceof LeaveApplicationError
+        || error instanceof LeaveBalanceError
+        || error instanceof ApprovalWorkflowError
         ? error.details
         : undefined;
       apiError(res, status, error.code, error.message, details);
@@ -367,6 +385,188 @@ export function createMyRouter(db: DB): Router {
       }
     });
   }
+
+  router.get('/approvals', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        await resolveActorEmployeeWithin(tx, scope, session.userId);
+        return listMyLeaveApprovalsWithin(tx, scope, session.userId);
+      });
+      res.json({
+        data,
+        meta: {
+          actorDerived: true,
+          privacy: 'reason_and_evidence_redacted',
+          decisionCommands: true,
+          limit: 100,
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.get('/approvals/:requestId', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const requestId = positiveId(req.params.requestId);
+    if (!requestId) {
+      apiError(res, 400, 'invalid_id', 'requestId must be a positive integer.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        await resolveActorEmployeeWithin(tx, scope, session.userId);
+        return readMyLeaveApprovalWithin(tx, scope, session.userId, requestId);
+      });
+      res.json({
+        data,
+        meta: { actorDerived: true, privacy: 'reason_and_evidence_redacted' },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  for (const action of ['approve', 'reject'] as const) {
+    router.post(`/approvals/:requestId/actions/${action}`, async (req, res) => {
+      const session = await requireSelf(req, res);
+      if (!session) return;
+      const requestId = positiveId(req.params.requestId);
+      if (!requestId) {
+        apiError(res, 400, 'invalid_id', 'requestId must be a positive integer.');
+        return;
+      }
+      const payload = {
+        expectedVersion: Number(req.body?.expectedVersion),
+        reason: typeof req.body?.reason === 'string' ? req.body.reason : '',
+      };
+      try {
+        await runLeaveCommand(
+          req,
+          res,
+          session,
+          `approval:${action}:${requestId}`,
+          payload,
+          (tx, scopeValue, actor) => decideGovernedLeaveWithin(
+            tx,
+            scopeValue,
+            actor,
+            requestId,
+            payload.expectedVersion,
+            action === 'approve' ? 'approved' : 'rejected',
+            payload.reason,
+          ),
+        );
+      } catch (error) {
+        handleActorError(res, error);
+      }
+    });
+  }
+
+  router.get('/approval-delegations', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
+        return listApprovalDelegationsWithin(tx, scope, actor.id);
+      });
+      res.json({ data, meta: { actorDerived: true, maximumDays: 90 } });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.get('/approval-delegation-candidates', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
+        return listApprovalDelegationCandidatesWithin(tx, scope, actor.id);
+      });
+      res.json({ data, meta: { actorDerived: true, fields: 'business_identity_only' } });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/approval-delegations', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const payload = {
+      domain: typeof req.body?.domain === 'string' ? req.body.domain : 'leave',
+      delegateId: Number(req.body?.delegateId),
+      validFrom: String(req.body?.validFrom ?? ''),
+      validTo: String(req.body?.validTo ?? ''),
+      reason: typeof req.body?.reason === 'string' ? req.body.reason : '',
+    };
+    const validFrom = new Date(payload.validFrom);
+    const validTo = new Date(payload.validTo);
+    if (
+      !Number.isSafeInteger(payload.delegateId)
+      || payload.delegateId <= 0
+      || Number.isNaN(validFrom.getTime())
+      || Number.isNaN(validTo.getTime())
+    ) {
+      apiError(res, 400, 'approval_delegation_invalid', 'Select a delegate and valid dates.');
+      return;
+    }
+    try {
+      await runLeaveCommand(
+        req,
+        res,
+        session,
+        'approval-delegation:create',
+        payload,
+        (tx, scopeValue, actor) => createApprovalDelegationWithin(tx, scopeValue, {
+          domain: payload.domain,
+          authorityEmployeeId: actor.employeeId,
+          delegateEmployeeId: payload.delegateId,
+          validFrom,
+          validTo,
+          reason: payload.reason,
+          createdByUserId: actor.userId,
+        }),
+        201,
+      );
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/approval-delegations/:delegationId/actions/revoke', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const delegationId = positiveId(req.params.delegationId);
+    if (!delegationId) {
+      apiError(res, 400, 'invalid_id', 'delegationId must be a positive integer.');
+      return;
+    }
+    try {
+      await runLeaveCommand(
+        req,
+        res,
+        session,
+        `approval-delegation:revoke:${delegationId}`,
+        {},
+        (tx, scopeValue, actor) => revokeApprovalDelegationWithin(tx, scopeValue, {
+          delegationId,
+          authorityEmployeeId: actor.employeeId,
+          actorUserId: actor.userId,
+        }),
+      );
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
 
   for (const resource of ['claims', 'receipts'] as const) {
     router.get(`/${resource}`, async (req, res) => {

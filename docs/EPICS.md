@@ -1918,10 +1918,17 @@ Legacy Policy marker and is never silently recomputed.
       erasure; legacy rows remain read-only snapshots. Medical content remains deferred
       to DocumentStorageProvider, while evidence-required/state metadata is privacy
       redacted for managers. PWA v111.
-- [ ] **TASK-114 — Add configurable approval, delegation and capacity controls.**
-      Default to direct manager, allow policy-driven additional levels, forbid
-      self-approval, support time-bounded delegates, reminders/escalation and
-      department minimum-staff warning/add-level/block behavior.
+- [x] **TASK-114 — Add configurable approval, delegation and capacity controls.**
+      Migration 0053 implements effective-dated, versioned approval policies with
+      employee/department/type/day/amount/currency conditions and ordered direct
+      manager, named employee or permission steps. Workflow instances snapshot the
+      original authority; immutable decisions/events distinguish direct, delegated
+      and escalated actors, while self-approval is rejected. Delegation is bounded,
+      revocable and historically retained; reminder/escalation notifications are
+      idempotent. Capacity snapshots re-evaluate department coverage and warn, append
+      a policy approval level or block. `my-approvals` is now a five-language
+      privacy-redacted Canonical Demo/API workspace with real decisions and delegation
+      management. PWA v112.
 - [ ] **TASK-115 — Add `calendar-workspace-v1` and optional outbound calendar sync.**
       Provide month/week/list team views, direct-report default scope, authorised
       hierarchy expansion, privacy-redacted availability and detail-drawer decisions;

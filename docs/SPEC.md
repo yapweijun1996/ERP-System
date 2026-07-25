@@ -107,7 +107,9 @@ TASK-110 proved the identity/security boundary including reporting-derived Manag
 authorization. TASK-111 implements the versioned policy/calendar foundation.
 TASK-112 implements the immutable leave-balance ledger and Pending reservation
 boundary. TASK-113 implements the versioned leave lifecycle, actor-owned authoring,
-privacy-controlled evidence metadata and approved cancellation. TASK-114–135 remain
+privacy-controlled evidence metadata and approved cancellation. TASK-114 implements
+versioned multi-level approval, bounded delegation, immutable authority/decision
+audit, reminders/escalation and minimum-staff capacity controls. TASK-115–135 remain
 **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
@@ -135,9 +137,15 @@ capabilities must not be represented as current Canonical behavior.
   split when insufficient; approval or rejection appends consumption or release.
 - **My Work shell:** My Leave, My Claims and My Receipts use the shared list SSOT.
   Team Calendar and My Approvals are present only when the actor context grants team
-  scope; team rows omit private reasons/evidence. Claims/Receipts and approval commands
-  remain honest unavailable/read-only states. `my-leave` and its governed
-  `leave-application` detail are Canonical; the other four shell routes remain Preview.
+  scope; team rows omit private reasons/evidence. Claims/Receipts remain honest
+  unavailable states. `my-leave`, its governed `leave-application` detail and
+  `my-approvals` are Canonical; Claims, Receipts and Team Calendar remain Preview.
+- **Governed approval:** confirmed effective-dated policy versions match employee,
+  department, leave type, days, amount and currency before instantiating ordered
+  direct-manager, named-employee or permission steps. Original authority is
+  snapshotted, self-approval is forbidden, time-bounded delegation retains original
+  authority, and immutable decisions/events distinguish direct, delegated and
+  escalated actors. Capacity re-evaluates warn, add-level or block behavior.
 - **Governed leave lifecycle:** every non-legacy request retains policy/calendar and
   immutable revision snapshots. Draft, Pending, Approved, Rejected, Withdrawn,
   Voided and Cancelled transitions require the expected version. Employee “delete”

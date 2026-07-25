@@ -137,8 +137,10 @@ SG and MY demo companies; production wires real auth.
 > five UI shell routes and no table. TASK-110 adds role-grant provenance without a
 > new table. TASK-111 adds the calendar/type/policy entities listed below. The
 > immutable balance ledger is implemented by TASK-112. TASK-113 adds the governed
-> leave request/revision/event/evidence/cancellation entities. The remaining entities
-> are approved targets for TASK-114–135 and are
+> leave request/revision/event/evidence/cancellation entities. TASK-114 adds the
+> versioned approval policy/step, workflow instance/step, immutable decision/event,
+> bounded delegation, capacity-rule and capacity-snapshot entities. The remaining
+> entities are approved targets for TASK-115–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -155,7 +157,7 @@ user_company_role              user ↔ company ↔ role, many roles +
 employee_activation_secret     encrypted recoverable one-time secret (implemented)
 employee_account_handoff       immutable offboarding transfer summary (implemented)
 employee_hierarchy_scope      direct/tree authority + effective dates (implemented)
-approval_delegation            effective-dated, bounded delegation
+approval_delegation            effective-dated, bounded delegation (implemented)
 ```
 
 `master.login_code` is globally unique and `(master_fn, username)` is unique.
@@ -176,8 +178,9 @@ remains manual and is never silently revoked.
 ### 8.2 Versioned approvals and leave
 
 ```
-approval_policy(+version/+step) configurable multi-stage workflow definition
-approval_instance(+step)        immutable decision trail and current workflow projection
+approval_policy(+version/+step) configurable multi-stage workflow definition (implemented)
+approval_instance(+step)        snapshotted authority and current workflow projection (implemented)
+approval_decision/event         immutable actor, authority, outcome and timer trail (implemented)
 working_calendar(+version)      workdays and effective dates
 calendar_holiday                official draft/company-confirmed holiday
 leave_type / leave_policy       effective-dated eligibility, evidence and carry rules
@@ -187,7 +190,8 @@ leave_request_event             immutable transition and actor trail (implemente
 leave_cancellation_request      separately decided approved-leave cancellation (implemented)
 leave_balance_entry             append-only grant/accrual/reserve/use/cancel/adjust ledger (implemented)
 leave_evidence                  immutable private evidence metadata; content deferred (implemented)
-leave_capacity_rule             department minimum-coverage rule and action
+leave_capacity_rule             department minimum-coverage rule and action (implemented)
+approval_capacity_snapshot      immutable submission/decision coverage fact (implemented)
 ```
 
 Every leave request retains the policy/calendar versions and calculated-day snapshot used
@@ -218,6 +222,17 @@ file metadata; document bytes remain out of scope until TASK-117/118. A submitte
 request is never physically deleted: owner deletion becomes `Voided`, Pending uses
 `Withdrawn`, and Approved uses `leave_cancellation_request` before becoming
 `Cancelled`. Legacy rows retain revision zero and their original day snapshot.
+
+Migration 0053 implements generic approval governance. Confirmed effective-dated
+policy versions match tenant-scoped employee, department, request type, days, amount
+and currency conditions by priority and specificity, then create ordered step
+snapshots. Direct-manager, named-employee and permission authorities retain both
+original and current/escalated authority. Immutable decisions and events identify
+direct, delegated, permission or escalated actions; the command boundary rejects
+self-approval. Delegations are effective-dated, capped at 90 days, revocable without
+deleting history and linked to delegated decisions. Leave-capacity rules snapshot
+active staff and approved absence counts at submission and decision, applying
+warning, additional-level or blocking behavior.
 
 ### 8.3 Managed documents and extraction
 

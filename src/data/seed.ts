@@ -9,6 +9,7 @@ import {
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
   calendarHoliday, leaveBalanceEntry, leavePolicyVersion, leaveType,
   workingCalendar, workingCalendarVersion,
+  approvalPolicy, approvalPolicyVersion, approvalPolicyStep, leaveCapacityRule,
   purchaseRequisition, purchaseRequisitionLine,
   purchaseRfq, purchaseRfqLine, purchaseRfqSupplier,
   supplierQuotation, supplierQuotationLine,
@@ -421,7 +422,8 @@ export async function seedDemo(db: DB): Promise<void> {
   const [manager] = await db.insert(employee).values({
     masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1001', fullName: 'Farah Wong',
     email: 'farah.wong@acme.co', department: 'Operations', jobTitle: 'Operations Director',
-    employmentType: 'Full-time', startDate: '2019-02-01', annualLeaveDays: 20, baseSalary: '8500.00',
+    employmentType: 'Full-time', startDate: '2019-02-01', annualLeaveDays: 20,
+    baseSalary: '8500.00',
   }).returning({ id: employee.id });
   const [marcus, aisha, tom, lena] = await db.insert(employee).values([
     {
@@ -555,6 +557,95 @@ export async function seedDemo(db: DB): Promise<void> {
   ]));
   const annualTypeId = leaveTypeByCode.get('ANNUAL')!;
   const medicalTypeId = leaveTypeByCode.get('MEDICAL')!;
+  const approvalPolicies = await db.insert(approvalPolicy).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'LEAVE-DEFAULT',
+      name: 'Default leave approval', domain: 'leave',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'LEAVE-LONG',
+      name: 'Extended leave approval', domain: 'leave',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'LEAVE-UNPAID',
+      name: 'Unpaid leave approval', domain: 'leave',
+    },
+  ]).returning({ id: approvalPolicy.id, code: approvalPolicy.code });
+  const approvalPolicyByCode = new Map(approvalPolicies.map((policy) => [
+    policy.code,
+    policy.id,
+  ]));
+  const approvalVersions = await db.insert(approvalPolicyVersion).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG',
+      policyId: approvalPolicyByCode.get('LEAVE-DEFAULT')!,
+      versionNo: 1, effectiveFrom: '2026-01-01', status: 'confirmed', priority: 0,
+      confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG',
+      policyId: approvalPolicyByCode.get('LEAVE-LONG')!,
+      versionNo: 1, effectiveFrom: '2026-01-01', status: 'confirmed', priority: 100,
+      minimumDays: '6.00',
+      confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG',
+      policyId: approvalPolicyByCode.get('LEAVE-UNPAID')!,
+      versionNo: 1, effectiveFrom: '2026-01-01', status: 'confirmed', priority: 200,
+      typeRef: 'UNPAID',
+      confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+  ]).returning({ id: approvalPolicyVersion.id, policyId: approvalPolicyVersion.policyId });
+  const approvalVersionByPolicy = new Map(approvalVersions.map((version) => [
+    version.policyId,
+    version.id,
+  ]));
+  const defaultApprovalStep = (policyCode: string, stepNo: number) => ({
+    masterFn: 'M1',
+    companyFn: 'C-SG',
+    policyVersionId: approvalVersionByPolicy.get(approvalPolicyByCode.get(policyCode)!)!,
+    stepNo,
+    label: stepNo === 1 ? 'Direct manager approval' : 'HR governance approval',
+    authorityType: stepNo === 1 ? 'direct_manager' : 'permission',
+    authorityPermissionKey: stepNo === 1 ? null : 'hr.write',
+    managerLevel: 1,
+    fallbackPermissionKey: stepNo === 1 ? 'hr.write' : null,
+    reminderAfterHours: stepNo === 1 ? 24 : 48,
+    escalateAfterHours: stepNo === 1 ? 48 : null,
+    escalationAuthorityType: stepNo === 1 ? 'permission' : null,
+    escalationPermissionKey: stepNo === 1 ? 'hr.write' : null,
+  });
+  await db.insert(approvalPolicyStep).values([
+    defaultApprovalStep('LEAVE-DEFAULT', 1),
+    defaultApprovalStep('LEAVE-LONG', 1),
+    defaultApprovalStep('LEAVE-LONG', 2),
+    defaultApprovalStep('LEAVE-UNPAID', 1),
+    defaultApprovalStep('LEAVE-UNPAID', 2),
+  ]);
+  await db.insert(leaveCapacityRule).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'CAP-DEFAULT',
+      name: 'Default advisory capacity', effectiveFrom: '2026-01-01',
+      minimumStaff: 0, action: 'warn', priority: 0,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'CAP-WAREHOUSE-ANNUAL',
+      name: 'Warehouse annual-leave warning', department: 'Warehouse', typeRef: 'ANNUAL',
+      effectiveFrom: '2026-01-01', minimumStaff: 1, action: 'warn', priority: 100,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'CAP-PRODUCTION-MEDICAL',
+      name: 'Production medical-leave block', department: 'Production', typeRef: 'MEDICAL',
+      effectiveFrom: '2026-01-01', minimumStaff: 1, action: 'block', priority: 100,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'CAP-UNPAID-EXCEPTION',
+      name: 'Unpaid leave capacity exception', typeRef: 'UNPAID',
+      effectiveFrom: '2026-01-01', minimumStaff: 1, action: 'extra_approval', priority: 90,
+      extraApprovalPermissionKey: 'hr.write',
+    },
+  ]);
   const sgEmployees = [
     [manager.id, 20],
     [marcus.id, 16],

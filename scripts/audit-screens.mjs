@@ -1699,6 +1699,12 @@ async function auditRoutes(browser, viewport) {
         claims:ErpSystemData.my.claims,
         receipts:ErpSystemData.my.receipts,
         teamLeaveRequests:ErpSystemData.my.teamLeaveRequests,
+        approvals:ErpSystemData.my.approvals,
+        approvalAction:ErpSystemData.my.approvalAction,
+        approvalDelegations:ErpSystemData.my.approvalDelegations,
+        approvalDelegationCandidates:ErpSystemData.my.approvalDelegationCandidates,
+        createApprovalDelegation:ErpSystemData.my.createApprovalDelegation,
+        revokeApprovalDelegation:ErpSystemData.my.revokeApprovalDelegation,
       };
       const employee = {
         id:42,employeeNo:'EMP-AUDIT',fullName:'My Work Auditor',
@@ -1732,6 +1738,16 @@ async function auditRoutes(browser, viewport) {
         department:'Operations',leaveType:'Medical',startDate:'2026-08-05',
         endDate:'2026-08-05',days:1,status:'pending',
       }];
+      const approvalRows = [{
+        requestId:72,requestVersion:2,employeeId:43,employeeNo:'EMP-TEAM',
+        employeeName:'Team Member',department:'Operations',jobTitle:'Supervisor',
+        leaveType:'Annual leave',startDate:'2026-08-05',endDate:'2026-08-06',
+        days:'2.00',currentStepNo:1,stepLabel:'Direct manager approval',
+        stepActivatedAt:'2026-07-25T08:00:00Z',
+        stepDueAt:'2026-07-27T08:00:00Z',
+        privacy:'reason_and_evidence_redacted',
+        capacity:{action:'warn',breached:true,minimumStaff:1,remainingStaff:0},
+      }];
       const setContext = (team,writable=false) => {
         MY_WORK_CONTEXT={
           company,employee,
@@ -1762,6 +1778,16 @@ async function auditRoutes(browser, viewport) {
         ErpSystemData.my.teamLeaveRequests=async()=>({
           data:teamLeave,meta:{privacy:'reason_and_evidence_redacted'},
         });
+        ErpSystemData.my.approvals=async()=>({
+          data:approvalRows,meta:{privacy:'reason_and_evidence_redacted'},
+        });
+        ErpSystemData.my.approvalAction=async()=>({
+          data:{requestId:72,status:'approved',version:3},
+        });
+        ErpSystemData.my.approvalDelegations=async()=>({data:[]});
+        ErpSystemData.my.approvalDelegationCandidates=async()=>({data:[]});
+        ErpSystemData.my.createApprovalDelegation=async()=>({data:{id:1}});
+        ErpSystemData.my.revokeApprovalDelegation=async()=>({data:{id:1}});
 
         setContext(false);
         renderSidebar();
@@ -1833,11 +1859,24 @@ async function auditRoutes(browser, viewport) {
           issues.push('team route did not keep actor reasons outside the manager view');
         }
         await navigate('my-approvals');
-        if (document.querySelectorAll('#viewRoot [data-list-table] .dt-r[data-row]').length!==1) {
+        const approvalRoot=document.querySelector(
+          '#viewRoot [data-layout="master-detail-register-v1"][data-list-route="my-approvals"]',
+        );
+        const approvalRow=approvalRoot?.querySelector('[data-list-table] .dt-r[data-row]');
+        if (!approvalRoot) {
+          issues.push('My Approvals left master-detail-register-v1');
+        }
+        if (!approvalRow
+            || approvalRoot.querySelectorAll('[data-list-table] .dt-r[data-row]').length!==1) {
           issues.push('pending team approval row missing');
         }
-        if (document.querySelector('#viewRoot [data-list-primary-action]')) {
-          issues.push('read-only approval shell exposed a decision action');
+        approvalRow?.click();
+        await new Promise((resolve)=>setTimeout(resolve,50));
+        const decisionButtons=[...document.querySelectorAll(
+          '#viewRoot [data-approval-action="approve"],#viewRoot [data-approval-action="reject"]',
+        )];
+        if (decisionButtons.length!==2 || decisionButtons.some((button)=>button.disabled)) {
+          issues.push('governed approval decision actions are missing or disabled');
         }
       } finally {
         Object.assign(ErpSystemData.my,originalMethods);

@@ -194,8 +194,10 @@ actor-owned self/team read contracts, TASK-109's five Preview My Work routes and
 TASK-110 identity/security proof and TASK-111's versioned leave policy calendar are
 implemented. TASK-112 adds the immutable leave-balance ledger and serialized Pending
 reservation. TASK-113 adds the versioned leave lifecycle, immutable revision/event
-trail, actor-owned authoring and privacy-controlled evidence metadata; the remaining
-sections describe the target architecture for TASK-114–135.
+trail, actor-owned authoring and privacy-controlled evidence metadata. TASK-114 adds
+versioned approval policy resolution, snapshotted workflow authority, bounded
+delegation, immutable decisions/events and capacity controls; the remaining sections
+describe the target architecture for TASK-115–135.
 
 ### Identity and authorization
 
@@ -223,7 +225,9 @@ sections describe the target architecture for TASK-114–135.
   navigation reads `/api/my/context`, never client role labels: self routes appear for
   a linked employee, while Team Calendar/My Approvals require `team.available`.
   Employee-only API sessions fall back from the management dashboard to a restricted
-  shell; unfinished claims, receipts and approval commands are not fabricated.
+  shell; unfinished claims and receipts are not fabricated. TASK-114 promotes My
+  Approvals to a privacy-redacted Canonical workflow with real decisions and bounded
+  delegation.
 
 ### Shared workflow and document services
 

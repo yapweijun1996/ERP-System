@@ -225,6 +225,33 @@
     claims:function(){ return apiRequest('my/claims'); },
     receipts:function(){ return apiRequest('my/receipts'); },
     teamLeaveRequests:function(){ return apiRequest('my/team/leave-requests'); },
+    approvals:function(){ return apiRequest('my/approvals'); },
+    approval:function(id){ return apiRequest('my/approvals/'+encodeURIComponent(id)); },
+    approvalAction:function(id,name,payload,idempotencyKey){
+      return apiRequest('my/approvals/'+encodeURIComponent(id)+'/actions/'+encodeURIComponent(name),{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    approvalDelegations:function(){ return apiRequest('my/approval-delegations'); },
+    approvalDelegationCandidates:function(){
+      return apiRequest('my/approval-delegation-candidates');
+    },
+    createApprovalDelegation:function(payload,idempotencyKey){
+      return apiRequest('my/approval-delegations',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    revokeApprovalDelegation:function(id,idempotencyKey){
+      return apiRequest('my/approval-delegations/'+encodeURIComponent(id)+'/actions/revoke',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:{},
+      });
+    },
   };
 
   async function fetchDashboard(){

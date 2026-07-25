@@ -7,6 +7,9 @@ import {
   auditLog,
   employee,
   leaveType,
+  role,
+  userCompany,
+  userCompanyRole,
 } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
@@ -76,7 +79,35 @@ describe('governed leave application API', () => {
       eq(leaveType.companyFn, 'C-SG'),
       eq(leaveType.code, 'ANNUAL'),
     ));
-    return { viewer, admin, subject, annual };
+    const [managerEmployee] = await db.select().from(employee).where(eq(
+      employee.id,
+      subject.managerId!,
+    ));
+    const managerUsername = 'approval.manager';
+    const [managerUser] = await db.insert(appUser).values({
+      masterFn: 'M1',
+      username: managerUsername,
+      email: 'approval.manager@acme.co',
+      fullName: managerEmployee.fullName,
+      passwordHash: viewer.passwordHash,
+    }).returning({ id: appUser.userId });
+    const roles = await db.select().from(role).where(eq(role.masterFn, 'M1'));
+    const managerRole = roles.find((item) => item.name === 'Manager')!;
+    const superadminRole = roles.find((item) => item.name === 'Superadmin')!;
+    await db.insert(userCompany).values({
+      userId: managerUser.id,
+      companyFn: 'C-SG',
+      roleId: managerRole.roleId,
+    });
+    await db.insert(userCompanyRole).values([
+      { userId: managerUser.id, companyFn: 'C-SG', roleId: managerRole.roleId },
+      { userId: managerUser.id, companyFn: 'C-SG', roleId: superadminRole.roleId },
+    ]);
+    await db.update(employee).set({ userId: managerUser.id }).where(eq(
+      employee.id,
+      managerEmployee.id,
+    ));
+    return { viewer, admin, subject, annual, managerUsername };
   }
 
   it('enforces CSRF, idempotency, actor ownership and optimistic versions', async () => {
@@ -211,6 +242,7 @@ describe('governed leave application API', () => {
     const data = await identityFixture();
     const employeeAuth = await login('viewer', 'viewer1234');
     const adminAuth = await login('admin', 'demo1234');
+    const managerAuth = await login(data.managerUsername, 'viewer1234');
 
     const create = await fetch(`${baseUrl}/api/my/leave-requests`, {
       method: 'POST',
@@ -238,7 +270,7 @@ describe('governed leave application API', () => {
       `${baseUrl}/api/hr/leave-applications/${draft.data.id}/actions/approve`,
       {
         method: 'POST',
-        headers: writeHeaders(adminAuth, 'hr-leave-approve'),
+        headers: writeHeaders(managerAuth, 'hr-leave-approve'),
         body: JSON.stringify({ expectedVersion: pending.data.version }),
       },
     );
@@ -269,5 +301,95 @@ describe('governed leave application API', () => {
       'approve',
       'create_on_behalf',
     ]));
+  });
+
+  it('exposes privacy-redacted policy steps through My Approvals and completes them in order', async () => {
+    const data = await identityFixture();
+    const employeeAuth = await login('viewer', 'viewer1234');
+    const managerAuth = await login(data.managerUsername, 'viewer1234');
+    const create = await fetch(`${baseUrl}/api/my/leave-requests`, {
+      method: 'POST',
+      headers: writeHeaders(employeeAuth, 'policy-leave-create'),
+      body: JSON.stringify({
+        leaveTypeId: data.annual.id,
+        startDate: '2026-10-05',
+        endDate: '2026-10-12',
+        unit: 'full_day',
+        reason: 'Private family circumstances',
+      }),
+    });
+    const draft = await create.json() as { data: { id: number; version: number } };
+    const submit = await fetch(
+      `${baseUrl}/api/my/leave-requests/${draft.data.id}/actions/submit`,
+      {
+        method: 'POST',
+        headers: writeHeaders(employeeAuth, 'policy-leave-submit'),
+        body: JSON.stringify({ expectedVersion: draft.data.version }),
+      },
+    );
+    const pending = await submit.json() as {
+      data: {
+        version: number;
+        approval: { policyCode: string; stepCount: number };
+      };
+    };
+    expect(pending.data.approval).toMatchObject({
+      policyCode: 'LEAVE-LONG',
+      stepCount: 2,
+    });
+
+    const employeeQueue = await fetch(`${baseUrl}/api/my/approvals`, {
+      headers: { cookie: employeeAuth.header },
+    });
+    expect(employeeQueue.status).toBe(200);
+    expect((await employeeQueue.json()).data).toEqual([]);
+
+    const managerQueue = await fetch(`${baseUrl}/api/my/approvals`, {
+      headers: { cookie: managerAuth.header },
+    });
+    expect(managerQueue.status).toBe(200);
+    const managerRows = (await managerQueue.json()).data as Array<Record<string, unknown>>;
+    const assigned = managerRows.find((row) => row.requestId === draft.data.id);
+    expect(assigned).toMatchObject({
+      employeeName: data.subject.fullName,
+      currentStepNo: 1,
+      stepLabel: 'Direct manager approval',
+      privacy: 'reason_and_evidence_redacted',
+    });
+    expect(assigned).not.toHaveProperty('reason');
+
+    const first = await fetch(
+      `${baseUrl}/api/my/approvals/${draft.data.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: writeHeaders(managerAuth, 'policy-leave-step-1'),
+        body: JSON.stringify({
+          expectedVersion: pending.data.version,
+          reason: 'Manager coverage confirmed',
+        }),
+      },
+    );
+    expect(first.status).toBe(200);
+    const firstBody = await first.json() as {
+      data: { version: number; status: string; approval: { currentStepNo: number } };
+    };
+    expect(firstBody.data).toMatchObject({
+      status: 'pending',
+      approval: { currentStepNo: 2 },
+    });
+
+    const second = await fetch(
+      `${baseUrl}/api/my/approvals/${draft.data.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: writeHeaders(managerAuth, 'policy-leave-step-2'),
+        body: JSON.stringify({
+          expectedVersion: firstBody.data.version,
+          reason: 'HR governance confirmed',
+        }),
+      },
+    );
+    expect(second.status).toBe(200);
+    expect((await second.json()).data.status).toBe('approved');
   });
 });
