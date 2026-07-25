@@ -20,6 +20,10 @@ function assetCopy(){
       fieldAcquisitionDate:'Acquisition date',fieldCost:'Cost',fieldResidualValue:'Residual value',
       fieldUsefulLife:'Useful life (years)',years:'years',nameRequired:'Asset name is required',
       assetCreated:'Asset {name} registered',assetSaveError:'Asset could not be registered',createAsset:'Register asset',
+      assetProfileTitle:'Asset profile',
+      assetProfileDescription:'Review acquisition, valuation and posted depreciation for the selected asset.',
+      noAssetFound:'No asset found',noAssetBody:'Choose an asset from Asset Register to review its details.',
+      monthlySummary:'{amount} per month · {years}-year straight-line',
       acquisition:'Acquisition',depreciationPanel:'Depreciation',fieldOriginalCost:'Original cost',
       fieldMethod:'Method',straightLine:'Straight-line',fieldMonthlyCharge:'Monthly charge',
       fieldGlAccounts:'GL accounts',scheduleHeader:'Depreciation history',colRun:'Run',colOpening:'Opening NBV',
@@ -55,6 +59,10 @@ function assetCopy(){
       fieldAcquisitionDate:'Tarikh perolehan',fieldCost:'Kos',fieldResidualValue:'Nilai baki',
       fieldUsefulLife:'Hayat guna (tahun)',years:'tahun',nameRequired:'Nama aset diperlukan',
       assetCreated:'Aset {name} didaftarkan',assetSaveError:'Aset tidak dapat didaftarkan',createAsset:'Daftar aset',
+      assetProfileTitle:'Profil aset',
+      assetProfileDescription:'Semak perolehan, penilaian dan susut nilai tercatat bagi aset yang dipilih.',
+      noAssetFound:'Aset tidak ditemui',noAssetBody:'Pilih aset daripada Daftar Aset untuk menyemak butirannya.',
+      monthlySummary:'{amount} sebulan · garis lurus {years} tahun',
       acquisition:'Perolehan',depreciationPanel:'Susut nilai',fieldOriginalCost:'Kos asal',
       fieldMethod:'Kaedah',straightLine:'Garis lurus',fieldMonthlyCharge:'Caj bulanan',
       fieldGlAccounts:'Akaun GL',scheduleHeader:'Sejarah susut nilai',colRun:'Larian',colOpening:'NBV pembukaan',
@@ -90,6 +98,10 @@ function assetCopy(){
       fieldAcquisitionDate:'购置日期',fieldCost:'成本',fieldResidualValue:'残值',
       fieldUsefulLife:'使用年限(年)',years:'年',nameRequired:'请填写资产名称',
       assetCreated:'资产 {name} 已登记',assetSaveError:'资产登记失败',createAsset:'登记资产',
+      assetProfileTitle:'资产档案',
+      assetProfileDescription:'查看所选资产的购置、估值及已过账折旧。',
+      noAssetFound:'未找到资产',noAssetBody:'请从资产登记册选择资产以查看详情。',
+      monthlySummary:'每月 {amount} · {years} 年直线法',
       acquisition:'购置',depreciationPanel:'折旧',fieldOriginalCost:'原始成本',
       fieldMethod:'方法',straightLine:'直线法',fieldMonthlyCharge:'月折旧额',
       fieldGlAccounts:'总账科目',scheduleHeader:'折旧历史',colRun:'折旧运算',colOpening:'期初账面净值',
@@ -125,6 +137,10 @@ function assetCopy(){
       fieldAcquisitionDate:'取得日',fieldCost:'取得原価',fieldResidualValue:'残存価額',
       fieldUsefulLife:'耐用年数',years:'年',nameRequired:'資産名を入力してください',
       assetCreated:'資産 {name} を登録しました',assetSaveError:'資産を登録できませんでした',createAsset:'資産を登録',
+      assetProfileTitle:'資産プロフィール',
+      assetProfileDescription:'選択した資産の取得、評価、計上済み減価償却を確認します。',
+      noAssetFound:'資産が見つかりません',noAssetBody:'資産台帳から資産を選択して詳細を確認してください。',
+      monthlySummary:'月額 {amount} · {years} 年定額法',
       acquisition:'取得情報',depreciationPanel:'減価償却',fieldOriginalCost:'取得原価',
       fieldMethod:'方法',straightLine:'定額法',fieldMonthlyCharge:'月次償却額',
       fieldGlAccounts:'総勘定元帳科目',scheduleHeader:'償却履歴',colRun:'償却実行',colOpening:'期首帳簿価額',
@@ -160,6 +176,10 @@ function assetCopy(){
       fieldAcquisitionDate:'Ngày mua',fieldCost:'Nguyên giá',fieldResidualValue:'Giá trị thu hồi',
       fieldUsefulLife:'Thời gian sử dụng (năm)',years:'năm',nameRequired:'Vui lòng nhập tên tài sản',
       assetCreated:'Đã đăng ký tài sản {name}',assetSaveError:'Không thể đăng ký tài sản',createAsset:'Đăng ký tài sản',
+      assetProfileTitle:'Hồ sơ tài sản',
+      assetProfileDescription:'Xem thông tin mua, định giá và khấu hao đã ghi sổ của tài sản được chọn.',
+      noAssetFound:'Không tìm thấy tài sản',noAssetBody:'Chọn một tài sản từ Sổ đăng ký tài sản để xem chi tiết.',
+      monthlySummary:'{amount} mỗi tháng · đường thẳng {years} năm',
       acquisition:'Thông tin mua',depreciationPanel:'Khấu hao',fieldOriginalCost:'Nguyên giá',
       fieldMethod:'Phương pháp',straightLine:'Đường thẳng',fieldMonthlyCharge:'Mức khấu hao/tháng',
       fieldGlAccounts:'Tài khoản sổ cái',scheduleHeader:'Lịch sử khấu hao',colRun:'Đợt khấu hao',colOpening:'GTCL đầu kỳ',
@@ -331,7 +351,7 @@ async function prepareAssetDetail(assetId){
   ]);
   const [assets,runs,lines]=pages.map(p=>p.data);
   const asset=assetId?assets.find(row=>row.id===assetId):assets[0];
-  if(!asset) throw new Error('No asset found for the active company.');
+  if(!asset) return {asset:null,history:[]};
   const postedRunById=new Map(runs.filter(row=>row.status==='posted').map(row=>[row.id,row]));
   const history=lines.filter(line=>line.assetId===asset.id&&postedRunById.has(line.runId))
     .map(line=>Object.assign({},line,{run:postedRunById.get(line.runId)}))
@@ -341,9 +361,30 @@ async function prepareAssetDetail(assetId){
 
 SCREENS['asset-detail'] = async function(root, params){
   const s=assetCopy();
-  const requestedId=params&&params.assetId?Number(params.assetId):null;
+  const rawId=params&&params.assetId;
+  const requestedId=rawId==null?null:Number(rawId);
+  if(rawId!=null&&(!Number.isSafeInteger(requestedId)||requestedId<=0)){
+    masterDetailEditorPage(root,{
+      module:'asset',route:'asset-detail',active:'asset-register',
+      title:s('assetProfileTitle'),description:s('assetProfileDescription'),
+      crumb:[DB.company.name,{label:t('nav.asset'),route:'asset-register'},{label:t('fa.title'),route:'asset-register'},{cur:s('assetProfileTitle')}],
+      empty:{icon:'asset',title:s('noAssetFound'),description:s('noAssetBody')},
+      afterRender:({editor})=>editor?.setAttribute('data-canonical-asset-detail','true'),
+    });
+    return;
+  }
   const detail=await prepareAssetDetail(requestedId);
   const a=detail.asset;
+  if(!a){
+    masterDetailEditorPage(root,{
+      module:'asset',route:'asset-detail',active:'asset-register',
+      title:s('assetProfileTitle'),description:s('assetProfileDescription'),
+      crumb:[DB.company.name,{label:t('nav.asset'),route:'asset-register'},{label:t('fa.title'),route:'asset-register'},{cur:s('assetProfileTitle')}],
+      empty:{icon:'asset',title:s('noAssetFound'),description:s('noAssetBody')},
+      afterRender:({editor})=>editor?.setAttribute('data-canonical-asset-detail','true'),
+    });
+    return;
+  }
   const cost=assetNumber(a.cost), residual=assetNumber(a.residualValue), accDep=assetNumber(a.accumulatedDepreciation);
   const nbv=cost-accDep;
   const life=assetNumber(a.usefulLifeYears);
@@ -351,59 +392,74 @@ SCREENS['asset-detail'] = async function(root, params){
   const depPct=cost>0?Math.round(accDep/cost*100):0;
   const statusLabel=ASSET_STATUS_LABEL[a.status]||a.status;
   const catLabel=s(ASSET_CATEGORY_KEY[a.category]||a.category);
-  const historyRows=detail.history.map(line=>`<tr>
-    <td class="l li-name"><b>${esc(line.run.docNo)}</b><small>${esc(dateValue(line.run.runDate))}</small></td>
-    <td class="tnum">${money0(assetNumber(line.openingNbv))}</td>
-    <td class="tnum">${money0(assetNumber(line.depreciationAmount))}</td>
-    <td class="tnum"><b>${money0(assetNumber(line.closingNbv))}</b></td>
-  </tr>`).join('');
-  root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage" style="max-width:960px">
-    ${crumbs([DB.company.name,t('nav.asset'),t('fa.title'),{cur:a.assetNo}])}
-    <div class="dochead">
-      <div class="dh-row1"><div><div class="dt">${ic('asset')}${esc(a.name)} <span class="dnum">${esc(a.assetNo)}</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(catLabel)} · ${esc(a.location||'—')} · ${esc(s('straightLine'))} · ${life} ${esc(s('years'))}</div></div>
-        <div class="dactions">${statusBadge(statusLabel)}</div></div>
-    </div>
-    <div class="doclayout">
-      <div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>${esc(s('acquisition'))}</h3></div><div class="panel-body">
-          <div class="fldrow c3">
-            <div class="fld"><span>${esc(s('fieldAcquisitionDate'))}</span><input value="${esc(dateValue(a.acquisitionDate))}" readonly></div>
-            <div class="fld"><span>${esc(s('fieldOriginalCost'))}</span><input value="${money(cost)}" readonly></div>
-            <div class="fld"><span>${esc(s('category'))}</span><input value="${esc(catLabel)}" readonly></div>
-            <div class="fld"><span>${esc(s('fieldLocation'))}</span><input value="${esc(a.location||'—')}" readonly></div>
-            <div class="fld"><span>${esc(s('fieldUsefulLife'))}</span><input value="${life} ${esc(s('years'))}" readonly></div>
-            <div class="fld"><span>${esc(s('fieldResidualValue'))}</span><input value="${money(residual)}" readonly></div>
+  const historyBody=detail.history.length
+    ? `<div class="asset-detail-history-scroll" data-asset-depreciation-history>${buildTable({
+        rows:detail.history,
+        rowId:line=>line.id,
+        rowInteraction:()=>({kind:'none',label:''}),
+        columns:[
+          {label:s('colRun'),align:'l',sticky:true,w:'minmax(160px,1.4fr)',render:line=>`<div class="cellsub"><b>${esc(line.run.docNo)}</b><small>${esc(dateValue(line.run.runDate))}</small></div>`},
+          {label:s('colOpening'),align:'r',w:'130px',render:line=>`<span class="tnum">${money0(assetNumber(line.openingNbv))}</span>`},
+          {label:s('colDep'),align:'r',w:'120px',render:line=>`<span class="tnum">${money0(assetNumber(line.depreciationAmount))}</span>`},
+          {label:s('colClosing'),align:'r',w:'130px',render:line=>`<b class="tnum">${money0(assetNumber(line.closingNbv))}</b>`},
+        ],
+      })}</div>`
+    : `<div class="master-detail-editor-inline-empty" data-asset-depreciation-empty>
+        ${ic('chart')}<span>${esc(s('noHistoryYet'))}</span></div>`;
+  const monthlySummary=s('monthlySummary')
+    .replace('{amount}',money(monthly))
+    .replace('{years}',life);
+  const statusTone={in_use:'ok',under_maintenance:'warn',idle:'neutral',disposed:'danger'}[a.status]||'neutral';
+  masterDetailEditorPage(root,{
+    module:'asset',route:'asset-detail',active:'asset-register',
+    title:s('assetProfileTitle'),description:s('assetProfileDescription'),
+    crumb:[DB.company.name,{label:t('nav.asset'),route:'asset-register'},{label:t('fa.title'),route:'asset-register'},{cur:a.assetNo}],
+    status:{label:ts(statusLabel),tone:statusTone},
+    overview:{
+      title:a.name,
+      code:a.assetNo,
+      meta:`${catLabel} · ${a.location||'—'}`,
+      facts:[
+        {label:s('fieldAcquisitionDate'),value:dateValue(a.acquisitionDate)},
+        {label:s('fieldOriginalCost'),value:money(cost),numeric:true},
+        {label:s('fieldUsefulLife'),value:`${life} ${s('years')}`},
+        {label:s('fieldResidualValue'),value:money(residual),numeric:true},
+      ],
+    },
+    main:`
+      <div class="panel" data-asset-depreciation-policy>
+        <div class="panel-h"><h3>${esc(s('depreciationPanel'))}</h3></div>
+        <div class="master-detail-editor-facts asset-detail-policy-facts">
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('fieldMethod'))}</small><b>${esc(s('straightLine'))}</b>
           </div>
-        </div></div>
-        <div class="panel"><div class="panel-h"><h3>${esc(s('depreciationPanel'))}</h3></div><div class="panel-body">
-          <div class="fldrow c3">
-            <div class="fld"><span>${esc(s('fieldMethod'))}</span><input value="${esc(s('straightLine'))}" readonly></div>
-            <div class="fld"><span>${esc(s('fieldMonthlyCharge'))}</span><input value="${money(monthly)}" readonly></div>
-            <div class="fld"><span>${esc(s('fieldGlAccounts'))}</span><input value="6200 · 1510" readonly></div>
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('fieldMonthlyCharge'))}</small><b class="tnum">${money(monthly)}</b>
           </div>
-        </div></div>
-        <div class="panel"><div class="panel-h"><h3>${esc(s('scheduleHeader'))}</h3></div>
-          ${detail.history.length
-            ?`<table class="lines"><thead><tr><th class="l">${esc(s('colRun'))}</th><th>${esc(s('colOpening'))}</th><th>${esc(s('colDep'))}</th><th>${esc(s('colClosing'))}</th></tr></thead><tbody>${historyRows}</tbody></table>`
-            :`<div style="color:var(--muted);font-size:13px;padding:0 16px 16px">${esc(s('noHistoryYet'))}</div>`}
+          <div class="master-detail-editor-fact">
+            <small>${esc(s('fieldGlAccounts'))}</small><b class="tnum">6200 · 1510</b>
+          </div>
         </div>
       </div>
-      <aside class="summary">
-        <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(s('bookValue'))}</div>
+      <div class="panel asset-detail-history" data-asset-depreciation-panel>
+        <div class="panel-h"><h3>${esc(s('scheduleHeader'))}</h3><span class="grow"></span><small class="tnum">${detail.history.length}</small></div>
+        ${historyBody}
+      </div>`,
+    context:{
+      title:s('bookValue'),
+      body:`<div class="asset-detail-book-values" data-asset-book-value>
           <div class="sumrow"><span class="sk2">${esc(s('originalCost'))}</span><span class="sv tnum">${money(cost)}</span></div>
-          <div class="sumrow"><span class="sk2">${esc(s('accumDep'))}</span><span class="sv tnum" style="color:var(--muted)">(${money(accDep)})</span></div>
+          <div class="sumrow"><span class="sk2">${esc(s('accumDep'))}</span><span class="sv tnum">(${money(accDep)})</span></div>
           <div class="sumrow total"><span class="sk2">${esc(s('netBookValue'))}</span><span class="sv tnum">${money(nbv)}</span></div>
-          <div class="indicator ${depPct>=100?'danger':'ok'}" style="margin-top:12px">
-            <div class="ind-top">${ic('chart')}<span>${esc(s('depreciated'))}</span><span class="ind-r">${depPct}%</span></div>
-            <div class="track"><i style="width:${Math.min(100,depPct)}%"></i></div>
-            <small>${money(monthly)}/mo · ${life}-${esc(s('yearStraightLine'))}</small>
-          </div>
         </div>
-      </aside>
-    </div>
-    <div style="height:60px"></div>
-  </div></div></section></div>`;
+        <div class="indicator ${depPct>=100?'danger':'ok'} asset-detail-progress" data-asset-depreciation-progress>
+          <div class="ind-top">${ic('chart')}<span>${esc(s('depreciated'))}</span><span class="ind-r tnum">${depPct}%</span></div>
+          <div class="track"><i style="width:${Math.min(100,depPct)}%"></i></div>
+          <small>${esc(monthlySummary)}</small>
+        </div>`,
+    },
+    afterRender:({editor})=>editor?.setAttribute('data-canonical-asset-detail','true'),
+  });
 };
 
 /* ---------------- DEPRECIATION RUN (compute + post to GL) ---------------- */

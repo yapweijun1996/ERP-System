@@ -591,7 +591,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'picking',
   ],
   'master-detail-editor-v1':[
-    'bom','employee','service-contract',
+    'bom','employee','service-contract','asset-detail',
   ],
   'case-detail-v1':[
     'ncr','service-order',
@@ -628,7 +628,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'new-stock-adjustment','new-work-order',
   ],
   'master-detail':[
-    'asset-detail','crm-customer','role-permission',
+    'crm-customer','role-permission',
   ],
   workspace:[
     'bank-rec','data-import','integration','master-control',

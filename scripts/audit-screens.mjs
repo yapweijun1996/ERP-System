@@ -119,6 +119,25 @@ if (obsoleteEmployeeChrome.length) {
 }
 
 const assetScreenSource = readFileSync(path.join(assetDir, 'screens-asset.js'), 'utf8');
+const assetDetailScreenSource = (assetScreenSource.split("SCREENS['asset-detail'] =")[1] || '')
+  .split("SCREENS['depreciation'] =")[0];
+const obsoleteAssetDetailChrome = [
+  '<div class="content full"',
+  'docwrap',
+  'docpage',
+  'dochead',
+  'doclayout',
+  'class="summary"',
+  'class="sumcard"',
+  '<table class="lines"',
+  'readonly',
+].filter((token) => assetDetailScreenSource.includes(token));
+if (!assetDetailScreenSource.includes('masterDetailEditorPage(root')) {
+  throw new Error('Asset Detail does not render through masterDetailEditorPage().');
+}
+if (obsoleteAssetDetailChrome.length) {
+  throw new Error(`Asset Detail still rebuilds legacy document chrome: ${obsoleteAssetDetailChrome.join(', ')}`);
+}
 const depreciationScreenSource = assetScreenSource.split("SCREENS['depreciation'] =")[1] || '';
 const obsoleteDepreciationChrome = [
   'class="report"',
@@ -1901,6 +1920,136 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'payroll-run');
     if (result) {
       result.layoutIssues.push(...payrollIssues.map((issue) => `Payroll Run smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
+      result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('asset-detail')) {
+    const assetDetailIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const expected = {
+        en:'Asset profile',
+        ms:'Profil aset',
+        zh:'资产档案',
+        ja:'資産プロフィール',
+        vi:'Hồ sơ tài sản',
+      };
+      const assets = [{
+        id:9801,assetNo:'FA-9801',name:'Audit Delivery Van',category:'Vehicles',
+        location:'Audit Yard',acquisitionDate:'2024-06-15',cost:'68000.00',
+        residualValue:'8000.00',usefulLifeYears:5,accumulatedDepreciation:'1000.00',
+        method:'straight_line',status:'in_use',version:2,
+      },{
+        id:9802,assetNo:'FA-9802',name:'Audit CNC',category:'Plant & Machinery',
+        location:null,acquisitionDate:'2025-01-10',cost:'120000.00',
+        residualValue:'12000.00',usefulLifeYears:10,accumulatedDepreciation:'0.00',
+        method:'straight_line',status:'idle',version:1,
+      }];
+      const runs = [{
+        id:9811,docNo:'DEP-9811',runDate:'2026-07-25',status:'posted',
+        totalAmount:'1000.00',version:2,postedAt:'2026-07-25T04:00:00.000Z',
+      },{
+        id:9812,docNo:'DEP-9812',runDate:'2026-08-25',status:'draft',
+        totalAmount:'1000.00',version:1,postedAt:null,
+      }];
+      const postedLine = {
+        id:9821,runId:9811,lineNo:1,assetId:9801,
+        openingNbv:'68000.00',depreciationAmount:'1000.00',closingNbv:'67000.00',
+      };
+      const draftLine = {
+        id:9822,runId:9812,lineNo:1,assetId:9801,
+        openingNbv:'67000.00',depreciationAmount:'1000.00',closingNbv:'66000.00',
+      };
+      let assetRows=assets;
+      let runRows=runs;
+      let lineRows=[postedLine,draftLine];
+      const issues = [];
+      const assetRoot = () => document.querySelector(
+        '#viewRoot [data-layout="master-detail-editor-v1"][data-master-detail-route="asset-detail"]',
+      );
+      const installStub = () => {
+        adapter.list = async (resource,query) => {
+          if (resource === 'assets/assets') return {data:assetRows,meta:{nextCursor:null}};
+          if (resource === 'assets/depreciation-runs') return {data:runRows,meta:{nextCursor:null}};
+          if (resource === 'assets/depreciation-run-lines') return {data:lineRows,meta:{nextCursor:null}};
+          return originalList.call(adapter,resource,query);
+        };
+      };
+      try {
+        installStub();
+        for (const [locale,title] of Object.entries(expected)) {
+          window.getLang = () => locale;
+          await navigate('asset-detail',{assetId:9801});
+          const root = assetRoot();
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (heading !== title) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          if (!root) issues.push(`${locale} master-detail editor root missing`);
+          if (root?.getAttribute('data-canonical-asset-detail') !== 'true') {
+            issues.push(`${locale} canonical marker missing`);
+          }
+          if (root?.querySelectorAll('[data-master-detail-overview] .master-detail-editor-fact').length !== 4) {
+            issues.push(`${locale} expected four overview facts`);
+          }
+        }
+
+        window.getLang = () => 'en';
+        await navigate('asset-detail',{assetId:9801});
+        let root = assetRoot();
+        if (document.querySelectorAll('#viewRoot h1').length !== 1) {
+          issues.push('asset detail does not render exactly one page heading');
+        }
+        if (root?.querySelector('.docwrap,.docpage,.dochead,.doclayout,.summary,.sumcard,input[readonly]')) {
+          issues.push('legacy document chrome or read-only fake controls remain');
+        }
+        if (root?.querySelectorAll('[data-asset-depreciation-history] .dt-r[data-row]').length !== 1) {
+          issues.push('posted depreciation history is missing or includes an unposted run');
+        }
+        if (!root?.querySelector('[data-asset-book-value]')
+            || !root?.textContent.includes('S$67,000.00')
+            || !root?.querySelector('[data-asset-depreciation-progress]')) {
+          issues.push('book value or depreciation progress context is incomplete');
+        }
+        const actions = root?.querySelector('[data-master-detail-actions]');
+        if (!actions?.hasAttribute('hidden') || actions?.querySelectorAll('button').length) {
+          issues.push('read-only asset detail exposes a populated footer action region');
+        }
+
+        await navigate('asset-detail',{assetId:9802});
+        root = assetRoot();
+        if (!root?.querySelector('[data-asset-depreciation-empty]')) {
+          issues.push('asset with no posted depreciation lacks the local empty state');
+        }
+        const alternateStatus = document.querySelector('#viewRoot [data-master-detail-page-actions] .cap');
+        if (!root?.textContent.includes('Audit CNC') || alternateStatus?.textContent?.trim() !== 'Idle') {
+          issues.push('alternate asset identity or status did not refresh');
+        }
+
+        await navigate('asset-detail',{assetId:999999});
+        if (!assetRoot()?.querySelector('[data-master-detail-empty]')) {
+          issues.push('unknown asset id does not render the standard empty state');
+        }
+
+        assetRows=[];
+        runRows=[];
+        lineRows=[];
+        await navigate('asset-detail');
+        if (!assetRoot()?.querySelector('[data-master-detail-empty]')) {
+          issues.push('no-asset state left the shared editor shell');
+        }
+      } finally {
+        adapter.list = originalList;
+        window.getLang = originalGetLang;
+        await navigate('asset-detail');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'asset-detail');
+    if (result) {
+      result.layoutIssues.push(...assetDetailIssues.map((issue) => `Asset Detail state smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
       result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
     }

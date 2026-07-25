@@ -682,7 +682,7 @@ Android verification remains the only human-only release check.
 
 ## Phase 33 — Page-level UI SSOT Convergence ✅
 
-1. **Shared list and workspace contracts** (EPIC-051, TASK-087–102, completed
+1. **Shared list and workspace contracts** (EPIC-051, TASK-087–103, completed
    2026-07-25) separate data maturity from visual-layout compliance. The approved
    transaction-list renderer owns KPI, toolbar, table/empty and pagination regions;
    master-detail registers, tabular reports and operational workspaces extend that
@@ -718,9 +718,15 @@ Android verification remains the only human-only release check.
    Draft, Posted and Cancelled runs now share audited list/detail behavior, while
    responsive create and posting confirmation modals preserve the canonical
    straight-line calculation and balanced GL command.
+9. **Asset Detail correction** (TASK-103) moves the Fixed Assets master record from
+   the legacy detail exemption onto `master-detail-editor-v1`. Acquisition and
+   depreciation policy are pure display facts, posted history uses a controlled
+   responsive table, and book value remains a derived context instead of a fake
+   editable form.
 
 Exit criteria: 43 shared list-layout routes and all 115 routes pass desktop/375px
 structural audits; Timesheet and Employee pass their dedicated five-language/state
-proofs, and the three master-detail editor routes pass focused and live browser
+proofs, and the four master-detail editor routes pass focused and live browser
 verification; Payroll modal initial/error/mobile states and both Case Detail routes
-pass focused state proofs, and Depreciation run states pass with service-worker v100.
+pass focused state proofs, and Fixed Assets detail/run states pass with
+service-worker v101.

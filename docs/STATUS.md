@@ -723,15 +723,32 @@ scrolling. Five-language desktop/375px state proofs cover empty, mixed, create/p
 failure and successful lifecycle refreshes. Service-worker v100 delivers the update,
 and the shared list-layout audit now covers 43 routes.
 
+## Asset Detail master-data SSOT (TASK-103, 2026-07-25)
+
+The canonical Asset Detail page no longer relies on the legacy `master-detail`
+exemption or rebuilds `docwrap`, `docpage`, `dochead`, `doclayout`, summary cards and
+read-only form controls. It now renders through `masterDetailEditorPage()` under
+`data-layout="master-detail-editor-v1"` with one semantic page header and the
+standard overview, error, main, context and hidden actions regions.
+
+Acquisition date, original cost, useful life and residual value are overview facts;
+depreciation method, monthly charge and GL accounts are pure display facts rather
+than fake inputs. Only real Posted run lines appear in the controlled responsive
+history table. Original cost, accumulated depreciation, net book value and progress
+remain derived from Canonical Demo/API data in the context rail. Five-language
+desktop/375px proofs cover populated, no-history, unknown-ID and no-asset states.
+Service-worker v101 delivers the update, and the focused master-detail editor audit
+now covers BOM, Employee, Service Contract and Asset Detail.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 101 tasks, including TASK-102
+- Done: 102 tasks, including TASK-103
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 115 Canonical / 0 Preview and 43 audited list-layout routes, including
   36 transaction lists, 5 master-detail registers and 2 report lists; Warehouse
-  Picking remains on its dedicated operational-workspace SSOT, and BOM, Employee plus
-  Service Contract use the shared master-detail editor SSOT.
+  Picking remains on its dedicated operational-workspace SSOT, and BOM, Employee,
+  Service Contract plus Asset Detail use the shared master-detail editor SSOT.
   NCR and Service Order use the shared actionable Case Detail SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.

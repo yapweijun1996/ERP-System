@@ -1810,3 +1810,10 @@ Delivery slices:
       history, move creation and confirmed posting into responsive recoverable
       modals, and retain the existing straight-line and GL commands. Five-language
       state audits and service worker v100 enforce the desktop/375px contract.
+- [x] **TASK-103 — Asset Detail master-data SSOT.** Reclassify the canonical
+      Asset Detail page from the legacy `master-detail` exemption to
+      `master-detail-editor-v1`. Replace hand-built document chrome and read-only
+      form controls with the shared overview/main/context/actions regions, preserve
+      real posted depreciation history and book-value calculations, and constrain
+      history through the standard responsive table. Five-language state audits and
+      service worker v101 enforce the desktop/375px contract.
