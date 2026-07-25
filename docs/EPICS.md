@@ -1953,10 +1953,13 @@ Create the reusable document boundary for leave evidence, expense receipts, card
 proof and tax evidence. PostgreSQL/PGlite byte storage is the default confirmed
 deployment; a server-filesystem provider is optional and explicitly single-node.
 
-- [ ] **TASK-117 — Introduce DocumentStorageProvider and receipt metadata.** Store
-      tenant ownership, version, SHA-256, MIME, size, backend locator, retention and
-      legal-hold metadata independently from content; provide database and optional
-      filesystem implementations with identical authorization.
+- [x] **TASK-117 — Introduce DocumentStorageProvider and receipt metadata.** Migration
+      0056 stores tenant ownership, immutable version/SHA-256/MIME/size facts,
+      retention and legal hold independently from content. PostgreSQL/PGlite `bytea`
+      is the default cluster-safe provider; an explicitly configured filesystem root
+      is single-node and stores only opaque content plus a database-owned locator.
+      Both providers enforce identical owner/manager/cross-tenant authorization and
+      verify content integrity on read. PWA v117.
 - [ ] **TASK-118 — Add secure upload and mobile offline capture.** Accept JPEG, PNG,
       HEIC and PDF up to 20 MB/20 pages, validate magic bytes, stream bounded content,
       support camera/crop/rotate/compress and clear unsynced local drafts after an

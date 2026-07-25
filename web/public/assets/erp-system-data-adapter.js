@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 55;
+  var DEMO_SCHEMA_VERSION = 56;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -207,6 +207,10 @@
       "select count(*)::int as n from information_schema.columns " +
       "where table_schema='public' and table_name='payroll_run_line' and column_name in " +
       "('base_gross_pay','leave_earnings','leave_deductions')")).rows[0];
+    var documentStorageSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('managed_document','document_version','document_blob','document_file_location')")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
@@ -215,7 +219,8 @@
       && reportingSignature && Number(reportingSignature.n) === 6
       && calendarOutboundSignature && Number(calendarOutboundSignature.n) === 2
       && payrollLeaveSignature && Number(payrollLeaveSignature.n) === 2
-      && payrollRunLineSignature && Number(payrollRunLineSignature.n) === 3;
+      && payrollRunLineSignature && Number(payrollRunLineSignature.n) === 3
+      && documentStorageSignature && Number(documentStorageSignature.n) === 4;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -227,11 +232,20 @@
       "select count(*)::int as n from information_schema.columns " +
       "where table_schema='public' and table_name='payroll_run_line' and column_name in " +
       "('base_gross_pay','leave_earnings','leave_deductions')")).rows[0];
+    var appliedDocumentTables = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('managed_document','document_version','document_blob','document_file_location')")).rows[0];
     if (!appliedPayrollTables || Number(appliedPayrollTables.n) !== 2
       || !appliedPayrollColumns || Number(appliedPayrollColumns.n) !== 3) {
       throw new Error(
         'Persistent PGlite migration v' + DEMO_SCHEMA_VERSION +
         ' did not apply its required Payroll schema signature.');
+    }
+    if (!appliedDocumentTables || Number(appliedDocumentTables.n) !== 4) {
+      throw new Error(
+        'Persistent PGlite migration v' + DEMO_SCHEMA_VERSION +
+        ' did not apply its required Document Storage schema signature.');
     }
     await db.query(
       'insert into "_erp_demo_migration" ("version") values ($1) on conflict ("version") do nothing',

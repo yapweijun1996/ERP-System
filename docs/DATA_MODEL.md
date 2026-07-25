@@ -141,8 +141,9 @@ SG and MY demo companies; production wires real auth.
 > versioned approval policy/step, workflow instance/step, immutable decision/event,
 > bounded delegation, capacity-rule and capacity-snapshot entities. TASK-115 adds the
 > outbound calendar connection/event entities. TASK-116 adds the leave-to-Payroll
-> source and one-time run mapping entities. The remaining entities are approved
-> targets for TASK-117–135 and are
+> source and one-time run mapping entities. TASK-117 adds the first four managed
+> document storage entities in section 8.3. The remaining entities are approved
+> targets for TASK-118–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -259,10 +260,10 @@ does not depend on later salary or policy changes.
 ### 8.3 Managed documents and extraction
 
 ```
-managed_document               tenant ownership, hash, MIME, size, page count and state
-document_version               immutable content-version metadata
-document_blob                  default PostgreSQL/PGlite binary payload
-document_file_location         optional single-node server-file reference
+managed_document               tenant identity, owner, purpose, retention and legal hold [0056]
+document_version               immutable version/hash/MIME/size/backend metadata [0056]
+document_blob                  default PostgreSQL/PGlite binary payload [0056]
+document_file_location         optional single-node server-file locator [0056]
 document_link                  typed owner link (leave, claim, receipt, tax pack)
 document_scan_job              quarantine/malware result and retry state
 document_extraction(+field)     OCR/Vision model, source, value and confidence
@@ -271,9 +272,15 @@ document_purge_approval         records-manager request and finance review
 document_tombstone             retained hash/provenance after authorized purge
 ```
 
-Database binary storage is the default provider. Server-file storage is an explicit
-single-node deployment option; the database still owns all tenant, integrity, version,
-retention and audit metadata. New files remain `Quarantined` until a successful scan.
+Migration 0056 implements the first four rows. Database binary storage is the default,
+cluster-safe provider. Server-file storage requires `DOCUMENT_STORAGE_FS_ROOT` and is
+an explicit single-node deployment option; the database still owns all tenant,
+integrity, version, retention and legal-hold metadata. Identity and versions cannot be
+updated or deleted, while the managed projection may advance only its current version,
+retention deadline or legal hold. Every read verifies stored bytes against the
+database-owned SHA-256 and size. The remaining link, quarantine, extraction, retention
+workflow, purge and tombstone rows are planned for TASK-118–122. New files will remain
+`Quarantined` until a successful scan.
 Scanner unavailability or an indeterminate result fails closed. OCR is local by default;
 external Vision is opt-in BYOK with company-level region and retention policy.
 

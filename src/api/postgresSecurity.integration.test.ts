@@ -25,6 +25,12 @@ import {
   issueStockWithin,
   receiveStockWithin,
 } from '../modules/inventory/stock';
+import {
+  appendManagedDocumentVersion,
+  createDocumentStorageRegistry,
+  createManagedDocument,
+  readManagedDocument,
+} from '../modules/documents/storage';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -178,6 +184,92 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       fullName: 'Replay',
       password: 'invited-password',
     }, 'pg-accept-replay')).rejects.toMatchObject({ code: 'invitation_invalid' });
+
+    const documentScope = {
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+    };
+    const documentRegistry = createDocumentStorageRegistry({});
+    const documentV1 = new TextEncoder().encode('postgres-document-v1');
+    const documentV2 = new TextEncoder().encode('postgres-document-v2');
+    const createdDocument = await createManagedDocument(
+      db,
+      documentScope,
+      { userId: accepted.userId },
+      {
+        documentKey: 'postgres:receipt:1',
+        purpose: 'receipt',
+        ownerUserId: accepted.userId,
+        originalFileName: 'receipt.txt',
+        mimeType: 'text/plain',
+        retentionUntil: new Date('2033-12-31T00:00:00.000Z'),
+        content: documentV1,
+      },
+      documentRegistry,
+    );
+    expect(createdDocument.version).toMatchObject({
+      versionNo: 1,
+      storageBackend: 'database',
+      sizeBytes: documentV1.byteLength,
+    });
+    expect((await readManagedDocument(
+      db,
+      documentScope,
+      { userId: accepted.userId },
+      createdDocument.document.id,
+      documentRegistry,
+    )).content).toEqual(documentV1);
+    expect((await readManagedDocument(
+      db,
+      documentScope,
+      { userId: admin.userId, canManage: true },
+      createdDocument.document.id,
+      documentRegistry,
+    )).content).toEqual(documentV1);
+    await expect(readManagedDocument(
+      db,
+      documentScope,
+      { userId: admin.userId },
+      createdDocument.document.id,
+      documentRegistry,
+    )).rejects.toMatchObject({ code: 'document_access_denied', status: 403 });
+    await expect(readManagedDocument(
+      db,
+      { masterFn: setup.masterFn, companyFn: 'CROSS-TENANT' },
+      { userId: accepted.userId, canManage: true },
+      createdDocument.document.id,
+      documentRegistry,
+    )).rejects.toMatchObject({ code: 'document_missing', status: 404 });
+    const appendedDocument = await appendManagedDocumentVersion(
+      db,
+      documentScope,
+      { userId: accepted.userId },
+      createdDocument.document.id,
+      {
+        expectedVersionNo: 1,
+        mimeType: 'text/plain',
+        content: documentV2,
+      },
+      documentRegistry,
+    );
+    expect(appendedDocument).toMatchObject({
+      replayed: false,
+      document: { currentVersionNo: 2 },
+      version: { versionNo: 2, storageBackend: 'database' },
+    });
+    expect((await readManagedDocument(
+      db,
+      documentScope,
+      { userId: accepted.userId },
+      createdDocument.document.id,
+      documentRegistry,
+    )).content).toEqual(documentV2);
+    expect(await db.select().from(schema.documentBlob)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.documentBlob),
+    )).toHaveLength(2);
 
     await requestPasswordReset(
       db,

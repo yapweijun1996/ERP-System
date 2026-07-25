@@ -136,6 +136,18 @@ docker compose exec api npm run migrate:prod-rls   # enables + FORCEs RLS polici
 This keeps tenant isolation enforced at the database level in production without breaking
 the "identical shared schema both modes" invariant.
 
+### Optional single-node document filesystem
+
+Document content uses PostgreSQL `bytea` by default and needs no extra configuration.
+For a deliberately single-node deployment, set
+`DOCUMENT_STORAGE_FS_ROOT=/var/lib/erp-documents`. The bundled Compose stack mounts
+the named `document_storage` volume there for both API and worker services. Back up
+that volume together with PostgreSQL: the files contain only content, while PostgreSQL
+remains authoritative for tenant ownership, version, SHA-256, MIME, size, retention,
+legal hold and the opaque relative locator. Do not enable this backend behind multiple
+API/worker nodes unless the path is replaced by shared durable storage in a future
+provider.
+
 ---
 
 ## 2. PostgreSQL tuning (100–800 GB)

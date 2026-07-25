@@ -21,3 +21,4 @@ export * from './integration';
 export * from './notifications';
 export * from './controlPlane';
 export * from './reporting';
+export * from './documents';

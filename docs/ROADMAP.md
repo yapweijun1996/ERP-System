@@ -812,17 +812,20 @@ Exit criteria: working-day/half-day calculation, pending reservation, insufficie
 balance split, privacy, approval/delegation/capacity, calendar, outbound sync and
 Payroll effects pass five-language desktop/375px and domain/API proof.
 
-## Phase 36 — Receipt & Secure Document Processing (Planned)
+## Phase 36 — Receipt & Secure Document Processing (In progress)
 
-1. **Storage and bounded capture** (EPIC-054, TASK-117/118) add a shared storage
-   provider with database content as the default and optional single-node filesystem
-   content, while retaining authoritative metadata, hashes, scope and retention in
-   PostgreSQL/PGlite. PWA capture supports bounded JPEG/PNG/HEIC/PDF and offline drafts.
-2. **Fail-closed scan and governed extraction** (TASK-119/120) quarantine every file,
+1. **Storage provider** (TASK-117 done 2026-07-26) adds database-default
+   PostgreSQL/PGlite byte content and an optional explicit single-node filesystem
+   provider. Tenant ownership, immutable versions, SHA-256, MIME, size, retention,
+   legal hold and the filesystem locator remain queryable database facts. The same
+   owner/manager/cross-tenant contract and integrity verification cover both providers.
+2. **Bounded capture** (TASK-118 planned) adds secure JPEG/PNG/HEIC/PDF upload,
+   mobile camera tooling and offline PWA drafts.
+3. **Fail-closed scan and governed extraction** (TASK-119/120) quarantine every file,
    default to local OCR, make external Vision BYOK opt-in, preserve field provenance
    and permit system submission only when every critical field reaches at least 98%
    and all safety, amount and duplicate checks pass.
-3. **Void, retention and access audit** (TASK-121/122) distinguish draft deletion,
+4. **Void, retention and access audit** (TASK-121/122) distinguish draft deletion,
    submitted Void, posted correction and post-retention two-person purge; support
    legal hold, paper-original custody and sensitive read/download/export audit.
 

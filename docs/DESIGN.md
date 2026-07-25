@@ -199,7 +199,10 @@ versioned approval policy resolution, snapshotted workflow authority, bounded
 delegation, immutable decisions/events and capacity controls. TASK-115 adds the shared
 Team Calendar read model/workspace and optional one-way delivery worker. TASK-116 adds
 immutable leave-to-Payroll sources, policy-controlled encashment and one-time run
-mappings; the remaining sections describe the target architecture for TASK-117–135.
+mappings. TASK-117 implements the shared managed-document identity/version boundary,
+database-default byte provider and optional explicit single-node filesystem provider.
+The remaining sections describe the target architecture for upload, quarantine,
+extraction, retention workflows and expense linkage under TASK-118–135.
 
 ### Identity and authorization
 

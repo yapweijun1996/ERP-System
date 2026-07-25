@@ -55,6 +55,7 @@ DECLARE
     'approval_instance_event', 'approval_delegation', 'approval_capacity_snapshot',
     'leave_capacity_rule',
     'calendar_outbound_connection', 'calendar_outbound_event',
+    'managed_document', 'document_version', 'document_blob', 'document_file_location',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',

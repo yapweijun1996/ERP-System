@@ -38,6 +38,9 @@ services:
       ERP_SETUP_TOKEN: ${ERP_SETUP_TOKEN:-}
       ERP_TOKEN_ENCRYPTION_KEY: ${ERP_TOKEN_ENCRYPTION_KEY:-}
       ERP_PUBLIC_URL: ${ERP_PUBLIC_URL:-http://localhost:8080}
+      DOCUMENT_STORAGE_FS_ROOT: ${DOCUMENT_STORAGE_FS_ROOT:-}
+    volumes:
+      - document_storage:/var/lib/erp-documents
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:
@@ -67,6 +70,9 @@ services:
       OUTBOX_POLL_MS: ${OUTBOX_POLL_MS:-5000}
       CALENDAR_OUTBOUND_URL: ${CALENDAR_OUTBOUND_URL:-}
       CALENDAR_OUTBOUND_TOKEN: ${CALENDAR_OUTBOUND_TOKEN:-}
+      DOCUMENT_STORAGE_FS_ROOT: ${DOCUMENT_STORAGE_FS_ROOT:-}
+    volumes:
+      - document_storage:/var/lib/erp-documents
     depends_on:
       db:
         condition: service_healthy
@@ -86,3 +92,4 @@ services:
 
 volumes:
   pgdata:
+  document_storage:

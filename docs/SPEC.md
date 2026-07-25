@@ -113,7 +113,9 @@ audit, reminders/escalation and minimum-staff capacity controls. TASK-115 implem
 the privacy-redacted Team Calendar plus optional idempotent outbound delivery.
 TASK-116 implements immutable unpaid-leave/cancellation/encashment Payroll sources,
 policy-controlled balance consumption and one-time payroll-run application.
-TASK-117–135 remain
+TASK-117 implements immutable managed-document identity/version metadata,
+database-default PostgreSQL/PGlite byte content, optional explicit single-node
+filesystem content and a shared authorization/integrity contract. TASK-118–135 remain
 **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
