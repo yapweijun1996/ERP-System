@@ -158,7 +158,7 @@ function renderSetupWizard(){
     step:0, reached:0,
     lang:(typeof getLang==='function'?getLang():'en'),
     masterName:'', organizationCode:'', setupToken:'', companyName:'', country:'SG',
-    adminName:'', adminUsername:'admin', adminEmail:'', adminPassword:'', adminPasswordConfirm:'',
+    adminName:'', adminUsername:IS_API?'admin':'', adminEmail:'', adminPassword:'', adminPasswordConfirm:'',
     aiProvider:'', aiKey:'',
   };
 
@@ -320,6 +320,11 @@ function renderSetupWizard(){
       var err=validateStep(S.step);
       var errEl=document.getElementById('wizErr');
       if(err){ if(errEl) errEl.textContent=err; return; }
+      if(S.step===1 && !S.adminUsername){
+        S.adminUsername=IS_API
+          ? 'admin'
+          : ('admin.'+S.organizationCode.trim().toLowerCase()).slice(0,64);
+      }
       S.step++; S.reached=Math.max(S.reached,S.step); render();
     });
     var finish=document.getElementById('wizFinish');

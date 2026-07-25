@@ -106,7 +106,9 @@ TASK-109 delivered the five-language My Work shell as five Preview routes, and
 TASK-110 proved the identity/security boundary including reporting-derived Manager
 authorization. TASK-111 implements the versioned policy/calendar foundation.
 TASK-112 implements the immutable leave-balance ledger and Pending reservation
-boundary. TASK-113–135 remain **Planned** until their individual acceptance gates pass. Planned
+boundary. TASK-113 implements the versioned leave lifecycle, actor-owned authoring,
+privacy-controlled evidence metadata and approved cancellation. TASK-114–135 remain
+**Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
@@ -134,8 +136,14 @@ capabilities must not be represented as current Canonical behavior.
 - **My Work shell:** My Leave, My Claims and My Receipts use the shared list SSOT.
   Team Calendar and My Approvals are present only when the actor context grants team
   scope; team rows omit private reasons/evidence. Claims/Receipts and approval commands
-  remain honest unavailable/read-only states. These five accepted shell routes are
-  Preview backed by Canonical actor reads, leaving the 115 Canonical routes unchanged.
+  remain honest unavailable/read-only states. `my-leave` and its governed
+  `leave-application` detail are Canonical; the other four shell routes remain Preview.
+- **Governed leave lifecycle:** every non-legacy request retains policy/calendar and
+  immutable revision snapshots. Draft, Pending, Approved, Rejected, Withdrawn,
+  Voided and Cancelled transitions require the expected version. Employee “delete”
+  creates a reasoned Void tombstone; pending records withdraw, while approved records
+  require a separately decided cancellation request. Manager list projections expose
+  dates, duration and evidence state but never the private reason or document reference.
 - **Full leave:** effective-dated work/holiday/leave policy, full-day/half-day units,
   immutable entitlement ledger, Pending reservation, versioned amendment/cancellation,
   multi-stage approval/delegation/capacity, role-redacted team calendar, protected
@@ -152,8 +160,9 @@ capabilities must not be represented as current Canonical behavior.
   maker/checker bank-file batches, successful-line-only bank posting and immutable
   PDF/XLSX/CSV/ZIP/hash tax-support packages. The product does not call bank APIs or
   submit tax returns directly.
-- **Record governance:** unsubmitted drafts may be deleted; submitted evidence uses
-  reasoned Void; posted/finalised evidence uses correction or reversal. Legal hold
+- **Record governance:** unsubmitted governed records use a reasoned Void-delete
+  tombstone rather than physical erasure; submitted evidence uses state-dependent
+  Void; posted/finalised evidence uses correction or reversal. Legal hold
   prevents purge. Post-retention content purge requires two distinct approvers and
   leaves a permanent hash tombstone.
 

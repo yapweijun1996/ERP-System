@@ -106,7 +106,7 @@ SCREENS['leave-approval'] = async function(root){
       },
       {
         label:s('kpiPendingDays'),
-        value:leaveRequests.filter(row=>row.status==='pending').reduce((sum,row)=>sum+row.days,0),
+        value:leaveRequests.filter(row=>row.status==='pending').reduce((sum,row)=>sum+Number(row.days||0),0),
         filter:'pending',
       },
       {

@@ -7,7 +7,8 @@ import {
   master, company, currency, appUser, role, rolePermission, userCompany, userCompanyRole,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
-  calendarHoliday, leavePolicyVersion, leaveType, workingCalendar, workingCalendarVersion,
+  calendarHoliday, leaveBalanceEntry, leavePolicyVersion, leaveType,
+  workingCalendar, workingCalendarVersion,
   purchaseRequisition, purchaseRequisitionLine,
   purchaseRfq, purchaseRfqLine, purchaseRfqSupplier,
   supplierQuotation, supplierQuotationLine,
@@ -104,7 +105,9 @@ export async function seedDemo(db: DB): Promise<void> {
   })));
   await db.insert(rolePermission).values([
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.self.read' },
+    { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.leave.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.self.read' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.leave.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
   ]);
 
@@ -513,7 +516,7 @@ export async function seedDemo(db: DB): Promise<void> {
     },
   ]).returning({ id: leaveType.id, code: leaveType.code });
   const leaveTypeByCode = new Map(leaveTypes.map((type) => [type.code, type.id]));
-  await db.insert(leavePolicyVersion).values([
+  const policyVersions = await db.insert(leavePolicyVersion).values([
     {
       masterFn: 'M1', companyFn: 'C-SG', leaveTypeId: leaveTypeByCode.get('ANNUAL')!,
       calendarId: sgCalendar.id, versionNo: 1, effectiveFrom: '2026-01-01',
@@ -542,28 +545,62 @@ export async function seedDemo(db: DB): Promise<void> {
       encashmentMaxDays: '0.00', eligibleEmploymentTypes: ['Full-time', 'Part-time', 'Contract', 'Intern'],
       confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
     },
-  ]);
+  ]).returning({
+    id: leavePolicyVersion.id,
+    leaveTypeId: leavePolicyVersion.leaveTypeId,
+  });
+  const policyByLeaveType = new Map(policyVersions.map((policy) => [
+    policy.leaveTypeId,
+    policy.id,
+  ]));
+  const annualTypeId = leaveTypeByCode.get('ANNUAL')!;
+  const medicalTypeId = leaveTypeByCode.get('MEDICAL')!;
+  const sgEmployees = [
+    [manager.id, 20],
+    [marcus.id, 16],
+    [aisha.id, 18],
+    [tom.id, 14],
+    [lena.id, 12],
+  ] as const;
+  await db.insert(leaveBalanceEntry).values(sgEmployees.flatMap(([employeeId, annualDays]) => [
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId, leaveTypeId: annualTypeId,
+      policyVersionId: policyByLeaveType.get(annualTypeId)!,
+      entryType: 'grant', entryKey: `demo:2026:annual:${employeeId}`,
+      balanceDelta: annualDays.toFixed(2), reservedDelta: '0.00',
+      effectiveDate: '2026-01-01', sourceType: 'demo_opening_grant',
+      sourceId: `annual:${employeeId}`, createdByUserId: adminUser.id,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId, leaveTypeId: medicalTypeId,
+      policyVersionId: policyByLeaveType.get(medicalTypeId)!,
+      entryType: 'grant', entryKey: `demo:2026:medical:${employeeId}`,
+      balanceDelta: '14.00', reservedDelta: '0.00',
+      effectiveDate: '2026-01-01', sourceType: 'demo_opening_grant',
+      sourceId: `medical:${employeeId}`, createdByUserId: adminUser.id,
+    },
+  ]));
 
   await db.insert(leaveRequest).values([
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeId: marcus.id, leaveType: 'Annual',
-      startDate: '2026-08-10', endDate: '2026-08-14', days: 5,
+      startDate: '2026-08-10', endDate: '2026-08-14', days: '5.00',
       reason: 'Family trip', status: 'pending',
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeId: aisha.id, leaveType: 'Medical',
-      startDate: '2026-06-09', endDate: '2026-06-10', days: 2,
+      startDate: '2026-06-09', endDate: '2026-06-10', days: '2.00',
       reason: 'Medical appointment', status: 'approved', decidedAt: new Date('2026-06-08T09:00:00Z'),
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeId: tom.id, leaveType: 'Unpaid',
-      startDate: '2026-07-01', endDate: '2026-07-05', days: 5,
+      startDate: '2026-07-01', endDate: '2026-07-05', days: '5.00',
       reason: 'Personal', status: 'rejected', rejectionReason: 'Peak production week — please reschedule.',
       decidedAt: new Date('2026-06-25T14:30:00Z'),
     },
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeId: lena.id, leaveType: 'Annual',
-      startDate: '2026-08-24', endDate: '2026-08-24', days: 1,
+      startDate: '2026-08-24', endDate: '2026-08-24', days: '1.00',
       reason: 'Errand', status: 'pending',
     },
   ]);

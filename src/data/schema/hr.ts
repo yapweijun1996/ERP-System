@@ -367,20 +367,198 @@ export const leaveRequest = pgTable('leave_request', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,
   employeeId: bigint('employee_id', { mode: 'number' }).notNull().references(() => employee.id),
+  leaveTypeId: bigint('leave_type_id', { mode: 'number' }).references(() => leaveType.id),
+  policyVersionId: bigint('policy_version_id', { mode: 'number' })
+    .references(() => leavePolicyVersion.id),
+  calendarVersionId: bigint('calendar_version_id', { mode: 'number' })
+    .references(() => workingCalendarVersion.id),
   leaveType: text('leave_type').notNull(),
   startDate: date('start_date').notNull(),
   endDate: date('end_date').notNull(),
-  days: integer('days').notNull(),
+  unit: text('unit'),
+  days: numeric('days', { precision: 8, scale: 2 }).notNull(),
   reason: text('reason'),
   status: text('status').notNull().default('pending'),
+  version: integer('version').notNull().default(1),
+  currentRevisionNo: integer('current_revision_no').notNull().default(0),
+  legacyPolicy: boolean('legacy_policy').notNull().default(true),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  onBehalfByUserId: bigint('on_behalf_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   rejectionReason: text('rejection_reason'),
+  decidedByUserId: bigint('decided_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
   decidedAt: timestamp('decided_at', { withTimezone: true }),
   ...timestamps,
 }, (t) => [
   index('idx_leave_request_employee').on(t.masterFn, t.companyFn, t.employeeId, t.id),
   index('idx_leave_request_status').on(t.masterFn, t.companyFn, t.status, t.id),
-  check('ck_leave_request_type', sql`${t.leaveType} in ('Annual', 'Medical', 'Unpaid')`),
-  check('ck_leave_request_status', sql`${t.status} in ('pending', 'approved', 'rejected')`),
+  check(
+    'ck_leave_request_status',
+    sql`${t.status} in (
+      'draft', 'pending', 'approved', 'rejected', 'withdrawn', 'voided', 'cancelled'
+    )`,
+  ),
   check('ck_leave_request_days', sql`${t.days} > 0`),
   check('ck_leave_request_dates', sql`${t.endDate} >= ${t.startDate}`),
+  check('ck_leave_request_version', sql`${t.version} > 0 and ${t.currentRevisionNo} >= 0`),
+  check(
+    'ck_leave_request_governance',
+    sql`(
+      ${t.legacyPolicy} = true
+      and ${t.currentRevisionNo} = 0
+      and ${t.leaveTypeId} is null
+      and ${t.policyVersionId} is null
+      and ${t.calendarVersionId} is null
+      and ${t.unit} is null
+    ) or (
+      ${t.legacyPolicy} = false
+      and ${t.currentRevisionNo} > 0
+      and ${t.leaveTypeId} is not null
+      and ${t.policyVersionId} is not null
+      and ${t.calendarVersionId} is not null
+      and ${t.unit} in ('full_day', 'half_day_am', 'half_day_pm')
+    )`,
+  ),
+]);
+
+/** Immutable submitted/draft content snapshots. The header projects only the
+ * latest revision so legacy list consumers remain compatible. */
+export const leaveRequestRevision = pgTable('leave_request_revision', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  requestId: bigint('request_id', { mode: 'number' }).notNull().references(() => leaveRequest.id),
+  revisionNo: integer('revision_no').notNull(),
+  leaveTypeId: bigint('leave_type_id', { mode: 'number' }).notNull()
+    .references(() => leaveType.id),
+  policyVersionId: bigint('policy_version_id', { mode: 'number' }).notNull()
+    .references(() => leavePolicyVersion.id),
+  calendarVersionId: bigint('calendar_version_id', { mode: 'number' }).notNull()
+    .references(() => workingCalendarVersion.id),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  unit: text('unit').notNull(),
+  days: numeric('days', { precision: 8, scale: 2 }).notNull(),
+  reason: text('reason'),
+  changeReason: text('change_reason'),
+  evidenceRequired: boolean('evidence_required').notNull().default(false),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_leave_request_revision')
+    .on(t.masterFn, t.companyFn, t.requestId, t.revisionNo),
+  index('idx_leave_request_revision_current')
+    .on(t.masterFn, t.companyFn, t.requestId, t.revisionNo),
+  check('ck_leave_request_revision_no', sql`${t.revisionNo} > 0`),
+  check('ck_leave_request_revision_days', sql`${t.days} > 0 and mod(${t.days} * 2, 1) = 0`),
+  check('ck_leave_request_revision_dates', sql`${t.endDate} >= ${t.startDate}`),
+  check(
+    'ck_leave_request_revision_unit',
+    sql`${t.unit} in ('full_day', 'half_day_am', 'half_day_pm')`,
+  ),
+]);
+
+/** Append-only state history. `event_key` is the domain-level replay key; API
+ * idempotency remains a separate authenticated request boundary. */
+export const leaveRequestEvent = pgTable('leave_request_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  requestId: bigint('request_id', { mode: 'number' }).notNull().references(() => leaveRequest.id),
+  revisionNo: integer('revision_no'),
+  eventType: text('event_type').notNull(),
+  fromStatus: text('from_status'),
+  toStatus: text('to_status'),
+  reason: text('reason'),
+  eventKey: text('event_key').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_leave_request_event_key')
+    .on(t.masterFn, t.companyFn, t.eventKey),
+  index('idx_leave_request_event_history')
+    .on(t.masterFn, t.companyFn, t.requestId, t.id),
+  check(
+    'ck_leave_request_event_type',
+    sql`${t.eventType} in (
+      'created_draft', 'amended', 'submitted', 'approved', 'rejected',
+      'withdrawn', 'voided', 'cancellation_requested',
+      'cancellation_approved', 'cancellation_rejected'
+    )`,
+  ),
+]);
+
+/** Evidence metadata only. Binary content remains outside this task and will be
+ * linked through DocumentStorageProvider in TASK-117/118. Every row is a new fact. */
+export const leaveEvidence = pgTable('leave_evidence', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  requestId: bigint('request_id', { mode: 'number' }).notNull().references(() => leaveRequest.id),
+  revisionNo: integer('revision_no').notNull(),
+  evidenceType: text('evidence_type').notNull().default('medical_certificate'),
+  state: text('state').notNull().default('received'),
+  documentReference: text('document_reference').notNull(),
+  originalFileName: text('original_file_name'),
+  mimeType: text('mime_type'),
+  note: text('note'),
+  eventKey: text('event_key').notNull(),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_leave_evidence_event_key')
+    .on(t.masterFn, t.companyFn, t.eventKey),
+  index('idx_leave_evidence_projection')
+    .on(t.masterFn, t.companyFn, t.requestId, t.revisionNo, t.id),
+  check('ck_leave_evidence_revision', sql`${t.revisionNo} > 0`),
+  check(
+    'ck_leave_evidence_type',
+    sql`${t.evidenceType} in ('medical_certificate', 'supporting_document')`,
+  ),
+  check('ck_leave_evidence_state', sql`${t.state} in ('received', 'verified', 'rejected')`),
+  check(
+    'ck_leave_evidence_reference',
+    sql`char_length(trim(${t.documentReference})) between 3 and 200`,
+  ),
+]);
+
+/** An approved request stays approved while its cancellation is pending. */
+export const leaveCancellationRequest = pgTable('leave_cancellation_request', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  requestId: bigint('request_id', { mode: 'number' }).notNull().references(() => leaveRequest.id),
+  requestVersion: integer('request_version').notNull(),
+  reason: text('reason').notNull(),
+  status: text('status').notNull().default('pending'),
+  version: integer('version').notNull().default(1),
+  requestedByUserId: bigint('requested_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedByUserId: bigint('decided_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  decisionReason: text('decision_reason'),
+}, (t) => [
+  uniqueIndex('uq_leave_cancellation_pending')
+    .on(t.masterFn, t.companyFn, t.requestId)
+    .where(sql`${t.status} = 'pending'`),
+  index('idx_leave_cancellation_history')
+    .on(t.masterFn, t.companyFn, t.requestId, t.id),
+  check('ck_leave_cancellation_request_version', sql`${t.requestVersion} > 0 and ${t.version} > 0`),
+  check('ck_leave_cancellation_status', sql`${t.status} in ('pending', 'approved', 'rejected')`),
+  check(
+    'ck_leave_cancellation_reason',
+    sql`char_length(trim(${t.reason})) between 3 and 500`,
+  ),
+  check(
+    'ck_leave_cancellation_decision',
+    sql`(${t.status} = 'pending' and ${t.decidedByUserId} is null and ${t.decidedAt} is null)
+      or (${t.status} <> 'pending' and ${t.decidedByUserId} is not null and ${t.decidedAt} is not null)`,
+  ),
 ]);

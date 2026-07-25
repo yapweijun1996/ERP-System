@@ -16,11 +16,23 @@ import {
   type ResetEmployeeAccountInput,
 } from '../../src/modules/hr/employeeAccount';
 import {
+  listAvailableLeaveTypesWithin,
   listActorLeaveWithin,
   listTeamLeaveWithin,
   resolveActorEmployeeWithin,
   resolveTeamEmployeeIdsWithin,
 } from '../../src/modules/hr/actorScope';
+import {
+  amendLeaveApplicationWithin,
+  createLeaveDraftWithin,
+  readGovernedLeaveWithin,
+  requestApprovedLeaveCancellationWithin,
+  submitLeaveApplicationWithin,
+  voidOwnLeaveApplicationWithin,
+  withdrawLeaveApplicationWithin,
+  type LeaveApplicationActor,
+  type LeaveRevisionInput,
+} from '../../src/modules/hr/leaveApplication';
 import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
@@ -429,6 +441,85 @@ export const erpDemoRuntime = Object.freeze({
     },
     listActorLeaveWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return listActorLeaveWithin(asDomainDb(db), scope, employeeId);
+    },
+    listAvailableLeaveTypesWithin(db: DemoOrm, scope: Scope) {
+      return listAvailableLeaveTypesWithin(asDomainDb(db), scope);
+    },
+    readGovernedLeaveWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      requestId: number,
+    ) {
+      return readGovernedLeaveWithin(asDomainDb(db), scope, actor, requestId);
+    },
+    createLeaveDraftWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      employeeId: number,
+      input: LeaveRevisionInput,
+    ) {
+      return createLeaveDraftWithin(asDomainDb(db), scope, actor, employeeId, input);
+    },
+    amendLeaveApplicationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      requestId: number,
+      expectedVersion: number,
+      input: LeaveRevisionInput,
+    ) {
+      return amendLeaveApplicationWithin(
+        asDomainDb(db), scope, actor, requestId, expectedVersion, input,
+      );
+    },
+    submitLeaveApplicationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      requestId: number,
+      expectedVersion: number,
+    ) {
+      return submitLeaveApplicationWithin(
+        asDomainDb(db), scope, actor, requestId, expectedVersion,
+      );
+    },
+    withdrawLeaveApplicationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      requestId: number,
+      expectedVersion: number,
+      reason: string,
+    ) {
+      return withdrawLeaveApplicationWithin(
+        asDomainDb(db), scope, actor, requestId, expectedVersion, reason,
+      );
+    },
+    voidOwnLeaveApplicationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      requestId: number,
+      expectedVersion: number,
+      reason: string,
+    ) {
+      return voidOwnLeaveApplicationWithin(
+        asDomainDb(db), scope, actor, requestId, expectedVersion, reason,
+      );
+    },
+    requestApprovedLeaveCancellationWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actor: LeaveApplicationActor,
+      requestId: number,
+      expectedVersion: number,
+      reason: string,
+    ) {
+      return requestApprovedLeaveCancellationWithin(
+        asDomainDb(db), scope, actor, requestId, expectedVersion, reason,
+      );
     },
     resolveTeamEmployeeIdsWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return resolveTeamEmployeeIdsWithin(asDomainDb(db), scope, employeeId);

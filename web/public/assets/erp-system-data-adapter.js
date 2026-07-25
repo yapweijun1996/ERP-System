@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 51;
+  var DEMO_SCHEMA_VERSION = 52;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -2828,9 +2828,12 @@
       var data=await withMyActor(async function(orm,actor){
         var canReadTeam=await state.runtime.commands.hasPermissionWithin(
           orm,SCOPE,myActorUserId(),'employee.team.read');
+        var canWriteLeave=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.leave.write');
         var teamEmployeeIds=canReadTeam
           ?await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id)
           :[];
+        var leaveTypes=await state.runtime.commands.listAvailableLeaveTypesWithin(orm,SCOPE);
         return {
           company:{
             companyFn:SCOPE.companyFn,
@@ -2841,8 +2844,9 @@
             locale:typeof getLang==='function'?getLang():'en',
           },
           employee:actor,
+          leaveTypes:leaveTypes,
           capabilities:{
-            leave:{available:true,writable:false},
+            leave:{available:true,writable:canWriteLeave},
             claims:{available:false,reason:'not_modelled'},
             receipts:{available:false,reason:'not_modelled'},
             team:{available:canReadTeam,employeeCount:teamEmployeeIds.length},
@@ -2856,6 +2860,58 @@
         return state.runtime.commands.listActorLeaveWithin(orm,SCOPE,actor.id);
       });
       return {data:data,meta:{actorDerived:true,limit:100}};
+    },
+    leaveApplication:async function(id){
+      var data=await withMyActor(function(orm,actor){
+        return state.runtime.commands.readGovernedLeaveWithin(orm,SCOPE,{
+          userId:myActorUserId(),employeeId:actor.id,
+        },Number(id));
+      });
+      return {data:data,meta:{actorDerived:true,privacy:'owner_private'}};
+    },
+    createLeaveDraft:async function(payload){
+      var data=await withMyActor(async function(orm,actor){
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.leave.write');
+        if(!canWrite) throw new Error('You cannot maintain your leave applications.');
+        return state.runtime.commands.createLeaveDraftWithin(orm,SCOPE,{
+          userId:myActorUserId(),employeeId:actor.id,
+        },actor.id,payload||{});
+      });
+      return {data:data,meta:{actorDerived:true}};
+    },
+    leaveAction:async function(id,name,payload){
+      payload=payload||{};
+      var data=await withMyActor(async function(orm,actor){
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.leave.write');
+        if(!canWrite) throw new Error('You cannot maintain your leave applications.');
+        var requestId=Number(id);
+        var version=Number(payload.expectedVersion);
+        var leaveActor={userId:myActorUserId(),employeeId:actor.id};
+        if(name==='amend'){
+          return state.runtime.commands.amendLeaveApplicationWithin(
+            orm,SCOPE,leaveActor,requestId,version,payload);
+        }
+        if(name==='submit'){
+          return state.runtime.commands.submitLeaveApplicationWithin(
+            orm,SCOPE,leaveActor,requestId,version);
+        }
+        if(name==='withdraw'){
+          return state.runtime.commands.withdrawLeaveApplicationWithin(
+            orm,SCOPE,leaveActor,requestId,version,String(payload.reason||''));
+        }
+        if(name==='void'){
+          return state.runtime.commands.voidOwnLeaveApplicationWithin(
+            orm,SCOPE,leaveActor,requestId,version,String(payload.reason||''));
+        }
+        if(name==='request-cancellation'){
+          return state.runtime.commands.requestApprovedLeaveCancellationWithin(
+            orm,SCOPE,leaveActor,requestId,version,String(payload.reason||''));
+        }
+        throw new Error('Unsupported leave action.');
+      });
+      return {data:data,meta:{actorDerived:true}};
     },
     claims:async function(){
       await withMyActor(function(){ return null; });

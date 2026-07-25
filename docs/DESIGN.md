@@ -193,7 +193,9 @@ TASK-106 identity primitives, TASK-107 employee account lifecycle, TASK-108
 actor-owned self/team read contracts, TASK-109's five Preview My Work routes and
 TASK-110 identity/security proof and TASK-111's versioned leave policy calendar are
 implemented. TASK-112 adds the immutable leave-balance ledger and serialized Pending
-reservation; the remaining sections describe the target architecture for TASK-113–135.
+reservation. TASK-113 adds the versioned leave lifecycle, immutable revision/event
+trail, actor-owned authoring and privacy-controlled evidence metadata; the remaining
+sections describe the target architecture for TASK-114–135.
 
 ### Identity and authorization
 
@@ -235,6 +237,13 @@ reservation; the remaining sections describe the target architecture for TASK-11
   Submission appends `reserve`; a later outcome appends `use` or `release`. An
   insufficient reservation returns the exact paid/unpaid split instead of creating a
   negative available balance.
+- Governed leave separates a mutable, version-checked state projection from immutable
+  revision and event facts. Employee commands derive ownership from Session; HR
+  on-behalf creation is explicit. Owner “delete” means reasoned Void, Pending means
+  withdrawal, and Approved means a separately approved cancellation. The list row
+  contract opens only governed records; Legacy Policy rows stay visible but static.
+  Private reasons and evidence references are returned only to the owner/HR detail,
+  while manager projections contain dates, duration and evidence-required/state only.
 
 - A versioned approval policy resolves ordered steps from domain, company, employee,
   hierarchy, type, amount/days, project and department. Approval instances snapshot
@@ -248,7 +257,7 @@ reservation; the remaining sections describe the target architecture for TASK-11
   stores provider/model/field/confidence; system auto-submit records the authenticated
   uploader and exact policy version.
 - Sensitive reads use short-lived authorised download responses and append audit
-  events. Draft delete, submitted Void, posted correction, legal hold and physical
+  events. Reasoned draft Void-delete, submitted Void, posted correction, legal hold and physical
   purge are separate commands with separate permissions.
 
 ### Domain data flow
@@ -269,7 +278,7 @@ reservation; the remaining sections describe the target architecture for TASK-11
 ### Frontend SSOT
 
 - `my-leave`, `my-receipts` and `my-claims` use the shared transaction-list contract.
-  Leave/expense decisions use `case-detail-v1`; payment/tax registers use
+  `leave-application` and later expense decisions use `case-detail-v1`; payment/tax registers use
   `master-detail-register-v1` and posted payment detail uses `posting-detail-v1`.
 - Introduce `calendar-workspace-v1` once for Team Calendar: page header, filters,
   calendar/list surface, retryable error, responsive detail drawer and governed
@@ -280,7 +289,7 @@ reservation; the remaining sections describe the target architecture for TASK-11
 ## 8. Testing design
 
 - Required local gates are root/web typecheck, ESLint, Vitest, `npm run demo`, generated
-  schema/drift checks, Demo and API builds, and the 115-route desktop/375px audit.
+  schema/drift checks, Demo and API builds, and the live-route desktop/375px audit.
 - CI adds PostgreSQL 16 migration/RLS/integration coverage and the same schema and route
   gates. Stateful browser fixtures ensure detail routes are not skipped for lack of
   context.

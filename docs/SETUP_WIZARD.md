@@ -48,9 +48,10 @@ experience lives.
 
 ## Phase B — In-app first-run wizard (shared by demo & production)
 
-Once the stack is up (or the demo loads), the app detects **first run** (no master
-configured) and launches a guided wizard. Same wizard in both modes — the demo simply has
-no Phase A.
+Once the stack is up (or the demo loads), the app detects **first run** and launches a
+guided wizard. Production uses the server's zero-user setup state; the browser demo uses
+its local completion flag and a seeded reference master. The same visible wizard is used
+in both modes — the demo simply has no Phase A.
 
 The wizard is part of the real frontend, not a separate prototype. It must work with the
 same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND_PLAN.md).
@@ -77,10 +78,16 @@ the master, first company, Superadmin, permissions, effective-dated tax rule and
 chart of accounts, then permanently marks setup complete. In API mode the wizard asks
 for the installer-provided token, keeps it only in page memory and sends it in
 `X-ERP-Setup-Token`; it is never placed in the JSON body or localStorage. The public
-demo continues to write to PGlite/IndexedDB and can be reset for visitors.
+demo continues to write to PGlite/IndexedDB and can be reset for visitors. Because its
+reference master already contains demo identities, the wizard proposes an
+organisation-derived username such as `admin.acme` instead of the seeded `admin`.
+Username and email collisions are rejected before any company or master change, so a
+failed setup remains a clean retry rather than exposing a database constraint error.
 
 ### First-run detection
-- The app checks for an existing master on boot. None → wizard. Exists → normal login.
+- Production checks the one-time setup state on the server. The static demo uses
+  `aria-setup-wizard-complete`; reset clears the browser database and returns to the
+  wizard.
 - The wizard writes through the **same data layer** as everything else, so it works
   against PGlite (demo) and the API/PostgreSQL (prod) without special-casing.
 - Production setup is a privileged, one-time deployment action. The raw setup token is

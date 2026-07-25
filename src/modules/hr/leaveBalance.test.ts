@@ -24,7 +24,19 @@ describe('immutable leave balance ledger', () => {
     const db = await freshDb();
     await seedDemo(db);
     const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
-    const [subject] = await db.select().from(employee).where(eq(employee.employeeNo, 'EMP-1042'));
+    const [subject] = await db.insert(employee).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      employeeNo: 'EMP-LEDGER',
+      fullName: 'Ledger Test Employee',
+      email: 'ledger.test@acme.co',
+      department: 'Finance',
+      jobTitle: 'Test Analyst',
+      employmentType: 'Full-time',
+      startDate: '2026-01-01',
+      annualLeaveDays: 14,
+      baseSalary: '1000.00',
+    }).returning();
     const [annualType] = await db.select().from(leaveType).where(and(
       eq(leaveType.masterFn, scope.masterFn),
       eq(leaveType.companyFn, scope.companyFn),

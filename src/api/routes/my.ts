@@ -6,12 +6,30 @@ import { PERMISSIONS, hasPermission } from '../../auth/permissions';
 import { company } from '../../data/schema';
 import {
   ActorScopeError,
+  listAvailableLeaveTypesWithin,
   listActorLeaveWithin,
   listTeamLeaveWithin,
   resolveActorEmployeeWithin,
   resolveTeamEmployeeIdsWithin,
 } from '../../modules/hr/actorScope';
-import { apiError, requireSession } from '../http';
+import {
+  LeaveApplicationError,
+  amendLeaveApplicationWithin,
+  createLeaveDraftWithin,
+  readGovernedLeaveWithin,
+  requestApprovedLeaveCancellationWithin,
+  submitLeaveApplicationWithin,
+  voidOwnLeaveApplicationWithin,
+  withdrawLeaveApplicationWithin,
+} from '../../modules/hr/leaveApplication';
+import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
+import { LeavePolicyError } from '../../modules/hr/leavePolicy';
+import { appendAudit } from '../audit';
+import { apiError, context, requireSession } from '../http';
+import {
+  beginIdempotentRequest,
+  completeIdempotentRequest,
+} from '../idempotency';
 
 function findClientEmployeeIdentity(
   value: unknown,
@@ -31,6 +49,11 @@ function findClientEmployeeIdentity(
 
 export function createMyRouter(db: DB): Router {
   const router = Router();
+
+  function positiveId(value: string): number | null {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  }
 
   router.use((req, res, next) => {
     const supplied = findClientEmployeeIdentity(req.query)
@@ -53,6 +76,18 @@ export function createMyRouter(db: DB): Router {
       apiError(res, error.status, error.code, error.message);
       return;
     }
+    if (
+      error instanceof LeaveApplicationError
+      || error instanceof LeaveBalanceError
+      || error instanceof LeavePolicyError
+    ) {
+      const status = error instanceof LeaveApplicationError ? error.status : 422;
+      const details = error instanceof LeaveApplicationError || error instanceof LeaveBalanceError
+        ? error.details
+        : undefined;
+      apiError(res, status, error.code, error.message, details);
+      return;
+    }
     throw error;
   }
 
@@ -69,12 +104,87 @@ export function createMyRouter(db: DB): Router {
     return session;
   }
 
+  async function requireLeaveWrite(
+    req: import('express').Request,
+    res: import('express').Response,
+  ) {
+    const session = await requireSelf(req, res);
+    if (!session) return null;
+    if (!await hasPermission(db, session, PERMISSIONS.employeeLeaveWrite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot maintain your leave applications.');
+      return null;
+    }
+    return session;
+  }
+
+  async function runLeaveCommand(
+    req: import('express').Request,
+    res: import('express').Response,
+    session: NonNullable<Awaited<ReturnType<typeof requireSession>>>,
+    operation: string,
+    payload: Record<string, unknown>,
+    execute: (
+      tx: DB,
+      scope: { masterFn: string; companyFn: string },
+      actor: { userId: number; employeeId: number },
+    ) => Promise<unknown>,
+    status = 200,
+  ) {
+    const key = req.header('idempotency-key')?.trim() ?? '';
+    if (!key || key.length > 128) {
+      apiError(res, 428, 'idempotency_key_required', 'A valid Idempotency-Key is required.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const begun = await beginIdempotentRequest(db, {
+      ...scope,
+      actorUserId: session.userId,
+    }, key, operation, payload);
+    if (begun.kind === 'replay') {
+      res.setHeader('Idempotency-Replayed', 'true');
+      res.status(begun.status).json(begun.body);
+      return;
+    }
+    if (begun.kind === 'conflict') {
+      apiError(
+        res,
+        409,
+        begun.reason === 'different_request'
+          ? 'idempotency_key_reused'
+          : 'idempotency_request_in_progress',
+        'This Idempotency-Key cannot be used for this request.',
+      );
+      return;
+    }
+    const data = await withTenantTransaction(db, scope, async (tx) => {
+      const employeeActor = await resolveActorEmployeeWithin(tx, scope, session.userId);
+      const result = await execute(tx, scope, {
+        userId: session.userId,
+        employeeId: employeeActor.id,
+      });
+      await appendAudit(tx, {
+        ...scope,
+        actorUserId: session.userId,
+        requestId: context(res).requestId,
+        entity: 'my/leave-requests',
+        entityId: Number((result as { id?: unknown }).id) || null,
+        action: operation,
+        after: result,
+      });
+      return result;
+    });
+    const body = { data, meta: { actorDerived: true } };
+    await completeIdempotentRequest(db, begun.recordId, status, body);
+    res.status(status).json(body);
+  }
+
   router.get('/context', async (req, res) => {
     const session = await requireSelf(req, res);
     if (!session) return;
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
       const canReadTeam = await hasPermission(db, session, PERMISSIONS.employeeTeamRead);
+      const canWriteLeave = await hasPermission(db, session, PERMISSIONS.employeeLeaveWrite);
       const data = await withTenantTransaction(db, scope, async (tx) => {
         const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
         const [activeCompany] = await tx.select({
@@ -97,11 +207,13 @@ export function createMyRouter(db: DB): Router {
         const teamEmployeeIds = canReadTeam
           ? await resolveTeamEmployeeIdsWithin(tx, scope, actor.id)
           : [];
+        const leaveTypes = await listAvailableLeaveTypesWithin(tx, scope);
         return {
           company: activeCompany,
           employee: actor,
+          leaveTypes,
           capabilities: {
-            leave: { available: true, writable: false },
+            leave: { available: true, writable: canWriteLeave },
             claims: { available: false, reason: 'not_modelled' },
             receipts: { available: false, reason: 'not_modelled' },
             team: { available: canReadTeam, employeeCount: teamEmployeeIds.length },
@@ -128,6 +240,133 @@ export function createMyRouter(db: DB): Router {
       handleActorError(res, error);
     }
   });
+
+  router.get('/leave-requests/:requestId', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const requestId = positiveId(req.params.requestId);
+    if (!requestId) {
+      apiError(res, 400, 'invalid_id', 'requestId must be a positive integer.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const employeeActor = await resolveActorEmployeeWithin(tx, scope, session.userId);
+        return readGovernedLeaveWithin(tx, scope, {
+          userId: session.userId,
+          employeeId: employeeActor.id,
+        }, requestId);
+      });
+      res.json({ data, meta: { actorDerived: true, privacy: 'owner_private' } });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/leave-requests', async (req, res) => {
+    const session = await requireLeaveWrite(req, res);
+    if (!session) return;
+    const payload = {
+      leaveTypeId: Number(req.body?.leaveTypeId),
+      startDate: String(req.body?.startDate ?? ''),
+      endDate: String(req.body?.endDate ?? ''),
+      unit: String(req.body?.unit ?? ''),
+      reason: typeof req.body?.reason === 'string' ? req.body.reason : null,
+    };
+    try {
+      await runLeaveCommand(
+        req,
+        res,
+        session,
+        'create_draft',
+        payload,
+        (tx, scope, actor) => createLeaveDraftWithin(
+          tx,
+          scope,
+          actor,
+          actor.employeeId,
+          payload as Parameters<typeof createLeaveDraftWithin>[4],
+        ),
+        201,
+      );
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/leave-requests/:requestId/actions/amend', async (req, res) => {
+    const session = await requireLeaveWrite(req, res);
+    if (!session) return;
+    const requestId = positiveId(req.params.requestId);
+    if (!requestId) {
+      apiError(res, 400, 'invalid_id', 'requestId must be a positive integer.');
+      return;
+    }
+    const payload = {
+      expectedVersion: Number(req.body?.expectedVersion),
+      leaveTypeId: Number(req.body?.leaveTypeId),
+      startDate: String(req.body?.startDate ?? ''),
+      endDate: String(req.body?.endDate ?? ''),
+      unit: String(req.body?.unit ?? ''),
+      reason: typeof req.body?.reason === 'string' ? req.body.reason : null,
+      changeReason: typeof req.body?.changeReason === 'string' ? req.body.changeReason : null,
+    };
+    try {
+      await runLeaveCommand(req, res, session, `amend:${requestId}`, payload,
+        (tx, scope, actor) => amendLeaveApplicationWithin(
+          tx,
+          scope,
+          actor,
+          requestId,
+          payload.expectedVersion,
+          payload as Parameters<typeof amendLeaveApplicationWithin>[5],
+        ));
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  for (const action of ['submit', 'withdraw', 'void', 'request-cancellation'] as const) {
+    router.post(`/leave-requests/:requestId/actions/${action}`, async (req, res) => {
+      const session = await requireLeaveWrite(req, res);
+      if (!session) return;
+      const requestId = positiveId(req.params.requestId);
+      if (!requestId) {
+        apiError(res, 400, 'invalid_id', 'requestId must be a positive integer.');
+        return;
+      }
+      const payload = {
+        expectedVersion: Number(req.body?.expectedVersion),
+        reason: typeof req.body?.reason === 'string' ? req.body.reason : '',
+      };
+      try {
+        await runLeaveCommand(req, res, session, `${action}:${requestId}`, payload,
+          async (tx, scope, actor) => {
+            if (action === 'submit') {
+              return submitLeaveApplicationWithin(
+                tx, scope, actor, requestId, payload.expectedVersion,
+              );
+            }
+            if (action === 'withdraw') {
+              return withdrawLeaveApplicationWithin(
+                tx, scope, actor, requestId, payload.expectedVersion, payload.reason,
+              );
+            }
+            if (action === 'void') {
+              return voidOwnLeaveApplicationWithin(
+                tx, scope, actor, requestId, payload.expectedVersion, payload.reason,
+              );
+            }
+            return requestApprovedLeaveCancellationWithin(
+              tx, scope, actor, requestId, payload.expectedVersion, payload.reason,
+            );
+          });
+      } catch (error) {
+        handleActorError(res, error);
+      }
+    });
+  }
 
   for (const resource of ['claims', 'receipts'] as const) {
     router.get(`/${resource}`, async (req, res) => {

@@ -185,149 +185,161 @@ export function appendLeaveBalanceEntry(
   return db.transaction((tx) => appendLeaveBalanceEntryWithin(tx, scope, input));
 }
 
-export async function reservePaidLeave(
-  db: DB,
+export interface ReservePaidLeaveInput {
+  employeeId: number;
+  leaveTypeId: number;
+  policyVersionId: number;
+  days: string | number;
+  effectiveDate: string;
+  requestReference: string;
+  actorUserId: number;
+}
+
+export async function reservePaidLeaveWithin(
+  exec: DB,
   scope: Scope,
-  input: {
-    employeeId: number;
-    leaveTypeId: number;
-    policyVersionId: number;
-    days: string | number;
-    effectiveDate: string;
-    requestReference: string;
-    actorUserId: number;
-  },
+  input: ReservePaidLeaveInput,
 ) {
   const requested = dayUnits(input.days, 'Requested days');
-  return db.transaction(async (tx) => {
-    const [subject] = await tx.select({ id: employee.id }).from(employee).where(and(
+  const [subject] = await exec.select({ id: employee.id }).from(employee).where(and(
       eq(employee.id, input.employeeId),
       eq(employee.masterFn, scope.masterFn),
       eq(employee.companyFn, scope.companyFn),
       eq(employee.isActive, true),
-    )).limit(1).for('update');
-    if (!subject) throw new LeaveBalanceError('employee_unavailable', 'Active employee not found.');
-    const [type] = await tx.select({ paid: leaveType.paid }).from(leaveType).where(and(
-      eq(leaveType.id, input.leaveTypeId),
-      eq(leaveType.masterFn, scope.masterFn),
-      eq(leaveType.companyFn, scope.companyFn),
-    )).limit(1);
-    if (!type?.paid) {
-      throw new LeaveBalanceError('paid_balance_not_applicable', 'This leave type does not use paid balance.');
-    }
-    const ledgerInput: AppendLeaveBalanceEntryInput = {
-      employeeId: input.employeeId,
-      leaveTypeId: input.leaveTypeId,
-      policyVersionId: input.policyVersionId,
-      entryType: 'reserve',
-      entryKey: `leave:${input.requestReference}:reserve`,
-      balanceDelta: '0.00',
-      reservedDelta: signedDays(requested),
-      effectiveDate: input.effectiveDate,
-      sourceType: 'leave_request',
-      sourceId: input.requestReference,
-      createdByUserId: input.actorUserId,
+  )).limit(1).for('update');
+  if (!subject) throw new LeaveBalanceError('employee_unavailable', 'Active employee not found.');
+  const [type] = await exec.select({ paid: leaveType.paid }).from(leaveType).where(and(
+    eq(leaveType.id, input.leaveTypeId),
+    eq(leaveType.masterFn, scope.masterFn),
+    eq(leaveType.companyFn, scope.companyFn),
+  )).limit(1);
+  if (!type?.paid) {
+    throw new LeaveBalanceError('paid_balance_not_applicable', 'This leave type does not use paid balance.');
+  }
+  const ledgerInput: AppendLeaveBalanceEntryInput = {
+    employeeId: input.employeeId,
+    leaveTypeId: input.leaveTypeId,
+    policyVersionId: input.policyVersionId,
+    entryType: 'reserve',
+    entryKey: `leave:${input.requestReference}:reserve`,
+    balanceDelta: '0.00',
+    reservedDelta: signedDays(requested),
+    effectiveDate: input.effectiveDate,
+    sourceType: 'leave_request',
+    sourceId: input.requestReference,
+    createdByUserId: input.actorUserId,
+  };
+  const [existing] = await exec.select({ id: leaveBalanceEntry.id })
+    .from(leaveBalanceEntry)
+    .where(and(
+      eq(leaveBalanceEntry.masterFn, scope.masterFn),
+      eq(leaveBalanceEntry.companyFn, scope.companyFn),
+      eq(leaveBalanceEntry.entryKey, ledgerInput.entryKey),
+    ))
+    .limit(1);
+  if (existing) {
+    const appended = await appendLeaveBalanceEntryWithin(exec, scope, ledgerInput);
+    return {
+      ...appended,
+      projection: await projectLeaveBalance(
+        exec, scope, input.employeeId, input.leaveTypeId, input.effectiveDate,
+      ),
     };
-    const [existing] = await tx.select({ id: leaveBalanceEntry.id })
-      .from(leaveBalanceEntry)
-      .where(and(
-        eq(leaveBalanceEntry.masterFn, scope.masterFn),
-        eq(leaveBalanceEntry.companyFn, scope.companyFn),
-        eq(leaveBalanceEntry.entryKey, ledgerInput.entryKey),
-      ))
-      .limit(1);
-    if (existing) {
-      const appended = await appendLeaveBalanceEntryWithin(tx, scope, ledgerInput);
-      return {
-        ...appended,
-        projection: await projectLeaveBalance(
-          tx, scope, input.employeeId, input.leaveTypeId, input.effectiveDate,
-        ),
-      };
-    }
-    const projection = await projectLeaveBalance(
-      tx,
+  }
+  const projection = await projectLeaveBalance(
+    exec,
+    scope,
+    input.employeeId,
+    input.leaveTypeId,
+    input.effectiveDate,
+  );
+  const available = fixedUnits(projection.available, 2);
+  if (available < requested) {
+    const paid = available > 0n ? available : 0n;
+    throw new LeaveBalanceError(
+      'insufficient_paid_balance',
+      'Paid leave balance is insufficient.',
+      {
+        requestedDays: signedDays(requested),
+        availablePaidDays: signedDays(paid),
+        suggestedUnpaidDays: signedDays(requested - paid),
+      },
+    );
+  }
+  const appended = await appendLeaveBalanceEntryWithin(exec, scope, ledgerInput);
+  return {
+    ...appended,
+    projection: await projectLeaveBalance(
+      exec,
       scope,
       input.employeeId,
       input.leaveTypeId,
       input.effectiveDate,
-    );
-    const available = fixedUnits(projection.available, 2);
-    if (available < requested) {
-      const paid = available > 0n ? available : 0n;
-      throw new LeaveBalanceError(
-        'insufficient_paid_balance',
-        'Paid leave balance is insufficient.',
-        {
-          requestedDays: signedDays(requested),
-          availablePaidDays: signedDays(paid),
-          suggestedUnpaidDays: signedDays(requested - paid),
-        },
-      );
-    }
-    const appended = await appendLeaveBalanceEntryWithin(tx, scope, ledgerInput);
-    return {
-      ...appended,
-      projection: await projectLeaveBalance(
-        tx,
-        scope,
-        input.employeeId,
-        input.leaveTypeId,
-        input.effectiveDate,
-      ),
-    };
-  });
+    ),
+  };
 }
 
-export async function settlePaidLeaveReservation(
-  db: DB,
+export function reservePaidLeave(db: DB, scope: Scope, input: ReservePaidLeaveInput) {
+  return db.transaction((tx) => reservePaidLeaveWithin(tx, scope, input));
+}
+
+export interface SettlePaidLeaveReservationInput {
+  employeeId: number;
+  leaveTypeId: number;
+  policyVersionId: number;
+  days: string | number;
+  effectiveDate: string;
+  requestReference: string;
+  outcome: 'use' | 'release';
+  actorUserId: number;
+}
+
+export async function settlePaidLeaveReservationWithin(
+  exec: DB,
   scope: Scope,
-  input: {
-    employeeId: number;
-    leaveTypeId: number;
-    policyVersionId: number;
-    days: string | number;
-    effectiveDate: string;
-    requestReference: string;
-    outcome: 'use' | 'release';
-    actorUserId: number;
-  },
+  input: SettlePaidLeaveReservationInput,
 ) {
   const days = dayUnits(input.days, 'Settlement days');
-  return db.transaction(async (tx) => {
-    await tx.select({ id: employee.id }).from(employee).where(and(
-      eq(employee.id, input.employeeId),
-      eq(employee.masterFn, scope.masterFn),
-      eq(employee.companyFn, scope.companyFn),
-    )).limit(1).for('update');
-    const ledgerInput: AppendLeaveBalanceEntryInput = {
-      employeeId: input.employeeId,
-      leaveTypeId: input.leaveTypeId,
-      policyVersionId: input.policyVersionId,
-      entryType: input.outcome,
-      entryKey: `leave:${input.requestReference}:${input.outcome}`,
-      balanceDelta: input.outcome === 'use' ? signedDays(-days) : '0.00',
-      reservedDelta: signedDays(-days),
-      effectiveDate: input.effectiveDate,
-      sourceType: 'leave_request',
-      sourceId: input.requestReference,
-      createdByUserId: input.actorUserId,
-    };
-    const [existing] = await tx.select({ id: leaveBalanceEntry.id })
-      .from(leaveBalanceEntry)
-      .where(and(
-        eq(leaveBalanceEntry.masterFn, scope.masterFn),
-        eq(leaveBalanceEntry.companyFn, scope.companyFn),
-        eq(leaveBalanceEntry.entryKey, ledgerInput.entryKey),
-      ))
-      .limit(1);
-    if (existing) return appendLeaveBalanceEntryWithin(tx, scope, ledgerInput);
-    const projection = await projectLeaveBalance(
-      tx, scope, input.employeeId, input.leaveTypeId, input.effectiveDate,
-    );
-    if (fixedUnits(projection.reserved, 2) < days) {
-      throw new LeaveBalanceError('reservation_insufficient', 'Reserved balance is insufficient for this outcome.');
-    }
-    return appendLeaveBalanceEntryWithin(tx, scope, ledgerInput);
-  });
+  await exec.select({ id: employee.id }).from(employee).where(and(
+    eq(employee.id, input.employeeId),
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+  )).limit(1).for('update');
+  const ledgerInput: AppendLeaveBalanceEntryInput = {
+    employeeId: input.employeeId,
+    leaveTypeId: input.leaveTypeId,
+    policyVersionId: input.policyVersionId,
+    entryType: input.outcome,
+    entryKey: `leave:${input.requestReference}:${input.outcome}`,
+    balanceDelta: input.outcome === 'use' ? signedDays(-days) : '0.00',
+    reservedDelta: signedDays(-days),
+    effectiveDate: input.effectiveDate,
+    sourceType: 'leave_request',
+    sourceId: input.requestReference,
+    createdByUserId: input.actorUserId,
+  };
+  const [existing] = await exec.select({ id: leaveBalanceEntry.id })
+    .from(leaveBalanceEntry)
+    .where(and(
+      eq(leaveBalanceEntry.masterFn, scope.masterFn),
+      eq(leaveBalanceEntry.companyFn, scope.companyFn),
+      eq(leaveBalanceEntry.entryKey, ledgerInput.entryKey),
+    ))
+    .limit(1);
+  if (existing) return appendLeaveBalanceEntryWithin(exec, scope, ledgerInput);
+  const projection = await projectLeaveBalance(
+    exec, scope, input.employeeId, input.leaveTypeId, input.effectiveDate,
+  );
+  if (fixedUnits(projection.reserved, 2) < days) {
+    throw new LeaveBalanceError('reservation_insufficient', 'Reserved balance is insufficient for this outcome.');
+  }
+  return appendLeaveBalanceEntryWithin(exec, scope, ledgerInput);
+}
+
+export function settlePaidLeaveReservation(
+  db: DB,
+  scope: Scope,
+  input: SettlePaidLeaveReservationInput,
+) {
+  return db.transaction((tx) => settlePaidLeaveReservationWithin(tx, scope, input));
 }

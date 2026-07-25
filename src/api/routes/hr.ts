@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { normalizeUsername, isValidUsername } from '../../auth/identifiers';
 import {
@@ -19,6 +20,17 @@ import {
   completeIdempotentRequest,
 } from '../idempotency';
 import { withTenantTransaction } from '../../data/tenantTransaction';
+import { employee } from '../../data/schema';
+import {
+  LeaveApplicationError,
+  createLeaveDraftWithin,
+  decideApprovedLeaveCancellationWithin,
+  decideGovernedLeaveWithin,
+  readGovernedLeaveWithin,
+  voidLeaveApplicationWithin,
+} from '../../modules/hr/leaveApplication';
+import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
+import { LeavePolicyError } from '../../modules/hr/leavePolicy';
 
 export interface HrRouterOptions {
   tokenEncryptionKey?: Buffer;
@@ -35,6 +47,18 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
   function handleError(res: import('express').Response, error: unknown): void {
     if (error instanceof EmployeeAccountError) {
       apiError(res, error.status, error.code, error.message, error.fieldErrors);
+      return;
+    }
+    if (
+      error instanceof LeaveApplicationError
+      || error instanceof LeaveBalanceError
+      || error instanceof LeavePolicyError
+    ) {
+      const status = error instanceof LeaveApplicationError ? error.status : 422;
+      const details = error instanceof LeaveApplicationError || error instanceof LeaveBalanceError
+        ? error.details
+        : undefined;
+      apiError(res, status, error.code, error.message, details);
       return;
     }
     throw error;
@@ -92,6 +116,19 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     const body = { data: result.data, meta: {} };
     await completeIdempotentRequest(db, begun.recordId, result.status, body);
     res.status(result.status).json(body);
+  }
+
+  async function managementActor(
+    tx: DB,
+    scope: { masterFn: string; companyFn: string },
+    userId: number,
+  ) {
+    const [linked] = await tx.select({ id: employee.id }).from(employee).where(and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      eq(employee.userId, userId),
+    )).limit(1);
+    return { userId, employeeId: linked?.id ?? null, canManage: true };
   }
 
   router.get('/employee-accounts/:employeeId', async (req, res) => {
@@ -265,6 +302,186 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       handleError(res, error);
     }
   });
+
+  router.get('/leave-applications/:requestId', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const requestId = employeeIdParam(req.params.requestId);
+    if (!requestId) {
+      apiError(res, 400, 'invalid_id', 'requestId must be a positive integer.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) =>
+        readGovernedLeaveWithin(
+          tx, scope, await managementActor(tx, scope, session.userId), requestId,
+        ));
+      res.json({ data, meta: { privacy: 'hr_private' } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/leave-applications', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const payload = {
+      employeeId: Number(req.body?.employeeId),
+      leaveTypeId: Number(req.body?.leaveTypeId),
+      startDate: String(req.body?.startDate ?? ''),
+      endDate: String(req.body?.endDate ?? ''),
+      unit: String(req.body?.unit ?? ''),
+      reason: typeof req.body?.reason === 'string' ? req.body.reason : null,
+    };
+    if (!Number.isSafeInteger(payload.employeeId) || payload.employeeId <= 0) {
+      apiError(res, 400, 'invalid_employee', 'Select a valid employee.');
+      return;
+    }
+    try {
+      await runIdempotent(
+        req,
+        res,
+        session,
+        'hr.leave.create-on-behalf',
+        payload,
+        async () => {
+          const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+          const data = await withTenantTransaction(db, scope, async (tx) => {
+            const result = await createLeaveDraftWithin(
+              tx,
+              scope,
+              await managementActor(tx, scope, session.userId),
+              payload.employeeId,
+              payload as Parameters<typeof createLeaveDraftWithin>[4],
+            );
+            await appendAudit(tx, {
+              ...scope,
+              actorUserId: session.userId,
+              requestId: context(res).requestId,
+              entity: 'leave_application',
+              entityId: result.id,
+              action: 'create_on_behalf',
+              after: result,
+            });
+            return result;
+          });
+          return { status: 201, data };
+        },
+      );
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  for (const action of ['approve', 'reject', 'void'] as const) {
+    router.post(`/leave-applications/:requestId/actions/${action}`, async (req, res) => {
+      const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+      if (!session) return;
+      const requestId = employeeIdParam(req.params.requestId);
+      if (!requestId) {
+        apiError(res, 400, 'invalid_id', 'requestId must be a positive integer.');
+        return;
+      }
+      const payload = {
+        expectedVersion: Number(req.body?.expectedVersion),
+        reason: typeof req.body?.reason === 'string' ? req.body.reason : '',
+      };
+      try {
+        await runIdempotent(
+          req,
+          res,
+          session,
+          `hr.leave.${action}:${requestId}`,
+          payload,
+          async () => {
+            const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+            const data = await withTenantTransaction(db, scope, async (tx) => {
+              const actor = await managementActor(tx, scope, session.userId);
+              const result = action === 'void'
+                ? await voidLeaveApplicationWithin(
+                  tx, scope, actor, requestId, payload.expectedVersion, payload.reason,
+                )
+                : await decideGovernedLeaveWithin(
+                  tx,
+                  scope,
+                  actor,
+                  requestId,
+                  payload.expectedVersion,
+                  action === 'approve' ? 'approved' : 'rejected',
+                  payload.reason,
+                );
+              await appendAudit(tx, {
+                ...scope,
+                actorUserId: session.userId,
+                requestId: context(res).requestId,
+                entity: 'leave_application',
+                entityId: requestId,
+                action,
+                after: result,
+              });
+              return result;
+            });
+            return { status: 200, data };
+          },
+        );
+      } catch (error) {
+        handleError(res, error);
+      }
+    });
+  }
+
+  for (const action of ['approve', 'reject'] as const) {
+    router.post(`/leave-cancellations/:cancellationId/actions/${action}`, async (req, res) => {
+      const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+      if (!session) return;
+      const cancellationId = employeeIdParam(req.params.cancellationId);
+      if (!cancellationId) {
+        apiError(res, 400, 'invalid_id', 'cancellationId must be a positive integer.');
+        return;
+      }
+      const payload = {
+        expectedVersion: Number(req.body?.expectedVersion),
+        reason: typeof req.body?.reason === 'string' ? req.body.reason : '',
+      };
+      try {
+        await runIdempotent(
+          req,
+          res,
+          session,
+          `hr.leave-cancellation.${action}:${cancellationId}`,
+          payload,
+          async () => {
+            const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+            const data = await withTenantTransaction(db, scope, async (tx) => {
+              const result = await decideApprovedLeaveCancellationWithin(
+                tx,
+                scope,
+                await managementActor(tx, scope, session.userId),
+                cancellationId,
+                payload.expectedVersion,
+                action === 'approve' ? 'approved' : 'rejected',
+                payload.reason,
+              );
+              await appendAudit(tx, {
+                ...scope,
+                actorUserId: session.userId,
+                requestId: context(res).requestId,
+                entity: 'leave_cancellation',
+                entityId: cancellationId,
+                action,
+                after: result,
+              });
+              return result;
+            });
+            return { status: 200, data };
+          },
+        );
+      } catch (error) {
+        handleError(res, error);
+      }
+    });
+  }
 
   return router;
 }

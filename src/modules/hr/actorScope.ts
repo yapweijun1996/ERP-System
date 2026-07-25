@@ -6,7 +6,11 @@ import type { Scope } from '../../data/repo';
 import {
   employee,
   employeeHierarchyScope,
+  leaveEvidence,
+  leavePolicyVersion,
   leaveRequest,
+  leaveRequestRevision,
+  leaveType,
 } from '../../data/schema';
 
 export class ActorScopeError extends Error {
@@ -57,7 +61,7 @@ export async function listActorLeaveWithin(
   scope: Scope,
   employeeId: number,
 ) {
-  return exec.select({
+  const rows = await exec.select({
     id: leaveRequest.id,
     leaveType: leaveRequest.leaveType,
     startDate: leaveRequest.startDate,
@@ -65,6 +69,10 @@ export async function listActorLeaveWithin(
     days: leaveRequest.days,
     reason: leaveRequest.reason,
     status: leaveRequest.status,
+    version: leaveRequest.version,
+    revisionNo: leaveRequest.currentRevisionNo,
+    unit: leaveRequest.unit,
+    legacyPolicy: leaveRequest.legacyPolicy,
     rejectionReason: leaveRequest.rejectionReason,
     decidedAt: leaveRequest.decidedAt,
     createdAt: leaveRequest.createdAt,
@@ -74,6 +82,39 @@ export async function listActorLeaveWithin(
     eq(leaveRequest.companyFn, scope.companyFn),
     eq(leaveRequest.employeeId, employeeId),
   )).orderBy(asc(leaveRequest.startDate), asc(leaveRequest.id)).limit(100);
+  return rows.map((row) => ({ ...row, days: Number(row.days) }));
+}
+
+export async function listAvailableLeaveTypesWithin(
+  exec: DB,
+  scope: Scope,
+  today = new Date().toISOString().slice(0, 10),
+) {
+  return exec.select({
+    id: leaveType.id,
+    code: leaveType.code,
+    name: leaveType.name,
+    paid: leaveType.paid,
+    policyVersionId: leavePolicyVersion.id,
+    evidenceAfterDays: leavePolicyVersion.evidenceAfterDays,
+  }).from(leaveType)
+    .innerJoin(leavePolicyVersion, and(
+      eq(leavePolicyVersion.leaveTypeId, leaveType.id),
+      eq(leavePolicyVersion.masterFn, leaveType.masterFn),
+      eq(leavePolicyVersion.companyFn, leaveType.companyFn),
+      eq(leavePolicyVersion.status, 'confirmed'),
+    ))
+    .where(and(
+      eq(leaveType.masterFn, scope.masterFn),
+      eq(leaveType.companyFn, scope.companyFn),
+      eq(leaveType.isActive, true),
+      lte(leavePolicyVersion.effectiveFrom, today),
+      or(
+        isNull(leavePolicyVersion.effectiveTo),
+        gte(leavePolicyVersion.effectiveTo, today),
+      ),
+    ))
+    .orderBy(asc(leaveType.code), asc(leavePolicyVersion.versionNo));
 }
 
 export async function resolveTeamEmployeeIdsWithin(
@@ -135,7 +176,7 @@ export async function listTeamLeaveWithin(
   teamEmployeeIds: number[],
 ) {
   if (!teamEmployeeIds.length) return [];
-  return exec.select({
+  const rows = await exec.select({
     id: leaveRequest.id,
     employeeId: leaveRequest.employeeId,
     employeeNo: employee.employeeNo,
@@ -146,6 +187,9 @@ export async function listTeamLeaveWithin(
     endDate: leaveRequest.endDate,
     days: leaveRequest.days,
     status: leaveRequest.status,
+    version: leaveRequest.version,
+    revisionNo: leaveRequest.currentRevisionNo,
+    legacyPolicy: leaveRequest.legacyPolicy,
     createdAt: leaveRequest.createdAt,
   }).from(leaveRequest)
     .innerJoin(employee, eq(employee.id, leaveRequest.employeeId))
@@ -158,4 +202,42 @@ export async function listTeamLeaveWithin(
     ))
     .orderBy(asc(leaveRequest.startDate), asc(leaveRequest.id))
     .limit(100);
+  const governedIds = rows.filter((row) => !row.legacyPolicy).map((row) => row.id);
+  const revisions = governedIds.length ? await exec.select({
+    requestId: leaveRequestRevision.requestId,
+    revisionNo: leaveRequestRevision.revisionNo,
+    evidenceRequired: leaveRequestRevision.evidenceRequired,
+  }).from(leaveRequestRevision).where(and(
+    eq(leaveRequestRevision.masterFn, scope.masterFn),
+    eq(leaveRequestRevision.companyFn, scope.companyFn),
+    inArray(leaveRequestRevision.requestId, governedIds),
+  )) : [];
+  const evidence = governedIds.length ? await exec.select({
+    requestId: leaveEvidence.requestId,
+    revisionNo: leaveEvidence.revisionNo,
+    state: leaveEvidence.state,
+    id: leaveEvidence.id,
+  }).from(leaveEvidence).where(and(
+    eq(leaveEvidence.masterFn, scope.masterFn),
+    eq(leaveEvidence.companyFn, scope.companyFn),
+    inArray(leaveEvidence.requestId, governedIds),
+  )).orderBy(asc(leaveEvidence.id)) : [];
+  const revisionByRequest = new Map(revisions.map((revision) => [
+    `${revision.requestId}:${revision.revisionNo}`,
+    revision,
+  ]));
+  const evidenceByRequest = new Map(evidence.map((item) => [
+    `${item.requestId}:${item.revisionNo}`,
+    item.state,
+  ]));
+  return rows.map((row) => {
+    const key = `${row.id}:${row.revisionNo}`;
+    const revision = revisionByRequest.get(key);
+    return {
+      ...row,
+      days: Number(row.days),
+      evidenceRequired: revision?.evidenceRequired ?? false,
+      evidenceStatus: evidenceByRequest.get(key) ?? 'missing',
+    };
+  });
 }

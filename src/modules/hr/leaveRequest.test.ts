@@ -24,7 +24,7 @@ describe('createLeaveRequest', () => {
     });
     expect(res.id).toBeGreaterThan(0);
     const [row] = await db.select().from(leaveRequestTable).where(eq(leaveRequestTable.id, res.id));
-    expect(row.days).toBe(5);
+    expect(row.days).toBe('5.00');
     expect(row.status).toBe('pending');
   });
 

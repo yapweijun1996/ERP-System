@@ -365,6 +365,13 @@
       "when": 1784967247879,
       "tag": "0051_volatile_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1784968561529,
+      "tag": "0052_leave_application_lifecycle",
+      "breakpoints": true
     }
   ]
 }

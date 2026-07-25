@@ -112,6 +112,23 @@ if (!hrScreenSource.includes('data-my-work-shell')
     || !hrScreenSource.includes('reason_and_evidence_redacted')) {
   throw new Error('My Work shell does not declare its SSOT list or privacy contract.');
 }
+const leaveApplicationScreenSource = (hrScreenSource.split("SCREENS['leave-application']=")[1] || '')
+  .split("SCREENS['my-claims']")[0];
+if (!leaveApplicationScreenSource.includes('caseDetailPage(root')) {
+  throw new Error('Leave Application does not render through caseDetailPage().');
+}
+const obsoleteLeaveApplicationChrome = [
+  'docwrap','docpage','dochead','position:sticky','data-my-leave-delete',
+].filter((token) => leaveApplicationScreenSource.includes(token));
+if (obsoleteLeaveApplicationChrome.length) {
+  throw new Error(
+    `Leave Application rebuilds legacy chrome or physical-delete affordances: ${obsoleteLeaveApplicationChrome.join(', ')}`,
+  );
+}
+if (!hrScreenSource.includes("leaveAction(application.id,name")
+    || !hrScreenSource.includes("confirmMyLeaveAction(application,'void')")) {
+  throw new Error('Leave Application does not expose the governed Void-delete workflow.');
+}
 const i18nSource = readFileSync(path.join(assetDir, 'i18n.js'), 'utf8');
 const missingMyWorkLocales = ['en','ms','zh','ja','vi'].filter((locale) =>
   !i18nSource.includes(`Object.assign(I18N.${locale},{`)
@@ -1676,6 +1693,9 @@ async function auditRoutes(browser, viewport) {
       const originalMethods = {
         context:ErpSystemData.my.context,
         leaveRequests:ErpSystemData.my.leaveRequests,
+        leaveApplication:ErpSystemData.my.leaveApplication,
+        createLeaveDraft:ErpSystemData.my.createLeaveDraft,
+        leaveAction:ErpSystemData.my.leaveAction,
         claims:ErpSystemData.my.claims,
         receipts:ErpSystemData.my.receipts,
         teamLeaveRequests:ErpSystemData.my.teamLeaveRequests,
@@ -1690,18 +1710,34 @@ async function auditRoutes(browser, viewport) {
       };
       const selfLeave = [{
         id:71,leaveType:'Annual',startDate:'2026-08-03',endDate:'2026-08-04',
-        days:2,reason:'Actor-owned reason',status:'approved',
+        days:2,reason:'Actor-owned reason',status:'draft',version:1,
+        revisionNo:1,unit:'full_day',legacyPolicy:false,
       }];
+      const leaveDetail = {
+        ...selfLeave[0],employeeId:employee.id,currentRevisionNo:1,
+        revisions:[{
+          id:711,revisionNo:1,leaveTypeId:1,policyVersionId:1,calendarVersionId:1,
+          startDate:'2026-08-03',endDate:'2026-08-04',unit:'full_day',days:'2.00',
+          reason:'Actor-owned reason',changeReason:null,evidenceRequired:false,
+          createdAt:'2026-07-25T08:00:00Z',
+        }],
+        events:[{
+          id:712,eventType:'created_draft',fromStatus:null,toStatus:'draft',
+          reason:null,occurredAt:'2026-07-25T08:00:00Z',
+        }],
+        evidence:[],cancellations:[],
+      };
       const teamLeave = [{
         id:72,employeeId:43,employeeNo:'EMP-TEAM',employeeName:'Team Member',
         department:'Operations',leaveType:'Medical',startDate:'2026-08-05',
         endDate:'2026-08-05',days:1,status:'pending',
       }];
-      const setContext = (team) => {
+      const setContext = (team,writable=false) => {
         MY_WORK_CONTEXT={
           company,employee,
+          leaveTypes:[{id:1,code:'ANNUAL',name:'Annual leave',paid:true,policyVersionId:1}],
           capabilities:{
-            leave:{available:true,writable:false},
+            leave:{available:true,writable},
             claims:{available:false,reason:'not_modelled'},
             receipts:{available:false,reason:'not_modelled'},
             team:{available:team,employeeCount:team?1:0},
@@ -1712,6 +1748,15 @@ async function auditRoutes(browser, viewport) {
       };
       try {
         ErpSystemData.my.leaveRequests=async()=>({data:selfLeave,meta:{actorDerived:true}});
+        ErpSystemData.my.leaveApplication=async()=>({
+          data:leaveDetail,meta:{actorDerived:true,privacy:'owner_private'},
+        });
+        ErpSystemData.my.createLeaveDraft=async()=>({
+          data:{id:71,status:'draft',version:1},meta:{actorDerived:true},
+        });
+        ErpSystemData.my.leaveAction=async()=>({
+          data:{id:71,status:'draft',version:2},meta:{actorDerived:true},
+        });
         ErpSystemData.my.claims=async()=>({data:[],meta:{availability:'not_modelled',plannedEpic:'EPIC-055'}});
         ErpSystemData.my.receipts=async()=>({data:[],meta:{availability:'not_modelled',plannedEpic:'EPIC-054'}});
         ErpSystemData.my.teamLeaveRequests=async()=>({
@@ -1739,6 +1784,37 @@ async function auditRoutes(browser, viewport) {
         const employeeTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
         if (employeeTabs!==3) {
           issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 3`);
+        }
+
+        setContext(false,true);
+        await navigate('my-leave');
+        if (!document.querySelector('#viewRoot [data-list-primary-action]')) {
+          issues.push('writable My Leave does not expose its create action');
+        }
+        const governedRow=document.querySelector('#viewRoot [data-list-table] [data-row="71"]');
+        if (governedRow?.dataset.rowInteraction!=='open') {
+          issues.push('governed My Leave row is not a real open interaction');
+        }
+        await navigate('leave-application',{requestId:71});
+        const leaveCase=document.querySelector(
+          '#viewRoot [data-layout="case-detail-v1"][data-case-route="leave-application"]',
+        );
+        if (!leaveCase) {
+          issues.push('governed Leave Application left case-detail-v1');
+        } else {
+          const required=['[data-case-overview]','[data-case-error]','[data-case-main]',
+            '[data-case-context]','[data-case-actions]'];
+          if (required.some((selector)=>!leaveCase.querySelector(selector))) {
+            issues.push('governed Leave Application is missing a standard Case region');
+          }
+          if (!leaveCase.querySelector('[data-my-leave-amend]')
+              || !leaveCase.querySelector('[data-my-leave-submit]')
+              || !leaveCase.querySelector('[data-my-leave-void]')) {
+            issues.push('Draft Leave Application is missing amend, submit or Void actions');
+          }
+          if (leaveCase.querySelector('[data-my-leave-delete]')) {
+            issues.push('Leave Application exposes destructive physical delete');
+          }
         }
 
         setContext(true);

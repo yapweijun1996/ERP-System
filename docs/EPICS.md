@@ -1908,10 +1908,16 @@ Legacy Policy marker and is never silently recomputed.
       reservation serializes per employee. Pending reserves balance; approval or
       rejection appends use/release, while insufficient balance returns an explicit
       paid/unpaid split. PWA v110; no route maturity change.
-- [ ] **TASK-113 — Add complete leave application lifecycle and evidence.** Implement
-      Draft, Pending, Approved, Rejected, Withdrawn, Voided and Cancelled semantics,
-      versioned amendments, approved-cancellation requests, HR on-behalf entry and
-      policy-controlled medical evidence with strict privacy.
+- [x] **TASK-113 — Add complete leave application lifecycle and evidence.** Migration
+      0052 adds governed request headers, immutable revisions/events, evidence metadata
+      and approved-cancellation decisions. Actor-derived My Leave now creates and opens
+      real drafts through `transaction-list-v1` and `case-detail-v1`; every command uses
+      optimistic versioning, CSRF, idempotency and audit. Pending reserves entitlement,
+      withdrawal/rejection releases it, approval consumes it and approved cancellation
+      restores it. Employee “delete” is a reasoned Void tombstone, never physical
+      erasure; legacy rows remain read-only snapshots. Medical content remains deferred
+      to DocumentStorageProvider, while evidence-required/state metadata is privacy
+      redacted for managers. PWA v111.
 - [ ] **TASK-114 — Add configurable approval, delegation and capacity controls.**
       Default to direct manager, allow policy-driven additional levels, forbid
       self-approval, support time-bounded delegates, reminders/escalation and

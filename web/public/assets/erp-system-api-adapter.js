@@ -205,6 +205,23 @@
   var my={
     context:function(){ return apiRequest('my/context'); },
     leaveRequests:function(){ return apiRequest('my/leave-requests'); },
+    leaveApplication:function(id){
+      return apiRequest('my/leave-requests/'+encodeURIComponent(id));
+    },
+    createLeaveDraft:function(payload,idempotencyKey){
+      return apiRequest('my/leave-requests',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    leaveAction:function(id,name,payload,idempotencyKey){
+      return apiRequest('my/leave-requests/'+encodeURIComponent(id)+'/actions/'+encodeURIComponent(name),{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
     claims:function(){ return apiRequest('my/claims'); },
     receipts:function(){ return apiRequest('my/receipts'); },
     teamLeaveRequests:function(){ return apiRequest('my/team/leave-requests'); },

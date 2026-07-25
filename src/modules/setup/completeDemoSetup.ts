@@ -110,6 +110,31 @@ export async function completeDemoSetupWithin(
     .for('update');
   if (!existingMaster) throw new DemoSetupError(`Master ${masterFn} not found.`);
 
+  const [existingUsername] = await exec.select({
+    userId: appUser.userId,
+    email: appUser.email,
+  }).from(appUser).where(and(
+    eq(appUser.masterFn, masterFn),
+    eq(appUser.username, adminUsername),
+  )).limit(1);
+  if (existingUsername && existingUsername.email !== adminEmail) {
+    throw new DemoSetupError(
+      `Username ${adminUsername} already belongs to another demo account.`,
+    );
+  }
+  const [existingEmail] = await exec.select({
+    userId: appUser.userId,
+    username: appUser.username,
+  }).from(appUser).where(and(
+    eq(appUser.masterFn, masterFn),
+    eq(appUser.email, adminEmail),
+  )).limit(1);
+  if (existingEmail && existingEmail.username !== adminUsername) {
+    throw new DemoSetupError(
+      `Email ${adminEmail} already belongs to another demo username.`,
+    );
+  }
+
   const masterName = input.masterName?.trim();
   await exec.update(master).set({
     ...(masterName ? { name: masterName } : {}),
@@ -171,9 +196,10 @@ export async function completeDemoSetupWithin(
     })),
   ).onConflictDoNothing();
 
-  let [admin] = await exec.select({ userId: appUser.userId })
-    .from(appUser)
-    .where(and(eq(appUser.masterFn, masterFn), eq(appUser.email, adminEmail)));
+  let admin = existingUsername && existingEmail
+    && existingUsername.userId === existingEmail.userId
+    ? { userId: existingUsername.userId }
+    : undefined;
   if (!admin) {
     [admin] = await exec.insert(appUser).values({
       masterFn,

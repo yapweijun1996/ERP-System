@@ -411,6 +411,73 @@ function myWorkCopy(){
   const pack=packs[lang]||packs.en;
   return key=>pack[key]||packs.en[key]||key;
 }
+function myLeaveCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{
+      newLeave:'New leave',applicationTitle:'Leave application',applicationDescription:'Maintain one governed leave application and its immutable history.',
+      leaveType:'Leave type',startDate:'Start date',endDate:'End date',unit:'Duration',fullDay:'Full day',halfDay:'Half day',halfMorning:'Morning half-day',halfAfternoon:'Afternoon half-day',reason:'Private reason',changeReason:'Reason for change',
+      saveDraft:'Save draft',amend:'Amend',submit:'Submit',withdraw:'Withdraw',voidDraft:'Void application',requestCancellation:'Request cancellation',cancel:'Cancel',confirm:'Confirm',
+      submitTitle:'Submit leave application?',submitBody:'Submitting reserves paid leave balance and starts the approval workflow.',
+      withdrawTitle:'Withdraw pending leave',voidTitle:'Void this application',cancelTitle:'Request cancellation of approved leave',
+      reasonRequired:'Enter an auditable reason of at least 3 characters.',saveFailed:'The leave application could not be saved.',actionFailed:'The leave action could not be completed.',
+      created:'Leave draft created',amended:'Leave application amended',submitted:'Leave application submitted',withdrawn:'Leave application withdrawn',voided:'Leave application Voided',cancellationRequested:'Cancellation requested',
+      history:'Lifecycle history',revisions:'Versions',evidence:'Medical evidence',evidenceRequired:'Required before submission',evidenceNotRequired:'Not required',notUploaded:'No governed evidence received',revision:'Revision',changed:'Changed',event:'Event',occurred:'Occurred',
+      status_draft:'Draft',status_pending:'Pending',status_approved:'Approved',status_rejected:'Rejected',status_withdrawn:'Withdrawn',status_voided:'Voided',status_cancelled:'Cancelled',
+      missing:'Leave application unavailable',missingBody:'Select a governed application from My Leave.',legacy:'Legacy Policy',legacyBody:'Legacy leave remains visible in the list but is not rewritten by the governed workflow.',
+    },
+    ms:{
+      newLeave:'Cuti baharu',applicationTitle:'Permohonan cuti',applicationDescription:'Urus satu permohonan cuti terkawal dan sejarah kekalnya.',
+      leaveType:'Jenis cuti',startDate:'Tarikh mula',endDate:'Tarikh akhir',unit:'Tempoh',fullDay:'Hari penuh',halfDay:'Separuh hari',halfMorning:'Separuh hari pagi',halfAfternoon:'Separuh hari petang',reason:'Sebab peribadi',changeReason:'Sebab perubahan',
+      saveDraft:'Simpan draf',amend:'Pinda',submit:'Hantar',withdraw:'Tarik balik',voidDraft:'Void permohonan',requestCancellation:'Mohon pembatalan',cancel:'Batal',confirm:'Sahkan',
+      submitTitle:'Hantar permohonan cuti?',submitBody:'Penghantaran menempah baki cuti berbayar dan memulakan aliran kelulusan.',
+      withdrawTitle:'Tarik balik cuti tertunda',voidTitle:'Void permohonan ini',cancelTitle:'Mohon pembatalan cuti diluluskan',
+      reasonRequired:'Masukkan sebab boleh audit sekurang-kurangnya 3 aksara.',saveFailed:'Permohonan cuti tidak dapat disimpan.',actionFailed:'Tindakan cuti tidak dapat diselesaikan.',
+      created:'Draf cuti dicipta',amended:'Permohonan dipinda',submitted:'Permohonan dihantar',withdrawn:'Permohonan ditarik balik',voided:'Permohonan telah di-Void',cancellationRequested:'Pembatalan diminta',
+      history:'Sejarah kitar hayat',revisions:'Versi',evidence:'Bukti perubatan',evidenceRequired:'Diperlukan sebelum penghantaran',evidenceNotRequired:'Tidak diperlukan',notUploaded:'Tiada bukti terkawal diterima',revision:'Semakan',changed:'Diubah',event:'Peristiwa',occurred:'Masa',
+      status_draft:'Draf',status_pending:'Tertunda',status_approved:'Diluluskan',status_rejected:'Ditolak',status_withdrawn:'Ditarik balik',status_voided:'Voided',status_cancelled:'Dibatalkan',
+      missing:'Permohonan cuti tidak tersedia',missingBody:'Pilih permohonan terkawal daripada Cuti Saya.',legacy:'Polisi Legasi',legacyBody:'Cuti legasi kekal dalam senarai tetapi tidak ditulis semula oleh aliran terkawal.',
+    },
+    zh:{
+      newLeave:'新建请假',applicationTitle:'请假申请',applicationDescription:'维护一项受治理的请假申请及其不可变历史。',
+      leaveType:'假期类型',startDate:'开始日期',endDate:'结束日期',unit:'时长',fullDay:'整天',halfDay:'半天',halfMorning:'上午半天',halfAfternoon:'下午半天',reason:'私人原因',changeReason:'变更原因',
+      saveDraft:'保存草稿',amend:'修改',submit:'提交',withdraw:'撤回',voidDraft:'Void 申请',requestCancellation:'申请取消',cancel:'取消',confirm:'确认',
+      submitTitle:'提交请假申请？',submitBody:'提交后将预留有薪假余额，并进入审批流程。',
+      withdrawTitle:'撤回待审批请假',voidTitle:'Void 这项申请',cancelTitle:'申请取消已批准请假',
+      reasonRequired:'请输入至少 3 个字符、可审计的原因。',saveFailed:'无法保存请假申请。',actionFailed:'无法完成请假操作。',
+      created:'请假草稿已建立',amended:'请假申请已修改',submitted:'请假申请已提交',withdrawn:'请假申请已撤回',voided:'请假申请已 Void',cancellationRequested:'取消申请已提交',
+      history:'生命周期历史',revisions:'版本记录',evidence:'医疗证明',evidenceRequired:'提交前必须提供',evidenceNotRequired:'不需要',notUploaded:'尚未收到受治理证明',revision:'版本',changed:'变更说明',event:'事件',occurred:'发生时间',
+      status_draft:'草稿',status_pending:'待审批',status_approved:'已批准',status_rejected:'已拒绝',status_withdrawn:'已撤回',status_voided:'已 Void',status_cancelled:'已取消',
+      missing:'请假申请不可用',missingBody:'请从“我的请假”选择一项受治理申请。',legacy:'旧政策记录',legacyBody:'旧请假仍保留在列表，但不会由新流程重算或改写。',
+    },
+    ja:{
+      newLeave:'休暇を申請',applicationTitle:'休暇申請',applicationDescription:'統制された休暇申請と不変の履歴を管理します。',
+      leaveType:'休暇種別',startDate:'開始日',endDate:'終了日',unit:'期間',fullDay:'全日',halfDay:'半日',halfMorning:'午前半休',halfAfternoon:'午後半休',reason:'非公開の理由',changeReason:'変更理由',
+      saveDraft:'ドラフト保存',amend:'変更',submit:'提出',withdraw:'取り下げ',voidDraft:'申請を Void',requestCancellation:'取消を申請',cancel:'キャンセル',confirm:'確認',
+      submitTitle:'休暇申請を提出しますか？',submitBody:'提出すると有給残高を予約し、承認フローを開始します。',
+      withdrawTitle:'保留中の休暇を取り下げ',voidTitle:'この申請を Void',cancelTitle:'承認済み休暇の取消を申請',
+      reasonRequired:'監査可能な理由を3文字以上入力してください。',saveFailed:'休暇申請を保存できませんでした。',actionFailed:'休暇操作を完了できませんでした。',
+      created:'休暇ドラフトを作成しました',amended:'休暇申請を変更しました',submitted:'休暇申請を提出しました',withdrawn:'休暇申請を取り下げました',voided:'休暇申請を Void しました',cancellationRequested:'取消を申請しました',
+      history:'ライフサイクル履歴',revisions:'バージョン',evidence:'医療証明',evidenceRequired:'提出前に必要',evidenceNotRequired:'不要',notUploaded:'統制された証明は未受領です',revision:'改訂',changed:'変更',event:'イベント',occurred:'発生日時',
+      status_draft:'ドラフト',status_pending:'保留中',status_approved:'承認済',status_rejected:'却下',status_withdrawn:'取り下げ済',status_voided:'Voided',status_cancelled:'取消済',
+      missing:'休暇申請を利用できません',missingBody:'自分の休暇から統制対象の申請を選択してください。',legacy:'旧ポリシー',legacyBody:'旧休暇は一覧に保持されますが、新しいフローで再計算・書換えしません。',
+    },
+    vi:{
+      newLeave:'Tạo đơn nghỉ',applicationTitle:'Đơn nghỉ phép',applicationDescription:'Quản lý một đơn nghỉ phép được kiểm soát và lịch sử bất biến.',
+      leaveType:'Loại nghỉ',startDate:'Ngày bắt đầu',endDate:'Ngày kết thúc',unit:'Thời lượng',fullDay:'Cả ngày',halfDay:'Nửa ngày',halfMorning:'Nửa ngày buổi sáng',halfAfternoon:'Nửa ngày buổi chiều',reason:'Lý do riêng tư',changeReason:'Lý do thay đổi',
+      saveDraft:'Lưu nháp',amend:'Sửa đổi',submit:'Gửi',withdraw:'Rút đơn',voidDraft:'Void đơn',requestCancellation:'Yêu cầu hủy',cancel:'Hủy',confirm:'Xác nhận',
+      submitTitle:'Gửi đơn nghỉ phép?',submitBody:'Khi gửi, hệ thống giữ trước số dư nghỉ có lương và bắt đầu luồng phê duyệt.',
+      withdrawTitle:'Rút đơn đang chờ',voidTitle:'Void đơn này',cancelTitle:'Yêu cầu hủy phép đã duyệt',
+      reasonRequired:'Nhập lý do có thể kiểm toán ít nhất 3 ký tự.',saveFailed:'Không thể lưu đơn nghỉ phép.',actionFailed:'Không thể hoàn tất thao tác nghỉ phép.',
+      created:'Đã tạo bản nháp',amended:'Đã sửa đơn',submitted:'Đã gửi đơn',withdrawn:'Đã rút đơn',voided:'Đã Void đơn',cancellationRequested:'Đã gửi yêu cầu hủy',
+      history:'Lịch sử vòng đời',revisions:'Phiên bản',evidence:'Chứng từ y tế',evidenceRequired:'Bắt buộc trước khi gửi',evidenceNotRequired:'Không bắt buộc',notUploaded:'Chưa nhận chứng từ được quản trị',revision:'Bản sửa',changed:'Thay đổi',event:'Sự kiện',occurred:'Thời điểm',
+      status_draft:'Nháp',status_pending:'Đang chờ',status_approved:'Đã duyệt',status_rejected:'Từ chối',status_withdrawn:'Đã rút',status_voided:'Voided',status_cancelled:'Đã hủy',
+      missing:'Không có đơn nghỉ phép',missingBody:'Chọn một đơn được quản trị từ Nghỉ phép của tôi.',legacy:'Chính sách cũ',legacyBody:'Đơn cũ vẫn hiển thị nhưng không bị tính lại hoặc ghi đè bởi quy trình mới.',
+    },
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
 
 /* ---- shared data prep (directory, profile and leave-approval all need employees +
    leave requests; one fetch point avoids three near-identical Promise.all blocks) ---- */
@@ -429,7 +496,7 @@ function hrIsOnLeaveToday(employeeId,leaveRequests){
 }
 function hrAnnualLeaveUsed(employeeId,leaveRequests){
   return leaveRequests.filter(lv=>lv.employeeId===employeeId&&lv.status==='approved'&&lv.leaveType==='Annual')
-    .reduce((sum,lv)=>sum+lv.days,0);
+    .reduce((sum,lv)=>sum+Number(lv.days||0),0);
 }
 function hrEmploymentTypeLabel(s,type){
   return {'Full-time':t('hr.emp.fulltime'),'Contract':t('hr.emp.contract'),'Part-time':s('typeParttime'),'Intern':s('typeIntern')}[type]||type;
@@ -476,7 +543,14 @@ function myWorkAfterRender(route,privacy){
   };
 }
 function myWorkStatusTone(status){
-  return {pending:'warn',approved:'ok',rejected:'danger'}[status]||'neutral';
+  return {
+    draft:'neutral',pending:'warn',approved:'ok',rejected:'danger',
+    withdrawn:'neutral',voided:'neutral',cancelled:'neutral',
+  }[status]||'neutral';
+}
+function myWorkLeaveStatus(status,statusCopy){
+  const lifecycle=myLeaveCopy();
+  return lifecycle(`status_${status}`)||hrLeaveStatusLabel(statusCopy,status);
 }
 function myWorkLeaveColumns(copy,statusCopy,{team=false}={}){
   const columns=[];
@@ -490,7 +564,7 @@ function myWorkLeaveColumns(copy,statusCopy,{team=false}={}){
     {label:copy('dates'),align:'l',render:row=>`<span class="tnum">${esc(dateValue(row.startDate))}</span> → <span class="tnum">${esc(dateValue(row.endDate))}</span>`},
     {label:copy('leaveType'),align:'l',render:row=>esc(row.leaveType)},
     {label:copy('days'),render:row=>`<span class="tnum">${esc(String(row.days))}</span>`},
-    {label:copy('status'),align:'l',render:row=>cap(hrLeaveStatusLabel(statusCopy,row.status),myWorkStatusTone(row.status))},
+    {label:copy('status'),align:'l',render:row=>cap(myWorkLeaveStatus(row.status,statusCopy),myWorkStatusTone(row.status))},
   );
   if(!team){
     columns.splice(columns.length-1,0,{
@@ -521,6 +595,138 @@ function myWorkIdentityPage(root,route,title,description){
   myWorkEmptyPage(root,{
     route,title,description,
     emptyTitle:copy('noIdentity'),emptyDescription:copy('noIdentityBody'),
+  });
+}
+
+function myLeaveEventLabel(eventType,copy){
+  return {
+    created_draft:copy('created'),
+    amended:copy('amended'),
+    submitted:copy('submitted'),
+    withdrawn:copy('withdrawn'),
+    voided:copy('voided'),
+    cancellation_requested:copy('cancellationRequested'),
+    cancellation_approved:copy('status_cancelled'),
+    cancellation_rejected:copy('status_approved'),
+    approved:copy('status_approved'),
+    rejected:copy('status_rejected'),
+  }[eventType]||String(eventType||'—');
+}
+function myLeaveTypeOptions(context,selectedId){
+  const types=Array.isArray(context&&context.leaveTypes)?context.leaveTypes:[];
+  return types.map(type=>`<option value="${type.id}" ${String(type.id)===String(selectedId)?'selected':''}>
+    ${esc(type.name)}
+  </option>`).join('');
+}
+function openMyLeaveForm(context,current,onSaved){
+  const copy=myLeaveCopy();
+  const revision=current&&current.revisions&&current.revisions[0];
+  const editing=Boolean(current);
+  const start=revision&&revision.startDate||hrToday();
+  const end=revision&&revision.endDate||start;
+  appModal({
+    icon:'calendar',
+    title:editing?copy('amend'):copy('newLeave'),
+    width:640,
+    body:`<div class="alert danger" data-my-leave-form-error hidden>${ic('warn')}<span></span></div>
+      <div class="fld"><span>${esc(copy('leaveType'))}</span>
+        <select data-my-leave-type>${myLeaveTypeOptions(context,revision&&revision.leaveTypeId)}</select>
+      </div>
+      <div class="fldrow c2">
+        <div class="fld"><span>${esc(copy('startDate'))}</span><input type="date" value="${esc(dateValue(start))}" data-my-leave-start></div>
+        <div class="fld"><span>${esc(copy('endDate'))}</span><input type="date" value="${esc(dateValue(end))}" data-my-leave-end></div>
+      </div>
+      <div class="fld"><span>${esc(copy('unit'))}</span>
+        <select data-my-leave-unit>
+          <option value="full_day" ${revision&&revision.unit==='full_day'?'selected':''}>${esc(copy('fullDay'))}</option>
+          <option value="half_day_am" ${revision&&revision.unit==='half_day_am'?'selected':''}>${esc(copy('halfMorning'))}</option>
+          <option value="half_day_pm" ${revision&&revision.unit==='half_day_pm'?'selected':''}>${esc(copy('halfAfternoon'))}</option>
+        </select>
+      </div>
+      <div class="fld"><span>${esc(copy('reason'))}</span><textarea rows="3" data-my-leave-reason>${esc(revision&&revision.reason||'')}</textarea></div>
+      ${editing?`<div class="fld"><span>${esc(copy('changeReason'))}</span><textarea rows="2" data-my-leave-change></textarea></div>`:''}`,
+    actions:`${btn(copy('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(editing?copy('amend'):copy('saveDraft'),{icon:'check',cls:'primary',attrs:'data-my-leave-save'})}`,
+  });
+  const modal=$('#modalEl');
+  const save=modal&&modal.querySelector('[data-my-leave-save]');
+  save?.addEventListener('click',async()=>{
+    const payload={
+      leaveTypeId:Number(modal.querySelector('[data-my-leave-type]').value),
+      startDate:modal.querySelector('[data-my-leave-start]').value,
+      endDate:modal.querySelector('[data-my-leave-end]').value,
+      unit:modal.querySelector('[data-my-leave-unit]').value,
+      reason:modal.querySelector('[data-my-leave-reason]').value.trim()||null,
+    };
+    if(editing) payload.changeReason=modal.querySelector('[data-my-leave-change]').value.trim();
+    const errorRoot=modal.querySelector('[data-my-leave-form-error]');
+    errorRoot.hidden=true;
+    if(!payload.leaveTypeId||!payload.startDate||!payload.endDate||payload.endDate<payload.startDate
+      ||(editing&&payload.changeReason.length<3)){
+      errorRoot.hidden=false;
+      errorRoot.querySelector('span').textContent=copy('reasonRequired');
+      return;
+    }
+    save.disabled=true;
+    try{
+      const response=editing
+        ?await myWorkAdapter().leaveAction(current.id,'amend',{
+          ...payload,expectedVersion:current.version,
+        })
+        :await myWorkAdapter().createLeaveDraft(payload);
+      closeModal();
+      toast(editing?copy('amended'):copy('created'),'ok');
+      onSaved(response.data);
+    }catch(error){
+      save.disabled=false;
+      errorRoot.hidden=false;
+      errorRoot.querySelector('span').textContent=error&&error.message||copy('saveFailed');
+    }
+  });
+}
+function confirmMyLeaveAction(application,name){
+  const copy=myLeaveCopy();
+  const isSubmit=name==='submit';
+  const title={
+    submit:copy('submitTitle'),withdraw:copy('withdrawTitle'),
+    void:copy('voidTitle'),'request-cancellation':copy('cancelTitle'),
+  }[name];
+  const success={
+    submit:copy('submitted'),withdraw:copy('withdrawn'),
+    void:copy('voided'),'request-cancellation':copy('cancellationRequested'),
+  }[name];
+  appModal({
+    icon:isSubmit?'send':'warn',
+    title,
+    width:520,
+    body:isSubmit
+      ?`<p>${esc(copy('submitBody'))}</p><div class="alert danger" data-my-leave-action-error hidden>${ic('warn')}<span></span></div>`
+      :`<div class="fld"><span>${esc(copy('reason'))}</span><textarea rows="3" data-my-leave-action-reason></textarea></div>
+        <div class="alert danger" data-my-leave-action-error hidden>${ic('warn')}<span></span></div>`,
+    actions:`${btn(copy('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(copy('confirm'),{icon:'check',cls:name==='void'?'danger':'primary',attrs:'data-my-leave-action-confirm'})}`,
+  });
+  const modal=$('#modalEl');
+  const confirm=modal&&modal.querySelector('[data-my-leave-action-confirm]');
+  confirm?.addEventListener('click',async()=>{
+    const reason=modal.querySelector('[data-my-leave-action-reason]')?.value.trim()||'';
+    const errorRoot=modal.querySelector('[data-my-leave-action-error]');
+    if(!isSubmit&&reason.length<3){
+      errorRoot.hidden=false;
+      errorRoot.querySelector('span').textContent=copy('reasonRequired');
+      return;
+    }
+    confirm.disabled=true;
+    try{
+      await myWorkAdapter().leaveAction(application.id,name,{
+        expectedVersion:application.version,reason,
+      });
+      closeModal();
+      toast(success,'ok');
+      navigate('leave-application',{requestId:application.id});
+    }catch(error){
+      confirm.disabled=false;
+      errorRoot.hidden=false;
+      errorRoot.querySelector('span').textContent=error&&error.message||copy('actionFailed');
+    }
   });
 }
 
@@ -562,8 +768,133 @@ SCREENS['my-leave']=async function(root){
       {label:copy('approvedDays'),value:String(approvedDays)},
     ],
     columns:myWorkLeaveColumns(copy,statusCopy),
+    primaryAction:context.capabilities&&context.capabilities.leave&&context.capabilities.leave.writable
+      ?{label:myLeaveCopy()('newLeave'),icon:'plus',onClick:()=>openMyLeaveForm(context,null,created=>
+        navigate('leave-application',{requestId:created.id}))}
+      :null,
+    rowAction:{
+      enabled:row=>!row.legacyPolicy,
+      label:row=>`${myLeaveCopy()('applicationTitle')} ${row.id}`,
+      run:row=>navigate('leave-application',{requestId:row.id}),
+    },
     empty:{icon:'calendar',title:copy('noLeave'),description:copy('noLeaveBody')},
     afterRender:myWorkAfterRender('my-leave'),
+  });
+};
+
+SCREENS['leave-application']=async function(root,params){
+  // Yield before the first render so navigate() can install its loading state
+  // without overwriting the synchronous empty-case shell of this async screen.
+  await Promise.resolve();
+  const copy=myLeaveCopy();
+  const workCopy=myWorkCopy();
+  const statusCopy=hrCopy();
+  const requestId=params&&Number(params.requestId);
+  if(!Number.isSafeInteger(requestId)||requestId<=0){
+    caseDetailPage(root,{
+      module:'mywork',route:'leave-application',active:'my-leave',
+      title:copy('applicationTitle'),description:copy('applicationDescription'),
+      crumb:[DB.company.name,{label:workCopy('leaveTitle'),route:'my-leave'},{cur:copy('applicationTitle')}],
+      empty:{icon:'calendar',title:copy('missing'),description:copy('missingBody')},
+      context:{
+        title:copy('history'),
+        body:`<div class="callout info">${ic('info')}<span>${esc(copy('missingBody'))}</span></div>`,
+      },
+    });
+    return;
+  }
+  const [contextResponse,detailResponse]=await Promise.all([
+    myWorkAdapter().context(),
+    myWorkAdapter().leaveApplication(requestId),
+  ]);
+  const context=contextResponse.data;
+  const application=detailResponse.data;
+  const revision=application.revisions&&application.revisions[0];
+  if(!revision) throw new Error(copy('missing'));
+  const lifecyclePath={
+    draft:['draft'],pending:['draft','pending'],approved:['draft','pending','approved'],
+    rejected:['draft','pending','rejected'],withdrawn:['draft','pending','withdrawn'],
+    voided:['draft','voided'],cancelled:['draft','pending','approved','cancelled'],
+  }[application.status]||[application.status];
+  const lifecycleSteps=lifecyclePath.map(key=>({key,label:myWorkLeaveStatus(key,statusCopy)}));
+  const revisionRows=application.revisions||[];
+  const revisionTable=buildTable({
+    rowId:row=>row.id,
+    columns:[
+      {label:copy('revision'),render:row=>`<b class="tnum">v${row.revisionNo}</b>`},
+      {label:workCopy('dates'),align:'l',render:row=>`${esc(dateValue(row.startDate))} → ${esc(dateValue(row.endDate))}`},
+      {label:workCopy('days'),align:'r',render:row=>`<span class="tnum">${esc(String(row.days))}</span>`},
+      {label:copy('changed'),align:'l',render:row=>esc(row.changeReason||'—')},
+    ],
+    rows:revisionRows,
+  });
+  const eventRows=(application.events||[]).map(event=>`<div class="tl">
+    <span class="tldot"></span><div class="tlbody">
+      <div class="when">${esc(dateTimeValue(event.occurredAt))}</div>
+      <div class="what">${esc(myLeaveEventLabel(event.eventType,copy))}</div>
+      ${event.reason?`<div class="det">${esc(event.reason)}</div>`:''}
+    </div>
+  </div>`).join('');
+  const evidenceRequired=Boolean(revision.evidenceRequired);
+  const evidence=application.evidence||[];
+  const cancellation=(application.cancellations||[])[0];
+  const actions=[];
+  if(['draft','rejected','withdrawn'].includes(application.status)){
+    actions.push(btn(copy('voidDraft'),{icon:'x',cls:'danger',attrs:'data-my-leave-void'}));
+    actions.push(btn(copy('amend'),{icon:'edit',cls:'soft',attrs:'data-my-leave-amend'}));
+  }
+  if(application.status==='draft') actions.push(btn(copy('submit'),{icon:'send',cls:'primary',attrs:'data-my-leave-submit'}));
+  if(application.status==='pending') actions.push(btn(copy('withdraw'),{icon:'undo',cls:'soft',attrs:'data-my-leave-withdraw'}));
+  if(application.status==='approved'&&(!cancellation||cancellation.status!=='pending')){
+    actions.push(btn(copy('requestCancellation'),{icon:'undo',cls:'soft',attrs:'data-my-leave-cancel'}));
+  }
+  caseDetailPage(root,{
+    module:'mywork',route:'leave-application',active:'my-leave',
+    title:copy('applicationTitle'),description:copy('applicationDescription'),
+    crumb:[DB.company.name,{label:workCopy('leaveTitle'),route:'my-leave'},{cur:`#${application.id}`}],
+    identity:{
+      title:application.leaveType,
+      code:`#${application.id}`,
+      meta:`${dateValue(application.startDate)} → ${dateValue(application.endDate)}`,
+    },
+    statuses:[{label:myWorkLeaveStatus(application.status,statusCopy),tone:myWorkStatusTone(application.status)}],
+    lifecycle:{label:copy('history'),current:application.status,steps:lifecycleSteps},
+    facts:[
+      {label:copy('startDate'),value:dateValue(application.startDate)},
+      {label:copy('endDate'),value:dateValue(application.endDate)},
+      {label:workCopy('days'),value:String(application.days),numeric:true},
+      {label:copy('unit'),value:application.unit==='half_day_am'
+        ?copy('halfMorning'):application.unit==='half_day_pm'?copy('halfAfternoon'):copy('fullDay')},
+    ],
+    main:`<div class="panel" data-my-leave-reason>
+        <div class="panel-h"><h3>${esc(copy('reason'))}</h3></div>
+        <div class="panel-body"><p>${esc(revision.reason||'—')}</p><small>${esc(workCopy('privateReason'))}</small></div>
+      </div>
+      <div class="panel" data-my-leave-revisions>
+        <div class="panel-h"><h3>${esc(copy('revisions'))}</h3><span>${revisionRows.length}</span></div>
+        <div class="master-detail-editor-table-scroll">${revisionTable}</div>
+      </div>`,
+    context:{
+      title:copy('history'),
+      body:`<div class="service-order-context-section">
+          <div class="sectitle">${esc(copy('evidence'))}</div>
+          <div class="callout ${evidenceRequired?'warn':'info'}">${ic(evidenceRequired?'warn':'check')}
+            <span>${esc(evidenceRequired?copy('evidenceRequired'):copy('evidenceNotRequired'))}</span>
+          </div>
+          ${evidence.length?`<small>${esc(String(evidence.length))}</small>`:`<small>${esc(copy('notUploaded'))}</small>`}
+        </div>
+        <div class="timeline" data-my-leave-events>${eventRows}</div>`,
+    },
+    actions:actions.length?`<div class="grow"></div>${actions.join('')}`:'',
+    afterRender:()=>{
+      root.querySelector('[data-my-leave-amend]')?.addEventListener('click',()=>openMyLeaveForm(
+        context,application,()=>navigate('leave-application',{requestId:application.id}),
+      ));
+      root.querySelector('[data-my-leave-submit]')?.addEventListener('click',()=>confirmMyLeaveAction(application,'submit'));
+      root.querySelector('[data-my-leave-withdraw]')?.addEventListener('click',()=>confirmMyLeaveAction(application,'withdraw'));
+      root.querySelector('[data-my-leave-void]')?.addEventListener('click',()=>confirmMyLeaveAction(application,'void'));
+      root.querySelector('[data-my-leave-cancel]')?.addEventListener('click',()=>confirmMyLeaveAction(application,'request-cancellation'));
+    },
   });
 };
 

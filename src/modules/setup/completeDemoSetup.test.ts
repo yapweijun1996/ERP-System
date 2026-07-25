@@ -100,6 +100,34 @@ describe('completeDemoSetup', () => {
       .where(eq(appUser.email, 'rollback@example.test'))).toHaveLength(0);
   });
 
+  it('rejects username and email collisions before changing the seeded master', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+
+    await expect(completeDemoSetup(db, {
+      masterFn: 'M1',
+      masterName: 'Must Not Persist',
+      organizationCode: 'MUST-NOT-PERSIST',
+      companyFn: 'C-COLLISION',
+      companyName: 'Collision Company',
+      country: 'SG',
+      adminName: 'Collision Admin',
+      adminUsername: 'admin',
+      adminEmail: 'different.admin@example.test',
+      adminPasswordHash: PASSWORD_HASH,
+    })).rejects.toThrow('Username admin already belongs to another demo account.');
+
+    expect(await db.select().from(company)
+      .where(eq(company.companyFn, 'C-COLLISION'))).toHaveLength(0);
+    expect(await db.select({
+      name: master.name,
+      loginCode: master.loginCode,
+    }).from(master).where(eq(master.masterFn, 'M1'))).toEqual([{
+      name: 'Acme Group',
+      loginCode: 'ACME',
+    }]);
+  });
+
   it('rejects a plaintext password before writing anything', async () => {
     const db = await freshDb();
     await seedDemo(db);

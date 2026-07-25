@@ -55,7 +55,7 @@ export async function createLeaveRequestWithin(exec: DB, scope: Scope, input: Cr
     leaveType: input.leaveType,
     startDate: input.startDate,
     endDate: input.endDate,
-    days: inclusiveDayCount(input.startDate, input.endDate),
+    days: inclusiveDayCount(input.startDate, input.endDate).toFixed(2),
     reason: input.reason?.trim() || null,
     status: 'pending',
   }).returning({ id: leaveRequest.id });
@@ -77,7 +77,11 @@ export async function decideLeaveRequestWithin(
   if (decision === 'rejected' && !rejectionReason?.trim()) {
     throw new InvalidLeaveRequestStateError('rejectionReason is required when rejecting a leave request');
   }
-  const [row] = await exec.select({ id: leaveRequest.id, status: leaveRequest.status })
+  const [row] = await exec.select({
+    id: leaveRequest.id,
+    status: leaveRequest.status,
+    legacyPolicy: leaveRequest.legacyPolicy,
+  })
     .from(leaveRequest)
     .where(and(
       eq(leaveRequest.id, leaveRequestId),
@@ -86,6 +90,11 @@ export async function decideLeaveRequestWithin(
     ))
     .limit(1);
   if (!row) throw new InvalidLeaveRequestStateError('leave request not found');
+  if (!row.legacyPolicy) {
+    throw new InvalidLeaveRequestStateError(
+      'governed leave must be decided through the versioned approval workflow',
+    );
+  }
   if (row.status !== 'pending') {
     throw new InvalidLeaveRequestStateError(`leave request is already ${row.status}, not pending`);
   }

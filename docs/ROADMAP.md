@@ -785,11 +785,16 @@ explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof
    reserving entitlement, returns an explicit paid/unpaid split when insufficient,
    and uses idempotent append facts for approval/rejection outcomes. Database triggers
    forbid update/delete and concurrent-reservation proof prevents overspending.
-3. **Complete lifecycle and governed approval** (TASK-113/114) add versioned
-   amendments, withdrawal, void, approved cancellation, evidence privacy,
-   multi-level approval, no self-approval, delegation/escalation and configurable
-   minimum-staff controls.
-4. **Team calendar and Payroll integration** (TASK-115/116) introduce
+3. **Complete lifecycle** (TASK-113 done 2026-07-25) adds immutable revisions/events,
+   Draft/Pending/Approved/Rejected/Withdrawn/Voided/Cancelled transitions, HR
+   on-behalf entry, approved cancellation, evidence metadata privacy and actor-owned
+   five-language My Leave list/detail. “Delete” is implemented as a reasoned Void
+   tombstone; submitted and approved records follow withdrawal/cancellation instead
+   of destructive erasure.
+4. **Governed approval** (TASK-114) adds multi-level approval, policy resolution,
+   delegation/escalation and configurable minimum-staff controls. TASK-113 already
+   prevents self-approval at the command boundary without pre-empting this policy work.
+5. **Team calendar and Payroll integration** (TASK-115/116) introduce
    `calendar-workspace-v1`, role-redacted team availability, optional one-way external
    calendar delivery, unpaid-leave deduction and policy-controlled encashment.
    Historical HR-lite rows keep their original day snapshot under Legacy Policy.

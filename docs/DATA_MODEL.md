@@ -136,8 +136,9 @@ SG and MY demo companies; production wires real auth.
 > `employee_hierarchy_scope` are present in the current Drizzle schema. TASK-109 adds
 > five UI shell routes and no table. TASK-110 adds role-grant provenance without a
 > new table. TASK-111 adds the calendar/type/policy entities listed below. The
-> immutable balance ledger is implemented by TASK-112. The remaining entities are
-> approved targets for TASK-113–135 and are
+> immutable balance ledger is implemented by TASK-112. TASK-113 adds the governed
+> leave request/revision/event/evidence/cancellation entities. The remaining entities
+> are approved targets for TASK-114–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -180,9 +181,12 @@ approval_instance(+step)        immutable decision trail and current workflow pr
 working_calendar(+version)      workdays and effective dates
 calendar_holiday                official draft/company-confirmed holiday
 leave_type / leave_policy       effective-dated eligibility, evidence and carry rules
-leave_request(+revision)        Draft/Pending/Approved/Rejected/Withdrawn/Voided lifecycle
+leave_request                   versioned governed header + retained Legacy rows (implemented)
+leave_request_revision          immutable policy/calendar/day/reason snapshot (implemented)
+leave_request_event             immutable transition and actor trail (implemented)
+leave_cancellation_request      separately decided approved-leave cancellation (implemented)
 leave_balance_entry             append-only grant/accrual/reserve/use/cancel/adjust ledger (implemented)
-leave_evidence                  access-controlled link to managed document content
+leave_evidence                  immutable private evidence metadata; content deferred (implemented)
 leave_capacity_rule             department minimum-coverage rule and action
 ```
 
@@ -205,6 +209,15 @@ cover grant, accrual, reserve, use, release, cancellation, adjustment, carry-for
 expiry and encashment. Projection sums balance and reservation deltas rather than
 storing a mutable balance. Paid-leave reservation locks the employee row before
 checking availability so concurrent Pending requests cannot overspend entitlement.
+
+Migration 0052 implements the governed lifecycle without rewriting historical HR-lite
+facts. `leave_request` is the versioned state projection, while immutable
+`leave_request_revision` and `leave_request_event` rows preserve what changed, why and
+by whom. `leave_evidence` currently stores only managed-document references and private
+file metadata; document bytes remain out of scope until TASK-117/118. A submitted
+request is never physically deleted: owner deletion becomes `Voided`, Pending uses
+`Withdrawn`, and Approved uses `leave_cancellation_request` before becoming
+`Cancelled`. Legacy rows retain revision zero and their original day snapshot.
 
 ### 8.3 Managed documents and extraction
 

@@ -33,6 +33,7 @@ export const PERMISSIONS = {
   hrRead: 'hr.read',
   hrWrite: 'hr.write',
   employeeSelfRead: 'employee.self.read',
+  employeeLeaveWrite: 'employee.leave.write',
   employeeTeamRead: 'employee.team.read',
   projectRead: 'project.read',
   projectWrite: 'project.write',
