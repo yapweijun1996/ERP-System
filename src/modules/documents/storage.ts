@@ -2,17 +2,21 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   mkdir,
   readFile,
+  rename,
   unlink,
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import {
   documentBlob,
+  documentCorrection,
   documentFileLocation,
+  documentGovernanceEvent,
+  documentTombstone,
   documentVersion,
   managedDocument,
   userCompany,
@@ -40,6 +44,11 @@ interface StorageWriteReceipt {
   rollback?: () => Promise<void>;
 }
 
+export interface StorageRemoveReceipt {
+  commit?: () => Promise<void>;
+  rollback?: () => Promise<void>;
+}
+
 export interface DocumentStorageProvider {
   readonly backend: DocumentStorageBackend;
   readonly deployment: 'cluster-safe' | 'single-node';
@@ -54,6 +63,11 @@ export interface DocumentStorageProvider {
     scope: Scope,
     version: StoredDocumentVersion,
   ): Promise<Uint8Array>;
+  removeWithin(
+    exec: DB,
+    scope: Scope,
+    version: StoredDocumentVersion,
+  ): Promise<StorageRemoveReceipt>;
 }
 
 export class DocumentStorageError extends Error {
@@ -131,6 +145,19 @@ export class DatabaseDocumentStorageProvider implements DocumentStorageProvider 
       );
     }
     return verifyContent(version, asBytes(row.content));
+  }
+
+  async removeWithin(
+    exec: DB,
+    scope: Scope,
+    version: StoredDocumentVersion,
+  ): Promise<StorageRemoveReceipt> {
+    await exec.delete(documentBlob).where(and(
+      eq(documentBlob.masterFn, scope.masterFn),
+      eq(documentBlob.companyFn, scope.companyFn),
+      eq(documentBlob.versionId, version.id),
+    ));
+    return {};
   }
 }
 
@@ -223,6 +250,53 @@ export class FilesystemDocumentStorageProvider implements DocumentStorageProvide
       );
     }
     return verifyContent(version, content);
+  }
+
+  async removeWithin(
+    exec: DB,
+    scope: Scope,
+    version: StoredDocumentVersion,
+  ): Promise<StorageRemoveReceipt> {
+    const [row] = await exec.select({ relativePath: documentFileLocation.relativePath })
+      .from(documentFileLocation)
+      .where(and(
+        eq(documentFileLocation.masterFn, scope.masterFn),
+        eq(documentFileLocation.companyFn, scope.companyFn),
+        eq(documentFileLocation.versionId, version.id),
+      ))
+      .limit(1);
+    if (!row) {
+      throw new DocumentStorageError(
+        'document_content_missing',
+        'Filesystem document content is unavailable for removal.',
+        404,
+      );
+    }
+    const absolute = this.absolutePath(row.relativePath);
+    const staged = `${absolute}.purge-${randomUUID()}`;
+    try {
+      await rename(absolute, staged);
+    } catch {
+      throw new DocumentStorageError(
+        'document_content_missing',
+        'Filesystem document content is unavailable on this node.',
+        404,
+      );
+    }
+    try {
+      await exec.delete(documentFileLocation).where(and(
+        eq(documentFileLocation.masterFn, scope.masterFn),
+        eq(documentFileLocation.companyFn, scope.companyFn),
+        eq(documentFileLocation.versionId, version.id),
+      ));
+    } catch (error) {
+      await rename(staged, absolute).catch(() => undefined);
+      throw error;
+    }
+    return {
+      commit: () => unlink(staged).catch(() => undefined),
+      rollback: () => rename(staged, absolute).catch(() => undefined),
+    };
   }
 }
 
@@ -399,6 +473,24 @@ export async function createManagedDocument(
   try {
     return await withTenantTransaction(db, scope, async (tx) => {
       await assertOwnerAccess(tx, scope, actor, input.ownerUserId);
+      const documentKeyHash = createHash('sha256')
+        .update(normalized.documentKey, 'utf8')
+        .digest('hex');
+      const [tombstone] = await tx.select({ id: documentTombstone.id })
+        .from(documentTombstone)
+        .where(and(
+          eq(documentTombstone.masterFn, scope.masterFn),
+          eq(documentTombstone.companyFn, scope.companyFn),
+          eq(documentTombstone.documentKeyHash, documentKeyHash),
+        ))
+        .limit(1);
+      if (tombstone) {
+        throw new DocumentStorageError(
+          'document_key_purged',
+          'This document identity was permanently purged and cannot be reused.',
+          410,
+        );
+      }
       const [existing] = await tx.select().from(managedDocument).where(and(
         eq(managedDocument.masterFn, scope.masterFn),
         eq(managedDocument.companyFn, scope.companyFn),
@@ -471,6 +563,10 @@ export interface AppendManagedDocumentVersionInput {
   content: Uint8Array;
   pageCount?: number;
   storageBackend?: DocumentStorageBackend;
+  governance?: {
+    kind: 'correction' | 'reversal';
+    reason: string;
+  };
 }
 
 export async function appendManagedDocumentVersion(
@@ -509,6 +605,37 @@ export async function appendManagedDocumentVersion(
         );
       }
       await assertOwnerAccess(tx, scope, actor, document.ownerUserId);
+      const correctionReason = input.governance?.reason.trim();
+      if (input.governance && (!correctionReason
+        || correctionReason.length < 3 || correctionReason.length > 1000)) {
+        throw new DocumentStorageError(
+          'document_correction_reason_invalid',
+          'A correction or reversal reason of 3–1000 characters is required.',
+          422,
+        );
+      }
+      const governedStatus = ['posted', 'sealed'].includes(document.recordStatus);
+      if (governedStatus && !input.governance) {
+        throw new DocumentStorageError(
+          'document_correction_required',
+          'Posted or sealed records require a correction or reversal version.',
+          409,
+        );
+      }
+      if (!governedStatus && input.governance) {
+        throw new DocumentStorageError(
+          'document_correction_not_allowed',
+          'Correction and reversal versions are limited to posted or sealed records.',
+          409,
+        );
+      }
+      if (!input.governance && document.recordStatus !== 'draft') {
+        throw new DocumentStorageError(
+          'document_version_locked',
+          'Only an unsubmitted draft may receive an ordinary replacement version.',
+          409,
+        );
+      }
       if (document.currentVersionNo !== input.expectedVersionNo) {
         const [current] = await tx.select().from(documentVersion).where(and(
           eq(documentVersion.masterFn, scope.masterFn),
@@ -525,6 +652,22 @@ export async function appendManagedDocumentVersion(
           && current.pageCount === (input.pageCount ?? 1)
           && current.storageBackend === backend
         ) {
+          if (input.governance) {
+            const [correction] = await tx.select().from(documentCorrection).where(and(
+              eq(documentCorrection.masterFn, scope.masterFn),
+              eq(documentCorrection.companyFn, scope.companyFn),
+              eq(documentCorrection.correctionVersionId, current.id),
+              eq(documentCorrection.kind, input.governance.kind),
+              eq(documentCorrection.reason, correctionReason!),
+            )).limit(1);
+            if (!correction || document.recordStatus !== 'corrected') {
+              throw new DocumentStorageError(
+                'document_version_conflict',
+                'Managed document correction state does not match this replay.',
+                409,
+              );
+            }
+          }
           return { document, version: versionContract(current), replayed: true };
         }
         throw new DocumentStorageError(
@@ -534,6 +677,22 @@ export async function appendManagedDocumentVersion(
         );
       }
       const nextVersionNo = document.currentVersionNo + 1;
+      const [sourceVersion] = await tx.select({ id: documentVersion.id })
+        .from(documentVersion)
+        .where(and(
+          eq(documentVersion.masterFn, scope.masterFn),
+          eq(documentVersion.companyFn, scope.companyFn),
+          eq(documentVersion.documentId, document.id),
+          eq(documentVersion.versionNo, document.currentVersionNo),
+        ))
+        .limit(1);
+      if (!sourceVersion) {
+        throw new DocumentStorageError(
+          'document_version_missing',
+          'The source document version is unavailable.',
+          404,
+        );
+      }
       const [versionRow] = await tx.insert(documentVersion).values({
         ...scope,
         documentId: document.id,
@@ -549,6 +708,10 @@ export async function appendManagedDocumentVersion(
       writeReceipt = await provider.writeWithin(tx, scope, version, normalized.content);
       const [updated] = await tx.update(managedDocument).set({
         currentVersionNo: nextVersionNo,
+        ...(input.governance ? {
+          recordStatus: 'corrected',
+          recordVersion: sql`${managedDocument.recordVersion} + 1`,
+        } : {}),
       }).where(and(
         eq(managedDocument.masterFn, scope.masterFn),
         eq(managedDocument.companyFn, scope.companyFn),
@@ -561,6 +724,29 @@ export async function appendManagedDocumentVersion(
           'Managed document version changed before this content was appended.',
           409,
         );
+      }
+      if (input.governance) {
+        await tx.insert(documentCorrection).values({
+          ...scope,
+          documentId: document.id,
+          sourceVersionId: sourceVersion.id,
+          correctionVersionId: version.id,
+          kind: input.governance.kind,
+          reason: correctionReason!,
+          createdByUserId: actor.userId,
+        });
+        await tx.insert(documentGovernanceEvent).values({
+          ...scope,
+          documentId: document.id,
+          eventType: input.governance.kind === 'correction'
+            ? 'correction_created'
+            : 'reversal_created',
+          fromStatus: document.recordStatus,
+          toStatus: 'corrected',
+          reason: correctionReason!,
+          actorUserId: actor.userId,
+          recordVersion: updated.recordVersion,
+        });
       }
       return { document: updated, version, replayed: false };
     });

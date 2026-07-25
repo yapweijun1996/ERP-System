@@ -35,6 +35,15 @@ export const managedDocument = pgTable('managed_document', {
   currentVersionNo: integer('current_version_no').notNull().default(1),
   retentionUntil: timestamp('retention_until', { withTimezone: true }).notNull(),
   legalHold: boolean('legal_hold').notNull().default(false),
+  recordStatus: text('record_status').notNull().default('draft'),
+  recordVersion: integer('record_version').notNull().default(1),
+  voidReason: text('void_reason'),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+  voidedByUserId: bigint('voided_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  taxFinalizedAt: timestamp('tax_finalized_at', { withTimezone: true }),
+  paperCustodyStatus: text('paper_custody_status').notNull().default('none'),
+  paperOriginalReference: text('paper_original_reference'),
   createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
     .references(() => appUser.userId),
   ...timestamps,
@@ -48,6 +57,29 @@ export const managedDocument = pgTable('managed_document', {
   check('ck_managed_document_version', sql`${t.currentVersionNo} > 0`),
   check('ck_managed_document_file_name',
     sql`char_length(${t.originalFileName}) between 1 and 255`),
+  check('ck_managed_document_record_status',
+    sql`${t.recordStatus} in (
+      'draft','submitted','approved','posted','sealed','voided','corrected'
+    )`),
+  check('ck_managed_document_record_version', sql`${t.recordVersion} > 0`),
+  check('ck_managed_document_void',
+    sql`(${t.recordStatus} = 'voided'
+      and char_length(${t.voidReason}) between 3 and 1000
+      and ${t.voidedAt} is not null
+      and ${t.voidedByUserId} is not null)
+      or (${t.recordStatus} <> 'voided'
+        and ${t.voidReason} is null
+        and ${t.voidedAt} is null
+        and ${t.voidedByUserId} is null)`),
+  check('ck_managed_document_tax_finalized',
+    sql`${t.taxFinalizedAt} is null
+      or ${t.recordStatus} in ('sealed','corrected')`),
+  check('ck_managed_document_paper_custody',
+    sql`(${t.paperCustodyStatus} = 'none' and ${t.paperOriginalReference} is null)
+      or (${t.paperCustodyStatus} in (
+          'employee','finance_archive','returned','destroyed'
+        )
+        and char_length(${t.paperOriginalReference}) between 1 and 160)`),
 ]);
 
 /** Immutable integrity and backend locator metadata for one content version. */
@@ -315,4 +347,170 @@ export const receiptInboxItem = pgTable('receipt_inbox_item', {
         and ${t.systemActorKey} is null
         and ${t.submittedAt} is null)`),
   check('ck_receipt_inbox_version', sql`${t.version} > 0`),
+]);
+
+/** Append-only state, legal-hold and paper-custody decision history. */
+export const documentGovernanceEvent = pgTable('document_governance_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  documentId: bigint('document_id', { mode: 'number' }).notNull()
+    .references(() => managedDocument.id),
+  eventType: text('event_type').notNull(),
+  fromStatus: text('from_status'),
+  toStatus: text('to_status'),
+  reason: text('reason').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  recordVersion: integer('record_version').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_document_governance_event_document')
+    .on(t.masterFn, t.companyFn, t.documentId, t.id),
+  check('ck_document_governance_event_type',
+    sql`${t.eventType} in (
+      'submitted','approved','posted','sealed','voided',
+      'correction_created','reversal_created',
+      'legal_hold_set','legal_hold_released','paper_custody_changed',
+      'purge_requested','purge_approved','purge_rejected'
+    )`),
+  check('ck_document_governance_event_status',
+    sql`(${t.fromStatus} is null or ${t.fromStatus} in (
+      'draft','submitted','approved','posted','sealed','voided','corrected'
+    )) and (${t.toStatus} is null or ${t.toStatus} in (
+      'draft','submitted','approved','posted','sealed','voided','corrected'
+    ))`),
+  check('ck_document_governance_event_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
+  check('ck_document_governance_event_version', sql`${t.recordVersion} > 0`),
+]);
+
+/** Immutable link from a posted/sealed version to its correction or reversal version. */
+export const documentCorrection = pgTable('document_correction', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  documentId: bigint('document_id', { mode: 'number' }).notNull()
+    .references(() => managedDocument.id),
+  sourceVersionId: bigint('source_version_id', { mode: 'number' }).notNull()
+    .references(() => documentVersion.id),
+  correctionVersionId: bigint('correction_version_id', { mode: 'number' }).notNull()
+    .references(() => documentVersion.id),
+  kind: text('kind').notNull(),
+  reason: text('reason').notNull(),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_document_correction_version')
+    .on(t.masterFn, t.companyFn, t.correctionVersionId),
+  index('idx_document_correction_source')
+    .on(t.masterFn, t.companyFn, t.sourceVersionId, t.id),
+  check('ck_document_correction_kind', sql`${t.kind} in ('correction','reversal')`),
+  check('ck_document_correction_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
+  check('ck_document_correction_versions',
+    sql`${t.sourceVersionId} <> ${t.correctionVersionId}`),
+]);
+
+/** Two-person permanent-purge approval that survives content deletion. */
+export const documentPurgeRequest = pgTable('document_purge_request', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  documentId: bigint('document_id', { mode: 'number' }).notNull(),
+  documentKeyHash: text('document_key_hash').notNull(),
+  finalSha256: text('final_sha256').notNull(),
+  retentionUntil: timestamp('retention_until', { withTimezone: true }).notNull(),
+  status: text('status').notNull().default('pending_finance'),
+  initiatedByUserId: bigint('initiated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  initiatedAt: timestamp('initiated_at', { withTimezone: true }).notNull().defaultNow(),
+  reviewedByUserId: bigint('reviewed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  reviewReason: text('review_reason'),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  executedByUserId: bigint('executed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  executedAt: timestamp('executed_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_document_purge_request_document')
+    .on(t.masterFn, t.companyFn, t.documentId),
+  uniqueIndex('uq_document_purge_request_key_hash')
+    .on(t.masterFn, t.companyFn, t.documentKeyHash),
+  index('idx_document_purge_request_status')
+    .on(t.masterFn, t.companyFn, t.status, t.id),
+  check('ck_document_purge_request_hashes',
+    sql`char_length(${t.documentKeyHash}) = 64
+      and ${t.documentKeyHash} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.finalSha256}) = 64
+      and ${t.finalSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_document_purge_request_status',
+    sql`${t.status} in ('pending_finance','approved','rejected','executed')`),
+  check('ck_document_purge_request_review',
+    sql`(${t.status} = 'pending_finance'
+      and ${t.reviewedByUserId} is null
+      and ${t.reviewReason} is null
+      and ${t.reviewedAt} is null)
+      or (${t.status} in ('approved','rejected','executed')
+        and ${t.reviewedByUserId} is not null
+        and ${t.reviewedByUserId} <> ${t.initiatedByUserId}
+        and char_length(${t.reviewReason}) between 3 and 1000
+        and ${t.reviewedAt} is not null)`),
+  check('ck_document_purge_request_execution',
+    sql`(${t.status} = 'executed'
+      and ${t.executedByUserId} is not null
+      and ${t.executedAt} is not null)
+      or (${t.status} <> 'executed'
+        and ${t.executedByUserId} is null
+        and ${t.executedAt} is null)`),
+  check('ck_document_purge_request_version', sql`${t.version} > 0`),
+]);
+
+/** Permanent non-content proof retained after an authorized purge. */
+export const documentTombstone = pgTable('document_tombstone', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  purgeRequestId: bigint('purge_request_id', { mode: 'number' }).notNull()
+    .references(() => documentPurgeRequest.id),
+  originalDocumentId: bigint('original_document_id', { mode: 'number' }).notNull(),
+  documentKeyHash: text('document_key_hash').notNull(),
+  purpose: text('purpose').notNull(),
+  ownerHash: text('owner_hash').notNull(),
+  finalSha256: text('final_sha256').notNull(),
+  versionManifest: jsonb('version_manifest').$type<Array<{
+    versionNo: number;
+    sha256: string;
+    mimeType: string;
+    sizeBytes: number;
+    pageCount: number;
+  }>>().notNull(),
+  retentionUntil: timestamp('retention_until', { withTimezone: true }).notNull(),
+  finalPaperCustodyStatus: text('final_paper_custody_status').notNull(),
+  initiatedByUserId: bigint('initiated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  reviewedByUserId: bigint('reviewed_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  executedByUserId: bigint('executed_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  purgedAt: timestamp('purged_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_document_tombstone_request').on(t.purgeRequestId),
+  uniqueIndex('uq_document_tombstone_key_hash')
+    .on(t.masterFn, t.companyFn, t.documentKeyHash),
+  check('ck_document_tombstone_hashes',
+    sql`char_length(${t.documentKeyHash}) = 64
+      and ${t.documentKeyHash} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.ownerHash}) = 64
+      and ${t.ownerHash} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.finalSha256}) = 64
+      and ${t.finalSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_document_tombstone_purpose',
+    sql`${t.purpose} in ('receipt','leave_evidence','tax_evidence','other')`),
+  check('ck_document_tombstone_paper',
+    sql`${t.finalPaperCustodyStatus} in (
+      'none','employee','finance_archive','returned','destroyed'
+    )`),
+  check('ck_document_tombstone_two_person',
+    sql`${t.initiatedByUserId} <> ${t.reviewedByUserId}`),
 ]);

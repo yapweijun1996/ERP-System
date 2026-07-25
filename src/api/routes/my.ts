@@ -766,6 +766,8 @@ export function createMyRouter(db: DB): Router {
           storageBackend: result.version.storageBackend,
           scanStatus: 'queued',
           extractionStatus: null,
+          recordStatus: result.document.recordStatus,
+          recordVersion: result.document.recordVersion,
           createdAt: result.document.createdAt,
         },
         meta: {

@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 59;
+  var DEMO_SCHEMA_VERSION = 60;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -3003,7 +3003,8 @@
       await withMyActor(function(){ return null; });
       var result=await requireDemoDb().query(
         `select d.id,d.document_key,d.original_file_name,d.current_version_no,
-                d.retention_until,d.legal_hold,d.created_at,
+                d.retention_until,d.legal_hold,d.record_status,d.record_version,
+                d.void_reason,d.paper_custody_status,d.created_at,
                 v.sha256,v.mime_type,v.size_bytes,v.page_count,v.storage_backend,
                 s.status as scan_status,s.result_code as scan_result_code,
                 x.status as extraction_status,x.provider as extraction_provider,
@@ -3031,6 +3032,8 @@
         id:Number(row.id),documentKey:row.document_key,
         originalFileName:row.original_file_name,currentVersionNo:Number(row.current_version_no),
         retentionUntil:row.retention_until,legalHold:Boolean(row.legal_hold),createdAt:row.created_at,
+        recordStatus:row.record_status,recordVersion:Number(row.record_version),
+        voidReason:row.void_reason,paperCustodyStatus:row.paper_custody_status,
         sha256:row.sha256,mimeType:row.mime_type,sizeBytes:Number(row.size_bytes),
         pageCount:Number(row.page_count),storageBackend:row.storage_backend,
         scanStatus:row.scan_status,scanResultCode:row.scan_result_code,
@@ -3165,9 +3168,147 @@
         sizeBytes:validated.content.byteLength,pageCount:validated.pageCount,
         storageBackend:'database',scanStatus:'unavailable',extractionStatus:null,
         inboxStatus:null,autoSubmitAuthorized:result.autoSubmitAuthorized,
+        recordStatus:'draft',recordVersion:1,
         createdAt:result.row.created_at,
       },meta:{actorDerived:true,replayed:result.replayed,scanning:'fail_closed',
         receiptInbox:'confidence_governed'}};
+    },
+    deleteStoredReceipt:async function(id){
+      var documentId=Number(id);
+      if(!Number.isSafeInteger(documentId)||documentId<=0) throw new Error('Document id is invalid.');
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.receipts.write');
+        if(!canWrite) throw new Error('You cannot delete receipt drafts.');
+        await state.runtime.commands.resolveActorEmployeeWithin(orm,SCOPE,myActorUserId());
+        var selected=await tx.query(
+          `select id,owner_user_id,record_status from managed_document
+           where master_fn=$1 and company_fn=$2 and id=$3 and purpose='receipt'
+           for update`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        var documentRow=selected.rows[0];
+        if(!documentRow||Number(documentRow.owner_user_id)!==myActorUserId()){
+          var missing=new Error('Managed document is unavailable.');
+          missing.code='document_missing';throw missing;
+        }
+        if(documentRow.record_status!=='draft'){
+          var locked=new Error('Only an unsubmitted draft may be directly deleted.');
+          locked.code='document_direct_delete_forbidden';throw locked;
+        }
+        await tx.query(`select set_config('app.document_governance_delete','on',true)`);
+        var versionIds=`select id from document_version
+          where master_fn=$1 and company_fn=$2 and document_id=$3`;
+        await tx.query(
+          `delete from outbox_event where master_fn=$1 and company_fn=$2 and (
+             (aggregate_type='document_version' and aggregate_id in
+               (select id::text from document_version
+                where master_fn=$1 and company_fn=$2 and document_id=$3))
+             or (aggregate_type='receipt_inbox_item' and aggregate_id in
+               (select i.id::text from receipt_inbox_item i
+                join document_version v on v.id=i.version_id
+                where v.master_fn=$1 and v.company_fn=$2 and v.document_id=$3)))`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        await tx.query(
+          `delete from document_extraction_field where master_fn=$1 and company_fn=$2
+           and extraction_id in (select x.id from document_extraction x
+             join document_version v on v.id=x.version_id
+             where v.master_fn=$1 and v.company_fn=$2 and v.document_id=$3)`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        await tx.query(
+          `update receipt_inbox_item set duplicate_of_version_id=null
+           where master_fn=$1 and company_fn=$2
+             and duplicate_of_version_id in (${versionIds})`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        for(const table of ['receipt_inbox_item','receipt_upload_authorization',
+          'document_extraction','document_scan_job']){
+          await tx.query(
+            `delete from ${table} where master_fn=$1 and company_fn=$2
+             and version_id in (${versionIds})`,
+            [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        }
+        await tx.query(
+          `delete from document_correction where master_fn=$1 and company_fn=$2 and document_id=$3`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        await tx.query(
+          `delete from document_governance_event where master_fn=$1 and company_fn=$2 and document_id=$3`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        await tx.query(
+          `delete from document_blob where master_fn=$1 and company_fn=$2
+             and version_id in (${versionIds})`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        await tx.query(
+          `delete from document_version where master_fn=$1 and company_fn=$2 and document_id=$3`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        await tx.query(
+          `delete from managed_document where master_fn=$1 and company_fn=$2 and id=$3`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        return {id:documentId,deleted:true};
+      });
+      return {data:data,meta:{}};
+    },
+    voidStoredReceipt:async function(item,reason){
+      item=item||{};
+      var documentId=Number(item.id);
+      var expectedVersion=Number(item.recordVersion);
+      var reasonText=String(reason||'').trim();
+      if(!Number.isSafeInteger(documentId)||documentId<=0) throw new Error('Document id is invalid.');
+      if(!Number.isSafeInteger(expectedVersion)||expectedVersion<=0){
+        var versionError=new Error('Document governance version is required.');
+        versionError.code='document_record_version_invalid';throw versionError;
+      }
+      if(reasonText.length<3||reasonText.length>1000){
+        var reasonError=new Error('A Void reason of 3–1000 characters is required.');
+        reasonError.code='document_void_reason_invalid';throw reasonError;
+      }
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.receipts.write');
+        if(!canWrite) throw new Error('You cannot Void receipt records.');
+        await state.runtime.commands.resolveActorEmployeeWithin(orm,SCOPE,myActorUserId());
+        var selected=await tx.query(
+          `select id,owner_user_id,record_status,record_version from managed_document
+           where master_fn=$1 and company_fn=$2 and id=$3 and purpose='receipt'
+           for update`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId]);
+        var documentRow=selected.rows[0];
+        if(!documentRow||Number(documentRow.owner_user_id)!==myActorUserId()){
+          var missing=new Error('Managed document is unavailable.');
+          missing.code='document_missing';throw missing;
+        }
+        if(Number(documentRow.record_version)!==expectedVersion){
+          var conflict=new Error('Document governance state changed before this action.');
+          conflict.code='document_record_version_conflict';throw conflict;
+        }
+        if(!['submitted','approved'].includes(documentRow.record_status)){
+          var locked=new Error(documentRow.record_status==='draft'
+            ?'An unsubmitted draft must be directly deleted.'
+            :'Posted or sealed evidence requires a correction or reversal version.');
+          locked.code='document_void_forbidden';throw locked;
+        }
+        var now=new Date();
+        var updated=await tx.query(
+          `update managed_document set record_status='voided',record_version=record_version+1,
+             void_reason=$4,voided_by_user_id=$5,voided_at=$6,updated_at=$6
+           where master_fn=$1 and company_fn=$2 and id=$3 and record_version=$7
+           returning *`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId,reasonText,myActorUserId(),now,expectedVersion]);
+        if(!updated.rows[0]){
+          var raced=new Error('Document governance state changed before this action.');
+          raced.code='document_record_version_conflict';throw raced;
+        }
+        await tx.query(
+          `insert into document_governance_event
+             (master_fn,company_fn,document_id,event_type,from_status,to_status,reason,
+              actor_user_id,record_version)
+           values ($1,$2,$3,'voided',$4,'voided',$5,$6,$7)`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentId,documentRow.record_status,reasonText,
+           myActorUserId(),Number(updated.rows[0].record_version)]);
+        return {id:documentId,status:'voided',
+          recordVersion:Number(updated.rows[0].record_version),voidReason:reasonText};
+      });
+      return {data:data,meta:{}};
     },
     teamLeaveRequests:async function(){
       var data=await withMyActor(async function(orm,actor){

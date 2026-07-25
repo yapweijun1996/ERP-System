@@ -1976,10 +1976,13 @@ deployment; a server-filesystem provider is optional and explicitly single-node.
       confidence, conflict, amount and exact-duplicate checks must all pass; otherwise
       explicit human review is required. A successful system submission records both
       the uploader authorization and `receipt-auto-submit-v1` system actor. PWA v120.
-- [ ] **TASK-121 — Add document void, retention and purge governance.** Hard-delete
-      only unsubmitted drafts; use reasoned Void after submission, correction/reversal
-      after posting or tax finalisation, legal hold, paper-original custody and
-      two-person post-retention purge with a permanent hash tombstone.
+- [x] **TASK-121 — Add document void, retention and purge governance.** Migration
+      0060 permits governed physical deletion only for an unsubmitted draft; submitted
+      or approved records require reasoned Void, while posted or sealed facts require
+      an immutable correction/reversal version. Legal hold, tax finalisation and
+      paper-original custody block purge. Records Manager initiation plus a distinct
+      Finance review is required after retention; execution removes operational
+      content and metadata while retaining a permanent hash/version tombstone. PWA v121.
 - [ ] **TASK-122 — Audit document access and storage parity.** Record sensitive
       view/download/print/export operations, prove database/filesystem parity,
       quarantine isolation, tenant/privacy rules, retry idempotency and bounded

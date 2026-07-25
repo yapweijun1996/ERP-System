@@ -833,9 +833,11 @@ Payroll effects pass five-language desktop/375px and domain/API proof.
    submission requires every critical field at least 98%, clean safety/amount/conflict
    and exact-duplicate checks, company opt-in and retry-stable system attribution;
    every failed check enters explicit human review.
-4. **Void, retention and access audit** (TASK-121/122) distinguish draft deletion,
-   submitted Void, posted correction and post-retention two-person purge; support
-   legal hold, paper-original custody and sensitive read/download/export audit.
+4. **Void, retention and purge** (TASK-121 done 2026-07-26) distinguishes draft
+   deletion, submitted/approved reasoned Void, posted/sealed correction versions and
+   post-retention two-person purge, with legal hold, paper-original custody and a
+   permanent hash tombstone. **Sensitive access and storage parity** (TASK-122)
+   completes read/download/print/export audit and cross-provider proof.
 
 Exit criteria: storage backends, upload limits, quarantine, extraction retry,
 confidence policy, auto-submit attribution, void/purge states, privacy and PWA logout

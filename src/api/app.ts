@@ -24,6 +24,7 @@ import { createFinanceReportsRouter } from './routes/financeReports';
 import { createReportingRouter } from './routes/reporting';
 import { createHrRouter } from './routes/hr';
 import { createMyRouter } from './routes/my';
+import { createDocumentsRouter } from './routes/documents';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -103,6 +104,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     tokenEncryptionKey: lifecycle?.tokenEncryptionKey,
   }));
   app.use('/api/my', createMyRouter(db));
+  app.use('/api/documents', createDocumentsRouter(db));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
 

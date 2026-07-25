@@ -980,7 +980,15 @@ function receiptCaptureCopy(){
     vi:{autoAuthorize:'Chỉ cho phép hệ thống gửi khi mọi trường quan trọng đạt độ tin cậy ít nhất 98% và tất cả kiểm tra an toàn, số tiền, trùng lặp đều đạt.',draftAuthorized:'Bản nháp ngoại tuyến · đã cho phép hệ thống gửi',reviewRequired:'Cần người xem xét',readyReview:'Sẵn sàng để xem xét',autoSubmitted:'Đã tự động gửi'},
   };
   const governed=confidence[lang]||confidence.en;
-  return key=>governed[key]||safety[key]||pack[key]||packs.en[key]||key;
+  const governance={
+    en:{storedDelete:'Delete draft',storedVoid:'Void',confirmStoredDelete:'Permanently delete this unsubmitted stored draft?',voidReason:'Enter the reason for voiding this submitted record:',storedDeleted:'Stored draft deleted.',voided:'Voided',voidedDone:'Submitted record voided.'},
+    ms:{storedDelete:'Padam draf',storedVoid:'Batal',confirmStoredDelete:'Padam kekal draf tersimpan yang belum dihantar ini?',voidReason:'Masukkan sebab membatalkan rekod yang telah dihantar ini:',storedDeleted:'Draf tersimpan dipadam.',voided:'Dibatalkan',voidedDone:'Rekod yang dihantar telah dibatalkan.'},
+    zh:{storedDelete:'删除草稿',storedVoid:'作废',confirmStoredDelete:'永久删除这份尚未提交的已存草稿？',voidReason:'请输入作废这份已提交记录的原因：',storedDeleted:'已删除存储草稿。',voided:'已作废',voidedDone:'已作废提交记录。'},
+    ja:{storedDelete:'下書きを削除',storedVoid:'無効化',confirmStoredDelete:'未送信の保存済み下書きを完全に削除しますか？',voidReason:'送信済み記録を無効化する理由を入力してください：',storedDeleted:'保存済み下書きを削除しました。',voided:'無効化済み',voidedDone:'送信済み記録を無効化しました。'},
+    vi:{storedDelete:'Xóa bản nháp',storedVoid:'Hủy hiệu lực',confirmStoredDelete:'Xóa vĩnh viễn bản nháp đã lưu nhưng chưa gửi này?',voidReason:'Nhập lý do hủy hiệu lực bản ghi đã gửi này:',storedDeleted:'Đã xóa bản nháp lưu trữ.',voided:'Đã hủy hiệu lực',voidedDone:'Đã hủy hiệu lực bản ghi đã gửi.'},
+  };
+  const recordGovernance=governance[lang]||governance.en;
+  return key=>recordGovernance[key]||governed[key]||safety[key]||pack[key]||packs.en[key]||key;
 }
 function receiptBytes(value){
   const size=Number(value)||0;
@@ -996,6 +1004,7 @@ function receiptProcessingState(item){
   };
   const p=packs[typeof getLang==='function'?getLang():'en']||packs.en;
   const s=receiptCaptureCopy();
+  if(item.recordStatus==='voided')return {label:s('voided'),tone:'danger'};
   if(item.inboxStatus==='review_required')return {label:s('reviewRequired'),tone:'warn'};
   if(item.inboxStatus==='ready')return {label:s('readyReview'),tone:'info'};
   if(item.inboxStatus==='submitted')return {label:s('autoSubmitted'),tone:'ok'};
@@ -1107,7 +1116,12 @@ SCREENS['my-receipts']=async function(root){
         ?`<div class="row-actions">
           ${btn(s('edit'),{icon:'edit',sm:true,attrs:`data-receipt-edit="${esc(row.draft.id)}"`})}
           ${btn(s('sync'),{icon:'sync',sm:true,attrs:`data-receipt-sync="${esc(row.draft.id)}"`})}
-          ${btn(s('remove'),{icon:'trash',cls:'danger',sm:true,attrs:`data-receipt-delete="${esc(row.draft.id)}"`})}</div>`:'—'},
+          ${btn(s('remove'),{icon:'trash',cls:'danger',sm:true,attrs:`data-receipt-delete="${esc(row.draft.id)}"`})}</div>`
+        :row.item.recordStatus==='draft'
+          ?btn(s('storedDelete'),{icon:'trash',cls:'danger',sm:true,attrs:`data-receipt-delete-stored="${esc(row.item.id)}"`})
+          :['submitted','approved'].includes(row.item.recordStatus)
+            ?btn(s('storedVoid'),{icon:'x',cls:'danger',sm:true,attrs:`data-receipt-void-stored="${esc(row.item.id)}"`})
+            :'—'},
     ],
     empty:{icon:'receipt',title:s('empty'),description:s('emptyBody')},
     note:s('limits'),
@@ -1127,6 +1141,24 @@ SCREENS['my-receipts']=async function(root){
       screenRoot.querySelectorAll('[data-receipt-delete]').forEach(button=>button.addEventListener('click',async event=>{
         event.stopPropagation();if(!confirm(s('confirmDelete')))return;
         await draftStore.remove(button.dataset.receiptDelete);toast(s('deleted'),'ok');await rerender();
+      }));
+      screenRoot.querySelectorAll('[data-receipt-delete-stored]').forEach(button=>button.addEventListener('click',async event=>{
+        event.stopPropagation();if(!confirm(s('confirmStoredDelete')))return;
+        try{
+          await adapter.deleteStoredReceipt(button.dataset.receiptDeleteStored);
+          toast(s('storedDeleted'),'ok');await rerender();
+        }catch(error){toast((error&&error.message)||s('error'),'danger');}
+      }));
+      screenRoot.querySelectorAll('[data-receipt-void-stored]').forEach(button=>button.addEventListener('click',async event=>{
+        event.stopPropagation();
+        const item=stored.find(candidate=>String(candidate.id)===button.dataset.receiptVoidStored);
+        if(!item)return;
+        const reason=prompt(s('voidReason'),'');
+        if(reason===null)return;
+        try{
+          await adapter.voidStoredReceipt(item,reason);
+          toast(s('voidedDone'),'ok');await rerender();
+        }catch(error){toast((error&&error.message)||s('error'),'danger');}
       }));
     },
   });

@@ -1149,6 +1149,26 @@ dual typecheck, 467 tests plus one expected skip, 60 migrations at schema versio
 **120 Canonical / 1 Preview**. A real PostgreSQL 16 non-superuser/RLS run passes.
 PWA v120.
 
+### Document Void, correction, retention and two-person purge (TASK-121)
+
+Migration 0060 adds an explicit record lifecycle to every managed document. Only an
+actor-owned, unsubmitted `draft` may be physically deleted. `submitted` and
+`approved` records require a reasoned Void; `posted` and tax-finalised `sealed`
+records reject direct mutation and require a linked immutable correction or reversal
+version. Legal hold and paper-original custody are versioned, reasoned governance
+events.
+
+Post-retention permanent purge is a two-person workflow: Records Manager initiates and
+a distinct Finance actor approves or rejects. Execution re-checks retention, hold,
+custody, version and content integrity, then removes operational bytes and metadata
+atomically across database or staged filesystem storage. The purge request and a
+permanent SHA-256 tombstone retain the original document-key hash, version manifest,
+actors and custody state, and prevent silent key reuse. My Receipts exposes direct
+delete only for stored drafts and reasoned Void only for submitted/approved records in
+five languages. Final gates pass lint, dual typecheck, 471 tests plus one expected
+skip, 61 migrations at schema version 60, 175-table drift, API/Demo builds, smoke,
+all 121 desktop/375px routes and a real PostgreSQL 16 non-superuser/RLS run. PWA v121.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1159,8 +1179,9 @@ delegation and capacity boundary. TASK-115 delivered the Canonical Team Calendar
 optional outbound delivery boundary. TASK-116 delivered the governed Payroll
 deduction/encashment boundary. TASK-117 delivered the managed-document storage
 boundary, TASK-118 delivered bounded secure capture plus offline mobile drafts and
-TASK-119 delivered fail-closed scanning plus governed extraction and TASK-120 delivered
-the confidence-governed receipt inbox. TASK-121 through TASK-135 remain planning records
+TASK-119 delivered fail-closed scanning plus governed extraction, TASK-120 delivered
+the confidence-governed receipt inbox and TASK-121 delivered document lifecycle,
+correction and two-person retention purge. TASK-122 through TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1198,9 +1219,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 119 tasks, including TASK-120
+- Done: 120 tasks, including TASK-121
 - Blocked: TASK-017 (1)
-- Todo: 15 planned tasks (TASK-121–135) across EPIC-054–056. These extend the product
+- Todo: 14 planned tasks (TASK-122–135) across EPIC-054–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

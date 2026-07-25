@@ -121,8 +121,10 @@ mobile capture/editing and logout-cleared IndexedDB drafts. TASK-119 implements
 fail-closed quarantine scanning, local OCR by default and explicitly configured BYOK
 Vision extraction through retry-safe jobs. TASK-120 adds immutable field provenance,
 98%-minimum confidence governance, prior-uploader authorization and system-attributed
-receipt inbox submission. TASK-121–135 remain **Planned** until
-their individual acceptance gates pass. Planned
+receipt inbox submission. TASK-121 adds state-governed draft deletion, reasoned Void,
+immutable posted/sealed correction versions, legal hold, paper custody and
+records-manager plus distinct-Finance post-retention purge with a permanent hash
+tombstone. TASK-122–135 remain **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an

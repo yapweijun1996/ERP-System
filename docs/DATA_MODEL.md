@@ -146,7 +146,9 @@ SG and MY demo companies; production wires real auth.
 > without a new entity. TASK-119 adds `document_processing_policy`,
 > `document_scan_job` and `document_extraction`. TASK-120 adds immutable
 > `document_extraction_field`, `receipt_upload_authorization` and `receipt_inbox_item`
-> entities. The remaining targets for TASK-121–135 are **not yet present**. Each task
+> entities. TASK-121 adds the managed-document lifecycle, correction, governance-event,
+> purge-request and tombstone entities. The remaining targets for TASK-122–135 are
+> **not yet present**. Each task
 > must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -263,7 +265,7 @@ does not depend on later salary or policy changes.
 ### 8.3 Managed documents and extraction
 
 ```
-managed_document               tenant identity, owner, purpose, retention and legal hold [0056]
+managed_document               identity, lifecycle/version, retention, hold, custody [0056/0060]
 document_version               immutable version/hash/MIME/size/backend metadata [0056]
 document_blob                  default PostgreSQL/PGlite binary payload [0056]
 document_file_location         optional single-node server-file locator [0056]
@@ -273,9 +275,10 @@ document_extraction            versioned OCR/Vision output and retry state [0058
 document_extraction_field      immutable source/model/value/confidence candidates [0059]
 receipt_upload_authorization   immutable uploader choice per document version [0059]
 receipt_inbox_item             ready/review/submitted projection and attribution [0059]
-document_retention             retention deadline, paper-custody state and legal hold
-document_purge_approval         records-manager request and finance review
-document_tombstone             retained hash/provenance after authorized purge
+document_governance_event      immutable state/hold/custody/purge actor trail [0060]
+document_correction            source to correction/reversal version linkage [0060]
+document_purge_request         records-manager request + distinct Finance review [0060]
+document_tombstone             permanent hash/version provenance after purge [0060]
 ```
 
 Migration 0056 implements the first four rows. Migration 0057 adds positive page-count
@@ -291,12 +294,17 @@ database-owned SHA-256 and size. TASK-119 places every captured version in a uni
 result is `clean`. Scanner unavailability or an indeterminate result fails closed.
 Clean versions receive one versioned `document_extraction`; OCR is local by default,
 while external Vision requires a connected encrypted BYOK credential plus company-level
-provider, region and retention policy. The remaining links, retention workflow, purge
-and tombstone rows are planned for TASK-121–122.
+provider, region and retention policy.
 TASK-120 implements field provenance as immutable candidates and records the uploader's
 prior auto-submit choice separately from the receipt inbox projection. The inbox is
 `review_required`, `ready` or system-`submitted`; submission attribution is valid only
 with both the uploader authorization and `receipt-auto-submit-v1` system actor.
+TASK-121 adds the `draft` → `submitted` → `approved` → `posted` → `sealed`
+governance lifecycle, reasoned Void, linked correction/reversal versions, tax
+finalisation, paper custody and legal hold. Post-retention purge requires Records
+Manager initiation and a distinct Finance review; it deletes operational content and
+metadata only after revalidation, while preserving a permanent hash/version tombstone.
+Sensitive access auditing and provider-parity proof remain in TASK-122.
 
 ### 8.4 Claims, expenses and accounting
 

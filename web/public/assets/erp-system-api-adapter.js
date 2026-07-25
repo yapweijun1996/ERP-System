@@ -249,6 +249,19 @@
       }
       return body;
     },
+    deleteStoredReceipt:function(id){
+      return apiRequest('documents/'+encodeURIComponent(id)+'/actions/delete-draft',{
+        method:'POST',
+        body:{},
+      });
+    },
+    voidStoredReceipt:function(item,reason){
+      return apiRequest('documents/'+encodeURIComponent(item.id)+'/actions/void',{
+        method:'POST',
+        headers:{'Idempotency-Key':crypto.randomUUID()},
+        body:{expectedVersion:Number(item.recordVersion),reason:String(reason||'')},
+      });
+    },
     teamLeaveRequests:function(){ return apiRequest('my/team/leave-requests'); },
     teamCalendar:function(query){
       query=query||{};

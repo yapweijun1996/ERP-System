@@ -36,6 +36,7 @@ import {
   readManagedDocument,
   type DocumentStorageRegistry,
 } from './storage';
+import { markDocumentSystemSubmittedWithin } from './governance';
 
 const DOCUMENT_SCAN_TOPIC = 'document.scan.requested';
 const DOCUMENT_EXTRACTION_TOPIC = 'document.extraction.requested';
@@ -450,6 +451,13 @@ async function completeReceiptExtractionWithin(
     submittedAt: autoSubmit ? now : null,
   }).onConflictDoNothing().returning();
   if (inbox?.status === 'submitted') {
+    await markDocumentSystemSubmittedWithin(
+      tx,
+      scope,
+      source.document.id,
+      source.document.ownerUserId,
+      now,
+    );
     await tx.insert(outboxEvent).values({
       ...scope,
       topic: RECEIPT_SUBMISSION_TOPIC,

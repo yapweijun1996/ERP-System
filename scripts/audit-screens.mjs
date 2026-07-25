@@ -166,6 +166,21 @@ if (prematureReceiptActions.length) {
     `Quarantined My Receipts exposes blocked actions: ${prematureReceiptActions.join(', ')}`,
   );
 }
+const receiptGovernanceContracts = [
+  "row.item.recordStatus==='draft'",
+  "['submitted','approved'].includes(row.item.recordStatus)",
+  'data-receipt-delete-stored',
+  'adapter.deleteStoredReceipt',
+  'data-receipt-void-stored',
+  'adapter.voidStoredReceipt',
+  "item.recordStatus==='voided'",
+].filter((token) => !myReceiptsScreenSource.includes(token)
+  && !hrScreenSource.includes(token));
+if (receiptGovernanceContracts.length) {
+  throw new Error(
+    `My Receipts is missing state-governed deletion/Void contracts: ${receiptGovernanceContracts.join(', ')}`,
+  );
+}
 const offlineReceiptContracts = [
   "var DB_NAME='aria-receipt-drafts-v1'",
   'var MAX_BYTES=20*1024*1024',
