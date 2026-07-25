@@ -12,6 +12,7 @@ import {
 } from '../../modules/integration/connector';
 import {
   configureDocumentProcessingPolicyWithin,
+  configureReceiptAutoSubmitPolicyWithin,
   DocumentProcessingPolicyError,
   getDocumentProcessingPolicyWithin,
   type DocumentProcessingPolicyInput,
@@ -98,6 +99,60 @@ export function createIntegrationRouter(db: DB, encryptionKey?: Buffer): Router 
             scope,
             { userId: input.actorUserId, requestId: context(res).requestId },
             policyInput,
+          );
+        },
+      });
+      if (result.replayed) res.setHeader('Idempotency-Replayed', 'true');
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      if (error instanceof ActionDispatchError) {
+        apiError(res, error.status, error.code, error.message);
+        return;
+      }
+      if (error instanceof DocumentProcessingPolicyError) {
+        apiError(res, 422, error.code, error.message);
+        return;
+      }
+      throw error;
+    }
+  });
+
+  router.post('/receipt-auto-submit-policy/actions/update', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    const payload = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+      ? req.body as Record<string, unknown>
+      : {};
+    try {
+      const result = await dispatchAction({
+        db,
+        session,
+        resource: 'integration/receipt-auto-submit-policy',
+        resourceId: 0,
+        action: 'update',
+        payload,
+        idempotencyKey: req.header('idempotency-key'),
+        requestId: context(res).requestId,
+      }, {
+        permission: PERMISSIONS.integrationManage,
+        idempotency: 'required',
+        audit: 'none',
+        execute: (tx, scope, input) => {
+          if (typeof payload.enabled !== 'boolean'
+            || typeof payload.minConfidence !== 'number') {
+            throw new DocumentProcessingPolicyError(
+              'invalid_auto_submit_policy',
+              'Provide enabled and a numeric confidence threshold from 98% to 100%.',
+            );
+          }
+          return configureReceiptAutoSubmitPolicyWithin(
+            tx,
+            scope,
+            { userId: input.actorUserId, requestId: context(res).requestId },
+            {
+              enabled: payload.enabled,
+              minConfidence: payload.minConfidence,
+            },
           );
         },
       });

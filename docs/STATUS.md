@@ -126,6 +126,7 @@ hardcoded fictional customer regardless of the active company.
 | Governed document storage provider | ✅ Canonical domain and storage boundary | Migration 0056 adds managed identity, immutable version/hash/MIME/size facts, default PostgreSQL/PGlite `bytea` content and optional database-located filesystem content. The filesystem backend requires an explicit dedicated root and is labelled single-node; tenant, owner, retention and legal-hold facts remain database-owned. Provider-parity tests cover owner/manager/cross-tenant access and content-integrity verification, with a PostgreSQL 16 non-superuser RLS proof. TASK-118 builds bounded actor-owned receipt capture on this boundary. |
 | Secure receipt upload and offline mobile capture | ✅ Canonical Demo/API data and writes | Migration 0057 adds immutable positive page counts and upgrades existing Employee/Manager roles with `employee.receipts.write`. Actor-owned My Work endpoints and Demo parity stream-bound files at 20 MB, verify JPEG/PNG/HEIC/PDF magic bytes against MIME and extension, parse PDFs with a 20-page ceiling and reuse stable draft keys idempotently. The five-language My Receipts page supports camera/file capture, IndexedDB drafts and Canvas crop/rotate/compress for JPEG/PNG; logout confirms then clears unsynchronised drafts only. Stored files remain private and enter TASK-119's fail-closed quarantine with no premature preview, OCR or claim linkage. |
 | Document quarantine scanning and extraction | ✅ Canonical domain/API worker boundary | Migration 0058 adds company processing policy, unique leased scan jobs, versioned extraction rows, existing-document backfill and retry-stable outbox signals. Unavailable, indeterminate and infected scans fail closed; only clean versions reach extraction. Local OCR is the default. BYOK Vision requires an explicitly connected encrypted credential plus provider, region and retention policy. Demo honestly reports scanner unavailable and exposes no preview, claim, submission or export affordance. |
+| Confidence-governed receipt inbox | ✅ Canonical domain/API and My Receipts boundary | Migration 0059 stores immutable field provenance/confidence, uploader authorization and ready/review/submitted inbox states. Company auto-submit defaults off and cannot use a threshold below 98%. Clean safety, critical-field validity/confidence, conflict, amount and exact-duplicate checks must all pass; system submission records uploader authorization plus `receipt-auto-submit-v1`, while failures enter explicit human review. |
 | Project-lite: register + progress-claim billing | ✅ Canonical Demo/API data and writes | Second Phase 7 module. `project` (nullable `customer_id` — null means Internal — running `billed_to_date` aggregate) and `progress_claim` (draft/posted billing document, tax-snapshotted like `sales_debit_note`) tables, `src/modules/project/` (`createProject`, `createProgressClaim`/`postProgressClaim`), registered as standard generic resources gated on `project.read`/`project.write` permissions. Posting a claim inserts the exact same balanced `gl_entry` legs `postSalesDebitNote` already uses (Dr `1100` AR / Cr `4000` Revenue / Cr `2200` Output Tax) and increments the project's `billed_to_date`. `project-pl` and `project-detail` expose only real contract, billing, claim and customer relationships; unsupported cost/budget/team/milestone data remains absent rather than fabricated. |
 | Project Timesheet | ✅ Canonical Demo/API data and writes | Migration 0040 adds actor-owned `project_time_entry` facts with Decimal hours, project/date indexes, version and append-preserving void metadata. Creation derives the actor from the signed-in Session, accepts only an open tenant project and a real work date, and never exposes another user's entries. Correction voids under a row lock instead of deleting or rewriting hours. The five-language `timesheet` route loads a bounded weekly view, reports only active totals, keeps voided facts visible and explicitly does not invent approval, capacity or payroll workflow. Domain/API tests cover validation, tenant/actor isolation, Viewer denial, audit and idempotent void replay; Demo smoke and live in-app browser prove create → void at desktop and 375px. |
 | Actor-addressed Notifications | ✅ Canonical Demo/API data and writes | Migration 0043 adds first-class `app_notification` delivery/read/dismiss facts scoped to one master, company and recipient. Shared TypeScript commands serve both adapters; public rows omit tenant/user identifiers and cross-user records stay unavailable. `notifications.read`/`notifications.manage`, CSRF, idempotency, audit and production RLS protect the API. The bell plus five-language full page share the canonical feed and reload on company switch; localStorage state, fictional notifications and fake preferences are removed. |
@@ -1123,6 +1124,31 @@ plus one expected skip, 59 migrations at schema version 58, 168-table drift,
 Demo/API builds and all 121 desktop/375px routes at **120 Canonical / 1 Preview**.
 A real PostgreSQL 16 RLS run and in-app upload/reload proof also pass. PWA v119.
 
+## TASK-120 — Confidence-governed receipt inbox and auto-submit (done)
+
+Migration 0059 adds immutable `document_extraction_field` candidates, one immutable
+`receipt_upload_authorization` choice per document version and one governed
+`receipt_inbox_item` projection. Every candidate preserves field key, value,
+normalised value, source reference, extractor provider/model, confidence and review
+state. Critical merchant, transaction date, currency and total fields must each be
+valid, non-conflicting and at or above the company threshold.
+
+Auto-submit defaults off. The domain command and database constraint reject thresholds
+below 98%. A receipt reaches system `submitted` only after a clean malware scan, an
+explicitly clear extraction safety result, valid amount fields, no exact SHA-256
+duplicate, company opt-in and the authenticated uploader's prior immutable
+authorization. Submission records that uploader, the authorization timestamp,
+`receipt-auto-submit-v1` system actor and one retry-stable `receipt.inbox.submitted`
+outbox event. Failed checks produce explicit review reasons; clear checks without
+opt-in or authorization remain `ready`.
+
+My Receipts exposes the authorization choice before capture and five-language
+`review_required`, `ready` and automatic-submission states. Final gates pass lint,
+dual typecheck, 467 tests plus one expected skip, 60 migrations at schema version 59,
+171-table drift, API/Demo builds, smoke and all 121 desktop/375px routes at
+**120 Canonical / 1 Preview**. A real PostgreSQL 16 non-superuser/RLS run passes.
+PWA v120.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1133,8 +1159,8 @@ delegation and capacity boundary. TASK-115 delivered the Canonical Team Calendar
 optional outbound delivery boundary. TASK-116 delivered the governed Payroll
 deduction/encashment boundary. TASK-117 delivered the managed-document storage
 boundary, TASK-118 delivered bounded secure capture plus offline mobile drafts and
-TASK-119 delivered fail-closed scanning plus governed extraction. TASK-120 through
-TASK-135 remain planning records
+TASK-119 delivered fail-closed scanning plus governed extraction and TASK-120 delivered
+the confidence-governed receipt inbox. TASK-121 through TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1172,9 +1198,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 118 tasks, including TASK-119
+- Done: 119 tasks, including TASK-120
 - Blocked: TASK-017 (1)
-- Todo: 16 planned tasks (TASK-120–135) across EPIC-054–056. These extend the product
+- Todo: 15 planned tasks (TASK-121–135) across EPIC-054–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

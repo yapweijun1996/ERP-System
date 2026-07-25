@@ -5,6 +5,8 @@ import {
   customType,
   index,
   integer,
+  jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -117,6 +119,11 @@ export const documentProcessingPolicy = pgTable('document_processing_policy', {
   visionProvider: text('vision_provider'),
   visionRegion: text('vision_region'),
   visionRetentionDays: integer('vision_retention_days'),
+  autoSubmitEnabled: boolean('auto_submit_enabled').notNull().default(false),
+  autoSubmitMinConfidence: numeric('auto_submit_min_confidence', {
+    precision: 5,
+    scale: 4,
+  }).notNull().default('0.9800'),
   version: integer('version').notNull().default(1),
   updatedByUserId: bigint('updated_by_user_id', { mode: 'number' }).notNull()
     .references(() => appUser.userId),
@@ -137,6 +144,8 @@ export const documentProcessingPolicy = pgTable('document_processing_policy', {
         and char_length(${t.visionRegion}) between 2 and 80
         and ${t.visionRetentionDays} between 0 and 365)`),
   check('ck_document_processing_policy_version', sql`${t.version} > 0`),
+  check('ck_document_processing_policy_auto_submit_confidence',
+    sql`${t.autoSubmitMinConfidence} between 0.9800 and 1.0000`),
 ]);
 
 /** One retryable, leased malware-scan job per immutable document version. */
@@ -197,4 +206,113 @@ export const documentExtraction = pgTable('document_extraction', {
       char_length(${t.outputSha256}) = 64
       and ${t.outputSha256} ~ '^[0-9a-f]{64}$'
     )`),
+]);
+
+/** Immutable extraction candidates with source, model and confidence provenance. */
+export const documentExtractionField = pgTable('document_extraction_field', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  extractionId: bigint('extraction_id', { mode: 'number' }).notNull()
+    .references(() => documentExtraction.id),
+  fieldKey: text('field_key').notNull(),
+  candidateNo: integer('candidate_no').notNull().default(1),
+  valueText: text('value_text').notNull(),
+  normalizedValue: text('normalized_value').notNull(),
+  sourceType: text('source_type').notNull(),
+  sourceRef: text('source_ref').notNull(),
+  model: text('model').notNull(),
+  confidence: numeric('confidence', { precision: 5, scale: 4 }).notNull(),
+  critical: boolean('critical').notNull().default(false),
+  reviewState: text('review_state').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_document_extraction_field_candidate')
+    .on(t.masterFn, t.companyFn, t.extractionId, t.fieldKey, t.candidateNo),
+  index('idx_document_extraction_field_review')
+    .on(t.masterFn, t.companyFn, t.extractionId, t.reviewState, t.fieldKey),
+  check('ck_document_extraction_field_key',
+    sql`${t.fieldKey} ~ '^[a-z][a-z0-9_]{1,63}$'`),
+  check('ck_document_extraction_field_candidate', sql`${t.candidateNo} > 0`),
+  check('ck_document_extraction_field_value',
+    sql`char_length(${t.valueText}) between 1 and 4000`),
+  check('ck_document_extraction_field_source',
+    sql`${t.sourceType} in ('local_ocr','byok_vision','user')
+      and char_length(${t.sourceRef}) between 1 and 500`),
+  check('ck_document_extraction_field_confidence',
+    sql`${t.confidence} between 0.0000 and 1.0000`),
+  check('ck_document_extraction_field_review_state',
+    sql`${t.reviewState} in ('accepted','low_confidence','conflict')`),
+]);
+
+/** Immutable uploader choice captured before any system submission decision. */
+export const receiptUploadAuthorization = pgTable('receipt_upload_authorization', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  versionId: bigint('version_id', { mode: 'number' }).notNull()
+    .references(() => documentVersion.id),
+  uploaderUserId: bigint('uploader_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  autoSubmitAuthorized: boolean('auto_submit_authorized').notNull().default(false),
+  authorizedAt: timestamp('authorized_at', { withTimezone: true }),
+  statementVersion: text('statement_version').notNull().default('receipt-auto-submit-v1'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_receipt_upload_authorization_version')
+    .on(t.masterFn, t.companyFn, t.versionId),
+  check('ck_receipt_upload_authorization',
+    sql`(${t.autoSubmitAuthorized} and ${t.authorizedAt} is not null)
+      or (not ${t.autoSubmitAuthorized} and ${t.authorizedAt} is null)`),
+  check('ck_receipt_upload_authorization_statement',
+    sql`${t.statementVersion} = 'receipt-auto-submit-v1'`),
+]);
+
+/**
+ * Receipt inbox projection. `submitted` is system-only in this slice; claim
+ * authoring and employee/Finance submission arrive in EPIC-055.
+ */
+export const receiptInboxItem = pgTable('receipt_inbox_item', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  versionId: bigint('version_id', { mode: 'number' }).notNull()
+    .references(() => documentVersion.id),
+  extractionId: bigint('extraction_id', { mode: 'number' }).notNull()
+    .references(() => documentExtraction.id),
+  ownerUserId: bigint('owner_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  status: text('status').notNull(),
+  reviewReasons: jsonb('review_reasons').$type<string[]>().notNull()
+    .default(sql`'[]'::jsonb`),
+  duplicateOfVersionId: bigint('duplicate_of_version_id', { mode: 'number' })
+    .references(() => documentVersion.id),
+  submissionKind: text('submission_kind').notNull().default('none'),
+  authorizedByUserId: bigint('authorized_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  uploadAuthorizedAt: timestamp('upload_authorized_at', { withTimezone: true }),
+  systemActorKey: text('system_actor_key'),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_receipt_inbox_version').on(t.masterFn, t.companyFn, t.versionId),
+  uniqueIndex('uq_receipt_inbox_extraction').on(t.masterFn, t.companyFn, t.extractionId),
+  index('idx_receipt_inbox_owner_status')
+    .on(t.masterFn, t.companyFn, t.ownerUserId, t.status, t.id),
+  check('ck_receipt_inbox_status',
+    sql`${t.status} in ('review_required','ready','submitted')`),
+  check('ck_receipt_inbox_submission_kind',
+    sql`${t.submissionKind} in ('none','system')`),
+  check('ck_receipt_inbox_submission',
+    sql`(${t.status} = 'submitted'
+      and ${t.submissionKind} = 'system'
+      and ${t.authorizedByUserId} is not null
+      and ${t.uploadAuthorizedAt} is not null
+      and ${t.systemActorKey} = 'receipt-auto-submit-v1'
+      and ${t.submittedAt} is not null)
+      or (${t.status} <> 'submitted'
+        and ${t.submissionKind} = 'none'
+        and ${t.authorizedByUserId} is null
+        and ${t.uploadAuthorizedAt} is null
+        and ${t.systemActorKey} is null
+        and ${t.submittedAt} is null)`),
+  check('ck_receipt_inbox_version', sql`${t.version} > 0`),
 ]);

@@ -414,6 +414,13 @@
       "when": 1785006629195,
       "tag": "0058_document_quarantine_processing",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1785009442505,
+      "tag": "0059_receipt_confidence_inbox",
+      "breakpoints": true
     }
   ]
 }

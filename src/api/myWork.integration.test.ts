@@ -192,6 +192,7 @@ describe('actor-owned My Work API', () => {
       'content-type': 'image/jpeg',
       'x-erp-file-name': encodeURIComponent('taxi-receipt.jpg'),
       'x-erp-draft-id': 'draft_api_001',
+      'x-erp-auto-submit-authorized': 'true',
     };
     const jpeg = Uint8Array.from([
       0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
@@ -210,6 +211,7 @@ describe('actor-owned My Work API', () => {
         storageBackend: 'database',
         scanStatus: 'queued',
         extractionStatus: null,
+        autoSubmitAuthorized: true,
       },
       meta: { actorDerived: true, replayed: false, scanning: 'fail_closed' },
     });
@@ -232,6 +234,7 @@ describe('actor-owned My Work API', () => {
         pageCount: 1,
         scanStatus: 'queued',
         extractionStatus: null,
+        autoSubmitAuthorized: true,
       }],
       meta: { actorDerived: true, availability: 'capture', scanning: 'fail_closed' },
     });
@@ -247,6 +250,19 @@ describe('actor-owned My Work API', () => {
     });
     expect(spoofed.status).toBe(422);
     expect((await spoofed.json()).error.code).toBe('receipt_type_mismatch');
+
+    const invalidAuthorization = await fetch(`${baseUrl}/api/my/receipts/actions/upload`, {
+      method: 'POST',
+      headers: {
+        ...uploadHeaders,
+        'x-erp-draft-id': 'draft_api_003',
+        'x-erp-auto-submit-authorized': 'yes',
+      },
+      body: jpeg,
+    });
+    expect(invalidAuthorization.status).toBe(400);
+    expect((await invalidAuthorization.json()).error.code)
+      .toBe('receipt_auto_submit_authorization_invalid');
   });
 
   it('lets an Employee-only account boot My Work without dashboard access', async () => {

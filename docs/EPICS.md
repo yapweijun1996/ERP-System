@@ -1969,10 +1969,13 @@ deployment; a server-filesystem provider is optional and explicitly single-node.
       allow external BYOK Vision only after company opt-in with provider, region and
       retention metadata. Migration 0058 adds retry-safe jobs/outbox signals,
       upgrade backfill, encrypted-connector policy controls and PWA v119.
-- [ ] **TASK-120 — Add confidence-governed receipt inbox and auto-submit.** Persist
-      field provenance/model/confidence, require every critical field at 98% or above
-      plus safety/amount/duplicate checks, let a company disable but never lower the
-      threshold, and record system submission as acting for the authenticated uploader.
+- [x] **TASK-120 — Add confidence-governed receipt inbox and auto-submit.** Migration
+      0059 persists immutable field source/model/confidence candidates, prior uploader
+      authorization and a governed receipt inbox. Company policy defaults auto-submit
+      off and cannot set its threshold below 98%. Safety, critical-field validity,
+      confidence, conflict, amount and exact-duplicate checks must all pass; otherwise
+      explicit human review is required. A successful system submission records both
+      the uploader authorization and `receipt-auto-submit-v1` system actor. PWA v120.
 - [ ] **TASK-121 — Add document void, retention and purge governance.** Hard-delete
       only unsubmitted drafts; use reasoned Void after submission, correction/reversal
       after posting or tax finalisation, legal hold, paper-original custody and

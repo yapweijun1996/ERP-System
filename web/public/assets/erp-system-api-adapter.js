@@ -234,6 +234,7 @@
           'X-CSRF-Token':csrf,
           'X-ERP-File-Name':encodeURIComponent(String(draft.name||'')),
           'X-ERP-Draft-Id':String(draft.id||''),
+          'X-ERP-Auto-Submit-Authorized':draft.autoSubmitAuthorized?'true':'false',
           'Idempotency-Key':String(draft.id||''),
         },
         body:draft.blob,

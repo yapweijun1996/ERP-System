@@ -7,6 +7,8 @@ import {
   documentScanJob,
   documentVersion,
   managedDocument,
+  receiptInboxItem,
+  receiptUploadAuthorization,
 } from '../../data/schema';
 import {
   createManagedDocument,
@@ -33,6 +35,7 @@ export interface ReceiptUploadInput {
   content: Uint8Array;
   storageBackend?: 'database' | 'filesystem';
   retentionUntil?: Date;
+  autoSubmitAuthorized?: boolean;
 }
 
 function uploadError(code: string, message: string, status = 422): never {
@@ -84,12 +87,28 @@ export async function uploadReceiptDocument(
     pageCount: validated.pageCount,
     storageBackend: input.storageBackend,
   }, registry);
-  await withTenantTransaction(db, scope, (tx) =>
-    enqueueDocumentProcessing(tx, scope, stored.version.id));
+  const authorization = await withTenantTransaction(db, scope, async (tx) => {
+    await tx.insert(receiptUploadAuthorization).values({
+      ...scope,
+      versionId: stored.version.id,
+      uploaderUserId: actor.userId,
+      autoSubmitAuthorized: input.autoSubmitAuthorized === true,
+      authorizedAt: input.autoSubmitAuthorized === true ? new Date() : null,
+    }).onConflictDoNothing();
+    await enqueueDocumentProcessing(tx, scope, stored.version.id);
+    const [row] = await tx.select().from(receiptUploadAuthorization).where(and(
+      eq(receiptUploadAuthorization.masterFn, scope.masterFn),
+      eq(receiptUploadAuthorization.companyFn, scope.companyFn),
+      eq(receiptUploadAuthorization.versionId, stored.version.id),
+    )).limit(1);
+    if (!row) throw new Error('Receipt upload authorization was not recorded.');
+    return row;
+  });
   return {
     ...stored,
     format: validated.format,
     pageCount: validated.pageCount,
+    autoSubmitAuthorized: authorization.autoSubmitAuthorized,
   };
 }
 
@@ -115,6 +134,12 @@ export async function listReceiptDocuments(
     scanResultCode: documentScanJob.resultCode,
     extractionStatus: documentExtraction.status,
     extractionProvider: documentExtraction.provider,
+    inboxStatus: receiptInboxItem.status,
+    reviewReasons: receiptInboxItem.reviewReasons,
+    duplicateOfVersionId: receiptInboxItem.duplicateOfVersionId,
+    submissionKind: receiptInboxItem.submissionKind,
+    submittedAt: receiptInboxItem.submittedAt,
+    autoSubmitAuthorized: receiptUploadAuthorization.autoSubmitAuthorized,
   }).from(managedDocument).innerJoin(documentVersion, and(
     eq(documentVersion.masterFn, managedDocument.masterFn),
     eq(documentVersion.companyFn, managedDocument.companyFn),
@@ -129,6 +154,14 @@ export async function listReceiptDocuments(
     eq(documentExtraction.companyFn, documentVersion.companyFn),
     eq(documentExtraction.versionId, documentVersion.id),
     eq(documentExtraction.extractionVersion, 1),
+  )).leftJoin(receiptInboxItem, and(
+    eq(receiptInboxItem.masterFn, documentVersion.masterFn),
+    eq(receiptInboxItem.companyFn, documentVersion.companyFn),
+    eq(receiptInboxItem.versionId, documentVersion.id),
+  )).leftJoin(receiptUploadAuthorization, and(
+    eq(receiptUploadAuthorization.masterFn, documentVersion.masterFn),
+    eq(receiptUploadAuthorization.companyFn, documentVersion.companyFn),
+    eq(receiptUploadAuthorization.versionId, documentVersion.id),
   )).where(and(
     eq(managedDocument.masterFn, scope.masterFn),
     eq(managedDocument.companyFn, scope.companyFn),

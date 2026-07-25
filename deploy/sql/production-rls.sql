@@ -57,6 +57,7 @@ DECLARE
     'calendar_outbound_connection', 'calendar_outbound_event',
     'managed_document', 'document_version', 'document_blob', 'document_file_location',
     'document_processing_policy', 'document_scan_job', 'document_extraction',
+    'document_extraction_field', 'receipt_upload_authorization', 'receipt_inbox_item',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',

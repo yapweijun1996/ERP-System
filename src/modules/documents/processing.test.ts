@@ -3,10 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   appUser,
   documentExtraction,
+  documentExtractionField,
   documentProcessingPolicy,
   documentScanJob,
   integrationConnector,
   outboxEvent,
+  receiptInboxItem,
+  receiptUploadAuthorization,
 } from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
@@ -28,6 +31,30 @@ async function setup() {
   await seedDemo(db);
   const [viewer] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
   return { db, viewer };
+}
+
+const safeReceiptFields = [
+  { fieldKey: 'merchant_name', value: 'Merchant Example', sourceRef: 'page:1:block:1', confidence: 0.995 },
+  { fieldKey: 'transaction_date', value: '2026-07-25', sourceRef: 'page:1:block:2', confidence: 0.992 },
+  { fieldKey: 'currency', value: 'SGD', sourceRef: 'page:1:block:3', confidence: 0.999 },
+  { fieldKey: 'total_amount', value: '10.00', sourceRef: 'page:1:block:4', confidence: 0.998 },
+];
+
+function safeExtractor() {
+  return {
+    extract: async () => ({
+      rawText: 'Merchant Example\n2026-07-25\nSGD 10.00',
+      model: 'local-receipt-v1',
+      safetyClear: true,
+      fields: safeReceiptFields,
+    }),
+  };
+}
+
+function cleanScanner() {
+  return {
+    scan: async () => ({ status: 'clean' as const, scanner: 'clamav-test' }),
+  };
 }
 
 describe('quarantined document processing', () => {
@@ -191,5 +218,157 @@ describe('quarantined document processing', () => {
       status: 'succeeded',
       model: 'vision-test',
     });
+  });
+
+  it('auto-submits exactly once only with prior uploader authorization and every check clear', async () => {
+    const { db, viewer } = await setup();
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'local_ocr',
+      autoSubmitEnabled: true,
+      autoSubmitMinConfidence: '0.9800',
+      updatedByUserId: viewer.userId,
+    });
+    const stored = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_auto_submit_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      autoSubmitAuthorized: true,
+    });
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: safeExtractor(),
+      workerId: 'auto-submit-worker',
+      now: new Date('2026-07-26T00:00:00.000Z'),
+    });
+    expect(result).toMatchObject({ clean: 1, extracted: 1, failed: 0 });
+    expect(await db.select().from(documentExtractionField)).toHaveLength(4);
+    expect((await db.select().from(receiptUploadAuthorization))[0]).toMatchObject({
+      versionId: stored.version.id,
+      uploaderUserId: viewer.userId,
+      autoSubmitAuthorized: true,
+      statementVersion: 'receipt-auto-submit-v1',
+    });
+    expect((await db.select().from(receiptInboxItem))[0]).toMatchObject({
+      versionId: stored.version.id,
+      status: 'submitted',
+      reviewReasons: [],
+      submissionKind: 'system',
+      authorizedByUserId: viewer.userId,
+      systemActorKey: 'receipt-auto-submit-v1',
+    });
+    expect((await db.select().from(outboxEvent))
+      .filter((row) => row.topic === 'receipt.inbox.submitted')).toHaveLength(1);
+
+    await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: safeExtractor(),
+      workerId: 'auto-submit-retry-worker',
+      now: new Date('2026-07-26T00:01:00.000Z'),
+    });
+    expect(await db.select().from(documentExtractionField)).toHaveLength(4);
+    expect(await db.select().from(receiptInboxItem)).toHaveLength(1);
+    expect((await db.select().from(outboxEvent))
+      .filter((row) => row.topic === 'receipt.inbox.submitted')).toHaveLength(1);
+  });
+
+  it('routes low-confidence and conflicting critical fields to explicit human review', async () => {
+    const { db, viewer } = await setup();
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'local_ocr',
+      autoSubmitEnabled: true,
+      autoSubmitMinConfidence: '0.9800',
+      updatedByUserId: viewer.userId,
+    });
+    await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_review_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      autoSubmitAuthorized: true,
+    });
+    await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: {
+        extract: async () => ({
+          rawText: 'Merchant Example\n2026-07-25\nSGD 10.00\nSGD 12.00',
+          model: 'local-receipt-v1',
+          safetyClear: true,
+          fields: [
+            ...safeReceiptFields.map((field) =>
+              field.fieldKey === 'transaction_date'
+                ? { ...field, confidence: 0.97 }
+                : field),
+            {
+              fieldKey: 'total_amount',
+              value: '12.00',
+              sourceRef: 'page:1:block:5',
+              confidence: 0.999,
+            },
+          ],
+        }),
+      },
+      now: new Date('2026-07-26T00:00:00.000Z'),
+    });
+    const [inbox] = await db.select().from(receiptInboxItem);
+    expect(inbox).toMatchObject({
+      status: 'review_required',
+      submissionKind: 'none',
+    });
+    expect(inbox.reviewReasons).toEqual(expect.arrayContaining([
+      'field_conflict:total_amount',
+      'critical_field_low_confidence:transaction_date',
+    ]));
+    expect((await db.select().from(documentExtractionField))
+      .filter((row) => row.reviewState === 'conflict')).toHaveLength(2);
+    expect((await db.select().from(outboxEvent))
+      .filter((row) => row.topic === 'receipt.inbox.submitted')).toHaveLength(0);
+  });
+
+  it('prevents exact duplicate receipt auto-submission', async () => {
+    const { db, viewer } = await setup();
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'local_ocr',
+      autoSubmitEnabled: true,
+      autoSubmitMinConfidence: '0.9800',
+      updatedByUserId: viewer.userId,
+    });
+    await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_original_001',
+      fileName: 'original.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      autoSubmitAuthorized: true,
+    });
+    await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: safeExtractor(),
+      now: new Date('2026-07-26T00:00:00.000Z'),
+    });
+    const duplicate = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_duplicate_001',
+      fileName: 'duplicate.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      autoSubmitAuthorized: true,
+    });
+    await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: safeExtractor(),
+      now: new Date('2026-07-26T00:01:00.000Z'),
+    });
+    const inboxes = await db.select().from(receiptInboxItem);
+    const duplicateInbox = inboxes.find((row) => row.versionId === duplicate.version.id);
+    expect(duplicateInbox).toMatchObject({
+      status: 'review_required',
+      reviewReasons: ['duplicate_receipt'],
+      submissionKind: 'none',
+    });
+    expect(duplicateInbox?.duplicateOfVersionId).toBeTypeOf('number');
+    expect((await db.select().from(outboxEvent))
+      .filter((row) => row.topic === 'receipt.inbox.submitted')).toHaveLength(1);
   });
 });

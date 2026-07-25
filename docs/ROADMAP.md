@@ -828,9 +828,11 @@ Payroll effects pass five-language desktop/375px and domain/API proof.
 3. **Fail-closed scan and governed extraction** (TASK-119 done 2026-07-26) quarantines
    every file, defaults to retry-safe local OCR and permits external Vision only with
    an encrypted BYOK connector plus company provider, region and retention policy.
-   TASK-120 will preserve field provenance and permit system submission only when
-   every critical field reaches at least 98% and all safety, amount and duplicate
-   checks pass.
+   **Confidence-governed receipt inbox** (TASK-120 done 2026-07-26) preserves immutable
+   field source/model/confidence provenance and prior uploader authorization. System
+   submission requires every critical field at least 98%, clean safety/amount/conflict
+   and exact-duplicate checks, company opt-in and retry-stable system attribution;
+   every failed check enters explicit human review.
 4. **Void, retention and access audit** (TASK-121/122) distinguish draft deletion,
    submitted Void, posted correction and post-retention two-person purge; support
    legal hold, paper-original custody and sensitive read/download/export audit.

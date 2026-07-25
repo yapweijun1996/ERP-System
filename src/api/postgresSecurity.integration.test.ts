@@ -277,10 +277,19 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
     await withTenantTransaction(
       db,
       documentScope,
-      (tx) => enqueueDocumentProcessing(tx, documentScope, appendedDocument.version.id),
+      async (tx) => {
+        await tx.insert(schema.receiptUploadAuthorization).values({
+          ...documentScope,
+          versionId: appendedDocument.version.id,
+          uploaderUserId: accepted.userId,
+          autoSubmitAuthorized: false,
+        });
+        await enqueueDocumentProcessing(tx, documentScope, appendedDocument.version.id);
+      },
     );
     expect(await db.select().from(schema.documentScanJob)).toHaveLength(0);
     expect(await db.select().from(schema.documentExtraction)).toHaveLength(0);
+    expect(await db.select().from(schema.receiptUploadAuthorization)).toHaveLength(0);
     const processedDocument = await processDocumentJobBatch(db, {
       scanner: {
         scan: async () => ({
@@ -293,6 +302,13 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         extract: async () => ({
           rawText: 'postgres ocr proof',
           model: 'local-ocr-security-proof',
+          safetyClear: true,
+          fields: [
+            { fieldKey: 'merchant_name', value: 'Proof Merchant', sourceRef: 'page:1:block:1', confidence: 0.99 },
+            { fieldKey: 'transaction_date', value: '2026-07-26', sourceRef: 'page:1:block:2', confidence: 0.99 },
+            { fieldKey: 'currency', value: 'SGD', sourceRef: 'page:1:block:3', confidence: 0.99 },
+            { fieldKey: 'total_amount', value: '10.00', sourceRef: 'page:1:block:4', confidence: 0.99 },
+          ],
         }),
       },
       workerId: 'postgres-document-worker',
@@ -316,6 +332,29 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         rawText: 'postgres ocr proof',
       }),
     ]);
+    expect(await db.select().from(schema.documentExtractionField)).toHaveLength(0);
+    expect(await db.select().from(schema.receiptInboxItem)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.documentExtractionField),
+    )).toHaveLength(4);
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.receiptUploadAuthorization),
+    )).toEqual([expect.objectContaining({
+      uploaderUserId: accepted.userId,
+      autoSubmitAuthorized: false,
+    })]);
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.receiptInboxItem),
+    )).toEqual([expect.objectContaining({
+      status: 'ready',
+      submissionKind: 'none',
+    })]);
 
     await requestPasswordReset(
       db,

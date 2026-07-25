@@ -155,5 +155,9 @@ export const outboxEvent = pgTable('outbox_event', {
   ),
   uniqueIndex('uq_outbox_document_signal').on(
     t.masterFn, t.companyFn, t.topic, t.aggregateType, t.aggregateId,
-  ).where(sql`${t.topic} in ('document.scan.requested','document.extraction.requested')`),
+  ).where(sql`${t.topic} in (
+    'document.scan.requested',
+    'document.extraction.requested',
+    'receipt.inbox.submitted'
+  )`),
 ]);

@@ -687,6 +687,7 @@ export function createMyRouter(db: DB): Router {
           actorDerived: true,
           availability: 'capture',
           scanning: 'fail_closed',
+          receiptInbox: 'confidence_governed',
           limit: 100,
         },
       });
@@ -701,6 +702,16 @@ export function createMyRouter(db: DB): Router {
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     const encodedFileName = req.header('x-erp-file-name') ?? '';
     const clientDraftId = req.header('x-erp-draft-id') ?? '';
+    const autoSubmitHeader = req.header('x-erp-auto-submit-authorized');
+    if (autoSubmitHeader != null && !['true', 'false'].includes(autoSubmitHeader)) {
+      apiError(
+        res,
+        400,
+        'receipt_auto_submit_authorization_invalid',
+        'Receipt auto-submit authorization must be true or false.',
+      );
+      return;
+    }
     let fileName: string;
     try {
       fileName = decodeURIComponent(encodedFileName);
@@ -721,6 +732,7 @@ export function createMyRouter(db: DB): Router {
           fileName,
           declaredMimeType: req.header('content-type')?.split(';', 1)[0] ?? '',
           content,
+          autoSubmitAuthorized: autoSubmitHeader === 'true',
         },
       );
       await withTenantTransaction(db, scope, (tx) => appendAudit(tx, {
@@ -737,6 +749,7 @@ export function createMyRouter(db: DB): Router {
           mimeType: result.version.mimeType,
           sizeBytes: result.version.sizeBytes,
           pageCount: result.version.pageCount,
+          autoSubmitAuthorized: result.autoSubmitAuthorized,
         },
       }));
       res.status(result.replayed ? 200 : 201).json({
@@ -749,6 +762,7 @@ export function createMyRouter(db: DB): Router {
           mimeType: result.version.mimeType,
           sizeBytes: result.version.sizeBytes,
           pageCount: result.version.pageCount,
+          autoSubmitAuthorized: result.autoSubmitAuthorized,
           storageBackend: result.version.storageBackend,
           scanStatus: 'queued',
           extractionStatus: null,
@@ -758,6 +772,7 @@ export function createMyRouter(db: DB): Router {
           actorDerived: true,
           replayed: result.replayed,
           scanning: 'fail_closed',
+          receiptInbox: 'confidence_governed',
         },
       });
     } catch (error) {

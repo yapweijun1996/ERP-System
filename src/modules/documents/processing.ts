@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import Decimal from 'decimal.js';
 import {
   and,
   asc,
@@ -7,6 +8,7 @@ import {
   isNull,
   lt,
   lte,
+  ne,
   or,
   sql,
 } from 'drizzle-orm';
@@ -19,12 +21,15 @@ import {
 } from '../../data/tenantTransaction';
 import {
   documentExtraction,
+  documentExtractionField,
   documentProcessingPolicy,
   documentScanJob,
   documentVersion,
   integrationConnector,
   managedDocument,
   outboxEvent,
+  receiptInboxItem,
+  receiptUploadAuthorization,
 } from '../../data/schema';
 import {
   createDocumentStorageRegistry,
@@ -52,6 +57,17 @@ export interface MalwareScanner {
 export interface ExtractionResult {
   rawText: string;
   model: string;
+  safetyClear?: boolean;
+  fields?: ExtractionFieldCandidate[];
+}
+
+export interface ExtractionFieldCandidate {
+  fieldKey: string;
+  value: string;
+  normalizedValue?: string;
+  sourceRef: string;
+  confidence: number;
+  model?: string;
 }
 
 export interface DocumentExtractor {
@@ -89,6 +105,15 @@ export class DocumentQuarantineError extends Error {
     super(`Document ${action} is blocked while scan status is ${scanStatus}.`);
   }
 }
+
+const CRITICAL_RECEIPT_FIELDS = [
+  'merchant_name',
+  'transaction_date',
+  'currency',
+  'total_amount',
+] as const;
+const RECEIPT_SUBMISSION_TOPIC = 'receipt.inbox.submitted';
+const RECEIPT_SYSTEM_ACTOR = 'receipt-auto-submit-v1';
 
 function sha256Text(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
@@ -191,6 +216,8 @@ async function policyFor(db: DB, scope: Scope) {
     visionProvider: null,
     visionRegion: null,
     visionRetentionDays: null,
+    autoSubmitEnabled: false,
+    autoSubmitMinConfidence: '0.9800',
   };
 }
 
@@ -210,6 +237,233 @@ export async function assertDocumentScanClean(
     throw new DocumentQuarantineError(action, scan?.status ?? 'missing');
   }
   return scan;
+}
+
+function normalizeReceiptFieldValue(fieldKey: string, value: string): string {
+  const trimmed = value.trim();
+  if (fieldKey === 'merchant_name') return trimmed.replace(/\s+/g, ' ').toLowerCase();
+  if (fieldKey === 'currency') return trimmed.toUpperCase();
+  if (fieldKey === 'total_amount') return trimmed.replace(/,/g, '');
+  return trimmed;
+}
+
+function validReceiptCriticalValue(fieldKey: string, value: string): boolean {
+  if (fieldKey === 'merchant_name') return value.length > 0;
+  if (fieldKey === 'currency') return /^[A-Z]{3}$/.test(value);
+  if (fieldKey === 'transaction_date') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }
+  if (fieldKey === 'total_amount') {
+    try {
+      const amount = new Decimal(value);
+      return amount.isFinite() && amount.gt(0) && amount.lte('999999999999.9999');
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+function prepareExtractionFields(
+  result: ExtractionResult,
+  provider: 'local_ocr' | 'byok_vision',
+  minConfidence: number,
+) {
+  const candidates = (result.fields ?? []).map((field) => {
+    const fieldKey = field.fieldKey.trim();
+    const valueText = field.value.trim();
+    const sourceRef = field.sourceRef.trim();
+    const model = (field.model ?? result.model).trim();
+    if (!/^[a-z][a-z0-9_]{1,63}$/.test(fieldKey)) {
+      throw new Error(`Extraction field key is invalid: ${fieldKey || 'empty'}.`);
+    }
+    if (!valueText || valueText.length > 4000) {
+      throw new Error(`Extraction field ${fieldKey} has an invalid value length.`);
+    }
+    if (!sourceRef || sourceRef.length > 500) {
+      throw new Error(`Extraction field ${fieldKey} has an invalid source reference.`);
+    }
+    if (!model || model.length > 160) {
+      throw new Error(`Extraction field ${fieldKey} has an invalid model.`);
+    }
+    if (!Number.isFinite(field.confidence)
+      || field.confidence < 0 || field.confidence > 1) {
+      throw new Error(`Extraction field ${fieldKey} has invalid confidence.`);
+    }
+    const normalizedValue = normalizeReceiptFieldValue(
+      fieldKey,
+      field.normalizedValue ?? valueText,
+    );
+    return {
+      fieldKey,
+      valueText,
+      normalizedValue,
+      sourceType: provider,
+      sourceRef,
+      model,
+      confidence: field.confidence,
+      critical: CRITICAL_RECEIPT_FIELDS.includes(
+        fieldKey as typeof CRITICAL_RECEIPT_FIELDS[number],
+      ),
+    };
+  });
+  const groups = new Map<string, typeof candidates>();
+  for (const candidate of candidates) {
+    const group = groups.get(candidate.fieldKey) ?? [];
+    group.push(candidate);
+    groups.set(candidate.fieldKey, group);
+  }
+
+  const reasons: string[] = [];
+  const conflictKeys = new Set<string>();
+  for (const [fieldKey, group] of groups) {
+    if (new Set(group.map((field) => field.normalizedValue)).size > 1) {
+      conflictKeys.add(fieldKey);
+      reasons.push(`field_conflict:${fieldKey}`);
+    }
+  }
+  for (const fieldKey of CRITICAL_RECEIPT_FIELDS) {
+    const group = groups.get(fieldKey) ?? [];
+    if (!group.length) {
+      reasons.push(`critical_field_missing:${fieldKey}`);
+      continue;
+    }
+    if (conflictKeys.has(fieldKey)) continue;
+    const selected = group.reduce((best, field) =>
+      field.confidence > best.confidence ? field : best);
+    if (selected.confidence < minConfidence) {
+      reasons.push(`critical_field_low_confidence:${fieldKey}`);
+    }
+    if (!validReceiptCriticalValue(fieldKey, selected.normalizedValue)) {
+      reasons.push(`critical_field_invalid:${fieldKey}`);
+    }
+  }
+  if (result.safetyClear !== true) reasons.push('safety_check_not_clear');
+
+  const rows = candidates.flatMap((candidate) => {
+    const group = groups.get(candidate.fieldKey) ?? [];
+    return [{
+      ...candidate,
+      candidateNo: group.indexOf(candidate) + 1,
+      confidence: candidate.confidence.toFixed(4),
+      reviewState: conflictKeys.has(candidate.fieldKey)
+        ? 'conflict' as const
+        : candidate.confidence < minConfidence
+          ? 'low_confidence' as const
+          : 'accepted' as const,
+    }];
+  });
+  return { rows, reasons: Array.from(new Set(reasons)) };
+}
+
+async function completeReceiptExtractionWithin(
+  tx: DB,
+  scope: Scope,
+  job: typeof documentExtraction.$inferSelect,
+  source: Awaited<ReturnType<typeof versionContext>>,
+  result: ExtractionResult,
+  workerId: string,
+  now: Date,
+) {
+  await assertDocumentScanClean(tx, scope, job.versionId, 'ocr');
+  const policy = await policyFor(tx, scope);
+  const minConfidence = Number(policy.autoSubmitMinConfidence);
+  if (job.provider !== 'local_ocr' && job.provider !== 'byok_vision') {
+    throw new Error(`Unsupported extraction provider: ${job.provider}.`);
+  }
+  if (!result.rawText.trim() || result.rawText.length > 5_000_000) {
+    throw new Error('Extractor returned invalid raw text.');
+  }
+  const prepared = prepareExtractionFields(result, job.provider, minConfidence);
+
+  const [duplicate] = await tx.select({ id: documentVersion.id })
+    .from(documentVersion)
+    .innerJoin(managedDocument, and(
+      eq(managedDocument.masterFn, documentVersion.masterFn),
+      eq(managedDocument.companyFn, documentVersion.companyFn),
+      eq(managedDocument.id, documentVersion.documentId),
+    ))
+    .where(and(
+      eq(documentVersion.masterFn, scope.masterFn),
+      eq(documentVersion.companyFn, scope.companyFn),
+      eq(documentVersion.sha256, source.version.sha256),
+      ne(documentVersion.id, job.versionId),
+      eq(managedDocument.purpose, 'receipt'),
+    ))
+    .limit(1);
+  if (duplicate) prepared.reasons.push('duplicate_receipt');
+
+  const [authorization] = await tx.select()
+    .from(receiptUploadAuthorization)
+    .where(and(
+      eq(receiptUploadAuthorization.masterFn, scope.masterFn),
+      eq(receiptUploadAuthorization.companyFn, scope.companyFn),
+      eq(receiptUploadAuthorization.versionId, job.versionId),
+      eq(receiptUploadAuthorization.uploaderUserId, source.document.ownerUserId),
+    ))
+    .limit(1);
+  const reviewReasons = Array.from(new Set(prepared.reasons));
+  const checksClear = reviewReasons.length === 0;
+  const autoSubmit = checksClear
+    && policy.autoSubmitEnabled
+    && authorization?.autoSubmitAuthorized === true
+    && authorization.authorizedAt != null;
+  const status = !checksClear ? 'review_required' : autoSubmit ? 'submitted' : 'ready';
+  const rawText = result.rawText.trim();
+  const [updated] = await tx.update(documentExtraction).set({
+    status: 'succeeded',
+    model: result.model,
+    rawText,
+    outputSha256: sha256Text(rawText),
+    completedAt: now,
+    lockedAt: null,
+    lockedBy: null,
+    lastError: null,
+    updatedAt: now,
+  }).where(and(
+    eq(documentExtraction.id, job.id),
+    eq(documentExtraction.lockedBy, workerId),
+  )).returning({ id: documentExtraction.id });
+  if (!updated) return null;
+
+  if (prepared.rows.length) {
+    await tx.insert(documentExtractionField).values(prepared.rows.map((field) => ({
+      ...scope,
+      extractionId: job.id,
+      ...field,
+    }))).onConflictDoNothing();
+  }
+  const [inbox] = await tx.insert(receiptInboxItem).values({
+    ...scope,
+    versionId: job.versionId,
+    extractionId: job.id,
+    ownerUserId: source.document.ownerUserId,
+    status,
+    reviewReasons,
+    duplicateOfVersionId: duplicate?.id ?? null,
+    submissionKind: autoSubmit ? 'system' : 'none',
+    authorizedByUserId: autoSubmit ? authorization!.uploaderUserId : null,
+    uploadAuthorizedAt: autoSubmit ? authorization!.authorizedAt : null,
+    systemActorKey: autoSubmit ? RECEIPT_SYSTEM_ACTOR : null,
+    submittedAt: autoSubmit ? now : null,
+  }).onConflictDoNothing().returning();
+  if (inbox?.status === 'submitted') {
+    await tx.insert(outboxEvent).values({
+      ...scope,
+      topic: RECEIPT_SUBMISSION_TOPIC,
+      aggregateType: 'receipt_inbox_item',
+      aggregateId: String(inbox.id),
+      payload: {
+        inboxItemId: inbox.id,
+        versionId: job.versionId,
+        authorizedByUserId: inbox.authorizedByUserId,
+        systemActorKey: inbox.systemActorKey,
+      },
+    }).onConflictDoNothing();
+  }
+  return inbox ?? null;
 }
 
 async function createExtractionAfterClean(
@@ -481,18 +735,34 @@ export async function processDocumentJobBatch(
         retentionDays: policy.visionRetentionDays ?? undefined,
         credential,
       });
-      const rawText = result.rawText.trim();
-      await withTenantTransaction(db, scope, (tx) => tx.update(documentExtraction).set({
-        status: 'succeeded',
-        model: result.model,
-        rawText,
-        outputSha256: sha256Text(rawText),
-        completedAt: now,
-        lockedAt: null,
-        lockedBy: null,
-        lastError: null,
-        updatedAt: now,
-      }).where(and(eq(documentExtraction.id, job.id), eq(documentExtraction.lockedBy, workerId))));
+      const completed = await withTenantTransaction(db, scope, async (tx) => {
+        if (source.document.purpose === 'receipt') {
+          return Boolean(await completeReceiptExtractionWithin(
+            tx, scope, job, source, result, workerId, now,
+          ));
+        }
+        await assertDocumentScanClean(tx, scope, job.versionId, 'ocr');
+        const rawText = result.rawText.trim();
+        if (!rawText || result.rawText.length > 5_000_000) {
+          throw new Error('Extractor returned invalid raw text.');
+        }
+        const [updated] = await tx.update(documentExtraction).set({
+          status: 'succeeded',
+          model: result.model,
+          rawText,
+          outputSha256: sha256Text(rawText),
+          completedAt: now,
+          lockedAt: null,
+          lockedBy: null,
+          lastError: null,
+          updatedAt: now,
+        }).where(and(
+          eq(documentExtraction.id, job.id),
+          eq(documentExtraction.lockedBy, workerId),
+        )).returning({ id: documentExtraction.id });
+        return Boolean(updated);
+      });
+      if (!completed) throw new Error('Extraction lease was lost before completion.');
       await markSignalDelivered(db, scope, DOCUMENT_EXTRACTION_TOPIC, job.versionId, now);
       extracted += 1;
     } catch (error) {

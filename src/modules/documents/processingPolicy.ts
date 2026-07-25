@@ -36,6 +36,8 @@ const PUBLIC_COLUMNS = {
   visionProvider: documentProcessingPolicy.visionProvider,
   visionRegion: documentProcessingPolicy.visionRegion,
   visionRetentionDays: documentProcessingPolicy.visionRetentionDays,
+  autoSubmitEnabled: documentProcessingPolicy.autoSubmitEnabled,
+  autoSubmitMinConfidence: documentProcessingPolicy.autoSubmitMinConfidence,
   version: documentProcessingPolicy.version,
   updatedAt: documentProcessingPolicy.updatedAt,
 } as const;
@@ -53,6 +55,8 @@ export async function getDocumentProcessingPolicyWithin(
     visionProvider: null,
     visionRegion: null,
     visionRetentionDays: null,
+    autoSubmitEnabled: false,
+    autoSubmitMinConfidence: '0.9800',
     version: 0,
     updatedAt: null,
   };
@@ -135,6 +139,49 @@ export async function configureDocumentProcessingPolicyWithin(
     entity: 'document_processing_policy',
     entityId: scope.companyFn,
     action: 'configure',
+    before,
+    after: updated,
+  });
+  return updated;
+}
+
+export async function configureReceiptAutoSubmitPolicyWithin(
+  exec: DB,
+  scope: DocumentProcessingPolicyScope,
+  actor: DocumentProcessingPolicyActor,
+  input: { enabled: boolean; minConfidence: number },
+) {
+  if (!Number.isFinite(input.minConfidence)
+    || input.minConfidence < 0.98 || input.minConfidence > 1) {
+    throw new DocumentProcessingPolicyError(
+      'confidence_below_minimum',
+      'Receipt auto-submit confidence must be between 98% and 100%.',
+    );
+  }
+  const minConfidence = input.minConfidence.toFixed(4);
+  const before = await getDocumentProcessingPolicyWithin(exec, scope);
+  const [updated] = await exec.insert(documentProcessingPolicy).values({
+    ...scope,
+    autoSubmitEnabled: input.enabled,
+    autoSubmitMinConfidence: minConfidence,
+    updatedByUserId: actor.userId,
+  }).onConflictDoUpdate({
+    target: [documentProcessingPolicy.masterFn, documentProcessingPolicy.companyFn],
+    set: {
+      autoSubmitEnabled: input.enabled,
+      autoSubmitMinConfidence: minConfidence,
+      updatedByUserId: actor.userId,
+      version: sql`${documentProcessingPolicy.version} + 1`,
+      updatedAt: new Date(),
+    },
+  }).returning(PUBLIC_COLUMNS);
+  await appendAudit(exec, {
+    ...scope,
+    actorUserId: actor.userId,
+    requestId: actor.requestId,
+    entity: 'document_processing_policy',
+    entityId: scope.companyFn,
+    action: 'configure_auto_submit',
     before,
     after: updated,
   });

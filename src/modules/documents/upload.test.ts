@@ -1,7 +1,12 @@
 import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { appUser, documentVersion, managedDocument } from '../../data/schema';
+import {
+  appUser,
+  documentVersion,
+  managedDocument,
+  receiptUploadAuthorization,
+} from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
 import {
@@ -109,12 +114,16 @@ describe('secure receipt upload', () => {
       declaredMimeType: 'image/jpeg',
       content: jpegBytes(),
       retentionUntil: new Date('2033-12-31T00:00:00.000Z'),
+      autoSubmitAuthorized: true,
     };
     const created = await uploadReceiptDocument(
       db, scope, { userId: viewer.userId }, input,
     );
     const replayed = await uploadReceiptDocument(
-      db, scope, { userId: viewer.userId }, input,
+      db, scope, { userId: viewer.userId }, {
+        ...input,
+        autoSubmitAuthorized: false,
+      },
     );
     expect(created.replayed).toBe(false);
     expect(replayed.replayed).toBe(true);
@@ -127,7 +136,14 @@ describe('secure receipt upload', () => {
     expect(await db.select().from(documentVersion)).toHaveLength(1);
     expect(await listReceiptDocuments(
       db, scope, { userId: viewer.userId },
-    )).toHaveLength(1);
+    )).toEqual([expect.objectContaining({ autoSubmitAuthorized: true })]);
+    expect(await db.select().from(receiptUploadAuthorization)).toEqual([
+      expect.objectContaining({
+        uploaderUserId: viewer.userId,
+        autoSubmitAuthorized: true,
+        statementVersion: 'receipt-auto-submit-v1',
+      }),
+    ]);
     expect(await listReceiptDocuments(
       db, scope, { userId: admin.userId },
     )).toHaveLength(0);

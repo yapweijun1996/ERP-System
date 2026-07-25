@@ -144,8 +144,10 @@ SG and MY demo companies; production wires real auth.
 > source and one-time run mapping entities. TASK-117 adds the first four managed
 > document storage entities in section 8.3. TASK-118 adds immutable page counts
 > without a new entity. TASK-119 adds `document_processing_policy`,
-> `document_scan_job` and `document_extraction`. The remaining entities are approved
-> targets for TASK-120–135 and are **not yet present**. Each task must add migrations,
+> `document_scan_job` and `document_extraction`. TASK-120 adds immutable
+> `document_extraction_field`, `receipt_upload_authorization` and `receipt_inbox_item`
+> entities. The remaining targets for TASK-121–135 are **not yet present**. Each task
+> must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
 
@@ -267,7 +269,10 @@ document_blob                  default PostgreSQL/PGlite binary payload [0056]
 document_file_location         optional single-node server-file locator [0056]
 document_link                  typed owner link (leave, claim, receipt, tax pack)
 document_scan_job              quarantine/malware result and retry state
-document_extraction(+field)     OCR/Vision model, source, value and confidence
+document_extraction            versioned OCR/Vision output and retry state [0058]
+document_extraction_field      immutable source/model/value/confidence candidates [0059]
+receipt_upload_authorization   immutable uploader choice per document version [0059]
+receipt_inbox_item             ready/review/submitted projection and attribution [0059]
 document_retention             retention deadline, paper-custody state and legal hold
 document_purge_approval         records-manager request and finance review
 document_tombstone             retained hash/provenance after authorized purge
@@ -286,8 +291,12 @@ database-owned SHA-256 and size. TASK-119 places every captured version in a uni
 result is `clean`. Scanner unavailability or an indeterminate result fails closed.
 Clean versions receive one versioned `document_extraction`; OCR is local by default,
 while external Vision requires a connected encrypted BYOK credential plus company-level
-provider, region and retention policy. The remaining links, field provenance,
-retention workflow, purge and tombstone rows are planned for TASK-120–122.
+provider, region and retention policy. The remaining links, retention workflow, purge
+and tombstone rows are planned for TASK-121–122.
+TASK-120 implements field provenance as immutable candidates and records the uploader's
+prior auto-submit choice separately from the receipt inbox projection. The inbox is
+`review_required`, `ready` or system-`submitted`; submission attribution is valid only
+with both the uploader authorization and `receipt-auto-submit-v1` system actor.
 
 ### 8.4 Claims, expenses and accounting
 

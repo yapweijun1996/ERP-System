@@ -75,7 +75,7 @@
     }
     return type;
   }
-  async function putFile(file){
+  async function putFile(file,options){
     var type=validateSelection(file);
     var now=new Date().toISOString();
     var draft={
@@ -87,6 +87,7 @@
       createdAt:now,
       updatedAt:now,
       source:file.__captureSource||'file',
+      autoSubmitAuthorized:Boolean(options&&options.autoSubmitAuthorized),
       transform:{rotation:0,crop:'original',quality:0.82},
       status:'unsynced',
     };

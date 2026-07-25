@@ -121,6 +121,46 @@ describe('canonical control-plane API', () => {
     expect(documentPolicyReplay.status).toBe(200);
     expect(documentPolicyReplay.headers.get('idempotency-replayed')).toBe('true');
 
+    const belowMinimum = await fetch(
+      `${baseUrl}/api/integration/receipt-auto-submit-policy/actions/update`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: auth.header,
+          'x-csrf-token': auth.csrf,
+          'content-type': 'application/json',
+          'idempotency-key': 'receipt-auto-submit-too-low',
+        },
+        body: JSON.stringify({ enabled: true, minConfidence: 0.97 }),
+      },
+    );
+    expect(belowMinimum.status).toBe(422);
+    expect((await belowMinimum.json()).error.code).toBe('confidence_below_minimum');
+    const saveReceiptAutoSubmit = () => fetch(
+      `${baseUrl}/api/integration/receipt-auto-submit-policy/actions/update`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: auth.header,
+          'x-csrf-token': auth.csrf,
+          'content-type': 'application/json',
+          'idempotency-key': 'receipt-auto-submit-once',
+        },
+        body: JSON.stringify({ enabled: true, minConfidence: 0.98 }),
+      },
+    );
+    const savedReceiptAutoSubmit = await saveReceiptAutoSubmit();
+    expect(savedReceiptAutoSubmit.status).toBe(200);
+    expect(await savedReceiptAutoSubmit.json()).toMatchObject({
+      data: {
+        autoSubmitEnabled: true,
+        autoSubmitMinConfidence: '0.9800',
+      },
+    });
+    const receiptAutoSubmitReplay = await saveReceiptAutoSubmit();
+    expect(receiptAutoSubmitReplay.status).toBe(200);
+    expect(receiptAutoSubmitReplay.headers.get('idempotency-replayed')).toBe('true');
+
     const savePolicy = () => fetch(`${baseUrl}/api/settings/policy/current/actions/update`, {
       method: 'POST',
       headers: { cookie: auth.header, 'x-csrf-token': auth.csrf, 'content-type': 'application/json', 'idempotency-key': 'settings-policy-once' },
@@ -160,6 +200,16 @@ describe('canonical control-plane API', () => {
         'idempotency-key': 'viewer-document-policy-denied',
       },
       body: JSON.stringify({ extractionProvider: 'local_ocr' }),
+    })).status).toBe(403);
+    expect((await fetch(`${baseUrl}/api/integration/receipt-auto-submit-policy/actions/update`, {
+      method: 'POST',
+      headers: {
+        cookie: viewer.header,
+        'x-csrf-token': viewer.csrf,
+        'content-type': 'application/json',
+        'idempotency-key': 'viewer-receipt-policy-denied',
+      },
+      body: JSON.stringify({ enabled: true, minConfidence: 0.98 }),
     })).status).toBe(403);
   });
 });

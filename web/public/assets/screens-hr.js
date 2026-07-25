@@ -972,7 +972,15 @@ function receiptCaptureCopy(){
     vi:{sub:'Mọi tệp đã lưu được cách ly đến khi quét mã độc xác nhận an toàn; xem trước, trích xuất, yêu cầu chi phí và xuất đều bị chặn trước đó.',stored:'Đã lưu an toàn'},
   };
   const safety=quarantine[lang]||quarantine.en;
-  return key=>safety[key]||pack[key]||packs.en[key]||key;
+  const confidence={
+    en:{autoAuthorize:'Allow system submission when every critical field is at least 98% confident and all safety, amount and duplicate checks pass.',draftAuthorized:'Offline draft · system submission authorised',reviewRequired:'Human review required',readyReview:'Ready for review',autoSubmitted:'Submitted automatically'},
+    ms:{autoAuthorize:'Benarkan penyerahan sistem hanya apabila semua medan kritikal sekurang-kurangnya 98% yakin dan semua semakan keselamatan, amaun serta pendua lulus.',draftAuthorized:'Draf luar talian · penyerahan sistem dibenarkan',reviewRequired:'Semakan manusia diperlukan',readyReview:'Sedia untuk semakan',autoSubmitted:'Dihantar secara automatik'},
+    zh:{autoAuthorize:'仅当所有关键字段置信度至少为 98%，且安全、金额与重复检查全部通过时，允许系统提交。',draftAuthorized:'离线草稿 · 已授权系统提交',reviewRequired:'需要人工审核',readyReview:'等待人工审核',autoSubmitted:'已由系统自动提交'},
+    ja:{autoAuthorize:'すべての重要項目が98%以上の信頼度で、安全性・金額・重複チェックを通過した場合のみシステム送信を許可します。',draftAuthorized:'オフライン下書き · システム送信を許可済み',reviewRequired:'人による確認が必要',readyReview:'確認準備完了',autoSubmitted:'自動送信済み'},
+    vi:{autoAuthorize:'Chỉ cho phép hệ thống gửi khi mọi trường quan trọng đạt độ tin cậy ít nhất 98% và tất cả kiểm tra an toàn, số tiền, trùng lặp đều đạt.',draftAuthorized:'Bản nháp ngoại tuyến · đã cho phép hệ thống gửi',reviewRequired:'Cần người xem xét',readyReview:'Sẵn sàng để xem xét',autoSubmitted:'Đã tự động gửi'},
+  };
+  const governed=confidence[lang]||confidence.en;
+  return key=>governed[key]||safety[key]||pack[key]||packs.en[key]||key;
 }
 function receiptBytes(value){
   const size=Number(value)||0;
@@ -987,6 +995,10 @@ function receiptProcessingState(item){
     vi:{queued:'Cách ly · chờ quét',scanning:'Cách ly · đang quét',unavailable:'Cách ly · máy quét không sẵn sàng',indeterminate:'Cách ly · kết quả chưa xác định',infected:'Đã chặn · phát hiện mã độc',extracting:'An toàn · đang trích xuất cục bộ',extractionUnavailable:'An toàn · không thể trích xuất',extracted:'An toàn · đã trích xuất'},
   };
   const p=packs[typeof getLang==='function'?getLang():'en']||packs.en;
+  const s=receiptCaptureCopy();
+  if(item.inboxStatus==='review_required')return {label:s('reviewRequired'),tone:'warn'};
+  if(item.inboxStatus==='ready')return {label:s('readyReview'),tone:'info'};
+  if(item.inboxStatus==='submitted')return {label:s('autoSubmitted'),tone:'ok'};
   if(item.scanStatus==='infected')return {label:p.infected,tone:'danger'};
   if(item.scanStatus==='unavailable')return {label:p.unavailable,tone:'warn'};
   if(item.scanStatus==='indeterminate')return {label:p.indeterminate,tone:'warn'};
@@ -1041,7 +1053,7 @@ SCREENS['my-receipts']=async function(root){
   const drafts=await draftStore.list();
   const stored=Array.isArray(response.data)?response.data:[];
   const rows=[
-    ...drafts.map(draft=>({id:draft.id,kind:'draft',name:draft.name,state:s('offline'),size:draft.size,pages:'—',updated:draft.updatedAt,draft})),
+    ...drafts.map(draft=>({id:draft.id,kind:'draft',name:draft.name,state:s(draft.autoSubmitAuthorized?'draftAuthorized':'offline'),size:draft.size,pages:'—',updated:draft.updatedAt,draft})),
     ...stored.map(item=>{
       const processing=receiptProcessingState(item);
       return {id:'stored-'+item.id,kind:'stored',name:item.originalFileName,state:processing.label,tone:processing.tone,size:item.sizeBytes,pages:item.pageCount||1,updated:item.createdAt,item};
@@ -1050,7 +1062,12 @@ SCREENS['my-receipts']=async function(root){
   const rerender=()=>navigate('my-receipts');
   async function capture(files,source){
     const file=files&&files[0];if(!file)return;
-    try{file.__captureSource=source;await draftStore.putFile(file);toast(s('saved'),'ok');await rerender();}
+    try{
+      file.__captureSource=source;
+      const authorized=Boolean(root.querySelector('[data-receipt-auto-authorize]')?.checked);
+      await draftStore.putFile(file,{autoSubmitAuthorized:authorized});
+      toast(s('saved'),'ok');await rerender();
+    }
     catch(error){toast((error&&error.message)||s('error'),'danger');}
   }
   async function syncDraft(draft){
@@ -1077,7 +1094,8 @@ SCREENS['my-receipts']=async function(root){
       {label:s('syncAll'),icon:'sync',disabled:!drafts.length,onClick:syncAllDrafts},
     ],
     toolbarContent:`<input hidden type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf" capture="environment" data-receipt-camera>
-      <input hidden type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf" data-receipt-file>`,
+      <input hidden type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf" data-receipt-file>
+      <label class="checkline"><input type="checkbox" data-receipt-auto-authorize> <span>${esc(s('autoAuthorize'))}</span></label>`,
     kpis:[{label:s('offline'),value:drafts.length,accent:drafts.length>0},{label:s('stored'),value:stored.length}],
     columns:[
       {key:'name',label:s('file'),primary:true},
