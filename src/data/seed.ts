@@ -10,6 +10,7 @@ import {
   calendarHoliday, leaveBalanceEntry, leavePolicyVersion, leaveType,
   workingCalendar, workingCalendarVersion,
   approvalPolicy, approvalPolicyVersion, approvalPolicyStep, leaveCapacityRule,
+  calendarOutboundConnection,
   purchaseRequisition, purchaseRequisitionLine,
   purchaseRfq, purchaseRfqLine, purchaseRfqSupplier,
   supplierQuotation, supplierQuotationLine,
@@ -646,6 +647,14 @@ export async function seedDemo(db: DB): Promise<void> {
       extraApprovalPermissionKey: 'hr.write',
     },
   ]);
+  await db.insert(calendarOutboundConnection).values({
+    masterFn: 'M1',
+    companyFn: 'C-SG',
+    name: 'Demo team availability calendar',
+    provider: 'generic',
+    calendarRef: 'demo-team-availability',
+    createdByUserId: adminUser.id,
+  });
   const sgEmployees = [
     [manager.id, 20],
     [marcus.id, 16],

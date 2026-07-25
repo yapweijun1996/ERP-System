@@ -196,8 +196,9 @@ implemented. TASK-112 adds the immutable leave-balance ledger and serialized Pen
 reservation. TASK-113 adds the versioned leave lifecycle, immutable revision/event
 trail, actor-owned authoring and privacy-controlled evidence metadata. TASK-114 adds
 versioned approval policy resolution, snapshotted workflow authority, bounded
-delegation, immutable decisions/events and capacity controls; the remaining sections
-describe the target architecture for TASK-115–135.
+delegation, immutable decisions/events and capacity controls. TASK-115 adds the shared
+Team Calendar read model/workspace and optional one-way delivery worker; the remaining
+sections describe the target architecture for TASK-116–135.
 
 ### Identity and authorization
 
@@ -252,7 +253,9 @@ describe the target architecture for TASK-115–135.
 - A versioned approval policy resolves ordered steps from domain, company, employee,
   hierarchy, type, amount/days, project and department. Approval instances snapshot
   those steps; delegation and escalation append facts instead of editing prior
-  decisions.
+  decisions. Approved, changed and cancelled leave events enqueue an idempotent
+  one-way calendar projection; delivery revalidates current ERP state and supersedes
+  stale jobs rather than treating an external calendar as authoritative.
 - `DocumentStorageProvider` separates metadata from content. Both database and optional
   filesystem implementations stream bounded bytes, verify SHA-256 and enforce the
   same tenant/permission/retention contract. Filesystem mode is explicitly single-node.
@@ -284,9 +287,10 @@ describe the target architecture for TASK-115–135.
 - `my-leave`, `my-receipts` and `my-claims` use the shared transaction-list contract.
   `leave-application` and later expense decisions use `case-detail-v1`; payment/tax registers use
   `master-detail-register-v1` and posted payment detail uses `posting-detail-v1`.
-- Introduce `calendar-workspace-v1` once for Team Calendar: page header, filters,
+- `calendar-workspace-v1` is implemented once for Team Calendar: page header, filters,
   calendar/list surface, retryable error, responsive detail drawer and governed
-  actions. It is not a free-form exemption.
+  actions. The route supports month/week/list views and is guarded by a dedicated
+  desktop/375px layout audit; it is not a free-form exemption.
 - PWA camera drafts stay in IndexedDB only until upload. Logout reports unsynced count
   and, after confirmation, removes unuploaded local images.
 

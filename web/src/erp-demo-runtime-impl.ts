@@ -20,8 +20,10 @@ import {
   listActorLeaveWithin,
   listTeamLeaveWithin,
   resolveActorEmployeeWithin,
+  resolveDirectReportEmployeeIdsWithin,
   resolveTeamEmployeeIdsWithin,
 } from '../../src/modules/hr/actorScope';
+import { listTeamCalendarWithin } from '../../src/modules/hr/teamCalendar';
 import {
   amendLeaveApplicationWithin,
   createLeaveDraftWithin,
@@ -593,8 +595,19 @@ export const erpDemoRuntime = Object.freeze({
     resolveTeamEmployeeIdsWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return resolveTeamEmployeeIdsWithin(asDomainDb(db), scope, employeeId);
     },
+    resolveDirectReportEmployeeIdsWithin(db: DemoOrm, scope: Scope, employeeId: number) {
+      return resolveDirectReportEmployeeIdsWithin(asDomainDb(db), scope, employeeId);
+    },
     listTeamLeaveWithin(db: DemoOrm, scope: Scope, employeeIds: number[]) {
       return listTeamLeaveWithin(asDomainDb(db), scope, employeeIds);
+    },
+    listTeamCalendarWithin(
+      db: DemoOrm,
+      scope: Scope,
+      employeeIds: number[],
+      query: Parameters<typeof listTeamCalendarWithin>[3],
+    ) {
+      return listTeamCalendarWithin(asDomainDb(db), scope, employeeIds, query);
     },
     readEmployeeAccount(db: DemoOrm, scope: Scope, employeeId: number) {
       return readEmployeeAccount(asDomainDb(db), scope, employeeId);

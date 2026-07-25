@@ -1929,10 +1929,15 @@ Legacy Policy marker and is never silently recomputed.
       a policy approval level or block. `my-approvals` is now a five-language
       privacy-redacted Canonical Demo/API workspace with real decisions and delegation
       management. PWA v112.
-- [ ] **TASK-115 — Add `calendar-workspace-v1` and optional outbound calendar sync.**
-      Provide month/week/list team views, direct-report default scope, authorised
-      hierarchy expansion, privacy-redacted availability and detail-drawer decisions;
-      push approved/change/cancel events one-way while ERP remains authoritative.
+- [x] **TASK-115 — Add `calendar-workspace-v1` and optional outbound calendar sync.**
+      Migration 0054 adds optional tenant-scoped outbound connections and revision-keyed
+      delivery jobs. Team Calendar is now a five-language Canonical month/week/list
+      workspace with direct-report default scope, authorised hierarchy expansion,
+      department/status filters, conflict indicators, responsive detail and strict
+      reason/evidence redaction. Final approval, approved change and cancellation enqueue
+      idempotent one-way delivery; workers supersede stale jobs and reuse the external
+      event identity while ERP remains authoritative. A persistent-Demo upgrade
+      signature repair prevents stale schema markers. PWA v114.
 - [ ] **TASK-116 — Connect leave to Payroll and migrate HR-lite safely.** Feed approved
       unpaid leave into payroll deductions and approved encashment into earnings,
       preserve legacy request day snapshots, add five-language Demo/API state proof

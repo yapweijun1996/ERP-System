@@ -981,8 +981,158 @@ async function renderMyWorkTeamRoute(root,{route,approvals=false}){
   });
 }
 
+function teamCalendarCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Team Calendar',description:'Review privacy-redacted availability in your authorised reporting scope.',month:'Month',week:'Week',list:'List',previous:'Previous',next:'Next',today:'Today',department:'Department',allDepartments:'All departments',status:'Status',allStatuses:'All statuses',scope:'Reporting scope',direct:'Direct reports',expanded:'Expanded tree',select:'Select an absence',selectBody:'Choose an event to review availability, conflict and sync facts.',noEvents:'No team absences in this period',more:'more',conflict:'Coverage conflict',conflicts:'overlapping team absences',privacy:'Private reasons and document references are never shown.',openApprovals:'Open My Approvals',retry:'Retry',sync:'External sync',notSynced:'Not queued',employee:'Employee',dates:'Dates',days:'Days',leaveType:'Leave type',job:'Role',close:'Close detail'},
+    ms:{title:'Kalendar Pasukan',description:'Semak ketersediaan disunting privasi dalam skop pelaporan dibenarkan.',month:'Bulan',week:'Minggu',list:'Senarai',previous:'Sebelum',next:'Seterusnya',today:'Hari ini',department:'Jabatan',allDepartments:'Semua jabatan',status:'Status',allStatuses:'Semua status',scope:'Skop pelaporan',direct:'Laporan langsung',expanded:'Pokok diperluas',select:'Pilih ketidakhadiran',selectBody:'Pilih acara untuk semak ketersediaan, konflik dan fakta segerak.',noEvents:'Tiada ketidakhadiran pasukan dalam tempoh ini',more:'lagi',conflict:'Konflik liputan',conflicts:'ketidakhadiran pasukan bertindih',privacy:'Sebab peribadi dan rujukan dokumen tidak pernah dipaparkan.',openApprovals:'Buka Kelulusan Saya',retry:'Cuba lagi',sync:'Segerak luaran',notSynced:'Belum beratur',employee:'Pekerja',dates:'Tarikh',days:'Hari',leaveType:'Jenis cuti',job:'Peranan',close:'Tutup butiran'},
+    zh:{title:'团队日历',description:'查看授权汇报范围内、已按隐私规则脱敏的人员可用情况。',month:'月',week:'周',list:'列表',previous:'上一期',next:'下一期',today:'今天',department:'部门',allDepartments:'所有部门',status:'状态',allStatuses:'所有状态',scope:'汇报范围',direct:'直属下属',expanded:'扩展汇报树',select:'选择缺勤事项',selectBody:'选择日历事项以查看可用性、冲突和同步事实。',noEvents:'此期间没有团队缺勤',more:'更多',conflict:'人力冲突',conflicts:'项重叠的团队缺勤',privacy:'不会显示私人原因或文件引用。',openApprovals:'打开我的审批',retry:'重试',sync:'外部同步',notSynced:'未排队',employee:'员工',dates:'日期',days:'天数',leaveType:'假期类型',job:'职位',close:'关闭详情'},
+    ja:{title:'チームカレンダー',description:'許可された報告範囲の、プライバシー編集済み在席情報を確認します。',month:'月',week:'週',list:'一覧',previous:'前へ',next:'次へ',today:'今日',department:'部署',allDepartments:'すべての部署',status:'状態',allStatuses:'すべての状態',scope:'報告範囲',direct:'直属部下',expanded:'拡張ツリー',select:'不在を選択',selectBody:'予定を選択して在席、競合、同期情報を確認します。',noEvents:'この期間にチームの不在はありません',more:'件',conflict:'要員競合',conflicts:'件の重複不在',privacy:'非公開理由と文書参照は表示されません。',openApprovals:'自分の承認を開く',retry:'再試行',sync:'外部同期',notSynced:'未キュー',employee:'従業員',dates:'日付',days:'日数',leaveType:'休暇種別',job:'役職',close:'詳細を閉じる'},
+    vi:{title:'Lịch nhóm',description:'Xem tình trạng sẵn sàng đã ẩn dữ liệu riêng tư trong phạm vi báo cáo được phép.',month:'Tháng',week:'Tuần',list:'Danh sách',previous:'Trước',next:'Sau',today:'Hôm nay',department:'Phòng ban',allDepartments:'Tất cả phòng ban',status:'Trạng thái',allStatuses:'Tất cả trạng thái',scope:'Phạm vi báo cáo',direct:'Báo cáo trực tiếp',expanded:'Cây mở rộng',select:'Chọn vắng mặt',selectBody:'Chọn sự kiện để xem tình trạng, xung đột và đồng bộ.',noEvents:'Không có nhân viên nhóm vắng trong kỳ này',more:'thêm',conflict:'Xung đột nhân lực',conflicts:'lịch vắng trùng nhau',privacy:'Không bao giờ hiển thị lý do riêng hoặc tham chiếu tài liệu.',openApprovals:'Mở Phê duyệt của tôi',retry:'Thử lại',sync:'Đồng bộ ngoài',notSynced:'Chưa xếp hàng',employee:'Nhân viên',dates:'Ngày',days:'Số ngày',leaveType:'Loại nghỉ',job:'Vai trò',close:'Đóng chi tiết'},
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
 SCREENS['team-calendar']=async function(root){
-  return renderMyWorkTeamRoute(root,{route:'team-calendar'});
+  const c=teamCalendarCopy();
+  const statusCopy=hrCopy();
+  const lang=typeof getLang==='function'?getLang():'en';
+  const locales={en:'en-SG',ms:'ms-MY',zh:'zh-CN',ja:'ja-JP',vi:'vi-VN'};
+  let view='month';
+  let cursor=hrToday();
+  let selectedId=null;
+  let rows=[];
+  let departments=[];
+  let department='all';
+  let status='all';
+  let reportingScope='direct';
+  let canExpand=false;
+  let error=null;
+  function iso(date){return date.toISOString().slice(0,10);}
+  function addDays(value,days){
+    const date=new Date(`${value}T00:00:00Z`);date.setUTCDate(date.getUTCDate()+days);return iso(date);
+  }
+  function range(){
+    const date=new Date(`${cursor}T00:00:00Z`);
+    if(view==='month'){
+      const from=iso(new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),1)));
+      const to=iso(new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)));
+      return {from,to};
+    }
+    if(view==='week'){
+      const day=(date.getUTCDay()+6)%7;
+      return {from:addDays(cursor,-day),to:addDays(cursor,6-day)};
+    }
+    return {from:cursor,to:addDays(cursor,30)};
+  }
+  function periodLabel(){
+    const date=new Date(`${cursor}T00:00:00Z`);
+    if(view==='month') return new Intl.DateTimeFormat(locales[lang],{month:'long',year:'numeric',timeZone:'UTC'}).format(date);
+    const value=range();
+    return `${dateValue(value.from)} → ${dateValue(value.to)}`;
+  }
+  function detail(row){
+    const sync=row.sync?`${row.sync.eventType} · ${row.sync.status}`:c('notSynced');
+    return `<div class="detail-head"><span class="grabber"></span>
+      <button class="close" data-calendar-close>${ic('x')}${esc(c('close'))}</button>
+      <div class="dh-top">${profileAvatar({name:row.employeeName,cls:'cav',size:42})}
+        <div><h2>${esc(row.employeeName)}</h2><span class="sub">${esc(row.employeeNo)} · ${esc(row.department)}</span></div>
+        <div style="margin-left:auto">${cap(myWorkLeaveStatus(row.status,statusCopy),myWorkStatusTone(row.status))}</div>
+      </div></div>
+      <div class="detail-body">
+        <div class="alert info">${ic('shield')}<span>${esc(c('privacy'))}</span></div>
+        ${row.conflict?`<div class="alert danger">${ic('warn')}<span><b>${esc(c('conflict'))}</b><br>${row.conflictCount} ${esc(c('conflicts'))}</span></div>`:''}
+        <div class="card">
+          <div class="field"><span class="k">${esc(c('employee'))}</span><span class="v">${esc(row.employeeName)}</span></div>
+          <div class="field"><span class="k">${esc(c('job'))}</span><span class="v">${esc(row.jobTitle||'—')}</span></div>
+          <div class="field"><span class="k">${esc(c('leaveType'))}</span><span class="v">${esc(row.leaveType)}</span></div>
+          <div class="field"><span class="k">${esc(c('dates'))}</span><span class="v">${esc(dateValue(row.startDate))} → ${esc(dateValue(row.endDate))}</span></div>
+          <div class="field"><span class="k">${esc(c('days'))}</span><span class="v tnum">${esc(String(row.days))}</span></div>
+          <div class="field"><span class="k">${esc(c('sync'))}</span><span class="v">${esc(sync)}</span></div>
+        </div>
+      </div>`;
+  }
+  async function load(){
+    error=null;
+    try{
+      const value=range();
+      const response=await myWorkAdapter().teamCalendar({
+        from:value.from,to:value.to,scope:reportingScope,department,status,
+      });
+      rows=response.data&&response.data.items||[];
+      departments=Array.from(new Set(departments.concat(response.data&&response.data.departments||[]))).sort();
+      canExpand=Boolean(response.meta&&response.meta.canExpand);
+      if(reportingScope==='expanded'&&!canExpand) reportingScope='direct';
+      if(selectedId&&!rows.some(row=>String(row.id)===String(selectedId))) selectedId=null;
+    }catch(loadError){
+      rows=[];
+      error=loadError&&loadError.message||String(loadError);
+    }
+    render();
+  }
+  function render(){
+    const weekdays=Array.from({length:7},(_,index)=>{
+      const date=new Date(Date.UTC(2026,0,5+index));
+      return new Intl.DateTimeFormat(locales[lang],{weekday:'short',timeZone:'UTC'}).format(date);
+    });
+    calendarWorkspacePage(root,{
+      module:'mywork',route:'team-calendar',title:c('title'),description:c('description'),
+      rows,view,cursor,selectedId,error,periodLabel:periodLabel(),
+      privacy:c('privacy'),statusLabel:value=>myWorkLeaveStatus(value,statusCopy),
+      labels:{
+        month:c('month'),week:c('week'),list:c('list'),previous:c('previous'),
+        next:c('next'),today:c('today'),select:c('select'),selectBody:c('selectBody'),
+        noEvents:c('noEvents'),more:c('more'),conflict:c('conflict'),weekdays,
+      },
+      filters:()=>`<label class="fld"><span>${esc(c('department'))}</span><select data-calendar-department>
+        <option value="all">${esc(c('allDepartments'))}</option>
+        ${departments.map(item=>`<option value="${esc(item)}" ${item===department?'selected':''}>${esc(item)}</option>`).join('')}
+      </select></label>
+      <label class="fld"><span>${esc(c('status'))}</span><select data-calendar-status>
+        <option value="all">${esc(c('allStatuses'))}</option>
+        ${['pending','approved','cancelled'].map(item=>`<option value="${item}" ${item===status?'selected':''}>${esc(myWorkLeaveStatus(item,statusCopy))}</option>`).join('')}
+      </select></label>
+      <label class="fld"><span>${esc(c('scope'))}</span><select data-calendar-scope ${canExpand?'':'disabled'}>
+        <option value="direct">${esc(c('direct'))}</option>
+        ${canExpand?`<option value="expanded" ${reportingScope==='expanded'?'selected':''}>${esc(c('expanded'))}</option>`:''}
+      </select></label>`,
+      detail,
+      actions:[
+        ...(error?[{label:c('retry'),icon:'refresh',onClick:load}]:[]),
+        {label:c('openApprovals'),icon:'check',cls:'primary',onClick:()=>navigate('my-approvals')},
+      ],
+      onNavigate:direction=>{
+        if(direction==='today') cursor=hrToday();
+        else if(view==='month'){
+          const date=new Date(`${cursor}T00:00:00Z`);
+          date.setUTCMonth(date.getUTCMonth()+Number(direction));cursor=iso(date);
+        }else cursor=addDays(cursor,Number(direction)*(view==='week'?7:31));
+        selectedId=null;load();
+      },
+      onView:next=>{view=next;selectedId=null;load();},
+      onSelect:id=>{selectedId=String(id)===String(selectedId)?null:id;render();},
+      afterRender:({root:screenRoot})=>{
+        const layout=screenRoot.querySelector('[data-layout="calendar-workspace-v1"]');
+        layout?.setAttribute('data-my-work-shell','true');
+        layout?.setAttribute('data-my-work-view','team-calendar');
+        layout?.setAttribute('data-my-work-privacy','reason_and_evidence_redacted');
+        screenRoot.querySelector('[data-calendar-close]')?.addEventListener('click',()=>{
+          selectedId=null;render();
+        });
+        screenRoot.querySelector('[data-calendar-department]')?.addEventListener('change',event=>{
+          department=event.target.value;selectedId=null;load();
+        });
+        screenRoot.querySelector('[data-calendar-status]')?.addEventListener('change',event=>{
+          status=event.target.value;selectedId=null;load();
+        });
+        screenRoot.querySelector('[data-calendar-scope]')?.addEventListener('change',event=>{
+          reportingScope=event.target.value;selectedId=null;load();
+        });
+      },
+    });
+  }
+  await load();
 };
 
 function myApprovalCopy(){

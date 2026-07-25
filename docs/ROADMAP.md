@@ -797,10 +797,13 @@ explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof
    time-bounded delegation; reminders/escalation; and minimum-staff
    warn/add-level/block controls. `my-approvals` is now a privacy-redacted
    five-language Canonical workspace with real Demo/API decisions and delegation.
-5. **Team calendar and Payroll integration** (TASK-115/116) introduce
-   `calendar-workspace-v1`, role-redacted team availability, optional one-way external
-   calendar delivery, unpaid-leave deduction and policy-controlled encashment.
-   Historical HR-lite rows keep their original day snapshot under Legacy Policy.
+5. **Team calendar** (TASK-115 done 2026-07-25) introduces
+   `calendar-workspace-v1`, privacy-redacted direct-report availability, authorised
+   reporting-tree expansion, conflict indicators and optional idempotent one-way
+   approved/change/cancel delivery. ERP status and revision remain authoritative.
+6. **Payroll integration** (TASK-116) adds unpaid-leave deduction and
+   policy-controlled encashment. Historical HR-lite rows keep their original day
+   snapshot under Legacy Policy.
 
 Exit criteria: working-day/half-day calculation, pending reservation, insufficient
 balance split, privacy, approval/delegation/capacity, calendar, outbound sync and

@@ -109,7 +109,9 @@ TASK-112 implements the immutable leave-balance ledger and Pending reservation
 boundary. TASK-113 implements the versioned leave lifecycle, actor-owned authoring,
 privacy-controlled evidence metadata and approved cancellation. TASK-114 implements
 versioned multi-level approval, bounded delegation, immutable authority/decision
-audit, reminders/escalation and minimum-staff capacity controls. TASK-115–135 remain
+audit, reminders/escalation and minimum-staff capacity controls. TASK-115 implements
+the privacy-redacted Team Calendar plus optional idempotent outbound delivery.
+TASK-116–135 remain
 **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
@@ -139,7 +141,7 @@ capabilities must not be represented as current Canonical behavior.
   Team Calendar and My Approvals are present only when the actor context grants team
   scope; team rows omit private reasons/evidence. Claims/Receipts remain honest
   unavailable states. `my-leave`, its governed `leave-application` detail and
-  `my-approvals` are Canonical; Claims, Receipts and Team Calendar remain Preview.
+  `my-approvals` plus Team Calendar are Canonical; Claims and Receipts remain Preview.
 - **Governed approval:** confirmed effective-dated policy versions match employee,
   department, leave type, days, amount and currency before instantiating ordered
   direct-manager, named-employee or permission steps. Original authority is

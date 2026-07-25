@@ -170,6 +170,20 @@ export async function resolveTeamEmployeeIdsWithin(
   return Array.from(permitted).sort((a, b) => a - b);
 }
 
+export async function resolveDirectReportEmployeeIdsWithin(
+  exec: DB,
+  scope: Scope,
+  actorEmployeeId: number,
+) {
+  const rows = await exec.select({ id: employee.id }).from(employee).where(and(
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+    eq(employee.managerId, actorEmployeeId),
+    eq(employee.isActive, true),
+  )).orderBy(asc(employee.id));
+  return rows.map((row) => row.id);
+}
+
 export async function listTeamLeaveWithin(
   exec: DB,
   scope: Scope,

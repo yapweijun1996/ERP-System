@@ -26,6 +26,7 @@
     "audit:payroll-run": "PAYROLL_RUN_ONLY=1 node scripts/audit-screens.mjs",
     "audit:list-layouts": "LIST_LAYOUT_ONLY=1 node scripts/audit-screens.mjs",
     "audit:workspaces": "WORKSPACE_LAYOUT_ONLY=1 node scripts/audit-screens.mjs",
+    "audit:calendar-workspaces": "CALENDAR_WORKSPACE_ONLY=1 node scripts/audit-screens.mjs",
     "audit:master-detail-editors": "MASTER_DETAIL_EDITOR_ONLY=1 node scripts/audit-screens.mjs",
     "audit:case-details": "CASE_DETAIL_ONLY=1 node scripts/audit-screens.mjs",
     "audit:ledger-details": "LEDGER_DETAIL_ONLY=1 node scripts/audit-screens.mjs",

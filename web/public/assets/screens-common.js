@@ -933,6 +933,140 @@ function reportListPage(root,config){
 }
 window.reportListPage=reportListPage;
 
+/**
+ * Shared team-calendar workspace. The helper owns the required layout regions,
+ * month/week/list rendering, selection semantics and responsive detail drawer;
+ * domain screens provide localized labels, rows, filters and governed actions.
+ */
+function calendarWorkspacePage(root,config){
+  const cfg=config||{};
+  const rows=Array.isArray(cfg.rows)?cfg.rows:[];
+  const view=['month','week','list'].includes(cfg.view)?cfg.view:'month';
+  const selected=rows.find(row=>String(row.id)===String(cfg.selectedId))||null;
+  const resolve=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
+  const iso=value=>{
+    const date=value instanceof Date?value:new Date(`${String(value)}T00:00:00Z`);
+    return date.toISOString().slice(0,10);
+  };
+  const shift=(date,days)=>{
+    const next=new Date(`${date}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate()+days);
+    return iso(next);
+  };
+  const startOfWeek=date=>{
+    const valueDate=new Date(`${date}T00:00:00Z`);
+    const day=(valueDate.getUTCDay()+6)%7;
+    valueDate.setUTCDate(valueDate.getUTCDate()-day);
+    return iso(valueDate);
+  };
+  const cursor=cfg.cursor||iso(new Date());
+  const eventLabel=row=>esc(String(row.employeeName||row.employeeNo||'Unavailable'));
+  const eventTone=row=>row.status==='approved'?'ok':row.status==='pending'?'warn':'neutral';
+  const eventButton=row=>`<button class="calendar-event ${eventTone(row)}"
+      data-calendar-event="${esc(String(row.id))}" aria-label="${eventLabel(row)}">
+    <span>${eventLabel(row)}</span>${row.conflict?`<b title="${esc(String(cfg.labels.conflict))}">!</b>`:''}
+  </button>`;
+  const rowsForDay=day=>rows.filter(row=>row.startDate<=day&&row.endDate>=day);
+  function monthSurface(){
+    const current=new Date(`${cursor}T00:00:00Z`);
+    const first=iso(new Date(Date.UTC(current.getUTCFullYear(),current.getUTCMonth(),1)));
+    const start=startOfWeek(first);
+    const days=Array.from({length:42},(_,index)=>shift(start,index));
+    return `<div class="calendar-month-grid" role="grid">
+      ${(cfg.labels.weekdays||[]).map(label=>`<div class="calendar-weekday" role="columnheader">${esc(label)}</div>`).join('')}
+      ${days.map(day=>{
+        const dayRows=rowsForDay(day);
+        const outside=day.slice(0,7)!==cursor.slice(0,7);
+        return `<div class="calendar-day${outside?' outside':''}" role="gridcell" data-calendar-day="${day}">
+          <div class="calendar-day-number">${Number(day.slice(8))}</div>
+          ${dayRows.slice(0,3).map(eventButton).join('')}
+          ${dayRows.length>3?`<small>+${dayRows.length-3} ${esc(cfg.labels.more)}</small>`:''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+  function weekSurface(){
+    const start=startOfWeek(cursor);
+    return `<div class="calendar-week-grid">
+      ${Array.from({length:7},(_,index)=>{
+        const day=shift(start,index);
+        const dayRows=rowsForDay(day);
+        return `<section class="calendar-week-day" data-calendar-day="${day}">
+          <header><b>${esc((cfg.labels.weekdays||[])[index]||'')}</b><span>${esc(day.slice(5))}</span></header>
+          <div>${dayRows.length?dayRows.map(eventButton).join(''):`<small>${esc(cfg.labels.noEvents)}</small>`}</div>
+        </section>`;
+      }).join('')}
+    </div>`;
+  }
+  function listSurface(){
+    return `<div class="calendar-list">
+      ${rows.length?rows.map(row=>`<button class="calendar-list-row" data-calendar-event="${esc(String(row.id))}">
+        <span class="tnum">${esc(row.startDate)} → ${esc(row.endDate)}</span>
+        <b>${eventLabel(row)}</b><span>${esc(String(row.department||''))}</span>
+        ${cap(String(cfg.statusLabel(row.status)),eventTone(row))}
+        ${row.conflict?cap(String(cfg.labels.conflict),'danger'):''}
+      </button>`).join(''):`<div class="empty"><div>${ic('calendar')}</div><h3>${esc(cfg.labels.noEvents)}</h3></div>`}
+    </div>`;
+  }
+  const surface=view==='week'?weekSurface():view==='list'?listSurface():monthSurface();
+  const detail=selected
+    ?resolve(cfg.detail,selected)
+    :`<div class="detail-empty">${ic('calendar')}<div><b>${esc(cfg.labels.select)}</b><small>${esc(cfg.labels.selectBody)}</small></div></div>`;
+  const actions=(cfg.actions||[]).map((action,index)=>btn(String(action.label),{
+    icon:action.icon||null,cls:action.cls||'soft',
+    attrs:`data-calendar-action="${index}"${action.disabled?' disabled':''}`,
+  })).join('');
+  const body=`<div class="calendar-workspace" data-layout="calendar-workspace-v1"
+      data-calendar-route="${esc(String(cfg.route||''))}">
+    <div class="calendar-workspace-header" data-calendar-header>
+      <div class="calendar-nav">
+        ${btn(cfg.labels.previous,{icon:'chevL',cls:'soft',attrs:'data-calendar-nav="-1"'})}
+        ${btn(cfg.labels.today,{cls:'soft',attrs:'data-calendar-nav="today"'})}
+        ${btn(cfg.labels.next,{icon:'chevR',cls:'soft',attrs:'data-calendar-nav="1"'})}
+        <b>${esc(String(cfg.periodLabel||cursor))}</b>
+      </div>
+      <div class="calendar-view-switch">
+        ${['month','week','list'].map(mode=>btn(cfg.labels[mode],{
+          cls:mode===view?'primary':'soft',attrs:`data-calendar-view="${mode}"`,
+        })).join('')}
+      </div>
+    </div>
+    <div class="calendar-workspace-filters" data-calendar-filters>${resolve(cfg.filters)||''}</div>
+    <div class="calendar-workspace-main">
+      <div class="calendar-workspace-surface" data-calendar-surface>${surface}</div>
+      <aside class="detail calendar-workspace-detail ${selected?'open':'is-empty'}" data-calendar-detail>
+        ${detail}
+      </aside>
+    </div>
+    <div class="calendar-workspace-error" data-calendar-error ${cfg.error?'':'hidden'}>
+      ${cfg.error?`<div class="alert danger">${ic('warn')}<span>${esc(String(cfg.error))}</span></div>`:''}
+    </div>
+    <div class="set-savebar calendar-workspace-actions" data-calendar-actions>
+      <span class="muted">${esc(String(cfg.privacy||''))}</span><div class="grow"></div>${actions}
+    </div>
+  </div>`;
+  root.innerHTML=modulePage({
+    module:cfg.module,route:cfg.route,active:cfg.active||cfg.route,
+    title:String(cfg.title||''),sub:String(cfg.description||''),
+    count:rows.length,body,
+  });
+  root.querySelectorAll('[data-calendar-nav]').forEach(button=>button.addEventListener('click',()=>{
+    cfg.onNavigate?.(button.dataset.calendarNav);
+  }));
+  root.querySelectorAll('[data-calendar-view]').forEach(button=>button.addEventListener('click',()=>{
+    cfg.onView?.(button.dataset.calendarView);
+  }));
+  root.querySelectorAll('[data-calendar-event]').forEach(button=>button.addEventListener('click',()=>{
+    cfg.onSelect?.(button.dataset.calendarEvent);
+  }));
+  root.querySelectorAll('[data-calendar-action]').forEach(button=>button.addEventListener('click',()=>{
+    const action=(cfg.actions||[])[Number(button.dataset.calendarAction)];
+    if(action&&!action.disabled) action.onClick?.(selected);
+  }));
+  cfg.afterRender?.({root,selected});
+}
+window.calendarWorkspacePage=calendarWorkspacePage;
+
 function transactionRowMenuButton(label){
   return `<span class="rowact"><button class="transaction-row-menu" data-tip="${esc(label||'Actions')}" aria-label="${esc(label||'Row actions')}">${ic('more')}</button></span>`;
 }

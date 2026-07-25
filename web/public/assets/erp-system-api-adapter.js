@@ -225,6 +225,14 @@
     claims:function(){ return apiRequest('my/claims'); },
     receipts:function(){ return apiRequest('my/receipts'); },
     teamLeaveRequests:function(){ return apiRequest('my/team/leave-requests'); },
+    teamCalendar:function(query){
+      query=query||{};
+      var params=new URLSearchParams();
+      ['from','to','scope','department','status'].forEach(function(key){
+        if(query[key]!=null&&query[key]!=='') params.set(key,String(query[key]));
+      });
+      return apiRequest('my/team/calendar?'+params.toString());
+    },
     approvals:function(){ return apiRequest('my/approvals'); },
     approval:function(id){ return apiRequest('my/approvals/'+encodeURIComponent(id)); },
     approvalAction:function(id,name,payload,idempotencyKey){

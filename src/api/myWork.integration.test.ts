@@ -375,6 +375,40 @@ describe('actor-owned My Work API', () => {
       && !Object.prototype.hasOwnProperty.call(row, 'rejectionReason'))).toBe(true);
     expect(body.meta.privacy).toBe('reason_and_evidence_redacted');
 
+    const directCalendar = await fetch(
+      `${baseUrl}/api/my/team/calendar?from=2026-09-01&to=2026-09-30&scope=direct`,
+      { headers: { cookie } },
+    );
+    expect(directCalendar.status).toBe(200);
+    const directCalendarBody = await directCalendar.json() as {
+      data: { items: Array<{ employeeId: number }> };
+      meta: { scope: string; canExpand: boolean };
+    };
+    expect(directCalendarBody.data.items.map((item) => item.employeeId))
+      .not.toContain(scopeLeaf.id);
+    expect(directCalendarBody.meta).toMatchObject({
+      scope: 'direct',
+      canExpand: true,
+    });
+
+    const expandedCalendar = await fetch(
+      `${baseUrl}/api/my/team/calendar?from=2026-09-01&to=2026-09-30&scope=expanded&department=Projects`,
+      { headers: { cookie } },
+    );
+    expect(expandedCalendar.status).toBe(200);
+    const expandedCalendarBody = await expandedCalendar.json() as {
+      data: { items: Array<Record<string, unknown> & { employeeId: number }> };
+      meta: { privacy: string; scope: string };
+    };
+    expect(expandedCalendarBody.data.items.map((item) => item.employeeId))
+      .toContain(scopeLeaf.id);
+    expect(expandedCalendarBody.data.items.every((item) =>
+      !Object.prototype.hasOwnProperty.call(item, 'reason'))).toBe(true);
+    expect(expandedCalendarBody.meta).toMatchObject({
+      privacy: 'reason_and_evidence_redacted',
+      scope: 'expanded',
+    });
+
     const context = await fetch(`${baseUrl}/api/my/context`, {
       headers: { cookie },
     });

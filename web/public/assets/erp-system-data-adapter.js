@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 53;
+  var DEMO_SCHEMA_VERSION = 54;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -194,12 +194,17 @@
       "where table_schema='public' and table_name in " +
       "('financial_statement_account_map','budget_version','budget_line'," +
       "'consolidation_rate','report_job','report_artifact')")).rows[0];
+    var calendarOutboundSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('calendar_outbound_connection','calendar_outbound_event')")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
       && projectTimeSignature && Number(projectTimeSignature.n) === 1
       && importSignature && Number(importSignature.n) === 3
-      && reportingSignature && Number(reportingSignature.n) === 6;
+      && reportingSignature && Number(reportingSignature.n) === 6
+      && calendarOutboundSignature && Number(calendarOutboundSignature.n) === 2;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -2931,6 +2936,36 @@
       });
       return {data:data,meta:{
         actorDerived:true,privacy:'reason_and_evidence_redacted',limit:100,
+      }};
+    },
+    teamCalendar:async function(query){
+      query=query||{};
+      var response=await withMyActor(async function(orm,actor){
+        var canReadTeam=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.team.read');
+        if(!canReadTeam) throw new Error('You cannot read the team calendar.');
+        var directIds=await state.runtime.commands.resolveDirectReportEmployeeIdsWithin(
+          orm,SCOPE,actor.id);
+        var expandedIds=await state.runtime.commands.resolveTeamEmployeeIdsWithin(
+          orm,SCOPE,actor.id);
+        var directSet=new Set(directIds);
+        var canExpand=expandedIds.some(function(id){return !directSet.has(id);});
+        if(query.scope==='expanded'&&!canExpand){
+          var scopeError=new Error('No active hierarchy grant authorizes an expanded reporting tree.');
+          scopeError.code='calendar_scope_not_authorized';
+          throw scopeError;
+        }
+        var data=await state.runtime.commands.listTeamCalendarWithin(
+          orm,SCOPE,query.scope==='expanded'?expandedIds:directIds,{
+            from:String(query.from||''),to:String(query.to||''),
+            department:query.department||null,status:query.status||'all',
+          });
+        return {data:data,canExpand:canExpand,directCount:directIds.length};
+      });
+      return {data:response.data,meta:{
+        actorDerived:true,privacy:'reason_and_evidence_redacted',
+        scope:query.scope==='expanded'?'expanded':'direct',
+        canExpand:response.canExpand,directReportCount:response.directCount,limit:300,
       }};
     },
     approvals:async function(){

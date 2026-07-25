@@ -18,6 +18,7 @@ import {
   reservePaidLeaveWithin,
   settlePaidLeaveReservationWithin,
 } from './leaveBalance';
+import { enqueueLeaveCalendarSyncWithin } from './calendarSync';
 import {
   decideLeaveApprovalWithin,
   startLeaveApprovalWithin,
@@ -598,6 +599,12 @@ export async function decideGovernedLeaveWithin(
     actorUserId: actor.userId,
     occurredAt: now,
   });
+  if (decision === 'approved') {
+    await enqueueLeaveCalendarSyncWithin(exec, scope, {
+      leaveRequestId: row.id,
+      eventType: 'approved',
+    }, now);
+  }
   return { id: row.id, status: decision, version, approval };
 }
 
@@ -826,6 +833,12 @@ export async function decideApprovedLeaveCancellationWithin(
     actorUserId: actor.userId,
     occurredAt: now,
   });
+  if (decision === 'approved') {
+    await enqueueLeaveCalendarSyncWithin(exec, scope, {
+      leaveRequestId: row.id,
+      eventType: 'cancelled',
+    }, now);
+  }
   return {
     id: row.id,
     cancellationId: cancellation.id,

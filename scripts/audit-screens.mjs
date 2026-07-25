@@ -22,6 +22,7 @@
 //     region in canonical order. Set LIST_LAYOUT_ONLY=1 to audit only those
 //     routes while migrating legacy screens in bounded batches, or
 //     WORKSPACE_LAYOUT_ONLY=1 for operational workspaces, or
+//     CALENDAR_WORKSPACE_ONLY=1 for team calendar workspaces, or
 //     MASTER_DETAIL_EDITOR_ONLY=1 for versioned master-data detail editors, or
 //     CASE_DETAIL_ONLY=1 for actionable lifecycle case details, or
 //     LEDGER_DETAIL_ONLY=1 for immutable financial account ledgers, or
@@ -44,6 +45,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 const WORKSPACE_LAYOUT_ONLY = process.env.WORKSPACE_LAYOUT_ONLY === '1';
+const CALENDAR_WORKSPACE_ONLY = process.env.CALENDAR_WORKSPACE_ONLY === '1';
 const MASTER_DETAIL_EDITOR_ONLY = process.env.MASTER_DETAIL_EDITOR_ONLY === '1';
 const CASE_DETAIL_ONLY = process.env.CASE_DETAIL_ONLY === '1';
 const LEDGER_DETAIL_ONLY = process.env.LEDGER_DETAIL_ONLY === '1';
@@ -53,18 +55,19 @@ const PAYROLL_RUN_ONLY = process.env.PAYROLL_RUN_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
+const CALENDAR_WORKSPACE_LAYOUT = 'calendar-workspace-v1';
 const MASTER_DETAIL_EDITOR_LAYOUT = 'master-detail-editor-v1';
 const CASE_DETAIL_LAYOUT = 'case-detail-v1';
 const LEDGER_DETAIL_LAYOUT = 'ledger-detail-v1';
 const POSTING_DETAIL_LAYOUT = 'posting-detail-v1';
 const FINANCIAL_STATEMENT_LAYOUT = 'financial-statement-v1';
 const VALID_LAYOUTS = new Set([
-  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT,
+  ...LIST_LAYOUTS,OPERATIONAL_WORKSPACE_LAYOUT,CALENDAR_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT,
   'dashboard','report','document-detail','form',
   'master-detail','workspace','board','activity-feed',
 ]);
 
-if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY,FINANCIAL_STATEMENT_ONLY,PAYROLL_RUN_ONLY].filter(Boolean).length > 1) {
+if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,CALENDAR_WORKSPACE_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY,FINANCIAL_STATEMENT_ONLY,PAYROLL_RUN_ONLY].filter(Boolean).length > 1) {
   throw new Error('Layout-only audit switches are mutually exclusive.');
 }
 
@@ -109,6 +112,7 @@ if (missingMyWorkRoutes.length) {
 }
 if (!hrScreenSource.includes('data-my-work-shell')
     || !hrScreenSource.includes('transactionListPage(root')
+    || !hrScreenSource.includes('calendarWorkspacePage(root')
     || !hrScreenSource.includes('reason_and_evidence_redacted')) {
   throw new Error('My Work shell does not declare its SSOT list or privacy contract.');
 }
@@ -463,6 +467,8 @@ async function auditRoutes(browser, viewport) {
     ? allRoutes.filter((route) => LIST_LAYOUTS.has(screenMeta[route]?.layout))
     : WORKSPACE_LAYOUT_ONLY
       ? allRoutes.filter((route) => screenMeta[route]?.layout === OPERATIONAL_WORKSPACE_LAYOUT)
+      : CALENDAR_WORKSPACE_ONLY
+        ? allRoutes.filter((route) => screenMeta[route]?.layout === CALENDAR_WORKSPACE_LAYOUT)
       : MASTER_DETAIL_EDITOR_ONLY
         ? allRoutes.filter((route) => screenMeta[route]?.layout === MASTER_DETAIL_EDITOR_LAYOUT)
         : CASE_DETAIL_ONLY
@@ -482,6 +488,9 @@ async function auditRoutes(browser, viewport) {
   }
   if (WORKSPACE_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare an operational workspace layout.');
+  }
+  if (CALENDAR_WORKSPACE_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare a calendar workspace layout.');
   }
   if (MASTER_DETAIL_EDITOR_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a master-detail editor layout.');
@@ -638,6 +647,24 @@ async function auditRoutes(browser, viewport) {
         if (contextRect.top < mainRect.bottom - 1) {
           layoutIssues.push('operational workspace context does not follow the main work area on mobile');
         }
+      }
+      const calendarRoot = el.querySelector('[data-layout="calendar-workspace-v1"]');
+      const calendarRegions = calendarRoot ? [
+        calendarRoot.querySelector('[data-calendar-header]'),
+        calendarRoot.querySelector('[data-calendar-filters]'),
+        calendarRoot.querySelector('[data-calendar-surface]'),
+        calendarRoot.querySelector('[data-calendar-detail]'),
+        calendarRoot.querySelector('[data-calendar-error]'),
+        calendarRoot.querySelector('[data-calendar-actions]'),
+      ] : [];
+      const calendarRegionOrder = calendarRegions.length === 6
+        && calendarRegions.every(Boolean)
+        && calendarRegions.every((node,index)=>index === 0
+          || Boolean(calendarRegions[index - 1].compareDocumentPosition(node)
+            & Node.DOCUMENT_POSITION_FOLLOWING));
+      if (calendarRoot && calendarRegions[5] && calendarRegions[5].offsetParent !== null
+          && calendarRegions[5].scrollWidth > calendarRegions[5].clientWidth + 1) {
+        layoutIssues.push(`calendar workspace actions overflow ${calendarRegions[5].scrollWidth}>${calendarRegions[5].clientWidth}`);
       }
       const masterDetailEditorRoot = el.querySelector('[data-layout="master-detail-editor-v1"]');
       const masterDetailEditorRegions = masterDetailEditorRoot ? [
@@ -981,6 +1008,18 @@ async function auditRoutes(browser, viewport) {
             && workspaceRoot?.querySelector('[data-complete-pick]:not([disabled])')
           ),
         },
+        calendarWorkspaceLayout: {
+          present: Boolean(calendarRoot),
+          actualLayout: calendarRoot?.getAttribute('data-layout') || null,
+          missingRegions: calendarRoot
+            ? ['header','filters','surface','detail','error','actions']
+              .filter((_,index)=>!calendarRegions[index])
+            : [],
+          ordered: calendarRegionOrder,
+          pageheads: el.querySelectorAll('.pagehead').length,
+          viewButtons: calendarRoot?.querySelectorAll('[data-calendar-view]').length || 0,
+          privacy: calendarRoot?.getAttribute('data-my-work-privacy') || null,
+        },
         masterDetailEditorLayout: {
           present: Boolean(masterDetailEditorRoot),
           actualLayout: masterDetailEditorRoot?.getAttribute('data-layout') || null,
@@ -1117,6 +1156,7 @@ async function auditRoutes(browser, viewport) {
             || null,
         },
         moduleShell: Boolean(el.querySelector('.sales-subnav')),
+        renderErrorMessage: el.dataset.screenRenderError || null,
         renderError: Boolean(el.querySelector('.screen-render-error')),
       };
     }).catch(() => ({
@@ -1144,6 +1184,10 @@ async function auditRoutes(browser, viewport) {
       workspaceLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         progress: null, pageheads: 0, errorRegion: false, incompleteCompletionEnabled: false,
+      },
+      calendarWorkspaceLayout: {
+        present: false, actualLayout: null, missingRegions: [], ordered: false,
+        pageheads: 0, viewButtons: 0, privacy: null,
       },
       masterDetailEditorLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
@@ -1220,6 +1264,28 @@ async function auditRoutes(browser, viewport) {
     }
     if (rendered.listLayout.present && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`rendered ${rendered.listLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
+    if (meta?.layout === CALENDAR_WORKSPACE_LAYOUT) {
+      if (!rendered.calendarWorkspaceLayout.present) {
+        rendered.layoutIssues.push('calendar-workspace-v1 root missing');
+      } else {
+        if (rendered.calendarWorkspaceLayout.missingRegions.length) {
+          rendered.layoutIssues.push(
+            `calendar-workspace-v1 regions missing: ${rendered.calendarWorkspaceLayout.missingRegions.join(', ')}`,
+          );
+        }
+        if (!rendered.calendarWorkspaceLayout.ordered) {
+          rendered.layoutIssues.push('calendar-workspace-v1 regions are outside canonical order');
+        }
+        if (rendered.calendarWorkspaceLayout.viewButtons !== 3) {
+          rendered.layoutIssues.push(
+            `calendar-workspace-v1 expected 3 view controls, found ${rendered.calendarWorkspaceLayout.viewButtons}`,
+          );
+        }
+        if (rendered.calendarWorkspaceLayout.privacy !== 'reason_and_evidence_redacted') {
+          rendered.layoutIssues.push('calendar-workspace-v1 privacy marker is missing');
+        }
+      }
     }
     if (route === 'timesheet') {
       if (rendered.timesheetLayout.pageheads !== 1) {
@@ -1674,6 +1740,7 @@ async function auditRoutes(browser, viewport) {
       identityLeaks: leaks,
       missingMeta: !meta,
       renderError: rendered.renderError,
+      renderErrorMessage: rendered.renderErrorMessage,
       missingPreviewBanner: Boolean(meta && meta.maturity === 'preview' && !rendered.previewBanner),
       enabledPreviewWrites: meta && meta.maturity === 'preview' ? rendered.enabledPreviewWrites : [],
       layoutIssues: rendered.layoutIssues,
@@ -1699,6 +1766,7 @@ async function auditRoutes(browser, viewport) {
         claims:ErpSystemData.my.claims,
         receipts:ErpSystemData.my.receipts,
         teamLeaveRequests:ErpSystemData.my.teamLeaveRequests,
+        teamCalendar:ErpSystemData.my.teamCalendar,
         approvals:ErpSystemData.my.approvals,
         approvalAction:ErpSystemData.my.approvalAction,
         approvalDelegations:ErpSystemData.my.approvalDelegations,
@@ -1735,8 +1803,10 @@ async function auditRoutes(browser, viewport) {
       };
       const teamLeave = [{
         id:72,employeeId:43,employeeNo:'EMP-TEAM',employeeName:'Team Member',
-        department:'Operations',leaveType:'Medical',startDate:'2026-08-05',
-        endDate:'2026-08-05',days:1,status:'pending',
+        department:'Operations',jobTitle:'Coordinator',leaveType:'Medical',
+        startDate:'2026-07-27',endDate:'2026-07-27',days:1,status:'pending',
+        version:2,revisionNo:1,legacyPolicy:false,conflict:false,conflictCount:0,
+        privacy:'reason_and_evidence_redacted',sync:null,
       }];
       const approvalRows = [{
         requestId:72,requestVersion:2,employeeId:43,employeeNo:'EMP-TEAM',
@@ -1777,6 +1847,13 @@ async function auditRoutes(browser, viewport) {
         ErpSystemData.my.receipts=async()=>({data:[],meta:{availability:'not_modelled',plannedEpic:'EPIC-054'}});
         ErpSystemData.my.teamLeaveRequests=async()=>({
           data:teamLeave,meta:{privacy:'reason_and_evidence_redacted'},
+        });
+        ErpSystemData.my.teamCalendar=async()=>({
+          data:{items:teamLeave,departments:['Operations'],from:'2026-07-01',to:'2026-07-31'},
+          meta:{
+            privacy:'reason_and_evidence_redacted',scope:'direct',
+            canExpand:true,directReportCount:1,
+          },
         });
         ErpSystemData.my.approvals=async()=>({
           data:approvalRows,meta:{privacy:'reason_and_evidence_redacted'},
@@ -4126,7 +4203,10 @@ try {
         console.error(`FAIL [${r.viewport}:${r.route}]`);
         if (r.missingMeta) console.error('  [metadata] SCREEN_META entry missing');
         if (r.threwSync) console.error(`  [sync throw] ${r.threwSync}`);
-        if (r.renderError) console.error('  [render error] standard page error state is visible');
+        if (r.renderError) {
+          console.error('  [render error] standard page error state is visible');
+          console.error(`  [render error detail] ${String(r.renderErrorMessage || r.text || '').slice(0, 500).replace(/\s+/g, ' ')}`);
+        }
         for (const m of r.consoleErrors) console.error(`  [console.error] ${m}`);
         for (const m of r.pageErrors) console.error(`  [pageerror] ${m}`);
       }

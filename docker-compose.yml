@@ -65,6 +65,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       OUTBOX_POLL_MS: ${OUTBOX_POLL_MS:-5000}
+      CALENDAR_OUTBOUND_URL: ${CALENDAR_OUTBOUND_URL:-}
+      CALENDAR_OUTBOUND_TOKEN: ${CALENDAR_OUTBOUND_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy

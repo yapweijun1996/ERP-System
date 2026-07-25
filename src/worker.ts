@@ -6,6 +6,10 @@ import {
   processOutboxBatch,
 } from './worker/outbox';
 import { processReportJobBatch } from './modules/reporting/reportJobs';
+import {
+  createGenericCalendarDriverFromEnv,
+  processCalendarOutboundBatch,
+} from './modules/hr/calendarSync';
 
 const databaseUrl = process.env.DATABASE_URL;
 const encryptionKey = process.env.ERP_TOKEN_ENCRYPTION_KEY;
@@ -18,6 +22,8 @@ const db = await createPostgresDb(databaseUrl);
 const mailEnabled = Boolean(encryptionKey && process.env.SMTP_HOST && process.env.SMTP_FROM);
 const transport = mailEnabled ? createSmtpTransportFromEnv() : null;
 const tokenEncryptionKey = encryptionKey ? parseTokenEncryptionKey(encryptionKey) : null;
+const calendarEnabled = Boolean(process.env.CALENDAR_OUTBOUND_URL);
+const calendarDriver = calendarEnabled ? createGenericCalendarDriverFromEnv() : null;
 const workerId = process.env.WORKER_ID ?? `erp-worker-${process.pid}`;
 const pollMs = Math.max(500, Number(process.env.OUTBOX_POLL_MS) || 5000);
 let lastMaintenanceAt = 0;
@@ -36,13 +42,29 @@ async function tick(): Promise<void> {
   if (reports.claimed > 0) {
     console.log(`[erp-worker] reports claimed=${reports.claimed} succeeded=${reports.succeeded} failed=${reports.failed}`);
   }
+  if (calendarDriver) {
+    const calendar = await processCalendarOutboundBatch(
+      db,
+      { generic: calendarDriver },
+      { workerId },
+    );
+    if (calendar.claimed > 0) {
+      console.log(
+        `[erp-worker] calendar claimed=${calendar.claimed} delivered=${calendar.delivered}`
+        + ` failed=${calendar.failed} superseded=${calendar.superseded}`,
+      );
+    }
+  }
   if (Date.now() - lastMaintenanceAt >= 60 * 60 * 1000) {
     console.log('[erp-worker] maintenance', await runMaintenance(db));
     lastMaintenanceAt = Date.now();
   }
 }
 
-console.log(`[erp-worker] started as ${workerId}; email=${mailEnabled ? 'enabled' : 'disabled'}; reports=enabled`);
+console.log(
+  `[erp-worker] started as ${workerId}; email=${mailEnabled ? 'enabled' : 'disabled'};`
+  + ` reports=enabled; calendar=${calendarEnabled ? 'enabled' : 'disabled'}`,
+);
 for (;;) {
   try {
     await tick();

@@ -54,6 +54,7 @@ DECLARE
     'approval_instance', 'approval_instance_step', 'approval_decision',
     'approval_instance_event', 'approval_delegation', 'approval_capacity_snapshot',
     'leave_capacity_rule',
+    'calendar_outbound_connection', 'calendar_outbound_event',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line',

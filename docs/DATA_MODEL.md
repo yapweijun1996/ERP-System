@@ -139,8 +139,9 @@ SG and MY demo companies; production wires real auth.
 > immutable balance ledger is implemented by TASK-112. TASK-113 adds the governed
 > leave request/revision/event/evidence/cancellation entities. TASK-114 adds the
 > versioned approval policy/step, workflow instance/step, immutable decision/event,
-> bounded delegation, capacity-rule and capacity-snapshot entities. The remaining
-> entities are approved targets for TASK-115–135 and are
+> bounded delegation, capacity-rule and capacity-snapshot entities. TASK-115 adds the
+> outbound calendar connection/event entities. The remaining entities are approved
+> targets for TASK-116–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -192,6 +193,8 @@ leave_balance_entry             append-only grant/accrual/reserve/use/cancel/adj
 leave_evidence                  immutable private evidence metadata; content deferred (implemented)
 leave_capacity_rule             department minimum-coverage rule and action (implemented)
 approval_capacity_snapshot      immutable submission/decision coverage fact (implemented)
+calendar_outbound_connection    optional tenant-scoped one-way provider configuration (implemented)
+calendar_outbound_event         revision-keyed approved/change/cancel delivery job (implemented)
 ```
 
 Every leave request retains the policy/calendar versions and calculated-day snapshot used
@@ -233,6 +236,14 @@ self-approval. Delegations are effective-dated, capped at 90 days, revocable wit
 deleting history and linked to delegated decisions. Leave-capacity rules snapshot
 active staff and approved absence counts at submission and decision, applying
 warning, additional-level or blocking behavior.
+
+Migration 0054 implements optional one-way calendar delivery. Connection rows contain
+bounded provider configuration but no Demo credentials. Outbound events are unique by
+connection, leave request, revision and event type; changed and cancelled deliveries
+reuse the original external event identity. The worker re-reads the current ERP
+request revision/status before delivery, supersedes stale jobs and retries transient
+failures with bounded exponential backoff. Payloads include availability dates and a
+neutral summary only—never private reasons or evidence references.
 
 ### 8.3 Managed documents and extraction
 

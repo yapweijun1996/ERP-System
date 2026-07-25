@@ -123,6 +123,20 @@ describe('browser demo compatibility migrations', () => {
         'supplier',
       ]);
 
+      const calendarTables = await db.query<{ table_name: string }>(`
+        select table_name
+        from information_schema.tables
+        where table_schema = 'public'
+          and table_name in (
+            'calendar_outbound_connection', 'calendar_outbound_event'
+          )
+        order by table_name
+      `);
+      expect(calendarTables.rows.map((row) => row.table_name)).toEqual([
+        'calendar_outbound_connection',
+        'calendar_outbound_event',
+      ]);
+
       const versionColumns = await db.query<{ table_name: string }>(`
         select table_name
         from information_schema.columns

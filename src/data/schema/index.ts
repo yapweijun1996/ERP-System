@@ -13,6 +13,7 @@ export * from './manufacturing';
 export * from './quality';
 export * from './hr';
 export * from './approval';
+export * from './calendar';
 export * from './project';
 export * from './service';
 export * from './payroll';

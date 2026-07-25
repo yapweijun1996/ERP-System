@@ -503,7 +503,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
-  'my-leave','leave-application','my-approvals',
+  'my-leave','leave-application','team-calendar','my-approvals',
   'integration-logs','data-import',
   'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
@@ -523,7 +523,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'integration','master-control','sys-settings',
 ]);
 const CANONICAL_DATA_PREVIEW_ROUTES = new Set([
-  'my-claims','my-receipts','team-calendar',
+  'my-claims','my-receipts',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
@@ -673,11 +673,14 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
     'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
     'service-contracts','asset-register','user-mgmt',
-    'my-leave','my-claims','my-receipts','team-calendar',
+    'my-leave','my-claims','my-receipts',
   ],
   'master-detail-register-v1':[
     'item-master','stock-on-hand','leave-approval','payroll-run','depreciation',
     'my-approvals',
+  ],
+  'calendar-workspace-v1':[
+    'team-calendar',
   ],
   'report-list-v1':[
     'inv-valuation','ar-aging',
@@ -1028,6 +1031,7 @@ function screenErrorHtml(route,error){
 }
 function finishScreenRender(root,route,sequence,output){
   if(sequence!==SCREEN_RENDER_SEQUENCE || CURRENT_ROUTE!==route) return false;
+  delete root.dataset.screenRenderError;
   if(typeof output==='string') root.innerHTML=output;
   decorateScreen(root,route);
   root.scrollTop=0;
@@ -1035,6 +1039,8 @@ function finishScreenRender(root,route,sequence,output){
 }
 function failScreenRender(root,route,sequence,error){
   if(sequence!==SCREEN_RENDER_SEQUENCE || CURRENT_ROUTE!==route) return false;
+  root.dataset.screenRenderError=error&&error.message
+    ?error.message:String(error||'Unknown rendering error');
   root.innerHTML=screenErrorHtml(route,error);
   const panel=root.querySelector('.statepanel');
   if(panel) panel.closest('.master')?.classList.add('screen-render-error');

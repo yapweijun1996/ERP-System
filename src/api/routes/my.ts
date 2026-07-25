@@ -10,8 +10,14 @@ import {
   listActorLeaveWithin,
   listTeamLeaveWithin,
   resolveActorEmployeeWithin,
+  resolveDirectReportEmployeeIdsWithin,
   resolveTeamEmployeeIdsWithin,
 } from '../../modules/hr/actorScope';
+import {
+  TeamCalendarError,
+  listTeamCalendarWithin,
+  type TeamCalendarStatus,
+} from '../../modules/hr/teamCalendar';
 import {
   LeaveApplicationError,
   amendLeaveApplicationWithin,
@@ -85,6 +91,10 @@ export function createMyRouter(db: DB): Router {
 
   function handleActorError(res: import('express').Response, error: unknown): void {
     if (error instanceof ActorScopeError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
+    if (error instanceof TeamCalendarError) {
       apiError(res, error.status, error.code, error.message);
       return;
     }
@@ -610,6 +620,61 @@ export function createMyRouter(db: DB): Router {
           actorDerived: true,
           privacy: 'reason_and_evidence_redacted',
           limit: 100,
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.get('/team/calendar', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.employeeTeamRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read the team calendar.');
+      return;
+    }
+    const from = typeof req.query.from === 'string' ? req.query.from : '';
+    const to = typeof req.query.to === 'string' ? req.query.to : '';
+    const requestedScope = req.query.scope === 'expanded' ? 'expanded' : 'direct';
+    const department = typeof req.query.department === 'string'
+      ? req.query.department
+      : null;
+    const status = typeof req.query.status === 'string'
+      ? req.query.status as TeamCalendarStatus | 'all'
+      : 'all';
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const result = await withTenantTransaction(db, scope, async (tx) => {
+        const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
+        const directIds = await resolveDirectReportEmployeeIdsWithin(tx, scope, actor.id);
+        const expandedIds = await resolveTeamEmployeeIdsWithin(tx, scope, actor.id);
+        const directSet = new Set(directIds);
+        const canExpand = expandedIds.some((id) => !directSet.has(id));
+        if (requestedScope === 'expanded' && !canExpand) {
+          throw new TeamCalendarError(
+            'calendar_scope_not_authorized',
+            'No active hierarchy grant authorizes an expanded reporting tree.',
+            403,
+          );
+        }
+        const data = await listTeamCalendarWithin(
+          tx,
+          scope,
+          requestedScope === 'expanded' ? expandedIds : directIds,
+          { from, to, department, status },
+        );
+        return { data, actor, canExpand, directCount: directIds.length };
+      });
+      res.json({
+        data: result.data,
+        meta: {
+          actorDerived: true,
+          privacy: 'reason_and_evidence_redacted',
+          scope: requestedScope,
+          canExpand: result.canExpand,
+          directReportCount: result.directCount,
+          limit: 300,
         },
       });
     } catch (error) {
