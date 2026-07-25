@@ -1886,17 +1886,21 @@ company, and every self-service resource derives the employee identity from Sess
       preserved and locked in User Management. PWA v108 and `docs/SECURITY.md`
       document and prove the boundary without promoting the five Preview routes.
 
-## EPIC-053 — Full Leave Management (Planned)
+## EPIC-053 — Full Leave Management (In progress)
 
 Replace the current HR-lite three-type/calendar-day request model with versioned leave
 policy, immutable entitlement facts, multi-stage approval and a team calendar. Existing
 leave rows remain historical facts: their stored day count is preserved under a
 Legacy Policy marker and is never silently recomputed.
 
-- [ ] **TASK-111 — Add working calendars, holidays, leave types and policy versions.**
+- [x] **TASK-111 — Add working calendars, holidays, leave types and policy versions.**
       Support country/region holiday presets that HR confirms, company holidays,
       full-day/half-day units, effective-dated entitlements, accrual, carry-forward,
-      expiry, evidence rules, staffing controls and encashment policy.
+      expiry, evidence rules, staffing controls and encashment policy. Delivered by
+      migration 0050 and PWA v109: five tenant-scoped policy tables, confirmed-only
+      historical resolvers and deterministic working-day/half-day calculation.
+      Official imports remain inert drafts until HR confirms them; existing HR-lite
+      leave rows remain unchanged Legacy snapshots.
 - [ ] **TASK-112 — Add the immutable leave balance ledger.** Record grant, accrual,
       pending reservation, use, release, cancellation, adjustment, carry-forward,
       expiry and encashment as append-only entries; Pending requests reserve balance

@@ -869,10 +869,11 @@ The Demo Viewer is also linked to a real Employee and receives Employee in its r
 union, preserving its existing Viewer grants while proving capability composition.
 The preview banner distinguishes governed `Canonical Data` from old sample previews.
 English, Malay, Simplified Chinese, Japanese and Vietnamese shell copy is complete.
-PWA v108 refreshes the affected shell and managed-role administration assets.
+PWA v109 refreshes the affected shell, managed-role administration and leave-policy
+schema bundle.
 
-Verification covers 414 tests plus one expected skip, 50 ordered migrations,
-137 drift-checked tables, the Employee-only dashboard denial/My Work success path, real
+Verification covers 420 tests plus one expected skip, 51 ordered migrations,
+142 drift-checked tables, the Employee-only dashboard denial/My Work success path, real
 actor leave, capability-hidden versus manager-visible tabs, privacy redaction,
 read-only approval, cross-organisation login reuse, managed Manager grants, five
 languages and desktop/375px layout. The shared list audit covers 48 routes. The
@@ -883,7 +884,8 @@ registry is **120 total: 115 Canonical / 5 Preview**.
 The 115-route Canonical boundary does **not** yet promote the newly approved
 employee self-service pages. TASK-106 through TASK-110 have delivered identity,
 account lifecycle, actor-owned API, five Preview shell routes and the identity
-security proof. TASK-111 through TASK-135 remain planning records and must not be
+security proof. TASK-111 has delivered the policy/calendar foundation. TASK-112
+through TASK-135 remain planning records and must not be
 counted as implemented tables,
 permissions, commands or Canonical workflows until their individual gates pass.
 
@@ -921,9 +923,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 109 tasks, including TASK-110
+- Done: 110 tasks, including TASK-111
 - Blocked: TASK-017 (1)
-- Todo: 25 planned tasks (TASK-111–135) across EPIC-053–056. These extend the product
+- Todo: 24 planned tasks (TASK-112–135) across EPIC-053–056. These extend the product
   beyond the current 115 Canonical / 5 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 48 audited
   list-layout routes. Future Leave/Receipt/Expense/Tax routes must join the appropriate

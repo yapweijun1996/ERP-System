@@ -133,6 +133,171 @@ export const employeeHierarchyScope = pgTable('employee_hierarchy_scope', {
   ),
 ]);
 
+/** Stable calendar identity. Effective work patterns live in immutable versions. */
+export const workingCalendar = pgTable('working_calendar', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  timeZone: text('time_zone').notNull().default('Asia/Singapore'),
+  isDefault: boolean('is_default').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_working_calendar_code').on(t.masterFn, t.companyFn, t.code),
+  uniqueIndex('uq_working_calendar_scope_id').on(t.id, t.masterFn, t.companyFn),
+  uniqueIndex('uq_working_calendar_default')
+    .on(t.masterFn, t.companyFn)
+    .where(sql`${t.isDefault} = true`),
+]);
+
+/** Weekdays are ISO weekday numbers (1=Monday … 7=Sunday). */
+export const workingCalendarVersion = pgTable('working_calendar_version', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  calendarId: bigint('calendar_id', { mode: 'number' }).notNull()
+    .references(() => workingCalendar.id),
+  versionNo: integer('version_no').notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  weekdays: jsonb('weekdays').notNull(),
+  status: text('status').notNull().default('draft'),
+  confirmedByUserId: bigint('confirmed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_working_calendar_version')
+    .on(t.masterFn, t.companyFn, t.calendarId, t.versionNo),
+  uniqueIndex('uq_working_calendar_version_scope_id')
+    .on(t.id, t.masterFn, t.companyFn),
+  index('idx_working_calendar_version_effective')
+    .on(t.masterFn, t.companyFn, t.calendarId, t.status, t.effectiveFrom, t.effectiveTo),
+  check('ck_working_calendar_version_no', sql`${t.versionNo} > 0`),
+  check(
+    'ck_working_calendar_version_dates',
+    sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`,
+  ),
+  check(
+    'ck_working_calendar_version_status',
+    sql`${t.status} in ('draft', 'confirmed', 'retired')`,
+  ),
+  check(
+    'ck_working_calendar_version_confirmation',
+    sql`(${t.status} = 'confirmed' and ${t.confirmedAt} is not null and ${t.confirmedByUserId} is not null)
+      or (${t.status} <> 'confirmed')`,
+  ),
+]);
+
+/** Official imports remain draft until HR confirms them; company holidays are
+ * explicit HR facts and are confirmed when created. */
+export const calendarHoliday = pgTable('calendar_holiday', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  calendarVersionId: bigint('calendar_version_id', { mode: 'number' }).notNull()
+    .references(() => workingCalendarVersion.id),
+  holidayDate: date('holiday_date').notNull(),
+  name: text('name').notNull(),
+  source: text('source').notNull(),
+  country: text('country'),
+  status: text('status').notNull().default('draft'),
+  confirmedByUserId: bigint('confirmed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_calendar_holiday')
+    .on(t.masterFn, t.companyFn, t.calendarVersionId, t.holidayDate, t.name),
+  index('idx_calendar_holiday_effective')
+    .on(t.masterFn, t.companyFn, t.calendarVersionId, t.status, t.holidayDate),
+  check('ck_calendar_holiday_source', sql`${t.source} in ('official', 'company')`),
+  check('ck_calendar_holiday_status', sql`${t.status} in ('draft', 'confirmed')`),
+  check(
+    'ck_calendar_holiday_confirmation',
+    sql`(${t.status} = 'confirmed' and ${t.confirmedAt} is not null and ${t.confirmedByUserId} is not null)
+      or (${t.status} = 'draft' and ${t.confirmedAt} is null and ${t.confirmedByUserId} is null)`,
+  ),
+]);
+
+/** Stable leave classification; calculation/governance rules live in versions. */
+export const leaveType = pgTable('leave_type', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  paid: boolean('paid').notNull().default(true),
+  isActive: boolean('is_active').notNull().default(true),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_leave_type_code').on(t.masterFn, t.companyFn, t.code),
+  uniqueIndex('uq_leave_type_scope_id').on(t.id, t.masterFn, t.companyFn),
+]);
+
+export const leavePolicyVersion = pgTable('leave_policy_version', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  leaveTypeId: bigint('leave_type_id', { mode: 'number' }).notNull()
+    .references(() => leaveType.id),
+  calendarId: bigint('calendar_id', { mode: 'number' }).notNull()
+    .references(() => workingCalendar.id),
+  versionNo: integer('version_no').notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  status: text('status').notNull().default('draft'),
+  unitMode: text('unit_mode').notNull().default('full_and_half_day'),
+  annualEntitlementDays: numeric('annual_entitlement_days', { precision: 8, scale: 2 })
+    .notNull().default('0'),
+  accrualMethod: text('accrual_method').notNull().default('upfront'),
+  carryForwardDays: numeric('carry_forward_days', { precision: 8, scale: 2 })
+    .notNull().default('0'),
+  carryExpiryMonths: integer('carry_expiry_months'),
+  evidenceAfterDays: numeric('evidence_after_days', { precision: 8, scale: 2 }),
+  staffingAction: text('staffing_action').notNull().default('warn'),
+  minimumStaff: integer('minimum_staff').notNull().default(0),
+  encashmentAllowed: boolean('encashment_allowed').notNull().default(false),
+  encashmentMaxDays: numeric('encashment_max_days', { precision: 8, scale: 2 })
+    .notNull().default('0'),
+  eligibleEmploymentTypes: jsonb('eligible_employment_types').notNull(),
+  confirmedByUserId: bigint('confirmed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_leave_policy_version')
+    .on(t.masterFn, t.companyFn, t.leaveTypeId, t.versionNo),
+  index('idx_leave_policy_version_effective')
+    .on(t.masterFn, t.companyFn, t.leaveTypeId, t.status, t.effectiveFrom, t.effectiveTo),
+  check('ck_leave_policy_version_no', sql`${t.versionNo} > 0`),
+  check(
+    'ck_leave_policy_dates',
+    sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`,
+  ),
+  check('ck_leave_policy_status', sql`${t.status} in ('draft', 'confirmed', 'retired')`),
+  check('ck_leave_policy_unit', sql`${t.unitMode} = 'full_and_half_day'`),
+  check('ck_leave_policy_accrual', sql`${t.accrualMethod} in ('none', 'upfront', 'monthly')`),
+  check(
+    'ck_leave_policy_staffing',
+    sql`${t.staffingAction} in ('warn', 'extra_approval', 'block') and ${t.minimumStaff} >= 0`,
+  ),
+  check(
+    'ck_leave_policy_values',
+    sql`${t.annualEntitlementDays} >= 0
+      and ${t.carryForwardDays} >= 0
+      and (${t.carryExpiryMonths} is null or ${t.carryExpiryMonths} > 0)
+      and (${t.evidenceAfterDays} is null or ${t.evidenceAfterDays} >= 0.5)
+      and ${t.encashmentMaxDays} >= 0`,
+  ),
+  check(
+    'ck_leave_policy_encashment',
+    sql`${t.encashmentAllowed} = true or ${t.encashmentMaxDays} = 0`,
+  ),
+  check(
+    'ck_leave_policy_confirmation',
+    sql`(${t.status} = 'confirmed' and ${t.confirmedAt} is not null and ${t.confirmedByUserId} is not null)
+      or (${t.status} <> 'confirmed')`,
+  ),
+]);
+
 export const leaveRequest = pgTable('leave_request', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,

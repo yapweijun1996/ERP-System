@@ -7,6 +7,7 @@ import {
   master, company, currency, appUser, role, rolePermission, userCompany, userCompanyRole,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
   employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
+  calendarHoliday, leavePolicyVersion, leaveType, workingCalendar, workingCalendarVersion,
   purchaseRequisition, purchaseRequisitionLine,
   purchaseRfq, purchaseRfqLine, purchaseRfqSupplier,
   supplierQuotation, supplierQuotationLine,
@@ -463,6 +464,85 @@ export async function seedDemo(db: DB): Promise<void> {
       employmentType: 'Full-time', startDate: '2023-11-15', annualLeaveDays: 14, baseSalary: '4200.00',
     },
   ]).returning({ id: employee.id });
+
+  // TASK-111: confirmed, effective-dated working calendars and leave policies.
+  // Imported official holidays intentionally remain draft until HR confirms them;
+  // explicit company holidays are confirmed facts immediately.
+  const [sgCalendar, myCalendar] = await db.insert(workingCalendar).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'SG-STANDARD',
+      name: 'Singapore standard work week', timeZone: 'Asia/Singapore', isDefault: true,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', code: 'MY-STANDARD',
+      name: 'Malaysia standard work week', timeZone: 'Asia/Kuala_Lumpur', isDefault: true,
+    },
+  ]).returning({ id: workingCalendar.id, companyFn: workingCalendar.companyFn });
+  const policyConfirmedAt = new Date('2025-12-01T00:00:00Z');
+  const [sgCalendarVersion] = await db.insert(workingCalendarVersion).values({
+    masterFn: 'M1', companyFn: 'C-SG', calendarId: sgCalendar.id, versionNo: 1,
+    effectiveFrom: '2026-01-01', effectiveTo: null, weekdays: [1, 2, 3, 4, 5],
+    status: 'confirmed', confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+  }).returning({ id: workingCalendarVersion.id });
+  await db.insert(workingCalendarVersion).values({
+    masterFn: 'M1', companyFn: 'C-MY', calendarId: myCalendar.id, versionNo: 1,
+    effectiveFrom: '2026-01-01', effectiveTo: null, weekdays: [1, 2, 3, 4, 5],
+    status: 'confirmed', confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+  });
+  await db.insert(calendarHoliday).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', calendarVersionId: sgCalendarVersion.id,
+      holidayDate: '2026-08-09', name: 'National Day import', source: 'official',
+      country: 'SG', status: 'draft',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', calendarVersionId: sgCalendarVersion.id,
+      holidayDate: '2026-12-24', name: 'Company year-end holiday', source: 'company',
+      status: 'confirmed', confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+  ]);
+  const leaveTypes = await db.insert(leaveType).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'ANNUAL', name: 'Annual leave', paid: true,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'MEDICAL', name: 'Medical leave', paid: true,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'UNPAID', name: 'Unpaid leave', paid: false,
+    },
+  ]).returning({ id: leaveType.id, code: leaveType.code });
+  const leaveTypeByCode = new Map(leaveTypes.map((type) => [type.code, type.id]));
+  await db.insert(leavePolicyVersion).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', leaveTypeId: leaveTypeByCode.get('ANNUAL')!,
+      calendarId: sgCalendar.id, versionNo: 1, effectiveFrom: '2026-01-01',
+      status: 'confirmed', unitMode: 'full_and_half_day', annualEntitlementDays: '14.00',
+      accrualMethod: 'monthly', carryForwardDays: '5.00', carryExpiryMonths: 3,
+      evidenceAfterDays: null, staffingAction: 'warn', minimumStaff: 2,
+      encashmentAllowed: true, encashmentMaxDays: '3.00',
+      eligibleEmploymentTypes: ['Full-time', 'Part-time'],
+      confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', leaveTypeId: leaveTypeByCode.get('MEDICAL')!,
+      calendarId: sgCalendar.id, versionNo: 1, effectiveFrom: '2026-01-01',
+      status: 'confirmed', unitMode: 'full_and_half_day', annualEntitlementDays: '14.00',
+      accrualMethod: 'upfront', carryForwardDays: '0.00', evidenceAfterDays: '2.00',
+      staffingAction: 'warn', minimumStaff: 0, encashmentAllowed: false,
+      encashmentMaxDays: '0.00', eligibleEmploymentTypes: ['Full-time', 'Part-time', 'Contract'],
+      confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', leaveTypeId: leaveTypeByCode.get('UNPAID')!,
+      calendarId: sgCalendar.id, versionNo: 1, effectiveFrom: '2026-01-01',
+      status: 'confirmed', unitMode: 'full_and_half_day', annualEntitlementDays: '0.00',
+      accrualMethod: 'none', carryForwardDays: '0.00', evidenceAfterDays: null,
+      staffingAction: 'extra_approval', minimumStaff: 2, encashmentAllowed: false,
+      encashmentMaxDays: '0.00', eligibleEmploymentTypes: ['Full-time', 'Part-time', 'Contract', 'Intern'],
+      confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+  ]);
 
   await db.insert(leaveRequest).values([
     {

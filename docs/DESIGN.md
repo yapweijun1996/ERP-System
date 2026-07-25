@@ -191,8 +191,8 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 
 TASK-106 identity primitives, TASK-107 employee account lifecycle, TASK-108
 actor-owned self/team read contracts, TASK-109's five Preview My Work routes and
-TASK-110 identity/security proof are implemented; the remaining sections describe
-the target architecture for TASK-111–135.
+TASK-110 identity/security proof and TASK-111's versioned leave policy calendar are
+implemented; the remaining sections describe the target architecture for TASK-112–135.
 
 ### Identity and authorization
 
@@ -223,6 +223,11 @@ the target architecture for TASK-111–135.
   shell; unfinished claims, receipts and approval commands are not fabricated.
 
 ### Shared workflow and document services
+
+- Working calendars and leave policies have stable identities plus retained,
+  non-overlapping confirmed versions. ISO weekdays and confirmed holiday facts drive
+  calculation; draft official imports are deliberately ignored. Half-day arithmetic
+  uses integer half-day units internally and returns fixed two-decimal days.
 
 - A versioned approval policy resolves ordered steps from domain, company, employee,
   hierarchy, type, amount/days, project and department. Approval instances snapshot

@@ -135,8 +135,8 @@ SG and MY demo companies; production wires real auth.
 > binding/account lifecycle and TASK-108's effective-dated
 > `employee_hierarchy_scope` are present in the current Drizzle schema. TASK-109 adds
 > five UI shell routes and no table. TASK-110 adds role-grant provenance without a
-> new table. The remaining entities in this section are approved targets for
-> TASK-111–135 and are
+> new table. TASK-111 adds the calendar/type/policy entities listed below. The
+> remaining entities are approved targets for TASK-112–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -190,6 +190,12 @@ at submission. `Pending` creates a reservation ledger entry; later decisions app
 release or consumption entries rather than mutating balances. Legacy leave rows retain
 their original `days` snapshot, are labelled `Legacy Policy`, and are not retroactively
 recalculated.
+
+`working_calendar`, `working_calendar_version`, `calendar_holiday`, `leave_type` and
+`leave_policy_version` are implemented by migration 0050. Confirmed versions may not
+overlap. Official holiday imports start as drafts; company holidays are explicit
+confirmed facts. Only confirmed facts affect calculation, so historical versions
+remain reproducible while current HR-lite `leave_request.days` stays untouched.
 
 ### 8.3 Managed documents and extraction
 

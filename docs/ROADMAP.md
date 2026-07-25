@@ -773,16 +773,19 @@ Exit criteria: organisation/username collisions, migration, first activation,
 multi-role permission union, actor isolation, hierarchy scope, offboarding and the
 explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof.
 
-## Phase 35 — Full Leave Management (Planned)
+## Phase 35 — Full Leave Management (In progress)
 
-1. **Policy, calendar and immutable balance** (EPIC-053, TASK-111/112) add confirmed
-   country/region holiday calendars, company work patterns, effective-dated leave
-   types, full/half-day policy and an append-only entitlement/reservation ledger.
-2. **Complete lifecycle and governed approval** (TASK-113/114) add versioned
+1. **Policy and calendar** (TASK-111 done 2026-07-25) add confirmed country/region
+   holiday calendars, company work patterns, effective-dated leave types and
+   deterministic full/half-day calculation. Official imported holidays are inert
+   until HR confirmation; overlapping confirmed versions are rejected.
+2. **Immutable balance** (TASK-112 planned) adds the append-only entitlement,
+   reservation, use, release, carry, expiry and encashment ledger.
+3. **Complete lifecycle and governed approval** (TASK-113/114) add versioned
    amendments, withdrawal, void, approved cancellation, evidence privacy,
    multi-level approval, no self-approval, delegation/escalation and configurable
    minimum-staff controls.
-3. **Team calendar and Payroll integration** (TASK-115/116) introduce
+4. **Team calendar and Payroll integration** (TASK-115/116) introduce
    `calendar-workspace-v1`, role-redacted team availability, optional one-way external
    calendar delivery, unpaid-leave deduction and policy-controlled encashment.
    Historical HR-lite rows keep their original day snapshot under Legacy Policy.
