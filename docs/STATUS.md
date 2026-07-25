@@ -705,13 +705,31 @@ Active/Expiring/Expired, no SLA, zero assets, missing/unknown/failed records,
 customer fallback, five languages and desktop/375px behavior. Service-worker v99
 delivers the shared table, list screens, new route and audit updates.
 
+## Depreciation master-detail register SSOT (TASK-102, 2026-07-25)
+
+The canonical Depreciation page no longer relies on the unstructured `workspace`
+exemption or rebuilds `report`, `report-params`, `report-result`, `report-toolbar`
+and a manual data table. It now renders through `masterDetailRegisterPage()` under
+`data-layout="master-detail-register-v1"` with one page header and the standard KPI,
+filter, table, pagination, register and detail regions.
+
+All bounded Draft, Posted and Cancelled runs are selectable instead of hiding every
+record except the newest. Run number and straight-line method are display facts in a
+responsive creation modal, only the run date is editable, and an existing Draft
+blocks another run. Draft posting uses a confirmation modal and the existing
+idempotent command; Posted runs retain General Ledger navigation and Cancelled runs
+are read-only. Category totals use `buildTable()` inside controlled horizontal
+scrolling. Five-language desktop/375px state proofs cover empty, mixed, create/post
+failure and successful lifecycle refreshes. Service-worker v100 delivers the update,
+and the shared list-layout audit now covers 43 routes.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 100 tasks, including TASK-101
+- Done: 101 tasks, including TASK-102
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
-  complete at 115 Canonical / 0 Preview and 42 audited list-layout routes, including
-  36 transaction lists, 4 master-detail registers and 2 report lists; Warehouse
+  complete at 115 Canonical / 0 Preview and 43 audited list-layout routes, including
+  36 transaction lists, 5 master-detail registers and 2 report lists; Warehouse
   Picking remains on its dedicated operational-workspace SSOT, and BOM, Employee plus
   Service Contract use the shared master-detail editor SSOT.
   NCR and Service Order use the shared actionable Case Detail SSOT.

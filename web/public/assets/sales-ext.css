@@ -116,6 +116,75 @@
 .payroll-run-modal-error{margin:0 0 14px;}
 .payroll-run-form{grid-template-columns:repeat(2,minmax(0,1fr));}
 .payroll-run-confirm{margin:0;color:var(--muted);font-size:calc(13.5px * var(--fs,1));line-height:1.55;}
+.master-detail-register-body[data-list-route="depreciation"] .master-detail-register-workspace{
+  grid-template-columns:minmax(0,1fr) 440px;
+}
+.depreciation-run-detail-head{
+  padding:20px 20px 15px;
+  border-bottom:1px solid var(--hairline);
+}
+.depreciation-run-detail-head .dh-top{align-items:center;gap:12px;}
+.depreciation-run-detail-head .dh-top h2{font-size:calc(20px * var(--fs,1));line-height:1.22;}
+.depreciation-run-detail-head .dh-top .sub{
+  margin-top:4px;font-size:calc(12.5px * var(--fs,1));line-height:1.4;
+}
+.depreciation-run-icon{
+  display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:44px;height:44px;border-radius:13px;background:var(--accent-tint);color:var(--accent);
+}
+.depreciation-run-icon svg{width:22px;height:22px;}
+.depreciation-run-status{margin-left:auto;align-self:flex-start;padding-top:2px;}
+.depreciation-run-detail-body{
+  display:flex;flex-direction:column;gap:16px;padding:18px 20px 32px;
+}
+.depreciation-run-kpis{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.depreciation-run-kpis .stat{
+  display:flex;flex-direction:column;justify-content:center;min-width:0;min-height:76px;
+  padding:13px 14px;border:1px solid var(--hairline);border-radius:11px;background:var(--surface-2);
+}
+.depreciation-run-kpis .stat small{
+  margin-bottom:6px;font-size:calc(10.5px * var(--fs,1));line-height:1.25;
+}
+.depreciation-run-kpis .stat b{
+  font-size:calc(18px * var(--fs,1));line-height:1.2;overflow:hidden;text-overflow:ellipsis;
+}
+.depreciation-run-facts{margin:0;padding:3px 14px;}
+.depreciation-run-facts .field{padding:11px 0;font-size:calc(13px * var(--fs,1));}
+.depreciation-run-categories{min-width:0;overflow:hidden;}
+.depreciation-run-categories .panel-h{padding:14px 15px;}
+.depreciation-run-categories .panel-h h3{font-size:calc(14.5px * var(--fs,1));}
+.depreciation-run-categories .panel-h small{margin-left:auto;color:var(--muted);}
+.depreciation-run-lines-scroll{
+  max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;
+}
+.depreciation-run-lines-scroll .dt{min-width:650px;}
+.depreciation-run-lines-empty{min-height:180px;height:auto!important;}
+.depreciation-run-note{
+  margin:0;border-left:3px solid var(--warn);border-radius:0 var(--r-m) var(--r-m) 0;
+}
+.depreciation-run-note.ok{border-left-color:var(--ok);}
+.depreciation-run-modal-description,.depreciation-run-confirm{
+  margin:0 0 16px;color:var(--muted);font-size:calc(13.5px * var(--fs,1));line-height:1.55;
+}
+.depreciation-run-modal-error{margin:0 0 14px;}
+.depreciation-run-modal-facts{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px;
+}
+.depreciation-run-modal-facts>div{
+  min-width:0;padding:12px 13px;border:1px solid var(--hairline);
+  border-radius:10px;background:var(--surface-2);
+}
+.depreciation-run-modal-facts span{
+  display:block;margin-bottom:5px;color:var(--muted);font-size:calc(10.5px * var(--fs,1));
+  font-weight:600;text-transform:uppercase;letter-spacing:.04em;
+}
+.depreciation-run-modal-facts b{
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:calc(13.5px * var(--fs,1));
+}
+.depreciation-run-date-field{margin:0;}
 .li-subj{color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;}
 .muted-date{color:var(--muted);}
 .linknum{cursor:pointer;}
@@ -244,6 +313,11 @@
   .payroll-run-detail-body{padding:16px 16px 92px;gap:14px;}
   .payroll-run-kpis .stat{min-height:70px;padding:12px;}
   .payroll-run-kpis .stat b{font-size:calc(17px * var(--fs,1));}
+  .depreciation-run-detail-head{padding:16px 16px 14px;}
+  .depreciation-run-detail-body{padding:16px 16px 92px;gap:14px;}
+  .depreciation-run-kpis .stat{min-height:70px;padding:12px;}
+  .depreciation-run-kpis .stat b{font-size:calc(17px * var(--fs,1));}
+  .depreciation-run-modal-facts{grid-template-columns:1fr;}
   .comm-grid{padding:0 16px 18px;}
   .comm-grid .panel-h{align-items:flex-start;flex-direction:column;}
   .comm-grid .panel-h small{margin-left:0;text-align:left;}

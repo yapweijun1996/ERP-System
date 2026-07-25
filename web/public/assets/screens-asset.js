@@ -36,6 +36,16 @@ function assetCopy(){
       runError:'Depreciation run could not be created',postSuccess:'Posted — {amount} to GL',
       postError:'Depreciation run could not be posted',
       pendingRunNote:'Post the pending run before starting a new one.',
+      statusDraft:'Draft',statusPosted:'Posted',statusCancelled:'Cancelled',
+      kpiTotalRuns:'Total runs',kpiDraftRuns:'Draft',kpiPostedRuns:'Posted',kpiLatestDep:'Latest depreciation',
+      newRunTitle:'New depreciation run',selectRun:'Select a depreciation run',
+      selectRunBody:'Choose a run to review its category totals and posting status.',
+      cancelledNote:'Cancelled — this run is read-only and was not posted to GL.',
+      confirmPostTitle:'Post depreciation run?',
+      confirmPostBody:'Post {docNo} for {amount} as Dr 6200 Depreciation Expense / Cr 1510 Accumulated Depreciation. This cannot be reversed here.',
+      runDateRequired:'Run date is required.',
+      noRunLines:'No depreciation lines are attached to this run.',
+      dataLimit:'Showing up to 100 depreciation runs.',
     },
     ms:{
       catPlantMachinery:'Loji & Jentera',catVehicles:'Kenderaan',catLabEquipment:'Peralatan Makmal',
@@ -61,6 +71,16 @@ function assetCopy(){
       runError:'Larian susut nilai tidak dapat dicipta',postSuccess:'Dicatat — {amount} ke GL',
       postError:'Larian susut nilai tidak dapat dicatat',
       pendingRunNote:'Catat larian yang belum selesai sebelum memulakan larian baharu.',
+      statusDraft:'Draf',statusPosted:'Dicatat',statusCancelled:'Dibatalkan',
+      kpiTotalRuns:'Jumlah larian',kpiDraftRuns:'Draf',kpiPostedRuns:'Dicatat',kpiLatestDep:'Susut nilai terkini',
+      newRunTitle:'Larian susut nilai baharu',selectRun:'Pilih larian susut nilai',
+      selectRunBody:'Pilih larian untuk menyemak jumlah kategori dan status catatannya.',
+      cancelledNote:'Dibatalkan — larian ini hanya boleh dibaca dan tidak dicatat ke GL.',
+      confirmPostTitle:'Catat larian susut nilai?',
+      confirmPostBody:'Catat {docNo} berjumlah {amount} sebagai Dr 6200 Perbelanjaan Susut Nilai / Kr 1510 Susut Nilai Terkumpul. Tindakan ini tidak boleh diterbalikkan di sini.',
+      runDateRequired:'Tarikh larian diperlukan.',
+      noRunLines:'Tiada baris susut nilai dilampirkan pada larian ini.',
+      dataLimit:'Memaparkan sehingga 100 larian susut nilai.',
     },
     zh:{
       catPlantMachinery:'厂房及机器',catVehicles:'车辆',catLabEquipment:'实验室设备',
@@ -86,6 +106,16 @@ function assetCopy(){
       runError:'折旧运算创建失败',postSuccess:'已过账 — {amount} 至总账',
       postError:'折旧运算过账失败',
       pendingRunNote:'请先过账待处理的运算,再开始新的运算。',
+      statusDraft:'草稿',statusPosted:'已过账',statusCancelled:'已取消',
+      kpiTotalRuns:'运算总数',kpiDraftRuns:'草稿',kpiPostedRuns:'已过账',kpiLatestDep:'最近折旧额',
+      newRunTitle:'新建折旧运算',selectRun:'选择折旧运算',
+      selectRunBody:'选择一项运算以查看类别汇总和过账状态。',
+      cancelledNote:'已取消 — 此运算为只读且未过账到总账。',
+      confirmPostTitle:'过账折旧运算？',
+      confirmPostBody:'将 {docNo} 的 {amount} 以借记 6200 折旧费用／贷记 1510 累计折旧过账。此处无法撤销此操作。',
+      runDateRequired:'必须填写运算日期。',
+      noRunLines:'此运算没有折旧明细。',
+      dataLimit:'最多显示 100 项折旧运算。',
     },
     ja:{
       catPlantMachinery:'機械装置',catVehicles:'車両',catLabEquipment:'実験機器',
@@ -111,6 +141,16 @@ function assetCopy(){
       runError:'減価償却実行を作成できませんでした',postSuccess:'{amount} を総勘定元帳に計上しました',
       postError:'減価償却実行を計上できませんでした',
       pendingRunNote:'新しい実行を開始する前に、保留中の実行を計上してください。',
+      statusDraft:'下書き',statusPosted:'計上済み',statusCancelled:'キャンセル済み',
+      kpiTotalRuns:'実行総数',kpiDraftRuns:'下書き',kpiPostedRuns:'計上済み',kpiLatestDep:'最新の償却額',
+      newRunTitle:'新しい減価償却実行',selectRun:'減価償却実行を選択',
+      selectRunBody:'実行を選択してカテゴリ別合計と計上状況を確認します。',
+      cancelledNote:'キャンセル済み — この実行は読み取り専用で、総勘定元帳には計上されていません。',
+      confirmPostTitle:'減価償却実行を計上しますか？',
+      confirmPostBody:'{docNo} の {amount} を借方 6200 減価償却費／貸方 1510 減価償却累計額として計上します。ここでは取り消せません。',
+      runDateRequired:'実行日は必須です。',
+      noRunLines:'この実行には減価償却明細がありません。',
+      dataLimit:'最大 100 件の減価償却実行を表示しています。',
     },
     vi:{
       catPlantMachinery:'Nhà xưởng & Máy móc',catVehicles:'Xe cộ',catLabEquipment:'Thiết bị phòng thí nghiệm',
@@ -136,6 +176,16 @@ function assetCopy(){
       runError:'Không thể tạo đợt chạy khấu hao',postSuccess:'Đã ghi {amount} vào sổ cái',
       postError:'Không thể ghi sổ đợt chạy khấu hao',
       pendingRunNote:'Hãy ghi sổ đợt đang chờ trước khi bắt đầu đợt mới.',
+      statusDraft:'Nháp',statusPosted:'Đã ghi sổ',statusCancelled:'Đã hủy',
+      kpiTotalRuns:'Tổng số đợt',kpiDraftRuns:'Nháp',kpiPostedRuns:'Đã ghi sổ',kpiLatestDep:'Khấu hao gần nhất',
+      newRunTitle:'Đợt chạy khấu hao mới',selectRun:'Chọn đợt chạy khấu hao',
+      selectRunBody:'Chọn một đợt để xem tổng theo danh mục và trạng thái ghi sổ.',
+      cancelledNote:'Đã hủy — đợt này chỉ đọc và chưa được ghi vào sổ cái.',
+      confirmPostTitle:'Ghi sổ đợt khấu hao?',
+      confirmPostBody:'Ghi {docNo} với số tiền {amount} theo Nợ 6200 Chi phí khấu hao / Có 1510 Hao mòn lũy kế. Không thể hoàn tác tại đây.',
+      runDateRequired:'Ngày chạy là bắt buộc.',
+      noRunLines:'Không có dòng khấu hao nào trong đợt này.',
+      dataLimit:'Hiển thị tối đa 100 đợt chạy khấu hao.',
     },
   };
   const pack=packs[lang]||packs.en;
@@ -359,109 +409,287 @@ SCREENS['asset-detail'] = async function(root, params){
 /* ---------------- DEPRECIATION RUN (compute + post to GL) ---------------- */
 SCREENS['depreciation'] = async function(root){
   const s=assetCopy();
-  await prepareCanonicalAssetData();
+  let runs=[];
+  let lines=[];
+  let truncated=false;
+  let page;
+  const isDesktop=()=>!window.matchMedia('(max-width:980px)').matches;
 
-  async function loadRuns(){
-    const page=await listPage('assets/depreciation-runs');
-    return page.data.slice().sort((a,b)=>b.id-a.id);
-  }
-  async function loadLines(runId){
-    const page=await listPage('assets/depreciation-run-lines');
-    return page.data.filter(line=>line.runId===runId);
+  async function refreshState(){
+    await prepareCanonicalAssetData();
+    const [runPage,linePage]=await Promise.all([
+      listPage('assets/depreciation-runs'),
+      listPage('assets/depreciation-run-lines'),
+    ]);
+    runs=runPage.data.slice().sort((a,b)=>Number(b.id)-Number(a.id));
+    lines=linePage.data.slice();
+    truncated=Boolean(runPage.nextCursor);
   }
   function nextDocNo(runs){
     let max=0;
     runs.forEach(r=>{ const m=/(\d+)\s*$/.exec(r.docNo||''); if(m&&+m[1]>max) max=+m[1]; });
     return 'DEP-'+String(max+1).padStart(4,'0');
   }
-  function groupTable(lines){
+  function localDateIso(date){
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  }
+  function statusLabel(status){
+    return s(status==='posted'?'statusPosted':status==='cancelled'?'statusCancelled':'statusDraft');
+  }
+  function statusTone(status){
+    return status==='posted'?'ok':status==='cancelled'?'neutral':'warn';
+  }
+  function hasDraft(){
+    return runs.some(run=>run.status==='draft');
+  }
+  function activeModal(){
+    const modals=document.querySelectorAll('body > #modalEl');
+    return modals[modals.length-1]||null;
+  }
+  function summaryFor(run){
+    const runLines=lines.filter(line=>Number(line.runId)===Number(run.id));
     const assetById=new Map(DB.assets.map(a=>[a.id,a]));
     const byCat=new Map();
-    let totOpen=0, totDep=0;
-    lines.forEach(line=>{
+    let opening=0;
+    let depreciation=0;
+    let closing=0;
+    runLines.forEach(line=>{
       const asset=assetById.get(line.assetId);
       const cat=asset?asset.cat:'—';
-      const cur=byCat.get(cat)||{cat,n:0,open:0,dep:0};
-      cur.n+=1; cur.open+=assetNumber(line.openingNbv); cur.dep+=assetNumber(line.depreciationAmount);
+      const cur=byCat.get(cat)||{cat,count:0,opening:0,depreciation:0,closing:0};
+      cur.count+=1;
+      cur.opening+=assetNumber(line.openingNbv);
+      cur.depreciation+=assetNumber(line.depreciationAmount);
+      cur.closing+=assetNumber(line.closingNbv);
       byCat.set(cat,cur);
-      totOpen+=assetNumber(line.openingNbv); totDep+=assetNumber(line.depreciationAmount);
+      opening+=assetNumber(line.openingNbv);
+      depreciation+=assetNumber(line.depreciationAmount);
+      closing+=assetNumber(line.closingNbv);
     });
-    const tpl='minmax(220px,2.4fr) 90px 150px 140px 150px';
-    let h=`<div class="dt-page"><div class="dt" role="table" style="--tpl:${tpl}">
-      <div class="dt-r dt-head"><div class="dt-c l">${esc(t('fa.col.category'))}</div><div class="dt-c r">${esc(s('colAssets'))}</div><div class="dt-c r">${esc(s('colOpening'))}</div><div class="dt-c r">${esc(s('colDep'))}</div><div class="dt-c r">${esc(s('colClosing'))}</div></div>
-      <div class="dt-body">`;
-    Array.from(byCat.values()).forEach(g=>{
-      h+=`<div class="dt-r"><div class="dt-c l"><b>${esc(s(ASSET_CATEGORY_KEY[g.cat]||g.cat))}</b></div><div class="dt-c r tnum">${g.n}</div><div class="dt-c r tnum">${money0(g.open)}</div><div class="dt-c r tnum">${money0(g.dep)}</div><div class="dt-c r tnum">${money0(g.open-g.dep)}</div></div>`;
-    });
-    h+=`<div class="dt-r grandtotal"><div class="dt-c l">${esc(s('total'))}</div><div class="dt-c r tnum">${lines.length}</div><div class="dt-c r tnum">${money0(totOpen)}</div><div class="dt-c r tnum">${money0(totDep)}</div><div class="dt-c r tnum">${money0(totOpen-totDep)}</div></div>`;
-    h+='</div></div></div>';
-    return h;
+    return {
+      lines:runLines,
+      categories:Array.from(byCat.values()).sort((a,b)=>
+        s(ASSET_CATEGORY_KEY[a.cat]||a.cat).localeCompare(s(ASSET_CATEGORY_KEY[b.cat]||b.cat))),
+      opening,
+      depreciation,
+      closing,
+    };
   }
-
-  let runs=await loadRuns();
-
-  async function render(){
-    const latest=runs[0]||null;
-    const lines=latest?await loadLines(latest.id):[];
-    const isDraft=latest&&latest.status==='draft';
-    const isPosted=latest&&latest.status==='posted';
-    root.innerHTML=`<div class="content full"><section class="master"><div class="report">
-      <aside class="report-params">
-        <h3>${esc(s('runParameters'))}</h3>
-        <div class="fld"><span>${esc(s('fieldDocNo'))}</span><input id="depDocNo" value="${esc(nextDocNo(runs))}" readonly></div>
-        <div class="fld"><span>${esc(s('fieldRunDate'))}</span><input id="depRunDate" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-        <div class="fld"><span>${esc(s('fieldMethod'))}</span><input value="${esc(s('straightLine'))}" readonly></div>
-        ${btn(s('runButton'),{icon:'play',cls:'primary',sm:false,attrs:`data-run="1"${isDraft?' disabled':''} title="${isDraft?esc(s('pendingRunNote')):''}"`})}
-        ${latest?`<div class="note rule" style="border:1px solid var(--hairline);border-left:3px solid ${isPosted?'var(--ok)':'var(--warn)'};background:var(--surface);border-radius:0 var(--r-m) var(--r-m) 0;padding:11px 13px;font-size:12.5px;margin-top:6px">
-          <b style="display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:3px">${esc(latest.docNo)}</b>
-          ${esc((isPosted?s('postedNote'):s('draftNote')).replace('{amount}',money0(assetNumber(latest.totalAmount))))}
-        </div>`:''}
-      </aside>
-      <div class="report-result">
-        <div class="report-toolbar">
-          <div><b style="font-size:15px">${esc(s('runTitle'))}</b><div class="report-meta">${latest?esc(latest.docNo)+' · '+esc(dateValue(latest.runDate))+' · '+lines.length+' '+esc(s('assetsWord')):esc(s('noRunYet'))}</div></div>
-          <div class="grow"></div>
-          ${isDraft?btn(s('postButton'),{icon:'book',cls:'primary',attrs:'data-post="1"'}):''}
-          ${isPosted?btn(s('viewGl'),{icon:'book',cls:'soft',attrs:'onclick="navigate(\'gl\')"'}):''}
+  function categoryTable(summary){
+    if(!summary.categories.length){
+      return `<div class="detail-empty depreciation-run-lines-empty">
+        ${ic('chart')}<div><b>${esc(s('noRunLines'))}</b></div>
+      </div>`;
+    }
+    return `<div class="depreciation-run-lines-scroll">${buildTable({
+      rows:summary.categories,
+      rowId:group=>group.cat,
+      rowInteraction:()=>({kind:'none',label:''}),
+      columns:[
+        {label:t('fa.col.category'),align:'l',sticky:true,w:'minmax(170px,1.5fr)',render:group=>`<b>${esc(s(ASSET_CATEGORY_KEY[group.cat]||group.cat))}</b>`},
+        {label:s('colAssets'),align:'r',w:'80px',render:group=>`<span class="tnum">${group.count}</span>`},
+        {label:s('colOpening'),align:'r',w:'130px',render:group=>`<span class="tnum">${money0(group.opening)}</span>`},
+        {label:s('colDep'),align:'r',w:'120px',render:group=>`<span class="tnum">${money0(group.depreciation)}</span>`},
+        {label:s('colClosing'),align:'r',w:'130px',render:group=>`<b class="tnum">${money0(group.closing)}</b>`},
+      ],
+    })}</div>`;
+  }
+  function detailContent(run){
+    const summary=summaryFor(run);
+    const note=run.status==='posted'
+      ?s('postedNote').replace('{amount}',money0(assetNumber(run.totalAmount)))
+      :run.status==='cancelled'
+        ?s('cancelledNote')
+        :s('draftNote').replace('{amount}',money0(assetNumber(run.totalAmount)));
+    const actions=run.status==='draft'
+      ?btn(s('postButton'),{icon:'book',cls:'primary',sm:false,attrs:`data-depreciation-post="${run.id}"`})
+      :run.status==='posted'
+        ?btn(s('viewGl'),{icon:'book',cls:'soft',sm:false,attrs:'data-depreciation-gl'})
+        :'';
+    return `<div class="detail-head depreciation-run-detail-head">
+        <span class="grabber"></span>
+        <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
+        <div class="dh-top">
+          <span class="depreciation-run-icon">${ic('chart')}</span>
+          <div><h2>${esc(run.docNo)}</h2><span class="sub">${esc(dateValue(run.runDate))} · ${summary.lines.length} ${esc(s('assetsWord'))}</span></div>
+          <div class="depreciation-run-status">${cap(statusLabel(run.status),statusTone(run.status))}</div>
         </div>
-        <div class="tablewrap" id="depTable">${latest?groupTable(lines):statePanel({icon:'chart',title:s('noRunYet'),body:s('noRunBody')})}</div>
       </div>
-    </div></section></div>`;
-    wire();
+      <div class="detail-body depreciation-run-detail-body" data-depreciation-run-detail="${run.id}">
+        <div class="depreciation-run-kpis">
+          <div class="stat"><small>${esc(s('colAssets'))}</small><b class="tnum">${summary.lines.length}</b></div>
+          <div class="stat"><small>${esc(s('colOpening'))}</small><b class="tnum">${money0(summary.opening)}</b></div>
+          <div class="stat"><small>${esc(s('colDep'))}</small><b class="tnum">${money0(summary.depreciation)}</b></div>
+          <div class="stat"><small>${esc(s('colClosing'))}</small><b class="tnum">${money0(summary.closing)}</b></div>
+        </div>
+        <div class="card depreciation-run-facts">
+          <div class="field"><span class="k">${esc(s('fieldRunDate'))}</span><span class="v">${esc(dateValue(run.runDate))}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldMethod'))}</span><span class="v">${esc(s('straightLine'))}</span></div>
+          <div class="field"><span class="k">${esc(s('fieldGlAccounts'))}</span><span class="v">Dr 6200 · Cr 1510</span></div>
+          <div class="field"><span class="k">${esc(t('col.status'))}</span><span class="v">${cap(statusLabel(run.status),statusTone(run.status))}</span></div>
+        </div>
+        <div class="panel depreciation-run-categories">
+          <div class="panel-h"><h3>${esc(t('fa.col.category'))}</h3><small>${summary.categories.length}</small></div>
+          ${categoryTable(summary)}
+        </div>
+        <div class="note rule depreciation-run-note ${run.status==='posted'?'ok':run.status==='cancelled'?'':'warn'}">${esc(note)}</div>
+      </div>
+      ${actions?`<div class="set-savebar depreciation-run-actions" data-depreciation-actions>
+        <div class="grow"></div>${actions}
+      </div>`:''}`;
   }
-
-  function wire(){
-    const runBtn=root.querySelector('[data-run]');
-    runBtn&&runBtn.addEventListener('click',async()=>{
-      runBtn.disabled=true;
+  function openCreateRun(){
+    if(hasDraft()){
+      toast(s('pendingRunNote'),'warn');
+      return;
+    }
+    const docNo=nextDocNo(runs);
+    appModal({
+      icon:'play',
+      title:s('newRunTitle'),
+      width:620,
+      body:`<p class="depreciation-run-modal-description">${esc(s('noRunBody'))}</p>
+        <div class="alert danger depreciation-run-modal-error" data-depreciation-create-error role="alert" hidden></div>
+        <div class="depreciation-run-modal-facts">
+          <div><span>${esc(s('fieldDocNo'))}</span><b class="mono">${esc(docNo)}</b></div>
+          <div><span>${esc(s('fieldMethod'))}</span><b>${esc(s('straightLine'))}</b></div>
+        </div>
+        <div class="fld depreciation-run-date-field">
+          <span>${esc(s('fieldRunDate'))} <span class="req">*</span></span>
+          <input id="depRunDate" type="date" value="${localDateIso(new Date())}">
+        </div>`,
+      actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}
+        ${btn(s('runButton'),{icon:'play',cls:'primary',sm:false,attrs:'data-depreciation-create'})}`,
+    });
+    const modal=activeModal();
+    const create=modal.querySelector('[data-depreciation-create]');
+    const errorRoot=modal.querySelector('[data-depreciation-create-error]');
+    create.addEventListener('click',async()=>{
+      const runDate=modal.querySelector('#depRunDate').value;
+      if(!runDate){
+        errorRoot.hidden=false;
+        errorRoot.innerHTML=`${ic('warn')}<span>${esc(s('runDateRequired'))}</span>`;
+        modal.querySelector('#depRunDate').focus();
+        return;
+      }
+      errorRoot.hidden=true;
+      errorRoot.innerHTML='';
+      create.disabled=true;
       try{
-        const docNo=$('#depDocNo').value.trim();
-        const runDate=$('#depRunDate').value;
-        await window.ErpSystemData.create('assets/depreciation-runs',{docNo,runDate});
+        const response=await window.ErpSystemData.create('assets/depreciation-runs',{docNo,runDate});
+        await refreshState();
+        primaryAction.disabled=hasDraft();
+        const createdId=Number(response&&response.data&&response.data.id)||Number(runs[0]&&runs[0].id);
+        closeModal();
         toast(s('runCreated'),'ok');
-        runs=await loadRuns();
-        await render();
+        page.render();
+        if(isDesktop()&&createdId) page.select(createdId);
       }catch(error){
-        toast(error&&error.message?error.message:s('runError'),'danger');
-        runBtn.disabled=false;
+        const message=error&&error.message?error.message:s('runError');
+        errorRoot.hidden=false;
+        errorRoot.innerHTML=`${ic('warn')}<span>${esc(message)}</span>`;
+        create.disabled=false;
       }
     });
-    const postBtn=root.querySelector('[data-post]');
-    postBtn&&postBtn.addEventListener('click',async()=>{
-      postBtn.disabled=true;
-      const latest=runs[0];
+  }
+  function confirmPost(run){
+    const body=s('confirmPostBody')
+      .replace('{docNo}',run.docNo)
+      .replace('{amount}',money0(assetNumber(run.totalAmount)));
+    appModal({
+      icon:'book',
+      title:s('confirmPostTitle'),
+      width:560,
+      body:`<div class="alert danger depreciation-run-modal-error" data-depreciation-post-error role="alert" hidden></div>
+        <p class="depreciation-run-confirm">${esc(body)}</p>`,
+      actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}
+        ${btn(s('postButton'),{icon:'book',cls:'primary',sm:false,attrs:`data-depreciation-post-confirm="${run.id}"`})}`,
+    });
+    const modal=activeModal();
+    const confirm=modal.querySelector('[data-depreciation-post-confirm]');
+    const errorRoot=modal.querySelector('[data-depreciation-post-error]');
+    confirm.addEventListener('click',async()=>{
+      confirm.disabled=true;
+      errorRoot.hidden=true;
+      errorRoot.innerHTML='';
       try{
-        await window.ErpSystemData.action('assets/depreciation-runs',latest.id,'post',{},`post-depreciation-run-${latest.id}`);
-        toast(s('postSuccess').replace('{amount}',money0(assetNumber(latest.totalAmount))),'ok');
-        runs=await loadRuns();
-        await prepareCanonicalAssetData();
-        await render();
+        await window.ErpSystemData.action('assets/depreciation-runs',run.id,'post',{},`post-depreciation-run-${run.id}`);
+        await refreshState();
+        primaryAction.disabled=hasDraft();
+        closeModal();
+        toast(s('postSuccess').replace('{amount}',money0(assetNumber(run.totalAmount))),'ok');
+        page.render();
       }catch(error){
-        toast(error&&error.message?error.message:s('postError'),'danger');
-        postBtn.disabled=false;
+        const message=error&&error.message?error.message:s('postError');
+        errorRoot.hidden=false;
+        errorRoot.innerHTML=`${ic('warn')}<span>${esc(message)}</span>`;
+        confirm.disabled=false;
       }
     });
   }
 
-  await render();
+  await refreshState();
+  const primaryAction={
+    label:s('runButton'),
+    icon:'play',
+    onClick:openCreateRun,
+    disabled:hasDraft(),
+  };
+  page=masterDetailRegisterPage(root,{
+    module:'asset',
+    route:'depreciation',
+    title:s('runTitle'),
+    description:s('noRunBody'),
+    rows:()=>runs,
+    rowId:run=>run.id,
+    initialFilter:'all',
+    filters:[
+      ['all',t('common.all')],
+      ['draft',s('statusDraft')],
+      ['posted',s('statusPosted')],
+      ['cancelled',s('statusCancelled')],
+    ],
+    filterFn:(run,status)=>run.status===status,
+    kpis:()=>{
+      const latest=runs[0];
+      return [
+        {label:s('kpiTotalRuns'),value:runs.length,filter:'all'},
+        {label:s('kpiDraftRuns'),value:runs.filter(run=>run.status==='draft').length,filter:'draft'},
+        {label:s('kpiPostedRuns'),value:runs.filter(run=>run.status==='posted').length,filter:'posted'},
+        {label:s('kpiLatestDep'),value:latest?money0(assetNumber(latest.totalAmount)):'—',accent:Boolean(latest)},
+      ];
+    },
+    count:()=>runs.length,
+    primaryAction,
+    note:()=>hasDraft()?s('pendingRunNote'):truncated?s('dataLimit'):'',
+    columns:[
+      {label:s('colRun'),align:'l',sticky:true,w:'minmax(150px,1.4fr)',render:run=>`<div class="cellsub"><b>${esc(run.docNo)}</b><small>${esc(dateValue(run.runDate))}</small></div>`},
+      {label:s('fieldRunDate'),align:'l',w:'120px',render:run=>esc(dateValue(run.runDate))},
+      {label:s('colAssets'),align:'r',w:'90px',render:run=>`<span class="tnum">${summaryFor(run).lines.length}</span>`},
+      {label:s('colDep'),align:'r',w:'140px',render:run=>`<b class="tnum">${money0(assetNumber(run.totalAmount))}</b>`},
+      {label:t('col.status'),align:'l',w:'110px',render:run=>cap(statusLabel(run.status),statusTone(run.status))},
+    ],
+    empty:{icon:'chart',title:s('noRunYet'),description:s('noRunBody')},
+    detailPane:{
+      rowLabel:run=>`${t('common.open')} ${run.docNo}`,
+      initialSelectedId:()=>isDesktop()?runs[0]?.id??null:null,
+      selectionOnFilter:visible=>isDesktop()?visible[0]?.id??null:null,
+      empty:`<div class="detail-empty">${ic('chart')}<div><b>${esc(s('selectRun'))}</b><small>${esc(s('selectRunBody'))}</small></div></div>`,
+      content:detailContent,
+      afterRender:({detailRoot,row})=>{
+        if(!detailRoot||!row) return;
+        detailRoot.querySelector('[data-depreciation-post]')?.addEventListener('click',()=>confirmPost(row));
+        detailRoot.querySelector('[data-depreciation-gl]')?.addEventListener('click',()=>navigate('gl'));
+      },
+    },
+    afterRender:({root:listRoot})=>{
+      const layoutRoot=listRoot.querySelector('[data-list-route="depreciation"]');
+      if(layoutRoot) layoutRoot.setAttribute('data-canonical-depreciation','true');
+      const primary=listRoot.querySelector('[data-list-primary-action]');
+      if(primary&&primaryAction.disabled){
+        primary.title=s('pendingRunNote');
+        primary.setAttribute('aria-label',`${s('runButton')}: ${s('pendingRunNote')}`);
+      }
+    },
+  });
 };

@@ -118,6 +118,23 @@ if (obsoleteEmployeeChrome.length) {
   throw new Error(`Employee still rebuilds legacy document chrome: ${obsoleteEmployeeChrome.join(', ')}`);
 }
 
+const assetScreenSource = readFileSync(path.join(assetDir, 'screens-asset.js'), 'utf8');
+const depreciationScreenSource = assetScreenSource.split("SCREENS['depreciation'] =")[1] || '';
+const obsoleteDepreciationChrome = [
+  'class="report"',
+  'report-params',
+  'report-result',
+  'report-toolbar',
+  '<div class="dt-page"',
+  'readonly',
+].filter((token) => depreciationScreenSource.includes(token));
+if (!depreciationScreenSource.includes('masterDetailRegisterPage(root')) {
+  throw new Error('Depreciation does not render through masterDetailRegisterPage().');
+}
+if (obsoleteDepreciationChrome.length) {
+  throw new Error(`Depreciation still rebuilds legacy report chrome: ${obsoleteDepreciationChrome.join(', ')}`);
+}
+
 const serviceScreenSource = readFileSync(path.join(assetDir, 'screens-service.js'), 'utf8');
 const serviceContractScreenSource = serviceScreenSource.split("SCREENS['service-contract'] =")[1] || '';
 const obsoleteServiceContractChrome = [
@@ -1884,6 +1901,236 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'payroll-run');
     if (result) {
       result.layoutIssues.push(...payrollIssues.map((issue) => `Payroll Run smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
+      result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('depreciation')) {
+    const depreciationIssues = await page.evaluate(async ({ mobile }) => {
+      const originalGetLang = window.getLang;
+      const adapter = window.ErpSystemData;
+      const originalList = adapter.list;
+      const originalCreate = adapter.create;
+      const originalAction = adapter.action;
+      const expected = {
+        en:'Depreciation Run',
+        ms:'Larian Susut Nilai',
+        zh:'折旧运算',
+        ja:'減価償却実行',
+        vi:'Đợt Chạy Khấu Hao',
+      };
+      const assets = [{
+        id:801,assetNo:'FA-801',name:'Audit CNC',category:'Plant & Machinery',
+        location:'Plant 1',acquisitionDate:'2025-01-01',cost:'120000.00',
+        residualValue:'12000.00',usefulLifeYears:5,accumulatedDepreciation:'1800.00',
+        method:'straight_line',status:'in_use',version:1,
+      },{
+        id:802,assetNo:'FA-802',name:'Audit Van',category:'Vehicles',
+        location:'HQ',acquisitionDate:'2025-02-01',cost:'60000.00',
+        residualValue:'6000.00',usefulLifeYears:5,accumulatedDepreciation:'900.00',
+        method:'straight_line',status:'in_use',version:1,
+      }];
+      const draft = {
+        id:903,docNo:'DEP-0903',runDate:'2026-07-25',status:'draft',
+        totalAmount:'2700.00',version:1,postedAt:null,
+      };
+      const posted = {
+        id:902,docNo:'DEP-0902',runDate:'2026-06-30',status:'posted',
+        totalAmount:'2700.00',version:2,postedAt:'2026-06-30T04:00:00.000Z',
+      };
+      const cancelled = {
+        id:901,docNo:'DEP-0901',runDate:'2026-05-31',status:'cancelled',
+        totalAmount:'2700.00',version:2,postedAt:null,
+      };
+      const linesFor = (runId) => [{
+        id:runId*10+1,runId,lineNo:1,assetId:801,
+        openingNbv:'118200.00',depreciationAmount:'1800.00',closingNbv:'116400.00',
+      },{
+        id:runId*10+2,runId,lineNo:2,assetId:802,
+        openingNbv:'59100.00',depreciationAmount:'900.00',closingNbv:'58200.00',
+      }];
+      let runRows=[draft,posted,cancelled];
+      let lineRows=runRows.flatMap((run)=>linesFor(run.id));
+      const issues = [];
+      const depRoot = () => document.querySelector(
+        '#viewRoot [data-layout="master-detail-register-v1"][data-list-route="depreciation"]',
+      );
+      const rows = () => [...(depRoot()?.querySelectorAll('[data-list-table] .dt-r[data-row]') || [])];
+      const activeModal = () => {
+        const modals = document.querySelectorAll('body > #modalEl');
+        return modals[modals.length - 1] || null;
+      };
+      const installListStub = () => {
+        adapter.list = async (resource,query) => {
+          if (resource === 'assets/assets') return {data:assets,meta:{nextCursor:null}};
+          if (resource === 'assets/depreciation-runs') return {data:runRows,meta:{nextCursor:null}};
+          if (resource === 'assets/depreciation-run-lines') return {data:lineRows,meta:{nextCursor:null}};
+          return originalList.call(adapter,resource,query);
+        };
+      };
+      const wait = (ms=30) => new Promise((resolve)=>setTimeout(resolve,ms));
+      try {
+        installListStub();
+        for (const [locale,title] of Object.entries(expected)) {
+          window.getLang = () => locale;
+          await navigate('depreciation');
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (heading !== title) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          if (!depRoot()) issues.push(`${locale} master-detail register root missing`);
+          if (depRoot()?.getAttribute('data-canonical-depreciation') !== 'true') {
+            issues.push(`${locale} canonical marker missing`);
+          }
+        }
+
+        window.getLang = () => 'en';
+        await navigate('depreciation');
+        const primary = document.querySelector('#viewRoot [data-list-primary-action]');
+        if (rows().length !== 3) issues.push('mixed depreciation history did not render all runs');
+        if (!primary?.disabled || !primary?.title.includes('pending')) {
+          issues.push('an existing draft did not disable and explain the new-run action');
+        }
+        if (depRoot()?.querySelector('.report,.report-params,.report-result,.report-toolbar,input[readonly]')) {
+          issues.push('legacy report chrome or read-only fake controls remain');
+        }
+        if (rows().some((row)=>row.dataset.rowInteraction!=='select'||row.getAttribute('tabindex')!=='0')) {
+          issues.push('depreciation history rows do not use the select interaction contract');
+        }
+
+        if (mobile && rows()[0]) {
+          if (depRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile depreciation detail opened before row selection');
+          }
+          rows()[0].click();
+          if (!depRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile depreciation row did not open the detail drawer');
+          }
+          depRoot()?.querySelector('[data-master-detail-close]')?.click();
+          if (depRoot()?.querySelector('[data-master-detail-panel].open')) {
+            issues.push('mobile depreciation detail did not close');
+          }
+          rows()[0]?.click();
+        }
+
+        const post = depRoot()?.querySelector('[data-depreciation-post]');
+        if (!post) {
+          issues.push('draft depreciation run is missing Post to GL');
+        } else {
+          adapter.action = async () => { throw new Error('depreciation post audit failure'); };
+          post.click();
+          const confirm = activeModal()?.querySelector('[data-depreciation-post-confirm]');
+          if (!confirm) {
+            issues.push('depreciation post confirmation modal did not open');
+          } else {
+            confirm.click();
+            await wait();
+            const error = activeModal()?.querySelector('[data-depreciation-post-error]');
+            if (!error || error.hidden || !error.textContent.includes('audit failure')) {
+              issues.push('failed depreciation post did not remain recoverable in the modal');
+            }
+            if (confirm.disabled) issues.push('failed depreciation post did not re-enable confirmation');
+          }
+          closeModal();
+          await wait(220);
+          adapter.action = originalAction;
+        }
+
+        runRows=[];
+        lineRows=[];
+        await navigate('depreciation');
+        if (!depRoot()?.querySelector('[data-list-empty]')
+            || !depRoot()?.querySelector('[data-master-detail-panel].is-empty')) {
+          issues.push('empty depreciation register left the shared empty/detail contract');
+        }
+        const emptyPrimary = document.querySelector('#viewRoot [data-list-primary-action]');
+        if (!emptyPrimary || emptyPrimary.disabled) {
+          issues.push('empty depreciation register did not enable Run depreciation');
+        } else {
+          emptyPrimary.click();
+          const modal = activeModal();
+          const create = modal?.querySelector('[data-depreciation-create]');
+          const date = modal?.querySelector('#depRunDate');
+          const facts = modal?.querySelector('.depreciation-run-modal-facts');
+          const error = modal?.querySelector('[data-depreciation-create-error]');
+          const now = new Date();
+          const expectedDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+          const modalRect = modal?.getBoundingClientRect();
+          if (!modal || !create || !date || !facts || !error) {
+            issues.push('new depreciation run modal is incomplete');
+          } else {
+            if (facts.querySelector('input') || modal.querySelectorAll('input').length !== 1) {
+              issues.push('run number or method still renders as a fake form control');
+            }
+            if (date.value !== expectedDate) {
+              issues.push(`depreciation run date is not local calendar date: ${date.value}`);
+            }
+            if (!error.hidden || getComputedStyle(error).display !== 'none') {
+              issues.push('new depreciation modal exposes an empty error');
+            }
+            if (modalRect.left < 8 || modalRect.right > innerWidth - 8
+                || modal.scrollWidth > modal.clientWidth + 1) {
+              issues.push(`new depreciation modal exceeds the ${innerWidth}px viewport`);
+            }
+
+            adapter.create = async () => { throw new Error('No assets have remaining depreciable value to run'); };
+            create.click();
+            await wait();
+            if (error.hidden || !error.textContent.includes('No assets') || create.disabled) {
+              issues.push('failed depreciation create is not recoverable in the modal');
+            }
+
+            adapter.create = async () => {
+              runRows=[draft];
+              lineRows=linesFor(draft.id);
+              return {data:draft,meta:{}};
+            };
+            create.click();
+            await wait(100);
+            if (rows().length !== 1
+                || !document.querySelector('#viewRoot [data-list-primary-action][disabled]')) {
+              issues.push('successful depreciation create did not refresh the draft register');
+            }
+          }
+        }
+
+        if (mobile && rows()[0] && !depRoot()?.querySelector('[data-master-detail-panel].open')) {
+          rows()[0].click();
+        }
+        adapter.action = async () => {
+          runRows=[{...draft,status:'posted',version:2,postedAt:'2026-07-25T04:00:00.000Z'}];
+          return {data:runRows[0],meta:{}};
+        };
+        depRoot()?.querySelector('[data-depreciation-post]')?.click();
+        activeModal()?.querySelector('[data-depreciation-post-confirm]')?.click();
+        await wait(100);
+        if (!depRoot()?.querySelector('[data-depreciation-gl]')
+            || document.querySelector('#viewRoot [data-list-primary-action]')?.disabled) {
+          issues.push('successful depreciation post did not refresh status and actions');
+        }
+
+        runRows=[cancelled];
+        lineRows=linesFor(cancelled.id);
+        adapter.action=originalAction;
+        await navigate('depreciation');
+        if (mobile) rows()[0]?.click();
+        if (depRoot()?.querySelector('[data-depreciation-actions]')
+            || !depRoot()?.textContent.includes('Cancelled')) {
+          issues.push('cancelled depreciation run is not read-only or lacks its status');
+        }
+      } finally {
+        adapter.list = originalList;
+        adapter.create = originalCreate;
+        adapter.action = originalAction;
+        window.getLang = originalGetLang;
+        closeModal();
+        await navigate('depreciation');
+      }
+      return issues;
+    }, { mobile: viewport.width <= 980 });
+    const result = results.find((row) => row.route === 'depreciation');
+    if (result) {
+      result.layoutIssues.push(...depreciationIssues.map((issue) => `Depreciation smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event) => event.kind === 'console.error').map((event) => event.message));
       result.pageErrors.push(...events.filter((event) => event.kind === 'pageerror').map((event) => event.message));
     }

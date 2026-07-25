@@ -182,7 +182,10 @@ function initTooltip(){
 
 /* ---- modal ---- */
 function openModal(html){
-  closeModal();
+  // A new modal replaces the current one synchronously. closeModal() deliberately
+  // keeps its node for the exit animation, which would otherwise leave duplicate
+  // modalEl/modalScrim ids and let immediate follow-up actions bind to the old DOM.
+  document.querySelectorAll('#modalEl,#modalScrim').forEach(node=>node.remove());
   const scrim=document.createElement('div'); scrim.className='scrim show'; scrim.id='modalScrim';
   scrim.style.zIndex=110;
   const m=document.createElement('div'); m.className='modal'; m.id='modalEl'; m.innerHTML=html;

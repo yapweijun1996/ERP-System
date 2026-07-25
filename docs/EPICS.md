@@ -1803,3 +1803,10 @@ Delivery slices:
       read-only `service-contract` route through `master-detail-editor-v1`.
       Mouse, Enter and Space share one action while nested controls are isolated.
       Focused list/master-detail audits and service worker v99 enforce the change.
+- [x] **TASK-102 — Depreciation master-detail register SSOT.** Reclassify the
+      canonical Depreciation run page from the unstructured `workspace` exemption
+      to `master-detail-register-v1`. Replace the hand-built report split with the
+      shared KPI/filter/table/detail regions, expose bounded Draft/Posted/Cancelled
+      history, move creation and confirmed posting into responsive recoverable
+      modals, and retain the existing straight-line and GL commands. Five-language
+      state audits and service worker v100 enforce the desktop/375px contract.
