@@ -301,6 +301,26 @@ describe('actor-owned My Work API', () => {
         fxMethod: 'table_rate',
       },
     );
+    const adminCookie = await login('admin', 'demo1234');
+    const adminCsrf = decodeURIComponent(
+      adminCookie.match(/(?:^|;\s*)erp_csrf=([^;]+)/)?.[1] ?? '',
+    );
+    const controlPolicy = await fetch(`${baseUrl}/api/expense-policies/controls/versions`, {
+      method: 'POST',
+      headers: {
+        cookie: adminCookie,
+        'x-csrf-token': adminCsrf,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        policyKey: 'expense-controls-api',
+        versionNo: 1,
+        validFrom: '2026-01-01',
+        duplicateHighRiskScore: 70,
+        budgetAction: 'warn',
+      }),
+    });
+    expect(controlPolicy.status).toBe(201);
     const cookie = await login();
     const csrf = decodeURIComponent(
       cookie.match(/(?:^|;\s*)erp_csrf=([^;]+)/)?.[1] ?? '',
@@ -371,7 +391,7 @@ describe('actor-owned My Work API', () => {
       data: {
         claim: {
           ownerUserId: viewer.userId,
-          status: 'submitted',
+          status: 'pending_approval',
           submissionKind: 'employee',
         },
       },
@@ -384,7 +404,7 @@ describe('actor-owned My Work API', () => {
       data: [{
         claimNo: 'EC-API-0001',
         ownerUserId: viewer.userId,
-        status: 'submitted',
+        status: 'pending_approval',
         lines: [{
           merchant: 'API Taxi',
           allocations: [{
@@ -395,6 +415,46 @@ describe('actor-owned My Work API', () => {
         }],
       }],
       meta: { actorDerived: true, availability: 'canonical' },
+    });
+
+    const queue = await fetch(`${baseUrl}/api/expense-approvals`, {
+      headers: { cookie: adminCookie },
+    });
+    expect(queue.status).toBe(200);
+    const queueBody = await queue.json() as {
+      data: Array<{ link: { id: number }; line: { merchant: string } }>;
+    };
+    expect(queueBody.data[0].line.merchant).toBe('API Taxi');
+    const lineApprovalId = queueBody.data[0].link.id;
+    const decideHeaders = (idempotencyKey: string) => ({
+      cookie: adminCookie,
+      'x-csrf-token': adminCsrf,
+      'content-type': 'application/json',
+      'idempotency-key': idempotencyKey,
+    });
+    const managerApproved = await fetch(
+      `${baseUrl}/api/expense-approvals/${lineApprovalId}/actions/decide`,
+      {
+        method: 'POST',
+        headers: decideHeaders('expense-api-manager-approve-0001'),
+        body: JSON.stringify({ decision: 'approved' }),
+      },
+    );
+    expect(managerApproved.status).toBe(200);
+    expect(await managerApproved.json()).toMatchObject({
+      data: { status: 'pending', claimStatus: 'pending_approval' },
+    });
+    const financeApproved = await fetch(
+      `${baseUrl}/api/expense-approvals/${lineApprovalId}/actions/decide`,
+      {
+        method: 'POST',
+        headers: decideHeaders('expense-api-finance-approve-0001'),
+        body: JSON.stringify({ decision: 'approved' }),
+      },
+    );
+    expect(financeApproved.status).toBe(200);
+    expect(await financeApproved.json()).toMatchObject({
+      data: { status: 'approved', claimStatus: 'approved' },
     });
   });
 

@@ -24,6 +24,7 @@ import {
   submitAuthorizedExpenseClaimBySystem,
   submitExpenseClaimByEmployee,
 } from './claims';
+import { configureExpenseControlPolicyVersion } from './controls';
 import { configureExpensePolicyVersion } from './policy';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
@@ -55,6 +56,13 @@ async function setup(evidenceRequired = false) {
     toCcy: 'SGD',
     rate: '1.35000000',
     validFrom: '2026-01-01',
+  });
+  await configureExpenseControlPolicyVersion(db, scope, admin.userId, {
+    policyKey: 'expense-controls-test',
+    versionNo: 1,
+    validFrom: '2026-01-01',
+    duplicateHighRiskScore: 70,
+    budgetAction: 'warn',
   });
   for (const categoryCode of ['TRAVEL', 'MEALS']) {
     await configureExpensePolicyVersion(db, scope, admin.userId, {
@@ -207,7 +215,7 @@ describe('employee-owned expense claims', () => {
     expect(submitted).toMatchObject({
       replayed: false,
       claim: {
-        status: 'submitted',
+        status: 'pending_approval',
         submissionKind: 'employee',
         submittedByUserId: viewer.userId,
       },
@@ -372,7 +380,7 @@ describe('employee-owned expense claims', () => {
     expect(submitted).toMatchObject({
       replayed: false,
       claim: {
-        status: 'submitted',
+        status: 'pending_approval',
         submissionKind: 'system',
         submittedByUserId: viewer.userId,
         systemActorKey: 'expense-auto-submit-v1',

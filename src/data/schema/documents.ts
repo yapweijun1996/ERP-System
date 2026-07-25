@@ -216,6 +216,7 @@ export const documentExtraction = pgTable('document_extraction', {
   status: text('status').notNull().default('queued'),
   rawText: text('raw_text'),
   outputSha256: text('output_sha256'),
+  visualFingerprint: text('visual_fingerprint'),
   attempts: integer('attempts').notNull().default(0),
   availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
@@ -237,6 +238,11 @@ export const documentExtraction = pgTable('document_extraction', {
     sql`${t.outputSha256} is null or (
       char_length(${t.outputSha256}) = 64
       and ${t.outputSha256} ~ '^[0-9a-f]{64}$'
+    )`),
+  check('ck_document_extraction_visual_fingerprint',
+    sql`${t.visualFingerprint} is null or (
+      char_length(${t.visualFingerprint}) = 64
+      and ${t.visualFingerprint} ~ '^[0-9a-f]{64}$'
     )`),
 ]);
 

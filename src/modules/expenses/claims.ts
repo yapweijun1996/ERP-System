@@ -23,6 +23,7 @@ import {
 import {
   snapshotSubmittedExpenseLineWithin,
 } from './policy';
+import { startExpenseLineControlsWithin } from './controls';
 
 const SYSTEM_ACTOR = 'expense-auto-submit-v1';
 
@@ -103,6 +104,7 @@ export interface ExpenseAllocationInput {
 
 export interface ExpenseClaimLineInput {
   merchant: string;
+  merchantTaxNumber?: string | null;
   transactionDate: string;
   purpose: string;
   categoryCode: string;
@@ -202,6 +204,9 @@ function normalizeLine(input: ExpenseClaimLineInput) {
   }
   return {
     merchant: text(input.merchant, 'Merchant', 1, 160),
+    merchantTaxNumber: input.merchantTaxNumber == null
+      ? null
+      : text(input.merchantTaxNumber, 'Merchant tax number', 3, 80).toUpperCase(),
     transactionDate: isoDate(input.transactionDate),
     purpose: text(input.purpose, 'Purpose', 3, 500),
     categoryCode: input.categoryCode.trim().toUpperCase(),
@@ -384,6 +389,7 @@ export async function replaceExpenseClaimDraftLinesWithin(
         claimId: claim.id,
         lineNo: index + 1,
         merchant: input.merchant,
+        merchantTaxNumber: input.merchantTaxNumber,
         transactionDate: input.transactionDate,
         purpose: input.purpose,
         categoryCode: input.categoryCode,
@@ -479,7 +485,9 @@ export async function submitExpenseClaimWithin(
         403,
       );
     }
-    if (claim.status === 'submitted') return { claim, replayed: true };
+    if (claim.status !== 'draft' && claim.submissionKind !== 'none') {
+      return { claim, replayed: true };
+    }
     if (claim.status !== 'draft' || claim.version !== expectedVersion) {
       throw new ExpenseClaimError(
         'expense_claim_version_conflict',
@@ -589,8 +597,15 @@ export async function submitExpenseClaimWithin(
       } : null,
     };
     const factsSha256 = createHash('sha256').update(JSON.stringify(facts)).digest('hex');
+    const controls = await startExpenseLineControlsWithin(tx, scope, {
+      claim,
+      lines,
+      snapshots,
+      claimVersion: claim.version + 1,
+      now,
+    });
     const [submitted] = await tx.update(expenseClaim).set({
-      status: 'submitted',
+      status: 'pending_approval',
       version: claim.version + 1,
       submissionKind: kind,
       submittedByUserId: ownerUserId,
@@ -624,14 +639,19 @@ export async function submitExpenseClaimWithin(
       eventType: kind === 'system' ? 'system_submitted' : 'submitted',
       actorUserId: ownerUserId,
       fromStatus: 'draft',
-      toStatus: 'submitted',
+      toStatus: 'pending_approval',
       reason: kind === 'system'
         ? 'System submitted under the employee’s explicit prior authorization.'
         : 'Employee submitted the final claim.',
       claimVersion: submitted.version,
       createdAt: now,
     });
-  return { claim: submitted, snapshots, replayed: false };
+    return {
+      claim: submitted,
+      snapshots,
+      controls,
+      replayed: false,
+    };
 }
 
 export function submitExpenseClaimByEmployee(

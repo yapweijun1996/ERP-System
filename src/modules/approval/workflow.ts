@@ -49,6 +49,7 @@ export interface ApprovalContextInput {
   extraPermissionSteps?: Array<{
     label: string;
     permissionKey: string;
+    position?: 'before_final' | 'after';
   }>;
 }
 
@@ -312,17 +313,22 @@ async function resolvedPolicySteps(
     });
   }
   for (const extra of input.extraPermissionSteps ?? []) {
-    steps.push({
+    const resolved: ResolvedStep = {
       policyStepId: null,
-      stepNo: steps.length + 1,
+      stepNo: 0,
       label: extra.label,
       authority: permissionAuthority(extra.permissionKey),
       escalation: null,
       reminderAfterHours: null,
       escalateAfterHours: null,
-    });
+    };
+    if (extra.position === 'before_final' && steps.length > 0) {
+      steps.splice(steps.length - 1, 0, resolved);
+    } else {
+      steps.push(resolved);
+    }
   }
-  return steps;
+  return steps.map((step, index) => ({ ...step, stepNo: index + 1 }));
 }
 
 async function appendEvent(
@@ -708,7 +714,7 @@ export async function decideApprovalWithin(
   input: {
     instanceId: number;
     actorUserId: number;
-    decision: 'approved' | 'rejected';
+    decision: 'approved' | 'rejected' | 'returned';
     reason?: string | null;
   },
   now = new Date(),
@@ -749,8 +755,13 @@ export async function decideApprovalWithin(
     input.actorUserId,
     now,
   );
-  const reason = input.decision === 'rejected'
-    ? requireReason(input.reason, 'approval_rejection_reason_required')
+  const reason = input.decision === 'rejected' || input.decision === 'returned'
+    ? requireReason(
+      input.reason,
+      input.decision === 'returned'
+        ? 'approval_return_reason_required'
+        : 'approval_rejection_reason_required',
+    )
     : cleanOptional(input.reason);
   const [decision] = await exec.insert(approvalDecision).values({
     ...scope,
@@ -774,7 +785,7 @@ export async function decideApprovalWithin(
     decidedAt: now,
     updatedAt: now,
   }).where(eq(approvalInstanceStep.id, step.id));
-  if (input.decision === 'rejected') {
+  if (input.decision === 'rejected' || input.decision === 'returned') {
     await exec.update(approvalInstanceStep).set({
       status: 'cancelled',
       updatedAt: now,
@@ -783,23 +794,23 @@ export async function decideApprovalWithin(
       eq(approvalInstanceStep.status, 'waiting'),
     ));
     await exec.update(approvalInstance).set({
-      status: 'rejected',
+      status: input.decision,
       completedAt: now,
       updatedAt: now,
     }).where(eq(approvalInstance.id, instance.id));
     await appendEvent(exec, scope, {
       instanceId: instance.id,
       stepId: step.id,
-      eventType: 'rejected',
+      eventType: input.decision,
       actorUserId: input.actorUserId,
       detail: reason,
-      eventKey: `approval:${instance.id}:rejected`,
+      eventKey: `approval:${instance.id}:${input.decision}`,
       occurredAt: now,
     });
     return {
       id: instance.id,
       decisionId: decision.id,
-      status: 'rejected' as const,
+      status: input.decision,
       currentStepNo: step.stepNo,
     };
   }

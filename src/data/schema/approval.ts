@@ -171,7 +171,8 @@ export const approvalInstance = pgTable('approval_instance', {
   index('idx_approval_instance_status')
     .on(t.masterFn, t.companyFn, t.domain, t.status, t.currentStepNo, t.id),
   check('ck_approval_instance_entity_version', sql`${t.entityId} > 0 and ${t.entityVersion} > 0`),
-  check('ck_approval_instance_status', sql`${t.status} in ('pending', 'approved', 'rejected', 'cancelled')`),
+  check('ck_approval_instance_status',
+    sql`${t.status} in ('pending', 'approved', 'rejected', 'returned', 'cancelled')`),
   check('ck_approval_instance_current_step', sql`${t.currentStepNo} > 0`),
 ]);
 
@@ -219,7 +220,8 @@ export const approvalInstanceStep = pgTable('approval_instance_step', {
   index('idx_approval_instance_step_queue')
     .on(t.masterFn, t.companyFn, t.status, t.currentAuthorityUserId, t.id),
   check('ck_approval_instance_step_no', sql`${t.stepNo} > 0`),
-  check('ck_approval_instance_step_status', sql`${t.status} in ('waiting', 'pending', 'approved', 'rejected', 'cancelled')`),
+  check('ck_approval_instance_step_status',
+    sql`${t.status} in ('waiting', 'pending', 'approved', 'rejected', 'returned', 'cancelled')`),
   check(
     'ck_approval_instance_step_authority_type',
     sql`${t.originalAuthorityType} in ('employee', 'permission')
@@ -290,7 +292,8 @@ export const approvalDecision = pgTable('approval_decision', {
   uniqueIndex('uq_approval_decision_step').on(t.masterFn, t.companyFn, t.stepId),
   uniqueIndex('uq_approval_decision_event_key').on(t.masterFn, t.companyFn, t.eventKey),
   index('idx_approval_decision_history').on(t.masterFn, t.companyFn, t.instanceId, t.id),
-  check('ck_approval_decision_value', sql`${t.decision} in ('approved', 'rejected')`),
+  check('ck_approval_decision_value',
+    sql`${t.decision} in ('approved', 'rejected', 'returned')`),
   check(
     'ck_approval_decision_authority_source',
     sql`${t.authoritySource} in ('direct', 'delegated', 'permission', 'escalated')`,
@@ -316,7 +319,7 @@ export const approvalInstanceEvent = pgTable('approval_instance_event', {
     'ck_approval_instance_event_type',
     sql`${t.eventType} in (
       'created', 'step_activated', 'reminder_sent', 'escalated',
-      'step_approved', 'approved', 'rejected', 'cancelled', 'capacity_evaluated'
+      'step_approved', 'approved', 'rejected', 'returned', 'cancelled', 'capacity_evaluated'
     )`,
   ),
 ]);

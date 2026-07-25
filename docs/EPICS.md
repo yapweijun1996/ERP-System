@@ -2013,10 +2013,15 @@ approval is the accounting boundary.
       employee authorization plus an eligible employee-authorized system-submitted
       receipt on every line. Submitted facts, authorization, revisions and events are
       database-protected from mutation. PWA v124.
-- [ ] **TASK-125 — Add line-level approval, duplicate and budget control.** Default to
-      manager then Finance with configurable extra levels; allow approve/reject/return
-      per line, forbid approver edits/self-approval, combine file/image/business-field
-      duplicate detection and apply policy warning/add-level/block budget behavior.
+- [x] **TASK-125 — Add line-level approval, duplicate and budget control.** Migration
+      0064 starts one governed approval per submitted line, defaults to direct Manager
+      then Finance and may insert a configured budget-exception step before Finance.
+      Approve/reject/return decisions are line-specific; self-approval and employee-fact
+      edits remain forbidden. Immutable assessments combine exact file hash,
+      provider-generated visual fingerprint and merchant/date/gross/tax-number signals.
+      High-risk final approval requires a Finance-permission override with a reason.
+      Effective policy applies budget warning, extra approval or transactional block.
+      PWA v125.
 - [ ] **TASK-126 — Add corporate-card statement reconciliation.** Import bounded
       CSV/Excel statements, match holder/date/currency/amount to receipt evidence and
       retain unmatched transactions and missing-receipt follow-up as auditable facts.

@@ -1228,6 +1228,26 @@ dual typecheck, 480 tests plus one expected skip, 64 migrations at schema versio
 187-table drift, API/Demo builds, smoke, all 121 desktop/375px routes and a real
 PostgreSQL 16 non-superuser/RLS claim proof. PWA v124.
 
+### Expense line approval, duplicate risk and budget control (TASK-125)
+
+Migration 0064 adds confirmed effective-dated expense-control versions, immutable
+per-line control assessments, weighted duplicate signals, reasoned Finance overrides
+and a projection from each claim line to the generic approval workflow. Submission now
+starts Manager then Finance approval for every line; an exceeded or missing budget may
+warn, insert a configured exception approver before Finance, or roll back submission.
+Approvers may approve, reject or return individual lines but cannot approve their own
+claim or edit employee-submitted facts.
+
+Duplicate assessment combines exact document SHA-256, provider-generated visual
+fingerprint and normalized merchant/date/gross/tax-number signals. Final approval of a
+high-risk line requires a user with Finance override permission to append a reasoned,
+immutable disposition. `/api/expense-approvals` exposes only actor-authorized queue
+facts and line decisions, while `/api/expense-policies/controls/versions` confirms the
+effective control behavior. Final gates pass lint, dual typecheck, 484 tests plus one
+expected skip, 65 migrations at schema version 64, 192-table drift, API/Demo builds,
+smoke, all 121 desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof. PWA
+v125.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1242,8 +1262,9 @@ TASK-119 delivered fail-closed scanning plus governed extraction, TASK-120 deliv
 the confidence-governed receipt inbox, TASK-121 delivered document lifecycle,
 correction and two-person retention purge, TASK-122 delivered sensitive access audit
 plus storage parity, TASK-123 delivered effective tax/FX/GL expense policy and
-TASK-124 delivered employee-owned multi-line claims with exact allocation.
-TASK-125 through TASK-135 remain planning records
+TASK-124 delivered employee-owned multi-line claims with exact allocation and TASK-125
+delivered line approval, duplicate risk and budget control. TASK-126 through TASK-135
+remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1281,9 +1302,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 123 tasks, including TASK-124
+- Done: 124 tasks, including TASK-125
 - Blocked: TASK-017 (1)
-- Todo: 11 planned tasks (TASK-125–135) across EPIC-055–056. These extend the product
+- Todo: 10 planned tasks (TASK-126–135) across EPIC-055–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

@@ -150,7 +150,8 @@ SG and MY demo companies; production wires real auth.
 > purge-request and tombstone entities. TASK-122 adds immutable sensitive-access
 > events. TASK-123 adds the first five effective policy/snapshot entities in section
 > 8.4. TASK-124 adds the employee claim, line, allocation, authorization, revision and
-> event entities. The remaining targets for TASK-125–135 are
+> event entities. TASK-125 adds the five control, assessment, signal, override and
+> line-approval entities listed below. The remaining targets for TASK-126–135 are
 > **not yet present**. Each task
 > must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
@@ -325,9 +326,13 @@ expense_claim(+revision)        employee-owned header and workflow state
 expense_claim_line              merchant/date/purpose/currency/tax/payment-source facts
 expense_allocation              department/cost-centre/project split
 receipt_inbox_item              uploaded receipt before or during claim assembly
+expense_control_policy_version  effective duplicate threshold and budget action
+expense_line_control_assessment immutable per-line duplicate/budget snapshot
+expense_duplicate_signal        immutable hash/image/business-key evidence
+expense_duplicate_override      reasoned Finance high-risk disposition
+expense_line_approval            line ↔ generic approval workflow projection
 corporate_card_transaction      imported statement line and reconciliation state
 cash_advance                    issue, application and outstanding balance
-expense_duplicate_signal        hash/image/business-key match and disposition
 expense_posting                 idempotent balanced GL linkage
 ```
 
@@ -352,6 +357,18 @@ submission. Explicit prior claim authorization and an eligible authorized
 system-submitted receipt on every line are mandatory for automatic submission.
 Database triggers keep submitted employee facts and all authorization/revision/event
 records immutable.
+
+Migration 0064 implements `expense_control_policy_version`,
+`expense_line_control_assessment`, `expense_duplicate_signal`,
+`expense_duplicate_override` and `expense_line_approval`. Submission evaluates each
+line before approval and snapshots the effective duplicate threshold, budget action,
+approved budget reference, consumption and remaining amount. Exact document SHA-256,
+provider-generated visual fingerprint and normalized merchant/date/gross/tax-number
+keys contribute weighted immutable signals. A high-risk line cannot receive final
+Finance approval until a user holding the duplicate-override permission records a
+reason. Missing/exceeded budget follows the confirmed policy's warn, extra-approval or
+transactional-block action. The generic approval workflow now supports reasoned Return;
+all line facts, assessments, signals and override facts remain immutable.
 
 Approved employee-paid expenses post Dr Expense/Input Tax and Cr Employee Payable;
 company-paid expenses credit the configured bank/card clearing account. Original and

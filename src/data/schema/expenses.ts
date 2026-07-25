@@ -18,6 +18,8 @@ import { appUser } from './tenancy';
 import { account } from './finance';
 import { currency } from './localization';
 import { documentVersion, receiptInboxItem } from './documents';
+import { budgetLine, budgetVersion } from './reporting';
+import { approvalInstance } from './approval';
 
 export const expenseCategory = pgTable('expense_category', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -247,6 +249,7 @@ export const expenseClaimLine = pgTable('expense_claim_line', {
     .references(() => expenseClaim.id),
   lineNo: integer('line_no').notNull(),
   merchant: text('merchant').notNull(),
+  merchantTaxNumber: text('merchant_tax_number'),
   transactionDate: date('transaction_date').notNull(),
   purpose: text('purpose').notNull(),
   categoryCode: text('category_code').notNull(),
@@ -274,6 +277,9 @@ export const expenseClaimLine = pgTable('expense_claim_line', {
     sql`char_length(${t.merchant}) between 1 and 160
       and char_length(${t.purpose}) between 3 and 500
       and ${t.categoryCode} ~ '^[A-Z][A-Z0-9_-]{1,31}$'`),
+  check('ck_expense_claim_line_tax_number',
+    sql`${t.merchantTaxNumber} is null
+      or char_length(${t.merchantTaxNumber}) between 3 and 80`),
   check('ck_expense_claim_line_payment',
     sql`${t.paymentSource} in ('employee_paid','company_paid')`),
   check('ck_expense_claim_line_amounts',
@@ -369,8 +375,163 @@ export const expenseClaimEvent = pgTable('expense_claim_event', {
   index('idx_expense_claim_event_claim')
     .on(t.masterFn, t.companyFn, t.claimId, t.id),
   check('ck_expense_claim_event_type',
-    sql`${t.eventType} in ('created','draft_replaced','submitted','system_submitted')`),
+    sql`${t.eventType} in (
+      'created','draft_replaced','submitted','system_submitted','approval_updated'
+    )`),
   check('ck_expense_claim_event_reason',
     sql`char_length(${t.reason}) between 3 and 1000`),
   check('ck_expense_claim_event_version', sql`${t.claimVersion} > 0`),
+]);
+
+/** Confirmed effective-dated duplicate and budget behavior used at submission. */
+export const expenseControlPolicyVersion = pgTable('expense_control_policy_version', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  policyKey: text('policy_key').notNull(),
+  versionNo: integer('version_no').notNull(),
+  validFrom: date('valid_from').notNull(),
+  validTo: date('valid_to'),
+  status: text('status').notNull().default('confirmed'),
+  duplicateHighRiskScore: integer('duplicate_high_risk_score').notNull().default(70),
+  budgetAction: text('budget_action').notNull().default('warn'),
+  budgetTolerancePct: numeric('budget_tolerance_pct', { precision: 7, scale: 4 })
+    .notNull().default('0'),
+  budgetExtraApprovalPermissionKey: text('budget_extra_approval_permission_key'),
+  confirmedByUserId: bigint('confirmed_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_expense_control_policy_version')
+    .on(t.masterFn, t.companyFn, t.policyKey, t.versionNo),
+  index('idx_expense_control_policy_effective')
+    .on(t.masterFn, t.companyFn, t.status, t.validFrom, t.validTo, t.id),
+  check('ck_expense_control_policy_key',
+    sql`${t.policyKey} ~ '^[a-z][a-z0-9._-]{2,63}$'`),
+  check('ck_expense_control_policy_version_no', sql`${t.versionNo} > 0`),
+  check('ck_expense_control_policy_dates',
+    sql`${t.validTo} is null or ${t.validTo} >= ${t.validFrom}`),
+  check('ck_expense_control_policy_status', sql`${t.status} = 'confirmed'`),
+  check('ck_expense_control_policy_duplicate_score',
+    sql`${t.duplicateHighRiskScore} between 1 and 100`),
+  check('ck_expense_control_policy_budget_action',
+    sql`${t.budgetAction} in ('warn','extra_approval','block')`),
+  check('ck_expense_control_policy_budget_tolerance',
+    sql`${t.budgetTolerancePct} between 0.0000 and 100.0000`),
+  check('ck_expense_control_policy_budget_extra',
+    sql`${t.budgetAction} <> 'extra_approval'
+      or char_length(${t.budgetExtraApprovalPermissionKey}) between 3 and 120`),
+]);
+
+/** Immutable duplicate/budget snapshot evaluated before a line enters approval. */
+export const expenseLineControlAssessment = pgTable('expense_line_control_assessment', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  claimId: bigint('claim_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaim.id),
+  lineId: bigint('line_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaimLine.id),
+  claimVersion: integer('claim_version').notNull(),
+  controlPolicyVersionId: bigint('control_policy_version_id', { mode: 'number' }).notNull()
+    .references(() => expenseControlPolicyVersion.id),
+  duplicateRiskScore: integer('duplicate_risk_score').notNull(),
+  duplicateRiskLevel: text('duplicate_risk_level').notNull(),
+  budgetAction: text('budget_action').notNull(),
+  budgetVersionId: bigint('budget_version_id', { mode: 'number' })
+    .references(() => budgetVersion.id),
+  budgetLineId: bigint('budget_line_id', { mode: 'number' })
+    .references(() => budgetLine.id),
+  budgetAmount: numeric('budget_amount', { precision: 18, scale: 4 }),
+  consumedAmount: numeric('consumed_amount', { precision: 18, scale: 4 }).notNull(),
+  lineAmount: numeric('line_amount', { precision: 18, scale: 4 }).notNull(),
+  remainingAfter: numeric('remaining_after', { precision: 18, scale: 4 }),
+  budgetBreached: boolean('budget_breached').notNull(),
+  assessedAt: timestamp('assessed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_line_control_assessment')
+    .on(t.masterFn, t.companyFn, t.lineId, t.claimVersion),
+  index('idx_expense_line_control_risk')
+    .on(t.masterFn, t.companyFn, t.duplicateRiskLevel, t.budgetBreached, t.id),
+  check('ck_expense_line_control_version', sql`${t.claimVersion} > 0`),
+  check('ck_expense_line_control_duplicate_score',
+    sql`${t.duplicateRiskScore} between 0 and 100`),
+  check('ck_expense_line_control_duplicate_level',
+    sql`${t.duplicateRiskLevel} in ('none','low','medium','high')`),
+  check('ck_expense_line_control_budget_action',
+    sql`${t.budgetAction} in ('warn','extra_approval','block')`),
+  check('ck_expense_line_control_amounts',
+    sql`${t.consumedAmount} >= 0 and ${t.lineAmount} > 0
+      and (${t.budgetAmount} is null or ${t.budgetAmount} >= 0)`),
+]);
+
+/** Immutable weighted evidence contributing to duplicate risk. */
+export const expenseDuplicateSignal = pgTable('expense_duplicate_signal', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  assessmentId: bigint('assessment_id', { mode: 'number' }).notNull()
+    .references(() => expenseLineControlAssessment.id),
+  lineId: bigint('line_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaimLine.id),
+  matchedLineId: bigint('matched_line_id', { mode: 'number' })
+    .references(() => expenseClaimLine.id),
+  signalType: text('signal_type').notNull(),
+  signalHash: text('signal_hash').notNull(),
+  riskPoints: integer('risk_points').notNull(),
+  detail: jsonb('detail').notNull(),
+  detectedAt: timestamp('detected_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_duplicate_signal')
+    .on(t.masterFn, t.companyFn, t.assessmentId, t.signalType, t.matchedLineId),
+  index('idx_expense_duplicate_signal_line')
+    .on(t.masterFn, t.companyFn, t.lineId, t.id),
+  check('ck_expense_duplicate_signal_type',
+    sql`${t.signalType} in ('file_hash','image_fingerprint','business_key')`),
+  check('ck_expense_duplicate_signal_hash',
+    sql`char_length(${t.signalHash}) = 64 and ${t.signalHash} ~ '^[0-9a-f]{64}$'`),
+  check('ck_expense_duplicate_signal_points', sql`${t.riskPoints} between 1 and 100`),
+]);
+
+/** Finance-only, reasoned high-risk duplicate override. */
+export const expenseDuplicateOverride = pgTable('expense_duplicate_override', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  assessmentId: bigint('assessment_id', { mode: 'number' }).notNull()
+    .references(() => expenseLineControlAssessment.id),
+  reason: text('reason').notNull(),
+  overriddenByUserId: bigint('overridden_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  overriddenAt: timestamp('overridden_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_duplicate_override')
+    .on(t.masterFn, t.companyFn, t.assessmentId),
+  check('ck_expense_duplicate_override_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
+]);
+
+/** Mutable workflow projection; employee facts stay in immutable claim lines. */
+export const expenseLineApproval = pgTable('expense_line_approval', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  claimId: bigint('claim_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaim.id),
+  lineId: bigint('line_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaimLine.id),
+  claimVersion: integer('claim_version').notNull(),
+  assessmentId: bigint('assessment_id', { mode: 'number' }).notNull()
+    .references(() => expenseLineControlAssessment.id),
+  approvalInstanceId: bigint('approval_instance_id', { mode: 'number' }).notNull()
+    .references(() => approvalInstance.id),
+  status: text('status').notNull().default('pending'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_line_approval_line')
+    .on(t.masterFn, t.companyFn, t.lineId, t.claimVersion),
+  uniqueIndex('uq_expense_line_approval_instance')
+    .on(t.masterFn, t.companyFn, t.approvalInstanceId),
+  index('idx_expense_line_approval_queue')
+    .on(t.masterFn, t.companyFn, t.status, t.id),
+  check('ck_expense_line_approval_version', sql`${t.claimVersion} > 0`),
+  check('ck_expense_line_approval_status',
+    sql`${t.status} in ('pending','approved','rejected','returned')`),
 ]);

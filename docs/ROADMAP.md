@@ -853,9 +853,10 @@ cleanup pass Demo/API, five-language and responsive proof.
    claims, governed receipt links and exact department/cost-centre/project allocation.
    Employee-owned facts become immutable at final submission; automatic submission
    needs separate claim authorization and an eligible authorized receipt on every line.
-2. **Approval and control** (TASK-125/126) add manager + Finance line decisions,
-   configurable extra levels, multi-signal duplicate blocking, budget
-   warning/add-level/block and corporate-card CSV/Excel reconciliation.
+2. **Approval and control** (TASK-125 done 2026-07-26) adds Manager + Finance line
+   decisions, configurable extra levels, multi-signal duplicate blocking and budget
+   warning/add-level/block. **Corporate-card reconciliation** (TASK-126) remains
+   planned for bounded CSV/Excel import, matching and missing-receipt follow-up.
 3. **Non-receipt expenses and posting** (TASK-127/128) cover mileage, per diem and
    cash advances, then post final Finance approval to balanced Expense/Input Tax
    against Employee Payable or the configured company-paid account.

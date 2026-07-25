@@ -45,6 +45,7 @@ import {
   replaceExpenseClaimDraftLines,
   submitExpenseClaimByEmployee,
 } from '../modules/expenses/claims';
+import { configureExpenseControlPolicyVersion } from '../modules/expenses/controls';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -203,6 +204,67 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
     const employeePayable = visibleAccounts.find((row) => row.code === '2100')!;
     const companyClearing = visibleAccounts.find((row) => row.code === '1100')!;
     const expenseScope = { masterFn: setup.masterFn, companyFn: setup.companyFn };
+    await withTenantTransaction(db, expenseScope, async (tx) => {
+      await tx.insert(schema.employee).values({
+        ...expenseScope,
+        employeeNo: 'PG-INVITED-001',
+        fullName: 'Invited User',
+        email: accepted.email,
+        department: 'Security',
+        jobTitle: 'Security Analyst',
+        employmentType: 'Full-time',
+        userId: accepted.userId,
+        startDate: '2026-01-01',
+        baseSalary: '100.00',
+      });
+      const [policy] = await tx.insert(schema.approvalPolicy).values({
+        ...expenseScope,
+        code: 'PG-EXPENSE-DEFAULT',
+        name: 'PostgreSQL expense line approval',
+        domain: 'expense',
+      }).returning();
+      const [version] = await tx.insert(schema.approvalPolicyVersion).values({
+        ...expenseScope,
+        policyId: policy.id,
+        versionNo: 1,
+        effectiveFrom: '2026-01-01',
+        status: 'confirmed',
+        priority: 0,
+        confirmedByUserId: admin.userId,
+        confirmedAt: new Date('2026-01-01T00:00:00.000Z'),
+      }).returning();
+      await tx.insert(schema.approvalPolicyStep).values([
+        {
+          ...expenseScope,
+          policyVersionId: version.id,
+          stepNo: 1,
+          label: 'Direct manager approval',
+          authorityType: 'direct_manager',
+          managerLevel: 1,
+          fallbackPermissionKey: 'expenses.approve.manager',
+        },
+        {
+          ...expenseScope,
+          policyVersionId: version.id,
+          stepNo: 2,
+          label: 'Finance approval',
+          authorityType: 'permission',
+          authorityPermissionKey: 'expenses.approve.finance',
+        },
+      ]);
+    });
+    await configureExpenseControlPolicyVersion(
+      db,
+      expenseScope,
+      admin.userId,
+      {
+        policyKey: 'pg-expense-controls',
+        versionNo: 1,
+        validFrom: '2026-01-01',
+        duplicateHighRiskScore: 70,
+        budgetAction: 'warn',
+      },
+    );
     const configuredExpensePolicy = await configureExpensePolicyVersion(
       db,
       expenseScope,
@@ -296,7 +358,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       expenseClaimLines.claim.version,
     );
     expect(submittedClaim.claim).toMatchObject({
-      status: 'submitted',
+      status: 'pending_approval',
       ownerUserId: accepted.userId,
       submissionKind: 'employee',
     });

@@ -115,6 +115,7 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.receipts.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.claims.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.approve.manager' },
   ]);
 
   // First-class, actor-addressed notifications. These rows intentionally stay
@@ -587,6 +588,10 @@ export async function seedDemo(db: DB): Promise<void> {
       masterFn: 'M1', companyFn: 'C-SG', code: 'LEAVE-UNPAID',
       name: 'Unpaid leave approval', domain: 'leave',
     },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', code: 'EXPENSE-DEFAULT',
+      name: 'Default expense line approval', domain: 'expense',
+    },
   ]).returning({ id: approvalPolicy.id, code: approvalPolicy.code });
   const approvalPolicyByCode = new Map(approvalPolicies.map((policy) => [
     policy.code,
@@ -611,6 +616,12 @@ export async function seedDemo(db: DB): Promise<void> {
       policyId: approvalPolicyByCode.get('LEAVE-UNPAID')!,
       versionNo: 1, effectiveFrom: '2026-01-01', status: 'confirmed', priority: 200,
       typeRef: 'UNPAID',
+      confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG',
+      policyId: approvalPolicyByCode.get('EXPENSE-DEFAULT')!,
+      versionNo: 1, effectiveFrom: '2026-01-01', status: 'confirmed', priority: 0,
       confirmedByUserId: adminUser.id, confirmedAt: policyConfirmedAt,
     },
   ]).returning({ id: approvalPolicyVersion.id, policyId: approvalPolicyVersion.policyId });
@@ -639,6 +650,38 @@ export async function seedDemo(db: DB): Promise<void> {
     defaultApprovalStep('LEAVE-LONG', 2),
     defaultApprovalStep('LEAVE-UNPAID', 1),
     defaultApprovalStep('LEAVE-UNPAID', 2),
+    {
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      policyVersionId: approvalVersionByPolicy.get(
+        approvalPolicyByCode.get('EXPENSE-DEFAULT')!,
+      )!,
+      stepNo: 1,
+      label: 'Direct manager approval',
+      authorityType: 'direct_manager',
+      managerLevel: 1,
+      fallbackPermissionKey: 'expenses.approve.manager',
+      reminderAfterHours: 24,
+      escalateAfterHours: 48,
+      escalationAuthorityType: 'permission',
+      escalationPermissionKey: 'expenses.approve.finance',
+    },
+    {
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      policyVersionId: approvalVersionByPolicy.get(
+        approvalPolicyByCode.get('EXPENSE-DEFAULT')!,
+      )!,
+      stepNo: 2,
+      label: 'Finance evidence, tax and GL approval',
+      authorityType: 'permission',
+      authorityPermissionKey: 'expenses.approve.finance',
+      managerLevel: 1,
+      reminderAfterHours: 24,
+      escalateAfterHours: 48,
+      escalationAuthorityType: 'permission',
+      escalationPermissionKey: 'expenses.approve.finance',
+    },
   ]);
   await db.insert(leaveCapacityRule).values([
     {

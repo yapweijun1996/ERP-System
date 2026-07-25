@@ -7,6 +7,10 @@ import {
   snapshotSubmittedExpenseLine,
   verifyActualBankCharge,
 } from '../../modules/expenses/policy';
+import {
+  configureExpenseControlPolicyVersion,
+  ExpenseControlError,
+} from '../../modules/expenses/controls';
 import { DocumentQuarantineError } from '../../modules/documents/processing';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
@@ -19,6 +23,10 @@ function body(value: unknown): Record<string, unknown> {
 }
 
 function handle(res: import('express').Response, error: unknown): void {
+  if (error instanceof ExpenseControlError) {
+    apiError(res, error.status, error.code, error.message);
+    return;
+  }
   if (error instanceof ExpensePolicyError) {
     apiError(res, error.status, error.code, error.message);
     return;
@@ -35,6 +43,41 @@ function handle(res: import('express').Response, error: unknown): void {
 
 export function createExpensePoliciesRouter(db: DB): Router {
   const router = Router();
+
+  router.post('/controls/versions', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.expensesPolicyManage)) {
+      apiError(res, 403, 'permission_denied', 'Expense-policy permission is required.');
+      return;
+    }
+    const input = body(req.body);
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await configureExpenseControlPolicyVersion(
+        db,
+        scope,
+        session.userId,
+        input as unknown as Parameters<typeof configureExpenseControlPolicyVersion>[3],
+      );
+      await withTenantTransaction(db, scope, (tx) => appendAudit(tx, {
+        ...scope,
+        actorUserId: session.userId,
+        requestId: context(res).requestId,
+        entity: 'expense_control_policy_version',
+        entityId: data.version.id,
+        action: data.replayed ? 'confirm_replay' : 'confirm',
+        after: {
+          versionNo: data.version.versionNo,
+          budgetAction: data.version.budgetAction,
+          duplicateHighRiskScore: data.version.duplicateHighRiskScore,
+        },
+      }));
+      res.status(data.replayed ? 200 : 201).json({ data, meta: {} });
+    } catch (error) {
+      handle(res, error);
+    }
+  });
 
   router.post('/versions', async (req, res) => {
     const session = await requireSession(db, req, res);

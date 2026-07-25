@@ -58,6 +58,8 @@ export interface MalwareScanner {
 export interface ExtractionResult {
   rawText: string;
   model: string;
+  /** Provider-generated visual/perceptual fingerprint; never synthesized from OCR text. */
+  visualFingerprint?: string;
   safetyClear?: boolean;
   fields?: ExtractionFieldCandidate[];
 }
@@ -378,6 +380,10 @@ async function completeReceiptExtractionWithin(
     throw new Error('Extractor returned invalid raw text.');
   }
   const prepared = prepareExtractionFields(result, job.provider, minConfidence);
+  const visualFingerprint = result.visualFingerprint?.trim().toLowerCase() || null;
+  if (visualFingerprint && !/^[0-9a-f]{64}$/.test(visualFingerprint)) {
+    throw new Error('Extractor returned an invalid visual fingerprint.');
+  }
 
   const [duplicate] = await tx.select({ id: documentVersion.id })
     .from(documentVersion)
@@ -418,6 +424,7 @@ async function completeReceiptExtractionWithin(
     model: result.model,
     rawText,
     outputSha256: sha256Text(rawText),
+    visualFingerprint,
     completedAt: now,
     lockedAt: null,
     lockedBy: null,
