@@ -133,8 +133,9 @@ SG and MY demo companies; production wires real auth.
 
 > Delivery boundary: TASK-106 identity fields/`user_company_role`, TASK-107's employee
 > binding/account lifecycle and TASK-108's effective-dated
-> `employee_hierarchy_scope` are present in the current Drizzle schema. The remaining
-> entities in this section are approved targets for TASK-109–135 and are
+> `employee_hierarchy_scope` are present in the current Drizzle schema. TASK-109 adds
+> five UI shell routes and no table. The remaining entities in this section are
+> approved targets for TASK-110–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.

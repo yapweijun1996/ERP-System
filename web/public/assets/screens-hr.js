@@ -399,6 +399,19 @@ function employeeAccountCopy(){
   return key=>pack[key]||packs.en[key]||key;
 }
 
+function myWorkCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{module:'My Work',leaveTitle:'My Leave',leaveDescription:'Review leave requests owned by your signed-in employee profile.',claimsTitle:'My Claims',claimsDescription:'Expense claims will appear here after the governed claim domain is delivered.',receiptsTitle:'My Receipts',receiptsDescription:'Expense evidence will appear here after secure document processing is delivered.',teamTitle:'Team Calendar',teamDescription:'Review privacy-redacted leave facts for your permitted reporting scope.',approvalsTitle:'My Approvals',approvalsDescription:'Review pending team leave. Decision actions arrive with the complete leave workflow.',noIdentity:'Employee self service is unavailable',noIdentityBody:'This account is not linked to an active employee in the current company.',noLeave:'No leave requests',noLeaveBody:'Your employee profile has no leave requests yet.',claimsUnavailable:'Claims are not modelled yet',claimsUnavailableBody:'EPIC-055 will add claim creation, approval and accounting. No sample claims are shown.',receiptsUnavailable:'Receipts are not modelled yet',receiptsUnavailableBody:'EPIC-054 will add secure upload, quarantine and extraction. No sample receipts are shown.',teamUnavailable:'Team access is unavailable',teamUnavailableBody:'Team Calendar and Approvals appear only with an authorised manager scope.',noTeamLeave:'No team leave',noTeamLeaveBody:'No leave requests exist in your permitted reporting scope.',noApprovals:'No pending approvals',noApprovalsBody:'No team leave request is waiting for review.',allowance:'Annual allowance',pending:'Pending',approvedDays:'Approved days',employee:'Employee',department:'Department',dates:'Dates',leaveType:'Leave type',days:'Days',status:'Status',reason:'Reason',privateReason:'Visible only to you',managerPrivacy:'Employee reasons and evidence are hidden in this manager view.',calendarPreview:'Calendar layout arrives with TASK-115; this preview uses the real privacy-redacted team list.',approvalPreview:'Read-only shell: approval commands arrive with TASK-113/114.'},
+    ms:{module:'Kerja Saya',leaveTitle:'Cuti Saya',leaveDescription:'Semak permohonan cuti milik profil pekerja yang sedang log masuk.',claimsTitle:'Tuntutan Saya',claimsDescription:'Tuntutan perbelanjaan akan dipaparkan selepas domain tuntutan terkawal siap.',receiptsTitle:'Resit Saya',receiptsDescription:'Bukti perbelanjaan akan dipaparkan selepas pemprosesan dokumen selamat siap.',teamTitle:'Kalendar Pasukan',teamDescription:'Semak fakta cuti yang disunting privasi dalam skop pelaporan dibenarkan.',approvalsTitle:'Kelulusan Saya',approvalsDescription:'Semak cuti pasukan tertunda. Tindakan keputusan hadir bersama aliran cuti lengkap.',noIdentity:'Layan diri pekerja tidak tersedia',noIdentityBody:'Akaun ini tidak dipautkan kepada pekerja aktif dalam syarikat semasa.',noLeave:'Tiada permohonan cuti',noLeaveBody:'Profil pekerja anda belum mempunyai permohonan cuti.',claimsUnavailable:'Tuntutan belum dimodelkan',claimsUnavailableBody:'EPIC-055 akan menambah penciptaan, kelulusan dan perakaunan tuntutan. Tiada data contoh dipaparkan.',receiptsUnavailable:'Resit belum dimodelkan',receiptsUnavailableBody:'EPIC-054 akan menambah muat naik selamat, kuarantin dan pengekstrakan. Tiada data contoh dipaparkan.',teamUnavailable:'Akses pasukan tidak tersedia',teamUnavailableBody:'Kalendar Pasukan dan Kelulusan hanya muncul dengan skop pengurus yang sah.',noTeamLeave:'Tiada cuti pasukan',noTeamLeaveBody:'Tiada permohonan cuti dalam skop pelaporan anda.',noApprovals:'Tiada kelulusan tertunda',noApprovalsBody:'Tiada permohonan cuti pasukan menunggu semakan.',allowance:'Kelayakan tahunan',pending:'Tertunda',approvedDays:'Hari diluluskan',employee:'Pekerja',department:'Jabatan',dates:'Tarikh',leaveType:'Jenis cuti',days:'Hari',status:'Status',reason:'Sebab',privateReason:'Hanya anda boleh melihatnya',managerPrivacy:'Sebab dan bukti pekerja disembunyikan dalam paparan pengurus.',calendarPreview:'Susun atur kalendar hadir dalam TASK-115; pratonton ini menggunakan senarai pasukan sebenar yang disunting privasi.',approvalPreview:'Shell baca sahaja: arahan kelulusan hadir dalam TASK-113/114.'},
+    zh:{module:'我的工作',leaveTitle:'我的请假',leaveDescription:'查看当前登录员工本人拥有的请假记录。',claimsTitle:'我的报销',claimsDescription:'受治理的费用申报领域完成后，报销单将在此显示。',receiptsTitle:'我的收据',receiptsDescription:'安全文件处理完成后，费用凭证将在此显示。',teamTitle:'团队日历',teamDescription:'查看授权汇报范围内、已按隐私规则脱敏的请假资料。',approvalsTitle:'我的审批',approvalsDescription:'查看待处理的团队请假；完整请假流程完成后才开放决定操作。',noIdentity:'员工自助不可用',noIdentityBody:'此登录账号未绑定当前公司内的在职员工。',noLeave:'暂无请假记录',noLeaveBody:'你的员工档案目前没有请假记录。',claimsUnavailable:'报销领域尚未建模',claimsUnavailableBody:'EPIC-055 将加入报销建立、审批与会计处理；这里不会显示虚构示例。',receiptsUnavailable:'收据领域尚未建模',receiptsUnavailableBody:'EPIC-054 将加入安全上传、隔离与识别；这里不会显示虚构示例。',teamUnavailable:'团队访问不可用',teamUnavailableBody:'只有具备授权管理范围时才显示团队日历和审批。',noTeamLeave:'暂无团队请假',noTeamLeaveBody:'你的授权汇报范围内没有请假记录。',noApprovals:'暂无待审批事项',noApprovalsBody:'目前没有等待处理的团队请假。',allowance:'年假额度',pending:'待审批',approvedDays:'已批准天数',employee:'员工',department:'部门',dates:'日期',leaveType:'假期类型',days:'天数',status:'状态',reason:'原因',privateReason:'仅你本人可见',managerPrivacy:'此主管视图不会显示员工原因及证明文件。',calendarPreview:'TASK-115 才会提供日历布局；本预览使用真实、已脱敏的团队列表。',approvalPreview:'只读入口：审批命令将在 TASK-113/114 提供。'},
+    ja:{module:'マイワーク',leaveTitle:'自分の休暇',leaveDescription:'サインイン中の従業員プロフィールに属する休暇申請を確認します。',claimsTitle:'自分の経費申請',claimsDescription:'統制された経費申請ドメインの提供後、ここに表示されます。',receiptsTitle:'自分の領収書',receiptsDescription:'安全な文書処理の提供後、経費証憑がここに表示されます。',teamTitle:'チームカレンダー',teamDescription:'許可された報告範囲の、プライバシー編集済み休暇情報を確認します。',approvalsTitle:'自分の承認',approvalsDescription:'保留中のチーム休暇を確認します。決定操作は完全な休暇ワークフローで提供します。',noIdentity:'従業員セルフサービスを利用できません',noIdentityBody:'このアカウントは現在の会社の有効な従業員に紐付いていません。',noLeave:'休暇申請はありません',noLeaveBody:'従業員プロフィールにはまだ休暇申請がありません。',claimsUnavailable:'経費申請は未モデルです',claimsUnavailableBody:'EPIC-055 で作成・承認・会計を追加します。サンプル申請は表示しません。',receiptsUnavailable:'領収書は未モデルです',receiptsUnavailableBody:'EPIC-054 で安全なアップロード・隔離・抽出を追加します。サンプルは表示しません。',teamUnavailable:'チームアクセスを利用できません',teamUnavailableBody:'権限のある管理範囲がある場合のみチーム機能を表示します。',noTeamLeave:'チーム休暇はありません',noTeamLeaveBody:'許可された報告範囲に休暇申請はありません。',noApprovals:'保留中の承認はありません',noApprovalsBody:'確認待ちのチーム休暇申請はありません。',allowance:'年間付与',pending:'保留中',approvedDays:'承認済み日数',employee:'従業員',department:'部署',dates:'日付',leaveType:'休暇種別',days:'日数',status:'状態',reason:'理由',privateReason:'本人のみ表示',managerPrivacy:'管理者ビューでは従業員の理由と証憑を非表示にします。',calendarPreview:'カレンダーは TASK-115 で提供します。このプレビューは実データの匿名化済み一覧です。',approvalPreview:'読み取り専用：承認コマンドは TASK-113/114 で提供します。'},
+    vi:{module:'Công việc của tôi',leaveTitle:'Nghỉ phép của tôi',leaveDescription:'Xem các đơn nghỉ phép thuộc hồ sơ nhân viên đang đăng nhập.',claimsTitle:'Yêu cầu chi phí của tôi',claimsDescription:'Yêu cầu chi phí sẽ xuất hiện sau khi miền nghiệp vụ được quản trị hoàn tất.',receiptsTitle:'Biên lai của tôi',receiptsDescription:'Chứng từ chi phí sẽ xuất hiện sau khi xử lý tài liệu an toàn hoàn tất.',teamTitle:'Lịch nhóm',teamDescription:'Xem dữ liệu nghỉ phép đã ẩn thông tin riêng tư trong phạm vi báo cáo được phép.',approvalsTitle:'Phê duyệt của tôi',approvalsDescription:'Xem đơn nghỉ phép nhóm đang chờ. Thao tác quyết định sẽ có trong quy trình nghỉ phép đầy đủ.',noIdentity:'Không thể dùng dịch vụ nhân viên',noIdentityBody:'Tài khoản này chưa liên kết với nhân viên đang hoạt động trong công ty hiện tại.',noLeave:'Không có đơn nghỉ phép',noLeaveBody:'Hồ sơ nhân viên của bạn chưa có đơn nghỉ phép.',claimsUnavailable:'Chưa mô hình hóa yêu cầu chi phí',claimsUnavailableBody:'EPIC-055 sẽ bổ sung tạo, phê duyệt và kế toán. Không hiển thị dữ liệu mẫu.',receiptsUnavailable:'Chưa mô hình hóa biên lai',receiptsUnavailableBody:'EPIC-054 sẽ bổ sung tải lên an toàn, cách ly và trích xuất. Không hiển thị dữ liệu mẫu.',teamUnavailable:'Không có quyền truy cập nhóm',teamUnavailableBody:'Lịch Nhóm và Phê duyệt chỉ hiện với phạm vi quản lý được ủy quyền.',noTeamLeave:'Không có nghỉ phép nhóm',noTeamLeaveBody:'Không có đơn nghỉ phép trong phạm vi báo cáo của bạn.',noApprovals:'Không có phê duyệt chờ xử lý',noApprovalsBody:'Không có đơn nghỉ phép nhóm nào đang chờ xem xét.',allowance:'Hạn mức năm',pending:'Đang chờ',approvedDays:'Ngày đã duyệt',employee:'Nhân viên',department:'Phòng ban',dates:'Ngày',leaveType:'Loại nghỉ',days:'Số ngày',status:'Trạng thái',reason:'Lý do',privateReason:'Chỉ bạn có thể xem',managerPrivacy:'Lý do và chứng từ của nhân viên bị ẩn trong chế độ quản lý.',calendarPreview:'Bố cục lịch sẽ có trong TASK-115; bản xem trước dùng danh sách nhóm thật đã ẩn dữ liệu riêng tư.',approvalPreview:'Chỉ đọc: lệnh phê duyệt sẽ có trong TASK-113/114.'},
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
 /* ---- shared data prep (directory, profile and leave-approval all need employees +
    leave requests; one fetch point avoids three near-identical Promise.all blocks) ---- */
 async function prepareHrData(){
@@ -437,6 +450,212 @@ function hrLeaveStatusLabel(s,status){
     rejected:s('statusRejected'),
   }[status]||status;
 }
+
+/* ---------------- MY WORK (actor-owned preview shell) ----------------
+   These five routes deliberately use the existing transaction-list SSOT while
+   their domain epics are still planned. Leave rows are actor-derived; claims
+   and receipts expose honest governed empty states instead of sample records.
+   Team routes render only the privacy-redacted manager scope returned by the
+   backend capability contract. */
+function myWorkAdapter(){
+  const adapter=window.ErpSystemData&&window.ErpSystemData.my;
+  if(!adapter||typeof adapter.context!=='function'){
+    const error=new Error('Employee Self Service adapter is unavailable.');
+    error.code='my_work_adapter_missing';
+    throw error;
+  }
+  return adapter;
+}
+function myWorkAfterRender(route,privacy){
+  return ({root:screenRoot})=>{
+    const layout=screenRoot.querySelector('[data-layout="transaction-list-v1"]');
+    if(!layout) return;
+    layout.setAttribute('data-my-work-shell','true');
+    layout.setAttribute('data-my-work-view',route);
+    if(privacy) layout.setAttribute('data-my-work-privacy',privacy);
+  };
+}
+function myWorkStatusTone(status){
+  return {pending:'warn',approved:'ok',rejected:'danger'}[status]||'neutral';
+}
+function myWorkLeaveColumns(copy,statusCopy,{team=false}={}){
+  const columns=[];
+  if(team){
+    columns.push(
+      {label:copy('employee'),render:row=>`<div class="cellsub"><b>${esc(row.employeeName)}</b><small>${esc(row.employeeNo)}</small></div>`},
+      {label:copy('department'),align:'l',render:row=>esc(row.department)},
+    );
+  }
+  columns.push(
+    {label:copy('dates'),align:'l',render:row=>`<span class="tnum">${esc(dateValue(row.startDate))}</span> → <span class="tnum">${esc(dateValue(row.endDate))}</span>`},
+    {label:copy('leaveType'),align:'l',render:row=>esc(row.leaveType)},
+    {label:copy('days'),render:row=>`<span class="tnum">${esc(String(row.days))}</span>`},
+    {label:copy('status'),align:'l',render:row=>cap(hrLeaveStatusLabel(statusCopy,row.status),myWorkStatusTone(row.status))},
+  );
+  if(!team){
+    columns.splice(columns.length-1,0,{
+      label:copy('reason'),
+      align:'l',
+      render:row=>`<div class="cellsub"><b>${esc(row.reason||'—')}</b><small>${esc(copy('privateReason'))}</small></div>`,
+    });
+  }
+  return columns;
+}
+function myWorkEmptyPage(root,{route,title,description,emptyTitle,emptyDescription,note,privacy}){
+  transactionListPage(root,{
+    module:'mywork',route,title,description,rows:[],rowId:row=>row.id,
+    columns:[],
+    note,
+    empty:{icon:'inbox',title:emptyTitle,description:emptyDescription},
+    afterRender:myWorkAfterRender(route,privacy),
+  });
+}
+function isMyWorkIdentityError(error){
+  return Boolean(error&&(
+    ['employee_identity_missing','employee_identity_ambiguous','permission_denied'].includes(error.code)
+    ||/not linked|not linked to an active employee|không liên kết|tidak dipautkan/i.test(error.message||'')
+  ));
+}
+function myWorkIdentityPage(root,route,title,description){
+  const copy=myWorkCopy();
+  myWorkEmptyPage(root,{
+    route,title,description,
+    emptyTitle:copy('noIdentity'),emptyDescription:copy('noIdentityBody'),
+  });
+}
+
+SCREENS['my-leave']=async function(root){
+  const copy=myWorkCopy();
+  const statusCopy=hrCopy();
+  const adapter=myWorkAdapter();
+  let contextResponse;
+  let leaveResponse;
+  try{
+    [contextResponse,leaveResponse]=await Promise.all([
+      adapter.context(),
+      adapter.leaveRequests(),
+    ]);
+  }catch(error){
+    if(!isMyWorkIdentityError(error)) throw error;
+    myWorkIdentityPage(root,'my-leave',copy('leaveTitle'),copy('leaveDescription'));
+    return;
+  }
+  const context=contextResponse.data;
+  const rows=Array.isArray(leaveResponse.data)?leaveResponse.data:[];
+  const pending=rows.filter(row=>row.status==='pending').length;
+  const approvedDays=rows.filter(row=>row.status==='approved')
+    .reduce((sum,row)=>sum+Number(row.days||0),0);
+  transactionListPage(root,{
+    module:'mywork',route:'my-leave',
+    title:copy('leaveTitle'),description:copy('leaveDescription'),
+    rows,rowId:row=>row.id,
+    filters:[
+      ['all',statusCopy('filterAllStatus')],
+      ['pending',statusCopy('statusPending')],
+      ['approved',statusCopy('statusApproved')],
+      ['rejected',statusCopy('statusRejected')],
+    ],
+    filterFn:(row,status)=>row.status===status,
+    kpis:[
+      {label:copy('allowance'),value:String(context.employee.annualLeaveDays)},
+      {label:copy('pending'),value:String(pending),negative:pending>0},
+      {label:copy('approvedDays'),value:String(approvedDays)},
+    ],
+    columns:myWorkLeaveColumns(copy,statusCopy),
+    empty:{icon:'calendar',title:copy('noLeave'),description:copy('noLeaveBody')},
+    afterRender:myWorkAfterRender('my-leave'),
+  });
+};
+
+SCREENS['my-claims']=async function(root){
+  const copy=myWorkCopy();
+  let response;
+  try{ response=await myWorkAdapter().claims(); }
+  catch(error){
+    if(!isMyWorkIdentityError(error)) throw error;
+    myWorkIdentityPage(root,'my-claims',copy('claimsTitle'),copy('claimsDescription'));
+    return;
+  }
+  myWorkEmptyPage(root,{
+    route:'my-claims',title:copy('claimsTitle'),description:copy('claimsDescription'),
+    emptyTitle:copy('claimsUnavailable'),emptyDescription:copy('claimsUnavailableBody'),
+    note:response.meta&&response.meta.plannedEpic,
+  });
+};
+
+SCREENS['my-receipts']=async function(root){
+  const copy=myWorkCopy();
+  let response;
+  try{ response=await myWorkAdapter().receipts(); }
+  catch(error){
+    if(!isMyWorkIdentityError(error)) throw error;
+    myWorkIdentityPage(root,'my-receipts',copy('receiptsTitle'),copy('receiptsDescription'));
+    return;
+  }
+  myWorkEmptyPage(root,{
+    route:'my-receipts',title:copy('receiptsTitle'),description:copy('receiptsDescription'),
+    emptyTitle:copy('receiptsUnavailable'),emptyDescription:copy('receiptsUnavailableBody'),
+    note:response.meta&&response.meta.plannedEpic,
+  });
+};
+
+async function renderMyWorkTeamRoute(root,{route,approvals=false}){
+  const copy=myWorkCopy();
+  const statusCopy=hrCopy();
+  const adapter=myWorkAdapter();
+  let context;
+  try{ context=(await adapter.context()).data; }
+  catch(error){
+    if(!isMyWorkIdentityError(error)) throw error;
+    myWorkIdentityPage(
+      root,route,
+      copy(approvals?'approvalsTitle':'teamTitle'),
+      copy(approvals?'approvalsDescription':'teamDescription'),
+    );
+    return;
+  }
+  if(!context.capabilities||!context.capabilities.team||!context.capabilities.team.available){
+    myWorkEmptyPage(root,{
+      route,
+      title:copy(approvals?'approvalsTitle':'teamTitle'),
+      description:copy(approvals?'approvalsDescription':'teamDescription'),
+      emptyTitle:copy('teamUnavailable'),emptyDescription:copy('teamUnavailableBody'),
+      privacy:'reason_and_evidence_redacted',
+    });
+    return;
+  }
+  const response=await adapter.teamLeaveRequests();
+  const source=Array.isArray(response.data)?response.data:[];
+  const rows=approvals?source.filter(row=>row.status==='pending'):source;
+  transactionListPage(root,{
+    module:'mywork',route,
+    title:copy(approvals?'approvalsTitle':'teamTitle'),
+    description:copy(approvals?'approvalsDescription':'teamDescription'),
+    rows,rowId:row=>row.id,
+    filters:approvals?[]:[
+      ['all',statusCopy('filterAllStatus')],
+      ['pending',statusCopy('statusPending')],
+      ['approved',statusCopy('statusApproved')],
+      ['rejected',statusCopy('statusRejected')],
+    ],
+    filterFn:(row,status)=>row.status===status,
+    columns:myWorkLeaveColumns(copy,statusCopy,{team:true}),
+    note:copy(approvals?'approvalPreview':'calendarPreview'),
+    empty:{
+      icon:approvals?'check':'calendar',
+      title:copy(approvals?'noApprovals':'noTeamLeave'),
+      description:copy(approvals?'noApprovalsBody':'noTeamLeaveBody'),
+    },
+    afterRender:myWorkAfterRender(route,'reason_and_evidence_redacted'),
+  });
+}
+
+SCREENS['team-calendar']=async function(root){
+  return renderMyWorkTeamRoute(root,{route:'team-calendar'});
+};
+SCREENS['my-approvals']=async function(root){
+  return renderMyWorkTeamRoute(root,{route:'my-approvals',approvals:true});
+};
 
 /* ---------------- EMPLOYEE DIRECTORY (listing — module landing) ---------------- */
 SCREENS['hr-directory'] = async function(root){

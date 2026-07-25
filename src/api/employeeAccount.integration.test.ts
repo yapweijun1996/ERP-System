@@ -142,8 +142,9 @@ describe('employee account API lifecycle', () => {
     const [subject] = await db.select().from(employee).where(and(
       eq(employee.masterFn, 'M1'),
       eq(employee.companyFn, 'C-SG'),
+      eq(employee.userId, user.userId),
     )).limit(1);
-    await db.update(employee).set({ userId: user.userId }).where(eq(employee.id, subject.id));
+    expect(subject).toBeDefined();
 
     const response = await fetch(`${baseUrl}/api/auth/password-reset/actions/request`, {
       method: 'POST',

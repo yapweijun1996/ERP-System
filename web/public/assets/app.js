@@ -6,7 +6,27 @@ const ROUTE_MODULE = {};       // route -> module id (for active state)
 let CURRENT_ROUTE = null;
 let CURRENT_ROUTE_PARAMS = {};
 let SCREEN_RENDER_SEQUENCE = 0;
+let MY_WORK_CONTEXT = null;
 const DEMO_AUTH_KEY = 'aria-demo-auth';
+
+function isSelfServiceOnly(){
+  return Boolean(DB.erpSystem&&DB.erpSystem.selfServiceOnly);
+}
+async function loadMyWorkContext(){
+  MY_WORK_CONTEXT=DB.myWorkContext||null;
+  const adapter=window.ErpSystemData;
+  if(MY_WORK_CONTEXT||!adapter||!adapter.my||typeof adapter.my.context!=='function'){
+    return MY_WORK_CONTEXT;
+  }
+  try{
+    const response=await adapter.my.context();
+    MY_WORK_CONTEXT=response&&response.data||null;
+    DB.myWorkContext=MY_WORK_CONTEXT;
+  }catch{
+    MY_WORK_CONTEXT=null;
+  }
+  return MY_WORK_CONTEXT;
+}
 
 function demoUser(){
   return DB.user || { name:'Demo Admin', email:'admin@example.com', initials:'DA', role:'Administrator' };
@@ -353,12 +373,14 @@ async function dismissAllNotifications(){
 function routeModuleId(route){ return ROUTE_MODULE[route]; }
 function routeAllowed(route){
   const mod=routeModuleId(route);
+  if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
   if(!mod||mod==='settings') return true;
   const st=moduleState(mod);
   return st.visible&&st.active;
 }
 function routeShownInCommands(route){
   const mod=routeModuleId(route);
+  if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
   if(!mod||mod==='settings') return true;
   const st=moduleState(mod);
   return st.visible&&st.active;
@@ -448,6 +470,7 @@ const SUBROUTES = {
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
+  mywork:['my-leave','my-claims','my-receipts','team-calendar','my-approvals'],
   workflow:['po-approval'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
@@ -498,6 +521,9 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'my-activity','notifications',
   'integration','master-control','sys-settings',
 ]);
+const CANONICAL_DATA_PREVIEW_ROUTES = new Set([
+  'my-leave','my-claims','my-receipts','team-calendar','my-approvals',
+]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
   'stock-on-hand','stock-movement','inv-valuation','new-item',
@@ -538,6 +564,7 @@ const API_SCREEN_ROUTES = new Set([
   'my-activity',
   'notifications',
   'integration','master-control','sys-settings',
+  'my-leave','my-claims','my-receipts','team-calendar','my-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -591,6 +618,13 @@ const MODULE_DEFS = {
     ['hr-directory','Directory','people'],['leave-approval','Leave','calendar'],
     ['payroll-run','Payroll','coins'],
   ]},
+  mywork:{ labelKey:'nav.mywork', home:'my-leave', items:[
+    {route:'my-leave',labelKey:'myWork.nav.leave',icon:'calendar'},
+    {route:'my-claims',labelKey:'myWork.nav.claims',icon:'receipt'},
+    {route:'my-receipts',labelKey:'myWork.nav.receipts',icon:'upload'},
+    {route:'team-calendar',labelKey:'myWork.nav.teamCalendar',icon:'people',capability:'team'},
+    {route:'my-approvals',labelKey:'myWork.nav.approvals',icon:'check',capability:'team'},
+  ]},
   project:{ labelKey:'nav.project', home:'project-pl', items:[
     ['project-pl','Projects','project'],['timesheet','Timesheets','clock'],
   ]},
@@ -622,7 +656,7 @@ const MODULE_READ_PERMISSION = {
   manufacturing:'manufacturing.read', quality:'quality.read', finance:'finance.read',
   hr:'hr.read', project:'project.read', service:'service.read', asset:'asset.read',
   workflow:'approval.read', bi:'reporting.read', admin:'admin.read',
-  integration:'integration.read', settings:'settings.read',
+  integration:'integration.read', settings:'settings.read', mywork:'employee.self.read',
 };
 const SCREEN_FIXTURES = {
   'txn-view':'sales-enquiry',
@@ -637,6 +671,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
     'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
     'service-contracts','asset-register','user-mgmt',
+    'my-leave','my-claims','my-receipts','team-calendar','my-approvals',
   ],
   'master-detail-register-v1':[
     'item-master','stock-on-hand','leave-approval','payroll-run','depreciation',
@@ -707,12 +742,13 @@ Object.keys(SCREENS).forEach(route=>{
     ['notifications','my-activity'].includes(route)?'admin':'unmapped'
   );
   const canonical=CANONICAL_SCREEN_ROUTES.has(route);
+  const canonicalData=canonical||CANONICAL_DATA_PREVIEW_ROUTES.has(route);
   SCREEN_META[route]=Object.freeze({
     route,
     module:moduleId,
     maturity:canonical?'canonical':'preview',
-    dataSource:canonical?'canonical':'sample',
-    supportedModes:canonical?(API_SCREEN_ROUTES.has(route)?['demo','api']:['demo']):['demo'],
+    dataSource:canonicalData?'canonical':'sample',
+    supportedModes:API_SCREEN_ROUTES.has(route)?['demo','api']:['demo'],
     activeSection:SCREEN_ACTIVE_ALIASES[route]||route,
     permission:MODULE_READ_PERMISSION[moduleId]||null,
     fixture:SCREEN_FIXTURES[route]||null,
@@ -750,6 +786,12 @@ function moduleNavItem(item, active){
   const text=labelKey?t(labelKey):tf('route.'+route,label);
   return `<button class="ssub ${route===active?'on':''}" role="tab" aria-selected="${route===active}" onclick="navigate('${route}')">${ic(icon)}<span>${esc(text)}</span></button>`;
 }
+function myWorkCapabilityEnabled(item){
+  if(!item||!item.capability) return true;
+  return item.capability==='team'
+    ?Boolean(MY_WORK_CONTEXT&&MY_WORK_CONTEXT.capabilities&&MY_WORK_CONTEXT.capabilities.team&&MY_WORK_CONTEXT.capabilities.team.available)
+    :false;
+}
 function moduleNav(moduleId, active){
   const def=MODULE_DEFS[moduleId];
   if(!def) return '';
@@ -758,7 +800,7 @@ function moduleNav(moduleId, active){
   const ariaLabel=def.ariaLabel?esc(def.ariaLabel):esc(t(def.labelKey));
   const body=def.sections
     ? def.sections.map((sec,gi)=>(gi?`<span class="ssub-sep" aria-hidden="true"></span>`:'')+sec.items.map(it=>moduleNavItem(it,active)).join('')).join('')
-    : def.items.map(it=>moduleNavItem(it,active)).join('');
+    : def.items.filter(myWorkCapabilityEnabled).map(it=>moduleNavItem(it,active)).join('');
   return `<div class="${cls}" role="tablist" aria-label="${ariaLabel}">${body}</div>`;
 }
 function modulePage(o){
@@ -844,10 +886,11 @@ function decorateScreen(root, route){
   if(meta.maturity!=='preview') return;
   if(!root.querySelector('[data-preview-banner]')){
     const banner=document.createElement('div');
+    const canonicalPreview=meta.dataSource==='canonical';
     banner.className='screen-preview-banner';
     banner.dataset.previewBanner='true';
     banner.setAttribute('role','status');
-    banner.innerHTML=`${ic('warn')}<div><b>${esc(t('preview.label'))}</b><span>${esc(t('preview.desc'))}</span></div>`;
+    banner.innerHTML=`${ic('warn')}<div><b>${esc(t(canonicalPreview?'preview.canonical.label':'preview.label'))}</b><span>${esc(t(canonicalPreview?'preview.canonical.desc':'preview.desc'))}</span></div>`;
     root.prepend(banner);
   }
   root.querySelectorAll('button').forEach(button=>{
@@ -878,7 +921,11 @@ function renderSidebar(){
     <div class="brandtext"><b>Aria</b><small>${esc(DB.company.name.split(' ')[0])} Mfg.</small></div>
   </button>`;
   DB.nav.forEach(g=>{
-    const items=g.items.filter(m=>moduleState(m.id).visible);
+    const items=g.items.filter(m=>{
+      if(m.id==='mywork') return Boolean(MY_WORK_CONTEXT);
+      if(isSelfServiceOnly()) return false;
+      return moduleState(m.id).visible;
+    });
     if(!items.length) return;
     h+=`<div class="navgroup"><h6>${esc(tf('group.'+g.group, g.group))}</h6>`;
     items.forEach(m=>{
@@ -1434,7 +1481,9 @@ function openFySetup(fyArg,isNew){
 
 /* ---------- mobile tab bar ---------- */
 function renderTabbar(){
-  const tabs=[['dashboard','home',t('tab.home')],['sales-orders','bag',t('tab.sales')],['po-approval','flow',t('tab.approve')],['stock-on-hand','box',t('tab.stock')],['picking','warehouse',t('tab.pick')]];
+  const tabs=isSelfServiceOnly()
+    ?[['my-leave','calendar',t('myWork.nav.leave')],['my-claims','receipt',t('myWork.nav.claims')],['my-receipts','upload',t('myWork.nav.receipts')]]
+    :[['dashboard','home',t('tab.home')],['sales-orders','bag',t('tab.sales')],['po-approval','flow',t('tab.approve')],['stock-on-hand','box',t('tab.stock')],['picking','warehouse',t('tab.pick')]];
   $('#tabbar').innerHTML=tabs.filter(([r])=>routeShownInCommands(r)).map(([r,i,l])=>`<button data-route="${r}">${ic(i)}${esc(l)}</button>`).join('')+`<button onclick="openPalette()">${ic('search')}${esc(t('tab.search'))}</button>`;
   $$('#tabbar button[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
 }
@@ -1481,7 +1530,9 @@ async function boot(){
   try{ if(localStorage.getItem('aria-density')==='compact') document.documentElement.setAttribute('data-density','compact'); }catch{}
   try{ const ts=localStorage.getItem('aria-textsize'); if(ts && ts!=='1') document.documentElement.style.setProperty('--fs',ts); }catch{}
   await loadModuleControl();
-  try{ await loadNotifications(); }catch(error){ console.error('Notification load failed',error); }
+  await loadMyWorkContext();
+  if(isSelfServiceOnly()) DB.notifications=[];
+  else try{ await loadNotifications(); }catch(error){ console.error('Notification load failed',error); }
   renderSidebar(); renderTabbar(); initTooltip();
   // default/restore sidebar collapse state (+ sets the toggle icon)
   autoNav();
@@ -1499,6 +1550,10 @@ async function boot(){
   // popovers fill
   refreshNotifs();
   $('#qcMenu').innerHTML=buildQuickCreate();
+  if(isSelfServiceOnly()){
+    const quickCreate=$('#qcBtn');
+    if(quickCreate) quickCreate.hidden=true;
+  }
   $('#qcMenu').querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
   // company switcher
   wireCompanyMenu();
@@ -1535,6 +1590,7 @@ async function boot(){
   // initial route
   let start=(location.hash||'').replace('#','');
   if(!SCREENS[start]&&!DB.nav.flatMap(g=>g.items).some(m=>m.route===start)) start='dashboard';
+  if(isSelfServiceOnly()&&ROUTE_MODULE[start]!=='mywork'&&start!=='settings') start='my-leave';
   // apply the persisted language across the whole shell
   if(typeof applyI18n==='function') applyI18n();
   const envAfterI18n=$('.env'); if(envAfterI18n) envAfterI18n.textContent=DB.company.env||envAfterI18n.textContent;

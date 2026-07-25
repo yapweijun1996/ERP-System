@@ -74,6 +74,7 @@ export async function seedDemo(db: DB): Promise<void> {
     { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
     { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
+    { userId: viewerUser.id, companyFn: 'C-SG', roleId: employeeRole.id },
   ]);
 
   await db.insert(rolePermission).values([
@@ -422,7 +423,8 @@ export async function seedDemo(db: DB): Promise<void> {
     {
       masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1042', fullName: 'Marcus Silva',
       email: 'marcus.silva@acme.co', department: 'Warehouse', jobTitle: 'Warehouse Supervisor',
-      employmentType: 'Full-time', managerId: manager.id, startDate: '2021-03-15', annualLeaveDays: 16,
+      employmentType: 'Full-time', userId: viewerUser.id, managerId: manager.id,
+      startDate: '2021-03-15', annualLeaveDays: 16,
       baseSalary: '4200.00',
     },
     {

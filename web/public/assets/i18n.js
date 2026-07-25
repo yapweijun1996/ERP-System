@@ -2244,6 +2244,82 @@ Object.assign(I18N.vi,{
   'ar.adapterMissing':'Bộ điều hợp tuổi nợ AR chuẩn không khả dụng.',
 });
 
+Object.assign(I18N.en,{
+  'preview.canonical.label':'Preview · Canonical Data',
+  'preview.canonical.desc':'This entry point uses governed ERP data, but its complete workflow is not yet available. Write actions remain disabled.',
+  'nav.mywork':'My Work',
+  'myWork.nav.leave':'My Leave',
+  'myWork.nav.claims':'My Claims',
+  'myWork.nav.receipts':'My Receipts',
+  'myWork.nav.teamCalendar':'Team Calendar',
+  'myWork.nav.approvals':'My Approvals',
+  'route.my-leave':'My Leave',
+  'route.my-claims':'My Claims',
+  'route.my-receipts':'My Receipts',
+  'route.team-calendar':'Team Calendar',
+  'route.my-approvals':'My Approvals',
+});
+Object.assign(I18N.ms,{
+  'preview.canonical.label':'Pratonton · Data Kanonik',
+  'preview.canonical.desc':'Pintu masuk ini menggunakan data ERP terkawal, tetapi aliran kerja lengkap belum tersedia. Tindakan tulis kekal dilumpuhkan.',
+  'nav.mywork':'Kerja Saya',
+  'myWork.nav.leave':'Cuti Saya',
+  'myWork.nav.claims':'Tuntutan Saya',
+  'myWork.nav.receipts':'Resit Saya',
+  'myWork.nav.teamCalendar':'Kalendar Pasukan',
+  'myWork.nav.approvals':'Kelulusan Saya',
+  'route.my-leave':'Cuti Saya',
+  'route.my-claims':'Tuntutan Saya',
+  'route.my-receipts':'Resit Saya',
+  'route.team-calendar':'Kalendar Pasukan',
+  'route.my-approvals':'Kelulusan Saya',
+});
+Object.assign(I18N.zh,{
+  'preview.canonical.label':'预览 · Canonical 数据',
+  'preview.canonical.desc':'此入口使用受治理的 ERP 数据，但完整流程尚未开放；写入操作维持禁用。',
+  'nav.mywork':'我的工作',
+  'myWork.nav.leave':'我的请假',
+  'myWork.nav.claims':'我的报销',
+  'myWork.nav.receipts':'我的收据',
+  'myWork.nav.teamCalendar':'团队日历',
+  'myWork.nav.approvals':'我的审批',
+  'route.my-leave':'我的请假',
+  'route.my-claims':'我的报销',
+  'route.my-receipts':'我的收据',
+  'route.team-calendar':'团队日历',
+  'route.my-approvals':'我的审批',
+});
+Object.assign(I18N.ja,{
+  'preview.canonical.label':'プレビュー · Canonical データ',
+  'preview.canonical.desc':'この入口は統制された ERP データを使用しますが、完全なワークフローは未提供です。書き込み操作は無効です。',
+  'nav.mywork':'マイワーク',
+  'myWork.nav.leave':'自分の休暇',
+  'myWork.nav.claims':'自分の経費申請',
+  'myWork.nav.receipts':'自分の領収書',
+  'myWork.nav.teamCalendar':'チームカレンダー',
+  'myWork.nav.approvals':'自分の承認',
+  'route.my-leave':'自分の休暇',
+  'route.my-claims':'自分の経費申請',
+  'route.my-receipts':'自分の領収書',
+  'route.team-calendar':'チームカレンダー',
+  'route.my-approvals':'自分の承認',
+});
+Object.assign(I18N.vi,{
+  'preview.canonical.label':'Xem trước · Dữ liệu Canonical',
+  'preview.canonical.desc':'Điểm vào này dùng dữ liệu ERP được quản trị nhưng quy trình đầy đủ chưa sẵn sàng. Thao tác ghi vẫn bị vô hiệu hóa.',
+  'nav.mywork':'Công việc của tôi',
+  'myWork.nav.leave':'Nghỉ phép của tôi',
+  'myWork.nav.claims':'Yêu cầu chi phí của tôi',
+  'myWork.nav.receipts':'Biên lai của tôi',
+  'myWork.nav.teamCalendar':'Lịch nhóm',
+  'myWork.nav.approvals':'Phê duyệt của tôi',
+  'route.my-leave':'Nghỉ phép của tôi',
+  'route.my-claims':'Yêu cầu chi phí của tôi',
+  'route.my-receipts':'Biên lai của tôi',
+  'route.team-calendar':'Lịch nhóm',
+  'route.my-approvals':'Phê duyệt của tôi',
+});
+
 let LANG = 'en';
 try{ const s=localStorage.getItem('aria-lang'); if(s && I18N[s]) LANG=s; }catch{}
 

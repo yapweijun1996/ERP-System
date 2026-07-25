@@ -1869,9 +1869,14 @@ company, and every self-service resource derives the employee identity from Sess
       API and Demo expose actor-derived context, own leave and privacy-redacted team
       leave. Claims/receipts declare `not_modelled` until EPIC-054/055 rather than
       fabricating records.
-- [ ] **TASK-109 — Build the five-language My Work shell.** Add My Leave, My Claims and
-      My Receipts entry points; add Team Calendar and Approvals only when the active
-      employee has management capability; preserve all existing Canonical routes.
+- [x] **TASK-109 — Build the five-language My Work shell.** Five Preview routes now
+      reuse `transaction-list-v1`: My Leave reads only the Session actor's real leave,
+      My Claims and My Receipts disclose their governed `not_modelled` boundary, and
+      Team Calendar/My Approvals appear only when `/api/my/context` grants team scope.
+      Team rows remain privacy-redacted and approval is deliberately read-only until
+      TASK-113/114. Employee-only API accounts can boot the restricted My Work shell
+      without `dashboard.read`; PWA v107 delivers all five-language assets. Existing
+      Canonical maturity remains 115 while the accepted shell adds five Preview routes.
 - [ ] **TASK-110 — Prove identity migration, access and security boundaries.** Cover
       cross-organisation username reuse, same-organisation collisions, multi-role
       permission union, first activation, temporary-secret destruction, HR reset,

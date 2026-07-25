@@ -101,6 +101,24 @@ if (obsoleteTimesheetChrome.length) {
 }
 
 const hrScreenSource = readFileSync(path.join(assetDir, 'screens-hr.js'), 'utf8');
+const myWorkRoutes = ['my-leave','my-claims','my-receipts','team-calendar','my-approvals'];
+const missingMyWorkRoutes = myWorkRoutes.filter((route) =>
+  !hrScreenSource.includes(`SCREENS['${route}']`));
+if (missingMyWorkRoutes.length) {
+  throw new Error(`My Work shell routes are missing: ${missingMyWorkRoutes.join(', ')}`);
+}
+if (!hrScreenSource.includes('data-my-work-shell')
+    || !hrScreenSource.includes('transactionListPage(root')
+    || !hrScreenSource.includes('reason_and_evidence_redacted')) {
+  throw new Error('My Work shell does not declare its SSOT list or privacy contract.');
+}
+const i18nSource = readFileSync(path.join(assetDir, 'i18n.js'), 'utf8');
+const missingMyWorkLocales = ['en','ms','zh','ja','vi'].filter((locale) =>
+  !i18nSource.includes(`Object.assign(I18N.${locale},{`)
+  || !i18nSource.includes(`'myWork.nav.teamCalendar'`));
+if (missingMyWorkLocales.length) {
+  throw new Error(`My Work navigation translations are missing: ${missingMyWorkLocales.join(', ')}`);
+}
 const employeeScreenSource = (hrScreenSource.split("SCREENS['employee'] =")[1] || '')
   .split('/* ---- shared payroll data prep')[0];
 const obsoleteEmployeeChrome = [
@@ -1647,6 +1665,121 @@ async function auditRoutes(browser, viewport) {
     });
 
     events.length = 0; // fully consumed this route's window; reset for the next
+  }
+
+  if (routes.includes('my-leave')) {
+    const myWorkIssues = await page.evaluate(async () => {
+      const issues = [];
+      const originalLanguage = getLang();
+      const originalContext = MY_WORK_CONTEXT;
+      const originalDbContext = DB.myWorkContext;
+      const originalMethods = {
+        context:ErpSystemData.my.context,
+        leaveRequests:ErpSystemData.my.leaveRequests,
+        claims:ErpSystemData.my.claims,
+        receipts:ErpSystemData.my.receipts,
+        teamLeaveRequests:ErpSystemData.my.teamLeaveRequests,
+      };
+      const employee = {
+        id:42,employeeNo:'EMP-AUDIT',fullName:'My Work Auditor',
+        department:'Operations',jobTitle:'Coordinator',annualLeaveDays:14,
+      };
+      const company = {
+        companyFn:'C-SG',name:'Acme Singapore',country:'SG',
+        currency:'SGD',taxRegime:'GST',locale:'en',
+      };
+      const selfLeave = [{
+        id:71,leaveType:'Annual',startDate:'2026-08-03',endDate:'2026-08-04',
+        days:2,reason:'Actor-owned reason',status:'approved',
+      }];
+      const teamLeave = [{
+        id:72,employeeId:43,employeeNo:'EMP-TEAM',employeeName:'Team Member',
+        department:'Operations',leaveType:'Medical',startDate:'2026-08-05',
+        endDate:'2026-08-05',days:1,status:'pending',
+      }];
+      const setContext = (team) => {
+        MY_WORK_CONTEXT={
+          company,employee,
+          capabilities:{
+            leave:{available:true,writable:false},
+            claims:{available:false,reason:'not_modelled'},
+            receipts:{available:false,reason:'not_modelled'},
+            team:{available:team,employeeCount:team?1:0},
+          },
+        };
+        DB.myWorkContext=MY_WORK_CONTEXT;
+        ErpSystemData.my.context=async()=>({data:MY_WORK_CONTEXT,meta:{actorDerived:true}});
+      };
+      try {
+        ErpSystemData.my.leaveRequests=async()=>({data:selfLeave,meta:{actorDerived:true}});
+        ErpSystemData.my.claims=async()=>({data:[],meta:{availability:'not_modelled',plannedEpic:'EPIC-055'}});
+        ErpSystemData.my.receipts=async()=>({data:[],meta:{availability:'not_modelled',plannedEpic:'EPIC-054'}});
+        ErpSystemData.my.teamLeaveRequests=async()=>({
+          data:teamLeave,meta:{privacy:'reason_and_evidence_redacted'},
+        });
+
+        setContext(false);
+        renderSidebar();
+        const expectedTitles = {
+          en:'My Leave',ms:'Cuti Saya',zh:'我的请假',ja:'自分の休暇',vi:'Nghỉ phép của tôi',
+        };
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          setLang(locale);
+          await navigate('my-leave');
+          const heading=document.querySelector('#viewRoot h1')?.textContent?.trim()||'';
+          if (heading!==title) issues.push(`${locale} My Leave heading rendered as ${heading||'missing'}`);
+          const root=document.querySelector('#viewRoot [data-my-work-shell="true"]');
+          if (!root || root.getAttribute('data-my-work-view')!=='my-leave') {
+            issues.push(`${locale} My Leave SSOT marker missing`);
+          }
+          if (!root?.textContent.includes('Actor-owned reason')) {
+            issues.push(`${locale} actor-owned leave row missing`);
+          }
+        }
+        const employeeTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
+        if (employeeTabs!==3) {
+          issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 3`);
+        }
+
+        setContext(true);
+        renderSidebar();
+        await navigate('team-calendar');
+        const managerRoot=document.querySelector('#viewRoot [data-my-work-shell="true"]');
+        const managerTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
+        if (managerTabs!==5) {
+          issues.push(`manager capability navigation exposed ${managerTabs} tabs instead of 5`);
+        }
+        if (managerRoot?.getAttribute('data-my-work-privacy')!=='reason_and_evidence_redacted') {
+          issues.push('team route privacy marker missing');
+        }
+        if (!managerRoot?.textContent.includes('Team Member')
+            || managerRoot?.textContent.includes('Actor-owned reason')) {
+          issues.push('team route did not keep actor reasons outside the manager view');
+        }
+        await navigate('my-approvals');
+        if (document.querySelectorAll('#viewRoot [data-list-table] .dt-r[data-row]').length!==1) {
+          issues.push('pending team approval row missing');
+        }
+        if (document.querySelector('#viewRoot [data-list-primary-action]')) {
+          issues.push('read-only approval shell exposed a decision action');
+        }
+      } finally {
+        Object.assign(ErpSystemData.my,originalMethods);
+        MY_WORK_CONTEXT=originalContext;
+        DB.myWorkContext=originalDbContext;
+        setLang(originalLanguage);
+        renderSidebar();
+        await navigate('dashboard');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'my-leave');
+    if (result) {
+      result.layoutIssues.push(...myWorkIssues.map((issue)=>`My Work smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
   }
 
   if (routes.includes('service-contracts')) {

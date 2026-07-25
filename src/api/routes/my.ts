@@ -1,7 +1,9 @@
 import { Router } from 'express';
+import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
+import { company } from '../../data/schema';
 import {
   ActorScopeError,
   listActorLeaveWithin,
@@ -75,10 +77,28 @@ export function createMyRouter(db: DB): Router {
       const canReadTeam = await hasPermission(db, session, PERMISSIONS.employeeTeamRead);
       const data = await withTenantTransaction(db, scope, async (tx) => {
         const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
+        const [activeCompany] = await tx.select({
+          companyFn: company.companyFn,
+          name: company.name,
+          country: company.country,
+          currency: company.currency,
+          taxRegime: company.taxRegime,
+          locale: company.locale,
+        }).from(company).where(and(
+          eq(company.masterFn, scope.masterFn),
+          eq(company.companyFn, scope.companyFn),
+        )).limit(1);
+        if (!activeCompany) {
+          throw new ActorScopeError(
+            'active_company_missing',
+            'The active employee company could not be resolved.',
+          );
+        }
         const teamEmployeeIds = canReadTeam
           ? await resolveTeamEmployeeIdsWithin(tx, scope, actor.id)
           : [];
         return {
+          company: activeCompany,
           employee: actor,
           capabilities: {
             leave: { available: true, writable: false },

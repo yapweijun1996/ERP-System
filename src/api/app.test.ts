@@ -186,7 +186,9 @@ describe('production API security contract', () => {
     const viewer = userPayload.users.find(
       (user: { username: string }) => user.username === 'viewer',
     );
-    expect(viewer.roles).toHaveLength(1);
+    expect(viewer.roles.map(
+      (assigned: { roleName: string }) => assigned.roleName,
+    )).toEqual(['Viewer', 'Employee']);
 
     const setRoles = await fetch(
       `${running.baseUrl}/api/admin/users/${viewer.id}/actions/set-roles`,
@@ -194,14 +196,18 @@ describe('production API security contract', () => {
         method: 'POST',
         headers: { ...headers, 'x-request-id': 'set-viewer-role-union' },
         body: JSON.stringify({
-          roleIds: [viewer.roles[0].roleId, auditorRoleId, auditorRoleId],
+          roleIds: [
+            ...viewer.roles.map((assigned: { roleId: number }) => assigned.roleId),
+            auditorRoleId,
+            auditorRoleId,
+          ],
         }),
       },
     );
     expect(setRoles.status).toBe(200);
     expect((await setRoles.json()).data.roles.map(
       (assigned: { name: string }) => assigned.name,
-    )).toEqual(['Viewer', 'Auditor']);
+    )).toEqual(['Viewer', 'Employee', 'Auditor']);
 
     const usersAfter = await fetch(`${running.baseUrl}/api/admin/users`, {
       headers: { cookie: cookies.header },
@@ -211,7 +217,7 @@ describe('production API security contract', () => {
     );
     expect(updatedViewer.roles.map(
       (assigned: { roleName: string }) => assigned.roleName,
-    )).toEqual(['Viewer', 'Auditor']);
+    )).toEqual(['Viewer', 'Employee', 'Auditor']);
     const [audit] = await db.select().from(auditLog)
       .where(eq(auditLog.requestId, 'set-viewer-role-union'));
     expect(audit).toMatchObject({

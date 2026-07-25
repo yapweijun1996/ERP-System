@@ -36,8 +36,9 @@ describe('employee account lifecycle', () => {
       eq(employee.masterFn, scope.masterFn),
       eq(employee.companyFn, scope.companyFn),
     ));
-    const source = employees.find((row) => row.managerId != null)!;
-    const target = employees.find((row) => row.id !== source.id && row.isActive)!;
+    const source = employees.find((row) => row.managerId != null && row.userId == null)!;
+    const target = employees.find((row) =>
+      row.id !== source.id && row.isActive && row.userId == null)!;
     return { db, actor, source, target };
   }
 

@@ -64,6 +64,11 @@ describe('actor-owned My Work API', () => {
       eq(employee.companyFn, 'C-SG'),
       eq(employee.employeeNo, employeeNo),
     ));
+    await db.update(employee).set({ userId: null }).where(and(
+      eq(employee.masterFn, 'M1'),
+      eq(employee.companyFn, 'C-SG'),
+      eq(employee.userId, viewer.userId),
+    ));
     await db.update(employee).set({ userId: viewer.userId }).where(eq(employee.id, subject.id));
     for (const name of roleNames) {
       const [selectedRole] = await db.select().from(role).where(and(
@@ -89,6 +94,14 @@ describe('actor-owned My Work API', () => {
     expect(context.status).toBe(200);
     const contextBody = await context.json() as {
       data: {
+        company: {
+          companyFn: string;
+          name: string;
+          country: string;
+          currency: string;
+          taxRegime: string;
+          locale: string;
+        };
         employee: { id: number; employeeNo: string };
         capabilities: {
           claims: { available: boolean; reason: string };
@@ -101,6 +114,12 @@ describe('actor-owned My Work API', () => {
     expect(contextBody.data.employee).toMatchObject({
       id: subject.id,
       employeeNo: 'EMP-1042',
+    });
+    expect(contextBody.data.company).toMatchObject({
+      companyFn: 'C-SG',
+      name: 'Acme Singapore',
+      country: 'SG',
+      currency: 'SGD',
     });
     expect(contextBody.meta.actorDerived).toBe(true);
     expect(contextBody.data.capabilities.team.available).toBe(false);
@@ -177,6 +196,43 @@ describe('actor-owned My Work API', () => {
         availability: 'not_modelled',
       });
     }
+  });
+
+  it('lets an Employee-only account boot My Work without dashboard access', async () => {
+    const { viewer } = await linkViewer('EMP-1042', ['Employee']);
+    const [employeeRole] = await db.select().from(role).where(and(
+      eq(role.masterFn, 'M1'),
+      eq(role.name, 'Employee'),
+    ));
+    await db.delete(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, viewer.userId),
+      eq(userCompanyRole.companyFn, 'C-SG'),
+    ));
+    await db.insert(userCompanyRole).values({
+      userId: viewer.userId,
+      companyFn: 'C-SG',
+      roleId: employeeRole.roleId,
+    });
+
+    const cookie = await login();
+    const dashboard = await fetch(`${baseUrl}/api/dashboard`, {
+      headers: { cookie },
+    });
+    expect(dashboard.status).toBe(403);
+    expect((await dashboard.json()).error.code).toBe('permission_denied');
+
+    const context = await fetch(`${baseUrl}/api/my/context`, {
+      headers: { cookie },
+    });
+    expect(context.status).toBe(200);
+    const body = await context.json() as {
+      data: {
+        employee: { employeeNo: string };
+        capabilities: { team: { available: boolean } };
+      };
+    };
+    expect(body.data.employee.employeeNo).toBe('EMP-1042');
+    expect(body.data.capabilities.team.available).toBe(false);
   });
 
   it('requires an active company-bound employee identity and a separate team permission', async () => {

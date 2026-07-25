@@ -101,10 +101,10 @@ marked as sample/demo content and must not crash under canonical data (TASK-018)
 
 The following requirements are approved product scope. TASK-106 implemented the
 organisation username/multi-role identity foundation, TASK-107 implemented the
-employee account lifecycle and TASK-108 implemented actor-owned self/team reads;
-TASK-109–135 remain
-**Planned** until their individual acceptance gates pass. Planned capabilities must
-not be represented as current Canonical behavior.
+employee account lifecycle, TASK-108 implemented actor-owned self/team reads and
+TASK-109 delivered the five-language My Work shell as five Preview routes.
+TASK-110–135 remain **Planned** until their individual acceptance gates pass. Planned
+capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
   organisation-unique username, with nullable email before activation. HR employee
@@ -118,6 +118,11 @@ not be represented as current Canonical behavior.
   scope; manager leave projections omit private reason facts. Claim/receipt endpoints
   declare `not_modelled` until their domain tasks. Offboarding revokes active sessions
   but retains statutory/audit history.
+- **My Work shell:** My Leave, My Claims and My Receipts use the shared list SSOT.
+  Team Calendar and My Approvals are present only when the actor context grants team
+  scope; team rows omit private reasons/evidence. Claims/Receipts and approval commands
+  remain honest unavailable/read-only states. These five accepted shell routes are
+  Preview backed by Canonical actor reads, leaving the 115 Canonical routes unchanged.
 - **Full leave:** effective-dated work/holiday/leave policy, full-day/half-day units,
   immutable entitlement ledger, Pending reservation, versioned amendment/cancellation,
   multi-stage approval/delegation/capacity, role-redacted team calendar, protected

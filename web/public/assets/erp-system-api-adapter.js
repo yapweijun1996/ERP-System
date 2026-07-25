@@ -291,6 +291,24 @@
     document.title = 'ERP System - ' + active.name;
   }
 
+  function applyMyWorkShell(context, sessionUser){
+    var active=context&&context.company||{
+      companyFn:(sessionUser&&sessionUser.activeCompanyFn)||'',
+      name:'Employee Self Service',country:'',currency:'USD',taxRegime:'',locale:'en',
+    };
+    applyDashboard({
+      scope:{
+        masterFn:(sessionUser&&sessionUser.masterFn)||'',
+        companyFn:active.companyFn||(sessionUser&&sessionUser.activeCompanyFn)||'',
+      },
+      companies:[active],
+      metrics:{},
+    },sessionUser);
+    DB.erpSystem.selfServiceOnly=true;
+    DB.myWorkContext=context;
+    state.mode='api';
+  }
+
   async function fetchSession(){
     var res = await fetch(API_BASE + '/auth/session', { method: 'GET', credentials: 'same-origin' });
     if (!res.ok) return null;
@@ -303,8 +321,21 @@
     if (!session) throw new Error('not_authenticated');
     var payload = await fetchDashboard();
     applyDashboard(payload, session);
+    DB.erpSystem.selfServiceOnly=false;
     state.mode = 'api';
     return payload;
+  }
+
+  async function loadAuthenticatedShell(){
+    try{
+      return await loadDashboard();
+    }catch(dashboardError){
+      var session=state.session||await fetchSession();
+      if(!session) throw dashboardError;
+      var response=await my.context();
+      applyMyWorkShell(response.data,session);
+      return response.data;
+    }
   }
 
   var ready = checkHealth().then(function(reachable){
@@ -315,7 +346,7 @@
 
   async function refresh(){
     if (state.mode === 'api-unavailable') return null;
-    return loadDashboard();
+    return loadAuthenticatedShell();
   }
 
   async function switchCompany(companyFn){
@@ -327,7 +358,7 @@
         method:'POST',body:{companyFn:companyFn},
       });
       SCOPE.companyFn = companyFn;
-      return await loadDashboard();
+      return await loadAuthenticatedShell();
     } catch (e) {
       SCOPE.companyFn = previous; // don't leave SCOPE pointing at a company we failed to load
       throw e;
@@ -358,7 +389,7 @@
       var session=await fetchSession();
       if(!session) return false;
       if(session.passwordChangeRequired) return true;
-      await loadDashboard();
+      await loadAuthenticatedShell();
       return true;
     } catch {
       return false;

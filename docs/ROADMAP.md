@@ -758,10 +758,15 @@ service-worker v103. All three Posting Detail routes pass focused state proofs.
    direct/tree hierarchy scope and actor-derived `/api/my/*` reads. Client-selected
    employee IDs fail closed; ordinary managers see direct reports only, explicit
    hierarchy grants stay company-bound, and team leave omits private reason facts.
-4. **My Work navigation and security proof** (TASK-109/110 planned) adds five-language My
-   Leave, My Claims and My Receipts entry points without reclassifying unfinished
-   routes as Canonical. Offboarding revokes sessions; temporary password reveal is
-   audited and ends permanently at first activation.
+4. **My Work navigation** (TASK-109 done 2026-07-25) adds five-language My Leave,
+   My Claims and My Receipts plus capability-gated Team Calendar/My Approvals through
+   `transaction-list-v1`. The five routes are Preview with Canonical actor-owned data:
+   unfinished Claim/Receipt/approval domains stay honest and read-only rather than
+   being promoted or simulated. Employee-only API accounts boot a restricted shell.
+5. **Identity security proof** (TASK-110 planned) consolidates migration, collision,
+   activation-secret destruction, HR reset, role union, hierarchy, cross-tenant and
+   offboarding proof. It records the accepted optional MFA/step-up/email-verification
+   boundary explicitly.
 
 Exit criteria: organisation/username collisions, migration, first activation,
 multi-role permission union, actor isolation, hierarchy scope, offboarding and the

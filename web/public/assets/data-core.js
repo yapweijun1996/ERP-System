@@ -38,6 +38,7 @@ DB.nav = [
     { id:'quality', label:'Quality', icon:'checkc', route:'qc-inspection' },
   ]},
   { group:'Finance & Back office', items:[
+    { id:'mywork', label:'My Work', icon:'user', route:'my-leave' },
     { id:'finance', label:'Finance', icon:'book', route:'gl' },
     { id:'hr', label:'HR / Payroll', icon:'people', route:'hr-directory', badge:'4' },
     { id:'project', label:'Projects', icon:'project', route:'project-pl' },

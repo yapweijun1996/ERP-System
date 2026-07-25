@@ -2832,6 +2832,14 @@
           ?await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id)
           :[];
         return {
+          company:{
+            companyFn:SCOPE.companyFn,
+            name:DB.company&&DB.company.name||SCOPE.companyFn,
+            country:DB.company&&DB.company.country||'',
+            currency:DB.company&&DB.company.currency||'',
+            taxRegime:DB.company&&DB.company.taxRegime||'',
+            locale:typeof getLang==='function'?getLang():'en',
+          },
           employee:actor,
           capabilities:{
             leave:{available:true,writable:false},
