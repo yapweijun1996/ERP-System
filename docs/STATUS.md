@@ -777,17 +777,54 @@ no-movement, unknown, empty, failed-read and Retry states. Service-worker v103
 delivers the update, and the focused Posting Detail audit now covers Journal Entry,
 Payment Voucher and Goods Receipt.
 
+## Planned employee self-service, leave and expense programme (EPIC-052–056)
+
+The current 115-route Canonical boundary does **not** yet include the newly approved
+employee self-service programme. EPIC-052 through EPIC-056 and TASK-106 through
+TASK-135 are planning records only; they must not be counted as implemented routes,
+tables, permissions, API contracts or tested behavior until their individual
+acceptance gates pass.
+
+The programme is intentionally ordered:
+
+1. **EPIC-052 — Employee Identity & My Work:** organisation code + username login,
+   encrypted pre-activation credential, forced first-login completion, company-scoped
+   employee/user link, multiple role assignments, hierarchy-scoped Manager capability
+   and actor-derived `/api/my/*` resources.
+2. **EPIC-053 — Full Leave Management:** versioned work/holiday/leave policy,
+   append-only balance ledger, full/half-day applications, multi-level approval,
+   delegation/capacity, medical privacy, `calendar-workspace-v1`, outbound calendar
+   events and Payroll deduction/encashment sources. Existing HR-lite day values remain
+   immutable Legacy Policy snapshots.
+3. **EPIC-054 — Receipt & Secure Document Processing:** database-default or optional
+   single-node filesystem content storage, bounded mobile capture, fail-closed
+   quarantine, local OCR plus opt-in BYOK Vision, 98%-minimum governed auto-submit,
+   reasoned Void/correction, legal hold, paper custody and post-retention purge.
+4. **EPIC-055 — Expense Claims & Accounting:** employee/company-paid claims, receipt
+   inbox, tax/GL/FX policy, manager + Finance line decisions, duplicate/budget control,
+   card-statement matching, mileage/per diem/advance settlement and balanced posting
+   to Employee Payable or company-paid clearing.
+5. **EPIC-056 — Reimbursement Payments & Tax Evidence:** encrypted payout profiles,
+   maker/checker bank-file batches, partial bank results, balanced cash settlement and
+   immutable PDF/XLSX/CSV/ZIP/hash tax-support packages with correction versions.
+
+Confirmed constraints are recorded honestly. MFA, sensitive-operation step-up and
+email verification remain optional by product decision; this is an accepted risk, not
+an implemented security guarantee. Receipt content defaults to database binary storage
+and may be switched to a server filesystem provider, whose single-node limitation must
+remain visible. The programme excludes hourly leave, native mobile apps, two-way
+calendar edits, direct bank APIs and direct tax filing.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
 - Done: 104 tasks, including TASK-105
 - Blocked: TASK-017 (1)
-- Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
-  complete at 115 Canonical / 0 Preview and 43 audited list-layout routes, including
-  36 transaction lists, 5 master-detail registers and 2 report lists; Warehouse
-  Picking remains on its dedicated operational-workspace SSOT, and BOM, Employee,
-  Service Contract plus Asset Detail use the shared master-detail editor SSOT.
-  NCR, Service Order and Purchase Order Approval use the shared actionable Case
-  Detail SSOT.
+- Todo: 30 planned tasks (TASK-106–135) across EPIC-052–056. These extend the product
+  beyond the currently complete 115 Canonical / 0 Preview boundary; they do not reopen
+  or downgrade existing routes. Current visual-layout convergence remains complete at
+  43 audited list-layout routes, while future My Work/Leave/Receipt/Expense/Tax routes
+  must join the appropriate existing SSOT or the planned `calendar-workspace-v1` only
+  after Canonical Demo/API behavior exists.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

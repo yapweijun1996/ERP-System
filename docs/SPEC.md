@@ -95,6 +95,50 @@ CRM, Manufacturing, Quality, HR/Payroll, Projects, Service, Fixed Assets, BI,
 Integration, Admin render sample data. Requirement: each such screen must be visibly
 marked as sample/demo content and must not crash under canonical data (TASK-018).
 
+### 4.4 Approved expansion, not yet implemented (EPIC-052–056)
+
+The following requirements are approved product scope but remain **Planned** until
+TASK-106–135 pass their individual acceptance gates. They must not be represented as
+current Canonical behavior.
+
+- **Employee identity:** production login adds organisation code + an
+  organisation-unique username. HR creates and company-links the employee account.
+  First login requires a password change and an email address. The encrypted
+  temporary password may be revealed to HR only before activation, every reveal is
+  audited, and activation permanently destroys the recoverable copy.
+- **Multiple roles:** one user may hold multiple roles in one company. Permissions are
+  the union of those roles, but company, employee and reporting-hierarchy scope still
+  limit accessible rows. Direct reports activate Manager capability; self-approval is
+  never permitted.
+- **Actor-owned self service:** `/api/my/*` derives employee identity from Session and
+  never accepts an employee identifier that could select another person's data.
+  Offboarding revokes active sessions but retains statutory/audit history.
+- **Full leave:** effective-dated work/holiday/leave policy, full-day/half-day units,
+  immutable entitlement ledger, Pending reservation, versioned amendment/cancellation,
+  multi-stage approval/delegation/capacity, role-redacted team calendar, protected
+  medical evidence and Payroll sources for unpaid leave and encashment.
+- **Receipt evidence:** JPEG/PNG/HEIC/PDF only, maximum 20 MB and 20 PDF pages. Every
+  file is quarantined until a fail-closed scan succeeds. Local OCR is default; external
+  Vision is explicit company BYOK. Governed auto-submit requires every critical field
+  at 98% confidence or above plus safety, amount and duplicate checks.
+- **Expense claims:** employee-paid and company-paid evidence, multi-line claims,
+  tax/GL/FX/category policy, manager + Finance line decisions, duplicate/budget
+  control, card-statement matching, mileage/per diem/cash advances and final-approval
+  balanced posting to Employee Payable or the configured company-paid account.
+- **Payment and tax evidence:** encrypted employee payout profiles, distinct
+  maker/checker bank-file batches, successful-line-only bank posting and immutable
+  PDF/XLSX/CSV/ZIP/hash tax-support packages. The product does not call bank APIs or
+  submit tax returns directly.
+- **Record governance:** unsubmitted drafts may be deleted; submitted evidence uses
+  reasoned Void; posted/finalised evidence uses correction or reversal. Legal hold
+  prevents purge. Post-retention content purge requires two distinct approvers and
+  leaves a permanent hash tombstone.
+
+Confirmed risk acceptance for this programme: MFA, sensitive-operation step-up and
+email verification are optional rather than mandatory. Tests and documentation must
+continue to report that boundary accurately; no implementation may imply those
+controls exist.
+
 ## 5. Non-functional requirements
 
 - **Performance:** all list screens must use keyset pagination patterns compatible

@@ -1834,3 +1834,161 @@ Delivery slices:
       Back/footer chrome while preserving all Canonical receipt and movement reads.
       Five-language state audits and service worker v103 enforce the desktop/375px
       contract.
+
+## EPIC-052 — Employee Self-Service Identity & My Work (Planned)
+
+Build the identity boundary required for employee-owned leave, receipt and expense
+workflows. This epic extends the current email/single-role account model without
+changing the maturity of any existing route until Demo/API parity is proven.
+
+Confirmed product decisions: employees sign in with organisation code + an
+organisation-unique username; HR chooses the username (default employee number) and
+creates a one-time password. HR may reveal the encrypted temporary password only
+before first activation, with every reveal audited. First login requires a password
+change and an email address, but email verification, MFA and step-up authentication
+remain optional by explicit product decision. One user may hold multiple roles in one
+company, and every self-service resource derives the employee identity from Session.
+
+- [ ] **TASK-106 — Add organisation username login and multi-role assignments.**
+      Add organisation login codes, organisation-scoped usernames, nullable
+      pre-activation email, multiple company-role grants and a non-destructive
+      migration for existing email accounts and single-role assignments.
+- [ ] **TASK-107 — Link Employee to app_user and implement HR account lifecycle.**
+      Create the company-unique employee/user link, encrypted activation credential,
+      audited pre-activation reveal, forced first-login completion, HR one-time
+      password reset and immediate session revocation on offboarding.
+- [ ] **TASK-108 — Add actor-owned `/api/my/*` contracts.** Resolve employee identity
+      from the authenticated Session, reject client-supplied employee impersonation,
+      expose only self-owned leave/expense/receipt facts and keep management resources
+      behind separate permissions and hierarchy scopes.
+- [ ] **TASK-109 — Build the five-language My Work shell.** Add My Leave, My Claims and
+      My Receipts entry points; add Team Calendar and Approvals only when the active
+      employee has management capability; preserve all existing Canonical routes.
+- [ ] **TASK-110 — Prove identity migration, access and security boundaries.** Cover
+      cross-organisation username reuse, same-organisation collisions, multi-role
+      permission union, first activation, temporary-secret destruction, HR reset,
+      offboarding, hierarchy scope and the accepted no-MFA/unverified-email risks.
+
+## EPIC-053 — Full Leave Management (Planned)
+
+Replace the current HR-lite three-type/calendar-day request model with versioned leave
+policy, immutable entitlement facts, multi-stage approval and a team calendar. Existing
+leave rows remain historical facts: their stored day count is preserved under a
+Legacy Policy marker and is never silently recomputed.
+
+- [ ] **TASK-111 — Add working calendars, holidays, leave types and policy versions.**
+      Support country/region holiday presets that HR confirms, company holidays,
+      full-day/half-day units, effective-dated entitlements, accrual, carry-forward,
+      expiry, evidence rules, staffing controls and encashment policy.
+- [ ] **TASK-112 — Add the immutable leave balance ledger.** Record grant, accrual,
+      pending reservation, use, release, cancellation, adjustment, carry-forward,
+      expiry and encashment as append-only entries; Pending requests reserve balance
+      and insufficient paid balance suggests an explicit unpaid split.
+- [ ] **TASK-113 — Add complete leave application lifecycle and evidence.** Implement
+      Draft, Pending, Approved, Rejected, Withdrawn, Voided and Cancelled semantics,
+      versioned amendments, approved-cancellation requests, HR on-behalf entry and
+      policy-controlled medical evidence with strict privacy.
+- [ ] **TASK-114 — Add configurable approval, delegation and capacity controls.**
+      Default to direct manager, allow policy-driven additional levels, forbid
+      self-approval, support time-bounded delegates, reminders/escalation and
+      department minimum-staff warning/add-level/block behavior.
+- [ ] **TASK-115 — Add `calendar-workspace-v1` and optional outbound calendar sync.**
+      Provide month/week/list team views, direct-report default scope, authorised
+      hierarchy expansion, privacy-redacted availability and detail-drawer decisions;
+      push approved/change/cancel events one-way while ERP remains authoritative.
+- [ ] **TASK-116 — Connect leave to Payroll and migrate HR-lite safely.** Feed approved
+      unpaid leave into payroll deductions and approved encashment into earnings,
+      preserve legacy request day snapshots, add five-language Demo/API state proof
+      and keep old route aliases functional during rollout.
+
+## EPIC-054 — Receipt & Secure Document Processing (Planned)
+
+Create the reusable document boundary for leave evidence, expense receipts, card
+proof and tax evidence. PostgreSQL/PGlite byte storage is the default confirmed
+deployment; a server-filesystem provider is optional and explicitly single-node.
+
+- [ ] **TASK-117 — Introduce DocumentStorageProvider and receipt metadata.** Store
+      tenant ownership, version, SHA-256, MIME, size, backend locator, retention and
+      legal-hold metadata independently from content; provide database and optional
+      filesystem implementations with identical authorization.
+- [ ] **TASK-118 — Add secure upload and mobile offline capture.** Accept JPEG, PNG,
+      HEIC and PDF up to 20 MB/20 pages, validate magic bytes, stream bounded content,
+      support camera/crop/rotate/compress and clear unsynced local drafts after an
+      explicit logout warning.
+- [ ] **TASK-119 — Add quarantine, scanning and asynchronous extraction.** Fail closed
+      when malware scanning is unavailable or uncertain; default to local OCR and
+      allow external BYOK Vision only after company opt-in with provider, region and
+      retention metadata.
+- [ ] **TASK-120 — Add confidence-governed receipt inbox and auto-submit.** Persist
+      field provenance/model/confidence, require every critical field at 98% or above
+      plus safety/amount/duplicate checks, let a company disable but never lower the
+      threshold, and record system submission as acting for the authenticated uploader.
+- [ ] **TASK-121 — Add document void, retention and purge governance.** Hard-delete
+      only unsubmitted drafts; use reasoned Void after submission, correction/reversal
+      after posting or tax finalisation, legal hold, paper-original custody and
+      two-person post-retention purge with a permanent hash tombstone.
+- [ ] **TASK-122 — Audit document access and storage parity.** Record sensitive
+      view/download/print/export operations, prove database/filesystem parity,
+      quarantine isolation, tenant/privacy rules, retry idempotency and bounded
+      desktop/375px/PWA behavior.
+
+## EPIC-055 — Expense Claims & Accounting (Planned)
+
+Add employee reimbursement, company-paid evidence and policy-driven non-receipt
+expenses without treating employees as suppliers or mixing reimbursement into payroll.
+An authenticated upload may authorise 98%-confidence system submission; final finance
+approval is the accounting boundary.
+
+- [ ] **TASK-123 — Add effective-dated expense, tax, FX and GL policy.** Map categories
+      to expense/input-tax accounts, deductibility, evidence, limits and payment
+      sources; preserve original currency, policy FX and verified actual card charge.
+- [ ] **TASK-124 — Add multi-line claims, receipt inbox and allocation.** Support
+      direct claim creation plus quick receipt capture, multiple lines per claim,
+      department/cost-centre/project split by amount or percentage and employee-only
+      final submission semantics.
+- [ ] **TASK-125 — Add line-level approval, duplicate and budget control.** Default to
+      manager then Finance with configurable extra levels; allow approve/reject/return
+      per line, forbid approver edits/self-approval, combine file/image/business-field
+      duplicate detection and apply policy warning/add-level/block budget behavior.
+- [ ] **TASK-126 — Add corporate-card statement reconciliation.** Import bounded
+      CSV/Excel statements, match holder/date/currency/amount to receipt evidence and
+      retain unmatched transactions and missing-receipt follow-up as auditable facts.
+- [ ] **TASK-127 — Add mileage, per diem and cash advances.** Calculate policy rates
+      without inventing receipts, require advance settlement and post employee
+      receivable/payable differences through explicit workflows.
+- [ ] **TASK-128 — Post approved expenses and employee payables.** On final Finance
+      approval post balanced Expense/Input Tax against Employee Payable or the
+      configured company-paid clearing/bank account; preserve Decimal, period-lock,
+      idempotency and audit invariants.
+- [ ] **TASK-129 — Deliver five-language expense SSOT screens and proof.** Use standard
+      list/case-detail regions for My Claims, My Receipts and approvals; cover partial
+      decisions, foreign currency, duplicate override, allocation, budget, posting
+      failure and privacy at desktop and 375px.
+
+## EPIC-056 — Reimbursement Payments & Tax Evidence (Planned)
+
+Complete the employee-expense chain with encrypted payout details, maker/checker bank
+files and immutable tax-support packages. This epic does not call bank APIs and does
+not submit returns directly to IRAS or LHDN.
+
+- [ ] **TASK-130 — Add encrypted employee payout profiles.** Mask account details by
+      default, restrict reveal, require HR/Finance verification, audit every change and
+      invalidate verification after modification.
+- [ ] **TASK-131 — Add maker/checker reimbursement payment batches.** Create batches
+      only from posted unpaid employee payables; require a distinct releaser and reject
+      any batch containing the releaser's own claim.
+- [ ] **TASK-132 — Export bank files and import payment outcomes.** Provide configured
+      bank templates, immutable release snapshot, bank reference/result capture,
+      partial-success handling and retry of failed lines without duplicate payment;
+      post Dr Employee Payable / Cr Bank only for successful lines.
+- [ ] **TASK-133 — Build the Tax Evidence Center and report jobs.** Filter by period,
+      category, project, tax status and evidence completeness; generate a register,
+      merged PDF, XLSX/CSV, original-file ZIP and SHA-256 manifest from one snapshot.
+- [ ] **TASK-134 — Add tax-pack finalisation and corrections.** Seal immutable versions,
+      create superseding correction packs with an explicit difference report, retain
+      SG records for at least five years and MY records for at least seven years,
+      enforce longer company policy/legal hold and never silently overwrite evidence.
+- [ ] **TASK-135 — Prove the complete employee-to-tax chain.** Verify account
+      activation → leave → payroll effect and receipt → claim → approval → balanced
+      posting → maker/checker payment → bank result → immutable tax package across
+      Demo/API, five languages, tenant/privacy boundaries and all release gates.

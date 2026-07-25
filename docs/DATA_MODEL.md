@@ -129,7 +129,115 @@ rules and the app-level-vs-RLS isolation model are in
 [MULTI_TENANCY.md](MULTI_TENANCY.md). The demo ships a sample user with access to both the
 SG and MY demo companies; production wires real auth.
 
-## 8. Migrations
+## 8. Planned target model — employee self-service, leave and expenses
+
+> Planning boundary: the entities in this section are approved targets for
+> `EPIC-052`–`EPIC-056`; they are **not present in the current Drizzle schema**. Each
+> task must add migrations, tenant indexes, API contracts and cross-engine proofs before
+> the corresponding capability becomes Canonical.
+
+### 8.1 Identity, employment and delegated authority
+
+```
+master                       + login_code (unique organization login code)
+app_user                     + username, activation_state, password_change_required
+                               email remains nullable until first activation
+employee                     + user_id (company-scoped unique binding)
+user_company_role              user ↔ company ↔ role, many roles per company
+user_activation_secret         encrypted recoverable one-time secret, pre-activation only
+manager_scope                  direct-report source plus authorized full-tree scope
+approval_delegation            effective-dated, bounded delegation
+```
+
+`(master_fn, login_code)` and `(master_fn, username)` are unique. Authentication resolves
+the master from organization code before resolving the username. An employee identity is
+derived from the authenticated session; `/api/my/*` resources never accept a client
+supplied `employee_id`. Activation-secret reads are audited, and the recoverable cipher
+text is permanently cleared after the employee sets a password. Role permissions are the
+union of all active company roles, while tenant, employee and reporting-line data scopes
+remain restrictive.
+
+### 8.2 Versioned approvals and leave
+
+```
+approval_policy(+version/+step) configurable multi-stage workflow definition
+approval_instance(+step)        immutable decision trail and current workflow projection
+working_calendar(+version)      workdays and effective dates
+calendar_holiday                official draft/company-confirmed holiday
+leave_type / leave_policy       effective-dated eligibility, evidence and carry rules
+leave_request(+revision)        Draft/Pending/Approved/Rejected/Withdrawn/Voided lifecycle
+leave_balance_entry             append-only grant/accrual/reserve/use/cancel/adjust ledger
+leave_evidence                  access-controlled link to managed document content
+leave_capacity_rule             department minimum-coverage rule and action
+```
+
+Every leave request retains the policy/calendar versions and calculated-day snapshot used
+at submission. `Pending` creates a reservation ledger entry; later decisions append
+release or consumption entries rather than mutating balances. Legacy leave rows retain
+their original `days` snapshot, are labelled `Legacy Policy`, and are not retroactively
+recalculated.
+
+### 8.3 Managed documents and extraction
+
+```
+managed_document               tenant ownership, hash, MIME, size, page count and state
+document_version               immutable content-version metadata
+document_blob                  default PostgreSQL/PGlite binary payload
+document_file_location         optional single-node server-file reference
+document_link                  typed owner link (leave, claim, receipt, tax pack)
+document_scan_job              quarantine/malware result and retry state
+document_extraction(+field)     OCR/Vision model, source, value and confidence
+document_retention             retention deadline, paper-custody state and legal hold
+document_purge_approval         records-manager request and finance review
+document_tombstone             retained hash/provenance after authorized purge
+```
+
+Database binary storage is the default provider. Server-file storage is an explicit
+single-node deployment option; the database still owns all tenant, integrity, version,
+retention and audit metadata. New files remain `Quarantined` until a successful scan.
+Scanner unavailability or an indeterminate result fails closed. OCR is local by default;
+external Vision is opt-in BYOK with company-level region and retention policy.
+
+### 8.4 Claims, expenses and accounting
+
+```
+expense_policy(+version)        effective-dated limits, evidence, tax and posting rules
+expense_category                GL/input-tax mapping and deductibility
+expense_claim(+revision)        employee-owned header and workflow state
+expense_line                    merchant/date/purpose/currency/tax/payment-source facts
+expense_allocation              department/cost-centre/project split
+receipt_inbox_item              uploaded receipt before or during claim assembly
+corporate_card_transaction      imported statement line and reconciliation state
+cash_advance                    issue, application and outstanding balance
+expense_duplicate_signal        hash/image/business-key match and disposition
+expense_posting                 idempotent balanced GL linkage
+```
+
+Approved employee-paid expenses post Dr Expense/Input Tax and Cr Employee Payable;
+company-paid expenses credit the configured bank/card clearing account. Original and
+base-currency amounts, exchange-rate source, verified actual bank charge and Decimal
+rounding evidence are persisted. Approval is line-aware, but approvers cannot rewrite
+employee-submitted facts.
+
+### 8.5 Reimbursement and tax evidence
+
+```
+employee_payout_profile         encrypted, masked and verification-versioned bank details
+reimbursement_batch(+line)      maker/checker release and per-line bank result
+payment_export_artifact         versioned bank file, checksum and access audit
+tax_evidence_pack               immutable company/period/version seal
+tax_evidence_artifact           PDF/XLSX/CSV/ZIP/hash-manifest member
+record_legal_hold               scoped retention override and release history
+```
+
+Batch release enforces separation of duties and excludes self-release. Only successful
+bank-result lines post Dr Employee Payable / Cr Bank; failures remain independently
+retryable under the same idempotency scope. Tax evidence packs are immutable after seal;
+late evidence or corrections create a new version and delta manifest. Default minimum
+retention is five years for Singapore and seven years for Malaysia, subject to longer
+company policy and legal hold.
+
+## 9. Migrations
 
 Drizzle migrations live in `drizzle/` and run identically in both modes:
 
@@ -139,7 +247,7 @@ Drizzle migrations live in `drizzle/` and run identically in both modes:
 Never hand-edit the live schema — change the Drizzle schema, generate a migration, apply
 it. This keeps demo and production schemas in lockstep.
 
-## 9. ER diagram — implemented schema
+## 10. ER diagram — implemented schema
 
 The Drizzle schema lives in [`src/data/schema/`](../src/data/schema/) and is the single
 source of truth. The diagram below reflects the **implemented** tables (tenancy,

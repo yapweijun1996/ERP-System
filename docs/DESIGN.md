@@ -181,8 +181,76 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 | Personal activity is a sanitized actor-owned audit projection, not a security/session center | Session fixes tenant, company and actor scope. The public read model maps raw audit vocabulary to bounded category/entity/action keys and omits payloads, request IDs and actor identity. It must not invent device, sign-in, comment, export or security facts absent from the audit domain | EPIC-047 |
 | Notifications are recipient-addressed delivery facts, not audit or outbox projections | Each notification belongs to one tenant, active company and recipient, with bounded kind/severity and persistent read/dismiss state. Audit remains the history of writes; outbox remains worker delivery infrastructure. Neither is exposed or mutated to simulate a user's attention feed | EPIC-048 |
 | Control-plane pages are tenant-bounded facts, never a fictional global console | Connector secrets are encrypted only by the production server and never returned; offline Demo stores none. Master Control exposes only the Session tenant. Company policy, sequences and period locks are company-scoped audited records, while tax remains effective-dated canonical data | EPIC-049 |
+| Employee self service is Session-actor-owned, not employee-id-selected | Organisation code + username resolves the tenant/account. The company Employee link is server-derived for `/api/my/*`; multiple roles union capabilities but never widen tenant, employee or reporting-hierarchy row scope. Temporary activation secrets are recoverable only before first activation and every reveal is audited | EPIC-052 |
+| Leave balances are immutable facts and approval is configurable governance | Grant/accrual/reservation/use/release/adjustment/carry/expiry/encashment append ledger entries. Requests use policy snapshots and multi-stage approval with no self-approval; legacy HR-lite days are retained rather than recomputed | EPIC-053 |
+| Receipt content is replaceable storage behind immutable governed metadata | DocumentStorageProvider defaults to database binary content and may use a single-node filesystem backend. Quarantine, scan, hash, extraction provenance, 98%-minimum auto-submit, Void/correction, legal hold and two-person purge are invariant across providers | EPIC-054 |
+| Finance approval is the expense accounting boundary | Managers confirm business purpose, Finance confirms evidence/tax/GL, and line decisions never rewrite the employee's submission. Final Finance approval posts balanced expense/input-tax legs against Employee Payable or the configured company-paid account | EPIC-055 |
+| Reimbursement payment and tax reporting remain explicit controlled stages | Maker and releaser are distinct, nobody releases their own claim, bank outcomes post successful lines only, and tax packages are immutable snapshot artifacts with superseding corrections. No direct bank execution or tax filing is implied | EPIC-056 |
 
-## 7. Testing design
+## 7. Planned employee self-service architecture (EPIC-052–056)
+
+This section is a target design, not current implementation.
+
+### Identity and authorization
+
+- Add an organisation login code, organisation-scoped `app_user.username`, nullable
+  pre-activation email, company-unique `employee.user_id` and a separate
+  `user_company_role` assignment table. Backfill existing email users and current
+  `user_company.role_id` grants without changing their access.
+- Store the pre-activation credential as an AES-GCM encrypted temporary secret with
+  expiry/reveal audit. First activation changes the password, captures email and
+  destroys the encrypted copy. HR reset creates a new one-time credential and revokes
+  existing sessions.
+- Add granular self/manager/HR/expense/finance/payment/tax permissions. Role permission
+  union decides capability; Session tenant, Employee link and management hierarchy
+  decide row scope. Self-approval is rejected before workflow mutation.
+- Keep existing generic HR resources management-only. New `/api/my/*` controllers
+  expose bounded actor-owned views and never accept `employeeId`.
+
+### Shared workflow and document services
+
+- A versioned approval policy resolves ordered steps from domain, company, employee,
+  hierarchy, type, amount/days, project and department. Approval instances snapshot
+  those steps; delegation and escalation append facts instead of editing prior
+  decisions.
+- `DocumentStorageProvider` separates metadata from content. Both database and optional
+  filesystem implementations stream bounded bytes, verify SHA-256 and enforce the
+  same tenant/permission/retention contract. Filesystem mode is explicitly single-node.
+- Upload returns a quarantined document immediately. Scan, OCR/Vision, preview and
+  export run as retryable jobs/outbox work. Unknown scan state fails closed. Extraction
+  stores provider/model/field/confidence; system auto-submit records the authenticated
+  uploader and exact policy version.
+- Sensitive reads use short-lived authorised download responses and append audit
+  events. Draft delete, submitted Void, posted correction, legal hold and physical
+  purge are separate commands with separate permissions.
+
+### Domain data flow
+
+1. Leave submission snapshots policy/calendar, appends Pending balance reservation and
+   creates an approval instance. Terminal rejection/withdrawal releases reservation;
+   approval converts it to use. Unpaid/encashed facts become explicit Payroll inputs.
+2. Expense submission snapshots receipt extraction, category/tax/FX, allocation,
+   duplicate and budget decisions. Final Finance approval appends balanced GL and an
+   employee payable or company-paid settlement fact in one transaction.
+3. A reimbursement batch locks eligible employee payables, snapshots masked payout
+   targets, requires a distinct releaser and exports a bank file. Imported results post
+   only successful lines; retry never reselects a successful payable.
+4. A tax-pack job snapshots eligible evidence and produces PDF, XLSX/CSV, original ZIP
+   and hash manifest artifacts. Finalisation freezes the version; later evidence creates
+   a superseding correction package and difference report.
+
+### Frontend SSOT
+
+- `my-leave`, `my-receipts` and `my-claims` use the shared transaction-list contract.
+  Leave/expense decisions use `case-detail-v1`; payment/tax registers use
+  `master-detail-register-v1` and posted payment detail uses `posting-detail-v1`.
+- Introduce `calendar-workspace-v1` once for Team Calendar: page header, filters,
+  calendar/list surface, retryable error, responsive detail drawer and governed
+  actions. It is not a free-form exemption.
+- PWA camera drafts stay in IndexedDB only until upload. Logout reports unsynced count
+  and, after confirmation, removes unuploaded local images.
+
+## 8. Testing design
 
 - Required local gates are root/web typecheck, ESLint, Vitest, `npm run demo`, generated
   schema/drift checks, Demo and API builds, and the 115-route desktop/375px audit.

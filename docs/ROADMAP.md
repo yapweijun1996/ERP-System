@@ -740,3 +740,96 @@ proofs, and the four master-detail editor routes pass focused and live browser
 verification; Payroll modal initial/error/mobile states and all three Case Detail routes
 pass focused state proofs, and Fixed Assets detail/run states pass with
 service-worker v103. All three Posting Detail routes pass focused state proofs.
+
+## Phase 34 — Employee Identity & My Work (Planned)
+
+1. **Organisation username and first activation** (EPIC-052, TASK-106/107) extend the
+   current email-only account with organisation code + username login, an
+   organisation-unique employee/user link, encrypted pre-activation credential and
+   forced first-login password/email completion. Existing users and roles migrate
+   without losing company access.
+2. **Multiple roles and actor-owned self service** (TASK-106/108) allow Employee,
+   Manager, HR and Finance capabilities to compose while every `/api/my/*` query
+   derives employee identity from Session. Direct reports automatically activate the
+   Manager role; hierarchy limits the visible team.
+3. **My Work navigation and security proof** (TASK-109/110) adds five-language My
+   Leave, My Claims and My Receipts entry points without reclassifying unfinished
+   routes as Canonical. Offboarding revokes sessions; temporary password reveal is
+   audited and ends permanently at first activation.
+
+Exit criteria: organisation/username collisions, migration, first activation,
+multi-role permission union, actor isolation, hierarchy scope, offboarding and the
+explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof.
+
+## Phase 35 — Full Leave Management (Planned)
+
+1. **Policy, calendar and immutable balance** (EPIC-053, TASK-111/112) add confirmed
+   country/region holiday calendars, company work patterns, effective-dated leave
+   types, full/half-day policy and an append-only entitlement/reservation ledger.
+2. **Complete lifecycle and governed approval** (TASK-113/114) add versioned
+   amendments, withdrawal, void, approved cancellation, evidence privacy,
+   multi-level approval, no self-approval, delegation/escalation and configurable
+   minimum-staff controls.
+3. **Team calendar and Payroll integration** (TASK-115/116) introduce
+   `calendar-workspace-v1`, role-redacted team availability, optional one-way external
+   calendar delivery, unpaid-leave deduction and policy-controlled encashment.
+   Historical HR-lite rows keep their original day snapshot under Legacy Policy.
+
+Exit criteria: working-day/half-day calculation, pending reservation, insufficient
+balance split, privacy, approval/delegation/capacity, calendar, outbound sync and
+Payroll effects pass five-language desktop/375px and domain/API proof.
+
+## Phase 36 — Receipt & Secure Document Processing (Planned)
+
+1. **Storage and bounded capture** (EPIC-054, TASK-117/118) add a shared storage
+   provider with database content as the default and optional single-node filesystem
+   content, while retaining authoritative metadata, hashes, scope and retention in
+   PostgreSQL/PGlite. PWA capture supports bounded JPEG/PNG/HEIC/PDF and offline drafts.
+2. **Fail-closed scan and governed extraction** (TASK-119/120) quarantine every file,
+   default to local OCR, make external Vision BYOK opt-in, preserve field provenance
+   and permit system submission only when every critical field reaches at least 98%
+   and all safety, amount and duplicate checks pass.
+3. **Void, retention and access audit** (TASK-121/122) distinguish draft deletion,
+   submitted Void, posted correction and post-retention two-person purge; support
+   legal hold, paper-original custody and sensitive read/download/export audit.
+
+Exit criteria: storage backends, upload limits, quarantine, extraction retry,
+confidence policy, auto-submit attribution, void/purge states, privacy and PWA logout
+cleanup pass Demo/API, five-language and responsive proof.
+
+## Phase 37 — Expense Claims & Accounting (Planned)
+
+1. **Policy and claim authoring** (EPIC-055, TASK-123/124) support employee-paid and
+   company-paid expense lines, receipt inbox, effective tax/GL/FX policy,
+   department/cost-centre/project allocation and verifiable actual card charges.
+2. **Approval and control** (TASK-125/126) add manager + Finance line decisions,
+   configurable extra levels, multi-signal duplicate blocking, budget
+   warning/add-level/block and corporate-card CSV/Excel reconciliation.
+3. **Non-receipt expenses and posting** (TASK-127/128) cover mileage, per diem and
+   cash advances, then post final Finance approval to balanced Expense/Input Tax
+   against Employee Payable or the configured company-paid account.
+4. **SSOT UI and proof** (TASK-129) deliver five-language standard list/case-detail
+   states without allowing approver edits, self-approval or client-selected employee
+   identity.
+
+Exit criteria: authoring, extraction handoff, partial decisions, duplicate override,
+FX, allocation, budget, card matching, advances and balanced idempotent posting pass
+domain/API/browser and current release gates.
+
+## Phase 38 — Reimbursement Payments & Tax Evidence (Planned)
+
+1. **Payout profiles and maker/checker settlement** (EPIC-056, TASK-130–132) add
+   encrypted verified employee bank profiles, separate batch preparer/releaser,
+   self-payment prevention, bank-file export and partial bank-result import with
+   successful-line-only Dr Employee Payable / Cr Bank posting.
+2. **Immutable tax evidence packages** (TASK-133/134) generate one-snapshot register,
+   merged PDF, XLSX/CSV, original ZIP and hash manifest. Finalised packages are
+   immutable; later facts create a superseding correction pack and difference report.
+3. **Complete release proof** (TASK-135) validates the full identity/leave/payroll and
+   receipt/expense/payment/tax chains without adding direct bank API or direct
+   IRAS/LHDN filing.
+
+Exit criteria: payout privacy, maker/checker separation, partial payment replay,
+balanced cash posting, package consistency/hash verification, SG/MY retention, legal
+hold, correction versions and sensitive-access audit pass all local and PostgreSQL
+release gates.
