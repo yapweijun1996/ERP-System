@@ -23,6 +23,7 @@ import { createSettingsRouter } from './routes/settings';
 import { createFinanceReportsRouter } from './routes/financeReports';
 import { createReportingRouter } from './routes/reporting';
 import { createHrRouter } from './routes/hr';
+import { createMyRouter } from './routes/my';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -101,6 +102,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/hr', createHrRouter(db, {
     tokenEncryptionKey: lifecycle?.tokenEncryptionKey,
   }));
+  app.use('/api/my', createMyRouter(db));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
 

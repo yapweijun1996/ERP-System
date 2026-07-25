@@ -202,6 +202,13 @@
       return API_BASE+'/reporting/artifacts/'+encodeURIComponent(id)+'/download';
     },
   };
+  var my={
+    context:function(){ return apiRequest('my/context'); },
+    leaveRequests:function(){ return apiRequest('my/leave-requests'); },
+    claims:function(){ return apiRequest('my/claims'); },
+    receipts:function(){ return apiRequest('my/receipts'); },
+    teamLeaveRequests:function(){ return apiRequest('my/team/leave-requests'); },
+  };
 
   async function fetchDashboard(){
     var url = API_BASE + '/dashboard';
@@ -427,6 +434,7 @@
     session:fetchSession,
     completeActivation:completeActivation,
     financeReports:financeReports,
+    my:my,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
     completeSetup: completeSetup,
     switchCompany: switchCompany,

@@ -131,9 +131,10 @@ SG and MY demo companies; production wires real auth.
 
 ## 8. Employee self-service, leave and expenses
 
-> Delivery boundary: TASK-106 identity fields/`user_company_role` and TASK-107's
-> employee binding/account lifecycle are present in the current Drizzle schema. The
-> remaining entities in this section are approved targets for TASK-108–135 and are
+> Delivery boundary: TASK-106 identity fields/`user_company_role`, TASK-107's employee
+> binding/account lifecycle and TASK-108's effective-dated
+> `employee_hierarchy_scope` are present in the current Drizzle schema. The remaining
+> entities in this section are approved targets for TASK-109–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -148,7 +149,7 @@ employee                     + user_id (company-scoped unique binding, implement
 user_company_role              user ↔ company ↔ role, many roles (implemented)
 employee_activation_secret     encrypted recoverable one-time secret (implemented)
 employee_account_handoff       immutable offboarding transfer summary (implemented)
-manager_scope                  direct-report source plus authorized full-tree scope
+employee_hierarchy_scope      direct/tree authority + effective dates (implemented)
 approval_delegation            effective-dated, bounded delegation
 ```
 

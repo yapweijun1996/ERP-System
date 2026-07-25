@@ -58,9 +58,12 @@ export async function seedDemo(db: DB): Promise<void> {
   const [viewerRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Viewer', isSuperadmin: false,
   }).returning({ id: role.roleId });
-  await db.insert(role).values({
+  const [employeeRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Employee', isSuperadmin: false,
-  });
+  }).returning({ id: role.roleId });
+  const [managerRole] = await db.insert(role).values({
+    masterFn: 'M1', name: 'Manager', isSuperadmin: false,
+  }).returning({ id: role.roleId });
 
   await db.insert(userCompany).values([
     { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
@@ -97,6 +100,11 @@ export async function seedDemo(db: DB): Promise<void> {
     roleId: viewerRole.id,
     permissionKey,
   })));
+  await db.insert(rolePermission).values([
+    { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.self.read' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.self.read' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
+  ]);
 
   // First-class, actor-addressed notifications. These rows intentionally stay
   // separate from audit/outbox infrastructure: they model user-visible

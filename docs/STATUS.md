@@ -827,12 +827,37 @@ builds, desktop/375px smoke, 43 list-layout routes, four master-detail editor ro
 and all 115 Canonical routes at desktop/375px. The route baseline remains
 **115 Canonical / 0 Preview**.
 
+## Actor-owned My Work API (TASK-108, 2026-07-25)
+
+TASK-108 is complete without adding a product route. Migration 0048 adds
+`employee_hierarchy_scope` plus separate Employee/Manager self and team permissions.
+`/api/my/context`, `/leave-requests`, `/claims`, `/receipts` and
+`/team/leave-requests` always resolve the active Employee from the authenticated
+Session and active company. Supplying `employeeId` or `employee_id` is rejected before
+controller execution; inactive, missing or ambiguous Employee links fail closed.
+
+Ordinary managers see active direct reports. An effective-dated `direct` or `tree`
+grant may widen that scope, but only to Employee IDs found inside the same active
+company. Team leave returns dates, duration and status without private reason or
+rejection facts. Claims and receipts are intentionally not invented early: both verify
+the actor and return an empty collection with `availability: not_modelled` and the
+owning future EPIC. Demo and API adapters expose the same `my` surface; PWA v106
+invalidates the previous adapter cache.
+
+Verification is green: lint, dual TypeScript, 408 tests passed with one expected skip,
+49-migration PGlite compatibility plus transaction proof, 137-table drift and Demo/API
+builds. Demo smoke, 43 list-layout routes, four master-detail editors, three Case
+Details, three Posting Details and all 115 desktop/375px routes pass. ID tampering,
+missing/inactive links, separate team permission, direct reports, authorised trees,
+privacy redaction and cross-company denial are independently tested. The route
+baseline remains **115 Canonical / 0 Preview**.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 The current 115-route Canonical boundary does **not** yet include the newly approved
-employee self-service routes. TASK-106 and TASK-107 have delivered the identity and
-account-lifecycle foundation above; TASK-108 through TASK-135 remain planning records
-and must not be counted as
+employee self-service pages. TASK-106 through TASK-108 have delivered the identity,
+account-lifecycle and actor-owned API foundation above; TASK-109 through TASK-135
+remain planning records and must not be counted as
 implemented routes, tables, permissions, API contracts or tested behavior until their
 individual acceptance gates pass.
 
@@ -868,9 +893,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 106 tasks, including TASK-107
+- Done: 107 tasks, including TASK-108
 - Blocked: TASK-017 (1)
-- Todo: 28 planned tasks (TASK-108–135) across EPIC-052–056. These extend the product
+- Todo: 27 planned tasks (TASK-109–135) across EPIC-052–056. These extend the product
   beyond the currently complete 115 Canonical / 0 Preview boundary; they do not reopen
   or downgrade existing routes. Current visual-layout convergence remains complete at
   43 audited list-layout routes, while future My Work/Leave/Receipt/Expense/Tax routes

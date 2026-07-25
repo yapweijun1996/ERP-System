@@ -32,6 +32,8 @@ export const PERMISSIONS = {
   assetWrite: 'asset.write',
   hrRead: 'hr.read',
   hrWrite: 'hr.write',
+  employeeSelfRead: 'employee.self.read',
+  employeeTeamRead: 'employee.team.read',
   projectRead: 'project.read',
   projectWrite: 'project.write',
   serviceRead: 'service.read',

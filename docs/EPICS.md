@@ -1862,10 +1862,13 @@ company, and every self-service resource derives the employee identity from Sess
       migration 0047, company-scoped HR endpoints, a five-language activation/account
       UI and PWA v105; offboarding transfers current responsibility without rewriting
       historical attribution.
-- [ ] **TASK-108 — Add actor-owned `/api/my/*` contracts.** Resolve employee identity
+- [x] **TASK-108 — Add actor-owned `/api/my/*` contracts.** Resolve employee identity
       from the authenticated Session, reject client-supplied employee impersonation,
-      expose only self-owned leave/expense/receipt facts and keep management resources
-      behind separate permissions and hierarchy scopes.
+      expose only self-owned leave facts and keep management resources behind separate
+      permissions and hierarchy scopes. Delivered by migration 0048 and PWA v106:
+      API and Demo expose actor-derived context, own leave and privacy-redacted team
+      leave. Claims/receipts declare `not_modelled` until EPIC-054/055 rather than
+      fabricating records.
 - [ ] **TASK-109 — Build the five-language My Work shell.** Add My Leave, My Claims and
       My Receipts entry points; add Team Calendar and Approvals only when the active
       employee has management capability; preserve all existing Canonical routes.

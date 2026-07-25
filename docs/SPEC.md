@@ -100,8 +100,9 @@ marked as sample/demo content and must not crash under canonical data (TASK-018)
 ### 4.4 Approved expansion (EPIC-052–056)
 
 The following requirements are approved product scope. TASK-106 implemented the
-organisation username/multi-role identity foundation and TASK-107 implemented the
-employee account lifecycle; TASK-108–135 remain
+organisation username/multi-role identity foundation, TASK-107 implemented the
+employee account lifecycle and TASK-108 implemented actor-owned self/team reads;
+TASK-109–135 remain
 **Planned** until their individual acceptance gates pass. Planned capabilities must
 not be represented as current Canonical behavior.
 
@@ -109,11 +110,14 @@ not be represented as current Canonical behavior.
   organisation-unique username, with nullable email before activation. HR employee
   linking and the activation lifecycle are implemented by TASK-107.
 - **Multiple roles:** one user may now hold multiple roles in one company. Permissions
-  are the union of those roles without widening the company boundary. Employee and
-  reporting-hierarchy row scope remain TASK-107/108.
-- **Actor-owned self service:** `/api/my/*` derives employee identity from Session and
-  never accepts an employee identifier that could select another person's data.
-  Offboarding revokes active sessions but retains statutory/audit history.
+  are the union of those roles without widening the company boundary. Employee binding
+  and reporting-hierarchy row scope are implemented by TASK-107/108.
+- **Actor-owned self service:** `/api/my/*` now derives employee identity from Session,
+  rejects client-selected employee IDs and separates self/team permissions. Direct
+  reports plus effective-dated company-bound hierarchy grants determine manager
+  scope; manager leave projections omit private reason facts. Claim/receipt endpoints
+  declare `not_modelled` until their domain tasks. Offboarding revokes active sessions
+  but retains statutory/audit history.
 - **Full leave:** effective-dated work/holiday/leave policy, full-day/half-day units,
   immutable entitlement ledger, Pending reservation, versioned amendment/cancellation,
   multi-stage approval/delegation/capacity, role-redacted team calendar, protected

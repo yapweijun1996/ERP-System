@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 47;
+  var DEMO_SCHEMA_VERSION = 48;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -2804,6 +2804,72 @@
     reportJob:function(){return Promise.reject(new Error('Demo exports complete immediately.'));},
     artifactUrl:function(id){return String(id||'');},
   };
+  function myActorUserId(){
+    var actorUserId=Number(state.activeUserId);
+    if(!Number.isSafeInteger(actorUserId)||actorUserId<=0){
+      throw new Error('An authenticated demo user is required.');
+    }
+    return actorUserId;
+  }
+  async function withMyActor(work){
+    var data=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx);
+      var canReadSelf=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,myActorUserId(),'employee.self.read');
+      if(!canReadSelf) throw new Error('You cannot access Employee Self Service.');
+      var actor=await state.runtime.commands.resolveActorEmployeeWithin(
+        orm,SCOPE,myActorUserId());
+      return work(orm,actor);
+    });
+    return data;
+  }
+  var my={
+    context:async function(){
+      var data=await withMyActor(async function(orm,actor){
+        var canReadTeam=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.team.read');
+        var teamEmployeeIds=canReadTeam
+          ?await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id)
+          :[];
+        return {
+          employee:actor,
+          capabilities:{
+            leave:{available:true,writable:false},
+            claims:{available:false,reason:'not_modelled'},
+            receipts:{available:false,reason:'not_modelled'},
+            team:{available:canReadTeam,employeeCount:teamEmployeeIds.length},
+          },
+        };
+      });
+      return {data:data,meta:{actorDerived:true}};
+    },
+    leaveRequests:async function(){
+      var data=await withMyActor(function(orm,actor){
+        return state.runtime.commands.listActorLeaveWithin(orm,SCOPE,actor.id);
+      });
+      return {data:data,meta:{actorDerived:true,limit:100}};
+    },
+    claims:async function(){
+      await withMyActor(function(){ return null; });
+      return {data:[],meta:{actorDerived:true,availability:'not_modelled',plannedEpic:'EPIC-055'}};
+    },
+    receipts:async function(){
+      await withMyActor(function(){ return null; });
+      return {data:[],meta:{actorDerived:true,availability:'not_modelled',plannedEpic:'EPIC-054'}};
+    },
+    teamLeaveRequests:async function(){
+      var data=await withMyActor(async function(orm,actor){
+        var canReadTeam=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.team.read');
+        if(!canReadTeam) throw new Error('You cannot read team leave.');
+        var ids=await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id);
+        return state.runtime.commands.listTeamLeaveWithin(orm,SCOPE,ids);
+      });
+      return {data:data,meta:{
+        actorDerived:true,privacy:'reason_and_evidence_redacted',limit:100,
+      }};
+    },
+  };
 
   var adapter = {
     ready: ready,
@@ -2816,6 +2882,7 @@
     action: action,
     session: session,
     financeReports:financeReports,
+    my:my,
     confirmOrder: confirmOrder,
     createPurchaseOrder: createPurchaseOrder,
     receiveGoods: receiveGoods,

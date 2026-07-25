@@ -104,6 +104,35 @@ export const employeeAccountHandoff = pgTable('employee_account_handoff', {
   `),
 ]);
 
+/** Explicit, time-bounded authority to widen a manager beyond their ordinary
+ * direct reports. `tree` includes every descendant of the selected root. */
+export const employeeHierarchyScope = pgTable('employee_hierarchy_scope', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  granteeEmployeeId: bigint('grantee_employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  scopeRootEmployeeId: bigint('scope_root_employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  scopeType: text('scope_type').notNull().default('direct'),
+  validFrom: date('valid_from').notNull(),
+  validTo: date('valid_to'),
+  grantedByUserId: bigint('granted_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  ...timestamps,
+}, (t) => [
+  index('idx_employee_hierarchy_scope_grantee')
+    .on(t.masterFn, t.companyFn, t.granteeEmployeeId, t.validFrom, t.validTo),
+  check('ck_employee_hierarchy_scope_type', sql`${t.scopeType} in ('direct', 'tree')`),
+  check(
+    'ck_employee_hierarchy_scope_dates',
+    sql`${t.validTo} is null or ${t.validTo} >= ${t.validFrom}`,
+  ),
+  check(
+    'ck_employee_hierarchy_scope_distinct',
+    sql`${t.granteeEmployeeId} <> ${t.scopeRootEmployeeId}`,
+  ),
+]);
+
 export const leaveRequest = pgTable('leave_request', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,

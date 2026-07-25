@@ -189,8 +189,9 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 
 ## 7. Employee self-service architecture (EPIC-052–056)
 
-TASK-106 identity primitives and TASK-107 employee account lifecycle are implemented;
-the remaining sections describe the target architecture for TASK-108–135.
+TASK-106 identity primitives, TASK-107 employee account lifecycle and TASK-108
+actor-owned self/team read contracts are implemented; the remaining sections describe
+the target architecture for TASK-109–135.
 
 ### Identity and authorization
 
@@ -203,11 +204,13 @@ the remaining sections describe the target architecture for TASK-108–135.
   expiry/reveal audit. First activation changes the password, captures email and
   destroys the encrypted copy. HR reset creates a new one-time credential and revokes
   existing sessions.
-- Add granular self/manager/HR/expense/finance/payment/tax permissions. Role permission
-  union decides capability; Session tenant, Employee link and management hierarchy
-  decide row scope. Self-approval is rejected before workflow mutation.
-- Keep existing generic HR resources management-only. New `/api/my/*` controllers
-  expose bounded actor-owned views and never accept `employeeId`.
+- `employee.self.read` and `employee.team.read` are implemented. Role permission union
+  decides capability; Session tenant, active Employee link, direct reports and
+  effective-dated direct/tree grants decide row scope. Later HR/expense/finance/
+  payment/tax permissions and self-approval checks remain with their workflow tasks.
+- Existing generic HR resources remain management-only. `/api/my/*` controllers expose
+  bounded actor-owned views and reject client-selected `employeeId`; manager leave
+  projections omit private reason and rejection details.
 
 ### Shared workflow and document services
 

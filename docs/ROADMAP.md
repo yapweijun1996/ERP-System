@@ -753,10 +753,11 @@ service-worker v103. All three Posting Detail routes pass focused state proofs.
    completion permanently clears the AES-GCM envelope. HR reset revokes sessions and
    issues a new one-time password. Offboarding transfers direct reports, current
    customer/open-opportunity ownership and unread notifications before revoking access.
-3. **Actor-owned self service** (TASK-108 planned) allows Employee, Manager, HR and
-   Finance capabilities to compose while every `/api/my/*` query
-   derives employee identity from Session. Direct reports automatically activate the
-   Manager role; hierarchy limits the visible team.
+3. **Actor-owned self service** (TASK-108 done 2026-07-25) adds separate
+   `employee.self.read` and `employee.team.read` permissions, effective-dated
+   direct/tree hierarchy scope and actor-derived `/api/my/*` reads. Client-selected
+   employee IDs fail closed; ordinary managers see direct reports only, explicit
+   hierarchy grants stay company-bound, and team leave omits private reason facts.
 4. **My Work navigation and security proof** (TASK-109/110 planned) adds five-language My
    Leave, My Claims and My Receipts entry points without reclassifying unfinished
    routes as Canonical. Offboarding revokes sessions; temporary password reveal is

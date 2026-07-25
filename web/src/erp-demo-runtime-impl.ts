@@ -4,6 +4,7 @@ import * as schema from '../../src/data/schema';
 import type { DB } from '../../src/data/db';
 import type { Scope } from '../../src/data/repo';
 import { seedDemo } from '../../src/data/seed';
+import { hasPermission } from '../../src/auth/permissions';
 import {
   activeEmployeeSecret,
   createEmployeeAccount,
@@ -14,6 +15,12 @@ import {
   type OffboardEmployeeInput,
   type ResetEmployeeAccountInput,
 } from '../../src/modules/hr/employeeAccount';
+import {
+  listActorLeaveWithin,
+  listTeamLeaveWithin,
+  resolveActorEmployeeWithin,
+  resolveTeamEmployeeIdsWithin,
+} from '../../src/modules/hr/actorScope';
 import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
@@ -405,6 +412,30 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    hasPermissionWithin(
+      db: DemoOrm,
+      scope: Scope,
+      userId: number,
+      permissionKey: string,
+    ) {
+      return hasPermission(
+        asDomainDb(db),
+        demoSession(scope, userId),
+        permissionKey,
+      );
+    },
+    resolveActorEmployeeWithin(db: DemoOrm, scope: Scope, userId: number) {
+      return resolveActorEmployeeWithin(asDomainDb(db), scope, userId);
+    },
+    listActorLeaveWithin(db: DemoOrm, scope: Scope, employeeId: number) {
+      return listActorLeaveWithin(asDomainDb(db), scope, employeeId);
+    },
+    resolveTeamEmployeeIdsWithin(db: DemoOrm, scope: Scope, employeeId: number) {
+      return resolveTeamEmployeeIdsWithin(asDomainDb(db), scope, employeeId);
+    },
+    listTeamLeaveWithin(db: DemoOrm, scope: Scope, employeeIds: number[]) {
+      return listTeamLeaveWithin(asDomainDb(db), scope, employeeIds);
+    },
     readEmployeeAccount(db: DemoOrm, scope: Scope, employeeId: number) {
       return readEmployeeAccount(asDomainDb(db), scope, employeeId);
     },
