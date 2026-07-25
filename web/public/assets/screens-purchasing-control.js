@@ -8,11 +8,11 @@
 function poApprovalCopy(){
   const lang=typeof getLang==='function'?getLang():'en';
   const packs={
-    en:{title:'Purchase Order Approvals',unit:'requests',sub:'Review every newly created purchase order before it can be received. Decisions are audited and never post inventory or accounting entries.',all:'All',pending:'Pending',approved:'Approved',rejected:'Rejected',awaiting:'Awaiting approval',queueValue:'Value awaiting approval',approvedCount:'Approved',rejectedCount:'Rejected',po:'Purchase order',supplier:'Supplier',date:'Order date',total:'Total',submitted:'Submitted',status:'Decision',review:'Review request',details:'Approval request',lineItems:'Order lines',item:'Item',qty:'Quantity',unitCost:'Unit cost',tax:'Tax',net:'Net amount',decision:'Decision record',decidedBy:'Decided by',decidedAt:'Decided at',note:'Decision note',approve:'Approve PO',reject:'Reject PO',approveTitle:'Approve purchase order?',rejectTitle:'Reject purchase order?',approvePrompt:'Record why this purchase order may proceed to receiving.',rejectPrompt:'Record why this purchase order must not proceed.',notePlaceholder:'Enter a concise, auditable reason…',cancel:'Cancel',confirm:'Confirm decision',approvedDone:'Purchase order approved',rejectedDone:'Purchase order rejected',back:'Back to approvals',orderStatus:'Order status',accountingNote:'Approval changes document status only. Stock movements begin at goods receipt; accounting begins at supplier-invoice posting.',empty:'There are no purchase-order approval requests in this company.',pendingDecision:'Awaiting an authorised decision.'},
-    ms:{title:'Kelulusan Pesanan Belian',unit:'permintaan',sub:'Semak setiap pesanan belian baharu sebelum penerimaan barang. Keputusan diaudit dan tidak pernah mempost inventori atau perakaunan.',all:'Semua',pending:'Menunggu',approved:'Diluluskan',rejected:'Ditolak',awaiting:'Menunggu kelulusan',queueValue:'Nilai menunggu kelulusan',approvedCount:'Diluluskan',rejectedCount:'Ditolak',po:'Pesanan belian',supplier:'Pembekal',date:'Tarikh pesanan',total:'Jumlah',submitted:'Dihantar',status:'Keputusan',review:'Semak permintaan',details:'Permintaan kelulusan',lineItems:'Baris pesanan',item:'Item',qty:'Kuantiti',unitCost:'Kos seunit',tax:'Cukai',net:'Amaun bersih',decision:'Rekod keputusan',decidedBy:'Diputuskan oleh',decidedAt:'Masa keputusan',note:'Nota keputusan',approve:'Luluskan PO',reject:'Tolak PO',approveTitle:'Luluskan pesanan belian?',rejectTitle:'Tolak pesanan belian?',approvePrompt:'Catat sebab pesanan ini boleh diteruskan ke penerimaan.',rejectPrompt:'Catat sebab pesanan ini tidak boleh diteruskan.',notePlaceholder:'Masukkan sebab ringkas yang boleh diaudit…',cancel:'Batal',confirm:'Sahkan keputusan',approvedDone:'Pesanan belian diluluskan',rejectedDone:'Pesanan belian ditolak',back:'Kembali ke kelulusan',orderStatus:'Status pesanan',accountingNote:'Kelulusan hanya mengubah status dokumen. Pergerakan stok bermula semasa penerimaan; perakaunan bermula semasa invois pembekal diposting.',empty:'Tiada permintaan kelulusan pesanan belian untuk syarikat ini.',pendingDecision:'Menunggu keputusan pengguna yang diberi kuasa.'},
-    zh:{title:'采购订单审批',unit:'项申请',sub:'每张新采购订单必须先审批才能收货。所有决定均可审计，审批本身不会过账库存或会计分录。',all:'全部',pending:'待审批',approved:'已批准',rejected:'已拒绝',awaiting:'待审批数量',queueValue:'待审批金额',approvedCount:'已批准',rejectedCount:'已拒绝',po:'采购订单',supplier:'供应商',date:'订单日期',total:'总额',submitted:'提交时间',status:'审批结果',review:'审核申请',details:'审批申请',lineItems:'订单明细',item:'物料',qty:'数量',unitCost:'单位成本',tax:'税额',net:'未税金额',decision:'审批记录',decidedBy:'审批人',decidedAt:'审批时间',note:'审批备注',approve:'批准订单',reject:'拒绝订单',approveTitle:'批准这张采购订单？',rejectTitle:'拒绝这张采购订单？',approvePrompt:'请记录允许此采购订单进入收货流程的原因。',rejectPrompt:'请记录不允许此采购订单继续执行的原因。',notePlaceholder:'请输入简洁、可审计的原因…',cancel:'取消',confirm:'确认决定',approvedDone:'采购订单已批准',rejectedDone:'采购订单已拒绝',back:'返回审批列表',orderStatus:'订单状态',accountingNote:'审批只改变单据状态；库存流水从收货开始，会计分录从供应商发票过账开始。',empty:'当前公司没有采购订单审批申请。',pendingDecision:'等待授权用户作出决定。'},
-    ja:{title:'購買発注承認',unit:'件',sub:'新しい購買発注は入荷前に承認します。判断は監査され、承認自体は在庫・会計を転記しません。',all:'すべて',pending:'承認待ち',approved:'承認済',rejected:'却下',awaiting:'承認待ち',queueValue:'承認待ち金額',approvedCount:'承認済',rejectedCount:'却下',po:'購買発注',supplier:'仕入先',date:'発注日',total:'合計',submitted:'申請日時',status:'判断',review:'申請を確認',details:'承認申請',lineItems:'発注明細',item:'品目',qty:'数量',unitCost:'単価',tax:'税額',net:'税抜金額',decision:'判断記録',decidedBy:'判断者',decidedAt:'判断日時',note:'判断メモ',approve:'発注を承認',reject:'発注を却下',approveTitle:'購買発注を承認しますか？',rejectTitle:'購買発注を却下しますか？',approvePrompt:'この発注を入荷へ進める理由を記録してください。',rejectPrompt:'この発注を進めない理由を記録してください。',notePlaceholder:'簡潔で監査可能な理由を入力…',cancel:'キャンセル',confirm:'判断を確定',approvedDone:'購買発注を承認しました',rejectedDone:'購買発注を却下しました',back:'承認一覧へ戻る',orderStatus:'発注ステータス',accountingNote:'承認は伝票ステータスのみ変更します。在庫移動は入荷、会計転記は仕入先請求書から始まります。',empty:'この会社には購買発注承認申請がありません。',pendingDecision:'権限を持つユーザーの判断待ちです。'},
-    vi:{title:'Phê duyệt đơn mua hàng',unit:'yêu cầu',sub:'Mọi đơn mua hàng mới phải được duyệt trước khi nhận hàng. Quyết định được kiểm toán và không tự ghi sổ kho hay kế toán.',all:'Tất cả',pending:'Chờ duyệt',approved:'Đã duyệt',rejected:'Đã từ chối',awaiting:'Đang chờ duyệt',queueValue:'Giá trị chờ duyệt',approvedCount:'Đã duyệt',rejectedCount:'Đã từ chối',po:'Đơn mua hàng',supplier:'Nhà cung cấp',date:'Ngày đặt hàng',total:'Tổng',submitted:'Đã gửi',status:'Quyết định',review:'Xem yêu cầu',details:'Yêu cầu phê duyệt',lineItems:'Dòng đơn hàng',item:'Mặt hàng',qty:'Số lượng',unitCost:'Đơn giá',tax:'Thuế',net:'Giá trị chưa thuế',decision:'Biên bản quyết định',decidedBy:'Người quyết định',decidedAt:'Thời điểm quyết định',note:'Ghi chú quyết định',approve:'Duyệt PO',reject:'Từ chối PO',approveTitle:'Duyệt đơn mua hàng?',rejectTitle:'Từ chối đơn mua hàng?',approvePrompt:'Ghi rõ lý do cho phép đơn hàng chuyển sang nhận hàng.',rejectPrompt:'Ghi rõ lý do không cho phép đơn hàng tiếp tục.',notePlaceholder:'Nhập lý do ngắn gọn, có thể kiểm toán…',cancel:'Hủy',confirm:'Xác nhận quyết định',approvedDone:'Đã duyệt đơn mua hàng',rejectedDone:'Đã từ chối đơn mua hàng',back:'Quay lại danh sách duyệt',orderStatus:'Trạng thái đơn',accountingNote:'Phê duyệt chỉ đổi trạng thái chứng từ. Biến động kho bắt đầu khi nhận hàng; bút toán bắt đầu khi ghi sổ hóa đơn nhà cung cấp.',empty:'Không có yêu cầu phê duyệt đơn mua hàng trong công ty này.',pendingDecision:'Đang chờ quyết định của người có thẩm quyền.'},
+    en:{title:'Purchase Order Approvals',unit:'requests',sub:'Review every newly created purchase order before it can be received. Decisions are audited and never post inventory or accounting entries.',detailTitle:'Purchase order approval',detailSub:'Review the order, financial impact and audit record before making a decision.',all:'All',pending:'Pending',approved:'Approved',rejected:'Rejected',awaiting:'Awaiting approval',queueValue:'Value awaiting approval',approvedCount:'Approved',rejectedCount:'Rejected',po:'Purchase order',supplier:'Supplier',date:'Order date',total:'Total',submitted:'Submitted',status:'Decision',review:'Review request',details:'Approval request',lineItems:'Order lines',item:'Item',qty:'Quantity',unitCost:'Unit cost',tax:'Tax',net:'Net amount',financial:'Financial summary',decision:'Decision record',decidedBy:'Decided by',decidedAt:'Decided at',note:'Decision note',approve:'Approve PO',reject:'Reject PO',approveTitle:'Approve purchase order?',rejectTitle:'Reject purchase order?',approvePrompt:'Record why this purchase order may proceed to receiving.',rejectPrompt:'Record why this purchase order must not proceed.',notePlaceholder:'Enter a concise, auditable reason…',cancel:'Cancel',confirm:'Confirm decision',approvedDone:'Purchase order approved',rejectedDone:'Purchase order rejected',decisionFailed:'The decision could not be saved.',back:'Back to approvals',orderStatus:'Order status',accountingNote:'Approval changes document status only. Stock movements begin at goods receipt; accounting begins at supplier-invoice posting.',empty:'There are no purchase-order approval requests in this company.',missing:'The requested purchase-order approval is unavailable in this company.',noLines:'This purchase order has no lines to review.',pendingDecision:'Awaiting an authorised decision.',actionHint:'Record one auditable decision for this purchase order.'},
+    ms:{title:'Kelulusan Pesanan Belian',unit:'permintaan',sub:'Semak setiap pesanan belian baharu sebelum penerimaan barang. Keputusan diaudit dan tidak pernah mempost inventori atau perakaunan.',detailTitle:'Kelulusan pesanan belian',detailSub:'Semak pesanan, kesan kewangan dan rekod audit sebelum membuat keputusan.',all:'Semua',pending:'Menunggu',approved:'Diluluskan',rejected:'Ditolak',awaiting:'Menunggu kelulusan',queueValue:'Nilai menunggu kelulusan',approvedCount:'Diluluskan',rejectedCount:'Ditolak',po:'Pesanan belian',supplier:'Pembekal',date:'Tarikh pesanan',total:'Jumlah',submitted:'Dihantar',status:'Keputusan',review:'Semak permintaan',details:'Permintaan kelulusan',lineItems:'Baris pesanan',item:'Item',qty:'Kuantiti',unitCost:'Kos seunit',tax:'Cukai',net:'Amaun bersih',financial:'Ringkasan kewangan',decision:'Rekod keputusan',decidedBy:'Diputuskan oleh',decidedAt:'Masa keputusan',note:'Nota keputusan',approve:'Luluskan PO',reject:'Tolak PO',approveTitle:'Luluskan pesanan belian?',rejectTitle:'Tolak pesanan belian?',approvePrompt:'Catat sebab pesanan ini boleh diteruskan ke penerimaan.',rejectPrompt:'Catat sebab pesanan ini tidak boleh diteruskan.',notePlaceholder:'Masukkan sebab ringkas yang boleh diaudit…',cancel:'Batal',confirm:'Sahkan keputusan',approvedDone:'Pesanan belian diluluskan',rejectedDone:'Pesanan belian ditolak',decisionFailed:'Keputusan tidak dapat disimpan.',back:'Kembali ke kelulusan',orderStatus:'Status pesanan',accountingNote:'Kelulusan hanya mengubah status dokumen. Pergerakan stok bermula semasa penerimaan; perakaunan bermula semasa invois pembekal diposting.',empty:'Tiada permintaan kelulusan pesanan belian untuk syarikat ini.',missing:'Permintaan kelulusan pesanan belian ini tidak tersedia untuk syarikat ini.',noLines:'Pesanan belian ini tiada baris untuk disemak.',pendingDecision:'Menunggu keputusan pengguna yang diberi kuasa.',actionHint:'Rekod satu keputusan yang boleh diaudit untuk pesanan ini.'},
+    zh:{title:'采购订单审批',unit:'项申请',sub:'每张新采购订单必须先审批才能收货。所有决定均可审计，审批本身不会过账库存或会计分录。',detailTitle:'采购订单审批',detailSub:'作出决定前，请核对订单内容、财务影响和审计记录。',all:'全部',pending:'待审批',approved:'已批准',rejected:'已拒绝',awaiting:'待审批数量',queueValue:'待审批金额',approvedCount:'已批准',rejectedCount:'已拒绝',po:'采购订单',supplier:'供应商',date:'订单日期',total:'总额',submitted:'提交时间',status:'审批结果',review:'审核申请',details:'审批申请',lineItems:'订单明细',item:'物料',qty:'数量',unitCost:'单位成本',tax:'税额',net:'未税金额',financial:'金额汇总',decision:'审批记录',decidedBy:'审批人',decidedAt:'审批时间',note:'审批备注',approve:'批准订单',reject:'拒绝订单',approveTitle:'批准这张采购订单？',rejectTitle:'拒绝这张采购订单？',approvePrompt:'请记录允许此采购订单进入收货流程的原因。',rejectPrompt:'请记录不允许此采购订单继续执行的原因。',notePlaceholder:'请输入简洁、可审计的原因…',cancel:'取消',confirm:'确认决定',approvedDone:'采购订单已批准',rejectedDone:'采购订单已拒绝',decisionFailed:'无法保存审批决定。',back:'返回审批列表',orderStatus:'订单状态',accountingNote:'审批只改变单据状态；库存流水从收货开始，会计分录从供应商发票过账开始。',empty:'当前公司没有采购订单审批申请。',missing:'当前公司无法找到这项采购订单审批申请。',noLines:'这张采购订单没有可供审核的明细。',pendingDecision:'等待授权用户作出决定。',actionHint:'请为这张采购订单记录一项可审计的决定。'},
+    ja:{title:'購買発注承認',unit:'件',sub:'新しい購買発注は入荷前に承認します。判断は監査され、承認自体は在庫・会計を転記しません。',detailTitle:'購買発注の承認',detailSub:'判断前に発注内容、財務的影響、監査記録を確認します。',all:'すべて',pending:'承認待ち',approved:'承認済',rejected:'却下',awaiting:'承認待ち',queueValue:'承認待ち金額',approvedCount:'承認済',rejectedCount:'却下',po:'購買発注',supplier:'仕入先',date:'発注日',total:'合計',submitted:'申請日時',status:'判断',review:'申請を確認',details:'承認申請',lineItems:'発注明細',item:'品目',qty:'数量',unitCost:'単価',tax:'税額',net:'税抜金額',financial:'金額サマリー',decision:'判断記録',decidedBy:'判断者',decidedAt:'判断日時',note:'判断メモ',approve:'発注を承認',reject:'発注を却下',approveTitle:'購買発注を承認しますか？',rejectTitle:'購買発注を却下しますか？',approvePrompt:'この発注を入荷へ進める理由を記録してください。',rejectPrompt:'この発注を進めない理由を記録してください。',notePlaceholder:'簡潔で監査可能な理由を入力…',cancel:'キャンセル',confirm:'判断を確定',approvedDone:'購買発注を承認しました',rejectedDone:'購買発注を却下しました',decisionFailed:'判断を保存できませんでした。',back:'承認一覧へ戻る',orderStatus:'発注ステータス',accountingNote:'承認は伝票ステータスのみ変更します。在庫移動は入荷、会計転記は仕入先請求書から始まります。',empty:'この会社には購買発注承認申請がありません。',missing:'指定された購買発注承認申請はこの会社では利用できません。',noLines:'確認できる発注明細がありません。',pendingDecision:'権限を持つユーザーの判断待ちです。',actionHint:'この発注に監査可能な判断を1件記録します。'},
+    vi:{title:'Phê duyệt đơn mua hàng',unit:'yêu cầu',sub:'Mọi đơn mua hàng mới phải được duyệt trước khi nhận hàng. Quyết định được kiểm toán và không tự ghi sổ kho hay kế toán.',detailTitle:'Phê duyệt đơn mua hàng',detailSub:'Kiểm tra đơn hàng, tác động tài chính và hồ sơ kiểm toán trước khi quyết định.',all:'Tất cả',pending:'Chờ duyệt',approved:'Đã duyệt',rejected:'Đã từ chối',awaiting:'Đang chờ duyệt',queueValue:'Giá trị chờ duyệt',approvedCount:'Đã duyệt',rejectedCount:'Đã từ chối',po:'Đơn mua hàng',supplier:'Nhà cung cấp',date:'Ngày đặt hàng',total:'Tổng',submitted:'Đã gửi',status:'Quyết định',review:'Xem yêu cầu',details:'Yêu cầu phê duyệt',lineItems:'Dòng đơn hàng',item:'Mặt hàng',qty:'Số lượng',unitCost:'Đơn giá',tax:'Thuế',net:'Giá trị chưa thuế',financial:'Tóm tắt tài chính',decision:'Biên bản quyết định',decidedBy:'Người quyết định',decidedAt:'Thời điểm quyết định',note:'Ghi chú quyết định',approve:'Duyệt PO',reject:'Từ chối PO',approveTitle:'Duyệt đơn mua hàng?',rejectTitle:'Từ chối đơn mua hàng?',approvePrompt:'Ghi rõ lý do cho phép đơn hàng chuyển sang nhận hàng.',rejectPrompt:'Ghi rõ lý do không cho phép đơn hàng tiếp tục.',notePlaceholder:'Nhập lý do ngắn gọn, có thể kiểm toán…',cancel:'Hủy',confirm:'Xác nhận quyết định',approvedDone:'Đã duyệt đơn mua hàng',rejectedDone:'Đã từ chối đơn mua hàng',decisionFailed:'Không thể lưu quyết định.',back:'Quay lại danh sách duyệt',orderStatus:'Trạng thái đơn',accountingNote:'Phê duyệt chỉ đổi trạng thái chứng từ. Biến động kho bắt đầu khi nhận hàng; bút toán bắt đầu khi ghi sổ hóa đơn nhà cung cấp.',empty:'Không có yêu cầu phê duyệt đơn mua hàng trong công ty này.',missing:'Yêu cầu phê duyệt đơn mua hàng này không có trong công ty hiện tại.',noLines:'Đơn mua hàng này không có dòng nào để xem xét.',pendingDecision:'Đang chờ quyết định của người có thẩm quyền.',actionHint:'Ghi lại một quyết định có thể kiểm toán cho đơn hàng này.'},
   };
   const pack=packs[lang]||packs.en;
   return key=>pack[key]||packs.en[key]||key;
@@ -28,13 +28,13 @@ function openPoApprovalDecision(request,decision){
   document.querySelector('[data-po-decision-cancel]')?.addEventListener('click',closeModal);
   document.querySelector('[data-po-decision-confirm]')?.addEventListener('click',async event=>{
     const button=event.currentTarget;const note=document.querySelector('#poApprovalNote').value.trim();
-    if(!note){toast(s('notePlaceholder'),'warn');return;}
+    if(!requireField(note,s('notePlaceholder'),'#poApprovalNote')) return;
     button.disabled=true;
     try{
       await window.ErpSystemData.action('purchasing/purchase-orders',request.orderId,decision,{note},`po-approval-${request.id}-v${request.version}-${decision}`);
       closeModal();toast(s(approve?'approvedDone':'rejectedDone'),'ok');
       navigate('po-approval',{purchaseOrderId:request.orderId});
-    }catch(error){button.disabled=false;toast(error&&error.message||'Decision failed','danger');}
+    }catch(error){button.disabled=false;toast(error&&error.message||s('decisionFailed'),'danger');}
   });
 }
 registerPurchasingTransactionList({
@@ -69,9 +69,29 @@ SCREENS['po-approval']=async function(root,params){
   await prepareCanonicalPurchasingData();
   const requestedId=params&&params.purchaseOrderId?Number(params.purchaseOrderId):null;
   const requests=DB.purchaseOrderApprovals||[];
-  const request=(requestedId?requests.find(row=>row.orderId===requestedId):null)
-    ||requests.find(row=>row.status==='pending')||requests[0];
-  if(!request){root.innerHTML=purPage({route:'po-approval',active:'po-approvals',title:s('details'),sub:s('sub'),body:`<div class="emptystate"><b>${esc(s('empty'))}</b></div>`});return;}
+  const request=requestedId
+    ?requests.find(row=>row.orderId===requestedId)
+    :requests.find(row=>row.status==='pending')||requests[0];
+  const crumb=[DB.company.name,{label:s('title'),route:'po-approvals'}];
+  if(!request){
+    caseDetailPage(root,{
+      module:'purchasing',
+      route:'po-approval',
+      active:'po-approvals',
+      title:s('detailTitle'),
+      description:s('detailSub'),
+      crumb:[...crumb,{cur:s('details')}],
+      empty:{
+        icon:'flow',
+        title:requestedId?s('missing'):s('empty'),
+        description:s('sub'),
+      },
+      afterRender:({caseRoot})=>{
+        caseRoot?.setAttribute('data-canonical-po-approval','true');
+      },
+    });
+    return;
+  }
   const lines=buildTable({rowId:line=>line.id,columns:[
     {label:s('item'),w:'minmax(190px,1.8fr)',render:line=>`<div class="cellsub"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></div>`},
     {label:s('qty'),align:'r',w:'minmax(80px,.7fr)',render:line=>`<span class="tnum">${num(line.qty)} ${esc(line.uom)}</span>`},
@@ -82,18 +102,56 @@ SCREENS['po-approval']=async function(root,params){
   const decision=request.status==='pending'
     ?`<div class="callout info">${ic('clock')}<span>${esc(s('pendingDecision'))}</span></div>`
     :`<div class="timeline"><div class="tl ${request.status==='approved'?'ok':'danger'}"><span class="tldot"></span><div class="tlbody"><div class="when">${esc(request.decidedAt||'—')}</div><div class="what">${esc(poApprovalLabel(request.status))} · ${esc(request.decidedByName||'—')}</div><div class="det">${esc(request.decisionNote||'—')}</div></div></div></div>`;
-  root.innerHTML=`<div class="content full"><section class="master"><div class="scrollarea"><div class="docwrap"><div class="docpage">
-    ${crumbs([DB.company.name,{label:s('title'),route:'po-approvals'},{cur:request.no}])}${purNav('po-approvals')}
-    <div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('cart')} ${esc(s('details'))} <span class="dnum">${esc(request.no)}</span></div><div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(request.supplier)} · ${esc(request.supplierCode)}</div></div><div class="dactions">${cap(poApprovalLabel(request.status),poApprovalTone(request.status))}</div></div>
-      <div class="docmeta"><div class="dm"><small>${esc(s('supplier'))}</small><b>${esc(request.supplier)}</b></div><div class="dm"><small>${esc(s('date'))}</small><b>${esc(request.orderDate)}</b></div><div class="dm"><small>${esc(s('submitted'))}</small><b>${esc(request.submittedAt)}</b></div><div class="dm"><small>${esc(s('orderStatus'))}</small><b>${esc(request.orderStatus)}</b></div></div>
+  const actions=request.status==='pending'?`
+    <span class="case-detail-action-note">${esc(s('actionHint'))}</span>
+    <div class="grow"></div>
+    ${btn(s('reject'),{icon:'x',cls:'danger',attrs:'data-po-reject'})}
+    ${btn(s('approve'),{icon:'check',cls:'primary',sm:false,attrs:'data-po-approve'})}`:'';
+  caseDetailPage(root,{
+    module:'purchasing',
+    route:'po-approval',
+    active:'po-approvals',
+    title:s('detailTitle'),
+    description:s('detailSub'),
+    crumb:[...crumb,{cur:request.no}],
+    identity:{
+      title:request.supplier,
+      code:request.no,
+      meta:request.supplierCode,
+    },
+    statuses:[{label:poApprovalLabel(request.status),tone:poApprovalTone(request.status)}],
+    facts:[
+      {label:s('net'),value:money(request.net,request.currency),numeric:true},
+      {label:s('date'),value:request.orderDate},
+      {label:s('submitted'),value:request.submittedAt},
+      {label:s('orderStatus'),value:request.orderStatus},
+    ],
+    main:`<div class="panel" data-po-lines>
+      <div class="panel-h"><h3>${esc(s('lineItems'))}</h3><span class="case-detail-panel-count">${request.lines.length}</span></div>
+      ${request.lines.length
+        ?`<div class="master-detail-editor-table-scroll">${lines}</div>`
+        :`<div class="case-detail-inline-empty">${ic('inbox')}<span>${esc(s('noLines'))}</span></div>`}
     </div>
-    <div class="appr-layout"><div class="docmain"><div class="panel"><div class="panel-h"><h3>${esc(s('lineItems'))}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${request.lines.length}</span></div><div class="tablewrap">${lines}</div></div><div class="callout info" style="margin-top:14px">${ic('lock')}<span>${esc(s('accountingNote'))}</span></div></div>
-      <aside><div class="sumcard"><div class="sumrow"><span class="sk2">${esc(s('net'))}</span><span class="sv tnum">${money(request.net,request.currency)}</span></div><div class="sumrow"><span class="sk2">${esc(s('tax'))}</span><span class="sv tnum">${money(request.tax,request.currency)}</span></div><div class="sumrow total"><span class="sk2">${esc(s('total'))}</span><span class="sv tnum">${money(request.total,request.currency)}</span></div></div><div class="sumcard" style="margin-top:14px"><div class="sectitle" style="margin-top:0">${esc(s('decision'))}</div>${decision}</div></aside>
-    </div>
-  </div></div></div><div class="responsive-actionbar">${btn(s('back'),{icon:'chevleft',cls:'soft',attrs:'data-po-back'})}<div class="grow"></div>${request.status==='pending'?btn(s('reject'),{icon:'x',cls:'danger',attrs:'data-po-reject'})+btn(s('approve'),{icon:'check',cls:'primary',sm:false,attrs:'data-po-approve'}):''}</div></section></div>`;
-  root.querySelector('[data-po-back]')?.addEventListener('click',()=>navigate('po-approvals'));
-  root.querySelector('[data-po-approve]')?.addEventListener('click',()=>openPoApprovalDecision(request,'approve'));
-  root.querySelector('[data-po-reject]')?.addEventListener('click',()=>openPoApprovalDecision(request,'reject'));
+    <div class="callout info" data-po-accounting-boundary>${ic('lock')}<span>${esc(s('accountingNote'))}</span></div>`,
+    context:{
+      title:s('financial'),
+      body:`<div class="po-approval-context-section" data-po-totals>
+        <div class="sumrow"><span class="sk2">${esc(s('net'))}</span><span class="sv tnum">${money(request.net,request.currency)}</span></div>
+        <div class="sumrow"><span class="sk2">${esc(s('tax'))}</span><span class="sv tnum">${money(request.tax,request.currency)}</span></div>
+        <div class="sumrow total"><span class="sk2">${esc(s('total'))}</span><span class="sv tnum">${money(request.total,request.currency)}</span></div>
+      </div>
+      <div class="po-approval-context-section" data-po-decision>
+        <div class="sectitle">${esc(s('decision'))}</div>
+        ${decision}
+      </div>`,
+    },
+    actions,
+    afterRender:({caseRoot})=>{
+      caseRoot?.setAttribute('data-canonical-po-approval','true');
+      root.querySelector('[data-po-approve]')?.addEventListener('click',()=>openPoApprovalDecision(request,'approve'));
+      root.querySelector('[data-po-reject]')?.addEventListener('click',()=>openPoApprovalDecision(request,'reject'));
+    },
+  });
 };
 
 /* ---------------- SUPPLIER PRICE LISTS / CONTRACTS ---------------- */

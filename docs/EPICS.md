@@ -1817,3 +1817,11 @@ Delivery slices:
       real posted depreciation history and book-value calculations, and constrain
       history through the standard responsive table. Five-language state audits and
       service worker v101 enforce the desktop/375px contract.
+- [x] **TASK-104 — Purchase Order Approval case-detail SSOT.** Reclassify the
+      canonical Purchase Order Approval detail from the unstructured
+      `document-detail` exemption to `case-detail-v1`. Render order identity, four
+      approval facts, controlled lines, financial totals, the decision record and
+      pending Approve/Reject commands through the standard five regions. Remove
+      duplicate Back navigation and legacy footer chrome while preserving the real
+      note validation, idempotent command and audited decision refresh. Five-language
+      state audits and service worker v102 enforce the desktop/375px contract.

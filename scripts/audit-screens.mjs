@@ -195,6 +195,27 @@ if (obsoleteServiceOrderChrome.length) {
   throw new Error(`Service Order still rebuilds legacy case chrome: ${obsoleteServiceOrderChrome.join(', ')}`);
 }
 
+const purchasingControlSource = readFileSync(path.join(assetDir, 'screens-purchasing-control.js'), 'utf8');
+const poApprovalScreenSource = (purchasingControlSource.split("SCREENS['po-approval']=")[1] || '')
+  .split('/* ---------------- SUPPLIER PRICE LISTS')[0];
+const obsoletePoApprovalChrome = [
+  '<div class="content full"',
+  'docwrap',
+  'docpage',
+  'dochead',
+  'docmeta',
+  'appr-layout',
+  'sumcard',
+  'data-po-back',
+  'position:sticky',
+].filter((token) => poApprovalScreenSource.includes(token));
+if (!poApprovalScreenSource.includes('caseDetailPage(root')) {
+  throw new Error('PO Approval does not render through caseDetailPage().');
+}
+if (obsoletePoApprovalChrome.length) {
+  throw new Error(`PO Approval still rebuilds legacy case chrome: ${obsoletePoApprovalChrome.join(', ')}`);
+}
+
 const warehouseScreenSource = readFileSync(path.join(assetDir, 'screens-warehouse.js'), 'utf8');
 const obsoleteWorkspaceChrome = ['pick-layout','pick-main','pick-side','pick-tools','progressbig']
   .filter((token) => warehouseScreenSource.includes(token));
@@ -652,6 +673,23 @@ async function auditRoutes(browser, viewport) {
       if (serviceOrderOverflow.length) {
         layoutIssues.push(`Service Order internal overflow: ${serviceOrderOverflow.join(', ')}`);
       }
+      const poApprovalRoot = caseDetailRoot?.getAttribute('data-case-route') === 'po-approval'
+        ? caseDetailRoot
+        : null;
+      const poApprovalOverflow = poApprovalRoot
+        ? [
+            poApprovalRoot,
+            poApprovalRoot.querySelector('[data-case-overview]'),
+            poApprovalRoot.querySelector('.case-detail-facts'),
+            poApprovalRoot.querySelector('[data-case-main]'),
+            poApprovalRoot.querySelector('[data-case-context]'),
+            poApprovalRoot.querySelector('[data-case-actions]'),
+          ].filter((node)=>node&&node.offsetParent!==null&&node.scrollWidth>node.clientWidth+1)
+            .map((node)=>`${node.className||node.tagName} ${node.scrollWidth}>${node.clientWidth}`)
+        : [];
+      if (poApprovalOverflow.length) {
+        layoutIssues.push(`PO Approval internal overflow: ${poApprovalOverflow.join(', ')}`);
+      }
       const ledgerDetailRoot = el.querySelector('[data-layout="ledger-detail-v1"]');
       const ledgerDetailRegions = ledgerDetailRoot ? [
         ledgerDetailRoot.querySelector('[data-ledger-overview]'),
@@ -904,6 +942,20 @@ async function auditRoutes(browser, viewport) {
           actionsHidden: Boolean(serviceOrderRoot?.querySelector('[data-case-actions][hidden]')),
           actionButtons: serviceOrderRoot?.querySelectorAll('[data-case-actions] button').length || 0,
           internalOverflow: serviceOrderOverflow,
+        },
+        poApprovalLayout: {
+          canonicalMarker: poApprovalRoot?.getAttribute('data-canonical-po-approval') === 'true',
+          h1s: el.querySelectorAll('.pagehead h1').length,
+          factCount: poApprovalRoot?.querySelectorAll('.case-detail-fact').length || 0,
+          lines: Boolean(poApprovalRoot?.querySelector('[data-po-lines]')),
+          controlledLines: Boolean(poApprovalRoot?.querySelector('[data-po-lines] .master-detail-editor-table-scroll')),
+          totals: Boolean(poApprovalRoot?.querySelector('[data-po-totals]')),
+          decision: Boolean(poApprovalRoot?.querySelector('[data-po-decision]')),
+          actionsHidden: Boolean(poApprovalRoot?.querySelector('[data-case-actions][hidden]')),
+          approveActions: poApprovalRoot?.querySelectorAll('[data-po-approve]').length || 0,
+          rejectActions: poApprovalRoot?.querySelectorAll('[data-po-reject]').length || 0,
+          backActions: poApprovalRoot?.querySelectorAll('[data-po-back]').length || 0,
+          internalOverflow: poApprovalOverflow,
         },
         ledgerDetailLayout: {
           present: Boolean(ledgerDetailRoot),
@@ -1341,6 +1393,29 @@ async function auditRoutes(browser, viewport) {
       }
       if (rendered.serviceOrderLayout.internalOverflow.length) {
         rendered.layoutIssues.push(`Service Order contains internal overflow: ${rendered.serviceOrderLayout.internalOverflow.join(', ')}`);
+      }
+    }
+    if (route === 'po-approval') {
+      if (!rendered.poApprovalLayout.canonicalMarker) {
+        rendered.layoutIssues.push('PO Approval canonical marker missing');
+      }
+      if (rendered.poApprovalLayout.h1s !== 1) {
+        rendered.layoutIssues.push(`PO Approval expected one semantic page heading, found ${rendered.poApprovalLayout.h1s}`);
+      }
+      if (rendered.poApprovalLayout.factCount !== 4) {
+        rendered.layoutIssues.push(`PO Approval expected 4 overview facts, found ${rendered.poApprovalLayout.factCount}`);
+      }
+      if (!rendered.poApprovalLayout.lines
+          || !rendered.poApprovalLayout.controlledLines
+          || !rendered.poApprovalLayout.totals
+          || !rendered.poApprovalLayout.decision) {
+        rendered.layoutIssues.push('PO Approval is missing controlled lines, totals or decision context');
+      }
+      if (rendered.poApprovalLayout.backActions) {
+        rendered.layoutIssues.push('PO Approval contains a redundant Back action');
+      }
+      if (rendered.poApprovalLayout.internalOverflow.length) {
+        rendered.layoutIssues.push(`PO Approval contains internal overflow: ${rendered.poApprovalLayout.internalOverflow.join(', ')}`);
       }
     }
     if (meta?.layout === LEDGER_DETAIL_LAYOUT) {
@@ -2966,6 +3041,166 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'service-order');
     if (result) {
       result.layoutIssues.push(...serviceOrderIssues.map((issue)=>`Service Order state smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('po-approval')) {
+    const poApprovalIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const originalPrepare = window.prepareCanonicalPurchasingData;
+      const adapter = window.ErpSystemData;
+      const originalAction = adapter.action;
+      const originalApprovals = DB.purchaseOrderApprovals;
+      const expectedTitles = {
+        en:'Purchase order approval',
+        ms:'Kelulusan pesanan belian',
+        zh:'采购订单审批',
+        ja:'購買発注の承認',
+        vi:'Phê duyệt đơn mua hàng',
+      };
+      const fixture = {
+        id:9901,version:1,orderId:9901,no:'PO-AUDIT-9901',
+        orderDate:'2026-07-25',currency:'SGD',
+        supplierId:9901,supplier:'Audit Supplier Pte Ltd',supplierCode:'AUD-SUPP',
+        net:100,tax:9,total:109,status:'pending',orderStatus:'pending_approval',
+        submittedAt:'2026-07-25 · 09:00',decidedAt:null,decidedByName:null,decisionNote:null,
+        lines:[{
+          id:9901,lineNo:1,productId:9901,sku:'AUD-ITEM',
+          name:'Audit Item',uom:'unit',qty:2,unitCost:50,net:100,
+          taxCode:'SR',taxRate:9,tax:9,
+        }],
+      };
+      const issues = [];
+      const approvalRoot = () => document.querySelector(
+        '#viewRoot [data-layout="case-detail-v1"][data-case-route="po-approval"]',
+      );
+      try {
+        window.prepareCanonicalPurchasingData = async () => {};
+        DB.purchaseOrderApprovals = [fixture];
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          window.getLang = () => locale;
+          await navigate('po-approval',{purchaseOrderId:fixture.orderId});
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (heading !== title) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+        }
+
+        window.getLang = () => 'en';
+        await navigate('po-approval',{purchaseOrderId:fixture.orderId});
+        let root = approvalRoot();
+        if (root?.querySelectorAll('[data-case-actions] button').length !== 2
+            || !root?.querySelector('[data-po-approve]')
+            || !root?.querySelector('[data-po-reject]')) {
+          issues.push('pending approval does not expose exactly Approve and Reject');
+        }
+        if (root?.querySelector('[data-po-back]')) {
+          issues.push('pending approval exposes a redundant Back action');
+        }
+        if (!root?.querySelector('[data-po-lines] .master-detail-editor-table-scroll')
+            || !root?.querySelector('[data-po-totals]')
+            || !root?.querySelector('[data-po-decision]')) {
+          issues.push('pending approval is missing controlled lines, totals or decision context');
+        }
+
+        root?.querySelector('[data-po-approve]')?.click();
+        document.querySelector('#modalEl [data-po-decision-confirm]')?.click();
+        if (document.activeElement?.id !== 'poApprovalNote') {
+          issues.push('Approve does not require and focus an auditable note');
+        }
+        closeModal();
+
+        const actionCalls = [];
+        adapter.action = async (resource,id,action,payload,idempotencyKey) => {
+          actionCalls.push({resource,id,action,payload,idempotencyKey});
+          DB.purchaseOrderApprovals = DB.purchaseOrderApprovals.map((request)=>request.id===fixture.id
+            ? {
+                ...request,status:action==='approve'?'approved':'rejected',
+                orderStatus:action==='approve'?'open':'rejected',
+                decidedAt:'2026-07-25 · 10:00',decidedByName:'Audit Approver',
+                decisionNote:payload.note,version:request.version+1,
+              }
+            : request);
+          return {data:DB.purchaseOrderApprovals[0]};
+        };
+        await navigate('po-approval',{purchaseOrderId:fixture.orderId});
+        approvalRoot()?.querySelector('[data-po-approve]')?.click();
+        const note = document.querySelector('#poApprovalNote');
+        if (note) note.value = 'Approved by the PO approval audit.';
+        document.querySelector('#modalEl [data-po-decision-confirm]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,300));
+        root = approvalRoot();
+        if (actionCalls[0]?.resource !== 'purchasing/purchase-orders'
+            || actionCalls[0]?.id !== fixture.orderId
+            || actionCalls[0]?.action !== 'approve'
+            || actionCalls[0]?.payload?.note !== 'Approved by the PO approval audit.'
+            || !String(actionCalls[0]?.idempotencyKey||'').includes(`v${fixture.version}-approve`)) {
+          issues.push('Approve did not preserve the canonical action contract');
+        }
+        if (!root?.querySelector('[data-case-actions][hidden]')
+            || root?.querySelectorAll('[data-case-actions] button').length
+            || !root?.textContent.includes('Audit Approver')
+            || !root?.textContent.includes('Approved by the PO approval audit.')) {
+          issues.push('approved state did not refresh the decision record and hide actions');
+        }
+
+        DB.purchaseOrderApprovals = [{...fixture,status:'rejected',orderStatus:'rejected',
+          decidedAt:'2026-07-25 · 11:00',decidedByName:'Audit Rejector',
+          decisionNote:'Rejected by audit.'}];
+        await navigate('po-approval',{purchaseOrderId:fixture.orderId});
+        root = approvalRoot();
+        if (!root?.querySelector('[data-case-actions][hidden]')
+            || root?.querySelectorAll('[data-case-actions] button').length
+            || !root?.textContent.includes('Rejected by audit.')) {
+          issues.push('rejected state is not read-only or is missing its audit record');
+        }
+
+        DB.purchaseOrderApprovals = [{...fixture,lines:[]}];
+        await navigate('po-approval',{purchaseOrderId:fixture.orderId});
+        if (!approvalRoot()?.querySelector('[data-po-lines] .case-detail-inline-empty')) {
+          issues.push('no-lines state does not use the local standard empty state');
+        }
+
+        DB.purchaseOrderApprovals = [fixture];
+        await navigate('po-approval',{purchaseOrderId:999999});
+        if (!approvalRoot()?.querySelector('[data-case-empty]')) {
+          issues.push('unknown purchase order id does not render the case empty state');
+        }
+
+        DB.purchaseOrderApprovals = [];
+        await navigate('po-approval');
+        root = approvalRoot();
+        if (!root?.querySelector('[data-case-empty]')
+            || root?.getAttribute('data-canonical-po-approval') !== 'true') {
+          issues.push('no-approval state left the canonical case shell');
+        }
+
+        DB.purchaseOrderApprovals = [fixture];
+        adapter.action = async () => { throw new Error('PO approval audit failure'); };
+        await navigate('po-approval',{purchaseOrderId:fixture.orderId});
+        approvalRoot()?.querySelector('[data-po-reject]')?.click();
+        const failedNote = document.querySelector('#poApprovalNote');
+        if (failedNote) failedNote.value = 'This rejection will fail.';
+        document.querySelector('#modalEl [data-po-decision-confirm]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,100));
+        const failedConfirm = document.querySelector('#modalEl [data-po-decision-confirm]');
+        if (!failedConfirm || failedConfirm.disabled) {
+          issues.push('failed Reject did not remain recoverable in the modal');
+        }
+        closeModal();
+      } finally {
+        adapter.action = originalAction;
+        window.prepareCanonicalPurchasingData = originalPrepare;
+        window.getLang = originalGetLang;
+        DB.purchaseOrderApprovals = originalApprovals;
+        await navigate('po-approval');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'po-approval');
+    if (result) {
+      result.layoutIssues.push(...poApprovalIssues.map((issue)=>`PO Approval state smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }

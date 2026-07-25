@@ -594,7 +594,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'bom','employee','service-contract','asset-detail',
   ],
   'case-detail-v1':[
-    'ncr','service-order',
+    'ncr','service-order','po-approval',
   ],
   'ledger-detail-v1':[
     'account-ledger',
@@ -617,7 +617,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   'document-detail':[
     'credit-note','delivery-order','goods-receipt',
-    'opportunity','payslip','po-approval','project-detail',
+    'opportunity','payslip','project-detail',
     'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
     'sales-order','sales-return','supplier-invoice','txn-view',
     'work-order',

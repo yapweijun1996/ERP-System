@@ -294,8 +294,11 @@ table.lines tr.editing td{background:var(--accent-tint);}
 .case-detail-empty{margin:0;min-height:260px;}
 .case-detail-inline-empty{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:calc(12.5px * var(--fs,1));padding:18px 16px;}
 .case-detail-inline-empty .ico{width:18px;height:18px;color:var(--faint);}
+.case-detail-panel-count{margin-left:auto;color:var(--muted);font-size:calc(12px * var(--fs,1));font-variant-numeric:tabular-nums;}
 .case-detail-actions{display:flex;align-items:center;gap:10px;position:sticky;bottom:0;z-index:8;margin-top:16px;padding:11px 14px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--material);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);box-shadow:var(--shadow);}
 .case-detail-action-note{font-size:calc(12px * var(--fs,1));color:var(--muted);min-width:0;}
+.po-approval-context-section+.po-approval-context-section{border-top:1px solid var(--hairline);margin-top:16px;padding-top:16px;}
+.po-approval-context-section>.sectitle{margin-top:0;}
 .service-order-diagnosis .risk+.risk{margin-top:10px;}
 .service-order-diagnosis .case-detail-inline-empty{padding:12px 0 0;}
 .service-order-context-section+.service-order-context-section{border-top:1px solid var(--hairline);margin-top:16px;padding-top:16px;}

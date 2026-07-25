@@ -740,16 +740,35 @@ desktop/375px proofs cover populated, no-history, unknown-ID and no-asset states
 Service-worker v101 delivers the update, and the focused master-detail editor audit
 now covers BOM, Employee, Service Contract and Asset Detail.
 
+## Purchase Order Approval case-detail SSOT (TASK-104, 2026-07-25)
+
+The Canonical Purchase Order Approval detail no longer relies on the permissive
+`document-detail` exemption or rebuilds `docwrap`, `docpage`, `dochead`,
+`appr-layout`, summary cards and a separate page-level footer. It now renders through
+`caseDetailPage()` under `data-layout="case-detail-v1"` with one semantic page
+header and the standard overview, error, main, context and actions regions.
+
+Order lines use the bounded responsive table container; financial totals and the
+auditable decision record form the context rail. Pending requests expose only the
+real Reject and Approve commands in the standard action region, while approved and
+rejected requests keep that region hidden and empty. Breadcrumb and Purchasing
+sub-navigation replace the duplicate Back button. Five-language state proofs cover
+pending, approved, rejected, no-lines, missing/unknown and recoverable failure
+states without changing the existing note requirement, idempotency key, permission
+or domain command. Service-worker v102 delivers the update, and the focused Case
+Detail audit now covers NCR, Service Order and Purchase Order Approval.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 102 tasks, including TASK-103
+- Done: 103 tasks, including TASK-104
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 115 Canonical / 0 Preview and 43 audited list-layout routes, including
   36 transaction lists, 5 master-detail registers and 2 report lists; Warehouse
   Picking remains on its dedicated operational-workspace SSOT, and BOM, Employee,
   Service Contract plus Asset Detail use the shared master-detail editor SSOT.
-  NCR and Service Order use the shared actionable Case Detail SSOT.
+  NCR, Service Order and Purchase Order Approval use the shared actionable Case
+  Detail SSOT.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
