@@ -779,8 +779,12 @@ explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof
    holiday calendars, company work patterns, effective-dated leave types and
    deterministic full/half-day calculation. Official imported holidays are inert
    until HR confirmation; overlapping confirmed versions are rejected.
-2. **Immutable balance** (TASK-112 planned) adds the append-only entitlement,
-   reservation, use, release, carry, expiry and encashment ledger.
+2. **Immutable balance** (TASK-112 done 2026-07-25) adds migration 0051 and the
+   append-only entitlement, reservation, use, release, cancellation, adjustment,
+   carry, expiry and encashment ledger. Pending paid leave locks the employee before
+   reserving entitlement, returns an explicit paid/unpaid split when insufficient,
+   and uses idempotent append facts for approval/rejection outcomes. Database triggers
+   forbid update/delete and concurrent-reservation proof prevents overspending.
 3. **Complete lifecycle and governed approval** (TASK-113/114) add versioned
    amendments, withdrawal, void, approved cancellation, evidence privacy,
    multi-level approval, no self-approval, delegation/escalation and configurable

@@ -136,7 +136,8 @@ SG and MY demo companies; production wires real auth.
 > `employee_hierarchy_scope` are present in the current Drizzle schema. TASK-109 adds
 > five UI shell routes and no table. TASK-110 adds role-grant provenance without a
 > new table. TASK-111 adds the calendar/type/policy entities listed below. The
-> remaining entities are approved targets for TASK-112–135 and are
+> immutable balance ledger is implemented by TASK-112. The remaining entities are
+> approved targets for TASK-113–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -180,7 +181,7 @@ working_calendar(+version)      workdays and effective dates
 calendar_holiday                official draft/company-confirmed holiday
 leave_type / leave_policy       effective-dated eligibility, evidence and carry rules
 leave_request(+revision)        Draft/Pending/Approved/Rejected/Withdrawn/Voided lifecycle
-leave_balance_entry             append-only grant/accrual/reserve/use/cancel/adjust ledger
+leave_balance_entry             append-only grant/accrual/reserve/use/cancel/adjust ledger (implemented)
 leave_evidence                  access-controlled link to managed document content
 leave_capacity_rule             department minimum-coverage rule and action
 ```
@@ -196,6 +197,14 @@ recalculated.
 overlap. Official holiday imports start as drafts; company holidays are explicit
 confirmed facts. Only confirmed facts affect calculation, so historical versions
 remain reproducible while current HR-lite `leave_request.days` stays untouched.
+
+`leave_balance_entry` is implemented by migration 0051 as an append-only,
+tenant-scoped ledger. A database trigger rejects `UPDATE` and `DELETE`; a
+company-scoped idempotency key prevents duplicate facts. Decimal full/half-day deltas
+cover grant, accrual, reserve, use, release, cancellation, adjustment, carry-forward,
+expiry and encashment. Projection sums balance and reservation deltas rather than
+storing a mutable balance. Paid-leave reservation locks the employee row before
+checking availability so concurrent Pending requests cannot overspend entitlement.
 
 ### 8.3 Managed documents and extraction
 

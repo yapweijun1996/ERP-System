@@ -105,7 +105,8 @@ employee account lifecycle, TASK-108 implemented actor-owned self/team reads and
 TASK-109 delivered the five-language My Work shell as five Preview routes, and
 TASK-110 proved the identity/security boundary including reporting-derived Manager
 authorization. TASK-111 implements the versioned policy/calendar foundation.
-TASK-112–135 remain **Planned** until their individual acceptance gates pass. Planned
+TASK-112 implements the immutable leave-balance ledger and Pending reservation
+boundary. TASK-113–135 remain **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
@@ -125,6 +126,11 @@ capabilities must not be represented as current Canonical behavior.
 - **Leave policy calendar:** confirmed effective-dated work patterns, confirmed
   company holidays and HR-confirmed official imports determine chargeable working
   days. Leave units are full day or AM/PM half day; hourly leave is rejected.
+- **Immutable leave balance:** tenant-scoped append-only grant, accrual, reservation,
+  use, release, cancellation, adjustment, carry-forward, expiry and encashment facts
+  project exact balance/reserved/available days. Pending paid leave serializes on the
+  employee, reserves available entitlement and fails with an explicit paid/unpaid
+  split when insufficient; approval or rejection appends consumption or release.
 - **My Work shell:** My Leave, My Claims and My Receipts use the shared list SSOT.
   Team Calendar and My Approvals are present only when the actor context grants team
   scope; team rows omit private reasons/evidence. Claims/Receipts and approval commands

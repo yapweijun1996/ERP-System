@@ -192,7 +192,8 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 TASK-106 identity primitives, TASK-107 employee account lifecycle, TASK-108
 actor-owned self/team read contracts, TASK-109's five Preview My Work routes and
 TASK-110 identity/security proof and TASK-111's versioned leave policy calendar are
-implemented; the remaining sections describe the target architecture for TASK-112–135.
+implemented. TASK-112 adds the immutable leave-balance ledger and serialized Pending
+reservation; the remaining sections describe the target architecture for TASK-113–135.
 
 ### Identity and authorization
 
@@ -228,6 +229,12 @@ implemented; the remaining sections describe the target architecture for TASK-11
   non-overlapping confirmed versions. ISO weekdays and confirmed holiday facts drive
   calculation; draft official imports are deliberately ignored. Half-day arithmetic
   uses integer half-day units internally and returns fixed two-decimal days.
+- Leave entitlement is projected only from immutable `leave_balance_entry` facts.
+  Database triggers reject mutation, company-scoped entry keys make command replay
+  idempotent, and employee-row locking serializes paid-balance reservations.
+  Submission appends `reserve`; a later outcome appends `use` or `release`. An
+  insufficient reservation returns the exact paid/unpaid split instead of creating a
+  negative available balance.
 
 - A versioned approval policy resolves ordered steps from domain, company, employee,
   hierarchy, type, amount/days, project and department. Approval instances snapshot

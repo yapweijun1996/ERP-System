@@ -298,6 +298,71 @@ export const leavePolicyVersion = pgTable('leave_policy_version', {
   ),
 ]);
 
+/** Append-only entitlement and reservation facts. `balance_delta` changes the
+ * earned/consumed balance; `reserved_delta` changes only the Pending hold. */
+export const leaveBalanceEntry = pgTable('leave_balance_entry', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  employeeId: bigint('employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  leaveTypeId: bigint('leave_type_id', { mode: 'number' }).notNull()
+    .references(() => leaveType.id),
+  policyVersionId: bigint('policy_version_id', { mode: 'number' }).notNull()
+    .references(() => leavePolicyVersion.id),
+  entryType: text('entry_type').notNull(),
+  entryKey: text('entry_key').notNull(),
+  balanceDelta: numeric('balance_delta', { precision: 10, scale: 2 }).notNull().default('0'),
+  reservedDelta: numeric('reserved_delta', { precision: 10, scale: 2 }).notNull().default('0'),
+  effectiveDate: date('effective_date').notNull(),
+  sourceType: text('source_type').notNull(),
+  sourceId: text('source_id').notNull(),
+  note: text('note'),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_leave_balance_entry_key')
+    .on(t.masterFn, t.companyFn, t.entryKey),
+  index('idx_leave_balance_projection')
+    .on(t.masterFn, t.companyFn, t.employeeId, t.leaveTypeId, t.effectiveDate, t.id),
+  index('idx_leave_balance_source')
+    .on(t.masterFn, t.companyFn, t.sourceType, t.sourceId, t.id),
+  check(
+    'ck_leave_balance_entry_type',
+    sql`${t.entryType} in (
+      'grant', 'accrual', 'reserve', 'use', 'release', 'cancellation',
+      'adjustment', 'carry_forward', 'expiry', 'encashment'
+    )`,
+  ),
+  check(
+    'ck_leave_balance_nonzero',
+    sql`${t.balanceDelta} <> 0 or ${t.reservedDelta} <> 0`,
+  ),
+  check(
+    'ck_leave_balance_half_day',
+    sql`mod(abs(${t.balanceDelta}) * 2, 1) = 0
+      and mod(abs(${t.reservedDelta}) * 2, 1) = 0`,
+  ),
+  check(
+    'ck_leave_balance_entry_shape',
+    sql`
+      (${t.entryType} in ('grant', 'accrual', 'carry_forward')
+        and ${t.balanceDelta} > 0 and ${t.reservedDelta} = 0)
+      or (${t.entryType} = 'reserve'
+        and ${t.balanceDelta} = 0 and ${t.reservedDelta} > 0)
+      or (${t.entryType} = 'release'
+        and ${t.balanceDelta} = 0 and ${t.reservedDelta} < 0)
+      or (${t.entryType} = 'use'
+        and ${t.balanceDelta} < 0 and ${t.reservedDelta} < 0)
+      or (${t.entryType} = 'cancellation'
+        and ${t.balanceDelta} > 0 and ${t.reservedDelta} = 0)
+      or (${t.entryType} in ('expiry', 'encashment')
+        and ${t.balanceDelta} < 0 and ${t.reservedDelta} = 0)
+      or (${t.entryType} = 'adjustment' and ${t.reservedDelta} = 0)
+    `,
+  ),
+]);
+
 export const leaveRequest = pgTable('leave_request', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,

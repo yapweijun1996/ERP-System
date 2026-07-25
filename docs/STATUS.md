@@ -879,14 +879,38 @@ read-only approval, cross-organisation login reuse, managed Manager grants, five
 languages and desktop/375px layout. The shared list audit covers 48 routes. The
 registry is **120 total: 115 Canonical / 5 Preview**.
 
+## Immutable leave balance ledger (TASK-112, 2026-07-25)
+
+TASK-112 adds migration 0051 and `leave_balance_entry`, a tenant-scoped append-only
+source for grant, accrual, reserve, use, release, cancellation, adjustment,
+carry-forward, expiry and encashment facts. A PostgreSQL trigger rejects every update
+or delete, while a company-scoped immutable entry key makes command replay idempotent.
+Balance, reserved and available days are projected with fixed two-decimal arithmetic;
+there is no mutable balance column.
+
+Pending paid leave locks the active employee row before projecting availability and
+appending its reservation, so concurrent requests cannot overspend entitlement.
+Insufficient entitlement fails without a ledger write and returns requested, available
+paid and suggested unpaid days. Approval appends use; rejection appends release.
+Repeated reserve/settle commands return the original fact without duplicating it.
+The policy-calendar foundation remains the governing context and existing HR-lite
+requests remain unchanged until TASK-113 migrates the lifecycle.
+
+Verification covers 428 tests plus one expected skip, 52 ordered migrations and
+143 drift-checked tables. Dedicated proof covers every ledger event, full/half-day
+validation, tenant mismatch, conflicting replay, mutation rejection, paid/unpaid
+split and concurrent reservation. PWA v110 refreshes the generated schema bundle.
+The route registry remains **120 total: 115 Canonical / 5 Preview** and the shared
+list audit remains 48 routes.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 The 115-route Canonical boundary does **not** yet promote the newly approved
 employee self-service pages. TASK-106 through TASK-110 have delivered identity,
 account lifecycle, actor-owned API, five Preview shell routes and the identity
 security proof. TASK-111 has delivered the policy/calendar foundation. TASK-112
-through TASK-135 remain planning records and must not be
-counted as implemented tables,
+has delivered the immutable ledger and paid-balance reservation boundary. TASK-113
+through TASK-135 remain planning records and must not be counted as implemented tables,
 permissions, commands or Canonical workflows until their individual gates pass.
 
 The programme is intentionally ordered:
@@ -923,9 +947,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 110 tasks, including TASK-111
+- Done: 111 tasks, including TASK-112
 - Blocked: TASK-017 (1)
-- Todo: 24 planned tasks (TASK-112–135) across EPIC-053–056. These extend the product
+- Todo: 23 planned tasks (TASK-113–135) across EPIC-053–056. These extend the product
   beyond the current 115 Canonical / 5 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 48 audited
   list-layout routes. Future Leave/Receipt/Expense/Tax routes must join the appropriate

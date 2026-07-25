@@ -1901,10 +1901,13 @@ Legacy Policy marker and is never silently recomputed.
       historical resolvers and deterministic working-day/half-day calculation.
       Official imports remain inert drafts until HR confirms them; existing HR-lite
       leave rows remain unchanged Legacy snapshots.
-- [ ] **TASK-112 — Add the immutable leave balance ledger.** Record grant, accrual,
-      pending reservation, use, release, cancellation, adjustment, carry-forward,
-      expiry and encashment as append-only entries; Pending requests reserve balance
-      and insufficient paid balance suggests an explicit unpaid split.
+- [x] **TASK-112 — Add the immutable leave balance ledger.** Migration 0051 records
+      grant, accrual, pending reservation, use, release, cancellation, adjustment,
+      carry-forward, expiry and encashment as tenant-scoped append-only entries.
+      Database mutation is rejected, entry keys make replay idempotent and paid
+      reservation serializes per employee. Pending reserves balance; approval or
+      rejection appends use/release, while insufficient balance returns an explicit
+      paid/unpaid split. PWA v110; no route maturity change.
 - [ ] **TASK-113 — Add complete leave application lifecycle and evidence.** Implement
       Draft, Pending, Approved, Rejected, Withdrawn, Voided and Cancelled semantics,
       versioned amendments, approved-cancellation requests, HR on-behalf entry and
