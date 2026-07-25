@@ -426,11 +426,11 @@ function ledgerDetailPage(root, config){
 window.ledgerDetailPage=ledgerDetailPage;
 
 /**
- * Page-level SSOT for immutable balanced accounting postings.
+ * Page-level SSOT for immutable operational and financial postings.
  *
  * The shell owns posting identity, status, facts, main/context placement,
  * responsive actions and standard empty/error states. Finance screens provide
- * only the journal-specific line, audit and action content.
+ * balanced journals; inventory postings provide their stock-effect evidence.
  */
 function postingDetailPage(root, config){
   if(!root) throw new Error('postingDetailPage requires a render root.');

@@ -682,7 +682,7 @@ Android verification remains the only human-only release check.
 
 ## Phase 33 — Page-level UI SSOT Convergence ✅
 
-1. **Shared list and workspace contracts** (EPIC-051, TASK-087–104, completed
+1. **Shared list and workspace contracts** (EPIC-051, TASK-087–105, completed
    2026-07-25) separate data maturity from visual-layout compliance. The approved
    transaction-list renderer owns KPI, toolbar, table/empty and pagination regions;
    master-detail registers, tabular reports and operational workspaces extend that
@@ -728,10 +728,15 @@ Android verification remains the only human-only release check.
     lines, financial impact and the audit record now use the standard responsive
     regions; pending Approve/Reject commands retain their canonical validation and
     idempotency while decided requests become clean read-only cases.
+11. **Goods Receipt correction** (TASK-105) moves the immutable inventory posting
+    from the legacy document exemption onto `posting-detail-v1`. Source order lines,
+    stock-movement evidence and posting context now share bounded responsive regions;
+    the stock register is reached from one header action and duplicate footer
+    navigation is removed.
 
 Exit criteria: 43 shared list-layout routes and all 115 routes pass desktop/375px
 structural audits; Timesheet and Employee pass their dedicated five-language/state
 proofs, and the four master-detail editor routes pass focused and live browser
 verification; Payroll modal initial/error/mobile states and all three Case Detail routes
 pass focused state proofs, and Fixed Assets detail/run states pass with
-service-worker v102.
+service-worker v103. All three Posting Detail routes pass focused state proofs.

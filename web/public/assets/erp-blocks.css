@@ -378,6 +378,8 @@ table.lines tr.editing td{background:var(--accent-tint);}
 .posting-balance-row.total{margin-top:4px;padding-top:12px;font-weight:700;font-size:calc(14px * var(--fs,1));}
 .posting-context-card .indicator{margin-top:10px;}
 .posting-context-card p{font-size:calc(12.5px * var(--fs,1));color:var(--muted);margin:0;line-height:1.5;}
+.posting-context-note{display:flex;align-items:flex-start;gap:9px;}
+.posting-context-note .ico{width:17px;height:17px;flex:none;color:var(--muted);margin-top:1px;}
 .posting-detail.is-empty{padding-bottom:24px;}
 .posting-detail.is-empty .posting-detail-grid{display:block;}
 .posting-detail-empty{margin:0;min-height:360px;padding:68px 30px;}

@@ -1825,3 +1825,12 @@ Delivery slices:
       duplicate Back navigation and legacy footer chrome while preserving the real
       note validation, idempotent command and audited decision refresh. Five-language
       state audits and service worker v102 enforce the desktop/375px contract.
+- [x] **TASK-105 — Goods Receipt posting-detail SSOT.** Reclassify the immutable
+      Canonical Goods Receipt from the unstructured `document-detail` exemption to
+      `posting-detail-v1`. Broaden the shared Posting Detail description to include
+      operational stock postings, then render receipt identity, four source facts,
+      controlled document lines, inventory movement evidence, stock-effect context
+      and one header navigation action through the standard regions. Remove duplicate
+      Back/footer chrome while preserving all Canonical receipt and movement reads.
+      Five-language state audits and service worker v103 enforce the desktop/375px
+      contract.

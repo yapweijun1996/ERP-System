@@ -758,9 +758,28 @@ states without changing the existing note requirement, idempotency key, permissi
 or domain command. Service-worker v102 delivers the update, and the focused Case
 Detail audit now covers NCR, Service Order and Purchase Order Approval.
 
+## Goods Receipt posting-detail SSOT (TASK-105, 2026-07-25)
+
+The Canonical Goods Receipt detail no longer relies on the permissive
+`document-detail` exemption or rebuilds `docwrap`, `docpage`, `dochead`,
+`doclayout`, summary cards and a separate page-level footer. It now renders through
+the broadened `postingDetailPage()` contract under `data-layout="posting-detail-v1"`.
+That contract supports immutable operational postings as well as balanced finance
+postings without changing Journal Entry or Payment Voucher behavior.
+
+Receipt identity, supplier, source purchase order, document date and warehouse form
+the standard overview. Order lines and inventory movements use bounded responsive
+tables; received quantity, movement count, posting status and immutability form the
+context rail. “View stock movements” is the single header navigation action, while
+breadcrumb and Purchasing tabs replace the duplicate Back button and the footer
+actions region remains hidden and empty. Five-language state proofs cover populated,
+no-movement, unknown, empty, failed-read and Retry states. Service-worker v103
+delivers the update, and the focused Posting Detail audit now covers Journal Entry,
+Payment Voucher and Goods Receipt.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 103 tasks, including TASK-104
+- Done: 104 tasks, including TASK-105
 - Blocked: TASK-017 (1)
 - Todo: 0 actionable tasks. Route productionization and visual-layout convergence are
   complete at 115 Canonical / 0 Preview and 43 audited list-layout routes, including

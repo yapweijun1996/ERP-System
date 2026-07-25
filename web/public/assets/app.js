@@ -600,7 +600,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'account-ledger',
   ],
   'posting-detail-v1':[
-    'journal-entry','payment-voucher',
+    'journal-entry','payment-voucher','goods-receipt',
   ],
   'financial-statement-v1':[
     'pnl',
@@ -616,7 +616,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'stock-aging','vendor-performance',
   ],
   'document-detail':[
-    'credit-note','delivery-order','goods-receipt',
+    'credit-note','delivery-order',
     'opportunity','payslip','project-detail',
     'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
     'sales-order','sales-return','supplier-invoice','txn-view',

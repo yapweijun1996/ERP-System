@@ -216,6 +216,28 @@ if (obsoletePoApprovalChrome.length) {
   throw new Error(`PO Approval still rebuilds legacy case chrome: ${obsoletePoApprovalChrome.join(', ')}`);
 }
 
+const purchasingDetailsSource = readFileSync(path.join(assetDir, 'screens-purchasing-details.js'), 'utf8');
+const goodsReceiptScreenSource = (purchasingDetailsSource.split("SCREENS['goods-receipt']=")[1] || '')
+  .split("SCREENS['supplier-invoice']=")[0];
+const obsoleteGoodsReceiptChrome = [
+  '<div class="content full"',
+  'docwrap',
+  'docpage',
+  'dochead',
+  'docmeta',
+  'doclayout',
+  'sumcard',
+  'class="summary"',
+  'data-receipt-back',
+  'position:sticky',
+].filter((token) => goodsReceiptScreenSource.includes(token));
+if (!goodsReceiptScreenSource.includes('postingDetailPage(root')) {
+  throw new Error('Goods Receipt does not render through postingDetailPage().');
+}
+if (obsoleteGoodsReceiptChrome.length) {
+  throw new Error(`Goods Receipt still rebuilds legacy posting chrome: ${obsoleteGoodsReceiptChrome.join(', ')}`);
+}
+
 const warehouseScreenSource = readFileSync(path.join(assetDir, 'screens-warehouse.js'), 'utf8');
 const obsoleteWorkspaceChrome = ['pick-layout','pick-main','pick-side','pick-tools','progressbig']
   .filter((token) => warehouseScreenSource.includes(token));
@@ -770,6 +792,23 @@ async function auditRoutes(browser, viewport) {
       if (postingDetailRoot?.querySelector('[data-posting-lines]') && !postingLinesBounded) {
         layoutIssues.push('posting lines table is missing its bounded scroll container');
       }
+      const goodsReceiptRoot = postingDetailRoot?.getAttribute('data-posting-route') === 'goods-receipt'
+        ? postingDetailRoot
+        : null;
+      const goodsReceiptOverflow = goodsReceiptRoot
+        ? [
+            goodsReceiptRoot,
+            goodsReceiptRoot.querySelector('[data-posting-overview]'),
+            goodsReceiptRoot.querySelector('.posting-detail-facts'),
+            goodsReceiptRoot.querySelector('[data-posting-main]'),
+            goodsReceiptRoot.querySelector('[data-posting-context]'),
+            goodsReceiptRoot.querySelector('[data-posting-actions]'),
+          ].filter((node)=>node&&node.offsetParent!==null&&node.scrollWidth>node.clientWidth+1)
+            .map((node)=>`${node.className||node.tagName} ${node.scrollWidth}>${node.clientWidth}`)
+        : [];
+      if (goodsReceiptOverflow.length) {
+        layoutIssues.push(`Goods Receipt internal overflow: ${goodsReceiptOverflow.join(', ')}`);
+      }
       const financialStatementRoot = el.querySelector('[data-layout="financial-statement-v1"]');
       const financialStatementRegions = financialStatementRoot ? [
         financialStatementRoot.querySelector('[data-financial-summary]'),
@@ -990,6 +1029,20 @@ async function auditRoutes(browser, viewport) {
           balance: Boolean(postingDetailRoot?.querySelector('[data-posting-balance]')),
           audit: Boolean(postingDetailRoot?.querySelector('[data-posting-audit]')),
           controlledTable: postingLinesBounded,
+        },
+        goodsReceiptLayout: {
+          canonicalMarker: goodsReceiptRoot?.getAttribute('data-canonical-goods-receipt') === 'true',
+          h1s: el.querySelectorAll('.pagehead h1').length,
+          factCount: goodsReceiptRoot?.querySelectorAll('.posting-detail-fact').length || 0,
+          lines: Boolean(goodsReceiptRoot?.querySelector('[data-goods-receipt-lines]')),
+          trace: Boolean(goodsReceiptRoot?.querySelector('[data-goods-receipt-trace]')),
+          effect: Boolean(goodsReceiptRoot?.querySelector('[data-goods-receipt-effect]')),
+          immutable: Boolean(goodsReceiptRoot?.querySelector('[data-goods-receipt-immutability]')),
+          headerStockActions: el.querySelectorAll('[data-posting-header-action]').length,
+          footerHidden: Boolean(goodsReceiptRoot?.querySelector('[data-posting-actions][hidden]')),
+          footerActions: goodsReceiptRoot?.querySelectorAll('[data-posting-actions] button').length || 0,
+          backActions: goodsReceiptRoot?.querySelectorAll('[data-receipt-back]').length || 0,
+          internalOverflow: goodsReceiptOverflow,
         },
         financialStatementLayout: {
           present: Boolean(financialStatementRoot),
@@ -1494,6 +1547,37 @@ async function auditRoutes(browser, viewport) {
     }
     if (rendered.postingDetailLayout.present && meta?.layout !== POSTING_DETAIL_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.postingDetailLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
+    if (route === 'goods-receipt') {
+      if (!rendered.goodsReceiptLayout.canonicalMarker) {
+        rendered.layoutIssues.push('Goods Receipt canonical marker missing');
+      }
+      if (rendered.goodsReceiptLayout.h1s !== 1) {
+        rendered.layoutIssues.push(`Goods Receipt expected one semantic page heading, found ${rendered.goodsReceiptLayout.h1s}`);
+      }
+      if (rendered.goodsReceiptLayout.factCount !== 4) {
+        rendered.layoutIssues.push(`Goods Receipt expected 4 overview facts, found ${rendered.goodsReceiptLayout.factCount}`);
+      }
+      if (!rendered.goodsReceiptLayout.lines
+          || !rendered.goodsReceiptLayout.trace
+          || !rendered.goodsReceiptLayout.effect
+          || !rendered.goodsReceiptLayout.immutable) {
+        rendered.layoutIssues.push('Goods Receipt is missing lines, inventory trace, stock effect or immutability context');
+      }
+      if (rendered.goodsReceiptLayout.headerStockActions !== 1) {
+        rendered.layoutIssues.push(`Goods Receipt expected one header stock action, found ${rendered.goodsReceiptLayout.headerStockActions}`);
+      }
+      if (!rendered.goodsReceiptLayout.footerHidden || rendered.goodsReceiptLayout.footerActions) {
+        rendered.layoutIssues.push(
+          `Goods Receipt footer actions must remain hidden and empty, found hidden=${rendered.goodsReceiptLayout.footerHidden} buttons=${rendered.goodsReceiptLayout.footerActions}`,
+        );
+      }
+      if (rendered.goodsReceiptLayout.backActions) {
+        rendered.layoutIssues.push('Goods Receipt contains a redundant Back action');
+      }
+      if (rendered.goodsReceiptLayout.internalOverflow.length) {
+        rendered.layoutIssues.push(`Goods Receipt contains internal overflow: ${rendered.goodsReceiptLayout.internalOverflow.join(', ')}`);
+      }
     }
     if (meta?.layout === FINANCIAL_STATEMENT_LAYOUT) {
       if (!rendered.financialStatementLayout.present) {
@@ -3512,6 +3596,158 @@ async function auditRoutes(browser, viewport) {
     const result = results.find((row) => row.route === 'payment-voucher');
     if (result) {
       result.layoutIssues.push(...voucherIssues.map((issue)=>`Payment voucher smoke: ${issue}`));
+      result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
+      result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
+    }
+    events.length = 0;
+  }
+
+  if (routes.includes('goods-receipt')) {
+    const goodsReceiptIssues = await page.evaluate(async () => {
+      const originalGetLang = window.getLang;
+      const originalNavigate = window.navigate;
+      const originalPrepare = window.prepareCanonicalPurchasingData;
+      const originalListPage = window.listPage;
+      const originalReceipts = DB.goodsReceipts;
+      const originalOrders = DB.purchaseOrders;
+      const originalLines = DB.purchaseOrderLines;
+      const expectedTitles = {
+        en:'Goods Receipt',
+        ms:'Penerimaan Barang',
+        zh:'收货单',
+        ja:'入荷伝票',
+        vi:'Phiếu nhận hàng',
+      };
+      const receipt = {
+        id:9901,no:'GR-AUDIT-9901',date:'2026-07-25',po:'PO-AUDIT-9901',
+        orderId:9901,warehouseId:9901,supplier:'Audit Supplier Pte Ltd',
+        code:'AUD-SUPP',warehouse:'WH-AUDIT',lines:1,recvPct:100,
+        qc:'Not modeled',status:'Posted',
+      };
+      const order = {
+        id:9901,docNo:'PO-AUDIT-9901',currency:'SGD',supplierId:9901,
+      };
+      const line = {
+        id:9901,orderId:9901,lineNo:1,productId:9901,
+        sku:'AUD-ITEM',name:'Audit Item',uom:'unit',qty:20,
+        unitCost:6,net:120,taxCode:'SR',taxRate:9,tax:10.8,
+      };
+      const movement = {
+        id:9901,productId:9901,direction:'in',qty:'20.0000',
+        refType:'goods_receipt',refId:9901,movementGroup:'goods_receipt #9901',
+      };
+      const issues = [];
+      let movements = [movement];
+      const postingRoot = () => document.querySelector(
+        '#viewRoot [data-layout="posting-detail-v1"][data-posting-route="goods-receipt"]',
+      );
+      try {
+        window.prepareCanonicalPurchasingData = async () => {};
+        window.listPage = async (resource) => resource === 'inventory/stock-movements'
+          ? {data:movements,meta:{nextCursor:null}}
+          : originalListPage(resource);
+        DB.goodsReceipts = [receipt];
+        DB.purchaseOrders = [order];
+        DB.purchaseOrderLines = [line];
+
+        for (const [locale,title] of Object.entries(expectedTitles)) {
+          window.getLang = () => locale;
+          await navigate('goods-receipt',{receiptId:receipt.id});
+          const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
+          if (heading !== title) issues.push(`${locale} heading rendered as ${heading || 'missing'}`);
+          const root = postingRoot();
+          if (!root?.querySelector('[data-goods-receipt-lines]')
+              || !root?.querySelector('[data-goods-receipt-trace]')
+              || !root?.querySelector('[data-goods-receipt-effect]')) {
+            issues.push(`${locale} receipt evidence regions missing`);
+          }
+        }
+
+        window.getLang = () => 'en';
+        await navigate('goods-receipt',{receiptId:receipt.id});
+        let root = postingRoot();
+        if (root?.getAttribute('data-canonical-goods-receipt') !== 'true') {
+          issues.push('canonical Goods Receipt marker missing');
+        }
+        if (root?.querySelectorAll('.posting-detail-fact').length !== 4) {
+          issues.push('Goods Receipt does not expose four posting facts');
+        }
+        if (!root?.querySelector('[data-posting-actions][hidden]')
+            || root?.querySelectorAll('[data-posting-actions] button').length) {
+          issues.push('posted receipt footer action region is visible or populated');
+        }
+        if (root?.querySelector('[data-receipt-back]')) {
+          issues.push('posted receipt exposes a redundant Back action');
+        }
+        if (!root?.querySelector('[data-posting-lines] .posting-lines-scroll')
+            || !root?.querySelector('[data-posting-totals]')
+            || !root?.querySelector('[data-posting-audit] .posting-lines-scroll')
+            || !root?.textContent.includes('20')) {
+          issues.push('receipt lines, totals or inventory trace are incomplete');
+        }
+
+        const headerAction = document.querySelector('#viewRoot [data-posting-header-action]');
+        let captured = null;
+        window.navigate = async (route,params) => { captured={route,params}; };
+        headerAction?.click();
+        window.navigate = originalNavigate;
+        if (captured?.route !== 'stock-movement') {
+          issues.push('View stock movements does not open the stock movement register');
+        }
+
+        movements = [];
+        await navigate('goods-receipt',{receiptId:receipt.id});
+        if (!postingRoot()?.querySelector('[data-goods-receipt-trace] .posting-inline-empty')) {
+          issues.push('no-movement state does not use the local standard empty state');
+        }
+
+        movements = [movement];
+        await navigate('goods-receipt',{receiptId:999999});
+        root = postingRoot();
+        if (!root?.querySelector('[data-posting-empty]')
+            || root?.getAttribute('data-canonical-goods-receipt') !== 'true') {
+          issues.push('unknown receipt id left the canonical posting empty state');
+        }
+
+        DB.goodsReceipts = [];
+        await navigate('goods-receipt');
+        if (!postingRoot()?.querySelector('[data-posting-empty]')) {
+          issues.push('no-receipt state does not use the standard posting empty state');
+        }
+
+        DB.goodsReceipts = [receipt];
+        window.listPage = async (resource) => {
+          if (resource === 'inventory/stock-movements') throw new Error('goods receipt audit failure');
+          return originalListPage(resource);
+        };
+        await navigate('goods-receipt',{receiptId:receipt.id});
+        const errorRoot = postingRoot();
+        if (!errorRoot?.querySelector('[data-posting-error]:not([hidden])')) {
+          issues.push('read failure did not render the standard posting error state');
+        }
+        window.listPage = async (resource) => resource === 'inventory/stock-movements'
+          ? {data:[movement],meta:{nextCursor:null}}
+          : originalListPage(resource);
+        errorRoot?.querySelector('[data-posting-retry]')?.click();
+        await new Promise((resolve) => setTimeout(resolve,250));
+        if (!postingRoot() || postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) {
+          issues.push('Retry did not recover the Goods Receipt');
+        }
+      } finally {
+        window.navigate = originalNavigate;
+        window.getLang = originalGetLang;
+        window.prepareCanonicalPurchasingData = originalPrepare;
+        window.listPage = originalListPage;
+        DB.goodsReceipts = originalReceipts;
+        DB.purchaseOrders = originalOrders;
+        DB.purchaseOrderLines = originalLines;
+        await navigate('goods-receipt');
+      }
+      return issues;
+    });
+    const result = results.find((row) => row.route === 'goods-receipt');
+    if (result) {
+      result.layoutIssues.push(...goodsReceiptIssues.map((issue)=>`Goods Receipt smoke: ${issue}`));
       result.consoleErrors.push(...events.filter((event)=>event.kind === 'console.error').map((event)=>event.message));
       result.pageErrors.push(...events.filter((event)=>event.kind === 'pageerror').map((event)=>event.message));
     }
