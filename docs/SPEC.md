@@ -115,7 +115,9 @@ TASK-116 implements immutable unpaid-leave/cancellation/encashment Payroll sourc
 policy-controlled balance consumption and one-time payroll-run application.
 TASK-117 implements immutable managed-document identity/version metadata,
 database-default PostgreSQL/PGlite byte content, optional explicit single-node
-filesystem content and a shared authorization/integrity contract. TASK-118–135 remain
+filesystem content and a shared authorization/integrity contract. TASK-118 implements
+bounded magic-validated receipt upload, immutable page counts, actor-owned listing,
+mobile capture/editing and logout-cleared IndexedDB drafts. TASK-119–135 remain
 **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 

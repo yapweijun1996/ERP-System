@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 56;
+  var DEMO_SCHEMA_VERSION = 57;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -2888,6 +2888,8 @@
           orm,SCOPE,myActorUserId(),'employee.team.read');
         var canWriteLeave=await state.runtime.commands.hasPermissionWithin(
           orm,SCOPE,myActorUserId(),'employee.leave.write');
+        var canWriteReceipts=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.receipts.write');
         var teamEmployeeIds=canReadTeam
           ?await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id)
           :[];
@@ -2906,7 +2908,7 @@
           capabilities:{
             leave:{available:true,writable:canWriteLeave},
             claims:{available:false,reason:'not_modelled'},
-            receipts:{available:false,reason:'not_modelled'},
+            receipts:{available:true,writable:canWriteReceipts},
             team:{available:canReadTeam,employeeCount:teamEmployeeIds.length},
           },
         };
@@ -2977,7 +2979,95 @@
     },
     receipts:async function(){
       await withMyActor(function(){ return null; });
-      return {data:[],meta:{actorDerived:true,availability:'not_modelled',plannedEpic:'EPIC-054'}};
+      var result=await requireDemoDb().query(
+        `select d.id,d.document_key,d.original_file_name,d.current_version_no,
+                d.retention_until,d.legal_hold,d.created_at,
+                v.sha256,v.mime_type,v.size_bytes,v.page_count,v.storage_backend
+         from managed_document d
+         join document_version v
+           on v.master_fn=d.master_fn and v.company_fn=d.company_fn
+          and v.document_id=d.id and v.version_no=d.current_version_no
+         where d.master_fn=$1 and d.company_fn=$2 and d.owner_user_id=$3
+           and d.purpose='receipt'
+         order by d.created_at desc,d.id desc limit 100`,
+        [SCOPE.masterFn,SCOPE.companyFn,myActorUserId()]);
+      return {data:result.rows.map(function(row){return {
+        id:Number(row.id),documentKey:row.document_key,
+        originalFileName:row.original_file_name,currentVersionNo:Number(row.current_version_no),
+        retentionUntil:row.retention_until,legalHold:Boolean(row.legal_hold),createdAt:row.created_at,
+        sha256:row.sha256,mimeType:row.mime_type,sizeBytes:Number(row.size_bytes),
+        pageCount:Number(row.page_count),storageBackend:row.storage_backend,
+      };}),meta:{actorDerived:true,availability:'capture',scanning:'planned_task_119',limit:100}};
+    },
+    uploadReceipt:async function(draft){
+      draft=draft||{};
+      var content=new Uint8Array(await draft.blob.arrayBuffer());
+      var validated=await state.runtime.commands.validateReceiptUpload({
+        fileName:String(draft.name||''),declaredMimeType:String(draft.type||''),content:content,
+      });
+      var draftId=String(draft.id||'');
+      if(!/^[a-zA-Z0-9][a-zA-Z0-9_-]{7,127}$/.test(draftId)){
+        var idError=new Error('A stable client draft identifier is required.');
+        idError.code='receipt_draft_id_invalid';throw idError;
+      }
+      var digest=new Uint8Array(await crypto.subtle.digest('SHA-256',validated.content));
+      var hash=Array.from(digest).map(function(value){return value.toString(16).padStart(2,'0');}).join('');
+      var result=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canRead=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.self.read');
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.receipts.write');
+        if(!canRead||!canWrite) throw new Error('You cannot upload receipt evidence.');
+        await state.runtime.commands.resolveActorEmployeeWithin(orm,SCOPE,myActorUserId());
+        var key='receipt:'+myActorUserId()+':'+draftId;
+        var existing=await tx.query(
+          `select d.*,v.id as version_id,v.sha256,v.mime_type,v.size_bytes,
+                  v.page_count,v.storage_backend
+           from managed_document d join document_version v
+             on v.master_fn=d.master_fn and v.company_fn=d.company_fn
+            and v.document_id=d.id and v.version_no=1
+           where d.master_fn=$1 and d.company_fn=$2 and d.document_key=$3 limit 1`,
+          [SCOPE.masterFn,SCOPE.companyFn,key]);
+        if(existing.rows[0]){
+          var row=existing.rows[0];
+          if(row.sha256!==hash||row.mime_type!==validated.mimeType
+            ||Number(row.size_bytes)!==validated.content.byteLength
+            ||Number(row.page_count)!==validated.pageCount){
+            var conflict=new Error('This receipt draft key is already used by different content.');
+            conflict.code='document_key_conflict';throw conflict;
+          }
+          return {row:row,replayed:true};
+        }
+        var retention=new Date();retention.setUTCFullYear(retention.getUTCFullYear()+7);
+        var inserted=await tx.query(
+          `insert into managed_document
+             (master_fn,company_fn,document_key,purpose,owner_user_id,original_file_name,
+              current_version_no,retention_until,legal_hold,created_by_user_id)
+           values ($1,$2,$3,'receipt',$4,$5,1,$6,false,$4) returning *`,
+          [SCOPE.masterFn,SCOPE.companyFn,key,myActorUserId(),validated.fileName,retention]);
+        var documentRow=inserted.rows[0];
+        var version=await tx.query(
+          `insert into document_version
+             (master_fn,company_fn,document_id,version_no,sha256,mime_type,size_bytes,
+              page_count,storage_backend,created_by_user_id)
+           values ($1,$2,$3,1,$4,$5,$6,$7,'database',$8) returning *`,
+          [SCOPE.masterFn,SCOPE.companyFn,documentRow.id,hash,validated.mimeType,
+           validated.content.byteLength,validated.pageCount,myActorUserId()]);
+        await tx.query(
+          `insert into document_blob (master_fn,company_fn,version_id,content)
+           values ($1,$2,$3,$4)`,
+          [SCOPE.masterFn,SCOPE.companyFn,version.rows[0].id,validated.content]);
+        return {row:Object.assign({},documentRow,version.rows[0]),replayed:false};
+      });
+      return {data:{
+        id:Number(result.row.document_id||result.row.id),
+        documentKey:result.row.document_key,
+        originalFileName:result.row.original_file_name||validated.fileName,
+        versionNo:1,sha256:hash,mimeType:validated.mimeType,
+        sizeBytes:validated.content.byteLength,pageCount:validated.pageCount,
+        storageBackend:'database',createdAt:result.row.created_at,
+      },meta:{actorDerived:true,replayed:result.replayed,scanning:'planned_task_119'}};
     },
     teamLeaveRequests:async function(){
       var data=await withMyActor(async function(orm,actor){

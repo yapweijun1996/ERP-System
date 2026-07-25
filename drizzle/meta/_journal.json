@@ -400,6 +400,13 @@
       "when": 1785002128614,
       "tag": "0056_document_storage_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1785003975691,
+      "tag": "0057_secure_receipt_upload",
+      "breakpoints": true
     }
   ]
 }

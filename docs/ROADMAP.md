@@ -819,8 +819,12 @@ Payroll effects pass five-language desktop/375px and domain/API proof.
    provider. Tenant ownership, immutable versions, SHA-256, MIME, size, retention,
    legal hold and the filesystem locator remain queryable database facts. The same
    owner/manager/cross-tenant contract and integrity verification cover both providers.
-2. **Bounded capture** (TASK-118 planned) adds secure JPEG/PNG/HEIC/PDF upload,
-   mobile camera tooling and offline PWA drafts.
+2. **Bounded capture** (TASK-118 done 2026-07-26) adds 20 MB
+   JPEG/PNG/HEIC/PDF upload with magic-byte/MIME/extension agreement and a real
+   20-page PDF ceiling. The five-language Canonical My Receipts workspace provides
+   mobile camera/file capture, IndexedDB offline drafts and Canvas crop, rotation and
+   compression for JPEG/PNG. Logout warns and clears only unsynchronised local drafts;
+   Canonical stored receipts remain intact and explicitly await TASK-119 scanning.
 3. **Fail-closed scan and governed extraction** (TASK-119/120) quarantine every file,
    default to local OCR, make external Vision BYOK opt-in, preserve field provenance
    and permit system submission only when every critical field reaches at least 98%

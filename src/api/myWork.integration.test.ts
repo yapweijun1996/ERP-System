@@ -105,7 +105,7 @@ describe('actor-owned My Work API', () => {
         employee: { id: number; employeeNo: string };
         capabilities: {
           claims: { available: boolean; reason: string };
-          receipts: { available: boolean; reason: string };
+          receipts: { available: boolean; writable: boolean };
           team: { available: boolean };
         };
       };
@@ -127,10 +127,8 @@ describe('actor-owned My Work API', () => {
       available: false,
       reason: 'not_modelled',
     });
-    expect(contextBody.data.capabilities.receipts).toEqual({
-      available: false,
-      reason: 'not_modelled',
-    });
+    expect(contextBody.data.capabilities.receipts)
+      .toEqual({ available: true, writable: true });
 
     const ownLeave = await fetch(`${baseUrl}/api/my/leave-requests`, {
       headers: { cookie },
@@ -181,21 +179,67 @@ describe('actor-owned My Work API', () => {
         .toBe('actor_identity_is_session_derived');
     }
 
-    for (const resource of ['claims', 'receipts']) {
-      const response = await fetch(`${baseUrl}/api/my/${resource}`, {
-        headers: { cookie },
-      });
-      expect(response.status).toBe(200);
-      const body = await response.json() as {
-        data: unknown[];
-        meta: { actorDerived: boolean; availability: string; plannedEpic: string };
-      };
-      expect(body.data).toEqual([]);
-      expect(body.meta).toMatchObject({
-        actorDerived: true,
-        availability: 'not_modelled',
-      });
-    }
+    const claims = await fetch(`${baseUrl}/api/my/claims`, { headers: { cookie } });
+    expect(claims.status).toBe(200);
+    expect(await claims.json()).toMatchObject({
+      data: [],
+      meta: { actorDerived: true, availability: 'not_modelled' },
+    });
+
+    const uploadHeaders = {
+      cookie,
+      'x-csrf-token': csrf,
+      'content-type': 'image/jpeg',
+      'x-erp-file-name': encodeURIComponent('taxi-receipt.jpg'),
+      'x-erp-draft-id': 'draft_api_001',
+    };
+    const jpeg = Uint8Array.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+    ]);
+    const uploaded = await fetch(`${baseUrl}/api/my/receipts/actions/upload`, {
+      method: 'POST',
+      headers: uploadHeaders,
+      body: jpeg,
+    });
+    expect(uploaded.status).toBe(201);
+    expect(await uploaded.json()).toMatchObject({
+      data: {
+        originalFileName: 'taxi-receipt.jpg',
+        mimeType: 'image/jpeg',
+        pageCount: 1,
+        storageBackend: 'database',
+      },
+      meta: { actorDerived: true, replayed: false },
+    });
+    const replayedUpload = await fetch(`${baseUrl}/api/my/receipts/actions/upload`, {
+      method: 'POST',
+      headers: uploadHeaders,
+      body: jpeg,
+    });
+    expect(replayedUpload.status).toBe(200);
+    expect(await replayedUpload.json()).toMatchObject({
+      meta: { actorDerived: true, replayed: true },
+    });
+    const receiptList = await fetch(`${baseUrl}/api/my/receipts`, {
+      headers: { cookie },
+    });
+    expect(receiptList.status).toBe(200);
+    expect(await receiptList.json()).toMatchObject({
+      data: [{ originalFileName: 'taxi-receipt.jpg', pageCount: 1 }],
+      meta: { actorDerived: true, availability: 'capture' },
+    });
+
+    const spoofed = await fetch(`${baseUrl}/api/my/receipts/actions/upload`, {
+      method: 'POST',
+      headers: {
+        ...uploadHeaders,
+        'x-erp-file-name': encodeURIComponent('taxi-receipt.pdf'),
+        'x-erp-draft-id': 'draft_api_002',
+      },
+      body: jpeg,
+    });
+    expect(spoofed.status).toBe(422);
+    expect((await spoofed.json()).error.code).toBe('receipt_type_mismatch');
   });
 
   it('lets an Employee-only account boot My Work without dashboard access', async () => {

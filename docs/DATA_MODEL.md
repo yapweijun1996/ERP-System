@@ -142,8 +142,8 @@ SG and MY demo companies; production wires real auth.
 > bounded delegation, capacity-rule and capacity-snapshot entities. TASK-115 adds the
 > outbound calendar connection/event entities. TASK-116 adds the leave-to-Payroll
 > source and one-time run mapping entities. TASK-117 adds the first four managed
-> document storage entities in section 8.3. The remaining entities are approved
-> targets for TASK-118–135 and are
+> document storage entities in section 8.3. TASK-118 adds immutable page counts
+> without a new entity. The remaining entities are approved targets for TASK-119–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -272,14 +272,18 @@ document_purge_approval         records-manager request and finance review
 document_tombstone             retained hash/provenance after authorized purge
 ```
 
-Migration 0056 implements the first four rows. Database binary storage is the default,
+Migration 0056 implements the first four rows. Migration 0057 adds positive page-count
+metadata to each immutable version and the actor-owned receipt upload command reuses
+those rows with database binary content by default. Database binary storage is the default,
 cluster-safe provider. Server-file storage requires `DOCUMENT_STORAGE_FS_ROOT` and is
 an explicit single-node deployment option; the database still owns all tenant,
 integrity, version, retention and legal-hold metadata. Identity and versions cannot be
 updated or deleted, while the managed projection may advance only its current version,
 retention deadline or legal hold. Every read verifies stored bytes against the
-database-owned SHA-256 and size. The remaining link, quarantine, extraction, retention
-workflow, purge and tombstone rows are planned for TASK-118–122. New files will remain
+database-owned SHA-256 and size. TASK-118 capture-only receipts remain private and
+cannot enter a claim, preview or export while they explicitly await the TASK-119 scan
+boundary. The remaining link, quarantine, extraction, retention workflow, purge and
+tombstone rows are planned for TASK-119–122. TASK-119 will place new files in
 `Quarantined` until a successful scan.
 Scanner unavailability or an indeterminate result fails closed. OCR is local by default;
 external Vision is opt-in BYOK with company-level region and retention policy.

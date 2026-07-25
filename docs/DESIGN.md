@@ -201,8 +201,10 @@ Team Calendar read model/workspace and optional one-way delivery worker. TASK-11
 immutable leave-to-Payroll sources, policy-controlled encashment and one-time run
 mappings. TASK-117 implements the shared managed-document identity/version boundary,
 database-default byte provider and optional explicit single-node filesystem provider.
-The remaining sections describe the target architecture for upload, quarantine,
-extraction, retention workflows and expense linkage under TASK-118–135.
+TASK-118 implements bounded magic-validated receipt upload, positive page-count
+metadata, actor-owned listing, IndexedDB offline capture and Canvas editing. The
+remaining sections describe the target architecture for quarantine, extraction,
+retention workflows and expense linkage under TASK-119–135.
 
 ### Identity and authorization
 

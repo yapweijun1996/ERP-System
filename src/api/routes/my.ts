@@ -42,6 +42,13 @@ import {
 } from '../../modules/approval/workflow';
 import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
 import { LeavePolicyError } from '../../modules/hr/leavePolicy';
+import {
+  listReceiptDocuments,
+  RECEIPT_UPLOAD_MAX_BYTES,
+  ReceiptUploadError,
+  uploadReceiptDocument,
+} from '../../modules/documents/upload';
+import { DocumentStorageError } from '../../modules/documents/storage';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import {
@@ -116,6 +123,10 @@ export function createMyRouter(db: DB): Router {
       apiError(res, status, error.code, error.message, details);
       return;
     }
+    if (error instanceof DocumentStorageError || error instanceof ReceiptUploadError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
     throw error;
   }
 
@@ -143,6 +154,65 @@ export function createMyRouter(db: DB): Router {
       return null;
     }
     return session;
+  }
+
+  async function requireReceiptWrite(
+    req: import('express').Request,
+    res: import('express').Response,
+  ) {
+    const session = await requireSelf(req, res);
+    if (!session) return null;
+    if (!await hasPermission(db, session, PERMISSIONS.employeeReceiptsWrite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot upload receipt evidence.');
+      return null;
+    }
+    return session;
+  }
+
+  async function readBoundedReceiptBody(
+    req: import('express').Request,
+  ): Promise<Uint8Array> {
+    const declaredLength = req.header('content-length');
+    if (declaredLength) {
+      const length = Number(declaredLength);
+      if (!Number.isSafeInteger(length) || length < 0) {
+        throw new DocumentStorageError(
+          'receipt_content_length_invalid',
+          'Receipt Content-Length is invalid.',
+          400,
+        );
+      }
+      if (length > RECEIPT_UPLOAD_MAX_BYTES) {
+        throw new DocumentStorageError(
+          'receipt_too_large',
+          'Receipt content exceeds the 20 MB upload limit.',
+          413,
+        );
+      }
+    }
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for await (const chunk of req) {
+      const bytes = chunk instanceof Uint8Array
+        ? new Uint8Array(chunk)
+        : new TextEncoder().encode(String(chunk));
+      total += bytes.byteLength;
+      if (total > RECEIPT_UPLOAD_MAX_BYTES) {
+        throw new DocumentStorageError(
+          'receipt_too_large',
+          'Receipt content exceeds the 20 MB upload limit.',
+          413,
+        );
+      }
+      chunks.push(bytes);
+    }
+    const content = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      content.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return content;
   }
 
   async function runLeaveCommand(
@@ -213,6 +283,11 @@ export function createMyRouter(db: DB): Router {
     try {
       const canReadTeam = await hasPermission(db, session, PERMISSIONS.employeeTeamRead);
       const canWriteLeave = await hasPermission(db, session, PERMISSIONS.employeeLeaveWrite);
+      const canWriteReceipts = await hasPermission(
+        db,
+        session,
+        PERMISSIONS.employeeReceiptsWrite,
+      );
       const data = await withTenantTransaction(db, scope, async (tx) => {
         const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
         const [activeCompany] = await tx.select({
@@ -243,7 +318,7 @@ export function createMyRouter(db: DB): Router {
           capabilities: {
             leave: { available: true, writable: canWriteLeave },
             claims: { available: false, reason: 'not_modelled' },
-            receipts: { available: false, reason: 'not_modelled' },
+            receipts: { available: true, writable: canWriteReceipts },
             team: { available: canReadTeam, employeeCount: teamEmployeeIds.length },
           },
         };
@@ -578,27 +653,115 @@ export function createMyRouter(db: DB): Router {
     }
   });
 
-  for (const resource of ['claims', 'receipts'] as const) {
-    router.get(`/${resource}`, async (req, res) => {
-      const session = await requireSelf(req, res);
-      if (!session) return;
-      const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
-      try {
-        await withTenantTransaction(db, scope, (tx) =>
-          resolveActorEmployeeWithin(tx, scope, session.userId));
-        res.json({
-          data: [],
-          meta: {
-            actorDerived: true,
-            availability: 'not_modelled',
-            plannedEpic: resource === 'claims' ? 'EPIC-055' : 'EPIC-054',
-          },
-        });
-      } catch (error) {
-        handleActorError(res, error);
-      }
-    });
-  }
+  router.get('/claims', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      await withTenantTransaction(db, scope, (tx) =>
+        resolveActorEmployeeWithin(tx, scope, session.userId));
+      res.json({
+        data: [],
+        meta: {
+          actorDerived: true,
+          availability: 'not_modelled',
+          plannedEpic: 'EPIC-055',
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.get('/receipts', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      await withTenantTransaction(db, scope, (tx) =>
+        resolveActorEmployeeWithin(tx, scope, session.userId));
+      const data = await listReceiptDocuments(db, scope, { userId: session.userId });
+      res.json({
+        data,
+        meta: {
+          actorDerived: true,
+          availability: 'capture',
+          scanning: 'planned_task_119',
+          limit: 100,
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/receipts/actions/upload', async (req, res) => {
+    const session = await requireReceiptWrite(req, res);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const encodedFileName = req.header('x-erp-file-name') ?? '';
+    const clientDraftId = req.header('x-erp-draft-id') ?? '';
+    let fileName: string;
+    try {
+      fileName = decodeURIComponent(encodedFileName);
+    } catch {
+      apiError(res, 400, 'receipt_file_name_invalid', 'Receipt file name encoding is invalid.');
+      return;
+    }
+    try {
+      await withTenantTransaction(db, scope, (tx) =>
+        resolveActorEmployeeWithin(tx, scope, session.userId));
+      const content = await readBoundedReceiptBody(req);
+      const result = await uploadReceiptDocument(
+        db,
+        scope,
+        { userId: session.userId },
+        {
+          clientDraftId,
+          fileName,
+          declaredMimeType: req.header('content-type')?.split(';', 1)[0] ?? '',
+          content,
+        },
+      );
+      await withTenantTransaction(db, scope, (tx) => appendAudit(tx, {
+        ...scope,
+        actorUserId: session.userId,
+        requestId: context(res).requestId,
+        entity: 'my/receipts',
+        entityId: result.document.id,
+        action: result.replayed ? 'upload_replay' : 'upload',
+        after: {
+          documentId: result.document.id,
+          versionNo: result.version.versionNo,
+          sha256: result.version.sha256,
+          mimeType: result.version.mimeType,
+          sizeBytes: result.version.sizeBytes,
+          pageCount: result.version.pageCount,
+        },
+      }));
+      res.status(result.replayed ? 200 : 201).json({
+        data: {
+          id: result.document.id,
+          documentKey: result.document.documentKey,
+          originalFileName: result.document.originalFileName,
+          versionNo: result.version.versionNo,
+          sha256: result.version.sha256,
+          mimeType: result.version.mimeType,
+          sizeBytes: result.version.sizeBytes,
+          pageCount: result.version.pageCount,
+          storageBackend: result.version.storageBackend,
+          createdAt: result.document.createdAt,
+        },
+        meta: {
+          actorDerived: true,
+          replayed: result.replayed,
+          scanning: 'planned_task_119',
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
 
   router.get('/team/leave-requests', async (req, res) => {
     const session = await requireSelf(req, res);

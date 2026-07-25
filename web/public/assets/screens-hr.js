@@ -954,19 +954,133 @@ SCREENS['my-claims']=async function(root){
   });
 };
 
+function receiptCaptureCopy(){
+  const packs={
+    en:{title:'My Receipts',sub:'Capture secure receipt evidence online or offline. Files stay private and cannot enter a claim until later governance steps are delivered.',take:'Take photo',choose:'Choose file',syncAll:'Sync all',file:'File',state:'State',size:'Size',pages:'Pages',updated:'Updated',actions:'Actions',offline:'Offline draft',stored:'Stored · awaiting TASK-119 scan',edit:'Edit',sync:'Sync',remove:'Delete',empty:'No receipts or drafts',emptyBody:'Take a photo or choose JPEG, PNG, HEIC or PDF evidence (20 MB maximum; PDFs up to 20 pages).',limits:'JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20 pages',offlineNote:'Offline drafts are stored only on this device. Signing out warns and clears every unsynchronised draft.',editTitle:'Crop, rotate and compress',crop:'Crop',original:'Original',square:'Square',receipt:'Receipt 3:4',rotation:'Rotation',rotateLeft:'Rotate left',rotateRight:'Rotate right',quality:'JPEG quality',save:'Save edit',cancel:'Cancel',syncing:'Synchronising…',saved:'Receipt draft saved on this device.',uploaded:'Receipt uploaded securely.',deleted:'Receipt draft deleted.',offlineError:'You are offline. The draft remains safely on this device.',editUnavailable:'HEIC and PDF stay original because this browser cannot safely decode them for editing.',confirmDelete:'Delete this unsynchronised receipt draft?',error:'Receipt could not be processed.'},
+    ms:{title:'Resit Saya',sub:'Tangkap bukti resit dengan selamat dalam talian atau luar talian. Fail kekal peribadi dan belum boleh dimasukkan ke tuntutan.',take:'Ambil foto',choose:'Pilih fail',syncAll:'Segerakkan semua',file:'Fail',state:'Keadaan',size:'Saiz',pages:'Halaman',updated:'Dikemas kini',actions:'Tindakan',offline:'Draf luar talian',stored:'Disimpan · menunggu imbasan TASK-119',edit:'Sunting',sync:'Segerak',remove:'Padam',empty:'Tiada resit atau draf',emptyBody:'Ambil foto atau pilih bukti JPEG, PNG, HEIC atau PDF (maksimum 20 MB; PDF sehingga 20 halaman).',limits:'JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20 halaman',offlineNote:'Draf luar talian disimpan pada peranti ini sahaja. Log keluar memberi amaran lalu memadam semua draf belum disegerakkan.',editTitle:'Pangkas, putar dan mampat',crop:'Pangkas',original:'Asal',square:'Segi empat',receipt:'Resit 3:4',rotation:'Putaran',rotateLeft:'Putar kiri',rotateRight:'Putar kanan',quality:'Kualiti JPEG',save:'Simpan suntingan',cancel:'Batal',syncing:'Menyegerak…',saved:'Draf resit disimpan pada peranti ini.',uploaded:'Resit dimuat naik dengan selamat.',deleted:'Draf resit dipadam.',offlineError:'Anda di luar talian. Draf kekal selamat pada peranti ini.',editUnavailable:'HEIC dan PDF kekal asal kerana pelayar ini tidak dapat menyahkodnya dengan selamat.',confirmDelete:'Padam draf resit belum disegerakkan ini?',error:'Resit tidak dapat diproses.'},
+    zh:{title:'我的收据',sub:'在线或离线安全采集收据凭证。文件保持私密，后续治理步骤完成前不会进入报销单。',take:'拍摄收据',choose:'选择文件',syncAll:'全部同步',file:'文件',state:'状态',size:'大小',pages:'页数',updated:'更新时间',actions:'操作',offline:'离线草稿',stored:'已安全存储 · 等待 TASK-119 扫描',edit:'编辑',sync:'同步',remove:'删除',empty:'暂无收据或草稿',emptyBody:'拍照或选择 JPEG、PNG、HEIC、PDF 凭证（最大 20 MB；PDF 最多 20 页）。',limits:'JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20 页',offlineNote:'离线草稿只保存在此设备。登出时会先警告，确认后清除所有未同步草稿。',editTitle:'裁切、旋转与压缩',crop:'裁切',original:'原始',square:'正方形',receipt:'收据 3:4',rotation:'旋转',rotateLeft:'向左旋转',rotateRight:'向右旋转',quality:'JPEG 质量',save:'保存编辑',cancel:'取消',syncing:'正在同步…',saved:'收据草稿已保存在此设备。',uploaded:'收据已安全上传。',deleted:'收据草稿已删除。',offlineError:'当前离线，草稿仍安全保存在此设备。',editUnavailable:'浏览器无法安全解码 HEIC 与 PDF，因此会保留原件。',confirmDelete:'删除这份尚未同步的收据草稿？',error:'无法处理此收据。'},
+    ja:{title:'自分の領収書',sub:'オンラインまたはオフラインで領収書を安全に取得します。後続の統制が完了するまで経費申請には入りません。',take:'写真を撮る',choose:'ファイルを選択',syncAll:'すべて同期',file:'ファイル',state:'状態',size:'サイズ',pages:'ページ',updated:'更新',actions:'操作',offline:'オフライン下書き',stored:'保存済み · TASK-119 スキャン待ち',edit:'編集',sync:'同期',remove:'削除',empty:'領収書または下書きはありません',emptyBody:'JPEG、PNG、HEIC、PDF を撮影または選択（最大20MB、PDFは20ページまで）。',limits:'JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20ページ',offlineNote:'下書きはこの端末だけに保存されます。サインアウト時に警告し、確認後に未同期下書きを消去します。',editTitle:'切り抜き・回転・圧縮',crop:'切り抜き',original:'元画像',square:'正方形',receipt:'領収書 3:4',rotation:'回転',rotateLeft:'左回転',rotateRight:'右回転',quality:'JPEG品質',save:'編集を保存',cancel:'キャンセル',syncing:'同期中…',saved:'領収書下書きをこの端末に保存しました。',uploaded:'領収書を安全にアップロードしました。',deleted:'下書きを削除しました。',offlineError:'オフラインです。下書きはこの端末に安全に残ります。',editUnavailable:'HEICとPDFは安全にデコードできないため元のまま保持します。',confirmDelete:'未同期の領収書下書きを削除しますか？',error:'領収書を処理できませんでした。'},
+    vi:{title:'Biên lai của tôi',sub:'Chụp chứng từ biên lai an toàn khi trực tuyến hoặc ngoại tuyến. Tệp chưa được đưa vào yêu cầu chi phí cho đến bước quản trị sau.',take:'Chụp ảnh',choose:'Chọn tệp',syncAll:'Đồng bộ tất cả',file:'Tệp',state:'Trạng thái',size:'Kích thước',pages:'Số trang',updated:'Cập nhật',actions:'Thao tác',offline:'Bản nháp ngoại tuyến',stored:'Đã lưu · chờ quét TASK-119',edit:'Chỉnh sửa',sync:'Đồng bộ',remove:'Xóa',empty:'Không có biên lai hoặc bản nháp',emptyBody:'Chụp hoặc chọn JPEG, PNG, HEIC hay PDF (tối đa 20 MB; PDF tối đa 20 trang).',limits:'JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20 trang',offlineNote:'Bản nháp chỉ lưu trên thiết bị này. Đăng xuất sẽ cảnh báo rồi xóa mọi bản nháp chưa đồng bộ.',editTitle:'Cắt, xoay và nén',crop:'Cắt',original:'Gốc',square:'Vuông',receipt:'Biên lai 3:4',rotation:'Xoay',rotateLeft:'Xoay trái',rotateRight:'Xoay phải',quality:'Chất lượng JPEG',save:'Lưu chỉnh sửa',cancel:'Hủy',syncing:'Đang đồng bộ…',saved:'Đã lưu bản nháp trên thiết bị này.',uploaded:'Đã tải biên lai lên an toàn.',deleted:'Đã xóa bản nháp.',offlineError:'Bạn đang ngoại tuyến. Bản nháp vẫn an toàn trên thiết bị.',editUnavailable:'HEIC và PDF được giữ nguyên vì trình duyệt không thể giải mã an toàn.',confirmDelete:'Xóa bản nháp biên lai chưa đồng bộ này?',error:'Không thể xử lý biên lai.'},
+  };
+  const pack=packs[typeof getLang==='function'?getLang():'en']||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+function receiptBytes(value){
+  const size=Number(value)||0;
+  return size>=1024*1024?(size/(1024*1024)).toFixed(1)+' MB':Math.max(1,Math.ceil(size/1024))+' KB';
+}
+async function openReceiptEditor(draft,onDone){
+  const s=receiptCaptureCopy();
+  if(!['image/jpeg','image/png'].includes(draft.type)){toast(s('editUnavailable'),'warn');return;}
+  let rotation=Number(draft.transform&&draft.transform.rotation)||0;
+  appModal({icon:'crop',title:s('editTitle'),width:'min(680px, calc(100vw - 24px))',body:`
+    <div class="formgrid">
+      <label class="fld"><span>${esc(s('crop'))}</span><select data-receipt-crop>
+        <option value="original">${esc(s('original'))}</option><option value="square">${esc(s('square'))}</option>
+        <option value="receipt">${esc(s('receipt'))}</option></select></label>
+      <label class="fld"><span>${esc(s('quality'))}</span><input type="range" min="45" max="95" value="82" data-receipt-quality></label>
+    </div>
+    <div class="toolbar"><small>${esc(s('rotation'))}: <b data-receipt-rotation>${rotation}°</b></small><div class="grow"></div>
+      ${btn(s('rotateLeft'),{icon:'undo',attrs:'data-receipt-rotate="-90"'})}
+      ${btn(s('rotateRight'),{icon:'redo',attrs:'data-receipt-rotate="90"'})}</div>
+    <div class="callout info">${ic('info')}<span>${esc(s('limits'))}</span></div>
+    <div class="auth-error" data-receipt-edit-error role="alert"></div>`,
+    actions:`${btn(s('cancel'),{attrs:'onclick="closeModal()"'})}${btn(s('save'),{icon:'check',cls:'primary',attrs:'data-receipt-edit-save'})}`});
+  const modal=$('#modalEl');
+  modal.querySelectorAll('[data-receipt-rotate]').forEach(button=>button.addEventListener('click',()=>{
+    rotation=(rotation+Number(button.dataset.receiptRotate)+360)%360;
+    modal.querySelector('[data-receipt-rotation]').textContent=rotation+'°';
+  }));
+  modal.querySelector('[data-receipt-edit-save]').addEventListener('click',async event=>{
+    const button=event.currentTarget;button.disabled=true;
+    try{
+      await window.ErpReceiptDrafts.transformImage(draft.id,{
+        rotation,crop:modal.querySelector('[data-receipt-crop]').value,
+        quality:Number(modal.querySelector('[data-receipt-quality]').value)/100,
+      });
+      closeModal();await onDone();
+    }catch(error){modal.querySelector('[data-receipt-edit-error]').textContent=(error&&error.message)||s('error');button.disabled=false;}
+  });
+}
 SCREENS['my-receipts']=async function(root){
-  const copy=myWorkCopy();
+  const s=receiptCaptureCopy(),adapter=myWorkAdapter(),draftStore=window.ErpReceiptDrafts;
+  if(!draftStore) throw new Error('Offline receipt draft storage is unavailable.');
   let response;
-  try{ response=await myWorkAdapter().receipts(); }
+  try{ response=await adapter.receipts(); }
   catch(error){
     if(!isMyWorkIdentityError(error)) throw error;
-    myWorkIdentityPage(root,'my-receipts',copy('receiptsTitle'),copy('receiptsDescription'));
-    return;
+    myWorkIdentityPage(root,'my-receipts',s('title'),s('sub'));return;
   }
-  myWorkEmptyPage(root,{
-    route:'my-receipts',title:copy('receiptsTitle'),description:copy('receiptsDescription'),
-    emptyTitle:copy('receiptsUnavailable'),emptyDescription:copy('receiptsUnavailableBody'),
-    note:response.meta&&response.meta.plannedEpic,
+  const drafts=await draftStore.list();
+  const stored=Array.isArray(response.data)?response.data:[];
+  const rows=[
+    ...drafts.map(draft=>({id:draft.id,kind:'draft',name:draft.name,state:s('offline'),size:draft.size,pages:'—',updated:draft.updatedAt,draft})),
+    ...stored.map(item=>({id:'stored-'+item.id,kind:'stored',name:item.originalFileName,state:s('stored'),size:item.sizeBytes,pages:item.pageCount||1,updated:item.createdAt,item})),
+  ];
+  const rerender=()=>navigate('my-receipts');
+  async function capture(files,source){
+    const file=files&&files[0];if(!file)return;
+    try{file.__captureSource=source;await draftStore.putFile(file);toast(s('saved'),'ok');await rerender();}
+    catch(error){toast((error&&error.message)||s('error'),'danger');}
+  }
+  async function syncDraft(draft){
+    if(!navigator.onLine){toast(s('offlineError'),'warn');return;}
+    try{await adapter.uploadReceipt(draft);await draftStore.remove(draft.id);toast(s('uploaded'),'ok');await rerender();}
+    catch(error){toast((error&&error.message)||s('error'),'danger');}
+  }
+  async function syncAllDrafts(){
+    if(!navigator.onLine){toast(s('offlineError'),'warn');return;}
+    try{
+      for(const draft of await draftStore.list()){
+        await adapter.uploadReceipt(draft);
+        await draftStore.remove(draft.id);
+      }
+      toast(s('uploaded'),'ok');
+      await rerender();
+    }catch(error){toast((error&&error.message)||s('error'),'danger');}
+  }
+  transactionListPage(root,{
+    module:'mywork',route:'my-receipts',title:s('title'),description:s('sub'),rows,rowId:row=>row.id,
+    primaryAction:{label:s('take'),icon:'camera',onClick:()=>root.querySelector('[data-receipt-camera]').click()},
+    toolbarActions:[
+      {label:s('choose'),icon:'upload',onClick:()=>root.querySelector('[data-receipt-file]').click()},
+      {label:s('syncAll'),icon:'sync',disabled:!drafts.length,onClick:syncAllDrafts},
+    ],
+    toolbarContent:`<input hidden type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf" capture="environment" data-receipt-camera>
+      <input hidden type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf" data-receipt-file>`,
+    kpis:[{label:s('offline'),value:drafts.length,accent:drafts.length>0},{label:s('stored'),value:stored.length}],
+    columns:[
+      {key:'name',label:s('file'),primary:true},
+      {key:'state',label:s('state'),render:row=>`<span class="badge ${row.kind==='draft'?'warn':'ok'}">${esc(row.state)}</span>`},
+      {key:'size',label:s('size'),numeric:true,render:row=>esc(receiptBytes(row.size))},
+      {key:'pages',label:s('pages'),numeric:true},
+      {key:'updated',label:s('updated'),render:row=>esc(dateValue(row.updated))},
+      {key:'actions',label:s('actions'),render:row=>row.kind==='draft'
+        ?`<div class="row-actions">
+          ${btn(s('edit'),{icon:'edit',sm:true,attrs:`data-receipt-edit="${esc(row.draft.id)}"`})}
+          ${btn(s('sync'),{icon:'sync',sm:true,attrs:`data-receipt-sync="${esc(row.draft.id)}"`})}
+          ${btn(s('remove'),{icon:'trash',cls:'danger',sm:true,attrs:`data-receipt-delete="${esc(row.draft.id)}"`})}</div>`:'—'},
+    ],
+    empty:{icon:'receipt',title:s('empty'),description:s('emptyBody')},
+    note:s('limits'),
+    afterRender:({root:screenRoot})=>{
+      screenRoot.querySelector('[data-layout="transaction-list-v1"]')?.setAttribute('data-receipt-capture','canonical');
+      const note=document.createElement('div');note.className='callout warn';note.setAttribute('data-offline-draft-warning','');
+      note.innerHTML=`${ic('info')}<span>${esc(s('offlineNote'))}</span>`;
+      screenRoot.querySelector('[data-list-table]')?.before(note);
+      screenRoot.querySelector('[data-receipt-camera]')?.addEventListener('change',event=>capture(event.target.files,'camera'));
+      screenRoot.querySelector('[data-receipt-file]')?.addEventListener('change',event=>capture(event.target.files,'file'));
+      screenRoot.querySelectorAll('[data-receipt-edit]').forEach(button=>button.addEventListener('click',async event=>{
+        event.stopPropagation();const draft=await draftStore.get(button.dataset.receiptEdit);if(draft)openReceiptEditor(draft,rerender);
+      }));
+      screenRoot.querySelectorAll('[data-receipt-sync]').forEach(button=>button.addEventListener('click',async event=>{
+        event.stopPropagation();const draft=await draftStore.get(button.dataset.receiptSync);if(draft)await syncDraft(draft);
+      }));
+      screenRoot.querySelectorAll('[data-receipt-delete]').forEach(button=>button.addEventListener('click',async event=>{
+        event.stopPropagation();if(!confirm(s('confirmDelete')))return;
+        await draftStore.remove(button.dataset.receiptDelete);toast(s('deleted'),'ok');await rerender();
+      }));
+    },
   });
 };
 

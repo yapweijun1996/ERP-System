@@ -133,6 +133,33 @@ if (!hrScreenSource.includes("leaveAction(application.id,name")
     || !hrScreenSource.includes("confirmMyLeaveAction(application,'void')")) {
   throw new Error('Leave Application does not expose the governed Void-delete workflow.');
 }
+const receiptDraftSource = readFileSync(path.join(assetDir, 'receipt-drafts.js'), 'utf8');
+const receiptCaptureContracts = [
+  "SCREENS['my-receipts']",
+  "data-receipt-capture','canonical'",
+  'data-offline-draft-warning',
+  'adapter.uploadReceipt(draft)',
+  'draftStore.putFile(file)',
+  'window.ErpReceiptDrafts.transformImage',
+].filter((token) => !hrScreenSource.includes(token));
+if (receiptCaptureContracts.length) {
+  throw new Error(
+    `My Receipts is missing secure capture contracts: ${receiptCaptureContracts.join(', ')}`,
+  );
+}
+const offlineReceiptContracts = [
+  "var DB_NAME='aria-receipt-drafts-v1'",
+  'var MAX_BYTES=20*1024*1024',
+  'indexedDB.open',
+  'createImageBitmap',
+  'canvas.toBlob',
+  'confirmAndClearBeforeLogout',
+].filter((token) => !receiptDraftSource.includes(token));
+if (offlineReceiptContracts.length) {
+  throw new Error(
+    `Offline receipt drafts are missing required safeguards: ${offlineReceiptContracts.join(', ')}`,
+  );
+}
 const i18nSource = readFileSync(path.join(assetDir, 'i18n.js'), 'utf8');
 const missingMyWorkLocales = ['en','ms','zh','ja','vi'].filter((locale) =>
   !i18nSource.includes(`Object.assign(I18N.${locale},{`)

@@ -57,6 +57,7 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "nodemailer": "^9.0.3",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.21.0"
   },
   "overrides": {

@@ -58,6 +58,7 @@ export const documentVersion = pgTable('document_version', {
   sha256: text('sha256').notNull(),
   mimeType: text('mime_type').notNull(),
   sizeBytes: integer('size_bytes').notNull(),
+  pageCount: integer('page_count').notNull().default(1),
   storageBackend: text('storage_backend').notNull(),
   createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
     .references(() => appUser.userId),
@@ -72,6 +73,7 @@ export const documentVersion = pgTable('document_version', {
   check('ck_document_version_mime',
     sql`char_length(${t.mimeType}) between 3 and 160`),
   check('ck_document_version_size', sql`${t.sizeBytes} > 0`),
+  check('ck_document_version_page_count', sql`${t.pageCount} > 0`),
   check('ck_document_version_backend',
     sql`${t.storageBackend} in ('database', 'filesystem')`),
 ]);

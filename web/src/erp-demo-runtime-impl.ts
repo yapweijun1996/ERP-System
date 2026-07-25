@@ -5,6 +5,7 @@ import type { DB } from '../../src/data/db';
 import type { Scope } from '../../src/data/repo';
 import { seedDemo } from '../../src/data/seed';
 import { hasPermission } from '../../src/auth/permissions';
+import { validateReceiptUpload } from '../../src/modules/documents/receiptValidation';
 import {
   activeEmployeeSecret,
   createEmployeeAccount,
@@ -441,6 +442,7 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    validateReceiptUpload,
     hasPermissionWithin(
       db: DemoOrm,
       scope: Scope,

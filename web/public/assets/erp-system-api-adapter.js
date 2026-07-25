@@ -224,6 +224,30 @@
     },
     claims:function(){ return apiRequest('my/claims'); },
     receipts:function(){ return apiRequest('my/receipts'); },
+    uploadReceipt:async function(draft){
+      var csrf=cookieValue('erp_csrf');
+      var res=await fetch(API_BASE+'/my/receipts/actions/upload',{
+        method:'POST',
+        credentials:'same-origin',
+        headers:{
+          'Content-Type':String(draft.type||'application/octet-stream'),
+          'X-CSRF-Token':csrf,
+          'X-ERP-File-Name':encodeURIComponent(String(draft.name||'')),
+          'X-ERP-Draft-Id':String(draft.id||''),
+          'Idempotency-Key':String(draft.id||''),
+        },
+        body:draft.blob,
+      });
+      var body=await jsonBody(res);
+      if(!res.ok){
+        var detail=body&&body.error;
+        var error=new Error((detail&&detail.message)||('Receipt upload failed (HTTP '+res.status+').'));
+        error.code=(detail&&detail.code)||'receipt_upload_failed';
+        error.status=res.status;
+        throw error;
+      }
+      return body;
+    },
     teamLeaveRequests:function(){ return apiRequest('my/team/leave-requests'); },
     teamCalendar:function(query){
       query=query||{};

@@ -237,6 +237,11 @@ function renderEmployeeActivation(){
   setTimeout(()=>$('#activationEmail').focus(),60);
 }
 async function signOutDemo(){
+  if(
+    window.ErpReceiptDrafts
+    && typeof window.ErpReceiptDrafts.confirmAndClearBeforeLogout==='function'
+    && !await window.ErpReceiptDrafts.confirmAndClearBeforeLogout()
+  ) return;
   /* api mode: destroy the real server-side session, not just a local flag. */
   if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.logout==='function'){
     try{ await window.ErpSystemDemo.logout(); }catch{}
@@ -503,7 +508,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
-  'my-leave','leave-application','team-calendar','my-approvals',
+  'my-leave','leave-application','my-receipts','team-calendar','my-approvals',
   'integration-logs','data-import',
   'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
@@ -523,7 +528,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'integration','master-control','sys-settings',
 ]);
 const CANONICAL_DATA_PREVIEW_ROUTES = new Set([
-  'my-claims','my-receipts',
+  'my-claims',
 ]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',

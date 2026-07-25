@@ -32,6 +32,7 @@ export interface StoredDocumentVersion {
   sha256: string;
   mimeType: string;
   sizeBytes: number;
+  pageCount: number;
   storageBackend: DocumentStorageBackend;
 }
 
@@ -272,6 +273,7 @@ export interface CreateManagedDocumentInput {
   mimeType: string;
   retentionUntil: Date;
   content: Uint8Array;
+  pageCount?: number;
   storageBackend?: DocumentStorageBackend;
 }
 
@@ -322,6 +324,16 @@ function validateInput(input: CreateManagedDocumentInput): {
       422,
     );
   }
+  if (
+    input.pageCount != null
+    && (!Number.isSafeInteger(input.pageCount) || input.pageCount <= 0)
+  ) {
+    throw new DocumentStorageError(
+      'document_page_count_invalid',
+      'Document page count must be a positive integer.',
+      422,
+    );
+  }
   return {
     documentKey,
     originalFileName,
@@ -368,6 +380,7 @@ function versionContract(row: typeof documentVersion.$inferSelect): StoredDocume
     sha256: row.sha256,
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
+    pageCount: row.pageCount,
     storageBackend: row.storageBackend as DocumentStorageBackend,
   };
 }
@@ -407,6 +420,7 @@ export async function createManagedDocument(
           || existingVersion.sha256 !== normalized.contentHash
           || existingVersion.mimeType !== normalized.mimeType
           || existingVersion.sizeBytes !== normalized.content.byteLength
+          || existingVersion.pageCount !== (input.pageCount ?? 1)
           || existingVersion.storageBackend !== backend
         ) {
           throw new DocumentStorageError(
@@ -437,6 +451,7 @@ export async function createManagedDocument(
         sha256: normalized.contentHash,
         mimeType: normalized.mimeType,
         sizeBytes: normalized.content.byteLength,
+        pageCount: input.pageCount ?? 1,
         storageBackend: backend,
         createdByUserId: actor.userId,
       }).returning();
@@ -454,6 +469,7 @@ export interface AppendManagedDocumentVersionInput {
   expectedVersionNo: number;
   mimeType: string;
   content: Uint8Array;
+  pageCount?: number;
   storageBackend?: DocumentStorageBackend;
 }
 
@@ -473,6 +489,7 @@ export async function appendManagedDocumentVersion(
     mimeType: input.mimeType,
     retentionUntil: new Date(0),
     content: input.content,
+    pageCount: input.pageCount,
   });
   const backend = input.storageBackend ?? 'database';
   const provider = registry.get(backend);
@@ -505,6 +522,7 @@ export async function appendManagedDocumentVersion(
           && current.sha256 === normalized.contentHash
           && current.mimeType === normalized.mimeType
           && current.sizeBytes === normalized.content.byteLength
+          && current.pageCount === (input.pageCount ?? 1)
           && current.storageBackend === backend
         ) {
           return { document, version: versionContract(current), replayed: true };
@@ -523,6 +541,7 @@ export async function appendManagedDocumentVersion(
         sha256: normalized.contentHash,
         mimeType: normalized.mimeType,
         sizeBytes: normalized.content.byteLength,
+        pageCount: input.pageCount ?? 1,
         storageBackend: backend,
         createdByUserId: actor.userId,
       }).returning();

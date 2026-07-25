@@ -108,8 +108,10 @@ export async function seedDemo(db: DB): Promise<void> {
   await db.insert(rolePermission).values([
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.self.read' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.leave.write' },
+    { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.receipts.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.self.read' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.leave.write' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.receipts.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
   ]);
 
