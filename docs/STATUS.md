@@ -81,7 +81,7 @@ hardcoded fictional customer regardless of the active company.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (123 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 44 ordered migrations through `drizzle/0043_useful_miek.sql`, `src/data/schema/` |
+| Canonical schema (136 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 48 ordered migrations through `drizzle/0047_employee_account_lifecycle.sql`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -797,13 +797,42 @@ Verification is green: lint, dual TypeScript, 399 tests passed with one expected
 47-migration PGlite compatibility/retry proof, 134-table drift, Demo domain proof,
 Demo/API builds, desktop/375px smoke and all 115 Canonical routes at desktop/375px.
 The Canonical route baseline remains **115 / 0 Preview**. Employee linking,
-activation-secret lifecycle and offboarding remain TASK-107 and are not claimed here.
+activation-secret lifecycle and offboarding are delivered separately by TASK-107 below.
+
+## Employee account lifecycle (TASK-107, 2026-07-25)
+
+TASK-107 is complete without adding a product route. Migration 0047 links at most one
+`app_user` to one Employee inside a company, adds explicit preactivated/active/offboarded
+account states, and stores recoverable one-time passwords only as AES-256-GCM envelopes
+in `employee_activation_secret`. HR creates, reveals and resets credentials through
+company-scoped RBAC endpoints. Every reveal appends an audit record; first-login
+completion requires an email plus a different password, clears the encrypted envelope
+permanently and revokes every existing session. Employee-linked accounts are excluded
+from the public email-reset flow, so later resets remain HR-issued and audited.
+
+The Employee master-detail page now exposes the account state and five-language
+create/reveal/reset/offboard workflows in both Demo and API modes. A restricted
+five-language activation shell is shown before the normal application: pending users
+may access only Session, Logout and activation completion, while every ordinary API
+returns `activation_required`. Offboarding follows a reasoned Void-style process: it
+transfers direct reports, customer ownership, open opportunities and unread
+notifications to an active linked employee, records an immutable handoff summary,
+clears any temporary secret and revokes access. Historical sales, time, report and
+document attribution is never rewritten. PWA v105 delivers the updated auth, adapter
+and HR assets.
+
+Verification is green: lint, dual TypeScript, 405 tests passed with one expected skip,
+48-migration PGlite compatibility plus transaction proof, 136-table drift, Demo/API
+builds, desktop/375px smoke, 43 list-layout routes, four master-detail editor routes
+and all 115 Canonical routes at desktop/375px. The route baseline remains
+**115 Canonical / 0 Preview**.
 
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 The current 115-route Canonical boundary does **not** yet include the newly approved
-employee self-service routes. TASK-106 has delivered the identity foundation above;
-TASK-107 through TASK-135 remain planning records and must not be counted as
+employee self-service routes. TASK-106 and TASK-107 have delivered the identity and
+account-lifecycle foundation above; TASK-108 through TASK-135 remain planning records
+and must not be counted as
 implemented routes, tables, permissions, API contracts or tested behavior until their
 individual acceptance gates pass.
 
@@ -839,9 +868,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 105 tasks, including TASK-106
+- Done: 106 tasks, including TASK-107
 - Blocked: TASK-017 (1)
-- Todo: 29 planned tasks (TASK-107–135) across EPIC-052–056. These extend the product
+- Todo: 28 planned tasks (TASK-108–135) across EPIC-052–056. These extend the product
   beyond the currently complete 115 Canonical / 0 Preview boundary; they do not reopen
   or downgrade existing routes. Current visual-layout convergence remains complete at
   43 audited list-layout routes, while future My Work/Leave/Receipt/Expense/Tax routes

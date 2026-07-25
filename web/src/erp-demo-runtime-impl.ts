@@ -5,6 +5,16 @@ import type { DB } from '../../src/data/db';
 import type { Scope } from '../../src/data/repo';
 import { seedDemo } from '../../src/data/seed';
 import {
+  activeEmployeeSecret,
+  createEmployeeAccount,
+  offboardEmployeeAccount,
+  readEmployeeAccount,
+  resetEmployeeAccount,
+  type CreateEmployeeAccountInput,
+  type OffboardEmployeeInput,
+  type ResetEmployeeAccountInput,
+} from '../../src/modules/hr/employeeAccount';
+import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
 } from '../../src/modules/crm/convertOpportunityToSalesOrder';
@@ -350,6 +360,8 @@ function demoSession(scope: Scope, actorUserId: number): SessionData {
     username: 'demo',
     email: '',
     fullName: null,
+    accountState: 'active',
+    passwordChangeRequired: false,
   };
 }
 
@@ -393,6 +405,21 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   commands: Object.freeze({
+    readEmployeeAccount(db: DemoOrm, scope: Scope, employeeId: number) {
+      return readEmployeeAccount(asDomainDb(db), scope, employeeId);
+    },
+    activeEmployeeSecret(db: DemoOrm, scope: Scope, employeeId: number) {
+      return activeEmployeeSecret(asDomainDb(db), scope, employeeId);
+    },
+    createEmployeeAccount(db: DemoOrm, scope: Scope, input: CreateEmployeeAccountInput) {
+      return createEmployeeAccount(asDomainDb(db), scope, input);
+    },
+    resetEmployeeAccount(db: DemoOrm, scope: Scope, input: ResetEmployeeAccountInput) {
+      return resetEmployeeAccount(asDomainDb(db), scope, input);
+    },
+    offboardEmployeeAccount(db: DemoOrm, scope: Scope, input: OffboardEmployeeInput) {
+      return offboardEmployeeAccount(asDomainDb(db), scope, input);
+    },
     getArAgingOptions(
       db: DemoOrm,
       input: Pick<ArAgingRequest, 'masterFn' | 'activeCompanyFn' | 'actorUserId'>,

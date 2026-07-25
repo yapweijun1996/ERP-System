@@ -99,14 +99,15 @@ marked as sample/demo content and must not crash under canonical data (TASK-018)
 
 ### 4.4 Approved expansion (EPIC-052–056)
 
-The following requirements are approved product scope. TASK-106 has implemented the
-organisation username and multi-role identity foundation; TASK-107–135 remain
+The following requirements are approved product scope. TASK-106 implemented the
+organisation username/multi-role identity foundation and TASK-107 implemented the
+employee account lifecycle; TASK-108–135 remain
 **Planned** until their individual acceptance gates pass. Planned capabilities must
 not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
   organisation-unique username, with nullable email before activation. HR employee
-  linking and the activation lifecycle remain TASK-107.
+  linking and the activation lifecycle are implemented by TASK-107.
 - **Multiple roles:** one user may now hold multiple roles in one company. Permissions
   are the union of those roles without widening the company boundary. Employee and
   reporting-hierarchy row scope remain TASK-107/108.

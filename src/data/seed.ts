@@ -58,6 +58,9 @@ export async function seedDemo(db: DB): Promise<void> {
   const [viewerRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Viewer', isSuperadmin: false,
   }).returning({ id: role.roleId });
+  await db.insert(role).values({
+    masterFn: 'M1', name: 'Employee', isSuperadmin: false,
+  });
 
   await db.insert(userCompany).values([
     { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },

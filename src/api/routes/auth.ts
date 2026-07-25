@@ -1,10 +1,11 @@
 import { Router, type Request } from 'express';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  appUser, company, master, userCompany,
+  appUser, company, employeeActivationSecret, master, userCompany,
 } from '../../data/schema';
 import { verifyPassword } from '../../auth/password';
+import { hashPassword } from '../../auth/password';
 import {
   isValidOrganizationCode,
   isValidUsername,
@@ -38,6 +39,11 @@ import {
 import { hashOpaqueToken } from '../../auth/tokenCrypto';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
+import { withTenantTransaction } from '../../data/tenantTransaction';
+import {
+  completeEmployeeActivation,
+  EmployeeAccountError,
+} from '../../modules/hr/employeeAccount';
 
 export interface AuthRouterOptions {
   secureCookies: boolean;
@@ -128,6 +134,8 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       fullName: appUser.fullName,
       passwordHash: appUser.passwordHash,
       isActive: appUser.isActive,
+      accountState: appUser.accountState,
+      passwordChangeRequired: appUser.passwordChangeRequired,
     };
     const users = await db.select(userFields)
       .from(appUser)
@@ -138,7 +146,10 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       ))
       .limit(2);
     const user = users.length === 1 ? users[0] : null;
-    if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
+    const credentialsValid = Boolean(
+      user && user.isActive && verifyPassword(password, user.passwordHash),
+    );
+    if (!user || !credentialsValid) {
       const failure = await recordLoginFailure(db, identifier);
       if (failure.blocked) res.setHeader('retry-after', String(failure.retryAfterSeconds));
       // Identical response for unknown user, ambiguous email and wrong password.
@@ -163,6 +174,34 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       apiError(res, 403, 'no_company_access', 'This user has no company assignments.');
       return;
     }
+    if (user.passwordChangeRequired) {
+      const temporaryCredential = await withTenantTransaction(db, {
+        masterFn: user.masterFn,
+        companyFn: assignment.companyFn,
+      }, async (tx) => {
+        const [row] = await tx.select({ id: employeeActivationSecret.id })
+          .from(employeeActivationSecret)
+          .where(and(
+            eq(employeeActivationSecret.masterFn, user.masterFn),
+            eq(employeeActivationSecret.companyFn, assignment.companyFn),
+            eq(employeeActivationSecret.userId, user.userId),
+            isNull(employeeActivationSecret.clearedAt),
+            gt(employeeActivationSecret.expiresAt, new Date()),
+          ))
+          .limit(1);
+        return row;
+      });
+      if (!temporaryCredential) {
+        await recordLoginFailure(db, identifier);
+        apiError(
+          res,
+          401,
+          'invalid_credentials',
+          'Incorrect organization code, username or password.',
+        );
+        return;
+      }
+    }
 
     await clearLoginFailures(db, identifier);
     const created = await createSession(db, {
@@ -172,6 +211,8 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       username: user.username,
       email: user.email,
       fullName: user.fullName,
+      accountState: user.accountState as 'preactivated' | 'active' | 'offboarded',
+      passwordChangeRequired: user.passwordChangeRequired,
       userAgent: req.header('user-agent'),
     });
     res.cookie(SESSION_COOKIE, created.sessionId, {
@@ -192,6 +233,8 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       fullName: user.fullName,
       masterFn: user.masterFn,
       activeCompanyFn: assignment.companyFn,
+      accountState: user.accountState,
+      passwordChangeRequired: user.passwordChangeRequired,
     });
   });
 
@@ -203,9 +246,59 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   });
 
   router.get('/session', async (req, res) => {
-    const session = await requireSession(db, req, res);
+    const session = await requireSession(db, req, res, { allowActivationPending: true });
     if (!session) return;
     res.json(session);
+  });
+
+  router.post('/activation/actions/complete', async (req, res) => {
+    const session = await requireSession(db, req, res, { allowActivationPending: true });
+    if (!session) return;
+    if (!session.passwordChangeRequired) {
+      apiError(res, 409, 'activation_not_required', 'This account does not require activation.');
+      return;
+    }
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    const confirmPassword = typeof req.body?.confirmPassword === 'string'
+      ? req.body.confirmPassword
+      : '';
+    const fieldErrors: Record<string, string> = {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = 'Enter a valid email address.';
+    if (password.length < 8) fieldErrors.password = 'Use at least 8 characters.';
+    if (password !== confirmPassword) fieldErrors.confirmPassword = 'Passwords do not match.';
+    if (Object.keys(fieldErrors).length) {
+      apiError(res, 400, 'invalid_request', 'Complete all activation fields.', fieldErrors);
+      return;
+    }
+    const [currentUser] = await db.select({ passwordHash: appUser.passwordHash })
+      .from(appUser).where(eq(appUser.userId, session.userId)).limit(1);
+    if (currentUser && verifyPassword(password, currentUser.passwordHash)) {
+      apiError(res, 400, 'password_reused', 'Choose a password different from the temporary password.', {
+        password: 'Choose a new password.',
+      });
+      return;
+    }
+    try {
+      await withTenantTransaction(db, {
+        masterFn: session.masterFn,
+        companyFn: session.activeCompanyFn,
+      }, (tx) => completeEmployeeActivation(
+        tx,
+        session.userId,
+        email,
+        hashPassword(password),
+        context(res).requestId,
+      ));
+      clearAuthCookies(res, options.secureCookies);
+      res.json({ data: { ok: true, signInAgain: true }, meta: {} });
+    } catch (error) {
+      if (error instanceof EmployeeAccountError) {
+        apiError(res, error.status, error.code, error.message, error.fieldErrors);
+        return;
+      }
+      throw error;
+    }
   });
 
   router.post('/session/actions/switch-company', async (req, res) => {

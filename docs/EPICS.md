@@ -1835,7 +1835,7 @@ Delivery slices:
       Five-language state audits and service worker v103 enforce the desktop/375px
       contract.
 
-## EPIC-052 — Employee Self-Service Identity & My Work (Planned)
+## EPIC-052 — Employee Self-Service Identity & My Work (In progress)
 
 Build the identity boundary required for employee-owned leave, receipt and expense
 workflows. This epic extends the current email/single-role account model without
@@ -1855,10 +1855,13 @@ company, and every self-service resource derives the employee identity from Sess
       migration for existing email accounts and single-role assignments. Delivered
       through migration 0046, the organisation-first production login, explicit
       audited role-union management and service worker v104.
-- [ ] **TASK-107 — Link Employee to app_user and implement HR account lifecycle.**
+- [x] **TASK-107 — Link Employee to app_user and implement HR account lifecycle.**
       Create the company-unique employee/user link, encrypted activation credential,
       audited pre-activation reveal, forced first-login completion, HR one-time
-      password reset and immediate session revocation on offboarding.
+      password reset and immediate session revocation on offboarding. Delivered by
+      migration 0047, company-scoped HR endpoints, a five-language activation/account
+      UI and PWA v105; offboarding transfers current responsibility without rewriting
+      historical attribution.
 - [ ] **TASK-108 — Add actor-owned `/api/my/*` contracts.** Resolve employee identity
       from the authenticated Session, reject client-supplied employee impersonation,
       expose only self-owned leave/expense/receipt facts and keep management resources

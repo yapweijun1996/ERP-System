@@ -386,6 +386,19 @@ function hrCopy(){
   return key=>pack[key]||packs.en[key]||key;
 }
 
+function employeeAccountCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'Employee account',none:'No login account',preactivated:'Awaiting activation',active:'Active account',offboarded:'Offboarded',create:'Create account',username:'Username',createHint:'A one-time password will be encrypted and can be revealed until activation.',reveal:'Reveal one-time password',temporary:'One-time password',expires:'Expires',reset:'Reset password',resetConfirm:'Reset this employee to a new one-time password?',offboard:'Offboard',offboardTitle:'Offboard employee',handoff:'Transfer current work to',reason:'Reason',confirmOffboard:'Void access & transfer work',copy:'Copy password',copied:'Password copied',created:'Employee account created',resetDone:'New one-time password created',offboardedDone:'Access revoked and current work transferred',error:'Employee account action failed'},
+    ms:{title:'Akaun pekerja',none:'Tiada akaun log masuk',preactivated:'Menunggu pengaktifan',active:'Akaun aktif',offboarded:'Telah ditamatkan',create:'Cipta akaun',username:'Nama pengguna',createHint:'Kata laluan sekali akan disulitkan dan boleh dilihat sehingga pengaktifan.',reveal:'Lihat kata laluan sekali',temporary:'Kata laluan sekali',expires:'Tamat tempoh',reset:'Tetapkan semula kata laluan',resetConfirm:'Tetapkan kata laluan sekali baharu untuk pekerja ini?',offboard:'Tamatkan pekerja',offboardTitle:'Tamatkan akses pekerja',handoff:'Pindahkan kerja semasa kepada',reason:'Sebab',confirmOffboard:'Void akses & pindahkan kerja',copy:'Salin kata laluan',copied:'Kata laluan disalin',created:'Akaun pekerja dicipta',resetDone:'Kata laluan sekali baharu dicipta',offboardedDone:'Akses dibatalkan dan kerja semasa dipindahkan',error:'Tindakan akaun pekerja gagal'},
+    zh:{title:'员工账号',none:'尚未建立登录账号',preactivated:'等待首次激活',active:'账号有效',offboarded:'已离职停用',create:'建立账号',username:'用户名',createHint:'一次性密码会加密保存，并只可在激活前揭示。',reveal:'揭示一次性密码',temporary:'一次性密码',expires:'有效期至',reset:'重置密码',resetConfirm:'为此员工生成新的一次性密码？',offboard:'办理离职',offboardTitle:'员工离职与工作交接',handoff:'将当前工作转交给',reason:'离职／交接原因',confirmOffboard:'Void 访问权并转交工作',copy:'复制密码',copied:'密码已复制',created:'员工账号已建立',resetDone:'新一次性密码已生成',offboardedDone:'访问权已撤销，当前工作已完成交接',error:'员工账号操作失败'},
+    ja:{title:'従業員アカウント',none:'ログインアカウントなし',preactivated:'有効化待ち',active:'有効なアカウント',offboarded:'退職済み',create:'アカウント作成',username:'ユーザー名',createHint:'ワンタイムパスワードは暗号化され、有効化まで表示できます。',reveal:'ワンタイムパスワードを表示',temporary:'ワンタイムパスワード',expires:'有効期限',reset:'パスワードをリセット',resetConfirm:'新しいワンタイムパスワードを発行しますか？',offboard:'退職処理',offboardTitle:'従業員の退職処理',handoff:'現在の業務を引き継ぐ従業員',reason:'理由',confirmOffboard:'アクセスを Void し業務を移管',copy:'パスワードをコピー',copied:'コピーしました',created:'アカウントを作成しました',resetDone:'新しいワンタイムパスワードを作成しました',offboardedDone:'アクセスを無効化し業務を移管しました',error:'アカウント操作に失敗しました'},
+    vi:{title:'Tài khoản nhân viên',none:'Chưa có tài khoản đăng nhập',preactivated:'Chờ kích hoạt',active:'Tài khoản đang hoạt động',offboarded:'Đã nghỉ việc',create:'Tạo tài khoản',username:'Tên đăng nhập',createHint:'Mật khẩu dùng một lần được mã hóa và chỉ có thể xem trước khi kích hoạt.',reveal:'Xem mật khẩu một lần',temporary:'Mật khẩu một lần',expires:'Hết hạn',reset:'Đặt lại mật khẩu',resetConfirm:'Tạo mật khẩu dùng một lần mới cho nhân viên này?',offboard:'Cho nghỉ việc',offboardTitle:'Cho nhân viên nghỉ việc',handoff:'Chuyển công việc hiện tại cho',reason:'Lý do',confirmOffboard:'Void quyền truy cập & chuyển việc',copy:'Sao chép mật khẩu',copied:'Đã sao chép',created:'Đã tạo tài khoản nhân viên',resetDone:'Đã tạo mật khẩu dùng một lần mới',offboardedDone:'Đã thu hồi truy cập và chuyển công việc',error:'Thao tác tài khoản thất bại'},
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+
 /* ---- shared data prep (directory, profile and leave-approval all need employees +
    leave requests; one fetch point avoids three near-identical Promise.all blocks) ---- */
 async function prepareHrData(){
@@ -463,6 +476,7 @@ SCREENS['hr-directory'] = async function(root){
 /* ---------------- EMPLOYEE PROFILE (master) ---------------- */
 SCREENS['employee'] = async function(root, params){
   const s=hrCopy();
+  const ac=employeeAccountCopy();
   const {employees,leaveRequests}=await prepareHrData();
   const requestedId=params&&params.employeeId?Number(params.employeeId):null;
   const e=requestedId?employees.find(row=>row.id===requestedId):employees[0];
@@ -485,6 +499,18 @@ SCREENS['employee'] = async function(root, params){
   const remaining=Math.max(0,total-used);
   const pct=total>0?Math.max(0,Math.min(100,Math.round(remaining/total*100))):0;
   const myLeave=leaveRequests.filter(lv=>lv.employeeId===e.id).sort((a,b)=>dateValue(b.startDate).localeCompare(dateValue(a.startDate)));
+  let account=null;
+  try{ account=(await window.ErpSystemData.get('hr/employee-accounts',e.id)).data; }catch(error){
+    if(error&&error.code!=='route_not_found'&&error.code!=='resource_not_found') console.warn('Employee account read failed',error);
+  }
+  const accountLabel=!account||!account.userId?ac('none'):ac(account.accountState||'active');
+  const accountTone=!account||!account.userId?'neutral':account.accountState==='active'?'ok':account.accountState==='offboarded'?'neutral':'warn';
+  const availableTargets=employees.filter(row=>row.id!==e.id&&row.isActive);
+  const accountControls=!account||!account.userId
+    ? btn(ac('create'),{icon:'plus',cls:'soft',sm:true,attrs:'data-employee-account-create'})
+    : account.accountState!=='offboarded'
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${account.passwordChangeRequired?btn(ac('reveal'),{icon:'eye',cls:'soft',sm:true,attrs:'data-employee-account-reveal'}):''}${btn(ac('reset'),{icon:'refresh',cls:'soft',sm:true,attrs:'data-employee-account-reset'})}${btn(ac('offboard'),{icon:'x',cls:'soft',sm:true,attrs:'data-employee-account-offboard'})}</div>`
+      : '';
   const leaveStatusTone={pending:'warn',approved:'ok',rejected:'danger'};
   const leaveRows=myLeave.map(lv=>`<tr data-employee-leave-row>
       <td class="l li-name"><b>${esc(lv.leaveType)}</b></td>
@@ -546,11 +572,67 @@ SCREENS['employee'] = async function(root, params){
         <div class="track"><i style="width:${pct}%"></i></div>
         <small>${esc(remainingLabel)}</small>
         <small>${esc(usedLabel)}</small>
+      </div>
+      <div class="indicator ${accountTone}" data-employee-account-status style="margin-top:12px">
+        <div class="ind-top">${ic('user')}<span>${esc(ac('title'))}</span><span class="ind-r">${cap(accountLabel,accountTone)}</span></div>
+        ${account&&account.userId?`<small>${esc(account.username||'')} · ${esc(account.email||'—')}</small>`:`<small>${esc(ac('createHint'))}</small>`}
+        ${accountControls}
       </div>`,
     },
     afterRender:({editor})=>{
       editor?.setAttribute('data-canonical-employee','true');
       root.querySelector('[data-employee-review]')?.addEventListener('click',()=>navigate('leave-approval'));
+      const reload=()=>navigate('employee',{employeeId:Number(e.id)});
+      root.querySelector('[data-employee-account-create]')?.addEventListener('click',()=>{
+        const suggested=String(e.employeeNo||e.fullName).toLowerCase().replace(/[^a-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,64);
+        appModal({icon:'user',title:ac('create'),body:`
+          <p class="muted" style="margin-bottom:14px">${esc(ac('createHint'))}</p>
+          <label class="fld"><span>${esc(ac('username'))}</span><input id="employeeAccountUsername" value="${esc(suggested)}" autocomplete="off"></label>
+          <div class="auth-error" id="employeeAccountError" role="alert"></div>`,
+          actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(ac('create'),{icon:'plus',cls:'primary',attrs:'data-account-create-confirm'})}`});
+        document.querySelector('[data-account-create-confirm]')?.addEventListener('click',async()=>{
+          const button=document.querySelector('[data-account-create-confirm]');
+          button.setAttribute('disabled','');
+          try{
+            await window.ErpSystemData.action('hr/employee-accounts',e.id,'create',{username:document.querySelector('#employeeAccountUsername').value.trim()},crypto.randomUUID());
+            closeModal(); toast(ac('created'),'ok'); reload();
+          }catch(error){ document.querySelector('#employeeAccountError').textContent=(error&&error.message)||ac('error'); button.removeAttribute('disabled'); }
+        });
+      });
+      root.querySelector('[data-employee-account-reveal]')?.addEventListener('click',async()=>{
+        try{
+          const revealed=(await window.ErpSystemData.action('hr/employee-accounts',e.id,'reveal-temporary-password',{})).data;
+          appModal({icon:'eye',title:ac('temporary'),body:`
+            <div class="fld"><span>${esc(ac('temporary'))}</span><code id="employeeTemporaryPassword" style="display:block;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere">${esc(revealed.temporaryPassword)}</code></div>
+            <small>${esc(ac('expires'))}: ${esc(String(revealed.expiresAt||''))}</small>`,
+            actions:`${btn(ac('copy'),{icon:'copy',cls:'primary',attrs:'data-account-copy'})}`});
+          document.querySelector('[data-account-copy]')?.addEventListener('click',async()=>{
+            await navigator.clipboard.writeText(document.querySelector('#employeeTemporaryPassword').textContent);
+            toast(ac('copied'),'ok');
+          });
+        }catch(error){ toast((error&&error.message)||ac('error'),'bad'); }
+      });
+      root.querySelector('[data-employee-account-reset]')?.addEventListener('click',()=>{
+        confirmModal({icon:'warn',title:ac('reset'),message:ac('resetConfirm'),confirmLabel:ac('reset'),onConfirm:`async function(){try{await window.ErpSystemData.action('hr/employee-accounts',${Number(e.id)},'reset-password',{},crypto.randomUUID());toast(${JSON.stringify(ac('resetDone'))},'ok');navigate('employee',{employeeId:${Number(e.id)}})}catch(error){toast((error&&error.message)||${JSON.stringify(ac('error'))},'bad')}}`});
+      });
+      root.querySelector('[data-employee-account-offboard]')?.addEventListener('click',()=>{
+        appModal({icon:'warn',title:ac('offboardTitle'),body:`
+          <label class="fld"><span>${esc(ac('handoff'))}</span><select id="employeeHandoffTarget">${availableTargets.map(row=>`<option value="${row.id}" ${row.id===e.managerId?'selected':''}>${esc(row.fullName)} · ${esc(row.employeeNo)}</option>`).join('')}</select></label>
+          <label class="fld"><span>${esc(ac('reason'))}</span><textarea id="employeeOffboardReason" rows="3"></textarea></label>
+          <div class="auth-error" id="employeeOffboardError" role="alert"></div>`,
+          actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(ac('confirmOffboard'),{icon:'x',cls:'primary',attrs:'data-account-offboard-confirm'})}`});
+        document.querySelector('[data-account-offboard-confirm]')?.addEventListener('click',async()=>{
+          const button=document.querySelector('[data-account-offboard-confirm]');
+          button.setAttribute('disabled','');
+          try{
+            await window.ErpSystemData.action('hr/employee-accounts',e.id,'offboard',{
+              targetEmployeeId:Number(document.querySelector('#employeeHandoffTarget').value),
+              reason:document.querySelector('#employeeOffboardReason').value.trim(),
+            },crypto.randomUUID());
+            closeModal(); toast(ac('offboardedDone'),'ok'); reload();
+          }catch(error){ document.querySelector('#employeeOffboardError').textContent=(error&&error.message)||ac('error'); button.removeAttribute('disabled'); }
+        });
+      });
     },
   });
 };

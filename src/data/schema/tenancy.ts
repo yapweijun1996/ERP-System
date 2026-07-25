@@ -1,8 +1,9 @@
 // Tenancy & access: master → company → user, with M:N user↔company.
 // See docs/MULTI_TENANCY.md. RLS is NOT defined here — it is a production-only migration.
 import {
-  pgTable, text, bigint, boolean, date, index, uniqueIndex, primaryKey, foreignKey,
+  pgTable, text, bigint, boolean, date, timestamp, index, uniqueIndex, primaryKey, foreignKey, check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { timestamps } from './_shared';
 import { currency } from './localization';
 
@@ -43,10 +44,18 @@ export const appUser = pgTable('app_user', {
   passwordHash: text('password_hash').notNull(),
   language: text('language').notNull().default('en'),   // en | ms | zh | ja | vi
   isActive: boolean('is_active').notNull().default(true),
+  accountState: text('account_state').notNull().default('active'),
+  passwordChangeRequired: boolean('password_change_required').notNull().default(false),
+  activatedAt: timestamp('activated_at', { withTimezone: true }),
+  offboardedAt: timestamp('offboarded_at', { withTimezone: true }),
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_user_master_username').on(t.masterFn, t.username),
   uniqueIndex('uq_user_master_email').on(t.masterFn, t.email),
+  check(
+    'ck_app_user_account_state',
+    sql`${t.accountState} in ('preactivated', 'active', 'offboarded')`,
+  ),
 ]);
 
 /** A role within a master. `is_superadmin` sees all companies under its master. */

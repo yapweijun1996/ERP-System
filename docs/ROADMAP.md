@@ -747,9 +747,12 @@ service-worker v103. All three Posting Detail routes pass focused state proofs.
    account with organisation code + username login, nullable pre-activation email and
    explicit company-role unions. Migration 0046 preserves existing email accounts and
    copies each legacy role exactly once without changing company access.
-2. **First activation and employee link** (TASK-107 planned) add the
+2. **First activation and employee link** (TASK-107 done 2026-07-25) add the
    organisation-unique employee/user link, encrypted pre-activation credential and
-   forced first-login password/email completion.
+   forced first-login password/email completion. HR reveal is audited every time;
+   completion permanently clears the AES-GCM envelope. HR reset revokes sessions and
+   issues a new one-time password. Offboarding transfers direct reports, current
+   customer/open-opportunity ownership and unread notifications before revoking access.
 3. **Actor-owned self service** (TASK-108 planned) allows Employee, Manager, HR and
    Finance capabilities to compose while every `/api/my/*` query
    derives employee identity from Session. Direct reports automatically activate the

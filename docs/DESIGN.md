@@ -189,8 +189,8 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 
 ## 7. Employee self-service architecture (EPIC-052–056)
 
-TASK-106 identity primitives are implemented; the remaining sections describe the
-target architecture for TASK-107–135.
+TASK-106 identity primitives and TASK-107 employee account lifecycle are implemented;
+the remaining sections describe the target architecture for TASK-108–135.
 
 ### Identity and authorization
 
@@ -198,7 +198,7 @@ target architecture for TASK-107–135.
   and the separate `user_company_role` assignment table are implemented by TASK-106.
   Migration 0046 backfills existing email users and current `user_company.role_id`
   grants without changing their access. The company-unique `employee.user_id` link
-  remains TASK-107.
+  is enforced by TASK-107.
 - Store the pre-activation credential as an AES-GCM encrypted temporary secret with
   expiry/reveal audit. First activation changes the password, captures email and
   destroys the encrypted copy. HR reset creates a new one-time credential and revokes

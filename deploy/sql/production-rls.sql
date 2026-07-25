@@ -45,7 +45,7 @@ DECLARE
     'bank_receipt', 'payment_voucher', 'payment_voucher_line',
     'activity', 'opportunity', 'contact',
     'asset', 'depreciation_run', 'depreciation_run_line',
-    'employee', 'leave_request',
+    'employee', 'employee_activation_secret', 'employee_account_handoff', 'leave_request',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line',

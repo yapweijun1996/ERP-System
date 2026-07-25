@@ -39,7 +39,7 @@
   var API_BASE = window.__ERP_API_BASE__ || '/api';
   var HEALTH_URL = API_BASE.replace(/\/api\/?$/, '') + '/health';
   var SCOPE = { companyFn: null }; // masterFn is never client-held — it comes from the session, server-side, on every request
-  var state = { mode: 'api-unavailable' };
+  var state = { mode: 'api-unavailable', session: null };
 
   function notAvailable(action){
     return Promise.reject(new Error(
@@ -287,7 +287,8 @@
   async function fetchSession(){
     var res = await fetch(API_BASE + '/auth/session', { method: 'GET', credentials: 'same-origin' });
     if (!res.ok) return null;
-    return jsonBody(res);
+    state.session=await jsonBody(res);
+    return state.session;
   }
 
   async function loadDashboard(){
@@ -347,6 +348,9 @@
   async function isSignedIn(){
     if (state.mode === 'api-unavailable') return false;
     try {
+      var session=await fetchSession();
+      if(!session) return false;
+      if(session.passwordChangeRequired) return true;
       await loadDashboard();
       return true;
     } catch {
@@ -371,7 +375,16 @@
         : 'Sign in failed (HTTP ' + res.status + ').');
       throw new Error(message);
     }
-    return jsonBody(res);
+    state.session=await jsonBody(res);
+    return state.session;
+  }
+
+  async function completeActivation(input){
+    var response=await apiRequest('auth/activation/actions/complete',{
+      method:'POST',body:input||{},
+    });
+    state.session=null;
+    return response.data;
   }
 
   async function logout(){
@@ -412,6 +425,7 @@
     update:update,
     action:action,
     session:fetchSession,
+    completeActivation:completeActivation,
     financeReports:financeReports,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
     completeSetup: completeSetup,
@@ -427,7 +441,9 @@
       isSignedIn:isSignedIn,
       login:login,
       logout:logout,
+      completeActivation:completeActivation,
     },
+    get activationRequired(){ return Boolean(state.session&&state.session.passwordChangeRequired); },
     get mode(){ return state.mode; },
     get db(){ return null; },
   };

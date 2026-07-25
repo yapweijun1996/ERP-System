@@ -4,6 +4,7 @@ import {
   appSession,
   appUser,
   company,
+  employee,
   outboxEvent,
   passwordResetToken,
   role,
@@ -257,6 +258,11 @@ export async function requestPasswordReset(
   }).from(appUser).where(eq(appUser.email, email)).limit(2);
   const user = users.length === 1 && users[0].isActive ? users[0] : null;
   if (!user) return;
+  // Employee-linked accounts are reset only by HR so the public email flow
+  // cannot bypass the audited one-time credential lifecycle.
+  const [employeeAccount] = await db.select({ id: employee.id }).from(employee)
+    .where(eq(employee.userId, user.userId)).limit(1);
+  if (employeeAccount) return;
   const [assignment] = await db.select({ companyFn: userCompany.companyFn })
     .from(userCompany)
     .innerJoin(company, eq(company.companyFn, userCompany.companyFn))
@@ -335,6 +341,15 @@ export async function confirmPasswordReset(
       .for('update');
     if (!reset) {
       throw new AuthLifecycleError(400, 'reset_invalid', 'The reset link is invalid or expired.');
+    }
+    const [employeeAccount] = await tx.select({ id: employee.id }).from(employee)
+      .where(eq(employee.userId, reset.userId)).limit(1);
+    if (employeeAccount) {
+      throw new AuthLifecycleError(
+        400,
+        'reset_invalid',
+        'The reset link is invalid or expired.',
+      );
     }
     await tx.update(appUser).set({
       passwordHash: hashPassword(password),

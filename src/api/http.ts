@@ -38,9 +38,16 @@ export async function requireSession(
   db: DB,
   req: express.Request,
   res: express.Response,
+  options: { allowActivationPending?: boolean } = {},
 ): Promise<SessionData | null> {
   const ctx = context(res);
-  if (ctx.session) return ctx.session;
+  if (ctx.session) {
+    if (ctx.session.passwordChangeRequired && !options.allowActivationPending) {
+      apiError(res, 403, 'activation_required', 'Complete first-login activation before using the application.');
+      return null;
+    }
+    return ctx.session;
+  }
   const sessionId = parseCookies(req.headers.cookie)[SESSION_COOKIE];
   const session = await getSession(db, sessionId);
   if (!session) {
@@ -49,5 +56,14 @@ export async function requireSession(
   }
   ctx.sessionId = sessionId;
   ctx.session = session;
+  if (session.passwordChangeRequired && !options.allowActivationPending) {
+    apiError(
+      res,
+      403,
+      'activation_required',
+      'Complete first-login activation before using the application.',
+    );
+    return null;
+  }
   return session;
 }

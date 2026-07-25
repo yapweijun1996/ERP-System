@@ -22,6 +22,7 @@ import { createIntegrationRouter } from './routes/integration';
 import { createSettingsRouter } from './routes/settings';
 import { createFinanceReportsRouter } from './routes/financeReports';
 import { createReportingRouter } from './routes/reporting';
+import { createHrRouter } from './routes/hr';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -97,6 +98,9 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/account', createAccountRouter(db));
   app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey));
   app.use('/api/settings', createSettingsRouter(db));
+  app.use('/api/hr', createHrRouter(db, {
+    tokenEncryptionKey: lifecycle?.tokenEncryptionKey,
+  }));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
 

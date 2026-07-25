@@ -17,6 +17,10 @@ export interface SessionData {
   username: string;
   email: string | null;
   fullName: string | null;
+  /** Always populated by getSession; optional keeps domain/test synthetic
+   * sessions source-compatible while they migrate to the richer identity. */
+  accountState?: 'preactivated' | 'active' | 'offboarded';
+  passwordChangeRequired?: boolean;
 }
 
 export interface NewSessionData extends SessionData {
@@ -99,6 +103,8 @@ export async function getSession(
       username: appUser.username,
       email: appUser.email,
       fullName: appUser.fullName,
+      accountState: appUser.accountState,
+      passwordChangeRequired: appUser.passwordChangeRequired,
       expiresAt: appSession.expiresAt,
     })
     .from(appSession)
@@ -136,6 +142,8 @@ export async function getSession(
     username: row.username,
     email: row.email,
     fullName: row.fullName,
+    accountState: row.accountState as SessionData['accountState'],
+    passwordChangeRequired: row.passwordChangeRequired,
   };
 }
 

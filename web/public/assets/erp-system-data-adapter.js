@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 46;
+  var DEMO_SCHEMA_VERSION = 47;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -58,6 +58,45 @@
       return Array.prototype.map.call(bytes, function(b){ return ('0' + b.toString(16)).slice(-2); }).join('');
     }
     return 'pbkdf2$' + PBKDF2_ITERATIONS + '$' + toHex(salt) + '$' + toHex(new Uint8Array(bits));
+  }
+  function demoBase64Url(bytes){
+    var binary=''; Array.prototype.forEach.call(bytes,function(b){binary+=String.fromCharCode(b);});
+    return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function demoFromBase64Url(value){
+    var padded=String(value).replace(/-/g,'+').replace(/_/g,'/');
+    while(padded.length%4) padded+='=';
+    var binary=atob(padded), bytes=new Uint8Array(binary.length);
+    for(var i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    return bytes;
+  }
+  async function demoCredentialKey(){
+    var raw=null;
+    try{ raw=localStorage.getItem('aria-demo-employee-credential-key'); }catch{}
+    if(!raw){
+      var bytes=crypto.getRandomValues(new Uint8Array(32));
+      raw=demoBase64Url(bytes);
+      try{ localStorage.setItem('aria-demo-employee-credential-key',raw); }catch{}
+    }
+    return crypto.subtle.importKey('raw',demoFromBase64Url(raw),{name:'AES-GCM'},false,['encrypt','decrypt']);
+  }
+  async function encryptDemoCredential(value){
+    var iv=crypto.getRandomValues(new Uint8Array(12));
+    var encrypted=new Uint8Array(await crypto.subtle.encrypt(
+      {name:'AES-GCM',iv:iv},await demoCredentialKey(),new TextEncoder().encode(value)));
+    var tag=encrypted.slice(encrypted.length-16), ciphertext=encrypted.slice(0,encrypted.length-16);
+    return {v:1,alg:'A256GCM',iv:demoBase64Url(iv),ciphertext:demoBase64Url(ciphertext),tag:demoBase64Url(tag)};
+  }
+  async function decryptDemoCredential(envelope){
+    var ciphertext=demoFromBase64Url(envelope.ciphertext), tag=demoFromBase64Url(envelope.tag);
+    var combined=new Uint8Array(ciphertext.length+tag.length);
+    combined.set(ciphertext); combined.set(tag,ciphertext.length);
+    var plain=await crypto.subtle.decrypt(
+      {name:'AES-GCM',iv:demoFromBase64Url(envelope.iv)},await demoCredentialKey(),combined);
+    return new TextDecoder().decode(plain);
+  }
+  function newDemoTemporaryPassword(){
+    return 'Aria-'+demoBase64Url(crypto.getRandomValues(new Uint8Array(12)))+'!';
   }
   var SCOPE = { masterFn: 'M1', companyFn: 'C-SG' };
 
@@ -1576,6 +1615,10 @@
   }
   async function get(resource,id){
     var key=normalizeResource(resource);
+    if(key==='hr/employee-accounts'){
+      return {data:await state.runtime.commands.readEmployeeAccount(
+        state.orm,SCOPE,Number(id)),meta:{}};
+    }
     var table=RESOURCE_TABLES[key];
     if(!table) throw new Error('Unsupported ERP resource: '+key);
     var numericId=Number(id);
@@ -2026,6 +2069,50 @@
   }
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
+    if(key==='hr/employee-accounts'){
+      var employeeId=Number(id), actorUserId=Number(state.activeUserId);
+      if(name==='create'){
+        var initialPassword=newDemoTemporaryPassword();
+        var createdAccount=await state.runtime.commands.createEmployeeAccount(state.orm,SCOPE,{
+          employeeId:employeeId,
+          username:String(payload&&payload.username||'').trim().toLowerCase(),
+          passwordHash:await hashPasswordBrowser(initialPassword),
+          credentialEnvelope:await encryptDemoCredential(initialPassword),
+          expiresAt:new Date(Date.now()+7*24*60*60*1000),
+          actorUserId:actorUserId,
+        });
+        return {data:createdAccount,meta:{}};
+      }
+      if(name==='reveal-temporary-password'){
+        var secret=await state.runtime.commands.activeEmployeeSecret(state.orm,SCOPE,employeeId);
+        return {data:{
+          temporaryPassword:await decryptDemoCredential(secret.credentialEnvelope),
+          purpose:secret.purpose,generation:secret.generation,
+          expiresAt:secret.expiresAt,userId:secret.userId,
+        },meta:{}};
+      }
+      if(name==='reset-password'){
+        var resetPassword=newDemoTemporaryPassword();
+        var resetAccount=await state.runtime.commands.resetEmployeeAccount(state.orm,SCOPE,{
+          employeeId:employeeId,
+          passwordHash:await hashPasswordBrowser(resetPassword),
+          credentialEnvelope:await encryptDemoCredential(resetPassword),
+          expiresAt:new Date(Date.now()+7*24*60*60*1000),
+          actorUserId:actorUserId,
+        });
+        return {data:resetAccount,meta:{}};
+      }
+      if(name==='offboard'){
+        var handoff=await state.runtime.commands.offboardEmployeeAccount(state.orm,SCOPE,{
+          employeeId:employeeId,
+          targetEmployeeId:Number(payload&&payload.targetEmployeeId),
+          reason:String(payload&&payload.reason||'').trim(),
+          actorUserId:actorUserId,
+        });
+        return {data:handoff,meta:{}};
+      }
+      throw new Error('Unknown employee account action.');
+    }
     if(key==='integration/connectors'){
       if(name==='configure') throw new Error('Offline Demo never stores connector credentials. Use API mode with server-side encryption.');
       var connectorActor=Number(state.activeUserId);

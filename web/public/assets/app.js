@@ -164,6 +164,58 @@ function renderLogin(){
   });
   setTimeout(()=>$(apiMode?'#loginOrganizationCode':'#loginPassword').focus(),60);
 }
+function renderEmployeeActivation(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const copy={
+    en:{brand:'Employee activation',title:'Complete your account',body:'Replace the temporary password and add your email before entering My Work.',email:'Email',password:'New password',confirm:'Confirm password',submit:'Activate account',signOut:'Sign out',mismatch:'Passwords do not match.',done:'Account activated. Sign in again with your new password.'},
+    ms:{brand:'Pengaktifan pekerja',title:'Lengkapkan akaun anda',body:'Gantikan kata laluan sementara dan tambah e-mel sebelum memasuki My Work.',email:'E-mel',password:'Kata laluan baharu',confirm:'Sahkan kata laluan',submit:'Aktifkan akaun',signOut:'Log keluar',mismatch:'Kata laluan tidak sepadan.',done:'Akaun diaktifkan. Log masuk semula dengan kata laluan baharu.'},
+    zh:{brand:'员工账号激活',title:'完成账号激活',body:'进入 My Work 前，请更换临时密码并填写邮箱。',email:'邮箱',password:'新密码',confirm:'确认密码',submit:'激活账号',signOut:'退出登录',mismatch:'两次密码不一致。',done:'账号已激活，请使用新密码重新登录。'},
+    ja:{brand:'従業員アカウント有効化',title:'アカウントを有効化',body:'My Work を開く前に仮パスワードを変更し、メールを入力してください。',email:'メール',password:'新しいパスワード',confirm:'パスワード確認',submit:'アカウントを有効化',signOut:'サインアウト',mismatch:'パスワードが一致しません。',done:'有効化しました。新しいパスワードで再ログインしてください。'},
+    vi:{brand:'Kích hoạt nhân viên',title:'Hoàn tất tài khoản',body:'Đổi mật khẩu tạm thời và thêm email trước khi vào My Work.',email:'Email',password:'Mật khẩu mới',confirm:'Xác nhận mật khẩu',submit:'Kích hoạt tài khoản',signOut:'Đăng xuất',mismatch:'Mật khẩu không khớp.',done:'Tài khoản đã kích hoạt. Hãy đăng nhập lại bằng mật khẩu mới.'},
+  }[lang]||null;
+  setAuthShell(true);
+  closeAllPops(); closePalette(); closeModal();
+  let auth=$('#authView');
+  if(!auth){
+    auth=document.createElement('main');
+    auth.id='authView';
+    auth.className='auth-view';
+    document.body.insertBefore(auth,$('#app'));
+  }
+  auth.setAttribute('aria-label',copy.title);
+  auth.innerHTML=`<section class="auth-panel">
+    <div class="auth-brand"><span class="mark">${ic('box')}</span><span><b>Aria ERP</b><small>${esc(copy.brand)}</small></span></div>
+    <div class="auth-copy"><h1>${esc(copy.title)}</h1><p>${esc(copy.body)}</p></div>
+    <form class="auth-form" id="activationForm">
+      <div class="fld"><span>${esc(copy.email)}</span><input id="activationEmail" type="email" autocomplete="email" required></div>
+      <div class="fld"><span>${esc(copy.password)}</span><input id="activationPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="fld"><span>${esc(copy.confirm)}</span><input id="activationConfirm" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="auth-error" id="activationError" role="alert"></div>
+      <button class="btn primary lg" type="submit">${ic('check')}<span>${esc(copy.submit)}</span></button>
+    </form>
+    <button class="btn soft" type="button" id="activationSignOut">${ic('signout')}<span>${esc(copy.signOut)}</span></button>
+  </section>`;
+  $('#activationForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const password=$('#activationPassword').value;
+    const confirmPassword=$('#activationConfirm').value;
+    if(password!==confirmPassword){ $('#activationError').textContent=copy.mismatch; return; }
+    const button=$('#activationForm button[type="submit"]');
+    button.setAttribute('disabled','');
+    try{
+      await window.ErpSystemDemo.completeActivation({
+        email:$('#activationEmail').value.trim(),password,confirmPassword,
+      });
+      alert(copy.done);
+      location.reload();
+    }catch(error){
+      $('#activationError').textContent=(error&&error.message)||'Activation failed.';
+      button.removeAttribute('disabled');
+    }
+  });
+  $('#activationSignOut').addEventListener('click',signOutDemo);
+  setTimeout(()=>$('#activationEmail').focus(),60);
+}
 async function signOutDemo(){
   /* api mode: destroy the real server-side session, not just a local flag. */
   if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.logout==='function'){
@@ -1411,6 +1463,10 @@ async function boot(){
   const signedIn = (ed && typeof ed.isSignedIn==='function') ? await ed.isSignedIn() : isDemoSignedIn();
   if(!signedIn){
     renderLogin();
+    return;
+  }
+  if(ed&&ed.activationRequired){
+    renderEmployeeActivation();
     return;
   }
   setAuthShell(false);
