@@ -19,6 +19,7 @@ import {
   settlePaidLeaveReservationWithin,
 } from './leaveBalance';
 import { enqueueLeaveCalendarSyncWithin } from './calendarSync';
+import { createUnpaidLeavePayrollSourceWithin } from '../payroll/payrollLeave';
 import {
   decideLeaveApprovalWithin,
   startLeaveApprovalWithin,
@@ -600,6 +601,10 @@ export async function decideGovernedLeaveWithin(
     occurredAt: now,
   });
   if (decision === 'approved') {
+    await createUnpaidLeavePayrollSourceWithin(exec, scope, {
+      requestId: row.id,
+      actorUserId: actor.userId,
+    }, now);
     await enqueueLeaveCalendarSyncWithin(exec, scope, {
       leaveRequestId: row.id,
       eventType: 'approved',
@@ -834,6 +839,11 @@ export async function decideApprovedLeaveCancellationWithin(
     occurredAt: now,
   });
   if (decision === 'approved') {
+    await createUnpaidLeavePayrollSourceWithin(exec, scope, {
+      requestId: row.id,
+      actorUserId: actor.userId,
+      cancellationId: cancellation.id,
+    }, now);
     await enqueueLeaveCalendarSyncWithin(exec, scope, {
       leaveRequestId: row.id,
       eventType: 'cancelled',

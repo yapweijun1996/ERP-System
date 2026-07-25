@@ -57,7 +57,7 @@ DECLARE
     'calendar_outbound_connection', 'calendar_outbound_event',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
-    'payroll_run', 'payroll_run_line',
+    'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',
     'app_notification',
     'integration_connector',
     'company_policy',

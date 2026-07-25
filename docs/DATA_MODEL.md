@@ -140,8 +140,9 @@ SG and MY demo companies; production wires real auth.
 > leave request/revision/event/evidence/cancellation entities. TASK-114 adds the
 > versioned approval policy/step, workflow instance/step, immutable decision/event,
 > bounded delegation, capacity-rule and capacity-snapshot entities. TASK-115 adds the
-> outbound calendar connection/event entities. The remaining entities are approved
-> targets for TASK-116–135 and are
+> outbound calendar connection/event entities. TASK-116 adds the leave-to-Payroll
+> source and one-time run mapping entities. The remaining entities are approved
+> targets for TASK-117–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -195,6 +196,8 @@ leave_capacity_rule             department minimum-coverage rule and action (imp
 approval_capacity_snapshot      immutable submission/decision coverage fact (implemented)
 calendar_outbound_connection    optional tenant-scoped one-way provider configuration (implemented)
 calendar_outbound_event         revision-keyed approved/change/cancel delivery job (implemented)
+payroll_leave_source            immutable revision/balance-linked earning or deduction (implemented)
+payroll_run_leave_source        one-time source application and signed run-line trace (implemented)
 ```
 
 Every leave request retains the policy/calendar versions and calculated-day snapshot used
@@ -244,6 +247,14 @@ reuse the original external event identity. The worker re-reads the current ERP
 request revision/status before delivery, supersedes stale jobs and retries transient
 failures with bounded exponential backoff. Payloads include availability dates and a
 neutral summary only—never private reasons or evidence references.
+
+Migration 0055 implements the leave-to-Payroll boundary. `payroll_leave_source`
+snapshots employee, request revision or encashment ledger entry, direction, full/half
+days, monthly base salary, the 26-day divisor, exact amount and effective date.
+`payroll_run_leave_source` uniquely consumes a source once and links it to the
+resulting run line. Both tables are append-only. `payroll_run_line` separately
+snapshots base gross, leave earnings and unpaid-leave deductions so Payslip history
+does not depend on later salary or policy changes.
 
 ### 8.3 Managed documents and extraction
 

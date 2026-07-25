@@ -1938,10 +1938,14 @@ Legacy Policy marker and is never silently recomputed.
       idempotent one-way delivery; workers supersede stale jobs and reuse the external
       event identity while ERP remains authoritative. A persistent-Demo upgrade
       signature repair prevents stale schema markers. PWA v114.
-- [ ] **TASK-116 — Connect leave to Payroll and migrate HR-lite safely.** Feed approved
-      unpaid leave into payroll deductions and approved encashment into earnings,
-      preserve legacy request day snapshots, add five-language Demo/API state proof
-      and keep old route aliases functional during rollout.
+- [x] **TASK-116 — Connect leave to Payroll and migrate HR-lite safely.** Migration
+      0055 adds immutable, revision-linked unpaid-leave/cancellation/encashment sources,
+      one-time run mappings and base/leave snapshots on every payroll line. Approved
+      unpaid leave feeds deductions and policy-approved encashment feeds earnings while
+      legacy request day snapshots and old route aliases remain unchanged. The exact
+      26-day half-up formula, balance gate, overlap replay and append-only triggers
+      prevent duplicate effects. Persistent Demo SQL is versioned and post-verified so
+      stale service-worker assets cannot write a false schema marker. PWA v116.
 
 ## EPIC-054 — Receipt & Secure Document Processing (Planned)
 

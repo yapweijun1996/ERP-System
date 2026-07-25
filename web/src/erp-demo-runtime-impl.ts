@@ -255,6 +255,10 @@ import {
   type CreatePayrollRunInput,
 } from '../../src/modules/payroll/payrollRun';
 import {
+  approveLeaveEncashmentWithin,
+  type ApproveLeaveEncashmentInput,
+} from '../../src/modules/payroll/payrollLeave';
+import {
   createProjectWithin,
   type CreateProjectInput,
 } from '../../src/modules/project/project';
@@ -966,6 +970,13 @@ export const erpDemoRuntime = Object.freeze({
     },
     createPayrollRunWithin(db: DemoOrm, scope: Scope, input: CreatePayrollRunInput) {
       return createPayrollRunWithin(asDomainDb(db), scope, input);
+    },
+    approveLeaveEncashmentWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: ApproveLeaveEncashmentInput,
+    ) {
+      return approveLeaveEncashmentWithin(asDomainDb(db), scope, input);
     },
     postPayrollRunWithin(db: DemoOrm, scope: Scope, runId: number) {
       return postPayrollRunWithin(asDomainDb(db), scope, runId);

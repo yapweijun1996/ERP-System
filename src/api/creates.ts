@@ -132,6 +132,10 @@ import {
   type CreatePayrollRunInput,
 } from '../modules/payroll/payrollRun';
 import {
+  approveLeaveEncashmentWithin,
+  type ApproveLeaveEncashmentInput,
+} from '../modules/payroll/payrollLeave';
+import {
   createProjectWithin,
   type CreateProjectInput,
 } from '../modules/project/project';
@@ -547,6 +551,16 @@ const CREATES: Record<string, CreateDefinition> = {
     audit: 'required',
     execute(tx, scope, payload) {
       return createPayrollRunWithin(tx, scope, payload as unknown as CreatePayrollRunInput);
+    },
+  },
+  'payroll/leave-sources': {
+    permission: 'payroll.write',
+    audit: 'required',
+    execute(tx, scope, payload, actorUserId) {
+      return approveLeaveEncashmentWithin(tx, scope, {
+        ...(payload as unknown as Omit<ApproveLeaveEncashmentInput, 'actorUserId'>),
+        actorUserId,
+      });
     },
   },
   'project/projects': {

@@ -111,7 +111,9 @@ privacy-controlled evidence metadata and approved cancellation. TASK-114 impleme
 versioned multi-level approval, bounded delegation, immutable authority/decision
 audit, reminders/escalation and minimum-staff capacity controls. TASK-115 implements
 the privacy-redacted Team Calendar plus optional idempotent outbound delivery.
-TASK-116–135 remain
+TASK-116 implements immutable unpaid-leave/cancellation/encashment Payroll sources,
+policy-controlled balance consumption and one-time payroll-run application.
+TASK-117–135 remain
 **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
@@ -157,7 +159,9 @@ capabilities must not be represented as current Canonical behavior.
 - **Full leave:** effective-dated work/holiday/leave policy, full-day/half-day units,
   immutable entitlement ledger, Pending reservation, versioned amendment/cancellation,
   multi-stage approval/delegation/capacity, role-redacted team calendar, protected
-  medical evidence and Payroll sources for unpaid leave and encashment.
+  medical evidence and Payroll sources for unpaid leave, approved cancellation and
+  encashment. Payroll snapshots monthly base pay and applies each immutable source to
+  at most one run; Legacy Policy rows retain their original day values.
 - **Receipt evidence:** JPEG/PNG/HEIC/PDF only, maximum 20 MB and 20 PDF pages. Every
   file is quarantined until a fail-closed scan succeeds. Local OCR is default; external
   Vision is explicit company BYOK. Governed auto-submit requires every critical field

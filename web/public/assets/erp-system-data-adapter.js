@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 54;
+  var DEMO_SCHEMA_VERSION = 55;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -112,7 +112,8 @@
   /* ---------------- PGlite boot ---------------- */
 
   function fetchSql(name){
-    return fetch(DB_BASE + name).then(function(r){
+    var separator=name.indexOf('?')===-1?'?':'&';
+    return fetch(DB_BASE + name + separator + 'v=' + DEMO_SCHEMA_VERSION).then(function(r){
       if (!r.ok) throw new Error('fetch ' + name + ' -> HTTP ' + r.status);
       return r.text();
     });
@@ -198,16 +199,40 @@
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
       "('calendar_outbound_connection','calendar_outbound_event')")).rows[0];
+    var payrollLeaveSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('payroll_leave_source','payroll_run_leave_source')")).rows[0];
+    var payrollRunLineSignature = (await db.query(
+      "select count(*)::int as n from information_schema.columns " +
+      "where table_schema='public' and table_name='payroll_run_line' and column_name in " +
+      "('base_gross_pay','leave_earnings','leave_deductions')")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
       && projectTimeSignature && Number(projectTimeSignature.n) === 1
       && importSignature && Number(importSignature.n) === 3
       && reportingSignature && Number(reportingSignature.n) === 6
-      && calendarOutboundSignature && Number(calendarOutboundSignature.n) === 2;
+      && calendarOutboundSignature && Number(calendarOutboundSignature.n) === 2
+      && payrollLeaveSignature && Number(payrollLeaveSignature.n) === 2
+      && payrollRunLineSignature && Number(payrollRunLineSignature.n) === 3;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
+    var appliedPayrollTables = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('payroll_leave_source','payroll_run_leave_source')")).rows[0];
+    var appliedPayrollColumns = (await db.query(
+      "select count(*)::int as n from information_schema.columns " +
+      "where table_schema='public' and table_name='payroll_run_line' and column_name in " +
+      "('base_gross_pay','leave_earnings','leave_deductions')")).rows[0];
+    if (!appliedPayrollTables || Number(appliedPayrollTables.n) !== 2
+      || !appliedPayrollColumns || Number(appliedPayrollColumns.n) !== 3) {
+      throw new Error(
+        'Persistent PGlite migration v' + DEMO_SCHEMA_VERSION +
+        ' did not apply its required Payroll schema signature.');
+    }
     await db.query(
       'insert into "_erp_demo_migration" ("version") values ($1) on conflict ("version") do nothing',
       [DEMO_SCHEMA_VERSION]);
@@ -1415,6 +1440,10 @@
     'hr/leave-requests':'leave_request',
     'payroll/runs':'payroll_run',
     'payroll/run-lines':'payroll_run_line',
+    'payroll/leave-types':'leave_type',
+    'payroll/leave-policies':'leave_policy_version',
+    'payroll/leave-sources':'payroll_leave_source',
+    'payroll/run-leave-sources':'payroll_run_leave_source',
     'project/projects':'project',
     'project/progress-claims':'progress_claim',
     'project/time-entries':'project_time_entry',
@@ -1965,6 +1994,16 @@
       });
       await refresh();
       return {data:newPayrollRun,meta:{}};
+    }
+    if(key==='payroll/leave-sources'){
+      var newLeaveSource = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.approveLeaveEncashmentWithin(
+          state.runtime.createOrm(tx), SCOPE, Object.assign({},payload,{
+            actorUserId:state.activeUserId,
+          }));
+      });
+      await refresh();
+      return {data:newLeaveSource,meta:{}};
     }
     if(key==='project/projects'){
       var newProject = await requireDemoDb().transaction(function(tx){

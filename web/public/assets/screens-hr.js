@@ -80,6 +80,14 @@ function hrCopy(){
       statutoryEmployerLabelSG:'CPF — employer',statutoryEmployerLabelMY:'EPF — employer',
       additionalLabelSG:'SDL',additionalLabelMY:'SOCSO + EIS',incomeTaxLabel:'PCB income tax',
       baseSalaryLabel:'Base salary',fieldRunNo:'Run no.',
+      encashmentButton:'Approve leave encashment',encashmentTitle:'Leave encashment approval',
+      encashmentDescription:'Convert approved, available paid leave into an immutable Payroll earning.',
+      encashmentEmployee:'Employee',encashmentLeaveType:'Paid leave type',encashmentDays:'Days',
+      encashmentDate:'Effective date',encashmentNote:'Approval note',encashmentNotePlaceholder:'Optional audit note',
+      encashmentApprove:'Approve encashment',encashmentCreated:'Leave encashment approved for Payroll',
+      encashmentError:'Leave encashment could not be approved',selectRequired:'Select an employee and leave type.',
+      leaveEarningsLabel:'Leave earnings',unpaidLeaveDeductionLabel:'Unpaid leave deduction',
+      leaveTraceTitle:'Leave-to-payroll trace',leaveSourceCount:'{count} immutable source(s)',
     },
     ms:{
       statusActive:'Aktif',statusOnLeave:'Bercuti',statusInactive:'Tidak aktif',
@@ -155,6 +163,14 @@ function hrCopy(){
       statutoryEmployerLabelSG:'CPF — majikan',statutoryEmployerLabelMY:'KWSP — majikan',
       additionalLabelSG:'SDL',additionalLabelMY:'PERKESO + SIP',incomeTaxLabel:'Cukai pendapatan PCB',
       baseSalaryLabel:'Gaji asas',fieldRunNo:'No. larian',
+      encashmentButton:'Luluskan penunaian cuti',encashmentTitle:'Kelulusan penunaian cuti',
+      encashmentDescription:'Tukar cuti berbayar yang diluluskan dan tersedia kepada pendapatan Gaji yang kekal.',
+      encashmentEmployee:'Pekerja',encashmentLeaveType:'Jenis cuti berbayar',encashmentDays:'Hari',
+      encashmentDate:'Tarikh berkuat kuasa',encashmentNote:'Nota kelulusan',encashmentNotePlaceholder:'Nota audit pilihan',
+      encashmentApprove:'Luluskan penunaian',encashmentCreated:'Penunaian cuti diluluskan untuk Gaji',
+      encashmentError:'Penunaian cuti tidak dapat diluluskan',selectRequired:'Pilih pekerja dan jenis cuti.',
+      leaveEarningsLabel:'Pendapatan cuti',unpaidLeaveDeductionLabel:'Potongan cuti tanpa gaji',
+      leaveTraceTitle:'Jejak cuti ke gaji',leaveSourceCount:'{count} sumber kekal',
     },
     zh:{
       statusActive:'在职',statusOnLeave:'休假中',statusInactive:'已离职',
@@ -230,6 +246,14 @@ function hrCopy(){
       statutoryEmployerLabelSG:'CPF — 雇主部分',statutoryEmployerLabelMY:'EPF — 雇主部分',
       additionalLabelSG:'技能发展税(SDL)',additionalLabelMY:'社险 + 就业保险(SOCSO+EIS)',incomeTaxLabel:'PCB 预扣所得税',
       baseSalaryLabel:'底薪',fieldRunNo:'运算编号',
+      encashmentButton:'批准假期折现',encashmentTitle:'假期折现审批',
+      encashmentDescription:'把已获准且可用的带薪假期转换为不可篡改的薪资收入。',
+      encashmentEmployee:'员工',encashmentLeaveType:'带薪假期类型',encashmentDays:'天数',
+      encashmentDate:'生效日期',encashmentNote:'审批备注',encashmentNotePlaceholder:'可选审计备注',
+      encashmentApprove:'批准折现',encashmentCreated:'假期折现已批准并送入薪资',
+      encashmentError:'无法批准假期折现',selectRequired:'请选择员工与假期类型。',
+      leaveEarningsLabel:'假期收入',unpaidLeaveDeductionLabel:'无薪假扣款',
+      leaveTraceTitle:'假期至薪资追踪',leaveSourceCount:'{count} 个不可变来源',
     },
     ja:{
       statusActive:'在籍',statusOnLeave:'休暇中',statusInactive:'退職',
@@ -305,6 +329,14 @@ function hrCopy(){
       statutoryEmployerLabelSG:'CPF(雇用主負担分)',statutoryEmployerLabelMY:'EPF(雇用主負担分)',
       additionalLabelSG:'技能開発税(SDL)',additionalLabelMY:'社会保障 + 雇用保険(SOCSO+EIS)',incomeTaxLabel:'PCB源泉徴収税',
       baseSalaryLabel:'基本給',fieldRunNo:'実行番号',
+      encashmentButton:'休暇換金を承認',encashmentTitle:'休暇換金の承認',
+      encashmentDescription:'承認済みの利用可能な有給休暇を変更不可の給与収入へ変換します。',
+      encashmentEmployee:'従業員',encashmentLeaveType:'有給休暇種別',encashmentDays:'日数',
+      encashmentDate:'適用日',encashmentNote:'承認メモ',encashmentNotePlaceholder:'任意の監査メモ',
+      encashmentApprove:'換金を承認',encashmentCreated:'休暇換金を給与へ承認しました',
+      encashmentError:'休暇換金を承認できませんでした',selectRequired:'従業員と休暇種別を選択してください。',
+      leaveEarningsLabel:'休暇収入',unpaidLeaveDeductionLabel:'無給休暇控除',
+      leaveTraceTitle:'休暇から給与への追跡',leaveSourceCount:'変更不可のソース {count} 件',
     },
     vi:{
       statusActive:'Đang làm việc',statusOnLeave:'Đang nghỉ phép',statusInactive:'Đã nghỉ việc',
@@ -380,6 +412,14 @@ function hrCopy(){
       statutoryEmployerLabelSG:'CPF — phần công ty',statutoryEmployerLabelMY:'EPF — phần công ty',
       additionalLabelSG:'SDL',additionalLabelMY:'SOCSO + EIS',incomeTaxLabel:'Thuế thu nhập PCB',
       baseSalaryLabel:'Lương cơ bản',fieldRunNo:'Số đợt',
+      encashmentButton:'Duyệt quy đổi phép',encashmentTitle:'Phê duyệt quy đổi phép',
+      encashmentDescription:'Chuyển phép có lương đã duyệt và còn khả dụng thành khoản thu nhập lương bất biến.',
+      encashmentEmployee:'Nhân viên',encashmentLeaveType:'Loại phép có lương',encashmentDays:'Số ngày',
+      encashmentDate:'Ngày hiệu lực',encashmentNote:'Ghi chú phê duyệt',encashmentNotePlaceholder:'Ghi chú kiểm toán tùy chọn',
+      encashmentApprove:'Duyệt quy đổi',encashmentCreated:'Đã duyệt quy đổi phép vào bảng lương',
+      encashmentError:'Không thể duyệt quy đổi phép',selectRequired:'Chọn nhân viên và loại phép.',
+      leaveEarningsLabel:'Thu nhập từ phép',unpaidLeaveDeductionLabel:'Khấu trừ nghỉ không lương',
+      leaveTraceTitle:'Dấu vết phép đến lương',leaveSourceCount:'{count} nguồn bất biến',
     },
   };
   const pack=packs[lang]||packs.en;
@@ -1501,17 +1541,21 @@ SCREENS['employee'] = async function(root, params){
   });
 };
 
-/* ---- shared payroll data prep (payroll-run and payslip both need runs +
-   run-lines + employees; one fetch point avoids duplicated Promise.all blocks,
+/* ---- shared payroll data prep (payroll-run and payslip both need runs,
+   lines, employees and immutable leave-source traces; one fetch point avoids duplicated Promise.all blocks,
    mirroring prepareHrData()'s precedent above) ---- */
 async function preparePayrollData(){
   const pages=await Promise.all([
     listPage('payroll/runs'),
     listPage('payroll/run-lines'),
     listPage('hr/employees'),
+    listPage('payroll/leave-sources'),
+    listPage('payroll/run-leave-sources'),
+    listPage('payroll/leave-types'),
+    listPage('payroll/leave-policies'),
   ]);
-  const [runs,lines,employees]=pages.map(p=>p.data);
-  return {runs,lines,employees};
+  const [runs,lines,employees,leaveSources,runLeaveSources,leaveTypes,leavePolicies]=pages.map(p=>p.data);
+  return {runs,lines,employees,leaveSources,runLeaveSources,leaveTypes,leavePolicies};
 }
 function nextPayrollDocNo(runs){
   let max=0;
@@ -1531,7 +1575,7 @@ function payrollStatutoryLabel(s,kind){
 /* ---------------- PAYROLL RUN (canonical batch register → selected-run detail) ---------------- */
 SCREENS['payroll-run'] = async function(root){
   const s=hrCopy();
-  let {runs,lines,employees}=await preparePayrollData();
+  let {runs,lines,employees,runLeaveSources,leaveTypes,leavePolicies}=await preparePayrollData();
   runs=runs.slice().sort((a,b)=>b.id-a.id);
   let employeeById=new Map(employees.map(employee=>[employee.id,employee]));
   let page=null;
@@ -1553,10 +1597,14 @@ SCREENS['payroll-run'] = async function(root){
     return {
       runLines,
       headcount:runLines.length,
+      base:runLines.reduce((sum,line)=>sum+Number(line.baseGrossPay||line.grossPay),0),
+      leaveEarnings:runLines.reduce((sum,line)=>sum+Number(line.leaveEarnings||0),0),
+      leaveDeductions:runLines.reduce((sum,line)=>sum+Number(line.leaveDeductions||0),0),
       gross:runLines.reduce((sum,line)=>sum+Number(line.grossPay),0),
       statutory:runLines.reduce((sum,line)=>sum+Number(line.employeeStatutoryDeduction),0),
       tax:runLines.reduce((sum,line)=>sum+Number(line.incomeTaxDeduction),0),
       net:runLines.reduce((sum,line)=>sum+Number(line.netPay),0),
+      leaveSourceCount:runLeaveSources.filter(source=>String(source.runId)===String(run.id)).length,
     };
   }
   async function reload(){
@@ -1564,6 +1612,9 @@ SCREENS['payroll-run'] = async function(root){
     runs=fresh.runs.slice().sort((a,b)=>b.id-a.id);
     lines=fresh.lines;
     employees=fresh.employees;
+    runLeaveSources=fresh.runLeaveSources;
+    leaveTypes=fresh.leaveTypes;
+    leavePolicies=fresh.leavePolicies;
     employeeById=new Map(employees.map(employee=>[employee.id,employee]));
   }
   function createError(modal,message,input){
@@ -1628,6 +1679,64 @@ SCREENS['payroll-run'] = async function(root){
       }
     });
   }
+  function openEncashment(){
+    const paidTypeById=new Map(leaveTypes.filter(type=>type.paid).map(type=>[type.id,type]));
+    const choices=leavePolicies
+      .filter(policy=>policy.status==='confirmed'&&policy.encashmentAllowed&&paidTypeById.has(policy.leaveTypeId))
+      .map(policy=>({policy,type:paidTypeById.get(policy.leaveTypeId)}));
+    appModal({
+      icon:'coins',
+      title:s('encashmentTitle'),
+      width:620,
+      body:`<p class="h1sub">${esc(s('encashmentDescription'))}</p>
+        <div class="alert danger payroll-run-modal-error" data-payroll-create-error hidden>${ic('warn')}<span></span></div>
+        <div class="set-grid payroll-run-form">
+          <label class="fld"><span>${esc(s('encashmentEmployee'))}</span><select id="encEmployee">
+            <option value="">—</option>${employees.filter(row=>row.isActive).map(row=>`<option value="${row.id}">${esc(row.fullName)} · ${esc(row.employeeNo)}</option>`).join('')}
+          </select></label>
+          <label class="fld"><span>${esc(s('encashmentLeaveType'))}</span><select id="encPolicy">
+            <option value="">—</option>${choices.map(row=>`<option value="${row.policy.id}|${row.type.id}">${esc(row.type.name)} · ${esc(row.policy.encashmentMaxDays)} max</option>`).join('')}
+          </select></label>
+          <label class="fld"><span>${esc(s('encashmentDays'))}</span><input id="encDays" type="number" min="0.5" step="0.5" value="1.00"></label>
+          <label class="fld"><span>${esc(s('encashmentDate'))}</span><input id="encDate" type="date" value="${todayIso()}"></label>
+          <label class="fld" style="grid-column:1/-1"><span>${esc(s('encashmentNote'))}</span><textarea id="encNote" rows="3" placeholder="${esc(s('encashmentNotePlaceholder'))}"></textarea></label>
+        </div>`,
+      actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('encashmentApprove'),{icon:'check',cls:'primary',attrs:'data-encashment-create'})}`,
+    });
+    const modal=$('#modalEl');
+    const save=modal?.querySelector('[data-encashment-create]');
+    save?.addEventListener('click',async()=>{
+      const employeeId=Number(modal.querySelector('#encEmployee').value);
+      const [policyVersionId,leaveTypeId]=(modal.querySelector('#encPolicy').value||'|').split('|').map(Number);
+      const days=modal.querySelector('#encDays').value;
+      const effectiveDate=modal.querySelector('#encDate').value;
+      modal.querySelector('[data-payroll-create-error]').hidden=true;
+      if(!employeeId||!policyVersionId||!leaveTypeId){
+        createError(modal,s('selectRequired'),!employeeId?modal.querySelector('#encEmployee'):modal.querySelector('#encPolicy'));
+        return;
+      }
+      save.disabled=true;
+      save.setAttribute('aria-busy','true');
+      try{
+        await window.ErpSystemData.create('payroll/leave-sources',{
+          employeeId,leaveTypeId,policyVersionId,days,effectiveDate,
+          eventKey:`ui-encashment-${crypto.randomUUID()}`,
+          note:modal.querySelector('#encNote').value.trim()||null,
+        });
+        if(!routeStillActive()) return;
+        await reload();
+        if(!routeStillActive()) return;
+        closeModal();
+        page.render();
+        toast(s('encashmentCreated'),'ok');
+      }catch(error){
+        if(!routeStillActive()) return;
+        save.disabled=false;
+        save.removeAttribute('aria-busy');
+        createError(modal,error&&error.message?error.message:s('encashmentError'));
+      }
+    });
+  }
   async function postRun(run){
     busyId=run.id;
     actionError=null;
@@ -1679,9 +1788,10 @@ SCREENS['payroll-run'] = async function(root){
           ${profileAvatar({name,src:employee&&(employee.photoUrl||employee.imageUrl||employee.avatarUrl),size:28})}
           <div><b>${esc(name)}</b><small>${esc(department)}</small></div>
         </div></td>
+        <td class="tnum">${money0(Number(line.baseGrossPay||line.grossPay))}</td>
+        <td class="tnum">${Number(line.leaveEarnings||0)>0?'+'+money0(Number(line.leaveEarnings)):money0(0)}</td>
+        <td class="tnum">${Number(line.leaveDeductions||0)>0?'−'+money0(Number(line.leaveDeductions)):money0(0)}</td>
         <td class="tnum">${money0(Number(line.grossPay))}</td>
-        <td class="tnum muted">${money0(Number(line.employeeStatutoryDeduction))}</td>
-        <td class="tnum muted">${money0(Number(line.incomeTaxDeduction))}</td>
         <td class="tnum"><b>${money0(Number(line.netPay))}</b></td>
       </tr>`;
     }).join('');
@@ -1707,21 +1817,23 @@ SCREENS['payroll-run'] = async function(root){
           <div class="field"><span class="k">${esc(s('fieldPeriodEnd'))}</span><span class="v">${esc(dateValue(run.periodEnd))}</span></div>
           <div class="field"><span class="k">${esc(s('fieldPayDate'))}</span><span class="v">${esc(dateValue(run.payDate))}</span></div>
           <div class="field"><span class="k">${esc(s('colStatus'))}</span><span class="v">${cap(statusLabel(run.status),statusTone(run.status))}</span></div>
+          <div class="field"><span class="k">${esc(s('leaveTraceTitle'))}</span><span class="v">${esc(s('leaveSourceCount').replace('{count}',String(summary.leaveSourceCount)))}</span></div>
         </div>
         <div class="panel payroll-lines-panel">
           <div class="panel-h"><h3>${esc(s('employeePayrollLines'))}</h3><small>${esc(s('clickForPayslip'))}</small></div>
           ${summary.runLines.length?`<div class="payroll-lines-scroll">
-            <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('hr.col.employee'))}</th><th>${esc(s('colGross'))}</th><th>${esc(s('colStatutory'))}</th><th>${esc(s('colTax'))}</th><th>${esc(s('colNet'))}</th></tr></thead>
+            <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('hr.col.employee'))}</th><th>${esc(s('baseSalaryLabel'))}</th><th>${esc(s('leaveEarningsLabel'))}</th><th>${esc(s('unpaidLeaveDeductionLabel'))}</th><th>${esc(s('colGross'))}</th><th>${esc(s('colNet'))}</th></tr></thead>
               <tbody>${employeeRows}</tbody>
-              <tfoot><tr><td></td><td class="l"><b>${esc(s('totalsLabel').replace('{n}',String(summary.headcount)))}</b></td><td class="tnum"><b>${money0(summary.gross)}</b></td><td class="tnum">${money0(summary.statutory)}</td><td class="tnum">${money0(summary.tax)}</td><td class="tnum"><b>${money0(summary.net)}</b></td></tr></tfoot>
+              <tfoot><tr><td></td><td class="l"><b>${esc(s('totalsLabel').replace('{n}',String(summary.headcount)))}</b></td><td class="tnum">${money0(summary.base)}</td><td class="tnum">${money0(summary.leaveEarnings)}</td><td class="tnum">${money0(summary.leaveDeductions)}</td><td class="tnum"><b>${money0(summary.gross)}</b></td><td class="tnum"><b>${money0(summary.net)}</b></td></tr></tfoot>
             </table>
           </div>`:`<div class="detail-empty payroll-lines-empty">${ic('people')}<div><b>${esc(s('noPayrollLines'))}</b><small>${esc(s('noPayrollLinesBody'))}</small></div></div>`}
         </div>
       </div>
-      ${run.status==='draft'?`<div class="set-savebar" data-payroll-actions>
+      <div class="set-savebar" data-payroll-actions>
         <div class="grow"></div>
-        ${btn(s('postButton'),{icon:'check',cls:'primary',sm:false,attrs:`data-payroll-action="post"${busy?' disabled':''}`})}
-      </div>`:''}`;
+        ${btn(s('encashmentButton'),{icon:'coins',cls:'soft',sm:false,attrs:'data-payroll-action="encashment"'})}
+        ${run.status==='draft'?btn(s('postButton'),{icon:'check',cls:'primary',sm:false,attrs:`data-payroll-action="post"${busy?' disabled':''}`}):''}
+      </div>`;
   }
 
   page=masterDetailRegisterPage(root,{
@@ -1769,6 +1881,7 @@ SCREENS['payroll-run'] = async function(root){
           line.addEventListener('click',()=>navigate('payslip',{lineId:Number(line.dataset.payrollLine)}));
         });
         detailRoot.querySelector('[data-payroll-action="post"]')?.addEventListener('click',()=>confirmPost(row));
+        detailRoot.querySelector('[data-payroll-action="encashment"]')?.addEventListener('click',openEncashment);
       },
     },
   });
@@ -1777,7 +1890,7 @@ SCREENS['payroll-run'] = async function(root){
 /* ---------------- PAYSLIP (document — one real payroll_run_line) ---------------- */
 SCREENS['payslip'] = async function(root, params){
   const s=hrCopy();
-  const {runs,lines,employees}=await preparePayrollData();
+  const {runs,lines,employees,leaveSources,runLeaveSources}=await preparePayrollData();
   const requestedId=params&&params.lineId?Number(params.lineId):null;
   const postedLines=lines.slice().sort((a,b)=>b.id-a.id);
   const line=requestedId?lines.find(row=>row.id===requestedId):postedLines[0];
@@ -1789,17 +1902,24 @@ SCREENS['payslip'] = async function(root, params){
   const emp=employees.find(e=>e.id===line.employeeId)||null;
   const empName=emp?emp.fullName:('#'+line.employeeId);
 
-  const gross=Number(line.grossPay);
+  const baseGross=Number(line.baseGrossPay||line.grossPay);
+  const leaveEarnings=Number(line.leaveEarnings||0);
+  const leaveDeductions=Number(line.leaveDeductions||0);
+  const grossEarnings=baseGross+leaveEarnings;
   const statutoryDed=Number(line.employeeStatutoryDeduction);
   const taxDed=Number(line.incomeTaxDeduction);
-  const ded=statutoryDed+taxDed;
+  const ded=leaveDeductions+statutoryDed+taxDed;
   const net=Number(line.netPay);
   const employerStatutory=Number(line.employerStatutoryContribution);
   const employerAdditional=Number(line.employerAdditionalContribution);
   const empCont=employerStatutory+employerAdditional;
 
-  const earningsRows=`<tr><td class="l li-name"><b>${esc(s('baseSalaryLabel'))}</b></td><td class="tnum">${money(gross)}</td></tr>`;
+  const earningsRows=[
+    `<tr><td class="l li-name"><b>${esc(s('baseSalaryLabel'))}</b></td><td class="tnum">${money(baseGross)}</td></tr>`,
+    leaveEarnings>0?`<tr><td class="l li-name"><b>${esc(s('leaveEarningsLabel'))}</b></td><td class="tnum">${money(leaveEarnings)}</td></tr>`:'',
+  ].join('');
   const deductionRows=[
+    leaveDeductions>0?`<tr><td class="l li-name"><b>${esc(s('unpaidLeaveDeductionLabel'))}</b></td><td class="tnum">${money(leaveDeductions)}</td></tr>`:'',
     `<tr><td class="l li-name"><b>${esc(payrollStatutoryLabel(s,'employee'))}</b></td><td class="tnum">${money(statutoryDed)}</td></tr>`,
     taxDed>0?`<tr><td class="l li-name"><b>${esc(s('incomeTaxLabel'))}</b></td><td class="tnum">${money(taxDed)}</td></tr>`:'',
   ].join('');
@@ -1807,6 +1927,14 @@ SCREENS['payslip'] = async function(root, params){
     `<tr><td class="l li-name"><b>${esc(payrollStatutoryLabel(s,'employer'))}</b></td><td class="tnum">${money(employerStatutory)}</td></tr>`,
     `<tr><td class="l li-name"><b>${esc(payrollStatutoryLabel(s,'additional'))}</b></td><td class="tnum">${money(employerAdditional)}</td></tr>`,
   ].join('');
+  const lineMappings=runLeaveSources.filter(mapping=>String(mapping.runLineId)===String(line.id));
+  const leaveSourceById=new Map(leaveSources.map(source=>[source.id,source]));
+  const traceRows=lineMappings.map(mapping=>{
+    const source=leaveSourceById.get(mapping.sourceId);
+    if(!source) return '';
+    const sign=source.effectDirection==='deduction'?'−':'+';
+    return `<div class="field"><span class="k">${esc(source.sourceType.replaceAll('_',' '))} · ${esc(source.days)}d</span><span class="v tnum">${sign}${money(Number(source.amount))}</span></div>`;
+  }).join('');
 
   // Year to date: this employee's other posted lines whose run falls in the
   // current calendar year (this tenant's fiscal year starts January, see
@@ -1840,7 +1968,7 @@ SCREENS['payslip'] = async function(root, params){
       <div class="docmain">
         <div class="panel"><div class="panel-h"><h3>${esc(s('earningsTitle'))}</h3></div>
           <table class="lines"><tbody>${earningsRows}</tbody>
-          <tfoot><tr><td class="l" style="font-weight:600">${esc(s('grossEarnings'))}</td><td class="tnum"><b>${money(gross)}</b></td></tr></tfoot></table>
+          <tfoot><tr><td class="l" style="font-weight:600">${esc(s('grossEarnings'))}</td><td class="tnum"><b>${money(grossEarnings)}</b></td></tr></tfoot></table>
         </div>
         <div class="panel"><div class="panel-h"><h3>${esc(s('deductionsTitle'))}</h3></div>
           <table class="lines"><tbody>${deductionRows}</tbody>
@@ -1853,7 +1981,7 @@ SCREENS['payslip'] = async function(root, params){
       </div>
       <aside class="summary">
         <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(s('netPayTitle'))}</div>
-          <div class="sumrow"><span class="sk2">${esc(s('grossLabel'))}</span><span class="sv tnum">${money(gross)}</span></div>
+          <div class="sumrow"><span class="sk2">${esc(s('grossLabel'))}</span><span class="sv tnum">${money(grossEarnings)}</span></div>
           <div class="sumrow disc"><span class="sk2">${esc(s('deductionsLabel'))}</span><span class="sv tnum">−${money(ded)}</span></div>
           <div class="sumrow total"><span class="sk2">${esc(s('netPayLabel'))}</span><span class="sv tnum">${money(net)}</span></div>
           <div class="indicator ok" style="margin-top:12px"><div class="ind-top">${ic('coins')}<span>${esc(s('netPayDisbursed'))}</span><span class="ind-r">${money0(net)}</span></div><small>${run?esc(s('creditedOn').replace('{date}',dateValue(run.payDate))):''}</small></div>
@@ -1862,6 +1990,9 @@ SCREENS['payslip'] = async function(root, params){
           <div class="sumrow"><span class="sk2">${esc(s('grossYtd'))}</span><span class="sv tnum">${money0(grossYtd)}</span></div>
           <div class="sumrow"><span class="sk2">${esc(s('statutoryYtd'))}</span><span class="sv tnum">${money0(statutoryYtd)}</span></div>
           <div class="sumrow"><span class="sk2">${esc(s('taxYtd'))}</span><span class="sv tnum">${money0(taxYtd)}</span></div>
+        </div>
+        <div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(s('leaveTraceTitle'))}</div>
+          ${traceRows||`<div class="field"><span class="k">${esc(s('leaveSourceCount').replace('{count}','0'))}</span></div>`}
         </div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0">Related</div>
           ${relatedDocs([

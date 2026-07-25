@@ -1006,6 +1006,7 @@ export async function seedDemo(db: DB): Promise<void> {
 
     await db.insert(payrollRunLine).values(computed.map((line, index) => ({
       masterFn: 'M1', companyFn, runId: run.id, lineNo: index + 1, employeeId: line.employeeId,
+      baseGrossPay: line.baseSalary,
       grossPay: line.baseSalary,
       employeeStatutoryDeduction: line.employeeStatutoryDeduction,
       incomeTaxDeduction: line.incomeTaxDeduction,

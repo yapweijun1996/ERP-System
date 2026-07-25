@@ -58,6 +58,7 @@ import {
 import { ProjectTimeEntryError } from '../../modules/project/timeEntry';
 import { CustomerImportValidationError } from '../../modules/integration/customerImport';
 import { NotificationError } from '../../modules/account/notification';
+import { PayrollLeaveError } from '../../modules/payroll/payrollLeave';
 
 export function createResourceRouter(db: DB): Router {
   const router = Router();
@@ -127,6 +128,10 @@ export function createResourceRouter(db: DB): Router {
       }
       if (error instanceof InventoryProductConflictError) {
         apiError(res, 409, 'product_conflict', error.message);
+        return;
+      }
+      if (error instanceof PayrollLeaveError) {
+        apiError(res, error.status, error.code, error.message);
         return;
       }
       if (

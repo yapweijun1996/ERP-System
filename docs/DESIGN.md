@@ -197,8 +197,9 @@ reservation. TASK-113 adds the versioned leave lifecycle, immutable revision/eve
 trail, actor-owned authoring and privacy-controlled evidence metadata. TASK-114 adds
 versioned approval policy resolution, snapshotted workflow authority, bounded
 delegation, immutable decisions/events and capacity controls. TASK-115 adds the shared
-Team Calendar read model/workspace and optional one-way delivery worker; the remaining
-sections describe the target architecture for TASK-116–135.
+Team Calendar read model/workspace and optional one-way delivery worker. TASK-116 adds
+immutable leave-to-Payroll sources, policy-controlled encashment and one-time run
+mappings; the remaining sections describe the target architecture for TASK-117–135.
 
 ### Identity and authorization
 

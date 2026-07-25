@@ -801,9 +801,12 @@ explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof
    `calendar-workspace-v1`, privacy-redacted direct-report availability, authorised
    reporting-tree expansion, conflict indicators and optional idempotent one-way
    approved/change/cancel delivery. ERP status and revision remain authoritative.
-6. **Payroll integration** (TASK-116) adds unpaid-leave deduction and
-   policy-controlled encashment. Historical HR-lite rows keep their original day
-   snapshot under Legacy Policy.
+6. **Payroll integration** (TASK-116 done 2026-07-26) adds immutable, revision-linked
+   unpaid-leave deduction, cancellation recovery and policy-controlled encashment.
+   Historical HR-lite rows keep their original day snapshot under Legacy Policy.
+   One-time source-to-run mappings make overlapping payroll runs safe, while
+   five-language Payslip and Payroll Run surfaces expose base pay, leave
+   earnings/deductions and source trace.
 
 Exit criteria: working-day/half-day calculation, pending reservation, insufficient
 balance split, privacy, approval/delegation/capacity, calendar, outbound sync and
