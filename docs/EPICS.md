@@ -1947,7 +1947,7 @@ Legacy Policy marker and is never silently recomputed.
       prevent duplicate effects. Persistent Demo SQL is versioned and post-verified so
       stale service-worker assets cannot write a false schema marker. PWA v116.
 
-## EPIC-054 — Receipt & Secure Document Processing (Planned)
+## EPIC-054 — Receipt & Secure Document Processing (In progress)
 
 Create the reusable document boundary for leave evidence, expense receipts, card
 proof and tax evidence. PostgreSQL/PGlite byte storage is the default confirmed
@@ -1960,14 +1960,15 @@ deployment; a server-filesystem provider is optional and explicitly single-node.
       is single-node and stores only opaque content plus a database-owned locator.
       Both providers enforce identical owner/manager/cross-tenant authorization and
       verify content integrity on read. PWA v117.
-- [ ] **TASK-118 — Add secure upload and mobile offline capture.** Accept JPEG, PNG,
+- [x] **TASK-118 — Add secure upload and mobile offline capture.** Accept JPEG, PNG,
       HEIC and PDF up to 20 MB/20 pages, validate magic bytes, stream bounded content,
       support camera/crop/rotate/compress and clear unsynced local drafts after an
       explicit logout warning.
-- [ ] **TASK-119 — Add quarantine, scanning and asynchronous extraction.** Fail closed
+- [x] **TASK-119 — Add quarantine, scanning and asynchronous extraction.** Fail closed
       when malware scanning is unavailable or uncertain; default to local OCR and
       allow external BYOK Vision only after company opt-in with provider, region and
-      retention metadata.
+      retention metadata. Migration 0058 adds retry-safe jobs/outbox signals,
+      upgrade backfill, encrypted-connector policy controls and PWA v119.
 - [ ] **TASK-120 — Add confidence-governed receipt inbox and auto-submit.** Persist
       field provenance/model/confidence, require every critical field at 98% or above
       plus safety/amount/duplicate checks, let a company disable but never lower the

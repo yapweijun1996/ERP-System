@@ -30,4 +30,9 @@ export async function createDefaultControlPlane(
     category: 'Data import', direction: 'inbound', schedule: 'manual',
     status: 'connected', health: 'healthy', credentialRequired: false, enabled: true,
   });
+  await exec.insert(integrationConnector).values({
+    ...scope, connectorKey: 'document-vision', displayName: 'Document Vision (BYOK)',
+    category: 'Document processing', direction: 'outbound', schedule: 'realtime',
+    status: 'setup', health: 'unknown', credentialRequired: true, enabled: false,
+  });
 }

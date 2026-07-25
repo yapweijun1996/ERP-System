@@ -33,3 +33,14 @@ export function withReportingWorkerTransaction<T>(
     return command(tx);
   });
 }
+
+/** Document workers may claim only scan/extraction queues before tenant discovery. */
+export function withDocumentWorkerTransaction<T>(
+  db: DB,
+  command: (tx: DB) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.document_worker', 'on', true)`);
+    return command(tx);
+  });
+}

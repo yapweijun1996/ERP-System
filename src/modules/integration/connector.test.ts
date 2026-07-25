@@ -16,7 +16,13 @@ describe('integration connector registry', () => {
     const db = await freshDb(); await seedDemo(db);
     const sg = await listConnectorsWithin(db, { masterFn: 'M1', companyFn: 'C-SG' });
     const my = await listConnectorsWithin(db, { masterFn: 'M1', companyFn: 'C-MY' });
-    expect(sg).toHaveLength(3); expect(my).toHaveLength(1);
+    expect(sg).toHaveLength(4); expect(my).toHaveLength(2);
+    expect(sg).toContainEqual(expect.objectContaining({
+      connectorKey: 'document-vision',
+      status: 'setup',
+      enabled: false,
+      credentialRequired: true,
+    }));
     expect(JSON.stringify(sg)).not.toContain('credentialEnvelope');
     expect(JSON.stringify(sg)).not.toContain('masterFn');
     expect(JSON.stringify(sg)).not.toContain('companyFn');

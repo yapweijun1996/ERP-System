@@ -117,8 +117,10 @@ TASK-117 implements immutable managed-document identity/version metadata,
 database-default PostgreSQL/PGlite byte content, optional explicit single-node
 filesystem content and a shared authorization/integrity contract. TASK-118 implements
 bounded magic-validated receipt upload, immutable page counts, actor-owned listing,
-mobile capture/editing and logout-cleared IndexedDB drafts. TASK-119–135 remain
-**Planned** until their individual acceptance gates pass. Planned
+mobile capture/editing and logout-cleared IndexedDB drafts. TASK-119 implements
+fail-closed quarantine scanning, local OCR by default and explicitly configured BYOK
+Vision extraction through retry-safe jobs. TASK-120–135 remain **Planned** until
+their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an

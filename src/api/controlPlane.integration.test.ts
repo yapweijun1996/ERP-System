@@ -36,7 +36,12 @@ describe('canonical control-plane API', () => {
 
   it('serves tenant-scoped canonical reads and encrypts connector credentials', async () => {
     const auth = await login();
-    for (const path of ['/api/integration/connectors', '/api/admin/master-control', '/api/settings/overview']) {
+    for (const path of [
+      '/api/integration/connectors',
+      '/api/integration/document-processing-policy',
+      '/api/admin/master-control',
+      '/api/settings/overview',
+    ]) {
       const response = await fetch(baseUrl + path, { headers: { cookie: auth.header } });
       expect(response.status, path).toBe(200);
       const payload = JSON.stringify(await response.json());
@@ -62,6 +67,60 @@ describe('canonical control-plane API', () => {
     ));
     expect(JSON.stringify(stored.credentialEnvelope)).not.toContain(secret);
     expect(stored.credentialEnvelope).toBeTruthy();
+
+    const vision = connectors.data.find(
+      (row: { connectorKey: string }) => row.connectorKey === 'document-vision',
+    );
+    const configureVision = await fetch(
+      `${baseUrl}/api/integration/connectors/${vision.id}/actions/configure`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: auth.header,
+          'x-csrf-token': auth.csrf,
+          'content-type': 'application/json',
+          'idempotency-key': 'document-vision-secret-once',
+        },
+        body: JSON.stringify({
+          secret: 'document-vision-api-key',
+          label: 'Document Vision primary',
+          endpointHost: 'vision-gateway.example.test',
+        }),
+      },
+    );
+    expect(configureVision.status).toBe(200);
+    const saveDocumentPolicy = () => fetch(
+      `${baseUrl}/api/integration/document-processing-policy/actions/update`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: auth.header,
+          'x-csrf-token': auth.csrf,
+          'content-type': 'application/json',
+          'idempotency-key': 'document-policy-once',
+        },
+        body: JSON.stringify({
+          extractionProvider: 'byok_vision',
+          visionProvider: 'openai',
+          visionRegion: 'ap-southeast-1',
+          visionRetentionDays: 0,
+        }),
+      },
+    );
+    const savedDocumentPolicy = await saveDocumentPolicy();
+    expect(savedDocumentPolicy.status).toBe(200);
+    expect(await savedDocumentPolicy.json()).toMatchObject({
+      data: {
+        extractionProvider: 'byok_vision',
+        visionProvider: 'openai',
+        visionRegion: 'ap-southeast-1',
+        visionRetentionDays: 0,
+      },
+    });
+    const documentPolicyReplay = await saveDocumentPolicy();
+    expect(documentPolicyReplay.status).toBe(200);
+    expect(documentPolicyReplay.headers.get('idempotency-replayed')).toBe('true');
+
     const savePolicy = () => fetch(`${baseUrl}/api/settings/policy/current/actions/update`, {
       method: 'POST',
       headers: { cookie: auth.header, 'x-csrf-token': auth.csrf, 'content-type': 'application/json', 'idempotency-key': 'settings-policy-once' },
@@ -84,10 +143,23 @@ describe('canonical control-plane API', () => {
     })).status).toBe(428);
     const viewer = await login('viewer@acme.co', 'viewer1234');
     expect((await fetch(`${baseUrl}/api/integration/connectors`, { headers: { cookie: viewer.header } })).status).toBe(200);
+    expect((await fetch(`${baseUrl}/api/integration/document-processing-policy`, {
+      headers: { cookie: viewer.header },
+    })).status).toBe(200);
     expect((await fetch(`${baseUrl}/api/settings/overview`, { headers: { cookie: viewer.header } })).status).toBe(403);
     expect((await fetch(`${baseUrl}/api/admin/master-control`, { headers: { cookie: viewer.header } })).status).toBe(403);
     expect((await fetch(`${baseUrl}/api/integration/connectors/${target.id}/actions/check-health`, {
       method: 'POST', headers: { cookie: viewer.header, 'x-csrf-token': viewer.csrf, 'content-type': 'application/json', 'idempotency-key': 'viewer-health-denied' }, body: '{}',
+    })).status).toBe(403);
+    expect((await fetch(`${baseUrl}/api/integration/document-processing-policy/actions/update`, {
+      method: 'POST',
+      headers: {
+        cookie: viewer.header,
+        'x-csrf-token': viewer.csrf,
+        'content-type': 'application/json',
+        'idempotency-key': 'viewer-document-policy-denied',
+      },
+      body: JSON.stringify({ extractionProvider: 'local_ocr' }),
     })).status).toBe(403);
   });
 });

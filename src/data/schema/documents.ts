@@ -108,3 +108,93 @@ export const documentFileLocation = pgTable('document_file_location', {
     sql`char_length(${t.relativePath}) between 1 and 500
       and ${t.relativePath} !~ '(^/|(^|/)\\.\\.(/|$))'`),
 ]);
+
+/** Company extraction policy. Local OCR is the fail-closed default. */
+export const documentProcessingPolicy = pgTable('document_processing_policy', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  extractionProvider: text('extraction_provider').notNull().default('local_ocr'),
+  visionProvider: text('vision_provider'),
+  visionRegion: text('vision_region'),
+  visionRetentionDays: integer('vision_retention_days'),
+  version: integer('version').notNull().default(1),
+  updatedByUserId: bigint('updated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_document_processing_policy_company').on(t.masterFn, t.companyFn),
+  check('ck_document_processing_policy_provider',
+    sql`${t.extractionProvider} in ('local_ocr', 'byok_vision')`),
+  check('ck_document_processing_policy_vision_provider',
+    sql`${t.visionProvider} is null or ${t.visionProvider} in ('openai', 'google')`),
+  check('ck_document_processing_policy_vision_config',
+    sql`(${t.extractionProvider} = 'local_ocr'
+      and ${t.visionProvider} is null
+      and ${t.visionRegion} is null
+      and ${t.visionRetentionDays} is null)
+      or (${t.extractionProvider} = 'byok_vision'
+        and char_length(${t.visionProvider}) > 0
+        and char_length(${t.visionRegion}) between 2 and 80
+        and ${t.visionRetentionDays} between 0 and 365)`),
+  check('ck_document_processing_policy_version', sql`${t.version} > 0`),
+]);
+
+/** One retryable, leased malware-scan job per immutable document version. */
+export const documentScanJob = pgTable('document_scan_job', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  versionId: bigint('version_id', { mode: 'number' }).notNull()
+    .references(() => documentVersion.id),
+  status: text('status').notNull().default('queued'),
+  scanner: text('scanner'),
+  resultCode: text('result_code'),
+  attempts: integer('attempts').notNull().default(0),
+  availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedBy: text('locked_by'),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_document_scan_job_version').on(t.masterFn, t.companyFn, t.versionId),
+  index('idx_document_scan_job_queue').on(t.status, t.availableAt, t.lockedAt, t.id),
+  check('ck_document_scan_job_status',
+    sql`${t.status} in ('queued','scanning','clean','infected','indeterminate','unavailable')`),
+  check('ck_document_scan_job_attempts', sql`${t.attempts} >= 0`),
+]);
+
+/** Retry-stable extraction result header; field provenance arrives in TASK-120. */
+export const documentExtraction = pgTable('document_extraction', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  versionId: bigint('version_id', { mode: 'number' }).notNull()
+    .references(() => documentVersion.id),
+  extractionVersion: integer('extraction_version').notNull().default(1),
+  provider: text('provider').notNull(),
+  model: text('model').notNull(),
+  status: text('status').notNull().default('queued'),
+  rawText: text('raw_text'),
+  outputSha256: text('output_sha256'),
+  attempts: integer('attempts').notNull().default(0),
+  availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedBy: text('locked_by'),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_document_extraction_version')
+    .on(t.masterFn, t.companyFn, t.versionId, t.extractionVersion),
+  index('idx_document_extraction_queue').on(t.status, t.availableAt, t.lockedAt, t.id),
+  check('ck_document_extraction_version', sql`${t.extractionVersion} > 0`),
+  check('ck_document_extraction_provider',
+    sql`${t.provider} in ('local_ocr','byok_vision')`),
+  check('ck_document_extraction_status',
+    sql`${t.status} in ('queued','extracting','succeeded','failed','unavailable')`),
+  check('ck_document_extraction_attempts', sql`${t.attempts} >= 0`),
+  check('ck_document_extraction_output_hash',
+    sql`${t.outputSha256} is null or (
+      char_length(${t.outputSha256}) = 64
+      and ${t.outputSha256} ~ '^[0-9a-f]{64}$'
+    )`),
+]);

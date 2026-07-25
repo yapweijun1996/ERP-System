@@ -31,6 +31,10 @@ import {
   createManagedDocument,
   readManagedDocument,
 } from '../modules/documents/storage';
+import {
+  enqueueDocumentProcessing,
+  processDocumentJobBatch,
+} from '../modules/documents/processing';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -270,6 +274,48 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       documentScope,
       (tx) => tx.select().from(schema.documentBlob),
     )).toHaveLength(2);
+    await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => enqueueDocumentProcessing(tx, documentScope, appendedDocument.version.id),
+    );
+    expect(await db.select().from(schema.documentScanJob)).toHaveLength(0);
+    expect(await db.select().from(schema.documentExtraction)).toHaveLength(0);
+    const processedDocument = await processDocumentJobBatch(db, {
+      scanner: {
+        scan: async () => ({
+          status: 'clean',
+          scanner: 'postgres-security-proof',
+          resultCode: 'clean',
+        }),
+      },
+      localOcr: {
+        extract: async () => ({
+          rawText: 'postgres ocr proof',
+          model: 'local-ocr-security-proof',
+        }),
+      },
+      workerId: 'postgres-document-worker',
+    });
+    expect(processedDocument).toMatchObject({
+      scansClaimed: 1,
+      clean: 1,
+      extractionsClaimed: 1,
+      extracted: 1,
+      failed: 0,
+    });
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.documentExtraction),
+    )).toEqual([
+      expect.objectContaining({
+        versionId: appendedDocument.version.id,
+        provider: 'local_ocr',
+        status: 'succeeded',
+        rawText: 'postgres ocr proof',
+      }),
+    ]);
 
     await requestPasswordReset(
       db,

@@ -6,6 +6,7 @@ import {
   pgTable, text, bigint, integer, boolean, timestamp, jsonb,
   index, uniqueIndex, primaryKey,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { appUser, company, role } from './tenancy';
 
@@ -152,4 +153,7 @@ export const outboxEvent = pgTable('outbox_event', {
   index('idx_outbox_tenant_aggregate').on(
     t.masterFn, t.companyFn, t.aggregateType, t.aggregateId, t.id,
   ),
+  uniqueIndex('uq_outbox_document_signal').on(
+    t.masterFn, t.companyFn, t.topic, t.aggregateType, t.aggregateId,
+  ).where(sql`${t.topic} in ('document.scan.requested','document.extraction.requested')`),
 ]);

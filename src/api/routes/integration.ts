@@ -10,6 +10,12 @@ import {
   listConnectorsWithin,
   setConnectorEnabledWithin,
 } from '../../modules/integration/connector';
+import {
+  configureDocumentProcessingPolicyWithin,
+  DocumentProcessingPolicyError,
+  getDocumentProcessingPolicyWithin,
+  type DocumentProcessingPolicyInput,
+} from '../../modules/documents/processingPolicy';
 import { apiError, context, requireSession } from '../http';
 import { ActionDispatchError, dispatchAction } from '../actionDispatcher';
 
@@ -24,6 +30,90 @@ export function createIntegrationRouter(db: DB, encryptionKey?: Buffer): Router 
     }
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     res.json({ data: await withTenantTransaction(db, scope, (tx) => listConnectorsWithin(tx, scope)), meta: {} });
+  });
+
+  router.get('/document-processing-policy', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.integrationRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read document processing policy.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    res.json({
+      data: await withTenantTransaction(
+        db,
+        scope,
+        (tx) => getDocumentProcessingPolicyWithin(tx, scope),
+      ),
+      meta: { localOcrDefault: true, minimumExternalRetentionDays: 0 },
+    });
+  });
+
+  router.post('/document-processing-policy/actions/update', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    const payload = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+      ? req.body as Record<string, unknown>
+      : {};
+    try {
+      const result = await dispatchAction({
+        db,
+        session,
+        resource: 'integration/document-processing-policy',
+        resourceId: 0,
+        action: 'update',
+        payload,
+        idempotencyKey: req.header('idempotency-key'),
+        requestId: context(res).requestId,
+      }, {
+        permission: PERMISSIONS.integrationManage,
+        idempotency: 'required',
+        audit: 'none',
+        execute: async (tx, scope, input) => {
+          const provider = payload.extractionProvider;
+          let policyInput: DocumentProcessingPolicyInput;
+          if (provider === 'local_ocr') {
+            policyInput = { extractionProvider: 'local_ocr' };
+          } else if (
+            provider === 'byok_vision'
+            && (payload.visionProvider === 'openai' || payload.visionProvider === 'google')
+            && typeof payload.visionRegion === 'string'
+            && typeof payload.visionRetentionDays === 'number'
+          ) {
+            policyInput = {
+              extractionProvider: 'byok_vision',
+              visionProvider: payload.visionProvider,
+              visionRegion: payload.visionRegion,
+              visionRetentionDays: payload.visionRetentionDays,
+            };
+          } else {
+            throw new DocumentProcessingPolicyError(
+              'invalid_policy',
+              'Choose local OCR, or provide a supported Vision provider, region and retention days.',
+            );
+          }
+          return configureDocumentProcessingPolicyWithin(
+            tx,
+            scope,
+            { userId: input.actorUserId, requestId: context(res).requestId },
+            policyInput,
+          );
+        },
+      });
+      if (result.replayed) res.setHeader('Idempotency-Replayed', 'true');
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      if (error instanceof ActionDispatchError) {
+        apiError(res, error.status, error.code, error.message);
+        return;
+      }
+      if (error instanceof DocumentProcessingPolicyError) {
+        apiError(res, 422, error.code, error.message);
+        return;
+      }
+      throw error;
+    }
   });
 
   router.post('/connectors/:id/actions/:action', async (req, res) => {

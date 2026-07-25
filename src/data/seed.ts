@@ -197,10 +197,22 @@ export async function seedDemo(db: DB): Promise<void> {
       recordsProcessed: 0, enabled: true,
     },
     {
+      masterFn: 'M1', companyFn: 'C-SG', connectorKey: 'document-vision',
+      displayName: 'Document Vision (BYOK)', category: 'Document processing',
+      direction: 'outbound', schedule: 'realtime', status: 'setup', health: 'unknown',
+      credentialRequired: true, recordsProcessed: 0, enabled: false,
+    },
+    {
       masterFn: 'M1', companyFn: 'C-MY', connectorKey: 'customer-csv',
       displayName: 'Customer CSV import', category: 'Data import', direction: 'inbound',
       schedule: 'manual', status: 'connected', health: 'healthy', credentialRequired: false,
       recordsProcessed: 0, enabled: true,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', connectorKey: 'document-vision',
+      displayName: 'Document Vision (BYOK)', category: 'Document processing',
+      direction: 'outbound', schedule: 'realtime', status: 'setup', health: 'unknown',
+      credentialRequired: true, recordsProcessed: 0, enabled: false,
     },
   ]);
 

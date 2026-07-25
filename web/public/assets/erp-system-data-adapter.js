@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 57;
+  var DEMO_SCHEMA_VERSION = 58;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -211,6 +211,14 @@
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
       "('managed_document','document_version','document_blob','document_file_location')")).rows[0];
+    var documentPageSignature = (await db.query(
+      "select count(*)::int as n from information_schema.columns " +
+      "where table_schema='public' and table_name='document_version' " +
+      "and column_name='page_count'")).rows[0];
+    var documentProcessingSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('document_processing_policy','document_scan_job','document_extraction')")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
@@ -220,7 +228,9 @@
       && calendarOutboundSignature && Number(calendarOutboundSignature.n) === 2
       && payrollLeaveSignature && Number(payrollLeaveSignature.n) === 2
       && payrollRunLineSignature && Number(payrollRunLineSignature.n) === 3
-      && documentStorageSignature && Number(documentStorageSignature.n) === 4;
+      && documentStorageSignature && Number(documentStorageSignature.n) === 4
+      && documentPageSignature && Number(documentPageSignature.n) === 1
+      && documentProcessingSignature && Number(documentProcessingSignature.n) === 3;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
 
     await db.exec(await fetchSql('erp-system-migrations.sql'));
@@ -236,13 +246,23 @@
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
       "('managed_document','document_version','document_blob','document_file_location')")).rows[0];
+    var appliedDocumentPage = (await db.query(
+      "select count(*)::int as n from information_schema.columns " +
+      "where table_schema='public' and table_name='document_version' " +
+      "and column_name='page_count'")).rows[0];
+    var appliedDocumentProcessing = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('document_processing_policy','document_scan_job','document_extraction')")).rows[0];
     if (!appliedPayrollTables || Number(appliedPayrollTables.n) !== 2
       || !appliedPayrollColumns || Number(appliedPayrollColumns.n) !== 3) {
       throw new Error(
         'Persistent PGlite migration v' + DEMO_SCHEMA_VERSION +
         ' did not apply its required Payroll schema signature.');
     }
-    if (!appliedDocumentTables || Number(appliedDocumentTables.n) !== 4) {
+    if (!appliedDocumentTables || Number(appliedDocumentTables.n) !== 4
+      || !appliedDocumentPage || Number(appliedDocumentPage.n) !== 1
+      || !appliedDocumentProcessing || Number(appliedDocumentProcessing.n) !== 3) {
       throw new Error(
         'Persistent PGlite migration v' + DEMO_SCHEMA_VERSION +
         ' did not apply its required Document Storage schema signature.');
@@ -2982,11 +3002,18 @@
       var result=await requireDemoDb().query(
         `select d.id,d.document_key,d.original_file_name,d.current_version_no,
                 d.retention_until,d.legal_hold,d.created_at,
-                v.sha256,v.mime_type,v.size_bytes,v.page_count,v.storage_backend
+                v.sha256,v.mime_type,v.size_bytes,v.page_count,v.storage_backend,
+                s.status as scan_status,s.result_code as scan_result_code,
+                x.status as extraction_status,x.provider as extraction_provider
          from managed_document d
          join document_version v
            on v.master_fn=d.master_fn and v.company_fn=d.company_fn
           and v.document_id=d.id and v.version_no=d.current_version_no
+         left join document_scan_job s
+           on s.master_fn=v.master_fn and s.company_fn=v.company_fn and s.version_id=v.id
+         left join document_extraction x
+           on x.master_fn=v.master_fn and x.company_fn=v.company_fn
+          and x.version_id=v.id and x.extraction_version=1
          where d.master_fn=$1 and d.company_fn=$2 and d.owner_user_id=$3
            and d.purpose='receipt'
          order by d.created_at desc,d.id desc limit 100`,
@@ -2997,7 +3024,9 @@
         retentionUntil:row.retention_until,legalHold:Boolean(row.legal_hold),createdAt:row.created_at,
         sha256:row.sha256,mimeType:row.mime_type,sizeBytes:Number(row.size_bytes),
         pageCount:Number(row.page_count),storageBackend:row.storage_backend,
-      };}),meta:{actorDerived:true,availability:'capture',scanning:'planned_task_119',limit:100}};
+        scanStatus:row.scan_status,scanResultCode:row.scan_result_code,
+        extractionStatus:row.extraction_status,extractionProvider:row.extraction_provider,
+      };}),meta:{actorDerived:true,availability:'capture',scanning:'fail_closed',limit:100}};
     },
     uploadReceipt:async function(draft){
       draft=draft||{};
@@ -3037,6 +3066,23 @@
             var conflict=new Error('This receipt draft key is already used by different content.');
             conflict.code='document_key_conflict';throw conflict;
           }
+          await tx.query(
+            `insert into document_scan_job
+               (master_fn,company_fn,version_id,status,last_error)
+             values ($1,$2,$3,'unavailable','Static Demo has no malware scanner.')
+             on conflict (master_fn,company_fn,version_id) do update
+             set status=case when document_scan_job.status='queued' then 'unavailable'
+                 else document_scan_job.status end,
+                 last_error=case when document_scan_job.status='queued'
+                   then 'Static Demo has no malware scanner.' else document_scan_job.last_error end`,
+            [SCOPE.masterFn,SCOPE.companyFn,row.version_id]);
+          await tx.query(
+            `insert into outbox_event
+               (master_fn,company_fn,topic,aggregate_type,aggregate_id,payload)
+             values ($1,$2,'document.scan.requested','document_version',$3,$4)
+             on conflict do nothing`,
+            [SCOPE.masterFn,SCOPE.companyFn,String(row.version_id),
+             JSON.stringify({versionId:Number(row.version_id)})]);
           return {row:row,replayed:true};
         }
         var retention=new Date();retention.setUTCFullYear(retention.getUTCFullYear()+7);
@@ -3058,6 +3104,19 @@
           `insert into document_blob (master_fn,company_fn,version_id,content)
            values ($1,$2,$3,$4)`,
           [SCOPE.masterFn,SCOPE.companyFn,version.rows[0].id,validated.content]);
+        await tx.query(
+          `insert into document_scan_job
+             (master_fn,company_fn,version_id,status,last_error)
+           values ($1,$2,$3,'unavailable','Static Demo has no malware scanner.')
+           on conflict (master_fn,company_fn,version_id) do nothing`,
+          [SCOPE.masterFn,SCOPE.companyFn,version.rows[0].id]);
+        await tx.query(
+          `insert into outbox_event
+             (master_fn,company_fn,topic,aggregate_type,aggregate_id,payload)
+           values ($1,$2,'document.scan.requested','document_version',$3,$4)
+           on conflict do nothing`,
+          [SCOPE.masterFn,SCOPE.companyFn,String(version.rows[0].id),
+           JSON.stringify({versionId:Number(version.rows[0].id)})]);
         return {row:Object.assign({},documentRow,version.rows[0]),replayed:false};
       });
       return {data:{
@@ -3066,8 +3125,9 @@
         originalFileName:result.row.original_file_name||validated.fileName,
         versionNo:1,sha256:hash,mimeType:validated.mimeType,
         sizeBytes:validated.content.byteLength,pageCount:validated.pageCount,
-        storageBackend:'database',createdAt:result.row.created_at,
-      },meta:{actorDerived:true,replayed:result.replayed,scanning:'planned_task_119'}};
+        storageBackend:'database',scanStatus:'unavailable',extractionStatus:null,
+        createdAt:result.row.created_at,
+      },meta:{actorDerived:true,replayed:result.replayed,scanning:'fail_closed'}};
     },
     teamLeaveRequests:async function(){
       var data=await withMyActor(async function(orm,actor){

@@ -2,7 +2,12 @@ import { and, desc, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import { documentVersion, managedDocument } from '../../data/schema';
+import {
+  documentExtraction,
+  documentScanJob,
+  documentVersion,
+  managedDocument,
+} from '../../data/schema';
 import {
   createManagedDocument,
   type DocumentActor,
@@ -13,6 +18,7 @@ import {
   ReceiptUploadError,
   validateReceiptUpload,
 } from './receiptValidation';
+import { enqueueDocumentProcessing } from './processing';
 export {
   RECEIPT_UPLOAD_MAX_BYTES,
   RECEIPT_UPLOAD_MAX_PDF_PAGES,
@@ -78,6 +84,8 @@ export async function uploadReceiptDocument(
     pageCount: validated.pageCount,
     storageBackend: input.storageBackend,
   }, registry);
+  await withTenantTransaction(db, scope, (tx) =>
+    enqueueDocumentProcessing(tx, scope, stored.version.id));
   return {
     ...stored,
     format: validated.format,
@@ -103,11 +111,24 @@ export async function listReceiptDocuments(
     sizeBytes: documentVersion.sizeBytes,
     pageCount: documentVersion.pageCount,
     storageBackend: documentVersion.storageBackend,
+    scanStatus: documentScanJob.status,
+    scanResultCode: documentScanJob.resultCode,
+    extractionStatus: documentExtraction.status,
+    extractionProvider: documentExtraction.provider,
   }).from(managedDocument).innerJoin(documentVersion, and(
     eq(documentVersion.masterFn, managedDocument.masterFn),
     eq(documentVersion.companyFn, managedDocument.companyFn),
     eq(documentVersion.documentId, managedDocument.id),
     eq(documentVersion.versionNo, managedDocument.currentVersionNo),
+  )).leftJoin(documentScanJob, and(
+    eq(documentScanJob.masterFn, documentVersion.masterFn),
+    eq(documentScanJob.companyFn, documentVersion.companyFn),
+    eq(documentScanJob.versionId, documentVersion.id),
+  )).leftJoin(documentExtraction, and(
+    eq(documentExtraction.masterFn, documentVersion.masterFn),
+    eq(documentExtraction.companyFn, documentVersion.companyFn),
+    eq(documentExtraction.versionId, documentVersion.id),
+    eq(documentExtraction.extractionVersion, 1),
   )).where(and(
     eq(managedDocument.masterFn, scope.masterFn),
     eq(managedDocument.companyFn, scope.companyFn),

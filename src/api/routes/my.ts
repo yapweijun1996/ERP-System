@@ -686,7 +686,7 @@ export function createMyRouter(db: DB): Router {
         meta: {
           actorDerived: true,
           availability: 'capture',
-          scanning: 'planned_task_119',
+          scanning: 'fail_closed',
           limit: 100,
         },
       });
@@ -750,12 +750,14 @@ export function createMyRouter(db: DB): Router {
           sizeBytes: result.version.sizeBytes,
           pageCount: result.version.pageCount,
           storageBackend: result.version.storageBackend,
+          scanStatus: 'queued',
+          extractionStatus: null,
           createdAt: result.document.createdAt,
         },
         meta: {
           actorDerived: true,
           replayed: result.replayed,
-          scanning: 'planned_task_119',
+          scanning: 'fail_closed',
         },
       });
     } catch (error) {

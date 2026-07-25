@@ -141,10 +141,26 @@ const receiptCaptureContracts = [
   'adapter.uploadReceipt(draft)',
   'draftStore.putFile(file)',
   'window.ErpReceiptDrafts.transformImage',
+  'receiptProcessingState(item)',
+  "scanStatus==='infected'",
+  "scanStatus==='unavailable'",
+  "scanStatus!=='clean'",
 ].filter((token) => !hrScreenSource.includes(token));
 if (receiptCaptureContracts.length) {
   throw new Error(
     `My Receipts is missing secure capture contracts: ${receiptCaptureContracts.join(', ')}`,
+  );
+}
+const myReceiptsScreenSource = (hrScreenSource.split("SCREENS['my-receipts']=")[1] || '')
+  .split("SCREENS['team-calendar']")[0];
+const prematureReceiptActions = [
+  'data-receipt-preview',
+  'data-receipt-export',
+  'data-receipt-submit',
+].filter((token) => myReceiptsScreenSource.includes(token));
+if (prematureReceiptActions.length) {
+  throw new Error(
+    `Quarantined My Receipts exposes blocked actions: ${prematureReceiptActions.join(', ')}`,
   );
 }
 const offlineReceiptContracts = [

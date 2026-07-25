@@ -208,8 +208,10 @@ describe('actor-owned My Work API', () => {
         mimeType: 'image/jpeg',
         pageCount: 1,
         storageBackend: 'database',
+        scanStatus: 'queued',
+        extractionStatus: null,
       },
-      meta: { actorDerived: true, replayed: false },
+      meta: { actorDerived: true, replayed: false, scanning: 'fail_closed' },
     });
     const replayedUpload = await fetch(`${baseUrl}/api/my/receipts/actions/upload`, {
       method: 'POST',
@@ -225,8 +227,13 @@ describe('actor-owned My Work API', () => {
     });
     expect(receiptList.status).toBe(200);
     expect(await receiptList.json()).toMatchObject({
-      data: [{ originalFileName: 'taxi-receipt.jpg', pageCount: 1 }],
-      meta: { actorDerived: true, availability: 'capture' },
+      data: [{
+        originalFileName: 'taxi-receipt.jpg',
+        pageCount: 1,
+        scanStatus: 'queued',
+        extractionStatus: null,
+      }],
+      meta: { actorDerived: true, availability: 'capture', scanning: 'fail_closed' },
     });
 
     const spoofed = await fetch(`${baseUrl}/api/my/receipts/actions/upload`, {

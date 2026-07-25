@@ -56,6 +56,7 @@ DECLARE
     'leave_capacity_rule',
     'calendar_outbound_connection', 'calendar_outbound_event',
     'managed_document', 'document_version', 'document_blob', 'document_file_location',
+    'document_processing_policy', 'document_scan_job', 'document_extraction',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',
@@ -85,7 +86,10 @@ BEGIN
          )
          OR (
            %L
-           AND current_setting(''app.reporting_worker'', true) = ''on''
+           AND (
+             current_setting(''app.reporting_worker'', true) = ''on''
+             OR current_setting(''app.document_worker'', true) = ''on''
+           )
          )
        )
        WITH CHECK (
@@ -95,12 +99,15 @@ BEGIN
          )
          OR (
            %L
-           AND current_setting(''app.reporting_worker'', true) = ''on''
+           AND (
+             current_setting(''app.reporting_worker'', true) = ''on''
+             OR current_setting(''app.document_worker'', true) = ''on''
+           )
          )
        )',
       table_name,
-      table_name IN ('report_job', 'report_artifact'),
-      table_name IN ('report_job', 'report_artifact')
+      table_name IN ('report_job', 'report_artifact', 'document_scan_job', 'document_extraction'),
+      table_name IN ('report_job', 'report_artifact', 'document_scan_job', 'document_extraction')
     );
   END LOOP;
 END $$;

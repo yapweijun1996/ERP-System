@@ -37,6 +37,11 @@ interface AuthMailPayload {
   expiresAt: string;
 }
 
+const AUTH_MAIL_TOPICS = [
+  'auth.invitation.created',
+  'auth.password-reset.requested',
+] as const;
+
 export interface OutboxWorkerOptions {
   tokenEncryptionKey: Buffer;
   workerId?: string;
@@ -87,6 +92,7 @@ async function claimBatch(
       attempts: outboxEvent.attempts,
     }).from(outboxEvent)
       .where(and(
+        inArray(outboxEvent.topic, [...AUTH_MAIL_TOPICS]),
         isNull(outboxEvent.deliveredAt),
         lte(outboxEvent.availableAt, now),
         or(isNull(outboxEvent.lockedAt), lt(outboxEvent.lockedAt, expiredLease)),
@@ -124,7 +130,7 @@ export async function processOutboxBatch(
   for (const row of rows) {
     try {
       if (
-        !['auth.invitation.created', 'auth.password-reset.requested'].includes(row.topic)
+        !AUTH_MAIL_TOPICS.includes(row.topic as typeof AUTH_MAIL_TOPICS[number])
         || !isAuthMailPayload(row.payload)
       ) {
         throw new Error(`Unsupported outbox topic or payload: ${row.topic}`);

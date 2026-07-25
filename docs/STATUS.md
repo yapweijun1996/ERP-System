@@ -124,7 +124,8 @@ hardcoded fictional customer regardless of the active company.
 | HR-lite: employee master + leave request/approval | ✅ Canonical Demo/API data and writes | First Phase 7 module opened after Phase 8. `employee` (self-referencing `manager_id`, no link to `app_user`) and `leave_request` tables, `src/modules/hr/` (`createEmployee`, `createLeaveRequest`/`decideLeaveRequest`), registered as standard generic resources gated on new `hr.read`/`hr.write` permissions. `hr-directory` and `employee` read real data (per-employee detail, not always the same hardcoded record); `new-employee` is a single real form replacing the mock's 3-step compensation/provisioning wizard (no schema backed those steps); `leave-approval` reads real requests and its approve/reject actions are real, including a required-reason reject flow. That initial task deliberately excluded Payroll and compensation; later Payroll and Full Leave tasks supersede that historical boundary. Verified live: created a real employee, approved one leave request, rejected another with a reason, confirmed the employee detail's leave balance and history reflected both decisions. |
 | Leave-to-Payroll integration | ✅ Canonical Demo/API data and writes | Migration 0055 adds append-only unpaid-leave, approved-cancellation and encashment sources plus unique run mappings. Payroll lines snapshot base gross and leave earnings/deductions; the 26-day Decimal formula rounds half-up to cents and every source can be consumed once only. Legacy Policy rows retain original days. Five-language Payroll Run/Payslip surfaces and authenticated API/domain proofs cover balance, trace and overlapping-run replay. |
 | Governed document storage provider | ✅ Canonical domain and storage boundary | Migration 0056 adds managed identity, immutable version/hash/MIME/size facts, default PostgreSQL/PGlite `bytea` content and optional database-located filesystem content. The filesystem backend requires an explicit dedicated root and is labelled single-node; tenant, owner, retention and legal-hold facts remain database-owned. Provider-parity tests cover owner/manager/cross-tenant access and content-integrity verification, with a PostgreSQL 16 non-superuser RLS proof. TASK-118 builds bounded actor-owned receipt capture on this boundary. |
-| Secure receipt upload and offline mobile capture | ✅ Canonical Demo/API data and writes | Migration 0057 adds immutable positive page counts and upgrades existing Employee/Manager roles with `employee.receipts.write`. Actor-owned My Work endpoints and Demo parity stream-bound files at 20 MB, verify JPEG/PNG/HEIC/PDF magic bytes against MIME and extension, parse PDFs with a 20-page ceiling and reuse stable draft keys idempotently. The five-language My Receipts page supports camera/file capture, IndexedDB drafts and Canvas crop/rotate/compress for JPEG/PNG; logout confirms then clears unsynchronised drafts only. Stored files remain private and labelled as awaiting TASK-119 scanning, with no premature preview, OCR or claim linkage. |
+| Secure receipt upload and offline mobile capture | ✅ Canonical Demo/API data and writes | Migration 0057 adds immutable positive page counts and upgrades existing Employee/Manager roles with `employee.receipts.write`. Actor-owned My Work endpoints and Demo parity stream-bound files at 20 MB, verify JPEG/PNG/HEIC/PDF magic bytes against MIME and extension, parse PDFs with a 20-page ceiling and reuse stable draft keys idempotently. The five-language My Receipts page supports camera/file capture, IndexedDB drafts and Canvas crop/rotate/compress for JPEG/PNG; logout confirms then clears unsynchronised drafts only. Stored files remain private and enter TASK-119's fail-closed quarantine with no premature preview, OCR or claim linkage. |
+| Document quarantine scanning and extraction | ✅ Canonical domain/API worker boundary | Migration 0058 adds company processing policy, unique leased scan jobs, versioned extraction rows, existing-document backfill and retry-stable outbox signals. Unavailable, indeterminate and infected scans fail closed; only clean versions reach extraction. Local OCR is the default. BYOK Vision requires an explicitly connected encrypted credential plus provider, region and retention policy. Demo honestly reports scanner unavailable and exposes no preview, claim, submission or export affordance. |
 | Project-lite: register + progress-claim billing | ✅ Canonical Demo/API data and writes | Second Phase 7 module. `project` (nullable `customer_id` — null means Internal — running `billed_to_date` aggregate) and `progress_claim` (draft/posted billing document, tax-snapshotted like `sales_debit_note`) tables, `src/modules/project/` (`createProject`, `createProgressClaim`/`postProgressClaim`), registered as standard generic resources gated on `project.read`/`project.write` permissions. Posting a claim inserts the exact same balanced `gl_entry` legs `postSalesDebitNote` already uses (Dr `1100` AR / Cr `4000` Revenue / Cr `2200` Output Tax) and increments the project's `billed_to_date`. `project-pl` and `project-detail` expose only real contract, billing, claim and customer relationships; unsupported cost/budget/team/milestone data remains absent rather than fabricated. |
 | Project Timesheet | ✅ Canonical Demo/API data and writes | Migration 0040 adds actor-owned `project_time_entry` facts with Decimal hours, project/date indexes, version and append-preserving void metadata. Creation derives the actor from the signed-in Session, accepts only an open tenant project and a real work date, and never exposes another user's entries. Correction voids under a row lock instead of deleting or rewriting hours. The five-language `timesheet` route loads a bounded weekly view, reports only active totals, keeps voided facts visible and explicitly does not invent approval, capacity or payroll workflow. Domain/API tests cover validation, tenant/actor isolation, Viewer denial, audit and idempotent void replay; Demo smoke and live in-app browser prove create → void at desktop and 375px. |
 | Actor-addressed Notifications | ✅ Canonical Demo/API data and writes | Migration 0043 adds first-class `app_notification` delivery/read/dismiss facts scoped to one master, company and recipient. Shared TypeScript commands serve both adapters; public rows omit tenant/user identifiers and cross-user records stay unavailable. `notifications.read`/`notifications.manage`, CSRF, idempotency, audit and production RLS protect the API. The bell plus five-language full page share the canonical feed and reload on company switch; localStorage state, fictional notifications and fake preferences are removed. |
@@ -137,7 +138,7 @@ hardcoded fictional customer regardless of the active company.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. |
 | Full screen audit — every route in `SCREENS` (121), desktop + 375px | ✅ Working | `scripts/audit-screens.mjs`, `npm run audit:screens`, wired into CI; reads live `SCREENS`/`SCREEN_META`, runs stateful detail fixtures, and checks errors, Canonical identity leaks, Preview state/write locks, shared module shell, page/action-bar overflow, active-tab visibility and My Work capability/privacy states. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 461 passing tests plus 1 expected skip and one gated PostgreSQL 16 integration proof. Coverage includes Session/CSRF/RBAC, idempotency/audit, inventory/warehouse/manufacturing/quality invariants, sales/purchasing/CRM lifecycles, finance/assets/project/service/HR/payroll postings, actor-owned governed leave, calendar scope/sync, leave-to-Payroll replay, document-provider parity, bounded receipt upload and migration compatibility. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Working | `npm test`, 464 passing tests plus 1 expected skip and one gated PostgreSQL 16 integration proof. Coverage includes Session/CSRF/RBAC, idempotency/audit, inventory/warehouse/manufacturing/quality invariants, sales/purchasing/CRM lifecycles, finance/assets/project/service/HR/payroll postings, actor-owned governed leave, calendar scope/sync, leave-to-Payroll replay, document-provider parity, bounded receipt upload, fail-closed processing and migration compatibility. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production Setup remains a separate deployment-token/zero-user command. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -1099,6 +1100,29 @@ The maturity contract is **120 Canonical / 1 Preview**. A real PostgreSQL 16
 non-superuser/RLS run and in-app browser capture → edit → sync → logout-cleanup proof
 also pass. PWA v118 carries the upgrade.
 
+## TASK-119 — Quarantine scanning and asynchronous extraction (done)
+
+Migration 0058 adds tenant-scoped company processing policy, one unique leased scan
+job per immutable document version and versioned extraction output. The upgrade
+backfills every existing version and inserts a unique `document.scan.requested`
+outbox signal, so retries cannot duplicate documents, scan jobs, extraction version
+1 or downstream signals.
+
+The worker fails closed when its malware scanner is absent, unavailable or
+indeterminate. Only a `clean` scan may create or run extraction; infected content is
+permanently blocked. Local OCR is the default. An administrator may select BYOK
+Vision only after configuring the encrypted `document-vision` connector and explicit
+provider, region and 0–365 day retention metadata. Plain credentials exist only
+inside the extraction call.
+
+Production RLS gives the non-superuser document worker access only to its two queue
+tables; business document bytes still require a tenant transaction. Demo has no
+scanner, so it honestly displays `Quarantined · scanner unavailable` with no preview,
+claim, submission or export actions. Final gates pass lint, dual typecheck, 464 tests
+plus one expected skip, 59 migrations at schema version 58, 168-table drift,
+Demo/API builds and all 121 desktop/375px routes at **120 Canonical / 1 Preview**.
+A real PostgreSQL 16 RLS run and in-app upload/reload proof also pass. PWA v119.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1108,8 +1132,9 @@ leave lifecycle plus two Canonical leave routes and TASK-114 the generic approva
 delegation and capacity boundary. TASK-115 delivered the Canonical Team Calendar and
 optional outbound delivery boundary. TASK-116 delivered the governed Payroll
 deduction/encashment boundary. TASK-117 delivered the managed-document storage
-boundary and TASK-118 delivered bounded secure capture plus offline mobile drafts.
-TASK-119 through TASK-135 remain planning records
+boundary, TASK-118 delivered bounded secure capture plus offline mobile drafts and
+TASK-119 delivered fail-closed scanning plus governed extraction. TASK-120 through
+TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1147,9 +1172,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 117 tasks, including TASK-118
+- Done: 118 tasks, including TASK-119
 - Blocked: TASK-017 (1)
-- Todo: 17 planned tasks (TASK-119–135) across EPIC-054–056. These extend the product
+- Todo: 16 planned tasks (TASK-120–135) across EPIC-054–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

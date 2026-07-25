@@ -962,12 +962,39 @@ function receiptCaptureCopy(){
     ja:{title:'自分の領収書',sub:'オンラインまたはオフラインで領収書を安全に取得します。後続の統制が完了するまで経費申請には入りません。',take:'写真を撮る',choose:'ファイルを選択',syncAll:'すべて同期',file:'ファイル',state:'状態',size:'サイズ',pages:'ページ',updated:'更新',actions:'操作',offline:'オフライン下書き',stored:'保存済み · TASK-119 スキャン待ち',edit:'編集',sync:'同期',remove:'削除',empty:'領収書または下書きはありません',emptyBody:'JPEG、PNG、HEIC、PDF を撮影または選択（最大20MB、PDFは20ページまで）。',limits:'JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20ページ',offlineNote:'下書きはこの端末だけに保存されます。サインアウト時に警告し、確認後に未同期下書きを消去します。',editTitle:'切り抜き・回転・圧縮',crop:'切り抜き',original:'元画像',square:'正方形',receipt:'領収書 3:4',rotation:'回転',rotateLeft:'左回転',rotateRight:'右回転',quality:'JPEG品質',save:'編集を保存',cancel:'キャンセル',syncing:'同期中…',saved:'領収書下書きをこの端末に保存しました。',uploaded:'領収書を安全にアップロードしました。',deleted:'下書きを削除しました。',offlineError:'オフラインです。下書きはこの端末に安全に残ります。',editUnavailable:'HEICとPDFは安全にデコードできないため元のまま保持します。',confirmDelete:'未同期の領収書下書きを削除しますか？',error:'領収書を処理できませんでした。'},
     vi:{title:'Biên lai của tôi',sub:'Chụp chứng từ biên lai an toàn khi trực tuyến hoặc ngoại tuyến. Tệp chưa được đưa vào yêu cầu chi phí cho đến bước quản trị sau.',take:'Chụp ảnh',choose:'Chọn tệp',syncAll:'Đồng bộ tất cả',file:'Tệp',state:'Trạng thái',size:'Kích thước',pages:'Số trang',updated:'Cập nhật',actions:'Thao tác',offline:'Bản nháp ngoại tuyến',stored:'Đã lưu · chờ quét TASK-119',edit:'Chỉnh sửa',sync:'Đồng bộ',remove:'Xóa',empty:'Không có biên lai hoặc bản nháp',emptyBody:'Chụp hoặc chọn JPEG, PNG, HEIC hay PDF (tối đa 20 MB; PDF tối đa 20 trang).',limits:'JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20 trang',offlineNote:'Bản nháp chỉ lưu trên thiết bị này. Đăng xuất sẽ cảnh báo rồi xóa mọi bản nháp chưa đồng bộ.',editTitle:'Cắt, xoay và nén',crop:'Cắt',original:'Gốc',square:'Vuông',receipt:'Biên lai 3:4',rotation:'Xoay',rotateLeft:'Xoay trái',rotateRight:'Xoay phải',quality:'Chất lượng JPEG',save:'Lưu chỉnh sửa',cancel:'Hủy',syncing:'Đang đồng bộ…',saved:'Đã lưu bản nháp trên thiết bị này.',uploaded:'Đã tải biên lai lên an toàn.',deleted:'Đã xóa bản nháp.',offlineError:'Bạn đang ngoại tuyến. Bản nháp vẫn an toàn trên thiết bị.',editUnavailable:'HEIC và PDF được giữ nguyên vì trình duyệt không thể giải mã an toàn.',confirmDelete:'Xóa bản nháp biên lai chưa đồng bộ này?',error:'Không thể xử lý biên lai.'},
   };
-  const pack=packs[typeof getLang==='function'?getLang():'en']||packs.en;
-  return key=>pack[key]||packs.en[key]||key;
+  const lang=typeof getLang==='function'?getLang():'en';
+  const pack=packs[lang]||packs.en;
+  const quarantine={
+    en:{sub:'Every stored file stays quarantined until malware scanning is clean; preview, extraction, claims and export remain blocked beforehand.',stored:'Stored securely'},
+    ms:{sub:'Setiap fail disimpan dalam kuarantin sehingga imbasan perisian hasad bersih; pratonton, pengekstrakan, tuntutan dan eksport disekat sebelumnya.',stored:'Disimpan dengan selamat'},
+    zh:{sub:'每个已存文件在恶意软件扫描确认安全前都会保持隔离，预览、提取、报销与导出均被阻止。',stored:'已安全存储'},
+    ja:{sub:'保存されたファイルはマルウェアスキャンが安全と確認するまで隔離され、プレビュー・抽出・申請・エクスポートはブロックされます。',stored:'安全に保存済み'},
+    vi:{sub:'Mọi tệp đã lưu được cách ly đến khi quét mã độc xác nhận an toàn; xem trước, trích xuất, yêu cầu chi phí và xuất đều bị chặn trước đó.',stored:'Đã lưu an toàn'},
+  };
+  const safety=quarantine[lang]||quarantine.en;
+  return key=>safety[key]||pack[key]||packs.en[key]||key;
 }
 function receiptBytes(value){
   const size=Number(value)||0;
   return size>=1024*1024?(size/(1024*1024)).toFixed(1)+' MB':Math.max(1,Math.ceil(size/1024))+' KB';
+}
+function receiptProcessingState(item){
+  const packs={
+    en:{queued:'Quarantined · scan queued',scanning:'Quarantined · scanning',unavailable:'Quarantined · scanner unavailable',indeterminate:'Quarantined · scan indeterminate',infected:'Blocked · malware detected',extracting:'Clean · extracting locally',extractionUnavailable:'Clean · extraction unavailable',extracted:'Clean · extracted'},
+    ms:{queued:'Kuarantin · imbasan menunggu',scanning:'Kuarantin · sedang diimbas',unavailable:'Kuarantin · pengimbas tiada',indeterminate:'Kuarantin · hasil tidak pasti',infected:'Disekat · perisian hasad dikesan',extracting:'Bersih · ekstrak setempat',extractionUnavailable:'Bersih · pengekstrakan tiada',extracted:'Bersih · telah diekstrak'},
+    zh:{queued:'已隔离 · 等待扫描',scanning:'已隔离 · 正在扫描',unavailable:'已隔离 · 扫描器不可用',indeterminate:'已隔离 · 扫描结果不确定',infected:'已阻止 · 检测到恶意文件',extracting:'扫描安全 · 本地提取中',extractionUnavailable:'扫描安全 · 提取服务不可用',extracted:'扫描安全 · 已提取'},
+    ja:{queued:'隔離中 · スキャン待ち',scanning:'隔離中 · スキャン中',unavailable:'隔離中 · スキャナー利用不可',indeterminate:'隔離中 · 判定不能',infected:'ブロック済み · マルウェア検出',extracting:'安全 · ローカル抽出中',extractionUnavailable:'安全 · 抽出利用不可',extracted:'安全 · 抽出済み'},
+    vi:{queued:'Cách ly · chờ quét',scanning:'Cách ly · đang quét',unavailable:'Cách ly · máy quét không sẵn sàng',indeterminate:'Cách ly · kết quả chưa xác định',infected:'Đã chặn · phát hiện mã độc',extracting:'An toàn · đang trích xuất cục bộ',extractionUnavailable:'An toàn · không thể trích xuất',extracted:'An toàn · đã trích xuất'},
+  };
+  const p=packs[typeof getLang==='function'?getLang():'en']||packs.en;
+  if(item.scanStatus==='infected')return {label:p.infected,tone:'danger'};
+  if(item.scanStatus==='unavailable')return {label:p.unavailable,tone:'warn'};
+  if(item.scanStatus==='indeterminate')return {label:p.indeterminate,tone:'warn'};
+  if(item.scanStatus==='scanning')return {label:p.scanning,tone:'warn'};
+  if(item.scanStatus!=='clean')return {label:p.queued,tone:'warn'};
+  if(item.extractionStatus==='succeeded')return {label:p.extracted,tone:'ok'};
+  if(['failed','unavailable'].includes(item.extractionStatus))return {label:p.extractionUnavailable,tone:'warn'};
+  return {label:p.extracting,tone:'info'};
 }
 async function openReceiptEditor(draft,onDone){
   const s=receiptCaptureCopy();
@@ -1015,7 +1042,10 @@ SCREENS['my-receipts']=async function(root){
   const stored=Array.isArray(response.data)?response.data:[];
   const rows=[
     ...drafts.map(draft=>({id:draft.id,kind:'draft',name:draft.name,state:s('offline'),size:draft.size,pages:'—',updated:draft.updatedAt,draft})),
-    ...stored.map(item=>({id:'stored-'+item.id,kind:'stored',name:item.originalFileName,state:s('stored'),size:item.sizeBytes,pages:item.pageCount||1,updated:item.createdAt,item})),
+    ...stored.map(item=>{
+      const processing=receiptProcessingState(item);
+      return {id:'stored-'+item.id,kind:'stored',name:item.originalFileName,state:processing.label,tone:processing.tone,size:item.sizeBytes,pages:item.pageCount||1,updated:item.createdAt,item};
+    }),
   ];
   const rerender=()=>navigate('my-receipts');
   async function capture(files,source){
@@ -1051,7 +1081,7 @@ SCREENS['my-receipts']=async function(root){
     kpis:[{label:s('offline'),value:drafts.length,accent:drafts.length>0},{label:s('stored'),value:stored.length}],
     columns:[
       {key:'name',label:s('file'),primary:true},
-      {key:'state',label:s('state'),render:row=>`<span class="badge ${row.kind==='draft'?'warn':'ok'}">${esc(row.state)}</span>`},
+      {key:'state',label:s('state'),render:row=>`<span class="badge ${row.kind==='draft'?'warn':row.tone||'ok'}">${esc(row.state)}</span>`},
       {key:'size',label:s('size'),numeric:true,render:row=>esc(receiptBytes(row.size))},
       {key:'pages',label:s('pages'),numeric:true},
       {key:'updated',label:s('updated'),render:row=>esc(dateValue(row.updated))},

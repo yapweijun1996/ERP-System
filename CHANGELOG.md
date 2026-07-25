@@ -5,6 +5,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-26 — TASK-119 fail-closed document processing)
+- Migration 0058 adds company processing policy, unique leased scan jobs and
+  versioned extraction output, with existing-document backfill and retry-stable
+  outbox signals.
+- The worker blocks preview/OCR/submission/export until malware scanning is clean,
+  defaults to local OCR and permits BYOK Vision only with an encrypted connected
+  credential plus explicit provider, region and retention policy.
+- Demo and five-language My Receipts expose honest quarantine states with no
+  premature actions. PostgreSQL 16 non-superuser RLS, 168-table drift, 464 tests
+  plus one expected skip, dual builds and all 121 desktop/mobile routes pass.
+
 ### Added (2026-07-17 — TASK-028 wire CRM screens to canonical data)
 - `erp-system-data-adapter.js`: `readPayload()` gained an `opportunities` query
   (joins `customer` + `app_user`); `applyData()` builds `DB.pipeline` (grouped by

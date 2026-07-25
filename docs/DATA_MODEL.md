@@ -143,8 +143,9 @@ SG and MY demo companies; production wires real auth.
 > outbound calendar connection/event entities. TASK-116 adds the leave-to-Payroll
 > source and one-time run mapping entities. TASK-117 adds the first four managed
 > document storage entities in section 8.3. TASK-118 adds immutable page counts
-> without a new entity. The remaining entities are approved targets for TASK-119–135 and are
-> **not yet present**. Each task must add migrations,
+> without a new entity. TASK-119 adds `document_processing_policy`,
+> `document_scan_job` and `document_extraction`. The remaining entities are approved
+> targets for TASK-120–135 and are **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
 
@@ -280,13 +281,13 @@ an explicit single-node deployment option; the database still owns all tenant,
 integrity, version, retention and legal-hold metadata. Identity and versions cannot be
 updated or deleted, while the managed projection may advance only its current version,
 retention deadline or legal hold. Every read verifies stored bytes against the
-database-owned SHA-256 and size. TASK-118 capture-only receipts remain private and
-cannot enter a claim, preview or export while they explicitly await the TASK-119 scan
-boundary. The remaining link, quarantine, extraction, retention workflow, purge and
-tombstone rows are planned for TASK-119–122. TASK-119 will place new files in
-`Quarantined` until a successful scan.
-Scanner unavailability or an indeterminate result fails closed. OCR is local by default;
-external Vision is opt-in BYOK with company-level region and retention policy.
+database-owned SHA-256 and size. TASK-119 places every captured version in a unique
+`document_scan_job` and keeps preview, OCR, submission and export blocked until its
+result is `clean`. Scanner unavailability or an indeterminate result fails closed.
+Clean versions receive one versioned `document_extraction`; OCR is local by default,
+while external Vision requires a connected encrypted BYOK credential plus company-level
+provider, region and retention policy. The remaining links, field provenance,
+retention workflow, purge and tombstone rows are planned for TASK-120–122.
 
 ### 8.4 Claims, expenses and accounting
 
