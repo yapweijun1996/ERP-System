@@ -17,6 +17,7 @@ function adminCopy(){
       inviteSent:'Invitation sent to {email}',inviteError:'Invitation could not be sent',
       enable:'Enable',disable:'Disable',you:'you',
       manageRoles:'Manage roles',saveRoles:'Save roles',rolesUpdated:'Roles updated',rolesUpdateError:'Could not update roles',
+      managedRole:'Managed automatically from the employee reporting line',
       toggleEnabled:'{email} enabled',toggleDisabled:'{email} disabled',toggleError:'Could not update this user',
       cannotDisableSelf:"You can't disable your own account",
       invitedRow:'Invitation pending',
@@ -45,6 +46,7 @@ function adminCopy(){
       inviteSent:'Jemputan dihantar kepada {email}',inviteError:'Jemputan tidak dapat dihantar',
       enable:'Aktifkan',disable:'Lumpuhkan',you:'anda',
       manageRoles:'Urus peranan',saveRoles:'Simpan peranan',rolesUpdated:'Peranan dikemas kini',rolesUpdateError:'Peranan tidak dapat dikemas kini',
+      managedRole:'Diurus secara automatik daripada garis pelaporan pekerja',
       toggleEnabled:'{email} diaktifkan',toggleDisabled:'{email} dilumpuhkan',toggleError:'Pengguna ini tidak dapat dikemas kini',
       cannotDisableSelf:'Anda tidak boleh melumpuhkan akaun sendiri',
       invitedRow:'Jemputan belum diterima',
@@ -73,6 +75,7 @@ function adminCopy(){
       inviteSent:'邀请已发送至 {email}',inviteError:'邀请发送失败',
       enable:'启用',disable:'停用',you:'您',
       manageRoles:'管理角色',saveRoles:'保存角色',rolesUpdated:'角色已更新',rolesUpdateError:'无法更新角色',
+      managedRole:'由员工汇报关系自动管理',
       toggleEnabled:'{email} 已启用',toggleDisabled:'{email} 已停用',toggleError:'无法更新该用户',
       cannotDisableSelf:'无法停用自己的账户',
       invitedRow:'邀请待接受',
@@ -101,6 +104,7 @@ function adminCopy(){
       inviteSent:'{email} に招待を送信しました',inviteError:'招待を送信できませんでした',
       enable:'有効化',disable:'無効化',you:'あなた',
       manageRoles:'役割を管理',saveRoles:'役割を保存',rolesUpdated:'役割を更新しました',rolesUpdateError:'役割を更新できませんでした',
+      managedRole:'従業員の直属関係から自動的に管理されます',
       toggleEnabled:'{email} を有効化しました',toggleDisabled:'{email} を無効化しました',toggleError:'このユーザーを更新できませんでした',
       cannotDisableSelf:'自分自身のアカウントは無効化できません',
       invitedRow:'招待は保留中です',
@@ -129,6 +133,7 @@ function adminCopy(){
       inviteSent:'Đã gửi lời mời đến {email}',inviteError:'Không thể gửi lời mời',
       enable:'Kích hoạt',disable:'Vô hiệu hóa',you:'bạn',
       manageRoles:'Quản lý vai trò',saveRoles:'Lưu vai trò',rolesUpdated:'Đã cập nhật vai trò',rolesUpdateError:'Không thể cập nhật vai trò',
+      managedRole:'Được tự động quản lý từ tuyến báo cáo của nhân viên',
       toggleEnabled:'Đã kích hoạt {email}',toggleDisabled:'Đã vô hiệu hóa {email}',toggleError:'Không thể cập nhật người dùng này',
       cannotDisableSelf:'Bạn không thể vô hiệu hóa tài khoản của chính mình',
       invitedRow:'Lời mời đang chờ',
@@ -238,10 +243,17 @@ SCREENS['user-mgmt'] = async function(root){
   async function openUserRolesModal(user){
     const roles=(await listPage('admin/roles')).data;
     const selected=new Set((user.roles||[]).map(grant=>Number(grant.roleId)));
+    const managed=new Set((user.roles||[])
+      .filter(grant=>grant.managedBySystem)
+      .map(grant=>Number(grant.roleId)));
     appModal({
       icon:'shield',
       title:s('manageRoles'),
-      body:`<div class="panel-body" style="display:grid;gap:10px">${roles.map(role=>`<label style="display:flex;align-items:center;gap:9px"><input type="checkbox" data-role-id="${role.roleId}" ${selected.has(Number(role.roleId))?'checked':''}> <span>${esc(role.name)}</span></label>`).join('')}</div>`,
+      body:`<div class="panel-body" style="display:grid;gap:10px">${roles.map(role=>{
+        const roleId=Number(role.roleId);
+        const isManaged=managed.has(roleId);
+        return `<label style="display:flex;align-items:center;gap:9px"><input type="checkbox" data-role-id="${role.roleId}" ${selected.has(roleId)?'checked':''} ${isManaged?'disabled':''}> <span>${esc(role.name)}</span>${isManaged?`<small class="muted" title="${esc(s('managedRole'))}">${ic('link')} ${esc(s('managedRole'))}</small>`:''}</label>`;
+      }).join('')}</div>`,
       actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('saveRoles'),{icon:'check',cls:'primary',attrs:'data-save="1"'})}`,
     });
     const saveBtn=$('#modalEl').querySelector('[data-save]');

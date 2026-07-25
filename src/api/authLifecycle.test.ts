@@ -3,9 +3,18 @@ import type { Server } from 'node:http';
 import { eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { seedDemo } from '../data/seed';
-import { outboxEvent, role } from '../data/schema';
+import {
+  appUser,
+  company,
+  master,
+  outboxEvent,
+  role,
+  userCompany,
+  userCompanyRole,
+} from '../data/schema';
 import { freshDb } from '../test/helpers';
 import { decryptToken, type EncryptedToken } from '../auth/tokenCrypto';
+import { hashPassword } from '../auth/password';
 import { createApp, type AppOptions } from './app';
 
 async function startApi(db: DB, options: AppOptions = {}) {
@@ -134,6 +143,71 @@ describe('auth lifecycle API', () => {
     expect(known.status).toBe(202);
     expect(unknown.status).toBe(202);
     expect(await known.json()).toEqual(await unknown.json());
+  });
+
+  it('authenticates the same username independently in two organizations', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    await db.insert(master).values({
+      masterFn: 'M-BETA',
+      loginCode: 'BETA',
+      name: 'Beta Group',
+    });
+    await db.insert(company).values({
+      companyFn: 'C-BETA',
+      masterFn: 'M-BETA',
+      name: 'Beta Singapore',
+      country: 'SG',
+      currency: 'SGD',
+      taxRegime: 'GST',
+      locale: 'en',
+    });
+    const [betaRole] = await db.insert(role).values({
+      masterFn: 'M-BETA',
+      name: 'Employee',
+    }).returning({ roleId: role.roleId });
+    const [betaUser] = await db.insert(appUser).values({
+      masterFn: 'M-BETA',
+      username: 'viewer',
+      email: 'viewer@beta.example',
+      fullName: 'Beta Viewer',
+      passwordHash: hashPassword('beta-password'),
+    }).returning({ userId: appUser.userId });
+    await db.insert(userCompany).values({
+      userId: betaUser.userId,
+      companyFn: 'C-BETA',
+      roleId: betaRole.roleId,
+    });
+    await db.insert(userCompanyRole).values({
+      userId: betaUser.userId,
+      companyFn: 'C-BETA',
+      roleId: betaRole.roleId,
+    });
+    const running = await startApi(db);
+    server = running.server;
+
+    const acme = await fetch(`${running.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        organizationCode: 'ACME',
+        username: 'viewer',
+        password: 'viewer1234',
+      }),
+    });
+    const beta = await fetch(`${running.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        organizationCode: 'BETA',
+        username: 'viewer',
+        password: 'beta-password',
+      }),
+    });
+    expect(acme.status).toBe(200);
+    expect(beta.status).toBe(200);
+    expect((await acme.json()).masterFn).toBe('M1');
+    expect((await beta.json()).masterFn).toBe('M-BETA');
   });
 
   it('protects one-time production setup with the deployment token', async () => {

@@ -102,8 +102,9 @@ marked as sample/demo content and must not crash under canonical data (TASK-018)
 The following requirements are approved product scope. TASK-106 implemented the
 organisation username/multi-role identity foundation, TASK-107 implemented the
 employee account lifecycle, TASK-108 implemented actor-owned self/team reads and
-TASK-109 delivered the five-language My Work shell as five Preview routes.
-TASK-110–135 remain **Planned** until their individual acceptance gates pass. Planned
+TASK-109 delivered the five-language My Work shell as five Preview routes, and
+TASK-110 proved the identity/security boundary including reporting-derived Manager
+authorization. TASK-111–135 remain **Planned** until their individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
@@ -111,7 +112,9 @@ capabilities must not be represented as current Canonical behavior.
   linking and the activation lifecycle are implemented by TASK-107.
 - **Multiple roles:** one user may now hold multiple roles in one company. Permissions
   are the union of those roles without widening the company boundary. Employee binding
-  and reporting-hierarchy row scope are implemented by TASK-107/108.
+  and reporting-hierarchy row scope are implemented by TASK-107/108. TASK-110 adds
+  system/manual grant provenance so reporting lines automatically maintain Manager
+  without revoking a separately authorized manual grant.
 - **Actor-owned self service:** `/api/my/*` now derives employee identity from Session,
   rejects client-selected employee IDs and separates self/team permissions. Direct
   reports plus effective-dated company-bound hierarchy grants determine manager

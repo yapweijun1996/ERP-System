@@ -1877,10 +1877,14 @@ company, and every self-service resource derives the employee identity from Sess
       TASK-113/114. Employee-only API accounts can boot the restricted My Work shell
       without `dashboard.read`; PWA v107 delivers all five-language assets. Existing
       Canonical maturity remains 115 while the accepted shell adds five Preview routes.
-- [ ] **TASK-110 — Prove identity migration, access and security boundaries.** Cover
+- [x] **TASK-110 — Prove identity migration, access and security boundaries.** Covers
       cross-organisation username reuse, same-organisation collisions, multi-role
       permission union, first activation, temporary-secret destruction, HR reset,
       offboarding, hierarchy scope and the accepted no-MFA/unverified-email risks.
+      Migration 0049 adds role-grant provenance; reporting lines now automatically
+      maintain only their own Manager grant, while manual Manager authorization is
+      preserved and locked in User Management. PWA v108 and `docs/SECURITY.md`
+      document and prove the boundary without promoting the five Preview routes.
 
 ## EPIC-053 — Full Leave Management (Planned)
 

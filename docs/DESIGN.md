@@ -190,8 +190,9 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 ## 7. Employee self-service architecture (EPIC-052–056)
 
 TASK-106 identity primitives, TASK-107 employee account lifecycle, TASK-108
-actor-owned self/team read contracts and TASK-109's five Preview My Work routes are
-implemented; the remaining sections describe the target architecture for TASK-110–135.
+actor-owned self/team read contracts, TASK-109's five Preview My Work routes and
+TASK-110 identity/security proof are implemented; the remaining sections describe
+the target architecture for TASK-111–135.
 
 ### Identity and authorization
 
@@ -208,6 +209,10 @@ implemented; the remaining sections describe the target architecture for TASK-11
   decides capability; Session tenant, active Employee link, direct reports and
   effective-dated direct/tree grants decide row scope. Later HR/expense/finance/
   payment/tax permissions and self-approval checks remain with their workflow tasks.
+- Manager is a reporting-derived capability with explicit grant provenance. A linked
+  employee gains a system-managed Manager role while active direct reports exist;
+  reconciliation removes only that system grant. Manually authorized Manager grants
+  remain intact and the User Management editor presents them as non-removable.
 - Existing generic HR resources remain management-only. `/api/my/*` controllers expose
   bounded actor-owned views and reject client-selected `employeeId`; manager leave
   projections omit private reason and rejection details.

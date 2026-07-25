@@ -29,6 +29,7 @@ export async function listCompanyUsers(db: DB, masterFn: string, companyFn: stri
     userId: userCompanyRole.userId,
     roleId: role.roleId,
     roleName: role.name,
+    managedBySystem: userCompanyRole.managedBySystem,
   }).from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
     .where(and(
@@ -36,10 +37,18 @@ export async function listCompanyUsers(db: DB, masterFn: string, companyFn: stri
       eq(role.masterFn, masterFn),
     ))
     .orderBy(userCompanyRole.userId, role.roleId);
-  const rolesByUser = new Map<number, Array<{ roleId: number; roleName: string }>>();
+  const rolesByUser = new Map<number, Array<{
+    roleId: number;
+    roleName: string;
+    managedBySystem: boolean;
+  }>>();
   for (const row of userRoleRows) {
     const grants = rolesByUser.get(row.userId) ?? [];
-    grants.push({ roleId: row.roleId, roleName: row.roleName });
+    grants.push({
+      roleId: row.roleId,
+      roleName: row.roleName,
+      managedBySystem: row.managedBySystem,
+    });
     rolesByUser.set(row.userId, grants);
   }
 

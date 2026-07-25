@@ -869,20 +869,22 @@ The Demo Viewer is also linked to a real Employee and receives Employee in its r
 union, preserving its existing Viewer grants while proving capability composition.
 The preview banner distinguishes governed `Canonical Data` from old sample previews.
 English, Malay, Simplified Chinese, Japanese and Vietnamese shell copy is complete.
-PWA v107 refreshes the affected shell, adapters, HR screen and localization assets.
+PWA v108 refreshes the affected shell and managed-role administration assets.
 
-Verification covers 409 tests plus one expected skip, the Employee-only dashboard
-denial/My Work success path, real
+Verification covers 414 tests plus one expected skip, 50 ordered migrations,
+137 drift-checked tables, the Employee-only dashboard denial/My Work success path, real
 actor leave, capability-hidden versus manager-visible tabs, privacy redaction,
-read-only approval, five languages and desktop/375px layout. The shared list audit
-now covers 48 routes. The registry is **120 total: 115 Canonical / 5 Preview**.
+read-only approval, cross-organisation login reuse, managed Manager grants, five
+languages and desktop/375px layout. The shared list audit covers 48 routes. The
+registry is **120 total: 115 Canonical / 5 Preview**.
 
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 The 115-route Canonical boundary does **not** yet promote the newly approved
-employee self-service pages. TASK-106 through TASK-109 have delivered identity,
-account lifecycle, actor-owned API and five Preview shell routes. TASK-110 through
-TASK-135 remain planning records and must not be counted as implemented tables,
+employee self-service pages. TASK-106 through TASK-110 have delivered identity,
+account lifecycle, actor-owned API, five Preview shell routes and the identity
+security proof. TASK-111 through TASK-135 remain planning records and must not be
+counted as implemented tables,
 permissions, commands or Canonical workflows until their individual gates pass.
 
 The programme is intentionally ordered:
@@ -910,16 +912,18 @@ The programme is intentionally ordered:
 
 Confirmed constraints are recorded honestly. MFA, sensitive-operation step-up and
 email verification remain optional by product decision; this is an accepted risk, not
-an implemented security guarantee. Receipt content defaults to database binary storage
-and may be switched to a server filesystem provider, whose single-node limitation must
-remain visible. The programme excludes hourly leave, native mobile apps, two-way
+an implemented security guarantee; `SECURITY.md` records the residual exposure and
+current mitigations. Reporting lines automatically maintain provenance-marked Manager
+roles without deleting manual authorization. Receipt content defaults to database
+binary storage and may be switched to a server filesystem provider, whose single-node
+limitation must remain visible. The programme excludes hourly leave, native mobile apps, two-way
 calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 108 tasks, including TASK-109
+- Done: 109 tasks, including TASK-110
 - Blocked: TASK-017 (1)
-- Todo: 26 planned tasks (TASK-110–135) across EPIC-052–056. These extend the product
+- Todo: 25 planned tasks (TASK-111–135) across EPIC-053–056. These extend the product
   beyond the current 115 Canonical / 5 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 48 audited
   list-layout routes. Future Leave/Receipt/Expense/Tax routes must join the appropriate

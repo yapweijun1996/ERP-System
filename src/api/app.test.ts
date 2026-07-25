@@ -189,6 +189,9 @@ describe('production API security contract', () => {
     expect(viewer.roles.map(
       (assigned: { roleName: string }) => assigned.roleName,
     )).toEqual(['Viewer', 'Employee']);
+    expect(viewer.roles.every(
+      (assigned: { managedBySystem: boolean }) => assigned.managedBySystem === false,
+    )).toBe(true);
 
     const setRoles = await fetch(
       `${running.baseUrl}/api/admin/users/${viewer.id}/actions/set-roles`,

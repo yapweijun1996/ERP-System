@@ -89,6 +89,7 @@ export const userCompanyRole = pgTable('user_company_role', {
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => appUser.userId),
   companyFn: text('company_fn').notNull().references(() => company.companyFn),
   roleId: bigint('role_id', { mode: 'number' }).notNull().references(() => role.roleId),
+  managedBySystem: boolean('managed_by_system').notNull().default(false),
   ...timestamps,
 }, (t) => [
   primaryKey({ columns: [t.userId, t.companyFn, t.roleId] }),

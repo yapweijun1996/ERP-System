@@ -7,6 +7,7 @@ import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { EMPLOYMENT_TYPES, employee } from '../../data/schema';
 import { fixedUnits } from '../inventory/decimal';
+import { syncManagerRoleWithin } from './managerRole';
 
 export class InvalidEmployeeStateError extends Error {
   constructor(message: string) {
@@ -80,6 +81,9 @@ export async function createEmployeeWithin(exec: DB, scope: Scope, input: Create
     baseSalary: String(input.baseSalary),
     isActive: true,
   }).returning({ id: employee.id });
+  if (input.managerId != null) {
+    await syncManagerRoleWithin(exec, scope, input.managerId);
+  }
   return { id: row.id };
 }
 

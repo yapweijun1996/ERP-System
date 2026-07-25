@@ -17,6 +17,7 @@ import {
   userCompanyRole,
 } from '../../data/schema';
 import type { EncryptedToken } from '../../auth/tokenCrypto';
+import { syncManagerRolesWithin } from './managerRole';
 
 export const EMPLOYEE_ACCOUNT_STATES = ['preactivated', 'active', 'offboarded'] as const;
 export type EmployeeAccountState = typeof EMPLOYEE_ACCOUNT_STATES[number];
@@ -157,6 +158,7 @@ export async function createEmployeeAccount(
       userId: user.userId,
       updatedAt: new Date(),
     }).where(eq(employee.id, employeeRow.id));
+    await syncManagerRolesWithin(tx, scope, [employeeRow.id]);
     await tx.insert(employeeActivationSecret).values({
       ...scope,
       employeeId: employeeRow.id,
@@ -376,6 +378,7 @@ export async function offboardEmployeeAccount(
       id: employee.id,
       userId: employee.userId,
       isActive: employee.isActive,
+      managerId: employee.managerId,
     }).from(employee).where(and(
       eq(employee.masterFn, scope.masterFn),
       eq(employee.companyFn, scope.companyFn),
@@ -435,6 +438,11 @@ export async function offboardEmployeeAccount(
       isNull(appNotification.dismissedAt),
     )).returning({ id: appNotification.id });
     await tx.update(employee).set({ isActive: false, updatedAt: now }).where(eq(employee.id, source.id));
+    await syncManagerRolesWithin(tx, scope, [
+      source.id,
+      source.managerId,
+      target.id,
+    ]);
     await tx.update(appUser).set({
       isActive: false,
       accountState: 'offboarded',

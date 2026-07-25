@@ -763,10 +763,11 @@ service-worker v103. All three Posting Detail routes pass focused state proofs.
    `transaction-list-v1`. The five routes are Preview with Canonical actor-owned data:
    unfinished Claim/Receipt/approval domains stay honest and read-only rather than
    being promoted or simulated. Employee-only API accounts boot a restricted shell.
-5. **Identity security proof** (TASK-110 planned) consolidates migration, collision,
-   activation-secret destruction, HR reset, role union, hierarchy, cross-tenant and
-   offboarding proof. It records the accepted optional MFA/step-up/email-verification
-   boundary explicitly.
+5. **Identity security proof** (TASK-110 done 2026-07-25) consolidates migration,
+   collision, activation-secret destruction, HR reset, role union, hierarchy,
+   cross-tenant and offboarding proof. Reporting lines maintain a provenance-marked
+   Manager grant without deleting manual authorization. The accepted optional
+   MFA/step-up/email-verification boundary is recorded in `docs/SECURITY.md`.
 
 Exit criteria: organisation/username collisions, migration, first activation,
 multi-role permission union, actor isolation, hierarchy scope, offboarding and the

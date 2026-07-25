@@ -134,8 +134,9 @@ SG and MY demo companies; production wires real auth.
 > Delivery boundary: TASK-106 identity fields/`user_company_role`, TASK-107's employee
 > binding/account lifecycle and TASK-108's effective-dated
 > `employee_hierarchy_scope` are present in the current Drizzle schema. TASK-109 adds
-> five UI shell routes and no table. The remaining entities in this section are
-> approved targets for TASK-110–135 and are
+> five UI shell routes and no table. TASK-110 adds role-grant provenance without a
+> new table. The remaining entities in this section are approved targets for
+> TASK-111–135 and are
 > **not yet present**. Each task must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
 > Canonical.
@@ -147,7 +148,8 @@ master                         login_code (implemented, globally unique login co
 app_user                       username + nullable email + account_state +
                                password_change_required (implemented)
 employee                     + user_id (company-scoped unique binding, implemented)
-user_company_role              user ↔ company ↔ role, many roles (implemented)
+user_company_role              user ↔ company ↔ role, many roles +
+                               managed_by_system provenance (implemented)
 employee_activation_secret     encrypted recoverable one-time secret (implemented)
 employee_account_handoff       immutable offboarding transfer summary (implemented)
 employee_hierarchy_scope      direct/tree authority + effective dates (implemented)
@@ -162,6 +164,12 @@ supplied `employee_id`. Activation-secret reads are audited, and the recoverable
 text is permanently cleared after the employee sets a password. Role permissions are the
 union of all active company roles, while tenant, employee and reporting-line data scopes
 remain restrictive.
+
+`user_company_role.managed_by_system` distinguishes a role derived from reporting
+facts from a manual authorization. TASK-110 currently uses it for Manager: a linked,
+active employee with at least one active direct report receives the system grant.
+Reconciliation may remove only a system-owned grant; an existing manual Manager grant
+remains manual and is never silently revoked.
 
 ### 8.2 Versioned approvals and leave
 

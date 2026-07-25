@@ -184,6 +184,7 @@ export async function setUserRolesWithin(
     roleId: role.roleId,
     name: role.name,
     isSuperadmin: role.isSuperadmin,
+    managedBySystem: userCompanyRole.managedBySystem,
   }).from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
     .where(and(
@@ -192,6 +193,18 @@ export async function setUserRolesWithin(
       eq(role.masterFn, session.masterFn),
     ))
     .orderBy(role.roleId);
+  const managedRoleIds = before
+    .filter((grant) => grant.managedBySystem)
+    .map((grant) => grant.roleId);
+  const omittedManagedRole = managedRoleIds.find((roleId) => !roleIds.includes(roleId));
+  if (omittedManagedRole != null) {
+    throw new AuthLifecycleError(
+      409,
+      'managed_role_required',
+      'A reporting-line managed role cannot be removed manually.',
+      { roleIds: 'Update the employee reporting line before removing this role.' },
+    );
+  }
   const removesSuperadmin = before.some((grant) => grant.isSuperadmin)
     && !selectedRoles.some((grant) => grant.isSuperadmin);
   if (removesSuperadmin) {
@@ -220,12 +233,17 @@ export async function setUserRolesWithin(
   await exec.delete(userCompanyRole).where(and(
     eq(userCompanyRole.userId, userId),
     eq(userCompanyRole.companyFn, session.activeCompanyFn),
+    eq(userCompanyRole.managedBySystem, false),
   ));
-  await exec.insert(userCompanyRole).values(roleIds.map((roleId) => ({
-    userId,
-    companyFn: session.activeCompanyFn,
-    roleId,
-  })));
+  const manualRoleIds = roleIds.filter((roleId) => !managedRoleIds.includes(roleId));
+  if (manualRoleIds.length) {
+    await exec.insert(userCompanyRole).values(manualRoleIds.map((roleId) => ({
+      userId,
+      companyFn: session.activeCompanyFn,
+      roleId,
+      managedBySystem: false,
+    })));
+  }
   await exec.update(userCompany).set({
     roleId: roleIds[0],
     updatedAt: now,

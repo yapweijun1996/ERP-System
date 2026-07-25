@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { seedDemo } from '../data/seed';
 import {
-  appUser, master, outboxEvent, role, rolePermission, userCompany, userCompanyRole,
+  appUser, employee, master, outboxEvent, role, rolePermission, userCompany, userCompanyRole,
   userInvitation,
 } from '../data/schema';
 import { freshDb } from '../test/helpers';
@@ -164,6 +164,63 @@ describe('admin user/role/permission lifecycle', () => {
       [viewerRole.roleId],
       'remove-last-superadmin',
     )).rejects.toMatchObject({ code: 'cannot_remove_last_superadmin' });
+  });
+
+  it('preserves reporting-line managed roles while allowing manual role changes', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const session = await adminSession(db);
+    const [viewer] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
+    const [managerEmployee] = await db.select().from(employee)
+      .where(eq(employee.userId, viewer.userId));
+    const [managerRole] = await db.select().from(role).where(eq(role.name, 'Manager'));
+    const [viewerRole] = await db.select().from(role).where(eq(role.name, 'Viewer'));
+    const [employeeRole] = await db.select().from(role).where(eq(role.name, 'Employee'));
+    const [operatorRole] = await db.insert(role).values({
+      masterFn: session.masterFn,
+      name: 'Operator',
+    }).returning({ roleId: role.roleId });
+    await db.insert(employee).values({
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+      employeeNo: 'EMP-ADMIN-MANAGED',
+      fullName: 'Managed Direct Report',
+      email: 'managed.direct@example.test',
+      department: 'Warehouse',
+      jobTitle: 'Coordinator',
+      employmentType: 'Full-time',
+      managerId: managerEmployee.id,
+      startDate: '2026-07-25',
+      baseSalary: '3200.00',
+    });
+    await db.insert(userCompanyRole).values({
+      userId: viewer.userId,
+      companyFn: session.activeCompanyFn,
+      roleId: managerRole.roleId,
+      managedBySystem: true,
+    });
+
+    await expect(setUserRoles(
+      db,
+      session,
+      viewer.userId,
+      [viewerRole.roleId, employeeRole.roleId],
+      'omit-managed-manager',
+    )).rejects.toMatchObject({ code: 'managed_role_required' });
+
+    await setUserRoles(
+      db,
+      session,
+      viewer.userId,
+      [viewerRole.roleId, employeeRole.roleId, managerRole.roleId, operatorRole.roleId],
+      'preserve-managed-manager',
+    );
+    const grants = await db.select().from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, viewer.userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+    ));
+    expect(grants.find((grant) => grant.roleId === managerRole.roleId)?.managedBySystem).toBe(true);
+    expect(grants.find((grant) => grant.roleId === operatorRole.roleId)?.managedBySystem).toBe(false);
   });
 
   it('createInvitationRecordWithin (demo path) inserts with a pre-computed hash and no outbox event', async () => {

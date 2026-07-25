@@ -12,6 +12,8 @@ import {
   employeeAccountHandoff,
   employeeActivationSecret,
   opportunity,
+  role,
+  userCompanyRole,
 } from '../../data/schema';
 import { hashPassword, verifyPassword } from '../../auth/password';
 import { encryptToken } from '../../auth/tokenCrypto';
@@ -152,8 +154,30 @@ describe('employee account lifecycle', () => {
 
   it('offboards immediately, transfers current work and preserves historical ownership', async () => {
     const data = await fixture();
+    await data.db.insert(employee).values({
+      ...scope,
+      employeeNo: 'EMP-HANDOFF-REPORT',
+      fullName: 'Handoff Direct Report',
+      email: 'handoff.report@example.test',
+      department: 'Operations',
+      jobTitle: 'Coordinator',
+      employmentType: 'Full-time',
+      managerId: data.source.id,
+      startDate: '2026-07-25',
+      baseSalary: '3200.00',
+    });
     const sourceAccount = await provision(data, data.source.id, 'employee.source');
     const targetAccount = await provision(data, data.target.id, 'employee.target');
+    const [managerRole] = await data.db.select().from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.name, 'Manager'),
+    ));
+    expect(await data.db.select().from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, sourceAccount.userId),
+      eq(userCompanyRole.companyFn, scope.companyFn),
+      eq(userCompanyRole.roleId, managerRole.roleId),
+      eq(userCompanyRole.managedBySystem, true),
+    ))).toHaveLength(1);
     await data.db.update(customer).set({ ownerUserId: sourceAccount.userId })
       .where(and(eq(customer.masterFn, scope.masterFn), eq(customer.companyFn, scope.companyFn)));
     await data.db.update(opportunity).set({ ownerUserId: sourceAccount.userId })
@@ -198,6 +222,17 @@ describe('employee account lifecycle', () => {
       eq(appSession.userId, sourceAccount.userId),
       isNull(appSession.revokedAt),
     ))).toHaveLength(0);
+    expect(await data.db.select().from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, sourceAccount.userId),
+      eq(userCompanyRole.companyFn, scope.companyFn),
+      eq(userCompanyRole.roleId, managerRole.roleId),
+    ))).toHaveLength(0);
+    expect(await data.db.select().from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, targetAccount.userId),
+      eq(userCompanyRole.companyFn, scope.companyFn),
+      eq(userCompanyRole.roleId, managerRole.roleId),
+      eq(userCompanyRole.managedBySystem, true),
+    ))).toHaveLength(1);
     // Audit is written by the API boundary; the domain handoff remains an
     // immutable, independently queryable business record.
     expect(await data.db.select().from(auditLog)).toBeDefined();
