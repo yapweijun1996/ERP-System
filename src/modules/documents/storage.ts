@@ -756,6 +756,47 @@ export async function appendManagedDocumentVersion(
   }
 }
 
+export async function readManagedDocumentWithin(
+  exec: DB,
+  scope: Scope,
+  actor: DocumentActor,
+  documentId: number,
+  registry = createDocumentStorageRegistry(),
+  versionNo?: number,
+) {
+  const [document] = await exec.select().from(managedDocument).where(and(
+      eq(managedDocument.masterFn, scope.masterFn),
+      eq(managedDocument.companyFn, scope.companyFn),
+      eq(managedDocument.id, documentId),
+  )).limit(1);
+  if (!document) {
+    throw new DocumentStorageError(
+      'document_missing',
+      'Managed document is unavailable in the active company.',
+      404,
+    );
+  }
+  await assertOwnerAccess(exec, scope, actor, document.ownerUserId);
+  const selectedVersion = versionNo ?? document.currentVersionNo;
+  const [versionRow] = await exec.select().from(documentVersion).where(and(
+    eq(documentVersion.masterFn, scope.masterFn),
+    eq(documentVersion.companyFn, scope.companyFn),
+    eq(documentVersion.documentId, document.id),
+    eq(documentVersion.versionNo, selectedVersion),
+  )).limit(1);
+  if (!versionRow) {
+    throw new DocumentStorageError(
+      'document_version_missing',
+      'Managed document version is unavailable.',
+      404,
+    );
+  }
+  const version = versionContract(versionRow);
+  const content = await registry.get(version.storageBackend)
+    .readWithin(exec, scope, version);
+  return { document, version, content };
+}
+
 export async function readManagedDocument(
   db: DB,
   scope: Scope,
@@ -764,37 +805,6 @@ export async function readManagedDocument(
   registry = createDocumentStorageRegistry(),
   versionNo?: number,
 ) {
-  return withTenantTransaction(db, scope, async (tx) => {
-    const [document] = await tx.select().from(managedDocument).where(and(
-      eq(managedDocument.masterFn, scope.masterFn),
-      eq(managedDocument.companyFn, scope.companyFn),
-      eq(managedDocument.id, documentId),
-    )).limit(1);
-    if (!document) {
-      throw new DocumentStorageError(
-        'document_missing',
-        'Managed document is unavailable in the active company.',
-        404,
-      );
-    }
-    await assertOwnerAccess(tx, scope, actor, document.ownerUserId);
-    const selectedVersion = versionNo ?? document.currentVersionNo;
-    const [versionRow] = await tx.select().from(documentVersion).where(and(
-      eq(documentVersion.masterFn, scope.masterFn),
-      eq(documentVersion.companyFn, scope.companyFn),
-      eq(documentVersion.documentId, document.id),
-      eq(documentVersion.versionNo, selectedVersion),
-    )).limit(1);
-    if (!versionRow) {
-      throw new DocumentStorageError(
-        'document_version_missing',
-        'Managed document version is unavailable.',
-        404,
-      );
-    }
-    const version = versionContract(versionRow);
-    const content = await registry.get(version.storageBackend)
-      .readWithin(tx, scope, version);
-    return { document, version, content };
-  });
+  return withTenantTransaction(db, scope, (tx) =>
+    readManagedDocumentWithin(tx, scope, actor, documentId, registry, versionNo));
 }

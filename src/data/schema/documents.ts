@@ -514,3 +514,40 @@ export const documentTombstone = pgTable('document_tombstone', {
   check('ck_document_tombstone_two_person',
     sql`${t.initiatedByUserId} <> ${t.reviewedByUserId}`),
 ]);
+
+/**
+ * Append-only proof of every user-facing sensitive content access. Document and
+ * version ids deliberately remain scalar facts so this audit survives purge.
+ */
+export const documentAccessEvent = pgTable('document_access_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  documentId: bigint('document_id', { mode: 'number' }).notNull(),
+  versionId: bigint('version_id', { mode: 'number' }).notNull(),
+  versionNo: integer('version_no').notNull(),
+  versionSha256: text('version_sha256').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  accessAction: text('access_action').notNull(),
+  accessPurpose: text('access_purpose').notNull(),
+  accessKey: text('access_key').notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_document_access_event_key')
+    .on(t.masterFn, t.companyFn, t.actorUserId, t.accessKey),
+  index('idx_document_access_event_document')
+    .on(t.masterFn, t.companyFn, t.documentId, t.occurredAt, t.id),
+  index('idx_document_access_event_actor')
+    .on(t.masterFn, t.companyFn, t.actorUserId, t.occurredAt, t.id),
+  check('ck_document_access_event_version', sql`${t.versionNo} > 0`),
+  check('ck_document_access_event_hash',
+    sql`char_length(${t.versionSha256}) = 64
+      and ${t.versionSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_document_access_event_action',
+    sql`${t.accessAction} in ('view','download','print','export')`),
+  check('ck_document_access_event_purpose',
+    sql`char_length(${t.accessPurpose}) between 3 and 500`),
+  check('ck_document_access_event_key',
+    sql`char_length(${t.accessKey}) between 8 and 128
+      and ${t.accessKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+]);

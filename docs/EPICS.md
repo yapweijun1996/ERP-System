@@ -1983,10 +1983,13 @@ deployment; a server-filesystem provider is optional and explicitly single-node.
       paper-original custody block purge. Records Manager initiation plus a distinct
       Finance review is required after retention; execution removes operational
       content and metadata while retaining a permanent hash/version tombstone. PWA v121.
-- [ ] **TASK-122 — Audit document access and storage parity.** Record sensitive
-      view/download/print/export operations, prove database/filesystem parity,
-      quarantine isolation, tenant/privacy rules, retry idempotency and bounded
-      desktop/375px/PWA behavior.
+- [x] **TASK-122 — Audit document access and storage parity.** Migration 0061 adds
+      append-only, purge-surviving access facts for every view/download/print/export:
+      tenant, actor, declared purpose, document/version/hash, stable retry key and
+      timestamp. The content API fails closed before a clean scan, enforces owner or
+      explicit manager access, integrity-checks bytes and records a single event per
+      retry key. Database and filesystem providers pass the same authorization,
+      retention, SHA-256, privacy and tenant proofs. PWA v122.
 
 ## EPIC-055 — Expense Claims & Accounting (Planned)
 

@@ -21,6 +21,11 @@ import {
   transitionDocumentRecordWithin,
   voidDocumentRecordWithin,
 } from '../../modules/documents/governance';
+import {
+  accessManagedDocument,
+  type DocumentAccessAction,
+} from '../../modules/documents/access';
+import { DocumentQuarantineError } from '../../modules/documents/processing';
 import { DocumentStorageError } from '../../modules/documents/storage';
 import { appendAudit } from '../audit';
 import { ActionDispatchError, dispatchAction } from '../actionDispatcher';
@@ -46,11 +51,75 @@ function handleError(res: import('express').Response, error: unknown): void {
     apiError(res, error.status, error.code, error.message);
     return;
   }
+  if (error instanceof DocumentQuarantineError) {
+    apiError(res, 423, error.code, error.message, {
+      action: error.action,
+      scanStatus: error.scanStatus,
+    });
+    return;
+  }
   throw error;
 }
 
 export function createDocumentsRouter(db: DB): Router {
   const router = Router();
+
+  router.get('/:id/content', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    const id = positiveId(req.params.id);
+    if (!id) {
+      apiError(res, 400, 'invalid_id', 'Document id must be a positive integer.');
+      return;
+    }
+    const action = String(req.query.action ?? 'view') as DocumentAccessAction;
+    if (!['view', 'download', 'print', 'export'].includes(action)) {
+      apiError(res, 400, 'document_access_action_invalid', 'Document access action is invalid.');
+      return;
+    }
+    const purpose = req.header('x-document-access-purpose') ?? '';
+    const accessKey = req.header('idempotency-key') ?? '';
+    const rawVersion = req.query.version;
+    const versionNo = rawVersion == null ? undefined : Number(rawVersion);
+    if (versionNo != null && (!Number.isSafeInteger(versionNo) || versionNo <= 0)) {
+      apiError(res, 400, 'document_version_invalid', 'Document version must be positive.');
+      return;
+    }
+    const canManage = await hasPermission(
+      db, session, PERMISSIONS.documentsGovernanceManage,
+    );
+    const canReadSelf = await hasPermission(db, session, PERMISSIONS.employeeSelfRead);
+    if (!canManage && !canReadSelf) {
+      apiError(res, 403, 'permission_denied', 'You cannot access document content.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const stored = await accessManagedDocument(
+        db,
+        scope,
+        { userId: session.userId, canManage },
+        id,
+        { action, purpose, accessKey, versionNo },
+      );
+      const disposition = ['download', 'export'].includes(action) ? 'attachment' : 'inline';
+      const encodedName = encodeURIComponent(stored.document.originalFileName)
+        .replaceAll("'", '%27');
+      res.set({
+        'Content-Type': stored.version.mimeType,
+        'Content-Length': String(stored.content.byteLength),
+        'Content-Disposition': `${disposition}; filename*=UTF-8''${encodedName}`,
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Document-SHA256': stored.version.sha256,
+        'X-Document-Version': String(stored.version.versionNo),
+        'X-Document-Access-Replayed': stored.replayed ? 'true' : 'false',
+      });
+      res.send(Buffer.from(stored.content));
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
 
   router.get('/:id/governance', async (req, res) => {
     const session = await requireSession(db, req, res);

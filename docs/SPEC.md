@@ -124,7 +124,10 @@ Vision extraction through retry-safe jobs. TASK-120 adds immutable field provena
 receipt inbox submission. TASK-121 adds state-governed draft deletion, reasoned Void,
 immutable posted/sealed correction versions, legal hold, paper custody and
 records-manager plus distinct-Finance post-retention purge with a permanent hash
-tombstone. TASK-122–135 remain **Planned** until their individual acceptance gates pass. Planned
+tombstone. TASK-122 adds purge-surviving, retry-stable audit for every sensitive
+view/download/print/export and proves database/filesystem authorization, retention,
+integrity, quarantine and tenant parity. TASK-123–135 remain **Planned** until their
+individual acceptance gates pass. Planned
 capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an

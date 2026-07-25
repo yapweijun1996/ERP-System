@@ -836,8 +836,9 @@ Payroll effects pass five-language desktop/375px and domain/API proof.
 4. **Void, retention and purge** (TASK-121 done 2026-07-26) distinguishes draft
    deletion, submitted/approved reasoned Void, posted/sealed correction versions and
    post-retention two-person purge, with legal hold, paper-original custody and a
-   permanent hash tombstone. **Sensitive access and storage parity** (TASK-122)
-   completes read/download/print/export audit and cross-provider proof.
+   permanent hash tombstone. **Sensitive access and storage parity** (TASK-122 done
+   2026-07-26) completes retry-stable view/download/print/export audit, quarantine
+   isolation and cross-provider authorization/retention/hash proof.
 
 Exit criteria: storage backends, upload limits, quarantine, extraction retry,
 confidence policy, auto-submit attribution, void/purge states, privacy and PWA logout

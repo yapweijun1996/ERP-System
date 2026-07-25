@@ -147,7 +147,8 @@ SG and MY demo companies; production wires real auth.
 > `document_scan_job` and `document_extraction`. TASK-120 adds immutable
 > `document_extraction_field`, `receipt_upload_authorization` and `receipt_inbox_item`
 > entities. TASK-121 adds the managed-document lifecycle, correction, governance-event,
-> purge-request and tombstone entities. The remaining targets for TASK-122–135 are
+> purge-request and tombstone entities. TASK-122 adds immutable sensitive-access
+> events. The remaining targets for TASK-123–135 are
 > **not yet present**. Each task
 > must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
@@ -279,6 +280,7 @@ document_governance_event      immutable state/hold/custody/purge actor trail [0
 document_correction            source to correction/reversal version linkage [0060]
 document_purge_request         records-manager request + distinct Finance review [0060]
 document_tombstone             permanent hash/version provenance after purge [0060]
+document_access_event          view/download/print/export actor-purpose proof [0061]
 ```
 
 Migration 0056 implements the first four rows. Migration 0057 adds positive page-count
@@ -304,7 +306,11 @@ governance lifecycle, reasoned Void, linked correction/reversal versions, tax
 finalisation, paper custody and legal hold. Post-retention purge requires Records
 Manager initiation and a distinct Finance review; it deletes operational content and
 metadata only after revalidation, while preserving a permanent hash/version tombstone.
-Sensitive access auditing and provider-parity proof remain in TASK-122.
+TASK-122 records tenant, actor, declared access purpose, immutable document/version
+hash, action, retry key and timestamp for every user-facing view, download, print or
+export. Events survive governed purge. Content remains inaccessible until the scan is
+clean; both database and filesystem providers pass the same owner/manager, tenant,
+retention and SHA-256 contract.
 
 ### 8.4 Claims, expenses and accounting
 

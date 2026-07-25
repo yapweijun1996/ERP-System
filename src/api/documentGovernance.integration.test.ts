@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../data/db';
 import {
   appUser,
+  documentAccessEvent,
   documentPurgeRequest,
+  documentScanJob,
   documentTombstone,
   managedDocument,
   role,
@@ -226,5 +228,84 @@ describe('document governance API', () => {
         finalSha256: retained.version.sha256,
       },
     });
+  });
+
+  it('fails closed before scan and audits every retry-stable sensitive content access', async () => {
+    const viewer = await login('viewer');
+    const admin = await login('admin');
+    const stored = await uploadReceiptDocument(db, scope, { userId: viewerId }, {
+      clientDraftId: 'api_sensitive_access_001',
+      fileName: 'sensitive-receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+    });
+    const contentUrl = `${baseUrl}/api/documents/${stored.document.id}/content?action=download`;
+    const accessHeaders = {
+      cookie: viewer.cookie,
+      'idempotency-key': 'viewer-download-proof-001',
+      'x-document-access-purpose': 'Prepare employee expense evidence.',
+    };
+    const quarantined = await fetch(contentUrl, { headers: accessHeaders });
+    expect(quarantined.status).toBe(423);
+    expect((await quarantined.json()).error).toMatchObject({
+      code: 'document_quarantined',
+      fieldErrors: { action: 'preview', scanStatus: 'queued' },
+    });
+    expect(await db.select().from(documentAccessEvent)).toHaveLength(0);
+
+    await db.update(documentScanJob).set({
+      status: 'clean',
+      scanner: 'api-proof',
+      resultCode: 'clean',
+      completedAt: new Date('2026-07-26T02:00:00.000Z'),
+    }).where(eq(documentScanJob.versionId, stored.version.id));
+
+    const downloaded = await fetch(contentUrl, { headers: accessHeaders });
+    expect(downloaded.status).toBe(200);
+    expect(downloaded.headers.get('content-type')).toContain('image/jpeg');
+    expect(downloaded.headers.get('content-disposition')).toContain('attachment');
+    expect(downloaded.headers.get('x-document-sha256')).toBe(stored.version.sha256);
+    expect(downloaded.headers.get('x-document-version')).toBe('1');
+    expect(downloaded.headers.get('x-document-access-replayed')).toBe('false');
+    expect(new Uint8Array(await downloaded.arrayBuffer())).toEqual(jpeg);
+
+    const replay = await fetch(contentUrl, { headers: accessHeaders });
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('x-document-access-replayed')).toBe('true');
+    expect(await db.select().from(documentAccessEvent)).toEqual([
+      expect.objectContaining({
+        masterFn: scope.masterFn,
+        companyFn: scope.companyFn,
+        documentId: stored.document.id,
+        versionId: stored.version.id,
+        versionNo: 1,
+        versionSha256: stored.version.sha256,
+        actorUserId: viewerId,
+        accessAction: 'download',
+        accessPurpose: 'Prepare employee expense evidence.',
+      }),
+    ]);
+
+    const managedView = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/content?action=view`,
+      {
+        headers: {
+          cookie: admin.cookie,
+          'idempotency-key': 'manager-view-proof-0001',
+          'x-document-access-purpose': 'Finance evidence verification.',
+        },
+      },
+    );
+    expect(managedView.status).toBe(200);
+    expect(managedView.headers.get('content-disposition')).toContain('inline');
+    expect(await db.select().from(documentAccessEvent)).toHaveLength(2);
+
+    const keyConflict = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/content?action=print`,
+      { headers: accessHeaders },
+    );
+    expect(keyConflict.status).toBe(409);
+    expect((await keyConflict.json()).error.code).toBe('document_access_key_conflict');
+    expect(await db.select().from(documentAccessEvent)).toHaveLength(2);
   });
 });

@@ -35,6 +35,7 @@ import {
   enqueueDocumentProcessing,
   processDocumentJobBatch,
 } from '../modules/documents/processing';
+import { accessManagedDocument } from '../modules/documents/access';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -354,6 +355,32 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
     )).toEqual([expect.objectContaining({
       status: 'ready',
       submissionKind: 'none',
+    })]);
+    const accessedDocument = await accessManagedDocument(
+      db,
+      documentScope,
+      { userId: accepted.userId },
+      createdDocument.document.id,
+      {
+        action: 'download',
+        purpose: 'PostgreSQL tenant-scoped evidence proof.',
+        accessKey: 'pg-document-access-0001',
+        versionNo: appendedDocument.version.versionNo,
+      },
+      documentRegistry,
+    );
+    expect(accessedDocument.content).toEqual(documentV2);
+    expect(await db.select().from(schema.documentAccessEvent)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.documentAccessEvent),
+    )).toEqual([expect.objectContaining({
+      documentId: createdDocument.document.id,
+      versionId: appendedDocument.version.id,
+      actorUserId: accepted.userId,
+      accessAction: 'download',
+      accessPurpose: 'PostgreSQL tenant-scoped evidence proof.',
     })]);
 
     await requestPasswordReset(

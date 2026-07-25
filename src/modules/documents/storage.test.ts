@@ -6,8 +6,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import {
   appUser,
+  documentAccessEvent,
   documentBlob,
   documentFileLocation,
+  documentScanJob,
   documentVersion,
   managedDocument,
 } from '../../data/schema';
@@ -23,6 +25,7 @@ import {
   FilesystemDocumentStorageProvider,
   readManagedDocument,
 } from './storage';
+import { accessManagedDocument } from './access';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
 const tempRoots: string[] = [];
@@ -158,12 +161,103 @@ async function proveProviderParity(
   );
   expect(appendReplay.replayed).toBe(true);
   expect(await db.select().from(documentVersion)).toHaveLength(2);
+  await db.insert(documentScanJob).values([
+    {
+      ...scope,
+      versionId: created.version.id,
+      status: 'clean',
+      scanner: 'parity-proof',
+      resultCode: 'clean',
+      completedAt: new Date('2026-07-26T00:00:00.000Z'),
+    },
+    {
+      ...scope,
+      versionId: appended.version.id,
+      status: 'clean',
+      scanner: 'parity-proof',
+      resultCode: 'clean',
+      completedAt: new Date('2026-07-26T00:00:00.000Z'),
+    },
+  ]);
   expect((await readManagedDocument(
     db, scope, { userId: viewer.userId }, created.document.id, registry,
   )).content).toEqual(secondContent);
   expect((await readManagedDocument(
     db, scope, { userId: viewer.userId }, created.document.id, registry, 1,
   )).content).toEqual(firstContent);
+  const accessed = await accessManagedDocument(
+    db,
+    scope,
+    { userId: viewer.userId },
+    created.document.id,
+    {
+      action: 'download',
+      purpose: 'Employee expense evidence review.',
+      accessKey: `download-${backend}-0001`,
+    },
+    registry,
+    new Date('2026-07-26T01:00:00.000Z'),
+  );
+  expect(accessed).toMatchObject({
+    replayed: false,
+    version: {
+      id: appended.version.id,
+      versionNo: 2,
+      storageBackend: backend,
+      sha256: createHash('sha256').update(secondContent).digest('hex'),
+    },
+    access: {
+      documentId: created.document.id,
+      versionId: appended.version.id,
+      versionNo: 2,
+      actorUserId: viewer.userId,
+      accessAction: 'download',
+      accessPurpose: 'Employee expense evidence review.',
+      occurredAt: new Date('2026-07-26T01:00:00.000Z'),
+    },
+  });
+  expect((await accessManagedDocument(
+    db,
+    scope,
+    { userId: viewer.userId },
+    created.document.id,
+    {
+      action: 'download',
+      purpose: 'Employee expense evidence review.',
+      accessKey: `download-${backend}-0001`,
+    },
+    registry,
+  )).replayed).toBe(true);
+  expect(await db.select().from(documentAccessEvent)).toHaveLength(1);
+  await expect(accessManagedDocument(
+    db,
+    scope,
+    { userId: admin.userId },
+    created.document.id,
+    {
+      action: 'view',
+      purpose: 'Unauthorized employee evidence access.',
+      accessKey: `unauthorized-${backend}-0001`,
+    },
+    registry,
+  )).rejects.toMatchObject({ code: 'document_access_denied', status: 403 });
+  await expect(accessManagedDocument(
+    db,
+    { masterFn: 'M1', companyFn: 'C-MY' },
+    { userId: admin.userId, canManage: true },
+    created.document.id,
+    {
+      action: 'view',
+      purpose: 'Cross-tenant evidence access.',
+      accessKey: `cross-tenant-${backend}-0001`,
+    },
+    registry,
+  )).rejects.toMatchObject({ code: 'document_missing', status: 404 });
+  expect(await db.select().from(documentAccessEvent)).toHaveLength(1);
+  await expect(db.update(documentAccessEvent).set({
+    accessPurpose: 'Mutated purpose.',
+  })).rejects.toThrow();
+  await expect(db.delete(documentAccessEvent)).rejects.toThrow();
 
   await expect(db.update(documentVersion).set({ sha256: '0'.repeat(64) })
     .where(eq(documentVersion.id, created.version.id))).rejects.toThrow();
@@ -263,5 +357,40 @@ describe('DocumentStorageProvider', () => {
       { ...base, content: new TextEncoder().encode('two') },
       registry,
     )).rejects.toMatchObject({ code: 'document_key_conflict', status: 409 });
+  });
+
+  it('keeps quarantined content isolated and records no access event', async () => {
+    const { db, viewer } = await fixture();
+    const stored = await createManagedDocument(db, scope, { userId: viewer.userId }, {
+      documentKey: 'receipt:quarantine-access',
+      purpose: 'receipt',
+      ownerUserId: viewer.userId,
+      originalFileName: 'quarantined.txt',
+      mimeType: 'text/plain',
+      retentionUntil: new Date('2033-12-31T00:00:00.000Z'),
+      content: new TextEncoder().encode('quarantined content'),
+    });
+    await db.insert(documentScanJob).values({
+      ...scope,
+      versionId: stored.version.id,
+      status: 'unavailable',
+      lastError: 'Scanner unavailable.',
+    });
+    await expect(accessManagedDocument(
+      db,
+      scope,
+      { userId: viewer.userId },
+      stored.document.id,
+      {
+        action: 'view',
+        purpose: 'Employee evidence review.',
+        accessKey: 'quarantine-view-0001',
+      },
+    )).rejects.toMatchObject({
+      code: 'document_quarantined',
+      action: 'preview',
+      scanStatus: 'unavailable',
+    });
+    expect(await db.select().from(documentAccessEvent)).toHaveLength(0);
   });
 });
