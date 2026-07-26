@@ -875,7 +875,7 @@ Exit criteria: authoring, extraction handoff, partial decisions, duplicate overr
 FX, allocation, budget, card matching, advances and balanced idempotent posting pass
 domain/API/browser and current release gates.
 
-## Phase 38 — Reimbursement Payments & Tax Evidence (In Progress)
+## Phase 38 — Reimbursement Payments & Tax Evidence (Complete)
 
 1. **Payout profiles and maker/checker settlement** (EPIC-056) now has encrypted,
    masked, independently verified employee bank profiles (TASK-130 done 2026-07-26)
@@ -891,8 +891,10 @@ domain/API/browser and current release gates.
    versions, requires linear superseding corrections with SHA-256 difference
    manifests, snapshots effective country/company retention and applies
    chain-scoped append-only legal holds.
-3. **Complete release proof** (TASK-135) validates the full identity/leave/payroll and
-   receipt/expense/payment/tax chains without adding direct bank API or direct
+3. **Complete release proof** (TASK-135 done 2026-07-26) validates the full
+   identity/leave/payroll and receipt/expense/payment/tax chains through the
+   executable evidence index, five-language responsive audits, real PostgreSQL
+   forced RLS and every release gate, without adding direct bank API or direct
    IRAS/LHDN filing.
 
 Exit criteria: payout privacy, maker/checker separation, partial payment replay,

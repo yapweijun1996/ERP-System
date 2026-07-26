@@ -5,6 +5,18 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Verified (2026-07-26 — TASK-135 employee-to-tax release proof)
+- Added `docs/EMPLOYEE_TO_TAX_RELEASE_PROOF.md`, mapping every stage from employee
+  activation and leave/Payroll through receipt, expense, payment, partial bank
+  outcome and sealed tax correction to its executable domain/API/PostgreSQL proof.
+- The acceptance matrix explicitly covers success/replay, fail-closed and partial
+  failure, Void/correction, cross-tenant RLS denial, sensitive masking/audit and the
+  honest API-only boundary for Node scan/report workers.
+- Final gates pass: 506 tests plus one expected skip, real PostgreSQL 16
+  non-superuser forced RLS, PGlite schema v72 across 73 migrations, 226-table parity,
+  dual typechecks/builds, lint, Demo transactions, desktop/375px smoke, five-language
+  expense privacy/failure states and 122 Canonical / 0 Preview routes.
+
 ### Added (2026-07-26 — TASK-134 tax pack finalisation and retention)
 - Migration 0072 adds effective-dated immutable tax retention policy versions,
   immutable sealed package envelopes, linear supersession links, SHA-256 difference

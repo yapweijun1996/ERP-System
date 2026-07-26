@@ -2053,7 +2053,7 @@ approval is the accounting boundary.
       dedicated five-language fixture audit plus the 122-route desktop/mobile audit
       proves the standard layouts, failure states and zero page overflow. PWA v129.
 
-## EPIC-056 — Reimbursement Payments & Tax Evidence (In Progress)
+## EPIC-056 — Reimbursement Payments & Tax Evidence (Complete)
 
 Complete the employee-expense chain with encrypted payout details, maker/checker bank
 files and immutable tax-support packages. This epic does not call bank APIs and does
@@ -2073,18 +2073,22 @@ not submit returns directly to IRAS or LHDN.
       every profile version, snapshots only its encrypted envelope, hashes the complete
       release facts and freezes both batch and membership with database triggers.
       PWA v131.
-- [ ] **TASK-132 — Export bank files and import payment outcomes.** Provide configured
+- [x] **TASK-132 — Export bank files and import payment outcomes.** Provide configured
       bank templates, immutable release snapshot, bank reference/result capture,
       partial-success handling and retry of failed lines without duplicate payment;
       post Dr Employee Payable / Cr Bank only for successful lines.
-- [ ] **TASK-133 — Build the Tax Evidence Center and report jobs.** Filter by period,
+- [x] **TASK-133 — Build the Tax Evidence Center and report jobs.** Filter by period,
       category, project, tax status and evidence completeness; generate a register,
       merged PDF, XLSX/CSV, original-file ZIP and SHA-256 manifest from one snapshot.
-- [ ] **TASK-134 — Add tax-pack finalisation and corrections.** Seal immutable versions,
+- [x] **TASK-134 — Add tax-pack finalisation and corrections.** Seal immutable versions,
       create superseding correction packs with an explicit difference report, retain
       SG records for at least five years and MY records for at least seven years,
       enforce longer company policy/legal hold and never silently overwrite evidence.
-- [ ] **TASK-135 — Prove the complete employee-to-tax chain.** Verify account
+- [x] **TASK-135 — Prove the complete employee-to-tax chain.** Verify account
       activation → leave → payroll effect and receipt → claim → approval → balanced
       posting → maker/checker payment → bank result → immutable tax package across
       Demo/API, five languages, tenant/privacy boundaries and all release gates.
+      The executable evidence index is
+      `docs/EMPLOYEE_TO_TAX_RELEASE_PROOF.md`; the final proof passed 506 tests plus
+      one expected skip, real PostgreSQL 16 forced RLS, 226-table parity, both builds,
+      desktop/375px smoke, five-language expense states and all 122 Canonical routes.

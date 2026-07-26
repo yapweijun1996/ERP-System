@@ -1391,8 +1391,11 @@ outcomes, failed-line retry and successful-line-only settlement. TASK-133 delive
 immutable filtered tax snapshots and retry-safe reconciled PDF/XLSX/CSV/ZIP/manifest
 artifact sets with sensitive access audit. TASK-134 delivered immutable sealed-pack
 version chains, correction difference manifests, effective-dated SG/MY/company
-retention and chain-scoped append-only legal holds. TASK-135 remains a planning record
-and must not be counted as a complete end-to-end release proof until its gates pass.
+retention and chain-scoped append-only legal holds. TASK-135 completed the executable
+employee-to-tax evidence index and final release proof: account activation,
+leave/Payroll, receipt, claim approval, balanced posting, maker/checker, partial bank
+outcome and immutable tax correction are covered by PGlite/API tests plus real
+PostgreSQL forced RLS, five languages and responsive audits.
 
 The programme is intentionally ordered:
 
@@ -1428,11 +1431,11 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 133 tasks, including TASK-134
+- Done: 134 tasks, including TASK-135
 - Blocked: TASK-017 (1)
-- Todo: 1 planned task (TASK-135) across EPIC-056. It extends the product
-  beyond the current 122 Canonical / 0 Preview boundary; they do not reopen or
-  downgrade existing routes. Current visual-layout convergence covers 47 audited
+- Todo: 0 planned tasks. EPIC-056 is complete at the current 122 Canonical /
+  0 Preview boundary; it did not reopen or downgrade existing routes. Current
+  visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future
   Leave/Receipt/Expense/Tax routes must join the appropriate existing SSOT only after
   governed Demo/API behavior exists.
