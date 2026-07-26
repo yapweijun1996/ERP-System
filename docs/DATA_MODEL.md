@@ -152,8 +152,9 @@ SG and MY demo companies; production wires real auth.
 > 8.4. TASK-124 adds the employee claim, line, allocation, authorization, revision and
 > event entities. TASK-125 adds the five control, assessment, signal, override and
 > line-approval entities listed below. TASK-126 adds the corporate-card import,
-> transaction, candidate, follow-up and event entities. The remaining targets for
-> TASK-127–135 are
+> transaction, candidate, follow-up and event entities. TASK-127 adds the allowance
+> policy/calculation and cash-advance application/posting/event entities. The remaining
+> targets for TASK-128–135 are
 > **not yet present**. Each task
 > must add migrations,
 > tenant indexes, API contracts and cross-engine proofs before its capability becomes
@@ -338,7 +339,12 @@ corporate_card_transaction      imported statement line and reconciliation state
 corporate_card_match_candidate  reviewable confidence and reason evidence
 corporate_card_follow_up        unresolved holder/missing receipt work item
 corporate_card_event            append-only import/review/follow-up history
-cash_advance                    issue, application and outstanding balance
+expense_allowance_policy_version confirmed mileage/per-diem unit and rate
+expense_allowance_calculation   immutable no-receipt formula evidence and approval
+cash_advance                    issue and exactly reconciled closing projection
+cash_advance_application        immutable approved expense/allowance source
+cash_advance_posting            paired GL ids for issue/application/repayment
+cash_advance_event              append-only issue/close evidence
 expense_posting                 idempotent balanced GL linkage
 ```
 
@@ -387,6 +393,17 @@ receipt date within two days; confidence and the contributing reasons remain vis
 until Finance explicitly accepts or rejects. Unknown holders, no candidate and
 exhausted suggestions persist as follow-up. Import facts and event history are
 append-only, while guarded projections allow only valid review and resolution changes.
+
+Migration 0066 implements `expense_allowance_policy_version`,
+`expense_allowance_calculation`, `cash_advance`, `cash_advance_application`,
+`cash_advance_posting` and `cash_advance_event`. Mileage and per-diem calculations
+select exactly one confirmed policy for the service date and retain its version,
+unit, Decimal rate/units/amount, formula and explicit no-receipt treatment. An advance
+posts its issue to Advance Receivable and Bank. Closing accepts only approved,
+unapplied employee-owned sources in functional currency, applies the lesser of total
+expenses and advance, requires the remaining employee repayment exactly, and records
+any excess as employee payable. Every posting stores both balanced GL leg ids; source,
+posting and event evidence cannot be rewritten or deleted.
 
 Approved employee-paid expenses post Dr Expense/Input Tax and Cr Employee Payable;
 company-paid expenses credit the configured bank/card clearing account. Original and

@@ -463,6 +463,13 @@
       "when": 1785019828273,
       "tag": "0065_corporate_card_reconciliation",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1785021378068,
+      "tag": "0066_allowances_cash_advances",
+      "breakpoints": true
     }
   ]
 }

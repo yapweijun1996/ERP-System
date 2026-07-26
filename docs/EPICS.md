@@ -2030,9 +2030,13 @@ approval is the accounting boundary.
       or rejection. Unknown holders, missing receipts and rejected suggestions create
       persistent assigned follow-up; resolve/waive actions and every review state are
       append-only audited. PWA v126.
-- [ ] **TASK-127 — Add mileage, per diem and cash advances.** Calculate policy rates
-      without inventing receipts, require advance settlement and post employee
-      receivable/payable differences through explicit workflows.
+- [x] **TASK-127 — Add mileage, per diem and cash advances.** Migration 0066 snapshots
+      confirmed effective mileage/per-diem rate, unit, policy version, Decimal result
+      and formula evidence while explicitly requiring no receipt. Finance approval is
+      separate from the employee owner. Cash-advance issue, approved-source application
+      and exact employee repayment reconcile before close; balanced paired GL entries,
+      employee-payable difference, applications and lifecycle events remain immutable
+      and tenant scoped. PWA v127.
 - [ ] **TASK-128 — Post approved expenses and employee payables.** On final Finance
       approval post balanced Expense/Input Tax against Employee Payable or the
       configured company-paid clearing/bank account; preserve Decimal, period-lock,

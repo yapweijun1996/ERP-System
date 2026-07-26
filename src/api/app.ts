@@ -28,6 +28,7 @@ import { createDocumentsRouter } from './routes/documents';
 import { createExpensePoliciesRouter } from './routes/expensePolicies';
 import { createExpenseApprovalsRouter } from './routes/expenseApprovals';
 import { createCorporateCardsRouter } from './routes/corporateCards';
+import { createAllowancesAdvancesRouter } from './routes/allowancesAdvances';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -111,6 +112,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/expense-policies', createExpensePoliciesRouter(db));
   app.use('/api/expense-approvals', createExpenseApprovalsRouter(db));
   app.use('/api/corporate-cards', createCorporateCardsRouter(db));
+  app.use('/api/expense-settlements', createAllowancesAdvancesRouter(db));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
 

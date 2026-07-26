@@ -47,6 +47,13 @@ import {
 } from '../modules/expenses/claims';
 import { configureExpenseControlPolicyVersion } from '../modules/expenses/controls';
 import { importCorporateCardStatement } from '../modules/expenses/corporateCards';
+import {
+  approveAllowanceCalculationWithin,
+  calculateAllowance,
+  closeCashAdvance,
+  configureAllowancePolicyVersion,
+  issueCashAdvance,
+} from '../modules/expenses/allowancesAdvances';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -400,6 +407,80 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       expenseScope,
       (tx) => tx.select().from(schema.corporateCardFollowUp),
     )).toHaveLength(1);
+
+    await configureAllowancePolicyVersion(db, expenseScope, admin.userId, {
+      policyKey: 'pg-mileage',
+      versionNo: 1,
+      allowanceType: 'mileage',
+      unit: 'km',
+      rate: '1',
+      currency: 'SGD',
+      effectiveFrom: '2026-01-01',
+    });
+    const mileage = await calculateAllowance(db, expenseScope, accepted.userId, {
+      calculationKey: 'pg-mileage-calc-0001',
+      allowanceType: 'mileage',
+      serviceDate: '2026-07-26',
+      units: '30',
+    });
+    await withTenantTransaction(db, expenseScope, (tx) =>
+      approveAllowanceCalculationWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        mileage.calculation.id,
+      ));
+    const [advanceEmployee] = await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.employee)
+        .where(eq(schema.employee.userId, accepted.userId)),
+    );
+    const [bankAccount] = await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.insert(schema.account).values({
+        ...expenseScope,
+        code: '1000',
+        name: 'Cash at Bank',
+        type: 'asset',
+      }).returning(),
+    );
+    const advance = await issueCashAdvance(db, expenseScope, admin.userId, {
+      advanceKey: 'pg-cash-advance-0001',
+      advanceNo: 'PG-CA-0001',
+      employeeId: advanceEmployee.id,
+      currency: 'SGD',
+      issuedAmount: '100',
+      issuedDate: '2026-07-26',
+      purpose: 'PostgreSQL RLS cash advance proof',
+      advanceReceivableAccountId: companyClearing.id,
+      employeePayableAccountId: employeePayable.id,
+      bankAccountId: bankAccount.id,
+    });
+    const settledAdvance = await closeCashAdvance(
+      db,
+      expenseScope,
+      admin.userId,
+      advance.advance.id,
+      {
+        sources: [{ sourceType: 'allowance', sourceId: mileage.calculation.id }],
+        employeeRepaidAmount: '70',
+        reason: 'PostgreSQL allowance and repayment reconcile exactly.',
+      },
+    );
+    expect(settledAdvance.advance).toMatchObject({
+      status: 'closed',
+      employeeRepaidAmount: '70.00',
+      employeePayableDifference: '0.00',
+    });
+    expect(await db.select().from(schema.expenseAllowanceCalculation)).toHaveLength(0);
+    expect(await db.select().from(schema.cashAdvancePosting)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.cashAdvancePosting),
+    )).toHaveLength(3);
 
     const documentScope = {
       masterFn: setup.masterFn,

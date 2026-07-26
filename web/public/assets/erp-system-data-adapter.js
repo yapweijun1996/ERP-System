@@ -36,8 +36,8 @@
 
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
-  var BOOT_TIMEOUT_MS = 20000;
-  var DEMO_SCHEMA_VERSION = 65;
+  var BOOT_TIMEOUT_MS = 45000;
+  var DEMO_SCHEMA_VERSION = 66;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web

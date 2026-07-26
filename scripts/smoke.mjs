@@ -105,8 +105,8 @@ async function checkViewport(browser, viewport) {
   try {
     // Network idle does not mean the WASM database finished its cold start.
     // Keep the DOM locator alive across a possible service-worker navigation
-    // and allow more than the adapter's bounded 20s fallback watchdog.
-    await page.waitForSelector('.dashgrid', { timeout: 45000, state: 'visible' });
+    // and allow more than the adapter's bounded 45s fallback watchdog.
+    await page.waitForSelector('.dashgrid', { timeout: 60000, state: 'visible' });
     dashboardVisible = true;
   } catch (e) {
     errors.push(`[content] .dashgrid (dashboard cards) never appeared: ${e.message}`);
@@ -858,20 +858,28 @@ async function checkViewport(browser, viewport) {
 let previewProc;
 let exitCode = 0;
 try {
-  console.log(`Starting vite preview on ${BASE_URL} (serving web/dist/)...`);
-  previewProc = await startPreviewServer();
-
   const browser = await chromium.launch();
   try {
     for (const viewport of VIEWPORTS) {
+      console.log(`Starting vite preview on ${BASE_URL} (serving web/dist/)...`);
+      previewProc = await startPreviewServer();
       console.log(`Checking ${viewport.name} (${viewport.width}x${viewport.height})...`);
-      const result = await checkViewport(browser, viewport);
-      if (result.errors.length) {
-        exitCode = 1;
-        console.error(`FAIL [${result.viewport}] title="${result.title}" dashboardVisible=${result.dashboardVisible}`);
-        for (const e of result.errors) console.error(`  ${e}`);
-      } else {
-        console.log(`PASS [${result.viewport}] title="${result.title}" — dashboard rendered, zero console/page errors.`);
+      try {
+        const result = await checkViewport(browser, viewport);
+        if (result.errors.length) {
+          exitCode = 1;
+          console.error(`FAIL [${result.viewport}] title="${result.title}" dashboardVisible=${result.dashboardVisible}`);
+          for (const e of result.errors) console.error(`  ${e}`);
+        } else {
+          console.log(`PASS [${result.viewport}] title="${result.title}" — dashboard rendered, zero console/page errors.`);
+        }
+      } finally {
+        if (previewProc) {
+          const stopped = new Promise((resolve) => previewProc.once('exit', resolve));
+          previewProc.kill();
+          if (previewProc.exitCode == null) await stopped;
+          previewProc = null;
+        }
       }
     }
   } finally {

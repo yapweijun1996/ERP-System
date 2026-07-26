@@ -1266,6 +1266,26 @@ event history. Final gates pass lint, dual typecheck, 488 tests plus one expecte
 66 migrations at schema version 65, 197-table drift, API/Demo builds, smoke, all 121
 desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof. PWA v126.
 
+### Mileage, per diem and cash advances (TASK-127)
+
+Migration 0066 adds confirmed, non-overlapping mileage and per-diem policy versions
+plus employee-owned calculation snapshots. Every calculation retains the applicable
+policy id/version, service date, unit, Decimal units/rate/amount, formula evidence and
+an explicit `receipt_required=false`; Finance approval cannot be performed by the
+employee who owns the calculation.
+
+Cash-advance issue is replay-safe and posts a balanced Dr Advance Receivable / Cr Bank
+pair. Closing locks the issued advance, accepts only approved unapplied allowance or
+employee-paid claim-line sources for the same employee and functional currency, and
+requires employee repayment to equal the remaining advance exactly. Application posts
+Dr Employee Payable / Cr Advance Receivable, repayment posts Dr Bank / Cr Advance
+Receivable, and any expense excess remains an explicit employee-payable difference.
+Applications, paired GL links and lifecycle events are immutable and tenant scoped.
+`/api/expense-settlements` exposes governed policy, calculation, approval, issue, close
+and queue operations. Final gates pass lint, dual typecheck, 492 tests plus one expected
+skip, 67 migrations at schema version 66, 203-table drift, API/Demo builds, smoke, all
+121 desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof. PWA v127.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1281,8 +1301,9 @@ the confidence-governed receipt inbox, TASK-121 delivered document lifecycle,
 correction and two-person retention purge, TASK-122 delivered sensitive access audit
 plus storage parity, TASK-123 delivered effective tax/FX/GL expense policy and
 TASK-124 delivered employee-owned multi-line claims with exact allocation and TASK-125
-delivered line approval, duplicate risk and budget control, and TASK-126 delivered
-bounded corporate-card reconciliation. TASK-127 through TASK-135
+delivered line approval, duplicate risk and budget control, TASK-126 delivered bounded
+corporate-card reconciliation, and TASK-127 delivered versioned allowance calculations
+and reconciled cash advances. TASK-128 through TASK-135
 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
@@ -1321,9 +1342,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 125 tasks, including TASK-126
+- Done: 126 tasks, including TASK-127
 - Blocked: TASK-017 (1)
-- Todo: 9 planned tasks (TASK-127–135) across EPIC-055–056. These extend the product
+- Todo: 8 planned tasks (TASK-128–135) across EPIC-055–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

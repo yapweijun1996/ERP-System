@@ -15,7 +15,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { appUser } from './tenancy';
-import { account } from './finance';
+import { account, glEntry } from './finance';
 import { currency } from './localization';
 import { documentVersion, receiptInboxItem } from './documents';
 import { budgetLine, budgetVersion } from './reporting';
@@ -740,5 +740,231 @@ export const corporateCardEvent = pgTable('corporate_card_event', {
       'follow_up_opened','follow_up_resolved','follow_up_waived'
     )`),
   check('ck_corporate_card_event_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
+]);
+
+/** Confirmed effective-dated mileage or per-diem rate. */
+export const expenseAllowancePolicyVersion = pgTable('expense_allowance_policy_version', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  policyKey: text('policy_key').notNull(),
+  versionNo: integer('version_no').notNull(),
+  allowanceType: text('allowance_type').notNull(),
+  unit: text('unit').notNull(),
+  rate: numeric('rate', { precision: 18, scale: 4 }).notNull(),
+  currency: text('currency').notNull(),
+  maximumUnits: numeric('maximum_units', { precision: 18, scale: 4 }),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  status: text('status').notNull().default('confirmed'),
+  confirmedByUserId: bigint('confirmed_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_expense_allowance_policy_version')
+    .on(t.masterFn, t.companyFn, t.policyKey, t.versionNo),
+  index('idx_expense_allowance_policy_effective')
+    .on(t.masterFn, t.companyFn, t.allowanceType, t.status, t.effectiveFrom, t.id),
+  check('ck_expense_allowance_policy_key',
+    sql`${t.policyKey} ~ '^[a-z][a-z0-9._-]{2,63}$'`),
+  check('ck_expense_allowance_policy_type',
+    sql`(${t.allowanceType} = 'mileage' and ${t.unit} = 'km')
+      or (${t.allowanceType} = 'per_diem' and ${t.unit} = 'day')`),
+  check('ck_expense_allowance_policy_rate', sql`${t.rate} > 0`),
+  check('ck_expense_allowance_policy_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_expense_allowance_policy_max',
+    sql`${t.maximumUnits} is null or ${t.maximumUnits} > 0`),
+  check('ck_expense_allowance_policy_dates',
+    sql`${t.effectiveTo} is null or ${t.effectiveTo} >= ${t.effectiveFrom}`),
+  check('ck_expense_allowance_policy_status', sql`${t.status} = 'confirmed'`),
+  check('ck_expense_allowance_policy_version_no', sql`${t.versionNo} > 0`),
+]);
+
+/** Immutable non-receipt calculation snapshot; Finance controls approval/application. */
+export const expenseAllowanceCalculation = pgTable('expense_allowance_calculation', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  calculationKey: text('calculation_key').notNull(),
+  ownerUserId: bigint('owner_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  employeeId: bigint('employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  policyVersionId: bigint('policy_version_id', { mode: 'number' }).notNull()
+    .references(() => expenseAllowancePolicyVersion.id),
+  allowanceType: text('allowance_type').notNull(),
+  serviceDate: date('service_date').notNull(),
+  unit: text('unit').notNull(),
+  units: numeric('units', { precision: 18, scale: 4 }).notNull(),
+  rate: numeric('rate', { precision: 18, scale: 4 }).notNull(),
+  amount: numeric('amount', { precision: 18, scale: 4 }).notNull(),
+  currency: text('currency').notNull(),
+  receiptRequired: boolean('receipt_required').notNull().default(false),
+  calculationEvidence: jsonb('calculation_evidence').notNull(),
+  status: text('status').notNull().default('calculated'),
+  approvedByUserId: bigint('approved_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  appliedAt: timestamp('applied_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_expense_allowance_calculation_key')
+    .on(t.masterFn, t.companyFn, t.calculationKey),
+  index('idx_expense_allowance_calculation_owner')
+    .on(t.masterFn, t.companyFn, t.ownerUserId, t.status, t.serviceDate, t.id),
+  check('ck_expense_allowance_calculation_type',
+    sql`(${t.allowanceType} = 'mileage' and ${t.unit} = 'km')
+      or (${t.allowanceType} = 'per_diem' and ${t.unit} = 'day')`),
+  check('ck_expense_allowance_calculation_amounts',
+    sql`${t.units} > 0 and ${t.rate} > 0 and ${t.amount} > 0`),
+  check('ck_expense_allowance_calculation_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_expense_allowance_no_receipt', sql`${t.receiptRequired} = false`),
+  check('ck_expense_allowance_calculation_status',
+    sql`${t.status} in ('calculated','approved','applied')`),
+  check('ck_expense_allowance_calculation_approval',
+    sql`(${t.status} = 'calculated'
+      and ${t.approvedByUserId} is null and ${t.approvedAt} is null and ${t.appliedAt} is null)
+      or (${t.status} = 'approved'
+        and ${t.approvedByUserId} is not null and ${t.approvedAt} is not null
+        and ${t.appliedAt} is null)
+      or (${t.status} = 'applied'
+        and ${t.approvedByUserId} is not null and ${t.approvedAt} is not null
+        and ${t.appliedAt} is not null)`),
+]);
+
+/** Employee cash advance with immutable issue facts and one exact closing settlement. */
+export const cashAdvance = pgTable('cash_advance', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  advanceKey: text('advance_key').notNull(),
+  advanceNo: text('advance_no').notNull(),
+  employeeId: bigint('employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  ownerUserId: bigint('owner_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  currency: text('currency').notNull(),
+  issuedAmount: numeric('issued_amount', { precision: 18, scale: 2 }).notNull(),
+  issuedDate: date('issued_date').notNull(),
+  purpose: text('purpose').notNull(),
+  advanceReceivableAccountId: bigint('advance_receivable_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  employeePayableAccountId: bigint('employee_payable_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  bankAccountId: bigint('bank_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  status: text('status').notNull().default('issued'),
+  appliedExpenseAmount: numeric('applied_expense_amount', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  employeeRepaidAmount: numeric('employee_repaid_amount', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  employeePayableDifference: numeric('employee_payable_difference', { precision: 18, scale: 2 })
+    .notNull().default('0'),
+  closedByUserId: bigint('closed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  closedAt: timestamp('closed_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_cash_advance_key').on(t.masterFn, t.companyFn, t.advanceKey),
+  uniqueIndex('uq_cash_advance_no').on(t.masterFn, t.companyFn, t.advanceNo),
+  index('idx_cash_advance_employee')
+    .on(t.masterFn, t.companyFn, t.employeeId, t.status, t.id),
+  check('ck_cash_advance_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_cash_advance_amounts',
+    sql`${t.issuedAmount} > 0 and ${t.appliedExpenseAmount} >= 0
+      and ${t.employeeRepaidAmount} >= 0 and ${t.employeePayableDifference} >= 0`),
+  check('ck_cash_advance_status', sql`${t.status} in ('issued','closed')`),
+  check('ck_cash_advance_close',
+    sql`(${t.status} = 'issued'
+      and ${t.appliedExpenseAmount} = 0 and ${t.employeeRepaidAmount} = 0
+      and ${t.employeePayableDifference} = 0
+      and ${t.closedByUserId} is null and ${t.closedAt} is null)
+      or (${t.status} = 'closed'
+        and ${t.closedByUserId} is not null and ${t.closedAt} is not null)`),
+  check('ck_cash_advance_version', sql`${t.version} > 0`),
+  check('ck_cash_advance_purpose', sql`char_length(${t.purpose}) between 3 and 500`),
+]);
+
+/** Immutable approved source included in one closing settlement. */
+export const cashAdvanceApplication = pgTable('cash_advance_application', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  advanceId: bigint('advance_id', { mode: 'number' }).notNull()
+    .references(() => cashAdvance.id),
+  sourceType: text('source_type').notNull(),
+  expenseClaimLineId: bigint('expense_claim_line_id', { mode: 'number' })
+    .references(() => expenseClaimLine.id),
+  allowanceCalculationId: bigint('allowance_calculation_id', { mode: 'number' })
+    .references(() => expenseAllowanceCalculation.id),
+  amount: numeric('amount', { precision: 18, scale: 2 }).notNull(),
+  appliedByUserId: bigint('applied_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  appliedAt: timestamp('applied_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_cash_advance_application_claim_line')
+    .on(t.masterFn, t.companyFn, t.expenseClaimLineId)
+    .where(sql`${t.expenseClaimLineId} is not null`),
+  uniqueIndex('uq_cash_advance_application_allowance')
+    .on(t.masterFn, t.companyFn, t.allowanceCalculationId)
+    .where(sql`${t.allowanceCalculationId} is not null`),
+  index('idx_cash_advance_application_advance')
+    .on(t.masterFn, t.companyFn, t.advanceId, t.id),
+  check('ck_cash_advance_application_source',
+    sql`(${t.sourceType} = 'expense_claim_line'
+      and ${t.expenseClaimLineId} is not null and ${t.allowanceCalculationId} is null)
+      or (${t.sourceType} = 'allowance'
+        and ${t.expenseClaimLineId} is null and ${t.allowanceCalculationId} is not null)`),
+  check('ck_cash_advance_application_amount', sql`${t.amount} > 0`),
+]);
+
+/** Explicit two-leg GL evidence for issue, application, or employee repayment. */
+export const cashAdvancePosting = pgTable('cash_advance_posting', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  advanceId: bigint('advance_id', { mode: 'number' }).notNull()
+    .references(() => cashAdvance.id),
+  postingType: text('posting_type').notNull(),
+  journalRef: text('journal_ref').notNull(),
+  amount: numeric('amount', { precision: 18, scale: 2 }).notNull(),
+  debitAccountId: bigint('debit_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  creditAccountId: bigint('credit_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  debitGlEntryId: bigint('debit_gl_entry_id', { mode: 'number' }).notNull()
+    .references(() => glEntry.id),
+  creditGlEntryId: bigint('credit_gl_entry_id', { mode: 'number' }).notNull()
+    .references(() => glEntry.id),
+  postedByUserId: bigint('posted_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  postedAt: timestamp('posted_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_cash_advance_posting_type')
+    .on(t.masterFn, t.companyFn, t.advanceId, t.postingType),
+  uniqueIndex('uq_cash_advance_posting_ref')
+    .on(t.masterFn, t.companyFn, t.journalRef),
+  check('ck_cash_advance_posting_type',
+    sql`${t.postingType} in ('issue','expense_application','employee_repayment')`),
+  check('ck_cash_advance_posting_amount', sql`${t.amount} > 0`),
+  check('ck_cash_advance_posting_accounts',
+    sql`${t.debitAccountId} <> ${t.creditAccountId}
+      and ${t.debitGlEntryId} <> ${t.creditGlEntryId}`),
+]);
+
+/** Append-only advance lifecycle evidence. */
+export const cashAdvanceEvent = pgTable('cash_advance_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  advanceId: bigint('advance_id', { mode: 'number' }).notNull()
+    .references(() => cashAdvance.id),
+  eventType: text('event_type').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  reason: text('reason').notNull(),
+  detail: jsonb('detail').notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_cash_advance_event').on(t.masterFn, t.companyFn, t.advanceId, t.id),
+  check('ck_cash_advance_event_type', sql`${t.eventType} in ('issued','closed')`),
+  check('ck_cash_advance_event_reason',
     sql`char_length(${t.reason}) between 3 and 1000`),
 ]);

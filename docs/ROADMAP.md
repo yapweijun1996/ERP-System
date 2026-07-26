@@ -858,8 +858,11 @@ cleanup pass Demo/API, five-language and responsive proof.
    warning/add-level/block. **Corporate-card reconciliation** (TASK-126 done
    2026-07-26) adds bounded CSV/XLSX import, explainable reviewable receipt matching
    and persistent holder/missing-receipt follow-up.
-3. **Non-receipt expenses and posting** (TASK-127/128) cover mileage, per diem and
-   cash advances, then post final Finance approval to balanced Expense/Input Tax
+3. **Non-receipt expenses and posting** (TASK-127 done 2026-07-26 / TASK-128) now
+   snapshots mileage/per-diem formula evidence without fabricated receipts and
+   reconciles cash-advance application, exact repayment and employee-payable
+   differences through paired GL evidence; next, post final Finance approval to
+   balanced Expense/Input Tax
    against Employee Payable or the configured company-paid account.
 4. **SSOT UI and proof** (TASK-129) deliver five-language standard list/case-detail
    states without allowing approver edits, self-approval or client-selected employee
