@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-07-23
+# Project Status — reviewed 2026-07-26
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -115,7 +115,7 @@ hardcoded fictional customer regardless of the active company.
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Working | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. Its dashboard locator survives service-worker navigation and has a 45-second budget above PGlite's bounded 20-second cold-start watchdog, avoiding slow-runner races without suppressing console/page errors. |
-| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 121 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **120 Canonical / 1 Preview**. Preview pages distinguish Sample Data from Canonical Data and lock write-like actions. |
+| Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 122 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **122 Canonical / 0 Preview**. Preview pages, if reintroduced by a future task, distinguish Sample Data from Canonical Data and lock write-like actions. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; both `item-master` and the separate five-language `new-item` composer write through that audited Demo/API command. `new-item` now stores only real product fields, accepts a company-unique SKU and removes the sample form's fabricated USD/GST, accounting, costing, shelf-life and negative-stock controls. New items start at 0 on hand with no stock projection or movement — initial quantity must use Purchase Receipt or Stock Adjustment. Duplicate SKU is an atomic 409; delete remains honestly unsupported rather than mutating local sample data. |
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
@@ -1306,6 +1306,26 @@ one expected skip, 68 migrations at schema version 67, 205-table drift, API/Demo
 builds, smoke, all 121 desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof.
 PWA v128.
 
+### Five-language expense workspaces and proof (TASK-129)
+
+`my-claims` is now a Canonical `transaction-list-v1` register and
+`expense-claim` is an owner-only `case-detail-v1` route. Their shared projection reads
+the employee from the authenticated session, exposes snapshotted policy and verified
+actual FX, input tax, exact allocations, budget outcome, per-line approval and
+immutable posting evidence, and deliberately withholds duplicate evidence hashes and
+the matched employee's line identity. The production API returns the same bounded
+projection through `/api/my/claims` and `/api/my/claims/:claimId`.
+
+My Approvals now composes leave and expense work. Approvers can approve, reject or
+return a line and Finance can record the governed duplicate override, but neither
+surface offers editable claimant facts. A dedicated bounded audit injects partial
+decisions, JPY-to-SGD policy/actual FX, duplicate override, split allocations, budget
+breach, successful posting and locked-period failure across en/ms/zh/ja/vi at desktop
+and 375px. Final gates pass lint, dual typecheck, 496 tests plus one expected skip,
+68 migrations at schema version 67, 205-table drift, API/Demo builds, smoke, all 122
+desktop/375px routes at **122 Canonical / 0 Preview**, and PostgreSQL 16
+non-superuser/RLS proof. PWA v129.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1324,7 +1344,9 @@ TASK-124 delivered employee-owned multi-line claims with exact allocation and TA
 delivered line approval, duplicate risk and budget control, TASK-126 delivered bounded
 corporate-card reconciliation, and TASK-127 delivered versioned allowance calculations
 and reconciled cash advances. TASK-128 delivered transactionally coupled final approval
-and balanced expense posting. TASK-129 through TASK-135 remain planning records
+and balanced expense posting. TASK-129 delivered the five-language expense
+register/detail/approval SSOT and responsive privacy/failure proof. TASK-130 through
+TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1362,10 +1384,10 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 127 tasks, including TASK-128
+- Done: 128 tasks, including TASK-129
 - Blocked: TASK-017 (1)
-- Todo: 7 planned tasks (TASK-129–135) across EPIC-055–056. These extend the product
-  beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
+- Todo: 6 planned tasks (TASK-130–135) across EPIC-056. These extend the product
+  beyond the current 122 Canonical / 0 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future
   Leave/Receipt/Expense/Tax routes must join the appropriate existing SSOT only after

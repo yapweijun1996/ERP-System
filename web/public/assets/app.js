@@ -475,7 +475,7 @@ const SUBROUTES = {
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
-  mywork:['my-leave','leave-application','my-claims','my-receipts','team-calendar','my-approvals'],
+  mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','team-calendar','my-approvals'],
   workflow:['po-approval'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
@@ -508,7 +508,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
-  'my-leave','leave-application','my-receipts','team-calendar','my-approvals',
+  'my-leave','leave-application','my-claims','expense-claim','my-receipts','team-calendar','my-approvals',
   'integration-logs','data-import',
   'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
@@ -527,9 +527,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'my-activity','notifications',
   'integration','master-control','sys-settings',
 ]);
-const CANONICAL_DATA_PREVIEW_ROUTES = new Set([
-  'my-claims',
-]);
+const CANONICAL_DATA_PREVIEW_ROUTES = new Set([]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
   'stock-on-hand','stock-movement','inv-valuation','new-item',
@@ -570,7 +568,7 @@ const API_SCREEN_ROUTES = new Set([
   'my-activity',
   'notifications',
   'integration','master-control','sys-settings',
-  'my-leave','leave-application','my-claims','my-receipts','team-calendar','my-approvals',
+  'my-leave','leave-application','my-claims','expense-claim','my-receipts','team-calendar','my-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -588,6 +586,7 @@ const SCREEN_ACTIVE_ALIASES = {
   'asset-detail':'asset-register',
   'service-contract':'service-contracts',
   'leave-application':'my-leave',
+  'expense-claim':'my-claims',
   'new-journal-entry':'journal-entry','new-payment-voucher':'payment-voucher',
 };
 const MODULE_DEFS = {
@@ -697,7 +696,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'bom','employee','service-contract','asset-detail',
   ],
   'case-detail-v1':[
-    'ncr','service-order','po-approval','leave-application',
+    'ncr','service-order','po-approval','leave-application','expense-claim',
   ],
   'ledger-detail-v1':[
     'account-ledger',

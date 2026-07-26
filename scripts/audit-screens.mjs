@@ -104,7 +104,7 @@ if (obsoleteTimesheetChrome.length) {
 }
 
 const hrScreenSource = readFileSync(path.join(assetDir, 'screens-hr.js'), 'utf8');
-const myWorkRoutes = ['my-leave','my-claims','my-receipts','team-calendar','my-approvals'];
+const myWorkRoutes = ['my-leave','my-claims','expense-claim','my-receipts','team-calendar','my-approvals'];
 const missingMyWorkRoutes = myWorkRoutes.filter((route) =>
   !hrScreenSource.includes(`SCREENS['${route}']`));
 if (missingMyWorkRoutes.length) {
@@ -115,6 +115,27 @@ if (!hrScreenSource.includes('data-my-work-shell')
     || !hrScreenSource.includes('calendarWorkspacePage(root')
     || !hrScreenSource.includes('reason_and_evidence_redacted')) {
   throw new Error('My Work shell does not declare its SSOT list or privacy contract.');
+}
+const expenseClaimListSource = (hrScreenSource.split("SCREENS['my-claims']=")[1] || '')
+  .split("SCREENS['expense-claim']=")[0];
+const expenseClaimDetailSource = (hrScreenSource.split("SCREENS['expense-claim']=")[1] || '')
+  .split('function receiptCaptureCopy')[0];
+const expenseApprovalSource = (hrScreenSource.split("SCREENS['my-approvals']=")[1] || '')
+  .split('/* ---------------- EMPLOYEE DIRECTORY')[0];
+const missingExpenseContracts = [
+  ['My Claims transaction-list SSOT', expenseClaimListSource, 'transactionListPage(root'],
+  ['expense claim case-detail SSOT', expenseClaimDetailSource, 'caseDetailPage(root'],
+  ['expense owner privacy marker', expenseClaimDetailSource, 'data-expense-owner-only'],
+  ['expense FX state', expenseClaimDetailSource, 'data-expense-fx'],
+  ['expense duplicate state', expenseClaimDetailSource, 'data-expense-duplicate'],
+  ['expense allocation state', expenseClaimDetailSource, 'data-expense-allocation'],
+  ['expense budget state', expenseClaimDetailSource, 'data-expense-budget'],
+  ['expense posting failure state', expenseClaimDetailSource, 'data-expense-posting-failure'],
+  ['expense approval read-only marker', expenseApprovalSource, 'data-expense-read-only'],
+  ['expense return action', expenseApprovalSource, 'data-expense-approval-action="return"'],
+].filter(([,source,token]) => !source.includes(token)).map(([label]) => label);
+if (missingExpenseContracts.length) {
+  throw new Error(`Expense SSOT contracts are missing: ${missingExpenseContracts.join(', ')}`);
 }
 const leaveApplicationScreenSource = (hrScreenSource.split("SCREENS['leave-application']=")[1] || '')
   .split("SCREENS['my-claims']")[0];

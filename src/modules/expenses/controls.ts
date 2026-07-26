@@ -24,6 +24,8 @@ import {
   documentExtraction,
   documentVersion,
   employee,
+  expenseAllocation,
+  expenseBankChargeOverride,
   expenseClaim,
   expenseClaimEvent,
   expenseClaimLine,
@@ -761,6 +763,13 @@ export async function listExpenseApprovalQueueWithin(
     line: expenseClaimLine,
     claim: expenseClaim,
     assessment: expenseLineControlAssessment,
+    snapshot: expenseLinePolicySnapshot,
+    claimant: {
+      employeeNo: employee.employeeNo,
+      fullName: employee.fullName,
+      department: employee.department,
+      jobTitle: employee.jobTitle,
+    },
   }).from(expenseLineApproval)
     .innerJoin(expenseClaimLine, eq(expenseClaimLine.id, expenseLineApproval.lineId))
     .innerJoin(expenseClaim, eq(expenseClaim.id, expenseLineApproval.claimId))
@@ -768,6 +777,16 @@ export async function listExpenseApprovalQueueWithin(
       expenseLineControlAssessment,
       eq(expenseLineControlAssessment.id, expenseLineApproval.assessmentId),
     )
+    .innerJoin(expenseLinePolicySnapshot, and(
+      eq(expenseLinePolicySnapshot.masterFn, scope.masterFn),
+      eq(expenseLinePolicySnapshot.companyFn, scope.companyFn),
+      eq(expenseLinePolicySnapshot.id, expenseClaimLine.policySnapshotId),
+    ))
+    .innerJoin(employee, and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      eq(employee.userId, expenseClaim.ownerUserId),
+    ))
     .where(and(
       eq(expenseLineApproval.masterFn, scope.masterFn),
       eq(expenseLineApproval.companyFn, scope.companyFn),
@@ -775,10 +794,61 @@ export async function listExpenseApprovalQueueWithin(
         expenseLineApproval.approvalInstanceId,
         queue.map((row) => row.id),
       ),
-    ));
+  ));
   const byInstance = new Map(links.map((row) => [row.link.approvalInstanceId, row]));
+  if (!links.length) return [];
+  const assessmentIds = links.map((row) => row.assessment.id);
+  const lineIds = links.map((row) => row.line.id);
+  const snapshotIds = links.map((row) => row.snapshot.id);
+  const [allocations, signals, overrides, bankOverrides] = await Promise.all([
+    tx.select().from(expenseAllocation).where(and(
+      eq(expenseAllocation.masterFn, scope.masterFn),
+      eq(expenseAllocation.companyFn, scope.companyFn),
+      inArray(expenseAllocation.lineId, lineIds),
+    )).orderBy(expenseAllocation.lineId, expenseAllocation.allocationNo),
+    tx.select({
+      assessmentId: expenseDuplicateSignal.assessmentId,
+      signalType: expenseDuplicateSignal.signalType,
+      riskPoints: expenseDuplicateSignal.riskPoints,
+    }).from(expenseDuplicateSignal).where(and(
+      eq(expenseDuplicateSignal.masterFn, scope.masterFn),
+      eq(expenseDuplicateSignal.companyFn, scope.companyFn),
+      inArray(expenseDuplicateSignal.assessmentId, assessmentIds),
+    )),
+    tx.select({
+      assessmentId: expenseDuplicateOverride.assessmentId,
+      overriddenAt: expenseDuplicateOverride.overriddenAt,
+    }).from(expenseDuplicateOverride).where(and(
+      eq(expenseDuplicateOverride.masterFn, scope.masterFn),
+      eq(expenseDuplicateOverride.companyFn, scope.companyFn),
+      inArray(expenseDuplicateOverride.assessmentId, assessmentIds),
+    )),
+    tx.select({
+      snapshotId: expenseBankChargeOverride.snapshotId,
+      actualBaseGross: expenseBankChargeOverride.actualBaseGross,
+      actualFxRate: expenseBankChargeOverride.actualFxRate,
+      verifiedAt: expenseBankChargeOverride.verifiedAt,
+    }).from(expenseBankChargeOverride).where(and(
+      eq(expenseBankChargeOverride.masterFn, scope.masterFn),
+      eq(expenseBankChargeOverride.companyFn, scope.companyFn),
+      inArray(expenseBankChargeOverride.snapshotId, snapshotIds),
+    )),
+  ]);
   return queue.flatMap((approval) => {
     const linked = byInstance.get(approval.id);
-    return linked ? [{ approval, ...linked }] : [];
+    return linked ? [{
+      approval,
+      ...linked,
+      allocations: allocations.filter((row) => row.lineId === linked.line.id),
+      duplicateSignals: signals.filter(
+        (row) => row.assessmentId === linked.assessment.id,
+      ),
+      duplicateOverride: overrides.find(
+        (row) => row.assessmentId === linked.assessment.id,
+      ) ?? null,
+      bankChargeOverride: bankOverrides.find(
+        (row) => row.snapshotId === linked.snapshot.id,
+      ) ?? null,
+    }] : [];
   });
 }

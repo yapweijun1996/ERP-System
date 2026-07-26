@@ -52,11 +52,15 @@ import { DocumentStorageError } from '../../modules/documents/storage';
 import {
   createExpenseClaimDraftWithin,
   ExpenseClaimError,
-  listEmployeeExpenseClaimsWithin,
   replaceExpenseClaimDraftLinesWithin,
   submitExpenseClaimWithin,
   type ExpenseClaimLineInput,
 } from '../../modules/expenses/claims';
+import {
+  ExpenseClaimPresentationError,
+  listEmployeeExpenseClaimsWithin,
+  readEmployeeExpenseClaimWithin,
+} from '../../modules/expenses/presentation';
 import { ExpensePolicyError } from '../../modules/expenses/policy';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
@@ -120,11 +124,13 @@ export function createMyRouter(db: DB): Router {
       || error instanceof LeavePolicyError
       || error instanceof ApprovalWorkflowError
       || error instanceof ExpenseClaimError
+      || error instanceof ExpenseClaimPresentationError
       || error instanceof ExpensePolicyError
     ) {
       const status = error instanceof LeaveApplicationError
         || error instanceof ApprovalWorkflowError
         || error instanceof ExpenseClaimError
+        || error instanceof ExpenseClaimPresentationError
         || error instanceof ExpensePolicyError
         ? error.status
         : 422;
@@ -758,6 +764,33 @@ export function createMyRouter(db: DB): Router {
           availability: 'canonical',
           ownership: 'employee',
           limit: 100,
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.get('/claims/:claimId', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const claimId = positiveId(req.params.claimId);
+    if (!claimId) {
+      apiError(res, 400, 'invalid_id', 'claimId must be a positive integer.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        await resolveActorEmployeeWithin(tx, scope, session.userId);
+        return readEmployeeExpenseClaimWithin(tx, scope, session.userId, claimId);
+      });
+      res.json({
+        data,
+        meta: {
+          actorDerived: true,
+          ownership: 'employee',
+          privacy: 'owner_only_duplicate_evidence_redacted',
         },
       });
     } catch (error) {

@@ -223,6 +223,20 @@
       });
     },
     claims:function(){ return apiRequest('my/claims'); },
+    claim:function(id){ return apiRequest('my/claims/'+encodeURIComponent(id)); },
+    expenseApprovals:function(){ return apiRequest('expense-approvals'); },
+    expenseApprovalAction:function(id,decision,reason,idempotencyKey){
+      return apiRequest('expense-approvals/'+encodeURIComponent(id)+'/actions/decide',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:{decision:decision,reason:reason||null},
+      });
+    },
+    expenseDuplicateOverride:function(assessmentId,reason){
+      return apiRequest('expense-approvals/assessments/'+encodeURIComponent(assessmentId)+'/actions/override-duplicate',{
+        method:'POST',body:{reason:reason},
+      });
+    },
     receipts:function(){ return apiRequest('my/receipts'); },
     uploadReceipt:async function(draft){
       var csrf=cookieValue('erp_csrf');

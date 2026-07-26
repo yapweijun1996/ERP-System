@@ -413,7 +413,11 @@ describe('actor-owned My Work API', () => {
 
     const list = await fetch(`${baseUrl}/api/my/claims`, { headers: { cookie } });
     expect(list.status).toBe(200);
-    expect(await list.json()).toMatchObject({
+    const listBody = await list.json() as {
+      data: Array<{ id: number }>;
+      meta: { actorDerived: boolean; availability: string };
+    };
+    expect(listBody).toMatchObject({
       data: [{
         claimNo: 'EC-API-0001',
         ownerUserId: viewer.userId,
@@ -435,9 +439,20 @@ describe('actor-owned My Work API', () => {
     });
     expect(queue.status).toBe(200);
     const queueBody = await queue.json() as {
-      data: Array<{ link: { id: number }; line: { merchant: string } }>;
+      data: Array<{
+        link: { id: number };
+        line: { merchant: string };
+        claimant: { fullName: string };
+        snapshot: { functionalCurrency: string };
+        allocations: Array<{ dimensionKey: string }>;
+      }>;
     };
-    expect(queueBody.data[0].line.merchant).toBe('API Taxi');
+    expect(queueBody.data[0]).toMatchObject({
+      line: { merchant: 'API Taxi' },
+      claimant: { fullName: 'Marcus Silva' },
+      snapshot: { functionalCurrency: 'SGD' },
+      allocations: [{ dimensionKey: 'SALES' }],
+    });
     const lineApprovalId = queueBody.data[0].link.id;
     const decideHeaders = (idempotencyKey: string) => ({
       cookie: adminCookie,
@@ -481,6 +496,47 @@ describe('actor-owned My Work API', () => {
     });
     expect(await db.select().from(expensePosting)).toHaveLength(1);
     expect(await db.select().from(expensePostingLeg)).toHaveLength(2);
+
+    const detail = await fetch(
+      `${baseUrl}/api/my/claims/${listBody.data[0].id}`,
+      { headers: { cookie } },
+    );
+    expect(detail.status).toBe(200);
+    const detailBody = await detail.json();
+    expect(detailBody).toMatchObject({
+      data: {
+        claim: { claimNo: 'EC-API-0001', ownerUserId: viewer.userId },
+        lines: [{
+          merchant: 'API Taxi',
+          policy: {
+            functionalCurrency: 'SGD',
+            policyFxRate: '1.00000000',
+          },
+          control: {
+            budgetAction: 'warn',
+            signals: [],
+          },
+          approval: { status: 'approved' },
+          posting: {
+            journalRef: 'EXP:EC-API-0001:L1:V3',
+            legs: [{ legType: 'expense' }, { legType: 'credit' }],
+          },
+        }],
+      },
+      meta: {
+        actorDerived: true,
+        privacy: 'owner_only_duplicate_evidence_redacted',
+      },
+    });
+    expect(JSON.stringify(detailBody)).not.toContain('signalHash');
+    expect(JSON.stringify(detailBody)).not.toContain('matchedLineId');
+
+    const crossOwner = await fetch(
+      `${baseUrl}/api/my/claims/${listBody.data[0].id}`,
+      { headers: { cookie: adminCookie } },
+    );
+    expect(crossOwner.status).toBe(409);
+    expect((await crossOwner.json()).error.code).toBe('employee_identity_missing');
   });
 
   it('lets an Employee-only account boot My Work without dashboard access', async () => {

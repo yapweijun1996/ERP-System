@@ -558,12 +558,10 @@ function hrLeaveStatusLabel(s,status){
   }[status]||status;
 }
 
-/* ---------------- MY WORK (actor-owned preview shell) ----------------
-   These five routes deliberately use the existing transaction-list SSOT while
-   their domain epics are still planned. Leave rows are actor-derived; claims
-   and receipts expose honest governed empty states instead of sample records.
-   Team routes render only the privacy-redacted manager scope returned by the
-   backend capability contract. */
+/* ---------------- MY WORK (actor-owned governed shell) ----------------
+   List routes share transaction-list-v1, claim/leave cases use case-detail-v1,
+   and every read derives employee identity from the active session. Team and
+   approval routes render only their authorised privacy-redacted scope. */
 function myWorkAdapter(){
   const adapter=window.ErpSystemData&&window.ErpSystemData.my;
   if(!adapter||typeof adapter.context!=='function'){
@@ -938,19 +936,178 @@ SCREENS['leave-application']=async function(root,params){
   });
 };
 
+function expenseClaimCopy(){
+  const lang=typeof getLang==='function'?getLang():'en';
+  const packs={
+    en:{title:'My Claims',description:'Review your employee-owned expense claims, line decisions and immutable accounting outcome.',claim:'Claim',expenseClaim:'Expense claim',lines:'Lines',amount:'Claimed amount',updated:'Updated',status:'Status',all:'All',draft:'Draft',pending:'Pending approval',partial:'Partially decided',approved:'Approved',rejected:'Rejected',returned:'Returned',empty:'No expense claims',emptyBody:'Claims created by your signed-in employee profile will appear here.',missing:'Expense claim unavailable',missingBody:'Choose one of your own claims from My Claims.',ownerPrivacy:'Only your employee profile can read these claim facts. Duplicate evidence is summarized without exposing another employee or evidence hash.',merchant:'Merchant',date:'Transaction date',purpose:'Purpose',category:'Category',payment:'Payment source',employeePaid:'Employee paid',companyPaid:'Company paid',original:'Original amount',functional:'Functional amount',fx:'FX policy',actualFx:'Verified actual bank FX',tax:'Input tax',allocation:'Allocation',duplicate:'Duplicate control',risk:'risk',override:'Finance override recorded',budget:'Budget control',remaining:'remaining',breached:'Budget exceeded',withinBudget:'Within budget',approval:'Line approval',posting:'Accounting posting',notPosted:'Not posted',postingFailed:'Posting failed; approval remains recoverable',journal:'Journal',privacy:'Privacy',details:'Line details',noPolicy:'Awaiting submitted policy snapshot',noControl:'Controls run at submission',noApproval:'Approval not started',version:'Version',submitted:'Submitted',system:'System submitted',employee:'Employee submitted'},
+    ms:{title:'Tuntutan Saya',description:'Semak tuntutan perbelanjaan milik pekerja, keputusan baris dan hasil perakaunan kekal.',claim:'Tuntutan',expenseClaim:'Tuntutan perbelanjaan',lines:'Baris',amount:'Amaun tuntutan',updated:'Dikemas kini',status:'Status',all:'Semua',draft:'Draf',pending:'Menunggu kelulusan',partial:'Diputuskan sebahagian',approved:'Diluluskan',rejected:'Ditolak',returned:'Dikembalikan',empty:'Tiada tuntutan perbelanjaan',emptyBody:'Tuntutan yang dicipta oleh profil pekerja anda akan dipaparkan di sini.',missing:'Tuntutan tidak tersedia',missingBody:'Pilih tuntutan anda daripada Tuntutan Saya.',ownerPrivacy:'Hanya profil pekerja anda boleh membaca fakta tuntutan ini. Bukti pendua diringkaskan tanpa mendedahkan pekerja lain atau hash bukti.',merchant:'Peniaga',date:'Tarikh transaksi',purpose:'Tujuan',category:'Kategori',payment:'Sumber bayaran',employeePaid:'Dibayar pekerja',companyPaid:'Dibayar syarikat',original:'Amaun asal',functional:'Amaun fungsi',fx:'Dasar FX',actualFx:'FX bank sebenar disahkan',tax:'Cukai input',allocation:'Peruntukan',duplicate:'Kawalan pendua',risk:'risiko',override:'Pintasan Kewangan direkod',budget:'Kawalan bajet',remaining:'baki',breached:'Bajet dilebihi',withinBudget:'Dalam bajet',approval:'Kelulusan baris',posting:'Catatan perakaunan',notPosted:'Belum dicatat',postingFailed:'Catatan gagal; kelulusan boleh dipulihkan',journal:'Jurnal',privacy:'Privasi',details:'Butiran baris',noPolicy:'Menunggu snapshot dasar dihantar',noControl:'Kawalan dijalankan semasa penghantaran',noApproval:'Kelulusan belum bermula',version:'Versi',submitted:'Dihantar',system:'Dihantar sistem',employee:'Dihantar pekerja'},
+    zh:{title:'我的报销',description:'查看本人拥有的报销单、逐行决定及不可变会计结果。',claim:'报销单',expenseClaim:'费用报销单',lines:'费用行',amount:'申报金额',updated:'更新时间',status:'状态',all:'全部',draft:'草稿',pending:'待审批',partial:'部分已决定',approved:'已批准',rejected:'已拒绝',returned:'已退回',empty:'暂无费用报销',emptyBody:'当前登录员工本人建立的报销单会显示在这里。',missing:'报销单不可用',missingBody:'请从“我的报销”选择一份属于你的报销单。',ownerPrivacy:'只有你的员工身份可读取这些申报事实。重复凭证仅显示摘要，不会泄露其他员工或凭证哈希。',merchant:'商户',date:'交易日期',purpose:'用途',category:'类别',payment:'付款来源',employeePaid:'员工垫付',companyPaid:'公司支付',original:'原币金额',functional:'本位币金额',fx:'汇率政策',actualFx:'已核实银行实际汇率',tax:'进项税',allocation:'分摊',duplicate:'重复控制',risk:'风险',override:'已记录财务覆盖决定',budget:'预算控制',remaining:'剩余',breached:'预算已超出',withinBudget:'预算范围内',approval:'费用行审批',posting:'会计记账',notPosted:'尚未记账',postingFailed:'记账失败；审批仍可恢复',journal:'凭证',privacy:'隐私',details:'费用行明细',noPolicy:'提交后才生成政策快照',noControl:'提交时才执行控制',noApproval:'尚未开始审批',version:'版本',submitted:'提交时间',system:'系统自动提交',employee:'员工本人提交'},
+    ja:{title:'自分の経費申請',description:'本人所有の経費申請、明細ごとの決定、変更不能な会計結果を確認します。',claim:'申請',expenseClaim:'経費申請',lines:'明細',amount:'申請額',updated:'更新',status:'状態',all:'すべて',draft:'下書き',pending:'承認待ち',partial:'一部決定済み',approved:'承認済み',rejected:'却下',returned:'差し戻し',empty:'経費申請はありません',emptyBody:'ログイン中の従業員プロフィールで作成した申請が表示されます。',missing:'経費申請を利用できません',missingBody:'自分の経費申請から本人所有の申請を選択してください。',ownerPrivacy:'この申請情報は本人の従業員プロフィールだけが閲覧できます。重複証拠は他の従業員や証拠ハッシュを公開せず要約されます。',merchant:'加盟店',date:'取引日',purpose:'目的',category:'カテゴリ',payment:'支払元',employeePaid:'従業員立替',companyPaid:'会社払い',original:'原通貨額',functional:'機能通貨額',fx:'FXポリシー',actualFx:'確認済み銀行実勢FX',tax:'仕入税',allocation:'配賦',duplicate:'重複管理',risk:'リスク',override:'財務オーバーライド記録済み',budget:'予算管理',remaining:'残額',breached:'予算超過',withinBudget:'予算内',approval:'明細承認',posting:'会計転記',notPosted:'未転記',postingFailed:'転記失敗。承認は再実行可能です',journal:'仕訳',privacy:'プライバシー',details:'明細詳細',noPolicy:'提出後のポリシースナップショット待ち',noControl:'管理は提出時に実行',noApproval:'承認未開始',version:'バージョン',submitted:'提出',system:'システム提出',employee:'従業員提出'},
+    vi:{title:'Yêu cầu chi phí của tôi',description:'Xem yêu cầu chi phí thuộc nhân viên, quyết định từng dòng và kết quả kế toán bất biến.',claim:'Yêu cầu',expenseClaim:'Yêu cầu chi phí',lines:'Dòng',amount:'Số tiền yêu cầu',updated:'Cập nhật',status:'Trạng thái',all:'Tất cả',draft:'Bản nháp',pending:'Chờ phê duyệt',partial:'Đã quyết định một phần',approved:'Đã duyệt',rejected:'Đã từ chối',returned:'Đã trả lại',empty:'Không có yêu cầu chi phí',emptyBody:'Yêu cầu do hồ sơ nhân viên đang đăng nhập tạo sẽ xuất hiện ở đây.',missing:'Không thể xem yêu cầu',missingBody:'Chọn một yêu cầu thuộc bạn từ Yêu cầu chi phí của tôi.',ownerPrivacy:'Chỉ hồ sơ nhân viên của bạn có thể đọc dữ liệu này. Bằng chứng trùng lặp được tóm tắt mà không lộ nhân viên khác hoặc hash chứng từ.',merchant:'Đơn vị bán',date:'Ngày giao dịch',purpose:'Mục đích',category:'Danh mục',payment:'Nguồn thanh toán',employeePaid:'Nhân viên trả',companyPaid:'Công ty trả',original:'Số tiền gốc',functional:'Số tiền chức năng',fx:'Chính sách FX',actualFx:'FX ngân hàng thực tế đã xác minh',tax:'Thuế đầu vào',allocation:'Phân bổ',duplicate:'Kiểm soát trùng',risk:'rủi ro',override:'Đã ghi nhận ghi đè Tài chính',budget:'Kiểm soát ngân sách',remaining:'còn lại',breached:'Vượt ngân sách',withinBudget:'Trong ngân sách',approval:'Phê duyệt dòng',posting:'Hạch toán',notPosted:'Chưa hạch toán',postingFailed:'Hạch toán lỗi; phê duyệt vẫn có thể khôi phục',journal:'Nhật ký',privacy:'Riêng tư',details:'Chi tiết dòng',noPolicy:'Chờ snapshot chính sách khi gửi',noControl:'Kiểm soát chạy khi gửi',noApproval:'Chưa bắt đầu phê duyệt',version:'Phiên bản',submitted:'Đã gửi',system:'Hệ thống gửi',employee:'Nhân viên gửi'},
+  };
+  const pack=packs[lang]||packs.en;
+  return key=>pack[key]||packs.en[key]||key;
+}
+function expenseStatusInfo(status,c){
+  const map={
+    draft:['draft','neutral'],pending_approval:['pending','warn'],
+    partially_approved:['partial','violet'],approved:['approved','ok'],
+    rejected:['rejected','danger'],returned:['returned','warn'],
+  };
+  const item=map[status]||[status||'status','neutral'];
+  return {label:c(item[0]),tone:item[1]};
+}
+function expenseMoney(value,currency){
+  const amount=Number(value||0);
+  return `${currency||''} ${Number.isFinite(amount)?amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):String(value||'0')}`.trim();
+}
+function claimTotals(lines){
+  const totals=new Map();
+  (lines||[]).forEach(line=>totals.set(
+    line.originalCurrency,
+    Number(totals.get(line.originalCurrency)||0)+Number(line.originalGross||0),
+  ));
+  return [...totals].map(([currency,value])=>expenseMoney(value,currency)).join(' + ')||'—';
+}
+
 SCREENS['my-claims']=async function(root){
-  const copy=myWorkCopy();
+  const c=expenseClaimCopy();
   let response;
   try{ response=await myWorkAdapter().claims(); }
   catch(error){
     if(!isMyWorkIdentityError(error)) throw error;
-    myWorkIdentityPage(root,'my-claims',copy('claimsTitle'),copy('claimsDescription'));
+    myWorkIdentityPage(root,'my-claims',c('title'),c('description'));
     return;
   }
-  myWorkEmptyPage(root,{
-    route:'my-claims',title:copy('claimsTitle'),description:copy('claimsDescription'),
-    emptyTitle:copy('claimsUnavailable'),emptyDescription:copy('claimsUnavailableBody'),
-    note:response.meta&&response.meta.plannedEpic,
+  const rows=Array.isArray(response.data)?response.data:[];
+  transactionListPage(root,{
+    module:'mywork',route:'my-claims',title:c('title'),description:c('description'),
+    rows,rowId:row=>row.id,
+    filters:[
+      ['all',c('all')],['draft',c('draft')],['pending_approval',c('pending')],
+      ['partially_approved',c('partial')],['approved',c('approved')],
+      ['returned',c('returned')],['rejected',c('rejected')],
+    ],
+    filterFn:(row,status)=>row.status===status,
+    kpis:[
+      {label:c('pending'),value:rows.filter(row=>['pending_approval','partially_approved'].includes(row.status)).length,accent:true},
+      {label:c('approved'),value:rows.filter(row=>row.status==='approved').length},
+      {label:c('draft'),value:rows.filter(row=>row.status==='draft').length},
+    ],
+    columns:[
+      {key:'claim',label:c('claim'),primary:true,render:row=>`<div class="cellsub"><b>${esc(row.claimNo)}</b><small>${esc(row.title)}</small></div>`},
+      {key:'status',label:c('status'),render:row=>{const state=expenseStatusInfo(row.status,c);return cap(state.label,state.tone);}},
+      {key:'lines',label:c('lines'),numeric:true,render:row=>esc(String((row.lines||[]).length))},
+      {key:'amount',label:c('amount'),numeric:true,render:row=>esc(claimTotals(row.lines))},
+      {key:'updated',label:c('updated'),render:row=>esc(dateValue(row.updatedAt))},
+    ],
+    rowAction:{label:row=>`${c('expenseClaim')} ${row.claimNo}`,run:row=>navigate('expense-claim',{claimId:row.id})},
+    empty:{icon:'receipt',title:c('empty'),description:c('emptyBody')},
+    afterRender:({root:screenRoot})=>{
+      screenRoot.querySelector('[data-layout="transaction-list-v1"]')?.setAttribute('data-expense-claims','canonical');
+    },
+  });
+};
+
+SCREENS['expense-claim']=async function(root,params){
+  // Let navigate() install its loading shell before rendering the synchronous
+  // empty case used when no claim id is supplied by route audits or deep links.
+  await Promise.resolve();
+  const c=expenseClaimCopy();
+  const claimId=Number(params&&params.claimId);
+  if(!Number.isSafeInteger(claimId)||claimId<=0){
+    caseDetailPage(root,{module:'mywork',route:'expense-claim',active:'my-claims',
+      title:c('expenseClaim'),description:c('description'),
+      empty:{icon:'receipt',title:c('missing'),description:c('missingBody')},
+      context:{
+        title:c('privacy'),
+        body:`<div class="callout info">${ic('shield')}<span>${esc(c('ownerPrivacy'))}</span></div>`,
+      }});
+    return;
+  }
+  let payload;
+  try{ payload=(await myWorkAdapter().claim(claimId)).data; }
+  catch(error){
+    caseDetailPage(root,{module:'mywork',route:'expense-claim',active:'my-claims',
+      title:c('expenseClaim'),description:c('description'),
+      empty:{icon:'warn',title:c('missing'),description:(error&&error.message)||c('missingBody')},
+      context:{
+        title:c('privacy'),
+        body:`<div class="callout info">${ic('shield')}<span>${esc(c('ownerPrivacy'))}</span></div>`,
+      }});
+    return;
+  }
+  const claim=payload.claim||{},lines=Array.isArray(payload.lines)?payload.lines:[];
+  const state=expenseStatusInfo(claim.status,c);
+  const lineCards=lines.map(line=>{
+    const policy=line.policy,control=line.control,approval=line.approval,posting=line.posting;
+    const payment=c(line.paymentSource==='company_paid'?'companyPaid':'employeePaid');
+    const allocation=(line.allocations||[]).map(item=>{
+      const amount=item.mode==='percentage'
+        ?`${Number(item.percentage||0).toFixed(2)}%`
+        :expenseMoney(item.amountOriginal,line.originalCurrency);
+      return `${esc(item.dimensionType)}: ${esc(item.dimensionKey)} · ${esc(amount)}`;
+    }).join('<br>')||'—';
+    const duplicate=control
+      ?`${control.duplicateRiskScore}/100 · ${control.duplicateRiskLevel} ${c('risk')}`
+      :c('noControl');
+    const budget=control
+      ?`${control.budgetBreached?c('breached'):c('withinBudget')}${control.remainingAfter==null?'':` · ${expenseMoney(control.remainingAfter,policy&&policy.functionalCurrency)} ${c('remaining')}`}`
+      :c('noControl');
+    const approvalState=approval?expenseStatusInfo(approval.status,c):null;
+    const postingState=line.postingFailure
+      ?`<div class="alert danger" data-expense-posting-failure>${ic('warn')}<span>${esc(c('postingFailed'))}: ${esc(line.postingFailure)}</span></div>`
+      :posting
+        ?`<div class="alert ok" data-expense-posting>${ic('check')}<span><b>${esc(c('journal'))} ${esc(posting.journalRef)}</b><br>${esc(expenseMoney(posting.baseGross,posting.functionalCurrency))}</span></div>`
+        :`<small data-expense-posting>${esc(c('notPosted'))}</small>`;
+    return `<article class="card" data-expense-line="${esc(String(line.lineNo))}">
+      <div class="detail-head" style="padding:0 0 12px"><div class="dh-top">
+        <div><h3>${esc(String(line.lineNo))}. ${esc(line.merchant)}</h3><span class="sub">${esc(dateValue(line.transactionDate))} · ${esc(line.categoryCode)}</span></div>
+        <div style="margin-left:auto">${approvalState?cap(approvalState.label,approvalState.tone):cap(c('draft'),'neutral')}</div>
+      </div></div>
+      <div class="statgrid c3">
+        <div class="stat"><small>${esc(c('original'))}</small><b class="tnum">${esc(expenseMoney(line.originalGross,line.originalCurrency))}</b></div>
+        <div class="stat"><small>${esc(c('payment'))}</small><b>${esc(payment)}</b></div>
+        <div class="stat"><small>${esc(c('functional'))}</small><b class="tnum">${esc(policy?expenseMoney(policy.baseGross,policy.functionalCurrency):'—')}</b></div>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <div class="field"><span class="k">${esc(c('purpose'))}</span><span class="v">${esc(line.purpose)}</span></div>
+        <div class="field" data-expense-fx><span class="k">${esc(c('fx'))}</span><span class="v">${policy?`${esc(String(policy.policyFxRate))} · ${esc(policy.fxMethod)}`:esc(c('noPolicy'))}</span></div>
+        ${policy&&policy.bankChargeOverride?`<div class="field"><span class="k">${esc(c('actualFx'))}</span><span class="v">${esc(String(policy.bankChargeOverride.actualFxRate))} · ${esc(expenseMoney(policy.bankChargeOverride.actualBaseGross,policy.functionalCurrency))}</span></div>`:''}
+        <div class="field"><span class="k">${esc(c('tax'))}</span><span class="v">${policy?esc(expenseMoney(policy.baseInputTax,policy.functionalCurrency)):'—'}</span></div>
+        <div class="field" data-expense-allocation><span class="k">${esc(c('allocation'))}</span><span class="v">${allocation}</span></div>
+        <div class="field" data-expense-duplicate><span class="k">${esc(c('duplicate'))}</span><span class="v">${esc(duplicate)}${control&&control.duplicateOverride?` · ${esc(c('override'))}`:''}</span></div>
+        <div class="field" data-expense-budget><span class="k">${esc(c('budget'))}</span><span class="v">${esc(budget)}</span></div>
+        <div class="field"><span class="k">${esc(c('approval'))}</span><span class="v">${approvalState?esc(approvalState.label):esc(c('noApproval'))}</span></div>
+      </div>
+      <div style="margin-top:10px">${postingState}</div>
+    </article>`;
+  }).join('');
+  const submittedBy=claim.submissionKind==='system'?c('system'):claim.submissionKind==='employee'?c('employee'):'—';
+  caseDetailPage(root,{
+    module:'mywork',route:'expense-claim',active:'my-claims',
+    title:c('expenseClaim'),description:c('description'),
+    identity:{title:claim.title,code:claim.claimNo,meta:`${c('version')} ${claim.version}`},
+    statuses:[{label:state.label,tone:state.tone}],
+    facts:[
+      {label:c('lines'),value:lines.length,numeric:true},
+      {label:c('amount'),value:claimTotals(lines),numeric:true},
+      {label:c('submitted'),value:claim.submittedAt?dateValue(claim.submittedAt):'—'},
+      {label:c('status'),value:submittedBy},
+    ],
+    lifecycle:[
+      {label:c('draft'),state:claim.status==='draft'?'current':'complete'},
+      {label:c('pending'),state:['pending_approval','partially_approved'].includes(claim.status)?'current':claim.status==='draft'?'upcoming':'complete'},
+      {label:state.label,state:['approved','rejected','returned'].includes(claim.status)?'current':'upcoming'},
+    ],
+    main:lineCards||`<div class="statepanel empty">${ic('receipt')}<h3>${esc(c('empty'))}</h3></div>`,
+    context:{title:c('privacy'),body:`<div class="callout info" data-expense-privacy>${ic('shield')}<span>${esc(c('ownerPrivacy'))}</span></div>
+      <div class="card"><div class="field"><span class="k">${esc(c('version'))}</span><span class="v">${esc(String(claim.version||1))}</span></div>
+      <div class="field"><span class="k">${esc(c('lines'))}</span><span class="v">${esc(String(lines.length))}</span></div></div>`},
+    afterRender:({caseRoot})=>{
+      caseRoot?.setAttribute('data-expense-state',claim.status||'unknown');
+      caseRoot?.setAttribute('data-expense-owner-only','true');
+    },
   });
 };
 
@@ -1372,11 +1529,11 @@ SCREENS['team-calendar']=async function(root){
 function myApprovalCopy(){
   const lang=typeof getLang==='function'?getLang():'en';
   const packs={
-    en:{title:'My Approvals',description:'Decide policy-assigned leave steps, including delegated and escalated authority.',step:'Current step',submitted:'Submitted',due:'Escalation due',capacity:'Capacity control',privacy:'Employee reasons and document references remain private in this manager view.',approve:'Approve step',reject:'Reject',note:'Decision note',reason:'Rejection reason',reasonHint:'Required audit reason of at least 3 characters.',approved:'Approval step completed.',rejected:'Leave request rejected.',failed:'The approval decision could not be completed.',delegation:'Manage delegation',delegationTitle:'Approval delegation',delegate:'Delegate to',from:'Valid from',to:'Valid to',delegationReason:'Delegation reason',createDelegation:'Create delegation',revoke:'Revoke',activeDelegations:'Active and historical delegations',noDelegations:'No delegations created.',delegated:'Delegation created.',revoked:'Delegation revoked.',warn:'Warning only',extra:'Extra approval required',block:'Approval blocked',remaining:'staff remain',select:'Select an approval',selectBody:'Choose a policy-assigned leave request to review its governed decision step.'},
-    ms:{title:'Kelulusan Saya',description:'Putuskan langkah cuti yang ditugaskan dasar, termasuk kuasa wakil dan eskalasi.',step:'Langkah semasa',submitted:'Dihantar',due:'Eskalasi perlu',capacity:'Kawalan kapasiti',privacy:'Sebab pekerja dan rujukan dokumen kekal peribadi dalam paparan pengurus.',approve:'Luluskan langkah',reject:'Tolak',note:'Nota keputusan',reason:'Sebab penolakan',reasonHint:'Sebab audit sekurang-kurangnya 3 aksara diperlukan.',approved:'Langkah kelulusan selesai.',rejected:'Permohonan cuti ditolak.',failed:'Keputusan kelulusan gagal.',delegation:'Urus perwakilan',delegationTitle:'Perwakilan kelulusan',delegate:'Wakil kepada',from:'Sah dari',to:'Sah hingga',delegationReason:'Sebab perwakilan',createDelegation:'Cipta perwakilan',revoke:'Batalkan',activeDelegations:'Perwakilan aktif dan sejarah',noDelegations:'Tiada perwakilan.',delegated:'Perwakilan dicipta.',revoked:'Perwakilan dibatalkan.',warn:'Amaran sahaja',extra:'Kelulusan tambahan diperlukan',block:'Kelulusan disekat',remaining:'kakitangan kekal',select:'Pilih kelulusan',selectBody:'Pilih permohonan cuti yang ditugaskan untuk menyemak langkah keputusan.'},
-    zh:{title:'我的审批',description:'处理按政策分配的请假审批步骤，并支持限时代理与升级权限。',step:'当前步骤',submitted:'提交时间',due:'升级期限',capacity:'人力容量控制',privacy:'主管视图不会显示员工的私人原因及文件引用。',approve:'批准此步骤',reject:'拒绝',note:'决定备注',reason:'拒绝原因',reasonHint:'必须填写至少 3 个字符的审计原因。',approved:'审批步骤已完成。',rejected:'请假申请已拒绝。',failed:'无法完成审批决定。',delegation:'管理代理',delegationTitle:'审批代理',delegate:'代理人',from:'生效时间',to:'结束时间',delegationReason:'代理原因',createDelegation:'建立代理',revoke:'撤销',activeDelegations:'有效及历史代理',noDelegations:'尚未建立代理。',delegated:'审批代理已建立。',revoked:'审批代理已撤销。',warn:'仅警告',extra:'需要额外审批',block:'禁止批准',remaining:'名员工留岗',select:'选择审批事项',selectBody:'请选择一项按政策分配的请假，以处理当前受治理的审批步骤。'},
-    ja:{title:'自分の承認',description:'委任・エスカレーションを含む、ポリシーで割り当てられた休暇承認を決定します。',step:'現在のステップ',submitted:'提出日時',due:'エスカレーション期限',capacity:'要員管理',privacy:'管理者ビューでは従業員の理由と文書参照を表示しません。',approve:'ステップを承認',reject:'却下',note:'決定メモ',reason:'却下理由',reasonHint:'3文字以上の監査理由が必要です。',approved:'承認ステップが完了しました。',rejected:'休暇申請を却下しました。',failed:'承認を完了できませんでした。',delegation:'委任を管理',delegationTitle:'承認の委任',delegate:'委任先',from:'開始',to:'終了',delegationReason:'委任理由',createDelegation:'委任を作成',revoke:'取消',activeDelegations:'有効・過去の委任',noDelegations:'委任はありません。',delegated:'委任を作成しました。',revoked:'委任を取り消しました。',warn:'警告のみ',extra:'追加承認が必要',block:'承認をブロック',remaining:'人が残ります',select:'承認を選択',selectBody:'ポリシーで割り当てられた休暇申請を選択してください。'},
-    vi:{title:'Phê duyệt của tôi',description:'Quyết định bước nghỉ phép được chính sách giao, gồm ủy quyền và leo thang.',step:'Bước hiện tại',submitted:'Đã gửi',due:'Hạn leo thang',capacity:'Kiểm soát nhân lực',privacy:'Lý do riêng và tham chiếu tài liệu không hiển thị trong chế độ quản lý.',approve:'Duyệt bước',reject:'Từ chối',note:'Ghi chú quyết định',reason:'Lý do từ chối',reasonHint:'Cần lý do kiểm toán ít nhất 3 ký tự.',approved:'Đã hoàn tất bước phê duyệt.',rejected:'Đã từ chối đơn nghỉ phép.',failed:'Không thể hoàn tất quyết định.',delegation:'Quản lý ủy quyền',delegationTitle:'Ủy quyền phê duyệt',delegate:'Ủy quyền cho',from:'Hiệu lực từ',to:'Hiệu lực đến',delegationReason:'Lý do ủy quyền',createDelegation:'Tạo ủy quyền',revoke:'Thu hồi',activeDelegations:'Ủy quyền hiện tại và lịch sử',noDelegations:'Chưa có ủy quyền.',delegated:'Đã tạo ủy quyền.',revoked:'Đã thu hồi ủy quyền.',warn:'Chỉ cảnh báo',extra:'Cần thêm cấp duyệt',block:'Chặn phê duyệt',remaining:'nhân viên còn lại',select:'Chọn phê duyệt',selectBody:'Chọn đơn nghỉ phép được chính sách giao để xử lý bước quyết định.'},
+    en:{title:'My Approvals',description:'Decide policy-assigned leave and expense steps without editing employee-owned facts.',step:'Current step',submitted:'Submitted',due:'Escalation due',capacity:'Capacity control',privacy:'Employee reasons and document references remain private in this manager view.',approve:'Approve step',reject:'Reject',return:'Return',note:'Decision note',reason:'Decision reason',reasonHint:'Required audit reason of at least 3 characters.',approved:'Approval step completed.',rejected:'Request rejected.',returned:'Expense line returned.',failed:'The approval decision could not be completed.',delegation:'Manage delegation',delegationTitle:'Approval delegation',delegate:'Delegate to',from:'Valid from',to:'Valid to',delegationReason:'Delegation reason',createDelegation:'Create delegation',revoke:'Revoke',activeDelegations:'Active and historical delegations',noDelegations:'No delegations created.',delegated:'Delegation created.',revoked:'Delegation revoked.',warn:'Warning only',extra:'Extra approval required',block:'Approval blocked',remaining:'staff remain',select:'Select an approval',selectBody:'Choose a policy-assigned leave or expense item to review its governed decision step.',leave:'Leave',expense:'Expense',merchant:'Merchant',claimed:'Claimed',payment:'Payment',allocation:'Allocation',duplicate:'Duplicate risk',budget:'Budget',fx:'FX',overrideDuplicate:'Override duplicate',postingFailure:'Posting failed; the decision remains retryable.',expensePrivacy:'Expense facts are read-only. Receipt content and unrelated employee evidence are not exposed.'},
+    ms:{title:'Kelulusan Saya',description:'Putuskan langkah cuti dan perbelanjaan tanpa menyunting fakta milik pekerja.',step:'Langkah semasa',submitted:'Dihantar',due:'Eskalasi perlu',capacity:'Kawalan kapasiti',privacy:'Sebab pekerja dan rujukan dokumen kekal peribadi dalam paparan pengurus.',approve:'Luluskan langkah',reject:'Tolak',return:'Kembalikan',note:'Nota keputusan',reason:'Sebab keputusan',reasonHint:'Sebab audit sekurang-kurangnya 3 aksara diperlukan.',approved:'Langkah kelulusan selesai.',rejected:'Permohonan ditolak.',returned:'Baris perbelanjaan dikembalikan.',failed:'Keputusan kelulusan gagal.',delegation:'Urus perwakilan',delegationTitle:'Perwakilan kelulusan',delegate:'Wakil kepada',from:'Sah dari',to:'Sah hingga',delegationReason:'Sebab perwakilan',createDelegation:'Cipta perwakilan',revoke:'Batalkan',activeDelegations:'Perwakilan aktif dan sejarah',noDelegations:'Tiada perwakilan.',delegated:'Perwakilan dicipta.',revoked:'Perwakilan dibatalkan.',warn:'Amaran sahaja',extra:'Kelulusan tambahan diperlukan',block:'Kelulusan disekat',remaining:'kakitangan kekal',select:'Pilih kelulusan',selectBody:'Pilih cuti atau perbelanjaan yang ditugaskan untuk menyemak langkah keputusan.',leave:'Cuti',expense:'Perbelanjaan',merchant:'Peniaga',claimed:'Dituntut',payment:'Bayaran',allocation:'Peruntukan',duplicate:'Risiko pendua',budget:'Bajet',fx:'FX',overrideDuplicate:'Atasi pendua',postingFailure:'Catatan gagal; keputusan masih boleh dicuba semula.',expensePrivacy:'Fakta perbelanjaan hanya boleh dibaca. Kandungan resit dan bukti pekerja lain tidak didedahkan.'},
+    zh:{title:'我的审批',description:'处理按政策分配的请假及费用步骤，不可编辑员工拥有的原始事实。',step:'当前步骤',submitted:'提交时间',due:'升级期限',capacity:'人力容量控制',privacy:'主管视图不会显示员工的私人原因及文件引用。',approve:'批准此步骤',reject:'拒绝',return:'退回',note:'决定备注',reason:'决定原因',reasonHint:'必须填写至少 3 个字符的审计原因。',approved:'审批步骤已完成。',rejected:'申请已拒绝。',returned:'费用行已退回。',failed:'无法完成审批决定。',delegation:'管理代理',delegationTitle:'审批代理',delegate:'代理人',from:'生效时间',to:'结束时间',delegationReason:'代理原因',createDelegation:'建立代理',revoke:'撤销',activeDelegations:'有效及历史代理',noDelegations:'尚未建立代理。',delegated:'审批代理已建立。',revoked:'审批代理已撤销。',warn:'仅警告',extra:'需要额外审批',block:'禁止批准',remaining:'名员工留岗',select:'选择审批事项',selectBody:'请选择一项按政策分配的请假或费用，处理当前受治理的决定步骤。',leave:'请假',expense:'费用',merchant:'商户',claimed:'申报金额',payment:'付款来源',allocation:'分摊',duplicate:'重复风险',budget:'预算',fx:'汇率',overrideDuplicate:'覆盖重复阻止',postingFailure:'记账失败；此决定仍可重试。',expensePrivacy:'费用事实只读，不会暴露收据内容或其他员工的凭证。'},
+    ja:{title:'自分の承認',description:'従業員所有の情報を編集せず、割り当てられた休暇・経費ステップを決定します。',step:'現在のステップ',submitted:'提出日時',due:'エスカレーション期限',capacity:'要員管理',privacy:'管理者ビューでは従業員の理由と文書参照を表示しません。',approve:'ステップを承認',reject:'却下',return:'差し戻し',note:'決定メモ',reason:'決定理由',reasonHint:'3文字以上の監査理由が必要です。',approved:'承認ステップが完了しました。',rejected:'申請を却下しました。',returned:'経費明細を差し戻しました。',failed:'承認を完了できませんでした。',delegation:'委任を管理',delegationTitle:'承認の委任',delegate:'委任先',from:'開始',to:'終了',delegationReason:'委任理由',createDelegation:'委任を作成',revoke:'取消',activeDelegations:'有効・過去の委任',noDelegations:'委任はありません。',delegated:'委任を作成しました。',revoked:'委任を取り消しました。',warn:'警告のみ',extra:'追加承認が必要',block:'承認をブロック',remaining:'人が残ります',select:'承認を選択',selectBody:'割り当てられた休暇または経費を選択してください。',leave:'休暇',expense:'経費',merchant:'加盟店',claimed:'申請額',payment:'支払元',allocation:'配賦',duplicate:'重複リスク',budget:'予算',fx:'FX',overrideDuplicate:'重複をオーバーライド',postingFailure:'転記失敗。決定は再試行できます。',expensePrivacy:'経費情報は読み取り専用です。領収書内容や他の従業員の証拠は公開されません。'},
+    vi:{title:'Phê duyệt của tôi',description:'Quyết định bước nghỉ phép và chi phí mà không sửa dữ liệu thuộc nhân viên.',step:'Bước hiện tại',submitted:'Đã gửi',due:'Hạn leo thang',capacity:'Kiểm soát nhân lực',privacy:'Lý do riêng và tham chiếu tài liệu không hiển thị trong chế độ quản lý.',approve:'Duyệt bước',reject:'Từ chối',return:'Trả lại',note:'Ghi chú quyết định',reason:'Lý do quyết định',reasonHint:'Cần lý do kiểm toán ít nhất 3 ký tự.',approved:'Đã hoàn tất bước phê duyệt.',rejected:'Đã từ chối yêu cầu.',returned:'Đã trả lại dòng chi phí.',failed:'Không thể hoàn tất quyết định.',delegation:'Quản lý ủy quyền',delegationTitle:'Ủy quyền phê duyệt',delegate:'Ủy quyền cho',from:'Hiệu lực từ',to:'Hiệu lực đến',delegationReason:'Lý do ủy quyền',createDelegation:'Tạo ủy quyền',revoke:'Thu hồi',activeDelegations:'Ủy quyền hiện tại và lịch sử',noDelegations:'Chưa có ủy quyền.',delegated:'Đã tạo ủy quyền.',revoked:'Đã thu hồi ủy quyền.',warn:'Chỉ cảnh báo',extra:'Cần thêm cấp duyệt',block:'Chặn phê duyệt',remaining:'nhân viên còn lại',select:'Chọn phê duyệt',selectBody:'Chọn nghỉ phép hoặc chi phí được giao để xử lý bước quyết định.',leave:'Nghỉ phép',expense:'Chi phí',merchant:'Đơn vị bán',claimed:'Đã yêu cầu',payment:'Thanh toán',allocation:'Phân bổ',duplicate:'Rủi ro trùng',budget:'Ngân sách',fx:'FX',overrideDuplicate:'Ghi đè trùng lặp',postingFailure:'Hạch toán lỗi; quyết định vẫn có thể thử lại.',expensePrivacy:'Dữ liệu chi phí chỉ đọc. Không hiển thị nội dung biên lai hoặc chứng từ của nhân viên khác.'},
   };
   const pack=packs[lang]||packs.en;
   return key=>pack[key]||packs.en[key]||key;
@@ -1388,39 +1545,113 @@ SCREENS['my-approvals']=async function(root){
   const adapter=myWorkAdapter();
   let rows=[];
   let loadError=null;
-  try{
-    rows=(await adapter.approvals()).data||[];
-  }catch(error){
-    loadError=error&&error.message||c('failed');
+  async function reloadRows(){
+    const results=await Promise.allSettled([adapter.approvals(),adapter.expenseApprovals()]);
+    const leave=results[0].status==='fulfilled'?(results[0].value.data||[]):[];
+    const expenses=results[1].status==='fulfilled'?(results[1].value.data||[]):[];
+    rows=[
+      ...leave.map(row=>({...row,approvalKind:'leave',rowKey:`leave-${row.requestId}`})),
+      ...expenses.map(row=>({...row,approvalKind:'expense',rowKey:`expense-${row.link.id}`})),
+    ];
+    const failures=results.filter(result=>result.status==='rejected');
+    loadError=failures.length===2
+      ?failures.map(result=>result.reason&&result.reason.message||c('failed')).join(' · ')
+      :null;
   }
+  await reloadRows();
   let busyId=null;
   let actionError=null;
   const tone={warn:'warn',extra_approval:'violet',block:'danger',none:'neutral'};
   const capacityLabel=action=>c(action==='extra_approval'?'extra':action);
   async function decide(row,action,reason){
-    busyId=row.requestId; actionError=null; page.render();
+    busyId=row.rowKey; actionError=null; page.render();
     try{
-      const result=await adapter.approvalAction(row.requestId,action,{
-        expectedVersion:row.requestVersion,reason:reason||'',
-      });
-      rows=(await adapter.approvals()).data||[];
+      const result=row.approvalKind==='expense'
+        ?await adapter.expenseApprovalAction(
+          row.link.id,
+          action==='approve'?'approved':action==='reject'?'rejected':'returned',
+          reason||'',
+        )
+        :await adapter.approvalAction(row.requestId,action,{
+          expectedVersion:row.requestVersion,reason:reason||'',
+        });
+      await reloadRows();
       busyId=null;
-      toast(action==='approve'?c('approved'):c('rejected'),action==='approve'?'ok':'danger');
-      if(result.data&&result.data.status==='pending'){
+      toast(action==='approve'?c('approved'):action==='return'?c('returned'):c('rejected'),action==='approve'?'ok':'danger');
+      if(row.approvalKind==='leave'&&result.data&&result.data.status==='pending'){
         navigate('my-approvals');
       }else{
         page.setFilter(page.getFilter());
       }
     }catch(error){
       busyId=null;
-      actionError={id:row.requestId,message:error&&error.message||c('failed')};
+      actionError={id:row.rowKey,message:error&&error.message||c('failed')};
       page.render();
     }
   }
+  async function overrideDuplicate(row,reason){
+    busyId=row.rowKey;actionError=null;page.render();
+    try{
+      await adapter.expenseDuplicateOverride(row.assessment.id,reason);
+      await reloadRows();busyId=null;toast(c('overrideDuplicate'),'ok');page.render();
+    }catch(error){
+      busyId=null;actionError={id:row.rowKey,message:error&&error.message||c('failed')};page.render();
+    }
+  }
+  function expenseDetail(row){
+    const busy=String(busyId)===String(row.rowKey);
+    const error=actionError&&String(actionError.id)===String(row.rowKey)
+      ?actionError.message:null;
+    const line=row.line||{},claim=row.claim||{},assessment=row.assessment||{},snapshot=row.snapshot||{};
+    const claimant=row.claimant||{};
+    const allocation=(row.allocations||[]).map(item=>{
+      const value=item.mode==='percentage'
+        ?`${Number(item.percentage||0).toFixed(2)}%`
+        :expenseMoney(item.amountOriginal,line.originalCurrency);
+      return `${esc(item.dimensionType)}: ${esc(item.dimensionKey)} · ${esc(value)}`;
+    }).join('<br>')||'—';
+    const signals=(row.duplicateSignals||[]).map(signal=>
+      `${esc(signal.signalType)} +${esc(String(signal.riskPoints))}`).join(' · ')||'—';
+    const actual=row.bankChargeOverride;
+    return `<div class="detail-head"><span class="grabber"></span>
+      <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
+      <div class="dh-top">${profileAvatar({name:claimant.fullName||claim.claimNo,cls:'cav',size:42})}
+        <div><h2>${esc(claimant.fullName||claim.claimNo)}</h2><span class="sub">${esc(claimant.department||'—')} · ${esc(claimant.employeeNo||'—')}</span></div>
+        <div style="margin-left:auto">${cap(c('expense'),'violet')}</div>
+      </div></div>
+      <div class="detail-body" data-expense-approval-detail data-expense-read-only="true">
+        ${error?`<div class="alert danger" data-expense-posting-failure>${ic('warn')}<span>${esc(error)}</span></div>`:''}
+        <div class="alert info">${ic('shield')}<span>${esc(c('expensePrivacy'))}</span></div>
+        <div class="statgrid c3">
+          <div class="stat"><small>${esc(c('claimed'))}</small><b class="tnum">${esc(expenseMoney(line.originalGross,line.originalCurrency))}</b></div>
+          <div class="stat"><small>${esc(c('step'))}</small><b>${esc(row.approval.stepLabel)}</b></div>
+          <div class="stat"><small>${esc(c('fx'))}</small><b class="tnum">${esc(String(actual?actual.actualFxRate:snapshot.policyFxRate||'—'))}</b></div>
+        </div>
+        <div class="card">
+          <div class="field"><span class="k">${esc(c('merchant'))}</span><span class="v">${esc(line.merchant)}</span></div>
+          <div class="field"><span class="k">${esc(c('expense'))}</span><span class="v">${esc(claim.claimNo)} · ${esc(claim.title)}</span></div>
+          <div class="field"><span class="k">${esc(c('payment'))}</span><span class="v">${esc(line.paymentSource)}</span></div>
+          <div class="field" data-expense-allocation><span class="k">${esc(c('allocation'))}</span><span class="v">${allocation}</span></div>
+          <div class="field" data-expense-fx><span class="k">${esc(c('fx'))}</span><span class="v">${esc(snapshot.originalCurrency)} → ${esc(snapshot.functionalCurrency)} · ${esc(String(snapshot.policyFxRate||'—'))}${actual?` · ${esc(String(actual.actualFxRate))}`:''}</span></div>
+          <div class="field" data-expense-duplicate><span class="k">${esc(c('duplicate'))}</span><span class="v">${esc(String(assessment.duplicateRiskScore||0))}/100 · ${esc(assessment.duplicateRiskLevel||'none')}<br>${signals}</span></div>
+          <div class="field" data-expense-budget><span class="k">${esc(c('budget'))}</span><span class="v">${esc(assessment.budgetBreached?c('block'):c('warn'))} · ${esc(assessment.budgetAction||'warn')}${assessment.remainingAfter==null?'':` · ${esc(expenseMoney(assessment.remainingAfter,snapshot.functionalCurrency))}`}</span></div>
+        </div>
+        ${assessment.duplicateRiskLevel==='high'&&!row.duplicateOverride
+          ?`<div class="alert warn">${ic('warn')}<span>${esc(c('duplicate'))}</span>
+            ${btn(c('overrideDuplicate'),{icon:'shield',sm:true,attrs:`data-expense-duplicate-override${busy?' disabled':''}`})}</div>`
+          :row.duplicateOverride?`<div class="alert ok">${ic('check')}<span>${esc(c('overrideDuplicate'))}</span></div>`:''}
+      </div>
+      <div class="set-savebar" data-expense-approval-actions><div class="grow"></div>
+        ${btn(c('return'),{icon:'undo',cls:'soft',attrs:`data-expense-approval-action="return"${busy?' disabled':''}`})}
+        ${btn(c('reject'),{icon:'x',cls:'danger',attrs:`data-expense-approval-action="reject"${busy?' disabled':''}`})}
+        ${btn(c('approve'),{icon:'check',cls:'primary',attrs:`data-expense-approval-action="approve"${busy?' disabled':''}`})}
+      </div>`;
+  }
   function detail(row){
+    if(row.approvalKind==='expense') return expenseDetail(row);
     const capacity=row.capacity;
-    const busy=String(busyId)===String(row.requestId);
-    const error=actionError&&String(actionError.id)===String(row.requestId)
+    const busy=String(busyId)===String(row.rowKey);
+    const error=actionError&&String(actionError.id)===String(row.rowKey)
       ?actionError.message:null;
     return `<div class="detail-head"><span class="grabber"></span>
       <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
@@ -1495,21 +1726,34 @@ SCREENS['my-approvals']=async function(root){
   }
   let page=masterDetailRegisterPage(root,{
     module:'mywork',route:'my-approvals',title:c('title'),description:c('description'),
-    rows:()=>rows,rowId:row=>row.requestId,filters:[],
+    rows:()=>rows,rowId:row=>row.rowKey,
+    filters:[['all',w('approvalsTitle')],['leave',c('leave')],['expense',c('expense')]],
+    filterFn:(row,kind)=>row.approvalKind===kind,
     note:()=>loadError,
     toolbarActions:[{
       label:c('delegation'),icon:'flow',onClick:openDelegation,disabled:!!loadError,
     }],
     kpis:()=>[
       {label:c('title'),value:rows.length,accent:rows.length>0},
-      {label:c('block'),value:rows.filter(row=>row.capacity&&row.capacity.action==='block'&&row.capacity.breached).length,negative:true},
+      {label:c('expense'),value:rows.filter(row=>row.approvalKind==='expense').length},
+      {label:c('block'),value:rows.filter(row=>
+        row.approvalKind==='leave'
+          ?row.capacity&&row.capacity.action==='block'&&row.capacity.breached
+          :row.assessment&&row.assessment.budgetBreached&&row.assessment.budgetAction==='block'
+      ).length,negative:true},
     ],
     columns:[
-      {label:w('employee'),align:'l',w:'minmax(180px,2fr)',render:row=>`<div class="cellsub"><b>${esc(row.employeeName)}</b><small>${esc(row.department)}</small></div>`},
-      {label:w('leaveType'),align:'l',render:row=>esc(row.leaveType)},
-      {label:w('dates'),align:'l',w:'minmax(160px,1.4fr)',render:row=>`${esc(dateValue(row.startDate))} → ${esc(dateValue(row.endDate))}`},
-      {label:c('step'),align:'l',render:row=>`<div class="cellsub"><b>${esc(row.stepLabel)}</b><small>#${esc(String(row.currentStepNo))}</small></div>`},
-      {label:c('capacity'),align:'l',render:row=>row.capacity?cap(capacityLabel(row.capacity.action),tone[row.capacity.action]||'neutral'):'—'},
+      {label:w('employee'),align:'l',w:'minmax(180px,2fr)',render:row=>`<div class="cellsub"><b>${esc(row.approvalKind==='expense'?row.claimant.fullName:row.employeeName)}</b><small>${esc(row.approvalKind==='expense'?row.claimant.department:row.department)}</small></div>`},
+      {label:c('title'),align:'l',render:row=>row.approvalKind==='expense'
+        ?`<div class="cellsub"><b>${esc(row.claim.claimNo)}</b><small>${esc(row.line.merchant)}</small></div>`
+        :esc(row.leaveType)},
+      {label:c('claimed'),align:'l',w:'minmax(160px,1.4fr)',render:row=>row.approvalKind==='expense'
+        ?esc(expenseMoney(row.line.originalGross,row.line.originalCurrency))
+        :`${esc(dateValue(row.startDate))} → ${esc(dateValue(row.endDate))}`},
+      {label:c('step'),align:'l',render:row=>`<div class="cellsub"><b>${esc(row.approvalKind==='expense'?row.approval.stepLabel:row.stepLabel)}</b><small>#${esc(String(row.approvalKind==='expense'?row.approval.currentStepNo:row.currentStepNo))}</small></div>`},
+      {label:c('capacity'),align:'l',render:row=>row.approvalKind==='expense'
+        ?cap(`${row.assessment.duplicateRiskScore}/100`,row.assessment.duplicateRiskLevel==='high'?'danger':'neutral')
+        :row.capacity?cap(capacityLabel(row.capacity.action),tone[row.capacity.action]||'neutral'):'—'},
     ],
     empty:{
       icon:loadError?'warn':'check',
@@ -1517,11 +1761,34 @@ SCREENS['my-approvals']=async function(root){
       description:loadError||w('noApprovalsBody'),
     },
     detailPane:{
-      rowLabel:row=>`${c('title')} · ${row.employeeName}`,
-      initialSelectedId:()=>window.matchMedia('(max-width:980px)').matches?null:(rows[0]&&rows[0].requestId),
+      rowLabel:row=>`${c('title')} · ${row.approvalKind==='expense'?row.claimant.fullName:row.employeeName}`,
+      initialSelectedId:()=>window.matchMedia('(max-width:980px)').matches?null:(rows[0]&&rows[0].rowKey),
       empty:`<div class="detail-empty">${ic('check')}<div><b>${esc(c('select'))}</b><small>${esc(c('selectBody'))}</small></div></div>`,
       content:detail,
       afterRender:({detailRoot,row})=>{
+        if(row&&row.approvalKind==='expense'){
+          detailRoot?.querySelector('[data-expense-approval-action="approve"]')?.addEventListener('click',()=>decide(row,'approve',''));
+          ['reject','return'].forEach(action=>{
+            detailRoot?.querySelector(`[data-expense-approval-action="${action}"]`)?.addEventListener('click',()=>{
+              appModal({icon:action==='reject'?'x':'undo',title:c(action),body:`<div class="fld"><span>${esc(c('reason'))}</span><textarea id="expenseApprovalReason"></textarea><span class="hint">${esc(c('reasonHint'))}</span></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c(action),{icon:action==='reject'?'x':'undo',cls:action==='reject'?'danger-solid':'primary',attrs:'data-confirm-expense-decision'})}`});
+              $('#modalEl').querySelector('[data-confirm-expense-decision]')?.addEventListener('click',()=>{
+                const reason=$('#expenseApprovalReason').value.trim();
+                if(reason.length<3){toast(c('reasonHint'),'danger');return;}
+                closeModal();decide(row,action,reason);
+              });
+            });
+          });
+          detailRoot?.querySelector('[data-expense-duplicate-override]')?.addEventListener('click',()=>{
+            appModal({icon:'shield',title:c('overrideDuplicate'),body:`<div class="fld"><span>${esc(c('reason'))}</span><textarea id="expenseOverrideReason"></textarea><span class="hint">${esc(c('reasonHint'))}</span></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c('overrideDuplicate'),{icon:'shield',cls:'primary',attrs:'data-confirm-expense-override'})}`});
+            $('#modalEl').querySelector('[data-confirm-expense-override]')?.addEventListener('click',()=>{
+              const reason=$('#expenseOverrideReason').value.trim();
+              if(reason.length<3){toast(c('reasonHint'),'danger');return;}
+              closeModal();overrideDuplicate(row,reason);
+            });
+          });
+          return;
+        }
+        if(!row)return;
         detailRoot?.querySelector('[data-approval-action="approve"]')?.addEventListener('click',()=>decide(row,'approve',''));
         detailRoot?.querySelector('[data-approval-action="reject"]')?.addEventListener('click',()=>{
           appModal({icon:'x',title:c('reject'),body:`<div class="fld"><span>${esc(c('reason'))}</span><textarea id="approvalRejectReason"></textarea><span class="hint">${esc(c('reasonHint'))}</span></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(c('reject'),{icon:'x',cls:'danger-solid',attrs:'data-confirm-approval-reject'})}`});

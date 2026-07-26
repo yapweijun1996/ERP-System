@@ -865,9 +865,11 @@ cleanup pass Demo/API, five-language and responsive proof.
    posts period-valid balanced Expense/Input Tax against Employee Payable or the
    configured company-paid account, with stable replay identity and recoverable
    all-or-nothing failure.
-4. **SSOT UI and proof** (TASK-129) deliver five-language standard list/case-detail
-   states without allowing approver edits, self-approval or client-selected employee
-   identity.
+4. **SSOT UI and proof** (TASK-129 done 2026-07-26) delivers five-language standard
+   list/case-detail states without allowing approver edits, self-approval or
+   client-selected employee identity. The dedicated desktop/375px proof covers partial
+   decisions, policy and actual FX, duplicate override, exact allocation, budget
+   breach, immutable posting and recoverable posting failure.
 
 Exit criteria: authoring, extraction handoff, partial decisions, duplicate override,
 FX, allocation, budget, card matching, advances and balanced idempotent posting pass

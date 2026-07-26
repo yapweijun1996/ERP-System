@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import Decimal from 'decimal.js';
 import {
   and,
-  desc,
   eq,
   inArray,
 } from 'drizzle-orm';
@@ -678,36 +677,4 @@ export function submitAuthorizedExpenseClaimBySystem(
   return withTenantTransaction(db, scope, (tx) => submitExpenseClaimWithin(
     tx, scope, employeeUserId, claimId, expectedVersion, 'system', now,
   ));
-}
-
-export async function listEmployeeExpenseClaimsWithin(
-  tx: DB,
-  scope: Scope,
-  ownerUserId: number,
-) {
-  const claims = await tx.select().from(expenseClaim).where(and(
-    eq(expenseClaim.masterFn, scope.masterFn),
-    eq(expenseClaim.companyFn, scope.companyFn),
-    eq(expenseClaim.ownerUserId, ownerUserId),
-  )).orderBy(desc(expenseClaim.updatedAt), desc(expenseClaim.id)).limit(100);
-  if (!claims.length) return [];
-  const lines = await tx.select().from(expenseClaimLine).where(and(
-    eq(expenseClaimLine.masterFn, scope.masterFn),
-    eq(expenseClaimLine.companyFn, scope.companyFn),
-    inArray(expenseClaimLine.claimId, claims.map((claim) => claim.id)),
-  )).orderBy(expenseClaimLine.claimId, expenseClaimLine.lineNo);
-  const allocations = lines.length
-    ? await tx.select().from(expenseAllocation).where(and(
-      eq(expenseAllocation.masterFn, scope.masterFn),
-      eq(expenseAllocation.companyFn, scope.companyFn),
-      inArray(expenseAllocation.lineId, lines.map((line) => line.id)),
-    )).orderBy(expenseAllocation.lineId, expenseAllocation.allocationNo)
-    : [];
-  return claims.map((claim) => ({
-    ...claim,
-    lines: lines.filter((line) => line.claimId === claim.id).map((line) => ({
-      ...line,
-      allocations: allocations.filter((allocation) => allocation.lineId === line.id),
-    })),
-  }));
 }

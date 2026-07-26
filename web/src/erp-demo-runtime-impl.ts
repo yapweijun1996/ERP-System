@@ -42,6 +42,10 @@ import {
   readMyLeaveApprovalWithin,
 } from '../../src/modules/hr/leaveApproval';
 import {
+  listEmployeeExpenseClaimsWithin,
+  readEmployeeExpenseClaimWithin,
+} from '../../src/modules/expenses/presentation';
+import {
   createApprovalDelegationWithin,
   listApprovalDelegationCandidatesWithin,
   listApprovalDelegationsWithin,
@@ -463,6 +467,23 @@ export const erpDemoRuntime = Object.freeze({
     },
     listAvailableLeaveTypesWithin(db: DemoOrm, scope: Scope) {
       return listAvailableLeaveTypesWithin(asDomainDb(db), scope);
+    },
+    listEmployeeExpenseClaimsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      ownerUserId: number,
+    ) {
+      return listEmployeeExpenseClaimsWithin(asDomainDb(db), scope, ownerUserId);
+    },
+    readEmployeeExpenseClaimWithin(
+      db: DemoOrm,
+      scope: Scope,
+      ownerUserId: number,
+      claimId: number,
+    ) {
+      return readEmployeeExpenseClaimWithin(
+        asDomainDb(db), scope, ownerUserId, claimId,
+      );
     },
     readGovernedLeaveWithin(
       db: DemoOrm,

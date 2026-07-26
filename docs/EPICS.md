@@ -2044,10 +2044,14 @@ approval is the accounting boundary.
       overrides retained. Stable journal identity, linked immutable GL legs and
       abandoned incomplete API request claims make replay and recoverable failure safe.
       PWA v128.
-- [ ] **TASK-129 — Deliver five-language expense SSOT screens and proof.** Use standard
+- [x] **TASK-129 — Deliver five-language expense SSOT screens and proof.** Use standard
       list/case-detail regions for My Claims, My Receipts and approvals; cover partial
       decisions, foreign currency, duplicate override, allocation, budget, posting
-      failure and privacy at desktop and 375px.
+      failure and privacy at desktop and 375px. Employee reads are owner-derived and
+      suppress cross-claim duplicate identifiers/hashes; approval work is read-only
+      except for the existing governed decision and Finance override commands. A
+      dedicated five-language fixture audit plus the 122-route desktop/mobile audit
+      proves the standard layouts, failure states and zero page overflow. PWA v129.
 
 ## EPIC-056 — Reimbursement Payments & Tax Evidence (Planned)
 
