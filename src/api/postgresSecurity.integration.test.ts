@@ -13,7 +13,7 @@ import {
 } from '../data/tenantTransaction';
 import { completeProductionSetup } from '../modules/setup/completeSetup';
 import { createInvitation, acceptInvitation, requestPasswordReset, confirmPasswordReset } from '../auth/lifecycle';
-import { decryptToken, type EncryptedToken } from '../auth/tokenCrypto';
+import { decryptToken, encryptToken, type EncryptedToken } from '../auth/tokenCrypto';
 import { processOutboxBatch } from '../worker/outbox';
 import {
   createInventoryLotWithin,
@@ -57,6 +57,11 @@ import {
   configureAllowancePolicyVersion,
   issueCashAdvance,
 } from '../modules/expenses/allowancesAdvances';
+import {
+  readVerifiedPayoutProfileWithin,
+  upsertOwnPayoutProfileWithin,
+  verifyPayoutProfileWithin,
+} from '../modules/expenses/payoutProfiles';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -463,6 +468,54 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       (tx) => tx.select().from(schema.employee)
         .where(eq(schema.employee.userId, accepted.userId)),
     );
+    const unverifiedPayout = await withTenantTransaction(db, expenseScope, (tx) =>
+      upsertOwnPayoutProfileWithin(
+        tx,
+        expenseScope,
+        accepted.userId,
+        null,
+        {
+          bankCountry: 'SG',
+          currency: 'SGD',
+          bankCode: 'DBSSG',
+          bankName: 'DBS Bank',
+          accountHolderName: 'Invited User',
+          accountNumber: '123456789012',
+          swiftBic: 'DBSSSGSG',
+        },
+        (plaintext) => encryptToken(plaintext, key),
+      ));
+    expect(unverifiedPayout).toMatchObject({
+      employeeId: advanceEmployee.id,
+      verificationStatus: 'unverified',
+      accountNumberMasked: '••••••••9012',
+    });
+    await expect(withTenantTransaction(db, expenseScope, (tx) =>
+      readVerifiedPayoutProfileWithin(tx, expenseScope, advanceEmployee.id)))
+      .rejects.toMatchObject({ code: 'payout_profile_unverified' });
+    const verifiedPayout = await withTenantTransaction(db, expenseScope, (tx) =>
+      verifyPayoutProfileWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        advanceEmployee.id,
+        unverifiedPayout.version,
+        'Matched employee bank evidence in PostgreSQL security proof.',
+      ));
+    expect(await withTenantTransaction(db, expenseScope, (tx) =>
+      readVerifiedPayoutProfileWithin(tx, expenseScope, advanceEmployee.id)))
+      .toMatchObject({
+        id: verifiedPayout.profile.id,
+        verificationStatus: 'verified',
+        accountNumberMasked: '••••••••9012',
+      });
+    expect(await db.select().from(schema.employeePayoutProfile)).toHaveLength(0);
+    expect(await db.select().from(schema.employeePayoutProfileEvent)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.employeePayoutProfileEvent),
+    )).toHaveLength(2);
     const [bankAccount] = await withTenantTransaction(
       db,
       expenseScope,

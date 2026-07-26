@@ -2053,15 +2053,19 @@ approval is the accounting boundary.
       dedicated five-language fixture audit plus the 122-route desktop/mobile audit
       proves the standard layouts, failure states and zero page overflow. PWA v129.
 
-## EPIC-056 — Reimbursement Payments & Tax Evidence (Planned)
+## EPIC-056 — Reimbursement Payments & Tax Evidence (In Progress)
 
 Complete the employee-expense chain with encrypted payout details, maker/checker bank
 files and immutable tax-support packages. This epic does not call bank APIs and does
 not submit returns directly to IRAS or LHDN.
 
-- [ ] **TASK-130 — Add encrypted employee payout profiles.** Mask account details by
-      default, restrict reveal, require HR/Finance verification, audit every change and
-      invalidate verification after modification.
+- [x] **TASK-130 — Add encrypted employee payout profiles.** Migration 0068 stores
+      normalized bank facts only inside an AES-256-GCM envelope while ordinary
+      self-service and HR/Finance reads expose masked holder/account projections.
+      Reveal requires a separate permission, explicit purpose, audited no-store
+      response; an independent HR/Finance actor verifies the profile and every owner
+      modification invalidates that verification. The batch-read boundary rejects
+      unverified profiles and immutable events record every change/reveal. PWA v130.
 - [ ] **TASK-131 — Add maker/checker reimbursement payment batches.** Create batches
       only from posted unpaid employee payables; require a distinct releaser and reject
       any batch containing the releaser's own claim.

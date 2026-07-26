@@ -74,6 +74,7 @@ DECLARE
     'cash_advance', 'cash_advance_application', 'cash_advance_posting',
     'cash_advance_event',
     'expense_posting', 'expense_posting_leg',
+    'employee_payout_profile', 'employee_payout_profile_event',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',

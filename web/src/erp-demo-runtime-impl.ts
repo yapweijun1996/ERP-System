@@ -46,6 +46,15 @@ import {
   readEmployeeExpenseClaimWithin,
 } from '../../src/modules/expenses/presentation';
 import {
+  listMaskedPayoutProfilesWithin,
+  readOwnMaskedPayoutProfileWithin,
+  revealPayoutProfileWithin,
+  upsertOwnPayoutProfileWithin,
+  verifyPayoutProfileWithin,
+  type EncryptedPayoutEnvelope,
+  type PayoutDetailsInput,
+} from '../../src/modules/expenses/payoutProfiles';
+import {
   createApprovalDelegationWithin,
   listApprovalDelegationCandidatesWithin,
   listApprovalDelegationsWithin,
@@ -483,6 +492,52 @@ export const erpDemoRuntime = Object.freeze({
     ) {
       return readEmployeeExpenseClaimWithin(
         asDomainDb(db), scope, ownerUserId, claimId,
+      );
+    },
+    readOwnMaskedPayoutProfileWithin(
+      db: DemoOrm,
+      scope: Scope,
+      ownerUserId: number,
+    ) {
+      return readOwnMaskedPayoutProfileWithin(asDomainDb(db), scope, ownerUserId);
+    },
+    listMaskedPayoutProfilesWithin(db: DemoOrm, scope: Scope) {
+      return listMaskedPayoutProfilesWithin(asDomainDb(db), scope);
+    },
+    upsertOwnPayoutProfileWithin(
+      db: DemoOrm,
+      scope: Scope,
+      ownerUserId: number,
+      expectedVersion: number | null,
+      input: PayoutDetailsInput,
+      encrypt: (plaintext: string) => EncryptedPayoutEnvelope | Promise<EncryptedPayoutEnvelope>,
+    ) {
+      return upsertOwnPayoutProfileWithin(
+        asDomainDb(db), scope, ownerUserId, expectedVersion, input, encrypt,
+      );
+    },
+    verifyPayoutProfileWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      employeeId: number,
+      expectedVersion: number,
+      reason: string,
+    ) {
+      return verifyPayoutProfileWithin(
+        asDomainDb(db), scope, actorUserId, employeeId, expectedVersion, reason,
+      );
+    },
+    revealPayoutProfileWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      employeeId: number,
+      purpose: string,
+      decrypt: (envelope: EncryptedPayoutEnvelope) => string | Promise<string>,
+    ) {
+      return revealPayoutProfileWithin(
+        asDomainDb(db), scope, actorUserId, employeeId, purpose, decrypt,
       );
     },
     readGovernedLeaveWithin(

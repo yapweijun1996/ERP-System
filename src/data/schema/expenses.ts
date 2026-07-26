@@ -1049,3 +1049,90 @@ export const expensePostingLeg = pgTable('expense_posting_leg', {
     sql`(${t.debit} > 0 and ${t.credit} = 0)
       or (${t.credit} > 0 and ${t.debit} = 0)`),
 ]);
+
+/** One employee-owned payout destination. Bank facts remain encrypted at rest;
+ * only deliberately masked projections are stored outside the AES-GCM envelope. */
+export const employeePayoutProfile = pgTable('employee_payout_profile', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  employeeId: bigint('employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  bankCountry: text('bank_country').notNull(),
+  currency: text('currency').notNull().references(() => currency.code),
+  bankCode: text('bank_code').notNull(),
+  bankName: text('bank_name').notNull(),
+  accountHolderMasked: text('account_holder_masked').notNull(),
+  accountNumberMasked: text('account_number_masked').notNull(),
+  detailsEnvelope: jsonb('details_envelope').notNull(),
+  verificationStatus: text('verification_status').notNull().default('unverified'),
+  version: integer('version').notNull().default(1),
+  verifiedByUserId: bigint('verified_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  verificationReason: text('verification_reason'),
+  verificationInvalidatedAt: timestamp('verification_invalidated_at', { withTimezone: true }),
+  verificationInvalidatedReason: text('verification_invalidated_reason'),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  updatedByUserId: bigint('updated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_employee_payout_profile_employee')
+    .on(t.masterFn, t.companyFn, t.employeeId),
+  index('idx_employee_payout_profile_verification')
+    .on(t.masterFn, t.companyFn, t.verificationStatus, t.employeeId),
+  check('ck_employee_payout_profile_country', sql`${t.bankCountry} ~ '^[A-Z]{2}$'`),
+  check('ck_employee_payout_profile_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_employee_payout_profile_bank_code',
+    sql`char_length(${t.bankCode}) between 2 and 20`),
+  check('ck_employee_payout_profile_bank_name',
+    sql`char_length(${t.bankName}) between 2 and 120`),
+  check('ck_employee_payout_profile_masks',
+    sql`char_length(${t.accountHolderMasked}) between 2 and 160
+      and char_length(${t.accountNumberMasked}) between 4 and 40`),
+  check('ck_employee_payout_profile_status',
+    sql`${t.verificationStatus} in ('unverified','verified')`),
+  check('ck_employee_payout_profile_version', sql`${t.version} > 0`),
+  check('ck_employee_payout_profile_verification',
+    sql`(${t.verificationStatus} = 'verified'
+      and ${t.verifiedByUserId} is not null
+      and ${t.verifiedAt} is not null
+      and char_length(${t.verificationReason}) between 3 and 500
+      and ${t.verificationInvalidatedAt} is null
+      and ${t.verificationInvalidatedReason} is null)
+      or (${t.verificationStatus} = 'unverified'
+        and ${t.verifiedByUserId} is null
+        and ${t.verifiedAt} is null
+        and ${t.verificationReason} is null
+        and (${t.verificationInvalidatedAt} is null
+          or char_length(${t.verificationInvalidatedReason}) between 3 and 500))`),
+]);
+
+/** Append-only non-sensitive lifecycle/access proof. Metadata may contain field
+ * names and versions only; it must never contain an account value or envelope. */
+export const employeePayoutProfileEvent = pgTable('employee_payout_profile_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  profileId: bigint('profile_id', { mode: 'number' }).notNull()
+    .references(() => employeePayoutProfile.id),
+  employeeId: bigint('employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  eventType: text('event_type').notNull(),
+  profileVersion: integer('profile_version').notNull(),
+  reason: text('reason'),
+  metadata: jsonb('metadata').notNull().default({}),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_employee_payout_profile_event_profile')
+    .on(t.masterFn, t.companyFn, t.profileId, t.id),
+  index('idx_employee_payout_profile_event_actor')
+    .on(t.masterFn, t.companyFn, t.actorUserId, t.occurredAt, t.id),
+  check('ck_employee_payout_profile_event_type',
+    sql`${t.eventType} in ('created','updated','verified','revealed')`),
+  check('ck_employee_payout_profile_event_version', sql`${t.profileVersion} > 0`),
+  check('ck_employee_payout_profile_event_reason',
+    sql`${t.reason} is null or char_length(${t.reason}) between 3 and 500`),
+]);

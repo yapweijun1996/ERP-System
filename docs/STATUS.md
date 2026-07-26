@@ -1326,6 +1326,25 @@ and 375px. Final gates pass lint, dual typecheck, 496 tests plus one expected sk
 desktop/375px routes at **122 Canonical / 0 Preview**, and PostgreSQL 16
 non-superuser/RLS proof. PWA v129.
 
+### Encrypted employee payout profiles (TASK-130)
+
+Migration 0068 adds one tenant-scoped payout profile per active employee and an
+append-only event stream protected against UPDATE/DELETE. Bank country, currency,
+bank identity, holder name and account number are normalized before the complete
+sensitive payload is encrypted as an AES-256-GCM envelope. Ordinary self and
+HR/Finance reads omit that envelope and return only masked holder/account facts.
+
+The authenticated employee identity owns create/update; client-selected employee
+identity is rejected. Reveal requires a dedicated self or Finance permission, a
+3–500-character purpose, an audited event and a `Cache-Control: no-store` response.
+Verification requires a different HR/Finance actor, optimistic version and reason.
+Every subsequent employee modification clears verification and records why, while
+the batch-selection boundary rejects any unverified profile. Final gates pass lint,
+dual typecheck, 500 tests plus one expected skip, 69 migrations at schema version 68,
+207-table drift, API/Demo builds, desktop/mobile smoke, in-app-browser PGlite v68
+startup with zero runtime errors/overflow, and PostgreSQL 16 non-superuser/RLS proof.
+PWA v130.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1345,8 +1364,9 @@ delivered line approval, duplicate risk and budget control, TASK-126 delivered b
 corporate-card reconciliation, and TASK-127 delivered versioned allowance calculations
 and reconciled cash advances. TASK-128 delivered transactionally coupled final approval
 and balanced expense posting. TASK-129 delivered the five-language expense
-register/detail/approval SSOT and responsive privacy/failure proof. TASK-130 through
-TASK-135 remain planning records
+register/detail/approval SSOT and responsive privacy/failure proof, and TASK-130
+delivered encrypted, masked, independently verified employee payout profiles.
+TASK-131 through TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1384,9 +1404,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 128 tasks, including TASK-129
+- Done: 129 tasks, including TASK-130
 - Blocked: TASK-017 (1)
-- Todo: 6 planned tasks (TASK-130–135) across EPIC-056. These extend the product
+- Todo: 5 planned tasks (TASK-131–135) across EPIC-056. These extend the product
   beyond the current 122 Canonical / 0 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

@@ -224,6 +224,32 @@
     },
     claims:function(){ return apiRequest('my/claims'); },
     claim:function(id){ return apiRequest('my/claims/'+encodeURIComponent(id)); },
+    payoutProfile:function(){ return apiRequest('my/payout-profile'); },
+    savePayoutProfile:function(payload,idempotencyKey){
+      return apiRequest('my/payout-profile',{
+        method:'PUT',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    revealPayoutProfile:function(purpose){
+      return apiRequest('my/payout-profile/actions/reveal',{
+        method:'POST',body:{purpose:purpose},
+      });
+    },
+    payoutProfiles:function(){ return apiRequest('payout-profiles'); },
+    verifyPayoutProfile:function(employeeId,expectedVersion,reason,idempotencyKey){
+      return apiRequest('payout-profiles/'+encodeURIComponent(employeeId)+'/actions/verify',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:{expectedVersion:expectedVersion,reason:reason},
+      });
+    },
+    revealEmployeePayoutProfile:function(employeeId,purpose){
+      return apiRequest('payout-profiles/'+encodeURIComponent(employeeId)+'/actions/reveal',{
+        method:'POST',body:{purpose:purpose},
+      });
+    },
     expenseApprovals:function(){ return apiRequest('expense-approvals'); },
     expenseApprovalAction:function(id,decision,reason,idempotencyKey){
       return apiRequest('expense-approvals/'+encodeURIComponent(id)+'/actions/decide',{

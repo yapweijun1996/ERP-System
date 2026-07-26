@@ -875,10 +875,11 @@ Exit criteria: authoring, extraction handoff, partial decisions, duplicate overr
 FX, allocation, budget, card matching, advances and balanced idempotent posting pass
 domain/API/browser and current release gates.
 
-## Phase 38 — Reimbursement Payments & Tax Evidence (Planned)
+## Phase 38 — Reimbursement Payments & Tax Evidence (In Progress)
 
-1. **Payout profiles and maker/checker settlement** (EPIC-056, TASK-130–132) add
-   encrypted verified employee bank profiles, separate batch preparer/releaser,
+1. **Payout profiles and maker/checker settlement** (EPIC-056) starts with encrypted,
+   masked, independently verified employee bank profiles (TASK-130 done 2026-07-26).
+   TASK-131/132 add a separate batch preparer/releaser,
    self-payment prevention, bank-file export and partial bank-result import with
    successful-line-only Dr Employee Payable / Cr Bank posting.
 2. **Immutable tax evidence packages** (TASK-133/134) generate one-snapshot register,

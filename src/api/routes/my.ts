@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
+import { decryptToken, encryptToken } from '../../auth/tokenCrypto';
 import { company } from '../../data/schema';
 import {
   ActorScopeError,
@@ -62,9 +63,17 @@ import {
   readEmployeeExpenseClaimWithin,
 } from '../../modules/expenses/presentation';
 import { ExpensePolicyError } from '../../modules/expenses/policy';
+import {
+  PayoutProfileError,
+  readOwnMaskedPayoutProfileWithin,
+  revealPayoutProfileWithin,
+  upsertOwnPayoutProfileWithin,
+  type PayoutDetailsInput,
+} from '../../modules/expenses/payoutProfiles';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import {
+  abandonIdempotentRequest,
   beginIdempotentRequest,
   completeIdempotentRequest,
 } from '../idempotency';
@@ -85,7 +94,11 @@ function findClientEmployeeIdentity(
   return null;
 }
 
-export function createMyRouter(db: DB): Router {
+export interface MyRouterOptions {
+  payoutEncryptionKey?: Buffer;
+}
+
+export function createMyRouter(db: DB, options: MyRouterOptions = {}): Router {
   const router = Router();
 
   function positiveId(value: string): number | null {
@@ -146,6 +159,10 @@ export function createMyRouter(db: DB): Router {
       apiError(res, error.status, error.code, error.message);
       return;
     }
+    if (error instanceof PayoutProfileError) {
+      apiError(res, error.status, error.code, error.message, error.details);
+      return;
+    }
     throw error;
   }
 
@@ -196,6 +213,19 @@ export function createMyRouter(db: DB): Router {
     if (!session) return null;
     if (!await hasPermission(db, session, PERMISSIONS.employeeClaimsWrite)) {
       apiError(res, 403, 'permission_denied', 'You cannot maintain your expense claims.');
+      return null;
+    }
+    return session;
+  }
+
+  async function requirePayoutManage(
+    req: import('express').Request,
+    res: import('express').Response,
+  ) {
+    const session = await requireSelf(req, res);
+    if (!session) return null;
+    if (!await hasPermission(db, session, PERMISSIONS.employeePayoutManage)) {
+      apiError(res, 403, 'permission_denied', 'You cannot maintain your payout profile.');
       return null;
     }
     return session;
@@ -383,6 +413,11 @@ export function createMyRouter(db: DB): Router {
         session,
         PERMISSIONS.employeeClaimsWrite,
       );
+      const canManagePayout = await hasPermission(
+        db,
+        session,
+        PERMISSIONS.employeePayoutManage,
+      );
       const data = await withTenantTransaction(db, scope, async (tx) => {
         const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
         const [activeCompany] = await tx.select({
@@ -414,6 +449,7 @@ export function createMyRouter(db: DB): Router {
             leave: { available: true, writable: canWriteLeave },
             claims: { available: true, writable: canWriteClaims },
             receipts: { available: true, writable: canWriteReceipts },
+            payout: { available: true, writable: canManagePayout },
             team: { available: canReadTeam, employeeCount: teamEmployeeIds.length },
           },
         };
@@ -764,6 +800,184 @@ export function createMyRouter(db: DB): Router {
           availability: 'canonical',
           ownership: 'employee',
           limit: 100,
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.get('/payout-profile', async (req, res) => {
+    const session = await requireSelf(req, res);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        readOwnMaskedPayoutProfileWithin(tx, scope, session.userId));
+      res.json({
+        data,
+        meta: {
+          actorDerived: true,
+          ownership: 'employee',
+          sensitiveFields: 'masked',
+        },
+      });
+    } catch (error) {
+      handleActorError(res, error);
+    }
+  });
+
+  router.put('/payout-profile', async (req, res) => {
+    const session = await requirePayoutManage(req, res);
+    if (!session) return;
+    if (!options.payoutEncryptionKey) {
+      apiError(
+        res,
+        503,
+        'payout_encryption_unavailable',
+        'Payout profile encryption is not configured.',
+      );
+      return;
+    }
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+      ? req.body as Record<string, unknown>
+      : {};
+    const expectedVersion = body.expectedVersion == null
+      ? null
+      : Number(body.expectedVersion);
+    if (
+      expectedVersion != null
+      && (!Number.isSafeInteger(expectedVersion) || expectedVersion <= 0)
+    ) {
+      apiError(res, 400, 'invalid_version', 'expectedVersion must be a positive integer.');
+      return;
+    }
+    const details = {
+      bankCountry: String(body.bankCountry ?? ''),
+      currency: String(body.currency ?? ''),
+      bankCode: String(body.bankCode ?? ''),
+      bankName: String(body.bankName ?? ''),
+      accountHolderName: String(body.accountHolderName ?? ''),
+      accountNumber: String(body.accountNumber ?? ''),
+      swiftBic: body.swiftBic == null ? null : String(body.swiftBic),
+    } satisfies PayoutDetailsInput;
+    const key = req.header('idempotency-key')?.trim() ?? '';
+    if (!key || key.length > 128) {
+      apiError(res, 428, 'idempotency_key_required', 'A valid Idempotency-Key is required.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const operation = 'employee.payout-profile.upsert';
+    const begun = await beginIdempotentRequest(
+      db,
+      { ...scope, actorUserId: session.userId },
+      key,
+      operation,
+      { expectedVersion, details },
+    );
+    if (begun.kind === 'replay') {
+      res.setHeader('Idempotency-Replayed', 'true');
+      res.status(begun.status).json(begun.body);
+      return;
+    }
+    if (begun.kind === 'conflict') {
+      apiError(res, 409, 'idempotency_key_reused', 'This Idempotency-Key cannot be reused.');
+      return;
+    }
+    try {
+      const profile = await withTenantTransaction(db, scope, async (tx) => {
+        const result = await upsertOwnPayoutProfileWithin(
+          tx,
+          scope,
+          session.userId,
+          expectedVersion,
+          details,
+          (plaintext) => encryptToken(plaintext, options.payoutEncryptionKey!),
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'employee_payout_profile',
+          entityId: result.id,
+          action: expectedVersion == null ? 'created' : 'updated',
+          after: {
+            employeeId: result.employeeId,
+            version: result.version,
+            verificationStatus: result.verificationStatus,
+            bankCountry: result.bankCountry,
+            currency: result.currency,
+            bankCode: result.bankCode,
+            bankName: result.bankName,
+            accountHolderMasked: result.accountHolderMasked,
+            accountNumberMasked: result.accountNumberMasked,
+          },
+        });
+        return result;
+      });
+      const response = {
+        data: profile,
+        meta: {
+          actorDerived: true,
+          ownership: 'employee',
+          sensitiveFields: 'masked',
+        },
+      };
+      await completeIdempotentRequest(db, begun.recordId, expectedVersion == null ? 201 : 200, response);
+      res.status(expectedVersion == null ? 201 : 200).json(response);
+    } catch (error) {
+      await abandonIdempotentRequest(db, begun.recordId);
+      handleActorError(res, error);
+    }
+  });
+
+  router.post('/payout-profile/actions/reveal', async (req, res) => {
+    const session = await requirePayoutManage(req, res);
+    if (!session) return;
+    if (!options.payoutEncryptionKey) {
+      apiError(
+        res,
+        503,
+        'payout_encryption_unavailable',
+        'Payout profile encryption is not configured.',
+      );
+      return;
+    }
+    const purpose = String(req.body?.purpose ?? '');
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const owner = await resolveActorEmployeeWithin(tx, scope, session.userId);
+        const result = await revealPayoutProfileWithin(
+          tx,
+          scope,
+          session.userId,
+          owner.id,
+          purpose,
+          (envelope) => decryptToken(envelope, options.payoutEncryptionKey!),
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'employee_payout_profile',
+          entityId: result.profile.id,
+          action: 'sensitive_details_revealed',
+          after: {
+            employeeId: result.profile.employeeId,
+            profileVersion: result.profile.version,
+            purpose: result.purpose,
+          },
+        });
+        return result;
+      });
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({
+        data,
+        meta: {
+          actorDerived: true,
+          ownership: 'employee',
+          sensitiveAccess: 'audited',
         },
       });
     } catch (error) {

@@ -477,6 +477,13 @@
       "when": 1785027217732,
       "tag": "0067_expense_postings",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1785032890545,
+      "tag": "0068_employee_payout_profiles",
+      "breakpoints": true
     }
   ]
 }

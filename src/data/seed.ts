@@ -110,10 +110,12 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.leave.write' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.receipts.write' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.claims.write' },
+    { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.payout.manage' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.self.read' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.leave.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.receipts.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.claims.write' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.payout.manage' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.approve.manager' },
   ]);

@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 67;
+  var DEMO_SCHEMA_VERSION = 68;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -2914,6 +2914,8 @@
           orm,SCOPE,myActorUserId(),'employee.receipts.write');
         var canWriteClaims=await state.runtime.commands.hasPermissionWithin(
           orm,SCOPE,myActorUserId(),'employee.claims.write');
+        var canManagePayout=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.payout.manage');
         var teamEmployeeIds=canReadTeam
           ?await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id)
           :[];
@@ -2933,6 +2935,7 @@
             leave:{available:true,writable:canWriteLeave},
             claims:{available:true,writable:canWriteClaims},
             receipts:{available:true,writable:canWriteReceipts},
+            payout:{available:true,writable:canManagePayout},
             team:{available:canReadTeam,employeeCount:teamEmployeeIds.length},
           },
         };
@@ -3013,6 +3016,78 @@
         actorDerived:true,ownership:'employee',
         privacy:'owner_only_duplicate_evidence_redacted',
       }};
+    },
+    payoutProfile:async function(){
+      var data=await withMyActor(function(orm){
+        return state.runtime.commands.readOwnMaskedPayoutProfileWithin(
+          orm,SCOPE,myActorUserId());
+      });
+      return {data:data,meta:{
+        actorDerived:true,ownership:'employee',sensitiveFields:'masked',
+      }};
+    },
+    savePayoutProfile:async function(payload){
+      payload=payload||{};
+      var data=await withMyActor(async function(orm){
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.payout.manage');
+        if(!canWrite) throw new Error('You cannot maintain your payout profile.');
+        return state.runtime.commands.upsertOwnPayoutProfileWithin(
+          orm,SCOPE,myActorUserId(),
+          payload.expectedVersion==null?null:Number(payload.expectedVersion),
+          payload,
+          encryptDemoCredential);
+      });
+      return {data:data,meta:{
+        actorDerived:true,ownership:'employee',sensitiveFields:'masked',
+      }};
+    },
+    revealPayoutProfile:async function(purpose){
+      var data=await withMyActor(async function(orm,actor){
+        var canReveal=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'employee.payout.manage');
+        if(!canReveal) throw new Error('You cannot reveal your payout profile.');
+        return state.runtime.commands.revealPayoutProfileWithin(
+          orm,SCOPE,myActorUserId(),actor.id,String(purpose||''),
+          decryptDemoCredential);
+      });
+      return {data:data,meta:{
+        actorDerived:true,ownership:'employee',sensitiveAccess:'audited',
+      }};
+    },
+    payoutProfiles:async function(){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payout.verify');
+        if(!allowed) throw new Error('Payout profile verification permission is required.');
+        return state.runtime.commands.listMaskedPayoutProfilesWithin(orm,SCOPE);
+      });
+      return {data:data,meta:{sensitiveFields:'masked',limit:200}};
+    },
+    verifyPayoutProfile:async function(employeeId,expectedVersion,reason){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payout.verify');
+        if(!allowed) throw new Error('Payout profile verification permission is required.');
+        return state.runtime.commands.verifyPayoutProfileWithin(
+          orm,SCOPE,myActorUserId(),Number(employeeId),Number(expectedVersion),
+          String(reason||''));
+      });
+      return {data:data,meta:{sensitiveFields:'masked'}};
+    },
+    revealEmployeePayoutProfile:async function(employeeId,purpose){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payout.reveal');
+        if(!allowed) throw new Error('Payout profile reveal permission is required.');
+        return state.runtime.commands.revealPayoutProfileWithin(
+          orm,SCOPE,myActorUserId(),Number(employeeId),String(purpose||''),
+          decryptDemoCredential);
+      });
+      return {data:data,meta:{sensitiveAccess:'audited'}};
     },
     expenseApprovals:async function(){
       await withMyActor(function(){return null;});
