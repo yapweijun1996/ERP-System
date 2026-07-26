@@ -2037,10 +2037,13 @@ approval is the accounting boundary.
       and exact employee repayment reconcile before close; balanced paired GL entries,
       employee-payable difference, applications and lifecycle events remain immutable
       and tenant scoped. PWA v127.
-- [ ] **TASK-128 — Post approved expenses and employee payables.** On final Finance
-      approval post balanced Expense/Input Tax against Employee Payable or the
-      configured company-paid clearing/bank account; preserve Decimal, period-lock,
-      idempotency and audit invariants.
+- [x] **TASK-128 — Post approved expenses and employee payables.** Migration 0067
+      transactionally couples final Finance approval to one immutable, period-valid
+      posting. Employee-paid lines credit Employee Payable; company-paid lines credit
+      the snapshotted bank/card-clearing account, with eligible verified bank-charge
+      overrides retained. Stable journal identity, linked immutable GL legs and
+      abandoned incomplete API request claims make replay and recoverable failure safe.
+      PWA v128.
 - [ ] **TASK-129 — Deliver five-language expense SSOT screens and proof.** Use standard
       list/case-detail regions for My Claims, My Receipts and approvals; cover partial
       decisions, foreign currency, duplicate override, allocation, budget, posting

@@ -5,6 +5,7 @@ import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { appendAudit } from './audit';
 import {
+  abandonIdempotentRequest,
   beginIdempotentRequest,
   completeIdempotentRequest,
   requestHash,
@@ -31,6 +32,31 @@ describe('idempotency and audit services', () => {
 
   it('hashes object payloads independently of key insertion order', () => {
     expect(requestHash('op', { a: 1, b: 2 })).toBe(requestHash('op', { b: 2, a: 1 }));
+  });
+
+  it('releases an incomplete claim so a failed transactional request can retry', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const [actor] = await db.select({ userId: appUser.userId }).from(appUser)
+      .where(eq(appUser.email, 'admin@acme.co'));
+    const scope = { masterFn: 'M1', companyFn: 'C-SG', actorUserId: actor.userId };
+    const first = await beginIdempotentRequest(
+      db,
+      scope,
+      'recoverable-key',
+      'expense.line-approval.decide',
+      { decision: 'approved' },
+    );
+    expect(first.kind).toBe('started');
+    if (first.kind !== 'started') throw new Error('expected claim');
+    await abandonIdempotentRequest(db, first.recordId);
+    expect((await beginIdempotentRequest(
+      db,
+      scope,
+      'recoverable-key',
+      'expense.line-approval.decide',
+      { decision: 'approved' },
+    )).kind).toBe('started');
   });
 
   it('allows an idempotency key to be claimed again after its TTL expires', async () => {

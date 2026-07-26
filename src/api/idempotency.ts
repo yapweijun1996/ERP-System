@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, isNull, lt } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { apiIdempotency } from '../data/schema';
 
@@ -105,6 +105,15 @@ export async function completeIdempotentRequest(
     completedAt: new Date(),
     updatedAt: new Date(),
   }).where(eq(apiIdempotency.id, recordId));
+}
+
+/** A transaction failed before producing a response; release the claim so the same
+ * request key remains retryable instead of being stranded as permanently in-progress. */
+export async function abandonIdempotentRequest(db: DB, recordId: number): Promise<void> {
+  await db.delete(apiIdempotency).where(and(
+    eq(apiIdempotency.id, recordId),
+    isNull(apiIdempotency.completedAt),
+  ));
 }
 
 export async function cleanupExpiredIdempotency(db: DB, now = new Date()): Promise<number> {

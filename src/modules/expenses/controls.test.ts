@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import {
   account,
+  accountingPeriod,
   appUser,
   approvalInstanceStep,
   documentProcessingPolicy,
@@ -47,6 +48,15 @@ async function setup(
     eq(account.companyFn, scope.companyFn),
   ));
   const accountId = (code: string) => accounts.find((row) => row.code === code)!.id;
+  await db.insert(accountingPeriod).values({
+    ...scope,
+    fiscalYear: 2026,
+    periodNo: 7,
+    label: 'July 2026',
+    startDate: '2026-07-01',
+    endDate: '2026-07-31',
+    status: 'open',
+  });
   await configureExpensePolicyVersion(db, scope, admin.userId, {
     categoryCode: 'TRAVEL',
     categoryName: 'Business travel',

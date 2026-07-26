@@ -9,9 +9,11 @@ import {
   listExpenseApprovalQueueWithin,
   overrideHighRiskDuplicateWithin,
 } from '../../modules/expenses/controls';
+import { ExpensePostingError } from '../../modules/expenses/postings';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import {
+  abandonIdempotentRequest,
   beginIdempotentRequest,
   completeIdempotentRequest,
 } from '../idempotency';
@@ -28,7 +30,9 @@ function body(value: unknown): Record<string, unknown> {
 }
 
 function handle(res: import('express').Response, error: unknown): void {
-  if (error instanceof ExpenseControlError || error instanceof ApprovalWorkflowError) {
+  if (error instanceof ExpenseControlError
+    || error instanceof ApprovalWorkflowError
+    || error instanceof ExpensePostingError) {
     apiError(res, error.status, error.code, error.message);
     return;
   }
@@ -115,6 +119,7 @@ export function createExpenseApprovalsRouter(db: DB): Router {
       await completeIdempotentRequest(db, begun.recordId, 200, response);
       res.json(response);
     } catch (error) {
+      await abandonIdempotentRequest(db, begun.recordId);
       handle(res, error);
     }
   });

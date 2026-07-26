@@ -16,6 +16,7 @@ import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { appUser } from './tenancy';
 import { account, glEntry } from './finance';
+import { accountingPeriod } from './controlPlane';
 import { currency } from './localization';
 import { documentVersion, receiptInboxItem } from './documents';
 import { budgetLine, budgetVersion } from './reporting';
@@ -967,4 +968,84 @@ export const cashAdvanceEvent = pgTable('cash_advance_event', {
   check('ck_cash_advance_event_type', sql`${t.eventType} in ('issued','closed')`),
   check('ck_cash_advance_event_reason',
     sql`char_length(${t.reason}) between 3 and 1000`),
+]);
+
+/** One immutable, idempotent final-Finance posting per approved expense line. */
+export const expensePosting = pgTable('expense_posting', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  lineApprovalId: bigint('line_approval_id', { mode: 'number' }).notNull()
+    .references(() => expenseLineApproval.id),
+  claimId: bigint('claim_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaim.id),
+  lineId: bigint('line_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaimLine.id),
+  claimVersion: integer('claim_version').notNull(),
+  policySnapshotId: bigint('policy_snapshot_id', { mode: 'number' }).notNull()
+    .references(() => expenseLinePolicySnapshot.id),
+  bankChargeOverrideId: bigint('bank_charge_override_id', { mode: 'number' })
+    .references(() => expenseBankChargeOverride.id),
+  accountingPeriodId: bigint('accounting_period_id', { mode: 'number' }).notNull()
+    .references(() => accountingPeriod.id),
+  journalRef: text('journal_ref').notNull(),
+  postingDate: date('posting_date').notNull(),
+  paymentSource: text('payment_source').notNull(),
+  functionalCurrency: text('functional_currency').notNull(),
+  baseExpense: numeric('base_expense', { precision: 18, scale: 2 }).notNull(),
+  baseInputTax: numeric('base_input_tax', { precision: 18, scale: 2 }).notNull(),
+  baseGross: numeric('base_gross', { precision: 18, scale: 2 }).notNull(),
+  creditAccountId: bigint('credit_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  factsSha256: text('facts_sha256').notNull(),
+  postedByUserId: bigint('posted_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  postedAt: timestamp('posted_at', { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_expense_posting_line_approval')
+    .on(t.masterFn, t.companyFn, t.lineApprovalId),
+  uniqueIndex('uq_expense_posting_journal')
+    .on(t.masterFn, t.companyFn, t.journalRef),
+  index('idx_expense_posting_date')
+    .on(t.masterFn, t.companyFn, t.postingDate, t.id),
+  check('ck_expense_posting_version', sql`${t.claimVersion} > 0`),
+  check('ck_expense_posting_payment',
+    sql`${t.paymentSource} in ('employee_paid','company_paid')`),
+  check('ck_expense_posting_currency', sql`${t.functionalCurrency} ~ '^[A-Z]{3}$'`),
+  check('ck_expense_posting_amounts',
+    sql`${t.baseExpense} >= 0 and ${t.baseInputTax} >= 0 and ${t.baseGross} > 0
+      and ${t.baseExpense} + ${t.baseInputTax} = ${t.baseGross}`),
+  check('ck_expense_posting_hash',
+    sql`char_length(${t.factsSha256}) = 64
+      and ${t.factsSha256} ~ '^[0-9a-f]{64}$'`),
+]);
+
+/** Immutable link from each balanced debit/credit leg to its GL fact. */
+export const expensePostingLeg = pgTable('expense_posting_leg', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  postingId: bigint('posting_id', { mode: 'number' }).notNull()
+    .references(() => expensePosting.id),
+  legNo: integer('leg_no').notNull(),
+  legType: text('leg_type').notNull(),
+  accountId: bigint('account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  debit: numeric('debit', { precision: 18, scale: 2 }).notNull().default('0'),
+  credit: numeric('credit', { precision: 18, scale: 2 }).notNull().default('0'),
+  glEntryId: bigint('gl_entry_id', { mode: 'number' }).notNull()
+    .references(() => glEntry.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_expense_posting_leg_no')
+    .on(t.masterFn, t.companyFn, t.postingId, t.legNo),
+  uniqueIndex('uq_expense_posting_leg_gl')
+    .on(t.masterFn, t.companyFn, t.glEntryId),
+  index('idx_expense_posting_leg_posting')
+    .on(t.masterFn, t.companyFn, t.postingId, t.id),
+  check('ck_expense_posting_leg_no', sql`${t.legNo} > 0`),
+  check('ck_expense_posting_leg_type',
+    sql`${t.legType} in ('expense','input_tax','credit')`),
+  check('ck_expense_posting_leg_side',
+    sql`(${t.debit} > 0 and ${t.credit} = 0)
+      or (${t.credit} > 0 and ${t.debit} = 0)`),
 ]);

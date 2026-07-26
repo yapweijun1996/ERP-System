@@ -346,6 +346,7 @@ cash_advance_application        immutable approved expense/allowance source
 cash_advance_posting            paired GL ids for issue/application/repayment
 cash_advance_event              append-only issue/close evidence
 expense_posting                 idempotent balanced GL linkage
+expense_posting_leg             immutable debit/credit GL evidence
 ```
 
 Migration 0062 implements `expense_category`, `expense_policy`,
@@ -405,11 +406,14 @@ expenses and advance, requires the remaining employee repayment exactly, and rec
 any excess as employee payable. Every posting stores both balanced GL leg ids; source,
 posting and event evidence cannot be rewritten or deleted.
 
-Approved employee-paid expenses post Dr Expense/Input Tax and Cr Employee Payable;
-company-paid expenses credit the configured bank/card clearing account. Original and
-base-currency amounts, exchange-rate source, verified actual bank charge and Decimal
-rounding evidence are persisted. Approval is line-aware, but approvers cannot rewrite
-employee-submitted facts.
+Migration 0067 implements `expense_posting` and `expense_posting_leg`. Final Finance
+approval and posting occur in one transaction after locking exactly one open accounting
+period. Approved employee-paid expenses post Dr Expense/Input Tax and Cr Employee
+Payable; company-paid expenses credit the snapshotted bank/card clearing account. An
+eligible verified actual bank charge proportionally scales input tax and persists both
+the policy gross and posted gross. Stable journal identity makes replay idempotent;
+posting records, leg links and their GL rows are database-protected from mutation.
+Failure rolls back the approval, claim refresh and every ledger effect together.
 
 ### 8.5 Reimbursement and tax evidence
 

@@ -73,6 +73,7 @@ DECLARE
     'expense_allowance_policy_version', 'expense_allowance_calculation',
     'cash_advance', 'cash_advance_application', 'cash_advance_posting',
     'cash_advance_event',
+    'expense_posting', 'expense_posting_leg',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',

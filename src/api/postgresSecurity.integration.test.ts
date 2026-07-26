@@ -45,7 +45,10 @@ import {
   replaceExpenseClaimDraftLines,
   submitExpenseClaimByEmployee,
 } from '../modules/expenses/claims';
-import { configureExpenseControlPolicyVersion } from '../modules/expenses/controls';
+import {
+  configureExpenseControlPolicyVersion,
+  decideExpenseLineWithin,
+} from '../modules/expenses/controls';
 import { importCorporateCardStatement } from '../modules/expenses/corporateCards';
 import {
   approveAllowanceCalculationWithin,
@@ -376,6 +379,30 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       expenseScope,
       (tx) => tx.select().from(schema.expenseClaim),
     )).toHaveLength(1);
+    const pgLineApprovalId = submittedClaim.controls![0].lineApproval.id;
+    await withTenantTransaction(db, expenseScope, (tx) =>
+      decideExpenseLineWithin(tx, expenseScope, {
+        lineApprovalId: pgLineApprovalId,
+        actorUserId: admin.userId,
+        decision: 'approved',
+      }));
+    const pgPostedExpense = await withTenantTransaction(db, expenseScope, (tx) =>
+      decideExpenseLineWithin(tx, expenseScope, {
+        lineApprovalId: pgLineApprovalId,
+        actorUserId: admin.userId,
+        decision: 'approved',
+      }));
+    expect(pgPostedExpense.posting?.posting).toMatchObject({
+      paymentSource: 'employee_paid',
+      baseGross: '50.00',
+      creditAccountId: employeePayable.id,
+    });
+    expect(await db.select().from(schema.expensePosting)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.expensePostingLeg),
+    )).toHaveLength(2);
 
     const cardImport = await importCorporateCardStatement(
       db,

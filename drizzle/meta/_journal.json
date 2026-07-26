@@ -470,6 +470,13 @@
       "when": 1785021378068,
       "tag": "0066_allowances_cash_advances",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1785027217732,
+      "tag": "0067_expense_postings",
+      "breakpoints": true
     }
   ]
 }

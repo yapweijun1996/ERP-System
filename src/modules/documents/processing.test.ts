@@ -70,7 +70,7 @@ describe('quarantined document processing', () => {
     expect(await db.select().from(documentScanJob)).toHaveLength(1);
     expect(await db.select().from(documentExtraction)).toHaveLength(0);
     const unavailable = await processDocumentJobBatch(db, {
-      now: new Date('2026-07-26T00:00:00.000Z'),
+      now: new Date('2026-07-26T12:00:00.000Z'),
     });
     expect(unavailable).toMatchObject({ scansClaimed: 1, failed: 1, extracted: 0 });
     expect((await db.select().from(documentScanJob))[0]).toMatchObject({
@@ -99,7 +99,7 @@ describe('quarantined document processing', () => {
     const processed = await processDocumentJobBatch(db, {
       scanner: { scan },
       localOcr: { extract },
-      now: new Date('2026-07-26T00:01:00.000Z'),
+      now: new Date('2026-07-26T12:01:00.000Z'),
     });
     expect(processed).toMatchObject({
       scansClaimed: 1,
@@ -129,7 +129,7 @@ describe('quarantined document processing', () => {
     const retry = await processDocumentJobBatch(db, {
       scanner: { scan },
       localOcr: { extract },
-      now: new Date('2026-07-26T00:02:00.000Z'),
+      now: new Date('2026-07-26T12:02:00.000Z'),
     });
     expect(retry).toMatchObject({ scansClaimed: 0, extractionsClaimed: 0 });
     expect(scan).toHaveBeenCalledTimes(1);
@@ -157,7 +157,7 @@ describe('quarantined document processing', () => {
           throw new Error('must not run');
         },
       },
-      now: new Date('2026-07-26T00:00:00.000Z'),
+      now: new Date('2026-07-26T12:00:00.000Z'),
     });
     expect(result).toMatchObject({ blocked: 1, extracted: 0 });
     expect((await db.select().from(documentScanJob))[0]).toMatchObject({
@@ -205,7 +205,7 @@ describe('quarantined document processing', () => {
       },
       vision: { extract: vision },
       credentialEncryptionKey: encryptionKey,
-      now: new Date('2026-07-26T00:00:00.000Z'),
+      now: new Date('2026-07-26T12:00:00.000Z'),
     });
     expect(result).toMatchObject({ clean: 1, extracted: 1, failed: 0 });
     expect(vision).toHaveBeenCalledWith(expect.objectContaining({
@@ -240,7 +240,7 @@ describe('quarantined document processing', () => {
       scanner: cleanScanner(),
       localOcr: safeExtractor(),
       workerId: 'auto-submit-worker',
-      now: new Date('2026-07-26T00:00:00.000Z'),
+      now: new Date('2026-07-26T12:00:00.000Z'),
     });
     expect(result).toMatchObject({ clean: 1, extracted: 1, failed: 0 });
     expect(await db.select().from(documentExtractionField)).toHaveLength(4);
@@ -265,7 +265,7 @@ describe('quarantined document processing', () => {
       scanner: cleanScanner(),
       localOcr: safeExtractor(),
       workerId: 'auto-submit-retry-worker',
-      now: new Date('2026-07-26T00:01:00.000Z'),
+      now: new Date('2026-07-26T12:01:00.000Z'),
     });
     expect(await db.select().from(documentExtractionField)).toHaveLength(4);
     expect(await db.select().from(receiptInboxItem)).toHaveLength(1);
@@ -310,7 +310,7 @@ describe('quarantined document processing', () => {
           ],
         }),
       },
-      now: new Date('2026-07-26T00:00:00.000Z'),
+      now: new Date('2026-07-26T12:00:00.000Z'),
     });
     const [inbox] = await db.select().from(receiptInboxItem);
     expect(inbox).toMatchObject({
@@ -346,7 +346,7 @@ describe('quarantined document processing', () => {
     await processDocumentJobBatch(db, {
       scanner: cleanScanner(),
       localOcr: safeExtractor(),
-      now: new Date('2026-07-26T00:00:00.000Z'),
+      now: new Date('2026-07-26T12:00:00.000Z'),
     });
     const duplicate = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
       clientDraftId: 'processing_duplicate_001',
@@ -358,7 +358,7 @@ describe('quarantined document processing', () => {
     await processDocumentJobBatch(db, {
       scanner: cleanScanner(),
       localOcr: safeExtractor(),
-      now: new Date('2026-07-26T00:01:00.000Z'),
+      now: new Date('2026-07-26T12:01:00.000Z'),
     });
     const inboxes = await db.select().from(receiptInboxItem);
     const duplicateInbox = inboxes.find((row) => row.versionId === duplicate.version.id);

@@ -4,9 +4,12 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   account,
+  accountingPeriod,
   appUser,
   employee,
   employeeHierarchyScope,
+  expensePosting,
+  expensePostingLeg,
   leaveRequest,
   role,
   userCompanyRole,
@@ -33,6 +36,16 @@ describe('actor-owned My Work API', () => {
   beforeEach(async () => {
     db = await freshDb();
     await seedDemo(db);
+    await db.insert(accountingPeriod).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      fiscalYear: 2026,
+      periodNo: 7,
+      label: 'July 2026',
+      startDate: '2026-07-01',
+      endDate: '2026-07-31',
+      status: 'open',
+    });
     server = createApp(db).listen(0, '127.0.0.1');
     await new Promise<void>((resolve) => server.once('listening', resolve));
     const address = server.address();
@@ -454,8 +467,20 @@ describe('actor-owned My Work API', () => {
     );
     expect(financeApproved.status).toBe(200);
     expect(await financeApproved.json()).toMatchObject({
-      data: { status: 'approved', claimStatus: 'approved' },
+      data: {
+        status: 'approved',
+        claimStatus: 'approved',
+        posting: {
+          replayed: false,
+          posting: {
+            paymentSource: 'employee_paid',
+            baseGross: '25.00',
+          },
+        },
+      },
     });
+    expect(await db.select().from(expensePosting)).toHaveLength(1);
+    expect(await db.select().from(expensePostingLeg)).toHaveLength(2);
   });
 
   it('lets an Employee-only account boot My Work without dashboard access', async () => {

@@ -41,6 +41,7 @@ import {
   listApprovalQueueWithin,
   startApprovalWithin,
 } from '../approval/workflow';
+import { postApprovedExpenseLineWithin } from './postings';
 
 export class ExpenseControlError extends Error {
   constructor(
@@ -720,6 +721,16 @@ export async function decideExpenseLineWithin(
     status,
     updatedAt: now,
   }).where(eq(expenseLineApproval.id, lineApproval.id));
+  const posting = status === 'approved'
+    ? await postApprovedExpenseLineWithin(
+      tx,
+      scope,
+      lineApproval.id,
+      input.actorUserId,
+      now,
+      now,
+    )
+    : null;
   const claimStatus = await refreshClaimApprovalStatus(
     tx,
     scope,
@@ -728,7 +739,13 @@ export async function decideExpenseLineWithin(
     input.reason?.trim() || null,
     now,
   );
-  return { lineApprovalId: lineApproval.id, status, claimStatus, decision };
+  return {
+    lineApprovalId: lineApproval.id,
+    status,
+    claimStatus,
+    decision,
+    posting,
+  };
 }
 
 export async function listExpenseApprovalQueueWithin(

@@ -1286,6 +1286,26 @@ and queue operations. Final gates pass lint, dual typecheck, 492 tests plus one 
 skip, 67 migrations at schema version 66, 203-table drift, API/Demo builds, smoke, all
 121 desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof. PWA v127.
 
+### Approved expense posting and employee payables (TASK-128)
+
+Migration 0067 adds one immutable posting per final line approval and immutable
+posting-leg links to the existing general ledger. The final Finance decision, claim
+refresh and posting share one transaction: employee-paid lines debit Expense and
+Input Tax then credit the configured Employee Payable liability; company-paid lines
+credit their snapshotted bank or card-clearing asset/liability account. An eligible
+verified actual bank charge replaces the company-paid functional gross and scales
+input tax proportionally while preserving cent-exact balance.
+
+Posting locks and validates exactly one open accounting period, verifies account types,
+uses a stable claim/line/version journal reference and replays an existing posting
+instead of duplicating it. A period or account failure rolls back the approval and all
+ledger effects; the incomplete API idempotency claim is abandoned so the same key can
+recover after the configuration is corrected. Database triggers prevent posting,
+posting-leg or linked-GL mutation. Final gates pass lint, dual typecheck, 496 tests plus
+one expected skip, 68 migrations at schema version 67, 205-table drift, API/Demo
+builds, smoke, all 121 desktop/375px routes and PostgreSQL 16 non-superuser/RLS proof.
+PWA v128.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1303,8 +1323,8 @@ plus storage parity, TASK-123 delivered effective tax/FX/GL expense policy and
 TASK-124 delivered employee-owned multi-line claims with exact allocation and TASK-125
 delivered line approval, duplicate risk and budget control, TASK-126 delivered bounded
 corporate-card reconciliation, and TASK-127 delivered versioned allowance calculations
-and reconciled cash advances. TASK-128 through TASK-135
-remain planning records
+and reconciled cash advances. TASK-128 delivered transactionally coupled final approval
+and balanced expense posting. TASK-129 through TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1342,9 +1362,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 126 tasks, including TASK-127
+- Done: 127 tasks, including TASK-128
 - Blocked: TASK-017 (1)
-- Todo: 8 planned tasks (TASK-128–135) across EPIC-055–056. These extend the product
+- Todo: 7 planned tasks (TASK-129–135) across EPIC-055–056. These extend the product
   beyond the current 120 Canonical / 1 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future
