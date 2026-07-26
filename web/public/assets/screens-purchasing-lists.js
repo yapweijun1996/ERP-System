@@ -292,15 +292,84 @@ function newRequisitionModal(){
 
 /* ---------------- RFQs ---------------- */
 function sourcingCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{rfqs:'Requests for Quotation',rfqUnit:'RFQs',rfqSub:'Invite approved suppliers, collect comparable responses and award the winning quotation.',quotes:'Supplier Quotations',quoteUnit:'quotations',quoteSub:'Compare supplier price, lead time and terms, then create a traceable purchase order.',all:'All',draft:'Draft',sent:'Sent',responded:'Responded',awarded:'Awarded',closed:'Closed',received:'Received',rejected:'Rejected',converted:'Converted',open:'Open RFQs',awaiting:'Awaiting response',fully:'Fully responded',newRfq:'New RFQ',newQuote:'Record quotation',rfq:'RFQ',subject:'Subject',fromPr:'From PR',suppliers:'Suppliers',responseBy:'Response by',status:'Status',quote:'Quote',supplier:'Supplier',item:'Item',unitPrice:'Unit price',lead:'Lead',validUntil:'Valid until',total:'Total',view:'View details',compare:'Compare quotations',issue:'Issue RFQ',close:'Close RFQ',record:'Record supplier quotation',convert:'Select & convert to PO',date:'Date',requisition:'Approved requisition',adHoc:'Ad-hoc demand',due:'Response deadline',invited:'Invited suppliers',lines:'Requested lines',qty:'Qty',create:'Create RFQ',cancel:'Cancel',quoteDate:'Quote date',currency:'Currency',leadDays:'Lead time (days)',terms:'Payment terms',warranty:'Warranty',taxCode:'Tax code',saveQuote:'Save quotation',noQuotes:'No quotations are available for comparison.',best:'Best total',select:'Select',created:'RFQ created',issued:'RFQ issued',closedMsg:'RFQ closed',quoteSaved:'Supplier quotation saved',poCreated:'Purchase order created',required:'Complete all required fields.',chooseSupplier:'Choose at least one supplier.',chooseLine:'Choose an approved requisition or enter an item quantity.',noEligible:'No issued RFQ is awaiting a supplier response.',responses:'responses'},
-    ms:{rfqs:'Permintaan Sebut Harga',rfqUnit:'RFQ',rfqSub:'Jemput pembekal diluluskan, kumpul respons setara dan pilih sebut harga terbaik.',quotes:'Sebut Harga Pembekal',quoteUnit:'sebut harga',quoteSub:'Banding harga, tempoh dan syarat pembekal, kemudian cipta pesanan belian yang boleh dijejak.',all:'Semua',draft:'Draf',sent:'Dihantar',responded:'Dijawab',awarded:'Dipilih',closed:'Ditutup',received:'Diterima',rejected:'Ditolak',converted:'Ditukar',open:'RFQ terbuka',awaiting:'Menunggu respons',fully:'Respons lengkap',newRfq:'RFQ baharu',newQuote:'Rekod sebut harga',rfq:'RFQ',subject:'Subjek',fromPr:'Daripada PR',suppliers:'Pembekal',responseBy:'Tarikh respons',status:'Status',quote:'Sebut harga',supplier:'Pembekal',item:'Item',unitPrice:'Harga unit',lead:'Tempoh',validUntil:'Sah hingga',total:'Jumlah',view:'Lihat butiran',compare:'Banding sebut harga',issue:'Hantar RFQ',close:'Tutup RFQ',record:'Rekod sebut harga pembekal',convert:'Pilih & tukar ke PO',date:'Tarikh',requisition:'Rekuisisi diluluskan',adHoc:'Permintaan ad hoc',due:'Tarikh akhir respons',invited:'Pembekal dijemput',lines:'Baris diminta',qty:'Kuantiti',create:'Cipta RFQ',cancel:'Batal',quoteDate:'Tarikh sebut harga',currency:'Mata wang',leadDays:'Tempoh (hari)',terms:'Syarat bayaran',warranty:'Waranti',taxCode:'Kod cukai',saveQuote:'Simpan sebut harga',noQuotes:'Tiada sebut harga untuk dibandingkan.',best:'Jumlah terbaik',select:'Pilih',created:'RFQ dicipta',issued:'RFQ dihantar',closedMsg:'RFQ ditutup',quoteSaved:'Sebut harga disimpan',poCreated:'Pesanan belian dicipta',required:'Lengkapkan semua medan wajib.',chooseSupplier:'Pilih sekurang-kurangnya satu pembekal.',chooseLine:'Pilih rekuisisi diluluskan atau masukkan kuantiti item.',noEligible:'Tiada RFQ dihantar yang menunggu respons pembekal.',responses:'respons'},
+    ms:{
+  "rfqs": "Permintaan Sebut Harga",
+  "rfqUnit": "RFQ",
+  "rfqSub": "Jemput pembekal diluluskan, kumpul respons setara dan pilih sebut harga terbaik.",
+  "quotes": "Sebut Harga Pembekal",
+  "quoteUnit": "sebut harga",
+  "quoteSub": "Banding harga, tempoh dan syarat pembekal, kemudian cipta pesanan belian yang boleh dijejak.",
+  "all": "Semua",
+  "draft": "Draf",
+  "sent": "Dihantar",
+  "responded": "Dijawab",
+  "awarded": "Dipilih",
+  "closed": "Ditutup",
+  "received": "Diterima",
+  "rejected": "Ditolak",
+  "converted": "Ditukar",
+  "open": "RFQ terbuka",
+  "awaiting": "Menunggu respons",
+  "fully": "Respons lengkap",
+  "newRfq": "RFQ baharu",
+  "newQuote": "Rekod sebut harga",
+  "rfq": "RFQ",
+  "subject": "Subjek",
+  "fromPr": "Daripada PR",
+  "suppliers": "Pembekal",
+  "responseBy": "Tarikh respons",
+  "status": "Status",
+  "quote": "Sebut harga",
+  "supplier": "Pembekal",
+  "item": "item",
+  "unitPrice": "Harga unit",
+  "lead": "Tempoh",
+  "validUntil": "Sah hingga",
+  "total": "Jumlah",
+  "view": "Lihat butiran",
+  "compare": "Banding sebut harga",
+  "issue": "Hantar RFQ",
+  "close": "Tutup RFQ",
+  "record": "Rekod sebut harga pembekal",
+  "convert": "Pilih & tukar ke PO",
+  "date": "Tarikh",
+  "requisition": "Rekuisisi diluluskan",
+  "adHoc": "Permintaan ad hoc",
+  "due": "Tarikh akhir respons",
+  "invited": "Pembekal dijemput",
+  "lines": "Baris diminta",
+  "qty": "Kuantiti",
+  "create": "Cipta RFQ",
+  "cancel": "Batal",
+  "quoteDate": "Tarikh sebut harga",
+  "currency": "Mata wang",
+  "leadDays": "Tempoh (hari)",
+  "terms": "Syarat bayaran",
+  "warranty": "Waranti",
+  "taxCode": "Kod cukai",
+  "saveQuote": "Simpan sebut harga",
+  "noQuotes": "Tiada sebut harga untuk dibandingkan.",
+  "best": "Jumlah terbaik",
+  "select": "Pilih",
+  "created": "RFQ dicipta",
+  "issued": "RFQ dihantar",
+  "closedMsg": "RFQ ditutup",
+  "quoteSaved": "Sebut harga disimpan",
+  "poCreated": "Pesanan belian dicipta",
+  "required": "Lengkapkan semua medan wajib.",
+  "chooseSupplier": "Pilih sekurang-kurangnya satu pembekal.",
+  "chooseLine": "Pilih rekuisisi diluluskan atau masukkan kuantiti item.",
+  "noEligible": "Tiada RFQ dihantar yang menunggu respons pembekal.",
+  "responses": "respons"
+},
     zh:{rfqs:'询价单',rfqUnit:'张询价单',rfqSub:'邀请已批准供应商、收集可比较报价，并选择中标报价。',quotes:'供应商报价',quoteUnit:'份报价',quoteSub:'比较供应商价格、交期和条款，然后创建可追溯的采购订单。',all:'全部',draft:'草稿',sent:'已发出',responded:'已回复',awarded:'已定标',closed:'已关闭',received:'已收到',rejected:'未中标',converted:'已转采购单',open:'进行中询价',awaiting:'等待回复',fully:'全部回复',newRfq:'新建询价单',newQuote:'录入报价',rfq:'询价单',subject:'主题',fromPr:'来源请购单',suppliers:'供应商',responseBy:'回复期限',status:'状态',quote:'报价单',supplier:'供应商',item:'物料',unitPrice:'单价',lead:'交期',validUntil:'有效期至',total:'合计',view:'查看详情',compare:'比较报价',issue:'发出询价单',close:'关闭询价单',record:'录入供应商报价',convert:'选中并转采购订单',date:'日期',requisition:'已批准请购单',adHoc:'临时需求',due:'回复截止日期',invited:'受邀供应商',lines:'询价明细',qty:'数量',create:'创建询价单',cancel:'取消',quoteDate:'报价日期',currency:'币种',leadDays:'交期（天）',terms:'付款条款',warranty:'保修',taxCode:'税码',saveQuote:'保存报价',noQuotes:'没有可比较的报价。',best:'最低总额',select:'选择',created:'询价单已创建',issued:'询价单已发出',closedMsg:'询价单已关闭',quoteSaved:'供应商报价已保存',poCreated:'采购订单已创建',required:'请填写所有必填项。',chooseSupplier:'请至少选择一个供应商。',chooseLine:'请选择已批准请购单或填写物料数量。',noEligible:'没有等待供应商回复的已发出询价单。',responses:'份回复'},
     ja:{rfqs:'見積依頼',rfqUnit:'件',rfqSub:'承認済み仕入先を招待し、比較可能な回答から採用見積を決定します。',quotes:'仕入先見積',quoteUnit:'件',quoteSub:'価格、納期、条件を比較し、追跡可能な発注書を作成します。',all:'すべて',draft:'下書き',sent:'送信済み',responded:'回答済み',awarded:'採用済み',closed:'終了',received:'受領済み',rejected:'不採用',converted:'発注書作成済み',open:'進行中RFQ',awaiting:'回答待ち',fully:'全回答済み',newRfq:'RFQ作成',newQuote:'見積登録',rfq:'RFQ',subject:'件名',fromPr:'購買依頼',suppliers:'仕入先',responseBy:'回答期限',status:'状態',quote:'見積',supplier:'仕入先',item:'品目',unitPrice:'単価',lead:'納期',validUntil:'有効期限',total:'合計',view:'詳細を表示',compare:'見積を比較',issue:'RFQを送信',close:'RFQを終了',record:'仕入先見積を登録',convert:'採用して発注書へ',date:'日付',requisition:'承認済み購買依頼',adHoc:'個別需要',due:'回答期限',invited:'招待仕入先',lines:'依頼明細',qty:'数量',create:'RFQを作成',cancel:'キャンセル',quoteDate:'見積日',currency:'通貨',leadDays:'納期（日）',terms:'支払条件',warranty:'保証',taxCode:'税コード',saveQuote:'見積を保存',noQuotes:'比較できる見積がありません。',best:'最安合計',select:'採用',created:'RFQを作成しました',issued:'RFQを送信しました',closedMsg:'RFQを終了しました',quoteSaved:'見積を保存しました',poCreated:'発注書を作成しました',required:'必須項目を入力してください。',chooseSupplier:'仕入先を1社以上選択してください。',chooseLine:'承認済み購買依頼を選ぶか品目数量を入力してください。',noEligible:'回答待ちの送信済みRFQがありません。',responses:'回答'},
     vi:{rfqs:'Yêu cầu báo giá',rfqUnit:'RFQ',rfqSub:'Mời nhà cung cấp đã duyệt, thu thập phản hồi có thể so sánh và chọn báo giá thắng.',quotes:'Báo giá nhà cung cấp',quoteUnit:'báo giá',quoteSub:'So sánh giá, thời gian giao và điều khoản, rồi tạo đơn mua có thể truy vết.',all:'Tất cả',draft:'Nháp',sent:'Đã gửi',responded:'Đã phản hồi',awarded:'Đã chọn',closed:'Đã đóng',received:'Đã nhận',rejected:'Không chọn',converted:'Đã chuyển PO',open:'RFQ đang mở',awaiting:'Chờ phản hồi',fully:'Đã phản hồi đủ',newRfq:'RFQ mới',newQuote:'Ghi báo giá',rfq:'RFQ',subject:'Chủ đề',fromPr:'Từ yêu cầu mua',suppliers:'Nhà cung cấp',responseBy:'Hạn phản hồi',status:'Trạng thái',quote:'Báo giá',supplier:'Nhà cung cấp',item:'Mặt hàng',unitPrice:'Đơn giá',lead:'Thời gian',validUntil:'Hiệu lực đến',total:'Tổng',view:'Xem chi tiết',compare:'So sánh báo giá',issue:'Gửi RFQ',close:'Đóng RFQ',record:'Ghi báo giá nhà cung cấp',convert:'Chọn & chuyển thành PO',date:'Ngày',requisition:'Yêu cầu mua đã duyệt',adHoc:'Nhu cầu đột xuất',due:'Hạn phản hồi',invited:'Nhà cung cấp được mời',lines:'Dòng yêu cầu',qty:'Số lượng',create:'Tạo RFQ',cancel:'Hủy',quoteDate:'Ngày báo giá',currency:'Tiền tệ',leadDays:'Thời gian giao (ngày)',terms:'Điều khoản thanh toán',warranty:'Bảo hành',taxCode:'Mã thuế',saveQuote:'Lưu báo giá',noQuotes:'Không có báo giá để so sánh.',best:'Tổng tốt nhất',select:'Chọn',created:'Đã tạo RFQ',issued:'Đã gửi RFQ',closedMsg:'Đã đóng RFQ',quoteSaved:'Đã lưu báo giá',poCreated:'Đã tạo đơn mua',required:'Hoàn tất các trường bắt buộc.',chooseSupplier:'Chọn ít nhất một nhà cung cấp.',chooseLine:'Chọn yêu cầu mua đã duyệt hoặc nhập số lượng mặt hàng.',noEligible:'Không có RFQ đã gửi đang chờ phản hồi.',responses:'phản hồi'},
   };
-  return packs[lang]||packs.en;
+  return i18nLegacy(packs);
 }
 
 function nextSourcingNo(rows,prefix){
@@ -686,15 +755,70 @@ function openSINV(i){ navigate('supplier-invoice',{invoiceId:i.id}); }
 
 /* ---------------- PURCHASE RETURNS ---------------- */
 function purchaseReturnCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{returns:'Purchase Returns',returnUnit:'returns',returnSub:'Request a return against a real goods receipt and unpaid supplier invoice. Shipping posts the inventory issue and supplier credit atomically.',credits:'Supplier Credit Notes',creditUnit:'credit notes',creditSub:'Posted credits created from shipped purchase returns, with direct invoice, inventory movement and GL traceability.',all:'All',requested:'Requested',credited:'Credited',rejected:'Rejected',open:'Open returns',returnValue:'Return value',newReturn:'New return',returnNo:'Return',supplier:'Supplier',againstGrn:'Against GRN',invoice:'Supplier invoice',reason:'Reason',qty:'Qty',value:'Value',status:'Status',view:'View details',shipCredit:'Ship & create credit',reject:'Reject return',date:'Return date',lines:'Return lines',item:'Item',unitCost:'Unit cost',net:'Net',tax:'Tax',total:'Total',cancel:'Cancel',create:'Create return',chooseSource:'Choose a received invoice',source:'Received invoice',noSource:'No unpaid supplier invoice with a goods receipt is available.',addQty:'Return qty',required:'Complete the required fields and enter at least one quantity.',created:'Purchase return created',shipped:'Goods returned and supplier credit posted',rejectedMsg:'Purchase return rejected',creditNo:'Credit note',noteDate:'Credit date',warehouse:'Warehouse',tracking:'Stock tracking',lot:'Lot',serial:'Serial',noTracking:'No eligible stock tracking record is available.',posted:'Posted',creditValue:'Credit value',againstReturn:'Against return',originalInvoice:'Original invoice',accounting:'AP debit · Inventory and input-tax credit',immutable:'Posted supplier credits are immutable and can only originate from a purchase return.'},
-    ms:{returns:'Pulangan Belian',returnUnit:'pulangan',returnSub:'Mohon pulangan terhadap penerimaan barang dan invois pembekal belum dibayar. Penghantaran mempos keluaran stok dan kredit pembekal secara atomik.',credits:'Nota Kredit Pembekal',creditUnit:'nota kredit',creditSub:'Kredit dipos daripada pulangan belian yang dihantar, dengan jejak invois, pergerakan inventori dan lejar.',all:'Semua',requested:'Dimohon',credited:'Dikreditkan',rejected:'Ditolak',open:'Pulangan terbuka',returnValue:'Nilai pulangan',newReturn:'Pulangan baharu',returnNo:'Pulangan',supplier:'Pembekal',againstGrn:'Terhadap GRN',invoice:'Invois pembekal',reason:'Sebab',qty:'Kuantiti',value:'Nilai',status:'Status',view:'Lihat butiran',shipCredit:'Hantar & cipta kredit',reject:'Tolak pulangan',date:'Tarikh pulangan',lines:'Baris pulangan',item:'Item',unitCost:'Kos unit',net:'Bersih',tax:'Cukai',total:'Jumlah',cancel:'Batal',create:'Cipta pulangan',chooseSource:'Pilih invois diterima',source:'Invois diterima',noSource:'Tiada invois pembekal belum dibayar dengan penerimaan barang tersedia.',addQty:'Kuantiti pulangan',required:'Lengkapkan medan wajib dan masukkan sekurang-kurangnya satu kuantiti.',created:'Pulangan belian dicipta',shipped:'Barang dipulangkan dan kredit pembekal dipos',rejectedMsg:'Pulangan belian ditolak',creditNo:'Nota kredit',noteDate:'Tarikh kredit',warehouse:'Gudang',tracking:'Penjejakan stok',lot:'Lot',serial:'Siri',noTracking:'Tiada rekod penjejakan stok yang layak.',posted:'Dipos',creditValue:'Nilai kredit',againstReturn:'Terhadap pulangan',originalInvoice:'Invois asal',accounting:'Debit AP · Kredit inventori dan cukai input',immutable:'Kredit pembekal yang dipos tidak boleh diubah dan hanya berasal daripada pulangan belian.'},
+    ms:{
+  "returns": "Pulangan Belian",
+  "returnUnit": "pulangan",
+  "returnSub": "Mohon pulangan terhadap penerimaan barang dan invois pembekal belum dibayar. Penghantaran mempos keluaran stok dan kredit pembekal secara atomik.",
+  "credits": "Nota Kredit Pembekal",
+  "creditUnit": "nota kredit",
+  "creditSub": "Kredit dipos daripada pulangan belian yang dihantar, dengan jejak invois, pergerakan inventori dan lejar.",
+  "all": "Semua",
+  "requested": "Dimohon",
+  "credited": "Dikreditkan",
+  "rejected": "Ditolak",
+  "open": "Pulangan terbuka",
+  "returnValue": "Nilai pulangan",
+  "newReturn": "Pulangan baharu",
+  "returnNo": "Pulangan",
+  "supplier": "Pembekal",
+  "againstGrn": "Terhadap GRN",
+  "invoice": "Invois pembekal",
+  "reason": "Sebab",
+  "qty": "Kuantiti",
+  "value": "Nilai",
+  "status": "Status",
+  "view": "Lihat butiran",
+  "shipCredit": "Hantar & cipta kredit",
+  "reject": "Tolak pulangan",
+  "date": "Tarikh pulangan",
+  "lines": "Baris pulangan",
+  "item": "item",
+  "unitCost": "Kos unit",
+  "net": "Bersih",
+  "tax": "Cukai",
+  "total": "Jumlah",
+  "cancel": "Batal",
+  "create": "Cipta pulangan",
+  "chooseSource": "Pilih invois diterima",
+  "source": "Invois diterima",
+  "noSource": "Tiada invois pembekal belum dibayar dengan penerimaan barang tersedia.",
+  "addQty": "Kuantiti pulangan",
+  "required": "Lengkapkan medan wajib dan masukkan sekurang-kurangnya satu kuantiti.",
+  "created": "Pulangan belian dicipta",
+  "shipped": "Barang dipulangkan dan kredit pembekal dipos",
+  "rejectedMsg": "Pulangan belian ditolak",
+  "creditNo": "Nota kredit",
+  "noteDate": "Tarikh kredit",
+  "warehouse": "Gudang",
+  "tracking": "Penjejakan stok",
+  "lot": "banyak",
+  "serial": "Siri",
+  "noTracking": "Tiada rekod penjejakan stok yang layak.",
+  "posted": "Dipos",
+  "creditValue": "Nilai kredit",
+  "againstReturn": "Terhadap pulangan",
+  "originalInvoice": "Invois asal",
+  "accounting": "Debit AP · Kredit inventori dan cukai input",
+  "immutable": "Kredit pembekal yang dipos tidak boleh diubah dan hanya berasal daripada pulangan belian."
+},
     zh:{returns:'采购退货',returnUnit:'张退货单',returnSub:'基于真实收货单和未付款供应商发票申请退货；发货时原子执行库存出库并生成供应商贷项。',credits:'供应商贷项通知单',creditUnit:'张贷项单',creditSub:'由已发出的采购退货生成的已过账贷项，可直接追溯原发票、库存流水和总账。',all:'全部',requested:'待退货',credited:'已贷项',rejected:'已拒绝',open:'待处理退货',returnValue:'退货金额',newReturn:'新建退货',returnNo:'退货单',supplier:'供应商',againstGrn:'对应收货单',invoice:'供应商发票',reason:'退货原因',qty:'数量',value:'金额',status:'状态',view:'查看详情',shipCredit:'发出退货并生成贷项',reject:'拒绝退货',date:'退货日期',lines:'退货明细',item:'物料',unitCost:'单位成本',net:'未税金额',tax:'税额',total:'合计',cancel:'取消',create:'创建退货单',chooseSource:'选择已收货发票',source:'已收货发票',noSource:'没有同时具备收货单的未付款供应商发票。',addQty:'退货数量',required:'请填写必填项，并至少输入一个退货数量。',created:'采购退货单已创建',shipped:'货物已退回，供应商贷项已过账',rejectedMsg:'采购退货已拒绝',creditNo:'贷项单号',noteDate:'贷项日期',warehouse:'仓库',tracking:'库存追踪',lot:'批次',serial:'序列号',noTracking:'没有符合条件的库存追踪记录。',posted:'已过账',creditValue:'贷项金额',againstReturn:'对应退货单',originalInvoice:'原供应商发票',accounting:'借记应付账款 · 贷记库存及进项税',immutable:'已过账供应商贷项不可修改，且只能由采购退货生成。'},
     ja:{returns:'仕入返品',returnUnit:'件',returnSub:'実際の入荷と未払仕入先請求書に対して返品を申請し、出荷時に在庫払出と仕入先クレジットを同一取引で計上します。',credits:'仕入先クレジットノート',creditUnit:'件',creditSub:'出荷済み仕入返品から作成された計上済みクレジットを、請求書・在庫移動・GLまで追跡します。',all:'すべて',requested:'返品待ち',credited:'クレジット済み',rejected:'却下',open:'未処理返品',returnValue:'返品額',newReturn:'返品作成',returnNo:'返品',supplier:'仕入先',againstGrn:'入荷参照',invoice:'仕入先請求書',reason:'理由',qty:'数量',value:'金額',status:'状態',view:'詳細を表示',shipCredit:'返品出荷・クレジット作成',reject:'返品を却下',date:'返品日',lines:'返品明細',item:'品目',unitCost:'単位原価',net:'税抜',tax:'税',total:'合計',cancel:'キャンセル',create:'返品を作成',chooseSource:'入荷済み請求書を選択',source:'入荷済み請求書',noSource:'入荷に紐づく未払仕入先請求書がありません。',addQty:'返品数量',required:'必須項目と1件以上の返品数量を入力してください。',created:'仕入返品を作成しました',shipped:'返品を出荷し仕入先クレジットを計上しました',rejectedMsg:'仕入返品を却下しました',creditNo:'クレジット番号',noteDate:'クレジット日',warehouse:'倉庫',tracking:'在庫追跡',lot:'ロット',serial:'シリアル',noTracking:'利用可能な在庫追跡レコードがありません。',posted:'計上済み',creditValue:'クレジット額',againstReturn:'返品参照',originalInvoice:'元請求書',accounting:'AP借方・在庫/仮払税金貸方',immutable:'計上済み仕入先クレジットは変更不可で、仕入返品からのみ作成されます。'},
     vi:{returns:'Trả hàng mua',returnUnit:'phiếu trả',returnSub:'Yêu cầu trả theo phiếu nhận hàng và hóa đơn nhà cung cấp chưa thanh toán; khi xuất trả sẽ ghi xuất kho và tín dụng nhà cung cấp trong một giao dịch.',credits:'Phiếu tín dụng nhà cung cấp',creditUnit:'phiếu tín dụng',creditSub:'Tín dụng đã ghi sổ từ phiếu trả hàng, truy vết trực tiếp đến hóa đơn, biến động tồn kho và sổ cái.',all:'Tất cả',requested:'Chờ trả',credited:'Đã ghi tín dụng',rejected:'Đã từ chối',open:'Phiếu trả mở',returnValue:'Giá trị trả',newReturn:'Tạo phiếu trả',returnNo:'Phiếu trả',supplier:'Nhà cung cấp',againstGrn:'Theo GRN',invoice:'Hóa đơn NCC',reason:'Lý do',qty:'Số lượng',value:'Giá trị',status:'Trạng thái',view:'Xem chi tiết',shipCredit:'Xuất trả & tạo tín dụng',reject:'Từ chối trả',date:'Ngày trả',lines:'Dòng trả hàng',item:'Mặt hàng',unitCost:'Đơn giá vốn',net:'Trước thuế',tax:'Thuế',total:'Tổng',cancel:'Hủy',create:'Tạo phiếu trả',chooseSource:'Chọn hóa đơn đã nhận',source:'Hóa đơn đã nhận',noSource:'Không có hóa đơn nhà cung cấp chưa thanh toán kèm phiếu nhận hàng.',addQty:'SL trả',required:'Hoàn tất trường bắt buộc và nhập ít nhất một số lượng.',created:'Đã tạo phiếu trả hàng mua',shipped:'Đã xuất trả và ghi sổ tín dụng nhà cung cấp',rejectedMsg:'Đã từ chối phiếu trả hàng',creditNo:'Số phiếu tín dụng',noteDate:'Ngày tín dụng',warehouse:'Kho',tracking:'Theo dõi tồn kho',lot:'Lô',serial:'Sê-ri',noTracking:'Không có bản ghi theo dõi tồn kho phù hợp.',posted:'Đã ghi sổ',creditValue:'Giá trị tín dụng',againstReturn:'Theo phiếu trả',originalInvoice:'Hóa đơn gốc',accounting:'Nợ AP · Có tồn kho và thuế đầu vào',immutable:'Tín dụng nhà cung cấp đã ghi sổ là bất biến và chỉ được tạo từ phiếu trả hàng mua.'},
   };
-  return packs[lang]||packs.en;
+  return i18nLegacy(packs);
 }
 
 function purchaseReturnStatus(row){ const c=purchaseReturnCopy(); return c[row.rawStatus]||row.status; }
@@ -857,15 +981,45 @@ registerPurchasingTransactionList({
 
 /* ---------------- SUPPLIER DEBIT NOTES ---------------- */
 function supplierDebitCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{title:'Supplier Debit Notes',unit:'debit notes',sub:'Commercial claims against unpaid supplier invoices. Posting reduces AP without changing physical stock.',all:'All',draft:'Draft',posted:'Posted',claimValue:'Claim value',newNote:'New debit note',noteNo:'Debit note number',supplier:'Supplier',invoice:'Supplier invoice',against:'Against invoice',reason:'Reason',date:'Date',net:'Net amount',tax:'Tax',total:'Total',status:'Status',open:'Open debit note',post:'Post to finance',create:'Create draft',cancel:'Cancel',created:'Supplier debit note drafted',postedDone:'Supplier debit note posted',remaining:'Remaining payable',accounting:'Posting debits Accounts Payable and credits Purchase Variance / Input Tax. It creates no stock movement.',empty:'No canonical supplier debit notes yet.',selectInvoice:'Choose an unpaid supplier invoice',shortSupply:'Fictional short-supply claim'},
-    ms:{title:'Nota Debit Pembekal',unit:'nota debit',sub:'Tuntutan komersial terhadap invois pembekal belum dibayar. Posting mengurangkan AP tanpa mengubah stok fizikal.',all:'Semua',draft:'Draf',posted:'Diposting',claimValue:'Nilai tuntutan',newNote:'Nota debit baharu',noteNo:'Nombor nota debit',supplier:'Pembekal',invoice:'Invois pembekal',against:'Terhadap invois',reason:'Sebab',date:'Tarikh',net:'Amaun bersih',tax:'Cukai',total:'Jumlah',status:'Status',open:'Buka nota debit',post:'Posting ke kewangan',create:'Cipta draf',cancel:'Batal',created:'Draf nota debit pembekal dicipta',postedDone:'Nota debit pembekal diposting',remaining:'Baki belum bayar',accounting:'Posting mendebit Akaun Belum Bayar dan mengkredit Varians Belian / Cukai Input. Tiada pergerakan stok.',empty:'Belum ada nota debit pembekal kanonik.',selectInvoice:'Pilih invois pembekal belum dibayar',shortSupply:'Tuntutan kekurangan bekalan fiksyen'},
+    ms:{
+  "title": "Nota Debit Pembekal",
+  "unit": "nota debit",
+  "sub": "Tuntutan komersial terhadap invois pembekal belum dibayar. Posting mengurangkan AP tanpa mengubah stok fizikal.",
+  "all": "Semua",
+  "draft": "Draf",
+  "posted": "Diposting",
+  "claimValue": "Nilai tuntutan",
+  "newNote": "Nota debit baharu",
+  "noteNo": "Nombor nota debit",
+  "supplier": "Pembekal",
+  "invoice": "Invois pembekal",
+  "against": "Terhadap invois",
+  "reason": "Sebab",
+  "date": "Tarikh",
+  "net": "Amaun bersih",
+  "tax": "Cukai",
+  "total": "Jumlah",
+  "status": "Status",
+  "open": "Buka nota debit",
+  "post": "Posting ke kewangan",
+  "create": "Cipta draf",
+  "cancel": "Batal",
+  "created": "Draf nota debit pembekal dicipta",
+  "postedDone": "Nota debit pembekal diposting",
+  "remaining": "Baki belum bayar",
+  "accounting": "Posting mendebit Akaun Belum Bayar dan mengkredit Varians Belian / Cukai Input. Tiada pergerakan stok.",
+  "empty": "Belum ada nota debit pembekal kanonik.",
+  "selectInvoice": "Pilih invois pembekal belum dibayar",
+  "shortSupply": "Tuntutan kekurangan bekalan fiksyen"
+},
     zh:{title:'供应商借项单',unit:'张借项单',sub:'针对未付供应商发票的商业索赔。过账会减少应付账款，但不会改变实物库存。',all:'全部',draft:'草稿',posted:'已过账',claimValue:'索赔金额',newNote:'新建借项单',noteNo:'借项单编号',supplier:'供应商',invoice:'供应商发票',against:'对应发票',reason:'原因',date:'日期',net:'未税金额',tax:'税额',total:'总额',status:'状态',open:'打开借项单',post:'过账至财务',create:'创建草稿',cancel:'取消',created:'供应商借项单草稿已创建',postedDone:'供应商借项单已过账',remaining:'剩余应付',accounting:'过账借记应付账款，贷记采购差异及进项税；不会生成库存流水。',empty:'目前没有标准供应商借项单。',selectInvoice:'选择未付供应商发票',shortSupply:'虚构短供索赔'},
     ja:{title:'仕入先デビットノート',unit:'件',sub:'未払仕入先請求書に対する商取引上の請求です。転記で買掛金を減額し、実在庫は変更しません。',all:'すべて',draft:'ドラフト',posted:'転記済',claimValue:'請求額',newNote:'デビットノートを作成',noteNo:'デビット番号',supplier:'仕入先',invoice:'仕入先請求書',against:'対象請求書',reason:'理由',date:'日付',net:'税抜金額',tax:'税額',total:'合計',status:'ステータス',open:'デビットノートを開く',post:'会計へ転記',create:'ドラフト作成',cancel:'キャンセル',created:'仕入先デビットノートを作成しました',postedDone:'仕入先デビットノートを転記しました',remaining:'未払残高',accounting:'買掛金を借記し、購入差異・仮払税を貸記します。在庫移動は作成しません。',empty:'標準仕入先デビットノートはありません。',selectInvoice:'未払仕入先請求書を選択',shortSupply:'架空の数量不足請求'},
     vi:{title:'Phiếu ghi nợ nhà cung cấp',unit:'phiếu',sub:'Yêu cầu thương mại theo hóa đơn nhà cung cấp chưa thanh toán. Ghi sổ giảm phải trả nhưng không thay đổi tồn kho vật lý.',all:'Tất cả',draft:'Nháp',posted:'Đã ghi sổ',claimValue:'Giá trị yêu cầu',newNote:'Tạo phiếu ghi nợ',noteNo:'Số phiếu ghi nợ',supplier:'Nhà cung cấp',invoice:'Hóa đơn nhà cung cấp',against:'Theo hóa đơn',reason:'Lý do',date:'Ngày',net:'Trước thuế',tax:'Thuế',total:'Tổng cộng',status:'Trạng thái',open:'Mở phiếu ghi nợ',post:'Ghi sổ tài chính',create:'Tạo bản nháp',cancel:'Hủy',created:'Đã tạo phiếu ghi nợ nhà cung cấp',postedDone:'Đã ghi sổ phiếu ghi nợ nhà cung cấp',remaining:'Còn phải trả',accounting:'Ghi Nợ Phải trả và Có Chênh lệch mua hàng / Thuế đầu vào. Không tạo biến động kho.',empty:'Chưa có phiếu ghi nợ nhà cung cấp chuẩn.',selectInvoice:'Chọn hóa đơn nhà cung cấp chưa thanh toán',shortSupply:'Yêu cầu thiếu hàng giả lập'},
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
 }
 function nextSupplierDebitNo(){ return nextSourcingNo(DB.supplierDebitNotes,'SDN'); }
@@ -943,15 +1097,40 @@ registerPurchasingTransactionList({
 /* Canonical RFQ / supplier-quotation document workspace. It replaces the old
    sample quick-view registered near the top of this classic script. */
 function canonicalSourcingDocCopy(key){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{rfq:'Request for Quotation',quote:'Supplier Quotation',back:'Back to register',source:'Source requisition',invited:'Invited suppliers',responses:'Supplier responses',lines:'Document lines',supplier:'Supplier',subject:'Subject',date:'Document date',due:'Response due',valid:'Valid until',terms:'Payment terms',warranty:'Warranty',lead:'Quoted lead',qty:'Quantity',unitCost:'Unit cost',net:'Net',tax:'Tax',total:'Total',status:'Status',noQuotes:'No supplier responses are linked yet.',immutable:'The response is an immutable sourcing snapshot. Selecting it creates one linked purchase order through the audited conversion command.',rfqNote:'Issuing and responding to an RFQ is sourcing-only: it creates no stock movement or GL entry.'},
-    ms:{rfq:'Permintaan Sebut Harga',quote:'Sebut Harga Pembekal',back:'Kembali ke daftar',source:'Permintaan sumber',invited:'Pembekal dijemput',responses:'Respons pembekal',lines:'Baris dokumen',supplier:'Pembekal',subject:'Subjek',date:'Tarikh dokumen',due:'Tarikh akhir respons',valid:'Sah hingga',terms:'Terma bayaran',warranty:'Waranti',lead:'Masa utama sebut harga',qty:'Kuantiti',unitCost:'Kos seunit',net:'Bersih',tax:'Cukai',total:'Jumlah',status:'Status',noQuotes:'Belum ada respons pembekal yang dipautkan.',immutable:'Respons ialah petikan sumber yang tidak berubah. Memilihnya mencipta satu pesanan belian terpaut melalui arahan penukaran yang diaudit.',rfqNote:'Mengeluarkan dan menjawab RFQ hanya proses sumber: tiada pergerakan stok atau catatan GL.'},
+    ms:{
+  "rfq": "Permintaan Sebut Harga",
+  "quote": "Sebut Harga Pembekal",
+  "back": "Kembali ke daftar",
+  "source": "Permintaan sumber",
+  "invited": "Pembekal dijemput",
+  "responses": "Respons pembekal",
+  "lines": "Baris dokumen",
+  "supplier": "Pembekal",
+  "subject": "Subjek",
+  "date": "Tarikh dokumen",
+  "due": "Tarikh akhir respons",
+  "valid": "Sah hingga",
+  "terms": "Terma bayaran",
+  "warranty": "Waranti",
+  "lead": "Masa utama sebut harga",
+  "qty": "Kuantiti",
+  "unitCost": "Kos seunit",
+  "net": "Bersih",
+  "tax": "Cukai",
+  "total": "Jumlah",
+  "status": "Status",
+  "noQuotes": "Belum ada respons pembekal yang dipautkan.",
+  "immutable": "Respons ialah petikan sumber yang tidak berubah. Memilihnya mencipta satu pesanan belian terpaut melalui arahan penukaran yang diaudit.",
+  "rfqNote": "Mengeluarkan dan menjawab RFQ hanya proses sumber: tiada pergerakan stok atau catatan GL."
+},
     zh:{rfq:'询价单',quote:'供应商报价',back:'返回登记簿',source:'来源请购单',invited:'受邀供应商',responses:'供应商回复',lines:'单据明细',supplier:'供应商',subject:'主题',date:'单据日期',due:'回复期限',valid:'有效期至',terms:'付款条款',warranty:'保修',lead:'报价交期',qty:'数量',unitCost:'单位成本',net:'未税金额',tax:'税额',total:'合计',status:'状态',noQuotes:'尚无关联的供应商回复。',immutable:'报价回复是不可变的采购快照。选择报价会通过可审计转换命令创建唯一关联采购订单。',rfqNote:'发出及回复询价仅属于寻源流程，不会生成库存流水或总账分录。'},
     ja:{rfq:'見積依頼',quote:'仕入先見積',back:'一覧へ戻る',source:'元の購買依頼',invited:'招待仕入先',responses:'仕入先回答',lines:'伝票明細',supplier:'仕入先',subject:'件名',date:'伝票日',due:'回答期限',valid:'有効期限',terms:'支払条件',warranty:'保証',lead:'見積納期',qty:'数量',unitCost:'単価',net:'税抜',tax:'税',total:'合計',status:'ステータス',noQuotes:'紐づく仕入先回答はまだありません。',immutable:'回答は不変のソーシングスナップショットです。採用すると監査対象の変換コマンドで1件の発注書を作成します。',rfqNote:'RFQの発行・回答はソーシングのみで、在庫移動やGL仕訳を作成しません。'},
     vi:{rfq:'Yêu cầu Báo giá',quote:'Báo giá Nhà cung cấp',back:'Quay lại sổ đăng ký',source:'Yêu cầu mua nguồn',invited:'Nhà cung cấp được mời',responses:'Phản hồi nhà cung cấp',lines:'Dòng chứng từ',supplier:'Nhà cung cấp',subject:'Chủ đề',date:'Ngày chứng từ',due:'Hạn phản hồi',valid:'Hiệu lực đến',terms:'Điều khoản thanh toán',warranty:'Bảo hành',lead:'Thời gian báo giá',qty:'Số lượng',unitCost:'Đơn giá',net:'Trước thuế',tax:'Thuế',total:'Tổng',status:'Trạng thái',noQuotes:'Chưa có phản hồi nhà cung cấp được liên kết.',immutable:'Phản hồi là ảnh chụp nguồn cung bất biến. Chọn nó sẽ tạo đúng một đơn mua liên kết qua lệnh chuyển đổi có kiểm toán.',rfqNote:'Phát hành và phản hồi RFQ chỉ là tìm nguồn: không tạo biến động kho hay bút toán GL.'},
   };
-  const pack=packs[lang]||packs.en;return pack[key]||packs.en[key]||key;
+  const pack=i18nLegacy(packs);return pack[key]||packs.en[key]||key;
 }
 
 SCREENS['pur-txn-view']=async function(root){

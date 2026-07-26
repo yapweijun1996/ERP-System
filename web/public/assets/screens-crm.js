@@ -163,7 +163,7 @@ SCREENS['crm-pipeline'] = async function(root){
    post actions. Defaults the qty to roughly match the opportunity's value at
    the picked item's cost, editable before confirming. */
 function crmOpportunityCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{
       pipeline:'Pipeline',customer360:'Customer 360',value:'Value',probability:'Probability',expectedClose:'Expected close',age:'Age',owner:'Owner',days:'days',
@@ -177,16 +177,66 @@ function crmOpportunityCopy(){
       convertTitle:'Convert to sales order',item:'Item',qty:'Qty',unitPrice:'Unit price',convertConfirm:'Convert',noItems:'No items available to convert against',productWarehouseRequired:'A product and warehouse are required for conversion.',converted:'{no} converted — {order} created · {total}',
     },
     ms:{
-      pipeline:'Saluran jualan',customer360:'Paparan Pelanggan 360',value:'Nilai',probability:'Kebarangkalian',expectedClose:'Tarikh tutup dijangka',age:'Umur',owner:'Pemilik',days:'hari',
-      nextActions:'Tindakan seterusnya',closeOverdue:'Tarikh tutup dijangka telah lewat',closeDue:'Tarikh tutup dalam {days} hari',closeToday:'Tarikh tutup ialah hari ini',
-      openGuidance:'Pastikan aktiviti seterusnya dikemas kini sebelum menukar peluang ini.',wonGuidance:'Peluang ini telah ditukar kepada pesanan jualan.',lostGuidance:'Peluang ini ditutup sebagai gagal.',
-      activityTimeline:'Garis masa aktiviti',noActivity:'Belum ada aktiviti direkodkan untuk peluang ini.',dealValue:'Nilai peluang',weighted:'Berwajaran',stage:'Peringkat',
-      primaryContact:'Kenalan utama',noContact:'Tiada kenalan pelanggan direkodkan.',name:'Nama',role:'Peranan',email:'E-mel',phone:'Telefon',related:'Berkaitan',customer:'Pelanggan',salesOrder:'Pesanan jualan',
-      logActivity:'Log aktiviti',markLost:'Tanda gagal',convert:'Tukar kepada pesanan jualan',viewOrder:'Lihat pesanan jualan',openFooter:'Penukaran mencipta dan mengesahkan pesanan jualan sebenar.',wonFooter:'Peluang telah ditukar',lostFooter:'Peluang ditutup',
-      cancel:'Batal',type:'Jenis',note:'Nota',call:'Panggilan',details:'Butiran',activityPlaceholder:'Apa yang berlaku?',activityRequired:'Butiran aktiviti diperlukan.',activityLogged:'Aktiviti direkodkan.',activitySaveError:'Aktiviti tidak dapat disimpan.',
-      lossReason:'Sebab gagal',lossPlaceholder:'cth. Bajet ditarik balik atau pesaing dipilih',lossRequired:'Sebab gagal diperlukan.',markLostConfirm:'Tanda peluang gagal',markedLost:'Peluang ditanda gagal.',markLostError:'Peluang tidak dapat ditanda gagal.',
-      convertTitle:'Tukar kepada pesanan jualan',item:'Item',qty:'Kuantiti',unitPrice:'Harga unit',convertConfirm:'Tukar',noItems:'Tiada item tersedia untuk penukaran',productWarehouseRequired:'Produk dan gudang diperlukan untuk penukaran.',converted:'{no} ditukar — {order} dicipta · {total}',
-    },
+  "pipeline": "Saluran jualan",
+  "customer360": "Paparan Pelanggan 360",
+  "value": "Nilai",
+  "probability": "Kebarangkalian",
+  "expectedClose": "Tarikh tutup dijangka",
+  "age": "Umur",
+  "owner": "Pemilik",
+  "days": "hari",
+  "nextActions": "Tindakan seterusnya",
+  "closeOverdue": "Tarikh tutup dijangka telah lewat",
+  "closeDue": "Tarikh tutup dalam {days} hari",
+  "closeToday": "Tarikh tutup ialah hari ini",
+  "openGuidance": "Pastikan aktiviti seterusnya dikemas kini sebelum menukar peluang ini.",
+  "wonGuidance": "Peluang ini telah ditukar kepada pesanan jualan.",
+  "lostGuidance": "Peluang ini ditutup sebagai gagal.",
+  "activityTimeline": "Garis masa aktiviti",
+  "noActivity": "Belum ada aktiviti direkodkan untuk peluang ini.",
+  "dealValue": "Nilai peluang",
+  "weighted": "Berwajaran",
+  "stage": "Peringkat",
+  "primaryContact": "Kenalan utama",
+  "noContact": "Tiada kenalan pelanggan direkodkan.",
+  "name": "Nama",
+  "role": "Peranan",
+  "email": "E-mel",
+  "phone": "Telefon",
+  "related": "Berkaitan",
+  "customer": "Pelanggan",
+  "salesOrder": "Pesanan jualan",
+  "logActivity": "Log aktiviti",
+  "markLost": "Tanda gagal",
+  "convert": "Tukar kepada pesanan jualan",
+  "viewOrder": "Lihat pesanan jualan",
+  "openFooter": "Penukaran mencipta dan mengesahkan pesanan jualan sebenar.",
+  "wonFooter": "Peluang telah ditukar",
+  "lostFooter": "Peluang ditutup",
+  "cancel": "Batal",
+  "type": "Jenis",
+  "note": "Nota",
+  "call": "Panggilan",
+  "details": "Butiran",
+  "activityPlaceholder": "Apa yang berlaku?",
+  "activityRequired": "Butiran aktiviti diperlukan.",
+  "activityLogged": "Aktiviti direkodkan.",
+  "activitySaveError": "Aktiviti tidak dapat disimpan.",
+  "lossReason": "Sebab gagal",
+  "lossPlaceholder": "cth. Bajet ditarik balik atau pesaing dipilih",
+  "lossRequired": "Sebab gagal diperlukan.",
+  "markLostConfirm": "Tanda peluang gagal",
+  "markedLost": "Peluang ditanda gagal.",
+  "markLostError": "Peluang tidak dapat ditanda gagal.",
+  "convertTitle": "Tukar kepada pesanan jualan",
+  "item": "item",
+  "qty": "Kuantiti",
+  "unitPrice": "Harga unit",
+  "convertConfirm": "Tukar",
+  "noItems": "Tiada item tersedia untuk penukaran",
+  "productWarehouseRequired": "Produk dan gudang diperlukan untuk penukaran.",
+  "converted": "{no} ditukar — {order} dicipta · {total}"
+},
     zh:{
       pipeline:'销售管道',customer360:'客户 360',value:'金额',probability:'成交概率',expectedClose:'预计成交日',age:'商机天数',owner:'负责人',days:'天',
       nextActions:'下一步行动',closeOverdue:'预计成交日已逾期',closeDue:'预计 {days} 天后成交',closeToday:'预计今天成交',
@@ -210,18 +260,68 @@ function crmOpportunityCopy(){
       convertTitle:'受注に変換',item:'品目',qty:'数量',unitPrice:'単価',convertConfirm:'変換',noItems:'変換できる品目がありません',productWarehouseRequired:'変換には製品と倉庫が必要です。',converted:'{no} を変換 — {order} を作成 · {total}',
     },
     vi:{
-      pipeline:'Cơ hội bán hàng',customer360:'Khách hàng 360',value:'Giá trị',probability:'Xác suất',expectedClose:'Ngày chốt dự kiến',age:'Số ngày',owner:'Người phụ trách',days:'ngày',
-      nextActions:'Hành động tiếp theo',closeOverdue:'Đã quá ngày chốt dự kiến',closeDue:'Còn {days} ngày đến ngày chốt',closeToday:'Ngày chốt dự kiến là hôm nay',
-      openGuidance:'Cập nhật hoạt động tiếp theo trước khi chuyển đổi cơ hội.',wonGuidance:'Cơ hội này đã được chuyển thành đơn bán hàng.',lostGuidance:'Cơ hội này đã đóng với trạng thái thất bại.',
-      activityTimeline:'Dòng thời gian hoạt động',noActivity:'Chưa có hoạt động nào cho cơ hội này.',dealValue:'Giá trị cơ hội',weighted:'Giá trị trọng số',stage:'Giai đoạn',
-      primaryContact:'Liên hệ chính',noContact:'Khách hàng chưa có liên hệ.',name:'Tên',role:'Vai trò',email:'Email',phone:'Điện thoại',related:'Liên quan',customer:'Khách hàng',salesOrder:'Đơn bán hàng',
-      logActivity:'Ghi hoạt động',markLost:'Đánh dấu thất bại',convert:'Chuyển thành đơn bán hàng',viewOrder:'Xem đơn bán hàng',openFooter:'Chuyển đổi sẽ tạo và xác nhận đơn bán hàng thực.',wonFooter:'Cơ hội đã chuyển đổi',lostFooter:'Cơ hội đã đóng',
-      cancel:'Hủy',type:'Loại',note:'Ghi chú',call:'Cuộc gọi',details:'Chi tiết',activityPlaceholder:'Đã xảy ra điều gì?',activityRequired:'Vui lòng nhập chi tiết hoạt động.',activityLogged:'Đã ghi hoạt động.',activitySaveError:'Không thể lưu hoạt động.',
-      lossReason:'Lý do thất bại',lossPlaceholder:'vd: Hủy ngân sách hoặc chọn đối thủ',lossRequired:'Vui lòng nhập lý do thất bại.',markLostConfirm:'Xác nhận thất bại',markedLost:'Đã đánh dấu cơ hội thất bại.',markLostError:'Không thể đánh dấu cơ hội thất bại.',
-      convertTitle:'Chuyển thành đơn bán hàng',item:'Mặt hàng',qty:'Số lượng',unitPrice:'Đơn giá',convertConfirm:'Chuyển đổi',noItems:'Không có mặt hàng để chuyển đổi',productWarehouseRequired:'Cần có sản phẩm và kho để chuyển đổi.',converted:'Đã chuyển {no} — tạo {order} · {total}',
-    },
+  "pipeline": "Cơ hội bán hàng",
+  "customer360": "Khách hàng 360",
+  "value": "Giá trị",
+  "probability": "Xác suất",
+  "expectedClose": "Ngày chốt dự kiến",
+  "age": "Số ngày",
+  "owner": "Người phụ trách",
+  "days": "ngày",
+  "nextActions": "Hành động tiếp theo",
+  "closeOverdue": "Đã quá ngày chốt dự kiến",
+  "closeDue": "Còn {days} ngày đến ngày chốt",
+  "closeToday": "Ngày chốt dự kiến là hôm nay",
+  "openGuidance": "Cập nhật hoạt động tiếp theo trước khi chuyển đổi cơ hội.",
+  "wonGuidance": "Cơ hội này đã được chuyển thành đơn bán hàng.",
+  "lostGuidance": "Cơ hội này đã đóng với trạng thái thất bại.",
+  "activityTimeline": "Dòng thời gian hoạt động",
+  "noActivity": "Chưa có hoạt động nào cho cơ hội này.",
+  "dealValue": "Giá trị cơ hội",
+  "weighted": "Giá trị trọng số",
+  "stage": "Giai đoạn",
+  "primaryContact": "Liên hệ chính",
+  "noContact": "Khách hàng chưa có liên hệ.",
+  "name": "Tên",
+  "role": "Vai trò",
+  "email": "E-mail",
+  "phone": "Điện thoại",
+  "related": "Liên quan",
+  "customer": "Khách hàng",
+  "salesOrder": "Đơn bán hàng",
+  "logActivity": "Ghi hoạt động",
+  "markLost": "Đánh dấu thất bại",
+  "convert": "Chuyển thành đơn bán hàng",
+  "viewOrder": "Xem đơn bán hàng",
+  "openFooter": "Chuyển đổi sẽ tạo và xác nhận đơn bán hàng thực.",
+  "wonFooter": "Cơ hội đã chuyển đổi",
+  "lostFooter": "Cơ hội đã đóng",
+  "cancel": "Hủy",
+  "type": "Loại",
+  "note": "Ghi chú",
+  "call": "Cuộc gọi",
+  "details": "Chi tiết",
+  "activityPlaceholder": "Đã xảy ra điều gì?",
+  "activityRequired": "Vui lòng nhập chi tiết hoạt động.",
+  "activityLogged": "Đã ghi hoạt động.",
+  "activitySaveError": "Không thể lưu hoạt động.",
+  "lossReason": "Lý do thất bại",
+  "lossPlaceholder": "vd: Hủy ngân sách hoặc chọn đối thủ",
+  "lossRequired": "Vui lòng nhập lý do thất bại.",
+  "markLostConfirm": "Xác nhận thất bại",
+  "markedLost": "Đã đánh dấu cơ hội thất bại.",
+  "markLostError": "Không thể đánh dấu cơ hội thất bại.",
+  "convertTitle": "Chuyển thành đơn bán hàng",
+  "item": "Mặt hàng",
+  "qty": "Số lượng",
+  "unitPrice": "Đơn giá",
+  "convertConfirm": "Chuyển đổi",
+  "noItems": "Không có mặt hàng để chuyển đổi",
+  "productWarehouseRequired": "Cần có sản phẩm và kho để chuyển đổi.",
+  "converted": "Đã chuyển {no} — tạo {order} · {total}"
+},
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
 }
 
@@ -299,7 +399,7 @@ async function prepareOpportunityDetail(requestedId){
 }
 
 function crmStageLabel(stage){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{lead:'Lead',qualified:'Qualified',proposal:'Proposal',negotiation:'Negotiation',won:'Won',lost:'Lost'},
     ms:{lead:'Prospek',qualified:'Layak',proposal:'Cadangan',negotiation:'Rundingan',won:'Menang',lost:'Gagal'},
@@ -307,7 +407,8 @@ function crmStageLabel(stage){
     ja:{lead:'リード',qualified:'有望',proposal:'提案',negotiation:'交渉',won:'受注',lost:'失注'},
     vi:{lead:'Tiềm năng',qualified:'Đủ điều kiện',proposal:'Đề xuất',negotiation:'Đàm phán',won:'Thành công',lost:'Thất bại'},
   };
-  return (packs[lang]&&packs[lang][stage])||packs.en[stage]||stage;
+  const localized=i18nLegacy(packs);
+  return localized[stage]||packs.en[stage]||stage;
 }
 
 SCREENS['opportunity'] = async function(root,params){
@@ -388,7 +489,7 @@ SCREENS['opportunity'] = async function(root,params){
 
 /* ---------------- CUSTOMER 360 (master / profile) ---------------- */
 function customer360Copy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{
       account:'Account',paymentTerms:'Payment terms',net30:'Net 30',creditLimit:'Credit limit',notSet:'Not set',
@@ -463,25 +564,56 @@ function customer360Copy(){
       limitUsedBody:'{limit} 中 {balance}(延滞 {overdue}）。',
     },
     vi:{
-      account:'Tài khoản',paymentTerms:'Điều khoản thanh toán',net30:'Net 30 ngày',creditLimit:'Hạn mức tín dụng',notSet:'Chưa thiết lập',
-      accountOwner:'Người phụ trách',contacts:'Liên hệ',addContact:'Thêm liên hệ',noContactsYet:'Chưa có liên hệ nào.',
-      openOrders:'Đơn hàng đang mở',noOpenOrders:'Không có đơn hàng đang mở.',openOpportunities:'Cơ hội đang mở',
-      noOpenOpportunities:'Không có cơ hội đang mở.',activity:'Hoạt động',logActivity:'Ghi nhận hoạt động',
-      noActivityYet:'Chưa có hoạt động nào được ghi nhận.',receivables:'Công nợ phải thu',balance:'Số dư',overdue:'Quá hạn',
-      limitUsed:'Hạn mức đã dùng',noCreditProfile:'Chưa có hồ sơ tín dụng.',
-      customerSince:'khách hàng từ',owner:'phụ trách',unassigned:'Chưa phân công',newSalesOrder:'Tạo đơn bán hàng',
-      salesOrder:'Đơn bán hàng',customers:'Khách hàng',
-      nameLabel:'Tên',roleLabel:'Vai trò',emailLabel:'Email',phoneLabel:'Điện thoại',
-      namePlaceholder:'vd: Nguyễn Văn A',rolePlaceholder:'vd: Nhân viên mua hàng',optional:'không bắt buộc',
-      nameRoleRequired:'Vui lòng nhập tên và vai trò',contactAdded:'Đã thêm liên hệ {name}',
-      contactSaveError:'Không thể lưu liên hệ',
-      type:'Loại',note:'Ghi chú',call:'Cuộc gọi',email:'Email',details:'Chi tiết',whatHappened:'Đã xảy ra điều gì?',
-      detailsRequired:'Vui lòng nhập chi tiết',activityLogged:'Đã ghi nhận hoạt động',
-      activitySaveError:'Không thể ghi nhận hoạt động',
-      limitUsedBody:'{balance} trên {limit} · quá hạn {overdue}.',
-    },
+  "account": "Tài khoản",
+  "paymentTerms": "Điều khoản thanh toán",
+  "net30": "Net 30 ngày",
+  "creditLimit": "Hạn mức tín dụng",
+  "notSet": "Chưa thiết lập",
+  "accountOwner": "Người phụ trách",
+  "contacts": "Liên hệ",
+  "addContact": "Thêm liên hệ",
+  "noContactsYet": "Chưa có liên hệ nào.",
+  "openOrders": "Đơn hàng đang mở",
+  "noOpenOrders": "Không có đơn hàng đang mở.",
+  "openOpportunities": "Cơ hội đang mở",
+  "noOpenOpportunities": "Không có cơ hội đang mở.",
+  "activity": "Hoạt động",
+  "logActivity": "Ghi nhận hoạt động",
+  "noActivityYet": "Chưa có hoạt động nào được ghi nhận.",
+  "receivables": "Công nợ phải thu",
+  "balance": "Số dư",
+  "overdue": "Quá hạn",
+  "limitUsed": "Hạn mức đã dùng",
+  "noCreditProfile": "Chưa có hồ sơ tín dụng.",
+  "customerSince": "khách hàng từ",
+  "owner": "phụ trách",
+  "unassigned": "Chưa phân công",
+  "newSalesOrder": "Tạo đơn bán hàng",
+  "salesOrder": "Đơn bán hàng",
+  "customers": "Khách hàng",
+  "nameLabel": "Tên",
+  "roleLabel": "Vai trò",
+  "emailLabel": "E-mail",
+  "phoneLabel": "Điện thoại",
+  "namePlaceholder": "vd: Nguyễn Văn A",
+  "rolePlaceholder": "vd: Nhân viên mua hàng",
+  "optional": "không bắt buộc",
+  "nameRoleRequired": "Vui lòng nhập tên và vai trò",
+  "contactAdded": "Đã thêm liên hệ {name}",
+  "contactSaveError": "Không thể lưu liên hệ",
+  "type": "Loại",
+  "note": "Ghi chú",
+  "call": "Cuộc gọi",
+  "email": "E-mail",
+  "details": "Chi tiết",
+  "whatHappened": "Đã xảy ra điều gì?",
+  "detailsRequired": "Vui lòng nhập chi tiết",
+  "activityLogged": "Đã ghi nhận hoạt động",
+  "activitySaveError": "Không thể ghi nhận hoạt động",
+  "limitUsedBody": "{balance} trên {limit} · quá hạn {overdue}."
+},
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
 }
 

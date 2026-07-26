@@ -4,15 +4,73 @@
    ============================================================ */
 
 function purchasingDetailCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{purchasing:'Purchasing',receipt:'Goods Receipt',receipts:'Goods Receipts',receiptSub:'Review the immutable receipt, source purchase order and inventory effects.',invoice:'Supplier Invoice',invoices:'Supplier Invoices',posted:'Posted',paid:'Paid',cancelled:'Cancelled',supplier:'Supplier',po:'Purchase order',date:'Document date',warehouse:'Warehouse',status:'Status',lines:'Document lines',item:'Item',ordered:'Ordered',received:'Received',receivedTotal:'Total received',quantity:'Quantity',unitCost:'Unit cost',net:'Net amount',tax:'Tax',total:'Total',inventoryTrace:'Inventory trace',stockEffect:'Stock effect',movement:'Movement',movementCount:'Stock movements',direction:'Direction',reference:'Reference',accountingTrace:'Accounting trace',account:'Account',memo:'Memo',debit:'Debit',credit:'Credit',balanced:'Balanced journal',immutableReceipt:'This posted receipt is immutable. Its quantities come from the approved purchase order and every stock effect is recorded as a stock movement.',immutableInvoice:'This posted supplier invoice is immutable. Payment changes its settlement status; corrections require a return, credit note or debit note.',backReceipts:'Back to receipts',backInvoices:'Back to invoices',viewStock:'View stock movements',viewLedger:'View General Ledger',schedulePayment:'Schedule payment',noMovement:'No stock movement is linked to this receipt.',noReceipt:'No goods receipts are available for this company.',missingReceipt:'The requested goods receipt is unavailable in this company.',receiptError:'The goods receipt could not be loaded.',retry:'Retry',noJournal:'No accounting journal is linked to this invoice.',traceCount:'trace records',outstanding:'Outstanding',settled:'Settlement',matched:'3-way match',matchNote:'The invoice uses the same purchase-order quantity, cost and tax snapshots as the posted receipt.',receiptNote:'Receipt posting changes inventory quantity only. Supplier-invoice posting creates the AP journal.',lineCount:'lines',journalRef:'Journal reference'},
-    ms:{purchasing:'Pembelian',receipt:'Penerimaan Barang',receipts:'Penerimaan Barang',receiptSub:'Semak penerimaan yang tidak boleh diubah, pesanan belian sumber dan kesan inventori.',invoice:'Invois Pembekal',invoices:'Invois Pembekal',posted:'Dipos',paid:'Dibayar',cancelled:'Dibatalkan',supplier:'Pembekal',po:'Pesanan belian',date:'Tarikh dokumen',warehouse:'Gudang',status:'Status',lines:'Baris dokumen',item:'Item',ordered:'Dipesan',received:'Diterima',receivedTotal:'Jumlah diterima',quantity:'Kuantiti',unitCost:'Kos seunit',net:'Amaun bersih',tax:'Cukai',total:'Jumlah',inventoryTrace:'Jejak inventori',stockEffect:'Kesan stok',movement:'Pergerakan',movementCount:'Pergerakan stok',direction:'Arah',reference:'Rujukan',accountingTrace:'Jejak perakaunan',account:'Akaun',memo:'Memo',debit:'Debit',credit:'Kredit',balanced:'Jurnal seimbang',immutableReceipt:'Penerimaan yang telah dipos tidak boleh diubah. Kuantitinya berasal daripada pesanan belian yang diluluskan dan setiap kesan stok direkod sebagai pergerakan stok.',immutableInvoice:'Invois pembekal yang telah dipos tidak boleh diubah. Pembayaran hanya mengubah status penyelesaian; pembetulan mesti melalui pulangan, nota kredit atau nota debit.',backReceipts:'Kembali ke penerimaan',backInvoices:'Kembali ke invois',viewStock:'Lihat pergerakan stok',viewLedger:'Lihat Lejar Am',schedulePayment:'Jadualkan pembayaran',noMovement:'Tiada pergerakan stok dipautkan kepada penerimaan ini.',noReceipt:'Tiada penerimaan barang untuk syarikat ini.',missingReceipt:'Penerimaan barang yang diminta tidak tersedia untuk syarikat ini.',receiptError:'Penerimaan barang tidak dapat dimuatkan.',retry:'Cuba lagi',noJournal:'Tiada jurnal perakaunan dipautkan kepada invois ini.',traceCount:'rekod jejak',outstanding:'Belum dibayar',settled:'Penyelesaian',matched:'Padanan 3 hala',matchNote:'Invois menggunakan gambaran kuantiti, kos dan cukai pesanan belian yang sama seperti penerimaan yang dipos.',receiptNote:'Posting penerimaan hanya mengubah kuantiti inventori. Posting invois pembekal mencipta jurnal AP.',lineCount:'baris',journalRef:'Rujukan jurnal'},
+    ms:{
+  "purchasing": "Pembelian",
+  "receipt": "Penerimaan Barang",
+  "receipts": "Penerimaan Barang",
+  "receiptSub": "Semak penerimaan yang tidak boleh diubah, pesanan belian sumber dan kesan inventori.",
+  "invoice": "Invois Pembekal",
+  "invoices": "Invois Pembekal",
+  "posted": "Dipos",
+  "paid": "Dibayar",
+  "cancelled": "Dibatalkan",
+  "supplier": "Pembekal",
+  "po": "Pesanan belian",
+  "date": "Tarikh dokumen",
+  "warehouse": "Gudang",
+  "status": "Status",
+  "lines": "Baris dokumen",
+  "item": "item",
+  "ordered": "Dipesan",
+  "received": "Diterima",
+  "receivedTotal": "Jumlah diterima",
+  "quantity": "Kuantiti",
+  "unitCost": "Kos seunit",
+  "net": "Amaun bersih",
+  "tax": "Cukai",
+  "total": "Jumlah",
+  "inventoryTrace": "Jejak inventori",
+  "stockEffect": "Kesan stok",
+  "movement": "Pergerakan",
+  "movementCount": "Pergerakan stok",
+  "direction": "Arah",
+  "reference": "Rujukan",
+  "accountingTrace": "Jejak perakaunan",
+  "account": "Akaun",
+  "memo": "Memo",
+  "debit": "Debit",
+  "credit": "Kredit",
+  "balanced": "Jurnal seimbang",
+  "immutableReceipt": "Penerimaan yang telah dipos tidak boleh diubah. Kuantitinya berasal daripada pesanan belian yang diluluskan dan setiap kesan stok direkod sebagai pergerakan stok.",
+  "immutableInvoice": "Invois pembekal yang telah dipos tidak boleh diubah. Pembayaran hanya mengubah status penyelesaian; pembetulan mesti melalui pulangan, nota kredit atau nota debit.",
+  "backReceipts": "Kembali ke penerimaan",
+  "backInvoices": "Kembali ke invois",
+  "viewStock": "Lihat pergerakan stok",
+  "viewLedger": "Lihat Lejar Am",
+  "schedulePayment": "Jadualkan pembayaran",
+  "noMovement": "Tiada pergerakan stok dipautkan kepada penerimaan ini.",
+  "noReceipt": "Tiada penerimaan barang untuk syarikat ini.",
+  "missingReceipt": "Penerimaan barang yang diminta tidak tersedia untuk syarikat ini.",
+  "receiptError": "Penerimaan barang tidak dapat dimuatkan.",
+  "retry": "Cuba lagi",
+  "noJournal": "Tiada jurnal perakaunan dipautkan kepada invois ini.",
+  "traceCount": "rekod jejak",
+  "outstanding": "Belum dibayar",
+  "settled": "Penyelesaian",
+  "matched": "Padanan 3 hala",
+  "matchNote": "Invois menggunakan gambaran kuantiti, kos dan cukai pesanan belian yang sama seperti penerimaan yang dipos.",
+  "receiptNote": "Posting penerimaan hanya mengubah kuantiti inventori. Posting invois pembekal mencipta jurnal AP.",
+  "lineCount": "baris",
+  "journalRef": "Rujukan jurnal"
+},
     zh:{purchasing:'采购',receipt:'收货单',receipts:'收货单',receiptSub:'核对不可修改的收货单、来源采购订单及库存影响。',invoice:'供应商发票',invoices:'供应商发票',posted:'已过账',paid:'已付款',cancelled:'已取消',supplier:'供应商',po:'采购订单',date:'单据日期',warehouse:'仓库',status:'状态',lines:'单据明细',item:'物料',ordered:'订购数量',received:'收货数量',receivedTotal:'收货总量',quantity:'数量',unitCost:'单位成本',net:'未税金额',tax:'税额',total:'合计',inventoryTrace:'库存追踪',stockEffect:'库存影响',movement:'库存流水',movementCount:'库存流水数量',direction:'方向',reference:'来源',accountingTrace:'会计追踪',account:'科目',memo:'摘要',debit:'借方',credit:'贷方',balanced:'借贷平衡',immutableReceipt:'已过账收货单不可修改。数量来自已批准的采购订单，每一笔库存影响都记录为库存流水。',immutableInvoice:'已过账供应商发票不可修改。付款只会更新结算状态；更正必须通过退货、贷项或借项处理。',backReceipts:'返回收货单',backInvoices:'返回供应商发票',viewStock:'查看库存流水',viewLedger:'查看总账',schedulePayment:'安排付款',noMovement:'此收货单没有关联库存流水。',noReceipt:'当前公司没有收货单。',missingReceipt:'当前公司无法找到指定的收货单。',receiptError:'无法加载收货单。',retry:'重试',noJournal:'此发票没有关联会计凭证。',traceCount:'条追踪记录',outstanding:'未付金额',settled:'结算状态',matched:'三单匹配',matchNote:'发票采用与已过账收货单相同的采购订单数量、成本及税额快照。',receiptNote:'收货过账只改变库存数量；供应商发票过账才生成应付账款凭证。',lineCount:'行',journalRef:'凭证编号'},
     ja:{purchasing:'購買',receipt:'入荷伝票',receipts:'入荷伝票',receiptSub:'変更不可の入荷、元の購買発注、在庫への影響を確認します。',invoice:'仕入先請求書',invoices:'仕入先請求書',posted:'転記済',paid:'支払済',cancelled:'取消済',supplier:'仕入先',po:'購買発注',date:'伝票日',warehouse:'倉庫',status:'ステータス',lines:'伝票明細',item:'品目',ordered:'発注数量',received:'入荷数量',receivedTotal:'入荷合計',quantity:'数量',unitCost:'単価',net:'税抜金額',tax:'税額',total:'合計',inventoryTrace:'在庫追跡',stockEffect:'在庫への影響',movement:'在庫移動',movementCount:'在庫移動件数',direction:'方向',reference:'参照',accountingTrace:'会計追跡',account:'勘定科目',memo:'摘要',debit:'借方',credit:'貸方',balanced:'貸借一致',immutableReceipt:'転記済入荷伝票は変更できません。数量は承認済購買発注から取得し、在庫への影響はすべて在庫移動として記録されます。',immutableInvoice:'転記済仕入先請求書は変更できません。支払は決済状態のみ更新し、訂正は返品・クレジットノート・デビットノートで行います。',backReceipts:'入荷一覧へ戻る',backInvoices:'請求書一覧へ戻る',viewStock:'在庫移動を表示',viewLedger:'総勘定元帳を表示',schedulePayment:'支払を予定',noMovement:'この入荷に紐づく在庫移動はありません。',noReceipt:'この会社には入荷伝票がありません。',missingReceipt:'指定された入荷伝票はこの会社では利用できません。',receiptError:'入荷伝票を読み込めませんでした。',retry:'再試行',noJournal:'この請求書に紐づく会計仕訳はありません。',traceCount:'件の追跡記録',outstanding:'未払額',settled:'決済',matched:'3点照合',matchNote:'請求書は転記済入荷と同じ購買発注の数量・原価・税スナップショットを使用します。',receiptNote:'入荷転記は在庫数量のみ変更し、仕入先請求書の転記でAP仕訳を作成します。',lineCount:'行',journalRef:'仕訳参照'},
     vi:{purchasing:'Mua hàng',receipt:'Phiếu nhận hàng',receipts:'Phiếu nhận hàng',receiptSub:'Kiểm tra phiếu nhận bất biến, đơn mua nguồn và tác động tồn kho.',invoice:'Hóa đơn nhà cung cấp',invoices:'Hóa đơn nhà cung cấp',posted:'Đã ghi sổ',paid:'Đã thanh toán',cancelled:'Đã hủy',supplier:'Nhà cung cấp',po:'Đơn mua hàng',date:'Ngày chứng từ',warehouse:'Kho',status:'Trạng thái',lines:'Dòng chứng từ',item:'Mặt hàng',ordered:'Đã đặt',received:'Đã nhận',receivedTotal:'Tổng đã nhận',quantity:'Số lượng',unitCost:'Đơn giá',net:'Giá trị chưa thuế',tax:'Thuế',total:'Tổng',inventoryTrace:'Truy vết tồn kho',stockEffect:'Tác động tồn kho',movement:'Biến động',movementCount:'Số biến động kho',direction:'Hướng',reference:'Tham chiếu',accountingTrace:'Truy vết kế toán',account:'Tài khoản',memo:'Diễn giải',debit:'Nợ',credit:'Có',balanced:'Bút toán cân bằng',immutableReceipt:'Phiếu nhận đã ghi sổ là bất biến. Số lượng lấy từ đơn mua hàng đã duyệt và mọi ảnh hưởng tồn kho đều được ghi thành biến động kho.',immutableInvoice:'Hóa đơn nhà cung cấp đã ghi sổ là bất biến. Thanh toán chỉ đổi trạng thái quyết toán; điều chỉnh phải qua trả hàng, phiếu tín dụng hoặc phiếu ghi nợ.',backReceipts:'Quay lại phiếu nhận',backInvoices:'Quay lại hóa đơn',viewStock:'Xem biến động kho',viewLedger:'Xem Sổ cái',schedulePayment:'Lập lịch thanh toán',noMovement:'Không có biến động kho liên kết với phiếu nhận này.',noReceipt:'Không có phiếu nhận hàng cho công ty này.',missingReceipt:'Phiếu nhận hàng được yêu cầu không có trong công ty này.',receiptError:'Không thể tải phiếu nhận hàng.',retry:'Thử lại',noJournal:'Không có bút toán kế toán liên kết với hóa đơn này.',traceCount:'bản ghi truy vết',outstanding:'Còn phải trả',settled:'Quyết toán',matched:'Đối chiếu 3 bên',matchNote:'Hóa đơn dùng cùng ảnh chụp số lượng, chi phí và thuế của đơn mua hàng như phiếu nhận đã ghi sổ.',receiptNote:'Ghi sổ nhận hàng chỉ đổi số lượng tồn kho. Ghi sổ hóa đơn nhà cung cấp mới tạo bút toán AP.',lineCount:'dòng',journalRef:'Tham chiếu bút toán'},
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
 }
 

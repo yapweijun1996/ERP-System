@@ -10,7 +10,7 @@ const ASSET_CATEGORY_KEY = {
 const ASSET_STATUS_LABEL = { in_use:'In use', under_maintenance:'Under maintenance', idle:'Idle', disposed:'Disposed' };
 
 function assetCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{
       catPlantMachinery:'Plant & Machinery',catVehicles:'Vehicles',catLabEquipment:'Lab Equipment',
@@ -208,7 +208,7 @@ function assetCopy(){
       dataLimit:'Hiển thị tối đa 100 đợt chạy khấu hao.',
     },
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
 }
 

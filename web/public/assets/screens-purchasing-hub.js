@@ -866,20 +866,89 @@ SCREENS['report-pur-generic'] = function(root){
    report renderers above while keeping shared shell/list helpers in one file.
    ============================================================ */
 function canonicalPurCopy(key){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{purchasing:'Purchasing',dashboardSub:'Canonical procure-to-pay command centre rebuilt from requisitions, approvals, orders, receipts, invoices, returns and active contracts.',newPo:'New purchase order',openPOs:'Open POs',openValue:'Open PO value',pendingApproval:'Pending approval',pendingReceipt:'Pending receipt',overdue:'Overdue quoted lead',invoiceVariance:'Invoice variance',netAP:'Net unpaid AP',spendHistory:'Posted invoice spend',invoices:'invoices',topSuppliers:'Top suppliers by invoiced spend',approvedSpendByBuyer:'Approved PO value by buyer',realBuyerNote:'Buyer is the real PO approval actor snapshot; unapproved orders are excluded.',noData:'No canonical facts in the current company yet.',masterData:'Master Data',transactions:'Transactions',controls:'Controls',reports:'Purchasing Reports',reportsSub:'Bounded, rebuildable reports from canonical procure-to-pay facts. No sample metrics or independent KPI table.',spend:'Spend',performance:'Performance',operations:'Operations',bySupplier:'Purchase by Supplier',bySupplierDesc:'Invoiced spend, order coverage and credited-return rate by supplier.',byBuyer:'Purchase by Buyer',byBuyerDesc:'Approved PO value grouped by the real approval actor.',priceVariance:'Price Variance',priceVarianceDesc:'Immutable supplier-invoice total compared with its source PO total.',vendorPerformance:'Supplier Performance',vendorPerformanceDesc:'Delivery, returns, invoice match and active-contract coverage.',orderStatus:'Purchase Order Status',orderStatusDesc:'Order count and committed value by canonical state.',invoiceStatus:'Supplier Invoice Status',invoiceStatusDesc:'Invoice count and value by settlement state.',requisitionStatus:'Requisition Status',requisitionStatusDesc:'Request count and estimated value by decision state.',live:'Live',backReports:'Back to reports',allHistory:'Current company · all canonical history',supplier:'Supplier',spendValue:'Invoiced spend',orders:'Orders',received:'Received',share:'Share',buyerApprover:'Buyer / approver',approvedValue:'Approved PO value',invoice:'Supplier invoice',po:'Purchase order',invoiceTotal:'Invoice total',poTotal:'PO total',variance:'Variance',result:'Result',exactMatch:'Exact match',attention:'Review',headerNote:'Price variance is reported at immutable document-header level because supplier invoice lines are not a domain table. Posting currently enforces exact PO totals.',onTime:'On-time',leadDays:'Actual lead',returns:'Credited returns',match:'Invoice match',coverage:'Contract coverage',rating:'Rating',status:'Status',count:'Count',value:'Value',truncated:'The bounded result has more rows; use the source register for the complete ledger.',print:'Print'},
-    ms:{purchasing:'Pembelian',dashboardSub:'Pusat arahan perolehan-ke-bayaran kanonik yang dibina semula daripada permintaan, kelulusan, pesanan, penerimaan, invois, pulangan dan kontrak aktif.',newPo:'Pesanan belian baharu',openPOs:'PO terbuka',openValue:'Nilai PO terbuka',pendingApproval:'Menunggu kelulusan',pendingReceipt:'Menunggu penerimaan',overdue:'Lewat masa utama',invoiceVariance:'Varians invois',netAP:'AP belum bayar bersih',spendHistory:'Belanja invois dipos',invoices:'invois',topSuppliers:'Pembekal utama mengikut belanja invois',approvedSpendByBuyer:'Nilai PO diluluskan mengikut pembeli',realBuyerNote:'Pembeli ialah rekod pelaku kelulusan PO sebenar; pesanan belum lulus dikecualikan.',noData:'Belum ada fakta kanonik untuk syarikat semasa.',masterData:'Data Induk',transactions:'Transaksi',controls:'Kawalan',reports:'Laporan Pembelian',reportsSub:'Laporan terhad dan boleh dibina semula daripada fakta perolehan-ke-bayaran kanonik. Tiada metrik sampel atau jadual KPI berasingan.',spend:'Belanja',performance:'Prestasi',operations:'Operasi',bySupplier:'Pembelian mengikut Pembekal',bySupplierDesc:'Belanja invois, liputan pesanan dan kadar pulangan dikredit mengikut pembekal.',byBuyer:'Pembelian mengikut Pembeli',byBuyerDesc:'Nilai PO diluluskan dikelompokkan mengikut pelaku kelulusan sebenar.',priceVariance:'Varians Harga',priceVarianceDesc:'Jumlah invois pembekal tidak berubah dibandingkan dengan jumlah PO sumber.',vendorPerformance:'Prestasi Pembekal',vendorPerformanceDesc:'Penghantaran, pulangan, padanan invois dan liputan kontrak aktif.',orderStatus:'Status Pesanan Belian',orderStatusDesc:'Bilangan pesanan dan nilai komitmen mengikut status kanonik.',invoiceStatus:'Status Invois Pembekal',invoiceStatusDesc:'Bilangan dan nilai invois mengikut status penyelesaian.',requisitionStatus:'Status Permintaan',requisitionStatusDesc:'Bilangan permintaan dan anggaran nilai mengikut keputusan.',live:'Langsung',backReports:'Kembali ke laporan',allHistory:'Syarikat semasa · semua sejarah kanonik',supplier:'Pembekal',spendValue:'Belanja invois',orders:'Pesanan',received:'Diterima',share:'Bahagian',buyerApprover:'Pembeli / pelulus',approvedValue:'Nilai PO diluluskan',invoice:'Invois pembekal',po:'Pesanan belian',invoiceTotal:'Jumlah invois',poTotal:'Jumlah PO',variance:'Varians',result:'Keputusan',exactMatch:'Padan tepat',attention:'Semak',headerNote:'Varians harga dilapor pada tahap kepala dokumen yang tidak berubah kerana baris invois pembekal bukan jadual domain. Pengeposan kini menguatkuasakan jumlah PO yang tepat.',onTime:'Tepat masa',leadDays:'Masa sebenar',returns:'Pulangan dikredit',match:'Padanan invois',coverage:'Liputan kontrak',rating:'Penarafan',status:'Status',count:'Bilangan',value:'Nilai',truncated:'Hasil terhad mempunyai baris tambahan; gunakan daftar sumber untuk lejar lengkap.',print:'Cetak'},
+    ms:{
+  "purchasing": "Pembelian",
+  "dashboardSub": "Pusat arahan perolehan-ke-bayaran kanonik yang dibina semula daripada permintaan, kelulusan, pesanan, penerimaan, invois, pulangan dan kontrak aktif.",
+  "newPo": "Pesanan belian baharu",
+  "openPOs": "PO terbuka",
+  "openValue": "Nilai PO terbuka",
+  "pendingApproval": "Menunggu kelulusan",
+  "pendingReceipt": "Menunggu penerimaan",
+  "overdue": "Lewat masa utama",
+  "invoiceVariance": "Varians invois",
+  "netAP": "AP belum bayar bersih",
+  "spendHistory": "Belanja invois dipos",
+  "invoices": "invois",
+  "topSuppliers": "Pembekal utama mengikut belanja invois",
+  "approvedSpendByBuyer": "Nilai PO diluluskan mengikut pembeli",
+  "realBuyerNote": "Pembeli ialah rekod pelaku kelulusan PO sebenar; pesanan belum lulus dikecualikan.",
+  "noData": "Belum ada fakta kanonik untuk syarikat semasa.",
+  "masterData": "Data Induk",
+  "transactions": "Transaksi",
+  "controls": "Kawalan",
+  "reports": "Laporan Pembelian",
+  "reportsSub": "Laporan terhad dan boleh dibina semula daripada fakta perolehan-ke-bayaran kanonik. Tiada metrik sampel atau jadual KPI berasingan.",
+  "spend": "Belanja",
+  "performance": "Prestasi",
+  "operations": "Operasi",
+  "bySupplier": "Pembelian mengikut Pembekal",
+  "bySupplierDesc": "Belanja invois, liputan pesanan dan kadar pulangan dikredit mengikut pembekal.",
+  "byBuyer": "Pembelian mengikut Pembeli",
+  "byBuyerDesc": "Nilai PO diluluskan dikelompokkan mengikut pelaku kelulusan sebenar.",
+  "priceVariance": "Varians Harga",
+  "priceVarianceDesc": "Jumlah invois pembekal tidak berubah dibandingkan dengan jumlah PO sumber.",
+  "vendorPerformance": "Prestasi Pembekal",
+  "vendorPerformanceDesc": "Penghantaran, pulangan, padanan invois dan liputan kontrak aktif.",
+  "orderStatus": "Status Pesanan Belian",
+  "orderStatusDesc": "Bilangan pesanan dan nilai komitmen mengikut status kanonik.",
+  "invoiceStatus": "Status Invois Pembekal",
+  "invoiceStatusDesc": "Bilangan dan nilai invois mengikut status penyelesaian.",
+  "requisitionStatus": "Status Permintaan",
+  "requisitionStatusDesc": "Bilangan permintaan dan anggaran nilai mengikut keputusan.",
+  "live": "Langsung",
+  "backReports": "Kembali ke laporan",
+  "allHistory": "Syarikat semasa · semua sejarah kanonik",
+  "supplier": "Pembekal",
+  "spendValue": "Belanja invois",
+  "orders": "Pesanan",
+  "received": "Diterima",
+  "share": "Bahagian",
+  "buyerApprover": "Pembeli / pelulus",
+  "approvedValue": "Nilai PO diluluskan",
+  "invoice": "Invois pembekal",
+  "po": "Pesanan belian",
+  "invoiceTotal": "Jumlah invois",
+  "poTotal": "Jumlah PO",
+  "variance": "Varians",
+  "result": "Keputusan",
+  "exactMatch": "Padan tepat",
+  "attention": "Semak",
+  "headerNote": "Varians harga dilapor pada tahap kepala dokumen yang tidak berubah kerana baris invois pembekal bukan jadual domain. Pengeposan kini menguatkuasakan jumlah PO yang tepat.",
+  "onTime": "Tepat masa",
+  "leadDays": "Masa sebenar",
+  "returns": "Pulangan dikredit",
+  "match": "Padanan invois",
+  "coverage": "Liputan kontrak",
+  "rating": "Penarafan",
+  "status": "Status",
+  "count": "Bilangan",
+  "value": "Nilai",
+  "truncated": "Hasil terhad mempunyai baris tambahan; gunakan daftar sumber untuk lejar lengkap.",
+  "print": "Cetak"
+},
     zh:{purchasing:'采购',dashboardSub:'由请购、审批、采购订单、收货、供应商发票、退货和生效合同实时重建的标准采购中心。',newPo:'新建采购订单',openPOs:'未结采购订单',openValue:'未结订单金额',pendingApproval:'待审批',pendingReceipt:'待收货',overdue:'超出报价交期',invoiceVariance:'发票价差',netAP:'应付净额',spendHistory:'已过账发票采购额',invoices:'张发票',topSuppliers:'按已开票采购额排名的供应商',approvedSpendByBuyer:'按采购负责人统计已批准订单',realBuyerNote:'采购负责人取自真实采购订单审批人快照；未批准订单不计入。',noData:'当前公司尚无标准业务数据。',masterData:'主数据',transactions:'采购交易',controls:'采购控制',reports:'采购报表',reportsSub:'所有指标均由标准采购事实限量重建，不使用示例数字或独立 KPI 表。',spend:'采购额',performance:'绩效',operations:'运营',bySupplier:'按供应商采购',bySupplierDesc:'按供应商查看已开票采购额、订单覆盖及已贷记退货率。',byBuyer:'按采购负责人采购',byBuyerDesc:'按真实审批人汇总已批准采购订单金额。',priceVariance:'采购价差',priceVarianceDesc:'比较不可变的供应商发票总额与来源采购订单总额。',vendorPerformance:'供应商绩效',vendorPerformanceDesc:'交付、退货、发票匹配及生效合同覆盖率。',orderStatus:'采购订单状态',orderStatusDesc:'按标准状态汇总订单数量及承诺金额。',invoiceStatus:'供应商发票状态',invoiceStatusDesc:'按结算状态汇总发票数量及金额。',requisitionStatus:'请购单状态',requisitionStatusDesc:'按审批结果汇总申请数量及预计金额。',live:'实时',backReports:'返回报表',allHistory:'当前公司 · 全部标准历史数据',supplier:'供应商',spendValue:'已开票采购额',orders:'订单',received:'已收货',share:'占比',buyerApprover:'采购负责人 / 审批人',approvedValue:'已批准订单金额',invoice:'供应商发票',po:'采购订单',invoiceTotal:'发票总额',poTotal:'订单总额',variance:'价差',result:'结果',exactMatch:'完全匹配',attention:'需复核',headerNote:'由于系统没有供应商发票行领域表，价差仅按不可变单据头计算，不虚构物料行。目前过账规则要求发票总额与采购订单完全一致。',onTime:'准时率',leadDays:'实际周期',returns:'已贷记退货',match:'发票匹配',coverage:'合同覆盖',rating:'评分',status:'状态',count:'数量',value:'金额',truncated:'限量结果仍有后续记录；请从来源登记簿查看完整流水。',print:'打印'},
     ja:{purchasing:'購買',dashboardSub:'購買依頼、承認、発注、入荷、仕入先請求、返品、有効契約から再構築する標準の購買管理センターです。',newPo:'購買発注を作成',openPOs:'未完了PO',openValue:'未完了PO金額',pendingApproval:'承認待ち',pendingReceipt:'入荷待ち',overdue:'見積納期超過',invoiceVariance:'請求差異',netAP:'未払AP純額',spendHistory:'転記済請求仕入額',invoices:'請求書',topSuppliers:'請求済仕入額上位の仕入先',approvedSpendByBuyer:'購買担当者別の承認済PO金額',realBuyerNote:'購買担当者は実際のPO承認者スナップショットです。未承認注文は除外されます。',noData:'現在の会社には標準データがありません。',masterData:'マスターデータ',transactions:'取引',controls:'統制',reports:'購買レポート',reportsSub:'標準の購買事実から再構築できる上限付きレポートです。サンプル指標や独立KPI表は使用しません。',spend:'仕入額',performance:'パフォーマンス',operations:'運用',bySupplier:'仕入先別購買',bySupplierDesc:'仕入先別の請求済仕入額、受領状況、貸方返品率。',byBuyer:'担当者別購買',byBuyerDesc:'実際の承認者ごとに承認済PO金額を集計します。',priceVariance:'価格差異',priceVarianceDesc:'不変の仕入先請求総額と元PO総額を比較します。',vendorPerformance:'仕入先パフォーマンス',vendorPerformanceDesc:'納品、返品、請求一致、有効契約カバー率。',orderStatus:'購買発注ステータス',orderStatusDesc:'標準状態別の件数と発注金額。',invoiceStatus:'仕入先請求ステータス',invoiceStatusDesc:'決済状態別の請求件数と金額。',requisitionStatus:'購買依頼ステータス',requisitionStatusDesc:'判断状態別の依頼件数と見積金額。',live:'ライブ',backReports:'レポートへ戻る',allHistory:'現在の会社 · 全標準履歴',supplier:'仕入先',spendValue:'請求済仕入額',orders:'発注',received:'入荷済',share:'構成比',buyerApprover:'購買担当 / 承認者',approvedValue:'承認済PO金額',invoice:'仕入先請求書',po:'購買発注',invoiceTotal:'請求総額',poTotal:'PO総額',variance:'差異',result:'結果',exactMatch:'完全一致',attention:'要確認',headerNote:'仕入先請求明細はドメイン表ではないため、価格差異は不変の伝票ヘッダー単位で表示します。現在の転記はPO総額との完全一致を必須とします。',onTime:'定時率',leadDays:'実リード',returns:'貸方返品',match:'請求一致',coverage:'契約カバー',rating:'評価',status:'ステータス',count:'件数',value:'金額',truncated:'上限付き結果には続きがあります。完全な台帳は元の一覧で確認してください。',print:'印刷'},
     vi:{purchasing:'Mua hàng',dashboardSub:'Trung tâm mua-đến-thanh-toán chuẩn được dựng lại từ yêu cầu, phê duyệt, đơn mua, nhận hàng, hóa đơn, trả hàng và hợp đồng hiệu lực.',newPo:'Đơn mua hàng mới',openPOs:'PO đang mở',openValue:'Giá trị PO mở',pendingApproval:'Chờ duyệt',pendingReceipt:'Chờ nhận',overdue:'Quá thời gian báo giá',invoiceVariance:'Chênh lệch hóa đơn',netAP:'AP chưa trả ròng',spendHistory:'Chi tiêu hóa đơn đã ghi sổ',invoices:'hóa đơn',topSuppliers:'Nhà cung cấp hàng đầu theo chi tiêu hóa đơn',approvedSpendByBuyer:'Giá trị PO duyệt theo người mua',realBuyerNote:'Người mua là ảnh chụp người duyệt PO thực; đơn chưa duyệt bị loại.',noData:'Chưa có dữ kiện chuẩn cho công ty hiện tại.',masterData:'Dữ liệu chính',transactions:'Giao dịch',controls:'Kiểm soát',reports:'Báo cáo Mua hàng',reportsSub:'Báo cáo có giới hạn và có thể dựng lại từ dữ kiện mua-đến-thanh-toán chuẩn. Không dùng số mẫu hay bảng KPI riêng.',spend:'Chi tiêu',performance:'Hiệu suất',operations:'Vận hành',bySupplier:'Mua theo Nhà cung cấp',bySupplierDesc:'Chi tiêu hóa đơn, độ phủ đơn và tỷ lệ trả hàng ghi Có theo nhà cung cấp.',byBuyer:'Mua theo Người mua',byBuyerDesc:'Giá trị PO đã duyệt nhóm theo người phê duyệt thực.',priceVariance:'Chênh lệch Giá',priceVarianceDesc:'So sánh tổng hóa đơn nhà cung cấp bất biến với tổng PO nguồn.',vendorPerformance:'Hiệu suất Nhà cung cấp',vendorPerformanceDesc:'Giao hàng, trả hàng, khớp hóa đơn và phủ hợp đồng hiệu lực.',orderStatus:'Trạng thái Đơn mua',orderStatusDesc:'Số đơn và giá trị cam kết theo trạng thái chuẩn.',invoiceStatus:'Trạng thái Hóa đơn NCC',invoiceStatusDesc:'Số lượng và giá trị hóa đơn theo trạng thái quyết toán.',requisitionStatus:'Trạng thái Yêu cầu mua',requisitionStatusDesc:'Số yêu cầu và giá trị ước tính theo quyết định.',live:'Trực tiếp',backReports:'Quay lại báo cáo',allHistory:'Công ty hiện tại · toàn bộ lịch sử chuẩn',supplier:'Nhà cung cấp',spendValue:'Chi tiêu hóa đơn',orders:'Đơn mua',received:'Đã nhận',share:'Tỷ trọng',buyerApprover:'Người mua / duyệt',approvedValue:'Giá trị PO đã duyệt',invoice:'Hóa đơn NCC',po:'Đơn mua',invoiceTotal:'Tổng hóa đơn',poTotal:'Tổng PO',variance:'Chênh lệch',result:'Kết quả',exactMatch:'Khớp chính xác',attention:'Cần xem',headerNote:'Chênh lệch giá được báo cáo ở cấp đầu chứng từ bất biến vì dòng hóa đơn nhà cung cấp chưa là bảng miền. Ghi sổ hiện yêu cầu tổng PO khớp chính xác.',onTime:'Đúng hạn',leadDays:'Thời gian thực',returns:'Trả hàng ghi Có',match:'Khớp hóa đơn',coverage:'Phủ hợp đồng',rating:'Điểm',status:'Trạng thái',count:'Số lượng',value:'Giá trị',truncated:'Kết quả giới hạn còn dòng tiếp theo; dùng sổ nguồn để xem toàn bộ.',print:'In'},
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return pack[key]||packs.en[key]||key;
 }
 
 function canonicalPurStatus(status){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const labels={
     en:{pending_approval:'Pending approval',open:'Open',received:'Received',rejected:'Rejected',cancelled:'Cancelled',unpaid:'Unpaid',paid:'Paid',submitted:'Submitted',approved:'Approved'},
     ms:{pending_approval:'Menunggu kelulusan',open:'Terbuka',received:'Diterima',rejected:'Ditolak',cancelled:'Dibatalkan',unpaid:'Belum bayar',paid:'Dibayar',submitted:'Dihantar',approved:'Diluluskan'},
@@ -887,7 +956,7 @@ function canonicalPurStatus(status){
     ja:{pending_approval:'承認待ち',open:'承認済 / 入荷待ち',received:'入荷済',rejected:'却下',cancelled:'取消済',unpaid:'未払',paid:'支払済',submitted:'申請済',approved:'承認済'},
     vi:{pending_approval:'Chờ duyệt',open:'Đã duyệt / chờ nhận',received:'Đã nhận',rejected:'Đã từ chối',cancelled:'Đã hủy',unpaid:'Chưa trả',paid:'Đã trả',submitted:'Đã gửi',approved:'Đã duyệt'},
   };
-  return (labels[lang]||labels.en)[status]||status;
+  return i18nLegacy(labels)[status]||status;
 }
 
 function canonicalPurMoney(value){ return money0(purchasingNumber(value)); }

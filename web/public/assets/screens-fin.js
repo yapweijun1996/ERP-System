@@ -329,18 +329,47 @@ function manualJournalViewCopy(){
     ja:{back:'仕訳一覧へ戻る',reverse:'仕訳を取消',title:'この仕訳を逆仕訳しますか？',body:'逆仕訳は転記済事実を編集せず、借方と貸方を入れ替えた別番号の仕訳を作成します。',number:'逆仕訳番号',date:'転記日',reason:'訂正理由',reasonPh:'転記済仕訳を取り消す理由を入力',cancel:'取消',confirm:'逆仕訳を作成',working:'処理中…',done:'逆仕訳を転記しました',required:'番号、転記日、理由は必須です。',immutable:'転記済仕訳明細は変更できません。',correct:'訂正には別番号の逆仕訳が必要です。',postedAudit:'GLへ転記 — 貸借一致',sourceAudit:'標準ソースから作成'},
     vi:{back:'Về danh sách bút toán',reverse:'Đảo bút toán',title:'Đảo bút toán này?',body:'Bút toán đảo không sửa dữ kiện đã ghi sổ. Nó tạo bút toán số riêng với toàn bộ Nợ và Có được hoán đổi.',number:'Số bút toán đảo',date:'Ngày ghi sổ',reason:'Lý do điều chỉnh',reasonPh:'Giải thích vì sao phải đảo bút toán đã ghi sổ',cancel:'Hủy',confirm:'Tạo bút toán đảo',working:'Đang đảo…',done:'Đã ghi sổ bút toán đảo',required:'Bắt buộc có số, ngày ghi sổ và lý do.',immutable:'Các dòng đã ghi sổ là bất biến.',correct:'Điều chỉnh phải dùng bút toán đảo có số riêng.',postedAudit:'Đã ghi vào GL — Nợ và Có cân bằng',sourceAudit:'Tạo từ nguồn chuẩn'},
   };
-  return packs[typeof getLang==='function'?getLang():'en']||packs.en;
+  return i18nLegacy(packs);
 }
 
 function journalDetailCopy(){
   const packs={
     en:{title:'Journal Entry',source:'source',date:'Date',period:'Period',prepared:'Prepared by',type:'Type',lines:'Journal lines',account:'Account',dimension:'Dimension',debit:'Debit',credit:'Credit',totals:'Totals',balanced:'Balanced',out:'Out of balance',audit:'Audit trail',totalDebit:'Total debit',totalCredit:'Total credit',difference:'Difference',entryBalances:'Entry balances',mustBalance:'Entry must balance',postToGl:'Posted to General Ledger',postIrrev:'Posting is irreversible and writes to the ledger for period {p}.',periodStatus:'Period status',open:'Open',empty:'No journal entry is available',emptyHelp:'No canonical posted journal exists for the current company.',error:'Journal entry could not be loaded.',retry:'Retry'},
-    ms:{title:'Catatan Jurnal',source:'sumber',date:'Tarikh',period:'Tempoh',prepared:'Disediakan oleh',type:'Jenis',lines:'Baris jurnal',account:'Akaun',dimension:'Dimensi',debit:'Debit',credit:'Kredit',totals:'Jumlah',balanced:'Seimbang',out:'Tidak seimbang',audit:'Jejak audit',totalDebit:'Jumlah debit',totalCredit:'Jumlah kredit',difference:'Perbezaan',entryBalances:'Catatan seimbang',mustBalance:'Catatan mesti seimbang',postToGl:'Dipos ke Lejar Am',postIrrev:'Posting tidak boleh dibatalkan dan menulis ke lejar untuk tempoh {p}.',periodStatus:'Status tempoh',open:'Terbuka',empty:'Tiada catatan jurnal tersedia',emptyHelp:'Tiada jurnal kanonik dipos untuk syarikat semasa.',error:'Catatan jurnal tidak dapat dimuatkan.',retry:'Cuba lagi'},
+    ms:{
+  "title": "Catatan Jurnal",
+  "source": "sumber",
+  "date": "Tarikh",
+  "period": "Tempoh",
+  "prepared": "Disediakan oleh",
+  "type": "Jenis",
+  "lines": "Baris jurnal",
+  "account": "Akaun",
+  "dimension": "Dimensi",
+  "debit": "Debit",
+  "credit": "Kredit",
+  "totals": "Jumlah",
+  "balanced": "Seimbang",
+  "out": "Tidak seimbang",
+  "audit": "Jejak audit",
+  "totalDebit": "Jumlah debit",
+  "totalCredit": "Jumlah kredit",
+  "difference": "Perbezaan",
+  "entryBalances": "Catatan seimbang",
+  "mustBalance": "Catatan mesti seimbang",
+  "postToGl": "Dipos ke Lejar Am",
+  "postIrrev": "Posting tidak boleh dibatalkan dan menulis ke lejar untuk tempoh {p}.",
+  "periodStatus": "Status tempoh",
+  "open": "Terbuka",
+  "empty": "Tiada catatan jurnal tersedia",
+  "emptyHelp": "Tiada jurnal kanonik dipos untuk syarikat semasa.",
+  "error": "Catatan jurnal tidak dapat dimuatkan.",
+  "retry": "Cuba lagi"
+},
     zh:{title:'会计凭证',source:'来源',date:'日期',period:'期间',prepared:'制单人',type:'类型',lines:'凭证明细',account:'科目',dimension:'维度',debit:'借方',credit:'贷方',totals:'合计',balanced:'已平衡',out:'不平衡',audit:'审计轨迹',totalDebit:'借方合计',totalCredit:'贷方合计',difference:'差额',entryBalances:'借贷平衡',mustBalance:'凭证必须平衡',postToGl:'已过账至总账',postIrrev:'过账不可撤销，并写入 {p} 期间的总账。',periodStatus:'期间状态',open:'开放',empty:'没有可用的会计凭证',emptyHelp:'当前公司尚无 Canonical 已过账凭证。',error:'无法加载会计凭证。',retry:'重试'},
     ja:{title:'仕訳伝票',source:'ソース',date:'日付',period:'期間',prepared:'作成者',type:'種類',lines:'仕訳明細',account:'勘定科目',dimension:'ディメンション',debit:'借方',credit:'貸方',totals:'合計',balanced:'貸借一致',out:'貸借不一致',audit:'監査証跡',totalDebit:'借方合計',totalCredit:'貸方合計',difference:'差額',entryBalances:'仕訳は貸借一致',mustBalance:'仕訳は一致が必要',postToGl:'総勘定元帳へ転記済',postIrrev:'転記は取り消せず、期間 {p} の元帳に記録されます。',periodStatus:'期間ステータス',open:'オープン',empty:'利用可能な仕訳がありません',emptyHelp:'現在の会社には Canonical 転記済仕訳がありません。',error:'仕訳を読み込めませんでした。',retry:'再試行'},
     vi:{title:'Bút toán nhật ký',source:'nguồn',date:'Ngày',period:'Kỳ',prepared:'Người lập',type:'Loại',lines:'Dòng bút toán',account:'Tài khoản',dimension:'Chiều phân tích',debit:'Nợ',credit:'Có',totals:'Tổng cộng',balanced:'Cân bằng',out:'Không cân bằng',audit:'Dấu vết kiểm toán',totalDebit:'Tổng Nợ',totalCredit:'Tổng Có',difference:'Chênh lệch',entryBalances:'Bút toán cân bằng',mustBalance:'Bút toán phải cân bằng',postToGl:'Đã ghi vào Sổ Cái',postIrrev:'Việc ghi sổ không thể hoàn tác và được ghi vào kỳ {p}.',periodStatus:'Trạng thái kỳ',open:'Mở',empty:'Không có bút toán khả dụng',emptyHelp:'Công ty hiện tại chưa có bút toán Canonical đã ghi sổ.',error:'Không thể tải bút toán.',retry:'Thử lại'},
   };
-  return packs[typeof getLang==='function'?getLang():'en']||packs.en;
+  return i18nLegacy(packs);
 }
 
 function openJournalReversal(j,mj){
@@ -496,7 +525,7 @@ function paymentVoucherCopy(){
     ja:{title:'支払伝票',sub:'Canonical 仕入先決済',posted:'転記済',payTo:'支払先',date:'日付',bankRef:'銀行参照',invoiceCount:'決済済請求書',invoices:'決済済請求書',supplierInvoice:'仕入先請求書',amount:'金額',net:'正味支払額',balance:'転記残高',debit:'借方 · 買掛金',credit:'貸方 · 現金・預金',difference:'差額',balanced:'転記は貸借一致',supplierBalance:'仕入先残高',remaining:'未決済残高',outstanding:'未払請求書が残っています。',recent:'最近の伝票',audit:'監査証跡',postedAudit:'支払を転記 — 仕入先請求書を決済',sourceAudit:'Canonical 支払伝票から作成',newVoucher:'新規伝票',empty:'支払伝票はまだありません',emptyHelp:'実際の未払仕入先請求書を決済すると、ここに表示されます。',error:'支払伝票を読み込めませんでした。',retry:'再試行'},
     vi:{title:'Phiếu chi',sub:'Thanh toán nhà cung cấp Canonical',posted:'Đã ghi sổ',payTo:'Thanh toán cho',date:'Ngày',bankRef:'Tham chiếu ngân hàng',invoiceCount:'Hóa đơn đã thanh toán',invoices:'Hóa đơn đã thanh toán',supplierInvoice:'Hóa đơn nhà cung cấp',amount:'Số tiền',net:'Thanh toán ròng',balance:'Cân đối ghi sổ',debit:'Nợ · Phải trả người bán',credit:'Có · Tiền mặt & Ngân hàng',difference:'Chênh lệch',balanced:'Bút toán cân bằng',supplierBalance:'Số dư nhà cung cấp',remaining:'Số dư còn mở',outstanding:'hóa đơn chưa thanh toán vẫn còn.',recent:'Phiếu gần đây',audit:'Dấu vết kiểm toán',postedAudit:'Đã ghi sổ thanh toán — hóa đơn nhà cung cấp đã tất toán',sourceAudit:'Tạo từ phiếu chi Canonical',newVoucher:'Phiếu mới',empty:'Chưa có phiếu chi',emptyHelp:'Thanh toán một hóa đơn nhà cung cấp thực tế để xem tại đây.',error:'Không thể tải phiếu chi.',retry:'Thử lại'},
   };
-  return packs[typeof getLang==='function'?getLang():'en']||packs.en;
+  return i18nLegacy(packs);
 }
 
 SCREENS['payment-voucher'] = async function(root, params){

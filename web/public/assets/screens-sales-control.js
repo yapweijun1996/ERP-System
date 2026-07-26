@@ -264,7 +264,7 @@ SCREENS['price-lists'] = function(root){
     {label:'Scope', align:'l', w:'minmax(140px,1.6fr)', render:p=>`<span style="color:var(--muted)">${esc(p.scope)}</span>`},
     {label:'Currency', align:'l', w:'minmax(80px,0.7fr)', render:p=>esc(p.currency)},
     {label:'Items', align:'r', w:'minmax(70px,0.7fr)', render:p=>`<span class="tnum">${num(p.items)}</span>`},
-    {label:'Effective', align:'l', w:'minmax(96px,1fr)', render:p=>`<span class="muted-date">${esc(p.effective)}</span>`},
+    {label:'Effective', align:'l', w:'minmax(96px,1fr)', render:p=>`<span class="muted-date" data-i18n-format="date" data-i18n-value="${esc(dateValue(p.effective))}">${esc(formatDate(dateValue(p.effective)))}</span>`},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(100px,1fr)', render:p=>cap(p.status,PL_TONE[p.status])},
   ]});
   const m=DB.priceListRows;

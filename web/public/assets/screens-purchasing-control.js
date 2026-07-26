@@ -6,15 +6,68 @@
 
 /* ---------------- PO APPROVALS (queue) ---------------- */
 function poApprovalCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{title:'Purchase Order Approvals',unit:'requests',sub:'Review every newly created purchase order before it can be received. Decisions are audited and never post inventory or accounting entries.',detailTitle:'Purchase order approval',detailSub:'Review the order, financial impact and audit record before making a decision.',all:'All',pending:'Pending',approved:'Approved',rejected:'Rejected',awaiting:'Awaiting approval',queueValue:'Value awaiting approval',approvedCount:'Approved',rejectedCount:'Rejected',po:'Purchase order',supplier:'Supplier',date:'Order date',total:'Total',submitted:'Submitted',status:'Decision',review:'Review request',details:'Approval request',lineItems:'Order lines',item:'Item',qty:'Quantity',unitCost:'Unit cost',tax:'Tax',net:'Net amount',financial:'Financial summary',decision:'Decision record',decidedBy:'Decided by',decidedAt:'Decided at',note:'Decision note',approve:'Approve PO',reject:'Reject PO',approveTitle:'Approve purchase order?',rejectTitle:'Reject purchase order?',approvePrompt:'Record why this purchase order may proceed to receiving.',rejectPrompt:'Record why this purchase order must not proceed.',notePlaceholder:'Enter a concise, auditable reason…',cancel:'Cancel',confirm:'Confirm decision',approvedDone:'Purchase order approved',rejectedDone:'Purchase order rejected',decisionFailed:'The decision could not be saved.',back:'Back to approvals',orderStatus:'Order status',accountingNote:'Approval changes document status only. Stock movements begin at goods receipt; accounting begins at supplier-invoice posting.',empty:'There are no purchase-order approval requests in this company.',missing:'The requested purchase-order approval is unavailable in this company.',noLines:'This purchase order has no lines to review.',pendingDecision:'Awaiting an authorised decision.',actionHint:'Record one auditable decision for this purchase order.'},
-    ms:{title:'Kelulusan Pesanan Belian',unit:'permintaan',sub:'Semak setiap pesanan belian baharu sebelum penerimaan barang. Keputusan diaudit dan tidak pernah mempost inventori atau perakaunan.',detailTitle:'Kelulusan pesanan belian',detailSub:'Semak pesanan, kesan kewangan dan rekod audit sebelum membuat keputusan.',all:'Semua',pending:'Menunggu',approved:'Diluluskan',rejected:'Ditolak',awaiting:'Menunggu kelulusan',queueValue:'Nilai menunggu kelulusan',approvedCount:'Diluluskan',rejectedCount:'Ditolak',po:'Pesanan belian',supplier:'Pembekal',date:'Tarikh pesanan',total:'Jumlah',submitted:'Dihantar',status:'Keputusan',review:'Semak permintaan',details:'Permintaan kelulusan',lineItems:'Baris pesanan',item:'Item',qty:'Kuantiti',unitCost:'Kos seunit',tax:'Cukai',net:'Amaun bersih',financial:'Ringkasan kewangan',decision:'Rekod keputusan',decidedBy:'Diputuskan oleh',decidedAt:'Masa keputusan',note:'Nota keputusan',approve:'Luluskan PO',reject:'Tolak PO',approveTitle:'Luluskan pesanan belian?',rejectTitle:'Tolak pesanan belian?',approvePrompt:'Catat sebab pesanan ini boleh diteruskan ke penerimaan.',rejectPrompt:'Catat sebab pesanan ini tidak boleh diteruskan.',notePlaceholder:'Masukkan sebab ringkas yang boleh diaudit…',cancel:'Batal',confirm:'Sahkan keputusan',approvedDone:'Pesanan belian diluluskan',rejectedDone:'Pesanan belian ditolak',decisionFailed:'Keputusan tidak dapat disimpan.',back:'Kembali ke kelulusan',orderStatus:'Status pesanan',accountingNote:'Kelulusan hanya mengubah status dokumen. Pergerakan stok bermula semasa penerimaan; perakaunan bermula semasa invois pembekal diposting.',empty:'Tiada permintaan kelulusan pesanan belian untuk syarikat ini.',missing:'Permintaan kelulusan pesanan belian ini tidak tersedia untuk syarikat ini.',noLines:'Pesanan belian ini tiada baris untuk disemak.',pendingDecision:'Menunggu keputusan pengguna yang diberi kuasa.',actionHint:'Rekod satu keputusan yang boleh diaudit untuk pesanan ini.'},
+    ms:{
+  "title": "Kelulusan Pesanan Belian",
+  "unit": "permintaan",
+  "sub": "Semak setiap pesanan belian baharu sebelum penerimaan barang. Keputusan diaudit dan tidak pernah mempost inventori atau perakaunan.",
+  "detailTitle": "Kelulusan pesanan belian",
+  "detailSub": "Semak pesanan, kesan kewangan dan rekod audit sebelum membuat keputusan.",
+  "all": "Semua",
+  "pending": "Menunggu",
+  "approved": "Diluluskan",
+  "rejected": "Ditolak",
+  "awaiting": "Menunggu kelulusan",
+  "queueValue": "Nilai menunggu kelulusan",
+  "approvedCount": "Diluluskan",
+  "rejectedCount": "Ditolak",
+  "po": "Pesanan belian",
+  "supplier": "Pembekal",
+  "date": "Tarikh pesanan",
+  "total": "Jumlah",
+  "submitted": "Dihantar",
+  "status": "Keputusan",
+  "review": "Semak permintaan",
+  "details": "Permintaan kelulusan",
+  "lineItems": "Baris pesanan",
+  "item": "item",
+  "qty": "Kuantiti",
+  "unitCost": "Kos seunit",
+  "tax": "Cukai",
+  "net": "Amaun bersih",
+  "financial": "Ringkasan kewangan",
+  "decision": "Rekod keputusan",
+  "decidedBy": "Diputuskan oleh",
+  "decidedAt": "Masa keputusan",
+  "note": "Nota keputusan",
+  "approve": "Luluskan PO",
+  "reject": "Tolak PO",
+  "approveTitle": "Luluskan pesanan belian?",
+  "rejectTitle": "Tolak pesanan belian?",
+  "approvePrompt": "Catat sebab pesanan ini boleh diteruskan ke penerimaan.",
+  "rejectPrompt": "Catat sebab pesanan ini tidak boleh diteruskan.",
+  "notePlaceholder": "Masukkan sebab ringkas yang boleh diaudit…",
+  "cancel": "Batal",
+  "confirm": "Sahkan keputusan",
+  "approvedDone": "Pesanan belian diluluskan",
+  "rejectedDone": "Pesanan belian ditolak",
+  "decisionFailed": "Keputusan tidak dapat disimpan.",
+  "back": "Kembali ke kelulusan",
+  "orderStatus": "Status pesanan",
+  "accountingNote": "Kelulusan hanya mengubah status dokumen. Pergerakan stok bermula semasa penerimaan; perakaunan bermula semasa invois pembekal diposting.",
+  "empty": "Tiada permintaan kelulusan pesanan belian untuk syarikat ini.",
+  "missing": "Permintaan kelulusan pesanan belian ini tidak tersedia untuk syarikat ini.",
+  "noLines": "Pesanan belian ini tiada baris untuk disemak.",
+  "pendingDecision": "Menunggu keputusan pengguna yang diberi kuasa.",
+  "actionHint": "Rekod satu keputusan yang boleh diaudit untuk pesanan ini."
+},
     zh:{title:'采购订单审批',unit:'项申请',sub:'每张新采购订单必须先审批才能收货。所有决定均可审计，审批本身不会过账库存或会计分录。',detailTitle:'采购订单审批',detailSub:'作出决定前，请核对订单内容、财务影响和审计记录。',all:'全部',pending:'待审批',approved:'已批准',rejected:'已拒绝',awaiting:'待审批数量',queueValue:'待审批金额',approvedCount:'已批准',rejectedCount:'已拒绝',po:'采购订单',supplier:'供应商',date:'订单日期',total:'总额',submitted:'提交时间',status:'审批结果',review:'审核申请',details:'审批申请',lineItems:'订单明细',item:'物料',qty:'数量',unitCost:'单位成本',tax:'税额',net:'未税金额',financial:'金额汇总',decision:'审批记录',decidedBy:'审批人',decidedAt:'审批时间',note:'审批备注',approve:'批准订单',reject:'拒绝订单',approveTitle:'批准这张采购订单？',rejectTitle:'拒绝这张采购订单？',approvePrompt:'请记录允许此采购订单进入收货流程的原因。',rejectPrompt:'请记录不允许此采购订单继续执行的原因。',notePlaceholder:'请输入简洁、可审计的原因…',cancel:'取消',confirm:'确认决定',approvedDone:'采购订单已批准',rejectedDone:'采购订单已拒绝',decisionFailed:'无法保存审批决定。',back:'返回审批列表',orderStatus:'订单状态',accountingNote:'审批只改变单据状态；库存流水从收货开始，会计分录从供应商发票过账开始。',empty:'当前公司没有采购订单审批申请。',missing:'当前公司无法找到这项采购订单审批申请。',noLines:'这张采购订单没有可供审核的明细。',pendingDecision:'等待授权用户作出决定。',actionHint:'请为这张采购订单记录一项可审计的决定。'},
     ja:{title:'購買発注承認',unit:'件',sub:'新しい購買発注は入荷前に承認します。判断は監査され、承認自体は在庫・会計を転記しません。',detailTitle:'購買発注の承認',detailSub:'判断前に発注内容、財務的影響、監査記録を確認します。',all:'すべて',pending:'承認待ち',approved:'承認済',rejected:'却下',awaiting:'承認待ち',queueValue:'承認待ち金額',approvedCount:'承認済',rejectedCount:'却下',po:'購買発注',supplier:'仕入先',date:'発注日',total:'合計',submitted:'申請日時',status:'判断',review:'申請を確認',details:'承認申請',lineItems:'発注明細',item:'品目',qty:'数量',unitCost:'単価',tax:'税額',net:'税抜金額',financial:'金額サマリー',decision:'判断記録',decidedBy:'判断者',decidedAt:'判断日時',note:'判断メモ',approve:'発注を承認',reject:'発注を却下',approveTitle:'購買発注を承認しますか？',rejectTitle:'購買発注を却下しますか？',approvePrompt:'この発注を入荷へ進める理由を記録してください。',rejectPrompt:'この発注を進めない理由を記録してください。',notePlaceholder:'簡潔で監査可能な理由を入力…',cancel:'キャンセル',confirm:'判断を確定',approvedDone:'購買発注を承認しました',rejectedDone:'購買発注を却下しました',decisionFailed:'判断を保存できませんでした。',back:'承認一覧へ戻る',orderStatus:'発注ステータス',accountingNote:'承認は伝票ステータスのみ変更します。在庫移動は入荷、会計転記は仕入先請求書から始まります。',empty:'この会社には購買発注承認申請がありません。',missing:'指定された購買発注承認申請はこの会社では利用できません。',noLines:'確認できる発注明細がありません。',pendingDecision:'権限を持つユーザーの判断待ちです。',actionHint:'この発注に監査可能な判断を1件記録します。'},
     vi:{title:'Phê duyệt đơn mua hàng',unit:'yêu cầu',sub:'Mọi đơn mua hàng mới phải được duyệt trước khi nhận hàng. Quyết định được kiểm toán và không tự ghi sổ kho hay kế toán.',detailTitle:'Phê duyệt đơn mua hàng',detailSub:'Kiểm tra đơn hàng, tác động tài chính và hồ sơ kiểm toán trước khi quyết định.',all:'Tất cả',pending:'Chờ duyệt',approved:'Đã duyệt',rejected:'Đã từ chối',awaiting:'Đang chờ duyệt',queueValue:'Giá trị chờ duyệt',approvedCount:'Đã duyệt',rejectedCount:'Đã từ chối',po:'Đơn mua hàng',supplier:'Nhà cung cấp',date:'Ngày đặt hàng',total:'Tổng',submitted:'Đã gửi',status:'Quyết định',review:'Xem yêu cầu',details:'Yêu cầu phê duyệt',lineItems:'Dòng đơn hàng',item:'Mặt hàng',qty:'Số lượng',unitCost:'Đơn giá',tax:'Thuế',net:'Giá trị chưa thuế',financial:'Tóm tắt tài chính',decision:'Biên bản quyết định',decidedBy:'Người quyết định',decidedAt:'Thời điểm quyết định',note:'Ghi chú quyết định',approve:'Duyệt PO',reject:'Từ chối PO',approveTitle:'Duyệt đơn mua hàng?',rejectTitle:'Từ chối đơn mua hàng?',approvePrompt:'Ghi rõ lý do cho phép đơn hàng chuyển sang nhận hàng.',rejectPrompt:'Ghi rõ lý do không cho phép đơn hàng tiếp tục.',notePlaceholder:'Nhập lý do ngắn gọn, có thể kiểm toán…',cancel:'Hủy',confirm:'Xác nhận quyết định',approvedDone:'Đã duyệt đơn mua hàng',rejectedDone:'Đã từ chối đơn mua hàng',decisionFailed:'Không thể lưu quyết định.',back:'Quay lại danh sách duyệt',orderStatus:'Trạng thái đơn',accountingNote:'Phê duyệt chỉ đổi trạng thái chứng từ. Biến động kho bắt đầu khi nhận hàng; bút toán bắt đầu khi ghi sổ hóa đơn nhà cung cấp.',empty:'Không có yêu cầu phê duyệt đơn mua hàng trong công ty này.',missing:'Yêu cầu phê duyệt đơn mua hàng này không có trong công ty hiện tại.',noLines:'Đơn mua hàng này không có dòng nào để xem xét.',pendingDecision:'Đang chờ quyết định của người có thẩm quyền.',actionHint:'Ghi lại một quyết định có thể kiểm toán cho đơn hàng này.'},
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
 }
 function poApprovalLabel(status){const s=poApprovalCopy();return s(status==='pending'?'pending':status==='approved'?'approved':'rejected');}
@@ -156,15 +209,47 @@ SCREENS['po-approval']=async function(root,params){
 
 /* ---------------- SUPPLIER PRICE LISTS / CONTRACTS ---------------- */
 function supplierPricingCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{title:'Supplier Price Lists',unit:'contracts',sub:'Effective-dated supplier contract prices, quantity tiers and lead times used before a purchase order is created.',all:'All',active:'Active',draft:'Draft',expired:'Expired',preferred:'Preferred',contracts:'Active contracts',suppliers:'Suppliers',new:'New price list',code:'Code',name:'Name',supplier:'Supplier',item:'Item',minQty:'Minimum quantity',unitCost:'Unit cost',currency:'Currency',lead:'Lead time',days:'days',from:'Effective from',to:'Effective to',terms:'Payment terms',status:'Status',scope:'Contract lines',activate:'Activate',create:'Create draft',cancel:'Cancel',created:'Supplier price list drafted',activated:'Supplier price list activated',empty:'No canonical supplier price lists yet.'},
-    ms:{title:'Senarai Harga Pembekal',unit:'kontrak',sub:'Harga kontrak pembekal, peringkat kuantiti dan masa utama mengikut tarikh sebelum pesanan belian dicipta.',all:'Semua',active:'Aktif',draft:'Draf',expired:'Tamat tempoh',preferred:'Pilihan',contracts:'Kontrak aktif',suppliers:'Pembekal',new:'Senarai harga baharu',code:'Kod',name:'Nama',supplier:'Pembekal',item:'Item',minQty:'Kuantiti minimum',unitCost:'Kos seunit',currency:'Mata wang',lead:'Masa utama',days:'hari',from:'Berkuat kuasa dari',to:'Berkuat kuasa hingga',terms:'Terma bayaran',status:'Status',scope:'Baris kontrak',activate:'Aktifkan',create:'Cipta draf',cancel:'Batal',created:'Draf senarai harga pembekal dicipta',activated:'Senarai harga pembekal diaktifkan',empty:'Belum ada senarai harga pembekal kanonik.'},
+    ms:{
+  "title": "Senarai Harga Pembekal",
+  "unit": "kontrak",
+  "sub": "Harga kontrak pembekal, peringkat kuantiti dan masa utama mengikut tarikh sebelum pesanan belian dicipta.",
+  "all": "Semua",
+  "active": "Aktif",
+  "draft": "Draf",
+  "expired": "Tamat tempoh",
+  "preferred": "Pilihan",
+  "contracts": "Kontrak aktif",
+  "suppliers": "Pembekal",
+  "new": "Senarai harga baharu",
+  "code": "Kod",
+  "name": "Nama",
+  "supplier": "Pembekal",
+  "item": "item",
+  "minQty": "Kuantiti minimum",
+  "unitCost": "Kos seunit",
+  "currency": "Mata wang",
+  "lead": "Masa utama",
+  "days": "hari",
+  "from": "Berkuat kuasa dari",
+  "to": "Berkuat kuasa hingga",
+  "terms": "Terma bayaran",
+  "status": "Status",
+  "scope": "Baris kontrak",
+  "activate": "Aktifkan",
+  "create": "Cipta draf",
+  "cancel": "Batal",
+  "created": "Draf senarai harga pembekal dicipta",
+  "activated": "Senarai harga pembekal diaktifkan",
+  "empty": "Belum ada senarai harga pembekal kanonik."
+},
     zh:{title:'供应商价格表',unit:'份合同',sub:'在创建采购订单前，按生效日期管理供应商合同价、数量阶梯和交付周期。',all:'全部',active:'生效中',draft:'草稿',expired:'已到期',preferred:'首选',contracts:'生效合同',suppliers:'供应商',new:'新建价格表',code:'编码',name:'名称',supplier:'供应商',item:'物料',minQty:'最低数量',unitCost:'单位成本',currency:'币种',lead:'交付周期',days:'天',from:'生效日期',to:'失效日期',terms:'付款条件',status:'状态',scope:'合同明细',activate:'启用',create:'创建草稿',cancel:'取消',created:'供应商价格表草稿已创建',activated:'供应商价格表已启用',empty:'目前没有标准供应商价格表。'},
     ja:{title:'仕入先価格表',unit:'契約',sub:'購買発注作成前に、有効日付きの仕入先契約価格、数量階層、リードタイムを管理します。',all:'すべて',active:'有効',draft:'ドラフト',expired:'期限切れ',preferred:'優先',contracts:'有効契約',suppliers:'仕入先',new:'価格表を作成',code:'コード',name:'名称',supplier:'仕入先',item:'品目',minQty:'最小数量',unitCost:'単価',currency:'通貨',lead:'リードタイム',days:'日',from:'開始日',to:'終了日',terms:'支払条件',status:'ステータス',scope:'契約明細',activate:'有効化',create:'ドラフト作成',cancel:'キャンセル',created:'仕入先価格表を作成しました',activated:'仕入先価格表を有効化しました',empty:'標準仕入先価格表はありません。'},
     vi:{title:'Bảng giá nhà cung cấp',unit:'hợp đồng',sub:'Quản lý giá hợp đồng, bậc số lượng và thời gian giao theo hiệu lực trước khi tạo đơn mua.',all:'Tất cả',active:'Đang hiệu lực',draft:'Nháp',expired:'Hết hạn',preferred:'Ưu tiên',contracts:'Hợp đồng hiệu lực',suppliers:'Nhà cung cấp',new:'Tạo bảng giá',code:'Mã',name:'Tên',supplier:'Nhà cung cấp',item:'Mặt hàng',minQty:'Số lượng tối thiểu',unitCost:'Đơn giá',currency:'Tiền tệ',lead:'Thời gian giao',days:'ngày',from:'Hiệu lực từ',to:'Hiệu lực đến',terms:'Điều khoản thanh toán',status:'Trạng thái',scope:'Dòng hợp đồng',activate:'Kích hoạt',create:'Tạo nháp',cancel:'Hủy',created:'Đã tạo nháp bảng giá nhà cung cấp',activated:'Đã kích hoạt bảng giá nhà cung cấp',empty:'Chưa có bảng giá nhà cung cấp chuẩn.'},
   };
-  const p=packs[lang]||packs.en;return key=>p[key]||packs.en[key]||key;
+  const p=i18nLegacy(packs);return key=>p[key]||packs.en[key]||key;
 }
 function supplierPriceToday(){ return new Date().toISOString().slice(0,10); }
 function supplierPriceStatus(row,s){return row.status==='Active'?s('active'):row.status==='Expired'?s('expired'):row.status==='Draft'?s('draft'):row.status;}
@@ -226,15 +311,62 @@ registerPurchasingTransactionList({
 
 /* ---------------- LANDED COST ---------------- */
 function landedCostCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{title:'Landed Cost',unit:'records',sub:'Capitalize tax-exclusive freight, duty and handling against received goods. Allocation revalues moving-average inventory cost without changing quantity.',all:'All',draft:'Draft',allocated:'Allocated',records:'Records',goodsValue:'Goods value',addedCost:'Added cost',newCost:'New landed cost',record:'Record',against:'Against receipt',supplier:'Supplier',basis:'Basis',byValue:'By value',byQuantity:'By quantity',goods:'Goods',status:'Status',open:'Open record',allocate:'Allocate to inventory',close:'Close',costDate:'Cost date',receipt:'Goods receipt',chooseReceipt:'Choose a posted goods receipt',freight:'Freight',duty:'Import duty',handling:'Handling',other:'Other',create:'Create draft',created:'Landed cost draft created',allocatedDone:'Landed cost allocated',totalAdded:'Total added cost',totalValue:'Total landed value',items:'Allocation lines',item:'Item',quantity:'Received qty',share:'Allocated',before:'Cost before',after:'Cost after',pending:'Pending allocation',accounting:'Allocation debits Inventory and credits Landed Cost Accrual. It creates no stock movement and excludes recoverable tax.',taxExclusive:'Enter tax-exclusive capitalization amounts; process any supplier tax invoice separately.',viewInventory:'View inventory',viewLedger:'View General Ledger',noReceipts:'No posted goods receipts are available yet.',enterCost:'Enter at least one positive cost component.'},
-    ms:{title:'Kos Mendarat',unit:'rekod',sub:'Permodalkan tambang, duti dan pengendalian tanpa cukai kepada barang diterima. Peruntukan menilai semula kos purata bergerak tanpa mengubah kuantiti.',all:'Semua',draft:'Draf',allocated:'Diperuntukkan',records:'Rekod',goodsValue:'Nilai barang',addedCost:'Kos tambahan',newCost:'Kos mendarat baharu',record:'Rekod',against:'Terhadap penerimaan',supplier:'Pembekal',basis:'Asas',byValue:'Mengikut nilai',byQuantity:'Mengikut kuantiti',goods:'Barang',status:'Status',open:'Buka rekod',allocate:'Peruntuk ke inventori',close:'Tutup',costDate:'Tarikh kos',receipt:'Penerimaan barang',chooseReceipt:'Pilih penerimaan barang diposting',freight:'Tambang',duty:'Duti import',handling:'Pengendalian',other:'Lain-lain',create:'Cipta draf',created:'Draf kos mendarat dicipta',allocatedDone:'Kos mendarat diperuntukkan',totalAdded:'Jumlah kos tambahan',totalValue:'Jumlah nilai mendarat',items:'Baris peruntukan',item:'Item',quantity:'Kuantiti diterima',share:'Diperuntukkan',before:'Kos sebelum',after:'Kos selepas',pending:'Menunggu peruntukan',accounting:'Peruntukan mendebit Inventori dan mengkredit Akruan Kos Mendarat. Tiada pergerakan stok dan cukai boleh pulih dikecualikan.',taxExclusive:'Masukkan amaun permodalan tanpa cukai; proses invois cukai pembekal secara berasingan.',viewInventory:'Lihat inventori',viewLedger:'Lihat Lejar Am',noReceipts:'Belum ada penerimaan barang diposting.',enterCost:'Masukkan sekurang-kurangnya satu komponen kos positif.'},
+    ms:{
+  "title": "Kos Mendarat",
+  "unit": "rekod",
+  "sub": "Permodalkan tambang, duti dan pengendalian tanpa cukai kepada barang diterima. Peruntukan menilai semula kos purata bergerak tanpa mengubah kuantiti.",
+  "all": "Semua",
+  "draft": "Draf",
+  "allocated": "Diperuntukkan",
+  "records": "Rekod",
+  "goodsValue": "Nilai barang",
+  "addedCost": "Kos tambahan",
+  "newCost": "Kos mendarat baharu",
+  "record": "Rekod",
+  "against": "Terhadap penerimaan",
+  "supplier": "Pembekal",
+  "basis": "Asas",
+  "byValue": "Mengikut nilai",
+  "byQuantity": "Mengikut kuantiti",
+  "goods": "Barang",
+  "status": "Status",
+  "open": "Buka rekod",
+  "allocate": "Peruntuk ke inventori",
+  "close": "Tutup",
+  "costDate": "Tarikh kos",
+  "receipt": "Penerimaan barang",
+  "chooseReceipt": "Pilih penerimaan barang diposting",
+  "freight": "Tambang",
+  "duty": "Duti import",
+  "handling": "Pengendalian",
+  "other": "Lain-lain",
+  "create": "Cipta draf",
+  "created": "Draf kos mendarat dicipta",
+  "allocatedDone": "Kos mendarat diperuntukkan",
+  "totalAdded": "Jumlah kos tambahan",
+  "totalValue": "Jumlah nilai mendarat",
+  "items": "Baris peruntukan",
+  "item": "item",
+  "quantity": "Kuantiti diterima",
+  "share": "Diperuntukkan",
+  "before": "Kos sebelum",
+  "after": "Kos selepas",
+  "pending": "Menunggu peruntukan",
+  "accounting": "Peruntukan mendebit Inventori dan mengkredit Akruan Kos Mendarat. Tiada pergerakan stok dan cukai boleh pulih dikecualikan.",
+  "taxExclusive": "Masukkan amaun permodalan tanpa cukai; proses invois cukai pembekal secara berasingan.",
+  "viewInventory": "Lihat inventori",
+  "viewLedger": "Lihat Lejar Am",
+  "noReceipts": "Belum ada penerimaan barang diposting.",
+  "enterCost": "Masukkan sekurang-kurangnya satu komponen kos positif."
+},
     zh:{title:'落地成本',unit:'笔记录',sub:'将不含税的运费、关税和处理费资本化到已收货物料。分摊会重估移动平均库存成本，但不会改变数量。',all:'全部',draft:'草稿',allocated:'已分摊',records:'记录数',goodsValue:'货物价值',addedCost:'新增成本',newCost:'新建落地成本',record:'记录',against:'对应收货单',supplier:'供应商',basis:'分摊依据',byValue:'按金额',byQuantity:'按数量',goods:'货物',status:'状态',open:'打开记录',allocate:'分摊至库存',close:'关闭',costDate:'成本日期',receipt:'收货单',chooseReceipt:'选择已过账收货单',freight:'运费',duty:'进口关税',handling:'处理费',other:'其他',create:'创建草稿',created:'落地成本草稿已创建',allocatedDone:'落地成本已分摊',totalAdded:'新增成本合计',totalValue:'落地价值合计',items:'分摊明细',item:'物料',quantity:'收货数量',share:'分摊金额',before:'分摊前成本',after:'分摊后成本',pending:'等待分摊',accounting:'分摊借记库存、贷记落地成本应计；不会生成库存数量流水，也不包含可抵扣税额。',taxExclusive:'请输入不含税的资本化金额；供应商税务发票应另行处理。',viewInventory:'查看库存',viewLedger:'查看总账',noReceipts:'目前没有可用的已过账收货单。',enterCost:'请至少输入一个大于零的成本项目。'},
     ja:{title:'陸揚げ費',unit:'件',sub:'税抜の運賃・関税・取扱費を入荷済商品へ資産計上します。配賦は数量を変えず移動平均在庫原価を再評価します。',all:'すべて',draft:'ドラフト',allocated:'配賦済',records:'件数',goodsValue:'商品価額',addedCost:'追加原価',newCost:'陸揚げ費を作成',record:'記録',against:'入荷対象',supplier:'仕入先',basis:'配賦基準',byValue:'価額基準',byQuantity:'数量基準',goods:'商品',status:'ステータス',open:'記録を開く',allocate:'在庫へ配賦',close:'閉じる',costDate:'原価日',receipt:'入荷伝票',chooseReceipt:'転記済入荷伝票を選択',freight:'運賃',duty:'輸入関税',handling:'取扱費',other:'その他',create:'ドラフト作成',created:'陸揚げ費ドラフトを作成しました',allocatedDone:'陸揚げ費を配賦しました',totalAdded:'追加原価合計',totalValue:'陸揚げ価額合計',items:'配賦明細',item:'品目',quantity:'入荷数量',share:'配賦額',before:'配賦前原価',after:'配賦後原価',pending:'配賦待ち',accounting:'在庫を借記し陸揚げ費未払を貸記します。在庫数量移動は作成せず、回収可能税は含みません。',taxExclusive:'税抜の資産計上額を入力し、仕入先税務請求書は別途処理してください。',viewInventory:'在庫を表示',viewLedger:'総勘定元帳を表示',noReceipts:'利用可能な転記済入荷伝票がありません。',enterCost:'1つ以上の正の原価項目を入力してください。'},
     vi:{title:'Chi phí nhập kho',unit:'bản ghi',sub:'Vốn hóa cước, thuế nhập khẩu và xử lý chưa thuế vào hàng đã nhận. Phân bổ đánh giá lại giá vốn bình quân mà không đổi số lượng.',all:'Tất cả',draft:'Nháp',allocated:'Đã phân bổ',records:'Bản ghi',goodsValue:'Giá trị hàng',addedCost:'Chi phí thêm',newCost:'Tạo chi phí nhập kho',record:'Bản ghi',against:'Theo phiếu nhận',supplier:'Nhà cung cấp',basis:'Cơ sở',byValue:'Theo giá trị',byQuantity:'Theo số lượng',goods:'Hàng hóa',status:'Trạng thái',open:'Mở bản ghi',allocate:'Phân bổ vào tồn kho',close:'Đóng',costDate:'Ngày chi phí',receipt:'Phiếu nhận hàng',chooseReceipt:'Chọn phiếu nhận đã ghi sổ',freight:'Cước vận chuyển',duty:'Thuế nhập khẩu',handling:'Phí xử lý',other:'Khác',create:'Tạo bản nháp',created:'Đã tạo bản nháp chi phí nhập kho',allocatedDone:'Đã phân bổ chi phí nhập kho',totalAdded:'Tổng chi phí thêm',totalValue:'Tổng giá trị nhập kho',items:'Dòng phân bổ',item:'Mặt hàng',quantity:'Số lượng nhận',share:'Đã phân bổ',before:'Giá vốn trước',after:'Giá vốn sau',pending:'Chờ phân bổ',accounting:'Phân bổ ghi Nợ Tồn kho và Có Chi phí nhập kho phải trả. Không tạo biến động số lượng và không gồm thuế được khấu trừ.',taxExclusive:'Nhập số vốn hóa chưa thuế; xử lý hóa đơn thuế nhà cung cấp riêng.',viewInventory:'Xem tồn kho',viewLedger:'Xem Sổ cái',noReceipts:'Chưa có phiếu nhận hàng đã ghi sổ.',enterCost:'Nhập ít nhất một thành phần chi phí dương.'},
   };
-  const pack=packs[lang]||packs.en;
+  const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
 }
 function nextLandedCostNo(){ return nextSourcingNo(DB.landedCosts,'LC'); }
@@ -322,14 +454,14 @@ registerPurchasingTransactionList({
 
 /* ---------------- VENDOR PERFORMANCE ---------------- */
 function vendorPerformanceCopy(){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{title:'Vendor Performance',sub:'Rebuildable scorecards derived only from purchase orders, receipts, supplier invoices, returns and active contracts.',scored:'Suppliers scored',avgLead:'Avg lead time',spend:'Invoiced spend',watch:'On watch / review',preferred:'Preferred',approved:'Approved',watchTag:'Watch',review:'Review',orders:'Orders received',onTime:'On-time against quoted lead',lead:'Average actual lead',returns:'Credited return rate',match:'Exact invoice match',coverage:'Active-contract coverage',days:'days',na:'Not enough data'},
     ms:{title:'Prestasi Pembekal',sub:'Kad skor boleh dibina semula hanya daripada pesanan, penerimaan, invois pembekal, pulangan dan kontrak aktif.',scored:'Pembekal dinilai',avgLead:'Purata masa utama',spend:'Belanja diinvois',watch:'Dalam pemantauan / semakan',preferred:'Pilihan',approved:'Diluluskan',watchTag:'Pantau',review:'Semak',orders:'Pesanan diterima',onTime:'Tepat masa ikut sebut harga',lead:'Purata masa sebenar',returns:'Kadar pulangan dikredit',match:'Padanan invois tepat',coverage:'Liputan kontrak aktif',days:'hari',na:'Data belum mencukupi'},
     zh:{title:'供应商绩效',sub:'评分卡仅由采购订单、收货、供应商发票、退货和生效合同实时重建。',scored:'已评分供应商',avgLead:'平均实际周期',spend:'已开票采购额',watch:'观察 / 复审',preferred:'首选',approved:'合格',watchTag:'观察',review:'复审',orders:'订单收货率',onTime:'按报价周期准时',lead:'平均实际周期',returns:'已贷记退货率',match:'发票精确匹配率',coverage:'生效合同覆盖率',days:'天',na:'数据不足'},
     ja:{title:'仕入先パフォーマンス',sub:'発注、入荷、仕入先請求、返品、有効契約のみから再構築できるスコアカードです。',scored:'評価済仕入先',avgLead:'平均実リードタイム',spend:'請求済仕入額',watch:'監視 / レビュー',preferred:'優先',approved:'承認済',watchTag:'監視',review:'レビュー',orders:'発注入荷率',onTime:'見積リード基準の定時率',lead:'平均実リードタイム',returns:'貸方済返品率',match:'請求一致率',coverage:'有効契約カバー率',days:'日',na:'データ不足'},
     vi:{title:'Hiệu suất nhà cung cấp',sub:'Bảng điểm có thể tái tạo chỉ từ đơn mua, nhận hàng, hóa đơn, trả hàng và hợp đồng hiệu lực.',scored:'Nhà cung cấp đã chấm',avgLead:'Thời gian giao thực tế TB',spend:'Giá trị đã lập hóa đơn',watch:'Theo dõi / xem xét',preferred:'Ưu tiên',approved:'Được duyệt',watchTag:'Theo dõi',review:'Xem xét',orders:'Tỷ lệ đơn đã nhận',onTime:'Đúng hạn theo báo giá',lead:'Thời gian giao thực tế TB',returns:'Tỷ lệ trả hàng đã ghi Có',match:'Khớp hóa đơn chính xác',coverage:'Phủ hợp đồng hiệu lực',days:'ngày',na:'Chưa đủ dữ liệu'},
-  };const p=packs[lang]||packs.en;return key=>p[key]||packs.en[key]||key;
+  };const p=i18nLegacy(packs);return key=>p[key]||packs.en[key]||key;
 }
 SCREENS['vendor-performance'] = async function(root){
   await prepareCanonicalVendorPerformanceData();

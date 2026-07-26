@@ -54,15 +54,45 @@ window.openSalesEnquiry=function(id){return openTxn('enquiry',id);};
 
 (function canonicalSalesEnquiryWorkspace(){
   function copy(){
-    const lang=typeof getLang==='function'?getLang():'en';
+
     const packs={
       en:{sales:'Sales',enquiries:'Enquiries',title:'Enquiry',request:'Customer request',customer:'Customer',date:'Enquiry date',channel:'Channel',owner:'Owner',estimated:'Estimated value',currency:'Currency',status:'Status',newStatus:'New',quoted:'Quoted',lost:'Lost',trace:'Canonical trace',captured:'Enquiry captured',linked:'Linked quotation',related:'Related quotation',noQuote:'No quotation has been created from this enquiry.',back:'Back to enquiries',convert:'Convert to quotation',viewQuote:'View quotation',empty:'No canonical enquiry is available.',emptyHelp:'Create an enquiry from the register to begin the sales process.',source:'Canonical source',sourceHelp:'This workspace re-reads the selected enquiry and its linked quotation from the active company. No sample activity is substituted.',limit:'One enquiry can create at most one linked quotation.',created:'Created',updated:'Last updated'},
-      ms:{sales:'Jualan',enquiries:'Pertanyaan',title:'Pertanyaan',request:'Permintaan pelanggan',customer:'Pelanggan',date:'Tarikh pertanyaan',channel:'Saluran',owner:'Pemilik',estimated:'Nilai anggaran',currency:'Mata wang',status:'Status',newStatus:'Baharu',quoted:'Telah disebut',lost:'Hilang',trace:'Jejak kanonik',captured:'Pertanyaan direkod',linked:'Sebut harga dipautkan',related:'Sebut harga berkaitan',noQuote:'Belum ada sebut harga dicipta daripada pertanyaan ini.',back:'Kembali ke pertanyaan',convert:'Tukar kepada sebut harga',viewQuote:'Lihat sebut harga',empty:'Tiada pertanyaan kanonik tersedia.',emptyHelp:'Cipta pertanyaan daripada daftar untuk memulakan proses jualan.',source:'Sumber kanonik',sourceHelp:'Ruang kerja ini membaca semula pertanyaan terpilih dan sebut harga terpaut daripada syarikat aktif. Tiada aktiviti sampel digantikan.',limit:'Satu pertanyaan hanya boleh mencipta satu sebut harga terpaut.',created:'Dicipta',updated:'Kemas kini terakhir'},
+      ms:{
+  "sales": "Jualan",
+  "enquiries": "Pertanyaan",
+  "title": "Pertanyaan",
+  "request": "Permintaan pelanggan",
+  "customer": "Pelanggan",
+  "date": "Tarikh pertanyaan",
+  "channel": "Saluran",
+  "owner": "Pemilik",
+  "estimated": "Nilai anggaran",
+  "currency": "Mata wang",
+  "status": "Status",
+  "newStatus": "Baharu",
+  "quoted": "Telah disebut",
+  "lost": "Hilang",
+  "trace": "Jejak kanonik",
+  "captured": "Pertanyaan direkod",
+  "linked": "Sebut harga dipautkan",
+  "related": "Sebut harga berkaitan",
+  "noQuote": "Belum ada sebut harga dicipta daripada pertanyaan ini.",
+  "back": "Kembali ke pertanyaan",
+  "convert": "Tukar kepada sebut harga",
+  "viewQuote": "Lihat sebut harga",
+  "empty": "Tiada pertanyaan kanonik tersedia.",
+  "emptyHelp": "Cipta pertanyaan daripada daftar untuk memulakan proses jualan.",
+  "source": "Sumber kanonik",
+  "sourceHelp": "Ruang kerja ini membaca semula pertanyaan terpilih dan sebut harga terpaut daripada syarikat aktif. Tiada aktiviti sampel digantikan.",
+  "limit": "Satu pertanyaan hanya boleh mencipta satu sebut harga terpaut.",
+  "created": "Dicipta",
+  "updated": "Kemas kini terakhir"
+},
       zh:{sales:'销售',enquiries:'询价',title:'询价',request:'客户需求',customer:'客户',date:'询价日期',channel:'渠道',owner:'负责人',estimated:'预计金额',currency:'币种',status:'状态',newStatus:'新建',quoted:'已报价',lost:'已丢失',trace:'标准追踪',captured:'询价已记录',linked:'已关联报价单',related:'关联报价单',noQuote:'此询价尚未生成报价单。',back:'返回询价列表',convert:'转为报价单',viewQuote:'查看报价单',empty:'没有可用的标准询价。',emptyHelp:'请从询价列表创建记录以开始销售流程。',source:'标准数据来源',sourceHelp:'此工作区会从当前公司重新读取所选询价及其关联报价单，不会替换成示例活动。',limit:'每个询价最多生成一张关联报价单。',created:'创建时间',updated:'最后更新'},
       ja:{sales:'販売',enquiries:'引合',title:'引合',request:'顧客依頼',customer:'顧客',date:'引合日',channel:'チャネル',owner:'担当者',estimated:'見込金額',currency:'通貨',status:'ステータス',newStatus:'新規',quoted:'見積済',lost:'失注',trace:'標準トレース',captured:'引合を記録',linked:'見積書を関連付け',related:'関連見積書',noQuote:'この引合から見積書はまだ作成されていません。',back:'引合一覧へ戻る',convert:'見積書へ変換',viewQuote:'見積書を表示',empty:'利用可能な標準引合はありません。',emptyHelp:'販売プロセスを開始するには一覧から引合を作成してください。',source:'標準データソース',sourceHelp:'このワークスペースはアクティブ会社から選択した引合と関連見積書を再読込します。サンプル活動への置換はありません。',limit:'1件の引合から作成できる関連見積書は1件です。',created:'作成日時',updated:'最終更新'},
       vi:{sales:'Bán hàng',enquiries:'Yêu cầu báo giá',title:'Yêu cầu báo giá',request:'Yêu cầu khách hàng',customer:'Khách hàng',date:'Ngày yêu cầu',channel:'Kênh',owner:'Người phụ trách',estimated:'Giá trị ước tính',currency:'Tiền tệ',status:'Trạng thái',newStatus:'Mới',quoted:'Đã báo giá',lost:'Đã mất',trace:'Dấu vết chuẩn',captured:'Đã ghi nhận yêu cầu',linked:'Đã liên kết báo giá',related:'Báo giá liên quan',noQuote:'Chưa có báo giá được tạo từ yêu cầu này.',back:'Quay lại danh sách',convert:'Chuyển thành báo giá',viewQuote:'Xem báo giá',empty:'Không có yêu cầu chuẩn khả dụng.',emptyHelp:'Tạo yêu cầu từ danh sách để bắt đầu quy trình bán hàng.',source:'Nguồn chuẩn',sourceHelp:'Không gian này đọc lại yêu cầu đã chọn và báo giá liên kết từ công ty hiện tại. Không thay thế bằng hoạt động mẫu.',limit:'Mỗi yêu cầu chỉ có thể tạo một báo giá liên kết.',created:'Đã tạo',updated:'Cập nhật lần cuối'},
     };
-    const pack=packs[lang]||packs.en;
+    const pack=i18nLegacy(packs);
     return key=>pack[key]||packs.en[key]||key;
   }
 

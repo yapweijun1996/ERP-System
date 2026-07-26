@@ -6,7 +6,7 @@
    current actor's sanitized, company-scoped write history. Session, IP,
    security posture and audit payloads belong to separate protected models. */
 SCREENS['my-activity'] = async function(root){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{title:'Your activity',sub:'Recorded application changes made by you in this company.',notice:'This history covers recorded application writes only. Sign-in, device and session history are not part of this log.',all:'All',today:'Today',week:'Last 7 days',categories:'Categories',loaded:'Loaded events',empty:'No recorded activity yet',emptyBody:'Actions you complete in this company will appear here.',records:'records',actions:{create:'Created',approve:'Approved',reject:'Rejected',post:'Posted',reverse:'Reversed',update:'Updated',other:'Changed'}},
     ms:{title:'Aktiviti anda',sub:'Perubahan aplikasi yang direkodkan oleh anda dalam syarikat ini.',notice:'Sejarah ini hanya merangkumi penulisan aplikasi yang direkodkan. Sejarah log masuk, peranti dan sesi tidak termasuk.',all:'Semua',today:'Hari ini',week:'7 hari lalu',categories:'Kategori',loaded:'Acara dimuat',empty:'Belum ada aktiviti direkodkan',emptyBody:'Tindakan yang anda lengkapkan dalam syarikat ini akan dipaparkan di sini.',records:'rekod',actions:{create:'Dicipta',approve:'Diluluskan',reject:'Ditolak',post:'Dipost',reverse:'Diterbalikkan',update:'Dikemas kini',other:'Diubah'}},
@@ -14,7 +14,7 @@ SCREENS['my-activity'] = async function(root){
     ja:{title:'自分のアクティビティ',sub:'この会社で自分が行った記録済みの変更です。',notice:'記録済みのアプリ書き込みのみを表示します。サインイン、端末、セッション履歴は含まれません。',all:'すべて',today:'今日',week:'過去7日',categories:'カテゴリ',loaded:'読込イベント',empty:'記録された活動はありません',emptyBody:'この会社で完了した操作がここに表示されます。',records:'件',actions:{create:'作成',approve:'承認',reject:'却下',post:'転記',reverse:'取消',update:'更新',other:'変更'}},
     vi:{title:'Hoạt động của bạn',sub:'Các thay đổi ứng dụng đã ghi nhận do bạn thực hiện trong công ty này.',notice:'Lịch sử này chỉ gồm các thao tác ghi ứng dụng đã được ghi nhận; không gồm lịch sử đăng nhập, thiết bị hoặc phiên.',all:'Tất cả',today:'Hôm nay',week:'7 ngày qua',categories:'Danh mục',loaded:'Sự kiện đã tải',empty:'Chưa có hoạt động được ghi nhận',emptyBody:'Các thao tác bạn hoàn tất trong công ty này sẽ xuất hiện tại đây.',records:'bản ghi',actions:{create:'Đã tạo',approve:'Đã duyệt',reject:'Đã từ chối',post:'Đã ghi sổ',reverse:'Đã đảo',update:'Đã cập nhật',other:'Đã thay đổi'}},
   };
-  const p=packs[lang]||packs.en;
+  const p=i18nLegacy(packs);
   const categoryLabels={sales:'Sales',purchasing:'Purchasing',crm:'CRM',inventory:'Inventory',warehouse:'Warehouse',manufacturing:'Manufacturing',quality:'Quality',finance:'Finance',assets:'Assets',project:'Projects',service:'Service',hr:'HR',payroll:'Payroll',admin:'Administration',integration:'Integration',system:'System'};
   const entityLabels={orders:'Order',invoices:'Invoice',enquiries:'Enquiry',quotations:'Quotation',deliveries:'Delivery',returns:'Return',products:'Product',adjustments:'Adjustment',transfers:'Transfer',journals:'Journal',opportunities:'Opportunity',users:'User',user:'User',role:'Role',permission:'Permission',module:'Module',invitation:'Invitation',session:'Session',system:'System'};
   const result=await listPage('account/activity',{limit:100});
@@ -59,7 +59,7 @@ SCREENS['my-activity'] = async function(root){
 /* First-class, actor-addressed notification feed. Read/dismiss state is stored
    in app_notification, never inferred from audit/outbox or localStorage. */
 SCREENS['notifications'] = async function(root){
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const packs={
     en:{title:'Notifications',sub:'Items delivered to you in this company.',notice:'Only notifications addressed to your user and active company are shown.',total:'Active notifications',unread:'Unread',today:'Today',categories:'Categories',all:'All',earlier:'Earlier',markAll:'Mark all read',dismissAll:'Dismiss all',mark:'Mark as read',dismiss:'Dismiss',open:'Open',empty:'You’re all caught up',emptyBody:'No notifications match this filter.',loadError:'Notifications could not be loaded',retry:'Retry',done:'All notifications marked read',cleared:'Notifications dismissed',cats:{approval:'Approvals',inventory:'Inventory',quality:'Quality',finance:'Finance',sales:'Sales',integration:'Integration',system:'System'}},
     ms:{title:'Pemberitahuan',sub:'Perkara yang dihantar kepada anda dalam syarikat ini.',notice:'Hanya pemberitahuan untuk pengguna dan syarikat aktif anda dipaparkan.',total:'Pemberitahuan aktif',unread:'Belum dibaca',today:'Hari ini',categories:'Kategori',all:'Semua',earlier:'Terdahulu',markAll:'Tanda semua dibaca',dismissAll:'Tutup semua',mark:'Tanda dibaca',dismiss:'Tutup',open:'Buka',empty:'Semuanya selesai',emptyBody:'Tiada pemberitahuan sepadan dengan penapis ini.',loadError:'Pemberitahuan tidak dapat dimuatkan',retry:'Cuba lagi',done:'Semua pemberitahuan ditanda dibaca',cleared:'Pemberitahuan ditutup',cats:{approval:'Kelulusan',inventory:'Inventori',quality:'Kualiti',finance:'Kewangan',sales:'Jualan',integration:'Integrasi',system:'Sistem'}},
@@ -67,7 +67,7 @@ SCREENS['notifications'] = async function(root){
     ja:{title:'通知',sub:'この会社で自分宛に配信された項目です。',notice:'現在のユーザーと会社に配信された通知だけを表示します。',total:'有効な通知',unread:'未読',today:'今日',categories:'カテゴリ',all:'すべて',earlier:'以前',markAll:'すべて既読にする',dismissAll:'すべて閉じる',mark:'既読にする',dismiss:'閉じる',open:'開く',empty:'対応は完了しています',emptyBody:'このフィルターに一致する通知はありません。',loadError:'通知を読み込めませんでした',retry:'再試行',done:'すべて既読にしました',cleared:'通知を閉じました',cats:{approval:'承認',inventory:'在庫',quality:'品質',finance:'財務',sales:'販売',integration:'連携',system:'システム'}},
     vi:{title:'Thông báo',sub:'Các mục được gửi cho bạn trong công ty này.',notice:'Chỉ hiển thị thông báo dành cho người dùng và công ty hiện tại.',total:'Thông báo đang hoạt động',unread:'Chưa đọc',today:'Hôm nay',categories:'Danh mục',all:'Tất cả',earlier:'Trước đó',markAll:'Đánh dấu tất cả đã đọc',dismissAll:'Đóng tất cả',mark:'Đánh dấu đã đọc',dismiss:'Đóng',open:'Mở',empty:'Bạn đã xử lý xong',emptyBody:'Không có thông báo phù hợp với bộ lọc này.',loadError:'Không thể tải thông báo',retry:'Thử lại',done:'Đã đánh dấu tất cả là đã đọc',cleared:'Đã đóng thông báo',cats:{approval:'Phê duyệt',inventory:'Tồn kho',quality:'Chất lượng',finance:'Tài chính',sales:'Bán hàng',integration:'Tích hợp',system:'Hệ thống'}},
   };
-  const p=packs[lang]||packs.en;
+  const p=i18nLegacy(packs);
   let rows=[];
   try{ rows=await loadNotifications(); }
   catch(error){

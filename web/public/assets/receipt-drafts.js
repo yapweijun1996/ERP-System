@@ -163,7 +163,7 @@
   async function confirmAndClearBeforeLogout(){
     var total=await count().catch(function(){return 0;});
     if(!total) return true;
-    var lang=typeof getLang==='function'?getLang():'en';
+
     var messages={
       en:'You have '+total+' unsynchronised receipt draft(s) on this device. Signing out will permanently clear them. Continue?',
       ms:'Anda mempunyai '+total+' draf resit belum disegerakkan pada peranti ini. Log keluar akan memadamkannya secara kekal. Teruskan?',
@@ -171,7 +171,7 @@
       ja:'この端末に未同期の領収書下書きが '+total+' 件あります。サインアウトすると完全に削除されます。続行しますか？',
       vi:'Thiết bị này có '+total+' bản nháp biên lai chưa đồng bộ. Đăng xuất sẽ xóa vĩnh viễn các bản nháp này. Tiếp tục?',
     };
-    if(!confirm(messages[lang]||messages.en)) return false;
+    if(!confirm(i18nLegacy(messages))) return false;
     await clear();
     return true;
   }

@@ -8,7 +8,9 @@ const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 
 /* ---- small render helpers ---- */
 function profileAvatarMedia({name='',src='',title=''}={}){
-  const label=title||`${name||'User'} profile image`;
+  const label=title||(typeof tf==='function'
+    ?tf('common.profileImage','{name} profile image',{name:name||'User'})
+    :`${name||'User'} profile image`);
   const candidate=String(src||'').trim();
   const safeSrc=/^(https?:|data:image\/|blob:|\/|\.\/|\.\.\/)/i.test(candidate)?candidate:'';
   const fallback=`<svg class="profile-avatar-fallback" xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +50,7 @@ function wizardStepper(steps, curStep, reached){
 function crumbs(parts){ // parts: ['Sales', {label:'Orders',route:'sales-orders'}, {cur:'SO-26-0418'}]
   // SSOT for breadcrumbs. Standard: a segment is clickable IFF it carries a route.
   // Routed → <button>; plain label → non-interactive <span class="step"> (not a dead button).
-  return `<nav class="crumb" aria-label="Breadcrumb">`+parts.map((p,i)=>{
+  return `<nav class="crumb" aria-label="${esc(typeof t==='function'?t('common.breadcrumb'):'Breadcrumb')}">`+parts.map((p,i)=>{
     const last=i===parts.length-1;
     const obj = p!=null && typeof p==='object';
     const lbl = obj ? (p.cur!=null?p.cur:p.label) : p;

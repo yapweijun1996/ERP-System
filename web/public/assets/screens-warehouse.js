@@ -19,7 +19,7 @@ SCREENS['picking'] = async function(root){
   const productById=new Map((productPage.data||[]).map(row=>[Number(row.id),row]));
   const binById=new Map((binPage.data||[]).map(row=>[Number(row.id),row]));
   const warehouseById=new Map((warehousePage.data||[]).map(row=>[Number(row.id),row]));
-  const lang=typeof getLang==='function'?getLang():'en';
+
   const COPY={
     en:{
       title:'Warehouse picking', queue:'Pick queue', empty:'No canonical pick tasks are available.',
@@ -38,21 +38,44 @@ SCREENS['picking'] = async function(root){
       retry:'Retry', actionFailed:'The warehouse action could not be completed.',
     },
     ms:{
-      title:'Pungutan gudang', queue:'Barisan pungutan', empty:'Tiada tugas pungutan kanonik tersedia.',
-      emptyDesc:'Cipta pungutan gudang melalui API atau pesanan jualan yang dilepaskan.',
-      assigned:'Ditugaskan kepada', unassigned:'Belum ditugaskan', date:'Tarikh pungutan', warehouse:'Gudang',
-      order:'Pesanan jualan', noOrder:'Tidak dipautkan', progress:'Kemajuan', lines:'baris selesai',
-      units:'unit', bin:'Bin', picked:'Dipungut', remaining:'Baki',
-      confirm:'Sahkan pungutan', next:'Pungut baris seterusnya', complete:'Selesaikan pungutan',
-      completed:'Pungutan selesai', recorded:'Kuantiti pungutan direkodkan',
-      fullyPicked:'Semua baris telah dipungut. Selesaikan tugas untuk mengeluarkan inventori.',
-      issued:'Inventori telah dikeluarkan dan tempahan digunakan secara atomik.',
-      reserved:'Inventori ditempah hanya dikeluarkan apabila seluruh pungutan selesai.',
-      status:'Status', priority:'Keutamaan', dataLimit:'Menunjukkan 100 baris kanonik pertama bagi setiap sumber.',
-      statusOpen:'Terbuka', statusProgress:'Sedang dipungut', statusPicked:'Dipungut', statusCancelled:'Dibatalkan',
-      priorityLow:'Rendah', priorityNormal:'Biasa', priorityHigh:'Tinggi', priorityUrgent:'Segera',
-      retry:'Cuba lagi', actionFailed:'Tindakan gudang tidak dapat diselesaikan.',
-    },
+  "title": "Pungutan gudang",
+  "queue": "Barisan pungutan",
+  "empty": "Tiada tugas pungutan kanonik tersedia.",
+  "emptyDesc": "Cipta pungutan gudang melalui API atau pesanan jualan yang dilepaskan.",
+  "assigned": "Ditugaskan kepada",
+  "unassigned": "Belum ditugaskan",
+  "date": "Tarikh pungutan",
+  "warehouse": "Gudang",
+  "order": "Pesanan jualan",
+  "noOrder": "Tidak dipautkan",
+  "progress": "Kemajuan",
+  "lines": "baris selesai",
+  "units": "unit",
+  "bin": "Tong sampah",
+  "picked": "Dipungut",
+  "remaining": "Baki",
+  "confirm": "Sahkan pungutan",
+  "next": "Pungut baris seterusnya",
+  "complete": "Selesaikan pungutan",
+  "completed": "Pungutan selesai",
+  "recorded": "Kuantiti pungutan direkodkan",
+  "fullyPicked": "Semua baris telah dipungut. Selesaikan tugas untuk mengeluarkan inventori.",
+  "issued": "Inventori telah dikeluarkan dan tempahan digunakan secara atomik.",
+  "reserved": "Inventori ditempah hanya dikeluarkan apabila seluruh pungutan selesai.",
+  "status": "Status",
+  "priority": "Keutamaan",
+  "dataLimit": "Menunjukkan 100 baris kanonik pertama bagi setiap sumber.",
+  "statusOpen": "Terbuka",
+  "statusProgress": "Sedang dipungut",
+  "statusPicked": "Dipungut",
+  "statusCancelled": "Dibatalkan",
+  "priorityLow": "Rendah",
+  "priorityNormal": "Biasa",
+  "priorityHigh": "Tinggi",
+  "priorityUrgent": "Segera",
+  "retry": "Cuba lagi",
+  "actionFailed": "Tindakan gudang tidak dapat diselesaikan."
+},
     zh:{
       title:'仓库拣货', queue:'拣货队列', empty:'目前没有标准拣货任务。',
       emptyDesc:'请通过 API 或已释放的销售订单创建仓库拣货任务。',
@@ -102,7 +125,7 @@ SCREENS['picking'] = async function(root){
       retry:'Thử lại', actionFailed:'Không thể hoàn tất thao tác kho.',
     },
   };
-  const copy=COPY[lang]||COPY.en;
+  const copy=i18nLegacy(COPY);
   const s=key=>copy[key]||COPY.en[key]||key;
   const company=DB.company&&DB.company.name||'Company';
   const statusLabel={

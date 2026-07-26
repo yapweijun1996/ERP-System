@@ -23,12 +23,21 @@ export function apiError(
   code: string,
   message: string,
   fieldErrors?: Record<string, string>,
+  options: {
+    params?: Record<string, string | number | boolean | null>;
+    fieldErrorCodes?: Record<string, {
+      code: string;
+      params?: Record<string, string | number | boolean | null>;
+    }>;
+  } = {},
 ): void {
   res.status(status).json({
     error: {
       code,
       message,
+      ...(options.params ? { params: options.params } : {}),
       ...(fieldErrors ? { fieldErrors } : {}),
+      ...(options.fieldErrorCodes ? { fieldErrorCodes: options.fieldErrorCodes } : {}),
       requestId: context(res).requestId,
     },
   });

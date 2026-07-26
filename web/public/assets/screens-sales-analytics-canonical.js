@@ -6,14 +6,61 @@
 (function(){
   const COPY={
     en:{sales:'Sales',dashboard:'Sales overview',dashSub:'Live commercial facts rebuilt from sales documents.',reports:'Sales reports',reportsSub:'Auditable reports based on invoices, adjustments and document status.',recognized:'Recognized revenue',receivables:'Open receivables',openOrders:'Open orders',approvals:'Pending approval',openEnquiries:'Open enquiries',returns:'Open returns',monthly:'Monthly recognized revenue',customers:'Top customers',people:'Revenue by salesperson',quotes:'Quotation status',orders:'Order status',invoices:'Invoice status',deliveries:'Delivery status',report:'Open report',customerReport:'Sales by customer',repReport:'Sales by salesperson',quoteReport:'Quotation conversion',statusReport:'Document status',customer:'Customer',salesperson:'Salesperson',revenue:'Recognized revenue',invoiced:'Invoiced',credits:'Credits',debits:'Debits',share:'Share',owner:'Owner',invoiceCount:'Invoices',customerCount:'Customers',status:'Status',count:'Count',value:'Value',period:'Period',winRate:'Win rate',converted:'Converted',decided:'Decided quotations',back:'Back to reports',empty:'No matching sales facts yet.',actualOnly:'Actual posted documents only; no target or forecast data is stored.',source:'Canonical source',sourceText:'Invoices, credit/debit notes and current document statuses.',allStatuses:'All document statuses'},
-    ms:{sales:'Jualan',dashboard:'Gambaran jualan',dashSub:'Fakta komersial langsung yang dibina semula daripada dokumen jualan.',reports:'Laporan jualan',reportsSub:'Laporan boleh diaudit berdasarkan invois, pelarasan dan status dokumen.',recognized:'Hasil diiktiraf',receivables:'Belum terima terbuka',openOrders:'Pesanan terbuka',approvals:'Menunggu kelulusan',openEnquiries:'Pertanyaan terbuka',returns:'Pulangan terbuka',monthly:'Hasil bulanan diiktiraf',customers:'Pelanggan utama',people:'Hasil mengikut jurujual',quotes:'Status sebut harga',orders:'Status pesanan',invoices:'Status invois',deliveries:'Status penghantaran',report:'Buka laporan',customerReport:'Jualan mengikut pelanggan',repReport:'Jualan mengikut jurujual',quoteReport:'Penukaran sebut harga',statusReport:'Status dokumen',customer:'Pelanggan',salesperson:'Jurujual',revenue:'Hasil diiktiraf',invoiced:'Diinvois',credits:'Kredit',debits:'Debit',share:'Bahagian',owner:'Pemilik',invoiceCount:'Invois',customerCount:'Pelanggan',status:'Status',count:'Bilangan',value:'Nilai',period:'Tempoh',winRate:'Kadar menang',converted:'Ditukar',decided:'Sebut harga diputuskan',back:'Kembali ke laporan',empty:'Belum ada fakta jualan yang sepadan.',actualOnly:'Dokumen sebenar yang dipos sahaja; tiada sasaran atau ramalan disimpan.',source:'Sumber kanonik',sourceText:'Invois, nota kredit/debit dan status dokumen semasa.',allStatuses:'Semua status dokumen'},
+    ms:{
+  "sales": "Jualan",
+  "dashboard": "Gambaran jualan",
+  "dashSub": "Fakta komersial langsung yang dibina semula daripada dokumen jualan.",
+  "reports": "Laporan jualan",
+  "reportsSub": "Laporan boleh diaudit berdasarkan invois, pelarasan dan status dokumen.",
+  "recognized": "Hasil diiktiraf",
+  "receivables": "Belum terima terbuka",
+  "openOrders": "Pesanan terbuka",
+  "approvals": "Menunggu kelulusan",
+  "openEnquiries": "Pertanyaan terbuka",
+  "returns": "Pulangan terbuka",
+  "monthly": "Hasil bulanan diiktiraf",
+  "customers": "Pelanggan utama",
+  "people": "Hasil mengikut jurujual",
+  "quotes": "Status sebut harga",
+  "orders": "Status pesanan",
+  "invoices": "Status invois",
+  "deliveries": "Status penghantaran",
+  "report": "Buka laporan",
+  "customerReport": "Jualan mengikut pelanggan",
+  "repReport": "Jualan mengikut jurujual",
+  "quoteReport": "Penukaran sebut harga",
+  "statusReport": "Status dokumen",
+  "customer": "Pelanggan",
+  "salesperson": "Jurujual",
+  "revenue": "Hasil diiktiraf",
+  "invoiced": "Diinvois",
+  "credits": "Kredit",
+  "debits": "Debit",
+  "share": "Bahagian",
+  "owner": "Pemilik",
+  "invoiceCount": "Invois",
+  "customerCount": "Pelanggan",
+  "status": "Status",
+  "count": "Bilangan",
+  "value": "Nilai",
+  "period": "Tempoh",
+  "winRate": "Kadar menang",
+  "converted": "Ditukar",
+  "decided": "Sebut harga diputuskan",
+  "back": "Kembali ke laporan",
+  "empty": "Belum ada fakta jualan yang sepadan.",
+  "actualOnly": "Dokumen sebenar yang dipos sahaja; tiada sasaran atau ramalan disimpan.",
+  "source": "Sumber kanonik",
+  "sourceText": "Invois, nota kredit/debit dan status dokumen semasa.",
+  "allStatuses": "Semua status dokumen"
+},
     zh:{sales:'销售',dashboard:'销售概览',dashSub:'从真实销售单据即时重建的商业数据。',reports:'销售报表',reportsSub:'基于发票、调整单及单据状态的可审计报表。',recognized:'已确认收入',receivables:'未收应收款',openOrders:'未结订单',approvals:'待审批',openEnquiries:'未结询价',returns:'待处理退货',monthly:'每月已确认收入',customers:'主要客户',people:'按销售负责人统计收入',quotes:'报价状态',orders:'订单状态',invoices:'发票状态',deliveries:'交货状态',report:'打开报表',customerReport:'按客户统计销售',repReport:'按销售负责人统计销售',quoteReport:'报价转换率',statusReport:'单据状态',customer:'客户',salesperson:'销售负责人',revenue:'已确认收入',invoiced:'发票金额',credits:'贷项',debits:'借项',share:'占比',owner:'负责人',invoiceCount:'发票',customerCount:'客户',status:'状态',count:'数量',value:'金额',period:'期间',winRate:'赢单率',converted:'已转换',decided:'已决报价',back:'返回报表',empty:'尚无符合条件的销售数据。',actualOnly:'仅统计真实已过账单据；系统未保存目标或预测数据。',source:'Canonical 数据源',sourceText:'发票、贷项/借项通知单及当前单据状态。',allStatuses:'全部单据状态'},
     ja:{sales:'販売',dashboard:'販売概要',dashSub:'販売伝票から再構築した最新の商取引データです。',reports:'販売レポート',reportsSub:'請求書、調整、伝票ステータスに基づく監査可能なレポートです。',recognized:'認識済み売上',receivables:'未収金',openOrders:'未完了受注',approvals:'承認待ち',openEnquiries:'未完了引合',returns:'未処理返品',monthly:'月次認識済み売上',customers:'上位顧客',people:'担当者別売上',quotes:'見積ステータス',orders:'受注ステータス',invoices:'請求ステータス',deliveries:'出荷ステータス',report:'レポートを開く',customerReport:'顧客別売上',repReport:'担当者別売上',quoteReport:'見積変換率',statusReport:'伝票ステータス',customer:'顧客',salesperson:'担当者',revenue:'認識済み売上',invoiced:'請求額',credits:'貸方',debits:'借方',share:'構成比',owner:'担当',invoiceCount:'請求書',customerCount:'顧客',status:'ステータス',count:'件数',value:'金額',period:'期間',winRate:'成約率',converted:'変換済み',decided:'確定見積',back:'レポートへ戻る',empty:'該当する販売データはありません。',actualOnly:'転記済み実績伝票のみ。目標・予測データは保存していません。',source:'Canonical ソース',sourceText:'請求書、貸方・借方通知書、現在の伝票ステータス。',allStatuses:'全伝票ステータス'},
     vi:{sales:'Bán hàng',dashboard:'Tổng quan bán hàng',dashSub:'Dữ liệu thương mại trực tiếp được dựng lại từ chứng từ bán hàng.',reports:'Báo cáo bán hàng',reportsSub:'Báo cáo có thể kiểm toán từ hóa đơn, điều chỉnh và trạng thái chứng từ.',recognized:'Doanh thu ghi nhận',receivables:'Phải thu còn mở',openOrders:'Đơn hàng còn mở',approvals:'Chờ phê duyệt',openEnquiries:'Yêu cầu còn mở',returns:'Trả hàng còn mở',monthly:'Doanh thu ghi nhận theo tháng',customers:'Khách hàng hàng đầu',people:'Doanh thu theo nhân viên',quotes:'Trạng thái báo giá',orders:'Trạng thái đơn hàng',invoices:'Trạng thái hóa đơn',deliveries:'Trạng thái giao hàng',report:'Mở báo cáo',customerReport:'Doanh số theo khách hàng',repReport:'Doanh số theo nhân viên',quoteReport:'Chuyển đổi báo giá',statusReport:'Trạng thái chứng từ',customer:'Khách hàng',salesperson:'Nhân viên bán hàng',revenue:'Doanh thu ghi nhận',invoiced:'Đã lập hóa đơn',credits:'Ghi có',debits:'Ghi nợ',share:'Tỷ trọng',owner:'Phụ trách',invoiceCount:'Hóa đơn',customerCount:'Khách hàng',status:'Trạng thái',count:'Số lượng',value:'Giá trị',period:'Kỳ',winRate:'Tỷ lệ thắng',converted:'Đã chuyển đổi',decided:'Báo giá đã quyết định',back:'Về báo cáo',empty:'Chưa có dữ liệu bán hàng phù hợp.',actualOnly:'Chỉ chứng từ thực tế đã ghi sổ; không lưu mục tiêu hay dự báo.',source:'Nguồn canonical',sourceText:'Hóa đơn, phiếu ghi có/ghi nợ và trạng thái chứng từ hiện tại.',allStatuses:'Tất cả trạng thái chứng từ'}
   };
   const locale={en:'en-SG',ms:'ms-MY',zh:'zh-CN',ja:'ja-JP',vi:'vi-VN'};
   const state={rows:[],sequence:0};
-  function c(){return COPY[getLang()]||COPY.en;}
+  function c(){return i18nLegacy(COPY);}
   function num(v){const n=Number(v);return Number.isFinite(n)?n:0;}
   function amount(v){return new Intl.NumberFormat(locale[getLang()]||'en-SG',{style:'currency',currency:(DB.company&&DB.company.currency)||'SGD',maximumFractionDigits:2}).format(num(v));}
   function integer(v){return new Intl.NumberFormat(locale[getLang()]||'en-SG',{maximumFractionDigits:0}).format(num(v));}

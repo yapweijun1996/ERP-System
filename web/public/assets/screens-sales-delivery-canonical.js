@@ -4,18 +4,36 @@
    ============================================================ */
 (function canonicalSalesDeliveryScreens(){
   function copy(){
-    const lang=typeof getLang==='function'?getLang():'en';
+
     const packs={
       en:{deliveries:'Delivery orders',delivery:'Delivery order',customer:'Customer',order:'Sales order',
         invoice:'Invoice',date:'Delivery date',status:'Status',items:'Delivered items',product:'Product',
         warehouse:'Warehouse',quantity:'Delivered quantity',all:'All',draft:'Draft',delivered:'Delivered',
         cancelled:'Cancelled',empty:'No canonical deliveries yet.',help:'Confirm a draft sales order to create its delivery, inventory issue and invoice in one transaction.',
         trace:'Fulfilment trace',viewOrder:'View sales order',viewInvoice:'View invoice',limit:'Showing the first 100 canonical delivery records.'},
-      ms:{deliveries:'Pesanan penghantaran',delivery:'Pesanan penghantaran',customer:'Pelanggan',order:'Pesanan jualan',
-        invoice:'Invois',date:'Tarikh penghantaran',status:'Status',items:'Item dihantar',product:'Produk',
-        warehouse:'Gudang',quantity:'Kuantiti dihantar',all:'Semua',draft:'Draf',delivered:'Dihantar',
-        cancelled:'Dibatalkan',empty:'Belum ada penghantaran kanonik.',help:'Sahkan draf pesanan jualan untuk mencipta penghantaran, pengeluaran stok dan invois dalam satu transaksi.',
-        trace:'Jejak pemenuhan',viewOrder:'Lihat pesanan jualan',viewInvoice:'Lihat invois',limit:'Memaparkan 100 rekod penghantaran kanonik pertama.'},
+      ms:{
+  "deliveries": "Pesanan penghantaran",
+  "delivery": "Pesanan penghantaran",
+  "customer": "Pelanggan",
+  "order": "Pesanan jualan",
+  "invoice": "Invois",
+  "date": "Tarikh penghantaran",
+  "status": "Status",
+  "items": "Item dihantar",
+  "product": "Produk",
+  "warehouse": "Gudang",
+  "quantity": "Kuantiti dihantar",
+  "all": "Semua",
+  "draft": "Draf",
+  "delivered": "Dihantar",
+  "cancelled": "Dibatalkan",
+  "empty": "Belum ada penghantaran kanonik.",
+  "help": "Sahkan draf pesanan jualan untuk mencipta penghantaran, pengeluaran stok dan invois dalam satu transaksi.",
+  "trace": "Jejak pemenuhan",
+  "viewOrder": "Lihat pesanan jualan",
+  "viewInvoice": "Lihat invois",
+  "limit": "Memaparkan 100 rekod penghantaran kanonik pertama."
+},
       zh:{deliveries:'交货单',delivery:'交货单',customer:'客户',order:'销售订单',
         invoice:'销售发票',date:'交货日期',status:'状态',items:'已交付项目',product:'产品',
         warehouse:'仓库',quantity:'交付数量',all:'全部',draft:'草稿',delivered:'已交付',
@@ -32,7 +50,7 @@
         cancelled:'Đã hủy',empty:'Chưa có phiếu giao hàng chuẩn.',help:'Xác nhận đơn bán hàng nháp để tạo giao hàng, xuất kho và hóa đơn trong cùng một giao dịch.',
         trace:'Truy vết thực hiện',viewOrder:'Xem đơn bán hàng',viewInvoice:'Xem hóa đơn',limit:'Hiển thị 100 bản ghi giao hàng chuẩn đầu tiên.'},
     };
-    const pack=packs[lang]||packs.en;
+    const pack=i18nLegacy(packs);
     return key=>pack[key]||packs.en[key]||key;
   }
   function adapter(){

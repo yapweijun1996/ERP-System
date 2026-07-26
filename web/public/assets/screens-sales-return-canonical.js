@@ -3,7 +3,7 @@
    ============================================================ */
 (function canonicalSalesReturnScreens(){
   function copy(){
-    const lang=typeof getLang==='function'?getLang():'en';
+
     const packs={
       en:{returns:'Sales returns / RMA',returnDoc:'Sales return',creditNotes:'Credit notes',creditNote:'Credit note',
         newReturn:'New return',customer:'Customer',against:'Against invoice',delivery:'Delivery',
@@ -17,18 +17,49 @@
         creditHelp:'Posted customer credits generated from accepted returns.',creditNo:'Credit note number',
         returnNo:'Return number',movement:'Inventory restored',gl:'AR / revenue / tax reversed',
         limit:'Showing the first 100 canonical records.'},
-      ms:{returns:'Pulangan jualan / RMA',returnDoc:'Pulangan jualan',creditNotes:'Nota kredit',creditNote:'Nota kredit',
-        newReturn:'Pulangan baharu',customer:'Pelanggan',against:'Terhadap invois',delivery:'Penghantaran',
-        reason:'Sebab',date:'Tarikh',status:'Status',items:'Item dipulangkan',product:'Produk',warehouse:'Gudang',
-        qty:'Kuantiti',unitPrice:'Harga unit',net:'Bersih',tax:'Cukai',total:'Jumlah',requested:'Diminta',
-        credited:'Dikreditkan',rejected:'Ditolak',posted:'Diposting',cancelled:'Dibatalkan',all:'Semua',
-        receiveCredit:'Terima & keluarkan kredit',reject:'Tolak pulangan',created:'Pulangan diminta',
-        creditedDone:'Pulangan diterima dan dikreditkan',rejectedDone:'Pulangan ditolak',create:'Cipta',cancel:'Batal',
-        empty:'Belum ada pulangan kanonik.',emptyCredit:'Belum ada nota kredit kanonik.',
-        help:'Kuantiti pulangan disemak terhadap baris penghantaran sebelum stok dan AR diterbalikkan.',
-        creditHelp:'Kredit pelanggan diposting daripada pulangan yang diterima.',creditNo:'Nombor nota kredit',
-        returnNo:'Nombor pulangan',movement:'Stok dipulihkan',gl:'AR / hasil / cukai diterbalikkan',
-        limit:'Memaparkan 100 rekod kanonik pertama.'},
+      ms:{
+  "returns": "Pulangan jualan / RMA",
+  "returnDoc": "Pulangan jualan",
+  "creditNotes": "Nota kredit",
+  "creditNote": "Nota kredit",
+  "newReturn": "Pulangan baharu",
+  "customer": "Pelanggan",
+  "against": "Terhadap invois",
+  "delivery": "Penghantaran",
+  "reason": "Sebab",
+  "date": "Tarikh",
+  "status": "Status",
+  "items": "Item dipulangkan",
+  "product": "Produk",
+  "warehouse": "Gudang",
+  "qty": "Kuantiti",
+  "unitPrice": "Harga unit",
+  "net": "Bersih",
+  "tax": "Cukai",
+  "total": "Jumlah",
+  "requested": "Diminta",
+  "credited": "Dikreditkan",
+  "rejected": "Ditolak",
+  "posted": "Diposting",
+  "cancelled": "Dibatalkan",
+  "all": "Semua",
+  "receiveCredit": "Terima & keluarkan kredit",
+  "reject": "Tolak pulangan",
+  "created": "Pulangan diminta",
+  "creditedDone": "Pulangan diterima dan dikreditkan",
+  "rejectedDone": "Pulangan ditolak",
+  "create": "Cipta",
+  "cancel": "Batal",
+  "empty": "Belum ada pulangan kanonik.",
+  "emptyCredit": "Belum ada nota kredit kanonik.",
+  "help": "Kuantiti pulangan disemak terhadap baris penghantaran sebelum stok dan AR diterbalikkan.",
+  "creditHelp": "Kredit pelanggan diposting daripada pulangan yang diterima.",
+  "creditNo": "Nombor nota kredit",
+  "returnNo": "Nombor pulangan",
+  "movement": "Stok dipulihkan",
+  "gl": "AR / hasil / cukai diterbalikkan",
+  "limit": "Memaparkan 100 rekod kanonik pertama."
+},
       zh:{returns:'销售退货 / RMA',returnDoc:'销售退货',creditNotes:'贷项通知单',creditNote:'贷项通知单',
         newReturn:'新建退货',customer:'客户',against:'原销售发票',delivery:'原交货单',
         reason:'退货原因',date:'日期',status:'状态',items:'退货项目',product:'产品',warehouse:'退货仓库',
@@ -66,7 +97,7 @@
         returnNo:'Số trả hàng',movement:'Đã hoàn kho',gl:'Đã đảo công nợ / doanh thu / thuế',
         limit:'Hiển thị 100 bản ghi chuẩn đầu tiên.'},
     };
-    const pack=packs[lang]||packs.en;
+    const pack=i18nLegacy(packs);
     return key=>pack[key]||packs.en[key]||key;
   }
   function adapter(){ if(!window.ErpSystemData) throw new Error('ERP data adapter is unavailable.'); return window.ErpSystemData; }
@@ -224,15 +255,33 @@
   };
 
   SCREENS['debit-notes']=async function(root){
-    const lang=typeof getLang==='function'?getLang():'en';
+
     const packs={
       en:{title:'Debit notes',newNote:'New debit note',help:'Additional customer charges are drafted, then posted with balanced AR, revenue and output-tax legs.',invoice:'Invoice',reason:'Reason',date:'Date',net:'Net amount',tax:'Tax',total:'Total',status:'Status',post:'Post',create:'Create',cancel:'Cancel',empty:'No canonical debit notes yet.',created:'Debit note drafted',posted:'Debit note posted',number:'Debit note number'},
-      ms:{title:'Nota debit',newNote:'Nota debit baharu',help:'Caj tambahan pelanggan didraf, kemudian diposting dengan kaki AR, hasil dan cukai output yang seimbang.',invoice:'Invois',reason:'Sebab',date:'Tarikh',net:'Amaun bersih',tax:'Cukai',total:'Jumlah',status:'Status',post:'Posting',create:'Cipta',cancel:'Batal',empty:'Belum ada nota debit kanonik.',created:'Nota debit didraf',posted:'Nota debit diposting',number:'Nombor nota debit'},
+      ms:{
+  "title": "Nota debit",
+  "newNote": "Nota debit baharu",
+  "help": "Caj tambahan pelanggan didraf, kemudian diposting dengan kaki AR, hasil dan cukai output yang seimbang.",
+  "invoice": "Invois",
+  "reason": "Sebab",
+  "date": "Tarikh",
+  "net": "Amaun bersih",
+  "tax": "Cukai",
+  "total": "Jumlah",
+  "status": "Status",
+  "post": "Posting",
+  "create": "Cipta",
+  "cancel": "Batal",
+  "empty": "Belum ada nota debit kanonik.",
+  "created": "Nota debit didraf",
+  "posted": "Nota debit diposting",
+  "number": "Nombor nota debit"
+},
       zh:{title:'借项通知单',newNote:'新建借项通知单',help:'客户附加收费先保存为草稿，再以平衡的应收、收入和销项税分录过账。',invoice:'原销售发票',reason:'原因',date:'日期',net:'未税金额',tax:'税额',total:'总额',status:'状态',post:'过账',create:'创建',cancel:'取消',empty:'目前没有标准借项通知单。',created:'借项通知单草稿已创建',posted:'借项通知单已过账',number:'借项通知单编号'},
       ja:{title:'デビットノート',newNote:'デビットノートを作成',help:'顧客への追加請求をドラフトし、売掛金・売上・税の均衡仕訳で転記します。',invoice:'請求書',reason:'理由',date:'日付',net:'税抜金額',tax:'税額',total:'合計',status:'ステータス',post:'転記',create:'作成',cancel:'キャンセル',empty:'標準デビットノートはありません。',created:'デビットノートを作成しました',posted:'デビットノートを転記しました',number:'デビット番号'},
       vi:{title:'Phiếu ghi nợ',newNote:'Tạo phiếu ghi nợ',help:'Khoản thu thêm được lưu nháp rồi ghi sổ với công nợ, doanh thu và thuế đầu ra cân bằng.',invoice:'Hóa đơn',reason:'Lý do',date:'Ngày',net:'Trước thuế',tax:'Thuế',total:'Tổng cộng',status:'Trạng thái',post:'Ghi sổ',create:'Tạo',cancel:'Hủy',empty:'Chưa có phiếu ghi nợ chuẩn.',created:'Đã tạo phiếu ghi nợ nháp',posted:'Đã ghi sổ phiếu ghi nợ',number:'Số phiếu ghi nợ'},
     };
-    const d=packs[lang]||packs.en,a=adapter();
+    const d=i18nLegacy(packs),a=adapter();
     const pages=await Promise.all([
       a.list('sales/debit-notes',{limit:100}),a.list('sales/invoices',{limit:100}),
     ]);

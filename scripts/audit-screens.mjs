@@ -215,10 +215,13 @@ if (offlineReceiptContracts.length) {
     `Offline receipt drafts are missing required safeguards: ${offlineReceiptContracts.join(', ')}`,
   );
 }
-const i18nSource = readFileSync(path.join(assetDir, 'i18n.js'), 'utf8');
-const missingMyWorkLocales = ['en','ms','zh','ja','vi'].filter((locale) =>
-  !i18nSource.includes(`Object.assign(I18N.${locale},{`)
-  || !i18nSource.includes(`'myWork.nav.teamCalendar'`));
+const i18nPackDir = path.join(assetDir, 'i18n');
+const missingMyWorkLocales = ['en','ms','zh','ja','vi'].filter((locale) => {
+  const packPath = path.join(i18nPackDir, `${locale}.json`);
+  if (!existsSync(packPath)) return true;
+  const pack = JSON.parse(readFileSync(packPath, 'utf8'));
+  return typeof pack['myWork.nav.teamCalendar'] !== 'string';
+});
 if (missingMyWorkLocales.length) {
   throw new Error(`My Work navigation translations are missing: ${missingMyWorkLocales.join(', ')}`);
 }
@@ -1954,7 +1957,7 @@ async function auditRoutes(browser, viewport) {
           en:'My Leave',ms:'Cuti Saya',zh:'我的请假',ja:'自分の休暇',vi:'Nghỉ phép của tôi',
         };
         for (const [locale,title] of Object.entries(expectedTitles)) {
-          setLang(locale);
+          await setLang(locale);
           await navigate('my-leave');
           const heading=document.querySelector('#viewRoot h1')?.textContent?.trim()||'';
           if (heading!==title) issues.push(`${locale} My Leave heading rendered as ${heading||'missing'}`);
@@ -2041,7 +2044,7 @@ async function auditRoutes(browser, viewport) {
         Object.assign(ErpSystemData.my,originalMethods);
         MY_WORK_CONTEXT=originalContext;
         DB.myWorkContext=originalDbContext;
-        setLang(originalLanguage);
+        await setLang(originalLanguage);
         renderSidebar();
         await navigate('dashboard');
       }
@@ -4174,7 +4177,7 @@ async function auditRoutes(browser, viewport) {
       const issues = [];
       try {
         for (const [locale, title] of Object.entries(expectedTitles)) {
-          setLang(locale);
+          await setLang(locale);
           await navigate('pnl');
           const heading = document.querySelector('#viewRoot h1')?.textContent?.trim() || '';
           if (!heading.startsWith(title)) {
@@ -4195,7 +4198,7 @@ async function auditRoutes(browser, viewport) {
           }
         }
       } finally {
-        setLang(originalLanguage);
+        await setLang(originalLanguage);
         await navigate('pnl');
       }
       return issues;
