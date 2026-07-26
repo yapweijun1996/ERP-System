@@ -250,6 +250,32 @@
         method:'POST',body:{purpose:purpose},
       });
     },
+    reimbursementCandidates:function(currency){
+      return apiRequest('reimbursement-batches/candidates?currency='+
+        encodeURIComponent(currency||''));
+    },
+    reimbursementBatches:function(){ return apiRequest('reimbursement-batches'); },
+    createReimbursementBatch:function(payload,idempotencyKey){
+      return apiRequest('reimbursement-batches',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    replaceReimbursementBatchLines:function(batchId,expectedVersion,postingIds,idempotencyKey){
+      return apiRequest('reimbursement-batches/'+encodeURIComponent(batchId)+'/lines',{
+        method:'PUT',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:{expectedVersion:expectedVersion,postingIds:postingIds||[]},
+      });
+    },
+    releaseReimbursementBatch:function(batchId,expectedVersion,reason,idempotencyKey){
+      return apiRequest('reimbursement-batches/'+encodeURIComponent(batchId)+'/actions/release',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:{expectedVersion:expectedVersion,reason:reason},
+      });
+    },
     expenseApprovals:function(){ return apiRequest('expense-approvals'); },
     expenseApprovalAction:function(id,decision,reason,idempotencyKey){
       return apiRequest('expense-approvals/'+encodeURIComponent(id)+'/actions/decide',{

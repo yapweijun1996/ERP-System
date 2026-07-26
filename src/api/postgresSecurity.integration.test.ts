@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
@@ -62,6 +62,10 @@ import {
   upsertOwnPayoutProfileWithin,
   verifyPayoutProfileWithin,
 } from '../modules/expenses/payoutProfiles';
+import {
+  createReimbursementBatchWithin,
+  releaseReimbursementBatchWithin,
+} from '../modules/expenses/reimbursementBatches';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -515,6 +519,47 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       db,
       expenseScope,
       (tx) => tx.select().from(schema.employeePayoutProfileEvent),
+    )).toHaveLength(2);
+    const [paymentChecker] = await db.insert(schema.appUser).values({
+      masterFn: setup.masterFn,
+      username: 'pg.payment.checker',
+      email: 'pg.payment.checker@security-proof.example',
+      fullName: 'PostgreSQL Payment Checker',
+      passwordHash: admin.passwordHash,
+      language: 'en',
+    }).returning();
+    const preparedPayment = await withTenantTransaction(db, expenseScope, (tx) =>
+      createReimbursementBatchWithin(tx, expenseScope, admin.userId, {
+        batchKey: 'pg-reimbursement-batch-0001',
+        batchNo: 'PG-RB-0001',
+        currency: 'SGD',
+        sourceBankAccountId: companyClearing.id,
+        postingIds: [pgPostedExpense.posting!.posting.id],
+      }));
+    const releasedPayment = await withTenantTransaction(db, expenseScope, (tx) =>
+      releaseReimbursementBatchWithin(
+        tx,
+        expenseScope,
+        paymentChecker.userId,
+        preparedPayment.batch.id,
+        preparedPayment.batch.version,
+        'Independent PostgreSQL Finance checker release.',
+        (value) => createHash('sha256')
+          .update(JSON.stringify(value))
+          .digest('hex'),
+      ));
+    expect(releasedPayment.batch).toMatchObject({
+      status: 'released',
+      itemCount: 1,
+      totalAmount: '50.00',
+      releasedByUserId: paymentChecker.userId,
+    });
+    expect(await db.select().from(schema.reimbursementPaymentBatch)).toHaveLength(0);
+    expect(await db.select().from(schema.reimbursementPaymentBatchLine)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.reimbursementPaymentBatchEvent),
     )).toHaveLength(2);
     const [bankAccount] = await withTenantTransaction(
       db,

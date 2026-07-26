@@ -2066,9 +2066,13 @@ not submit returns directly to IRAS or LHDN.
       response; an independent HR/Finance actor verifies the profile and every owner
       modification invalidates that verification. The batch-read boundary rejects
       unverified profiles and immutable events record every change/reveal. PWA v130.
-- [ ] **TASK-131 — Add maker/checker reimbursement payment batches.** Create batches
-      only from posted unpaid employee payables; require a distinct releaser and reject
-      any batch containing the releaser's own claim.
+- [x] **TASK-131 — Add maker/checker reimbursement payment batches.** Migration 0069
+      reserves only posted open employee payables whose same-currency payout profile
+      remains verified. The preparer alone may replace draft membership; a distinct
+      checker cannot release a batch containing their own claim. Release re-locks
+      every profile version, snapshots only its encrypted envelope, hashes the complete
+      release facts and freezes both batch and membership with database triggers.
+      PWA v131.
 - [ ] **TASK-132 — Export bank files and import payment outcomes.** Provide configured
       bank templates, immutable release snapshot, bank reference/result capture,
       partial-success handling and retry of failed lines without duplicate payment;

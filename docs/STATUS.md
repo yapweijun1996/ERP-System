@@ -1345,6 +1345,25 @@ dual typecheck, 500 tests plus one expected skip, 69 migrations at schema versio
 startup with zero runtime errors/overflow, and PostgreSQL 16 non-superuser/RLS proof.
 PWA v130.
 
+### Maker/checker reimbursement payment batches (TASK-131)
+
+Migration 0069 adds maker-authored reimbursement batches, their posted-payable
+membership and append-only lifecycle evidence. Candidate selection admits only
+employee-paid immutable expense postings not reserved by another batch, linked to an
+active employee and a currently verified same-currency payout profile. Draft
+membership is optimistic-versioned and only the original preparer may replace it.
+
+Release is a separate permission and actor. The checker cannot be the maker or own any
+claim in the batch. The release transaction re-locks every payout profile and rejects
+any verification/version change, copies the AES-GCM envelope into the line snapshot,
+hashes the posting/profile/version/member facts and then freezes the batch and lines.
+Database triggers independently reject incomplete snapshots, self-payment, stale
+profiles and any post-release batch/member mutation. Ordinary API/Demo projections
+remain masked and omit encrypted envelopes. Final gates pass lint, dual typecheck, 503
+tests plus one expected skip, 70 migrations at schema version 69, 210-table drift,
+API/Demo builds, desktop/mobile smoke, in-app-browser PGlite v69 startup with zero
+runtime errors/overflow, and PostgreSQL 16 non-superuser/RLS proof. PWA v131.
+
 ## Employee self-service, leave and expense programme (EPIC-052–056)
 
 TASK-106 through TASK-110 delivered identity, account lifecycle, actor-owned API,
@@ -1364,9 +1383,10 @@ delivered line approval, duplicate risk and budget control, TASK-126 delivered b
 corporate-card reconciliation, and TASK-127 delivered versioned allowance calculations
 and reconciled cash advances. TASK-128 delivered transactionally coupled final approval
 and balanced expense posting. TASK-129 delivered the five-language expense
-register/detail/approval SSOT and responsive privacy/failure proof, and TASK-130
-delivered encrypted, masked, independently verified employee payout profiles.
-TASK-131 through TASK-135 remain planning records
+register/detail/approval SSOT and responsive privacy/failure proof, TASK-130 delivered
+encrypted, masked, independently verified employee payout profiles, and TASK-131
+delivered maker/checker reimbursement batches with immutable release snapshots.
+TASK-132 through TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1404,9 +1424,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 129 tasks, including TASK-130
+- Done: 130 tasks, including TASK-131
 - Blocked: TASK-017 (1)
-- Todo: 5 planned tasks (TASK-131–135) across EPIC-056. These extend the product
+- Todo: 4 planned tasks (TASK-132–135) across EPIC-056. These extend the product
   beyond the current 122 Canonical / 0 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

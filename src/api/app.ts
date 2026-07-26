@@ -30,6 +30,7 @@ import { createExpenseApprovalsRouter } from './routes/expenseApprovals';
 import { createCorporateCardsRouter } from './routes/corporateCards';
 import { createAllowancesAdvancesRouter } from './routes/allowancesAdvances';
 import { createPayoutProfilesRouter } from './routes/payoutProfiles';
+import { createReimbursementBatchesRouter } from './routes/reimbursementBatches';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -119,6 +120,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/payout-profiles', createPayoutProfilesRouter(db, {
     payoutEncryptionKey: lifecycle?.tokenEncryptionKey,
   }));
+  app.use('/api/reimbursement-batches', createReimbursementBatchesRouter(db));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
 

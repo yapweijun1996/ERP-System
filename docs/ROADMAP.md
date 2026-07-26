@@ -877,10 +877,10 @@ domain/API/browser and current release gates.
 
 ## Phase 38 — Reimbursement Payments & Tax Evidence (In Progress)
 
-1. **Payout profiles and maker/checker settlement** (EPIC-056) starts with encrypted,
-   masked, independently verified employee bank profiles (TASK-130 done 2026-07-26).
-   TASK-131/132 add a separate batch preparer/releaser,
-   self-payment prevention, bank-file export and partial bank-result import with
+1. **Payout profiles and maker/checker settlement** (EPIC-056) now has encrypted,
+   masked, independently verified employee bank profiles (TASK-130 done 2026-07-26)
+   and immutable maker/checker batch release with self-payment prevention (TASK-131
+   done 2026-07-26). TASK-132 adds bank-file export and partial bank-result import with
    successful-line-only Dr Employee Payable / Cr Bank posting.
 2. **Immutable tax evidence packages** (TASK-133/134) generate one-snapshot register,
    merged PDF, XLSX/CSV, original ZIP and hash manifest. Finalised packages are

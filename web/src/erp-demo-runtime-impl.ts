@@ -55,6 +55,14 @@ import {
   type PayoutDetailsInput,
 } from '../../src/modules/expenses/payoutProfiles';
 import {
+  createReimbursementBatchWithin,
+  listOpenReimbursementPayablesWithin,
+  listReimbursementBatchesWithin,
+  releaseReimbursementBatchWithin,
+  replaceReimbursementBatchLinesWithin,
+  type ReimbursementBatchInput,
+} from '../../src/modules/expenses/reimbursementBatches';
+import {
   createApprovalDelegationWithin,
   listApprovalDelegationCandidatesWithin,
   listApprovalDelegationsWithin,
@@ -538,6 +546,57 @@ export const erpDemoRuntime = Object.freeze({
     ) {
       return revealPayoutProfileWithin(
         asDomainDb(db), scope, actorUserId, employeeId, purpose, decrypt,
+      );
+    },
+    listOpenReimbursementPayablesWithin(
+      db: DemoOrm,
+      scope: Scope,
+      currency: string,
+    ) {
+      return listOpenReimbursementPayablesWithin(asDomainDb(db), scope, currency);
+    },
+    listReimbursementBatchesWithin(db: DemoOrm, scope: Scope) {
+      return listReimbursementBatchesWithin(asDomainDb(db), scope);
+    },
+    createReimbursementBatchWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: ReimbursementBatchInput,
+    ) {
+      return createReimbursementBatchWithin(
+        asDomainDb(db), scope, actorUserId, input,
+      );
+    },
+    replaceReimbursementBatchLinesWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      batchId: number,
+      expectedVersion: number,
+      postingIds: number[],
+    ) {
+      return replaceReimbursementBatchLinesWithin(
+        asDomainDb(db), scope, actorUserId, batchId, expectedVersion, postingIds,
+      );
+    },
+    releaseReimbursementBatchWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      batchId: number,
+      expectedVersion: number,
+      reason: string,
+    ) {
+      return releaseReimbursementBatchWithin(
+        asDomainDb(db),
+        scope,
+        actorUserId,
+        batchId,
+        expectedVersion,
+        reason,
+        (value) => sha256Hex(JSON.stringify(value)),
+        new Date(),
       );
     },
     readGovernedLeaveWithin(

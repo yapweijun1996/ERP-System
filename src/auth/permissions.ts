@@ -51,6 +51,8 @@ export const PERMISSIONS = {
   expensesAdvanceManage: 'expenses.advance.manage',
   expensesPayoutVerify: 'expenses.payout.verify',
   expensesPayoutReveal: 'expenses.payout.reveal',
+  expensesPaymentBatchPrepare: 'expenses.payment.prepare',
+  expensesPaymentBatchRelease: 'expenses.payment.release',
   employeeTeamRead: 'employee.team.read',
   projectRead: 'project.read',
   projectWrite: 'project.write',

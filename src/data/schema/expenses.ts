@@ -1136,3 +1136,141 @@ export const employeePayoutProfileEvent = pgTable('employee_payout_profile_event
   check('ck_employee_payout_profile_event_reason',
     sql`${t.reason} is null or char_length(${t.reason}) between 3 and 500`),
 ]);
+
+/** Maker-authored reimbursement batch. A checker release freezes the membership,
+ * encrypted payout destinations and release facts without exposing bank plaintext. */
+export const reimbursementPaymentBatch = pgTable('reimbursement_payment_batch', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  batchKey: text('batch_key').notNull(),
+  batchNo: text('batch_no').notNull(),
+  currency: text('currency').notNull().references(() => currency.code),
+  sourceBankAccountId: bigint('source_bank_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  itemCount: integer('item_count').notNull().default(0),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  preparedByUserId: bigint('prepared_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  preparedAt: timestamp('prepared_at', { withTimezone: true }).notNull().defaultNow(),
+  releasedByUserId: bigint('released_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  releasedAt: timestamp('released_at', { withTimezone: true }),
+  releaseReason: text('release_reason'),
+  releaseFactsSha256: text('release_facts_sha256'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_reimbursement_payment_batch_key')
+    .on(t.masterFn, t.companyFn, t.batchKey),
+  uniqueIndex('uq_reimbursement_payment_batch_no')
+    .on(t.masterFn, t.companyFn, t.batchNo),
+  index('idx_reimbursement_payment_batch_status')
+    .on(t.masterFn, t.companyFn, t.status, t.preparedAt, t.id),
+  check('ck_reimbursement_payment_batch_key',
+    sql`${t.batchKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_reimbursement_payment_batch_no',
+    sql`char_length(${t.batchNo}) between 3 and 80`),
+  check('ck_reimbursement_payment_batch_currency',
+    sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_reimbursement_payment_batch_status',
+    sql`${t.status} in ('draft','released')`),
+  check('ck_reimbursement_payment_batch_version', sql`${t.version} > 0`),
+  check('ck_reimbursement_payment_batch_totals',
+    sql`${t.itemCount} >= 0 and ${t.totalAmount} >= 0`),
+  check('ck_reimbursement_payment_batch_release',
+    sql`(${t.status} = 'draft'
+      and ${t.releasedByUserId} is null
+      and ${t.releasedAt} is null
+      and ${t.releaseReason} is null
+      and ${t.releaseFactsSha256} is null)
+    or (${t.status} = 'released'
+      and ${t.itemCount} > 0
+      and ${t.totalAmount} > 0
+      and ${t.releasedByUserId} is not null
+      and ${t.releasedByUserId} <> ${t.preparedByUserId}
+      and ${t.releasedAt} is not null
+      and char_length(${t.releaseReason}) between 3 and 500
+      and char_length(${t.releaseFactsSha256}) = 64
+      and ${t.releaseFactsSha256} ~ '^[0-9a-f]{64}$')`),
+]);
+
+/** Draft-selectable posted employee payable; encrypted destination is copied only
+ * at checker release and ordinary projections must omit payoutEnvelopeSnapshot. */
+export const reimbursementPaymentBatchLine = pgTable('reimbursement_payment_batch_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  batchId: bigint('batch_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementPaymentBatch.id),
+  lineNo: integer('line_no').notNull(),
+  expensePostingId: bigint('expense_posting_id', { mode: 'number' }).notNull()
+    .references(() => expensePosting.id),
+  claimId: bigint('claim_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaim.id),
+  claimLineId: bigint('claim_line_id', { mode: 'number' }).notNull()
+    .references(() => expenseClaimLine.id),
+  ownerUserId: bigint('owner_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  employeeId: bigint('employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  payoutProfileId: bigint('payout_profile_id', { mode: 'number' }).notNull()
+    .references(() => employeePayoutProfile.id),
+  payoutProfileVersion: integer('payout_profile_version').notNull(),
+  currency: text('currency').notNull().references(() => currency.code),
+  amount: numeric('amount', { precision: 18, scale: 2 }).notNull(),
+  payableAccountId: bigint('payable_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  claimNo: text('claim_no').notNull(),
+  accountHolderMasked: text('account_holder_masked').notNull(),
+  accountNumberMasked: text('account_number_masked').notNull(),
+  bankName: text('bank_name').notNull(),
+  payoutEnvelopeSnapshot: jsonb('payout_envelope_snapshot'),
+  postingFactsSha256: text('posting_facts_sha256').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_reimbursement_payment_batch_line_no')
+    .on(t.masterFn, t.companyFn, t.batchId, t.lineNo),
+  uniqueIndex('uq_reimbursement_payment_batch_posting')
+    .on(t.masterFn, t.companyFn, t.expensePostingId),
+  index('idx_reimbursement_payment_batch_line_employee')
+    .on(t.masterFn, t.companyFn, t.employeeId, t.batchId, t.id),
+  check('ck_reimbursement_payment_batch_line_no', sql`${t.lineNo} > 0`),
+  check('ck_reimbursement_payment_batch_line_profile_version',
+    sql`${t.payoutProfileVersion} > 0`),
+  check('ck_reimbursement_payment_batch_line_currency',
+    sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_reimbursement_payment_batch_line_amount', sql`${t.amount} > 0`),
+  check('ck_reimbursement_payment_batch_line_masks',
+    sql`char_length(${t.accountHolderMasked}) between 2 and 160
+      and char_length(${t.accountNumberMasked}) between 4 and 40
+      and char_length(${t.bankName}) between 2 and 120`),
+  check('ck_reimbursement_payment_batch_line_hash',
+    sql`char_length(${t.postingFactsSha256}) = 64
+      and ${t.postingFactsSha256} ~ '^[0-9a-f]{64}$'`),
+]);
+
+/** Append-only maker/checker lifecycle proof; never stores account plaintext. */
+export const reimbursementPaymentBatchEvent = pgTable('reimbursement_payment_batch_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  batchId: bigint('batch_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementPaymentBatch.id),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  eventType: text('event_type').notNull(),
+  batchVersion: integer('batch_version').notNull(),
+  reason: text('reason'),
+  detail: jsonb('detail').notNull().default({}),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_reimbursement_payment_batch_event')
+    .on(t.masterFn, t.companyFn, t.batchId, t.id),
+  index('idx_reimbursement_payment_batch_event_actor')
+    .on(t.masterFn, t.companyFn, t.actorUserId, t.occurredAt, t.id),
+  check('ck_reimbursement_payment_batch_event_type',
+    sql`${t.eventType} in ('created','membership_replaced','released')`),
+  check('ck_reimbursement_payment_batch_event_version',
+    sql`${t.batchVersion} > 0`),
+  check('ck_reimbursement_payment_batch_event_reason',
+    sql`${t.reason} is null or char_length(${t.reason}) between 3 and 500`),
+]);
