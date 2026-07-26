@@ -1389,9 +1389,10 @@ delivered maker/checker reimbursement batches with immutable release snapshots.
 TASK-132 delivered encrypted versioned bank artifacts, access audit, partial bank
 outcomes, failed-line retry and successful-line-only settlement. TASK-133 delivered
 immutable filtered tax snapshots and retry-safe reconciled PDF/XLSX/CSV/ZIP/manifest
-artifact sets with sensitive access audit. TASK-134 and TASK-135 remain planning records
-and must not be counted as implemented tables, permissions, commands or Canonical
-workflows until their individual gates pass.
+artifact sets with sensitive access audit. TASK-134 delivered immutable sealed-pack
+version chains, correction difference manifests, effective-dated SG/MY/company
+retention and chain-scoped append-only legal holds. TASK-135 remains a planning record
+and must not be counted as a complete end-to-end release proof until its gates pass.
 
 The programme is intentionally ordered:
 
@@ -1427,9 +1428,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 132 tasks, including TASK-133
+- Done: 133 tasks, including TASK-134
 - Blocked: TASK-017 (1)
-- Todo: 2 planned tasks (TASK-134–135) across EPIC-056. These extend the product
+- Todo: 1 planned task (TASK-135) across EPIC-056. It extends the product
   beyond the current 122 Canonical / 0 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future

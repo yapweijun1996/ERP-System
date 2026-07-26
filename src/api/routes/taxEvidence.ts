@@ -10,6 +10,12 @@ import {
   TaxEvidenceError,
   type TaxEvidenceAction,
 } from '../../modules/expenses/taxEvidence';
+import {
+  configureTaxEvidenceRetentionPolicyWithin,
+  readTaxEvidencePackWithin,
+  recordTaxEvidencePackLegalHoldWithin,
+  sealTaxEvidencePackWithin,
+} from '../../modules/expenses/taxEvidenceGovernance';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import {
@@ -278,6 +284,237 @@ export function createTaxEvidenceRouter(db: DB): Router {
       res.setHeader('Content-Length', String(data.artifact.sizeBytes));
       res.setHeader('X-Checksum-SHA256', data.artifact.sha256);
       res.send(data.content);
+    } catch (error) {
+      handle(res, error);
+    }
+  });
+
+  router.post('/retention-policies', async (req, res) => {
+    const session = await requirePermission(
+      req,
+      res,
+      PERMISSIONS.expensesTaxEvidenceGovernance,
+    );
+    if (!session) return;
+    const key = idempotencyKey(req, res);
+    if (!key) return;
+    const payload = {
+      policyKey: String(req.body?.policyKey ?? ''),
+      effectiveFrom: String(req.body?.effectiveFrom ?? ''),
+      companyRetentionYears: Number(req.body?.companyRetentionYears),
+    };
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const begun = await beginIdempotentRequest(
+      db,
+      { ...scope, actorUserId: session.userId },
+      key,
+      'expenses.tax-evidence.retention-policy.configure',
+      payload,
+    );
+    if (begun.kind === 'replay') {
+      res.setHeader('Idempotency-Replayed', 'true');
+      res.status(begun.status).json(begun.body);
+      return;
+    }
+    if (begun.kind === 'conflict') {
+      apiError(res, 409, 'idempotency_key_reused', 'This Idempotency-Key cannot be reused.');
+      return;
+    }
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const result = await configureTaxEvidenceRetentionPolicyWithin(
+          tx,
+          scope,
+          session.userId,
+          payload,
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'tax_evidence_retention_policy',
+          entityId: result.policy.id,
+          action: result.replayed ? 'configure_replay' : 'configured',
+          after: {
+            versionNo: result.policy.versionNo,
+            countryCode: result.policy.countryCode,
+            statutoryMinimumYears: result.policy.statutoryMinimumYears,
+            companyRetentionYears: result.policy.companyRetentionYears,
+            effectiveFrom: result.policy.effectiveFrom,
+          },
+        });
+        return result;
+      });
+      const response = { data, meta: { immutable: true, effectiveDated: true } };
+      await completeIdempotentRequest(db, begun.recordId, data.replayed ? 200 : 201, response);
+      res.status(data.replayed ? 200 : 201).json(response);
+    } catch (error) {
+      await abandonIdempotentRequest(db, begun.recordId);
+      handle(res, error);
+    }
+  });
+
+  router.post('/packs/seal', async (req, res) => {
+    const session = await requirePermission(
+      req,
+      res,
+      PERMISSIONS.expensesTaxEvidenceGovernance,
+    );
+    if (!session) return;
+    const key = idempotencyKey(req, res);
+    if (!key) return;
+    const payload = {
+      packKey: String(req.body?.packKey ?? ''),
+      reportJobId: Number(req.body?.reportJobId),
+      supersedesPackId: req.body?.supersedesPackId == null
+        ? undefined
+        : Number(req.body.supersedesPackId),
+      correctionReason: req.body?.correctionReason == null
+        ? undefined
+        : String(req.body.correctionReason),
+    };
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const begun = await beginIdempotentRequest(
+      db,
+      { ...scope, actorUserId: session.userId },
+      key,
+      'expenses.tax-evidence.pack.seal',
+      payload,
+    );
+    if (begun.kind === 'replay') {
+      res.setHeader('Idempotency-Replayed', 'true');
+      res.status(begun.status).json(begun.body);
+      return;
+    }
+    if (begun.kind === 'conflict') {
+      apiError(res, 409, 'idempotency_key_reused', 'This Idempotency-Key cannot be reused.');
+      return;
+    }
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const result = await sealTaxEvidencePackWithin(
+          tx,
+          scope,
+          session.userId,
+          payload,
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'tax_evidence_pack',
+          entityId: result.pack.id,
+          action: result.replayed ? 'seal_replay' : 'sealed',
+          after: {
+            packKey: result.pack.packKey,
+            versionNo: result.pack.versionNo,
+            supersedesPackId: result.pack.supersedesPackId,
+            packSha256: result.pack.packSha256,
+            retentionUntil: result.pack.retentionUntil,
+          },
+        });
+        return result;
+      });
+      const response = {
+        data,
+        meta: { immutable: true, corrections: 'linked_versions' },
+      };
+      await completeIdempotentRequest(db, begun.recordId, data.replayed ? 200 : 201, response);
+      res.status(data.replayed ? 200 : 201).json(response);
+    } catch (error) {
+      await abandonIdempotentRequest(db, begun.recordId);
+      handle(res, error);
+    }
+  });
+
+  router.post('/packs/:packId/legal-holds', async (req, res) => {
+    const session = await requirePermission(
+      req,
+      res,
+      PERMISSIONS.expensesTaxEvidenceGovernance,
+    );
+    if (!session) return;
+    const packId = positiveId(req.params.packId);
+    if (!packId) {
+      apiError(res, 400, 'invalid_id', 'packId must be a positive integer.');
+      return;
+    }
+    const key = idempotencyKey(req, res);
+    if (!key) return;
+    const payload = {
+      eventKey: String(req.body?.eventKey ?? ''),
+      action: String(req.body?.action ?? '') as 'placed' | 'released',
+      reason: String(req.body?.reason ?? ''),
+    };
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const begun = await beginIdempotentRequest(
+      db,
+      { ...scope, actorUserId: session.userId },
+      key,
+      'expenses.tax-evidence.pack.legal-hold',
+      { packId, ...payload },
+    );
+    if (begun.kind === 'replay') {
+      res.setHeader('Idempotency-Replayed', 'true');
+      res.status(begun.status).json(begun.body);
+      return;
+    }
+    if (begun.kind === 'conflict') {
+      apiError(res, 409, 'idempotency_key_reused', 'This Idempotency-Key cannot be reused.');
+      return;
+    }
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const result = await recordTaxEvidencePackLegalHoldWithin(
+          tx,
+          scope,
+          session.userId,
+          packId,
+          payload,
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'tax_evidence_pack',
+          entityId: packId,
+          action: result.replayed
+            ? `legal_hold_${payload.action}_replay`
+            : `legal_hold_${payload.action}`,
+          after: {
+            eventKey: result.event.eventKey,
+            reason: result.event.reason,
+          },
+        });
+        return result;
+      });
+      const response = { data, meta: { appendOnly: true, chainScope: true } };
+      await completeIdempotentRequest(db, begun.recordId, data.replayed ? 200 : 201, response);
+      res.status(data.replayed ? 200 : 201).json(response);
+    } catch (error) {
+      await abandonIdempotentRequest(db, begun.recordId);
+      handle(res, error);
+    }
+  });
+
+  router.get('/packs/:packId', async (req, res) => {
+    const session = await requirePermission(
+      req,
+      res,
+      PERMISSIONS.expensesTaxEvidenceAccess,
+    );
+    if (!session) return;
+    const packId = positiveId(req.params.packId);
+    if (!packId) {
+      apiError(res, 400, 'invalid_id', 'packId must be a positive integer.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        readTaxEvidencePackWithin(tx, scope, packId));
+      res.setHeader('Cache-Control', 'no-store, private');
+      res.json({ data, meta: { sealed: true, artifactContent: 'omitted' } });
     } catch (error) {
       handle(res, error);
     }

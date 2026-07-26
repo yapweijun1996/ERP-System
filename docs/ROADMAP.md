@@ -887,8 +887,10 @@ domain/API/browser and current release gates.
 2. **Immutable tax evidence packages** (TASK-133 done 2026-07-26) now filter posted
    evidence by period/category/project/tax/completeness and atomically generate one
    snapshot register, merged PDF, XLSX/CSV, original ZIP and SHA-256 manifest through
-   retry-safe audited jobs. TASK-134 finalises packages and adds superseding
-   correction packs, difference manifests, retention and legal hold.
+   retry-safe audited jobs. TASK-134 (done 2026-07-26) seals immutable package
+   versions, requires linear superseding corrections with SHA-256 difference
+   manifests, snapshots effective country/company retention and applies
+   chain-scoped append-only legal holds.
 3. **Complete release proof** (TASK-135) validates the full identity/leave/payroll and
    receipt/expense/payment/tax chains without adding direct bank API or direct
    IRAS/LHDN filing.

@@ -79,6 +79,12 @@ import {
   processTaxEvidenceJobBatch,
   readTaxEvidenceJobWithin,
 } from '../modules/expenses/taxEvidence';
+import {
+  assessTaxEvidencePackPurgeWithin,
+  configureTaxEvidenceRetentionPolicyWithin,
+  recordTaxEvidencePackLegalHoldWithin,
+  sealTaxEvidencePackWithin,
+} from '../modules/expenses/taxEvidenceGovernance';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -700,9 +706,61 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         },
       ));
     expect(pgTaxDownload.artifact.sha256).toBe(pgTaxManifest.sha256);
+    const pgTaxRetention = await withTenantTransaction(db, expenseScope, (tx) =>
+      configureTaxEvidenceRetentionPolicyWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        {
+          policyKey: 'pg-tax-retention-0001',
+          effectiveFrom: '2026-01-01',
+          companyRetentionYears: 8,
+        },
+      ));
+    expect(pgTaxRetention.policy).toMatchObject({
+      countryCode: 'SG',
+      statutoryMinimumYears: 5,
+      companyRetentionYears: 8,
+    });
+    const pgTaxPack = await withTenantTransaction(db, expenseScope, (tx) =>
+      sealTaxEvidencePackWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        {
+          packKey: 'pg-tax-pack-july-2026',
+          reportJobId: pgTaxJob.job.id,
+        },
+      ));
+    await withTenantTransaction(db, expenseScope, (tx) =>
+      recordTaxEvidencePackLegalHoldWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        pgTaxPack.pack.id,
+        {
+          eventKey: 'pg-tax-pack-hold-0001',
+          action: 'placed',
+          reason: 'PostgreSQL chain-scoped legal hold proof.',
+        },
+      ));
+    const pgTaxPurge = await withTenantTransaction(db, expenseScope, (tx) =>
+      assessTaxEvidencePackPurgeWithin(
+        tx,
+        expenseScope,
+        pgTaxPack.pack.id,
+        new Date('2040-01-01T00:00:00.000Z'),
+      ));
+    expect(pgTaxPurge).toMatchObject({
+      eligible: false,
+      legalHoldActive: true,
+    });
     expect(await db.select().from(schema.taxEvidenceSnapshot)).toHaveLength(0);
     expect(await db.select().from(schema.taxEvidenceArtifact)).toHaveLength(0);
     expect(await db.select().from(schema.taxEvidenceAccessEvent)).toHaveLength(0);
+    expect(await db.select().from(schema.taxEvidencePack)).toHaveLength(0);
+    expect(await db.select().from(schema.taxEvidencePackLegalHoldEvent)).toHaveLength(0);
+    expect(await db.select().from(schema.taxEvidenceRetentionPolicy)).toHaveLength(0);
     expect(await withTenantTransaction(
       db,
       expenseScope,
@@ -712,6 +770,21 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       db,
       expenseScope,
       (tx) => tx.select().from(schema.taxEvidenceAccessEvent),
+    )).toHaveLength(1);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.taxEvidencePack),
+    )).toHaveLength(1);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.taxEvidencePackLegalHoldEvent),
+    )).toHaveLength(1);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.taxEvidenceRetentionPolicy),
     )).toHaveLength(1);
     const [bankAccount] = await withTenantTransaction(
       db,

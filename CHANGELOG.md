@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-26 — TASK-134 tax pack finalisation and retention)
+- Migration 0072 adds effective-dated immutable tax retention policy versions,
+  immutable sealed package envelopes, linear supersession links, SHA-256 difference
+  manifests and append-only legal-hold events.
+- Sealing verifies all six report artifacts against stored hashes, freezes the exact
+  snapshot and artifact-set identities, and rejects overwrite, branch, stale-parent
+  and no-difference corrections. Late or corrected evidence becomes a linked next
+  version with added/removed/changed line, document and total differences.
+- Singapore enforces at least five years and Malaysia at least seven years; a longer
+  company policy is snapshotted into the pack deadline. Any active legal hold on one
+  version blocks purge eligibility across its entire correction chain.
+- Domain/API adapters, immutable database triggers and PostgreSQL tenant RLS cover
+  policies, packs and holds; PWA advances to v134 and PGlite schema to v72.
+
 ### Added (2026-07-26 — TASK-133 tax evidence center)
 - Migration 0071 adds immutable filtered tax source snapshots and lines, frozen
   original-document versions, leased retryable report jobs, multi-artifact output

@@ -337,6 +337,30 @@
     taxEvidenceJob:function(jobId){
       return apiRequest('tax-evidence/jobs/'+encodeURIComponent(jobId));
     },
+    configureTaxEvidenceRetention:function(payload,idempotencyKey){
+      return apiRequest('tax-evidence/retention-policies',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    sealTaxEvidencePack:function(payload,idempotencyKey){
+      return apiRequest('tax-evidence/packs/seal',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    taxEvidencePack:function(packId){
+      return apiRequest('tax-evidence/packs/'+encodeURIComponent(packId));
+    },
+    taxEvidencePackLegalHold:function(packId,payload,idempotencyKey){
+      return apiRequest('tax-evidence/packs/'+encodeURIComponent(packId)+'/legal-holds',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
     accessTaxEvidenceArtifact:async function(artifactId,payload){
       payload=payload||{};
       var response=await fetch(API_BASE+'/tax-evidence/artifacts/'+

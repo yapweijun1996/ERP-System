@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 71;
+  var DEMO_SCHEMA_VERSION = 72;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -3236,6 +3236,22 @@
     taxEvidenceJob:async function(){
       throw new Error(
         'Tax evidence report jobs are available through the production API.');
+    },
+    configureTaxEvidenceRetention:async function(){
+      throw new Error(
+        'Tax evidence retention governance is available through the production API.');
+    },
+    sealTaxEvidencePack:async function(){
+      throw new Error(
+        'Tax evidence pack sealing is available through the production API.');
+    },
+    taxEvidencePack:async function(){
+      throw new Error(
+        'Tax evidence sealed packs are available through the production API.');
+    },
+    taxEvidencePackLegalHold:async function(){
+      throw new Error(
+        'Tax evidence legal holds are available through the production API.');
     },
     accessTaxEvidenceArtifact:async function(){
       throw new Error(

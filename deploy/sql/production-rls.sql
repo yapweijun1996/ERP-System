@@ -84,6 +84,8 @@ DECLARE
     'tax_evidence_snapshot', 'tax_evidence_snapshot_line',
     'tax_evidence_snapshot_document', 'tax_evidence_report_job',
     'tax_evidence_artifact', 'tax_evidence_access_event',
+    'tax_evidence_retention_policy', 'tax_evidence_pack',
+    'tax_evidence_pack_legal_hold_event',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',

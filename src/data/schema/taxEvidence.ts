@@ -3,6 +3,7 @@ import {
   bigint,
   check,
   customType,
+  date,
   index,
   integer,
   jsonb,
@@ -12,6 +13,7 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { tenant, timestamps } from './_shared';
 import { appUser } from './tenancy';
 import { documentVersion } from './documents';
@@ -211,4 +213,121 @@ export const taxEvidenceAccessEvent = pgTable('tax_evidence_access_event', {
   check('ck_tax_evidence_access_hash',
     sql`char_length(${t.artifactSha256}) = 64
       and ${t.artifactSha256} ~ '^[0-9a-f]{64}$'`),
+]);
+
+/** Immutable, effective-dated company retention policy used when a pack is sealed. */
+export const taxEvidenceRetentionPolicy = pgTable('tax_evidence_retention_policy', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  policyKey: text('policy_key').notNull(),
+  versionNo: integer('version_no').notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  countryCode: text('country_code').notNull(),
+  statutoryMinimumYears: integer('statutory_minimum_years').notNull(),
+  companyRetentionYears: integer('company_retention_years').notNull(),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_tax_evidence_retention_policy_key')
+    .on(t.masterFn, t.companyFn, t.policyKey),
+  uniqueIndex('uq_tax_evidence_retention_policy_version')
+    .on(t.masterFn, t.companyFn, t.versionNo),
+  index('idx_tax_evidence_retention_policy_effective')
+    .on(t.masterFn, t.companyFn, t.effectiveFrom, t.versionNo),
+  check('ck_tax_evidence_retention_policy_key',
+    sql`${t.policyKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_tax_evidence_retention_policy_version', sql`${t.versionNo} > 0`),
+  check('ck_tax_evidence_retention_policy_country',
+    sql`${t.countryCode} ~ '^[A-Z]{2}$'`),
+  check('ck_tax_evidence_retention_policy_years',
+    sql`${t.statutoryMinimumYears} between 1 and 20
+      and ${t.companyRetentionYears} between ${t.statutoryMinimumYears} and 50`),
+]);
+
+/**
+ * A sealed package is an immutable envelope over one completed artifact set.
+ * Corrections form a single, non-branching supersession chain.
+ */
+export const taxEvidencePack = pgTable('tax_evidence_pack', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  packKey: text('pack_key').notNull(),
+  versionNo: integer('version_no').notNull(),
+  snapshotId: bigint('snapshot_id', { mode: 'number' }).notNull()
+    .references(() => taxEvidenceSnapshot.id),
+  reportJobId: bigint('report_job_id', { mode: 'number' }).notNull()
+    .references(() => taxEvidenceReportJob.id),
+  supersedesPackId: bigint('supersedes_pack_id', { mode: 'number' })
+    .references((): AnyPgColumn => taxEvidencePack.id),
+  sourceSha256: text('source_sha256').notNull(),
+  artifactSetSha256: text('artifact_set_sha256').notNull(),
+  differenceManifest: jsonb('difference_manifest').notNull(),
+  differenceManifestSha256: text('difference_manifest_sha256').notNull(),
+  packSha256: text('pack_sha256').notNull(),
+  countryCode: text('country_code').notNull(),
+  statutoryMinimumYears: integer('statutory_minimum_years').notNull(),
+  companyRetentionYears: integer('company_retention_years').notNull(),
+  retentionUntil: timestamp('retention_until', { withTimezone: true }).notNull(),
+  correctionReason: text('correction_reason'),
+  sealedByUserId: bigint('sealed_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  sealedAt: timestamp('sealed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_tax_evidence_pack_version')
+    .on(t.masterFn, t.companyFn, t.packKey, t.versionNo),
+  uniqueIndex('uq_tax_evidence_pack_job')
+    .on(t.masterFn, t.companyFn, t.reportJobId),
+  uniqueIndex('uq_tax_evidence_pack_supersedes')
+    .on(t.masterFn, t.companyFn, t.supersedesPackId),
+  index('idx_tax_evidence_pack_chain')
+    .on(t.masterFn, t.companyFn, t.packKey, t.versionNo, t.id),
+  index('idx_tax_evidence_pack_retention')
+    .on(t.masterFn, t.companyFn, t.retentionUntil, t.id),
+  check('ck_tax_evidence_pack_key',
+    sql`${t.packKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_tax_evidence_pack_version', sql`${t.versionNo} > 0`),
+  check('ck_tax_evidence_pack_hashes',
+    sql`char_length(${t.sourceSha256}) = 64
+      and ${t.sourceSha256} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.artifactSetSha256}) = 64
+      and ${t.artifactSetSha256} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.differenceManifestSha256}) = 64
+      and ${t.differenceManifestSha256} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.packSha256}) = 64
+      and ${t.packSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_tax_evidence_pack_country', sql`${t.countryCode} ~ '^[A-Z]{2}$'`),
+  check('ck_tax_evidence_pack_years',
+    sql`${t.statutoryMinimumYears} between 1 and 20
+      and ${t.companyRetentionYears} between ${t.statutoryMinimumYears} and 50`),
+  check('ck_tax_evidence_pack_correction',
+    sql`(${t.versionNo} = 1 and ${t.supersedesPackId} is null
+        and ${t.correctionReason} is null)
+      or (${t.versionNo} > 1 and ${t.supersedesPackId} is not null
+        and char_length(${t.correctionReason}) between 3 and 1000)`),
+]);
+
+/** Append-only legal-hold state transitions; the latest event is authoritative. */
+export const taxEvidencePackLegalHoldEvent = pgTable('tax_evidence_pack_legal_hold_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  packId: bigint('pack_id', { mode: 'number' }).notNull()
+    .references(() => taxEvidencePack.id),
+  eventKey: text('event_key').notNull(),
+  action: text('action').notNull(),
+  reason: text('reason').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_tax_evidence_pack_hold_key')
+    .on(t.masterFn, t.companyFn, t.packId, t.eventKey),
+  index('idx_tax_evidence_pack_hold_state')
+    .on(t.masterFn, t.companyFn, t.packId, t.occurredAt, t.id),
+  check('ck_tax_evidence_pack_hold_key',
+    sql`${t.eventKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_tax_evidence_pack_hold_action',
+    sql`${t.action} in ('placed','released')`),
+  check('ck_tax_evidence_pack_hold_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
 ]);

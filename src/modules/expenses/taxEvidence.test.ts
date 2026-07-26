@@ -14,7 +14,10 @@ import {
   receiptInboxItem,
   taxEvidenceAccessEvent,
   taxEvidenceArtifact,
+  taxEvidencePack,
+  taxEvidencePackLegalHoldEvent,
   taxEvidenceReportJob,
+  taxEvidenceRetentionPolicy,
   taxEvidenceSnapshot,
   taxEvidenceSnapshotLine,
 } from '../../data/schema';
@@ -43,6 +46,13 @@ import {
   processTaxEvidenceJobBatch,
   readTaxEvidenceJobWithin,
 } from './taxEvidence';
+import {
+  assessTaxEvidencePackPurgeWithin,
+  configureTaxEvidenceRetentionPolicyWithin,
+  readTaxEvidencePackWithin,
+  recordTaxEvidencePackLegalHoldWithin,
+  sealTaxEvidencePackWithin,
+} from './taxEvidenceGovernance';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
 
@@ -491,5 +501,305 @@ describe('tax evidence snapshots and artifact jobs', () => {
         });
       }
     }
+  });
+
+  it('seals a linear correction chain with statutory retention and legal hold', async () => {
+    const context = await setup();
+    const retention = await withTenantTransaction(context.db, scope, (tx) =>
+      configureTaxEvidenceRetentionPolicyWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        {
+          policyKey: 'tax-retention-sg-0001',
+          effectiveFrom: '2026-01-01',
+          companyRetentionYears: 8,
+        },
+        new Date('2026-07-26T01:00:00.000Z'),
+      ));
+    expect(retention.policy).toMatchObject({
+      countryCode: 'SG',
+      statutoryMinimumYears: 5,
+      companyRetentionYears: 8,
+      versionNo: 1,
+    });
+    expect((await withTenantTransaction(context.db, scope, (tx) =>
+      configureTaxEvidenceRetentionPolicyWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        {
+          policyKey: 'tax-retention-sg-0001',
+          effectiveFrom: '2026-01-01',
+          companyRetentionYears: 8,
+        },
+      ))).replayed).toBe(true);
+
+    const initialSnapshot = await withTenantTransaction(context.db, scope, (tx) =>
+      createTaxEvidenceSnapshotWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        'tax-pack-seal-snapshot-0001',
+        { startDate: '2026-07-01', endDate: '2026-07-31' },
+      ));
+    const initialJob = await withTenantTransaction(context.db, scope, (tx) =>
+      createTaxEvidenceReportJobWithin(tx, scope, context.admin.userId, {
+        jobKey: 'tax-pack-seal-job-0001',
+        snapshotId: initialSnapshot.snapshot.id,
+      }));
+    expect((await processTaxEvidenceJobBatch(context.db, {
+      workerId: 'tax-pack-seal-worker-1',
+    })).succeeded).toBe(1);
+    const initialPack = await withTenantTransaction(context.db, scope, (tx) =>
+      sealTaxEvidencePackWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        {
+          packKey: 'tax-pack-july-2026',
+          reportJobId: initialJob.job.id,
+        },
+        new Date('2026-07-26T02:00:00.000Z'),
+      ));
+    expect(initialPack.pack).toMatchObject({
+      versionNo: 1,
+      supersedesPackId: null,
+      countryCode: 'SG',
+      statutoryMinimumYears: 5,
+      companyRetentionYears: 8,
+      sourceSha256: initialSnapshot.snapshot.sourceSha256,
+      packSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+      differenceManifestSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+    });
+    expect(initialPack.pack.retentionUntil.toISOString())
+      .toBe('2034-07-31T23:59:59.999Z');
+    const initialDifference = initialPack.pack.differenceManifest as {
+      lines: { added: string[] };
+      totalDifference: { baseGross: string };
+    };
+    expect(initialDifference.lines.added).toHaveLength(2);
+    expect(initialDifference.totalDifference.baseGross).toBe('163.50');
+    expect((await withTenantTransaction(context.db, scope, (tx) =>
+      sealTaxEvidencePackWithin(tx, scope, context.admin.userId, {
+        packKey: 'tax-pack-july-2026',
+        reportJobId: initialJob.job.id,
+      }))).replayed).toBe(true);
+
+    const correctedSnapshot = await withTenantTransaction(context.db, scope, (tx) =>
+      createTaxEvidenceSnapshotWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        'tax-pack-seal-snapshot-0002',
+        {
+          startDate: '2026-07-01',
+          endDate: '2026-07-31',
+          completeness: ['complete'],
+        },
+      ));
+    const correctedJob = await withTenantTransaction(context.db, scope, (tx) =>
+      createTaxEvidenceReportJobWithin(tx, scope, context.admin.userId, {
+        jobKey: 'tax-pack-seal-job-0002',
+        snapshotId: correctedSnapshot.snapshot.id,
+      }));
+    expect((await processTaxEvidenceJobBatch(context.db, {
+      workerId: 'tax-pack-seal-worker-2',
+    })).succeeded).toBe(1);
+    const correctedPack = await withTenantTransaction(context.db, scope, (tx) =>
+      sealTaxEvidencePackWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        {
+          packKey: 'tax-pack-july-2026',
+          reportJobId: correctedJob.job.id,
+          supersedesPackId: initialPack.pack.id,
+          correctionReason: 'Remove the incomplete evidence row after Finance review.',
+        },
+        new Date('2026-07-26T03:00:00.000Z'),
+      ));
+    expect(correctedPack.pack).toMatchObject({
+      versionNo: 2,
+      supersedesPackId: initialPack.pack.id,
+      sourceSha256: correctedSnapshot.snapshot.sourceSha256,
+    });
+    const correctionDifference = correctedPack.pack.differenceManifest as {
+      lines: { removed: string[] };
+      totalDifference: { baseGross: string };
+    };
+    expect(correctionDifference.lines.removed).toHaveLength(1);
+    expect(correctionDifference.totalDifference.baseGross).toBe('-54.50');
+    const chain = await withTenantTransaction(context.db, scope, (tx) =>
+      readTaxEvidencePackWithin(tx, scope, correctedPack.pack.id));
+    expect(chain.versions.map((pack) => pack.versionNo)).toEqual([1, 2]);
+
+    const hold = await withTenantTransaction(context.db, scope, (tx) =>
+      recordTaxEvidencePackLegalHoldWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        initialPack.pack.id,
+        {
+          eventKey: 'tax-pack-hold-placed-0001',
+          action: 'placed',
+          reason: 'Preserve the entire correction chain for an active tax audit.',
+        },
+        new Date('2035-01-01T00:00:00.000Z'),
+      ));
+    expect(hold.replayed).toBe(false);
+    const blocked = await withTenantTransaction(context.db, scope, (tx) =>
+      assessTaxEvidencePackPurgeWithin(
+        tx,
+        scope,
+        correctedPack.pack.id,
+        new Date('2035-01-02T00:00:00.000Z'),
+      ));
+    expect(blocked).toMatchObject({
+      eligible: false,
+      retentionActive: false,
+      legalHoldActive: true,
+      blockingLegalHoldPackId: initialPack.pack.id,
+    });
+    await withTenantTransaction(context.db, scope, (tx) =>
+      recordTaxEvidencePackLegalHoldWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        initialPack.pack.id,
+        {
+          eventKey: 'tax-pack-hold-release-0001',
+          action: 'released',
+          reason: 'Tax authority confirmed the audit has closed.',
+        },
+        new Date('2035-01-03T00:00:00.000Z'),
+      ));
+    expect((await withTenantTransaction(context.db, scope, (tx) =>
+      assessTaxEvidencePackPurgeWithin(
+        tx,
+        scope,
+        correctedPack.pack.id,
+        new Date('2035-01-04T00:00:00.000Z'),
+      ))).eligible).toBe(true);
+
+    const malaysiaScope = { masterFn: 'M1', companyFn: 'C-MY' };
+    await expect(withTenantTransaction(context.db, malaysiaScope, (tx) =>
+      configureTaxEvidenceRetentionPolicyWithin(
+        tx,
+        malaysiaScope,
+        context.admin.userId,
+        {
+          policyKey: 'tax-retention-my-short',
+          effectiveFrom: '2026-01-01',
+          companyRetentionYears: 6,
+        },
+      ))).rejects.toMatchObject({ code: 'tax_evidence_retention_invalid' });
+    const malaysiaPolicy = await withTenantTransaction(context.db, malaysiaScope, (tx) =>
+      configureTaxEvidenceRetentionPolicyWithin(
+        tx,
+        malaysiaScope,
+        context.admin.userId,
+        {
+          policyKey: 'tax-retention-my-0001',
+          effectiveFrom: '2026-01-01',
+          companyRetentionYears: 9,
+        },
+      ));
+    expect(malaysiaPolicy.policy).toMatchObject({
+      countryCode: 'MY',
+      statutoryMinimumYears: 7,
+      companyRetentionYears: 9,
+    });
+
+    let server: Server | undefined;
+    try {
+      server = createApp(context.db).listen(0, '127.0.0.1');
+      await new Promise<void>((resolve) => server!.once('listening', resolve));
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Missing API address');
+      const baseUrl = `http://127.0.0.1:${address.port}`;
+      const login = await fetch(`${baseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          organizationCode: 'ACME',
+          username: 'admin',
+          password: 'demo1234',
+        }),
+      });
+      const session = cookies(login);
+      const commonHeaders = (key: string) => ({
+        cookie: session.header,
+        'x-csrf-token': session.csrf,
+        'content-type': 'application/json',
+        'idempotency-key': key,
+      });
+      const apiPolicy = await fetch(`${baseUrl}/api/tax-evidence/retention-policies`, {
+        method: 'POST',
+        headers: commonHeaders('tax-api-retention-request-0001'),
+        body: JSON.stringify({
+          policyKey: 'tax-retention-sg-api-0002',
+          effectiveFrom: '2027-01-01',
+          companyRetentionYears: 9,
+        }),
+      });
+      expect(apiPolicy.status).toBe(201);
+      const apiSealReplay = await fetch(`${baseUrl}/api/tax-evidence/packs/seal`, {
+        method: 'POST',
+        headers: commonHeaders('tax-api-seal-request-0001'),
+        body: JSON.stringify({
+          packKey: 'tax-pack-july-2026',
+          reportJobId: correctedJob.job.id,
+          supersedesPackId: initialPack.pack.id,
+          correctionReason: 'Remove the incomplete evidence row after Finance review.',
+        }),
+      });
+      expect(apiSealReplay.status).toBe(200);
+      expect((await apiSealReplay.json() as {
+        data: { replayed: boolean };
+      }).data.replayed).toBe(true);
+      const apiHold = await fetch(
+        `${baseUrl}/api/tax-evidence/packs/${correctedPack.pack.id}/legal-holds`,
+        {
+          method: 'POST',
+          headers: commonHeaders('tax-api-hold-request-0001'),
+          body: JSON.stringify({
+            eventKey: 'tax-api-hold-placed-0001',
+            action: 'placed',
+            reason: 'API proof for a chain-scoped legal hold.',
+          }),
+        },
+      );
+      expect(apiHold.status).toBe(201);
+      const apiPack = await fetch(
+        `${baseUrl}/api/tax-evidence/packs/${correctedPack.pack.id}`,
+        { headers: { cookie: session.header } },
+      );
+      expect(apiPack.status).toBe(200);
+      expect(apiPack.headers.get('cache-control')).toContain('no-store');
+      expect((await apiPack.json() as {
+        data: { versions: Array<{ versionNo: number }>; purge: { legalHoldActive: boolean } };
+      }).data).toMatchObject({
+        versions: [{ versionNo: 1 }, { versionNo: 2 }],
+        purge: { legalHoldActive: true },
+      });
+    } finally {
+      if (server) {
+        await new Promise<void>((resolve, reject) => {
+          server!.close((error) => error ? reject(error) : resolve());
+        });
+      }
+    }
+
+    await expect(context.db.update(taxEvidencePack).set({
+      correctionReason: 'Silent replacement attempt',
+    }).where(eq(taxEvidencePack.id, initialPack.pack.id))).rejects.toThrow();
+    await expect(context.db.delete(taxEvidencePackLegalHoldEvent)
+      .where(eq(taxEvidencePackLegalHoldEvent.id, hold.event.id)))
+      .rejects.toThrow();
+    await expect(context.db.update(taxEvidenceRetentionPolicy).set({
+      companyRetentionYears: 5,
+    }).where(eq(taxEvidenceRetentionPolicy.id, retention.policy.id)))
+      .rejects.toThrow();
   });
 });
