@@ -9,6 +9,10 @@ import {
   auditLog,
   employee,
   expensePosting,
+  glEntry,
+  reimbursementBankExport,
+  reimbursementBankExportAccessEvent,
+  reimbursementSettlement,
   reimbursementPaymentBatchEvent,
   reimbursementPaymentBatchLine,
   role,
@@ -333,5 +337,115 @@ describe('reimbursement payment batch API', () => {
     expect(await db.select().from(auditLog).where(
       eq(auditLog.entity, 'reimbursement_payment_batch'),
     )).toHaveLength(2);
+
+    const paymentHeaders = (idempotencyKey: string) => ({
+      cookie: admin.header,
+      'x-csrf-token': admin.csrf,
+      'content-type': 'application/json',
+      'idempotency-key': idempotencyKey,
+    });
+    const configured = await fetch(
+      `${baseUrl}/api/reimbursement-payments/templates/versions`,
+      {
+        method: 'POST',
+        headers: paymentHeaders('payment-template-api-0001'),
+        body: JSON.stringify({
+          templateKey: 'api.generic',
+          versionNo: 1,
+          validFrom: '2026-01-01',
+          name: 'API generic CSV',
+          bankCode: 'GENERIC',
+          fieldOrder: [
+            'claim_no',
+            'account_holder_name',
+            'account_number',
+            'currency',
+            'amount',
+          ],
+        }),
+      },
+    );
+    expect(configured.status).toBe(201);
+    const generated = await fetch(`${baseUrl}/api/reimbursement-payments/exports`, {
+      method: 'POST',
+      headers: paymentHeaders('payment-export-api-request-0001'),
+      body: JSON.stringify({
+        exportKey: 'payment-export-api-0001',
+        batchId: createdBody.data.batch.id,
+        templateKey: 'api.generic',
+        exportDate: '2026-07-22',
+      }),
+    });
+    expect(generated.status).toBe(201);
+    const generatedBody = await generated.json() as {
+      data: { export: { id: number; contentSha256: string } };
+    };
+    expect(JSON.stringify(generatedBody)).not.toContain('123456789012');
+    expect(JSON.stringify(generatedBody)).not.toContain('artifactEnvelope');
+    const [storedExport] = await db.select().from(reimbursementBankExport);
+    expect(JSON.stringify(storedExport.artifactEnvelope)).not.toContain('123456789012');
+
+    const evidence = await fetch(
+      `${baseUrl}/api/reimbursement-payments/evidence`,
+      { headers: { cookie: admin.header } },
+    );
+    expect(evidence.status).toBe(200);
+    const evidenceText = await evidence.text();
+    expect(evidenceText).not.toContain('123456789012');
+    expect(evidenceText).not.toContain('artifactEnvelope');
+
+    const downloaded = await fetch(
+      `${baseUrl}/api/reimbursement-payments/exports/${generatedBody.data.export.id}/actions/download`,
+      {
+        method: 'POST',
+        headers: paymentHeaders('unused-by-download'),
+        body: JSON.stringify({
+          accessKey: 'payment-download-api-0001',
+          purpose: 'Upload the approved reimbursement file to the bank.',
+        }),
+      },
+    );
+    expect(downloaded.status).toBe(200);
+    expect(downloaded.headers.get('cache-control')).toContain('no-store');
+    expect(downloaded.headers.get('x-content-sha256'))
+      .toBe(generatedBody.data.export.contentSha256);
+    expect(await downloaded.text()).toContain('123456789012');
+    expect(await db.select().from(reimbursementBankExportAccessEvent)).toHaveLength(2);
+
+    const resultPayload = {
+      importKey: 'payment-result-api-0001',
+      exportId: generatedBody.data.export.id,
+      bankReference: 'BANK-API-REF-0001',
+      paymentDate: '2026-07-22',
+      results: [{
+        exportLineNo: 1,
+        outcome: 'success',
+        bankLineReference: 'BANK-API-LINE-0001',
+      }],
+    };
+    const imported = await fetch(
+      `${baseUrl}/api/reimbursement-payments/result-imports`,
+      {
+        method: 'POST',
+        headers: paymentHeaders('payment-result-api-request-0001'),
+        body: JSON.stringify(resultPayload),
+      },
+    );
+    expect(imported.status).toBe(201);
+    expect(await db.select().from(reimbursementSettlement)).toHaveLength(1);
+    expect(await db.select().from(glEntry).where(
+      eq(glEntry.journalRef, `REIMB:B${createdBody.data.batch.id}:L1`),
+    )).toHaveLength(2);
+    const importedReplay = await fetch(
+      `${baseUrl}/api/reimbursement-payments/result-imports`,
+      {
+        method: 'POST',
+        headers: paymentHeaders('payment-result-api-request-0001'),
+        body: JSON.stringify(resultPayload),
+      },
+    );
+    expect(importedReplay.status).toBe(201);
+    expect(importedReplay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await db.select().from(reimbursementSettlement)).toHaveLength(1);
   });
 });

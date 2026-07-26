@@ -276,6 +276,50 @@
         body:{expectedVersion:expectedVersion,reason:reason},
       });
     },
+    reimbursementPaymentEvidence:function(){
+      return apiRequest('reimbursement-payments/evidence');
+    },
+    configureReimbursementBankTemplate:function(payload,idempotencyKey){
+      return apiRequest('reimbursement-payments/templates/versions',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    generateReimbursementBankExport:function(payload,idempotencyKey){
+      return apiRequest('reimbursement-payments/exports',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    downloadReimbursementBankExport:async function(exportId,accessKey,purpose){
+      var response=await fetch(API_BASE+'/reimbursement-payments/exports/'+
+        encodeURIComponent(exportId)+'/actions/download',{
+          method:'POST',
+          credentials:'same-origin',
+          headers:{'Content-Type':'application/json','X-CSRF-Token':cookieValue('erp_csrf')},
+          body:JSON.stringify({accessKey:accessKey,purpose:purpose}),
+        });
+      if(!response.ok){
+        var failure=await jsonBody(response);
+        throw new Error(
+          failure&&failure.error&&failure.error.message||
+          'Bank artifact download failed (HTTP '+response.status+').');
+      }
+      return {data:{
+        content:await response.text(),
+        contentSha256:response.headers.get('x-content-sha256'),
+        contentDisposition:response.headers.get('content-disposition'),
+      },meta:{sensitiveAccess:'audited',cacheControl:'no-store'}};
+    },
+    importReimbursementBankResults:function(payload,idempotencyKey){
+      return apiRequest('reimbursement-payments/result-imports',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
     expenseApprovals:function(){ return apiRequest('expense-approvals'); },
     expenseApprovalAction:function(id,decision,reason,idempotencyKey){
       return apiRequest('expense-approvals/'+encodeURIComponent(id)+'/actions/decide',{

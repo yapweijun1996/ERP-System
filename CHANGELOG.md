@@ -5,6 +5,22 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-26 — TASK-132 reimbursement bank outcomes)
+- Migration 0070 adds effective-dated confirmed bank CSV templates, encrypted and
+  checksummed export versions, export-line mappings, append-only access evidence,
+  bank result imports, per-line outcomes and immutable reimbursement settlements.
+- Released maker/checker batches now generate encrypted-at-rest artifacts from the
+  immutable payout snapshot. Plaintext is exposed only by the purpose-bound,
+  permission-gated, `no-store` download action and every generation/download is
+  access-audited.
+- Mixed outcomes post Dr Employee Payable / Cr Bank only for successful lines.
+  Failed lines remain independently retryable from the latest attempt; unique
+  settlement and journal identities prevent duplicate successful payments.
+- Domain, HTTP, Demo/API adapters, PGlite v70 compatibility upgrade and PostgreSQL
+  16 non-superuser RLS share the same commands. The focused/API/PostgreSQL tests,
+  dual typechecks/builds, 217-table drift and live in-app browser v5→v70 upgrade
+  proof pass.
+
 ### Added (2026-07-26 — TASK-119 fail-closed document processing)
 - Migration 0058 adds company processing policy, unique leased scan jobs and
   versioned extraction output, with existing-document backfill and retry-stable

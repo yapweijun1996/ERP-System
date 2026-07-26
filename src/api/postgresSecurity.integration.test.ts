@@ -66,6 +66,12 @@ import {
   createReimbursementBatchWithin,
   releaseReimbursementBatchWithin,
 } from '../modules/expenses/reimbursementBatches';
+import {
+  accessReimbursementBankExportWithin,
+  configureReimbursementBankTemplateWithin,
+  generateReimbursementBankExportWithin,
+  importReimbursementBankResultsWithin,
+} from '../modules/expenses/reimbursementPayments';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -561,6 +567,87 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       expenseScope,
       (tx) => tx.select().from(schema.reimbursementPaymentBatchEvent),
     )).toHaveLength(2);
+    const paymentCrypto = {
+      encrypt: (plaintext: string) => encryptToken(plaintext, key),
+      decrypt: (value: Parameters<typeof decryptToken>[0]) => decryptToken(value, key),
+      hash: (value: string) => createHash('sha256').update(value).digest('hex'),
+    };
+    await withTenantTransaction(db, expenseScope, (tx) =>
+      configureReimbursementBankTemplateWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        {
+          templateKey: 'pg.generic',
+          versionNo: 1,
+          validFrom: '2026-01-01',
+          name: 'PostgreSQL bank CSV',
+          bankCode: 'GENERIC',
+          fieldOrder: [
+            'claim_no',
+            'account_holder_name',
+            'account_number',
+            'currency',
+            'amount',
+          ],
+        },
+      ));
+    const pgBankExport = await withTenantTransaction(db, expenseScope, (tx) =>
+      generateReimbursementBankExportWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        {
+          exportKey: 'pg-bank-export-0001',
+          batchId: releasedPayment.batch.id,
+          templateKey: 'pg.generic',
+          exportDate: '2026-07-26',
+        },
+        paymentCrypto,
+      ));
+    const pgBankFile = await withTenantTransaction(db, expenseScope, (tx) =>
+      accessReimbursementBankExportWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        pgBankExport.export.id,
+        'pg-bank-download-0001',
+        'Submit PostgreSQL proof file to bank.',
+        paymentCrypto,
+      ));
+    expect(pgBankFile.content).toContain('123456789012');
+    const pgBankResult = await withTenantTransaction(db, expenseScope, (tx) =>
+      importReimbursementBankResultsWithin(
+        tx,
+        expenseScope,
+        paymentChecker.userId,
+        {
+          importKey: 'pg-bank-result-0001',
+          exportId: pgBankExport.export.id,
+          bankReference: 'PG-BANK-REF-0001',
+          paymentDate: '2026-07-26',
+          results: [{
+            exportLineNo: 1,
+            outcome: 'success',
+            bankLineReference: 'PG-BANK-LINE-0001',
+          }],
+        },
+        paymentCrypto.hash,
+      ));
+    expect(pgBankResult.settlements).toHaveLength(1);
+    expect(await db.select().from(schema.reimbursementBankExport)).toHaveLength(0);
+    expect(await db.select().from(schema.reimbursementBankExportAccessEvent)).toHaveLength(0);
+    expect(await db.select().from(schema.reimbursementSettlement)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.reimbursementBankExportAccessEvent),
+    )).toHaveLength(2);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.reimbursementSettlement),
+    )).toHaveLength(1);
     const [bankAccount] = await withTenantTransaction(
       db,
       expenseScope,

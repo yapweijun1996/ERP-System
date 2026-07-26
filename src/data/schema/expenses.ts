@@ -1274,3 +1274,253 @@ export const reimbursementPaymentBatchEvent = pgTable('reimbursement_payment_bat
   check('ck_reimbursement_payment_batch_event_reason',
     sql`${t.reason} is null or char_length(${t.reason}) between 3 and 500`),
 ]);
+
+/** Confirmed effective-dated CSV layout used to render a released batch. */
+export const reimbursementBankTemplateVersion = pgTable(
+  'reimbursement_bank_template_version',
+  {
+    id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+    ...tenant,
+    templateKey: text('template_key').notNull(),
+    versionNo: integer('version_no').notNull(),
+    validFrom: date('valid_from').notNull(),
+    validTo: date('valid_to'),
+    name: text('name').notNull(),
+    bankCode: text('bank_code').notNull(),
+    fileFormat: text('file_format').notNull().default('csv'),
+    delimiter: text('delimiter').notNull().default(','),
+    includeHeader: boolean('include_header').notNull().default(true),
+    fieldOrder: jsonb('field_order').notNull(),
+    status: text('status').notNull().default('confirmed'),
+    confirmedByUserId: bigint('confirmed_by_user_id', { mode: 'number' }).notNull()
+      .references(() => appUser.userId),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }).notNull().defaultNow(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('uq_reimbursement_bank_template_version')
+      .on(t.masterFn, t.companyFn, t.templateKey, t.versionNo),
+    index('idx_reimbursement_bank_template_effective')
+      .on(t.masterFn, t.companyFn, t.templateKey, t.status, t.validFrom, t.validTo, t.id),
+    check('ck_reimbursement_bank_template_key',
+      sql`${t.templateKey} ~ '^[a-z][a-z0-9._-]{2,63}$'`),
+    check('ck_reimbursement_bank_template_version_no', sql`${t.versionNo} > 0`),
+    check('ck_reimbursement_bank_template_dates',
+      sql`${t.validTo} is null or ${t.validTo} >= ${t.validFrom}`),
+    check('ck_reimbursement_bank_template_name',
+      sql`char_length(${t.name}) between 3 and 160`),
+    check('ck_reimbursement_bank_template_bank',
+      sql`char_length(${t.bankCode}) between 2 and 20`),
+    check('ck_reimbursement_bank_template_format',
+      sql`${t.fileFormat} = 'csv' and ${t.delimiter} in (',', chr(9), chr(59))`),
+    check('ck_reimbursement_bank_template_status', sql`${t.status} = 'confirmed'`),
+  ],
+);
+
+/** Versioned encrypted bank artifact generated from one immutable released batch. */
+export const reimbursementBankExport = pgTable('reimbursement_bank_export', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  exportKey: text('export_key').notNull(),
+  batchId: bigint('batch_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementPaymentBatch.id),
+  templateVersionId: bigint('template_version_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementBankTemplateVersion.id),
+  exportVersion: integer('export_version').notNull(),
+  retryOfExportId: bigint('retry_of_export_id', { mode: 'number' }),
+  artifactFileName: text('artifact_file_name').notNull(),
+  artifactEnvelope: jsonb('artifact_envelope').notNull(),
+  contentSha256: text('content_sha256').notNull(),
+  rowCount: integer('row_count').notNull(),
+  totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
+  generatedByUserId: bigint('generated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_reimbursement_bank_export_key')
+    .on(t.masterFn, t.companyFn, t.exportKey),
+  uniqueIndex('uq_reimbursement_bank_export_version')
+    .on(t.masterFn, t.companyFn, t.batchId, t.exportVersion),
+  index('idx_reimbursement_bank_export_batch')
+    .on(t.masterFn, t.companyFn, t.batchId, t.generatedAt, t.id),
+  check('ck_reimbursement_bank_export_key',
+    sql`${t.exportKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_reimbursement_bank_export_version', sql`${t.exportVersion} > 0`),
+  check('ck_reimbursement_bank_export_file',
+    sql`char_length(${t.artifactFileName}) between 5 and 180
+      and ${t.artifactFileName} ~ '\\.csv$'`),
+  check('ck_reimbursement_bank_export_hash',
+    sql`char_length(${t.contentSha256}) = 64
+      and ${t.contentSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_reimbursement_bank_export_totals',
+    sql`${t.rowCount} > 0 and ${t.totalAmount} > 0`),
+]);
+
+/** Immutable mapping from an export row to its released batch member. */
+export const reimbursementBankExportLine = pgTable('reimbursement_bank_export_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  exportId: bigint('export_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementBankExport.id),
+  lineNo: integer('line_no').notNull(),
+  batchLineId: bigint('batch_line_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementPaymentBatchLine.id),
+  currency: text('currency').notNull().references(() => currency.code),
+  amount: numeric('amount', { precision: 18, scale: 2 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_reimbursement_bank_export_line_no')
+    .on(t.masterFn, t.companyFn, t.exportId, t.lineNo),
+  uniqueIndex('uq_reimbursement_bank_export_batch_line')
+    .on(t.masterFn, t.companyFn, t.exportId, t.batchLineId),
+  index('idx_reimbursement_bank_export_line_batch')
+    .on(t.masterFn, t.companyFn, t.batchLineId, t.exportId, t.id),
+  check('ck_reimbursement_bank_export_line_no', sql`${t.lineNo} > 0`),
+  check('ck_reimbursement_bank_export_line_currency',
+    sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_reimbursement_bank_export_line_amount', sql`${t.amount} > 0`),
+]);
+
+/** Append-only audited access to a plaintext bank artifact. */
+export const reimbursementBankExportAccessEvent = pgTable(
+  'reimbursement_bank_export_access_event',
+  {
+    id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+    ...tenant,
+    exportId: bigint('export_id', { mode: 'number' }).notNull()
+      .references(() => reimbursementBankExport.id),
+    actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+      .references(() => appUser.userId),
+    accessKey: text('access_key').notNull(),
+    action: text('action').notNull(),
+    purpose: text('purpose').notNull(),
+    contentSha256: text('content_sha256').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('uq_reimbursement_bank_export_access_key')
+      .on(t.masterFn, t.companyFn, t.exportId, t.actorUserId, t.accessKey),
+    index('idx_reimbursement_bank_export_access')
+      .on(t.masterFn, t.companyFn, t.exportId, t.occurredAt, t.id),
+    check('ck_reimbursement_bank_export_access_key',
+      sql`${t.accessKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+    check('ck_reimbursement_bank_export_access_action',
+      sql`${t.action} in ('generated','downloaded')`),
+    check('ck_reimbursement_bank_export_access_purpose',
+      sql`char_length(${t.purpose}) between 3 and 500`),
+    check('ck_reimbursement_bank_export_access_hash',
+      sql`char_length(${t.contentSha256}) = 64
+        and ${t.contentSha256} ~ '^[0-9a-f]{64}$'`),
+  ],
+);
+
+/** One immutable bank-result import; imports may cover disjoint subsets of an export. */
+export const reimbursementBankResultImport = pgTable('reimbursement_bank_result_import', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  importKey: text('import_key').notNull(),
+  exportId: bigint('export_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementBankExport.id),
+  bankReference: text('bank_reference').notNull(),
+  paymentDate: date('payment_date').notNull(),
+  sourceSha256: text('source_sha256').notNull(),
+  rowCount: integer('row_count').notNull(),
+  importedByUserId: bigint('imported_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_reimbursement_bank_result_import_key')
+    .on(t.masterFn, t.companyFn, t.importKey),
+  index('idx_reimbursement_bank_result_import_export')
+    .on(t.masterFn, t.companyFn, t.exportId, t.importedAt, t.id),
+  check('ck_reimbursement_bank_result_import_key',
+    sql`${t.importKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_reimbursement_bank_result_import_reference',
+    sql`char_length(${t.bankReference}) between 3 and 160`),
+  check('ck_reimbursement_bank_result_import_hash',
+    sql`char_length(${t.sourceSha256}) = 64
+      and ${t.sourceSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_reimbursement_bank_result_import_rows', sql`${t.rowCount} > 0`),
+]);
+
+/** One final bank outcome for one export attempt. Failed batch lines may be exported
+ * again; a successful batch line is protected by reimbursementSettlement uniqueness. */
+export const reimbursementBankLineResult = pgTable('reimbursement_bank_line_result', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  resultImportId: bigint('result_import_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementBankResultImport.id),
+  exportLineId: bigint('export_line_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementBankExportLine.id),
+  outcome: text('outcome').notNull(),
+  bankLineReference: text('bank_line_reference').notNull(),
+  failureCode: text('failure_code'),
+  failureMessage: text('failure_message'),
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_reimbursement_bank_line_result_export_line')
+    .on(t.masterFn, t.companyFn, t.exportLineId),
+  index('idx_reimbursement_bank_line_result_import')
+    .on(t.masterFn, t.companyFn, t.resultImportId, t.id),
+  check('ck_reimbursement_bank_line_result_outcome',
+    sql`${t.outcome} in ('success','failed')`),
+  check('ck_reimbursement_bank_line_result_reference',
+    sql`char_length(${t.bankLineReference}) between 1 and 160`),
+  check('ck_reimbursement_bank_line_result_failure',
+    sql`(${t.outcome} = 'success'
+      and ${t.failureCode} is null and ${t.failureMessage} is null)
+    or (${t.outcome} = 'failed'
+      and char_length(${t.failureCode}) between 1 and 80
+      and char_length(${t.failureMessage}) between 3 and 500)`),
+]);
+
+/** Idempotent balanced cash settlement generated only from a successful bank result. */
+export const reimbursementSettlement = pgTable('reimbursement_settlement', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  batchLineId: bigint('batch_line_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementPaymentBatchLine.id),
+  resultLineId: bigint('result_line_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementBankLineResult.id),
+  resultImportId: bigint('result_import_id', { mode: 'number' }).notNull()
+    .references(() => reimbursementBankResultImport.id),
+  accountingPeriodId: bigint('accounting_period_id', { mode: 'number' }).notNull()
+    .references(() => accountingPeriod.id),
+  bankReference: text('bank_reference').notNull(),
+  paymentDate: date('payment_date').notNull(),
+  currency: text('currency').notNull().references(() => currency.code),
+  amount: numeric('amount', { precision: 18, scale: 2 }).notNull(),
+  payableAccountId: bigint('payable_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  bankAccountId: bigint('bank_account_id', { mode: 'number' }).notNull()
+    .references(() => account.id),
+  journalRef: text('journal_ref').notNull(),
+  debitGlEntryId: bigint('debit_gl_entry_id', { mode: 'number' }).notNull()
+    .references(() => glEntry.id),
+  creditGlEntryId: bigint('credit_gl_entry_id', { mode: 'number' }).notNull()
+    .references(() => glEntry.id),
+  factsSha256: text('facts_sha256').notNull(),
+  postedByUserId: bigint('posted_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  postedAt: timestamp('posted_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_reimbursement_settlement_batch_line')
+    .on(t.masterFn, t.companyFn, t.batchLineId),
+  uniqueIndex('uq_reimbursement_settlement_result_line')
+    .on(t.masterFn, t.companyFn, t.resultLineId),
+  uniqueIndex('uq_reimbursement_settlement_journal')
+    .on(t.masterFn, t.companyFn, t.journalRef),
+  index('idx_reimbursement_settlement_date')
+    .on(t.masterFn, t.companyFn, t.paymentDate, t.id),
+  check('ck_reimbursement_settlement_reference',
+    sql`char_length(${t.bankReference}) between 3 and 160`),
+  check('ck_reimbursement_settlement_currency',
+    sql`${t.currency} ~ '^[A-Z]{3}$'`),
+  check('ck_reimbursement_settlement_amount', sql`${t.amount} > 0`),
+  check('ck_reimbursement_settlement_accounts',
+    sql`${t.payableAccountId} <> ${t.bankAccountId}
+      and ${t.debitGlEntryId} <> ${t.creditGlEntryId}`),
+  check('ck_reimbursement_settlement_hash',
+    sql`char_length(${t.factsSha256}) = 64
+      and ${t.factsSha256} ~ '^[0-9a-f]{64}$'`),
+]);

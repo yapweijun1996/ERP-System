@@ -880,8 +880,10 @@ domain/API/browser and current release gates.
 1. **Payout profiles and maker/checker settlement** (EPIC-056) now has encrypted,
    masked, independently verified employee bank profiles (TASK-130 done 2026-07-26)
    and immutable maker/checker batch release with self-payment prevention (TASK-131
-   done 2026-07-26). TASK-132 adds bank-file export and partial bank-result import with
-   successful-line-only Dr Employee Payable / Cr Bank posting.
+   done 2026-07-26). TASK-132 (done 2026-07-26) adds versioned encrypted bank-file
+   export, purpose-bound access audit, partial bank-result import, failed-line retry
+   and successful-line-only Dr Employee Payable / Cr Bank posting without duplicate
+   settlement.
 2. **Immutable tax evidence packages** (TASK-133/134) generate one-snapshot register,
    merged PDF, XLSX/CSV, original ZIP and hash manifest. Finalised packages are
    immutable; later facts create a superseding correction pack and difference report.

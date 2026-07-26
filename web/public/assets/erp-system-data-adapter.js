@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 69;
+  var DEMO_SCHEMA_VERSION = 70;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -3159,6 +3159,71 @@
       return {data:data,meta:{
         makerChecker:true,membership:'immutable_after_release',sensitiveFields:'masked',
       }};
+    },
+    reimbursementPaymentEvidence:async function(){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payment.export');
+        if(!allowed) throw new Error('Reimbursement bank export permission is required.');
+        return state.runtime.commands.listReimbursementPaymentEvidenceWithin(orm,SCOPE);
+      });
+      return {data:data,meta:{
+        artifactContent:'encrypted_omitted',resultEvidence:'immutable',limit:500,
+      }};
+    },
+    configureReimbursementBankTemplate:async function(payload){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payment.template.manage');
+        if(!allowed) throw new Error('Bank template permission is required.');
+        return state.runtime.commands.configureReimbursementBankTemplateWithin(
+          orm,SCOPE,myActorUserId(),payload||{});
+      });
+      return {data:data,meta:{versioned:true,status:'confirmed'}};
+    },
+    generateReimbursementBankExport:async function(payload){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payment.export');
+        if(!allowed) throw new Error('Reimbursement bank export permission is required.');
+        return state.runtime.commands.generateReimbursementBankExportWithin(
+          orm,SCOPE,myActorUserId(),payload||{},{
+            encrypt:encryptDemoCredential,
+            decrypt:decryptDemoCredential,
+            hash:function(value){return state.runtime.sha256Hex(value);},
+          });
+      });
+      return {data:data,meta:{artifactContent:'encrypted_omitted',integrity:'sha256'}};
+    },
+    downloadReimbursementBankExport:async function(exportId,accessKey,purpose){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payment.artifact.download');
+        if(!allowed) throw new Error('Bank artifact download permission is required.');
+        return state.runtime.commands.accessReimbursementBankExportWithin(
+          orm,SCOPE,myActorUserId(),Number(exportId),String(accessKey||''),
+          String(purpose||''),{
+            encrypt:encryptDemoCredential,
+            decrypt:decryptDemoCredential,
+            hash:function(value){return state.runtime.sha256Hex(value);},
+          });
+      });
+      return {data:data,meta:{sensitiveAccess:'audited',cacheControl:'no-store'}};
+    },
+    importReimbursementBankResults:async function(payload){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var allowed=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'expenses.payment.result.import');
+        if(!allowed) throw new Error('Bank result import permission is required.');
+        return state.runtime.commands.importReimbursementBankResultsWithin(
+          orm,SCOPE,myActorUserId(),payload||{});
+      });
+      return {data:data,meta:{settlementPosting:'successful_lines_only',idempotent:true}};
     },
     expenseApprovals:async function(){
       await withMyActor(function(){return null;});

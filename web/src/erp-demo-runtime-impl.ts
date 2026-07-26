@@ -63,6 +63,17 @@ import {
   type ReimbursementBatchInput,
 } from '../../src/modules/expenses/reimbursementBatches';
 import {
+  accessReimbursementBankExportWithin,
+  configureReimbursementBankTemplateWithin,
+  generateReimbursementBankExportWithin,
+  importReimbursementBankResultsWithin,
+  listReimbursementPaymentEvidenceWithin,
+  type BankExportInput,
+  type BankResultImportInput,
+  type BankTemplateInput,
+  type ReimbursementPaymentCrypto,
+} from '../../src/modules/expenses/reimbursementPayments';
+import {
   createApprovalDelegationWithin,
   listApprovalDelegationCandidatesWithin,
   listApprovalDelegationsWithin,
@@ -462,6 +473,7 @@ export const erpDemoRuntime = Object.freeze({
     return { client, orm: createOrm(client) };
   },
   createOrm,
+  sha256Hex,
   commands: Object.freeze({
     validateReceiptUpload,
     hasPermissionWithin(
@@ -597,6 +609,53 @@ export const erpDemoRuntime = Object.freeze({
         reason,
         (value) => sha256Hex(JSON.stringify(value)),
         new Date(),
+      );
+    },
+    listReimbursementPaymentEvidenceWithin(db: DemoOrm, scope: Scope) {
+      return listReimbursementPaymentEvidenceWithin(asDomainDb(db), scope);
+    },
+    configureReimbursementBankTemplateWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: BankTemplateInput,
+    ) {
+      return configureReimbursementBankTemplateWithin(
+        asDomainDb(db), scope, actorUserId, input,
+      );
+    },
+    generateReimbursementBankExportWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: BankExportInput,
+      crypto: ReimbursementPaymentCrypto,
+    ) {
+      return generateReimbursementBankExportWithin(
+        asDomainDb(db), scope, actorUserId, input, crypto,
+      );
+    },
+    accessReimbursementBankExportWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      exportId: number,
+      accessKey: string,
+      purpose: string,
+      crypto: ReimbursementPaymentCrypto,
+    ) {
+      return accessReimbursementBankExportWithin(
+        asDomainDb(db), scope, actorUserId, exportId, accessKey, purpose, crypto,
+      );
+    },
+    importReimbursementBankResultsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: BankResultImportInput,
+    ) {
+      return importReimbursementBankResultsWithin(
+        asDomainDb(db), scope, actorUserId, input, sha256Hex,
       );
     },
     readGovernedLeaveWithin(

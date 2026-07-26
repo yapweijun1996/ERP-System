@@ -1386,7 +1386,9 @@ and balanced expense posting. TASK-129 delivered the five-language expense
 register/detail/approval SSOT and responsive privacy/failure proof, TASK-130 delivered
 encrypted, masked, independently verified employee payout profiles, and TASK-131
 delivered maker/checker reimbursement batches with immutable release snapshots.
-TASK-132 through TASK-135 remain planning records
+TASK-132 delivered encrypted versioned bank artifacts, access audit, partial bank
+outcomes, failed-line retry and successful-line-only settlement. TASK-133 through
+TASK-135 remain planning records
 and must not be counted as implemented tables, permissions, commands or Canonical
 workflows until their individual gates pass.
 
@@ -1424,9 +1426,9 @@ calendar edits, direct bank APIs and direct tax filing.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 130 tasks, including TASK-131
+- Done: 131 tasks, including TASK-132
 - Blocked: TASK-017 (1)
-- Todo: 4 planned tasks (TASK-132–135) across EPIC-056. These extend the product
+- Todo: 3 planned tasks (TASK-133–135) across EPIC-056. These extend the product
   beyond the current 122 Canonical / 0 Preview boundary; they do not reopen or
   downgrade existing routes. Current visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future
