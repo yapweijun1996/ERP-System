@@ -57,6 +57,8 @@ export const PERMISSIONS = {
   expensesPaymentExport: 'expenses.payment.export',
   expensesPaymentResultImport: 'expenses.payment.result.import',
   expensesPaymentArtifactDownload: 'expenses.payment.artifact.download',
+  expensesTaxEvidenceGenerate: 'expenses.tax_evidence.generate',
+  expensesTaxEvidenceAccess: 'expenses.tax_evidence.access',
   employeeTeamRead: 'employee.team.read',
   projectRead: 'project.read',
   projectWrite: 'project.write',

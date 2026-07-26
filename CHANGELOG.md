@@ -5,6 +5,22 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (2026-07-26 — TASK-133 tax evidence center)
+- Migration 0071 adds immutable filtered tax source snapshots and lines, frozen
+  original-document versions, leased retryable report jobs, multi-artifact output
+  and purpose-bound append-only access evidence.
+- The Tax Evidence Center filters posted expense facts by date, category, project,
+  tax treatment and evidence completeness. One reconciled snapshot atomically
+  produces a register PDF, merged evidence PDF, XLSX, CSV, originals ZIP and
+  SHA-256 JSON manifest with the same rows, documents and totals.
+- Storage/provider failure returns the job to the queue without partial artifacts;
+  retries render one unique deterministic artifact set. View, download, print and
+  export actions verify artifact integrity, require a purpose and stable access key,
+  emit audit evidence and return `no-store` content.
+- Domain/API tests cover filters, source reconciliation, retry, hash verification,
+  immutable facts and HTTP access. PostgreSQL 16 proves reporting-worker claim
+  scope plus tenant RLS for all snapshot/artifact/access rows.
+
 ### Added (2026-07-26 — TASK-132 reimbursement bank outcomes)
 - Migration 0070 adds effective-dated confirmed bank CSV templates, encrypted and
   checksummed export versions, export-line mappings, append-only access evidence,

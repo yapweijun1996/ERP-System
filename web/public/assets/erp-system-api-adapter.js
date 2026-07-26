@@ -320,6 +320,45 @@
         body:payload||{},
       });
     },
+    createTaxEvidenceSnapshot:function(payload,idempotencyKey){
+      return apiRequest('tax-evidence/snapshots',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    createTaxEvidenceJob:function(payload,idempotencyKey){
+      return apiRequest('tax-evidence/jobs',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    taxEvidenceJob:function(jobId){
+      return apiRequest('tax-evidence/jobs/'+encodeURIComponent(jobId));
+    },
+    accessTaxEvidenceArtifact:async function(artifactId,payload){
+      payload=payload||{};
+      var response=await fetch(API_BASE+'/tax-evidence/artifacts/'+
+        encodeURIComponent(artifactId)+'/actions/access',{
+          method:'POST',
+          credentials:'same-origin',
+          headers:{'Content-Type':'application/json','X-CSRF-Token':cookieValue('erp_csrf')},
+          body:JSON.stringify(payload),
+        });
+      if(!response.ok){
+        var failure=await jsonBody(response);
+        throw new Error(
+          failure&&failure.error&&failure.error.message||
+          'Tax evidence artifact access failed (HTTP '+response.status+').');
+      }
+      return {data:{
+        content:await response.arrayBuffer(),
+        mimeType:response.headers.get('content-type'),
+        sha256:response.headers.get('x-checksum-sha256'),
+        contentDisposition:response.headers.get('content-disposition'),
+      },meta:{sensitiveAccess:'audited',cacheControl:'no-store'}};
+    },
     expenseApprovals:function(){ return apiRequest('expense-approvals'); },
     expenseApprovalAction:function(id,decision,reason,idempotencyKey){
       return apiRequest('expense-approvals/'+encodeURIComponent(id)+'/actions/decide',{

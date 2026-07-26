@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 70;
+  var DEMO_SCHEMA_VERSION = 71;
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -3224,6 +3224,22 @@
           orm,SCOPE,myActorUserId(),payload||{});
       });
       return {data:data,meta:{settlementPosting:'successful_lines_only',idempotent:true}};
+    },
+    createTaxEvidenceSnapshot:async function(){
+      throw new Error(
+        'Tax evidence snapshot creation uses the production report worker in API mode.');
+    },
+    createTaxEvidenceJob:async function(){
+      throw new Error(
+        'Tax evidence package generation uses the production report worker in API mode.');
+    },
+    taxEvidenceJob:async function(){
+      throw new Error(
+        'Tax evidence report jobs are available through the production API.');
+    },
+    accessTaxEvidenceArtifact:async function(){
+      throw new Error(
+        'Tax evidence artifact access is available through the production API.');
     },
     expenseApprovals:async function(){
       await withMyActor(function(){return null;});

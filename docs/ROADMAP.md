@@ -884,9 +884,11 @@ domain/API/browser and current release gates.
    export, purpose-bound access audit, partial bank-result import, failed-line retry
    and successful-line-only Dr Employee Payable / Cr Bank posting without duplicate
    settlement.
-2. **Immutable tax evidence packages** (TASK-133/134) generate one-snapshot register,
-   merged PDF, XLSX/CSV, original ZIP and hash manifest. Finalised packages are
-   immutable; later facts create a superseding correction pack and difference report.
+2. **Immutable tax evidence packages** (TASK-133 done 2026-07-26) now filter posted
+   evidence by period/category/project/tax/completeness and atomically generate one
+   snapshot register, merged PDF, XLSX/CSV, original ZIP and SHA-256 manifest through
+   retry-safe audited jobs. TASK-134 finalises packages and adds superseding
+   correction packs, difference manifests, retention and legal hold.
 3. **Complete release proof** (TASK-135) validates the full identity/leave/payroll and
    receipt/expense/payment/tax chains without adding direct bank API or direct
    IRAS/LHDN filing.

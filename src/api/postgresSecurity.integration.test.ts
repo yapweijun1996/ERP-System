@@ -72,6 +72,13 @@ import {
   generateReimbursementBankExportWithin,
   importReimbursementBankResultsWithin,
 } from '../modules/expenses/reimbursementPayments';
+import {
+  accessTaxEvidenceArtifactWithin,
+  createTaxEvidenceReportJobWithin,
+  createTaxEvidenceSnapshotWithin,
+  processTaxEvidenceJobBatch,
+  readTaxEvidenceJobWithin,
+} from '../modules/expenses/taxEvidence';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -647,6 +654,64 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       db,
       expenseScope,
       (tx) => tx.select().from(schema.reimbursementSettlement),
+    )).toHaveLength(1);
+    const pgTaxSnapshot = await withTenantTransaction(db, expenseScope, (tx) =>
+      createTaxEvidenceSnapshotWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        'pg-tax-snapshot-0001',
+        {
+          startDate: '2026-07-01',
+          endDate: '2026-07-31',
+          completeness: ['missing_receipt'],
+        },
+      ));
+    const pgTaxJob = await withTenantTransaction(db, expenseScope, (tx) =>
+      createTaxEvidenceReportJobWithin(tx, expenseScope, admin.userId, {
+        jobKey: 'pg-tax-report-0001',
+        snapshotId: pgTaxSnapshot.snapshot.id,
+        locale: 'en',
+      }));
+    expect(await processTaxEvidenceJobBatch(db, {
+      workerId: 'pg-tax-worker',
+    })).toEqual({ claimed: 1, succeeded: 1, failed: 0 });
+    const pgTaxEvidence = await withTenantTransaction(db, expenseScope, (tx) =>
+      readTaxEvidenceJobWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        pgTaxJob.job.id,
+      ));
+    expect(pgTaxEvidence.artifacts).toHaveLength(6);
+    const pgTaxManifest = pgTaxEvidence.artifacts.find(
+      (artifact) => artifact.artifactType === 'manifest_json',
+    )!;
+    const pgTaxDownload = await withTenantTransaction(db, expenseScope, (tx) =>
+      accessTaxEvidenceArtifactWithin(
+        tx,
+        expenseScope,
+        admin.userId,
+        pgTaxManifest.id,
+        {
+          accessKey: 'pg-tax-download-0001',
+          action: 'download',
+          purpose: 'PostgreSQL tax evidence RLS proof.',
+        },
+      ));
+    expect(pgTaxDownload.artifact.sha256).toBe(pgTaxManifest.sha256);
+    expect(await db.select().from(schema.taxEvidenceSnapshot)).toHaveLength(0);
+    expect(await db.select().from(schema.taxEvidenceArtifact)).toHaveLength(0);
+    expect(await db.select().from(schema.taxEvidenceAccessEvent)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.taxEvidenceArtifact),
+    )).toHaveLength(6);
+    expect(await withTenantTransaction(
+      db,
+      expenseScope,
+      (tx) => tx.select().from(schema.taxEvidenceAccessEvent),
     )).toHaveLength(1);
     const [bankAccount] = await withTenantTransaction(
       db,

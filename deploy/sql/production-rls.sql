@@ -81,6 +81,9 @@ DECLARE
     'reimbursement_bank_export_line', 'reimbursement_bank_export_access_event',
     'reimbursement_bank_result_import', 'reimbursement_bank_line_result',
     'reimbursement_settlement',
+    'tax_evidence_snapshot', 'tax_evidence_snapshot_line',
+    'tax_evidence_snapshot_document', 'tax_evidence_report_job',
+    'tax_evidence_artifact', 'tax_evidence_access_event',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',
@@ -130,8 +133,14 @@ BEGIN
          )
        )',
       table_name,
-      table_name IN ('report_job', 'report_artifact', 'document_scan_job', 'document_extraction'),
-      table_name IN ('report_job', 'report_artifact', 'document_scan_job', 'document_extraction')
+      table_name IN (
+        'report_job', 'report_artifact', 'tax_evidence_report_job',
+        'document_scan_job', 'document_extraction'
+      ),
+      table_name IN (
+        'report_job', 'report_artifact', 'tax_evidence_report_job',
+        'document_scan_job', 'document_extraction'
+      )
     );
   END LOOP;
 END $$;

@@ -6,6 +6,7 @@ import {
   processOutboxBatch,
 } from './worker/outbox';
 import { processReportJobBatch } from './modules/reporting/reportJobs';
+import { processTaxEvidenceJobBatch } from './modules/expenses/taxEvidence';
 import {
   createGenericCalendarDriverFromEnv,
   processCalendarOutboundBatch,
@@ -57,6 +58,13 @@ async function tick(): Promise<void> {
   if (reports.claimed > 0) {
     console.log(`[erp-worker] reports claimed=${reports.claimed} succeeded=${reports.succeeded} failed=${reports.failed}`);
   }
+  const taxEvidence = await processTaxEvidenceJobBatch(db, { workerId });
+  if (taxEvidence.claimed > 0) {
+    console.log(
+      `[erp-worker] tax-evidence claimed=${taxEvidence.claimed}`
+      + ` succeeded=${taxEvidence.succeeded} failed=${taxEvidence.failed}`,
+    );
+  }
   const documents = await processDocumentJobBatch(db, {
     workerId,
     scanner: documentScanner,
@@ -93,6 +101,7 @@ async function tick(): Promise<void> {
 console.log(
   `[erp-worker] started as ${workerId}; email=${mailEnabled ? 'enabled' : 'disabled'};`
   + ` reports=enabled; calendar=${calendarEnabled ? 'enabled' : 'disabled'};`
+  + ' tax-evidence=enabled;'
   + ` scanner=${documentScanner ? 'enabled' : 'fail-closed'};`
   + ` local-ocr=${localOcr ? 'enabled' : 'unavailable'};`
   + ` vision=${vision ? 'enabled' : 'unavailable'}`,

@@ -32,6 +32,7 @@ import { createAllowancesAdvancesRouter } from './routes/allowancesAdvances';
 import { createPayoutProfilesRouter } from './routes/payoutProfiles';
 import { createReimbursementBatchesRouter } from './routes/reimbursementBatches';
 import { createReimbursementPaymentsRouter } from './routes/reimbursementPayments';
+import { createTaxEvidenceRouter } from './routes/taxEvidence';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -125,6 +126,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/reimbursement-payments', createReimbursementPaymentsRouter(db, {
     encryptionKey: lifecycle?.tokenEncryptionKey,
   }));
+  app.use('/api/tax-evidence', createTaxEvidenceRouter(db));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
 
