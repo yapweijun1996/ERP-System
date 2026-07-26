@@ -5,6 +5,32 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Verified (2026-07-26 — TASK-139 five-language Canonical release)
+- Added `npm run audit:i18n`: resource, placeholder, unsafe-markup and hardcoded-copy
+  gates plus an explicit business-data allowlist. Final browser proof passes 122
+  Canonical routes × en/ms/zh/ja/vi × desktop/375px with zero blocking findings.
+- Independent `npm run audit:screens` passes at 122 Canonical / 0 Preview with every
+  desktop/mobile route free of console/page errors and all layout/shared-shell/state
+  contracts green. In-app testing also preserved an unsaved value, route, scroll and
+  focused field across a live Japanese → Vietnamese switch; 375×812 had no overflow.
+- Final gates pass: lint, both typechecks, API/Demo builds, schema v72 / 73 migrations,
+  226-table drift, generated i18n resources, desktop/mobile smoke and 512 tests plus
+  one expected skip. PWA cache version advances to v138.
+
+### Added (2026-07-26 — TASK-137/138 Canonical UI i18n)
+- Added 1,141-key canonical en/ms/zh/ja/vi resources, generated synchronous English
+  bootstrap and lazy validated non-English packs. Atomic `setLang()` deduplicates
+  requests, preserves active/stored language on failure and emits `erp:localechange`.
+- Added escaped named variables, Intl plurals, fixed locale mappings, date-only-safe
+  date formatting, timestamp/number/currency helpers and optional structured API error
+  parameters/field codes while retaining English message compatibility.
+- Migrated the shared shell and all Canonical routes, including dialogs, validation,
+  notifications, shortcuts, ARIA and dynamic detail states, to in-place bindings.
+  Business/user/company values and exported/statutory document locale remain unchanged.
+- English and the business boundary are precached; successfully loaded non-English
+  packs enter the Service Worker runtime cache. Offline uncached preferences fall back
+  for the session without overwriting the stored choice.
+
 ### Documented (2026-07-26 — TASK-136 Canonical UI i18n contract)
 - Locked the five-language browser UI contract before implementation: browser-local
   persistence with English default/fallback, fixed BCP-47 mappings, lazy atomic locale
@@ -621,8 +647,9 @@ All notable changes to this project are documented here. Format loosely follows
 - `docs/SETUP_WIZARD.md` — setup split into **Phase A host bootstrap** (script/`make setup`,
   cannot be a web GUI) and **Phase B in-app first-run wizard** (GUI: master → company →
   country/tax → admin user → AI provider), shared by demo and production.
-- `docs/I18N.md` — UI in **en / ms / zh / ja / vi**, lazy-loaded; language is a *user*
-  preference (`app_user.language`), kept orthogonal to a company's country/tax/currency.
+- `docs/I18N.md` — UI in **en / ms / zh / ja / vi**, lazy-loaded; current Web language
+  is browser-local (`aria-lang`) and orthogonal to company country/tax/currency.
+  `app_user.language` remains compatibility-only and is not read or written by Web.
 - `docs/AI_PROVIDERS.md` — pluggable **OpenAI / Gemini / DeepSeek / LM Studio** as **two
   adapters** (OpenAI-compatible + Gemini). **BYOK (Bring Your Own Key) everywhere** — the
   system never ships, stores, or manages a provider key; each user supplies their own at
