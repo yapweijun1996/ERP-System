@@ -1429,12 +1429,23 @@ binary storage and may be switched to a server filesystem provider, whose single
 limitation must remain visible. The programme excludes hourly leave, native mobile apps, two-way
 calendar edits, direct bank APIs and direct tax filing.
 
+## Canonical UI internationalization (EPIC-057)
+
+TASK-136 locks the implementation contract before runtime work: five browser-local
+languages, English default/fallback, lazy non-English packs, safe variables/plurals,
+locale-aware UI formatting, atomic in-place switching without form/dialog state loss,
+front-end translation of stable enum/API codes and runtime caching of used languages.
+Business records and generated/exported/statutory documents remain outside UI i18n.
+TASK-137 through TASK-139 now track the engine, all-Canonical migration and release
+proof respectively. No runtime behavior is claimed complete by TASK-136 alone.
+
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 134 tasks, including TASK-135
+- Done: 135 tasks, including TASK-136
 - Blocked: TASK-017 (1)
-- Todo: 0 planned tasks. EPIC-056 is complete at the current 122 Canonical /
-  0 Preview boundary; it did not reopen or downgrade existing routes. Current
+- Todo: 3 planned tasks (TASK-137 through TASK-139). EPIC-056 remains complete at
+  the current 122 Canonical / 0 Preview boundary; EPIC-057 does not reopen or
+  downgrade existing routes. Current
   visual-layout convergence covers 47 audited
   list-layout routes plus one audited calendar workspace. Future
   Leave/Receipt/Expense/Tax routes must join the appropriate existing SSOT only after

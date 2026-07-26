@@ -77,10 +77,10 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ### Also built in
 
-- **i18n** — runtime UI currently supports English, Malay and Mandarin; Japanese and
-  Vietnamese locale packs are part of the productionization plan
-  ([I18N.md](docs/I18N.md)). Language is a *user* preference, independent of a company's
-  country/tax.
+- **i18n** — the browser UI supports English, Malay, Simplified Chinese, Japanese and
+  Vietnamese. Language is stored in the current browser, defaults to English and is
+  independent of company country/tax and document locale
+  ([I18N.md](docs/I18N.md)).
 - **Pluggable LLM providers (BYOK)** — OpenAI, Gemini, DeepSeek, LM Studio behind two
   adapters; **Bring Your Own Key** — each user supplies their own key, the system never
   holds one ([AI_PROVIDERS.md](docs/AI_PROVIDERS.md)).

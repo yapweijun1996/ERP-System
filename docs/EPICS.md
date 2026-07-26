@@ -57,7 +57,8 @@ Acceptance criteria:
 
 - [x] Empty app launches setup wizard (`needsSetupWizard()` gate in `app.js` boot(),
       before the sign-in check).
-- [x] User can choose language (en/ms/zh — the 3 implemented in `i18n.js`).
+- [x] User can choose language (en/ms/zh/ja/vi; complete Canonical coverage is
+      tracked by EPIC-057).
 - [x] User can create master/company, persisted to PGlite via
       `ErpSystemDemo.completeSetup()` in one transaction.
 - [x] Country selection configures currency and tax regime (SG→SGD/GST 9%,
@@ -2092,3 +2093,25 @@ not submit returns directly to IRAS or LHDN.
       `docs/EMPLOYEE_TO_TAX_RELEASE_PROOF.md`; the final proof passed 506 tests plus
       one expected skip, real PostgreSQL 16 forced RLS, 226-table parity, both builds,
       desktop/375px smoke, five-language expense states and all 122 Canonical routes.
+
+## EPIC-057 — Canonical UI Internationalization 🔶
+
+Replace the mixed global/module-local translation approach with one safe, lazy-loaded
+five-language UI contract across every Canonical route. Business data and exported or
+statutory documents retain their own source/locale rules.
+
+- [x] **TASK-136 — Lock the i18n contract and task breakdown.** Reconcile browser-local
+      language persistence, English fallback, UI/company localization boundaries,
+      atomic loading, live-switch state preservation, formatting, API-message and
+      release-gate documentation before runtime implementation starts.
+- [ ] **TASK-137 — Implement the locale, message and formatting engine.** Add canonical
+      module-namespaced packs, lazy non-English loading, atomic async switching,
+      interpolation/plurals, unified formatting, compatible API-error parameters and
+      runtime PWA caching while preserving the global API surface.
+- [ ] **TASK-138 — Migrate all Canonical UI to live bindings.** Remove module-local copy
+      packs and hardcoded system text, bind shared shell/routes/dialogs/ARIA/formatting
+      to in-place updates and preserve every open form, filter, page, scroll and focus.
+- [ ] **TASK-139 — Prove five-language Canonical release quality.** Enforce resource,
+      placeholder, unsafe-markup and new-hardcoded-copy gates; audit all Canonical
+      routes in five languages and verify representative desktop/phone interactions,
+      offline cache and zero overflow/runtime errors.

@@ -82,6 +82,11 @@ Not built now, but the data model must not preclude them:
 Document numbering, tax breakdown storage, and the audit log are designed so these
 reports can be generated from existing data.
 
+The company `locale` above controls company-authored documents, statutory output and
+country presentation rules. It does **not** select the browser UI language. The current
+Web UI stores its independent language preference in `localStorage("aria-lang")`; see
+[I18N.md](I18N.md).
+
 ## 5. What stays country-neutral
 
 The core (orders, stock, ledger structure, multi-tenancy) is country-neutral. Only these

@@ -208,8 +208,10 @@ controls exist.
 - **Mobile:** every shipped screen usable at 375 px; no horizontal overflow.
 - **PWA:** installable; SW never serves HTML for JS/CSS asset requests; update prompt
   on new SW. ([PWA.md](PWA.md))
-- **i18n:** UI strings via the i18n layer (en/ms/zh/ja/vi); language is a user
-  preference (`app_user.language`), orthogonal to company country. ([I18N.md](I18N.md))
+- **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
+  layer. The current Web preference is browser-local (`aria-lang`), defaults to
+  English and is orthogonal to company country. `app_user.language` remains reserved
+  for compatibility and is not currently wired. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))
 

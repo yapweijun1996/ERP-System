@@ -901,3 +901,22 @@ Exit criteria: payout privacy, maker/checker separation, partial payment replay,
 balanced cash posting, package consistency/hash verification, SG/MY retention, legal
 hold, correction versions and sensitive-access audit pass all local and PostgreSQL
 release gates.
+
+## Phase 39 — Canonical UI Internationalization (In progress)
+
+1. **Contract first** (TASK-136 done 2026-07-26) records the browser-local language,
+   five fixed locale mappings, English fallback, UI/document boundary, safe message
+   format, atomic loading, offline cache and state-preserving live-switch contract.
+2. **Runtime foundation** (TASK-137) adds the lazy locale/message/formatting engine and
+   backward-compatible global/API surfaces without a schema migration.
+3. **Canonical migration** (TASK-138) moves all shell, route, dialog, validation,
+   notification and accessibility copy to in-place bindings while preserving business
+   data in its source language.
+4. **Release proof** (TASK-139) establishes the hardcoded-copy gate and proves every
+   Canonical route in en/ms/zh/ja/vi plus representative desktop/phone interactions and
+   PWA offline behavior.
+
+Exit criteria: all 122 Canonical routes have five-language system copy, live language
+switching preserves page/dialog state, known missing keys and hardcoded system copy are
+zero, non-English missing keys retain tested English fallback, and full release gates
+pass with 0 Preview routes.

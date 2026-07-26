@@ -117,7 +117,7 @@ updated. Columns: `master_fn, company_fn, actor_user_id, entity, entity_id, acti
 ```
 master         (master_fn, name)                          -- top tenant
 company        (company_fn, master_fn, country, currency, tax_regime, ...)
-app_user       (user_id, master_fn, email, language, ...)  -- user belongs to ONE master; language = UI i18n pref
+app_user       (user_id, master_fn, email, language, ...)  -- user belongs to ONE master; language reserved, current Web uses localStorage
 role           (role_id, master_fn, name, is_superadmin)
 user_company   (user_id, company_fn, role_id)             -- M:N: user ↔ many companies
 ```
@@ -513,7 +513,7 @@ erDiagram
         bigint user_id PK
         text master_fn FK
         text email
-        text language "i18n pref"
+        text language "reserved i18n pref; current Web uses localStorage"
     }
     role {
         bigint role_id PK

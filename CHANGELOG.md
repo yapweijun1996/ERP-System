@@ -5,6 +5,14 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Documented (2026-07-26 — TASK-136 Canonical UI i18n contract)
+- Locked the five-language browser UI contract before implementation: browser-local
+  persistence with English default/fallback, fixed BCP-47 mappings, lazy atomic locale
+  loading, pure-text variables/plurals and state-preserving in-place switching.
+- Kept business data and exported/statutory documents outside UI translation, retained
+  `app_user.language` only for compatibility and split EPIC-057 into engine, Canonical
+  migration and release-proof tasks.
+
 ### Verified (2026-07-26 — TASK-135 employee-to-tax release proof)
 - Added `docs/EMPLOYEE_TO_TAX_RELEASE_PROOF.md`, mapping every stage from employee
   activation and leave/Payroll through receipt, expense, payment, partial bank
