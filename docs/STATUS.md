@@ -80,10 +80,9 @@ hardcoded fictional customer regardless of the active company.
 
 The isolated dual-mode audit at `a9fdb07` confirms the core ERP invariants and all
 122 Canonical routes render, but the release baseline is **not fully green**. Its nine
-root causes are tracked in TASK-141–149; TASK-141, TASK-142 and TASK-144–146 plus
-TASK-149 are remediated. The remaining release gap is TASK-143's production dependency
-advisories, followed by TASK-147's PostgreSQL proof guard and TASK-148's expected My
-Work conflict noise. See
+root causes are tracked in TASK-141–149; all P1 findings and TASK-145/146/149 are
+remediated. The remaining work is TASK-147's PostgreSQL proof guard and TASK-148's
+expected My Work conflict noise. See
 `docs/audits/END_USER_AUDIT_2026-07-27.md` for exact evidence. TASK-017 remains blocked
 for physical-phone acceptance.
 
@@ -1452,8 +1451,8 @@ covers 122 routes × five languages × desktop/375px; PWA cache version is v138.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 153 tasks, including TASK-141
-- Todo: TASK-143, TASK-147 and TASK-148 (3)
+- Done: 154 tasks, including TASK-141 and TASK-143
+- Todo: TASK-147 and TASK-148 (2)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057 and EPIC-059 are complete at the current 122 Canonical / 0
   Preview boundary. EPIC-058 remains in progress until its three remaining remediation
@@ -1487,5 +1486,5 @@ proof passed 518 tests plus one expected skip, 232-table drift, PGlite/PostgreSQ
 parity and forced RLS, both builds, smoke, 122 routes × five languages ×
 desktop/375px and critical Chromium/Firefox/WebKit flows. Current-Chrome cold load was
 8.905 seconds and common-route p95 was 38.7 ms. TASK-017 remains blocked for a physical
-phone; EPIC-058 TASK-143/147/148 remain open. See
+phone; EPIC-058 TASK-147/148 remain open. See
 [EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).

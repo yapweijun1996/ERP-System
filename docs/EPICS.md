@@ -2132,7 +2132,10 @@ does not repair product code or reinterpret a blocked physical-device check as p
       Staff activation and the immutable leave ledger agree through every release path.
 - [x] **TASK-142 — Allow invitations for every eligible tenant role.** Dynamic,
       company-scoped roles now flow through invitation, acceptance and effective access.
-- [ ] **TASK-143 — Remediate or formally accept high dependency advisories.**
+- [x] **TASK-143 — Remediate or formally accept high dependency advisories.** Root
+      and Web production audits now report zero vulnerabilities; supported ExcelJS
+      transitive dependencies and PostCSS are pinned to fixed versions, with XLSX,
+      build and container proofs.
 - [x] **TASK-144 — Make document queue tests independent of wall-clock date.** Explicit
       clocks keep availability, retry and lease assertions deterministic.
 - [x] **TASK-145 — Derive shell navigation and quick actions from effective permissions.**

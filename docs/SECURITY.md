@@ -69,3 +69,13 @@ days. Setup-stage employees cannot log in. Production exposes no impersonation a
 Demo seed is guarded by explicit Demo-only environment flags plus an empty-database
 check. Import preflight and commit remain server-side, bounded, replay-resistant,
 audited and transactionally atomic.
+
+## Dependency supply-chain boundary (TASK-143)
+
+Production dependencies are checked independently in the root and `web/` lockfiles
+with `npm audit --omit=dev`. ExcelJS 4.4.0 remains the stable workbook API, while root
+overrides move its archive, workbook-read and UUID dependencies to fixed compatible
+releases; `brace-expansion` is pinned to 5.0.8. The Web workspace pins PostCSS to
+8.5.23. As of 2026-07-27 both production audits report zero vulnerabilities, so no
+security exception or expiry is being accepted. Focused XLSX read/write tests, both
+build modes and clean `npm ci` Docker builds are required whenever these pins change.

@@ -44,7 +44,7 @@ fresh IndexedDB. Existing Docker projects, default ports and databases were unto
 | Full `npm test` | Fail: 505 pass, 7 fail, 1 skip; six deterministic document tests and one suite-load timeout |
 | Focused session restart | Pass; the full-suite failure is load-sensitive |
 | Focused maker-checker, Payroll/Leave and prior parallel failures | Pass individually |
-| Production dependency audit | Fail: root 9 high + 1 moderate; Web 1 high (AUD-003) |
+| Production dependency audit | Failed at audit baseline; TASK-143 remediation now passes root and Web with zero production vulnerabilities |
 
 The API matrix's 409 responses show a clear “account is not linked to an active
 employee” empty state, so those routes are not blank. They remain a P3 observability
@@ -104,6 +104,12 @@ emits browser console errors.
 - **Actual:** `npm audit --omit=dev` reports 9 high + 1 moderate in the root dependency graph (brace-expansion/uuid through Excel export dependencies) and 1 high in Web (PostCSS source-map path traversal).
 - **Expected:** No unaccepted high advisory in shipped/build dependencies; any exception has a documented exploitability decision.
 - **Backlog:** TASK-143.
+- **Resolved 2026-07-27:** ExcelJS remains at 4.4.0 while its archive/read/UUID chain
+  is pinned to fixed compatible versions; Web PostCSS is pinned to 8.5.23. Both
+  `npm audit --omit=dev` commands report zero vulnerabilities. Seventeen focused XLSX
+  tests, the full 521-pass/1-skip suite, both application builds and clean `npm ci`
+  API/Web Docker builds pass. No advisory exception or breaking forced downgrade was
+  accepted.
 
 ### AUD-004 — P1 release-gate defect — document queue tests depend on wall-clock date
 

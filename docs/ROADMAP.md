@@ -928,9 +928,8 @@ pass with 0 Preview routes.
    SG/MY behavior, executable ERP journeys and 122-route five-language desktop/375px
    matrices. The dated report found no P0 and registered four P1, three P2 and two P3
    root causes without changing product code.
-2. **P1 remediation** (TASK-141–144): paid-leave openings, tenant-role invitations and
-   deterministic document queue clocks are complete; high dependency advisories remain
-   in TASK-143.
+2. **P1 remediation** (TASK-141–144) is complete: paid-leave openings, tenant-role
+   invitations, dependency advisories and deterministic document queue clocks pass.
 3. **P2/P3 hardening** (TASK-145–149) prunes custom-role navigation, stabilizes the
    supported test command, guards PostgreSQL proof data, deduplicates expected My Work
    conflicts and names icon-only user controls.
