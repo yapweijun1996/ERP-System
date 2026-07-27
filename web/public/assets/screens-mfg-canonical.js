@@ -443,13 +443,14 @@
     }).join('');
     const operationRows=operations.map(operation=>{
       const center=centers.get(Number(operation.workCenterId))||{};
-      return `<div class="oprow"><span class="opseq">${operation.sequence}</span>
+      return `<div class="oprow work-order-operation"><span class="opseq">${operation.sequence}</span>
         <div class="opmain"><b>${esc(operation.name)}</b><small>${esc(center.code||'')} · ${esc(center.name||s('workCenter'))}</small></div>
-        <div class="tnum">${num(Number(operation.actualHours))}/${num(Number(operation.plannedHours))} h</div>
+        <div class="work-order-operation-hours tnum"><small>${esc(s('actualHours'))} / ${esc(s('plannedHours'))}</small>
+          <b>${num(Number(operation.actualHours))}/${num(Number(operation.plannedHours))} h</b></div>
         ${cap(statusLabel(s,operation.status),operation.status==='completed'?'ok':operation.status==='blocked'?'danger':'neutral')}
       </div>`;
     }).join('');
-    root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
+    root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage work-order-detail" data-work-order-detail="canonical">
       ${crumbs([DB.company.name,t('nav.manufacturing'),s('orders'),{cur:order.docNo}])}
       <div class="dochead"><div class="dh-row1"><div>
         <div class="dt">${ic('factory')}${esc(order.docNo)} <span class="dnum">${esc(finished.sku||'')}</span></div>
@@ -457,7 +458,8 @@
       </div><div class="dactions">${cap(statusLabel(s,order.status),statusTone(order.status))}
         ${executionActions}
       </div></div>
-      <div class="progressbig"><i style="width:${pct}%"></i></div>
+      <div class="work-order-progress" role="progressbar" aria-label="${esc(s('progress'))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+        <i style="width:${pct}%"></i></div>
       <div class="docmeta">
         <div class="dm"><small>${esc(s('start'))}</small><b>${esc(dateLabel(order.startDate))}</b></div>
         <div class="dm"><small>${esc(s('due'))}</small><b>${esc(dateLabel(order.dueDate))}</b></div>
@@ -466,10 +468,11 @@
         <div class="dm"><small>${esc(s('routing'))}</small><b>${esc(routing.code||'#'+order.routingId)}</b></div>
       </div></div>
       <div class="doclayout"><div class="docmain">
-        <div class="panel"><div class="panel-h"><h3>${esc(s('materials'))}</h3></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('product'))}</th>
+        <div class="panel work-order-materials"><div class="panel-h"><h3>${esc(s('materials'))}</h3></div>
+          <div class="work-order-table-scroll" role="region" aria-label="${esc(s('materials'))}" tabindex="0">
+          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('components'))}</th>
             <th>${esc(s('required'))}</th><th>${esc(s('issued'))}</th><th>${esc(s('available'))}</th><th>${esc(s('cost'))}</th>
-          </tr></thead><tbody>${materialRows}</tbody></table></div>
+          </tr></thead><tbody>${materialRows}</tbody></table></div></div>
         <div class="panel"><div class="panel-h"><h3>${esc(s('operations'))}</h3></div>
           <div class="panel-body" style="padding:6px 0">${operationRows}</div></div>
       </div><aside class="summary"><div class="sumcard">
