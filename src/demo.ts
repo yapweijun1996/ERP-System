@@ -9,6 +9,7 @@ import Decimal from 'decimal.js';
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
 import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { createPgliteDb, createPostgresDb, type DB } from './data/db';
+import { guardPostgresProofDatabase } from './data/postgresProofGuard';
 import { seedDemo } from './data/seed';
 import { listCompanies, listProducts, addProduct, getEffectiveTaxRate, type Scope } from './data/repo';
 import {
@@ -549,6 +550,16 @@ async function runEngine(db: DB, withConcurrency: boolean) {
 
 const out: Record<string, Awaited<ReturnType<typeof runEngine>>> = {};
 
+const url = process.env.POSTGRES_URL;
+if (url) {
+  try {
+    await guardPostgresProofDatabase(url);
+  } catch (error) {
+    console.error(`❌ ${(error as Error).message}`);
+    process.exit(1);
+  }
+}
+
 // --- PGlite (demo engine): atomicity + rollback ---
 {
   const db = await createPgliteDb();
@@ -557,7 +568,6 @@ const out: Record<string, Awaited<ReturnType<typeof runEngine>>> = {};
 }
 
 // --- PostgreSQL (production engine): + true concurrency ---
-const url = process.env.POSTGRES_URL;
 if (url) {
   const db = await createPostgresDb(url);
   await migratePg(db, { migrationsFolder: 'drizzle' });

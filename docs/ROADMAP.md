@@ -930,9 +930,9 @@ pass with 0 Preview routes.
    root causes without changing product code.
 2. **P1 remediation** (TASK-141–144) is complete: paid-leave openings, tenant-role
    invitations, dependency advisories and deterministic document queue clocks pass.
-3. **P2/P3 hardening** (TASK-145–149) prunes custom-role navigation, stabilizes the
-   supported test command, guards PostgreSQL proof data, deduplicates expected My Work
-   conflicts and names icon-only user controls.
+3. **P2/P3 hardening** (TASK-145–149): navigation, test stability, PostgreSQL proof
+   safety and icon-control names are complete; TASK-148's expected My Work conflict
+   deduplication remains.
 
 Exit criteria: TASK-140 evidence and backlog exist; Phase 40 remains in progress until
 TASK-141–149 are complete. The isolated API environment remains available for review,

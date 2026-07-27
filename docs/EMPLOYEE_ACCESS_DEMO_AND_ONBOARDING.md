@@ -151,9 +151,9 @@ TASK-017.
   measured p95 38.7 ms, below the two-second target. Firefox and WebKit cold-load
   measurements are compatibility evidence, not the Chrome performance acceptance.
 - The production seed CLI exits before writes without both explicit Demo flags and also
-  rejects the retained non-empty proof database. The separate, broader safety work for
-  running `POSTGRES_URL npm run demo` against an arbitrary seeded database remains
-  EPIC-058 TASK-147 and is not claimed complete here.
+  rejects the retained non-empty proof database. EPIC-058 TASK-147 now adds the separate
+  read-only preflight that makes `POSTGRES_URL npm run demo` reject any database with a
+  user table before migration or seed.
 
 No customer credentials, production URL or secret is included in the generated pack or
 documentation. SMTP, live bank/tax integrations and multi-year historical migration are

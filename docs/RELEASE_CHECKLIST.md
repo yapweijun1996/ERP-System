@@ -12,7 +12,8 @@ section for the path you are releasing. Deployment mechanics live in
 - [ ] `npm test` (157+ tests; the PostgreSQL 16 proof needs `POSTGRES_URL`, or rely
       on CI's service-container run)
 - [ ] `npm run demo` — transaction proof; with `POSTGRES_URL` set it also proves
-      cross-engine parity and the true-concurrency race
+      cross-engine parity and the true-concurrency race. The PostgreSQL database must
+      be dedicated and empty; the preflight rejects any user table before writes.
 - [ ] `npm run check:demo-schema && npm run check:drift` — generated PGlite artifacts
       and all Drizzle migrations agree
 - [ ] `npm run build:demo` then `npm run smoke` and `npm run audit:screens`

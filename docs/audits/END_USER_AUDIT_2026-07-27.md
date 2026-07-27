@@ -138,6 +138,12 @@ emits browser console errors.
 - **Actual:** The proof inserts `master_fn=M1` and fails on the existing primary key. It passes only after creating and migrating a separate empty `erp_proof` database.
 - **Expected:** The command refuses a non-empty database with a clear guard or owns an isolated schema/database lifecycle.
 - **Backlog:** TASK-147.
+- **Resolved 2026-07-27:** A read-only table inventory now runs before the migrator and
+  refuses every non-empty target with a bounded table sample and explicit no-write
+  message. A fresh PostgreSQL 16 database passed parity and the one-winner stock race;
+  its second run refused with relation/master/movement counts unchanged at `233/1/9`.
+  A separate marker-only UAT database also refused and retained its sole table and
+  `1:uat-unchanged` row exactly.
 
 ### AUD-008 — P3 UX/observability — unlinked My Work routes repeat expected 409s
 

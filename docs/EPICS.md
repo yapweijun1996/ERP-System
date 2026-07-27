@@ -2142,7 +2142,9 @@ does not repair product code or reinterpret a blocked physical-device check as p
       Active-company actions/scopes/modules now drive shell visibility while APIs keep 403.
 - [x] **TASK-146 — Stabilize integration-test setup under supported parallel load.** The
       supported full suite now completes with 518 passing tests and one expected skip.
-- [ ] **TASK-147 — Guard PostgreSQL demo proof against seeded databases.**
+- [x] **TASK-147 — Guard PostgreSQL demo proof against seeded databases.** A read-only
+      preflight rejects every non-empty target before migration or seed; empty-database
+      parity/concurrency, deterministic second-run refusal and unchanged-UAT proofs pass.
 - [ ] **TASK-148 — Deduplicate expected My Work identity conflicts.**
 - [x] **TASK-149 — Name icon-only user administration controls.** Localized action-and-user
       names are available to keyboards and assistive technology.

@@ -39,5 +39,5 @@ CSV 导入和 Go Live 关键 UI 在 Chromium、Firefox、WebKit 均通过且没�
 
 最新版 Chromium 首次载入大型 Demo 为 8.905 秒；十个常用页面/报表共 30 次样本
 p95 为 38.7 毫秒，均低于计划预算。正式 seed 在缺少明确 Demo 标记或数据库非空时
-会在写入前拒绝。EPIC-058 的 TASK-147/148 仍保持开放，不能因本 Epic
+会在写入前拒绝。EPIC-058 的 TASK-148 仍保持开放，不能因本 Epic
 完成而误报；实体手机 TASK-017 继续 blocked。

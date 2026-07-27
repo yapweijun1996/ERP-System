@@ -73,7 +73,12 @@ POSTGRES_URL="postgres://postgres:test@localhost:55432/erp" npm run demo
 docker rm -f pg
 ```
 
-The demo expects a fresh database (it seeds on run); PGlite is always fresh (in-memory).
+The PostgreSQL target must contain zero user tables. A read-only preflight runs before
+the migrator and seed, so an API/UAT/previously-used proof database fails closed without
+being changed. The first run owns migration and seed of the empty disposable database;
+a second run against the same database deterministically refuses. Drop and recreate only
+the dedicated proof database when another successful run is required. PGlite is always
+fresh and in-memory.
 
 > These scripts are the intended contract. As modules land, keep this table in sync — it
 > is referenced by [DEPLOYMENT.md](DEPLOYMENT.md) and CI.

@@ -147,13 +147,12 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
   database session and run shared commands with RBAC, CSRF, idempotency and audit.
   Remaining Preview business areas still require their own schema and commands before
   they may join this API surface.
-- **Local Postgres for manual testing** (no Docker required yet): `createdb
-  erp_system_dev` against any local PostgreSQL 16+, then
-  `DATABASE_URL=postgresql://<user>@localhost:5432/erp_system_dev npm run migrate`
-  (requires `drizzle.config.ts`'s `dbCredentials.url`, fixed in TASK-011 — it was
-  missing entirely before), then `POSTGRES_URL=<same URL> npm run demo` to seed +
-  prove all invariants against real Postgres (including true concurrency). Never
-  point either at a database you didn't create for this purpose.
+- **Local Postgres proof** (no Docker required): `createdb erp_system_proof` against
+  PostgreSQL 16+, then point `POSTGRES_URL` at that empty database and run `npm run
+  demo`. Do not migrate or seed it first: the proof's read-only preflight requires zero
+  user tables, then owns migration and seed. Reusing the populated database fails before
+  writes by design; drop/recreate only this dedicated proof database for another passing
+  run. Never point the proof at a database you did not create for this purpose.
 - Deployment tuning and backup strategy → [DEPLOYMENT.md](DEPLOYMENT.md),
   [IMPORT_EXPORT.md](IMPORT_EXPORT.md).
 

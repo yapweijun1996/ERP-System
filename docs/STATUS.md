@@ -80,9 +80,8 @@ hardcoded fictional customer regardless of the active company.
 
 The isolated dual-mode audit at `a9fdb07` confirms the core ERP invariants and all
 122 Canonical routes render, but the release baseline is **not fully green**. Its nine
-root causes are tracked in TASK-141–149; all P1 findings and TASK-145/146/149 are
-remediated. The remaining work is TASK-147's PostgreSQL proof guard and TASK-148's
-expected My Work conflict noise. See
+root causes are tracked in TASK-141–149; every finding except TASK-148 is remediated.
+The only remaining work is expected My Work conflict noise. See
 `docs/audits/END_USER_AUDIT_2026-07-27.md` for exact evidence. TASK-017 remains blocked
 for physical-phone acceptance.
 
@@ -97,7 +96,7 @@ for physical-phone acceptance.
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
 | Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. The 120-route audit explicitly proves the loading/race/error contract at desktop + 375px. |
 | Bundled Demo ESM runtime | ✅ Current Canonical writes migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. CRM create/convert, Purchasing create/receive/post, Sales enquiry/quotation/order actions, Sales Draft confirmation and Demo Setup all use TypeScript commands instead of browser business SQL mirrors — including the base demo seed itself (`seedDemo()`, TASK-034), which now runs directly on first boot instead of a hand-written `erp-system-seed.sql` mirror. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
-| Transaction proof script | ✅ Fresh database / ⚠️ seeded guard missing | `npm run demo` passes PGlite and a dedicated empty PostgreSQL proof database. Against an already seeded database it collides on `master_fn=M1`; TASK-147 / AUD-007. |
+| Transaction proof script | ✅ Empty-only, fail-closed | `npm run demo` passes PGlite; with `POSTGRES_URL`, a read-only preflight rejects any user table before migration/seed. An empty PostgreSQL 16 database passes parity and true concurrency; its second run rejects deterministically without changing counts. |
 | Sales screens (orders, detail, invoices and idempotent confirmation) | ✅ Canonical Demo/API data and writes | Four Canonical routes read bounded formal customer/order/line/invoice resources in both modes. Confirmation executes the shared transactional command with a real warehouse, inventory movements, invoice and balanced GL; unsupported prototype actions are not exposed. |
 | Sales enquiry and quotation chain | ✅ Canonical Demo/API data and writes | Migration 0012 adds tenant-scoped enquiries, quotation headers and immutable quotation line tax snapshots. `enquiries`, `quotations`, `quotation` and `new-quotation` use bounded formal resources in five languages. The shared commands create enquiries/quotes, issue, accept and idempotently convert an accepted quote to an editable draft order without premature inventory, invoice or GL effects. Domain and authenticated HTTP tests cover status guards, rollback, tenant isolation, tax totals and idempotent replay. |
 | Sales delivery proof | ✅ Canonical Demo/API data | Migration 0013 adds tenant-scoped delivery headers and lines. Sales confirmation creates a draft delivery first, attributes every inventory issue to it, then marks it delivered only after the invoice and balanced GL succeed in the same transaction. `delivery-orders` and `delivery-order` provide five-language traceability across order, product, warehouse and invoice; failed confirmation rolls the delivery back. Advanced partial pick/pack/shipment remains in the Warehouse depth backlog. |
@@ -162,7 +161,7 @@ for physical-phone acceptance.
 | Docker Compose stack: `web` (nginx) + `api` (Express) + `db` (PostgreSQL) | ✅ Working | `docker-compose.yml`, `Dockerfile.api`, `web/Dockerfile`, `web/nginx.conf`; built and run end-to-end for real (healthchecks, `docker compose exec api npm run migrate`/`seed`, dashboard through the reverse proxy), then fully torn down, TASK-012 |
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
 | `make setup-interactive` (`scripts/setup.sh --interactive`) | ✅ Working | Prompts for bundled-vs-external database, auto-generates strong secrets on a blank answer (validated: e.g. a manually-typed `ERP_TOKEN_ENCRYPTION_KEY` must satisfy `tokenCrypto.ts`'s exact 32-byte contract or the script re-prompts, instead of letting `api` crash at boot), and checks WEB_PORT/API_PORT/DB_PORT for real collisions. `docker-compose.yml`'s `api`/`worker` `DATABASE_URL` now genuinely honors an external override instead of silently ignoring it. Verified live end-to-end three times against real Docker (plain non-interactive, `--interactive` bundled, `--interactive` external against a standalone `postgres:16-alpine` container) — the external run's `docker compose ps` confirmed the bundled `db` service was never created, and a direct `psql` query against the standalone container confirmed seed data genuinely landed there. TASK-060, EPIC-025. **Also fixed along the way**: the `web` service's Docker build had been silently broken since 2026-07-18 (build context couldn't reach `erp-demo-runtime-impl.ts`'s cross-workspace imports into `src/`) — nobody caught it because local dev/typecheck/`build:demo` all run from the repo root, where the paths resolve fine regardless of the Docker isolation bug. Fixed by widening `web`'s build context to the repo root, matching `Dockerfile.api`'s established pattern. |
-| PostgreSQL concurrency/parity proof | ✅ Working on dedicated proof DB | PGlite/PostgreSQL business results match and one of two stock races wins; forced RLS passes. The new production seed CLI fails closed without explicit Demo flags and against a non-empty DB; the broader `POSTGRES_URL npm run demo` disposable-database guard remains TASK-147. |
+| PostgreSQL concurrency/parity proof | ✅ Working on dedicated empty proof DB | PGlite/PostgreSQL business results match and one of two stock races wins; forced RLS passes. The production seed CLI fails closed without explicit Demo flags or on non-empty data, and `POSTGRES_URL npm run demo` now independently rejects every non-empty target before writes. |
 | `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Permission-aware rendering | All 122 routes render in API mode with no sample fallback. Active-company effective actions, scopes and module state now restrict Manager/custom-role shell/search/quick-create, while direct APIs remain the 403 boundary. Unlinked My Work expected 409s remain TASK-148. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production one-time setup | ✅ Working | The API-mode wizard collects the installer token in memory and calls `POST /api/setup/actions/complete` with `X-ERP-Setup-Token`. A database singleton locks concurrent attempts; the command only works with zero users and atomically creates tenant/company/admin/role/permissions/tax/accounts. |
@@ -1451,12 +1450,11 @@ covers 122 routes × five languages × desktop/375px; PWA cache version is v138.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 154 tasks, including TASK-141 and TASK-143
-- Todo: TASK-147 and TASK-148 (2)
+- Done: 155 tasks, including TASK-141, TASK-143 and TASK-147
+- Todo: TASK-148 (1)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057 and EPIC-059 are complete at the current 122 Canonical / 0
-  Preview boundary. EPIC-058 remains in progress until its three remaining remediation
-  tasks are complete.
+  Preview boundary. EPIC-058 remains in progress until TASK-148 is complete.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -1486,5 +1484,5 @@ proof passed 518 tests plus one expected skip, 232-table drift, PGlite/PostgreSQ
 parity and forced RLS, both builds, smoke, 122 routes × five languages ×
 desktop/375px and critical Chromium/Firefox/WebKit flows. Current-Chrome cold load was
 8.905 seconds and common-route p95 was 38.7 ms. TASK-017 remains blocked for a physical
-phone; EPIC-058 TASK-147/148 remain open. See
+phone; EPIC-058 TASK-148 remains open. See
 [EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).
