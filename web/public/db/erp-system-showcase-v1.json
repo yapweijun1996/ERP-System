@@ -1,7 +1,8 @@
 {
-  "version": "1",
+  "version": "2",
   "businessDate": "2026-07-27",
-  "sha256": "dd64790a9afebe50fbd0f703f279961b3db0d512206b1557f4213a964396248f",
+  "sha256": "6428fb0cf3f1d4b365960d1c178fe7028ffe8514d22102761d79b2b11d65e10e",
+  "personas": 12,
   "generated": {
     "employees": 94,
     "customers": 198,

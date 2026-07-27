@@ -14,9 +14,13 @@ describe('deterministic enterprise Demo pack', () => {
       readFile('web/public/db/erp-system-showcase-v1.json', 'utf8'),
     ]);
     const manifest = JSON.parse(manifestText) as {
+      version: string;
+      personas: number;
       sha256: string;
       records: { total: number };
     };
+    expect(manifest.version).toBe('2');
+    expect(manifest.personas).toBe(12);
     expect(createHash('sha256').update(packSql).digest('hex')).toBe(manifest.sha256);
     const client = new PGlite();
     await client.exec(schemaSql);
@@ -52,6 +56,27 @@ describe('deterministic enterprise Demo pack', () => {
     expect(Number(masterCounts.customers)).toBeGreaterThanOrEqual(199);
     expect(Number(masterCounts.suppliers)).toBeGreaterThanOrEqual(100);
     expect(Number(masterCounts.products)).toBeGreaterThanOrEqual(500);
+    const personas = (await client.query<{
+      username: string; is_superadmin: boolean; roles: string[]; companies: string[];
+    }>(`
+      select u.username, bool_or(r.is_superadmin) as is_superadmin,
+        array_agg(distinct r.name order by r.name) as roles,
+        array_agg(distinct ucr.company_fn order by ucr.company_fn) as companies
+      from app_user u
+      join user_company_role ucr on ucr.user_id=u.user_id
+      join role r on r.role_id=ucr.role_id
+      where u.master_fn='M1' and u.username in (
+        'admin','company-admin','manager','sales','buyer','warehouse','production',
+        'finance-preparer','finance-checker','hr','service','viewer'
+      )
+      group by u.user_id,u.username order by u.username
+    `)).rows;
+    expect(personas).toHaveLength(12);
+    const superadmin = personas.find((row) => row.username === 'admin');
+    expect(superadmin).toMatchObject({ is_superadmin: true, companies: ['C-MY', 'C-SG'] });
+    expect(superadmin?.roles).toContain('Superadmin');
+    const viewer = personas.find((row) => row.username === 'viewer');
+    expect(viewer?.roles).toContain('Viewer');
     await client.close();
   }, 30_000);
 });

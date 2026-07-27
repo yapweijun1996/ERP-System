@@ -18,6 +18,11 @@
 约 200 个客户、100 个供应商、500 个物料及正好 10,000 笔活动、库存与平衡总账
 记录。既有 IndexedDB 不会被静默覆盖；重置必须明确确认。
 
+企业 Demo 数据包现为 manifest v2，并直接拥有完整 12 个身份，不再依赖小型测试
+fixture 间接提供 Superadmin 与 Viewer。`Avery Tan · Superadmin` 同时属于 SG/MY，
+固定显示在人物切换器第一位，可进入全部设置与模块启用控制；其他人物会显示其真实
+岗位，不会再全部误标成 Viewer。旧 IndexedDB 确认升级后会保留既有业务数据并补齐身份。
+
 正式 PostgreSQL 严禁 Demo seed。setup token 只建立组织、首家公司和
 Superadmin，之后依序完成公司/税务、财年/科目、仓库、模块、角色、员工账号、
 导入、期初核对、UAT 与受审计 Go Live。Go Live 前普通员工不能登录或写交易。

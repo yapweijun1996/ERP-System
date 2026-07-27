@@ -15,6 +15,7 @@ const roleSpecs = [
   ['HR', 'hr'], ['Service', 'service'], ['Viewer', 'viewer'],
 ];
 const personaSpecs = [
+  ['admin', 'admin@acme.co', 'Avery Tan · Superadmin', 'Superadmin', 'zh'],
   ['company-admin', 'company-admin@acme.co', 'Chen Wei · Company Admin', 'Company Admin', 'en'],
   ['manager', 'manager@acme.co', 'Mei Lin · Manager', 'Manager', 'zh'],
   ['sales', 'sales@acme.co', 'Daniel Lim · Sales', 'Sales', 'en'],
@@ -25,6 +26,7 @@ const personaSpecs = [
   ['finance-checker', 'finance-checker@acme.co', 'Grace Lee · Finance Checker', 'Finance Checker', 'en'],
   ['hr', 'hr@acme.co', 'Linh Nguyen · HR', 'HR', 'vi'],
   ['service', 'service@acme.co', 'Marcus Ong · Service', 'Service', 'en'],
+  ['viewer', 'viewer@acme.co', 'Jordan Lee · Viewer', 'Viewer', 'en'],
 ];
 const rolePermissions = {
   'Company Admin': ['dashboard.read','admin.users.invite','admin.users.read','admin.users.manage','admin.roles.read','admin.roles.write','admin.modules.manage','admin.audit.read','settings.read','settings.manage','hr.read','hr.write'],
@@ -54,6 +56,12 @@ const roleScopeRows = Object.entries(roleScopes).flatMap(([name, scopes]) =>
   scopes.map(([resource, scope]) => [name, resource, scope]));
 const personaSql = `
 INSERT INTO role (master_fn, company_fn, name, is_superadmin, source_template_key)
+SELECT 'M1', company_fn, 'Superadmin', true, null
+FROM (VALUES ('C-SG'),('C-MY')) company(company_fn)
+ON CONFLICT (master_fn, company_fn, name)
+DO UPDATE SET is_superadmin=true, source_template_key=null;
+
+INSERT INTO role (master_fn, company_fn, name, is_superadmin, source_template_key)
 SELECT 'M1', company_fn, name, false, template_key
 FROM (VALUES ('C-SG'),('C-MY')) company(company_fn)
 CROSS JOIN (VALUES ${values(roleSpecs)}) template(name,template_key)
@@ -62,7 +70,11 @@ ON CONFLICT (master_fn, company_fn, name) DO NOTHING;
 INSERT INTO app_user (master_fn, username, email, full_name, password_hash, language)
 VALUES ${personaSpecs.map(([username,email,name,,language]) =>
     `('M1',${q(username)},${q(email)},${q(name)},${q(demoPasswordHash)},${q(language)})`).join(',\n  ')}
-ON CONFLICT (master_fn, username) DO NOTHING;
+ON CONFLICT (master_fn, username) DO UPDATE SET
+  email=excluded.email,
+  full_name=excluded.full_name,
+  language=excluded.language,
+  is_active=true;
 
 INSERT INTO role_permission (master_fn, role_id, permission_key, allowed)
 SELECT 'M1', role.role_id, permission.permission_key, true
@@ -84,6 +96,7 @@ INSERT INTO user_company (user_id, company_fn, role_id)
 SELECT app_user.user_id, assignment.company_fn, role.role_id
 FROM (VALUES ${values([
     ...personaSpecs.map(([username,,,roleName]) => [username,'C-SG',roleName]),
+    ['admin','C-MY','Superadmin'],
     ['finance-preparer','C-MY','Finance Preparer'], ['finance-checker','C-MY','Finance Checker'], ['hr','C-MY','HR'],
   ])}) assignment(username,company_fn,role_name)
 JOIN app_user ON app_user.master_fn='M1' AND app_user.username=assignment.username
@@ -137,12 +150,20 @@ ON CONFLICT (master_fn, company_fn, employee_no) DO NOTHING;
 UPDATE employee SET user_id=app_user.user_id
 FROM app_user
 WHERE employee.master_fn='M1' AND app_user.master_fn='M1'
+  AND NOT EXISTS (
+    SELECT 1 FROM employee linked
+    WHERE linked.master_fn=employee.master_fn
+      AND linked.company_fn=employee.company_fn
+      AND linked.user_id=app_user.user_id
+      AND linked.id<>employee.id
+  )
   AND (employee.company_fn, employee.employee_no, app_user.username) IN (
     ('C-SG','DEMO-SG-E001','company-admin'), ('C-SG','DEMO-SG-E002','manager'),
     ('C-SG','DEMO-SG-E003','sales'), ('C-SG','DEMO-SG-E004','buyer'),
     ('C-SG','DEMO-SG-E005','warehouse'), ('C-SG','DEMO-SG-E006','production'),
     ('C-SG','DEMO-SG-E007','finance-preparer'), ('C-SG','DEMO-SG-E008','finance-checker'),
     ('C-SG','DEMO-SG-E009','hr'), ('C-SG','DEMO-SG-E010','service'),
+    ('C-SG','DEMO-SG-E011','admin'), ('C-SG','DEMO-SG-E012','viewer'),
     ('C-MY','DEMO-MY-E001','finance-preparer'), ('C-MY','DEMO-MY-E002','finance-checker'),
     ('C-MY','DEMO-MY-E003','hr')
   );
@@ -237,7 +258,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO system_state (key, value, updated_at)
-VALUES ('demo_showcase_pack', '{"version":"1","businessDate":"2026-07-27","records":10000}'::jsonb, now())
+VALUES ('demo_showcase_pack', '{"version":"2","businessDate":"2026-07-27","records":10000,"personas":12}'::jsonb, now())
 ON CONFLICT (key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at;
 
 COMMIT;
@@ -245,7 +266,8 @@ COMMIT;
 
 const hash = createHash('sha256').update(sql).digest('hex');
 const manifest = `${JSON.stringify({
-  version: '1', businessDate: '2026-07-27', sha256: hash,
+  version: '2', businessDate: '2026-07-27', sha256: hash,
+  personas: 12,
   generated: { employees: 94, customers: 198, suppliers: 98, products: 498 },
   records: { activities: 4000, stockMovements: 4000, glEntries: 2000, total: 10000 },
   companies: ['C-SG', 'C-MY'],
@@ -258,9 +280,9 @@ if (check) {
   if (currentSql !== sql || currentManifest !== manifest) {
     throw new Error('Demo showcase pack is stale. Run npm run generate:demo-pack.');
   }
-  console.log(`Demo showcase pack v1 verified (${hash}).`);
+  console.log(`Demo showcase pack v2 verified (${hash}).`);
 } else {
   await mkdir(dirname(sqlPath), { recursive: true });
   await Promise.all([writeFile(sqlPath, sql), writeFile(manifestPath, manifest)]);
-  console.log(`Generated deterministic Demo showcase pack v1 (${hash}).`);
+  console.log(`Generated deterministic Demo showcase pack v2 (${hash}).`);
 }

@@ -470,15 +470,19 @@ function ensureUserSwitcherMenuItem(){
 }
 function openUserSwitcher(){
   const users=(DB.erpSystem&&DB.erpSystem.users)||[];
-  const rows=users.map(u=>{
+  const ordered=[...users].sort((a,b)=>Number(!!b.is_superadmin)-Number(!!a.is_superadmin)
+    ||String(a.full_name||a.email).localeCompare(String(b.full_name||b.email)));
+  const rows=ordered.map(u=>{
     const name=u.full_name||u.email;
     const current=DB.user&&DB.user.email===u.email;
+    const roleLabel=u.is_superadmin?'Superadmin':((u.roles||[]).join(' + ')||'Employee');
+    const accessLabel=u.is_superadmin?'All companies · All setup and modules':`${(u.companies||[]).length||1} company access`;
     return `<button class="menu-item" style="width:100%" ${current?'disabled':''} data-switch-email="${esc(u.email)}">
       ${ic(u.is_superadmin?'shield':'user')}
-      <span>${esc(name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(u.email)} · ${u.is_superadmin?'Superadmin':'Viewer'}</small></span>
+      <span>${esc(name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(u.email)} · ${esc(roleLabel)}</small><small style="display:block;color:var(--muted);font-size:10.5px">${esc(accessLabel)}</small></span>
       <span class="meta">${current?ic('check'):''}</span></button>`;
   }).join('');
-  appModal({ icon:'people', title:'Switch demo user', body:`<div style="display:grid;gap:4px">${rows}</div>`, width:360 });
+  appModal({ icon:'people', title:'Switch demo user', body:`<p class="hint" style="margin:0 0 10px">Choose a real permission persona. Superadmin always retains access to company setup and every module.</p><div role="list" style="display:grid;gap:4px;max-height:min(62vh,560px);overflow:auto">${rows}</div>`, width:420 });
   $$('#modalEl [data-switch-email]').forEach(b=>b.addEventListener('click',async ()=>{
     const email=b.dataset.switchEmail;
     closeModal();

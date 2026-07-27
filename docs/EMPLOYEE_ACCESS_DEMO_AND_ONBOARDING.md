@@ -61,6 +61,10 @@ MYR/SST), 12 real personas, at least 100 employees, about 200 customers, 100
 suppliers, 500 products and exactly 10,000 deterministic activity, inventory and GL
 records. Stock movements are paired and journals balance by company and reference.
 Cross-company Finance and HR assignments demonstrate legal-entity separation. The
+enterprise-pack manifest is currently version 2; it owns all 12 identities directly
+instead of relying on the compact regression seed. Its Superadmin belongs to both
+companies, bypasses module disablement for administration, and retains every setup
+capability. The Demo switcher presents the true assigned role for every persona.
 target is at most 15 seconds for first load and p95 at most two seconds for common
 pages and reports on a current Chrome browser and ordinary modern laptop.
 

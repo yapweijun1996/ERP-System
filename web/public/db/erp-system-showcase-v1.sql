@@ -4,6 +4,12 @@ BEGIN;
 
 
 INSERT INTO role (master_fn, company_fn, name, is_superadmin, source_template_key)
+SELECT 'M1', company_fn, 'Superadmin', true, null
+FROM (VALUES ('C-SG'),('C-MY')) company(company_fn)
+ON CONFLICT (master_fn, company_fn, name)
+DO UPDATE SET is_superadmin=true, source_template_key=null;
+
+INSERT INTO role (master_fn, company_fn, name, is_superadmin, source_template_key)
 SELECT 'M1', company_fn, name, false, template_key
 FROM (VALUES ('C-SG'),('C-MY')) company(company_fn)
 CROSS JOIN (VALUES ('Company Admin','company_admin'),
@@ -20,7 +26,8 @@ CROSS JOIN (VALUES ('Company Admin','company_admin'),
 ON CONFLICT (master_fn, company_fn, name) DO NOTHING;
 
 INSERT INTO app_user (master_fn, username, email, full_name, password_hash, language)
-VALUES ('M1','company-admin','company-admin@acme.co','Chen Wei · Company Admin','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','en'),
+VALUES ('M1','admin','admin@acme.co','Avery Tan · Superadmin','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','zh'),
+  ('M1','company-admin','company-admin@acme.co','Chen Wei · Company Admin','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','en'),
   ('M1','manager','manager@acme.co','Mei Lin · Manager','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','zh'),
   ('M1','sales','sales@acme.co','Daniel Lim · Sales','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','en'),
   ('M1','buyer','buyer@acme.co','Nur Aisyah · Buyer','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','ms'),
@@ -29,8 +36,13 @@ VALUES ('M1','company-admin','company-admin@acme.co','Chen Wei · Company Admin'
   ('M1','finance-preparer','finance-preparer@acme.co','Siti Aminah · Finance Preparer','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','ms'),
   ('M1','finance-checker','finance-checker@acme.co','Grace Lee · Finance Checker','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','en'),
   ('M1','hr','hr@acme.co','Linh Nguyen · HR','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','vi'),
-  ('M1','service','service@acme.co','Marcus Ong · Service','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','en')
-ON CONFLICT (master_fn, username) DO NOTHING;
+  ('M1','service','service@acme.co','Marcus Ong · Service','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','en'),
+  ('M1','viewer','viewer@acme.co','Jordan Lee · Viewer','pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48','en')
+ON CONFLICT (master_fn, username) DO UPDATE SET
+  email=excluded.email,
+  full_name=excluded.full_name,
+  language=excluded.language,
+  is_active=true;
 
 INSERT INTO role_permission (master_fn, role_id, permission_key, allowed)
 SELECT 'M1', role.role_id, permission.permission_key, true
@@ -180,7 +192,8 @@ ON CONFLICT (role_id, resource_key) DO NOTHING;
 
 INSERT INTO user_company (user_id, company_fn, role_id)
 SELECT app_user.user_id, assignment.company_fn, role.role_id
-FROM (VALUES ('company-admin','C-SG','Company Admin'),
+FROM (VALUES ('admin','C-SG','Superadmin'),
+  ('company-admin','C-SG','Company Admin'),
   ('manager','C-SG','Manager'),
   ('sales','C-SG','Sales'),
   ('buyer','C-SG','Buyer'),
@@ -190,6 +203,8 @@ FROM (VALUES ('company-admin','C-SG','Company Admin'),
   ('finance-checker','C-SG','Finance Checker'),
   ('hr','C-SG','HR'),
   ('service','C-SG','Service'),
+  ('viewer','C-SG','Viewer'),
+  ('admin','C-MY','Superadmin'),
   ('finance-preparer','C-MY','Finance Preparer'),
   ('finance-checker','C-MY','Finance Checker'),
   ('hr','C-MY','HR')) assignment(username,company_fn,role_name)
@@ -201,7 +216,7 @@ INSERT INTO user_company_role (user_id, company_fn, role_id)
 SELECT membership.user_id, membership.company_fn, membership.role_id
 FROM user_company membership
 JOIN app_user ON app_user.user_id=membership.user_id
-WHERE app_user.master_fn='M1' AND app_user.username IN ('company-admin','manager','sales','buyer','warehouse','production','finance-preparer','finance-checker','hr','service')
+WHERE app_user.master_fn='M1' AND app_user.username IN ('admin','company-admin','manager','sales','buyer','warehouse','production','finance-preparer','finance-checker','hr','service','viewer')
 ON CONFLICT (user_id, company_fn, role_id) DO NOTHING;
 
 
@@ -238,12 +253,20 @@ ON CONFLICT (master_fn, company_fn, employee_no) DO NOTHING;
 UPDATE employee SET user_id=app_user.user_id
 FROM app_user
 WHERE employee.master_fn='M1' AND app_user.master_fn='M1'
+  AND NOT EXISTS (
+    SELECT 1 FROM employee linked
+    WHERE linked.master_fn=employee.master_fn
+      AND linked.company_fn=employee.company_fn
+      AND linked.user_id=app_user.user_id
+      AND linked.id<>employee.id
+  )
   AND (employee.company_fn, employee.employee_no, app_user.username) IN (
     ('C-SG','DEMO-SG-E001','company-admin'), ('C-SG','DEMO-SG-E002','manager'),
     ('C-SG','DEMO-SG-E003','sales'), ('C-SG','DEMO-SG-E004','buyer'),
     ('C-SG','DEMO-SG-E005','warehouse'), ('C-SG','DEMO-SG-E006','production'),
     ('C-SG','DEMO-SG-E007','finance-preparer'), ('C-SG','DEMO-SG-E008','finance-checker'),
     ('C-SG','DEMO-SG-E009','hr'), ('C-SG','DEMO-SG-E010','service'),
+    ('C-SG','DEMO-SG-E011','admin'), ('C-SG','DEMO-SG-E012','viewer'),
     ('C-MY','DEMO-MY-E001','finance-preparer'), ('C-MY','DEMO-MY-E002','finance-checker'),
     ('C-MY','DEMO-MY-E003','hr')
   );
@@ -338,7 +361,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO system_state (key, value, updated_at)
-VALUES ('demo_showcase_pack', '{"version":"1","businessDate":"2026-07-27","records":10000}'::jsonb, now())
+VALUES ('demo_showcase_pack', '{"version":"2","businessDate":"2026-07-27","records":10000,"personas":12}'::jsonb, now())
 ON CONFLICT (key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at;
 
 COMMIT;
