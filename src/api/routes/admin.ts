@@ -10,7 +10,7 @@
 import { Router } from 'express';
 import type { DB } from '../../data/db';
 import {
-  listAuditLog, listCompanyUsers, listRolePermissions, listRoles,
+  listAuditLog, listCompanyUsers, listRolePermissions, listRoleScopes, listRoles,
 } from '../admin';
 import {
   AuthLifecycleError,
@@ -18,8 +18,11 @@ import {
   type LifecycleOptions,
 } from '../../auth/lifecycle';
 import {
+  cloneRoleTemplate,
   createRole,
+  listRoleTemplates,
   setRolePermission,
+  setRoleResourceScope,
   setUserActive,
   setUserRoles,
 } from '../../auth/adminLifecycle';
@@ -164,8 +167,52 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
       apiError(res, 403, 'permission_denied', 'You cannot read roles.');
       return;
     }
-    const result = await listRoles(db, session.masterFn);
+    const result = await listRoles(db, session.masterFn, session.activeCompanyFn);
     res.json({ data: result, meta: {} });
+  });
+
+  router.get('/role-templates', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read role templates.');
+      return;
+    }
+    res.json({ data: listRoleTemplates(), meta: { immutable: true } });
+  });
+
+  router.get('/role-scopes', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read role scopes.');
+      return;
+    }
+    res.json({
+      data: await listRoleScopes(db, session.masterFn, session.activeCompanyFn), meta: {},
+    });
+  });
+
+  router.post('/roles/actions/clone-template', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesWrite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot create roles.');
+      return;
+    }
+    const body = (req.body ?? {}) as { templateKey?: unknown; name?: unknown };
+    try {
+      const result = await cloneRoleTemplate(
+        db,
+        session,
+        typeof body.templateKey === 'string' ? body.templateKey : '',
+        typeof body.name === 'string' ? body.name : undefined,
+        context(res).requestId,
+      );
+      res.status(201).json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
   });
 
   router.get('/role-permissions', async (req, res) => {
@@ -175,7 +222,7 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
       apiError(res, 403, 'permission_denied', 'You cannot read role permissions.');
       return;
     }
-    const result = await listRolePermissions(db, session.masterFn);
+    const result = await listRolePermissions(db, session.masterFn, session.activeCompanyFn);
     res.json({ data: result, meta: {} });
   });
 
@@ -224,6 +271,35 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
     }
   });
 
+  router.post('/roles/:roleId/actions/set-scope', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.rolesWrite)) {
+      apiError(res, 403, 'permission_denied', 'You cannot change role data scopes.');
+      return;
+    }
+    const roleId = Number(req.params.roleId);
+    const body = (req.body ?? {}) as { resourceKey?: unknown; scope?: unknown };
+    if (!Number.isSafeInteger(roleId) || roleId <= 0
+      || typeof body.resourceKey !== 'string' || typeof body.scope !== 'string') {
+      apiError(res, 400, 'invalid_request', 'roleId, resourceKey and scope are required.');
+      return;
+    }
+    try {
+      const result = await setRoleResourceScope(
+        db,
+        session,
+        roleId,
+        body.resourceKey,
+        body.scope as 'self' | 'team' | 'department' | 'company',
+        context(res).requestId,
+      );
+      res.json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
   router.get('/audit-log', async (req, res) => {
     const session = await requireSession(db, req, res);
     if (!session) return;
@@ -246,7 +322,7 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
       apiError(res, 403, 'permission_denied', 'You cannot read module activation state.');
       return;
     }
-    const result = await listMasterModules(db, session.masterFn);
+    const result = await listMasterModules(db, session.masterFn, session.activeCompanyFn);
     res.json({ data: result, meta: {} });
   });
 

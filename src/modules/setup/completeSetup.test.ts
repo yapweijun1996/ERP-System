@@ -6,6 +6,7 @@ import {
   appUser,
   auditLog,
   company,
+  companyOnboarding,
   master,
   role,
   systemState,
@@ -50,7 +51,10 @@ describe('production setup command', () => {
     });
     expect((await db.select().from(systemState)
       .where(eq(systemState.key, 'production_setup')))[0].value)
-      .toMatchObject({ status: 'completed' });
+      .toMatchObject({ status: 'bootstrap_completed' });
+    expect((await db.select().from(companyOnboarding))[0]).toMatchObject({
+      status: 'setup', currentStage: 'fiscal', completedSteps: ['company'],
+    });
 
     await expect(completeProductionSetup(db, {
       organizationName: 'Second',

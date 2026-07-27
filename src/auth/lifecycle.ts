@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, or } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   appSession,
@@ -84,6 +84,7 @@ export async function createInvitation(
       .where(and(
         eq(role.roleId, input.roleId),
         eq(role.masterFn, session.masterFn),
+        or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       ))
       .limit(1);
     if (!targetRole) {

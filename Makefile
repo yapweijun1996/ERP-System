@@ -30,7 +30,7 @@ migrate: ## Apply Drizzle migrations to PostgreSQL
 	docker compose exec api npm run migrate
 
 seed: ## Seed sample data (SG + MY demo companies)
-	docker compose exec api npm run seed
+	docker compose exec -e ERP_ENV=demo -e ERP_DEMO_SEED=I_UNDERSTAND_DEMO_DATA api npm run seed
 
 reset: ## DESTRUCTIVE: wipe DB volume and re-setup from scratch
 	docker compose down -v

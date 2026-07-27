@@ -2,7 +2,8 @@ import { Router, type Request } from 'express';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  appUser, company, employeeActivationSecret, master, userCompany,
+  appUser, company, companyOnboarding, employeeActivationSecret, master, role,
+  userCompany, userCompanyRole,
 } from '../../data/schema';
 import { verifyPassword } from '../../auth/password';
 import { hashPassword } from '../../auth/password';
@@ -27,7 +28,8 @@ import {
   loginIdentifierHash,
   recordLoginFailure,
 } from '../../auth/rateLimit';
-import { PERMISSIONS, hasPermission } from '../../auth/permissions';
+import { PERMISSIONS, effectiveCapabilities, hasPermission } from '../../auth/permissions';
+import { listCompanyModules } from '../../auth/moduleAccess';
 import {
   acceptInvitation,
   AuthLifecycleError,
@@ -174,6 +176,27 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       apiError(res, 403, 'no_company_access', 'This user has no company assignments.');
       return;
     }
+    const [onboarding] = await db.select({ status: companyOnboarding.status })
+      .from(companyOnboarding).where(and(
+        eq(companyOnboarding.masterFn, user.masterFn),
+        eq(companyOnboarding.companyFn, assignment.companyFn),
+      )).limit(1);
+    if (onboarding?.status === 'setup') {
+      const [superadmin] = await db.select({ roleId: role.roleId })
+        .from(userCompanyRole)
+        .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+        .where(and(
+          eq(userCompanyRole.userId, user.userId),
+          eq(userCompanyRole.companyFn, assignment.companyFn),
+          eq(role.masterFn, user.masterFn),
+          eq(role.companyFn, assignment.companyFn),
+          eq(role.isSuperadmin, true),
+        )).limit(1);
+      if (!superadmin) {
+        apiError(res, 403, 'company_setup_in_progress', 'This company is not live yet.');
+        return;
+      }
+    }
     if (user.passwordChangeRequired) {
       const temporaryCredential = await withTenantTransaction(db, {
         masterFn: user.masterFn,
@@ -248,7 +271,18 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   router.get('/session', async (req, res) => {
     const session = await requireSession(db, req, res, { allowActivationPending: true });
     if (!session) return;
-    res.json(session);
+    const [capabilities, modules, onboarding] = await Promise.all([
+      effectiveCapabilities(db, session),
+      listCompanyModules(db, session.masterFn, session.activeCompanyFn),
+      db.select({
+        status: companyOnboarding.status,
+        currentStage: companyOnboarding.currentStage,
+      }).from(companyOnboarding).where(and(
+        eq(companyOnboarding.masterFn, session.masterFn),
+        eq(companyOnboarding.companyFn, session.activeCompanyFn),
+      )).limit(1),
+    ]);
+    res.json({ ...session, capabilities, modules, onboarding: onboarding[0] ?? null });
   });
 
   router.post('/activation/actions/complete', async (req, res) => {

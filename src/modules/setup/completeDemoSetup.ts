@@ -4,6 +4,8 @@ import {
   account,
   appUser,
   company,
+  companyModule,
+  companyOnboarding,
   currency,
   master,
   role,
@@ -20,6 +22,7 @@ import {
   normalizeOrganizationCode,
   normalizeUsername,
 } from '../../auth/identifiers';
+import { MODULE_KEYS } from '../../auth/moduleAccess';
 
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
 
@@ -180,12 +183,18 @@ export async function completeDemoSetupWithin(
 
   let [adminRole] = await exec.select({ roleId: role.roleId })
     .from(role)
-    .where(and(eq(role.masterFn, masterFn), eq(role.name, 'Superadmin')));
+    .where(and(
+      eq(role.masterFn, masterFn),
+      eq(role.companyFn, companyFn),
+      eq(role.name, 'Superadmin'),
+    ));
   if (!adminRole) {
     [adminRole] = await exec.insert(role).values({
       masterFn,
+      companyFn,
       name: 'Superadmin',
       isSuperadmin: true,
+      sourceTemplateKey: 'superadmin',
     }).returning({ roleId: role.roleId });
   }
   await exec.insert(rolePermission).values(
@@ -219,6 +228,14 @@ export async function completeDemoSetupWithin(
     userId: admin.userId,
     companyFn,
     roleId: adminRole.roleId,
+  }).onConflictDoNothing();
+  await exec.insert(companyModule).values(MODULE_KEYS.map((moduleKey) => ({
+    masterFn, companyFn, moduleKey, enabled: true, configured: true,
+  }))).onConflictDoNothing();
+  await exec.insert(companyOnboarding).values({
+    masterFn, companyFn, status: 'live', currentStage: 'live',
+    completedSteps: ['company', 'fiscal', 'warehouse', 'modules', 'roles', 'staff', 'import', 'opening_balance', 'uat'],
+    goLiveAt: new Date(), goLiveByUserId: admin.userId,
   }).onConflictDoNothing();
 
   return {

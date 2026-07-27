@@ -1,5 +1,5 @@
 import {
-  and, eq, inArray, isNull, ne, notInArray,
+  and, eq, inArray, isNull, ne, notInArray, or,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
@@ -128,6 +128,7 @@ export async function createEmployeeAccount(
     }
     const [employeeRole] = await tx.select({ roleId: role.roleId }).from(role).where(and(
       eq(role.masterFn, scope.masterFn),
+      or(eq(role.companyFn, scope.companyFn), isNull(role.companyFn)),
       eq(role.name, 'Employee'),
     )).limit(1);
     if (!employeeRole) {
@@ -143,6 +144,7 @@ export async function createEmployeeAccount(
       isActive: true,
       accountState: 'preactivated',
       passwordChangeRequired: true,
+      initialPasswordExpiresAt: input.expiresAt,
     }).returning({ userId: appUser.userId });
     await tx.insert(userCompany).values({
       userId: user.userId,
@@ -259,6 +261,7 @@ export async function resetEmployeeAccount(
     await tx.update(appUser).set({
       passwordHash: input.passwordHash,
       passwordChangeRequired: true,
+      initialPasswordExpiresAt: input.expiresAt,
       accountState: account.accountState === 'preactivated' ? 'preactivated' : 'active',
       updatedAt: now,
     }).where(eq(appUser.userId, account.userId));
@@ -329,6 +332,7 @@ export async function completeEmployeeActivation(
       email,
       passwordHash,
       passwordChangeRequired: false,
+      initialPasswordExpiresAt: null,
       accountState: 'active',
       activatedAt: now,
       updatedAt: now,
@@ -447,6 +451,7 @@ export async function offboardEmployeeAccount(
       isActive: false,
       accountState: 'offboarded',
       passwordChangeRequired: false,
+      initialPasswordExpiresAt: null,
       offboardedAt: now,
       updatedAt: now,
     }).where(eq(appUser.userId, source.userId));

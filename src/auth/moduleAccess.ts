@@ -6,7 +6,7 @@
 // repo: a raw-exec `...Within(exec, ...)` core plus a thin self-transacting wrapper.
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { masterModule } from '../data/schema';
+import { companyModule } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
@@ -23,10 +23,37 @@ export const MODULE_KEYS = [
 export type ModuleKey = typeof MODULE_KEYS[number];
 const KNOWN_MODULE_KEYS = new Set<string>(MODULE_KEYS);
 
-export interface MasterModuleState {
+/** Only hard technical prerequisites belong here. Commercial packaging remains
+ * independent from the authorization boundary. */
+export const MODULE_DEPENDENCIES: Readonly<Record<ModuleKey, readonly ModuleKey[]>> = {
+  sales: ['finance'],
+  purchasing: ['finance'],
+  crm: [],
+  inventory: [],
+  warehouse: ['inventory'],
+  manufacturing: ['inventory', 'warehouse'],
+  quality: ['inventory'],
+  finance: [],
+  hr: [],
+  project: ['finance'],
+  service: ['crm'],
+  asset: ['finance'],
+  workflow: [],
+  bi: [],
+  admin: [],
+  integration: [],
+};
+
+export interface CompanyModuleState {
   moduleKey: string;
   enabled: boolean;
+  configured: boolean;
+  dependencies: readonly string[];
+  blockers: string[];
 }
+
+/** Compatibility name retained for existing adapter consumers. */
+export type MasterModuleState = CompanyModuleState;
 
 /**
  * Absence of a master_module row for a (masterFn, moduleKey) pair means enabled --
@@ -34,29 +61,53 @@ export interface MasterModuleState {
  * every module on, matching today's client-side default in app.js's
  * defaultModuleControl().
  */
-export async function listMasterModules(exec: DB, masterFn: string): Promise<MasterModuleState[]> {
+export async function listCompanyModules(
+  exec: DB,
+  masterFn: string,
+  companyFn: string,
+): Promise<CompanyModuleState[]> {
   const rows = await exec.select({
-    moduleKey: masterModule.moduleKey,
-    enabled: masterModule.enabled,
-  }).from(masterModule).where(eq(masterModule.masterFn, masterFn));
-  const overrides = new Map(rows.map((r) => [r.moduleKey, r.enabled]));
+    moduleKey: companyModule.moduleKey,
+    enabled: companyModule.enabled,
+    configured: companyModule.configured,
+  }).from(companyModule).where(and(
+    eq(companyModule.masterFn, masterFn),
+    eq(companyModule.companyFn, companyFn),
+  ));
+  const states = new Map(rows.map((row) => [row.moduleKey, row]));
   return MODULE_KEYS.map((moduleKey) => ({
     moduleKey,
-    enabled: overrides.has(moduleKey) ? overrides.get(moduleKey) as boolean : true,
+    enabled: states.get(moduleKey)?.enabled ?? false,
+    configured: states.get(moduleKey)?.configured ?? false,
+    dependencies: MODULE_DEPENDENCIES[moduleKey],
+    blockers: MODULE_DEPENDENCIES[moduleKey].filter(
+      (dependency) => !(states.get(dependency)?.enabled ?? false),
+    ),
   }));
 }
+
+export const listMasterModules = listCompanyModules;
 
 /** True unless a master_module row explicitly disables this module. Used by
  *  server-side enforcement (routes/resources.ts). Unknown module keys are treated
  *  as enabled (fail open) -- a resource prefix must be explicitly mapped below to
  *  become gateable, so a forgotten mapping entry never blocks legitimate access. */
-export async function isModuleEnabled(exec: DB, masterFn: string, moduleKey: string): Promise<boolean> {
+export async function isModuleEnabled(
+  exec: DB,
+  masterFn: string,
+  companyFn: string,
+  moduleKey: string,
+): Promise<boolean> {
   if (!KNOWN_MODULE_KEYS.has(moduleKey)) return true;
-  const [row] = await exec.select({ enabled: masterModule.enabled })
-    .from(masterModule)
-    .where(and(eq(masterModule.masterFn, masterFn), eq(masterModule.moduleKey, moduleKey)))
+  const [row] = await exec.select({ enabled: companyModule.enabled })
+    .from(companyModule)
+    .where(and(
+      eq(companyModule.masterFn, masterFn),
+      eq(companyModule.companyFn, companyFn),
+      eq(companyModule.moduleKey, moduleKey),
+    ))
     .limit(1);
-  return row ? row.enabled : true;
+  return row?.enabled === true;
 }
 
 /** Generic-resource URL prefix (req.params.module in routes/resources.ts) -> the
@@ -87,7 +138,7 @@ export async function setMasterModuleWithin(
   enabled: boolean,
   requestId: string,
   now = new Date(),
-): Promise<MasterModuleState> {
+): Promise<CompanyModuleState> {
   if (!KNOWN_MODULE_KEYS.has(moduleKey)) {
     throw new AuthLifecycleError(400, 'invalid_module_key', 'Unknown module key.');
   }
@@ -98,23 +149,56 @@ export async function setMasterModuleWithin(
       'The Admin module cannot be disabled -- doing so would lock every superadmin out of re-enabling it.',
     );
   }
-  const [existing] = await exec.select({ enabled: masterModule.enabled })
-    .from(masterModule)
-    .where(and(eq(masterModule.masterFn, session.masterFn), eq(masterModule.moduleKey, moduleKey)))
+  const states = await listCompanyModules(exec, session.masterFn, session.activeCompanyFn);
+  const current = states.find((state) => state.moduleKey === moduleKey)!;
+  if (enabled && current.blockers.length) {
+    throw new AuthLifecycleError(
+      409,
+      'module_dependencies_required',
+      `Enable required modules first: ${current.blockers.join(', ')}.`,
+      { moduleKey: current.blockers.join(',') },
+    );
+  }
+  if (!enabled) {
+    const dependents = states.filter((state) =>
+      state.enabled && state.dependencies.includes(moduleKey as ModuleKey));
+    if (dependents.length) {
+      throw new AuthLifecycleError(
+        409,
+        'module_required_by_enabled_module',
+        `Disable dependent modules first: ${dependents.map((state) => state.moduleKey).join(', ')}.`,
+        { moduleKey: dependents.map((state) => state.moduleKey).join(',') },
+      );
+    }
+  }
+  const [existing] = await exec.select({
+    enabled: companyModule.enabled,
+    configured: companyModule.configured,
+  })
+    .from(companyModule)
+    .where(and(
+      eq(companyModule.masterFn, session.masterFn),
+      eq(companyModule.companyFn, session.activeCompanyFn),
+      eq(companyModule.moduleKey, moduleKey),
+    ))
     .limit(1);
   if (existing) {
-    await exec.update(masterModule).set({
+    await exec.update(companyModule).set({
       enabled,
+      configured: enabled || existing.configured,
       updatedAt: now,
     }).where(and(
-      eq(masterModule.masterFn, session.masterFn),
-      eq(masterModule.moduleKey, moduleKey),
+      eq(companyModule.masterFn, session.masterFn),
+      eq(companyModule.companyFn, session.activeCompanyFn),
+      eq(companyModule.moduleKey, moduleKey),
     ));
   } else {
-    await exec.insert(masterModule).values({
+    await exec.insert(companyModule).values({
       masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
       moduleKey,
       enabled,
+      configured: enabled,
     });
   }
   await appendAudit(exec, {
@@ -122,13 +206,14 @@ export async function setMasterModuleWithin(
     companyFn: session.activeCompanyFn,
     actorUserId: session.userId,
     requestId,
-    entity: 'master_module',
+    entity: 'company_module',
     entityId: moduleKey,
     action: 'set_enabled',
     before: existing ? { enabled: existing.enabled } : null,
     after: { moduleKey, enabled },
   });
-  return { moduleKey, enabled };
+  return (await listCompanyModules(exec, session.masterFn, session.activeCompanyFn))
+    .find((state) => state.moduleKey === moduleKey)!;
 }
 
 export function setMasterModule(

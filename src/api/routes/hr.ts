@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { normalizeUsername, isValidUsername } from '../../auth/identifiers';
+import { hashPassword } from '../../auth/password';
 import {
   provisionEmployeeAccount,
   resetEmployeeTemporaryPassword,
@@ -32,6 +33,14 @@ import {
 import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
 import { LeavePolicyError } from '../../modules/hr/leavePolicy';
 import { ApprovalWorkflowError } from '../../modules/approval/workflow';
+import {
+  StaffOnboardingError,
+  activateStaffOnboarding,
+  createStaffOnboardingDraft,
+  listStaffOnboardingDrafts,
+  updateStaffOnboardingDraft,
+  type StaffOnboardingDraftInput,
+} from '../../modules/hr/staffOnboarding';
 
 export interface HrRouterOptions {
   tokenEncryptionKey?: Buffer;
@@ -47,6 +56,10 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
 
   function handleError(res: import('express').Response, error: unknown): void {
     if (error instanceof EmployeeAccountError) {
+      apiError(res, error.status, error.code, error.message, error.fieldErrors);
+      return;
+    }
+    if (error instanceof StaffOnboardingError) {
       apiError(res, error.status, error.code, error.message, error.fieldErrors);
       return;
     }
@@ -137,6 +150,92 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     )).limit(1);
     return { userId, employeeId: linked?.id ?? null, canManage: true };
   }
+
+  router.get('/staff-onboarding-drafts', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const data = await withTenantTransaction(db, scope, (tx) =>
+      listStaffOnboardingDrafts(tx, session));
+    res.json({ data, meta: {} });
+  });
+
+  router.post('/staff-onboarding-drafts', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    try {
+      const data = await createStaffOnboardingDraft(
+        db, session, (req.body ?? {}) as StaffOnboardingDraftInput, context(res).requestId,
+      );
+      res.status(201).json({ data, meta: {} });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.put('/staff-onboarding-drafts/:draftId', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const draftId = employeeIdParam(req.params.draftId);
+    const expectedVersion = Number(req.body?.expectedVersion);
+    if (!draftId || !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0) {
+      apiError(res, 400, 'invalid_request', 'draftId and expectedVersion are required.');
+      return;
+    }
+    try {
+      const data = await updateStaffOnboardingDraft(
+        db,
+        session,
+        draftId,
+        expectedVersion,
+        (req.body?.draft ?? {}) as StaffOnboardingDraftInput,
+        context(res).requestId,
+      );
+      res.json({ data, meta: {} });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/staff-onboarding-drafts/:draftId/actions/activate', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const draftId = employeeIdParam(req.params.draftId);
+    const expectedVersion = Number(req.body?.expectedVersion);
+    const initialPassword = typeof req.body?.initialPassword === 'string'
+      ? req.body.initialPassword
+      : '';
+    if (!draftId || !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0
+      || (initialPassword.length > 0 && initialPassword.length < 8)) {
+      apiError(res, 400, 'invalid_request', 'Draft version and a valid optional initial password are required.', {
+        ...(initialPassword.length > 0 && initialPassword.length < 8
+          ? { initialPassword: 'Use at least 8 characters.' } : {}),
+      });
+      return;
+    }
+    try {
+      await runIdempotent(
+        req,
+        res,
+        session,
+        'hr.staff-onboarding.activate',
+        { draftId, expectedVersion },
+        async () => ({
+          status: 201,
+          data: await activateStaffOnboarding(
+            db,
+            session,
+            draftId,
+            expectedVersion,
+            initialPassword ? hashPassword(initialPassword) : null,
+            context(res).requestId,
+          ),
+        }),
+      );
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
 
   router.get('/employee-accounts/:employeeId', async (req, res) => {
     const session = await requireHr(req, res, PERMISSIONS.hrRead);

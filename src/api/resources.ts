@@ -1,4 +1,5 @@
-import { and, asc, eq, gt, gte, lte } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, inArray, lte, sql } from 'drizzle-orm';
+import type { DataScope } from '../auth/accessCatalog';
 import type { DB } from '../data/db';
 import {
   account,
@@ -126,6 +127,8 @@ export interface ApiScope {
   masterFn: string;
   companyFn: string;
   actorUserId?: number;
+  accessScope?: DataScope;
+  allowedUserIds?: number[];
 }
 
 export interface ResourceQuery {
@@ -159,7 +162,9 @@ export interface ResourceDefinition {
   status?: any;
   customerId?: any;
   numericFilters?: Record<string, any>;
-  actorUserIdColumn?: any;
+  textFilters?: Record<string, any>;
+    actorUserIdColumn?: any;
+    scopeUserIdColumn?: any;
   dateRangeColumn?: any;
   listOnly?: boolean;
   listHandler?: (
@@ -196,7 +201,10 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
   'inventory/warehouses': resource(warehouse, 'inventory.read'),
   'inventory/stock-levels': resource(stockLevel, 'inventory.read'),
-  'inventory/stock-movements': resource(stockMovement, 'inventory.read'),
+  'inventory/stock-movements': resource(stockMovement, 'inventory.read', {
+    numericFilters: { refId: stockMovement.refId },
+    textFilters: { refType: stockMovement.refType },
+  }),
   'inventory/bins': resource(warehouseBin, 'inventory.read', {
     createPermission: 'inventory.track',
   }),
@@ -237,6 +245,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     versionColumn: salesOrder.version,
     allowedActions: ['approve', 'reject', 'confirm'],
     createPermission: 'sales.write',
+    scopeUserIdColumn: salesOrder.salespersonUserId,
   }),
   'sales/order-approvals': resource(salesOrderApproval, 'sales.read', {
     status: salesOrderApproval.status,
@@ -278,7 +287,9 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'integration/import-errors': resource(importRowError, 'integration.read', {
     numericFilters: { jobId: importRowError.jobId },
   }),
-  'sales/customers': resource(customer, 'sales.read'),
+  'sales/customers': resource(customer, 'sales.read', {
+    scopeUserIdColumn: customer.ownerUserId,
+  }),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),
   'sales/deliveries': resource(salesDelivery, 'sales.read', {
     status: salesDelivery.status,
@@ -371,12 +382,14 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'finance/accounts': resource(account, 'finance.read'),
   'finance/gl-entries': resource(glEntry, 'finance.read', {
     numericFilters: { accountId: glEntry.accountId },
+    textFilters: { journalRef: glEntry.journalRef },
   }),
   'finance/journals': resource(journalHeader, 'finance.read', {
     status: journalHeader.status,
     versionColumn: journalHeader.version,
     allowedActions: ['post', 'reverse'],
     createPermission: 'finance.write',
+    textFilters: { docNo: journalHeader.docNo },
   }),
   'finance/journal-lines': resource(journalLine, 'finance.read', {
     numericFilters: { journalId: journalLine.journalId },
@@ -406,7 +419,9 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     status: purchaseOrderApproval.status,
     versionColumn: purchaseOrderApproval.version,
   }),
-  'purchasing/purchase-order-lines': resource(purchaseOrderLine, 'purchasing.read'),
+  'purchasing/purchase-order-lines': resource(purchaseOrderLine, 'purchasing.read', {
+    numericFilters: { orderId: purchaseOrderLine.orderId },
+  }),
   'purchasing/purchase-requisitions': resource(purchaseRequisition, 'purchasing.read', {
     status: purchaseRequisition.status,
     allowedActions: ['approve', 'reject'],
@@ -428,7 +443,9 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     createPermission: 'purchasing.write',
   }),
   'purchasing/supplier-quotation-lines': resource(supplierQuotationLine, 'purchasing.read'),
-  'purchasing/goods-receipts': resource(goodsReceipt, 'purchasing.read'),
+  'purchasing/goods-receipts': resource(goodsReceipt, 'purchasing.read', {
+    numericFilters: { orderId: goodsReceipt.orderId },
+  }),
   'purchasing/supplier-invoices': resource(supplierInvoice, 'purchasing.read', {
     status: supplierInvoice.status,
     versionColumn: supplierInvoice.version,
@@ -486,6 +503,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['convert', 'mark-lost'],
     createPermission: 'crm.write',
     updatePermission: 'crm.write',
+    scopeUserIdColumn: opportunity.ownerUserId,
   }),
   'manufacturing/work-centers': resource(workCenter, 'manufacturing.read'),
   'manufacturing/boms': resource(manufacturingBom, 'manufacturing.read', {
@@ -612,7 +630,9 @@ function resource(
     createPermission?: string;
     updatePermission?: string;
     numericFilters?: Record<string, any>;
-    actorUserIdColumn?: any;
+    textFilters?: Record<string, any>;
+  actorUserIdColumn?: any;
+  scopeUserIdColumn?: any;
     dateRangeColumn?: any;
   } = {},
 ): ResourceDefinition {
@@ -621,6 +641,7 @@ function resource(
   if (options.status) allowedFilters.push('status');
   if (options.customerId) allowedFilters.push('customerId');
   allowedFilters.push(...Object.keys(options.numericFilters ?? {}));
+  allowedFilters.push(...Object.keys(options.textFilters ?? {}));
   if (options.dateRangeColumn) allowedFilters.push('from', 'to');
   return {
     table,
@@ -639,7 +660,9 @@ function resource(
     status: options.status,
     customerId: options.customerId,
     numericFilters: options.numericFilters,
+    textFilters: options.textFilters,
     actorUserIdColumn: options.actorUserIdColumn,
+    scopeUserIdColumn: options.scopeUserIdColumn,
     dateRangeColumn: options.dateRangeColumn,
   };
 }
@@ -797,6 +820,13 @@ export async function listResource(
     }
     predicates.push(eq(definition.actorUserIdColumn, Number(scope.actorUserId)));
   }
+  if (scope.accessScope && scope.accessScope !== 'company') {
+    if (!definition.scopeUserIdColumn || !scope.allowedUserIds?.length) {
+      predicates.push(sql`false`);
+    } else {
+      predicates.push(inArray(definition.scopeUserIdColumn, scope.allowedUserIds));
+    }
+  }
   if (definition.status && typeof query.status === 'string' && query.status) {
     predicates.push(eq(definition.status, query.status));
   }
@@ -806,6 +836,11 @@ export async function listResource(
   for (const [key, column] of Object.entries(definition.numericFilters ?? {})) {
     if (query[key] != null && query[key] !== '') {
       predicates.push(eq(column, Number(query[key])));
+    }
+  }
+  for (const [key, column] of Object.entries(definition.textFilters ?? {})) {
+    if (query[key] != null && query[key] !== '') {
+      predicates.push(eq(column, String(query[key])));
     }
   }
   if (definition.dateRangeColumn && fromDate) {
@@ -847,6 +882,13 @@ export async function getResource(db: DB, scope: ApiScope, resource: string, id:
       throw new InvalidResourceQueryError('actor user scope is required');
     }
     predicates.push(eq(definition.actorUserIdColumn, Number(scope.actorUserId)));
+  }
+  if (scope.accessScope && scope.accessScope !== 'company') {
+    if (!definition.scopeUserIdColumn || !scope.allowedUserIds?.length) {
+      predicates.push(sql`false`);
+    } else {
+      predicates.push(inArray(definition.scopeUserIdColumn, scope.allowedUserIds));
+    }
   }
   const [row] = await db
     .select()

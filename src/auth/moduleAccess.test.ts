@@ -11,7 +11,7 @@ import {
   setMasterModule,
 } from './moduleAccess';
 
-describe('master module access control', () => {
+describe('company module access control', () => {
   async function adminSession(db: Awaited<ReturnType<typeof freshDb>>) {
     const [admin] = await db.select().from(appUser).where(eq(appUser.email, 'admin@acme.co'));
     return {
@@ -28,7 +28,7 @@ describe('master module access control', () => {
     const db = await freshDb();
     await seedDemo(db);
     const session = await adminSession(db);
-    const modules = await listMasterModules(db, session.masterFn);
+    const modules = await listMasterModules(db, session.masterFn, session.activeCompanyFn);
     expect(modules).toHaveLength(MODULE_KEYS.length);
     expect(modules.every((m) => m.enabled)).toBe(true);
   });
@@ -38,16 +38,18 @@ describe('master module access control', () => {
     await seedDemo(db);
     const session = await adminSession(db);
 
+    await setMasterModule(db, session, 'service', false, 'disable-service');
     const disabled = await setMasterModule(db, session, 'crm', false, 'disable-crm');
-    expect(disabled).toEqual({ moduleKey: 'crm', enabled: false });
-    expect(await isModuleEnabled(db, session.masterFn, 'crm')).toBe(false);
-    const afterDisable = await listMasterModules(db, session.masterFn);
-    expect(afterDisable.find((m) => m.moduleKey === 'crm')).toEqual({ moduleKey: 'crm', enabled: false });
-    expect(afterDisable.find((m) => m.moduleKey === 'sales')).toEqual({ moduleKey: 'sales', enabled: true });
+    expect(disabled).toMatchObject({ moduleKey: 'crm', enabled: false });
+    expect(await isModuleEnabled(db, session.masterFn, session.activeCompanyFn, 'crm')).toBe(false);
+    const afterDisable = await listMasterModules(db, session.masterFn, session.activeCompanyFn);
+    expect(afterDisable.find((m) => m.moduleKey === 'crm')).toMatchObject({ moduleKey: 'crm', enabled: false });
+    expect(afterDisable.find((m) => m.moduleKey === 'sales')).toMatchObject({ moduleKey: 'sales', enabled: true });
 
     const reenabled = await setMasterModule(db, session, 'crm', true, 're-enable-crm');
-    expect(reenabled).toEqual({ moduleKey: 'crm', enabled: true });
-    expect(await isModuleEnabled(db, session.masterFn, 'crm')).toBe(true);
+    expect(reenabled).toMatchObject({ moduleKey: 'crm', enabled: true });
+    expect(await isModuleEnabled(db, session.masterFn, session.activeCompanyFn, 'crm')).toBe(true);
+    await setMasterModule(db, session, 'service', true, 're-enable-service');
   });
 
   it('rejects an unknown module key and rejects disabling admin', async () => {
@@ -60,7 +62,7 @@ describe('master module access control', () => {
       .rejects.toMatchObject({ code: 'admin_module_required' });
   });
 
-  it('scopes module state per master -- one tenant disabling a module never affects another', async () => {
+  it('scopes module state per company -- one company disabling a module never affects another', async () => {
     const db = await freshDb();
     await seedDemo(db);
     const session = await adminSession(db);
@@ -71,8 +73,9 @@ describe('master module access control', () => {
     });
 
     await setMasterModule(db, session, 'purchasing', false, 'disable-purchasing-m1');
-    expect(await isModuleEnabled(db, session.masterFn, 'purchasing')).toBe(false);
-    expect(await isModuleEnabled(db, 'OTHER-M3', 'purchasing')).toBe(true);
+    expect(await isModuleEnabled(db, session.masterFn, session.activeCompanyFn, 'purchasing')).toBe(false);
+    expect(await isModuleEnabled(db, session.masterFn, 'C-MY', 'purchasing')).toBe(true);
+    expect(await isModuleEnabled(db, 'OTHER-M3', 'OTHER-C3', 'purchasing')).toBe(false);
   });
 
   it('maps generic-resource URL prefixes to their gating module key', () => {

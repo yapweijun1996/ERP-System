@@ -5,6 +5,8 @@ import {
   account,
   appUser,
   company,
+  companyModule,
+  companyOnboarding,
   currency,
   master,
   role,
@@ -24,6 +26,7 @@ import {
   normalizeUsername,
 } from '../../auth/identifiers';
 import { createDefaultControlPlane } from './defaultControlPlane';
+import { MODULE_KEYS } from '../../auth/moduleAccess';
 
 const SETUP_STATE_KEY = 'production_setup';
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
@@ -191,8 +194,10 @@ export async function completeProductionSetup(
     });
     const [adminRole] = await tx.insert(role).values({
       masterFn,
+      companyFn,
       name: 'Superadmin',
       isSuperadmin: true,
+      sourceTemplateKey: 'superadmin',
     }).returning({ roleId: role.roleId });
     const [admin] = await tx.insert(appUser).values({
       masterFn,
@@ -228,6 +233,20 @@ export async function completeProductionSetup(
       validFrom: defaults.taxValidFrom,
     });
     await createDefaultControlPlane(tx, { masterFn, companyFn }, country as 'SG' | 'MY');
+    await tx.insert(companyModule).values(MODULE_KEYS.map((moduleKey) => ({
+      masterFn,
+      companyFn,
+      moduleKey,
+      enabled: moduleKey === 'admin',
+      configured: moduleKey === 'admin',
+    })));
+    await tx.insert(companyOnboarding).values({
+      masterFn,
+      companyFn,
+      status: 'setup',
+      currentStage: 'fiscal',
+      completedSteps: ['company'],
+    });
     await tx.insert(account).values([
       { masterFn, companyFn, code: '1100', name: 'Accounts Receivable', type: 'asset' },
       { masterFn, companyFn, code: '1200', name: 'Input Tax', type: 'asset' },
@@ -261,7 +280,7 @@ export async function completeProductionSetup(
     });
     await tx.update(systemState).set({
       value: {
-        status: 'completed',
+        status: 'bootstrap_completed',
         masterFn,
         companyFn,
         completedAt: new Date().toISOString(),

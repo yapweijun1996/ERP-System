@@ -12,6 +12,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     testTimeout: 20000,
+    hookTimeout: 20000,
+    // Each file owns a WASM PostgreSQL instance. With 74 migrations and the
+    // EPIC-059 access seed, parallel file boots contend for the same CPU/memory
+    // budget and turn otherwise-fast assertions into false hook timeouts.
+    // Serialize files; individual tests still exercise real transaction races.
+    fileParallelism: false,
     // Claude Code agent worktrees live under .claude/worktrees/ as full nested
     // checkouts of this repo (see `git worktree list`). Vitest's default
     // include glob is recursive with no awareness of them, so without this

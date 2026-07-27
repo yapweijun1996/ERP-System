@@ -14,20 +14,22 @@
 // callers that aren't already inside a transaction (mirrors createAssetWithin +
 // createAsset in src/modules/assets/createAsset.ts).
 import {
-  and, eq, gt, inArray, isNull, ne,
+  and, eq, gt, inArray, isNull, ne, or,
 } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  appSession, appUser, role, rolePermission, userCompany, userCompanyRole,
+  appSession, appUser, role, rolePermission, roleResourceScope, userCompany, userCompanyRole,
   userInvitation,
 } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
-import { PERMISSIONS } from './permissions';
+import {
+  PERMISSION_CATALOG, ROLE_TEMPLATES, roleTemplate, type DataScope,
+} from './accessCatalog';
 import type { SessionData } from './session';
 
-const KNOWN_PERMISSION_KEYS = new Set<string>(Object.values(PERMISSIONS));
+const KNOWN_PERMISSION_KEYS = new Set<string>(PERMISSION_CATALOG);
 
 export async function setUserActiveWithin(
   exec: DB,
@@ -174,6 +176,7 @@ export async function setUserRolesWithin(
     isSuperadmin: role.isSuperadmin,
   }).from(role).where(and(
     eq(role.masterFn, session.masterFn),
+    or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
     inArray(role.roleId, roleIds),
   )).orderBy(role.roleId);
   if (selectedRoles.length !== roleIds.length) {
@@ -294,6 +297,7 @@ export async function createRoleWithin(
     .from(role)
     .where(and(
       eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(role.name, trimmed),
     ))
     .limit(1);
@@ -302,8 +306,10 @@ export async function createRoleWithin(
   }
   const [created] = await exec.insert(role).values({
     masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
     name: trimmed,
     isSuperadmin: false,
+    sourceTemplateKey: 'custom',
   }).returning({ id: role.roleId, name: role.name });
   await appendAudit(exec, {
     masterFn: session.masterFn,
@@ -342,6 +348,7 @@ export async function setRolePermissionWithin(
     .where(and(
       eq(role.roleId, roleId),
       eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
     ))
     .limit(1);
   if (!targetRole) {
@@ -391,6 +398,146 @@ export async function setRolePermissionWithin(
   return { roleId, permissionKey, allowed };
 }
 
+export function listRoleTemplates() {
+  return ROLE_TEMPLATES.map((template) => ({
+    key: template.key,
+    name: template.name,
+    isSuperadmin: template.isSuperadmin === true,
+    permissions: [...template.permissions],
+    scopes: { ...template.scopes },
+  }));
+}
+
+export async function cloneRoleTemplateWithin(
+  exec: DB,
+  session: SessionData,
+  templateKey: string,
+  nameInput: string | undefined,
+  requestId: string,
+) {
+  const template = roleTemplate(templateKey);
+  if (!template) {
+    throw new AuthLifecycleError(400, 'invalid_role_template', 'Unknown role template.');
+  }
+  const name = nameInput?.trim() || template.name;
+  const [existing] = await exec.select({ roleId: role.roleId }).from(role).where(and(
+    eq(role.masterFn, session.masterFn),
+    or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+    eq(role.name, name),
+  )).limit(1);
+  if (existing) throw new AuthLifecycleError(409, 'role_exists', 'A role with this name already exists.');
+  const [created] = await exec.insert(role).values({
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+    name,
+    isSuperadmin: template.isSuperadmin === true,
+    sourceTemplateKey: template.key,
+  }).returning({ id: role.roleId, name: role.name });
+  if (template.permissions.length) {
+    await exec.insert(rolePermission).values(template.permissions.map((permissionKey) => ({
+      masterFn: session.masterFn,
+      roleId: created.id,
+      permissionKey,
+      allowed: true,
+    })));
+  }
+  const scopeEntries = Object.entries(template.scopes);
+  if (scopeEntries.length) {
+    await exec.insert(roleResourceScope).values(scopeEntries.map(([resourceKey, scope]) => ({
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+      roleId: created.id,
+      resourceKey,
+      scope,
+    })));
+  }
+  await appendAudit(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+    actorUserId: session.userId,
+    requestId,
+    entity: 'role',
+    entityId: created.id,
+    action: 'clone_template',
+    after: { name, templateKey },
+  });
+  return { ...created, templateKey };
+}
+
+export function cloneRoleTemplate(
+  db: DB,
+  session: SessionData,
+  templateKey: string,
+  name: string | undefined,
+  requestId: string,
+) {
+  return withTenantTransaction(db, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, (tx) => cloneRoleTemplateWithin(tx, session, templateKey, name, requestId));
+}
+
+export async function setRoleResourceScopeWithin(
+  exec: DB,
+  session: SessionData,
+  roleId: number,
+  resourceKey: string,
+  scope: DataScope,
+  requestId: string,
+) {
+  if (!['self', 'team', 'department', 'company'].includes(scope)) {
+    throw new AuthLifecycleError(400, 'invalid_data_scope', 'Unknown data scope.');
+  }
+  if (!resourceKey.trim() || resourceKey.length > 120) {
+    throw new AuthLifecycleError(400, 'invalid_resource_key', 'Resource key is required.');
+  }
+  const [targetRole] = await exec.select({ id: role.roleId, superadmin: role.isSuperadmin })
+    .from(role).where(and(
+      eq(role.roleId, roleId),
+      eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+    )).limit(1);
+  if (!targetRole) throw new AuthLifecycleError(404, 'role_not_found', 'Role not found.');
+  if (targetRole.superadmin) {
+    throw new AuthLifecycleError(400, 'superadmin_immutable', 'Superadmin scope cannot be edited.');
+  }
+  await exec.insert(roleResourceScope).values({
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+    roleId,
+    resourceKey: resourceKey.trim(),
+    scope,
+  }).onConflictDoUpdate({
+    target: [roleResourceScope.roleId, roleResourceScope.resourceKey],
+    set: { scope, updatedAt: new Date() },
+  });
+  await appendAudit(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+    actorUserId: session.userId,
+    requestId,
+    entity: 'role_resource_scope',
+    entityId: roleId,
+    action: 'set_scope',
+    after: { resourceKey: resourceKey.trim(), scope },
+  });
+  return { roleId, resourceKey: resourceKey.trim(), scope };
+}
+
+export function setRoleResourceScope(
+  db: DB,
+  session: SessionData,
+  roleId: number,
+  resourceKey: string,
+  scope: DataScope,
+  requestId: string,
+) {
+  return withTenantTransaction(db, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, (tx) => setRoleResourceScopeWithin(tx, session, roleId, resourceKey, scope, requestId));
+}
+
 export function setRolePermission(
   db: DB,
   session: SessionData,
@@ -438,6 +585,7 @@ export async function createInvitationRecordWithin(
     .where(and(
       eq(role.roleId, input.roleId),
       eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
     ))
     .limit(1);
   if (!targetRole) {

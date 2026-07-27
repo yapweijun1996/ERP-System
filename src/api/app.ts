@@ -33,6 +33,7 @@ import { createPayoutProfilesRouter } from './routes/payoutProfiles';
 import { createReimbursementBatchesRouter } from './routes/reimbursementBatches';
 import { createReimbursementPaymentsRouter } from './routes/reimbursementPayments';
 import { createTaxEvidenceRouter } from './routes/taxEvidence';
+import { createOnboardingRouter } from './routes/onboarding';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -129,6 +130,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/tax-evidence', createTaxEvidenceRouter(db));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
+  app.use('/api/onboarding', createOnboardingRouter(db));
 
   app.get('/api/dashboard', async (req, res) => {
     const session = await requireSession(db, req, res);

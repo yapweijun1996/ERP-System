@@ -15,9 +15,20 @@ if (!url) {
   process.exit(1);
 }
 
+if (
+  process.env.ERP_ENV !== 'demo'
+  || process.env.ERP_DEMO_SEED !== 'I_UNDERSTAND_DEMO_DATA'
+  || process.env.NODE_ENV === 'production'
+) {
+  console.error('[erp-system-seed] Refusing to load Demo data.');
+  console.error('Set ERP_ENV=demo and ERP_DEMO_SEED=I_UNDERSTAND_DEMO_DATA in a non-production environment.');
+  process.exit(1);
+}
+
 const db = await createPostgresDb(url);
 if (await isSeeded(db)) {
-  console.log('[erp-system-seed] Already seeded (master row exists) — nothing to do.');
+  console.error('[erp-system-seed] Refusing to seed a non-empty database.');
+  process.exit(1);
 } else {
   await seedDemo(db);
   console.log('[erp-system-seed] Seed complete (Acme SG + Acme MY).');

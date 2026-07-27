@@ -367,7 +367,7 @@ const CREATES: Record<string, CreateDefinition> = {
   'crm/opportunities': {
     permission: 'crm.write',
     audit: 'required',
-    execute(tx, scope, payload) {
+    execute(tx, scope, payload, actorUserId) {
       const input = payload as unknown as CreateOpportunityInput;
       if (
         typeof input.docNo !== 'string'
@@ -393,7 +393,7 @@ const CREATES: Record<string, CreateDefinition> = {
           'docNo, customerId, title, positive value, currency and closeDate are required for an opportunity.',
         );
       }
-      return createOpportunity(tx, scope, input);
+      return createOpportunity(tx, scope, { ...input, ownerUserId: actorUserId });
     },
   },
   'manufacturing/work-orders': {

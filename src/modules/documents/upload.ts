@@ -36,6 +36,8 @@ export interface ReceiptUploadInput {
   storageBackend?: 'database' | 'filesystem';
   retentionUntil?: Date;
   autoSubmitAuthorized?: boolean;
+  /** Internal deterministic clock hook; HTTP callers never map request data here. */
+  processingNow?: Date;
 }
 
 function uploadError(code: string, message: string, status = 422): never {
@@ -82,7 +84,7 @@ export async function uploadReceiptDocument(
     ownerUserId: actor.userId,
     originalFileName: validated.fileName,
     mimeType: validated.mimeType,
-    retentionUntil: input.retentionUntil ?? existingRetention ?? defaultRetention(),
+    retentionUntil: input.retentionUntil ?? existingRetention ?? defaultRetention(input.processingNow),
     content: validated.content,
     pageCount: validated.pageCount,
     storageBackend: input.storageBackend,
@@ -93,9 +95,9 @@ export async function uploadReceiptDocument(
       versionId: stored.version.id,
       uploaderUserId: actor.userId,
       autoSubmitAuthorized: input.autoSubmitAuthorized === true,
-      authorizedAt: input.autoSubmitAuthorized === true ? new Date() : null,
+      authorizedAt: input.autoSubmitAuthorized === true ? (input.processingNow ?? new Date()) : null,
     }).onConflictDoNothing();
-    await enqueueDocumentProcessing(tx, scope, stored.version.id);
+    await enqueueDocumentProcessing(tx, scope, stored.version.id, input.processingNow);
     const [row] = await tx.select().from(receiptUploadAuthorization).where(and(
       eq(receiptUploadAuthorization.masterFn, scope.masterFn),
       eq(receiptUploadAuthorization.companyFn, scope.companyFn),

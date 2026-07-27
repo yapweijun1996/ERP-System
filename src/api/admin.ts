@@ -7,7 +7,7 @@ import {
 } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  appSession, appUser, auditLog, role, rolePermission, userCompany, userCompanyRole,
+  appSession, appUser, auditLog, role, rolePermission, roleResourceScope, userCompany, userCompanyRole,
   userInvitation,
 } from '../data/schema';
 
@@ -110,20 +110,43 @@ export async function listCompanyUsers(db: DB, masterFn: string, companyFn: stri
   };
 }
 
-export async function listRoles(db: DB, masterFn: string) {
+export async function listRoles(db: DB, masterFn: string, companyFn: string) {
   return db.select({
     roleId: role.roleId,
     name: role.name,
     isSuperadmin: role.isSuperadmin,
-  }).from(role).where(eq(role.masterFn, masterFn)).orderBy(role.roleId);
+    sourceTemplateKey: role.sourceTemplateKey,
+  }).from(role).where(and(
+    eq(role.masterFn, masterFn),
+    eq(role.companyFn, companyFn),
+  )).orderBy(role.roleId);
 }
 
-export async function listRolePermissions(db: DB, masterFn: string) {
+export async function listRolePermissions(db: DB, masterFn: string, companyFn: string) {
   return db.select({
     roleId: rolePermission.roleId,
     permissionKey: rolePermission.permissionKey,
     allowed: rolePermission.allowed,
-  }).from(rolePermission).where(eq(rolePermission.masterFn, masterFn));
+  }).from(rolePermission)
+    .innerJoin(role, eq(role.roleId, rolePermission.roleId))
+    .where(and(
+      eq(rolePermission.masterFn, masterFn),
+      eq(role.companyFn, companyFn),
+    ));
+}
+
+export async function listRoleScopes(db: DB, masterFn: string, companyFn: string) {
+  return db.select({
+    roleId: roleResourceScope.roleId,
+    resourceKey: roleResourceScope.resourceKey,
+    scope: roleResourceScope.scope,
+  }).from(roleResourceScope)
+    .innerJoin(role, eq(role.roleId, roleResourceScope.roleId))
+    .where(and(
+      eq(roleResourceScope.masterFn, masterFn),
+      eq(roleResourceScope.companyFn, companyFn),
+      eq(role.companyFn, companyFn),
+    ));
 }
 
 export async function listAuditLog(

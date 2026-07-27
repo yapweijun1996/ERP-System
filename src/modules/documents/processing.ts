@@ -132,6 +132,7 @@ async function enqueueSignal(
   scope: Scope,
   topic: typeof DOCUMENT_SCAN_TOPIC | typeof DOCUMENT_EXTRACTION_TOPIC,
   versionId: number,
+  availableAt = new Date(),
 ) {
   await exec.insert(outboxEvent).values({
     ...scope,
@@ -139,6 +140,7 @@ async function enqueueSignal(
     aggregateType: 'document_version',
     aggregateId: String(versionId),
     payload: { versionId },
+    availableAt,
   }).onConflictDoNothing();
 }
 
@@ -146,6 +148,7 @@ export async function enqueueDocumentProcessing(
   exec: DB,
   scope: Scope,
   versionId: number,
+  availableAt = new Date(),
 ) {
   const [version] = await exec.select({ id: documentVersion.id })
     .from(documentVersion)
@@ -159,8 +162,9 @@ export async function enqueueDocumentProcessing(
   await exec.insert(documentScanJob).values({
     ...scope,
     versionId,
+    availableAt,
   }).onConflictDoNothing();
-  await enqueueSignal(exec, scope, DOCUMENT_SCAN_TOPIC, versionId);
+  await enqueueSignal(exec, scope, DOCUMENT_SCAN_TOPIC, versionId, availableAt);
 }
 
 async function markSignalDelivered(

@@ -22,6 +22,7 @@ import {
 } from './processing';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+const uploadNow = new Date('2026-07-26T11:59:00.000Z');
 const jpeg = Uint8Array.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
 ]);
@@ -65,6 +66,7 @@ describe('quarantined document processing', () => {
       fileName: 'receipt.jpg',
       declaredMimeType: 'image/jpeg',
       content: jpeg,
+      processingNow: uploadNow,
     });
 
     expect(await db.select().from(documentScanJob)).toHaveLength(1);
@@ -143,6 +145,7 @@ describe('quarantined document processing', () => {
       fileName: 'receipt.jpg',
       declaredMimeType: 'image/jpeg',
       content: jpeg,
+      processingNow: uploadNow,
     });
     const result = await processDocumentJobBatch(db, {
       scanner: {
@@ -190,6 +193,7 @@ describe('quarantined document processing', () => {
       fileName: 'receipt.jpg',
       declaredMimeType: 'image/jpeg',
       content: jpeg,
+      processingNow: uploadNow,
     });
     const vision = vi.fn(async (input: {
       region?: string;
@@ -235,6 +239,7 @@ describe('quarantined document processing', () => {
       declaredMimeType: 'image/jpeg',
       content: jpeg,
       autoSubmitAuthorized: true,
+      processingNow: uploadNow,
     });
     const result = await processDocumentJobBatch(db, {
       scanner: cleanScanner(),
@@ -287,6 +292,7 @@ describe('quarantined document processing', () => {
       fileName: 'receipt.jpg',
       declaredMimeType: 'image/jpeg',
       content: jpeg,
+      processingNow: uploadNow,
       autoSubmitAuthorized: true,
     });
     await processDocumentJobBatch(db, {
@@ -342,6 +348,7 @@ describe('quarantined document processing', () => {
       declaredMimeType: 'image/jpeg',
       content: jpeg,
       autoSubmitAuthorized: true,
+      processingNow: uploadNow,
     });
     await processDocumentJobBatch(db, {
       scanner: cleanScanner(),
@@ -354,6 +361,7 @@ describe('quarantined document processing', () => {
       declaredMimeType: 'image/jpeg',
       content: jpeg,
       autoSubmitAuthorized: true,
+      processingNow: uploadNow,
     });
     await processDocumentJobBatch(db, {
       scanner: cleanScanner(),

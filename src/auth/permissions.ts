@@ -1,9 +1,10 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  company, role, rolePermission, userCompanyRole,
+  company, role, rolePermission, roleResourceScope, userCompanyRole,
 } from '../data/schema';
 import type { SessionData } from './session';
+import type { DataScope } from './accessCatalog';
 
 export const PERMISSIONS = {
   dashboardRead: 'dashboard.read',
@@ -105,6 +106,7 @@ export async function hasPermission(
       eq(userCompanyRole.userId, session.userId),
       eq(userCompanyRole.companyFn, session.activeCompanyFn),
       eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(company.masterFn, session.masterFn),
       eq(role.isSuperadmin, true),
     ))
@@ -125,12 +127,90 @@ export async function hasPermission(
       eq(userCompanyRole.userId, session.userId),
       eq(userCompanyRole.companyFn, session.activeCompanyFn),
       eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(company.masterFn, session.masterFn),
       eq(rolePermission.permissionKey, permissionKey),
       eq(rolePermission.allowed, true),
     ))
     .limit(1);
   return grant?.allowed === true;
+}
+
+export async function hasAnyPermission(
+  db: DB,
+  session: SessionData,
+  permissionKeys: readonly PermissionKey[],
+): Promise<boolean> {
+  for (const permissionKey of permissionKeys) {
+    if (await hasPermission(db, session, permissionKey)) return true;
+  }
+  return false;
+}
+
+const SCOPE_RANK: Record<DataScope, number> = {
+  self: 0,
+  team: 1,
+  department: 2,
+  company: 3,
+};
+
+export interface EffectiveCapability {
+  permissions: string[];
+  scopes: Record<string, DataScope>;
+}
+
+export async function effectiveCapabilities(
+  db: DB,
+  session: SessionData,
+): Promise<EffectiveCapability> {
+  if (await isSuperadminSession(db, session)) {
+    return { permissions: ['*'], scopes: { '*': 'company' } };
+  }
+  const permissions = await db.select({ permissionKey: rolePermission.permissionKey })
+    .from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .innerJoin(rolePermission, eq(rolePermission.roleId, role.roleId))
+    .where(and(
+      eq(userCompanyRole.userId, session.userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+      eq(rolePermission.allowed, true),
+    ));
+  const scopeRows = await db.select({
+    resourceKey: roleResourceScope.resourceKey,
+    scope: roleResourceScope.scope,
+  }).from(userCompanyRole)
+    .innerJoin(roleResourceScope, and(
+      eq(roleResourceScope.roleId, userCompanyRole.roleId),
+      eq(roleResourceScope.masterFn, session.masterFn),
+      eq(roleResourceScope.companyFn, session.activeCompanyFn),
+    ))
+    .where(and(
+      eq(userCompanyRole.userId, session.userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+    ));
+  const scopes: Record<string, DataScope> = {};
+  for (const row of scopeRows) {
+    const value = row.scope as DataScope;
+    const current = scopes[row.resourceKey];
+    if (!current || SCOPE_RANK[value] > SCOPE_RANK[current]) scopes[row.resourceKey] = value;
+  }
+  return {
+    permissions: [...new Set(permissions.map((row) => row.permissionKey))].sort(),
+    scopes,
+  };
+}
+
+export function scopeForResource(
+  capabilities: EffectiveCapability,
+  resource: string,
+): DataScope | null {
+  const candidates = [resource, `${resource.split('/')[0]}/*`, '*'];
+  for (const candidate of candidates) {
+    if (capabilities.scopes[candidate]) return capabilities.scopes[candidate];
+  }
+  return null;
 }
 
 /**
@@ -154,6 +234,7 @@ export async function isSuperadminSession(db: DB, session: SessionData): Promise
       eq(userCompanyRole.userId, session.userId),
       eq(userCompanyRole.companyFn, session.activeCompanyFn),
       eq(role.masterFn, session.masterFn),
+      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(company.masterFn, session.masterFn),
       eq(role.isSuperadmin, true),
     ))

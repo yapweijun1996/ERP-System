@@ -46,6 +46,7 @@ export const appUser = pgTable('app_user', {
   isActive: boolean('is_active').notNull().default(true),
   accountState: text('account_state').notNull().default('active'),
   passwordChangeRequired: boolean('password_change_required').notNull().default(false),
+  initialPasswordExpiresAt: timestamp('initial_password_expires_at', { withTimezone: true }),
   activatedAt: timestamp('activated_at', { withTimezone: true }),
   offboardedAt: timestamp('offboarded_at', { withTimezone: true }),
   ...timestamps,
@@ -62,11 +63,16 @@ export const appUser = pgTable('app_user', {
 export const role = pgTable('role', {
   roleId: bigint('role_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   masterFn: text('master_fn').notNull().references(() => master.masterFn),
+  /** Assignable roles are company-owned. Null is retained only for expand/backfill
+   * compatibility while persistent Demo databases migrate from the legacy model. */
+  companyFn: text('company_fn').references(() => company.companyFn),
   name: text('name').notNull(),
   isSuperadmin: boolean('is_superadmin').notNull().default(false),
+  sourceTemplateKey: text('source_template_key'),
   ...timestamps,
 }, (t) => [
-  uniqueIndex('uq_role_master_name').on(t.masterFn, t.name),
+  uniqueIndex('uq_role_company_name').on(t.masterFn, t.companyFn, t.name),
+  index('idx_role_company').on(t.masterFn, t.companyFn, t.roleId),
 ]);
 
 /**

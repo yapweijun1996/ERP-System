@@ -298,13 +298,19 @@ describe('production API security contract', () => {
       'content-type': 'application/json',
       'x-csrf-token': adminCookies.csrf,
     };
+    const disableService = await fetch(`${running.baseUrl}/api/admin/modules/service/actions/set-enabled`, {
+      method: 'POST',
+      headers: adminJsonHeaders,
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(disableService.status).toBe(200);
     const disable = await fetch(`${running.baseUrl}/api/admin/modules/crm/actions/set-enabled`, {
       method: 'POST',
       headers: adminJsonHeaders,
       body: JSON.stringify({ enabled: false }),
     });
     expect(disable.status).toBe(200);
-    expect((await disable.json()).data).toEqual({ moduleKey: 'crm', enabled: false });
+    expect((await disable.json()).data).toMatchObject({ moduleKey: 'crm', enabled: false });
 
     // Superadmin is exempt from a gate meant to restrict their own organization's
     // other users, not their own visibility.

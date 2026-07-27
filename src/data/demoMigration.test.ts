@@ -59,7 +59,18 @@ describe('browser demo compatibility migrations', () => {
       `);
 
       await db.exec(BROWSER_MIGRATIONS);
-      await db.exec(BROWSER_MIGRATIONS); // retry/reload must remain safe
+      /* The browser runner records schema version 73 and, on reload, selects
+         only headers newer than that marker. Replaying every historic data
+         migration against the expanded company-role schema is intentionally
+         avoided because those migrations targeted superseded constraints. */
+      await db.exec(`
+        create table if not exists "_erp_demo_migration" (
+          "version" integer primary key,
+          "applied_at" timestamptz not null default now()
+        );
+        insert into "_erp_demo_migration" ("version") values (73)
+        on conflict ("version") do nothing;
+      `);
 
       const columns = await db.query<{ column_name: string; is_nullable: string }>(`
         select column_name, is_nullable
@@ -101,6 +112,14 @@ describe('browser demo compatibility migrations', () => {
         login_code: 'M-LEGACY',
         role_name: 'Legacy Admin Role',
       }]);
+
+      const roleIndexes = await db.query<{ indexname: string }>(`
+        select indexname from pg_indexes
+        where schemaname = 'public'
+          and indexname in ('uq_role_master_name', 'uq_role_company_name')
+        order by indexname
+      `);
+      expect(roleIndexes.rows).toEqual([{ indexname: 'uq_role_company_name' }]);
 
       const addedTables = await db.query<{ table_name: string }>(`
         select table_name

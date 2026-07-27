@@ -19,9 +19,11 @@ import {
   payrollRun, payrollRunLine, appNotification,
   integrationConnector, companyPolicy, documentSequence, accountingPeriod,
   financialStatementAccountMap, budgetVersion, budgetLine, consolidationRate,
+  companyModule, companyOnboarding, roleResourceScope,
 } from './schema';
 import { computeStatutoryContributions } from '../modules/payroll/statutory';
 import { fixedUnits, fixedString } from '../modules/inventory/decimal';
+import { MODULE_KEYS } from '../auth/moduleAccess';
 
 /**
  * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
@@ -47,15 +49,14 @@ export async function seedDemo(db: DB): Promise<void> {
     { companyFn: 'C-MY', masterFn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', taxRegime: 'SST', locale: 'ms' },
   ]);
 
-  // Two demo personas so "switch user" (TASK-024) is meaningful: a superadmin with
-  // access to both companies, and a company-scoped viewer with access to SG only.
+  // Keep the compact regression fixture separate from the enterprise showcase pack.
+  // Browser Demo startup loads the deterministic pack after this fixture.
   const [adminUser] = await db.insert(appUser).values({
     masterFn: 'M1', username: 'admin', email: 'admin@acme.co', fullName: 'Admin', passwordHash: ADMIN_PASSWORD_HASH, language: 'zh',
   }).returning({ id: appUser.userId });
   const [viewerUser] = await db.insert(appUser).values({
     masterFn: 'M1', username: 'viewer', email: 'viewer@acme.co', fullName: 'Demo Viewer', passwordHash: VIEWER_PASSWORD_HASH, language: 'en',
   }).returning({ id: appUser.userId });
-
   const [superadminRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Superadmin', isSuperadmin: true,
   }).returning({ id: role.roleId });
@@ -68,7 +69,6 @@ export async function seedDemo(db: DB): Promise<void> {
   const [managerRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Manager', isSuperadmin: false,
   }).returning({ id: role.roleId });
-
   await db.insert(userCompany).values([
     { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
     { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
@@ -80,31 +80,13 @@ export async function seedDemo(db: DB): Promise<void> {
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: employeeRole.id },
   ]);
-
   await db.insert(rolePermission).values([
-    'dashboard.read',
-    'inventory.read',
-    'sales.read',
-    'finance.read',
-    'finance.report.export',
-    'purchasing.read',
-    'crm.read',
-    'manufacturing.read',
-    'quality.read',
-    'asset.read',
-    'hr.read',
-    'project.read',
-    'service.read',
-    'reporting.read',
-    'integration.read',
-    'notifications.read',
-    'notifications.manage',
-    'session.switch_company',
-  ].map((permissionKey) => ({
-    masterFn: 'M1',
-    roleId: viewerRole.id,
-    permissionKey,
-  })));
+    'dashboard.read', 'inventory.read', 'sales.read', 'finance.read',
+    'finance.report.export', 'purchasing.read', 'crm.read', 'manufacturing.read',
+    'quality.read', 'asset.read', 'hr.read', 'project.read', 'service.read',
+    'reporting.read', 'integration.read', 'notifications.read',
+    'notifications.manage', 'session.switch_company',
+  ].map((permissionKey) => ({ masterFn: 'M1', roleId: viewerRole.id, permissionKey })));
   await db.insert(rolePermission).values([
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.self.read' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.leave.write' },
@@ -119,6 +101,24 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.approve.manager' },
   ]);
+  await db.insert(roleResourceScope).values([
+    { masterFn: 'M1', companyFn: 'C-SG', roleId: viewerRole.id, resourceKey: '*', scope: 'company' },
+    { masterFn: 'M1', companyFn: 'C-SG', roleId: employeeRole.id, resourceKey: 'employee/*', scope: 'self' },
+    { masterFn: 'M1', companyFn: 'C-SG', roleId: managerRole.id, resourceKey: '*', scope: 'team' },
+  ]);
+  await db.insert(companyModule).values(
+    (['C-SG', 'C-MY'] as const).flatMap((companyFn) => MODULE_KEYS.map((moduleKey) => ({
+      masterFn: 'M1', companyFn, moduleKey, enabled: true, configured: true,
+    }))),
+  );
+  await db.insert(companyOnboarding).values((['C-SG', 'C-MY'] as const).map((companyFn) => ({
+    masterFn: 'M1', companyFn, status: 'live', currentStage: 'live',
+    completedSteps: [
+      'company', 'fiscal', 'warehouse', 'modules', 'roles',
+      'staff', 'import', 'opening_balance', 'uat',
+    ],
+    goLiveAt: new Date('2026-07-27T00:00:00Z'), goLiveByUserId: adminUser.id,
+  })));
 
   // First-class, actor-addressed notifications. These rows intentionally stay
   // separate from audit/outbox infrastructure: they model user-visible

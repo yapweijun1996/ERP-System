@@ -24,3 +24,4 @@ export * from './reporting';
 export * from './documents';
 export * from './expenses';
 export * from './taxEvidence';
+export * from './accessOnboarding';

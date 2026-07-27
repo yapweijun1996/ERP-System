@@ -73,7 +73,7 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
   }
   const roles = await exec.select({ roleId: role.roleId, name: role.name, isSuperadmin: role.isSuperadmin })
     .from(role).where(eq(role.masterFn, scope.masterFn)).orderBy(role.roleId);
-  const modules = await listMasterModules(exec, scope.masterFn);
+  const modules = await listMasterModules(exec, scope.masterFn, scope.companyFn);
   const counts = new Map<string, Set<number>>();
   assignments.forEach((a) => {
     const set = counts.get(a.companyFn) ?? new Set<number>();
