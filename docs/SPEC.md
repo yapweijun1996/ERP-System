@@ -224,3 +224,10 @@ controls exist.
 | PG parity + concurrency | `POSTGRES_URL=... npm run demo` | before any production release (TASK-013) |
 | Demo build | `npm run build:demo` | every PR |
 | Browser smoke | TASK-015 script (desktop + 375 px, zero console errors) | once built: every PR |
+
+## EPIC-059 employee access and customer onboarding
+
+Company roles, action permissions, data scopes, company module dependencies, atomic
+Staff activation, deterministic enterprise Demo data and gated production Go Live are
+binding requirements. The complete contract and compatibility rules are in
+[EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).

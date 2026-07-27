@@ -938,3 +938,21 @@ pass with 0 Preview routes.
 Exit criteria: TASK-140 evidence and backlog exist; Phase 40 remains in progress until
 TASK-141–149 are complete. The isolated API environment remains available for review,
 and TASK-017 remains blocked until a human performs physical-phone acceptance.
+
+## Phase 41 — Employee Access, Enterprise Demo & Customer Onboarding ✅
+
+1. **Contract and access foundation** (TASK-150–153): expand/backfill company roles,
+   immutable templates, action permissions, four data scopes, fail-closed ownership
+   and company module dependencies; deliver transactional Staff onboarding.
+2. **Demo and customer delivery** (TASK-154–155): keep the test seed small, load a
+   deterministic SHA-256 enterprise pack with 12 real personas, and gate production
+   configuration/import/UAT behind audited Go Live.
+3. **Localization and release proof** (TASK-156–157): five-language desktop/375px
+   coverage, reusable operating docs, both data modes, PostgreSQL forced RLS,
+   cross-browser critical flows and performance budgets.
+
+Completed 2026-07-27: TASK-150–157 passed with executable Demo/PostgreSQL evidence,
+forced RLS, 518 tests plus one expected skip, both builds, 122 routes × five languages ×
+desktop/375px, Chromium/Firefox/WebKit critical flows and current-Chrome cold-load/page
+budgets. TASK-142 and TASK-145 also closed under their original EPIC-058 acceptance;
+TASK-017 remains blocked for physical-device acceptance.

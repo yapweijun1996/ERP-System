@@ -135,3 +135,12 @@ role                (role_id, master_fn, name, is_superadmin)
 
 Shared-schema row scoping is the only model compatible with "one schema, two modes" and
 with consolidated group reporting across companies.
+
+## Company-owned authorization
+
+Roles and module state are legal-entity facts. A user's C-SG role cannot authorize a
+C-MY request; company switch requires an explicit membership and recomputes roles,
+actions, scopes and enabled modules. Data-scope resolution reads only active employees
+inside the same master/company. Records without an ownership mapping are unavailable
+to restricted roles. The migration copies legacy shared roles per assigned company
+before repointing memberships, while existing tenants are explicitly marked live.

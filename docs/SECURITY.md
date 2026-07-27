@@ -57,3 +57,15 @@ offboarding transfer, role-permission union, reporting-line Manager reconciliati
 cross-tenant denial, actor-id tampering and direct/tree hierarchy boundaries. Schema
 migration and PGlite replay checks prove the same data contract used by Demo and API
 mode.
+
+## Company access and onboarding boundary (EPIC-059)
+
+Authorization now evaluates only roles assigned to the active company. Allows are
+unioned and scopes use the widest of self/team/department/company; a restricted row
+without enforceable ownership fails closed. UI hiding is defence in depth: the API
+rechecks action permission, module state, tenant, scope and resource visibility.
+Initial Staff passwords are hash-only, force change and expire at first use or seven
+days. Setup-stage employees cannot log in. Production exposes no impersonation and
+Demo seed is guarded by explicit Demo-only environment flags plus an empty-database
+check. Import preflight and commit remain server-side, bounded, replay-resistant,
+audited and transactionally atomic.

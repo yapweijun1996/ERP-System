@@ -2128,14 +2128,40 @@ does not repair product code or reinterpret a blocked physical-device check as p
       and dated audit, ran the isolated dual-mode/role/company/language/viewport matrix,
       retained the API stack for review and registered nine evidence-backed root causes.
 - [ ] **TASK-141 — Initialize and reconcile paid-leave balances for new employees.**
-- [ ] **TASK-142 — Allow invitations for every eligible tenant role.**
+- [x] **TASK-142 — Allow invitations for every eligible tenant role.** Dynamic,
+      company-scoped roles now flow through invitation, acceptance and effective access.
 - [ ] **TASK-143 — Remediate or formally accept high dependency advisories.**
-- [ ] **TASK-144 — Make document queue tests independent of wall-clock date.**
-- [ ] **TASK-145 — Derive shell navigation and quick actions from effective permissions.**
-- [ ] **TASK-146 — Stabilize integration-test setup under supported parallel load.**
+- [x] **TASK-144 — Make document queue tests independent of wall-clock date.** Explicit
+      clocks keep availability, retry and lease assertions deterministic.
+- [x] **TASK-145 — Derive shell navigation and quick actions from effective permissions.**
+      Active-company actions/scopes/modules now drive shell visibility while APIs keep 403.
+- [x] **TASK-146 — Stabilize integration-test setup under supported parallel load.** The
+      supported full suite now completes with 518 passing tests and one expected skip.
 - [ ] **TASK-147 — Guard PostgreSQL demo proof against seeded databases.**
 - [ ] **TASK-148 — Deduplicate expected My Work identity conflicts.**
-- [ ] **TASK-149 — Name icon-only user administration controls.**
+- [x] **TASK-149 — Name icon-only user administration controls.** Localized action-and-user
+      names are available to keyboards and assistive technology.
 
 Audit evidence: `docs/audits/END_USER_AUDIT_2026-07-27.md`. No product fix is part
 of TASK-140; TASK-141–149 are independently testable remediation work.
+
+## EPIC-059 — Employee Access, Enterprise Demo & Customer Onboarding ✅
+
+Deliver company-level roles/actions/scopes/modules, atomic Staff onboarding, a separate
+deterministic enterprise Demo and a setup-gated production import/Go Live workflow.
+The authoritative specification is
+`docs/EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md`.
+
+- [x] **TASK-150 — Lock specification, permission catalogue and compatibility migration.**
+- [x] **TASK-151 — Implement company roles, templates and module dependencies.**
+- [x] **TASK-152 — Implement atomic Staff onboarding and credential lifecycle.**
+- [x] **TASK-153 — Enforce action permissions and data scopes server-side.**
+- [x] **TASK-154 — Deliver deterministic enterprise Demo and 12 real personas.**
+- [x] **TASK-155 — Deliver production onboarding, atomic imports and Go Live.**
+- [x] **TASK-156 — Complete five-language UI and operator documentation.**
+- [x] **TASK-157 — Prove dual-mode release quality and performance.**
+
+Completed 2026-07-27. Phase 41 passed every TASK-150–157 acceptance gate with 518
+tests plus one expected skip, forced-RLS PostgreSQL proof, 122 routes × five languages ×
+desktop/375px, cross-browser critical workflows and the Chrome performance budget.
+Physical-phone verification remains blocked under TASK-017.

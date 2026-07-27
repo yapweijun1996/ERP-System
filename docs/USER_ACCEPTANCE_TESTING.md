@@ -131,3 +131,20 @@ Every checklist item is Pass, Fail or Blocked; every observation is classified a
 reproducible defect, ERP capability gap, UX improvement or hypothesis. Demo/API
 differences have an explicit conclusion, P0–P2 evidence opens a remediation task, and
 the report records any environment intentionally left running.
+
+## EPIC-059 focused acceptance
+
+- Create a Staff draft without a password, activate with one password, then prove the
+  employee, user, membership, roles, leave opening and audit either all exist or all
+  roll back.
+- Link an existing organization username into a second company and prove no duplicate
+  identity or cross-company permission appears.
+- Exercise all 12 templates, multi-role union and self/team/department/company scopes;
+  verify unowned rows, hidden controls and direct API requests fail closed.
+- Enable and disable company modules in dependency order and verify background APIs
+  deny disabled modules while Admin remains recoverable.
+- Verify Demo manifest/hash/counts, balanced GL, paired stock, 12 real sessions and a
+  repeat load; record first-load and common-page performance.
+- Preflight CSV and XLSX good/warning/error/replay/oversize cases, prove atomic rollback,
+  complete the nine setup stages and confirm employee login is blocked until audited
+  Go Live.

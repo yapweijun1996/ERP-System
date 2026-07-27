@@ -103,3 +103,13 @@ Before publishing the demo:
   fallback.
 - PGlite initializes from a static origin and persists to IndexedDB.
 - the user can reset the demo data without a server.
+
+## Enterprise showcase pack
+
+Fresh Demo databases load the generated `erp-system-showcase-v1.sql` after the small
+regression seed. The browser verifies the manifest SHA-256 and commits the whole pack
+in one transaction. It is fixed to 2026-07-27, contains 12 real permission personas,
+SG/MY legal entities and exactly 10,000 linked activity/inventory/GL records. Existing
+IndexedDB is preserved unless the user explicitly confirms the irreversible upgrade
+or reset. The pack and production seed protections are specified in
+[EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).

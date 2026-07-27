@@ -670,3 +670,13 @@ landed_cost allocation writes no stock_movement because on-hand quantity is unch
 Sales delivery/returns, purchasing sourcing, treasury payments, manufacturing, quality,
 assets, projects, service, HR and payroll are also implemented in Drizzle; the route-level
 production boundary remains authoritative in [STATUS.md](STATUS.md).
+
+## EPIC-059 access and onboarding tables
+
+Migration 0073 adds `role_resource_scope`, `company_module`,
+`staff_onboarding_draft`, `company_onboarding`, `onboarding_import_job` and
+`onboarding_import_row`, plus `role.company_fn`, `role.source_template_key` and
+`app_user.initial_password_expires_at`. Existing roles and module states use an
+expand/backfill migration; legacy rows are retained during compatibility rollout.
+All company-owned additions carry `master_fn` and `company_fn` and participate in
+production RLS.
