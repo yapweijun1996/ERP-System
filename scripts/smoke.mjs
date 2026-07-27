@@ -138,6 +138,11 @@ async function checkViewport(browser, viewport) {
     errors.push('[quick-create] visible trigger has no accessible name');
   }
 
+  const ambiguousNavBadges = await page.locator('#sidebar .nav .badge').allTextContents();
+  if (ambiguousNavBadges.length) {
+    errors.push(`[navigation] unexplained numeric badges are visible: ${ambiguousNavBadges.join(', ')}`);
+  }
+
   if (viewport.name === 'desktop' && errors.length === 0) {
     const runtimeProof = await page.evaluate(async () => {
       const runtime = window.ErpDemoRuntime;

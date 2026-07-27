@@ -978,7 +978,6 @@ function renderSidebar(){
       const maturity=moduleMaturity(m.id);
       h+=`<button class="nav ${st.active?'':'is-disabled'}" data-route="${m.route}" data-mod="${m.id}" data-tip="${esc(st.active?label:label+' · inactive')}" ${st.active?'':'aria-disabled="true"'}>
         ${ic(m.icon)}<span class="navlabel">${esc(label)}</span>
-        ${st.active&&m.badge?`<span class="badge ${m.id==='workflow'||m.id==='purchasing'?'warn':''}">${m.badge}</span>`:''}
         ${maturity!=='canonical'?`<span class="nav-maturity ${maturity}">${esc(t(maturity==='preview'?'preview.short':'preview.partial'))}</span>`:''}
       </button>`;
     });
