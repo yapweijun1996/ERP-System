@@ -117,6 +117,27 @@ async function checkViewport(browser, viewport) {
     errors.push(`[content] document.title "${title}" does not mention the seeded company (expected "Acme...")`);
   }
 
+  const quickCreateState = await page.evaluate(() => {
+    const button = document.querySelector('#qcBtn');
+    const menu = document.querySelector('#qcMenu');
+    return {
+      buttonHidden: !button || button.hidden,
+      buttonLabel: button?.getAttribute('aria-label') || '',
+      actionCount: menu?.querySelectorAll('[data-route]').length || 0,
+      menuHidden: !menu || menu.hidden,
+    };
+  });
+  if (!quickCreateState.buttonHidden && quickCreateState.actionCount === 0) {
+    errors.push('[quick-create] visible trigger opens an empty menu');
+  }
+  if (quickCreateState.buttonHidden !== (quickCreateState.actionCount === 0)
+      || quickCreateState.menuHidden !== (quickCreateState.actionCount === 0)) {
+    errors.push(`[quick-create] trigger/menu availability is inconsistent: ${JSON.stringify(quickCreateState)}`);
+  }
+  if (!quickCreateState.buttonHidden && !quickCreateState.buttonLabel) {
+    errors.push('[quick-create] visible trigger has no accessible name');
+  }
+
   if (viewport.name === 'desktop' && errors.length === 0) {
     const runtimeProof = await page.evaluate(async () => {
       const runtime = window.ErpDemoRuntime;

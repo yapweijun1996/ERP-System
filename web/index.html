@@ -51,7 +51,7 @@
       <button class="ctxbtn" id="ctxCompany" data-tip="Switch company / branch" data-i18n-tip="tip.company"></button>
       <button class="ctxbtn" id="ctxPeriod" data-tip="Switch fiscal period" data-i18n-tip="tip.period"></button>
       <span class="env" data-tip="Environment" data-i18n-tip="tip.env" data-i18n="env">PRODUCTION</span>
-      <button class="iconbtn" id="qcBtn" data-tip="Quick create" data-i18n-tip="tip.qc" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
+      <button class="iconbtn" id="qcBtn" data-tip="Quick create" data-i18n-tip="tip.qc" data-i18n-aria-label="tip.qc" aria-label="Quick create" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
       <button class="iconbtn" id="bellBtn" data-tip="Notifications" data-i18n-tip="tip.notif" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.7"/></svg><span class="dotbadge" id="bellDot"></span></button>
       <button class="iconbtn" id="langBtn" data-tip="Language" data-i18n-tip="tip.language" aria-haspopup="true" aria-expanded="false"></button>
       <button class="iconbtn" id="themeBtn" data-tip="Toggle appearance" data-i18n-tip="tip.theme" aria-label="Toggle appearance"></button>
@@ -75,7 +75,7 @@
 
 <!-- popovers -->
 <div class="pop notifmenu" id="notifMenu" style="width:392px" role="menu" aria-label="Notifications"></div>
-<div class="pop qcmenu" id="qcMenu" style="width:240px" role="menu" aria-label="Quick create"></div>
+<div class="pop qcmenu" id="qcMenu" style="width:240px" role="menu" aria-label="Quick create" data-i18n-aria-label="quickCreate.title"></div>
 <div class="pop langmenu" id="langMenu" style="width:208px" role="menu" aria-label="Language"></div>
 <div class="pop companymenu" id="companyMenu" style="width:300px" role="menu" aria-label="Company switcher"></div>
 <div class="pop periodmenu" id="periodMenu" style="width:320px" role="menu" aria-label="Fiscal period switcher"></div>
@@ -195,7 +195,7 @@
 <script src="%BASE_URL%assets/screens-inv-new.js?v=20260723-canonical-new-item-v2"></script>
 <script src="%BASE_URL%assets/screens-activity.js?v=20260723-canonical-notifications-v1"></script>
 <script src="%BASE_URL%assets/screens-control-plane-canonical.js?v=20260723-final-control-plane-v1"></script>
-<script src="%BASE_URL%assets/app.js?v=20260726-expense-workspaces-v1"></script>
+<script src="%BASE_URL%assets/app.js?v=20260727-quick-create-v1"></script>
 <script src="%BASE_URL%assets/pwa.js?v=20260707-module-control"></script>
 </body>
 </html>

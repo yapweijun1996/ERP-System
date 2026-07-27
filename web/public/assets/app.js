@@ -1370,7 +1370,9 @@ function wireNotifCenter(){
 function refreshNotifs(){ const m=$('#notifMenu'); if(m){ m.innerHTML=buildNotifCenter(); wireNotifCenter(); } updateBellBadge(); }
 function buildQuickCreate(){
   const items=[[t('qc.so'),'bag','new-sales-order'],[t('qc.po'),'cart','new-purchase-order'],[t('qc.wo'),'factory','new-work-order'],[t('qc.je'),'book','new-journal-entry'],[t('qc.pv'),'coins','new-payment-voucher'],[t('qc.adj'),'adjust','new-stock-adjustment'],[t('qc.item'),'tag','new-item']];
-  return `<div class="menu-section"><div class="menu-head">${esc(t('quickCreate.title'))}</div>`+items.filter(([, ,r])=>routeShownInCommands(r)).map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
+  const allowed=items.filter(([, ,r])=>routeShownInCommands(r));
+  if(!allowed.length) return '';
+  return `<div class="menu-section"><div class="menu-head">${esc(t('quickCreate.title'))}</div>`+allowed.map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
 }
 function buildCompanyMenu(){
   /* Canonical companies (ERP-System PGlite schema), not the unrelated Aria
@@ -1593,12 +1595,15 @@ async function boot(){
   wirePeriodMenu();
   // popovers fill
   refreshNotifs();
-  $('#qcMenu').innerHTML=buildQuickCreate();
-  if(isSelfServiceOnly()){
-    const quickCreate=$('#qcBtn');
-    if(quickCreate) quickCreate.hidden=true;
-  }
-  $('#qcMenu').querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
+  const quickCreateMenu=$('#qcMenu');
+  const quickCreateButton=$('#qcBtn');
+  quickCreateMenu.innerHTML=buildQuickCreate();
+  const hasQuickCreateActions=!!quickCreateMenu.querySelector('[data-route]');
+  quickCreateButton.hidden=!hasQuickCreateActions;
+  quickCreateButton.setAttribute('aria-label',t('tip.qc'));
+  quickCreateMenu.hidden=!hasQuickCreateActions;
+  quickCreateMenu.setAttribute('aria-hidden',String(!hasQuickCreateActions));
+  quickCreateMenu.querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
   // company switcher
   wireCompanyMenu();
   // language switcher
@@ -1611,7 +1616,7 @@ async function boot(){
   $('#acctTheme')&&$('#acctTheme').addEventListener('click',e=>{e.stopPropagation();toggleTheme();});
   $('#globalSearch').addEventListener('click',openPalette);
   $('#bellBtn').addEventListener('click',e=>{e.stopPropagation();togglePop('notifMenu',$('#bellBtn'));});
-  $('#qcBtn').addEventListener('click',e=>{e.stopPropagation();togglePop('qcMenu',$('#qcBtn'));});
+  quickCreateButton.addEventListener('click',e=>{e.stopPropagation();if(!quickCreateButton.hidden)togglePop('qcMenu',quickCreateButton);});
   $('#avatarBtn').addEventListener('click',e=>{e.stopPropagation();togglePop('acctMenu',$('#avatarBtn'));});
   $('#ctxCompany').addEventListener('click',e=>{e.stopPropagation();togglePop('companyMenu',$('#ctxCompany'));});
   $('#ctxPeriod').addEventListener('click',e=>{e.stopPropagation();togglePop('periodMenu',$('#ctxPeriod'));});
@@ -1692,7 +1697,11 @@ function handleHotkey(e){
   if(k==='g'||k==='G'){ gArmed=Date.now(); return; }
   if(k==='?'){ e.preventDefault(); openShortcuts(); return; }
   if(k==='/'){ e.preventDefault(); openPalette(); return; }
-  if(k==='c'||k==='C'){ e.preventDefault(); togglePop('qcMenu',$('#qcBtn')); return; }
+  if(k==='c'||k==='C'){
+    const quickCreate=$('#qcBtn');
+    if(quickCreate&&!quickCreate.hidden){ e.preventDefault(); togglePop('qcMenu',quickCreate); }
+    return;
+  }
   if(k==='n'||k==='N'){ e.preventDefault(); togglePop('notifMenu',$('#bellBtn')); return; }
   if(k==='D'){ e.preventDefault(); toggleTheme(); return; }
 }
