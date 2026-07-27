@@ -920,3 +920,21 @@ Exit criteria: all 122 Canonical routes have five-language system copy, live lan
 switching preserves page/dialog state, known missing keys and hardcoded system copy are
 zero, non-English missing keys retain tested English fallback, and full release gates
 pass with 0 Preview routes.
+
+## Phase 40 — End-User ERP Quality Audit & Remediation (In progress)
+
+1. **Dual-mode end-user audit** (TASK-140 done 2026-07-27) recorded the clean baseline,
+   isolated Demo/API environments, real Admin/Viewer/Employee/Manager/Finance handoffs,
+   SG/MY behavior, executable ERP journeys and 122-route five-language desktop/375px
+   matrices. The dated report found no P0 and registered four P1, three P2 and two P3
+   root causes without changing product code.
+2. **P1 remediation** (TASK-141–144) aligns new-employee paid-leave balances, makes
+   every eligible tenant role invitational, resolves high dependency advisories and
+   removes the document queue's wall-clock test failure.
+3. **P2/P3 hardening** (TASK-145–149) prunes custom-role navigation, stabilizes the
+   supported test command, guards PostgreSQL proof data, deduplicates expected My Work
+   conflicts and names icon-only user controls.
+
+Exit criteria: TASK-140 evidence and backlog exist; Phase 40 remains in progress until
+TASK-141–149 are complete. The isolated API environment remains available for review,
+and TASK-017 remains blocked until a human performs physical-phone acceptance.

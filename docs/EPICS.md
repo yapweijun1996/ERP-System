@@ -2115,3 +2115,27 @@ statutory documents retain their own source/locale rules.
       placeholder, unsafe-markup and new-hardcoded-copy gates; audit all Canonical
       routes in five languages and verify representative desktop/phone interactions,
       offline cache and zero overflow/runtime errors.
+
+## EPIC-058 — End-User ERP Quality Audit & Remediation (In progress)
+
+Exercise the product as real users across the isolated Demo and production API paths,
+then turn every evidence-backed defect, ERP capability gap and material usability
+problem into an executable remediation backlog. This epic is audit-first: TASK-140
+does not repair product code or reinterpret a blocked physical-device check as passed.
+
+- [x] **TASK-140 — Run a dual-mode end-user ERP audit and register every confirmed
+      finding.** Completed 2026-07-27 at `a9fdb07`: published the reusable UAT manual
+      and dated audit, ran the isolated dual-mode/role/company/language/viewport matrix,
+      retained the API stack for review and registered nine evidence-backed root causes.
+- [ ] **TASK-141 — Initialize and reconcile paid-leave balances for new employees.**
+- [ ] **TASK-142 — Allow invitations for every eligible tenant role.**
+- [ ] **TASK-143 — Remediate or formally accept high dependency advisories.**
+- [ ] **TASK-144 — Make document queue tests independent of wall-clock date.**
+- [ ] **TASK-145 — Derive shell navigation and quick actions from effective permissions.**
+- [ ] **TASK-146 — Stabilize integration-test setup under supported parallel load.**
+- [ ] **TASK-147 — Guard PostgreSQL demo proof against seeded databases.**
+- [ ] **TASK-148 — Deduplicate expected My Work identity conflicts.**
+- [ ] **TASK-149 — Name icon-only user administration controls.**
+
+Audit evidence: `docs/audits/END_USER_AUDIT_2026-07-27.md`. No product fix is part
+of TASK-140; TASK-141–149 are independently testable remediation work.

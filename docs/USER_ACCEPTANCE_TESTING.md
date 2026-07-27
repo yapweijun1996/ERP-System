@@ -1,0 +1,133 @@
+# ERP user acceptance testing
+
+This manual is the reusable end-user acceptance checklist for Aria ERP. It tests the
+product through the same browser and HTTP boundaries used by real users; domain or SQL
+checks supplement the journey but do not replace it.
+
+## Rules of engagement
+
+- Record the commit SHA, date/time zone, browser version, data mode, company, role,
+  language and viewport before testing.
+- Use isolated origins and databases. Never reuse production data, an existing Docker
+  Compose project or a developer's default IndexedDB origin.
+- Provision ordinary users through the product UI first. If that is impossible, record
+  the capability gap before using an official seed or API fixture.
+- Do not use Superadmin as evidence for an ordinary role.
+- For each failure capture the request ID, console/network result and the ERP invariant
+  that was violated. P0–P2 findings require a screenshot.
+- External SMTP, bank and tax submissions remain Blocked unless a real approved test
+  endpoint is in scope. A simulated or local export is not an external-service pass.
+
+## Baseline and environment checklist
+
+- [ ] Working tree and baseline SHA recorded.
+- [ ] `npm run lint`, `npm run typecheck`, `npm run typecheck:web` recorded.
+- [ ] `npm test`, focused reruns, `npm run demo`, `npm run check:demo-schema`,
+      `npm run check:drift`, both builds, smoke and screen/i18n audits recorded.
+- [ ] Demo uses a fresh origin and fresh IndexedDB; first-run setup is completed once.
+- [ ] API Compose project, ports and volumes are unique; migration, seed and health pass.
+- [ ] PostgreSQL proof and RLS integration test run against a dedicated proof database.
+- [ ] No credential, token, bank account or private evidence is present in artifacts.
+
+Recommended isolated endpoints are a Demo preview on `127.0.0.1:44173` and a named
+Compose project with non-default Web/API/PostgreSQL ports. Store any environment file
+outside version control and do not remove its volumes until the report owner confirms.
+
+## Role matrix
+
+For every role verify visible navigation, a permitted read, a permitted write, a direct
+URL, a direct API denial and sensitive-data minimisation.
+
+- [ ] Superadmin/Admin: tenant control, users, roles, modules, audit and company switch.
+- [ ] Viewer: permitted read-only modules; write controls absent; write APIs return 403.
+- [ ] Pure Employee: only My Work and allowed settings; identity derives from the linked
+      employee, never from a client-selected employee ID.
+- [ ] Manager: reporting line, team calendar and assigned approvals only; private reason
+      and unrelated employee facts remain hidden.
+- [ ] Finance preparer: prepare allowed, release denied.
+- [ ] Finance checker: release allowed only for another maker and never own claims.
+- [ ] Multi-role user: union of explicit permissions without a broad default fallback.
+- [ ] SG and MY assignment: only assigned companies appear and cross-company calls fail.
+
+## Business journeys
+
+### Identity and control plane
+
+- [ ] First-run language → organization → company → admin → optional AI → finish.
+- [ ] Sign in, sign out, activation, reset, disable/offboard and session restart.
+- [ ] Create roles, assign multiple roles, change modules and inspect the audit trail.
+- [ ] Switch SG/MY company and fiscal period; currency and GST/SST context change together.
+- [ ] Repeat with invalid credentials, expired token, disabled user and unassigned company.
+
+### Lead to cash
+
+- [ ] Lead/opportunity → quotation → approval → sales order → delivery → invoice/GL → receipt.
+- [ ] Return plus credit/debit note; credit-limit denial and insufficient-stock rollback.
+- [ ] Duplicate confirmation, stale version and replay use one order/invoice/stock/GL effect.
+
+### Procure to pay
+
+- [ ] Requisition/RFQ/quote → PO approval → receipt → AP invoice → payment.
+- [ ] Purchase return, supplier debit/credit note and landed-cost allocation.
+- [ ] Reject early/duplicate invoice, duplicate receipt, overpayment and locked-period posting.
+
+### Inventory to production
+
+- [ ] Product, adjustment, transfer, pick/pack, lot/serial and stock movement trace.
+- [ ] Quality receipt/inspection/NCR disposition and release.
+- [ ] MRP/work order → release → issue → report output → complete.
+- [ ] Insufficient stock and concurrent issue preserve quantity and one movement only.
+
+### Record to report
+
+- [ ] Manual journal → post → reverse; debits equal credits at every posted state.
+- [ ] Period lock, bank reconciliation, budget approval and reporting/export permission.
+- [ ] Asset depreciation and project receipt/AP costs reach the expected GL accounts once.
+
+### Employee to tax
+
+- [ ] Employee record → login account → activation → linked employee context.
+- [ ] Leave draft → submit → manager approval/rejection → Payroll trace.
+- [ ] Receipt → claim → manager/Finance decision → balanced posting.
+- [ ] Verified payout → maker batch → independent checker → partial bank outcome.
+- [ ] Tax evidence snapshot/artifacts → seal → correction/retention/legal hold.
+- [ ] Exercise insufficient balance, private-reason redaction, duplicate evidence,
+      self-approval, maker-checker conflict and payment replay.
+
+### Service, integration and administration
+
+- [ ] Service contract/ticket assignment and resolution.
+- [ ] Notifications and personal activity are actor scoped.
+- [ ] Customer import validation/run and sanitized delivery log.
+- [ ] User/role/module changes create bounded audit events.
+
+## Route, language and responsive matrix
+
+- [ ] Every route in live `SCREENS` renders in Demo and API modes.
+- [ ] Each route renders in `en`, `ms`, `zh`, `ja`, `vi` at 1280×800 and 375×812.
+- [ ] No blank screen, uncaught error, horizontal page overflow, raw key or identity marker.
+- [ ] Every non-English locale completes at least one create/update/Void journey.
+- [ ] Keyboard focus, accessible names, dialog close and mobile action access are checked.
+- [ ] A physical phone remains separate acceptance evidence; automation cannot clear it.
+
+## Finding template
+
+```text
+ID / category / severity:
+Mode / role / company / language / viewport:
+Preconditions:
+Steps:
+Expected:
+Actual:
+Console / network / request ID:
+ERP invariant:
+Evidence:
+Related specification and backlog task:
+```
+
+## Completion criteria
+
+Every checklist item is Pass, Fail or Blocked; every observation is classified as a
+reproducible defect, ERP capability gap, UX improvement or hypothesis. Demo/API
+differences have an explicit conclusion, P0–P2 evidence opens a remediation task, and
+the report records any environment intentionally left running.
