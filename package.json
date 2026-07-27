@@ -15,6 +15,8 @@
     "generate": "drizzle-kit generate",
     "generate:demo-schema": "node scripts/generate-demo-schema.mjs",
     "check:demo-schema": "node scripts/generate-demo-schema.mjs --check",
+    "generate:demo-pack": "node scripts/generate-demo-pack.mjs",
+    "check:demo-pack": "node scripts/generate-demo-pack.mjs --check",
     "generate:i18n-bootstrap": "node scripts/generate-i18n-bootstrap.mjs",
     "check:i18n-bootstrap": "node scripts/generate-i18n-bootstrap.mjs --check",
     "generate:i18n-business": "node scripts/generate-i18n-business-allowlist.mjs",

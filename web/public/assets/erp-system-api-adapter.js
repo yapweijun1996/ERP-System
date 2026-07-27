@@ -521,6 +521,8 @@
     var initials = name.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(function(w){ return w[0]; }).join('').toUpperCase() || 'U';
     DB.user = {
       name: name, email: (sessionUser && sessionUser.email) || '', initials: initials || 'U', role: 'Signed in',
+      permissionKeys: sessionUser && sessionUser.capabilities
+        ? (sessionUser.capabilities.permissions || []) : [],
       perms: { post: false, approve: false, salaryView: false, costView: false },
     };
 
@@ -628,6 +630,55 @@
     }
   }
 
+  async function createStaffAccount(input){
+    input=input||{};
+    var created=await apiRequest('hr/staff-onboarding-drafts',{
+      method:'POST',body:{
+        employee:input.employee,username:input.username,email:input.email,roleIds:input.roleIds,
+      },
+    });
+    var draft=created.data;
+    var activated=await apiRequest('hr/staff-onboarding-drafts/'+draft.id+'/actions/activate',{
+      method:'POST',
+      headers:{'Idempotency-Key':'staff-onboarding-'+draft.id+'-'+draft.version},
+      body:{expectedVersion:draft.version,initialPassword:input.initialPassword},
+    });
+    return activated.data;
+  }
+
+  async function cloneRoleTemplate(templateKey,name){
+    var response=await apiRequest('admin/roles/actions/clone-template',{
+      method:'POST',body:{templateKey:templateKey,name:name||undefined},
+    });
+    return response.data;
+  }
+
+  function onboardingStatus(){ return apiRequest('onboarding/status'); }
+  function completeOnboardingStage(stage,expectedVersion){
+    return apiRequest('onboarding/stages/'+encodeURIComponent(stage)+'/actions/complete',{
+      method:'POST',body:{expectedVersion:expectedVersion},
+    });
+  }
+  async function preflightOnboardingImport(file,target){
+    var response=await fetch(API_BASE+'/onboarding/imports/actions/preflight',{
+      method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':file.type||'application/octet-stream','X-CSRF-Token':cookieValue('erp_csrf'),
+        'X-Import-Target':target,'X-Import-Format':file.name.toLowerCase().endsWith('.xlsx')?'xlsx':'csv','X-File-Name':file.name},
+      body:file,
+    });
+    var payload=await jsonBody(response);
+    if(!response.ok){ var failure=payload&&payload.error; var error=new Error(failure&&failure.message||'Import preflight failed.'); error.code=failure&&failure.code; throw error; }
+    return payload;
+  }
+  function commitOnboardingImport(jobId,expectedVersion,confirmWarnings){
+    return apiRequest('onboarding/imports/'+encodeURIComponent(jobId)+'/actions/commit',{
+      method:'POST',body:{expectedVersion:expectedVersion,confirmWarnings:confirmWarnings===true},
+    });
+  }
+  function goLiveCompany(expectedVersion){
+    return apiRequest('onboarding/actions/go-live',{method:'POST',body:{expectedVersion:expectedVersion}});
+  }
+
   /** True if the wizard should show — asks the server whether ANY admin
    *  exists yet, so the lock is real (not per-browser localStorage, which
    *  would let every new device re-offer "first-run" setup forever). */
@@ -731,6 +782,13 @@
     my:my,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
     completeSetup: completeSetup,
+    createStaffAccount:createStaffAccount,
+    cloneRoleTemplate:cloneRoleTemplate,
+    onboardingStatus:onboardingStatus,
+    completeOnboardingStage:completeOnboardingStage,
+    preflightOnboardingImport:preflightOnboardingImport,
+    commitOnboardingImport:commitOnboardingImport,
+    goLiveCompany:goLiveCompany,
     switchCompany: switchCompany,
     /* TASK-024 additions — demo adapter implements the same names locally. */
     needsSetup: needsSetup,

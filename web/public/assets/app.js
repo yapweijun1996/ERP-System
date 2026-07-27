@@ -388,10 +388,26 @@ async function dismissAllNotifications(){
   await Promise.all((DB.notifications||[]).filter(n=>!n.dismissed).map(n=>dismissNotification(n.id)));
 }
 function routeModuleId(route){ return ROUTE_MODULE[route]; }
+function canReadModule(mod){
+  const hasPermissionPayload=DB.user&&Array.isArray(DB.user.permissionKeys);
+  const keys=hasPermissionPayload?DB.user.permissionKeys:[];
+  if(keys.includes('*')) return true;
+  if(!hasPermissionPayload) return true;
+  const required={
+    sales:['sales.read'],purchasing:['purchasing.read'],crm:['crm.read'],
+    inventory:['inventory.read'],warehouse:['inventory.read'],manufacturing:['manufacturing.read'],
+    quality:['quality.read'],finance:['finance.read'],hr:['hr.read'],project:['project.read'],
+    service:['service.read'],asset:['asset.read'],workflow:['admin.roles.read'],
+    bi:['reporting.read'],admin:['admin.users.read','admin.roles.read','admin.master.read'],
+    integration:['integration.read'],
+  }[mod];
+  return !required||required.some(key=>keys.includes(key));
+}
 function routeAllowed(route){
   const mod=routeModuleId(route);
   if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
   if(!mod||mod==='settings') return true;
+  if(!canReadModule(mod)) return false;
   const st=moduleState(mod);
   return st.visible&&st.active;
 }
@@ -399,6 +415,7 @@ function routeShownInCommands(route){
   const mod=routeModuleId(route);
   if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
   if(!mod||mod==='settings') return true;
+  if(!canReadModule(mod)) return false;
   const st=moduleState(mod);
   return st.visible&&st.active;
 }
@@ -947,7 +964,7 @@ function renderSidebar(){
     const items=g.items.filter(m=>{
       if(m.id==='mywork') return Boolean(MY_WORK_CONTEXT);
       if(isSelfServiceOnly()) return false;
-      return moduleState(m.id).visible;
+      return moduleState(m.id).visible&&canReadModule(m.id);
     });
     if(!items.length) return;
     h+=`<div class="navgroup"><h6>${esc(tf('group.'+g.group, g.group))}</h6>`;
@@ -1353,7 +1370,7 @@ function wireNotifCenter(){
 function refreshNotifs(){ const m=$('#notifMenu'); if(m){ m.innerHTML=buildNotifCenter(); wireNotifCenter(); } updateBellBadge(); }
 function buildQuickCreate(){
   const items=[[t('qc.so'),'bag','new-sales-order'],[t('qc.po'),'cart','new-purchase-order'],[t('qc.wo'),'factory','new-work-order'],[t('qc.je'),'book','new-journal-entry'],[t('qc.pv'),'coins','new-payment-voucher'],[t('qc.adj'),'adjust','new-stock-adjustment'],[t('qc.item'),'tag','new-item']];
-  return `<div class="menu-section"><div class="menu-head">${esc(t('quickCreate.title'))}</div>`+items.map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
+  return `<div class="menu-section"><div class="menu-head">${esc(t('quickCreate.title'))}</div>`+items.filter(([, ,r])=>routeShownInCommands(r)).map(([l,i,r])=>`<button class="menu-item" data-route="${r}">${ic(i)}<span>${esc(l)}</span></button>`).join('')+`</div>`;
 }
 function buildCompanyMenu(){
   /* Canonical companies (ERP-System PGlite schema), not the unrelated Aria

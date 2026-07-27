@@ -394,7 +394,7 @@ SCREENS['journal-entry'] = async function(root, params){
   const mj=manualJournalViewCopy();
   const copy=journalDetailCopy();
   try{
-    await prepareCanonicalFinanceData();
+    await prepareCanonicalFinanceData(params&&params.no);
   }catch(error){
     postingDetailPage(root,{
       module:'finance',route:'journal-entry',title:copy.title,description:copy.error,

@@ -209,12 +209,17 @@ const ADMIN_PERMISSION_KEYS=[
   'session.switch_company',
   'admin.audit.read','admin.users.invite','admin.users.read','admin.users.manage',
   'admin.roles.read','admin.roles.write',
-];
+  'admin.modules.manage','settings.read','settings.manage','reporting.read','integration.read',
+].concat(['sales','purchasing','crm','inventory','warehouse','manufacturing','quality','finance','hr','payroll','project','service','asset']
+  .flatMap(moduleKey=>['create','edit','approve','post','pay','export'].map(action=>`${moduleKey}.${action}`)));
+const ADMIN_SCOPE_RESOURCES=['*','sales/*','purchasing/*','crm/*','inventory/*','warehouse/*','manufacturing/*','quality/*','finance/*','hr/*','payroll/*','project/*','service/*','asset/*'];
 
 SCREENS['role-permission'] = async function(root){
   const s=adminCopy();
   let roles=(await listPage('admin/roles')).data;
   let grants=(await listPage('admin/role-permissions')).data;
+  let templates=(await listPage('admin/role-templates')).data;
+  let scopes=(await listPage('admin/role-scopes')).data;
   function grantMap(){
     const m=new Map();
     grants.forEach(g=>{
@@ -243,6 +248,19 @@ SCREENS['role-permission'] = async function(root){
     });
     h+=`</div></div>`; return h;
   }
+  function scopeTable(){
+    const map=new Map(scopes.map(row=>[`${row.roleId}:${row.resourceKey}`,row.scope]));
+    const editable=roles.filter(role=>!role.isSuperadmin);
+    if(!editable.length) return '';
+    const tpl=`minmax(210px,1.6fr) repeat(${editable.length},minmax(130px,1fr))`;
+    return `<div class="pagehead" style="padding-top:18px"><div class="h1row"><h2>${esc(t('access.dataScope'))}</h2></div><div class="h1sub">${esc(t('access.dataScopeHint'))}</div></div>
+      <div class="dt-page"><div class="permgrid" role="table" style="--ptpl:${tpl}">
+      <div class="pg-r pg-head"><div class="pg-c modcell">${esc(t('access.resource'))}</div>${editable.map(r=>`<div class="pg-c c">${esc(r.name)}</div>`).join('')}</div>
+      ${ADMIN_SCOPE_RESOURCES.map(resource=>`<div class="pg-r"><div class="pg-c modcell sub mono">${esc(resource)}</div>${editable.map(role=>{
+        const value=map.get(`${role.roleId}:${resource}`)||'';
+        return `<div class="pg-c c"><select class="role-scope" data-role="${role.roleId}" data-resource="${esc(resource)}"><option value="" ${value?'':'selected'}>${esc(t('access.denied'))}</option>${['self','team','department','company'].map(scope=>`<option value="${scope}" ${value===scope?'selected':''}>${esc(t('access.scope.'+scope))}</option>`).join('')}</select></div>`;
+      }).join('')}</div>`).join('')}</div></div>`;
+  }
   async function render(){
     root.innerHTML=`<div class="content full"><section class="master">
       <div class="pagehead">${crumbs([DB.company.name,t('nav.admin'),t('usr.roles')])}
@@ -252,10 +270,11 @@ SCREENS['role-permission'] = async function(root){
       <div class="toolbar">
         <div class="grow"></div>
         ${btn(s('addRole'),{icon:'plus',cls:'soft',attrs:'data-act="add-role"'})}
+        ${btn(t('access.copyTemplate'),{icon:'copy',cls:'primary',attrs:'data-act="clone-role"'})}
       </div>
       <div class="alert info" style="margin-top:2px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="M12 11v5M12 8h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <span class="grow">${esc(s('superadminNote'))}</span></div>
-      <div class="tablewrap" id="permWrap" style="padding:0 24px 24px">${table()}</div>
+      <div class="tablewrap" id="permWrap" style="padding:0 24px 24px">${table()}${scopeTable()}</div>
     </section></div>`;
     rewire();
   }
@@ -278,6 +297,26 @@ SCREENS['role-permission'] = async function(root){
     }));
     const addBtn=root.querySelector('[data-act="add-role"]');
     addBtn&&addBtn.addEventListener('click',()=>openAddRoleModal());
+    const cloneBtn=root.querySelector('[data-act="clone-role"]');
+    cloneBtn&&cloneBtn.addEventListener('click',()=>openCloneRoleModal());
+    root.querySelectorAll('.role-scope').forEach(select=>select.addEventListener('change',async()=>{
+      if(!select.value){ toast(t('access.scopeRequired'),'warn'); scopes=(await listPage('admin/role-scopes')).data; await render(); return; }
+      select.disabled=true;
+      try{
+        await window.ErpSystemData.action('admin/roles',Number(select.dataset.role),'set-scope',{resourceKey:select.dataset.resource,scope:select.value});
+        scopes=(await listPage('admin/role-scopes')).data; toast(t('access.scopeUpdated'),'ok');
+      }catch(error){ select.disabled=false; toast(error&&error.message?error.message:t('access.scopeFailed'),'danger'); }
+    }));
+  }
+  function openCloneRoleModal(){
+    appModal({icon:'copy',title:t('access.copyTitle'),body:`<div class="fld"><span>${esc(t('access.template'))} *</span><select id="rtTemplate">${templates.filter(item=>!item.isSuperadmin).map(item=>`<option value="${esc(item.key)}">${esc(item.name)}</option>`).join('')}</select></div><div class="fld" style="margin-top:12px"><span>${esc(t('access.customName'))} *</span><input id="rtName" placeholder="${esc(t('access.customPlaceholder'))}"></div><p class="hint">${esc(t('access.copyHint',{company:DB.company.name}))}</p>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('access.copyTemplate'),{icon:'copy',cls:'primary',attrs:'data-save="1"'})}`});
+    const save=$('#modalEl').querySelector('[data-save]');
+    save.addEventListener('click',async()=>{
+      const name=$('#rtName').value.trim(); if(!name){ toast(t('access.nameRequired'),'danger'); return; }
+      save.disabled=true;
+      try{ await window.ErpSystemData.cloneRoleTemplate($('#rtTemplate').value,name); closeModal(); roles=(await listPage('admin/roles')).data; grants=(await listPage('admin/role-permissions')).data; scopes=(await listPage('admin/role-scopes')).data; await render(); toast(t('access.copied'),'ok'); }
+      catch(error){ save.disabled=false; toast(error&&error.message?error.message:t('access.copyFailed'),'danger'); }
+    });
   }
   function openAddRoleModal(){
     appModal({
@@ -297,6 +336,7 @@ SCREENS['role-permission'] = async function(root){
         toast(s('roleCreated').replace('{name}',name),'ok');
         roles=(await listPage('admin/roles')).data;
         grants=(await listPage('admin/role-permissions')).data;
+        scopes=(await listPage('admin/role-scopes')).data;
         await render();
       }catch(error){
         saveBtn.disabled=false;

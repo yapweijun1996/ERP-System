@@ -258,7 +258,7 @@ SCREENS['stock-on-hand'] = async function(root){
       {label:ts('Needs attention'),value:needsAttention,accent:needsAttention>0},
     ],
     primaryAction:{label:t('inv.newitem'),icon:'plus',onClick:()=>navigate('new-item')},
-    note:DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?ts('Showing first 100 items'):null,
+    note:DB.inventoryReadMeta&&DB.inventoryReadMeta.truncated?t('inventory.showingFirst100'):null,
     columns:[
       {label:t('inv.col.item'),sticky:true,render:it=>`<div class="cellsub"><b>${esc(it.name)}</b><small>${esc(it.sku)} · ${esc(it.cat)}</small></div>`},
       {label:t('inv.col.onhand'),align:'r',sortable:true,render:it=>`<span class="tnum">${num(it.onHand)}</span>`},

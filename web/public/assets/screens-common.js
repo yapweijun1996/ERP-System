@@ -1114,7 +1114,10 @@ function registerTransactionList(config){
       const rows=value(cfg.rows);
       return Array.isArray(rows)?rows:[];
     };
-    const unit=()=>value(cfg.unit);
+    const unit=()=>{
+      const raw=value(cfg.unit);
+      return raw?ts(String(raw)):raw;
+    };
     const truncated=()=>Boolean(
       value(cfg.truncated)
       ||(cfg.module==='sales'&&DB.salesReadMeta&&DB.salesReadMeta.truncated)

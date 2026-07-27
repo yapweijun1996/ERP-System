@@ -355,17 +355,26 @@ import {
   listAuditLog,
   listCompanyUsers,
   listRolePermissions,
+  listRoleScopes,
   listRoles,
 } from '../../src/api/admin';
 import { appendAudit } from '../../src/api/audit';
 import {
   createInvitationRecordWithin,
+  cloneRoleTemplateWithin,
   createRoleWithin,
+  listRoleTemplates,
   setRolePermissionWithin,
+  setRoleResourceScopeWithin,
   setUserActiveWithin,
   setUserRolesWithin,
 } from '../../src/auth/adminLifecycle';
 import { listMasterModules, setMasterModuleWithin } from '../../src/auth/moduleAccess';
+import {
+  activateStaffOnboardingWithin,
+  createStaffOnboardingDraftWithin,
+  type StaffOnboardingDraftInput,
+} from '../../src/modules/hr/staffOnboarding';
 import type { SessionData } from '../../src/auth/session';
 import ExcelJS from 'exceljs';
 import {
@@ -940,6 +949,22 @@ export const erpDemoRuntime = Object.freeze({
     seedDemo(db: DemoOrm) {
       return seedDemo(asDomainDb(db));
     },
+    createStaffOnboardingDraftWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, input: StaffOnboardingDraftInput,
+    ) {
+      return createStaffOnboardingDraftWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), input, 'demo',
+      );
+    },
+    activateStaffOnboardingWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, draftId: number,
+      expectedVersion: number, passwordHash: string | null,
+    ) {
+      return activateStaffOnboardingWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), draftId,
+        expectedVersion, passwordHash, 'demo',
+      );
+    },
     createProductWithin(db: DemoOrm, scope: Scope, input: CreateProductInput) {
       return createProductWithin(asDomainDb(db), scope, input);
     },
@@ -1265,10 +1290,10 @@ export const erpDemoRuntime = Object.freeze({
       return listCompanyUsers(asDomainDb(db), scope.masterFn, scope.companyFn);
     },
     listRoles(db: DemoOrm, scope: Scope) {
-      return listRoles(asDomainDb(db), scope.masterFn);
+      return listRoles(asDomainDb(db), scope.masterFn, scope.companyFn);
     },
     listRolePermissions(db: DemoOrm, scope: Scope) {
-      return listRolePermissions(asDomainDb(db), scope.masterFn);
+      return listRolePermissions(asDomainDb(db), scope.masterFn, scope.companyFn);
     },
     listAuditLog(db: DemoOrm, scope: Scope, query: { limit?: number; cursor?: number } = {}) {
       return listAuditLog(asDomainDb(db), scope.masterFn, scope.companyFn, query);
@@ -1310,7 +1335,7 @@ export const erpDemoRuntime = Object.freeze({
       );
     },
     listMasterModules(db: DemoOrm, scope: Scope) {
-      return listMasterModules(asDomainDb(db), scope.masterFn);
+      return listMasterModules(asDomainDb(db), scope.masterFn, scope.companyFn);
     },
     listConnectorsWithin(db: DemoOrm, scope: Scope) {
       return listConnectorsWithin(asDomainDb(db), scope);
@@ -1390,6 +1415,19 @@ export const erpDemoRuntime = Object.freeze({
     createRoleWithin(db: DemoOrm, scope: Scope, actorUserId: number, name: string) {
       return createRoleWithin(asDomainDb(db), demoSession(scope, actorUserId), name, 'demo');
     },
+    cloneRoleTemplateWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, templateKey: string, name?: string,
+    ) {
+      return cloneRoleTemplateWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), templateKey, name, 'demo',
+      );
+    },
+    listRoleTemplates() {
+      return listRoleTemplates();
+    },
+    listRoleScopes(db: DemoOrm, scope: Scope) {
+      return listRoleScopes(asDomainDb(db), scope.masterFn, scope.companyFn);
+    },
     setRolePermissionWithin(
       db: DemoOrm,
       scope: Scope,
@@ -1400,6 +1438,15 @@ export const erpDemoRuntime = Object.freeze({
     ) {
       return setRolePermissionWithin(
         asDomainDb(db), demoSession(scope, actorUserId), roleId, permissionKey, allowed, 'demo',
+      );
+    },
+    setRoleResourceScopeWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, roleId: number,
+      resourceKey: string, dataScope: 'self' | 'team' | 'department' | 'company',
+    ) {
+      return setRoleResourceScopeWithin(
+        asDomainDb(db), demoSession(scope, actorUserId), roleId,
+        resourceKey, dataScope, 'demo',
       );
     },
     createInvitation(

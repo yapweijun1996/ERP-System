@@ -699,7 +699,9 @@ async function checkViewport(browser, viewport) {
           && purchaseAfterApproval === purchaseBefore,
         purchaseBalanced: Number(purchaseGl.debit) === Number(purchaseGl.credit) && Number(purchaseGl.debit) > 0,
         receiptDetailCanonical,
+        receiptDetailFacts: receiptDetail ? { ...receiptDetail.dataset } : null,
         invoiceDetailCanonical,
+        invoiceDetailFacts: invoiceDetail ? { ...invoiceDetail.dataset } : null,
         purchasingAnalyticsCanonical,
         purchasingAnalyticsMarker,
         purchasingAnalyticsSummary,
@@ -728,6 +730,14 @@ async function checkViewport(browser, viewport) {
           && Number(reversalPosting.count) === 2
           && Number(reversalPosting.debit) === 42.5
           && Number(reversalPosting.credit) === 42.5,
+        manualJournalFacts: {
+          composer: manualJournalComposerCanonical,
+          detail: manualJournalDetailCanonical,
+          before: manualBefore,
+          posting: manualPosting,
+          originalStatus: reversedManual.data.original.status,
+          reversal: reversalPosting,
+        },
         bankReconciliationCanonical: bankReconciliationCanonical
           && bankReconciled.data.status === 'reconciled'
           && Number(bankReconciled.data.matchedLineCount) === 1,
@@ -781,8 +791,8 @@ async function checkViewport(browser, viewport) {
       if (runtimeProof.purchaseStockDelta !== 2) errors.push(`[demo-esm] expected purchase stock delta +2, got ${runtimeProof.purchaseStockDelta}`);
       if (!runtimeProof.purchaseApprovalNoStock) errors.push('[demo-esm] PO approval did not stay stock-neutral');
       if (!runtimeProof.purchaseBalanced) errors.push('[demo-esm] supplier invoice did not produce balanced GL entries');
-      if (!runtimeProof.receiptDetailCanonical) errors.push('[demo-esm] goods-receipt detail did not render its canonical stock trace');
-      if (!runtimeProof.invoiceDetailCanonical) errors.push('[demo-esm] supplier-invoice detail did not render its balanced canonical GL trace');
+      if (!runtimeProof.receiptDetailCanonical) errors.push(`[demo-esm] goods-receipt detail did not render its canonical stock trace (${JSON.stringify(runtimeProof.receiptDetailFacts)})`);
+      if (!runtimeProof.invoiceDetailCanonical) errors.push(`[demo-esm] supplier-invoice detail did not render its balanced canonical GL trace (${JSON.stringify(runtimeProof.invoiceDetailFacts)})`);
       if (!runtimeProof.purchasingAnalyticsCanonical) {
         errors.push(`[demo-esm] purchasing dashboard did not render its canonical derived analytics (source=${runtimeProof.purchasingScreenCanonicalSource}, marker=${runtimeProof.purchasingAnalyticsMarker}, summary=${runtimeProof.purchasingAnalyticsSummary}, monthly=${runtimeProof.purchasingAnalyticsMonthly}, error=${runtimeProof.purchasingErrorAtCheck || 'none'})`);
       }
@@ -798,7 +808,7 @@ async function checkViewport(browser, viewport) {
         errors.push('[demo-esm] Sales commission did not render an immutable canonical source trace without GL posting');
       }
       if (!runtimeProof.manualJournalCanonical) {
-        errors.push('[demo-esm] manual journal draft/post/reversal or its Canonical composer/detail boundary failed');
+        errors.push(`[demo-esm] manual journal draft/post/reversal or its Canonical composer/detail boundary failed (${JSON.stringify(runtimeProof.manualJournalFacts)})`);
       }
       if (!runtimeProof.bankReconciliationCanonical) {
         errors.push('[demo-esm] bank statement import/match/reconcile or its Canonical screen boundary failed');

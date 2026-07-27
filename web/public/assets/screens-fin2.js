@@ -20,7 +20,7 @@ function financeJournalSource(ref){
 
 /* Canonical finance presentation model. GL rows are the immutable fact source;
    reports and document views below are rebuilt from those rows on every load. */
-async function prepareCanonicalFinanceData(){
+async function prepareCanonicalFinanceData(journalRef){
   const adapter=window.ErpSystemData;
   if(adapter&&adapter.mode==='fallback'){
     if(
@@ -32,8 +32,8 @@ async function prepareCanonicalFinanceData(){
   }
   const pages=await Promise.all([
     listPage('finance/accounts'),
-    listPage('finance/gl-entries'),
-    listPage('finance/journals'),
+    listPage('finance/gl-entries',journalRef?{limit:100,journalRef}:{limit:100}),
+    listPage('finance/journals',journalRef?{limit:100,docNo:journalRef}:{limit:100}),
   ]);
   const [accounts,entries,manualJournals]=pages.map(page=>page.data);
   const accountById=new Map(accounts.map(row=>[row.id,row]));

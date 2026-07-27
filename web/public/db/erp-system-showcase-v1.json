@@ -1,0 +1,21 @@
+{
+  "version": "1",
+  "businessDate": "2026-07-27",
+  "sha256": "dd64790a9afebe50fbd0f703f279961b3db0d512206b1557f4213a964396248f",
+  "generated": {
+    "employees": 94,
+    "customers": 198,
+    "suppliers": 98,
+    "products": 498
+  },
+  "records": {
+    "activities": 4000,
+    "stockMovements": 4000,
+    "glEntries": 2000,
+    "total": 10000
+  },
+  "companies": [
+    "C-SG",
+    "C-MY"
+  ]
+}

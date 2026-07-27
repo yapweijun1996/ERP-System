@@ -89,8 +89,9 @@ async function prepareGoodsReceiptDetail(receiptId){
   await prepareCanonicalPurchasingData();
   const receipt=receiptId?DB.goodsReceipts.find(row=>row.id===receiptId):DB.goodsReceipts[0];
   if(!receipt) return {receipt:null,order:null,lines:[],movements:[]};
-  const movements=(await listPage('inventory/stock-movements')).data
-    .filter(row=>row.refType==='goods_receipt'&&Number(row.refId)===Number(receipt.id));
+  const movements=(await listPage('inventory/stock-movements',{
+    limit:100,refType:'goods_receipt',refId:receipt.id,
+  })).data;
   return {
     receipt,
     order:DB.purchaseOrders.find(row=>row.id===receipt.orderId)||{},
@@ -104,11 +105,11 @@ async function prepareSupplierInvoiceDetail(invoiceId){
   const invoice=(invoiceId?DB.supplierInvoices.find(row=>row.id===invoiceId):null)||DB.supplierInvoices[0];
   if(!invoice) throw new Error('No supplier invoice exists for the active company.');
   const [entriesPage,accountsPage]=await Promise.all([
-    listPage('finance/gl-entries'),
+    listPage('finance/gl-entries',{limit:100,journalRef:invoice.no}),
     listPage('finance/accounts'),
   ]);
   const accountById=new Map(accountsPage.data.map(row=>[row.id,row]));
-  const entries=entriesPage.data.filter(row=>row.journalRef===invoice.no).map(row=>({
+  const entries=entriesPage.data.map(row=>({
     ...row,
     account:accountById.get(row.accountId)||{},
   }));

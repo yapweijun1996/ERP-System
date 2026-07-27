@@ -344,7 +344,12 @@ function permissionGroupKey(permissionKey){
 /* ---------------- USER MANAGEMENT (listing — module landing) ---------------- */
 SCREENS['user-mgmt'] = async function(root){
   const s=adminCopy();
-  const usersPage=(await listPage('admin/users')).data;
+  const [usersResult,rolesResult]=await Promise.all([
+    listPage('admin/users'),
+    listPage('admin/roles'),
+  ]);
+  const usersPage=usersResult.data;
+  const availableRoles=(rolesResult.data||[]).filter(role=>!role.isSuperadmin);
   const rows=[...usersPage.users, ...usersPage.invitations];
   const roleNames=[...new Set(usersPage.users.flatMap(u=>
     Array.isArray(u.roles)&&u.roles.length?u.roles.map(role=>role.roleName):[u.roleName]).filter(Boolean))];
@@ -374,9 +379,9 @@ SCREENS['user-mgmt'] = async function(root){
         {label:t('usr.col.lastactive'),align:'l',render:u=>u.lastActiveAt?esc(dateTimeValue(u.lastActiveAt)):'—'},
         {label:t('col.status'),align:'l',render:u=>cap(ts(u.status),userStatusTone(u.status))},
         {label:'',align:'c',render:u=>u.kind==='user'
-          ?`<span class="rowact"><button data-tip="${esc(s('manageRoles'))}" data-act="roles" data-id="${u.id}">${ic('shield')}</button>${u.email!==(DB.user&&DB.user.email)
-            ?`<button data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button>`
-            :`<button data-tip="${esc(s('you'))}" disabled>${ic('user')}</button>`}</span>`
+          ?`<span class="rowact"><button aria-label="${esc(s('manageRoles'))}: ${esc(u.fullName||u.email||u.username)}" data-tip="${esc(s('manageRoles'))}" data-act="roles" data-id="${u.id}">${ic('shield')}</button>${u.email!==(DB.user&&DB.user.email)
+            ?`<button aria-label="${esc(u.status==='Active'?s('disable'):s('enable'))}: ${esc(u.fullName||u.email||u.username)}" data-tip="${esc(u.status==='Active'?s('disable'):s('enable'))}" data-act="toggle" data-id="${u.id}" data-active="${u.status==='Active'}">${ic(u.status==='Active'?'x':'check')}</button>`
+            :`<button aria-label="${esc(s('you'))}: ${esc(u.fullName||u.email||u.username)}" data-tip="${esc(s('you'))}" disabled>${ic('user')}</button>`}</span>`
           :''},
       ],
       rowAction:null,
@@ -475,20 +480,7 @@ SCREENS['user-mgmt'] = async function(root){
     });
   }
   function roleOptions(){
-    const uniqueRoles=[];
-    const seen=new Set();
-    usersPage.users.forEach(u=>{
-      const assignments=Array.isArray(u.roles)&&u.roles.length
-        ? u.roles
-        : [{roleId:u.roleId,roleName:u.roleName}];
-      assignments.forEach(r=>{
-        if(r.roleId!=null&&!seen.has(r.roleId)){
-          seen.add(r.roleId);
-          uniqueRoles.push({roleId:r.roleId,roleName:r.roleName});
-        }
-      });
-    });
-    return uniqueRoles.map(r=>`<option value="${r.roleId}">${esc(r.roleName)}</option>`).join('');
+    return availableRoles.map(role=>`<option value="${role.roleId}">${esc(role.name)}</option>`).join('');
   }
   await render();
 };
@@ -630,6 +622,8 @@ SCREENS['module-activation-control'] = async function(root){
   }
 
   await loadModuleControl();
+  let onboarding=null;
+  try{ onboarding=window.ErpSystemData.onboardingStatus?(await window.ErpSystemData.onboardingStatus()).data:null; }catch{}
   const rows=()=>moduleControlItems();
   let busy=null;
 
@@ -641,7 +635,7 @@ SCREENS['module-activation-control'] = async function(root){
       const st=cfg[m.id]||{visible:true,active:true};
       return `<tr data-module="${esc(m.id)}">
         <td class="l li-name"><b>${ic(m.icon)} ${esc(m.label)}</b><small>${esc(m.group)} · ${esc(m.route)}${m.required?' · '+esc(s('modActRequired')):''}</small></td>
-        <td class="l mono">${esc(currentMasterFn())}</td>
+        <td class="l mono">${esc(DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn||'')}</td>
         <td class="l">${cap(st.active?s('modActEnabled'):s('modActDisabled'),st.active?'ok':'neutral')}</td>
         <td class="c">${m.required
           ?cap(s('modActRequired'),'accent')
@@ -649,16 +643,28 @@ SCREENS['module-activation-control'] = async function(root){
         <td class="c">${btn(s('modActOpen'),{icon:'ext',cls:'plain',attrs:`data-open="${esc(m.route)}"`})}</td>
       </tr>`;
     }).join('');
-    return `<table class="lines"><thead><tr><th class="l">${esc(s('modActColModule'))}</th><th class="l">Master FN</th><th class="l">${esc(s('modActColStatus'))}</th><th class="c">${esc(s('modActEnabled'))}</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    return `<table class="lines"><thead><tr><th class="l">${esc(s('modActColModule'))}</th><th class="l">${esc(t('onboard.company'))}</th><th class="l">${esc(s('modActColStatus'))}</th><th class="c">${esc(s('modActEnabled'))}</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
   }
 
   function render(){
+    const onboardingStatus=onboarding&&(onboarding.status||'setup');
+    const onboardingStage=onboarding&&(onboarding.currentStage||onboarding.current_stage||'company');
+    const onboardingVersion=onboarding&&Number(onboarding.version||1);
+    const stages=['company','fiscal','warehouse','modules','roles','staff','import','opening_balance','uat'];
+    const completed=onboarding&&(onboarding.completedSteps||onboarding.completed_steps)||[];
+    const onboardingPanel=onboarding?`<div class="panel" style="margin:0 24px 24px">
+      <div class="panel-h"><h3>${esc(t('onboard.title'))}</h3>${cap(t('onboard.status.'+onboardingStatus),onboardingStatus==='live'?'ok':'warn')}</div>
+      <div class="panel-body"><div class="stepper">${stages.map((name,index)=>`<div class="step ${completed.includes(name)?'done':onboardingStage===name?'active':''}"><span>${index+1}</span><b>${esc(t('onboard.stage.'+name))}</b></div>`).join('')}</div>
+      ${onboardingStatus==='live'?`<div class="callout info">${esc(t('onboard.liveHint'))}</div>`:`<div class="callout warn">${esc(t('onboard.setupHint'))}</div>
+      ${['import','opening_balance'].includes(onboardingStage)?`<div class="fldrow c3" style="margin-top:12px"><div class="fld"><span>${esc(t('onboard.importTarget'))}</span><select id="obTarget">${['employee','customer','supplier','product','account','warehouse','inventory','ar','ap','gl'].map(item=>`<option value="${item}">${esc(t('onboard.target.'+item))}</option>`).join('')}</select></div><div class="fld"><span>${esc(t('onboard.file'))}</span><input id="obFile" type="file" accept=".csv,.xlsx"></div><div class="fld"><span>${esc(t('onboard.atomicImport'))}</span>${btn(t('onboard.preflightCommit'),{icon:'upload',cls:'soft',attrs:'data-onboarding="import"'})}</div></div>`:''}
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">${onboardingStage==='live'?btn(t('onboard.goLive'),{icon:'check',cls:'primary',attrs:'data-onboarding="go-live"'}):btn(t('onboard.completeStage'),{icon:'check',cls:'primary',attrs:'data-onboarding="complete"'})}</div>`}</div>
+    </div>`:'';
     root.innerHTML=`<div class="content full"><section class="master"><div class="scrollarea">
       <div class="pagehead">
         ${crumbs([DB.company.name,'Admin',s('modActTitle')])}
         <div class="h1row"><h1>${esc(s('modActTitle'))}</h1><span class="acct-role" style="font-size:11px">${ic('shield')}${esc(DB.user.role)}</span>
           <div class="headright">
-            <div class="kfig"><small>Master FN</small><b class="tnum">${esc(currentMasterFn())}</b></div>
+            <div class="kfig"><small>${esc(t('onboard.company'))}</small><b class="tnum">${esc(DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn||'')}</b></div>
             <div class="kfig"><small>${esc(s('modActEnabledCount'))}</small><b class="tnum">${enabledCount()}/${rows().length}</b></div>
           </div></div>
         <div class="h1sub">${esc(s('modActSubtitle').replace('{master}',currentMasterFn()))}</div>
@@ -670,6 +676,7 @@ SCREENS['module-activation-control'] = async function(root){
         <div class="panel-h"><h3>${esc(s('modActColModule'))}</h3></div>
         ${table()}
       </div>
+      ${onboardingPanel}
     </div></section></div>`;
 
     root.querySelectorAll('[data-toggle="enabled"]').forEach(input=>input.addEventListener('change',async()=>{
@@ -692,7 +699,12 @@ SCREENS['module-activation-control'] = async function(root){
       const toEnable=rows().filter(m=>!m.required&&!(readModuleControl()[m.id]&&readModuleControl()[m.id].active));
       if(!toEnable.length){ toast(s('modActResetDone'),'ok'); return; }
       try{
-        await Promise.all(toEnable.map(m=>setModuleEnabled(m.id,true)));
+        const pending=new Map(toEnable.map(item=>[item.id,item]));
+        while(pending.size){
+          const ready=[...pending.values()].filter(item=>(item.dependencies||[]).every(dep=>!pending.has(dep)));
+      if(!ready.length) throw new Error(t('onboard.moduleCycle'));
+          for(const item of ready){ await setModuleEnabled(item.id,true); pending.delete(item.id); }
+        }
         await loadModuleControl();
         renderSidebar(); renderTabbar(); setActiveNav(CURRENT_ROUTE);
         toast(s('modActResetDone'),'ok');
@@ -700,6 +712,19 @@ SCREENS['module-activation-control'] = async function(root){
         toast(s('modActUpdateError'),'danger');
       }
       render();
+    });
+    root.querySelector('[data-onboarding="complete"]')?.addEventListener('click',async()=>{
+      try{ onboarding=(await window.ErpSystemData.completeOnboardingStage(onboardingStage,onboardingVersion)).data; toast(t('onboard.stageDone'),'ok'); render(); }
+      catch(error){ toast(error&&error.message?error.message:t('onboard.stageFailed'),'danger'); }
+    });
+    root.querySelector('[data-onboarding="import"]')?.addEventListener('click',async()=>{
+      const file=$('#obFile').files[0]; if(!file){ toast(t('onboard.chooseFile'),'danger'); return; }
+      try{ const checked=await window.ErpSystemData.preflightOnboardingImport(file,$('#obTarget').value); const job=checked.data; if(job.errorRows){ toast(t('onboard.rowsError',{count:job.errorRows}),'danger'); return; } await window.ErpSystemData.commitOnboardingImport(job.id,job.version,job.warningRows>0); toast(t('onboard.rowsImported',{count:job.totalRows}),'ok'); }
+      catch(error){ toast(error&&error.message?error.message:t('onboard.importFailed'),'danger'); }
+    });
+    root.querySelector('[data-onboarding="go-live"]')?.addEventListener('click',async()=>{
+      try{ onboarding=(await window.ErpSystemData.goLiveCompany(onboardingVersion)).data; toast(t('onboard.companyLive'),'ok'); render(); }
+      catch(error){ toast(error&&error.message?error.message:t('onboard.goLiveFailed'),'danger'); }
     });
   }
   render();

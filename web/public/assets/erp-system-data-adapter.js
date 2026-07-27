@@ -37,7 +37,8 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 72;
+  var DEMO_SCHEMA_VERSION = 73;
+  var DEMO_PACK_VERSION = '1';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -107,7 +108,10 @@
     catch { return 'db/'; }
   })();
 
-  var state = { db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null };
+  var state = {
+    db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null,
+    demoPack: null, demoPackAvailable: null,
+  };
 
   /* ---------------- PGlite boot ---------------- */
 
@@ -117,6 +121,38 @@
       if (!r.ok) throw new Error('fetch ' + name + ' -> HTTP ' + r.status);
       return r.text();
     });
+  }
+
+  function fetchJson(name){
+    return fetch(DB_BASE + name + '?v=' + encodeURIComponent(DEMO_PACK_VERSION)).then(function(r){
+      if (!r.ok) throw new Error('fetch ' + name + ' -> HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  async function ensureShowcasePack(db, freshlySeeded){
+    var manifest = await fetchJson('erp-system-showcase-v1.json');
+    if(!manifest || manifest.version !== DEMO_PACK_VERSION || !manifest.sha256){
+      throw new Error('Demo showcase manifest is invalid.');
+    }
+    var current = await db.query("select value from system_state where key='demo_showcase_pack' limit 1");
+    if(current.rows[0] && current.rows[0].value && current.rows[0].value.version === DEMO_PACK_VERSION){
+      state.demoPack = manifest;
+      return false;
+    }
+    if(!freshlySeeded){
+      var accepted = typeof window.confirm === 'function' && window.confirm(
+        'A newer enterprise Demo data pack is available. Load it now? Your current Demo data will be preserved and only deterministic showcase records will be added.'
+      );
+      if(!accepted){ state.demoPackAvailable = manifest; return false; }
+    }
+    var sqlText = await fetchSql('erp-system-showcase-v1.sql');
+    var digest = await state.runtime.sha256Hex(sqlText);
+    if(digest !== manifest.sha256) throw new Error('Demo showcase pack integrity check failed.');
+    var started = performance.now();
+    await db.exec(sqlText);
+    state.demoPack = Object.assign({}, manifest, { loadMs: Math.round(performance.now()-started) });
+    return true;
   }
 
   async function ensureSeeded(db){
@@ -134,6 +170,14 @@
       await db.exec(schema);
       await state.runtime.commands.seedDemo(state.orm);
       await db.exec(txn);
+      /* The flat schema already contains the complete ordered migration chain.
+         Mark it current immediately so a brand-new browser database never
+         replays legacy data migrations against today's constraints. */
+      await db.exec(
+        'create table if not exists "_erp_demo_migration" (' +
+        '"version" integer primary key, "applied_at" timestamptz not null default now());' +
+        'insert into "_erp_demo_migration" ("version") values (' + DEMO_SCHEMA_VERSION + ') ' +
+        'on conflict ("version") do nothing;');
     }
     /* top-up: demo draft orders (idempotent — skips existing doc_no's), so
        databases seeded before TASK-007 gain the Confirm-flow drafts too */
@@ -220,6 +264,16 @@
       "where table_schema='public' and table_name in " +
       "('document_processing_policy','document_scan_job','document_extraction'," +
       "'document_extraction_field','receipt_upload_authorization','receipt_inbox_item')")).rows[0];
+    var accessOnboardingSignature = (await db.query(
+      "select count(*)::int as n from information_schema.tables " +
+      "where table_schema='public' and table_name in " +
+      "('company_module','company_onboarding','onboarding_import_job'," +
+      "'onboarding_import_row','role_resource_scope','staff_onboarding_draft')")).rows[0];
+    var accessColumnSignature = (await db.query(
+      "select count(*)::int as n from information_schema.columns " +
+      "where table_schema='public' and (" +
+      "(table_name='role' and column_name in ('company_fn','source_template_key')) or " +
+      "(table_name='app_user' and column_name='initial_password_expires_at'))")).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
@@ -231,10 +285,33 @@
       && payrollRunLineSignature && Number(payrollRunLineSignature.n) === 3
       && documentStorageSignature && Number(documentStorageSignature.n) === 4
       && documentPageSignature && Number(documentPageSignature.n) === 1
-      && documentProcessingSignature && Number(documentProcessingSignature.n) === 6;
-    if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) return false;
+      && documentProcessingSignature && Number(documentProcessingSignature.n) === 6
+      && accessOnboardingSignature && Number(accessOnboardingSignature.n) === 6
+      && accessColumnSignature && Number(accessColumnSignature.n) === 3;
+    if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) {
+      /* Repair databases upgraded by an early v73 preview that retained the
+         obsolete group-wide role-name index. Company roles must be independent. */
+      await db.exec(
+        'drop index if exists "uq_role_master_name";' +
+        'create unique index if not exists "uq_role_company_name" ' +
+        'on "role" ("master_fn","company_fn","name");');
+      return false;
+    }
 
-    await db.exec(await fetchSql('erp-system-migrations.sql'));
+    var migrationSql = await fetchSql('erp-system-migrations.sql');
+    var headers = [];
+    var headerPattern = /^-- (\d{4})_[^\n]+$/gm;
+    var match;
+    while ((match = headerPattern.exec(migrationSql)) !== null) {
+      headers.push({ version: Number(match[1]), offset: match.index });
+    }
+    var pending = headers.filter(function(header){ return header.version > currentVersion; });
+    if (!pending.length) throw new Error('Demo migration bundle has no pending migration for schema drift.');
+    await db.exec(migrationSql.slice(pending[0].offset));
+    await db.exec(
+      'drop index if exists "uq_role_master_name";' +
+      'create unique index if not exists "uq_role_company_name" ' +
+      'on "role" ("master_fn","company_fn","name");');
     var appliedPayrollTables = (await db.query(
       "select count(*)::int as n from information_schema.tables " +
       "where table_schema='public' and table_name in " +
@@ -338,9 +415,13 @@
        matching "auto-login a labeled demo user"). */
     var users = await rows(
       "select u.user_id, u.email, u.full_name, u.language, " +
-      "coalesce(bool_or(r.is_superadmin), false) as is_superadmin " +
-      "from app_user u left join user_company uc on uc.user_id = u.user_id " +
-      "left join role r on r.role_id = uc.role_id " +
+      "coalesce(bool_or(r.is_superadmin), false) as is_superadmin, " +
+      "coalesce(array_agg(distinct r.name) filter (where r.name is not null), '{}') as roles, " +
+      "coalesce(array_agg(distinct rp.permission_key) filter (where rp.allowed), '{}') as permissions, " +
+      "coalesce((select array_agg(distinct all_uc.company_fn) from user_company all_uc where all_uc.user_id=u.user_id), '{}') as companies " +
+      "from app_user u join user_company_role ucr on ucr.user_id = u.user_id and ucr.company_fn='" + SCOPE.companyFn + "' " +
+      "left join role r on r.role_id = ucr.role_id " +
+      "left join role_permission rp on rp.role_id = r.role_id " +
       "where " + w('u') + " and u.is_active " +
       "group by u.user_id, u.email, u.full_name, u.language order by u.user_id");
     var products = await rows(
@@ -560,6 +641,8 @@
       schema: 'src/data/schema (drizzle/0000_init.sql)',
       seed: 'src/data/seed.ts seedDemo() (runs directly, no SQL mirror)',
       transactionProof: 'web/public/db/erp-system-demo-txn.sql (mirrors src/demo.ts)',
+      demoPack: state.demoPack,
+      demoPackAvailable: state.demoPackAvailable,
       dataMode: mode,                          // 'pglite' | 'fallback'
       scope: SCOPE,
       master: d.master,
@@ -606,7 +689,9 @@
       email: activeUser.email,
       initials: (userDisplayName.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2)
         .map(function(w){ return w[0]; }).join('').toUpperCase()) || 'U',
-      role: activeUser.is_superadmin ? 'Superadmin' : 'Viewer',
+      role: activeUser.is_superadmin ? 'Superadmin' : ((activeUser.roles||[]).join(' + ')||'Employee'),
+      permissionKeys: activeUser.is_superadmin ? ['*'] : (activeUser.permissions||[]),
+      companyFns: activeUser.companies||[],
       perms: { post: !!activeUser.is_superadmin, approve: !!activeUser.is_superadmin, salaryView: false, costView: !!activeUser.is_superadmin },
     };
     var currencySymbols = { SGD: 'S$', MYR: 'RM', USD: '$' };
@@ -982,6 +1067,7 @@
     try {
       var freshlySeeded = await ensureSeeded(db);
       await ensureSchemaUpToDate(db);
+      var showcaseLoaded = await ensureShowcasePack(db, freshlySeeded);
       await ensureWarehousePickFixture(db);
       await ensureManufacturingFixture(db);
       await ensureQualityFixture(db);
@@ -997,6 +1083,7 @@
       applyOnce(payload, 'pglite');
       console.info('[erp-system] demo data source: PGlite (' + PG_DATA_DIR + ')' +
         (freshlySeeded ? ' — freshly seeded' : ' — existing IndexedDB data') +
+        (showcaseLoaded ? ' — enterprise showcase pack loaded' : '') +
         (wasFallback ? ' (replacing fallback — late boot)' : ''));
       /* boot() already rendered the current screen off fallback data before
          this resolved late — re-render it so the swap is actually visible
@@ -1274,6 +1361,12 @@
      org demo model. */
   function switchCompany(companyFn){
     if (!companyFn || companyFn === SCOPE.companyFn) return Promise.resolve(null);
+    var active=(DB.erpSystem&&DB.erpSystem.users||[]).find(function(user){
+      return Number(user.user_id)===Number(state.activeUserId);
+    });
+    if(active&&!active.is_superadmin&&!(active.companies||[]).includes(companyFn)){
+      return Promise.reject(new Error('This Demo persona has no role in the selected company.'));
+    }
     SCOPE.companyFn = companyFn;
     return refresh();
   }
@@ -1328,6 +1421,43 @@
     });
     await refresh();
     return result;
+  }
+
+  async function createStaffAccount(input){
+    if(!state.db) throw new Error('Demo database unavailable — Staff onboarding needs PGlite.');
+    input=input||{};
+    var initialPassword=String(input.initialPassword||'');
+    if(initialPassword.length<8) throw new Error('Initial password must be at least 8 characters.');
+    var passwordHash=await hashPasswordBrowser(initialPassword);
+    var result=await state.db.transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx);
+      var draft=await state.runtime.commands.createStaffOnboardingDraftWithin(
+        orm,SCOPE,Number(state.activeUserId),{
+          employee:input.employee,
+          username:String(input.username||''),
+          email:String(input.email||''),
+          roleIds:(input.roleIds||[]).map(Number),
+        });
+      return state.runtime.commands.activateStaffOnboardingWithin(
+        orm,SCOPE,Number(state.activeUserId),Number(draft.id),Number(draft.version),passwordHash);
+    });
+    await refresh();
+    return result;
+  }
+
+  async function cloneRoleTemplate(templateKey,name){
+    var data=await requireDemoDb().transaction(async function(tx){
+      return state.runtime.commands.cloneRoleTemplateWithin(
+        state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),String(templateKey||''),name);
+    });
+    await refresh();
+    return data;
+  }
+  async function onboardingStatus(){
+    var result=await requireDemoDb().query(
+      'select * from company_onboarding where master_fn=$1 and company_fn=$2 limit 1',
+      [SCOPE.masterFn,SCOPE.companyFn]);
+    return {data:result.rows[0]||{status:'live',current_stage:'live',version:1,completed_steps:[]},meta:{demo:true}};
   }
 
   /* Reset demo: drop the canonical schema and reload — next boot reseeds. */
@@ -1520,6 +1650,15 @@
       });
       return {data:roles,meta:{}};
     }
+    if(key==='admin/role-templates'){
+      return {data:state.runtime.commands.listRoleTemplates(),meta:{immutable:true}};
+    }
+    if(key==='admin/role-scopes'){
+      var roleScopes=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.listRoleScopes(state.runtime.createOrm(tx),SCOPE);
+      });
+      return {data:roleScopes,meta:{}};
+    }
     if(key==='admin/role-permissions'){
       var rolePermissions = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.listRolePermissions(state.runtime.createOrm(tx), SCOPE);
@@ -1662,6 +1801,9 @@
       'sales/quotations':{enquiryId:'enquiry_id'},
       'finance/journal-lines':{journalId:'journal_id'},
       'finance/gl-entries':{accountId:'account_id'},
+      'inventory/stock-movements':{refId:'ref_id'},
+      'purchasing/purchase-order-lines':{orderId:'order_id'},
+      'purchasing/goods-receipts':{orderId:'order_id'},
       'finance/bank-statements':{bankAccountId:'bank_account_id'},
       'finance/bank-statement-lines':{statementId:'statement_id'},
       'integration/import-rows':{jobId:'job_id'},
@@ -1675,6 +1817,16 @@
       }
       params.push(value);
       sql+=' and '+numericFilters[filter]+'=$'+params.length;
+    });
+    var textFilters={
+      'inventory/stock-movements':{refType:'ref_type'},
+      'finance/gl-entries':{journalRef:'journal_ref'},
+      'finance/journals':{docNo:'doc_no'},
+    }[key]||{};
+    Object.keys(textFilters).forEach(function(filter){
+      if(query[filter]==null||query[filter]==='') return;
+      params.push(String(query[filter]));
+      sql+=' and '+textFilters[filter]+'=$'+params.length;
     });
     params.push(limit+1);
     sql+=' order by id asc limit $'+params.length;
@@ -2313,6 +2465,14 @@
           payload&&payload.permissionKey, !!(payload&&payload.allowed));
       });
       return {data:updatedPermission,meta:{}};
+    }
+    if(key==='admin/roles'&&name==='set-scope'){
+      var scopeResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.setRoleResourceScopeWithin(
+          state.runtime.createOrm(tx),SCOPE,state.activeUserId,Number(id),
+          String(payload&&payload.resourceKey||'*'),String(payload&&payload.scope||'self'));
+      });
+      return {data:scopeResult,meta:{}};
     }
     if(key==='admin/modules'&&name==='set-enabled'){
       var updatedModule = await requireDemoDb().transaction(function(tx){
@@ -3712,6 +3872,9 @@
     createOpportunity: createOpportunity,
     convertOpportunityToSalesOrder: convertOpportunityToSalesOrder,
     completeSetup: completeSetup,
+    createStaffAccount:createStaffAccount,
+    cloneRoleTemplate:cloneRoleTemplate,
+    onboardingStatus:onboardingStatus,
     switchCompany: switchCompany,
     needsSetup: needsSetup,
     isSignedIn: isSignedIn,
