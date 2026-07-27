@@ -2127,7 +2127,9 @@ does not repair product code or reinterpret a blocked physical-device check as p
       finding.** Completed 2026-07-27 at `a9fdb07`: published the reusable UAT manual
       and dated audit, ran the isolated dual-mode/role/company/language/viewport matrix,
       retained the API stack for review and registered nine evidence-backed root causes.
-- [ ] **TASK-141 — Initialize and reconcile paid-leave balances for new employees.**
+- [x] **TASK-141 — Initialize and reconcile paid-leave balances for new employees.**
+      Migration 0074 and the shared employee-opening command make UI, API, imports,
+      Staff activation and the immutable leave ledger agree through every release path.
 - [x] **TASK-142 — Allow invitations for every eligible tenant role.** Dynamic,
       company-scoped roles now flow through invitation, acceptance and effective access.
 - [ ] **TASK-143 — Remediate or formally accept high dependency advisories.**

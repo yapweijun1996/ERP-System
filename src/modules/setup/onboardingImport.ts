@@ -3,12 +3,13 @@ import ExcelJS from 'exceljs';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  account, customer, employee, glEntry, onboardingImportJob, onboardingImportRow,
+  account, customer, glEntry, onboardingImportJob, onboardingImportRow,
   product, stockLevel, stockMovement, supplier, warehouse,
 } from '../../data/schema';
 import type { SessionData } from '../../auth/session';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import { appendAudit } from '../../api/audit';
+import { createEmployeeWithin } from '../hr/employee';
 
 export const IMPORT_TARGETS = [
   'employee', 'customer', 'supplier', 'product', 'account', 'warehouse',
@@ -280,13 +281,20 @@ async function commitRows(
 ) {
   const tenant = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
   if (target === 'employee') {
-    await exec.insert(employee).values(rows.map((row) => ({
-      ...tenant, employeeNo: row.employeeNo, fullName: row.fullName,
-      email: row.email.toLowerCase(), phone: row.phone || null,
-      department: row.department, jobTitle: row.jobTitle,
-      employmentType: row.employmentType || 'Full-time', startDate: row.startDate,
-      annualLeaveDays: Number(row.annualLeaveDays || 14), baseSalary: row.baseSalary,
-    })));
+    for (const row of rows) {
+      await createEmployeeWithin(exec, tenant, {
+        employeeNo: row.employeeNo,
+        fullName: row.fullName,
+        email: row.email.toLowerCase(),
+        phone: row.phone || null,
+        department: row.department,
+        jobTitle: row.jobTitle,
+        employmentType: row.employmentType || 'Full-time',
+        startDate: row.startDate,
+        annualLeaveDays: Number(row.annualLeaveDays || 14),
+        baseSalary: row.baseSalary,
+      }, session.userId);
+    }
   } else if (target === 'customer') {
     await exec.insert(customer).values(rows.map((row) => ({ ...tenant, code: row.code, name: row.name, industry: row.industry || null })));
   } else if (target === 'supplier') {

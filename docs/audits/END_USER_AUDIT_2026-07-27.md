@@ -31,7 +31,7 @@ fresh IndexedDB. Existing Docker projects, default ports and databases were unto
 | Check | Result |
 |---|---|
 | lint; root/web typecheck | Pass |
-| Demo schema and drift | Pass: 73 migrations, schema version 72, 226 tables |
+| Demo schema and drift | Pass at audit baseline: 73 migrations, schema version 72, 226 tables; TASK-141 remediation passes 75 migrations, schema version 74, 232 tables |
 | Demo proof | Pass in fresh PGlite; seeded PostgreSQL invocation fails non-idempotently (AUD-007) |
 | Dedicated PostgreSQL proof | Pass; PGlite/PostgreSQL results identical and one of two stock races wins |
 | PostgreSQL security/RLS | Pass |
@@ -81,6 +81,11 @@ emits browser console errors.
 - **Invariant:** Displayed available balance and the locked ledger balance used by submission must agree.
 - **Evidence:** [screenshot](assets/2026-07-27/api-new-employee-leave-balance-mismatch.png).
 - **Backlog:** TASK-141.
+- **Resolved 2026-07-27:** Migration 0074 backfills eligible legacy employees and all
+  new employee paths now create one idempotent `employee_opening` ledger grant in the
+  same transaction. My Leave, the HR profile API and UI project that immutable ledger.
+  Tests prove 14 days available, exactly one reservation and restoration after reject,
+  withdraw and Void.
 
 ### AUD-002 — P1 capability gap — Manager and custom roles cannot be invited
 

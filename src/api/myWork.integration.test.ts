@@ -118,6 +118,12 @@ describe('actor-owned My Work API', () => {
           locale: string;
         };
         employee: { id: number; employeeNo: string };
+        annualLeaveBalance: {
+          entitlement: string;
+          balance: string;
+          reserved: string;
+          available: string;
+        };
         capabilities: {
           claims: { available: boolean; writable: boolean };
           receipts: { available: boolean; writable: boolean };
@@ -135,6 +141,12 @@ describe('actor-owned My Work API', () => {
       name: 'Acme Singapore',
       country: 'SG',
       currency: 'SGD',
+    });
+    expect(contextBody.data.annualLeaveBalance).toMatchObject({
+      entitlement: '16.00',
+      balance: '16.00',
+      reserved: '0.00',
+      available: '16.00',
     });
     expect(contextBody.meta.actorDerived).toBe(true);
     expect(contextBody.data.capabilities.team.available).toBe(false);

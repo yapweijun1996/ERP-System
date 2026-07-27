@@ -1,8 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { hashPassword } from '../../auth/password';
 import { cloneRoleTemplate } from '../../auth/adminLifecycle';
-import { appUser, employee, userCompany } from '../../data/schema';
+import {
+  appUser, employee, leaveBalanceEntry, leaveType, userCompany,
+} from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
 import {
@@ -50,6 +52,19 @@ describe('atomic staff onboarding', () => {
     const [created] = await db.select().from(appUser).where(eq(appUser.userId, activated.userId));
     expect(created.passwordHash).toMatch(/^pbkdf2\$/);
     expect(created.initialPasswordExpiresAt).not.toBeNull();
+    const [annual] = await db.select({ id: leaveType.id }).from(leaveType).where(and(
+      eq(leaveType.masterFn, 'M1'),
+      eq(leaveType.companyFn, 'C-SG'),
+      eq(leaveType.code, 'ANNUAL'),
+    ));
+    const entries = await db.select().from(leaveBalanceEntry).where(and(
+      eq(leaveBalanceEntry.employeeId, activated.employeeId),
+      eq(leaveBalanceEntry.leaveTypeId, annual.id),
+    ));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      entryType: 'grant', balanceDelta: '14.00', sourceType: 'employee_opening',
+    });
   });
 
   it('links an existing organization identity across companies without resetting its password', async () => {

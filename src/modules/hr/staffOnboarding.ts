@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  appUser, employee, employeeActivationSecret, leavePolicyVersion, leaveType,
+  appUser, employee, employeeActivationSecret,
   role, staffOnboardingDraft, userCompany, userCompanyRole,
 } from '../../data/schema';
 import { withTenantTransaction } from '../../data/tenantTransaction';
@@ -9,7 +9,6 @@ import { appendAudit } from '../../api/audit';
 import type { SessionData } from '../../auth/session';
 import { isValidUsername, normalizeUsername } from '../../auth/identifiers';
 import { createEmployeeWithin, type CreateEmployeeInput } from './employee';
-import { appendLeaveBalanceEntryWithin } from './leaveBalance';
 
 export interface StaffOnboardingDraftInput {
   employee: CreateEmployeeInput;
@@ -248,7 +247,7 @@ export async function activateStaffOnboardingWithin(
   }
   const createdEmployee = await createEmployeeWithin(exec, {
     masterFn: session.masterFn, companyFn: session.activeCompanyFn,
-  }, employeeInput);
+  }, employeeInput, session.userId);
   await exec.update(employee).set({ userId, updatedAt: now }).where(eq(employee.id, createdEmployee.id));
   const [employeeBaseRole] = await exec.select({ id: role.roleId }).from(role).where(and(
     eq(role.masterFn, session.masterFn),
@@ -276,37 +275,6 @@ export async function activateStaffOnboardingWithin(
     });
   }
 
-  const [annual] = await exec.select({
-    leaveTypeId: leaveType.id,
-    policyVersionId: leavePolicyVersion.id,
-  }).from(leaveType).innerJoin(leavePolicyVersion, and(
-    eq(leavePolicyVersion.leaveTypeId, leaveType.id),
-    eq(leavePolicyVersion.masterFn, leaveType.masterFn),
-    eq(leavePolicyVersion.companyFn, leaveType.companyFn),
-  )).where(and(
-    eq(leaveType.masterFn, session.masterFn),
-    eq(leaveType.companyFn, session.activeCompanyFn),
-    eq(leaveType.code, 'ANNUAL'),
-    eq(leavePolicyVersion.status, 'confirmed'),
-  )).orderBy(desc(leavePolicyVersion.effectiveFrom)).limit(1);
-  if (annual && (employeeInput.annualLeaveDays ?? 14) > 0) {
-    await appendLeaveBalanceEntryWithin(exec, {
-      masterFn: session.masterFn, companyFn: session.activeCompanyFn,
-    }, {
-      employeeId: createdEmployee.id,
-      leaveTypeId: annual.leaveTypeId,
-      policyVersionId: annual.policyVersionId,
-      entryType: 'grant',
-      entryKey: `staff-onboarding:${draftId}:annual`,
-      balanceDelta: employeeInput.annualLeaveDays ?? 14,
-      reservedDelta: 0,
-      effectiveDate: employeeInput.startDate,
-      sourceType: 'staff_onboarding',
-      sourceId: String(draftId),
-      note: 'Opening annual leave entitlement',
-      createdByUserId: session.userId,
-    });
-  }
   await exec.update(staffOnboardingDraft).set({
     status: 'activated',
     activatedUserId: userId,

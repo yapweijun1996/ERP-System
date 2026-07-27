@@ -116,7 +116,8 @@ window.__ERP_I18N_BUSINESS_TEXT__={
     "1 · MOQ 1",
     "May 2026",
     "Demo replenishment",
-    "Superadmin · Acme Singapore"
+    "Superadmin · Acme Singapore",
+    "Avery Tan · Superadmin"
   ],
   "patterns": [
     "^[A-Z]{2,}(?:[-_/][A-Z0-9]+)+$",

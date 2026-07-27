@@ -116,6 +116,7 @@
     ,"May 2026"
     ,"Demo replenishment"
     ,"Superadmin · Acme Singapore"
+    ,"Avery Tan · Superadmin"
   ],
   "businessTextPatterns": [
     "^[A-Z]{2,}(?:[-_/][A-Z0-9]+)+$",

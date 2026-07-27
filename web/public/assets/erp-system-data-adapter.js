@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 73;
+  var DEMO_SCHEMA_VERSION = 74;
   var DEMO_PACK_VERSION = '2';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
@@ -1841,6 +1841,12 @@
       return {data:await state.runtime.commands.readEmployeeAccount(
         state.orm,SCOPE,Number(id)),meta:{}};
     }
+    if(key==='hr/employee-leave-balances'){
+      return {data:await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.projectEmployeeAnnualLeaveWithin(
+          state.runtime.createOrm(tx),SCOPE,Number(id));
+      }),meta:{ledger:'append_only'}};
+    }
     var table=RESOURCE_TABLES[key];
     if(!table) throw new Error('Unsupported ERP resource: '+key);
     var numericId=Number(id);
@@ -2162,7 +2168,7 @@
     if(key==='hr/employees'){
       var newEmployee = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createEmployeeWithin(
-          state.runtime.createOrm(tx), SCOPE, payload);
+          state.runtime.createOrm(tx), SCOPE, payload, Number(state.activeUserId));
       });
       await refresh();
       return {data:newEmployee,meta:{}};
@@ -3080,6 +3086,8 @@
           ?await state.runtime.commands.resolveTeamEmployeeIdsWithin(orm,SCOPE,actor.id)
           :[];
         var leaveTypes=await state.runtime.commands.listAvailableLeaveTypesWithin(orm,SCOPE);
+        var annualLeaveBalance=await state.runtime.commands.projectEmployeeAnnualLeaveWithin(
+          orm,SCOPE,actor.id);
         return {
           company:{
             companyFn:SCOPE.companyFn,
@@ -3091,6 +3099,7 @@
           },
           employee:actor,
           leaveTypes:leaveTypes,
+          annualLeaveBalance:annualLeaveBalance,
           capabilities:{
             leave:{available:true,writable:canWriteLeave},
             claims:{available:true,writable:canWriteClaims},

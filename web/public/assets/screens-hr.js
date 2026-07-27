@@ -16,6 +16,7 @@ function hrCopy(){
       noManager:'— (top of reporting line)',
       leaveBalanceTitle:'Leave balance',annualLeaveLabel:'Annual leave',
       annualLeaveUsed:'{used} of {total} days used this year',
+      annualLeaveReserved:'{reserved} days reserved by pending requests',
       annualLeaveRemaining:'{remaining} of {total} days remaining',
       recentLeaveTitle:'Leave requests',noLeaveRequests:'No leave requests yet.',
       noEmployeeFound:'No employee found',noEmployeeBody:'No employee exists for the active company yet.',
@@ -109,6 +110,7 @@ function hrCopy(){
   "leaveBalanceTitle": "Baki cuti",
   "annualLeaveLabel": "Cuti tahunan",
   "annualLeaveUsed": "{used} daripada {total} hari digunakan tahun ini",
+  "annualLeaveReserved": "{reserved} hari ditempah oleh permohonan tertunda",
   "annualLeaveRemaining": "{remaining} daripada {total} hari berbaki",
   "recentLeaveTitle": "Permohonan cuti",
   "noLeaveRequests": "Belum ada permohonan cuti.",
@@ -290,6 +292,7 @@ function hrCopy(){
   "leaveBalanceTitle": "假期余额",
   "annualLeaveLabel": "年假",
   "annualLeaveUsed": "今年已使用 {used}/{total} 天",
+  "annualLeaveReserved": "待审批申请已预留 {reserved} 天",
   "annualLeaveRemaining": "剩余 {remaining}/{total} 天",
   "recentLeaveTitle": "请假记录",
   "noLeaveRequests": "暂无请假记录。",
@@ -471,6 +474,7 @@ function hrCopy(){
   "leaveBalanceTitle": "休暇残日数",
   "annualLeaveLabel": "年次有給休暇",
   "annualLeaveUsed": "今年 {total} 日中 {used} 日使用済み",
+  "annualLeaveReserved": "保留中の申請で {reserved} 日を予約中",
   "annualLeaveRemaining": "{total} 日中 {remaining} 日残り",
   "recentLeaveTitle": "休暇申請",
   "noLeaveRequests": "休暇申請はまだありません。",
@@ -652,6 +656,7 @@ function hrCopy(){
   "leaveBalanceTitle": "Số ngày phép còn lại",
   "annualLeaveLabel": "Phép năm",
   "annualLeaveUsed": "Đã dùng {used}/{total} ngày trong năm nay",
+  "annualLeaveReserved": "{reserved} ngày đang được giữ cho đơn chờ duyệt",
   "annualLeaveRemaining": "Còn {remaining}/{total} ngày",
   "recentLeaveTitle": "Đơn xin nghỉ phép",
   "noLeaveRequests": "Chưa có đơn xin nghỉ phép nào.",
@@ -834,7 +839,7 @@ function employeeAccountCopy(){
 function myWorkCopy(){
 
   const packs={
-    en:{module:'My Work',leaveTitle:'My Leave',leaveDescription:'Review leave requests owned by your signed-in employee profile.',claimsTitle:'My Claims',claimsDescription:'Expense claims will appear here after the governed claim domain is delivered.',receiptsTitle:'My Receipts',receiptsDescription:'Expense evidence will appear here after secure document processing is delivered.',teamTitle:'Team Calendar',teamDescription:'Review privacy-redacted leave facts for your permitted reporting scope.',approvalsTitle:'My Approvals',approvalsDescription:'Review pending team leave. Decision actions arrive with the complete leave workflow.',noIdentity:'Employee self service is unavailable',noIdentityBody:'This account is not linked to an active employee in the current company.',noLeave:'No leave requests',noLeaveBody:'Your employee profile has no leave requests yet.',claimsUnavailable:'Claims are not modelled yet',claimsUnavailableBody:'EPIC-055 will add claim creation, approval and accounting. No sample claims are shown.',receiptsUnavailable:'Receipts are not modelled yet',receiptsUnavailableBody:'EPIC-054 will add secure upload, quarantine and extraction. No sample receipts are shown.',teamUnavailable:'Team access is unavailable',teamUnavailableBody:'Team Calendar and Approvals appear only with an authorised manager scope.',noTeamLeave:'No team leave',noTeamLeaveBody:'No leave requests exist in your permitted reporting scope.',noApprovals:'No pending approvals',noApprovalsBody:'No team leave request is waiting for review.',allowance:'Annual allowance',pending:'Pending',approvedDays:'Approved days',employee:'Employee',department:'Department',dates:'Dates',leaveType:'Leave type',days:'Days',status:'Status',reason:'Reason',privateReason:'Visible only to you',managerPrivacy:'Employee reasons and evidence are hidden in this manager view.',calendarPreview:'Calendar layout arrives with TASK-115; this preview uses the real privacy-redacted team list.',approvalPreview:'Read-only shell: approval commands arrive with TASK-113/114.'},
+    en:{module:'My Work',leaveTitle:'My Leave',leaveDescription:'Review leave requests owned by your signed-in employee profile.',claimsTitle:'My Claims',claimsDescription:'Expense claims will appear here after the governed claim domain is delivered.',receiptsTitle:'My Receipts',receiptsDescription:'Expense evidence will appear here after secure document processing is delivered.',teamTitle:'Team Calendar',teamDescription:'Review privacy-redacted leave facts for your permitted reporting scope.',approvalsTitle:'My Approvals',approvalsDescription:'Review pending team leave. Decision actions arrive with the complete leave workflow.',noIdentity:'Employee self service is unavailable',noIdentityBody:'This account is not linked to an active employee in the current company.',noLeave:'No leave requests',noLeaveBody:'Your employee profile has no leave requests yet.',claimsUnavailable:'Claims are not modelled yet',claimsUnavailableBody:'EPIC-055 will add claim creation, approval and accounting. No sample claims are shown.',receiptsUnavailable:'Receipts are not modelled yet',receiptsUnavailableBody:'EPIC-054 will add secure upload, quarantine and extraction. No sample receipts are shown.',teamUnavailable:'Team access is unavailable',teamUnavailableBody:'Team Calendar and Approvals appear only with an authorised manager scope.',noTeamLeave:'No team leave',noTeamLeaveBody:'No leave requests exist in your permitted reporting scope.',noApprovals:'No pending approvals',noApprovalsBody:'No team leave request is waiting for review.',allowance:'Annual allowance',availableLeave:'Available paid leave',pending:'Pending',approvedDays:'Approved days',employee:'Employee',department:'Department',dates:'Dates',leaveType:'Leave type',days:'Days',status:'Status',reason:'Reason',privateReason:'Visible only to you',managerPrivacy:'Employee reasons and evidence are hidden in this manager view.',calendarPreview:'Calendar layout arrives with TASK-115; this preview uses the real privacy-redacted team list.',approvalPreview:'Read-only shell: approval commands arrive with TASK-113/114.'},
     ms:{
   "module": "Kerja Saya",
   "leaveTitle": "Cuti Saya",
@@ -862,6 +867,7 @@ function myWorkCopy(){
   "noApprovals": "Tiada kelulusan tertunda",
   "noApprovalsBody": "Tiada permohonan cuti pasukan menunggu semakan.",
   "allowance": "Kelayakan tahunan",
+  "availableLeave": "Cuti berbayar tersedia",
   "pending": "Tertunda",
   "approvedDays": "Hari diluluskan",
   "employee": "Pekerja",
@@ -876,9 +882,9 @@ function myWorkCopy(){
   "calendarPreview": "Susun atur kalendar hadir dalam TASK-115; pratonton ini menggunakan senarai pasukan sebenar yang disunting privasi.",
   "approvalPreview": "Shell baca sahaja: arahan kelulusan hadir dalam TASK-113/114."
 },
-    zh:{module:'我的工作',leaveTitle:'我的请假',leaveDescription:'查看当前登录员工本人拥有的请假记录。',claimsTitle:'我的报销',claimsDescription:'受治理的费用申报领域完成后，报销单将在此显示。',receiptsTitle:'我的收据',receiptsDescription:'安全文件处理完成后，费用凭证将在此显示。',teamTitle:'团队日历',teamDescription:'查看授权汇报范围内、已按隐私规则脱敏的请假资料。',approvalsTitle:'我的审批',approvalsDescription:'查看待处理的团队请假；完整请假流程完成后才开放决定操作。',noIdentity:'员工自助不可用',noIdentityBody:'此登录账号未绑定当前公司内的在职员工。',noLeave:'暂无请假记录',noLeaveBody:'你的员工档案目前没有请假记录。',claimsUnavailable:'报销领域尚未建模',claimsUnavailableBody:'EPIC-055 将加入报销建立、审批与会计处理；这里不会显示虚构示例。',receiptsUnavailable:'收据领域尚未建模',receiptsUnavailableBody:'EPIC-054 将加入安全上传、隔离与识别；这里不会显示虚构示例。',teamUnavailable:'团队访问不可用',teamUnavailableBody:'只有具备授权管理范围时才显示团队日历和审批。',noTeamLeave:'暂无团队请假',noTeamLeaveBody:'你的授权汇报范围内没有请假记录。',noApprovals:'暂无待审批事项',noApprovalsBody:'目前没有等待处理的团队请假。',allowance:'年假额度',pending:'待审批',approvedDays:'已批准天数',employee:'员工',department:'部门',dates:'日期',leaveType:'假期类型',days:'天数',status:'状态',reason:'原因',privateReason:'仅你本人可见',managerPrivacy:'此主管视图不会显示员工原因及证明文件。',calendarPreview:'TASK-115 才会提供日历布局；本预览使用真实、已脱敏的团队列表。',approvalPreview:'只读入口：审批命令将在 TASK-113/114 提供。'},
-    ja:{module:'マイワーク',leaveTitle:'自分の休暇',leaveDescription:'サインイン中の従業員プロフィールに属する休暇申請を確認します。',claimsTitle:'自分の経費申請',claimsDescription:'統制された経費申請ドメインの提供後、ここに表示されます。',receiptsTitle:'自分の領収書',receiptsDescription:'安全な文書処理の提供後、経費証憑がここに表示されます。',teamTitle:'チームカレンダー',teamDescription:'許可された報告範囲の、プライバシー編集済み休暇情報を確認します。',approvalsTitle:'自分の承認',approvalsDescription:'保留中のチーム休暇を確認します。決定操作は完全な休暇ワークフローで提供します。',noIdentity:'従業員セルフサービスを利用できません',noIdentityBody:'このアカウントは現在の会社の有効な従業員に紐付いていません。',noLeave:'休暇申請はありません',noLeaveBody:'従業員プロフィールにはまだ休暇申請がありません。',claimsUnavailable:'経費申請は未モデルです',claimsUnavailableBody:'EPIC-055 で作成・承認・会計を追加します。サンプル申請は表示しません。',receiptsUnavailable:'領収書は未モデルです',receiptsUnavailableBody:'EPIC-054 で安全なアップロード・隔離・抽出を追加します。サンプルは表示しません。',teamUnavailable:'チームアクセスを利用できません',teamUnavailableBody:'権限のある管理範囲がある場合のみチーム機能を表示します。',noTeamLeave:'チーム休暇はありません',noTeamLeaveBody:'許可された報告範囲に休暇申請はありません。',noApprovals:'保留中の承認はありません',noApprovalsBody:'確認待ちのチーム休暇申請はありません。',allowance:'年間付与',pending:'保留中',approvedDays:'承認済み日数',employee:'従業員',department:'部署',dates:'日付',leaveType:'休暇種別',days:'日数',status:'状態',reason:'理由',privateReason:'本人のみ表示',managerPrivacy:'管理者ビューでは従業員の理由と証憑を非表示にします。',calendarPreview:'カレンダーは TASK-115 で提供します。このプレビューは実データの匿名化済み一覧です。',approvalPreview:'読み取り専用：承認コマンドは TASK-113/114 で提供します。'},
-    vi:{module:'Công việc của tôi',leaveTitle:'Nghỉ phép của tôi',leaveDescription:'Xem các đơn nghỉ phép thuộc hồ sơ nhân viên đang đăng nhập.',claimsTitle:'Yêu cầu chi phí của tôi',claimsDescription:'Yêu cầu chi phí sẽ xuất hiện sau khi miền nghiệp vụ được quản trị hoàn tất.',receiptsTitle:'Biên lai của tôi',receiptsDescription:'Chứng từ chi phí sẽ xuất hiện sau khi xử lý tài liệu an toàn hoàn tất.',teamTitle:'Lịch nhóm',teamDescription:'Xem dữ liệu nghỉ phép đã ẩn thông tin riêng tư trong phạm vi báo cáo được phép.',approvalsTitle:'Phê duyệt của tôi',approvalsDescription:'Xem đơn nghỉ phép nhóm đang chờ. Thao tác quyết định sẽ có trong quy trình nghỉ phép đầy đủ.',noIdentity:'Không thể dùng dịch vụ nhân viên',noIdentityBody:'Tài khoản này chưa liên kết với nhân viên đang hoạt động trong công ty hiện tại.',noLeave:'Không có đơn nghỉ phép',noLeaveBody:'Hồ sơ nhân viên của bạn chưa có đơn nghỉ phép.',claimsUnavailable:'Chưa mô hình hóa yêu cầu chi phí',claimsUnavailableBody:'EPIC-055 sẽ bổ sung tạo, phê duyệt và kế toán. Không hiển thị dữ liệu mẫu.',receiptsUnavailable:'Chưa mô hình hóa biên lai',receiptsUnavailableBody:'EPIC-054 sẽ bổ sung tải lên an toàn, cách ly và trích xuất. Không hiển thị dữ liệu mẫu.',teamUnavailable:'Không có quyền truy cập nhóm',teamUnavailableBody:'Lịch Nhóm và Phê duyệt chỉ hiện với phạm vi quản lý được ủy quyền.',noTeamLeave:'Không có nghỉ phép nhóm',noTeamLeaveBody:'Không có đơn nghỉ phép trong phạm vi báo cáo của bạn.',noApprovals:'Không có phê duyệt chờ xử lý',noApprovalsBody:'Không có đơn nghỉ phép nhóm nào đang chờ xem xét.',allowance:'Hạn mức năm',pending:'Đang chờ',approvedDays:'Ngày đã duyệt',employee:'Nhân viên',department:'Phòng ban',dates:'Ngày',leaveType:'Loại nghỉ',days:'Số ngày',status:'Trạng thái',reason:'Lý do',privateReason:'Chỉ bạn có thể xem',managerPrivacy:'Lý do và chứng từ của nhân viên bị ẩn trong chế độ quản lý.',calendarPreview:'Bố cục lịch sẽ có trong TASK-115; bản xem trước dùng danh sách nhóm thật đã ẩn dữ liệu riêng tư.',approvalPreview:'Chỉ đọc: lệnh phê duyệt sẽ có trong TASK-113/114.'},
+    zh:{module:'我的工作',leaveTitle:'我的请假',leaveDescription:'查看当前登录员工本人拥有的请假记录。',claimsTitle:'我的报销',claimsDescription:'受治理的费用申报领域完成后，报销单将在此显示。',receiptsTitle:'我的收据',receiptsDescription:'安全文件处理完成后，费用凭证将在此显示。',teamTitle:'团队日历',teamDescription:'查看授权汇报范围内、已按隐私规则脱敏的请假资料。',approvalsTitle:'我的审批',approvalsDescription:'查看待处理的团队请假；完整请假流程完成后才开放决定操作。',noIdentity:'员工自助不可用',noIdentityBody:'此登录账号未绑定当前公司内的在职员工。',noLeave:'暂无请假记录',noLeaveBody:'你的员工档案目前没有请假记录。',claimsUnavailable:'报销领域尚未建模',claimsUnavailableBody:'EPIC-055 将加入报销建立、审批与会计处理；这里不会显示虚构示例。',receiptsUnavailable:'收据领域尚未建模',receiptsUnavailableBody:'EPIC-054 将加入安全上传、隔离与识别；这里不会显示虚构示例。',teamUnavailable:'团队访问不可用',teamUnavailableBody:'只有具备授权管理范围时才显示团队日历和审批。',noTeamLeave:'暂无团队请假',noTeamLeaveBody:'你的授权汇报范围内没有请假记录。',noApprovals:'暂无待审批事项',noApprovalsBody:'目前没有等待处理的团队请假。',allowance:'年假额度',availableLeave:'可用带薪假',pending:'待审批',approvedDays:'已批准天数',employee:'员工',department:'部门',dates:'日期',leaveType:'假期类型',days:'天数',status:'状态',reason:'原因',privateReason:'仅你本人可见',managerPrivacy:'此主管视图不会显示员工原因及证明文件。',calendarPreview:'TASK-115 才会提供日历布局；本预览使用真实、已脱敏的团队列表。',approvalPreview:'只读入口：审批命令将在 TASK-113/114 提供。'},
+    ja:{module:'マイワーク',leaveTitle:'自分の休暇',leaveDescription:'サインイン中の従業員プロフィールに属する休暇申請を確認します。',claimsTitle:'自分の経費申請',claimsDescription:'統制された経費申請ドメインの提供後、ここに表示されます。',receiptsTitle:'自分の領収書',receiptsDescription:'安全な文書処理の提供後、経費証憑がここに表示されます。',teamTitle:'チームカレンダー',teamDescription:'許可された報告範囲の、プライバシー編集済み休暇情報を確認します。',approvalsTitle:'自分の承認',approvalsDescription:'保留中のチーム休暇を確認します。決定操作は完全な休暇ワークフローで提供します。',noIdentity:'従業員セルフサービスを利用できません',noIdentityBody:'このアカウントは現在の会社の有効な従業員に紐付いていません。',noLeave:'休暇申請はありません',noLeaveBody:'従業員プロフィールにはまだ休暇申請がありません。',claimsUnavailable:'経費申請は未モデルです',claimsUnavailableBody:'EPIC-055 で作成・承認・会計を追加します。サンプル申請は表示しません。',receiptsUnavailable:'領収書は未モデルです',receiptsUnavailableBody:'EPIC-054 で安全なアップロード・隔離・抽出を追加します。サンプルは表示しません。',teamUnavailable:'チームアクセスを利用できません',teamUnavailableBody:'権限のある管理範囲がある場合のみチーム機能を表示します。',noTeamLeave:'チーム休暇はありません',noTeamLeaveBody:'許可された報告範囲に休暇申請はありません。',noApprovals:'保留中の承認はありません',noApprovalsBody:'確認待ちのチーム休暇申請はありません。',allowance:'年間付与',availableLeave:'利用可能な有給休暇',pending:'保留中',approvedDays:'承認済み日数',employee:'従業員',department:'部署',dates:'日付',leaveType:'休暇種別',days:'日数',status:'状態',reason:'理由',privateReason:'本人のみ表示',managerPrivacy:'管理者ビューでは従業員の理由と証憑を非表示にします。',calendarPreview:'カレンダーは TASK-115 で提供します。このプレビューは実データの匿名化済み一覧です。',approvalPreview:'読み取り専用：承認コマンドは TASK-113/114 で提供します。'},
+    vi:{module:'Công việc của tôi',leaveTitle:'Nghỉ phép của tôi',leaveDescription:'Xem các đơn nghỉ phép thuộc hồ sơ nhân viên đang đăng nhập.',claimsTitle:'Yêu cầu chi phí của tôi',claimsDescription:'Yêu cầu chi phí sẽ xuất hiện sau khi miền nghiệp vụ được quản trị hoàn tất.',receiptsTitle:'Biên lai của tôi',receiptsDescription:'Chứng từ chi phí sẽ xuất hiện sau khi xử lý tài liệu an toàn hoàn tất.',teamTitle:'Lịch nhóm',teamDescription:'Xem dữ liệu nghỉ phép đã ẩn thông tin riêng tư trong phạm vi báo cáo được phép.',approvalsTitle:'Phê duyệt của tôi',approvalsDescription:'Xem đơn nghỉ phép nhóm đang chờ. Thao tác quyết định sẽ có trong quy trình nghỉ phép đầy đủ.',noIdentity:'Không thể dùng dịch vụ nhân viên',noIdentityBody:'Tài khoản này chưa liên kết với nhân viên đang hoạt động trong công ty hiện tại.',noLeave:'Không có đơn nghỉ phép',noLeaveBody:'Hồ sơ nhân viên của bạn chưa có đơn nghỉ phép.',claimsUnavailable:'Chưa mô hình hóa yêu cầu chi phí',claimsUnavailableBody:'EPIC-055 sẽ bổ sung tạo, phê duyệt và kế toán. Không hiển thị dữ liệu mẫu.',receiptsUnavailable:'Chưa mô hình hóa biên lai',receiptsUnavailableBody:'EPIC-054 sẽ bổ sung tải lên an toàn, cách ly và trích xuất. Không hiển thị dữ liệu mẫu.',teamUnavailable:'Không có quyền truy cập nhóm',teamUnavailableBody:'Lịch Nhóm và Phê duyệt chỉ hiện với phạm vi quản lý được ủy quyền.',noTeamLeave:'Không có nghỉ phép nhóm',noTeamLeaveBody:'Không có đơn nghỉ phép trong phạm vi báo cáo của bạn.',noApprovals:'Không có phê duyệt chờ xử lý',noApprovalsBody:'Không có đơn nghỉ phép nhóm nào đang chờ xem xét.',allowance:'Hạn mức năm',availableLeave:'Nghỉ phép có lương khả dụng',pending:'Đang chờ',approvedDays:'Ngày đã duyệt',employee:'Nhân viên',department:'Phòng ban',dates:'Ngày',leaveType:'Loại nghỉ',days:'Số ngày',status:'Trạng thái',reason:'Lý do',privateReason:'Chỉ bạn có thể xem',managerPrivacy:'Lý do và chứng từ của nhân viên bị ẩn trong chế độ quản lý.',calendarPreview:'Bố cục lịch sẽ có trong TASK-115; bản xem trước dùng danh sách nhóm thật đã ẩn dữ liệu riêng tư.',approvalPreview:'Chỉ đọc: lệnh phê duyệt sẽ có trong TASK-113/114.'},
   };
   const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
@@ -1103,10 +1109,6 @@ function hrToday(){ return new Date().toISOString().slice(0,10); }
 function hrIsOnLeaveToday(employeeId,leaveRequests){
   const today=hrToday();
   return leaveRequests.some(lv=>lv.employeeId===employeeId&&lv.status==='approved'&&dateValue(lv.startDate)<=today&&dateValue(lv.endDate)>=today);
-}
-function hrAnnualLeaveUsed(employeeId,leaveRequests){
-  return leaveRequests.filter(lv=>lv.employeeId===employeeId&&lv.status==='approved'&&lv.leaveType==='Annual')
-    .reduce((sum,lv)=>sum+Number(lv.days||0),0);
 }
 function hrEmploymentTypeLabel(s,type){
   return {'Full-time':t('hr.emp.fulltime'),'Contract':t('hr.emp.contract'),'Part-time':s('typeParttime'),'Intern':s('typeIntern')}[type]||type;
@@ -1371,7 +1373,7 @@ SCREENS['my-leave']=async function(root){
     ],
     filterFn:(row,status)=>row.status===status,
     kpis:[
-      {label:copy('allowance'),value:String(context.employee.annualLeaveDays)},
+      {label:copy('availableLeave'),value:String(context.annualLeaveBalance?.available??'0.00')},
       {label:copy('pending'),value:String(pending),negative:pending>0},
       {label:copy('approvedDays'),value:String(approvedDays)},
     ],
@@ -2661,15 +2663,19 @@ SCREENS['employee'] = async function(root, params){
   }
   const manager=e.managerId?employees.find(m=>m.id===e.managerId):null;
   const status=hrStatusOf(e,leaveRequests);
-  const used=hrAnnualLeaveUsed(e.id,leaveRequests);
-  const total=e.annualLeaveDays;
-  const remaining=Math.max(0,total-used);
-  const pct=total>0?Math.max(0,Math.min(100,Math.round(remaining/total*100))):0;
   const myLeave=leaveRequests.filter(lv=>lv.employeeId===e.id).sort((a,b)=>dateValue(b.startDate).localeCompare(dateValue(a.startDate)));
   let account=null;
+  let annualLeaveBalance=null;
   try{ account=(await window.ErpSystemData.get('hr/employee-accounts',e.id)).data; }catch(error){
     if(error&&error.code!=='route_not_found'&&error.code!=='resource_not_found') console.warn('Employee account read failed',error);
   }
+  try{ annualLeaveBalance=(await window.ErpSystemData.get('hr/employee-leave-balances',e.id)).data; }catch(error){
+    if(error&&error.code!=='route_not_found'&&error.code!=='resource_not_found') console.warn('Employee leave balance read failed',error);
+  }
+  const total=Number(annualLeaveBalance&&annualLeaveBalance.entitlement||0);
+  const remaining=Number(annualLeaveBalance&&annualLeaveBalance.available||0);
+  const reserved=Number(annualLeaveBalance&&annualLeaveBalance.reserved||0);
+  const pct=total>0?Math.max(0,Math.min(100,Math.round(remaining/total*100))):0;
   const accountLabel=!account||!account.userId?ac('none'):ac(account.accountState||'active');
   const accountTone=!account||!account.userId?'neutral':account.accountState==='active'?'ok':account.accountState==='offboarded'?'neutral':'warn';
   const availableTargets=employees.filter(row=>row.id!==e.id&&row.isActive);
@@ -2695,7 +2701,7 @@ SCREENS['employee'] = async function(root, params){
   const remainingLabel=s('annualLeaveRemaining')
     .replace('{remaining}',remaining)
     .replace('{total}',total);
-  const usedLabel=s('annualLeaveUsed').replace('{used}',used).replace('{total}',total);
+  const reservedLabel=s('annualLeaveReserved').replace('{reserved}',reserved);
   masterDetailEditorPage(root,{
     module:'hr',route:'employee',title:s('employeeProfileTitle'),
     description:s('employeeProfileDescription'),
@@ -2738,7 +2744,7 @@ SCREENS['employee'] = async function(root, params){
         <div class="ind-top">${ic('calendar')}<span>${esc(s('annualLeaveLabel'))}</span><span class="ind-r tnum">${remaining} / ${total}</span></div>
         <div class="track"><i style="width:${pct}%"></i></div>
         <small>${esc(remainingLabel)}</small>
-        <small>${esc(usedLabel)}</small>
+        <small>${esc(reservedLabel)}</small>
       </div>
       <div class="indicator ${accountTone}" data-employee-account-status style="margin-top:12px">
         <div class="ind-top">${ic('user')}<span>${esc(ac('title'))}</span><span class="ind-r">${cap(accountLabel,accountTone)}</span></div>

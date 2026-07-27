@@ -519,6 +519,13 @@
       "when": 1785142579386,
       "tag": "0073_even_gateway",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1785159740158,
+      "tag": "0074_employee_leave_opening",
+      "breakpoints": true
     }
   ]
 }

@@ -41,7 +41,10 @@ import {
   listApprovalDelegationsWithin,
   revokeApprovalDelegationWithin,
 } from '../../modules/approval/workflow';
-import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
+import {
+  LeaveBalanceError,
+  projectEmployeeAnnualLeaveWithin,
+} from '../../modules/hr/leaveBalance';
 import { LeavePolicyError } from '../../modules/hr/leavePolicy';
 import {
   listReceiptDocuments,
@@ -441,10 +444,14 @@ export function createMyRouter(db: DB, options: MyRouterOptions = {}): Router {
           ? await resolveTeamEmployeeIdsWithin(tx, scope, actor.id)
           : [];
         const leaveTypes = await listAvailableLeaveTypesWithin(tx, scope);
+        const annualLeaveBalance = await projectEmployeeAnnualLeaveWithin(
+          tx, scope, actor.id,
+        );
         return {
           company: activeCompany,
           employee: actor,
           leaveTypes,
+          annualLeaveBalance,
           capabilities: {
             leave: { available: true, writable: canWriteLeave },
             claims: { available: true, writable: canWriteClaims },

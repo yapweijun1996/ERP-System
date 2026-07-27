@@ -535,8 +535,10 @@ const CREATES: Record<string, CreateDefinition> = {
   'hr/employees': {
     permission: 'hr.write',
     audit: 'required',
-    execute(tx, scope, payload) {
-      return createEmployeeWithin(tx, scope, payload as unknown as CreateEmployeeInput);
+    execute(tx, scope, payload, actorUserId) {
+      return createEmployeeWithin(
+        tx, scope, payload as unknown as CreateEmployeeInput, actorUserId,
+      );
     },
   },
   'hr/leave-requests': {

@@ -277,6 +277,7 @@ import {
   createEmployeeWithin,
   type CreateEmployeeInput,
 } from '../../src/modules/hr/employee';
+import { projectEmployeeAnnualLeaveWithin } from '../../src/modules/hr/leaveBalance';
 import {
   createLeaveRequestWithin,
   decideLeaveRequestWithin,
@@ -1177,8 +1178,16 @@ export const erpDemoRuntime = Object.freeze({
     postDepreciationRunWithin(db: DemoOrm, scope: Scope, runId: number) {
       return postDepreciationRunWithin(asDomainDb(db), scope, runId);
     },
-    createEmployeeWithin(db: DemoOrm, scope: Scope, input: CreateEmployeeInput) {
-      return createEmployeeWithin(asDomainDb(db), scope, input);
+    createEmployeeWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateEmployeeInput,
+      actorUserId?: number | null,
+    ) {
+      return createEmployeeWithin(asDomainDb(db), scope, input, actorUserId);
+    },
+    projectEmployeeAnnualLeaveWithin(db: DemoOrm, scope: Scope, employeeId: number) {
+      return projectEmployeeAnnualLeaveWithin(asDomainDb(db), scope, employeeId);
     },
     createLeaveRequestWithin(db: DemoOrm, scope: Scope, input: CreateLeaveRequestInput) {
       return createLeaveRequestWithin(asDomainDb(db), scope, input);

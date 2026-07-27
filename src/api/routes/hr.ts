@@ -30,7 +30,10 @@ import {
   readGovernedLeaveWithin,
   voidLeaveApplicationWithin,
 } from '../../modules/hr/leaveApplication';
-import { LeaveBalanceError } from '../../modules/hr/leaveBalance';
+import {
+  LeaveBalanceError,
+  projectEmployeeAnnualLeaveWithin,
+} from '../../modules/hr/leaveBalance';
 import { LeavePolicyError } from '../../modules/hr/leavePolicy';
 import { ApprovalWorkflowError } from '../../modules/approval/workflow';
 import {
@@ -253,6 +256,27 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       const data = await withTenantTransaction(db, scope, (tx) =>
         readEmployeeAccount(tx, scope, employeeId));
       res.json({ data, meta: {} });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/employee-leave-balances/:employeeId', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const employeeId = employeeIdParam(req.params.employeeId);
+    if (!employeeId) {
+      apiError(res, 400, 'invalid_id', 'employeeId must be a positive integer.');
+      return;
+    }
+    try {
+      const scope = {
+        masterFn: session.masterFn,
+        companyFn: session.activeCompanyFn,
+      };
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        projectEmployeeAnnualLeaveWithin(tx, scope, employeeId));
+      res.json({ data, meta: { ledger: 'append_only' } });
     } catch (error) {
       handleError(res, error);
     }

@@ -12,6 +12,8 @@ import {
   leaveType,
 } from '../../data/schema';
 import { freshDb } from '../../test/helpers';
+import { createEmployee } from './employee';
+import { projectLeaveBalance } from './leaveBalance';
 import {
   LeaveApplicationError,
   amendLeaveApplicationWithin,
@@ -306,5 +308,92 @@ describe('governed leave application lifecycle', () => {
         unit: 'full_day',
       },
     ))).rejects.toBeInstanceOf(LeaveApplicationError);
+  });
+
+  it('keeps a newly-created 14-day opening consistent through submit, reject, withdraw and Void', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
+    const created = await createEmployee(db, scope, {
+      employeeNo: 'EMP-LIFECYCLE', fullName: 'Leave Lifecycle',
+      email: 'leave.lifecycle@example.test', department: 'Operations', jobTitle: 'Planner',
+      startDate: '2026-07-27', annualLeaveDays: 14, baseSalary: '4500.00',
+    }, admin.userId);
+    const [type] = await db.select().from(leaveType).where(and(
+      eq(leaveType.masterFn, scope.masterFn),
+      eq(leaveType.companyFn, scope.companyFn),
+      eq(leaveType.code, 'ANNUAL'),
+    ));
+    const actor = { userId: admin.userId, employeeId: created.id };
+    const hrActor = { userId: admin.userId, canManage: true };
+    const balance = () => projectLeaveBalance(db, scope, created.id, type.id);
+    expect(await balance()).toMatchObject({
+      balance: '14.00', reserved: '0.00', available: '14.00',
+    });
+
+    const draft = await db.transaction((tx) => createLeaveDraftWithin(
+      tx, scope, actor, created.id, {
+        leaveTypeId: type.id,
+        startDate: '2026-09-14', endDate: '2026-09-14',
+        unit: 'full_day', reason: 'One day annual leave',
+      },
+    ));
+    const pending = await db.transaction((tx) => submitLeaveApplicationWithin(
+      tx, scope, actor, draft.id, draft.version,
+    ));
+    expect(await balance()).toMatchObject({
+      balance: '14.00', reserved: '1.00', available: '13.00',
+    });
+    await expect(db.transaction((tx) => submitLeaveApplicationWithin(
+      tx, scope, actor, draft.id, pending.version,
+    ))).rejects.toMatchObject({ code: 'leave_not_draft' });
+    expect((await db.select().from(leaveBalanceEntry).where(and(
+      eq(leaveBalanceEntry.employeeId, created.id),
+      eq(leaveBalanceEntry.entryType, 'reserve'),
+    )))).toHaveLength(1);
+
+    const rejected = await db.transaction((tx) => decideGovernedLeaveWithin(
+      tx, scope, hrActor, draft.id, pending.version, 'rejected', 'Coverage unavailable',
+    ));
+    expect(rejected.status).toBe('rejected');
+    expect(await balance()).toMatchObject({
+      balance: '14.00', reserved: '0.00', available: '14.00',
+    });
+
+    const amended = await db.transaction((tx) => amendLeaveApplicationWithin(
+      tx, scope, actor, draft.id, rejected.version, {
+        leaveTypeId: type.id,
+        startDate: '2026-09-15', endDate: '2026-09-15',
+        unit: 'full_day', reason: 'Rescheduled annual leave',
+        changeReason: 'Moved after rejection',
+      },
+    ));
+    const pendingAgain = await db.transaction((tx) => submitLeaveApplicationWithin(
+      tx, scope, actor, draft.id, amended.version,
+    ));
+    const withdrawn = await db.transaction((tx) => withdrawLeaveApplicationWithin(
+      tx, scope, actor, draft.id, pendingAgain.version, 'Plans changed again',
+    ));
+    expect(await balance()).toMatchObject({
+      balance: '14.00', reserved: '0.00', available: '14.00',
+    });
+
+    const amendedAgain = await db.transaction((tx) => amendLeaveApplicationWithin(
+      tx, scope, actor, draft.id, withdrawn.version, {
+        leaveTypeId: type.id,
+        startDate: '2026-09-16', endDate: '2026-09-16',
+        unit: 'full_day', reason: 'Final annual leave date',
+        changeReason: 'Moved after withdrawal',
+      },
+    ));
+    const pendingFinal = await db.transaction((tx) => submitLeaveApplicationWithin(
+      tx, scope, actor, draft.id, amendedAgain.version,
+    ));
+    await db.transaction((tx) => voidLeaveApplicationWithin(
+      tx, scope, hrActor, draft.id, pendingFinal.version, 'Duplicate request entered',
+    ));
+    expect(await balance()).toMatchObject({
+      balance: '14.00', reserved: '0.00', available: '14.00',
+    });
   });
 });

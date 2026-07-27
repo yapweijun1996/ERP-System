@@ -79,11 +79,11 @@ hardcoded fictional customer regardless of the active company.
 ## 2026-07-27 end-user audit status
 
 The isolated dual-mode audit at `a9fdb07` confirms the core ERP invariants and all
-122 Canonical routes render, but the release baseline is **not fully green**. Four P1,
-three P2 and two P3 root causes are tracked in TASK-141–149. The highest product gaps
-are a new-employee paid-leave balance mismatch and an invitation UI that cannot select
-Manager/custom roles; the highest release gaps are production dependency advisories
-and six wall-clock-dependent document queue tests. See
+122 Canonical routes render, but the release baseline is **not fully green**. Its nine
+root causes are tracked in TASK-141–149; TASK-141, TASK-142 and TASK-144–146 plus
+TASK-149 are remediated. The remaining release gap is TASK-143's production dependency
+advisories, followed by TASK-147's PostgreSQL proof guard and TASK-148's expected My
+Work conflict noise. See
 `docs/audits/END_USER_AUDIT_2026-07-27.md` for exact evidence. TASK-017 remains blocked
 for physical-phone acceptance.
 
@@ -92,7 +92,7 @@ for physical-phone acceptance.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (226 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 73 ordered migrations through schema version 72; `drizzle/`, `src/data/schema/` |
+| Canonical schema (232 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 75 ordered migrations through schema version 74; `drizzle/`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -152,7 +152,7 @@ for physical-phone acceptance.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. The sidebar does not show unexplained static counters; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — every route in `SCREENS` (122), desktop + 375px | ✅ Demo / ⚠️ API expected-conflict noise | Demo screen and five-language audits pass at 122 Canonical / 0 Preview. The API matrix has zero blank/overflow/session-loss states and permission-aware navigation now matches effective capabilities; five unlinked-employee My Work routes still repeat expected 409s and console noise (TASK-148). |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Passing | 2026-07-27 `npm test`: 134 files passed, one expected skip; 518 tests passed, one expected skip, zero failures. Explicit document clocks and bounded PGlite/server setup close TASK-144 and TASK-146. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Passing | 2026-07-27 `npm test`: 135 files passed, one expected skip; 521 tests passed, one expected skip, zero failures. TASK-141 adds opening-balance migration and lifecycle coverage; explicit document clocks and bounded PGlite/server setup close TASK-144 and TASK-146. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production Setup remains a separate deployment-token/zero-user command. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -167,7 +167,7 @@ for physical-phone acceptance.
 | `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Permission-aware rendering | All 122 routes render in API mode with no sample fallback. Active-company effective actions, scopes and module state now restrict Manager/custom-role shell/search/quick-create, while direct APIs remain the 403 boundary. Unlinked My Work expected 409s remain TASK-148. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production one-time setup | ✅ Working | The API-mode wizard collects the installer token in memory and calls `POST /api/setup/actions/complete` with `X-ERP-Setup-Token`. A database singleton locks concurrent attempts; the command only works with zero users and atomically creates tenant/company/admin/role/permissions/tax/accounts. |
-| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v142) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
+| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v143) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
 
 ## Canonical and Preview route boundary
 
@@ -1452,14 +1452,12 @@ covers 122 routes × five languages × desktop/375px; PWA cache version is v138.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 138 tasks, including TASK-136 through TASK-139
+- Done: 153 tasks, including TASK-141
+- Todo: TASK-143, TASK-147 and TASK-148 (3)
 - Blocked: TASK-017 (1)
-- Todo: 0 planned tasks. EPIC-056 and EPIC-057 are complete at the current
-  122 Canonical / 0 Preview boundary. Current
-  visual-layout convergence covers 47 audited
-  list-layout routes plus one audited calendar workspace. Future
-  Leave/Receipt/Expense/Tax routes must join the appropriate existing SSOT only after
-  governed Demo/API behavior exists.
+- EPIC-056, EPIC-057 and EPIC-059 are complete at the current 122 Canonical / 0
+  Preview boundary. EPIC-058 remains in progress until its three remaining remediation
+  tasks are complete.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -1489,5 +1487,5 @@ proof passed 518 tests plus one expected skip, 232-table drift, PGlite/PostgreSQ
 parity and forced RLS, both builds, smoke, 122 routes × five languages ×
 desktop/375px and critical Chromium/Firefox/WebKit flows. Current-Chrome cold load was
 8.905 seconds and common-route p95 was 38.7 ms. TASK-017 remains blocked for a physical
-phone; EPIC-058 TASK-141/143/147/148 remain open. See
+phone; EPIC-058 TASK-143/147/148 remain open. See
 [EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).

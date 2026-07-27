@@ -1,6 +1,10 @@
+import { and, eq } from 'drizzle-orm';
 import { describe, it, expect } from 'vitest';
+import { appUser, leaveBalanceEntry, leaveType } from '../../data/schema';
+import { seedDemo } from '../../data/seed';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createEmployee, InvalidEmployeeStateError } from './employee';
+import { projectLeaveBalance } from './leaveBalance';
 
 describe('createEmployee', () => {
   it('success: registers an employee with no manager', async () => {
@@ -10,6 +14,34 @@ describe('createEmployee', () => {
       department: 'Operations', jobTitle: 'Director', startDate: '2024-01-01', baseSalary: '5000.00',
     });
     expect(res.id).toBeGreaterThan(0);
+  });
+
+  it('creates one authoritative annual-leave opening when policy is configured', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
+    const created = await createEmployee(db, scope, {
+      employeeNo: 'EMP-OPENING', fullName: 'Opening Balance',
+      email: 'opening.balance@example.test', department: 'Finance', jobTitle: 'Analyst',
+      startDate: '2026-07-27', annualLeaveDays: 14, baseSalary: '4500.00',
+    }, admin.userId);
+    expect(created.leaveBalance).toMatchObject({
+      entitlement: '14.00', balance: '14.00', reserved: '0.00', available: '14.00',
+      initialized: true,
+    });
+    const [annual] = await db.select({ id: leaveType.id }).from(leaveType).where(and(
+      eq(leaveType.masterFn, scope.masterFn),
+      eq(leaveType.companyFn, scope.companyFn),
+      eq(leaveType.code, 'ANNUAL'),
+    ));
+    expect(await projectLeaveBalance(db, scope, created.id, annual.id)).toEqual({
+      balance: '14.00', reserved: '0.00', available: '14.00', entryCount: 1,
+    });
+    expect(await db.select().from(leaveBalanceEntry).where(and(
+      eq(leaveBalanceEntry.employeeId, created.id),
+      eq(leaveBalanceEntry.leaveTypeId, annual.id),
+    ))).toHaveLength(1);
   });
 
   it('success: registers an employee reporting to an existing manager', async () => {

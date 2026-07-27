@@ -1,4 +1,6 @@
-import { and, asc, eq, lte } from 'drizzle-orm';
+import {
+  and, asc, desc, eq, gte, isNull, lte, or,
+} from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
@@ -81,6 +83,167 @@ export async function projectLeaveBalance(
     reserved: signedDays(reserved),
     available: signedDays(balance - reserved),
     entryCount: rows.length,
+  };
+}
+
+async function resolveAnnualOpeningPolicyWithin(
+  exec: DB,
+  scope: Scope,
+  leaveTypeId: number,
+  startDate: string,
+) {
+  const base = [
+    eq(leavePolicyVersion.masterFn, scope.masterFn),
+    eq(leavePolicyVersion.companyFn, scope.companyFn),
+    eq(leavePolicyVersion.leaveTypeId, leaveTypeId),
+    eq(leavePolicyVersion.status, 'confirmed'),
+  ];
+  const [covering] = await exec.select().from(leavePolicyVersion).where(and(
+    ...base,
+    lte(leavePolicyVersion.effectiveFrom, startDate),
+    or(
+      isNull(leavePolicyVersion.effectiveTo),
+      gte(leavePolicyVersion.effectiveTo, startDate),
+    ),
+  )).orderBy(desc(leavePolicyVersion.versionNo)).limit(1);
+  if (covering) return { policy: covering, effectiveDate: startDate };
+
+  const [future] = await exec.select().from(leavePolicyVersion).where(and(
+    ...base,
+    gte(leavePolicyVersion.effectiveFrom, startDate),
+  )).orderBy(
+    asc(leavePolicyVersion.effectiveFrom),
+    asc(leavePolicyVersion.versionNo),
+  ).limit(1);
+  if (future) return { policy: future, effectiveDate: future.effectiveFrom };
+
+  const [historic] = await exec.select().from(leavePolicyVersion).where(and(...base))
+    .orderBy(desc(leavePolicyVersion.effectiveFrom), desc(leavePolicyVersion.versionNo))
+    .limit(1);
+  if (!historic) return null;
+  return {
+    policy: historic,
+    effectiveDate: historic.effectiveTo ?? historic.effectiveFrom,
+  };
+}
+
+/**
+ * Creates the one authoritative annual-leave opening for an employee. The
+ * operation is idempotent by employee/type rather than by caller, so the HR
+ * create screen, Staff onboarding, customer imports and upgrade reconciliation
+ * cannot grant the same opening twice.
+ */
+export async function initializeEmployeeAnnualLeaveOpeningWithin(
+  exec: DB,
+  scope: Scope,
+  employeeId: number,
+  actorUserId: number | null = null,
+) {
+  const [subject] = await exec.select({
+    id: employee.id,
+    startDate: employee.startDate,
+    employmentType: employee.employmentType,
+    annualLeaveDays: employee.annualLeaveDays,
+  }).from(employee).where(and(
+    eq(employee.id, employeeId),
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+  )).limit(1);
+  if (!subject) {
+    throw new LeaveBalanceError('employee_unavailable', 'Employee not found.');
+  }
+  const [annualType] = await exec.select({ id: leaveType.id }).from(leaveType).where(and(
+    eq(leaveType.masterFn, scope.masterFn),
+    eq(leaveType.companyFn, scope.companyFn),
+    eq(leaveType.code, 'ANNUAL'),
+    eq(leaveType.paid, true),
+    eq(leaveType.isActive, true),
+  )).limit(1);
+  if (!annualType) return null;
+
+  const resolved = await resolveAnnualOpeningPolicyWithin(
+    exec, scope, annualType.id, subject.startDate,
+  );
+  if (!resolved) return null;
+  const eligible = resolved.policy.eligibleEmploymentTypes as string[];
+  if (!eligible.includes(subject.employmentType)) return null;
+
+  const [existing] = await exec.select({ id: leaveBalanceEntry.id })
+    .from(leaveBalanceEntry).where(and(
+      eq(leaveBalanceEntry.masterFn, scope.masterFn),
+      eq(leaveBalanceEntry.companyFn, scope.companyFn),
+      eq(leaveBalanceEntry.employeeId, subject.id),
+      eq(leaveBalanceEntry.leaveTypeId, annualType.id),
+    )).orderBy(asc(leaveBalanceEntry.id)).limit(1);
+  let entryId = existing?.id ?? null;
+  let replayed = Boolean(existing);
+  if (!existing && subject.annualLeaveDays > 0) {
+    const appended = await appendLeaveBalanceEntryWithin(exec, scope, {
+      employeeId: subject.id,
+      leaveTypeId: annualType.id,
+      policyVersionId: resolved.policy.id,
+      entryType: 'grant',
+      entryKey: `employee:${subject.id}:annual-opening`,
+      balanceDelta: subject.annualLeaveDays,
+      reservedDelta: 0,
+      effectiveDate: resolved.effectiveDate,
+      sourceType: 'employee_opening',
+      sourceId: String(subject.id),
+      note: 'Opening annual leave entitlement',
+      createdByUserId: actorUserId,
+    });
+    entryId = appended.id;
+    replayed = appended.replayed;
+  }
+  const projection = await projectLeaveBalance(
+    exec, scope, subject.id, annualType.id,
+  );
+  return {
+    employeeId: subject.id,
+    leaveTypeId: annualType.id,
+    policyVersionId: resolved.policy.id,
+    entryId,
+    effectiveDate: resolved.effectiveDate,
+    entitlement: projection.entryCount > 0
+      ? signedDays(BigInt(subject.annualLeaveDays) * 100n)
+      : '0.00',
+    initialized: !existing && entryId != null,
+    replayed,
+    ...projection,
+  };
+}
+
+export async function projectEmployeeAnnualLeaveWithin(
+  exec: DB,
+  scope: Scope,
+  employeeId: number,
+) {
+  const [subject] = await exec.select({
+    id: employee.id,
+    annualLeaveDays: employee.annualLeaveDays,
+  }).from(employee).where(and(
+    eq(employee.id, employeeId),
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+  )).limit(1);
+  if (!subject) {
+    throw new LeaveBalanceError('employee_unavailable', 'Employee not found.');
+  }
+  const [annualType] = await exec.select({ id: leaveType.id }).from(leaveType).where(and(
+    eq(leaveType.masterFn, scope.masterFn),
+    eq(leaveType.companyFn, scope.companyFn),
+    eq(leaveType.code, 'ANNUAL'),
+    eq(leaveType.paid, true),
+  )).limit(1);
+  if (!annualType) return null;
+  const projection = await projectLeaveBalance(exec, scope, subject.id, annualType.id);
+  return {
+    employeeId: subject.id,
+    leaveTypeId: annualType.id,
+    entitlement: projection.entryCount > 0
+      ? signedDays(BigInt(subject.annualLeaveDays) * 100n)
+      : '0.00',
+    ...projection,
   };
 }
 

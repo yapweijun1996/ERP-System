@@ -7,6 +7,7 @@ import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { EMPLOYMENT_TYPES, employee } from '../../data/schema';
 import { fixedUnits } from '../inventory/decimal';
+import { initializeEmployeeAnnualLeaveOpeningWithin } from './leaveBalance';
 import { syncManagerRoleWithin } from './managerRole';
 
 export class InvalidEmployeeStateError extends Error {
@@ -30,7 +31,12 @@ export interface CreateEmployeeInput {
   baseSalary: string;
 }
 
-export async function createEmployeeWithin(exec: DB, scope: Scope, input: CreateEmployeeInput) {
+export async function createEmployeeWithin(
+  exec: DB,
+  scope: Scope,
+  input: CreateEmployeeInput,
+  actorUserId: number | null = null,
+) {
   if (!input.employeeNo?.trim()) throw new InvalidEmployeeStateError('employeeNo is required');
   if (!input.fullName?.trim()) throw new InvalidEmployeeStateError('fullName is required');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email ?? '')) {
@@ -84,9 +90,17 @@ export async function createEmployeeWithin(exec: DB, scope: Scope, input: Create
   if (input.managerId != null) {
     await syncManagerRoleWithin(exec, scope, input.managerId);
   }
-  return { id: row.id };
+  const leaveBalance = await initializeEmployeeAnnualLeaveOpeningWithin(
+    exec, scope, row.id, actorUserId,
+  );
+  return { id: row.id, leaveBalance };
 }
 
-export function createEmployee(db: DB, scope: Scope, input: CreateEmployeeInput) {
-  return db.transaction((tx) => createEmployeeWithin(tx, scope, input));
+export function createEmployee(
+  db: DB,
+  scope: Scope,
+  input: CreateEmployeeInput,
+  actorUserId: number | null = null,
+) {
+  return db.transaction((tx) => createEmployeeWithin(tx, scope, input, actorUserId));
 }
