@@ -78,10 +78,9 @@ hardcoded fictional customer regardless of the active company.
 
 ## 2026-07-27 end-user audit status
 
-The isolated dual-mode audit at `a9fdb07` confirms the core ERP invariants and all
-122 Canonical routes render, but the release baseline is **not fully green**. Its nine
-root causes are tracked in TASK-141–149; every finding except TASK-148 is remediated.
-The only remaining work is expected My Work conflict noise. See
+The isolated dual-mode audit at `a9fdb07` confirmed the core ERP invariants and all
+122 Canonical routes. All nine root causes in TASK-141–149 are now remediated and the
+automated release baseline is green. See
 `docs/audits/END_USER_AUDIT_2026-07-27.md` for exact evidence. TASK-017 remains blocked
 for physical-phone acceptance.
 
@@ -149,8 +148,8 @@ for physical-phone acceptance.
 | Landed Cost allocation & moving-average revaluation | ✅ Canonical Demo/API data and writes | Migration 0033 adds versioned receipt-linked `landed_cost` headers, immutable allocation snapshots, `product.average_cost` and upgrade-safe account `2300`. Shared Decimal commands allocate by received value or quantity with deterministic whole-cent residuals. Allocation locks the draft/products/current balances, requires positive on-hand, revalues moving-average cost and posts balanced Dr Inventory / Cr Landed Cost Accrual without a `stock_movement`. Demo/API create and idempotent audited allocate actions, production RLS, five-language UI and inventory/GL trace links are live. Browser proof allocated S$14.00 against GR-1: Widget cost S$6.50→S$6.64, Dr/Cr S$14.00 and unchanged quantity. |
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. The sidebar does not show unexplained static counters; actionable counts remain in canonical module KPIs and approval queues. |
-| Full screen audit — every route in `SCREENS` (122), desktop + 375px | ✅ Demo / ⚠️ API expected-conflict noise | Demo screen and five-language audits pass at 122 Canonical / 0 Preview. The API matrix has zero blank/overflow/session-loss states and permission-aware navigation now matches effective capabilities; five unlinked-employee My Work routes still repeat expected 409s and console noise (TASK-148). |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Passing | 2026-07-27 `npm test`: 135 files passed, one expected skip; 521 tests passed, one expected skip, zero failures. TASK-141 adds opening-balance migration and lifecycle coverage; explicit document clocks and bounded PGlite/server setup close TASK-144 and TASK-146. |
+| Full screen audit — every route in `SCREENS` (122), desktop + 375px | ✅ Demo/API behavior | Screen and five-language audits pass at 122 Canonical / 0 Preview. Permission-aware navigation matches effective capabilities; every unlinked My Work route now performs one handled context preflight, zero downstream reads and renders its localized empty state. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Passing | 2026-07-27 `npm test`: 136 files passed, one expected skip; 523 tests passed, one expected skip, zero failures. TASK-141 adds opening-balance migration and lifecycle coverage; TASK-147 adds proof-guard coverage; explicit document clocks and bounded PGlite/server setup close TASK-144 and TASK-146. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production Setup remains a separate deployment-token/zero-user command. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -162,10 +161,10 @@ for physical-phone acceptance.
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, seed) on an isolated stack; every individual target (`help`/`up`/`down`/`restart`/`logs`/`migrate`/`seed`/`reset`/`ps`/`psql`) exercised against it, including the destructive `reset` path re-exercising `setup.sh`'s "`.env` already present" branch, TASK-021 |
 | `make setup-interactive` (`scripts/setup.sh --interactive`) | ✅ Working | Prompts for bundled-vs-external database, auto-generates strong secrets on a blank answer (validated: e.g. a manually-typed `ERP_TOKEN_ENCRYPTION_KEY` must satisfy `tokenCrypto.ts`'s exact 32-byte contract or the script re-prompts, instead of letting `api` crash at boot), and checks WEB_PORT/API_PORT/DB_PORT for real collisions. `docker-compose.yml`'s `api`/`worker` `DATABASE_URL` now genuinely honors an external override instead of silently ignoring it. Verified live end-to-end three times against real Docker (plain non-interactive, `--interactive` bundled, `--interactive` external against a standalone `postgres:16-alpine` container) — the external run's `docker compose ps` confirmed the bundled `db` service was never created, and a direct `psql` query against the standalone container confirmed seed data genuinely landed there. TASK-060, EPIC-025. **Also fixed along the way**: the `web` service's Docker build had been silently broken since 2026-07-18 (build context couldn't reach `erp-demo-runtime-impl.ts`'s cross-workspace imports into `src/`) — nobody caught it because local dev/typecheck/`build:demo` all run from the repo root, where the paths resolve fine regardless of the Docker isolation bug. Fixed by widening `web`'s build context to the repo root, matching `Dockerfile.api`'s established pattern. |
 | PostgreSQL concurrency/parity proof | ✅ Working on dedicated empty proof DB | PGlite/PostgreSQL business results match and one of two stock races wins; forced RLS passes. The production seed CLI fails closed without explicit Demo flags or on non-empty data, and `POSTGRES_URL npm run demo` now independently rejects every non-empty target before writes. |
-| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Permission-aware rendering | All 122 routes render in API mode with no sample fallback. Active-company effective actions, scopes and module state now restrict Manager/custom-role shell/search/quick-create, while direct APIs remain the 403 boundary. Unlinked My Work expected 409s remain TASK-148. |
+| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Permission-aware rendering | All 122 routes render in API mode with no sample fallback. Active-company effective actions, scopes and module state restrict Manager/custom-role shell/search/quick-create, direct APIs remain the 403 boundary, and unlinked My Work views stop after one handled identity preflight. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production one-time setup | ✅ Working | The API-mode wizard collects the installer token in memory and calls `POST /api/setup/actions/complete` with `X-ERP-Setup-Token`. A database singleton locks concurrent attempts; the command only works with zero users and atomically creates tenant/company/admin/role/permissions/tax/accounts. |
-| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v143) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
+| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v144) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
 
 ## Canonical and Preview route boundary
 
@@ -1450,11 +1449,11 @@ covers 122 routes × five languages × desktop/375px; PWA cache version is v138.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 155 tasks, including TASK-141, TASK-143 and TASK-147
-- Todo: TASK-148 (1)
+- Done: 156 tasks, including TASK-141, TASK-143, TASK-147 and TASK-148
+- Todo: 0
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057 and EPIC-059 are complete at the current 122 Canonical / 0
-  Preview boundary. EPIC-058 remains in progress until TASK-148 is complete.
+  Preview boundary. EPIC-058 remediation is complete.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -1484,5 +1483,5 @@ proof passed 518 tests plus one expected skip, 232-table drift, PGlite/PostgreSQ
 parity and forced RLS, both builds, smoke, 122 routes × five languages ×
 desktop/375px and critical Chromium/Firefox/WebKit flows. Current-Chrome cold load was
 8.905 seconds and common-route p95 was 38.7 ms. TASK-017 remains blocked for a physical
-phone; EPIC-058 TASK-148 remains open. See
+phone. See
 [EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).

@@ -1853,6 +1853,7 @@ async function auditRoutes(browser, viewport) {
         teamLeaveRequests:ErpSystemData.my.teamLeaveRequests,
         teamCalendar:ErpSystemData.my.teamCalendar,
         approvals:ErpSystemData.my.approvals,
+        expenseApprovals:ErpSystemData.my.expenseApprovals,
         approvalAction:ErpSystemData.my.approvalAction,
         approvalDelegations:ErpSystemData.my.approvalDelegations,
         approvalDelegationCandidates:ErpSystemData.my.approvalDelegationCandidates,
@@ -2039,6 +2040,36 @@ async function auditRoutes(browser, viewport) {
         )];
         if (decisionButtons.length!==2 || decisionButtons.some((button)=>button.disabled)) {
           issues.push('governed approval decision actions are missing or disabled');
+        }
+
+        const unlinkedRoutes=['my-leave','my-claims','my-receipts','team-calendar','my-approvals'];
+        let contextCalls=0;
+        let downstreamCalls=0;
+        const missingIdentity=()=>{
+          const error=new Error('The signed-in account is not linked to an active employee in this company.');
+          error.code='employee_identity_missing';
+          error.status=409;
+          return error;
+        };
+        ErpSystemData.my.context=async()=>{contextCalls+=1;throw missingIdentity();};
+        for(const method of ['leaveRequests','claims','receipts','teamCalendar','approvals','expenseApprovals']){
+          ErpSystemData.my[method]=async()=>{
+            downstreamCalls+=1;
+            throw new Error(`unlinked route called ${method} after identity rejection`);
+          };
+        }
+        for(const [index,route] of unlinkedRoutes.entries()){
+          await navigate(route);
+          const emptyRoot=document.querySelector(
+            `#viewRoot [data-my-work-shell="true"][data-my-work-view="${route}"]`,
+          );
+          if(!emptyRoot) issues.push(`${route} lost its no-active-employee empty state`);
+          if(contextCalls!==index+1){
+            issues.push(`${route} resolved unlinked identity ${contextCalls-index} times`);
+          }
+          if(downstreamCalls!==0){
+            issues.push(`${route} made ${downstreamCalls} downstream request(s) after identity rejection`);
+          }
         }
       } finally {
         Object.assign(ErpSystemData.my,originalMethods);

@@ -39,7 +39,7 @@ fresh IndexedDB. Existing Docker projects, default ports and databases were unto
 | Demo screen audit | Pass: 122 routes, 122 Canonical / 0 Preview, desktop + 375px |
 | Demo i18n audit | Pass: 122 routes × 5 languages × 2 viewports; 1,141 keys |
 | API route matrix | 1,220/1,220 rendered; zero blank, overflow or session-loss states |
-| API matrix network | 50 repeated expected 409 console signals on five unlinked-employee My Work routes (AUD-008) |
+| API matrix network | Audit baseline had 50 repeated expected 409 signals; TASK-148 now performs one handled context preflight and zero downstream reads per unlinked route |
 | Non-English writes | Pass: MS/ZH/JA/VI unpaid-leave draft → Void with localized headings |
 | Full `npm test` | Fail: 505 pass, 7 fail, 1 skip; six deterministic document tests and one suite-load timeout |
 | Focused session restart | Pass; the full-suite failure is load-sensitive |
@@ -151,6 +151,11 @@ emits browser console errors.
 - **Actual:** My Approvals, My Claims, My Leave, My Receipts and Team Calendar render a useful identity empty state, but each navigation generates repeated 409 requests and browser console errors.
 - **Expected:** Resolve identity once and render the empty state without duplicate conflict calls/noisy expected errors.
 - **Backlog:** TASK-148.
+- **Resolved 2026-07-27:** All five routes call the shared context preflight once and
+  stop before route-specific reads when the employee identity is missing. The runtime
+  audit verifies one resolution, zero downstream requests and the localized empty state
+  on every route, while linked Employee/Manager privacy and actions remain intact at
+  desktop and 375px.
 
 ### AUD-009 — P3 accessibility — user-row icon actions have no accessible name
 

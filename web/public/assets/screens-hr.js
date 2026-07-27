@@ -1207,6 +1207,15 @@ function myWorkIdentityPage(root,route,title,description){
     emptyTitle:copy('noIdentity'),emptyDescription:copy('noIdentityBody'),
   });
 }
+async function myWorkContextOrIdentityPage(root,route,title,description,adapter=myWorkAdapter()){
+  try{
+    return await adapter.context();
+  }catch(error){
+    if(!isMyWorkIdentityError(error)) throw error;
+    myWorkIdentityPage(root,route,title,description);
+    return null;
+  }
+}
 
 function myLeaveEventLabel(eventType,copy){
   return {
@@ -1344,13 +1353,13 @@ SCREENS['my-leave']=async function(root){
   const copy=myWorkCopy();
   const statusCopy=hrCopy();
   const adapter=myWorkAdapter();
-  let contextResponse;
+  const contextResponse=await myWorkContextOrIdentityPage(
+    root,'my-leave',copy('leaveTitle'),copy('leaveDescription'),adapter,
+  );
+  if(!contextResponse) return;
   let leaveResponse;
   try{
-    [contextResponse,leaveResponse]=await Promise.all([
-      adapter.context(),
-      adapter.leaveRequests(),
-    ]);
+    leaveResponse=await adapter.leaveRequests();
   }catch(error){
     if(!isMyWorkIdentityError(error)) throw error;
     myWorkIdentityPage(root,'my-leave',copy('leaveTitle'),copy('leaveDescription'));
@@ -1599,8 +1608,13 @@ function claimTotals(lines){
 
 SCREENS['my-claims']=async function(root){
   const c=expenseClaimCopy();
+  const adapter=myWorkAdapter();
+  const context=await myWorkContextOrIdentityPage(
+    root,'my-claims',c('title'),c('description'),adapter,
+  );
+  if(!context) return;
   let response;
-  try{ response=await myWorkAdapter().claims(); }
+  try{ response=await adapter.claims(); }
   catch(error){
     if(!isMyWorkIdentityError(error)) throw error;
     myWorkIdentityPage(root,'my-claims',c('title'),c('description'));
@@ -1837,6 +1851,10 @@ async function openReceiptEditor(draft,onDone){
 SCREENS['my-receipts']=async function(root){
   const s=receiptCaptureCopy(),adapter=myWorkAdapter(),draftStore=window.ErpReceiptDrafts;
   if(!draftStore) throw new Error('Offline receipt draft storage is unavailable.');
+  const context=await myWorkContextOrIdentityPage(
+    root,'my-receipts',s('title'),s('sub'),adapter,
+  );
+  if(!context) return;
   let response;
   try{ response=await adapter.receipts(); }
   catch(error){
@@ -2048,6 +2066,11 @@ function teamCalendarCopy(){
 SCREENS['team-calendar']=async function(root){
   const c=teamCalendarCopy();
   const statusCopy=hrCopy();
+  const adapter=myWorkAdapter();
+  const context=await myWorkContextOrIdentityPage(
+    root,'team-calendar',c('title'),c('description'),adapter,
+  );
+  if(!context) return;
   const lang=typeof getLang==='function'?getLang():'en';
   const locales={en:'en-SG',ms:'ms-MY',zh:'zh-CN',ja:'ja-JP',vi:'vi-VN'};
   let view='month';
@@ -2108,7 +2131,7 @@ SCREENS['team-calendar']=async function(root){
     error=null;
     try{
       const value=range();
-      const response=await myWorkAdapter().teamCalendar({
+      const response=await adapter.teamCalendar({
         from:value.from,to:value.to,scope:reportingScope,department,status,
       });
       rows=response.data&&response.data.items||[];
@@ -2347,6 +2370,10 @@ SCREENS['my-approvals']=async function(root){
   const c=myApprovalCopy();
   const w=myWorkCopy();
   const adapter=myWorkAdapter();
+  const context=await myWorkContextOrIdentityPage(
+    root,'my-approvals',c('title'),c('description'),adapter,
+  );
+  if(!context) return;
   let rows=[];
   let loadError=null;
   async function reloadRows(){

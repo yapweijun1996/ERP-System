@@ -921,7 +921,7 @@ switching preserves page/dialog state, known missing keys and hardcoded system c
 zero, non-English missing keys retain tested English fallback, and full release gates
 pass with 0 Preview routes.
 
-## Phase 40 — End-User ERP Quality Audit & Remediation (In progress)
+## Phase 40 — End-User ERP Quality Audit & Remediation ✅
 
 1. **Dual-mode end-user audit** (TASK-140 done 2026-07-27) recorded the clean baseline,
    isolated Demo/API environments, real Admin/Viewer/Employee/Manager/Finance handoffs,
@@ -930,13 +930,12 @@ pass with 0 Preview routes.
    root causes without changing product code.
 2. **P1 remediation** (TASK-141–144) is complete: paid-leave openings, tenant-role
    invitations, dependency advisories and deterministic document queue clocks pass.
-3. **P2/P3 hardening** (TASK-145–149): navigation, test stability, PostgreSQL proof
-   safety and icon-control names are complete; TASK-148's expected My Work conflict
-   deduplication remains.
+3. **P2/P3 hardening** (TASK-145–149) is complete: navigation, test stability,
+   PostgreSQL proof safety, single-preflight My Work identity handling and icon-control
+   names pass.
 
-Exit criteria: TASK-140 evidence and backlog exist; Phase 40 remains in progress until
-TASK-141–149 are complete. The isolated API environment remains available for review,
-and TASK-017 remains blocked until a human performs physical-phone acceptance.
+Exit criteria met: TASK-140 evidence and backlog exist and TASK-141–149 are complete.
+TASK-017 remains separately blocked until a human performs physical-phone acceptance.
 
 ## Phase 41 — Employee Access, Enterprise Demo & Customer Onboarding ✅
 

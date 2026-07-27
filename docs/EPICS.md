@@ -2116,7 +2116,7 @@ statutory documents retain their own source/locale rules.
       routes in five languages and verify representative desktop/phone interactions,
       offline cache and zero overflow/runtime errors.
 
-## EPIC-058 — End-User ERP Quality Audit & Remediation (In progress)
+## EPIC-058 — End-User ERP Quality Audit & Remediation ✅
 
 Exercise the product as real users across the isolated Demo and production API paths,
 then turn every evidence-backed defect, ERP capability gap and material usability
@@ -2145,12 +2145,14 @@ does not repair product code or reinterpret a blocked physical-device check as p
 - [x] **TASK-147 — Guard PostgreSQL demo proof against seeded databases.** A read-only
       preflight rejects every non-empty target before migration or seed; empty-database
       parity/concurrency, deterministic second-run refusal and unchanged-UAT proofs pass.
-- [ ] **TASK-148 — Deduplicate expected My Work identity conflicts.**
+- [x] **TASK-148 — Deduplicate expected My Work identity conflicts.** All five routes
+      preflight context once, stop before downstream reads for an unlinked account and
+      retain their localized empty state without duplicate resource errors.
 - [x] **TASK-149 — Name icon-only user administration controls.** Localized action-and-user
       names are available to keyboards and assistive technology.
 
-Audit evidence: `docs/audits/END_USER_AUDIT_2026-07-27.md`. No product fix is part
-of TASK-140; TASK-141–149 are independently testable remediation work.
+Audit evidence: `docs/audits/END_USER_AUDIT_2026-07-27.md`. TASK-140 remained an
+audit-only delivery; TASK-141–149 are now independently verified remediation work.
 
 ## EPIC-059 — Employee Access, Enterprise Demo & Customer Onboarding ✅
 
