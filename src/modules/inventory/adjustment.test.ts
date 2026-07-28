@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { DB } from '../../data/db';
 import {
   account,
+  accountingPeriod,
   glEntry,
   inventoryAdjustment,
   product,
@@ -14,6 +15,7 @@ import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import {
   createInventoryAdjustment,
   InventorySnapshotConflictError,
+  InventoryAdjustmentValidationError,
   InvalidInventoryAdjustmentStateError,
   postInventoryAdjustment,
 } from './adjustment';
@@ -44,6 +46,10 @@ async function fixture(db: DB) {
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '1400', name: 'Inventory', type: 'asset' },
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '5800', name: 'Inventory Variance', type: 'expense' },
   ]);
+  await db.insert(accountingPeriod).values({
+    masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, fiscalYear: 2026, periodNo: 7,
+    label: 'July 2026', startDate: '2026-07-01', endDate: '2026-07-31', status: 'open',
+  });
   return { productId: item.id, warehouseId: location.id };
 }
 
@@ -121,5 +127,40 @@ describe('inventory adjustment', () => {
       .rejects.toThrow(InvalidInventoryAdjustmentStateError);
     expect(await getStockQty(db, SCOPE, fx.productId, fx.warehouseId)).toBe(11);
     expect(await db.select().from(stockMovement)).toHaveLength(1);
+  });
+
+  it('rejects a negative physical count before creating a draft', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await expect(createInventoryAdjustment(db, SCOPE, {
+      docNo: 'ADJ-NEGATIVE', warehouseId: fx.warehouseId,
+      adjustmentDate: '2026-07-18', reason: 'Cycle count',
+      lines: [{ productId: fx.productId, countedQty: '-1' }],
+    })).rejects.toThrow(InventoryAdjustmentValidationError);
+    expect(await db.select().from(inventoryAdjustment)).toHaveLength(0);
+    expect(await db.select().from(stockMovement)).toHaveLength(0);
+    expect(await db.select().from(glEntry)).toHaveLength(0);
+  });
+
+  it('leaves a draft retryable when its accounting period is locked', async () => {
+    const db = await freshDb();
+    const fx = await fixture(db);
+    await db.insert(accountingPeriod).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, fiscalYear: 2026, periodNo: 6,
+      label: 'June 2026', startDate: '2026-06-01', endDate: '2026-06-30', status: 'locked',
+    });
+    const draft = await createInventoryAdjustment(db, SCOPE, {
+      docNo: 'ADJ-LOCKED', warehouseId: fx.warehouseId,
+      adjustmentDate: '2026-06-30', reason: 'Cycle count',
+      lines: [{ productId: fx.productId, countedQty: '8' }],
+    });
+    await expect(postInventoryAdjustment(db, SCOPE, draft.id))
+      .rejects.toThrow('Accounting period June 2026 is locked.');
+    expect(await getStockQty(db, SCOPE, fx.productId, fx.warehouseId)).toBe(10);
+    expect(await db.select().from(stockMovement)).toHaveLength(0);
+    expect(await db.select().from(glEntry)).toHaveLength(0);
+    const [header] = await db.select({ status: inventoryAdjustment.status })
+      .from(inventoryAdjustment).where(eq(inventoryAdjustment.id, draft.id));
+    expect(header.status).toBe('draft');
   });
 });

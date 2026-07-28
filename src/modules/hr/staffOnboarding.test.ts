@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { hashPassword } from '../../auth/password';
 import { cloneRoleTemplate } from '../../auth/adminLifecycle';
 import {
-  appUser, employee, leaveBalanceEntry, leaveType, userCompany,
+  appUser, employee, leaveBalanceEntry, leaveType, role, userCompany,
 } from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
@@ -47,6 +47,9 @@ describe('atomic staff onboarding', () => {
       db, session, draft.id, draft.version, hashPassword('temporary-pass'), 'activate',
     );
     expect(activated).toMatchObject({ username: 'new.staff', passwordChangeRequired: true });
+    const [employeeRole] = await db.select({ id: role.roleId }).from(role)
+      .where(eq(role.name, 'Employee'));
+    expect(activated.roleIds).toContain(employeeRole.id);
     expect(await db.select().from(employee).where(eq(employee.employeeNo, 'EMP-NEW-1'))).toHaveLength(1);
     expect(await db.select().from(userCompany).where(eq(userCompany.userId, activated.userId))).toHaveLength(1);
     const [created] = await db.select().from(appUser).where(eq(appUser.userId, activated.userId));

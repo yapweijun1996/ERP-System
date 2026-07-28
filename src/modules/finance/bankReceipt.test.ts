@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import type { DB } from '../../data/db';
-import { account, customer, glEntry, project, taxRule } from '../../data/schema';
+import {
+  account, accountingPeriod, bankReceipt, customer, glEntry, project, taxRule,
+} from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createProgressClaim, postProgressClaim } from '../project/progressClaim';
 import { createBankReceipt, BankReceiptError } from './bankReceipt';
@@ -25,6 +27,10 @@ async function fixture(db: DB) {
   await db.insert(taxRule).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, taxRegime: 'GST', taxCode: 'SR',
     rate: '9', validFrom: '2024-01-01',
+  });
+  await db.insert(accountingPeriod).values({
+    masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, fiscalYear: 2026, periodNo: 2,
+    label: 'February 2026', startDate: '2026-02-01', endDate: '2026-02-28', status: 'open',
   });
   return proj;
 }
@@ -83,5 +89,23 @@ describe('bank receipt', () => {
     await expect(createBankReceipt(db, SCOPE, {
       docNo: 'BR-MISMATCH', progressClaimId: claim.claimId, receivedDate: '2026-02-05', amount: '50',
     })).rejects.toThrow(BankReceiptError);
+  });
+
+  it('rejects a locked receipt period without creating cash or AR entries', async () => {
+    const db = await freshDb();
+    const proj = await fixture(db);
+    const claim = await postedClaim(db, proj);
+    await db.insert(accountingPeriod).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, fiscalYear: 2026, periodNo: 5,
+      label: 'May 2026', startDate: '2026-05-01', endDate: '2026-05-31', status: 'locked',
+    });
+    await expect(createBankReceipt(db, SCOPE, {
+      docNo: 'BR-LOCKED', progressClaimId: claim.claimId,
+      receivedDate: '2026-05-31', amount: claim.totalAmount,
+    })).rejects.toThrow('Accounting period May 2026 is locked.');
+    expect(await db.select().from(bankReceipt).where(eq(bankReceipt.docNo, 'BR-LOCKED')))
+      .toHaveLength(0);
+    expect(await db.select().from(glEntry).where(eq(glEntry.journalRef, 'BR-LOCKED')))
+      .toHaveLength(0);
   });
 });

@@ -48,7 +48,7 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
       PERMISSIONS.settingsManage, PERMISSIONS.companySwitch,
       PERMISSIONS.hrRead, PERMISSIONS.hrWrite,
     ],
-    scopes: companyScopes('admin/*'),
+    scopes: companyScopes('admin/*', 'hr/*'),
   },
   {
     key: 'manager', name: 'Manager',

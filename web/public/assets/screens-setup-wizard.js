@@ -88,6 +88,8 @@ function renderSetupWizard(){
       errAdminEmail:'Enter a valid email address to continue.',
       errAdminPassword:'Password must be at least 8 characters.',
       errAdminPasswordMismatch:'Passwords do not match.',
+      errAdminUsernameTaken:'This username is already assigned to a different email address.',
+      errAdminEmailTaken:'This email address is already assigned to a different username.',
       finished:'Setup complete — reloading.',
     },
     ms:{
@@ -119,6 +121,8 @@ function renderSetupWizard(){
       errAdminEmail:'Masukkan alamat e-mel yang sah untuk teruskan.',
       errAdminPassword:'Kata laluan mestilah sekurang-kurangnya 8 aksara.',
       errAdminPasswordMismatch:'Kata laluan tidak sepadan.',
+      errAdminUsernameTaken:'Nama pengguna ini telah dipadankan dengan alamat e-mel lain.',
+      errAdminEmailTaken:'Alamat e-mel ini telah dipadankan dengan nama pengguna lain.',
       finished:'Persediaan selesai — memuat semula.',
     },
     zh:{
@@ -150,6 +154,8 @@ function renderSetupWizard(){
       errAdminEmail:'请输入有效的电子邮箱地址以继续。',
       errAdminPassword:'密码至少需要 8 个字符。',
       errAdminPasswordMismatch:'两次输入的密码不一致。',
+      errAdminUsernameTaken:'此用户名已关联其他电子邮箱。',
+      errAdminEmailTaken:'此电子邮箱已关联其他用户名。',
       finished:'设置完成 — 正在重新加载。',
     },
 
@@ -218,6 +224,8 @@ function renderSetupWizard(){
       "errAdminEmail": "続行するには、有効な電子メール アドレスを入力してください。",
       "errAdminPassword": "パスワードは 8 文字以上である必要があります。",
       "errAdminPasswordMismatch": "パスワードが一致しません。",
+      "errAdminUsernameTaken": "このユーザー名は別のメールアドレスに割り当てられています。",
+      "errAdminEmailTaken": "このメールアドレスは別のユーザー名に割り当てられています。",
       "finished": "セットアップが完了しました — リロード中です。"
     },
     "vi":{
@@ -285,6 +293,8 @@ function renderSetupWizard(){
       "errAdminEmail": "Nhập địa chỉ email hợp lệ để tiếp tục.",
       "errAdminPassword": "Mật khẩu phải có ít nhất 8 ký tự.",
       "errAdminPasswordMismatch": "Mật khẩu không khớp.",
+      "errAdminUsernameTaken": "Tên người dùng này đã được gán cho một địa chỉ email khác.",
+      "errAdminEmailTaken": "Địa chỉ email này đã được gán cho một tên người dùng khác.",
       "finished": "Thiết lập hoàn tất - đang tải lại."
     },};
 
@@ -455,9 +465,10 @@ function renderSetupWizard(){
       var errEl=document.getElementById('wizErr');
       if(err){ if(errEl) errEl.textContent=err; return; }
       if(S.step===1 && !S.adminUsername){
-        S.adminUsername=IS_API
-          ? 'admin'
-          : ('admin.'+S.organizationCode.trim().toLowerCase()).slice(0,64);
+        // The deterministic Demo pack owns the canonical admin identity. Using
+        // the same default here lets first-run setup securely replace the
+        // seeded credentials instead of creating a conflicting second login.
+        S.adminUsername='admin';
       }
       S.step++; S.reached=Math.max(S.reached,S.step); render();
     });
@@ -477,8 +488,27 @@ function renderSetupWizard(){
         if(typeof toast==='function') toast(s('finished'),'ok');
         setTimeout(function(){ location.reload(); }, 350);
       }).catch(function(e){
-        finish.removeAttribute('disabled');
         var msg=(e&&e.message)?e.message:String(e);
+        var identityError='';
+        var focusId='';
+        if(/^Username /.test(msg)){
+          identityError=s('errAdminUsernameTaken');
+          focusId='wizAdminUsername';
+        }else if(/^Email /.test(msg)){
+          identityError=s('errAdminEmailTaken');
+          focusId='wizAdminEmail';
+        }
+        if(identityError){
+          S.step=3;
+          S.reached=Math.max(S.reached,S.step);
+          render();
+          var errEl=document.getElementById('wizErr');
+          if(errEl) errEl.textContent=identityError;
+          var field=document.getElementById(focusId);
+          if(field){ field.focus(); field.select(); }
+          return;
+        }
+        finish.removeAttribute('disabled');
         if(typeof toast==='function') toast(msg,'danger');
       });
     });

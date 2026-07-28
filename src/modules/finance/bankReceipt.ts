@@ -8,6 +8,7 @@ import Decimal from 'decimal.js';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { account, bankReceipt, glEntry, progressClaim } from '../../data/schema';
+import { assertOpenAccountingPeriod } from './postingPeriod';
 
 export class BankReceiptError extends Error {
   constructor(message: string) {
@@ -57,6 +58,9 @@ export async function createBankReceiptWithin(exec: DB, scope: Scope, input: Cre
   if (!amount.isFinite() || amount.lte(0)) {
     throw new BankReceiptError('amount must be greater than zero.');
   }
+  await assertOpenAccountingPeriod(
+    exec, scope, input.receivedDate, (message) => new BankReceiptError(message),
+  );
 
   const [claim] = await exec.select({
     id: progressClaim.id,

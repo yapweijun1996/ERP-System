@@ -218,6 +218,25 @@ export async function completeDemoSetupWithin(
       passwordHash: input.adminPasswordHash,
       language,
     }).returning({ userId: appUser.userId });
+  } else {
+    // The deterministic Demo pack already contains the canonical `admin`
+    // identity. When first-run setup supplies that exact username/email pair,
+    // honour the administrator details and password the user just entered
+    // instead of silently retaining the seeded credentials.
+    await exec.update(appUser).set({
+      fullName: adminName,
+      passwordHash: input.adminPasswordHash,
+      language,
+      isActive: true,
+      accountState: 'active',
+      passwordChangeRequired: false,
+      initialPasswordExpiresAt: null,
+      offboardedAt: null,
+      updatedAt: sql`now()`,
+    }).where(and(
+      eq(appUser.masterFn, masterFn),
+      eq(appUser.userId, admin.userId),
+    ));
   }
   await exec.insert(userCompany).values({
     userId: admin.userId,

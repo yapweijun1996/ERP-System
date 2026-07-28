@@ -376,6 +376,7 @@ import {
   createStaffOnboardingDraftWithin,
   type StaffOnboardingDraftInput,
 } from '../../src/modules/hr/staffOnboarding';
+import { completeEmployeeActivation } from '../../src/modules/hr/employeeAccount';
 import type { SessionData } from '../../src/auth/session';
 import ExcelJS from 'exceljs';
 import {
@@ -964,6 +965,13 @@ export const erpDemoRuntime = Object.freeze({
       return activateStaffOnboardingWithin(
         asDomainDb(db), demoSession(scope, actorUserId), draftId,
         expectedVersion, passwordHash, 'demo',
+      );
+    },
+    completeEmployeeActivation(
+      db: DemoOrm, userId: number, email: string, passwordHash: string,
+    ) {
+      return completeEmployeeActivation(
+        asDomainDb(db), userId, email, passwordHash, 'demo-activation',
       );
     },
     createProductWithin(db: DemoOrm, scope: Scope, input: CreateProductInput) {

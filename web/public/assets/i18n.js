@@ -77,7 +77,10 @@ function loadLocale(code){
   if(!I18N_CODES.has(code)) return Promise.reject(new Error(`Unsupported language: ${code}`));
   if(I18N[code]) return Promise.resolve(I18N[code]);
   if(I18N_LOADING.has(code)) return I18N_LOADING.get(code);
-  const request=fetch(new URL(`${code}.json`,I18N_PACK_BASE),{headers:{accept:'application/json'}})
+  const localeUrl=new URL(`${code}.json`,I18N_PACK_BASE);
+  const localeVersion=new URL(I18N_SCRIPT_URL).searchParams.get('v');
+  if(localeVersion) localeUrl.searchParams.set('v',localeVersion);
+  const request=fetch(localeUrl,{headers:{accept:'application/json'}})
     .then(response=>{
       if(!response.ok) throw new Error(`Locale ${code} failed with HTTP ${response.status}`);
       return response.json();
@@ -125,7 +128,11 @@ function i18nResolve(key,fallback,params){
 
 function t(key,params){ return i18nResolve(key,null,params); }
 function tf(key,fallback,params){ return i18nResolve(key,fallback,params); }
-function ts(value,params){ return tf(`st.${value}`,value,params); }
+function ts(value,params){
+  const normalized=String(value==null?'':value).trim();
+  if(!normalized||normalized==='—') return normalized||'—';
+  return tf(`st.${normalized}`,normalized,params);
+}
 
 function i18nDateOnly(value){
   if(typeof value!=='string'||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return null;

@@ -189,7 +189,15 @@
   SCREENS['sales-return']=async function(root){
     const s=copy(),data=await load(),id=Number(window.ACTIVE_SALES_RETURN_ID)||Number(data.returns[0]?.id);
     const row=data.returns.find(item=>Number(item.id)===id)||data.returns[0];
-    if(!row){root.innerHTML=`<div class="content full"><section class="master"><div class="statepanel empty"><h3>${esc(s('empty'))}</h3></div></section></div>`;return;}
+    const crumb=[DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:s('returns'),route:'sales-returns'}];
+    if(!row){
+      caseDetailPage(root,{
+        module:'sales',route:'sales-return',active:'sales-returns',title:s('returnDoc'),
+        description:s('help'),crumb,
+        empty:{icon:'refresh',title:s('empty'),description:s('help')},
+      });
+      return;
+    }
     window.ACTIVE_SALES_RETURN_ID=Number(row.id);
     const deliveries=byId(data.deliveries),invoices=byId(data.invoices),products=byId(data.products),warehouses=byId(data.warehouses);
     const delivery=deliveries.get(Number(row.deliveryId))||{},inv=invoices.get(Number(row.invoiceId))||{},cust=customerFor(data,delivery);
@@ -197,13 +205,32 @@
     const rows=lines.map((line,index)=>`<tr><td class="lineno">${index+1}</td><td class="l li-name"><b>${esc((products.get(Number(line.productId))||{}).name||'#'+line.productId)}</b></td>
       <td class="tnum">${num(Number(line.qty))}</td><td class="tnum">${esc(money(line.unitPrice,inv.currency))}</td>
       <td class="tnum">${esc(money(line.netAmount,inv.currency))}</td><td class="tnum">${esc(money(line.taxAmount,inv.currency))}</td></tr>`).join('');
-    root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:s('returns'),route:'sales-returns'},{cur:row.docNo}])}${salesNav('sales-returns')}</div>
-      <div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('refresh')}${esc(s('returnDoc'))} <span class="dnum">${esc(row.docNo)}</span></div>
-      <div class="h1sub">${esc(cust.name||'—')} · ${esc(row.reason)}</div></div>${cap(s(row.status),tone(row.status))}</div>
-      <div class="docmeta"><div class="dm"><small>${esc(s('against'))}</small><b>${esc(inv.docNo||'—')}</b></div><div class="dm"><small>${esc(s('delivery'))}</small><b>${esc(delivery.docNo||'—')}</b></div>
-      <div class="dm"><small>${esc(s('warehouse'))}</small><b>${esc((warehouses.get(Number(row.warehouseId))||{}).name||'—')}</b></div><div class="dm"><small>${esc(s('date'))}</small><b>${esc(dateValue(row.returnDate))}</b></div></div></div>
-      <div class="panel"><div class="panel-h"><h3>${esc(s('items'))}</h3></div><table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('product'))}</th><th>${esc(s('qty'))}</th><th>${esc(s('unitPrice'))}</th><th>${esc(s('net'))}</th><th>${esc(s('tax'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
-      </div></div>${row.status==='requested'?`<div class="set-savebar"><div class="grow"></div>${btn(s('reject'),{icon:'x',cls:'soft',attrs:'data-return-action="reject"'})}${btn(s('receiveCredit'),{icon:'coins',cls:'primary',attrs:'data-return-action="receive-and-credit"'})}</div>`:''}</section></div>`;
+    const netTotal=lines.reduce((sum,line)=>sum+Number(line.netAmount||0),0);
+    const taxTotal=lines.reduce((sum,line)=>sum+Number(line.taxAmount||0),0);
+    const lifecycleSteps=row.status==='rejected'
+      ?[{key:'requested',label:s('requested')},{key:'rejected',label:s('rejected')}]
+      :[{key:'requested',label:s('requested')},{key:'credited',label:s('credited')}];
+    const actions=row.status==='requested'
+      ?btn(s('reject'),{icon:'x',cls:'danger',attrs:'data-return-action="reject"'})
+        +btn(s('receiveCredit'),{icon:'coins',cls:'primary',attrs:'data-return-action="receive-and-credit"'})
+      :'';
+    caseDetailPage(root,{
+      module:'sales',route:'sales-return',active:'sales-returns',title:s('returnDoc'),
+      description:s('help'),crumb:[...crumb,{cur:row.docNo}],
+      identity:{title:cust.name||'—',code:row.docNo,meta:row.reason},
+      statuses:[{label:s(row.status),tone:tone(row.status)}],
+      lifecycle:{label:s('status'),current:row.status,steps:lifecycleSteps},
+      facts:[
+        {label:s('against'),value:inv.docNo||'—'},
+        {label:s('delivery'),value:delivery.docNo||'—'},
+        {label:s('warehouse'),value:(warehouses.get(Number(row.warehouseId))||{}).name||'—'},
+        {label:s('date'),value:dateValue(row.returnDate)},
+      ],
+      main:`<div class="panel"><div class="panel-h"><h3>${esc(s('items'))}</h3></div>
+        <div class="tablewrap" tabindex="0" role="region" aria-label="${esc(s('items'))}"><table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(s('product'))}</th><th>${esc(s('qty'))}</th><th>${esc(s('unitPrice'))}</th><th>${esc(s('net'))}</th><th>${esc(s('tax'))}</th></tr></thead><tbody>${rows}</tbody></table></div></div>`,
+      context:{title:s('total'),body:`<div class="sumcard"><div class="sumrow"><span class="sk2">${esc(s('net'))}</span><span class="sv tnum">${esc(money(netTotal,inv.currency))}</span></div><div class="sumrow"><span class="sk2">${esc(s('tax'))}</span><span class="sv tnum">${esc(money(taxTotal,inv.currency))}</span></div><div class="sumrow total"><span class="sk2">${esc(s('total'))}</span><span class="sv tnum">${esc(money(netTotal+taxTotal,inv.currency))}</span></div></div><div class="callout info">${ic('info')}<span>${esc(s('help'))}</span></div>`},
+      actions,
+    });
     root.querySelectorAll('[data-return-action]').forEach(button=>button.addEventListener('click',async()=>{
       const action=button.dataset.returnAction;root.querySelectorAll('[data-return-action]').forEach(node=>node.disabled=true);
       try{
@@ -239,13 +266,13 @@
   SCREENS['credit-note']=async function(root){
     const s=copy(),data=await load(),id=Number(window.ACTIVE_SALES_CREDIT_ID)||Number(data.credits[0]?.id);
     const credit=data.credits.find(row=>Number(row.id)===id)||data.credits[0];
-    if(!credit){root.innerHTML=`<div class="content full"><section class="master"><div class="statepanel empty"><h3>${esc(s('emptyCredit'))}</h3></div></section></div>`;return;}
+    if(!credit){root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead"><div class="h1row"><h1>${esc(s('creditNotes'))}</h1></div><div class="h1sub">${esc(s('creditHelp'))}</div></div><div class="statepanel empty"><h3>${esc(s('emptyCredit'))}</h3></div></section></div>`;return;}
     const inv=byId(data.invoices).get(Number(credit.invoiceId))||{},ret=byId(data.returns).get(Number(credit.returnId))||{};
     const creditLines=data.creditLines.filter(line=>Number(line.creditNoteId)===Number(credit.id)),products=byId(data.products);
     const rows=creditLines.map((line,index)=>`<tr><td class="lineno">${index+1}</td><td class="l">${esc((products.get(Number(line.productId))||{}).name||'#'+line.productId)}</td>
       <td class="tnum">${num(Number(line.qty))}</td><td class="tnum">${esc(money(line.netAmount,credit.currency))}</td><td class="tnum">${esc(money(line.taxAmount,credit.currency))}</td></tr>`).join('');
     root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:s('creditNotes'),route:'credit-notes'},{cur:credit.docNo}])}${salesNav('credit-notes')}</div>
-      <div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('coins')}${esc(s('creditNote'))} <span class="dnum">${esc(credit.docNo)}</span></div>
+      <div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><h1 class="dt">${ic('coins')}${esc(s('creditNote'))} <span class="dnum">${esc(credit.docNo)}</span></h1>
       <div class="h1sub">${esc(s('against'))} ${esc(inv.docNo||'—')} · ${esc(ret.docNo||'—')}</div></div>${cap(s(credit.status),tone(credit.status))}</div>
       <div class="docmeta"><div class="dm"><small>${esc(s('date'))}</small><b>${esc(dateValue(credit.noteDate))}</b></div><div class="dm"><small>${esc(s('net'))}</small><b>${esc(money(credit.netAmount,credit.currency))}</b></div>
       <div class="dm"><small>${esc(s('tax'))}</small><b>${esc(money(credit.taxAmount,credit.currency))}</b></div><div class="dm"><small>${esc(s('total'))}</small><b>${esc(money(credit.totalAmount,credit.currency))}</b></div></div></div>

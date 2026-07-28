@@ -2174,3 +2174,21 @@ Completed 2026-07-27. Phase 41 passed every TASK-150–157 acceptance gate with 
 tests plus one expected skip, forced-RLS PostgreSQL proof, 122 routes × five languages ×
 desktop/375px, cross-browser critical workflows and the Chrome performance budget.
 Physical-phone verification remains blocked under TASK-017.
+
+## EPIC-060 — Interactive End-User Product Walkthrough & Remediation ✅
+
+Exercise the real application control by control rather than inferring usability from
+route rendering. Confirmed UI/UX, localization, functional and ERP business-logic
+problems are fixed in the same audit and retested before closure.
+
+- [x] **TASK-158 — Complete the interactive walkthrough and remediate every confirmed
+      issue.** Traverse the full sidebar, module tabs, menus and primary actions; verify
+      12 personas, SG/MY boundaries, five languages and desktop/375px, then run the
+      complete release gates. Evidence is maintained in
+      `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
+
+Completed 2026-07-28 with IUA-001–067 fixed and retested, followed by the 2026-07-29
+IUA-068 PWA lifecycle repair and dedicated worker audit. Twelve permission personas,
+SG/MY write and denial paths, 40 transaction-list drill-downs, 29 detail-page
+contracts, 531 tests plus one expected skip and the 124-route five-language/two-
+viewport release matrix. TASK-017 remains separately blocked for a physical phone.

@@ -7,7 +7,7 @@
    the Stock Movement / Stock on Hand screens.
    ============================================================ */
 SCREENS['new-stock-adjustment'] = async function(root){
-  const TODAY=new Date().toISOString().slice(0,10);
+  const TODAY=typeof workingPeriodEndDate==='function'?workingPeriodEndDate():new Date().toISOString().slice(0,10);
   const adapter=window.ErpSystemData;
   if(!adapter) throw new Error('ERP data adapter is unavailable.');
   const [warehousePage,productPage,stockPage]=await Promise.all([
@@ -40,7 +40,7 @@ SCREENS['new-stock-adjustment'] = async function(root){
   function totals(){
     let upQty=0,downQty=0,value=0,lines=0;
     S.lines.forEach(l=>{ const v=l.counted-l.sys; if(v>0)upQty+=v; else downQty+=-v; value+=v*l.cost; if(v!==0)lines++; });
-    return {upQty,downQty,value,lines,net:upQty-downQty};
+    return {upQty,downQty,value,lines,net:upQty-downQty,valid:S.lines.every(l=>!l.invalid)};
   }
 
   /* ---------------- lines ---------------- */
@@ -61,6 +61,8 @@ SCREENS['new-stock-adjustment'] = async function(root){
   }
   function totalsCard(){
     const t=totals();
+    if(!t.valid) return `<div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:6px">Adjustment impact</div>
+      ${indicator({tone:'danger',icon:'warn',label:'Invalid counted quantity',value:'Fix input',sub:'Counted quantity must be zero or greater.'})}`;
     const tone=t.value>0?'ok':t.value<0?'danger':'neutral';
     const label=t.value>0?'Inventory increase':t.value<0?'Inventory decrease':'No net change';
     return `<div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:6px">Adjustment impact</div>
@@ -75,7 +77,8 @@ SCREENS['new-stock-adjustment'] = async function(root){
     $$('#wLines tr[data-i]').forEach(tr=>{
       const i=+tr.dataset.i, l=S.lines[i];
       const c=tr.querySelector('.wCount');
-      c.addEventListener('input',()=>{ l.counted=Math.max(0,+c.value||0);
+      c.addEventListener('input',()=>{ const parsed=Number(c.value); l.invalid=!Number.isFinite(parsed)||parsed<0; l.counted=Number.isFinite(parsed)?parsed:0;
+        c.setCustomValidity(l.invalid?'Counted quantity must be zero or greater.':''); c.setAttribute('aria-invalid',l.invalid?'true':'false');
         const v=l.counted-l.sys, val=v*l.cost, vcol=v>0?'var(--ok)':v<0?'var(--danger)':'var(--muted)';
         const cells=tr.querySelectorAll('td');
         cells[4].style.color=vcol; cells[4].textContent=(v>0?'+':'')+num(v);
@@ -87,13 +90,13 @@ SCREENS['new-stock-adjustment'] = async function(root){
 
   /* ---------------- bar ---------------- */
   function bar(){
-    const t=totals();
-    const ok=t.lines>0;
-    const hint=ok?`${t.lines} line(s) changed · ${t.value===0?money0(0):sd0(t.value)} impact`:'Count at least one item to post an adjustment';
+    const total=totals();
+    const ok=total.valid&&total.lines>0;
+    const hint=!total.valid?'Fix invalid counted quantities before posting':ok?`${total.lines} line(s) changed · ${total.value===0?money0(0):sd0(total.value)} impact`:'Count at least one item to post an adjustment';
     return `<div style="font-size:12.5px;color:var(--muted)" class="hideonsmall">${hint}</div>
       <div class="grow"></div>
       ${btn('Cancel',{cls:'soft',attrs:'id="wCancel"'})}
-      ${btn('Post adjustment',{icon:'check',cls:'primary',sm:false,attrs:`id="wPost" ${ok?'':'disabled style="opacity:.5;pointer-events:none"'}`})}`;
+      ${btn(t('quickCreate.postAdjustment'),{icon:'check',cls:'primary',sm:false,attrs:`id="wPost" ${ok?'':'disabled style="opacity:.5;pointer-events:none"'}`})}`;
   }
   function updateBar(){ const b=$('#wBar'); if(b){ b.innerHTML=bar(); wireBar(); } }
 
@@ -104,7 +107,7 @@ SCREENS['new-stock-adjustment'] = async function(root){
         ${crumbs([DB.company.name,'Inventory','Stock Adjustment',{cur:'New'}])}
         <div class="dochead">
           <div class="dh-row1">
-            <div><div class="dt">${ic('adjust')}New Stock Adjustment</div>
+            <div><h1 class="dt">${ic('adjust')}New Stock Adjustment</h1>
               <div style="color:var(--muted);font-size:13px;margin-top:4px">Draft · inventory count &amp; correction · ${esc(DB.company.name)}</div></div>
             <div class="dactions">${cap('Draft','neutral')}</div>
           </div>
@@ -114,9 +117,9 @@ SCREENS['new-stock-adjustment'] = async function(root){
           <div class="panel-h">${ic('receipt')}<h3>Adjustment details</h3></div>
           <div class="panel-body">
             <div class="fldrow c3">
-              <div class="fld"><span>Warehouse</span><select id="wWh">${WH.map(w=>`<option value="${w.id}" ${w.id===S.warehouseId?'selected':''}>${esc(w.code)} · ${esc(w.name)}</option>`).join('')}</select></div>
+              <div class="fld"><span>${esc(t('quickCreate.warehouse'))}</span><select id="wWh">${WH.map(w=>`<option value="${w.id}" ${w.id===S.warehouseId?'selected':''}>${esc(w.code)} · ${esc(w.name)}</option>`).join('')}</select></div>
               <div class="fld"><span>Adjustment date</span><input type="date" id="wDate" value="${S.date}"></div>
-              <div class="fld"><span>Reason</span><select id="wReason">${REASONS.map(r=>`<option ${r===S.reason?'selected':''}>${r}</option>`).join('')}</select></div>
+              <div class="fld"><span>${esc(t('quickCreate.reason'))}</span><select id="wReason">${REASONS.map(r=>`<option ${r===S.reason?'selected':''}>${r}</option>`).join('')}</select></div>
             </div>
             <div class="fld" style="margin-top:12px"><span>Reference / note</span><input id="wRef" value="${esc(S.reference)}" placeholder="e.g. Q2 cycle count — aisle A"></div>
           </div>
@@ -127,6 +130,7 @@ SCREENS['new-stock-adjustment'] = async function(root){
           <div class="panel-body">
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
               <div class="fld" style="flex:1;min-width:260px"><span>Item</span>
+                <input type="search" id="wPickSearch" class="select-filter" autocomplete="off" placeholder="${esc(t('quickCreate.searchItems'))}" aria-label="${esc(t('quickCreate.searchItems'))}">
                 <select id="wPick">${ITEMS.map(it=>`<option value="${it.sku}">${esc(it.sku)} · ${esc(it.name)} — here ${num(systemQty(it.id,S.warehouseId))} ${esc(it.uom)}</option>`).join('')}</select></div>
               ${btn('Add to count',{icon:'plus',cls:'primary',attrs:'id="wAdd"'})}
             </div>
@@ -158,11 +162,12 @@ SCREENS['new-stock-adjustment'] = async function(root){
       refreshLines();
     });
     b('wDate','date'); b('wReason','reason'); b('wRef','reference','input');
+    bindSelectFilter($('#wPickSearch'),$('#wPick'),t('quickCreate.noMatches'));
     $('#wAdd').addEventListener('click',()=>{
       const sku=$('#wPick').value, it=ITEMS.find(x=>x.sku===sku); if(!it) return;
       if(S.lines.find(l=>l.sku===sku)){ toast('Item already on the count sheet','info'); return; }
       const here=systemQty(it.id,S.warehouseId);
-      S.lines.push({productId:it.id,sku:it.sku,name:it.name,uom:it.uom,sys:here,counted:here,cost:it.cost});
+      S.lines.push({productId:it.id,sku:it.sku,name:it.name,uom:it.uom,sys:here,counted:here,cost:it.cost,invalid:false});
       $('#wCount2').textContent=`${S.lines.length} item${S.lines.length===1?'':'s'}`;
       refreshLines();
     });
@@ -171,6 +176,13 @@ SCREENS['new-stock-adjustment'] = async function(root){
     const cancel=$('#wCancel'); cancel&&cancel.addEventListener('click',()=>navigate('stock-movement'));
     const post=$('#wPost'); post&&post.addEventListener('click',()=>{
       const t=totals();
+      if(!t.valid){ toast('Counted quantity must be zero or greater.','danger'); return; }
+      const periodStart=typeof workingPeriodStartDate==='function'?workingPeriodStartDate():S.date;
+      const periodEnd=typeof workingPeriodEndDate==='function'?workingPeriodEndDate():S.date;
+      if(S.date<periodStart||S.date>periodEnd){
+        toast(`Adjustment date must be within the selected open period (${periodStart} to ${periodEnd}).`,'danger');
+        return;
+      }
       appModal({
         icon: 'adjust',
         title: 'Post stock adjustment?',

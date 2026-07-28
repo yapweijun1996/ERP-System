@@ -39,6 +39,8 @@ function isDemoSignedIn(){
   return !!(s&&s.signedIn);
 }
 function setAuthShell(onLogin){
+  const bootLoading=$('#bootLoadingView');
+  if(bootLoading) bootLoading.remove();
   document.body.classList.toggle('auth-locked',!!onLogin);
   const app=$('#app'), tabs=$('#tabbar');
   if(app) app.setAttribute('aria-hidden',onLogin?'true':'false');
@@ -98,6 +100,7 @@ function renderLogin(){
      mode's adapter always finishes loading real data before renderLogin() can
      be reached, so DB.company.name is trustworthy there. */
   const apiMode=typeof window.erpDataMode==='function' && window.erpDataMode()==='api';
+  const demoOneClickAvailable=!apiMode&&(!window.ErpSystemDemo||window.ErpSystemDemo.demoOneClickAvailable!==false);
   const companyLabel=(!apiMode && DB.company && DB.company.name) ? (esc(DB.company.name)+' · Static demo') : (apiMode?'Production':'Static demo');
   setAuthShell(true);
   closeAllPops();
@@ -127,15 +130,15 @@ function renderLogin(){
         ? `<div class="fld"><span>Organization code</span><input id="loginOrganizationCode" autocomplete="organization" placeholder="ACME"></div>
            <div class="fld"><span>Username</span><input id="loginUsername" autocomplete="username" placeholder="admin"></div>`
         : `<div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${esc(u.email)}"></div>`}
-      <div class="fld"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Any demo password'}"></div>
+      <div class="fld"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Account password'}"></div>
       <div class="auth-error" id="loginError" role="alert"></div>
       <button class="btn primary lg" type="submit">${ic('signout')}<span>Sign in</span></button>
-      ${apiMode?'':`<button class="btn soft lg" type="button" id="demoLoginBtn">${ic('user')}<span>Continue as ${esc(u.name)}</span></button>`}
+      ${demoOneClickAvailable?`<button class="btn soft lg" type="button" id="demoLoginBtn">${ic('user')}<span>Continue as ${esc(u.name)}</span></button>`:''}
     </form>
     <div class="auth-foot">
       ${apiMode
         ? `<span class="cap ok"><span class="dot"></span>Production</span><span>Real session — see docs/STATUS.md for current auth scope</span>`
-        : `<span class="cap ok"><span class="dot"></span>Demo only</span><span>No server auth or real credentials</span>`}
+        : `<span class="cap ok"><span class="dot"></span>Demo only</span><span>${demoOneClickAvailable?'One-click access is limited to showcase personas':'Staff credentials and first-login activation are enforced'}</span>`}
     </div>
   </section>`;
   const doLogin=(email)=>{
@@ -162,13 +165,20 @@ function renderLogin(){
       return;
     }
     if(!pass){
-      $('#loginError').textContent='Enter any demo password, or use Continue as demo user.';
+      $('#loginError').textContent=demoOneClickAvailable?'Enter the account password, or use the one-click Demo persona.':'Enter the staff account password.';
       $('#loginPassword').focus();
       return;
     }
     if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.login==='function'){
-      await window.ErpSystemDemo.login(email,pass);
-      location.reload();
+      const btnEl=$('#loginForm').querySelector('button[type="submit"]');
+      btnEl&&btnEl.setAttribute('disabled','');
+      try{
+        await window.ErpSystemDemo.login(email,pass);
+        location.reload();
+      }catch(err){
+        $('#loginError').textContent=(err&&err.message)||'Sign in failed.';
+        btnEl&&btnEl.removeAttribute('disabled');
+      }
       return;
     }
     doLogin(email);
@@ -265,7 +275,7 @@ async function signOutDemo(){
 
 function isModuleAdmin(){
   const role=String(DB.user&&DB.user.role||'').toLowerCase().replace(/\s+/g,'');
-  return role==='admin'||role==='superadmin'||role.includes('superadmin');
+  return userHasAnyPermission('*')||role==='admin'||role==='superadmin'||role.includes('superadmin');
 }
 function currentMasterFn(){
   return (DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.masterFn)
@@ -387,7 +397,17 @@ async function markAllNotificationsRead(){
 async function dismissAllNotifications(){
   await Promise.all((DB.notifications||[]).filter(n=>!n.dismissed).map(n=>dismissNotification(n.id)));
 }
-function routeModuleId(route){ return ROUTE_MODULE[route]; }
+function routeModuleId(route){
+  if(route==='settings') return 'settings';
+  if(route==='notifications'||route==='my-activity') return 'account';
+  return ROUTE_MODULE[route];
+}
+function userHasAnyPermission(required){
+  const keys=DB.user&&Array.isArray(DB.user.permissionKeys)?DB.user.permissionKeys:[];
+  if(keys.includes('*')) return true;
+  const wanted=Array.isArray(required)?required:[required];
+  return wanted.filter(Boolean).some(key=>keys.includes(key));
+}
 function canReadModule(mod){
   const hasPermissionPayload=DB.user&&Array.isArray(DB.user.permissionKeys);
   const keys=hasPermissionPayload?DB.user.permissionKeys:[];
@@ -395,29 +415,72 @@ function canReadModule(mod){
   if(!hasPermissionPayload) return true;
   const required={
     sales:['sales.read'],purchasing:['purchasing.read'],crm:['crm.read'],
-    inventory:['inventory.read'],warehouse:['inventory.read'],manufacturing:['manufacturing.read'],
+    inventory:['inventory.read'],warehouse:['warehouse.read'],manufacturing:['manufacturing.read'],
     quality:['quality.read'],finance:['finance.read'],hr:['hr.read'],project:['project.read'],
-    service:['service.read'],asset:['asset.read'],workflow:['admin.roles.read'],
+    service:['service.read'],asset:['asset.read'],workflow:[
+      'sales.approve','purchasing.approve','finance.approve','hr.approve','project.approve',
+      'employee.team.read','expenses.approve.manager','expenses.approve.finance',
+    ],
     bi:['reporting.read'],admin:['admin.users.read','admin.roles.read','admin.master.read'],
-    integration:['integration.read'],
+    integration:['integration.read'],settings:['settings.read'],
   }[mod];
   return !required||required.some(key=>keys.includes(key));
+}
+const ROUTE_ACTION_PERMISSION={
+  'new-sales-order':'sales.create','new-purchase-order':'purchasing.create',
+  'new-work-order':'manufacturing.create','new-journal-entry':'finance.create',
+  'new-payment-voucher':'finance.create','new-stock-adjustment':'inventory.create',
+  'new-item':'inventory.create','new-quotation':'sales.create','new-opportunity':'crm.create',
+  'new-employee':'hr.create',
+  'user-mgmt':'admin.users.read','role-permission':'admin.roles.read',
+  'audit-log':'admin.audit.read','master-control':'admin.master.read',
+  'sys-settings':'settings.read','module-activation-control':'admin.modules.manage',
+};
+function routeCapabilityAllowed(route){
+  const actionPermission=ROUTE_ACTION_PERMISSION[route];
+  if(actionPermission&&!userHasAnyPermission(actionPermission)) return false;
+  if(route==='team-calendar'||route==='my-approvals'){
+    return myWorkCapabilityEnabled({capability:'team'});
+  }
+  return true;
 }
 function routeAllowed(route){
   const mod=routeModuleId(route);
   if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
-  if(!mod||mod==='settings') return true;
+  if(!mod) return true;
   if(!canReadModule(mod)) return false;
+  if(!routeCapabilityAllowed(route)) return false;
   const st=moduleState(mod);
   return st.visible&&st.active;
+}
+function routeDeniedByPermission(route){
+  const mod=routeModuleId(route);
+  if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return true;
+  return Boolean(mod&&(!canReadModule(mod)||!routeCapabilityAllowed(route)));
 }
 function routeShownInCommands(route){
   const mod=routeModuleId(route);
   if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
-  if(!mod||mod==='settings') return true;
+  if(!mod) return true;
   if(!canReadModule(mod)) return false;
+  if(!routeCapabilityAllowed(route)) return false;
   const st=moduleState(mod);
   return st.visible&&st.active;
+}
+function approvalRouteForUser(row){
+  if(row&&row.route==='leave-approval'&&!userHasAnyPermission('hr.approve')
+      &&userHasAnyPermission(['employee.team.read','expenses.approve.manager'])){
+    return 'my-approvals';
+  }
+  return row&&row.route;
+}
+function approvalVisibleToUser(row){
+  const route=approvalRouteForUser(row);
+  const required=route==='so-approvals'?['sales.approve']
+    :route==='po-approvals'?['purchasing.approve']
+    :row&&row.route==='leave-approval'?['hr.approve','employee.team.read','expenses.approve.manager']
+    :[];
+  return required.length>0&&userHasAnyPermission(required)&&routeAllowed(route);
 }
 function moduleBlockedPanel(route){
   const mod=routeModuleId(route);
@@ -436,6 +499,19 @@ function moduleBlockedPanel(route){
     ${statePanel({icon:'lock',title:'Module is not available',body:'Ask an admin or superadmin to enable this module in Module Activation Control.',action})}
   </section></div>`;
 }
+function permissionBlockedPanel(){
+  const params=esc(JSON.stringify({company:DB.company.name}));
+  return `<div class="content full"><section class="master" data-access-denied="403">
+    <div class="pagehead">${crumbs([DB.company.name,t('access.routeCrumb')])}
+      <div class="h1row"><h1 data-i18n="access.routeTitle">${esc(t('access.routeTitle'))}</h1><span class="cap danger"><span class="dot"></span><span data-i18n="access.routeBadge">${esc(t('access.routeBadge'))}</span></span></div>
+      <div class="h1sub" data-i18n="access.routeHelp">${esc(t('access.routeHelp'))}</div>
+    </div>
+    <div class="statepanel"><div class="ic">${ic('lock')}</div>
+      <h3 data-i18n="access.routeDenied">${esc(t('access.routeDenied'))}</h3>
+      <p data-i18n="access.routeBody" data-i18n-params="${params}">${esc(t('access.routeBody',{company:DB.company.name}))}</p>
+    </div>
+  </section></div>`;
+}
 function ensureModuleActivationMenuItem(){
   const menu=$('#acctMenu'); if(!menu) return;
   const existing=menu.querySelector('[data-acct="module-control"]');
@@ -446,7 +522,7 @@ function ensureModuleActivationMenuItem(){
   const btnEl=document.createElement('button');
   btnEl.className='menu-item';
   btnEl.setAttribute('data-acct','module-control');
-  btnEl.innerHTML=`${ic('sliders')}<span>Module Activation Control</span><span class="meta">${ic('arrowR')}</span>`;
+  btnEl.innerHTML=`${ic('sliders')}<span>${esc(t('acct.moduleControl'))}</span><span class="meta">${ic('arrowR')}</span>`;
   firstSection.appendChild(btnEl);
 }
 
@@ -465,7 +541,7 @@ function ensureUserSwitcherMenuItem(){
   const btnEl=document.createElement('button');
   btnEl.className='menu-item';
   btnEl.setAttribute('data-acct','switch-user');
-  btnEl.innerHTML=`${ic('people')}<span>Switch demo user</span><span class="meta">${ic('arrowR')}</span>`;
+  btnEl.innerHTML=`${ic('people')}<span>${esc(t('acct.switchDemoUser'))}</span><span class="meta">${ic('arrowR')}</span>`;
   firstSection.appendChild(btnEl);
 }
 function openUserSwitcher(){
@@ -475,14 +551,14 @@ function openUserSwitcher(){
   const rows=ordered.map(u=>{
     const name=u.full_name||u.email;
     const current=DB.user&&DB.user.email===u.email;
-    const roleLabel=u.is_superadmin?'Superadmin':((u.roles||[]).join(' + ')||'Employee');
-    const accessLabel=u.is_superadmin?'All companies · All setup and modules':`${(u.companies||[]).length||1} company access`;
+    const roleLabel=u.is_superadmin?t('demoUser.superadmin'):((u.roles||[]).join(' + ')||t('demoUser.employee'));
+    const accessLabel=u.is_superadmin?t('demoUser.allAccess'):t('demoUser.companyAccess',{count:(u.companies||[]).length||1});
     return `<button class="menu-item" style="width:100%" ${current?'disabled':''} data-switch-email="${esc(u.email)}">
       ${ic(u.is_superadmin?'shield':'user')}
       <span>${esc(name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(u.email)} · ${esc(roleLabel)}</small><small style="display:block;color:var(--muted);font-size:10.5px">${esc(accessLabel)}</small></span>
       <span class="meta">${current?ic('check'):''}</span></button>`;
   }).join('');
-  appModal({ icon:'people', title:'Switch demo user', body:`<p class="hint" style="margin:0 0 10px">Choose a real permission persona. Superadmin always retains access to company setup and every module.</p><div role="list" style="display:grid;gap:4px;max-height:min(62vh,560px);overflow:auto">${rows}</div>`, width:420 });
+  appModal({ icon:'people', title:t('demoUser.switchTitle'), body:`<p class="hint" style="margin:0 0 10px">${esc(t('demoUser.switchHint'))}</p><div role="list" style="display:grid;gap:4px;max-height:min(62vh,560px);overflow:auto">${rows}</div>`, width:420 });
   $$('#modalEl [data-switch-email]').forEach(b=>b.addEventListener('click',async ()=>{
     const email=b.dataset.switchEmail;
     closeModal();
@@ -498,7 +574,7 @@ const SUBROUTES = {
   sales:['sales-home','sales-orders','sales-order','quotation','delivery-order','sales-invoice','new-sales-order',
     'enquiries','quotations','so-approvals','delivery-orders','sales-invoices','sales-returns','sales-return',
     'credit-notes','credit-note','debit-notes','price-lists','discount-mgmt','credit-control','sales-commission',
-    'sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','new-quotation','txn-view'], purchasing:['purchasing-home','suppliers','purchase-requisitions','rfqs','supplier-quotations','purchase-orders','po-approval','po-approvals','goods-receipts','goods-receipt','supplier-invoices','supplier-invoice','purchase-requisitions','purchase-request','purchase-returns','supplier-credit-notes','supplier-debit-notes','supplier-price-lists','landed-cost','vendor-performance','purchasing-reports','report-pur-supplier','report-pur-buyer','report-pur-price-var','report-pur-vendor','report-pur-generic','new-purchase-order','pur-txn-view'],
+    'sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','new-quotation','txn-view'], purchasing:['purchasing-home','suppliers','supplier','purchase-requisitions','rfqs','supplier-quotations','purchase-orders','po-approval','po-approvals','goods-receipts','goods-receipt','supplier-invoices','supplier-invoice','purchase-requisitions','purchase-request','purchase-returns','supplier-credit-notes','supplier-debit-notes','supplier-price-lists','landed-cost','vendor-performance','purchasing-reports','report-pur-supplier','report-pur-buyer','report-pur-price-var','report-pur-vendor','report-pur-generic','new-purchase-order','pur-txn-view'],
   inventory:['stock-on-hand','item-master','new-item','stock-movement','new-stock-adjustment','inv-valuation'], warehouse:['picking'],
   crm:['crm-pipeline','opportunity','new-opportunity','crm-customer'],
   manufacturing:['work-orders','work-order','new-work-order','bom','mrp'],
@@ -509,7 +585,7 @@ const SUBROUTES = {
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
   mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','team-calendar','my-approvals'],
-  workflow:['po-approval'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
+  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
@@ -521,10 +597,11 @@ ROUTE_MODULE['settings']='settings';
    slices move one route at a time from preview -> canonical. */
 const CANONICAL_SCREEN_ROUTES = new Set([
   'dashboard',
+  'approval-inbox',
   'sales-orders','sales-order','sales-invoices','sales-invoice',
   'stock-on-hand','stock-movement','inv-valuation','new-item',
   'gl','account-ledger','journal-entry','new-journal-entry','pnl','ar-aging',
-  'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
+  'suppliers','supplier','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
   'crm-pipeline','opportunity','new-opportunity',
   'settings',
   'picking',
@@ -563,10 +640,11 @@ const CANONICAL_SCREEN_ROUTES = new Set([
 const CANONICAL_DATA_PREVIEW_ROUTES = new Set([]);
 const API_SCREEN_ROUTES = new Set([
   'dashboard',
+  'approval-inbox',
   'stock-on-hand','stock-movement','inv-valuation','new-item',
   'sales-orders','sales-order','sales-invoices','sales-invoice',
   'gl','account-ledger','journal-entry','new-journal-entry','pnl','ar-aging',
-  'suppliers','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
+  'suppliers','supplier','purchase-orders','goods-receipts','supplier-invoices','new-purchase-order',
   'crm-pipeline','opportunity','new-opportunity',
   'settings',
   'picking',
@@ -607,7 +685,7 @@ const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
   'sales-order':'sales-orders','new-sales-order':'sales-orders','sales-return':'sales-returns',
   'credit-note':'credit-notes','new-quotation':'quotations','txn-view':'enquiries',
-  'purchase-request':'purchase-requisitions','goods-receipt':'goods-receipts',
+  'purchase-request':'purchase-requisitions','supplier':'suppliers','goods-receipt':'goods-receipts',
   'supplier-invoice':'supplier-invoices','po-approval':'po-approvals',
   'new-purchase-order':'purchase-orders','pur-txn-view':'purchase-orders',
   'new-item':'item-master','new-stock-adjustment':'stock-movement',
@@ -623,6 +701,10 @@ const SCREEN_ACTIVE_ALIASES = {
   'new-journal-entry':'journal-entry','new-payment-voucher':'payment-voucher',
 };
 const MODULE_DEFS = {
+  account:{ labelKey:'acct.activity', home:'my-activity', items:[
+    ['my-activity','My Activity','history','acct.activity'],
+    ['notifications','Notifications','bell','route.notifications'],
+  ]},
   /* sales/purchasing/inventory reference the section/alias data already defined in
      screens-sales-hub.js/screens-purchasing-hub.js/screens-inv.js (loaded before
      app.js -- see the script order in index.html), rather than duplicating it here.
@@ -664,6 +746,9 @@ const MODULE_DEFS = {
     {route:'team-calendar',labelKey:'myWork.nav.teamCalendar',icon:'people',capability:'team'},
     {route:'my-approvals',labelKey:'myWork.nav.approvals',icon:'check',capability:'team'},
   ]},
+  workflow:{ labelKey:'nav.workflow', home:'approval-inbox', items:[
+    {route:'approval-inbox',labelKey:'approvalInbox.title',icon:'flow'},
+  ]},
   project:{ labelKey:'nav.project', home:'project-pl', items:[
     ['project-pl','Projects','project'],['timesheet','Timesheets','clock'],
   ]},
@@ -686,7 +771,6 @@ const MODULE_DEFS = {
     ['user-mgmt','Users','people'],['role-permission','Roles & Permissions','shield'],
     ['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
     ['sys-settings','System Settings','gear'],['module-activation-control','Module Activation','sliders'],
-    ['notifications','Notifications','bell'],
   ]},
 };
 const MODULE_READ_PERMISSION = {
@@ -710,7 +794,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
     'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
     'service-contracts','asset-register','user-mgmt',
-    'my-leave','my-claims','my-receipts',
+    'my-leave','my-claims','my-receipts','approval-inbox',
   ],
   'master-detail-register-v1':[
     'item-master','stock-on-hand','leave-approval','payroll-run','depreciation',
@@ -729,7 +813,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'bom','employee','service-contract','asset-detail',
   ],
   'case-detail-v1':[
-    'ncr','service-order','po-approval','leave-application','expense-claim',
+    'ncr','service-order','po-approval','leave-application','expense-claim','sales-return',
   ],
   'ledger-detail-v1':[
     'account-ledger',
@@ -752,9 +836,9 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   'document-detail':[
     'credit-note','delivery-order',
-    'opportunity','payslip','project-detail',
+    'opportunity','payslip','project-detail','supplier',
     'pur-txn-view','purchase-request','qc-report','quotation','sales-invoice',
-    'sales-order','sales-return','supplier-invoice','txn-view',
+    'sales-order','supplier-invoice','txn-view',
     'work-order',
   ],
   form:[
@@ -782,7 +866,7 @@ Object.keys(SCREENS).forEach(route=>{
   const moduleId=ROUTE_MODULE[route]||(
     route==='dashboard'?'home':
     route==='settings'?'settings':
-    ['notifications','my-activity'].includes(route)?'admin':'unmapped'
+    ['notifications','my-activity'].includes(route)?'account':'unmapped'
   );
   const canonical=CANONICAL_SCREEN_ROUTES.has(route);
   const canonicalData=canonical||CANONICAL_DATA_PREVIEW_ROUTES.has(route);
@@ -835,6 +919,16 @@ function myWorkCapabilityEnabled(item){
     ?Boolean(MY_WORK_CONTEXT&&MY_WORK_CONTEXT.capabilities&&MY_WORK_CONTEXT.capabilities.team&&MY_WORK_CONTEXT.capabilities.team.available)
     :false;
 }
+function syncTeamCalendarEntry(){
+  const button=$('#calendarBtn');
+  if(!button) return false;
+  const available=myWorkCapabilityEnabled({capability:'team'})&&routeShownInCommands('team-calendar');
+  button.hidden=!available;
+  button.innerHTML=ic('calendar');
+  button.setAttribute('aria-label',t('myWork.nav.teamCalendar'));
+  button.setAttribute('data-tip',t('myWork.nav.teamCalendar'));
+  return available;
+}
 function moduleNav(moduleId, active){
   const def=MODULE_DEFS[moduleId];
   if(!def) return '';
@@ -843,7 +937,10 @@ function moduleNav(moduleId, active){
   const ariaLabel=def.ariaLabel?esc(def.ariaLabel):esc(t(def.labelKey));
   const body=def.sections
     ? def.sections.map((sec,gi)=>(gi?`<span class="ssub-sep" aria-hidden="true"></span>`:'')+sec.items.map(it=>moduleNavItem(it,active)).join('')).join('')
-    : def.items.filter(myWorkCapabilityEnabled).map(it=>moduleNavItem(it,active)).join('');
+    : def.items.filter(it=>{
+      const route=Array.isArray(it)?it[0]:it.route;
+      return myWorkCapabilityEnabled(it)&&routeShownInCommands(route);
+    }).map(it=>moduleNavItem(it,active)).join('');
   return `<div class="${cls}" role="tablist" aria-label="${ariaLabel}">${body}</div>`;
 }
 function modulePage(o){
@@ -923,6 +1020,10 @@ function decorateScreen(root, route){
   root.dataset.screenModule=meta.module;
   root.dataset.screenMaturity=meta.maturity;
 
+  if(root.querySelector('[data-access-denied]')){
+    if(typeof applyI18n==='function') applyI18n(root);
+    return;
+  }
   ensureModuleShell(root,meta);
   if(typeof applyI18n==='function') applyI18n(root);
   revealActiveModuleTab(root);
@@ -983,7 +1084,9 @@ function renderSidebar(){
     });
     h+=`</div>`;
   });
-  h+=`<div class="sidebar-foot"><button class="nav" data-route="settings" data-mod="settings" data-tip="${esc(t('nav.settings'))}">${ic('gear')}<span class="navlabel">${esc(t('nav.settings'))}</span></button></div>`;
+  if(routeShownInCommands('settings')){
+    h+=`<div class="sidebar-foot"><button class="nav" data-route="settings" data-mod="settings" data-tip="${esc(t('nav.settings'))}">${ic('gear')}<span class="navlabel">${esc(t('nav.settings'))}</span></button></div>`;
+  }
   el.innerHTML=h;
   el.querySelectorAll('.nav[data-route]').forEach(b=>b.addEventListener('click',()=>{
     if(b.getAttribute('aria-disabled')==='true'){ toast('Module inactive for this client','warn'); return; }
@@ -996,6 +1099,13 @@ function setActiveNav(route){
   const mod=ROUTE_MODULE[route];
   $$('#sidebar .nav').forEach(n=>n.classList.toggle('active',n.dataset.mod===mod));
   $$('.tabbar button[data-route]').forEach(n=>n.classList.toggle('active',ROUTE_MODULE[n.dataset.route]===mod));
+  const calendarButton=$('#calendarBtn');
+  if(calendarButton){
+    const active=route==='team-calendar';
+    calendarButton.classList.toggle('active',active);
+    if(active) calendarButton.setAttribute('aria-current','page');
+    else calendarButton.removeAttribute('aria-current');
+  }
 }
 
 /* ---------- router ---------- */
@@ -1097,7 +1207,7 @@ function navigate(route, params){
   CURRENT_ROUTE=route;
   CURRENT_ROUTE_PARAMS=Object.assign({},params||{});
   if(!routeAllowed(route)){
-    root.innerHTML=moduleBlockedPanel(route);
+    root.innerHTML=routeDeniedByPermission(route)?permissionBlockedPanel():moduleBlockedPanel(route);
     setActiveNav(route); closeAllPops(); return Promise.resolve(false);
   }
   if(!SCREENS[route]){
@@ -1267,44 +1377,61 @@ const PAL_COMMANDS=[
     {label:'Notifications center', icon:'bell', route:'notifications'},
   ]},
   {cat:'Create', items:[
-    {label:'New Sales Order', icon:'plus', action:()=>navigate('new-sales-order')},
-    {label:'New Purchase Order', icon:'plus', action:()=>navigate('new-purchase-order')},
-    {label:'New Journal Entry', icon:'plus', action:()=>navigate('new-journal-entry')},
-    {label:'New Work Order', icon:'plus', action:()=>navigate('new-work-order')},
-    {label:'New Opportunity', icon:'plus', action:()=>navigate('new-opportunity')},
-    {label:'New Employee', icon:'plus', action:()=>navigate('new-employee')},
-    {label:'New Payment Voucher', icon:'plus', action:()=>navigate('new-payment-voucher')},
-    {label:'New Stock Adjustment', icon:'plus', action:()=>navigate('new-stock-adjustment')},
-    {label:'New Item', icon:'plus', action:()=>navigate('new-item')},
-  ]},
-  {cat:'Open document', items:[
-    {label:'SO-26-0418 · Meridian Robotics', icon:'file', route:'sales-order'},
-    {label:'PO-26-0291 · Shenzhen Microcircuit', icon:'file', route:'po-approval'},
-    {label:'JE-26-0611 · FX revaluation', icon:'file', route:'journal-entry'},
+    {label:'New Sales Order',labelKey:'qc.so',icon:'plus',route:'new-sales-order'},
+    {label:'New Purchase Order',labelKey:'qc.po',icon:'plus',route:'new-purchase-order'},
+    {label:'New Journal Entry',labelKey:'qc.je',icon:'plus',route:'new-journal-entry'},
+    {label:'New Work Order',labelKey:'qc.wo',icon:'plus',route:'new-work-order'},
+    {label:'New Opportunity',labelKey:'pal.newOpportunity',icon:'plus',route:'new-opportunity'},
+    {label:'New Employee',labelKey:'pal.newEmployee',icon:'plus',route:'new-employee'},
+    {label:'New Payment Voucher',labelKey:'qc.pv',icon:'plus',route:'new-payment-voucher'},
+    {label:'New Stock Adjustment',labelKey:'qc.adj',icon:'plus',route:'new-stock-adjustment'},
+    {label:'New Item',labelKey:'qc.item',icon:'plus',route:'new-item'},
   ]},
 ];
 let palIndex=0, palFlat=[];
 function openPalette(){ $('#scrim').classList.add('show'); $('#palette').classList.add('show'); const i=$('#palInput'); i.value=''; renderPalette(''); setTimeout(()=>i.focus(),60); }
 function closePalette(){ $('#scrim').classList.remove('show'); $('#palette').classList.remove('show'); }
+function paletteItemLabel(item){
+  if(item.labelKey) return t(item.labelKey);
+  if(item.route&&!item.preserveLabel) return screenRouteTitle(item.route);
+  return item.label;
+}
+function paletteDocumentCommands(){
+  const items=[];
+  (DB.salesOrders||[]).slice(0,6).forEach(order=>items.push({
+    label:`${order.no} · ${order.cust||order.customer||order.customerName||'—'}`,
+    icon:'file',route:'sales-order',params:{no:order.no},preserveLabel:true,
+  }));
+  (DB.paymentVouchers||[]).slice(0,4).forEach(voucher=>items.push({
+    label:`${voucher.no} · ${voucher.supplierName||'—'}`,
+    icon:'file',route:'payment-voucher',params:{voucherId:voucher.id},preserveLabel:true,
+  }));
+  return items.length?[{cat:'Open document',items}]:[];
+}
 function renderPalette(q){
   q=q.toLowerCase().trim(); const list=$('#palList'); palFlat=[]; let h='';
-  PAL_COMMANDS.forEach(group=>{
-    const items=group.items.filter(it=>(!it.route||routeShownInCommands(it.route))&&(!q||it.label.toLowerCase().includes(q)));
+  [...PAL_COMMANDS,...paletteDocumentCommands()].forEach(group=>{
+    const items=group.items.filter(it=>{
+      const label=paletteItemLabel(it);
+      return (!it.route||routeShownInCommands(it.route))&&(!q||`${label} ${it.label}`.toLowerCase().includes(q));
+    });
     if(!items.length) return;
     h+=`<div class="pcat">${esc(tf('pal.cat.'+group.cat, group.cat))}</div>`;
-    items.forEach(it=>{ const idx=palFlat.length; palFlat.push(it);
-      h+=`<div class="pitem" data-i="${idx}">${ic(it.icon||'arrowR')}<span>${esc(it.label)}</span>${it.meta?`<span class="meta kbd">${it.meta}</span>`:`<span class="meta">${it.route?'↵':t('pal.run')}</span>`}</div>`;
+    items.forEach(it=>{ const idx=palFlat.length,label=paletteItemLabel(it); palFlat.push(it);
+      h+=`<div class="pitem" data-i="${idx}">${ic(it.icon||'arrowR')}<span>${esc(label)}</span>${it.meta?`<span class="meta kbd">${it.meta}</span>`:`<span class="meta">${it.route?'↵':t('pal.run')}</span>`}</div>`;
     });
   });
   if(!palFlat.length) h=`<div class="pcat">${esc(t('pal.nomatch'))}</div><div class="pitem"><span style="color:var(--muted)">${esc(t('pal.hint'))}</span></div>`;
-  list.innerHTML=h; palIndex=0; highlightPal();
+  list.innerHTML=h;
+  if(typeof applyStaticI18n==='function') applyStaticI18n(list);
+  palIndex=0; highlightPal();
   list.querySelectorAll('.pitem[data-i]').forEach(el=>{
     el.addEventListener('mouseenter',()=>{palIndex=+el.dataset.i;highlightPal();});
     el.addEventListener('click',()=>runPal(+el.dataset.i));
   });
 }
 function highlightPal(){ $$('#palList .pitem').forEach(el=>el.classList.toggle('active',+el.dataset.i===palIndex)); const a=$(`#palList .pitem[data-i="${palIndex}"]`); a&&a.scrollIntoView({block:'nearest'}); }
-function runPal(i){ const it=palFlat[i]; if(!it) return; closePalette(); if(it.route)navigate(it.route); else if(it.action)it.action(); }
+function runPal(i){ const it=palFlat[i]; if(!it) return; closePalette(); if(it.route)navigate(it.route,it.params); else if(it.action)it.action(); }
 
 /* ---------- notification center ---------- */
 let notifFilter='all';
@@ -1381,7 +1508,9 @@ function buildCompanyMenu(){
   /* Canonical companies (ERP-System PGlite schema), not the unrelated Aria
      "Master Control" mock hierarchy in DB.masters — this switches the real
      active company scope via ErpSystemDemo.switchCompany(). */
-  const companies=(DB.erpSystem && DB.erpSystem.companies) || [];
+  const allCompanies=(DB.erpSystem && DB.erpSystem.companies) || [];
+  const allowedFns=new Set((DB.user&&DB.user.companyFns)||[]);
+  const companies=isModuleAdmin()?allCompanies:allCompanies.filter(c=>allowedFns.has(c.company_fn||c.companyFn));
   const activeFn=DB.erpSystem && DB.erpSystem.scope && DB.erpSystem.scope.companyFn;
   const masterName=(DB.erpSystem && DB.erpSystem.master && DB.erpSystem.master.name) || DB.company.name;
   const head=`<div class="menu-head">${esc(masterName)}</div>`;
@@ -1395,8 +1524,9 @@ function buildCompanyMenu(){
     <span>${esc(c.name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(c.currency)} · ${esc(c.country)}</small></span>
     <span class="meta">${fn===activeFn?ic('check'):''}</span></button>`;
   }).join('');
-  return `<div class="menu-section">${head}${rows}</div>
-    <div class="menu-section"><button class="menu-item" data-co-action="master">${ic('grid')}<span>Master Control</span><span class="meta">${ic('arrowR')}</span></button></div>`;
+  return `<div class="menu-section">${head}${rows}</div>${isModuleAdmin()
+    ?`<div class="menu-section"><button class="menu-item" data-co-action="master">${ic('grid')}<span>Master Control</span><span class="meta">${ic('arrowR')}</span></button></div>`
+    :''}`;
 }
 /* (re)render the company switcher popover and wire its [data-co] buttons.
    Called on boot and again after a successful switch, since the button
@@ -1411,24 +1541,29 @@ function wireCompanyMenu(){
     window.ErpSystemDemo.switchCompany(fn).then(async()=>{
       await loadNotifications();
       $('#ctxCompany').innerHTML=`<b>${esc(DB.company.name)} ${ic('chevD')}</b><small>${esc(DB.company.branch)}</small>`;
+      /* refresh company-dependent currency in the fiscal context too; the
+         period itself is shared, but its legal-entity currency is not. */
+      paintPeriodContext();
       wireCompanyMenu();
       refreshNotifs();
       if(CURRENT_ROUTE) navigate(CURRENT_ROUTE);
       toast('Switched to '+DB.company.name,'ok');
     }).catch(e=>toast('Switch failed: '+((e&&e.message)||e),'danger'));
   }));
-  $('#companyMenu').querySelector('[data-co-action="master"]').addEventListener('click',()=>{ closeAllPops(); navigate('master-control'); });
+  $('#companyMenu').querySelector('[data-co-action="master"]')?.addEventListener('click',()=>{ closeAllPops(); navigate('master-control'); });
 }
 
 /* ---------- fiscal period switcher + FY setup ---------- */
-const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function localizedMonth(index){
+  return new Intl.DateTimeFormat(getLocale(),{month:'long',timeZone:'UTC'}).format(new Date(Date.UTC(2026,index,1)));
+}
 function fiscalPeriods(f){
   f=f||DB.fiscal; const out=[];
   for(let i=1;i<=f.periodCount;i++){
     const mi=(f.startMonth-1+(i-1))%12;
     const yr=f.startYear+Math.floor((f.startMonth-1+(i-1))/12);
     const code='P'+String(i).padStart(2,'0');
-    const label=f.periodCount===4 ? ('Q'+i+' '+yr) : (MONTHS[mi]+' '+yr);
+    const label=f.periodCount===4 ? ('Q'+i+' '+yr) : new Intl.DateTimeFormat(getLocale(),{year:'numeric',month:'long',timeZone:'UTC'}).format(new Date(Date.UTC(yr,mi,1)));
     out.push({ i, code, label, status:i<f.currentPeriod?'Closed':i===f.currentPeriod?'Open':'Future', current:i===f.currentPeriod, selected:i===f.selectedPeriod });
   }
   return out;
@@ -1439,7 +1574,11 @@ function selectFy(label){
   DB.fiscal=fy;
   applyPeriod(fy.selectedPeriod);
   wirePeriodMenu(); closeAllPops();
-  toast('Working fiscal year set to '+fy.fyLabel,'ok');
+  toast(t('fiscal.workingYearSet',{year:fy.fyLabel}),'ok');
+}
+function paintPeriodContext(){
+  const cp=$('#ctxPeriod');
+  if(cp) cp.innerHTML=`<b>${esc(DB.company.period)} ${ic('chevD')}</b><small>${esc(DB.company.periodLabel)} · ${esc(DB.company.currency)}</small>`;
 }
 function applyPeriod(i){
   const p=fiscalPeriods().find(x=>x.i===i); if(!p) return;
@@ -1447,34 +1586,36 @@ function applyPeriod(i){
   DB.company.period=DB.fiscal.fyLabel+' · '+p.code;
   DB.company.periodLabel=p.label;
   try{ localStorage.setItem('aria-period', DB.fiscal.fyLabel+'|'+i); }catch{}
-  const cp=$('#ctxPeriod'); if(cp) cp.innerHTML=`<b>${esc(DB.company.period)} ${ic('chevD')}</b><small>${esc(DB.company.periodLabel)} · ${esc(DB.company.currency)}</small>`;
+  paintPeriodContext();
 }
 function buildPeriodMenu(){
   const ps=fiscalPeriods();
   const tone=s=>s==='Open'?'ok':s==='Closed'?'neutral':'';
   const fyTone=s=>s==='Current'?'ok':s==='Future'?'':'neutral';
+  const periodStatus=s=>s==='Open'?t('common.open'):s==='Closed'?t('fiscal.closed'):t('fiscal.future');
+  const yearStatus=s=>s==='Current'?t('fiscal.current'):s==='Future'?t('fiscal.future'):t('fiscal.closed');
   // ── fiscal-year selector ──
   const years=DB.fiscalYears||[DB.fiscal];
   const fyRows=years.map(fy=>`<button class="menu-item" data-fy="${esc(fy.fyLabel)}">
     <span style="font-family:var(--mono);font-size:11px;color:var(--muted);min-width:30px;flex:none">${esc(fy.fyLabel.replace(/^FY/,''))}</span>
-    <span>${esc(fy.fyLabel)}<small style="display:block;color:var(--muted);font-size:11px">${esc(fyRangeLabel(fy))} · ${fy.periodCount} periods</small></span>
-    <span class="meta">${fy===DB.fiscal?ic('check'):cap(fy.state||'',fyTone(fy.state))}</span></button>`).join('');
-  const fySection=`<div class="menu-section"><div class="menu-head">Fiscal year</div>${fyRows}
-    <button class="menu-item" data-period-action="new">${ic('plus')||ic('add')||''}<span>New fiscal year…</span><span class="meta">${ic('arrowR')}</span></button></div>`;
+    <span>${esc(fy.fyLabel)}<small style="display:block;color:var(--muted);font-size:11px">${esc(t('fiscal.periodCount',{range:fyRangeLabel(fy),count:fy.periodCount}))}</small></span>
+    <span class="meta">${fy===DB.fiscal?ic('check'):cap(yearStatus(fy.state||''),fyTone(fy.state))}</span></button>`).join('');
+  const fySection=`<div class="menu-section"><div class="menu-head">${esc(t('fiscal.year'))}</div>${fyRows}
+    <button class="menu-item" data-period-action="new">${ic('plus')||ic('add')||''}<span>${esc(t('fiscal.newYear'))}</span><span class="meta">${ic('arrowR')}</span></button></div>`;
   // ── period selector for the working FY ──
-  const head=`<div class="menu-head">${esc(DB.fiscal.fyLabel)} periods · <span style="text-transform:none;letter-spacing:0;margin-left:4px">${esc(fyRangeLabel())}</span></div>`;
+  const head=`<div class="menu-head">${esc(t('fiscal.periods',{year:DB.fiscal.fyLabel}))} · <span style="text-transform:none;letter-spacing:0;margin-left:4px">${esc(fyRangeLabel())}</span></div>`;
   const rows=ps.map(p=>`<button class="menu-item" data-period="${p.i}">
     <span style="font-family:var(--mono);font-size:11px;color:var(--muted);min-width:30px;flex:none">${esc(p.code)}</span>
-    <span>${esc(p.label)}<small style="display:block;color:var(--muted);font-size:11px">${p.status==='Open'?'Open · current posting period':p.status==='Closed'?'Closed for posting':'Future period'}</small></span>
-    <span class="meta">${p.selected?ic('check'):cap(p.status,tone(p.status))}</span></button>`).join('');
+    <span>${esc(p.label)}<small style="display:block;color:var(--muted);font-size:11px">${esc(p.status==='Open'?t('fiscal.currentPostingPeriod'):p.status==='Closed'?t('fiscal.closedForPosting'):t('fiscal.futurePeriod'))}</small></span>
+    <span class="meta">${p.selected?ic('check'):cap(periodStatus(p.status),tone(p.status))}</span></button>`).join('');
   return `${fySection}<div class="menu-section">${head}<div style="max-height:264px;overflow:auto">${rows}</div></div>
-    <div class="menu-section"><button class="menu-item" data-period-action="setup">${ic('gear')}<span>Set up ${esc(DB.fiscal.fyLabel)}…</span><span class="meta">${ic('arrowR')}</span></button></div>`;
+    <div class="menu-section"><button class="menu-item" data-period-action="setup">${ic('gear')}<span>${esc(t('fiscal.setupYear',{year:DB.fiscal.fyLabel}))}</span><span class="meta">${ic('arrowR')}</span></button></div>`;
 }
 function wirePeriodMenu(){
   const m=$('#periodMenu'); if(!m) return;
   m.innerHTML=buildPeriodMenu();
   m.querySelectorAll('[data-fy]').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); selectFy(b.dataset.fy); }));
-  m.querySelectorAll('[data-period]').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); applyPeriod(+b.dataset.period); wirePeriodMenu(); closeAllPops(); toast('Working period set to '+DB.company.periodLabel,'ok'); }));
+  m.querySelectorAll('[data-period]').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); applyPeriod(+b.dataset.period); wirePeriodMenu(); closeAllPops(); toast(t('fiscal.workingPeriodSet',{period:DB.company.periodLabel}),'ok'); }));
   m.querySelector('[data-period-action="setup"]').addEventListener('click',e=>{ e.stopPropagation(); closeAllPops(); openFySetup(); });
   m.querySelector('[data-period-action="new"]').addEventListener('click',e=>{ e.stopPropagation(); closeAllPops(); openFySetup(null,true); });
 }
@@ -1482,22 +1623,26 @@ function openFySetup(fyArg,isNew){
   const f=isNew
     ? { fyLabel:'FY'+((DB.fiscalYears[DB.fiscalYears.length-1]?.startYear||DB.fiscal.startYear)+1), startYear:(DB.fiscalYears[DB.fiscalYears.length-1]?.startYear||DB.fiscal.startYear)+1, startMonth:DB.fiscal.startMonth, scheme:DB.fiscal.scheme, periodCount:DB.fiscal.periodCount, currentPeriod:1, selectedPeriod:1, state:'Future' }
     : (fyArg||DB.fiscal);
-  const schemes=['Monthly (12 periods)','Quarterly (4 periods)','4-4-5 (12 periods)'];
-  const monthOpts=MONTHS.map((mn,i)=>`<option value="${i+1}" ${f.startMonth===i+1?'selected':''}>${mn}</option>`).join('');
-  const schemeOpts=schemes.map(s=>`<option ${s===f.scheme?'selected':''}>${s}</option>`).join('');
+  const schemes=[
+    ['Monthly (12 periods)',t('fiscal.schemeMonthly')],
+    ['Quarterly (4 periods)',t('fiscal.schemeQuarterly')],
+    ['4-4-5 (12 periods)',t('fiscal.scheme445')],
+  ];
+  const monthOpts=Array.from({length:12},(_,i)=>`<option value="${i+1}" ${f.startMonth===i+1?'selected':''}>${esc(localizedMonth(i))}</option>`).join('');
+  const schemeOpts=schemes.map(([value,label])=>`<option value="${esc(value)}" ${value===f.scheme?'selected':''}>${esc(label)}</option>`).join('');
   const periodOpts=fiscalPeriods(f).map(p=>`<option value="${p.i}" ${f.currentPeriod===p.i?'selected':''}>${p.code} · ${p.label}</option>`).join('');
   appModal({
     icon: 'calendar',
-    title: isNew?'New fiscal year':'Set up '+f.fyLabel,
+    title: isNew?t('fiscal.newYearTitle'):t('fiscal.setupYearTitle',{year:f.fyLabel}),
     body: `<div class="set-grid">
-      <div class="fld"><span>Fiscal year label</span><input id="fyLabel" value="${esc(f.fyLabel)}"></div>
-      <div class="fld"><span>Starting year</span><input id="fyYear" type="number" value="${f.startYear}"></div>
-      <div class="fld"><span>First month</span><select id="fyMonth">${monthOpts}</select></div>
-      <div class="fld"><span>Period scheme</span><select id="fyScheme">${schemeOpts}</select></div>
-      <div class="fld" style="grid-column:1/-1"><span>Current open period</span><select id="fyCurrent">${periodOpts}</select></div>
+      <div class="fld"><span>${esc(t('fiscal.yearLabel'))}</span><input id="fyLabel" value="${esc(f.fyLabel)}"></div>
+      <div class="fld"><span>${esc(t('fiscal.startYear'))}</span><input id="fyYear" type="number" value="${f.startYear}"></div>
+      <div class="fld"><span>${esc(t('fiscal.firstMonth'))}</span><select id="fyMonth">${monthOpts}</select></div>
+      <div class="fld"><span>${esc(t('fiscal.periodScheme'))}</span><select id="fyScheme">${schemeOpts}</select></div>
+      <div class="fld" style="grid-column:1/-1"><span>${esc(t('fiscal.currentOpenPeriod'))}</span><select id="fyCurrent">${periodOpts}</select></div>
     </div>
-    <p style="margin:12px 2px 0;font-size:11.5px;color:var(--muted)">Periods before the open period are <b>Closed</b>; later periods are <b>Future</b>. Posting is blocked outside the open period.</p>`,
-    actions: `${btn('Cancel',{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(isNew?'Create fiscal year':'Save fiscal year',{icon:'save',cls:'primary',attrs:'data-save="1"'})}`,
+    <p style="margin:12px 2px 0;font-size:11.5px;color:var(--muted)">${esc(t('fiscal.closedFutureHelp'))}</p>`,
+    actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(isNew?t('fiscal.createYear'):t('fiscal.saveYear'),{icon:'save',cls:'primary',attrs:'data-save="1"'})}`,
   });
   const rebuildCurrent=()=>{
     const scheme=$('#fyScheme').value, count=scheme.startsWith('Quarterly')?4:12;
@@ -1523,7 +1668,7 @@ function openFySetup(fyArg,isNew){
     if(target.selectedPeriod>count) target.selectedPeriod=target.currentPeriod;
     applyPeriod(DB.fiscal.currentPeriod);
     closeModal(); wirePeriodMenu();
-    toast(target.fyLabel+(isNew?' created':' saved')+' · '+count+' periods','ok');
+    toast(t(isNew?'fiscal.yearCreated':'fiscal.yearSaved',{year:target.fyLabel,count}),'ok');
   });
 }
 
@@ -1567,7 +1712,6 @@ async function boot(){
     renderEmployeeActivation();
     return;
   }
-  setAuthShell(false);
   const auth=$('#authView'); if(auth) auth.remove();
   const wiz=$('#setupWizardView'); if(wiz) wiz.remove();
   const apiUnavail=$('#apiUnavailableView'); if(apiUnavail) apiUnavail.remove();
@@ -1583,6 +1727,7 @@ async function boot(){
   if(isSelfServiceOnly()) DB.notifications=[];
   else try{ await loadNotifications(); }catch(error){ console.error('Notification load failed',error); }
   renderSidebar(); renderTabbar(); initTooltip();
+  syncTeamCalendarEntry();
   // default/restore sidebar collapse state (+ sets the toggle icon)
   autoNav();
   addEventListener('resize',autoNav);
@@ -1619,6 +1764,7 @@ async function boot(){
   $('#acctTheme')&&$('#acctTheme').addEventListener('click',e=>{e.stopPropagation();toggleTheme();});
   $('#globalSearch').addEventListener('click',openPalette);
   $('#bellBtn').addEventListener('click',e=>{e.stopPropagation();togglePop('notifMenu',$('#bellBtn'));});
+  $('#calendarBtn').addEventListener('click',()=>navigate('team-calendar'));
   quickCreateButton.addEventListener('click',e=>{e.stopPropagation();if(!quickCreateButton.hidden)togglePop('qcMenu',quickCreateButton);});
   $('#avatarBtn').addEventListener('click',e=>{e.stopPropagation();togglePop('acctMenu',$('#avatarBtn'));});
   $('#ctxCompany').addEventListener('click',e=>{e.stopPropagation();togglePop('companyMenu',$('#ctxCompany'));});
@@ -1646,7 +1792,11 @@ async function boot(){
   // apply the persisted language across the whole shell
   if(typeof applyI18n==='function') applyI18n();
   const envAfterI18n=$('.env'); if(envAfterI18n) envAfterI18n.textContent=DB.company.env||envAfterI18n.textContent;
-  navigate(start);
+  // Keep the neutral boot screen in front until the first allowed route has
+  // actually rendered. This prevents prototype defaults from flashing while
+  // the canonical company/session payload is still loading.
+  await navigate(start);
+  setAuthShell(false);
 }
 /* ---------- keyboard shortcuts reference ---------- */
 const SHORTCUTS=[

@@ -12,6 +12,11 @@ SCREENS['dashboard'] = function(root){
      same distinction Settings already makes for its data-source panel. */
   const erpDemo=!!DB.erpSystem && DB.erpSystem.dataMode!=='api';
   const fmt=(n)=>typeof n==='number'?num(n):n;
+  const visibleApprovals=(DB.approvals||[])
+    .filter(approvalVisibleToUser)
+    .map(a=>({...a,route:approvalRouteForUser(a)}));
+  const visibleLeaveRequests=visibleApprovals.filter(a=>a.route==='leave-approval').length;
+  const approvalModuleCount=new Set(visibleApprovals.map(a=>ROUTE_MODULE[a.route]||a.route).filter(Boolean)).size;
   const wc = (o)=>`<button class="wcard ${o.span?'span2':''}" data-route="${o.route||''}">
     <div class="wc-top"><span class="wc-ic ${o.tone}">${ic(o.icon)}</span><h4>${esc(o.title)}</h4>${o.meta?`<span class="wc-meta">${esc(o.meta)}</span>`:''}</div>
     ${o.num!=null?`<div class="wc-num"><b class="tnum">${o.num}</b>${o.delta?`<span class="wc-delta ${o.deltaDir}">${esc(o.delta)}</span>`:''}</div>`:''}
@@ -20,54 +25,39 @@ SCREENS['dashboard'] = function(root){
     <div class="wc-act">${esc(o.cta)} ${ic('arrowR')}</div>
   </button>`;
 
-  const attention=[
-    wc({tone:(m.approvals||0)>0?'danger':'ok',icon:'flow',title:t('dash.c.approvals'),num:fmt(m.approvals??DB.approvals.length),meta:erpDemo?'demo queue':t('dash.c.approvals.meta'),body:erpDemo?'Setup follow-up and draft sales order are queued for the demo workspace.':t('dash.c.approvals.body'),cta:t('dash.c.approvals.cta'),route:'po-approval'}),
-    wc({tone:(m.glIssues||0)>0?'danger':'ok',icon:'error',title:erpDemo?'GL posting status':t('dash.c.gl'),num:fmt(m.glIssues??0),body:erpDemo?'INV-SO-1 posted a balanced AR, revenue, and GST journal. No posting exception is active.':t('dash.c.gl.body'),cta:t('dash.c.gl.cta'),route:'journal-entry'}),
-    wc({tone:(m.stockAlerts||0)>0?'warn':'ok',icon:'box',title:t('dash.c.stock'),num:fmt(m.stockAlerts??0),meta:erpDemo?'canonical stock':t('dash.c.stock.meta'),body:erpDemo?'SG-WIDGET and SG-GADGET balances come from the ERP-System sales transaction proof.':t('dash.c.stock.body'),cta:t('dash.c.stock.cta'),route:'stock-on-hand'}),
-    wc({tone:(m.arOpen||0)>0?'warn':'ok',icon:'receipt',title:t('dash.c.ar'),num:money(m.arOpen??0,DB.company.currency),deltaDir:'up',delta:erpDemo?'':DB.company.currency,body:erpDemo?'Beta Pte Ltd has one open posted invoice from SO-1.':t('dash.c.ar.body'),cta:t('dash.c.ar.cta'),route:'dashboard'}),
-  ];
-  const ops=[
-    wc({tone:'accent',icon:'truck',title:t('dash.c.deliver'),num:fmt(m.openDeliveries??0),body:erpDemo?'The canonical order is already delivered; new draft orders can be added next.':t('dash.c.deliver.body'),cta:t('dash.c.deliver.cta'),route:'sales-orders'}),
-    wc({tone:'accent',icon:'receive',title:t('dash.c.grn'),num:fmt(m.goodsReceipts??0),body:erpDemo?'Purchasing data will be connected after the sales and inventory slice.':t('dash.c.grn.body'),cta:t('dash.c.grn.cta'),route:'purchase-orders'}),
-    wc({tone:'teal',icon:'warehouse',title:t('dash.c.pick'),num:fmt(m.pickTasks??0),meta:erpDemo?'demo ready':t('dash.c.pick.meta'),body:erpDemo?'WH-SALES stock movement rows are visible in Inventory.':t('dash.c.pick.body'),cta:t('dash.c.pick.cta'),route:'picking'}),
-    wc({tone:'violet',icon:'people',title:t('dash.c.leave'),num:fmt(m.leaveRequests??0),body:erpDemo?'HR remains part of the cloned layout and will be wired in a later module task.':t('dash.c.leave.body'),cta:t('dash.c.leave.cta'),route:'leave-approval'}),
-  ];
+  const visibleCards=cards=>cards.filter(card=>(!card.route||routeAllowed(card.route))
+    &&(!card.permission||userHasAnyPermission(card.permission))).map(wc);
+  const attention=visibleCards([
+    {tone:visibleApprovals.length>0?'danger':'ok',icon:'flow',title:t('dash.c.approvals'),num:fmt(visibleApprovals.length),meta:erpDemo?t('dash.demo.approvals.meta'):t('dash.c.approvals.meta'),body:erpDemo?t(visibleApprovals.length===(DB.approvals||[]).length?'dash.demo.approvals.body':'dash.demo.approvals.filteredBody'):t('dash.c.approvals.body'),cta:t('dash.c.approvals.cta'),route:'approval-inbox'},
+    {tone:(m.glIssues||0)>0?'danger':'ok',icon:'error',title:erpDemo?t('dash.demo.gl.title'):t('dash.c.gl'),num:fmt(m.glIssues??0),body:erpDemo?t('dash.demo.gl.body'):t('dash.c.gl.body'),cta:t('dash.c.gl.cta'),route:'journal-entry'},
+    {tone:(m.stockAlerts||0)>0?'warn':'ok',icon:'box',title:t('dash.c.stock'),num:fmt(m.stockAlerts??0),meta:erpDemo?t('dash.demo.stock.meta'):t('dash.c.stock.meta'),body:erpDemo?t('dash.demo.stock.body'):t('dash.c.stock.body'),cta:t('dash.c.stock.cta'),route:'stock-on-hand'},
+    {tone:(m.arOpen||0)>0?'warn':'ok',icon:'receipt',title:t('dash.c.ar'),num:money(m.arOpen??0,DB.company.currency),deltaDir:'up',delta:erpDemo?'':DB.company.currency,body:erpDemo?t('dash.demo.ar.body'):t('dash.c.ar.body'),cta:t('dash.c.ar.cta'),route:'ar-aging'},
+  ]);
+  const ops=visibleCards([
+    {tone:'accent',icon:'truck',title:t('dash.c.deliver'),num:fmt(m.openDeliveries??0),body:erpDemo?t('dash.demo.deliver.body'):t('dash.c.deliver.body'),cta:t('dash.c.deliver.cta'),route:'sales-orders'},
+    {tone:'accent',icon:'receive',title:t('dash.c.grn'),num:fmt(m.goodsReceipts??0),body:erpDemo?t('dash.demo.grn.body'):t('dash.c.grn.body'),cta:t('dash.c.grn.cta'),route:'purchase-orders'},
+    {tone:'teal',icon:'warehouse',title:t('dash.c.pick'),num:fmt(m.pickTasks??0),meta:erpDemo?t('dash.demo.pick.meta'):t('dash.c.pick.meta'),body:erpDemo?t('dash.demo.pick.body'):t('dash.c.pick.body'),cta:t('dash.c.pick.cta'),route:'picking'},
+    {tone:'violet',icon:'people',title:t('dash.c.leave'),num:fmt(erpDemo?visibleLeaveRequests:(m.leaveRequests??0)),body:erpDemo?t(visibleLeaveRequests>0?'dash.demo.leave.pendingBody':'dash.demo.leave.body'):t('dash.c.leave.body'),cta:t('dash.c.leave.cta'),route:'leave-approval',permission:['hr.approve','employee.team.read','expenses.approve.manager']},
+  ]);
 
   /* approvals mini-table */
-  const apprList=`<div class="minilist">`+DB.approvals.slice(0,5).map(a=>`
-    <div class="mli" data-route="${a.route}">
+  const apprList=`<div class="minilist">`+visibleApprovals.slice(0,5).map(a=>`
+    <div class="mli" data-route="${a.route}" data-route-params="${esc(JSON.stringify(a.params||{}))}">
       <span class="ml-doc">${esc(a.no)}</span>
-      <div class="ml-main">${esc(a.kind)}<small>${esc(a.who)} · ${esc(a.age)} ago</small></div>
+      <div class="ml-main">${esc(a.kindKey?t(a.kindKey):a.kind)}<small>${esc(a.actorKey?t(a.actorKey):a.who)} · ${esc(a.ageKey?t(a.ageKey):t('dash.age.ago',{age:a.age}))}</small></div>
       ${a.amt!=null?`<span class="ml-amt tnum">${money0(a.amt)}</span>`:''}
       ${a.risk==='high'?cap(t('dash.cap.high'),'danger'):a.risk==='warn'?cap(t('dash.cap.check'),'warn'):cap(t('dash.cap.routine'),'neutral')}
     </div>`).join('')+`</div>`;
-
-  root.innerHTML=`<div class="content full"><section class="master">
-    <div class="scrollarea">
-      <div class="pagehead">
-        ${crumbs([DB.company.name, t('nav.home')])}
-        <div class="h1row">
-          <h1>${esc(t('dash.greeting'))}, ${esc(u.name.split(' ')[0])}</h1>
-          <div class="headright">
-            <div class="kfig"><small>${esc(t('dash.kpi.openorder'))}</small><b class="tnum">${money(m.openOrderValue??0,DB.company.currency)}</b></div>
-            <div class="kfig"><small>${esc(t('dash.kpi.cash'))}</small><b class="tnum">${money(m.cash??0,DB.company.currency)}</b></div>
-            <div class="kfig"><small>${esc(t('dash.kpi.mtd'))}</small><b class="tnum pos">${money(m.mtdSales??0,DB.company.currency)}</b></div>
-          </div>
-        </div>
-        <div class="h1sub">${esc(DB.company.branch)} · ${esc(DB.company.period)} · ${esc(t('dash.sub'))}</div>
-      </div>
-
-      <div class="dash">
-        <div class="dash-sectitle"><span>${esc(t('dash.sec.attention'))}</span><span class="ln"></span><span style="color:var(--danger)">${attention.length} ${esc(t('dash.items'))}</span></div>
-        <div class="dashgrid">${attention.join('')}</div>
-
-        <div class="dash-sectitle"><span>${esc(t('dash.sec.ops'))}</span><span class="ln"></span></div>
-        <div class="dashgrid">${ops.join('')}</div>
-
-        <div class="dash-sectitle"><span>${esc(t('dash.sec.queue'))}</span><span class="ln"></span><span><a href="javascript:navigate('po-approval')">${esc(t('dash.openall'))}</a></span></div>
+  const headerKpis=[
+    {permission:'sales.read',label:t('dash.kpi.openorder'),value:money(m.openOrderValue??0,DB.company.currency),cls:''},
+    {permission:'finance.read',label:t('dash.kpi.cash'),value:money(m.cash??0,DB.company.currency),cls:''},
+    {permission:'sales.read',label:t('dash.kpi.mtd'),value:money(m.mtdSales??0,DB.company.currency),cls:' pos'},
+  ].filter(kpi=>userHasAnyPermission(kpi.permission)).map(kpi=>`<div class="kfig"><small>${esc(kpi.label)}</small><b class="tnum${kpi.cls}">${kpi.value}</b></div>`).join('');
+  const approvalQueue=routeAllowed('approval-inbox')?`
+        <div class="dash-sectitle"><span>${esc(t('dash.sec.queue'))}</span><span class="ln"></span><span><a href="javascript:navigate('approval-inbox')">${esc(t('dash.openall'))}</a></span></div>
         <div class="dashgrid">
           <button class="wcard span2" style="cursor:default" onclick="event.stopPropagation()">
-            <div class="wc-top"><span class="wc-ic accent">${ic('flow')}</span><h4>${esc(t('dash.q.pending'))}</h4><span class="wc-meta">${esc(t('dash.q.modules'))}</span></div>
+            <div class="wc-top"><span class="wc-ic accent">${ic('flow')}</span><h4>${esc(t('dash.q.pending'))}</h4><span class="wc-meta">${esc(t('dash.q.moduleCount',{count:approvalModuleCount}))}</span></div>
             ${apprList}
           </button>
           <div class="wcard" style="cursor:default">
@@ -75,14 +65,71 @@ SCREENS['dashboard'] = function(root){
             <div class="wc-num"><b class="tnum">${fmt(m.cleared??0)}</b><span class="wc-delta up">${esc(t('dash.q.ontime'))}</span></div>
             <p>${t('dash.q.body')}</p>
           </div>
+        </div>`:'';
+  const attentionSection=attention.length?`
+        <div class="dash-sectitle"><span>${esc(t('dash.sec.attention'))}</span><span class="ln"></span><span style="color:var(--danger)">${attention.length} ${esc(t('dash.items'))}</span></div>
+        <div class="dashgrid">${attention.join('')}</div>`:'';
+  const operationsSection=ops.length?`
+        <div class="dash-sectitle"><span>${esc(t('dash.sec.ops'))}</span><span class="ln"></span></div>
+        <div class="dashgrid">${ops.join('')}</div>`:'';
+
+  root.innerHTML=`<div class="content full"><section class="master">
+    <div class="scrollarea">
+      <div class="pagehead">
+        ${crumbs([DB.company.name, t('nav.home')])}
+        <div class="h1row">
+          <h1>${esc(t('dash.greeting'))}, ${esc(u.name.split(' ')[0])}</h1>
+          <div class="headright">${headerKpis}</div>
         </div>
+        <div class="h1sub">${esc(DB.company.branch)} · ${esc(DB.company.period)} · ${esc(t('dash.sub'))}</div>
+      </div>
+
+      <div class="dash">
+        ${attentionSection}
+        ${operationsSection}
+        ${approvalQueue}
       </div>
     </div>
   </section></div>`;
 
   root.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>{
-    const r=el.dataset.route; if(r) navigate(r);
+    const r=el.dataset.route;
+    let params={};
+    try{ params=JSON.parse(el.dataset.routeParams||'{}'); }catch{}
+    if(r) navigate(r,params);
   }));
+};
+
+/* ---------------- CROSS-MODULE APPROVAL INBOX ---------------- */
+SCREENS['approval-inbox'] = function(root){
+  const rows=(DB.approvals||[])
+    .filter(approvalVisibleToUser)
+    .map(row=>({...row,route:approvalRouteForUser(row)}))
+    .map(row=>({
+      ...row,
+      displayKind:row.kindKey?t(row.kindKey):row.kind,
+      displayWho:row.actorKey?t(row.actorKey):row.who,
+      displayAge:row.ageKey?t(row.ageKey):t('dash.age.ago',{age:row.age}),
+      displayModule:t('nav.'+(ROUTE_MODULE[row.route]||'workflow')),
+    }));
+  const riskLabel=row=>row.risk==='high'?t('dash.cap.high'):row.risk==='warn'||row.risk==='med'?t('dash.cap.check'):t('dash.cap.routine');
+  const riskTone=row=>row.risk==='high'?'danger':row.risk==='warn'||row.risk==='med'?'warn':'neutral';
+  transactionListPage(root,{
+    module:'workflow',route:'approval-inbox',title:t('approvalInbox.title'),description:t('approvalInbox.description'),
+    rows,rowId:row=>`${row.route}:${row.no}`,
+    count:visible=>`${visible.length} ${t('dash.items')}`,
+    search:{placeholder:t('approvalInbox.search'),match:(row,query)=>[row.no,row.displayKind,row.displayWho,row.displayModule].some(value=>String(value||'').toLocaleLowerCase().includes(query)),empty:{icon:'search',title:t('approvalInbox.noMatch')}},
+    columns:[
+      {label:t('approvalInbox.record'),sticky:true,render:row=>`<b class="docnum">${esc(row.no)}</b>`},
+      {label:t('approvalInbox.type'),align:'l',render:row=>`<div class="cellsub"><b>${esc(row.displayKind)}</b><small>${esc(row.displayModule)}</small></div>`},
+      {label:t('approvalInbox.requestedBy'),align:'l',render:row=>`<span data-business-text>${esc(row.displayWho)}</span>`},
+      {label:t('approvalInbox.age'),align:'l',render:row=>esc(row.displayAge)},
+      {label:t('appr.col.amount'),align:'r',render:row=>row.amt==null?'—':`<b class="tnum">${money0(row.amt)}</b>`},
+      {label:t('approvalInbox.risk'),align:'l',render:row=>cap(riskLabel(row),riskTone(row))},
+    ],
+    rowAction:{label:row=>`${t('approvalInbox.open')} ${row.no}`,run:row=>navigate(row.route,row.params||{})},
+    empty:{icon:'checkc',title:t('approvalInbox.empty'),description:t('approvalInbox.emptyBody')},
+  });
 };
 
 /* ---------------- PURCHASE ORDERS (listing) ---------------- */

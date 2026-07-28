@@ -102,19 +102,27 @@ async function prepareCanonicalSalesData(){
     listPage('inventory/products'),
     listPage('inventory/warehouses'),
     listPage('inventory/stock-levels'),
+    listPage('sales/order-approvals'),
   ]);
   const [
-    customers,orders,orderLines,invoices,products,warehouses,stockLevels,
+    customers,orders,orderLines,invoices,products,warehouses,stockLevels,approvals,
   ]=pages.map(page=>page.data);
   const customerById=new Map(customers.map(row=>[row.id,row]));
   const orderById=new Map(orders.map(row=>[row.id,row]));
   const productById=new Map(products.map(row=>[row.id,row]));
   const invoiceByOrderId=new Map(invoices.map(row=>[row.orderId,row]));
+  const approvalByOrderId=new Map(approvals.map(row=>[row.orderId,row]));
+  const defaultWarehouseResource=warehouses.find(row=>row.code==='WH-SALES')||warehouses[0]||null;
   const onHandByProduct=new Map();
+  const onHandByProductWarehouse=new Map();
   stockLevels.forEach(row=>{
     onHandByProduct.set(
       row.productId,
       (onHandByProduct.get(row.productId)||0)+salesNumber(row.qty),
+    );
+    onHandByProductWarehouse.set(
+      `${row.productId}:${row.warehouseId}`,
+      salesNumber(row.qty),
     );
   });
   const linesByOrderId=new Map();
@@ -130,7 +138,9 @@ async function prepareCanonicalSalesData(){
       uom:product.uom||'unit',
       price:salesNumber(row.unitPrice),
       disc:0,
-      avail:onHandByProduct.get(row.productId)||0,
+      avail:defaultWarehouseResource
+        ?(onHandByProductWarehouse.get(`${row.productId}:${defaultWarehouseResource.id}`)||0)
+        :0,
       taxCode:row.taxCode,
       taxRate:salesNumber(row.taxRate)/100,
     });
@@ -173,12 +183,20 @@ async function prepareCanonicalSalesData(){
     status:(onHandByProduct.get(row.id)||0)>0?'In stock':'No stock',
   }));
 
-  const ORDER_STATUS_UI={pending_approval:'Pending Approval',draft:'Draft',confirmed:'Closed',rejected:'Rejected',cancelled:'Cancelled'};
+  const ORDER_STATUS_UI={pending_approval:'Pending Approval',approved:'Approved',draft:'Draft',confirmed:'Closed',rejected:'Rejected',cancelled:'Cancelled'};
   const INVOICE_STATUS_UI={unpaid:'Posted',paid:'Paid',cancelled:'Cancelled'};
   DB.salesOrders=orders.map(row=>{
     const customer=customerById.get(row.customerId)||{};
     const lines=linesByOrderId.get(row.id)||[];
     const relatedInvoice=invoiceByOrderId.get(row.id);
+    const approvalStatus=approvalByOrderId.get(row.id)?.status||null;
+    const effectiveStatus=row.status==='draft'
+      ?(approvalStatus==='pending'
+        ?'pending_approval'
+        :(approvalStatus==='rejected'
+          ?'rejected'
+          :(approvalStatus==='approved'?'approved':row.status)))
+      :row.status;
     return {
       id:row.id,
       version:row.version,
@@ -188,8 +206,9 @@ async function prepareCanonicalSalesData(){
       custCode:customer.code||'—',
       date:dateValue(row.orderDate),
       deliver:dateValue(row.orderDate),
-      status:ORDER_STATUS_UI[row.status]||row.status,
+      status:ORDER_STATUS_UI[effectiveStatus]||effectiveStatus,
       rawStatus:row.status,
+      approvalStatus,
       total:salesNumber(row.totalAmount),
       net:salesNumber(row.netAmount),
       tax:salesNumber(row.taxAmount),
@@ -204,7 +223,7 @@ async function prepareCanonicalSalesData(){
     };
   });
   DB.salesOrderDocs={};
-  const defaultWarehouse=DB.salesWarehouses.find(row=>row.code==='WH-SALES')
+  const defaultWarehouse=DB.salesWarehouses.find(row=>row.id===defaultWarehouseResource?.id)
     ||DB.salesWarehouses[0]||null;
   DB.salesOrders.forEach(row=>{
     const customer=customerViewById.get(row.customerId)||{
@@ -222,6 +241,7 @@ async function prepareCanonicalSalesData(){
       ref:'—',
       status:row.status,
       rawStatus:row.rawStatus,
+      approvalStatus:row.approvalStatus,
       owner:row.owner,
       warehouse:defaultWarehouse?`${defaultWarehouse.code} · ${defaultWarehouse.name}`:'—',
       warehouseId:defaultWarehouse&&defaultWarehouse.id,
@@ -293,7 +313,7 @@ async function prepareCanonicalSalesData(){
     };
   });
   DB.invoice0331=DB.salesInvoiceDocs[DB.salesInvoices[0]&&DB.salesInvoices[0].no]||null;
-  DB.soNow=new Date().toISOString().slice(0,10);
+  DB.soNow=typeof workingBusinessDate==='function'?workingBusinessDate():new Date().toISOString().slice(0,10);
   DB.salesReadMeta={
     truncated:pages.some(page=>Boolean(page.nextCursor)),
     nextCursors:pages.map(page=>page.nextCursor),

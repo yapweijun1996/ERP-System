@@ -509,8 +509,19 @@ async function checkViewport(browser, viewport) {
       const financeAccounts = await adapter.list('finance/accounts', { limit: 100 });
       const arAccount = financeAccounts.data.find((row) => row.code === '1100');
       const revenueAccount = financeAccounts.data.find((row) => row.code === '4000');
+      const smokeOpenPeriod = (await adapter.db.query(
+        "select start_date, end_date from accounting_period where master_fn='M1' and company_fn='C-SG' and status='open' order by start_date desc limit 1",
+      )).rows[0];
+      if (!smokeOpenPeriod) {
+        return { error: 'no open accounting period is available for the finance smoke proof' };
+      }
+      const smokeDateText = (value) => value instanceof Date
+        ? value.toISOString().slice(0, 10)
+        : String(value).slice(0, 10);
+      const smokePeriodStart = smokeDateText(smokeOpenPeriod.start_date);
+      const smokePostingDate = smokeDateText(smokeOpenPeriod.end_date);
       const manualJournal = await adapter.create('finance/journals', {
-        docNo: 'MJ-SMOKE-1', postingDate: '2026-07-22', journalType: 'standard',
+        docNo: 'MJ-SMOKE-1', postingDate: smokePostingDate, journalType: 'standard',
         memo: 'Smoke manual journal', reference: 'SMOKE',
         lines: [
           { accountId: arAccount.id, dimension: 'SG', debit: '42.50', credit: '0' },
@@ -526,7 +537,7 @@ async function checkViewport(browser, viewport) {
       )).rows[0];
       const reversedManual = await adapter.action(
         'finance/journals', manualJournal.data.id, 'reverse',
-        { docNo: 'MJ-SMOKE-REV-1', postingDate: '2026-07-23', reason: 'Smoke correction' },
+        { docNo: 'MJ-SMOKE-REV-1', postingDate: smokePostingDate, reason: 'Smoke correction' },
         'smoke-manual-reverse',
       );
       const reversalPosting = (await adapter.db.query(
@@ -540,7 +551,7 @@ async function checkViewport(browser, viewport) {
         && !document.querySelector('[data-manual-journal-reverse]');
       const bankAccount = financeAccounts.data.find((row) => row.code === '1000');
       const bankJournal = await adapter.create('finance/journals', {
-        docNo: 'MJ-SMOKE-BANK-1', postingDate: '2026-07-22', journalType: 'standard',
+        docNo: 'MJ-SMOKE-BANK-1', postingDate: smokePostingDate, journalType: 'standard',
         memo: 'Smoke bank receipt for reconciliation', reference: 'BANK-SMOKE',
         lines: [
           { accountId: bankAccount.id, dimension: 'SG', debit: '17.25', credit: '0' },
@@ -552,10 +563,10 @@ async function checkViewport(browser, viewport) {
       const bankLeg = bankGl.data.find((row) => row.journalRef === 'MJ-SMOKE-BANK-1');
       const bankStatement = await adapter.create('finance/bank-statements', {
         statementNo: 'BS-SMOKE-1', bankAccountId: bankAccount.id, currency: 'SGD',
-        periodStart: '2026-07-01', periodEnd: '2026-07-31',
+        periodStart: smokePeriodStart, periodEnd: smokePostingDate,
         openingBalance: '0.00', closingBalance: '17.25',
         lines: [{
-          transactionDate: '2026-07-22', reference: 'BANK-SMOKE',
+          transactionDate: smokePostingDate, reference: 'BANK-SMOKE',
           description: 'Smoke customer receipt', amount: '17.25',
         }],
       });

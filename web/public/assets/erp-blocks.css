@@ -126,10 +126,12 @@
 
 /* ===== document screen (transaction) ===== */
 .docwrap{flex:1;overflow:auto;min-height:0;}
-.docpage{max-width:1080px;margin:0 auto;padding:8px 24px 80px;}
+.docpage{max-width:1280px;margin:0 auto;padding:12px 24px 96px;}
 .dochead{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-l);padding:18px 20px;margin-bottom:16px;}
 .dh-row1{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;}
 .dh-row1 .dt{min-width:0;font-size:calc(23px * var(--fs,1));font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;}
+.dh-row1 h1.dt{margin:0;}
+.fld .select-filter{margin-bottom:8px;}
 .dh-row1 .dnum{font-family:var(--mono);font-size:calc(13px * var(--fs,1));color:var(--muted);}
 .dh-row1 .dactions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
 /* status flow stepper */
@@ -178,6 +180,15 @@
 @media(max-width:720px){.docaddr{grid-template-columns:1fr;}}
 /* make the meta grid above join cleanly with the address block */
 .dochead .docmeta:has(+ .docaddr){border-radius:var(--r-m) var(--r-m) 0 0;}
+/* Every document table remains usable at phone widths. The direct parent is
+   the scroll region so the table never forces page-level horizontal scroll. */
+.docpage *:has(>table.lines),.payslip-page *:has(>table.lines){
+  max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;outline:none;
+}
+.docpage *:has(>table.lines):focus-visible,.payslip-page *:has(>table.lines):focus-visible{
+  box-shadow:inset 0 0 0 2px var(--accent);
+}
+.docpage *:has(>table.lines)>table.lines,.payslip-page *:has(>table.lines)>table.lines{min-width:640px;}
 
 /* order notes & internal memo */
 .docnotes{display:flex;flex-direction:column;gap:14px;}
@@ -192,6 +203,17 @@
 /* document layout = lines + side summary */
 .doclayout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start;}
 .docmain{min-width:0;display:flex;flex-direction:column;gap:16px;}
+.sales-order-detail{max-width:1280px;padding-top:12px;}
+.sales-order-detail .dochead{padding:20px 22px;box-shadow:0 1px 2px rgba(0,0,0,.025);}
+.sales-order-detail .doclayout{grid-template-columns:minmax(0,1fr) minmax(280px,320px);gap:18px;}
+.sales-order-detail .stepper{display:grid;grid-template-columns:auto minmax(14px,1fr) auto minmax(14px,1fr) auto minmax(14px,1fr) auto minmax(14px,1fr) auto minmax(14px,1fr) auto;width:100%;}
+.sales-order-detail .step{white-space:nowrap;}
+.sales-order-detail .stepline{width:auto;min-width:0;margin:0 7px;}
+.sales-order-detail .docmeta{grid-template-columns:minmax(190px,1.35fr) repeat(4,minmax(130px,1fr));}
+.sales-order-detail .panel,.sales-order-detail .sumcard{box-shadow:0 1px 2px rgba(0,0,0,.025);}
+.sales-order-lines-scroll{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;outline:none;}
+.sales-order-lines-scroll:focus-visible{box-shadow:inset 0 0 0 2px var(--accent);}
+.sales-order-lines-scroll table.lines{min-width:690px;}
 .work-order-detail{max-width:1280px;}
 .work-order-progress{height:7px;margin-top:16px;overflow:hidden;border-radius:999px;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--hairline);}
 .work-order-progress>i{display:block;width:0;height:100%;border-radius:inherit;background:var(--accent);transition:width .24s var(--ease);}
@@ -579,6 +601,14 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .wcard.span2{grid-column:span 1;}
   .doclayout,.appr-layout{grid-template-columns:1fr;}
   .summary{position:static;}
+  .sales-order-detail{padding:8px 16px 90px;}
+  .sales-order-detail .doclayout{grid-template-columns:1fr;}
+  .sales-order-detail .docmeta{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .sales-order-detail .stepper{display:flex;flex-wrap:nowrap;overflow-x:auto;padding:4px 2px 10px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;}
+  .sales-order-detail .stepper{scrollbar-width:none;}
+  .sales-order-detail .stepper::-webkit-scrollbar{display:none;}
+  .sales-order-detail .step{flex:none;scroll-snap-align:start;}
+  .sales-order-detail .stepline{flex:0 0 28px;min-width:28px;margin:0 7px;}
   .work-order-detail{padding:8px 16px 90px;}
   .work-order-detail .dactions{width:100%;margin-left:0;justify-content:flex-start;}
   .work-order-detail .summary{order:-1;}
@@ -640,6 +670,15 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .screen-preview-banner{padding:8px 14px;}
   .screen-preview-banner>div{display:block;}
   .screen-preview-banner span{display:block;margin-top:1px;}
+}
+@media (max-width:560px){
+  .sales-order-detail{padding-left:12px;padding-right:12px;}
+  .sales-order-detail .dochead{padding:16px;}
+  .sales-order-detail .dh-row1 .dactions{width:100%;margin-left:0;justify-content:flex-start;}
+  .sales-order-detail .docmeta{grid-template-columns:1fr;}
+  .sales-order-detail .panel-h{align-items:flex-start;flex-direction:column;}
+  .sales-order-detail .panel-h .ph-act{margin-left:0;max-width:100%;overflow-x:auto;}
+  .sales-order-detail .linefoot{gap:8px;align-items:flex-start;flex-direction:column;}
 }
 
 /* ===== financial-statement-v1 — hierarchical Finance report SSOT ===== */
@@ -738,7 +777,9 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .case-detail-overview{padding:14px;}
   .case-detail-lifecycle li{font-size:calc(10.5px * var(--fs,1));}
   .case-detail-facts{grid-template-columns:1fr 1fr;}
-  .case-detail-actions{bottom:calc(58px + env(safe-area-inset-bottom));margin-left:-1px;margin-right:-1px;flex-wrap:wrap;justify-content:flex-end;}
+  /* Decision actions follow the complete case context on phones. A sticky footer
+     previously covered line items before the user could review totals/reasons. */
+  .case-detail-actions{position:static;bottom:auto;margin-left:-1px;margin-right:-1px;flex-wrap:wrap;justify-content:flex-end;}
   .case-detail-actions>.grow,.case-detail-action-note{display:none;}
   .case-detail-actions .btn{min-width:0;max-width:100%;}
   .ledger-detail{padding:2px 12px 90px;}
@@ -756,7 +797,8 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .posting-detail-overview{padding:13px;}
   .posting-detail-identity{align-items:flex-start;flex-direction:column;gap:3px;width:100%;}
   .posting-detail-facts{grid-template-columns:1fr 1fr;}
-  .posting-detail-actions{bottom:calc(58px + env(safe-area-inset-bottom));margin-left:-1px;margin-right:-1px;flex-wrap:wrap;justify-content:flex-end;}
+  /* Posting actions must not obscure the accounting trace on narrow screens. */
+  .posting-detail-actions{position:static;bottom:auto;margin-left:-1px;margin-right:-1px;flex-wrap:wrap;justify-content:flex-end;}
   .posting-detail-actions>.grow{display:none;}
   .posting-detail-actions .btn{min-width:0;max-width:100%;}
   .posting-lines-footer{justify-content:space-between;gap:10px 14px;}
@@ -826,6 +868,69 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .set-sess .sm b{font-size:calc(13px * var(--fs,1));font-weight:600;}
 .set-sess .sm small{display:block;font-size:calc(11.5px * var(--fs,1));color:var(--muted);margin-top:1px;}
 .set-savebar{flex:none;display:flex;align-items:center;gap:10px;padding:12px 24px;border-top:1px solid var(--hairline);background:var(--surface);}
+.docwrap+.set-savebar,.docwrap+.responsive-actionbar{
+  padding-inline:max(24px,calc((100% - 1280px)/2 + 24px));
+}
+[data-payroll-actions]{min-width:0;flex-wrap:wrap;padding-inline:14px;justify-content:flex-end;}
+[data-payroll-actions]>.grow{min-width:0;}
+[data-payroll-actions]>.btn{min-width:0;max-width:100%;}
+.staff-onboarding-progress .stepper{margin:16px 0 12px;}
+.staff-onboarding-save-context{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.staff-onboarding-save-context b{font-size:calc(12.5px * var(--fs,1));}
+.staff-onboarding-save-context small{display:block;color:var(--muted);font-size:calc(11.5px * var(--fs,1));}
+.staff-onboarding-error{margin:0 0 12px;}
+.fld.is-invalid>input,.fld.is-invalid>select,.fld.is-invalid>.combo .combo-in{border-color:var(--danger);box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 12%,transparent);}
+.staff-field-error{display:block;margin-top:5px;color:var(--danger);font-size:calc(11.5px * var(--fs,1));line-height:1.35;}
+
+/* Shared empty state for master-detail panes. Keep the icon and copy readable
+   in both the narrow desktop detail rail and the mobile detail drawer. */
+.detail-empty{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px 22px;text-align:center;color:var(--muted);}
+.detail-empty>.ico{width:30px;height:30px;flex:none;color:var(--faint);}
+.detail-empty>div{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:34ch;line-height:1.45;}
+.detail-empty b{display:block;color:var(--text);font-size:calc(13.5px * var(--fs,1));font-weight:650;}
+.detail-empty small{display:block;color:var(--muted);font-size:calc(12px * var(--fs,1));line-height:1.45;}
+
+.transaction-list-search{height:34px;min-width:250px;max-width:340px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--hairline);border-radius:var(--r-s);background:var(--surface);color:var(--muted);}
+.transaction-list-search:focus-within{border-color:color-mix(in srgb,var(--accent) 55%,var(--hairline));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent);}
+.transaction-list-search>.ico{width:15px;height:15px;flex:none;}
+.transaction-list-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--fg);font:inherit;font-size:calc(12.5px * var(--fs,1));}
+.transaction-list-search input::placeholder{color:var(--faint);}
+@media(max-width:760px){
+  .transaction-list-search{order:-1;flex-basis:100%;max-width:none;width:100%;}
+  .transaction-list-body>.toolbar{flex-wrap:wrap;}
+}
+
+/* Payroll payslip: use the desktop canvas instead of squeezing a document and
+   four summary cards into the old 920px prototype. */
+.payslip-page{max-width:1240px;width:100%;}
+.payslip-subtitle{color:var(--muted);font-size:calc(13px * var(--fs,1));margin-top:5px;line-height:1.45;overflow-wrap:anywhere;}
+.payslip-layout{grid-template-columns:minmax(0,1fr) minmax(330px,360px);gap:20px;}
+.payslip-main,.payslip-summary{min-width:0;}
+.payslip-summary{top:16px;}
+.payslip-related{margin-top:20px;overflow:hidden;}
+.payslip-related .panel-h{padding:14px 16px;}
+.payslip-related .minilist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px;padding:0 16px;}
+.payslip-related .mli{min-width:0;padding:12px 0;}
+.payslip-related .ml-doc{flex:none;white-space:nowrap;}
+.payslip-related .ml-main{overflow-wrap:anywhere;}
+.payslip-actionbar{position:sticky;bottom:0;z-index:7;display:flex;align-items:center;gap:14px;margin-top:16px;padding:11px 14px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--material);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);box-shadow:var(--shadow);}
+.payslip-action-context{display:flex;flex-direction:column;gap:2px;min-width:0;color:var(--muted);font-size:calc(12px * var(--fs,1));line-height:1.35;}
+.payslip-action-context b{color:var(--fg);font-size:calc(12.5px * var(--fs,1));}
+.payslip-action-context small{color:var(--muted);font-size:calc(11.5px * var(--fs,1));}
+
+@media(max-width:980px){
+  .payslip-layout{grid-template-columns:1fr;}
+  .payslip-summary{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;}
+  .payslip-related .minilist{grid-template-columns:1fr;}
+}
+@media(max-width:620px){
+  .payslip-page{padding-left:14px;padding-right:14px;}
+  .payslip-summary{grid-template-columns:1fr;}
+  .payslip-related{margin-top:14px;}
+  .payslip-related .mli{align-items:flex-start;flex-wrap:wrap;}
+  .payslip-related .ml-main{flex-basis:calc(100% - 110px);}
+  .payslip-actionbar{margin-left:0;margin-right:0;}
+}
 #setupWizardView .wizard-savebar{padding-inline:0;justify-content:flex-end;}
 @media (max-width:760px){ .set-rail{display:none;} .set-grid{grid-template-columns:1fr;} .set-row-c select{min-width:150px;} }
 

@@ -6,6 +6,7 @@ import Decimal from 'decimal.js';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { account, glEntry, journalHeader, journalLine } from '../../data/schema';
+import { assertOpenAccountingPeriod } from './postingPeriod';
 
 export class ManualJournalError extends Error {
   constructor(message: string) {
@@ -236,6 +237,9 @@ export async function postManualJournalWithin(exec: DB, scope: Scope, journalId:
   if (header.status !== 'draft') {
     throw new ManualJournalError(`Only a draft journal can be posted; ${header.docNo} is '${header.status}'.`);
   }
+  await assertOpenAccountingPeriod(
+    exec, scope, header.postingDate, (message) => new ManualJournalError(message),
+  );
   const lines = await storedLines(exec, scope, header.id);
   const [existingPosting] = await exec.select({ id: glEntry.id }).from(glEntry).where(and(
     eq(glEntry.masterFn, scope.masterFn),
@@ -293,6 +297,7 @@ export async function reverseManualJournalWithin(
   if (postingDate < dateText(original.postingDate)) {
     throw new ManualJournalError('Reversal postingDate cannot precede the original journal date.');
   }
+  await assertOpenAccountingPeriod(exec, scope, postingDate, (message) => new ManualJournalError(message));
   const [existingReversal] = await exec.select({ id: journalHeader.id }).from(journalHeader).where(and(
     eq(journalHeader.masterFn, scope.masterFn),
     eq(journalHeader.companyFn, scope.companyFn),

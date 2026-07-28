@@ -647,7 +647,7 @@ SCREENS['stock-movement'] = async function(root){
   const rangeLabel=mvDates.length?fmtD(mvDates[0])+' – '+fmtD(mvDates[mvDates.length-1]):'No movements';
   transactionListPage(root,{
     module:'inventory',route:'stock-movement',title:t('inv.nav.movements'),
-    description:'Every posted in/out and adjustment — the shared truth behind on-hand balances. Drill any row to its source document.',
+    description:t('inv.movements.description'),
     rows:DB.movements,rowId:m=>m.no,
     filters:[['all','All types'],['receipts','Receipts'],['issues','Issues'],['transfers','Transfers'],['adjustments','Adjustments']],
     filterFn:(movement,filter)=>movementKind(movement)===filter,
@@ -658,13 +658,12 @@ SCREENS['stock-movement'] = async function(root){
       {label:'Movement',sticky:true,render:m=>`<div class="cellsub"><b class="docnum">${esc(m.no)}</b><small>${esc(m.date)}</small></div>`},
       {label:'Item',align:'l',render:m=>`<div class="cellsub"><b>${esc(m.name)}</b><small>${esc(m.item)}</small></div>`},
       {label:'Type',align:'l',render:m=>cap(m.type,tone(m.type))},
-      {label:'Source doc',align:'l',render:m=>`<span class="docnum">${esc(m.ref)}</span>`},
+      {label:'Source doc',align:'l',render:m=>`<span class="docnum" data-business-text>${esc(m.ref)}</span>`},
       {label:'Warehouse',align:'l',render:m=>esc(m.wh)},
       {label:'Qty',align:'r',sortable:true,render:m=>`<b class="tnum delta ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${num(m.qty)}</b>`},
       {label:'Balance',align:'r',render:m=>`<span class="tnum">${num(m.bal)}</span>`},
       {label:'By',align:'l',render:m=>esc(m.by)},
     ],
-    rowAction:null,
     empty:{icon:'transfer',title:'No stock movements'},
   });
 };

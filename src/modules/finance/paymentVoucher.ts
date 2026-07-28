@@ -10,6 +10,7 @@ import {
   account, glEntry, paymentVoucher, paymentVoucherLine, supplier, supplierInvoice,
 } from '../../data/schema';
 import { supplierInvoiceOutstandingWithin } from '../purchasing/supplierPayable';
+import { assertOpenAccountingPeriod } from './postingPeriod';
 
 export class PaymentVoucherError extends Error {
   constructor(message: string) {
@@ -55,6 +56,9 @@ export async function createPaymentVoucherWithin(exec: DB, scope: Scope, input: 
   if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
     throw new PaymentVoucherError('supplierInvoiceIds must be positive integers.');
   }
+  await assertOpenAccountingPeriod(
+    exec, scope, input.paymentDate, (message) => new PaymentVoucherError(message),
+  );
 
   const [sup] = await exec.select({ id: supplier.id, name: supplier.name }).from(supplier).where(and(
     eq(supplier.masterFn, scope.masterFn),

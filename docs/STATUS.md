@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-07-27
+# Project Status — reviewed 2026-07-28
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -84,6 +84,58 @@ automated release baseline is green. See
 `docs/audits/END_USER_AUDIT_2026-07-27.md` for exact evidence. TASK-017 remains blocked
 for physical-phone acceptance.
 
+## 2026-07-28 interactive walkthrough status
+
+TASK-158 / EPIC-060 is complete except for the separately blocked physical-phone
+TASK-017. Unlike the route matrix alone, this pass clicked
+the real sidebar, tabs, menus and primary actions, fixes confirmed issues immediately
+and repeats each interaction in the browser. The current evidence and remaining gates
+are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`; the project must not be
+reported fully done until that ledger was closed. The first batch corrected Staff
+onboarding, fiscal-period payroll defaults, shell/PWA localization, empty detail states
+and enterprise Demo HR/payroll/AP/sales-approval coverage; the Demo pack is now v13. The current ledger
+also records the payslip layout, employee search, cross-company fiscal currency,
+payroll action overflow, business-data i18n boundaries, a non-disclosing direct-route
+403 for restricted roles, calendar discoverability and a universal transaction-list
+detail contract. All 40 standard transaction-list routes now fail audit if a populated
+row cannot open a native detail or governed read-only preview. The latest targeted
+desktop/375px list audit and Chinese browser proofs pass. The same pass now governs
+all 29 declared detail routes: 15 legacy documents have semantic titles, a wider
+shared canvas and bounded line tables; Sales Return uses the actionable case-detail
+contract; and mobile case/posting actions follow rather than cover their business
+context. Dedicated desktop/375px audits pass for document, case, master-editor,
+ledger and posting details; the complete 124-route × five-language × desktop/375px
+matrix is also green after correcting dynamic-business-text boundaries and Inventory
+Movement terminology. The real 12-persona shell matrix now also passes: navigation,
+quick-create actions, companies, dashboard facts and direct denial are permission-aware;
+personal Activity/Notifications use an Account shell, HR sees only its permitted Admin
+tabs, and Demo v13 is regression-checked against the authoritative role templates. MY sales
+approval-to-confirmation, AP settlement and closed-period rollback pass. Buyer created
+a real pending-approval PO; Production created and released a BOM-backed work order;
+Employee/Manager completed a real privacy-redacted leave approval; HR Staff activation
+enforced a temporary-password change; and Service created, assigned and resolved a real
+ticket while retaining its Finance 403 boundary. The 2026-07-29 IUA-068 follow-up also
+passes: PWA v208 removes the competing source-fingerprint updater, versions deferred
+prompts per tab session and reloads only after an explicit Update now action;
+`npm run audit:pwa-update` proves the real worker lifecycle. The Warehouse journey also
+blocks invalid physical counts and locked-period adjustments before posting, while the
+domain boundary preserves zero stock/GL effects on direct failure. The current release
+baseline is green after those changes: 531 tests pass with one intentional skip, both
+Demo/API builds pass, desktop/375px smoke passes, and all 124 routes pass the responsive
+and five-language matrices. Retry-state audits now wait on the rendered recovery state
+instead of a workstation-speed-dependent 250 ms delay.
+
+Demo v13 additionally gives every linked persona one company-managed Employee base
+role, removes the replaced shared compatibility assignment, and deterministically
+binds `viewer@acme.co` to Jordan Lee / `DEMO-SG-E012` under manager@acme.co. Existing
+IndexedDB receives the additive upgrade because both version and signed hash advanced.
+
+The previously open desktop smoke regression is also closed: its finance proof had
+retained hard-coded July dates after manual-journal posting became correctly governed
+by the selected FY2026 P06 accounting period. The proof now derives its journal,
+reversal and bank-reconciliation dates from the canonical open-period boundary;
+one rebuilt Demo run passes both 1280px and 375px with zero console/page errors.
+
 ## What actually works (verified in code)
 
 | Area | Status | Evidence |
@@ -118,9 +170,9 @@ for physical-phone acceptance.
 | Management Reporting / BI | ✅ Canonical Demo/API derived data | `bi/analytics` rebuilds recognized revenue, receivables, open sales/purchase value, net payables, cash, inventory value, product-category sales and stock activity aging from current Canonical facts. It stores no KPI table, allocates only traceable product invoice/credit lines and labels stock age as days since latest inbound movement rather than unsupported FIFO-layer age. `bi-dashboard`, `sales-analysis` and `stock-aging` are bounded five-language routes protected by `reporting.read`. |
 | Integration delivery log | ✅ Canonical Demo/API sanitized read model | `integration/events` reads existing transactional-outbox facts through an explicit tenant-scoped, newest-first, keyset-paginated projection protected by `integration.read`. Only safe operational metadata leaves the server; payload, recipient/token material, raw worker errors and worker identity are excluded. The five-language `integration-logs` workspace is deliberately read-only and does not fabricate replay/export or connector-control actions. |
 | Personal activity | ✅ Canonical Demo/API sanitized actor read model | `account/activity` reads only the signed-in actor's active-company audit facts, newest first. The response maps internal vocabulary to bounded category/entity/action keys and excludes payloads, request IDs, actor identity, other users, device/IP and session/security state. The five-language `my-activity` page is read-only and states this boundary. |
-| Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v2 owns all 12 identities directly. `Avery Tan · Superadmin` is assigned to SG/MY, receives the Superadmin bypass for every setup/module gate and appears first in the switcher; Viewer and all ten department personas display their actual effective roles. Existing IndexedDB upgrades add these identities without replacing business data. |
-| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; v142 precaches the English i18n bootstrap and business boundary, then runtime-caches successfully loaded non-English packs. |
-| Canonical UI i18n | ✅ Five-language release proven | 1,246-key canonical resources plus 73 registered module packs provide en/ms/zh/ja/vi across all 122 Canonical routes. `setLang()` is atomic and state-preserving; `npm run audit:i18n` proves 122 routes × 5 languages × desktop/375px with no blocking findings. TASK-137–139 and TASK-156. |
+| Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v13 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 12 controlled leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,422-record deterministic pack. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v13 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Superadmin` is assigned to SG/MY, receives the Superadmin bypass for every setup/module gate and appears first in the switcher; Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates; existing IndexedDB upgrades add or correct deterministic records without replacing user data. |
+| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; v208 uses the waiting service worker as the single update authority, bypasses HTTP cache for `sw.js`, suppresses only the exact deferred version for a tab session and reloads once only after explicit acceptance. `npm run audit:pwa-update` exercises baseline, Later, newer-version and Update-now states with a real service worker. |
+| Canonical UI i18n | ✅ Five-language release proven | 1,297-key canonical resources plus 73 registered module packs provide en/ms/zh/ja/vi across all 122 Canonical routes. `setLang()` is atomic and state-preserving; `npm run audit:i18n` proves 122 routes × 5 languages × desktop/375px with no blocking findings. TASK-137–139 and TASK-156. |
 | GitHub Pages deploy | ⏸️ Disabled (intentional) | `.github/workflows/deploy-pages.yml` builds cleanly (typecheck, PGlite demo proof, `build:demo` all pass) but the final "Configure Pages" step always 404'd — Pages was never enabled on this repo, and it can't be on the Free plan while the repo stays **private**. 2026-07-17: repo is intentionally kept private (this is a monetizable product; publishing the full source would let it be freely copied). Workflow disabled via `gh workflow disable` (reversible — file untouched, just toggled off in GitHub so it stops failing on every push). Plan: a **separate, new public repo** will host only `web/dist/`'s static demo (localStorage/IndexedDB, no server) for prospects to try; this repo stays private and becomes the Docker+PostgreSQL production track if/when a prospect converts. |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
@@ -149,7 +201,7 @@ for physical-phone acceptance.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. The sidebar does not show unexplained static counters; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — every route in `SCREENS` (122), desktop + 375px | ✅ Demo/API behavior | Screen and five-language audits pass at 122 Canonical / 0 Preview. Permission-aware navigation matches effective capabilities; every unlinked My Work route now performs one handled context preflight, zero downstream reads and renders its localized empty state. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Passing | 2026-07-27 `npm test`: 136 files passed, one expected skip; 523 tests passed, one expected skip, zero failures. TASK-141 adds opening-balance migration and lifecycle coverage; TASK-147 adds proof-guard coverage; explicit document clocks and bounded PGlite/server setup close TASK-144 and TASK-146. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Passing | 2026-07-28 `npm test`: 531 tests passed, one expected skip, zero failures (532 total). The latest tranche adds MY posting-account completeness, closed-period rollback for treasury and inventory, negative physical-count rejection, Staff base-role enforcement and deterministic Demo persona/reporting-line integrity. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production Setup remains a separate deployment-token/zero-user command. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -1449,11 +1501,11 @@ covers 122 routes × five languages × desktop/375px; PWA cache version is v138.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 156 tasks, including TASK-141, TASK-143, TASK-147 and TASK-148
+- Done: 157 tasks, including TASK-141, TASK-143, TASK-147, TASK-148 and TASK-158
 - Todo: 0
 - Blocked: TASK-017 (1)
-- EPIC-056, EPIC-057 and EPIC-059 are complete at the current 122 Canonical / 0
-  Preview boundary. EPIC-058 remediation is complete.
+- EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 124
+  Canonical / 0 Preview boundary. EPIC-058 remediation is complete.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

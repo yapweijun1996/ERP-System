@@ -148,3 +148,31 @@ the report records any environment intentionally left running.
 - Preflight CSV and XLSX good/warning/error/replay/oversize cases, prove atomic rollback,
   complete the nine setup stages and confirm employee login is blocked until audited
   Go Live.
+
+## TASK-158 executed acceptance — 2026-07-28
+
+This execution supplements the reusable unchecked template above. It records what was
+actually exercised on `codex/interactive-uat-round-1`; exact steps, findings and
+screenshots are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
+
+- [x] Fresh Demo first run, neutral secure boot, sign-in/sign-out and setup collision
+      recovery.
+- [x] Staff creation, `Employee + Viewer` assignment, temporary-password login,
+      forced first-login activation and permanent-password re-login.
+- [x] Viewer/Employee self-service leave draft and submission; Manager privacy-redacted
+      queue and approval to final `approved` state.
+- [x] Buyer PO creation and canonical Pending Approval; Production work-order creation,
+      release and BOM availability; Warehouse invalid/locked/valid adjustment paths.
+- [x] Finance preparer/checker boundary, maker-checker actions, SG/MY AP settlement and
+      closed-period zero-effect rollback.
+- [x] Service persona Finance 403 plus ticket create → assign → resolve → detail readback.
+- [x] Twelve-persona navigation, quick-create, company, dashboard and direct-URL denial
+      matrix, including company membership and sensitive-control minimisation.
+- [x] Forty populated transaction-list routes open a native detail or governed preview;
+      all 29 declared details pass desktop and 375px page-contract checks.
+- [x] Lint, dual typecheck/build, schema/pack/drift checks, smoke, 531 tests, 124-route
+      desktop/375px audit and 124 × five-language × two-viewport audit.
+- [x] PWA v208 update lifecycle: first install is silent, Later suppresses only the
+      same worker version, a newer worker still prompts, and Update now reloads once.
+- [ ] Physical-phone acceptance — Blocked by TASK-017; no emulator claim substitutes
+      for a real device.

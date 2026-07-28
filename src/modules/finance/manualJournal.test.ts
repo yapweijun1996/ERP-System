@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import type { DB } from '../../data/db';
-import { account, glEntry, journalHeader, journalLine } from '../../data/schema';
+import { account, accountingPeriod, glEntry, journalHeader, journalLine } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import {
   createManualJournal,
@@ -25,6 +25,16 @@ async function accounts(db: DB) {
 }
 
 async function draft(db: DB, docNo = 'MJ-TEST-1') {
+  await db.insert(accountingPeriod).values({
+    masterFn: SCOPE.masterFn,
+    companyFn: SCOPE.companyFn,
+    fiscalYear: 2026,
+    periodNo: 7,
+    label: 'July 2026',
+    startDate: '2026-07-01',
+    endDate: '2026-07-31',
+    status: 'open',
+  }).onConflictDoNothing();
   const ids = await accounts(db);
   return createManualJournal(db, SCOPE, {
     docNo,
@@ -101,6 +111,20 @@ describe('manual journal', () => {
     await postManualJournal(db, SCOPE, created.id);
     await expect(postManualJournal(db, SCOPE, created.id)).rejects.toThrow('Only a draft journal');
     expect(await db.select().from(glEntry).where(eq(glEntry.journalRef, 'MJ-POST-ONCE'))).toHaveLength(2);
+  });
+
+  it('keeps a draft unposted when its accounting period is locked', async () => {
+    const db = await freshDb();
+    const created = await draft(db, 'MJ-LOCKED-PERIOD');
+    await db.update(accountingPeriod).set({ status: 'locked' }).where(and(
+      eq(accountingPeriod.masterFn, SCOPE.masterFn),
+      eq(accountingPeriod.companyFn, SCOPE.companyFn),
+      eq(accountingPeriod.periodNo, 7),
+    ));
+    await expect(postManualJournal(db, SCOPE, created.id)).rejects.toThrow('Accounting period July 2026 is locked');
+    expect(await db.select().from(glEntry).where(eq(glEntry.journalRef, 'MJ-LOCKED-PERIOD'))).toHaveLength(0);
+    const [header] = await db.select().from(journalHeader).where(eq(journalHeader.id, created.id));
+    expect(header.status).toBe('draft');
   });
 
   it('reverses a posted journal with swapped lines and leaves both postings balanced', async () => {

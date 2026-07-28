@@ -81,7 +81,7 @@ SCREENS['purchase-request'] = async function(root, params){
     ${typeof purNav==='function'?'<div style="padding:0 0 4px">'+purNav('purchase-requisitions')+'</div>':''}
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('list')}Purchase Requisition <span class="dnum">${esc(d.no)}</span></div>
+        <div><h1 class="dt">${ic('list')}Purchase Requisition <span class="dnum">${esc(d.no)}</span></h1>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.requestedBy)} · ${esc(d.dept)} · needed by ${esc(d.need)}</div></div>
         <div class="dactions">${cap(d.status,PR_TONE[d.status])}${btn('Print',{icon:'print',cls:'soft'})}</div>
       </div>
@@ -149,7 +149,7 @@ SCREENS['goods-receipt'] = function(root){
     ${typeof purNav==='function'?'<div style="padding:0 0 4px">'+purNav('goods-receipt')+'</div>':''}
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('receive')}Goods Receipt <span class="dnum">${esc(d.no)}</span></div>
+        <div><h1 class="dt">${ic('receive')}Goods Receipt <span class="dnum">${esc(d.no)}</span></h1>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.supplier)} · against ${esc(d.po)} · ${esc(d.carrier)}</div></div>
         <div class="dactions">${cap(d.status,purTone(d.status))}${btn('Print GRN',{icon:'print',cls:'soft'})}</div>
       </div>
@@ -240,7 +240,7 @@ SCREENS['supplier-invoice'] = function(root){
     ${typeof purNav==='function'?'<div style="padding:0 0 4px">'+purNav('supplier-invoice')+'</div>':''}
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('receipt')}Supplier Invoice <span class="dnum">${esc(d.no)}</span></div>
+        <div><h1 class="dt">${ic('receipt')}Supplier Invoice <span class="dnum">${esc(d.no)}</span></h1>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.supplier)} · ref ${esc(d.suppRef)} · due ${esc(d.due)}</div></div>
         <div class="dactions">${cap(d.status,purTone(d.status))}${btn('Download',{icon:'filepdf',cls:'soft'})}</div>
       </div>

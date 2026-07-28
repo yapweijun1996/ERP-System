@@ -17,6 +17,7 @@ import {
   roundedMoneyUnits,
 } from './decimal';
 import { issueStockWithin, receiveStockWithin } from './stock';
+import { assertOpenAccountingPeriod } from '../finance/postingPeriod';
 
 export class InventoryAdjustmentValidationError extends Error {
   constructor(message: string) {
@@ -161,6 +162,7 @@ export async function postInventoryAdjustmentWithin(
     status: inventoryAdjustment.status,
     version: inventoryAdjustment.version,
     warehouseId: inventoryAdjustment.warehouseId,
+    adjustmentDate: inventoryAdjustment.adjustmentDate,
   }).from(inventoryAdjustment).where(and(
     eq(inventoryAdjustment.masterFn, scope.masterFn),
     eq(inventoryAdjustment.companyFn, scope.companyFn),
@@ -172,6 +174,12 @@ export async function postInventoryAdjustmentWithin(
       `Adjustment ${header.docNo} is '${header.status}', not 'draft'`,
     );
   }
+  await assertOpenAccountingPeriod(
+    exec,
+    scope,
+    header.adjustmentDate,
+    (message) => new InventoryAdjustmentValidationError(message),
+  );
 
   const lines = await exec.select({
     productId: inventoryAdjustmentLine.productId,

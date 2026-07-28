@@ -902,7 +902,7 @@ balanced cash posting, package consistency/hash verification, SG/MY retention, l
 hold, correction versions and sensitive-access audit pass all local and PostgreSQL
 release gates.
 
-## Phase 39 — Canonical UI Internationalization (In progress)
+## Phase 39 — Canonical UI Internationalization (Complete)
 
 1. **Contract first** (TASK-136 done 2026-07-26) records the browser-local language,
    five fixed locale mappings, English fallback, UI/document boundary, safe message
@@ -954,3 +954,23 @@ forced RLS, 518 tests plus one expected skip, both builds, 122 routes × five la
 desktop/375px, Chromium/Firefox/WebKit critical flows and current-Chrome cold-load/page
 budgets. TASK-142 and TASK-145 also closed under their original EPIC-058 acceptance;
 TASK-017 remains blocked for physical-device acceptance.
+
+## Phase 42 — Interactive End-User Walkthrough & Remediation (Complete)
+
+1. **Real control traversal** (TASK-158) clicks the sidebar, module tabs, menus and
+   primary actions in the running product and records exact end-user evidence.
+2. **Immediate remediation** fixes confirmed UI/UX, localization, functional and ERP
+   business-logic defects, then repeats the same browser interaction.
+3. **Completion proof** covers 12 personas, SG/MY, five languages, desktop/375px and
+   the full release suite. Route rendering alone cannot close the phase.
+
+Exit criteria: every planned interaction has Pass, Fail or bounded Blocked evidence;
+all confirmed findings are fixed and retested; TASK-158 is done. TASK-017 remains
+separately blocked until physical-phone acceptance.
+
+Completed 2026-07-28, with a 2026-07-29 follow-up: IUA-001–068 were fixed and
+browser-retested; Demo v13 preserves
+one managed Employee base role and deterministic employee/manager identity per
+persona. Final proof passed 531 tests plus one expected skip, dual builds, smoke,
+the dedicated PWA v208 lifecycle audit, 124 Canonical routes at desktop/375px and
+124 routes × five languages × two viewports.

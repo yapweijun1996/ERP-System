@@ -65,7 +65,7 @@ function newItemCopy(){
   "draft": "草稿",
   "master": "商品主数据",
   "basic": "基本信息",
-  "sku": "存货单位",
+  "sku": "物料编码（SKU）",
   "skuPlaceholder": "例如 SG-HOSE-12",
   "skuHelp": "当前公司的唯一物料编码，创建后不可更改。",
   "name": "物料名称",
@@ -197,7 +197,7 @@ SCREENS['new-item'] = function(root){
     <div class="docwrap"><div class="docpage">
       ${crumbs([DB.company.name,{label:t('nav.inventory'),route:'stock-on-hand'},{label:t('inv.nav.items'),route:'item-master'},{cur:s('title')}])}
       <div class="dochead"><div class="dh-row1">
-        <div><div class="dt">${ic('tag')}${esc(s('title'))}</div><div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(s('draft'))} · ${esc(s('master'))} · ${esc(DB.company.name)}</div></div>
+        <div><h1 class="dt">${ic('tag')}${esc(s('title'))}</h1><div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(s('draft'))} · ${esc(s('master'))} · ${esc(DB.company.name)}</div></div>
         <div class="dactions">${cap(s('draft'),'neutral')}</div>
       </div></div>
 

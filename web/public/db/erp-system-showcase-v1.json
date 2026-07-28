@@ -1,7 +1,7 @@
 {
-  "version": "2",
+  "version": "13",
   "businessDate": "2026-07-27",
-  "sha256": "6428fb0cf3f1d4b365960d1c178fe7028ffe8514d22102761d79b2b11d65e10e",
+  "sha256": "e1b7f34b4ecdf8e710b4628af72b06d8d19117bd6916e11079b60f3e62777543",
   "personas": 12,
   "generated": {
     "employees": 94,
@@ -11,9 +11,22 @@
   },
   "records": {
     "activities": 4000,
-    "stockMovements": 4000,
+    "stockMovements": 4002,
     "glEntries": 2000,
-    "total": 10000
+    "leaveRequests": 12,
+    "leaveBalanceEntries": 98,
+    "payrollRuns": 6,
+    "payrollLines": 282,
+    "salesOrders": 2,
+    "salesOrderLines": 2,
+    "salesOrderApprovals": 2,
+    "purchaseOrders": 2,
+    "purchaseOrderLines": 2,
+    "goodsReceipts": 2,
+    "apStockMovements": 2,
+    "supplierInvoices": 2,
+    "apGlEntries": 6,
+    "total": 10422
   },
   "companies": [
     "C-SG",

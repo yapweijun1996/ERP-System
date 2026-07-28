@@ -58,13 +58,18 @@ user must confirm an irreversible reset or upgrade.
 
 The pack contains independent Singapore and Malaysia legal entities (SGD/GST and
 MYR/SST), 12 real personas, at least 100 employees, about 200 customers, 100
-suppliers, 500 products and exactly 10,000 deterministic activity, inventory and GL
-records. Stock movements are paired and journals balance by company and reference.
+suppliers, 500 products and 10,422 deterministic activity, inventory, GL, leave, payroll and procure-to-pay
+payroll records. Stock movements are paired, journals balance by company and reference,
+and HR data includes reporting lines plus controlled approval and payroll states.
 Cross-company Finance and HR assignments demonstrate legal-entity separation. The
-enterprise-pack manifest is currently version 2; it owns all 12 identities directly
+enterprise-pack manifest is currently version 10; it owns all 12 identities directly
 instead of relying on the compact regression seed. Its Superadmin belongs to both
 companies, bypasses module disablement for administration, and retains every setup
-capability. The Demo switcher presents the true assigned role for every persona.
+capability. The Demo switcher presents the true assigned role for every persona, and
+the linked employee profile uses the same human identity. Every showcase employee has
+a deterministic annual-leave opening; pending annual requests create matching holds.
+Historical Demo databases are repaired idempotently with missing SG/MY work calendars,
+calendar versions, leave types and confirmed policies before those entries are added.
 target is at most 15 seconds for first load and p95 at most two seconds for common
 pages and reports on a current Chrome browser and ordinary modern laptop.
 

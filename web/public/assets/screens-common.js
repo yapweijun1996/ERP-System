@@ -23,6 +23,26 @@ async function listPage(resource, query){
 }
 
 /**
+ * Read every page for bounded child collections whose totals must never be
+ * calculated from a silently truncated first page (for example payroll lines).
+ */
+async function listAllPages(resource, query, maxPages){
+  const rows=[];
+  const base=Object.assign({},query||{}, {limit:Math.min(100,Math.max(1,Number(query&&query.limit)||100))});
+  let cursor=base.cursor||null;
+  const pageLimit=Math.max(1,Number(maxPages)||200);
+  delete base.cursor;
+  for(let page=0;page<pageLimit;page+=1){
+    const response=await window.ErpSystemData.list(resource,Object.assign({},base,cursor?{cursor}:{}));
+    if(!response||response.data==null) throw new Error(`Unexpected ${resource} response.`);
+    rows.push(...response.data);
+    cursor=response.meta&&response.meta.nextCursor||null;
+    if(!cursor) return {data:rows,nextCursor:null};
+  }
+  throw new Error(`${resource} exceeded the supported ${pageLimit*base.limit}-row page window.`);
+}
+
+/**
  * Page-level SSOT for operational execution workspaces.
  *
  * Unlike a transaction register, an operational workspace centres one active
@@ -640,6 +660,23 @@ function financialStatementPage(root, config){
 }
 window.financialStatementPage=financialStatementPage;
 
+/* Compatibility bridge for long single-line document renderers. New detail
+   screens emit an H1 directly; this upgrades the remaining title node without
+   changing its localized child markup or event wiring. */
+function promoteDocumentTitle(root){
+  const current=root&&root.querySelector('.dh-row1 .dt:not(h1)');
+  if(!current) return null;
+  const heading=document.createElement('h1');
+  heading.className=current.className;
+  [...current.attributes].forEach(attribute=>{
+    if(attribute.name!=='class') heading.setAttribute(attribute.name,attribute.value);
+  });
+  while(current.firstChild) heading.appendChild(current.firstChild);
+  current.replaceWith(heading);
+  return heading;
+}
+window.promoteDocumentTitle=promoteDocumentTitle;
+
 /**
  * Page-level SSOT for canonical transaction registers.
  *
@@ -656,6 +693,7 @@ function transactionListPage(root, config){
   const layout=cfg.layout||'transaction-list-v1';
   const detailPane=cfg.detailPane||null;
   let activeFilter=cfg.initialFilter||'all';
+  let searchTerm='';
   let selectedId=null;
 
   function allRows(){
@@ -663,9 +701,38 @@ function transactionListPage(root, config){
     return Array.isArray(rows)?rows:[];
   }
   function visibleRows(){
-    const rows=allRows();
-    if(activeFilter==='all'||typeof cfg.filterFn!=='function') return rows;
-    return rows.filter(row=>cfg.filterFn(row,activeFilter));
+    let rows=allRows();
+    if(activeFilter!=='all'&&typeof cfg.filterFn==='function') {
+      rows=rows.filter(row=>cfg.filterFn(row,activeFilter));
+    }
+    const query=searchTerm.trim().toLocaleLowerCase();
+    if(query&&cfg.search&&typeof cfg.search.match==='function') {
+      rows=rows.filter(row=>cfg.search.match(row,query));
+    }
+    return rows;
+  }
+  function previewRecord(row,id){
+    const columns=(value(cfg.columns,[row])||[]).map(column=>({
+      ...column,
+      label:value(column.label,column,[row]),
+    })).filter(column=>String(column.label||'').trim());
+    const fields=columns.map(column=>{
+      const rendered=column.render?column.render(row):esc(row[column.key]);
+      return `<div class="field transaction-record-preview-field">
+        <span class="k">${esc(String(column.label))}</span>
+        <div class="v" inert>${rendered==null?'—':rendered}</div>
+      </div>`;
+    }).join('');
+    const title=String(value(cfg.title,allRows())||cfg.route||'');
+    appModal({
+      icon:'file',
+      title:`${title} · ${id}`,
+      body:`<div class="transaction-record-preview" data-record-preview data-record-id="${esc(String(id))}">
+        ${fields||`<div class="statepanel empty">${ic('inbox')}<h3>${esc(String(id))}</h3></div>`}
+      </div>`,
+      actions:btn(t('common.close'),{cls:'soft',attrs:'onclick="closeModal()"'}),
+      width:680,
+    });
   }
   function rowActionFor(row,id){
     if(detailPane){
@@ -677,19 +744,24 @@ function transactionListPage(root, config){
     const configured=cfg.rowAction;
     if(configured&&typeof configured.run==='function'){
       const enabled=configured.enabled==null||Boolean(value(configured.enabled,row,id));
-      if(!enabled) return null;
-      const label=value(configured.label,row,id)
-        ||value(cfg.rowLabel,row,id)
-        ||`${t('common.open')} ${id}`;
-      return {
-        kind:configured.kind||'open',
-        label:String(label),
-        run:()=>configured.run(row,id),
-      };
+      if(enabled){
+        const label=value(configured.label,row,id)
+          ||value(cfg.rowLabel,row,id)
+          ||`${t('common.open')} ${id}`;
+        return {
+          kind:configured.kind||'open',
+          label:String(label),
+          run:()=>configured.run(row,id),
+        };
+      }
     }
     if(typeof cfg.onOpen==='function'){
       const label=value(cfg.rowLabel,row,id)||`${t('common.open')} ${id}`;
       return {kind:'open',label:String(label),run:()=>cfg.onOpen(row,id)};
+    }
+    if(layout==='transaction-list-v1'&&cfg.recordPreview!==false){
+      const label=value(cfg.rowLabel,row,id)||`${t('common.open')} ${id}`;
+      return {kind:'open',label:String(label),run:()=>previewRecord(row,id)};
     }
     return null;
   }
@@ -716,9 +788,18 @@ function transactionListPage(root, config){
       const key=Array.isArray(item)?item[0]:item.key;
       const label=Array.isArray(item)?item[1]:item.label;
       return `<button class="chip ${key===activeFilter?'on':''}" data-list-filter="${esc(String(key))}">
-        ${esc(String(value(label,item)||''))}
+        ${item&&item.businessText?`<span data-business-text>${esc(String(value(label,item)||''))}</span>`:esc(String(value(label,item)||''))}
       </button>`;
     }).join('')}</div>`;
+  }
+  function renderSearch(){
+    if(!cfg.search) return '';
+    const label=String(value(cfg.search.label)||value(cfg.search.placeholder)||'Search');
+    return `<label class="transaction-list-search">
+      ${ic('search')}
+      <input type="search" value="${esc(searchTerm)}" placeholder="${esc(String(value(cfg.search.placeholder)||label))}"
+        aria-label="${esc(label)}" data-list-search autocomplete="off">
+    </label>`;
   }
   function renderToolbarActions(rows){
     const actions=value(cfg.toolbarActions,rows)||[];
@@ -729,7 +810,7 @@ function transactionListPage(root, config){
     })).join('');
   }
   function renderEmpty(){
-    const empty=cfg.empty||{};
+    const empty=searchTerm.trim()&&cfg.search&&cfg.search.empty?cfg.search.empty:(cfg.empty||{});
     return `<div class="statepanel empty" data-list-empty>
       ${ic(empty.icon||'inbox')}
       <h3>${esc(String(value(empty.title)||'No records'))}</h3>
@@ -800,7 +881,7 @@ function transactionListPage(root, config){
         data-layout="${esc(layout)}" data-list-route="${esc(String(cfg.route||''))}">
       ${renderKpis(source)}
       <div class="toolbar" data-list-toolbar>
-        ${renderFilters()}<div class="grow"></div>
+        ${renderSearch()}${renderFilters()}<div class="grow"></div>
         ${note?`<small class="transaction-list-note">${esc(String(note))}</small>`:''}
         ${toolbarContent}
         ${renderToolbarActions(rows)}
@@ -858,6 +939,15 @@ function transactionListPage(root, config){
     root.querySelectorAll('[data-list-kpi-filter]').forEach(button=>button.addEventListener('click',()=>{
       setFilter(button.dataset.listKpiFilter);
     }));
+    root.querySelector('[data-list-search]')?.addEventListener('input',event=>{
+      const input=event.currentTarget;
+      searchTerm=input.value;
+      const caret=input.selectionStart;
+      render();
+      const next=root.querySelector('[data-list-search]');
+      next?.focus();
+      if(next&&caret!=null) next.setSelectionRange(caret,caret);
+    });
     root.querySelector('[data-list-primary-action]')?.addEventListener('click',event=>{
       if(primaryEnabled(cfg.primaryAction)) cfg.primaryAction.onClick(event);
     });
@@ -900,12 +990,77 @@ function transactionListPage(root, config){
     render,
     setFilter,
     getFilter:()=>activeFilter,
+    getSearch:()=>searchTerm,
     rows:visibleRows,
     select,
     getSelected:()=>selectedRow(),
   };
 }
 window.transactionListPage=transactionListPage;
+
+/**
+ * Return the final date of the fiscal period selected in the global context.
+ * Transaction composers use this instead of the workstation clock so a Demo
+ * opened after its accounting period does not silently default into a future
+ * or locked period.
+ */
+function workingPeriodEndDate(){
+  const fiscal=DB&&DB.fiscal;
+  if(!fiscal) return new Date().toISOString().slice(0,10);
+  const selected=Math.max(1,Number(fiscal.selectedPeriod||fiscal.currentPeriod||1));
+  const quarterly=Number(fiscal.periodCount)===4;
+  const monthsPerPeriod=quarterly?3:1;
+  const startOffset=(Number(fiscal.startMonth||1)-1)+((selected-1)*monthsPerPeriod);
+  const end=new Date(Date.UTC(Number(fiscal.startYear),startOffset+monthsPerPeriod,0));
+  return end.toISOString().slice(0,10);
+}
+window.workingPeriodEndDate=workingPeriodEndDate;
+
+function workingPeriodStartDate(){
+  const fiscal=DB&&DB.fiscal;
+  if(!fiscal) return new Date().toISOString().slice(0,10);
+  const selected=Math.max(1,Number(fiscal.selectedPeriod||fiscal.currentPeriod||1));
+  const quarterly=Number(fiscal.periodCount)===4;
+  const monthsPerPeriod=quarterly?3:1;
+  const startOffset=(Number(fiscal.startMonth||1)-1)+((selected-1)*monthsPerPeriod);
+  return new Date(Date.UTC(Number(fiscal.startYear),startOffset,1)).toISOString().slice(0,10);
+}
+window.workingPeriodStartDate=workingPeriodStartDate;
+
+/** Stable operational date for Demo; production/API mode follows the workstation. */
+function workingBusinessDate(){
+  const value=DB&&DB.erpSystem&&DB.erpSystem.demoPack&&DB.erpSystem.demoPack.businessDate;
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value||''))
+    ? String(value)
+    : new Date().toISOString().slice(0,10);
+}
+window.workingBusinessDate=workingBusinessDate;
+
+/** Add a lightweight type-ahead filter in front of a large native select. */
+function bindSelectFilter(input,select,emptyText){
+  if(!input||!select) return;
+  const source=[...select.options].map(option=>({
+    value:option.value,text:option.textContent||'',disabled:option.disabled,
+  }));
+  const hasPlaceholder=source[0]&&String(source[0].value)==='';
+  input.addEventListener('input',()=>{
+    const query=input.value.trim().toLocaleLowerCase();
+    const selected=select.value;
+    const visible=source.filter((option,index)=>(hasPlaceholder&&index===0)||!query||option.text.toLocaleLowerCase().includes(query));
+    select.innerHTML='';
+    visible.forEach(option=>{
+      const element=document.createElement('option');
+      element.value=option.value;element.textContent=option.text;element.disabled=option.disabled;
+      select.appendChild(element);
+    });
+    if(visible.length===(hasPlaceholder?1:0)&&query){
+      const none=document.createElement('option');
+      none.disabled=true;none.textContent=emptyText||'No matches';select.appendChild(none);
+    }
+    if(visible.some(option=>String(option.value)===String(selected))) select.value=selected;
+  });
+}
+window.bindSelectFilter=bindSelectFilter;
 
 /**
  * SSOT for registers whose row selection opens a persistent desktop detail pane

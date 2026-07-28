@@ -448,7 +448,7 @@ SCREENS['project-detail'] = async function(root, params){
         <div class="dochead">
           <div class="dh-row1">
             <div>
-              <div class="dt">${ic('project')}${esc(p.name)} <span class="dnum">${esc(p.projectNo)}</span></div>
+              <h1 class="dt">${ic('project')}${esc(p.name)} <span class="dnum">${esc(p.projectNo)}</span></h1>
               <div style="color:var(--muted);font-size:13px;margin-top:4px">${customer?esc(customer.name):esc(s('internalProject'))} · ${esc(p.managerName)} · ${esc(dateValue(p.startDate))}${p.dueDate?' → '+esc(dateValue(p.dueDate)):''}</div>
             </div>
             <div class="dactions">${projectStatusBadge(p.status)}${customer?btn(s('customer360'),{icon:'user',cls:'soft',attrs:'onclick="navigate(\'crm-customer\')"'}):''}</div>

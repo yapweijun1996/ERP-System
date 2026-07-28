@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import type { DB } from '../../data/db';
 import {
-  account, glEntry, purchaseOrder, stockMovement, supplier, supplierDebitNote,
+  account, accountingPeriod, glEntry, purchaseOrder, stockMovement, supplier, supplierDebitNote,
   supplierInvoice, taxRule,
 } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
@@ -34,6 +34,10 @@ async function fixture(db: DB, total = '109.00') {
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '2100', name: 'AP', type: 'liability' },
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '5800', name: 'Purchase variance', type: 'expense' },
   ]);
+  await db.insert(accountingPeriod).values({
+    masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, fiscalYear: 2026, periodNo: 1,
+    label: 'January 2026', startDate: '2026-01-01', endDate: '2026-01-31', status: 'open',
+  });
   await db.insert(taxRule).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn,
     taxRegime: 'GST', taxCode: 'SR', rate: '9', validFrom: '2024-01-01',

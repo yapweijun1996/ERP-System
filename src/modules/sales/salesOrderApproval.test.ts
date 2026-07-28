@@ -173,6 +173,27 @@ describe('sales order creation and approval', () => {
     expect(await db.select().from(glEntry)).toHaveLength(0);
   });
 
+  it('fails closed when inconsistent legacy data is draft while approval remains pending', async () => {
+    const db = await freshDb();
+    const fixture = await seedFixture(db);
+    const created = await createPendingOrder(db, fixture, 'SO-APP-GUARD');
+
+    // Simulate an inconsistent import or older client that changed only the
+    // order row. The approval record must remain authoritative for posting.
+    await db.update(salesOrder).set({ status: 'draft' }).where(eq(
+      salesOrder.id,
+      created.orderId,
+    ));
+
+    await expect(confirmDraftSalesOrder(db, SCOPE, {
+      salesOrderId: created.orderId,
+      warehouseId: 1,
+    })).rejects.toThrow("approval is 'pending', not 'approved'");
+    expect(await db.select().from(stockMovement)).toHaveLength(0);
+    expect(await db.select().from(invoice)).toHaveLength(0);
+    expect(await db.select().from(glEntry)).toHaveLength(0);
+  });
+
   it('rejects atomically and blocks repeat decisions', async () => {
     const db = await freshDb();
     const fixture = await seedFixture(db);
