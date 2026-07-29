@@ -762,6 +762,15 @@ describe('actor-owned My Work API', () => {
       scope: 'expanded',
     });
 
+    const companyCalendar = await fetch(
+      `${baseUrl}/api/my/team/calendar?from=2026-09-01&to=2026-09-30&scope=company`,
+      { headers: { cookie } },
+    );
+    expect(companyCalendar.status).toBe(403);
+    await expect(companyCalendar.json()).resolves.toMatchObject({
+      error: { code: 'calendar_scope_not_authorized' },
+    });
+
     const context = await fetch(`${baseUrl}/api/my/context`, {
       headers: { cookie },
     });

@@ -93,7 +93,7 @@ and repeats each interaction in the browser. The current evidence and remaining 
 are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`; the project must not be
 reported fully done until that ledger was closed. The first batch corrected Staff
 onboarding, fiscal-period payroll defaults, shell/PWA localization, empty detail states
-and enterprise Demo HR/payroll/AP/sales-approval coverage; the Demo pack is now v13. The current ledger
+and enterprise Demo HR/payroll/AP/sales-approval/calendar coverage; the Demo pack is now v15. The current ledger
 also records the payslip layout, employee search, cross-company fiscal currency,
 payroll action overflow, business-data i18n boundaries, a non-disclosing direct-route
 403 for restricted roles, calendar discoverability and a universal transaction-list
@@ -109,13 +109,13 @@ matrix is also green after correcting dynamic-business-text boundaries and Inven
 Movement terminology. The real 12-persona shell matrix now also passes: navigation,
 quick-create actions, companies, dashboard facts and direct denial are permission-aware;
 personal Activity/Notifications use an Account shell, HR sees only its permitted Admin
-tabs, and Demo v13 is regression-checked against the authoritative role templates. MY sales
+tabs, and Demo v15 is regression-checked against the authoritative role templates. MY sales
 approval-to-confirmation, AP settlement and closed-period rollback pass. Buyer created
 a real pending-approval PO; Production created and released a BOM-backed work order;
 Employee/Manager completed a real privacy-redacted leave approval; HR Staff activation
 enforced a temporary-password change; and Service created, assigned and resolved a real
 ticket while retaining its Finance 403 boundary. The 2026-07-29 IUA-068 follow-up also
-passes: PWA v208 removes the competing source-fingerprint updater, versions deferred
+passes: PWA v210 removes the competing source-fingerprint updater, versions deferred
 prompts per tab session and reloads only after an explicit Update now action;
 `npm run audit:pwa-update` proves the real worker lifecycle. The Warehouse journey also
 blocks invalid physical counts and locked-period adjustments before posting, while the
@@ -125,9 +125,11 @@ Demo/API builds pass, desktop/375px smoke passes, and all 124 routes pass the re
 and five-language matrices. Retry-state audits now wait on the rendered recovery state
 instead of a workstation-speed-dependent 250 ms delay.
 
-Demo v13 additionally gives every linked persona one company-managed Employee base
-role, removes the replaced shared compatibility assignment, and deterministically
+Demo v15 additionally gives every linked persona one company-managed Employee base
+role, removes the replaced shared compatibility assignment, deterministically
 binds `viewer@acme.co` to Jordan Lee / `DEMO-SG-E012` under manager@acme.co. Existing
+controlled rows converge on 24 July/August SG/MY leave cases. Superadmin uses company
+calendar scope while managers remain restricted to direct or explicitly granted teams.
 IndexedDB receives the additive upgrade because both version and signed hash advanced.
 
 The previously open desktop smoke regression is also closed: its finance proof had
@@ -170,8 +172,8 @@ one rebuilt Demo run passes both 1280px and 375px with zero console/page errors.
 | Management Reporting / BI | ✅ Canonical Demo/API derived data | `bi/analytics` rebuilds recognized revenue, receivables, open sales/purchase value, net payables, cash, inventory value, product-category sales and stock activity aging from current Canonical facts. It stores no KPI table, allocates only traceable product invoice/credit lines and labels stock age as days since latest inbound movement rather than unsupported FIFO-layer age. `bi-dashboard`, `sales-analysis` and `stock-aging` are bounded five-language routes protected by `reporting.read`. |
 | Integration delivery log | ✅ Canonical Demo/API sanitized read model | `integration/events` reads existing transactional-outbox facts through an explicit tenant-scoped, newest-first, keyset-paginated projection protected by `integration.read`. Only safe operational metadata leaves the server; payload, recipient/token material, raw worker errors and worker identity are excluded. The five-language `integration-logs` workspace is deliberately read-only and does not fabricate replay/export or connector-control actions. |
 | Personal activity | ✅ Canonical Demo/API sanitized actor read model | `account/activity` reads only the signed-in actor's active-company audit facts, newest first. The response maps internal vocabulary to bounded category/entity/action keys and excludes payloads, request IDs, actor identity, other users, device/IP and session/security state. The five-language `my-activity` page is read-only and states this boundary. |
-| Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v13 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 12 controlled leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,422-record deterministic pack. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v13 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Superadmin` is assigned to SG/MY, receives the Superadmin bypass for every setup/module gate and appears first in the switcher; Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates; existing IndexedDB upgrades add or correct deterministic records without replacing user data. |
-| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; v208 uses the waiting service worker as the single update authority, bypasses HTTP cache for `sw.js`, suppresses only the exact deferred version for a tab session and reloads once only after explicit acceptance. `npm run audit:pwa-update` exercises baseline, Later, newer-version and Update-now states with a real service worker. |
+| Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v15 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 24 controlled July/August leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,436-record deterministic pack. The calendar cases cover approved, pending, rejected, cancelled, multi-day and overlapping availability, and earlier controlled Demo rows converge in place on the same fixed business date. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v15 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively without replacing user-owned data. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Superadmin` is assigned to SG/MY, receives the Superadmin bypass for every setup/module gate and company-calendar scope, and appears first in the switcher; managers remain restricted to direct or explicitly granted teams. Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates. |
+| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; v210 uses the waiting service worker as the single update authority, bypasses HTTP cache for `sw.js`, suppresses only the exact deferred version for a tab session and reloads once only after explicit acceptance. `npm run audit:pwa-update` exercises baseline, Later, newer-version and Update-now states with a real service worker. |
 | Canonical UI i18n | ✅ Five-language release proven | 1,297-key canonical resources plus 73 registered module packs provide en/ms/zh/ja/vi across all 122 Canonical routes. `setLang()` is atomic and state-preserving; `npm run audit:i18n` proves 122 routes × 5 languages × desktop/375px with no blocking findings. TASK-137–139 and TASK-156. |
 | GitHub Pages deploy | ⏸️ Disabled (intentional) | `.github/workflows/deploy-pages.yml` builds cleanly (typecheck, PGlite demo proof, `build:demo` all pass) but the final "Configure Pages" step always 404'd — Pages was never enabled on this repo, and it can't be on the Free plan while the repo stays **private**. 2026-07-17: repo is intentionally kept private (this is a monetizable product; publishing the full source would let it be freely copied). Workflow disabled via `gh workflow disable` (reversible — file untouched, just toggled off in GitHub so it stops failing on every push). Plan: a **separate, new public repo** will host only `web/dist/`'s static demo (localStorage/IndexedDB, no server) for prospects to try; this repo stays private and becomes the Docker+PostgreSQL production track if/when a prospect converts. |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
@@ -1501,7 +1503,7 @@ covers 122 routes × five languages × desktop/375px; PWA cache version is v138.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 157 tasks, including TASK-141, TASK-143, TASK-147, TASK-148 and TASK-158
+- Done: 158 tasks, including TASK-141, TASK-143, TASK-147, TASK-148, TASK-158 and TASK-159
 - Todo: 0
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 124

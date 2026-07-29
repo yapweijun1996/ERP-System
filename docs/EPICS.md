@@ -2186,9 +2186,13 @@ problems are fixed in the same audit and retested before closure.
       12 personas, SG/MY boundaries, five languages and desktop/375px, then run the
       complete release gates. Evidence is maintained in
       `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
+- [x] **TASK-159 — Polish Team Calendar and deterministic Demo leave coverage.** Give
+      Superadmin tenant-bounded company scope, retain manager hierarchy boundaries,
+      ship the responsive calendar hierarchy and converge 24 fixed-date SG/MY cases.
 
 Completed 2026-07-28 with IUA-001–067 fixed and retested, followed by the 2026-07-29
-IUA-068 PWA lifecycle repair and dedicated worker audit. Twelve permission personas,
+IUA-068 PWA lifecycle and IUA-069 Team Calendar repairs. Twelve permission personas,
 SG/MY write and denial paths, 40 transaction-list drill-downs, 29 detail-page
 contracts, 531 tests plus one expected skip and the 124-route five-language/two-
-viewport release matrix. TASK-017 remains separately blocked for a physical phone.
+viewport release matrix; Demo v15 contains 10,436 linked records and 24 controlled
+leave cases. TASK-017 remains separately blocked for a physical phone.

@@ -30,7 +30,7 @@ describe('deterministic enterprise Demo pack', () => {
         total: number;
       };
     };
-    expect(manifest.version).toBe('13');
+    expect(manifest.version).toBe('15');
     expect(manifest.personas).toBe(12);
     expect(createHash('sha256').update(packSql).digest('hex')).toBe(manifest.sha256);
     const client = new PGlite();

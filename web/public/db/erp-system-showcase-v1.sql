@@ -408,25 +408,68 @@ INSERT INTO leave_request (
   reason, status, rejection_reason, decided_at
 )
 SELECT 'M1', c.company_fn, employee.id,
-  (ARRAY['Annual','Medical','Unpaid'])[((g-1)%3)+1],
-  DATE '2026-06-02' + ((g-1)*3), DATE '2026-06-02' + ((g-1)*3) + CASE WHEN g%2=0 THEN 1 ELSE 0 END,
-  CASE WHEN g%2=0 THEN 2 ELSE 1 END,
-  'Controlled demo leave case ' || c.company_fn || '-' || g,
-  (ARRAY['pending','approved','rejected'])[((g-1)%3)+1],
-  CASE WHEN ((g-1)%3)+1=3 THEN 'Capacity limit reached for this controlled demo case' ELSE null END,
-  CASE WHEN ((g-1)%3)+1 IN (2,3) THEN TIMESTAMPTZ '2026-05-27 10:00:00+08' + (g * INTERVAL '1 hour') ELSE null END
+  schedule.leave_type,schedule.start_date,schedule.end_date,schedule.days,
+  'Controlled demo leave case ' || c.company_fn || '-' || schedule.case_no,
+  schedule.status,
+  CASE WHEN schedule.status='rejected' THEN 'Capacity limit reached for this controlled demo case' ELSE null END,
+  CASE WHEN schedule.status IN ('approved','rejected','cancelled')
+    THEN TIMESTAMPTZ '2026-06-27 10:00:00+08' + (schedule.case_no * INTERVAL '2 hour') ELSE null END
 FROM (VALUES ('C-SG','SG'),('C-MY','MY')) c(company_fn,prefix)
-CROSS JOIN generate_series(1,6) g
+CROSS JOIN (VALUES
+  (1,'Annual', DATE '2026-07-02',DATE '2026-07-02',1,'pending'),
+  (2,'Medical',DATE '2026-07-06',DATE '2026-07-07',2,'approved'),
+  (3,'Unpaid', DATE '2026-07-09',DATE '2026-07-09',1,'rejected'),
+  (4,'Annual', DATE '2026-07-13',DATE '2026-07-14',2,'pending'),
+  (5,'Medical',DATE '2026-07-14',DATE '2026-07-14',1,'approved'),
+  (6,'Unpaid', DATE '2026-07-20',DATE '2026-07-20',1,'rejected'),
+  (7,'Annual', DATE '2026-07-23',DATE '2026-07-24',2,'approved'),
+  (8,'Medical',DATE '2026-07-27',DATE '2026-07-27',1,'approved'),
+  (9,'Annual', DATE '2026-07-27',DATE '2026-07-28',2,'pending'),
+  (10,'Unpaid',DATE '2026-07-30',DATE '2026-07-30',1,'cancelled'),
+  (11,'Annual',DATE '2026-08-03',DATE '2026-08-03',1,'approved'),
+  (12,'Medical',DATE '2026-08-05',DATE '2026-08-05',1,'rejected')
+) schedule(case_no,leave_type,start_date,end_date,days,status)
 CROSS JOIN LATERAL (
   SELECT id FROM employee
   WHERE master_fn='M1' AND company_fn=c.company_fn AND employee_no LIKE 'DEMO-%'
-  ORDER BY employee_no OFFSET (g-1) LIMIT 1
+  ORDER BY employee_no OFFSET (schedule.case_no-1) LIMIT 1
 ) employee
 WHERE NOT EXISTS (
   SELECT 1 FROM leave_request request
   WHERE request.master_fn='M1' AND request.company_fn=c.company_fn
-    AND request.reason='Controlled demo leave case ' || c.company_fn || '-' || g
+    AND request.reason='Controlled demo leave case ' || c.company_fn || '-' || schedule.case_no
 );
+
+-- Upgrade controlled showcase rows from earlier packs in place. These rows are
+-- owned by the Demo generator (never customer data), so fresh and upgraded
+-- IndexedDB/PostgreSQL installations converge on the same dated calendar.
+UPDATE leave_request request
+SET leave_type=schedule.leave_type,
+    start_date=schedule.start_date,
+    end_date=schedule.end_date,
+    days=schedule.days,
+    status=schedule.status,
+    rejection_reason=CASE WHEN schedule.status='rejected'
+      THEN 'Capacity limit reached for this controlled demo case' ELSE null END,
+    decided_at=CASE WHEN schedule.status IN ('approved','rejected','cancelled')
+      THEN TIMESTAMPTZ '2026-06-27 10:00:00+08' + (schedule.case_no * INTERVAL '2 hour') ELSE null END
+FROM (VALUES
+  ('C-SG',1,'Annual', DATE '2026-07-02',DATE '2026-07-02',1,'pending'),
+  ('C-SG',2,'Medical',DATE '2026-07-06',DATE '2026-07-07',2,'approved'),
+  ('C-SG',3,'Unpaid', DATE '2026-07-09',DATE '2026-07-09',1,'rejected'),
+  ('C-SG',4,'Annual', DATE '2026-07-13',DATE '2026-07-14',2,'pending'),
+  ('C-SG',5,'Medical',DATE '2026-07-14',DATE '2026-07-14',1,'approved'),
+  ('C-SG',6,'Unpaid', DATE '2026-07-20',DATE '2026-07-20',1,'rejected'),
+  ('C-MY',1,'Annual', DATE '2026-07-02',DATE '2026-07-02',1,'pending'),
+  ('C-MY',2,'Medical',DATE '2026-07-06',DATE '2026-07-07',2,'approved'),
+  ('C-MY',3,'Unpaid', DATE '2026-07-09',DATE '2026-07-09',1,'rejected'),
+  ('C-MY',4,'Annual', DATE '2026-07-13',DATE '2026-07-14',2,'pending'),
+  ('C-MY',5,'Medical',DATE '2026-07-14',DATE '2026-07-14',1,'approved'),
+  ('C-MY',6,'Unpaid', DATE '2026-07-20',DATE '2026-07-20',1,'rejected')
+) schedule(company_fn,case_no,leave_type,start_date,end_date,days,status)
+WHERE request.master_fn='M1'
+  AND request.company_fn=schedule.company_fn
+  AND request.reason='Controlled demo leave case ' || schedule.company_fn || '-' || schedule.case_no;
 
 INSERT INTO working_calendar (master_fn,company_fn,code,name,time_zone,is_default,is_active)
 SELECT 'M1',company.company_fn,company.code,company.name,company.time_zone,true,true
@@ -899,7 +942,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO system_state (key, value, updated_at)
-VALUES ('demo_showcase_pack', '{"version":"13","businessDate":"2026-07-27","records":10422,"personas":12}'::jsonb, now())
+VALUES ('demo_showcase_pack', '{"version":"15","businessDate":"2026-07-27","records":10436,"personas":12}'::jsonb, now())
 ON CONFLICT (key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at;
 
 COMMIT;

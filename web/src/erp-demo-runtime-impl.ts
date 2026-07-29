@@ -21,6 +21,7 @@ import {
   listActorLeaveWithin,
   listTeamLeaveWithin,
   resolveActorEmployeeWithin,
+  resolveCompanyEmployeeIdsWithin,
   resolveDirectReportEmployeeIdsWithin,
   resolveTeamEmployeeIdsWithin,
 } from '../../src/modules/hr/actorScope';
@@ -808,6 +809,9 @@ export const erpDemoRuntime = Object.freeze({
     },
     resolveDirectReportEmployeeIdsWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return resolveDirectReportEmployeeIdsWithin(asDomainDb(db), scope, employeeId);
+    },
+    resolveCompanyEmployeeIdsWithin(db: DemoOrm, scope: Scope) {
+      return resolveCompanyEmployeeIdsWithin(asDomainDb(db), scope);
     },
     listTeamLeaveWithin(db: DemoOrm, scope: Scope, employeeIds: number[]) {
       return listTeamLeaveWithin(asDomainDb(db), scope, employeeIds);

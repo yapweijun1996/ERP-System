@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import { PERMISSIONS, hasPermission } from '../../auth/permissions';
+import { PERMISSIONS, hasPermission, isSuperadminSession } from '../../auth/permissions';
 import { decryptToken, encryptToken } from '../../auth/tokenCrypto';
 import { company } from '../../data/schema';
 import {
@@ -11,6 +11,7 @@ import {
   listActorLeaveWithin,
   listTeamLeaveWithin,
   resolveActorEmployeeWithin,
+  resolveCompanyEmployeeIdsWithin,
   resolveDirectReportEmployeeIdsWithin,
   resolveTeamEmployeeIdsWithin,
 } from '../../modules/hr/actorScope';
@@ -1259,7 +1260,9 @@ export function createMyRouter(db: DB, options: MyRouterOptions = {}): Router {
     }
     const from = typeof req.query.from === 'string' ? req.query.from : '';
     const to = typeof req.query.to === 'string' ? req.query.to : '';
-    const requestedScope = req.query.scope === 'expanded' ? 'expanded' : 'direct';
+    const requestedScope = req.query.scope === 'company'
+      ? 'company'
+      : req.query.scope === 'expanded' ? 'expanded' : 'direct';
     const department = typeof req.query.department === 'string'
       ? req.query.department
       : null;
@@ -1272,8 +1275,16 @@ export function createMyRouter(db: DB, options: MyRouterOptions = {}): Router {
         const actor = await resolveActorEmployeeWithin(tx, scope, session.userId);
         const directIds = await resolveDirectReportEmployeeIdsWithin(tx, scope, actor.id);
         const expandedIds = await resolveTeamEmployeeIdsWithin(tx, scope, actor.id);
+        const canCompany = await isSuperadminSession(tx, session);
         const directSet = new Set(directIds);
         const canExpand = expandedIds.some((id) => !directSet.has(id));
+        if (requestedScope === 'company' && !canCompany) {
+          throw new TeamCalendarError(
+            'calendar_scope_not_authorized',
+            'Company-wide calendar scope is reserved for the tenant Superadmin.',
+            403,
+          );
+        }
         if (requestedScope === 'expanded' && !canExpand) {
           throw new TeamCalendarError(
             'calendar_scope_not_authorized',
@@ -1281,13 +1292,16 @@ export function createMyRouter(db: DB, options: MyRouterOptions = {}): Router {
             403,
           );
         }
+        const employeeIds = requestedScope === 'company'
+          ? await resolveCompanyEmployeeIdsWithin(tx, scope)
+          : requestedScope === 'expanded' ? expandedIds : directIds;
         const data = await listTeamCalendarWithin(
           tx,
           scope,
-          requestedScope === 'expanded' ? expandedIds : directIds,
+          employeeIds,
           { from, to, department, status },
         );
-        return { data, actor, canExpand, directCount: directIds.length };
+        return { data, actor, canExpand, canCompany, directCount: directIds.length };
       });
       res.json({
         data: result.data,
@@ -1296,6 +1310,7 @@ export function createMyRouter(db: DB, options: MyRouterOptions = {}): Router {
           privacy: 'reason_and_evidence_redacted',
           scope: requestedScope,
           canExpand: result.canExpand,
+          canCompany: result.canCompany,
           directReportCount: result.directCount,
           limit: 300,
         },

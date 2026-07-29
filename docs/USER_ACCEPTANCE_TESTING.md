@@ -172,7 +172,9 @@ screenshots are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
       all 29 declared details pass desktop and 375px page-contract checks.
 - [x] Lint, dual typecheck/build, schema/pack/drift checks, smoke, 531 tests, 124-route
       desktop/375px audit and 124 × five-language × two-viewport audit.
-- [x] PWA v208 update lifecycle: first install is silent, Later suppresses only the
+- [x] Team Calendar: Superadmin company scope, manager hierarchy scope, privacy-redacted
+      detail, July/August Demo v15 cases and desktop/375px month/list layouts.
+- [x] PWA v210 update lifecycle: first install is silent, Later suppresses only the
       same worker version, a newer worker still prompts, and Update now reloads once.
 - [ ] Physical-phone acceptance — Blocked by TASK-017; no emulator claim substitutes
       for a real device.

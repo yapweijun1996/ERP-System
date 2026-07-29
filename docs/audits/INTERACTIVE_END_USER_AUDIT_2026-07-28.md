@@ -15,9 +15,9 @@ TASK-017 and is not represented as passed.
 | --- | --- |
 | Browser | In-app Chromium, Chinese UI, Acme Singapore, FY2026 P06 |
 | Responsive route audit | Pass after the latest remediation: 124 Canonical routes at desktop and 375px; no console/page/layout-contract failures |
-| Static and regression gates | Pass after the final v13 tranche and 2026-07-29 PWA follow-up: lint, root/Web typecheck, Demo/API builds, Demo/schema/drift proofs, desktop/375px smoke, the dedicated PWA lifecycle audit, 124-route responsive audit, five-language browser matrix and the full suite with 531 passed / 1 intentional skip / 0 failures (532 total tests). |
+| Static and regression gates | Pass after the final v15 tranche and 2026-07-29 PWA/calendar follow-up: lint, root/Web typecheck, Demo/API builds, Demo/schema/drift proofs, desktop/375px smoke, the dedicated PWA lifecycle audit, 124-route responsive audit, five-language browser matrix and the full suite with 531 passed / 1 intentional skip / 0 failures (532 total tests). |
 | Five-language browser matrix | Pass after the latest remediation: 1439 canonical keys and 124 routes × five languages × desktop/375px; no hard-coded UI findings |
-| Enterprise Demo pack | Fresh-database proof passes for v13: SHA-256 manifest, 10,422 linked records, exact role-template permission/scope parity, company-managed Employee base roles, deterministic persona-to-employee/reporting-line identity, complete SG/MY posting-control accounts, real sales approvals with warehouse-specific fulfilment stock, balanced AP cases and payroll/leave/statutory invariants. Existing IndexedDB upgrades additively and legacy shared Employee grants are removed only after the company role exists. |
+| Enterprise Demo pack | Fresh-database proof passes for v15: SHA-256 manifest, 10,436 linked records, 24 fixed-date SG/MY leave cases, exact role-template permission/scope parity, company-managed Employee base roles, deterministic persona-to-employee/reporting-line identity, complete SG/MY posting-control accounts, real sales approvals with warehouse-specific fulfilment stock, balanced AP cases and payroll/leave/statutory invariants. Existing IndexedDB upgrades converge controlled Demo rows without replacing user-owned data, and legacy shared Employee grants are removed only after the company role exists. |
 | Physical phone | Blocked under TASK-017; 375px automation is not physical-device acceptance |
 
 ## Findings and remediation ledger
@@ -92,6 +92,7 @@ TASK-017 and is not represented as passed.
 | IUA-066 | P1 Demo role upgrade integrity | Adding the company Employee base role left Viewer's older shared Employee assignment in place, exposing `Viewer, Employee, Employee` and two authority sources; retaining the same pack version would also skip the repair on an existing IndexedDB. | Fixed in Demo pack v13; manifest, identity and i18n proofs passed | v13 first creates/assigns the managed company role, then removes only the legacy shared Employee assignment for deterministic personas. Tests reject missing base roles, legacy persona assignments and viewer/reporting-line drift; the changed version/hash forces an additive upgrade. |
 | IUA-067 | P2 regression tooling | The Sales shell audit treated the now-required My Work navigation and persisted role-assignment labels as permission leakage/hard-coded UI. | Fixed; final responsive and five-language matrices passed | Sales is expected to have `Home + Sales + CRM + My Work` through its job plus Employee roles, while unrelated modules remain absent. Role-assignment strings are classified as administrator-maintained business data; `Viewer, Employee` is shown once. |
 | IUA-068 | P1 PWA update lifecycle | After loading a new source fingerprint, the independent source-hash detector and waiting service worker could each show an indistinguishable update prompt for the same release. Choosing Later did not identify the deferred worker version, and the fixed bottom toast could therefore look like an update that never completed. | Fixed in PWA v208; dedicated real-service-worker lifecycle audit and in-app browser proof passed | The service worker is now the single update authority and reports its exact cache version over `MessageChannel`. Registration bypasses the HTTP cache for `sw.js`; Later suppresses only that worker version for the tab session, a genuinely newer version still prompts, Update now disables duplicate actions and reloads exactly once after `controllerchange`, and the obsolete source fingerprint/query marker is removed. |
+| IUA-069 | P1 Team Calendar usability and Demo coverage | Superadmin opened Team Calendar into an empty July grid because the workspace always requested direct reports, Avery had none, and v13 controlled leave cases were dated in June. The raw count chip, weak hierarchy, oversized empty rail, unmarked Demo business date and literal leave-type translations made the page look unfinished. | Fixed in Demo v15 / PWA v210; in-app desktop interaction, dedicated desktop/375px layout audit and Demo/API tests passed | Superadmin now receives tenant-bounded company calendar scope while managers remain direct/granted-tree only and unauthorized company scope returns 403. The workspace has labelled event counts, four period KPIs, fixed Demo-date highlighting, localized leave types, improved event/detail hierarchy and a 375px list layout. The deterministic pack supplies 24 SG/MY cases and upgrades earlier controlled rows in place so fresh and historical Demo databases converge. |
 
 ## Role and journey closure
 
@@ -112,12 +113,12 @@ TASK-017 and is not represented as passed.
 ## Final evidence
 
 - `npm test -- --maxWorkers=2`: 531 passed, one intentional skip, zero failures.
-- Lint, root/Web typecheck, 75-migration Demo schema, 232-table drift, Demo pack v13
+- Lint, root/Web typecheck, 75-migration Demo schema, 232-table drift, Demo pack v15
   hash, API build, Demo build and desktop/375px smoke passed.
 - `npm run audit:screens`: 124 Canonical / 0 Preview routes passed desktop and 375px.
 - `npm run audit:i18n`: 124 routes × five languages × two viewports passed.
-- `npm run audit:pwa-update`: baseline install is silent, deferred v208 audit-b prompts
-  once, later v208 audit-c prompts normally, and Update now activates/reloads once.
+- `npm run audit:pwa-update`: baseline install is silent, deferred v210 audit-b prompts
+  once, later v210 audit-c prompts normally, and Update now activates/reloads once.
 - P0–P2 browser images are under `docs/audits/assets/2026-07-28/`, including setup,
   neutral boot, first-login activation, employee submission, manager approval and
   completed service-ticket evidence.

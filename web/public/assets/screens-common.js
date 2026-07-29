@@ -1115,11 +1115,15 @@ function calendarWorkspacePage(root,config){
     return iso(valueDate);
   };
   const cursor=cfg.cursor||iso(new Date());
+  const businessDate=cfg.businessDate||iso(new Date());
   const eventLabel=row=>esc(String(row.employeeName||row.employeeNo||'Unavailable'));
   const eventTone=row=>row.status==='approved'?'ok':row.status==='pending'?'warn':'neutral';
-  const eventButton=row=>`<button class="calendar-event ${eventTone(row)}"
-      data-calendar-event="${esc(String(row.id))}" aria-label="${eventLabel(row)}">
-    <span>${eventLabel(row)}</span>${row.conflict?`<b title="${esc(String(cfg.labels.conflict))}">!</b>`:''}
+  const eventButton=row=>`<button class="calendar-event ${eventTone(row)}${String(row.id)===String(cfg.selectedId)?' selected':''}"
+      data-calendar-event="${esc(String(row.id))}" aria-label="${eventLabel(row)} · ${esc(String(cfg.statusLabel(row.status)))}"
+      aria-pressed="${String(row.id)===String(cfg.selectedId)?'true':'false'}">
+    <i class="calendar-event-dot" aria-hidden="true"></i>
+    <span class="calendar-event-copy"><b>${eventLabel(row)}</b><small>${esc(String(resolve(cfg.eventSubtitle,row)||row.leaveType||cfg.statusLabel(row.status)))}</small></span>
+    ${row.conflict?`<strong title="${esc(String(cfg.labels.conflict))}">!</strong>`:''}
   </button>`;
   const rowsForDay=day=>rows.filter(row=>row.startDate<=day&&row.endDate>=day);
   function monthSurface(){
@@ -1132,8 +1136,9 @@ function calendarWorkspacePage(root,config){
       ${days.map(day=>{
         const dayRows=rowsForDay(day);
         const outside=day.slice(0,7)!==cursor.slice(0,7);
-        return `<div class="calendar-day${outside?' outside':''}" role="gridcell" data-calendar-day="${day}">
-          <div class="calendar-day-number">${Number(day.slice(8))}</div>
+        const today=day===businessDate;
+        return `<div class="calendar-day${outside?' outside':''}${today?' today':''}" role="gridcell" data-calendar-day="${day}"${today?' aria-current="date"':''}>
+          <div class="calendar-day-number"><span>${Number(day.slice(8))}</span>${today?`<small>${esc(cfg.labels.today)}</small>`:''}</div>
           ${dayRows.slice(0,3).map(eventButton).join('')}
           ${dayRows.length>3?`<small>+${dayRows.length-3} ${esc(cfg.labels.more)}</small>`:''}
         </div>`;
@@ -1164,9 +1169,21 @@ function calendarWorkspacePage(root,config){
     </div>`;
   }
   const surface=view==='week'?weekSurface():view==='list'?listSurface():monthSurface();
+  const summary={
+    total:rows.length,
+    away:rows.filter(row=>row.status==='approved'&&row.startDate<=businessDate&&row.endDate>=businessDate).length,
+    pending:rows.filter(row=>row.status==='pending').length,
+    conflicts:rows.filter(row=>row.conflict).length,
+  };
+  const summaryCards=cfg.summaryLabels?`<div class="calendar-workspace-summary" data-calendar-summary>
+    <div class="calendar-summary-card"><span class="calendar-summary-icon blue">${ic('calendar')}</span><div><small>${esc(cfg.summaryLabels.total)}</small><b>${summary.total}</b></div></div>
+    <div class="calendar-summary-card"><span class="calendar-summary-icon green">${ic('people')}</span><div><small>${esc(cfg.summaryLabels.away)}</small><b>${summary.away}</b></div></div>
+    <div class="calendar-summary-card"><span class="calendar-summary-icon amber">${ic('clock')}</span><div><small>${esc(cfg.summaryLabels.pending)}</small><b>${summary.pending}</b></div></div>
+    <div class="calendar-summary-card"><span class="calendar-summary-icon red">${ic('warn')}</span><div><small>${esc(cfg.summaryLabels.conflicts)}</small><b>${summary.conflicts}</b></div></div>
+  </div>`:'';
   const detail=selected
     ?resolve(cfg.detail,selected)
-    :`<div class="detail-empty">${ic('calendar')}<div><b>${esc(cfg.labels.select)}</b><small>${esc(cfg.labels.selectBody)}</small></div></div>`;
+    :resolve(cfg.emptyDetail,summary)||`<div class="detail-empty">${ic('calendar')}<div><b>${esc(cfg.labels.select)}</b><small>${esc(cfg.labels.selectBody)}</small></div></div>`;
   const actions=(cfg.actions||[]).map((action,index)=>btn(String(action.label),{
     icon:action.icon||null,cls:action.cls||'soft',
     attrs:`data-calendar-action="${index}"${action.disabled?' disabled':''}`,
@@ -1186,6 +1203,7 @@ function calendarWorkspacePage(root,config){
         })).join('')}
       </div>
     </div>
+    ${summaryCards}
     <div class="calendar-workspace-filters" data-calendar-filters>${resolve(cfg.filters)||''}</div>
     <div class="calendar-workspace-main">
       <div class="calendar-workspace-surface" data-calendar-surface>${surface}</div>
@@ -1203,7 +1221,7 @@ function calendarWorkspacePage(root,config){
   root.innerHTML=modulePage({
     module:cfg.module,route:cfg.route,active:cfg.active||cfg.route,
     title:String(cfg.title||''),sub:String(cfg.description||''),
-    count:rows.length,body,
+    count:cfg.countLabel||rows.length,body,
   });
   root.querySelectorAll('[data-calendar-nav]').forEach(button=>button.addEventListener('click',()=>{
     cfg.onNavigate?.(button.dataset.calendarNav);

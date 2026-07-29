@@ -1157,13 +1157,16 @@ async function prepareHrData(){
   const [employees,leaveRequests]=pages.map(p=>p.data);
   return {employees,leaveRequests};
 }
-function hrToday(){ return new Date().toISOString().slice(0,10); }
+function hrToday(){ return typeof workingBusinessDate==='function'?workingBusinessDate():new Date().toISOString().slice(0,10); }
 function hrIsOnLeaveToday(employeeId,leaveRequests){
   const today=hrToday();
   return leaveRequests.some(lv=>lv.employeeId===employeeId&&lv.status==='approved'&&dateValue(lv.startDate)<=today&&dateValue(lv.endDate)>=today);
 }
 function hrEmploymentTypeLabel(s,type){
   return {'Full-time':t('hr.emp.fulltime'),'Contract':t('hr.emp.contract'),'Part-time':s('typeParttime'),'Intern':s('typeIntern')}[type]||type;
+}
+function hrLeaveTypeLabel(s,type){
+  return {Annual:s('leaveTypeAnnual'),Medical:s('leaveTypeMedical'),Unpaid:s('leaveTypeUnpaid')}[type]||type;
 }
 function hrStatusOf(emp,leaveRequests){
   if(!emp.isActive) return 'inactive';
@@ -2072,7 +2075,7 @@ async function renderMyWorkTeamRoute(root,{route,approvals=false}){
 function teamCalendarCopy(){
 
   const packs={
-    en:{title:'Team Calendar',description:'Review privacy-redacted availability in your authorised reporting scope.',month:'Month',week:'Week',list:'List',previous:'Previous',next:'Next',today:'Today',department:'Department',allDepartments:'All departments',status:'Status',allStatuses:'All statuses',scope:'Reporting scope',direct:'Direct reports',expanded:'Expanded tree',select:'Select an absence',selectBody:'Choose an event to review availability, conflict and sync facts.',noEvents:'No team absences in this period',more:'more',conflict:'Coverage conflict',conflicts:'overlapping team absences',privacy:'Private reasons and document references are never shown.',openApprovals:'Open My Approvals',retry:'Retry',sync:'External sync',notSynced:'Not queued',employee:'Employee',dates:'Dates',days:'Days',leaveType:'Leave type',job:'Role',close:'Close detail'},
+    en:{title:'Team Calendar',description:'Plan team coverage from privacy-redacted leave facts in your authorised scope.',month:'Month',week:'Week',list:'List',previous:'Previous',next:'Next',today:'Today',department:'Department',allDepartments:'All departments',status:'Status',allStatuses:'All statuses',scope:'Visibility',direct:'Direct reports',expanded:'Expanded tree',company:'Entire company',select:'Select an absence',selectBody:'Choose an event to review availability, conflict and sync facts.',noEvents:'No team absences in this period',more:'more',conflict:'Coverage conflict',conflicts:'overlapping team absences',privacy:'Private reasons and document references are never shown.',openApprovals:'Open My Approvals',retry:'Retry',sync:'External sync',notSynced:'Not queued',employee:'Employee',dates:'Dates',days:'Days',leaveType:'Leave type',job:'Role',close:'Close detail',eventCount:'{count} absence events',totalEvents:'Events this period',awayToday:'Away today',pendingCount:'Pending approval',conflictsCount:'Coverage conflicts',overviewTitle:'Period overview',overviewBody:'Select an event for employee, dates, status and calendar-sync facts.',upcoming:'Upcoming absences'},
     ms:{
   "title": "Kalendar Pasukan",
   "description": "Semak ketersediaan disunting privasi dalam skop pelaporan dibenarkan.",
@@ -2089,6 +2092,7 @@ function teamCalendarCopy(){
   "scope": "Skop pelaporan",
   "direct": "Laporan langsung",
   "expanded": "Pokok diperluas",
+  "company": "Seluruh syarikat",
   "select": "Pilih ketidakhadiran",
   "selectBody": "Pilih acara untuk semak ketersediaan, konflik dan fakta segerak.",
   "noEvents": "Tiada ketidakhadiran pasukan dalam tempoh ini",
@@ -2105,11 +2109,19 @@ function teamCalendarCopy(){
   "days": "Hari",
   "leaveType": "Jenis cuti",
   "job": "Peranan",
-  "close": "Tutup butiran"
+  "close": "Tutup butiran",
+  "eventCount": "{count} acara ketidakhadiran",
+  "totalEvents": "Acara tempoh ini",
+  "awayToday": "Tiada hari ini",
+  "pendingCount": "Menunggu kelulusan",
+  "conflictsCount": "Konflik liputan",
+  "overviewTitle": "Ringkasan tempoh",
+  "overviewBody": "Pilih acara untuk melihat pekerja, tarikh, status dan fakta segerak kalendar.",
+  "upcoming": "Ketidakhadiran akan datang"
 },
-    zh:{title:'团队日历',description:'查看授权汇报范围内、已按隐私规则脱敏的人员可用情况。',month:'月',week:'周',list:'列表',previous:'上一期',next:'下一期',today:'今天',department:'部门',allDepartments:'所有部门',status:'状态',allStatuses:'所有状态',scope:'汇报范围',direct:'直属下属',expanded:'扩展汇报树',select:'选择缺勤事项',selectBody:'选择日历事项以查看可用性、冲突和同步事实。',noEvents:'此期间没有团队缺勤',more:'更多',conflict:'人力冲突',conflicts:'项重叠的团队缺勤',privacy:'不会显示私人原因或文件引用。',openApprovals:'打开我的审批',retry:'重试',sync:'外部同步',notSynced:'未排队',employee:'员工',dates:'日期',days:'天数',leaveType:'假期类型',job:'职位',close:'关闭详情'},
-    ja:{title:'チームカレンダー',description:'許可された報告範囲の、プライバシー編集済み在席情報を確認します。',month:'月',week:'週',list:'一覧',previous:'前へ',next:'次へ',today:'今日',department:'部署',allDepartments:'すべての部署',status:'状態',allStatuses:'すべての状態',scope:'報告範囲',direct:'直属部下',expanded:'拡張ツリー',select:'不在を選択',selectBody:'予定を選択して在席、競合、同期情報を確認します。',noEvents:'この期間にチームの不在はありません',more:'件',conflict:'要員競合',conflicts:'件の重複不在',privacy:'非公開理由と文書参照は表示されません。',openApprovals:'自分の承認を開く',retry:'再試行',sync:'外部同期',notSynced:'未キュー',employee:'従業員',dates:'日付',days:'日数',leaveType:'休暇種別',job:'役職',close:'詳細を閉じる'},
-    vi:{title:'Lịch nhóm',description:'Xem tình trạng sẵn sàng đã ẩn dữ liệu riêng tư trong phạm vi báo cáo được phép.',month:'Tháng',week:'Tuần',list:'Danh sách',previous:'Trước',next:'Sau',today:'Hôm nay',department:'Phòng ban',allDepartments:'Tất cả phòng ban',status:'Trạng thái',allStatuses:'Tất cả trạng thái',scope:'Phạm vi báo cáo',direct:'Báo cáo trực tiếp',expanded:'Cây mở rộng',select:'Chọn vắng mặt',selectBody:'Chọn sự kiện để xem tình trạng, xung đột và đồng bộ.',noEvents:'Không có nhân viên nhóm vắng trong kỳ này',more:'thêm',conflict:'Xung đột nhân lực',conflicts:'lịch vắng trùng nhau',privacy:'Không bao giờ hiển thị lý do riêng hoặc tham chiếu tài liệu.',openApprovals:'Mở Phê duyệt của tôi',retry:'Thử lại',sync:'Đồng bộ ngoài',notSynced:'Chưa xếp hàng',employee:'Nhân viên',dates:'Ngày',days:'Số ngày',leaveType:'Loại nghỉ',job:'Vai trò',close:'Đóng chi tiết'},
+    zh:{title:'团队日历',description:'根据权限范围内的脱敏请假事实安排团队人力与工作覆盖。',month:'月',week:'周',list:'列表',previous:'上一期',next:'下一期',today:'今天',department:'部门',allDepartments:'所有部门',status:'状态',allStatuses:'所有状态',scope:'可见范围',direct:'直属下属',expanded:'扩展汇报树',company:'全公司',select:'选择缺勤事项',selectBody:'选择日历事项以查看员工、日期、状态和同步事实。',noEvents:'此期间没有团队缺勤',more:'更多',conflict:'人力冲突',conflicts:'项重叠的团队缺勤',privacy:'不会显示私人原因或文件引用。',openApprovals:'打开我的审批',retry:'重试',sync:'外部同步',notSynced:'未排队',employee:'员工',dates:'日期',days:'天数',leaveType:'假期类型',job:'职位',close:'关闭详情',eventCount:'{count} 项缺勤事项',totalEvents:'本期事项',awayToday:'今日休假',pendingCount:'待审批',conflictsCount:'人力冲突',overviewTitle:'期间概览',overviewBody:'选择事项后可查看员工、日期、状态及日历同步事实。',upcoming:'近期缺勤'},
+    ja:{title:'チームカレンダー',description:'許可範囲内のプライバシー編集済み休暇情報からチーム配置を計画します。',month:'月',week:'週',list:'一覧',previous:'前へ',next:'次へ',today:'今日',department:'部署',allDepartments:'すべての部署',status:'状態',allStatuses:'すべての状態',scope:'表示範囲',direct:'直属部下',expanded:'拡張ツリー',company:'会社全体',select:'不在を選択',selectBody:'予定を選択して従業員、日付、状態、同期情報を確認します。',noEvents:'この期間にチームの不在はありません',more:'件',conflict:'要員競合',conflicts:'件の重複不在',privacy:'非公開理由と文書参照は表示されません。',openApprovals:'自分の承認を開く',retry:'再試行',sync:'外部同期',notSynced:'未キュー',employee:'従業員',dates:'日付',days:'日数',leaveType:'休暇種別',job:'役職',close:'詳細を閉じる',eventCount:'不在予定 {count} 件',totalEvents:'期間内の予定',awayToday:'本日休暇',pendingCount:'承認待ち',conflictsCount:'要員競合',overviewTitle:'期間概要',overviewBody:'予定を選択すると従業員、日付、状態、同期情報を確認できます。',upcoming:'今後の不在'},
+    vi:{title:'Lịch nhóm',description:'Lập kế hoạch nhân sự từ dữ liệu nghỉ phép đã ẩn thông tin riêng tư trong phạm vi được phép.',month:'Tháng',week:'Tuần',list:'Danh sách',previous:'Trước',next:'Sau',today:'Hôm nay',department:'Phòng ban',allDepartments:'Tất cả phòng ban',status:'Trạng thái',allStatuses:'Tất cả trạng thái',scope:'Phạm vi xem',direct:'Báo cáo trực tiếp',expanded:'Cây mở rộng',company:'Toàn công ty',select:'Chọn vắng mặt',selectBody:'Chọn sự kiện để xem nhân viên, ngày, trạng thái và đồng bộ.',noEvents:'Không có nhân viên nhóm vắng trong kỳ này',more:'thêm',conflict:'Xung đột nhân lực',conflicts:'lịch vắng trùng nhau',privacy:'Không bao giờ hiển thị lý do riêng hoặc tham chiếu tài liệu.',openApprovals:'Mở Phê duyệt của tôi',retry:'Thử lại',sync:'Đồng bộ ngoài',notSynced:'Chưa xếp hàng',employee:'Nhân viên',dates:'Ngày',days:'Số ngày',leaveType:'Loại nghỉ',job:'Vai trò',close:'Đóng chi tiết',eventCount:'{count} sự kiện vắng mặt',totalEvents:'Sự kiện trong kỳ',awayToday:'Vắng hôm nay',pendingCount:'Chờ duyệt',conflictsCount:'Xung đột nhân lực',overviewTitle:'Tổng quan kỳ',overviewBody:'Chọn sự kiện để xem nhân viên, ngày, trạng thái và đồng bộ lịch.',upcoming:'Sắp vắng mặt'},
   };
   const pack=i18nLegacy(packs);
   return key=>pack[key]||packs.en[key]||key;
@@ -2125,14 +2137,15 @@ SCREENS['team-calendar']=async function(root){
   if(!context) return;
   const lang=typeof getLang==='function'?getLang():'en';
   const locales={en:'en-SG',ms:'ms-MY',zh:'zh-CN',ja:'ja-JP',vi:'vi-VN'};
-  let view='month';
+  let view=window.matchMedia&&window.matchMedia('(max-width:640px)').matches?'list':'month';
   let cursor=hrToday();
   let selectedId=null;
   let rows=[];
   let departments=[];
   let department='all';
   let status='all';
-  let reportingScope='direct';
+  let canCompany=Boolean(DB&&DB.user&&DB.user.role==='Superadmin');
+  let reportingScope=canCompany?'company':'direct';
   let canExpand=false;
   let error=null;
   function iso(date){return date.toISOString().slice(0,10);}
@@ -2172,7 +2185,7 @@ SCREENS['team-calendar']=async function(root){
         <div class="card">
           <div class="field"><span class="k">${esc(c('employee'))}</span><span class="v">${esc(row.employeeName)}</span></div>
           <div class="field"><span class="k">${esc(c('job'))}</span><span class="v">${esc(row.jobTitle||'—')}</span></div>
-          <div class="field"><span class="k">${esc(c('leaveType'))}</span><span class="v">${esc(row.leaveType)}</span></div>
+          <div class="field"><span class="k">${esc(c('leaveType'))}</span><span class="v">${esc(hrLeaveTypeLabel(statusCopy,row.leaveType))}</span></div>
           <div class="field"><span class="k">${esc(c('dates'))}</span><span class="v">${esc(dateValue(row.startDate))} → ${esc(dateValue(row.endDate))}</span></div>
           <div class="field"><span class="k">${esc(c('days'))}</span><span class="v tnum">${esc(String(row.days))}</span></div>
           <div class="field"><span class="k">${esc(c('sync'))}</span><span class="v">${esc(sync)}</span></div>
@@ -2189,6 +2202,8 @@ SCREENS['team-calendar']=async function(root){
       rows=response.data&&response.data.items||[];
       departments=Array.from(new Set(departments.concat(response.data&&response.data.departments||[]))).sort();
       canExpand=Boolean(response.meta&&response.meta.canExpand);
+      canCompany=Boolean(response.meta&&response.meta.canCompany);
+      if(reportingScope==='company'&&!canCompany) reportingScope='direct';
       if(reportingScope==='expanded'&&!canExpand) reportingScope='direct';
       if(selectedId&&!rows.some(row=>String(row.id)===String(selectedId))) selectedId=null;
     }catch(loadError){
@@ -2204,8 +2219,11 @@ SCREENS['team-calendar']=async function(root){
     });
     calendarWorkspacePage(root,{
       module:'mywork',route:'team-calendar',title:c('title'),description:c('description'),
-      rows,view,cursor,selectedId,error,periodLabel:periodLabel(),
+      rows,view,cursor,selectedId,error,periodLabel:periodLabel(),businessDate:hrToday(),
+      countLabel:c('eventCount').replace('{count}',String(rows.length)),
       privacy:c('privacy'),statusLabel:value=>myWorkLeaveStatus(value,statusCopy),
+      eventSubtitle:row=>hrLeaveTypeLabel(statusCopy,row.leaveType),
+      summaryLabels:{total:c('totalEvents'),away:c('awayToday'),pending:c('pendingCount'),conflicts:c('conflictsCount')},
       labels:{
         month:c('month'),week:c('week'),list:c('list'),previous:c('previous'),
         next:c('next'),today:c('today'),select:c('select'),selectBody:c('selectBody'),
@@ -2219,11 +2237,21 @@ SCREENS['team-calendar']=async function(root){
         <option value="all">${esc(c('allStatuses'))}</option>
         ${['pending','approved','cancelled'].map(item=>`<option value="${item}" ${item===status?'selected':''}>${esc(myWorkLeaveStatus(item,statusCopy))}</option>`).join('')}
       </select></label>
-      <label class="fld"><span>${esc(c('scope'))}</span><select data-calendar-scope ${canExpand?'':'disabled'}>
+      <label class="fld"><span>${esc(c('scope'))}</span><select data-calendar-scope ${canExpand||canCompany?'':'disabled'}>
         <option value="direct">${esc(c('direct'))}</option>
         ${canExpand?`<option value="expanded" ${reportingScope==='expanded'?'selected':''}>${esc(c('expanded'))}</option>`:''}
+        ${canCompany?`<option value="company" ${reportingScope==='company'?'selected':''}>${esc(c('company'))}</option>`:''}
       </select></label>`,
       detail,
+      emptyDetail:summary=>`<div class="calendar-overview">
+        <div class="calendar-overview-hero">${ic('calendar')}<div><h2>${esc(c('overviewTitle'))}</h2><p>${esc(c('overviewBody'))}</p></div></div>
+        <div class="calendar-overview-facts">
+          <div><small>${esc(c('totalEvents'))}</small><b>${summary.total}</b></div>
+          <div><small>${esc(c('awayToday'))}</small><b>${summary.away}</b></div>
+          <div><small>${esc(c('pendingCount'))}</small><b>${summary.pending}</b></div>
+        </div>
+        <div class="alert info">${ic('shield')}<span>${esc(c('privacy'))}</span></div>
+      </div>`,
       actions:[
         ...(error?[{label:c('retry'),icon:'refresh',onClick:load}]:[]),
         {label:c('openApprovals'),icon:'check',cls:'primary',onClick:()=>navigate('my-approvals')},

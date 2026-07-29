@@ -108,11 +108,11 @@ Before publishing the demo:
 
 Fresh Demo databases load the generated `erp-system-showcase-v1.sql` after the small
 regression seed. The browser verifies the manifest SHA-256 and commits the whole pack
-in one transaction. Manifest version 10 is fixed to 2026-07-27 and makes all 12 real
+in one transaction. Manifest version 15 is fixed to 2026-07-27 and makes all 12 real
 permission personas self-contained in the enterprise pack: Superadmin is assigned to
 both legal entities with unrestricted setup/module access, while Viewer and the ten
 department personas exercise their actual company roles. The pack also contains
-SG/MY legal entities and 10,422 linked activity/inventory/GL/leave/payroll/procure-to-pay records,
+SG/MY legal entities and 10,436 linked activity/inventory/GL/leave/payroll/procure-to-pay records,
 including manager reporting lines, governed annual-leave openings and reservations,
 one real pending sales-order approval per company, pending/approved/rejected leave and
 draft/posted/cancelled payroll cases. Existing
@@ -131,3 +131,10 @@ rollback teaching drafts outside the approval queue. Dashboard and approval inbo
 rows are derived only from real pending approval/request tables; the pack supplies
 separate `DEMO-SO-APP-SG-0001` and `DEMO-SO-APP-MY-0001` maker-checker cases, each
 with sufficient opening stock in the exact fulfilment warehouse.
+
+Version 15 adds 24 deterministic SG/MY leave cases across July and early August,
+including approved, pending, rejected, cancelled, multi-day and overlapping coverage
+examples. Earlier controlled Demo leave rows are upgraded in place so a historical
+IndexedDB converges on the same fixed business-date calendar as a fresh installation.
+Superadmin receives company-wide privacy-redacted calendar scope; managers remain
+restricted to direct reports or an explicitly granted reporting tree.

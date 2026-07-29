@@ -38,7 +38,7 @@
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
   var DEMO_SCHEMA_VERSION = 74;
-  var DEMO_PACK_VERSION = '13';
+  var DEMO_PACK_VERSION = '15';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -3862,24 +3862,34 @@
           orm,SCOPE,actor.id);
         var expandedIds=await state.runtime.commands.resolveTeamEmployeeIdsWithin(
           orm,SCOPE,actor.id);
+        var canCompany=Boolean(DB.user&&DB.user.role==='Superadmin');
         var directSet=new Set(directIds);
         var canExpand=expandedIds.some(function(id){return !directSet.has(id);});
+        if(query.scope==='company'&&!canCompany){
+          var companyScopeError=new Error('Company-wide calendar scope is reserved for the tenant Superadmin.');
+          companyScopeError.code='calendar_scope_not_authorized';
+          throw companyScopeError;
+        }
         if(query.scope==='expanded'&&!canExpand){
           var scopeError=new Error('No active hierarchy grant authorizes an expanded reporting tree.');
           scopeError.code='calendar_scope_not_authorized';
           throw scopeError;
         }
+        var employeeIds=query.scope==='company'
+          ?await state.runtime.commands.resolveCompanyEmployeeIdsWithin(orm,SCOPE)
+          :query.scope==='expanded'?expandedIds:directIds;
         var data=await state.runtime.commands.listTeamCalendarWithin(
-          orm,SCOPE,query.scope==='expanded'?expandedIds:directIds,{
+          orm,SCOPE,employeeIds,{
             from:String(query.from||''),to:String(query.to||''),
             department:query.department||null,status:query.status||'all',
           });
-        return {data:data,canExpand:canExpand,directCount:directIds.length};
+        return {data:data,canExpand:canExpand,canCompany:canCompany,directCount:directIds.length};
       });
       return {data:response.data,meta:{
         actorDerived:true,privacy:'reason_and_evidence_redacted',
-        scope:query.scope==='expanded'?'expanded':'direct',
-        canExpand:response.canExpand,directReportCount:response.directCount,limit:300,
+        scope:query.scope==='company'?'company':query.scope==='expanded'?'expanded':'direct',
+        canExpand:response.canExpand,canCompany:response.canCompany,
+        directReportCount:response.directCount,limit:300,
       }};
     },
     approvals:async function(){

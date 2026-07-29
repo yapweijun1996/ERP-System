@@ -58,11 +58,11 @@ user must confirm an irreversible reset or upgrade.
 
 The pack contains independent Singapore and Malaysia legal entities (SGD/GST and
 MYR/SST), 12 real personas, at least 100 employees, about 200 customers, 100
-suppliers, 500 products and 10,422 deterministic activity, inventory, GL, leave, payroll and procure-to-pay
+suppliers, 500 products and 10,436 deterministic activity, inventory, GL, leave, payroll and procure-to-pay
 payroll records. Stock movements are paired, journals balance by company and reference,
 and HR data includes reporting lines plus controlled approval and payroll states.
 Cross-company Finance and HR assignments demonstrate legal-entity separation. The
-enterprise-pack manifest is currently version 10; it owns all 12 identities directly
+enterprise-pack manifest is currently version 15; it owns all 12 identities directly
 instead of relying on the compact regression seed. Its Superadmin belongs to both
 companies, bypasses module disablement for administration, and retains every setup
 capability. The Demo switcher presents the true assigned role for every persona, and
