@@ -8,7 +8,12 @@
    ============================================================ */
 SCREENS['new-payment-voucher'] = async function(root){
   await prepareCanonicalPaymentVoucherData();
-  const TODAY=new Date().toISOString().slice(0,10);
+  const TODAY=typeof workingPeriodEndDate==='function'?workingPeriodEndDate():new Date().toISOString().slice(0,10);
+  const pc=(key,vars)=>{
+    let value=t('paymentVoucher.'+key);
+    Object.entries(vars||{}).forEach(([name,replacement])=>{ value=value.replaceAll(`{${name}}`,String(replacement)); });
+    return value;
+  };
 
   function openInvoicesFor(supplierId){
     return DB.supplierInvoices
@@ -33,7 +38,7 @@ SCREENS['new-payment-voucher'] = async function(root){
 
   /* ---------------- STEP 1 — supplier & invoice selection ---------------- */
   function invRows(){
-    if(!S.invoices.length) return `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:26px">${S.supplierId?'This supplier has no unpaid invoices.':'Select a supplier to load their open invoices.'}</td></tr>`;
+    if(!S.invoices.length) return `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:26px">${esc(pc(S.supplierId?'noInvoices':'selectSupplierPrompt'))}</td></tr>`;
     return S.invoices.map((inv,i)=>`<tr data-i="${i}" style="${inv.sel?'':'opacity:.5'}">
       <td style="text-align:center"><button class="set-tgl ${inv.sel?'on':''}" data-sel="${i}" role="switch" aria-checked="${inv.sel}" style="width:38px;height:23px"><span class="set-tgl-k" style="width:17px;height:17px"></span></button></td>
       <td class="l li-name"><b>${esc(inv.no)}</b></td>
@@ -44,31 +49,32 @@ SCREENS['new-payment-voucher'] = async function(root){
     const s=sup();
     return `<div class="doclayout"><div class="docmain">
       <div class="panel">
-        <div class="panel-h">${ic('truck')}<h3>Pay to supplier</h3></div>
+        <div class="panel-h">${ic('truck')}<h3>${esc(pc('payToSupplier'))}</h3></div>
         <div class="panel-body">
-          <div class="fld"><span>Supplier <span class="req">*</span></span>
-            <select id="wSup"><option value="">Choose a supplier…</option>
+          <div class="fld"><span>${esc(pc('supplier'))} <span class="req">*</span></span>
+            <input type="search" id="wSupSearch" class="select-filter" autocomplete="off" placeholder="${esc(t('quickCreate.searchSuppliers'))}" aria-label="${esc(t('quickCreate.searchSuppliers'))}">
+            <select id="wSup"><option value="">${esc(pc('chooseSupplier'))}</option>
               ${DB.suppliers.map(s=>`<option value="${s.id}" ${s.id===S.supplierId?'selected':''}>${esc(s.name)} · open ${money0(s.balance)}</option>`).join('')}</select></div>
         </div>
       </div>
       <div class="panel">
-        <div class="panel-h">${ic('receipt')}<h3>Open invoices</h3>
-          ${s?`<div style="margin-left:auto;display:flex;gap:6px"><button class="btn soft sm" id="wAll">Select all</button><button class="btn soft sm" id="wNone">Clear</button></div>`:''}</div>
-        <table class="lines"><thead><tr><th style="width:54px"></th><th class="l">Invoice</th><th class="l">Date</th><th>Amount</th></tr></thead>
+        <div class="panel-h">${ic('receipt')}<h3>${esc(t('quickCreate.openInvoices'))}</h3>
+          ${s?`<div style="margin-left:auto;display:flex;gap:6px"><button class="btn soft sm" id="wAll">${esc(pc('selectAll'))}</button><button class="btn soft sm" id="wNone">${esc(pc('clear'))}</button></div>`:''}</div>
+        <table class="lines"><thead><tr><th style="width:54px"></th><th class="l">${esc(t('quickCreate.invoice'))}</th><th class="l">${esc(t('common.date'))}</th><th>${esc(t('appr.col.amount'))}</th></tr></thead>
           <tbody id="wInv">${invRows()}</tbody></table>
       </div>
     </div>
     <aside class="summary" id="wSide">${summaryCard()}</aside></div>`;
   }
   function summaryCard(){
-    const t=totals(), s=sup();
+    const total=totals(), s=sup();
     return `<div class="sumcard">
-      <div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:6px">Payment summary</div>
-      <div class="sumrow"><span class="sk2">Invoices selected</span><span class="sv tnum">${t.count}</span></div>
-      <div class="sumrow total"><span class="sk2">Net payment</span><span class="sv tnum">${money(t.gross)}</span></div>
+      <div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:6px">${esc(t('quickCreate.paymentSummary'))}</div>
+      <div class="sumrow"><span class="sk2">${esc(t('quickCreate.invoicesSelected'))}</span><span class="sv tnum">${total.count}</span></div>
+      <div class="sumrow total"><span class="sk2">${esc(t('quickCreate.paymentTotal'))}</span><span class="sv tnum">${money(total.gross)}</span></div>
     </div>
-    ${s?`<div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Supplier balance</div>
-      ${indicator({tone:'ok',icon:'bank',label:'Open balance after pay',value:money0(s.balance-t.gross),sub:`Was ${money0(s.balance)}.`})}</div>`:''}`;
+    ${s?`<div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">${esc(pc('supplierBalance'))}</div>
+      ${indicator({tone:'ok',icon:'bank',label:pc('openBalanceAfter'),value:money0(s.balance-total.gross),sub:pc('wasBalance',{amount:money0(s.balance)})})}</div>`:''}`;
   }
   function refreshStep1(){ $('#wInv').innerHTML=invRows(); $('#wSide').innerHTML=summaryCard(); bindInv(); updateFooter(); }
   function bindInv(){
@@ -82,6 +88,7 @@ SCREENS['new-payment-voucher'] = async function(root){
       S.invoices=S.supplierId?openInvoicesFor(S.supplierId):[];
       render();
     });
+    bindSelectFilter($('#wSupSearch'),su,t('quickCreate.noMatches'));
     const all=$('#wAll'); all&&all.addEventListener('click',()=>{ S.invoices.forEach(i=>i.sel=true); refreshStep1(); });
     const none=$('#wNone'); none&&none.addEventListener('click',()=>{ S.invoices.forEach(i=>i.sel=false); refreshStep1(); });
     bindInv();
@@ -95,26 +102,26 @@ SCREENS['new-payment-voucher'] = async function(root){
       <td class="tnum"><b>${money(inv.amount)}</b></td></tr>`).join('');
     return `<div class="doclayout"><div class="docmain">
       <div class="panel">
-        <div class="panel-h">${ic('bank')}<h3>Payment details</h3></div>
+        <div class="panel-h">${ic('bank')}<h3>${esc(pc('paymentDetails'))}</h3></div>
         <div class="panel-body">
           <div class="fldrow c2">
-            <div class="fld"><span>Payment date</span><input type="date" id="wDate" value="${S.paymentDate}"></div>
-            <div class="fld"><span>Bank reference (optional)</span><input id="wRef" value="${esc(S.bankRef)}" placeholder="e.g. HSBC TT-88213"></div>
+            <div class="fld"><span>${esc(pc('paymentDate'))}</span><input type="date" id="wDate" value="${S.paymentDate}"></div>
+            <div class="fld"><span>${esc(pc('bankReference'))}</span><input id="wRef" value="${esc(S.bankRef)}" placeholder="${esc(pc('bankPlaceholder'))}"></div>
           </div>
         </div>
       </div>
       <div class="panel">
-        <div class="panel-h">${ic('receipt')}<h3>Invoices being settled</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${t.count} invoice${t.count===1?'':'s'}</span></div>
+        <div class="panel-h">${ic('receipt')}<h3>${esc(pc('invoicesSettled'))}</h3><span style="margin-left:auto;font-size:12px;color:var(--muted)">${esc(pc('invoiceCount',{count:t.count}))}</span></div>
         <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">Invoice</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
       </div>
     </div>
     <aside class="summary">
       <div class="docmeta" style="margin:0 0 14px;grid-template-columns:1fr">
-        <div class="dm"><small>Pay to</small><div class="partner">${profileAvatar({name:s.name,src:s.imageUrl||s.photoUrl||s.avatarUrl,cls:'pav',size:26})}<b>${esc(s.name)}</b></div></div>
+        <div class="dm"><small>${esc(pc('payTo'))}</small><div class="partner">${profileAvatar({name:s.name,src:s.imageUrl||s.photoUrl||s.avatarUrl,cls:'pav',size:26})}<b>${esc(s.name)}</b></div></div>
       </div>
       ${summaryCard()}
-      <div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Posting</div>
-        ${indicator({tone:'accent',icon:'flow',label:'Settles to AP',value:money0(t.gross),sub:'Debits Accounts Payable, credits Cash & Bank.'})}
+      <div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">${esc(pc('posting'))}</div>
+        ${indicator({tone:'accent',icon:'flow',label:pc('settlesAp'),value:money0(t.gross),sub:pc('postingDesc')})}
       </div>
     </aside></div>`;
   }
@@ -124,18 +131,18 @@ SCREENS['new-payment-voucher'] = async function(root){
   }
 
   /* ---------------- shell ---------------- */
-  const steps=[['Select invoices','receipt'],['Payment & review','bank']];
+  const steps=[[pc('stepSelect'),'receipt'],[pc('stepReview'),'bank']];
   function stepper(){ return wizardStepper(steps, S.step, S.reached); }
   function canAdvance(){ if(S.step===0) return !!S.supplierId && totals().count>0; return true; }
   function footer(){
     const adv=canAdvance();
     const right=S.step<1
       ? btn('Continue',{icon:'arrowR',cls:'primary',sm:false,attrs:`id="wNext" ${adv?'':'disabled style="opacity:.5;pointer-events:none"'}`})
-      : btn('Post payment',{icon:'check',cls:'primary',sm:false,attrs:'id="wCreate"'});
+      : btn(pc('postPayment'),{icon:'check',cls:'primary',sm:false,attrs:'id="wCreate"'});
     const left=S.step>0?btn('Back',{icon:'chevL',cls:'soft',attrs:'id="wBack"'}):btn('Cancel',{cls:'soft',attrs:'id="wCancel"'});
     const t=totals();
-    const hint=S.step===0?(S.supplierId?`Step 1 of 2 · ${t.count} invoice(s) · ${money0(t.gross)}`:'Step 1 of 2 · choose a supplier to pay')
-      :`Step 2 of 2 · ${money0(t.gross)} to ${sup().name}`;
+    const hint=S.step===0?(S.supplierId?pc('stepOneSelected',{count:t.count,amount:money0(t.gross)}):pc('stepOneChoose'))
+      :pc('stepTwo',{amount:money0(t.gross),supplier:sup().name});
     return `<div style="font-size:12.5px;color:var(--muted)" class="hideonsmall">${hint}</div><div class="grow"></div>${left}${right}`;
   }
   function body(){ return S.step===0?step1():step2(); }
@@ -143,11 +150,11 @@ SCREENS['new-payment-voucher'] = async function(root){
   function render(){
     root.innerHTML=`<div class="content full"><section class="master" data-screen-label="New Payment Voucher">
       <div class="docwrap"><div class="docpage">
-        ${crumbs([DB.company.name,'Finance','Payment Voucher',{cur:'New'}])}
+        ${crumbs([DB.company.name,t('nav.finance'),t('route.payment-voucher'),{cur:t('quickCreate.new')}])}
         <div class="dochead">
           <div class="dh-row1">
-            <div><div class="dt">${ic('coins')}New Payment Voucher</div>
-              <div style="color:var(--muted);font-size:13px;margin-top:4px">Draft · supplier settlement · ${esc(DB.company.name)}</div></div>
+            <div><h1 class="dt">${ic('coins')}${esc(pc('title'))}</h1>
+              <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(pc('subtitle',{company:DB.company.name}))}</div></div>
             <div class="dactions">${cap('Draft','neutral')}</div>
           </div>
           ${stepper()}

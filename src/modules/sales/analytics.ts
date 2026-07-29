@@ -13,6 +13,7 @@ import {
   salesDelivery,
   salesEnquiry,
   salesOrder,
+  salesOrderApproval,
   salesQuotation,
   salesReturn,
 } from '../../data/schema';
@@ -90,6 +91,12 @@ export async function listSalesAnalyticsWithin(
     eq(salesDebitNote.masterFn, scope.masterFn),
     eq(salesDebitNote.companyFn, scope.companyFn),
   );
+  const effectiveOrderStatus = sql<string>`case
+    when ${salesOrder.status} = 'draft' and ${salesOrderApproval.status} = 'approved' then 'approved'
+    when ${salesOrder.status} = 'draft' and ${salesOrderApproval.status} = 'pending' then 'pending_approval'
+    when ${salesOrder.status} = 'draft' and ${salesOrderApproval.status} = 'rejected' then 'rejected'
+    else ${salesOrder.status}
+  end`;
 
   const [
     [invoiceTotals], [unpaidInvoiceTotals], [creditTotals], [debitTotals],
@@ -192,8 +199,12 @@ export async function listSalesAnalyticsWithin(
         eq(salesQuotation.masterFn, scope.masterFn),
         eq(salesQuotation.companyFn, scope.companyFn),
       )).groupBy(salesQuotation.status).orderBy(asc(salesQuotation.status)),
-    exec.select({ status: salesOrder.status, count: count(), value: sum(salesOrder.totalAmount) })
-      .from(salesOrder).where(orderTenant).groupBy(salesOrder.status).orderBy(asc(salesOrder.status)),
+    exec.select({ status: effectiveOrderStatus, count: count(), value: sum(salesOrder.totalAmount) })
+      .from(salesOrder).leftJoin(salesOrderApproval, and(
+        eq(salesOrderApproval.masterFn, salesOrder.masterFn),
+        eq(salesOrderApproval.companyFn, salesOrder.companyFn),
+        eq(salesOrderApproval.orderId, salesOrder.id),
+      )).where(orderTenant).groupBy(effectiveOrderStatus).orderBy(asc(effectiveOrderStatus)),
     exec.select({ status: invoice.status, count: count(), value: sum(invoice.totalAmount) })
       .from(invoice).where(invoiceTenant).groupBy(invoice.status).orderBy(asc(invoice.status)),
     exec.select({ status: salesDelivery.status, count: count() }).from(salesDelivery).where(and(

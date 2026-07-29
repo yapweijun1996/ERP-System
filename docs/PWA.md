@@ -25,14 +25,24 @@ References:
 
 ## 2. Update Flow
 
-ERP System uses a user-controlled update flow:
+ERP System uses one user-controlled update flow, owned exclusively by the service worker:
 
 1. Browser installs a new service worker in the background.
 2. The old app keeps running.
-3. `web/public/assets/pwa.js` detects `registration.waiting`.
+3. `web/public/assets/pwa.js` detects `registration.waiting` and asks that worker for its
+   exact cache version.
 4. The UI shows a small toast with **Update now** and **Later**.
 5. **Update now** posts `SKIP_WAITING` to the waiting worker.
 6. `controllerchange` reloads the page once.
+
+The shell does not hash and download every source asset as a second update detector. That
+older mechanism could race the service-worker lifecycle and show two prompts for one release.
+Registration uses `updateViaCache: 'none'`, so the browser checks `sw.js` itself without using
+an HTTP cache entry.
+
+Choosing **Later** suppresses the same worker version for the current tab session. A genuinely
+newer worker has a different cache version and is shown normally. Only an update explicitly
+accepted through **Update now** is allowed to reload an already-open ERP workspace.
 
 This avoids surprise reloads in the middle of an ERP workflow.
 

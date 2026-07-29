@@ -16,6 +16,7 @@ import {
   salesDelivery,
   salesDeliveryLine,
   salesOrder,
+  salesOrderApproval,
   salesOrderLine,
 } from '../../data/schema';
 
@@ -300,6 +301,24 @@ export async function confirmDraftSalesOrderWithin(
   if (order.status !== 'draft') {
     throw new InvalidSalesOrderStateError(
       `Sales order ${order.docNo} is '${order.status}', not 'draft'`,
+    );
+  }
+
+  // Approval is a hard posting gate. Existing pre-migration drafts may not
+  // have an approval row, but once an order has entered the approval workflow
+  // it cannot be confirmed until that exact request is approved. Checking the
+  // approval record as well as the order status also fails closed if legacy or
+  // imported data contains an inconsistent `draft` + `pending` combination.
+  const [approval] = await exec.select({
+    status: salesOrderApproval.status,
+  }).from(salesOrderApproval).where(and(
+    eq(salesOrderApproval.masterFn, scope.masterFn),
+    eq(salesOrderApproval.companyFn, scope.companyFn),
+    eq(salesOrderApproval.orderId, order.id),
+  )).for('update');
+  if (approval && approval.status !== 'approved') {
+    throw new InvalidSalesOrderStateError(
+      `Sales order ${order.docNo} approval is '${approval.status}', not 'approved'`,
     );
   }
 

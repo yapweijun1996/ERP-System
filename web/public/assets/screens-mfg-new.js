@@ -151,7 +151,7 @@ SCREENS['new-work-order'] = function(root){
         ${crumbs([DB.company.name,'Manufacturing','Work Orders',{cur:'New'}])}
         <div class="dochead">
           <div class="dh-row1">
-            <div><div class="dt">${ic('factory')}New Work Order</div>
+            <div><h1 class="dt">${ic('factory')}New Work Order</h1>
               <div style="color:var(--muted);font-size:13px;margin-top:4px">Draft · ${esc(DB.company.name)} · ${esc(DB.company.branch)}</div></div>
             <div class="dactions">${cap('Draft','neutral')}</div>
           </div>

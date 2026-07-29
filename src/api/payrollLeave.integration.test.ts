@@ -154,11 +154,12 @@ describe('governed leave Payroll API vertical slice', () => {
       (source: { sourceKey: string }) => source.sourceKey === 'encashment:api-encashment-2026-09',
     )).toHaveLength(1);
 
-    const linesResponse = await fetch(`${baseUrl}/api/payroll/run-lines?limit=100`, {
+    const linesResponse = await fetch(`${baseUrl}/api/payroll/run-lines?limit=100&runId=${firstRun.id}`, {
       headers: { cookie: auth.header },
     });
     expect(linesResponse.status).toBe(200);
     const lines = (await linesResponse.json()).data;
+    expect(lines.every((line: { runId: number }) => line.runId === firstRun.id)).toBe(true);
     const workerLine = lines.find(
       (line: { runId: number; employeeId: number }) =>
         line.runId === firstRun.id && line.employeeId === worker.id,

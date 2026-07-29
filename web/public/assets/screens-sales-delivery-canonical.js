@@ -136,8 +136,8 @@
     root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">
       ${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:s('deliveries'),route:'delivery-orders'},{cur:delivery.docNo}])}
       ${typeof salesNav==='function'?salesNav('delivery-orders'):''}</div><div class="docwrap"><div class="docpage">
-      <div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('truck')}${esc(s('delivery'))}
-        <span class="dnum">${esc(delivery.docNo)}</span></div><div class="h1sub">${esc(customer.name||'#'+order.customerId)}</div></div>
+      <div class="dochead"><div class="dh-row1"><div><h1 class="dt">${ic('truck')}${esc(s('delivery'))}
+        <span class="dnum">${esc(delivery.docNo)}</span></h1><div class="h1sub">${esc(customer.name||'#'+order.customerId)}</div></div>
         <div class="dactions">${cap(statusLabel(s,delivery.status),statusTone(delivery.status))}</div></div>
         <div class="docmeta"><div class="dm"><small>${esc(s('customer'))}</small><b>${esc(customer.name||'—')}</b></div>
           <div class="dm"><small>${esc(s('order'))}</small><b>${esc(order.docNo||'—')}</b></div>

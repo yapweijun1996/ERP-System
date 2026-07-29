@@ -123,8 +123,21 @@ function togglePopList(anchorSel, items, onPick){
 }
 
 /* ---------------- SALES ORDER (transaction document) ---------------- */
+function salesOrderDetailCopy(){
+  const packs={
+    en:{confirm:'Confirm order',confirming:'Confirming…',more:'More actions',canonicalLines:'Canonical order lines',noCredit:'Credit limits are not modeled in the canonical customer master yet.',confirmHelp:'Confirming this approved draft issues stock, creates the invoice and posts a balanced journal in one transaction.',pendingHelp:'This order is awaiting approval. Stock, invoicing and GL posting remain blocked until approval is completed.',postedHelp:'This posted order is immutable. Corrections must use a return or reversal workflow.',pendingTitle:'Approval required before confirmation',pendingBody:'The approval request is still pending. Confirmation is blocked in both the interface and the posting service.',exportPdf:'Export as PDF',copyLink:'Copy link',history:'View change history',statusAudit:'Order status',createdAudit:'Canonical sales order created',system:'System',noAttachments:'No canonical attachments.',noComments:'No canonical comments.',postedInvoice:'Posted sales invoice',posted:'Posted',adapterMissing:'ERP data adapter not loaded',noWarehouse:'No warehouse is available for this order.',confirmed:'confirmed — stock issued and invoice posted to GL',confirmFailed:'Confirmation failed',exporting:'Exporting as PDF…',linkCopied:'Order link copied',showingHistory:'Showing change history',note:'Canonical sales order. Customer notes are not modeled yet.',memo:'Created from the canonical order-to-cash ledger.',discountReason:(x)=>`a line discount (${x}) exceeds the 10% sales threshold`,stockReason:(x)=>`${x} is short on stock`},
+    ms:{confirm:'Sahkan pesanan',confirming:'Mengesahkan…',more:'Tindakan lain',canonicalLines:'Baris pesanan berkanun',noCredit:'Had kredit belum dimodelkan dalam induk pelanggan berkanun.',confirmHelp:'Mengesahkan draf yang diluluskan akan mengeluarkan stok, mencipta invois dan mempos jurnal seimbang dalam satu transaksi.',pendingHelp:'Pesanan ini menunggu kelulusan. Stok, invois dan posting GL disekat sehingga kelulusan selesai.',postedHelp:'Pesanan yang telah dipos tidak boleh diubah. Pembetulan mesti menggunakan aliran pulangan atau pembalikan.',pendingTitle:'Kelulusan diperlukan sebelum pengesahan',pendingBody:'Permintaan kelulusan masih belum selesai. Pengesahan disekat pada antara muka dan perkhidmatan posting.',exportPdf:'Eksport sebagai PDF',copyLink:'Salin pautan',history:'Lihat sejarah perubahan',statusAudit:'Status pesanan',createdAudit:'Pesanan jualan berkanun dicipta',system:'Sistem',noAttachments:'Tiada lampiran berkanun.',noComments:'Tiada komen berkanun.',postedInvoice:'Invois jualan dipos',posted:'Dipos',adapterMissing:'Penyesuai data ERP tidak dimuatkan',noWarehouse:'Tiada gudang tersedia untuk pesanan ini.',confirmed:'disahkan — stok dikeluarkan dan invois dipos ke GL',confirmFailed:'Pengesahan gagal',exporting:'Mengeksport sebagai PDF…',linkCopied:'Pautan pesanan disalin',showingHistory:'Memaparkan sejarah perubahan',note:'Pesanan jualan berkanun. Nota pelanggan belum dimodelkan.',memo:'Dicipta daripada lejar pesanan-ke-tunai berkanun.',discountReason:(x)=>`diskaun baris (${x}) melebihi ambang jualan 10%`,stockReason:(x)=>`${x} kekurangan stok`},
+    zh:{confirm:'确认订单',confirming:'确认中…',more:'更多操作',canonicalLines:'真实订单明细',noCredit:'真实客户主数据尚未建立信用额度。',confirmHelp:'确认已审批草稿后，系统会在同一事务中出库、生成发票并过账平衡凭证。',pendingHelp:'此订单仍在等待审批；完成审批前，出库、开票及总账过账均被阻止。',postedHelp:'已过账订单不可修改；更正必须使用退货或冲销流程。',pendingTitle:'确认前必须完成审批',pendingBody:'审批申请仍处于待处理状态。界面与服务端过账层均已阻止确认。',exportPdf:'导出 PDF',copyLink:'复制链接',history:'查看变更历史',statusAudit:'订单状态',createdAudit:'已创建真实销售订单',system:'系统',noAttachments:'暂无真实附件。',noComments:'暂无真实评论。',postedInvoice:'已过账销售发票',posted:'已过账',adapterMissing:'ERP 数据适配器未载入',noWarehouse:'此订单没有可用仓库。',confirmed:'已确认 — 库存已出库，发票已过账至总账',confirmFailed:'确认失败',exporting:'正在导出 PDF…',linkCopied:'订单链接已复制',showingHistory:'正在显示变更历史',note:'真实销售订单；客户备注功能尚未建模。',memo:'由真实订单到收款账簿创建。',discountReason:(x)=>`行折扣（${x}）超过销售人员 10% 门槛`,stockReason:(x)=>`${x} 库存不足`},
+    ja:{confirm:'受注を確定',confirming:'確定中…',more:'その他の操作',canonicalLines:'標準受注明細',noCredit:'標準顧客マスターでは与信限度額はまだモデル化されていません。',confirmHelp:'承認済みドラフトを確定すると、1つのトランザクションで在庫出庫、請求書作成、貸借一致の仕訳転記を行います。',pendingHelp:'この受注は承認待ちです。承認完了まで在庫、請求、GL転記はブロックされます。',postedHelp:'転記済み受注は変更できません。訂正には返品または逆仕訳を使用してください。',pendingTitle:'確定前に承認が必要です',pendingBody:'承認依頼は保留中です。画面と転記サービスの両方で確定をブロックしています。',exportPdf:'PDFとしてエクスポート',copyLink:'リンクをコピー',history:'変更履歴を表示',statusAudit:'受注ステータス',createdAudit:'標準受注を作成',system:'システム',noAttachments:'標準添付ファイルはありません。',noComments:'標準コメントはありません。',postedInvoice:'転記済売上請求書',posted:'転記済',adapterMissing:'ERPデータアダプターが読み込まれていません',noWarehouse:'この受注で利用可能な倉庫がありません。',confirmed:'確定済み — 在庫を出庫し請求書をGLへ転記しました',confirmFailed:'確定に失敗しました',exporting:'PDFをエクスポート中…',linkCopied:'受注リンクをコピーしました',showingHistory:'変更履歴を表示しています',note:'標準受注です。顧客注記はまだモデル化されていません。',memo:'標準の受注から入金までの台帳から作成されました。',discountReason:(x)=>`明細値引（${x}）が営業担当者の10%しきい値を超えています`,stockReason:(x)=>`${x} の在庫が不足しています`},
+    vi:{confirm:'Xác nhận đơn hàng',confirming:'Đang xác nhận…',more:'Thao tác khác',canonicalLines:'Dòng đơn hàng chuẩn',noCredit:'Hạn mức tín dụng chưa được mô hình hóa trong hồ sơ khách hàng chuẩn.',confirmHelp:'Xác nhận bản nháp đã duyệt sẽ xuất kho, tạo hóa đơn và ghi bút toán cân bằng trong một giao dịch.',pendingHelp:'Đơn hàng đang chờ duyệt. Xuất kho, lập hóa đơn và ghi GL bị chặn cho đến khi duyệt xong.',postedHelp:'Đơn hàng đã ghi sổ không thể sửa. Điều chỉnh phải dùng quy trình trả hàng hoặc đảo bút toán.',pendingTitle:'Phải duyệt trước khi xác nhận',pendingBody:'Yêu cầu phê duyệt vẫn đang chờ. Giao diện và dịch vụ ghi sổ đều chặn xác nhận.',exportPdf:'Xuất PDF',copyLink:'Sao chép liên kết',history:'Xem lịch sử thay đổi',statusAudit:'Trạng thái đơn hàng',createdAudit:'Đã tạo đơn bán hàng chuẩn',system:'Hệ thống',noAttachments:'Không có tệp đính kèm chuẩn.',noComments:'Không có bình luận chuẩn.',postedInvoice:'Hóa đơn bán hàng đã ghi sổ',posted:'Đã ghi sổ',adapterMissing:'Chưa tải bộ điều hợp dữ liệu ERP',noWarehouse:'Không có kho khả dụng cho đơn hàng này.',confirmed:'đã xác nhận — đã xuất kho và ghi hóa đơn vào GL',confirmFailed:'Xác nhận thất bại',exporting:'Đang xuất PDF…',linkCopied:'Đã sao chép liên kết đơn hàng',showingHistory:'Đang hiển thị lịch sử thay đổi',note:'Đơn bán hàng chuẩn. Ghi chú khách hàng chưa được mô hình hóa.',memo:'Được tạo từ sổ cái đơn-hàng-đến-thu-tiền chuẩn.',discountReason:(x)=>`chiết khấu dòng (${x}) vượt ngưỡng bán hàng 10%`,stockReason:(x)=>`${x} thiếu tồn kho`},
+  };
+  const language=typeof getLang==='function'?getLang():'en';
+  return packs[language]||packs.en;
+}
+
 SCREENS['sales-order'] = async function(root, params){
   await prepareCanonicalSalesData();
+  const copy=salesOrderDetailCopy();
   const d=(params&&params.no&&DB.salesOrderDocs&&DB.salesOrderDocs[params.no])||DB.so0418;
   if(!d) throw new Error('No canonical sales order is available.');
   const c=d.cust||{name:'Unknown customer',balance:0,limit:null,overdue:0};
@@ -151,8 +164,13 @@ SCREENS['sales-order'] = async function(root, params){
   const overLimit=hasCreditLimit&&creditUsed>Number(c.limit);
 
   /* status-aware stepper: Closed/Invoiced orders show the full chain as done */
+  const approvalBlocked=d.approvalStatus&&d.approvalStatus!=='approved';
+  const displayStatus=d.approvalStatus==='pending'
+    ?'Pending Approval'
+    :(d.approvalStatus==='approved'&&d.rawStatus==='draft'?'Approved':d.status);
+  const canConfirm=d.rawStatus==='draft'&&(!d.approvalStatus||d.approvalStatus==='approved');
   const STEP_LABELS=[ts('Draft'),t('appr.step.submitted'),ts('Pending Approval'),ts('Approved'),t('doc.step.delivered'),t('doc.step.invoiced')];
-  const stepIdx=({'Draft':0,'Submitted':1,'Pending Approval':2,'Approved':3,'Delivered':4,'Invoiced':6,'Closed':6})[d.status]??2;
+  const stepIdx=({'Draft':0,'Submitted':1,'Pending Approval':2,'Approved':3,'Delivered':4,'Invoiced':6,'Closed':6})[displayStatus]??2;
   const stepperHtml=`<div class="stepper">${STEP_LABELS.map((s,i)=>{
     const cls=i<stepIdx?'done':(i===stepIdx?'current':'');
     const dot=i<stepIdx?ic('check'):(i===stepIdx?ic('clock'):'');
@@ -163,8 +181,8 @@ SCREENS['sales-order'] = async function(root, params){
   const shortNames=d.lines.filter(l=>l.qty>l.avail).map(l=>l.name);
   const discLines=d.lines.filter(l=>l.disc>10).map(l=>`${l.disc}% on ${l.name}`);
   const alertReasons=[
-    ...discLines.map(x=>`a line discount (${x}) exceeds the 10% rep threshold`),
-    ...shortNames.map(n=>`${n} is short on stock`),
+    ...discLines.map(copy.discountReason),
+    ...shortNames.map(copy.stockReason),
   ];
   const showAlert=d.status!=='Closed'&&d.status!=='Invoiced'&&alertReasons.length>0;
   const taxLabel=`Tax (${Math.round(d.taxRate*100)}% ${(DB.company&&DB.company.taxRegime)||'GST'})`;
@@ -180,12 +198,12 @@ SCREENS['sales-order'] = async function(root, params){
       <td class="tnum"><b>${money(ext)}</b></td></tr>`;
   }).join('');
 
-  root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:t('so.title'),route:'sales-orders'},{cur:d.no}])}${typeof salesNav==='function'?salesNav('sales-orders'):''}</div><div class="docwrap"><div class="docpage" style="padding-top:4px">
+  root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:t('so.title'),route:'sales-orders'},{cur:d.no}])}${typeof salesNav==='function'?salesNav('sales-orders'):''}</div><div class="docwrap"><div class="docpage sales-order-detail">
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('bag')}${esc(t('doc.so'))} <span class="dnum">${esc(d.no)}</span></div>
+        <div><h1 class="dt">${ic('bag')}${esc(t('doc.so'))} <span class="dnum">${esc(d.no)}</span></h1>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(t('doc.custref'))} ${esc(d.ref)} · ${esc(t('doc.owner'))} ${esc(d.owner)}</div></div>
-        <div class="dactions">${statusBadge(d.status)}${d.status==='Draft'?btn('Confirm order',{icon:'check',cls:'primary',attrs:'data-act="confirm-order"'}):''}${btn(t('common.print'),{icon:'print',cls:'soft'})}<button class="btn soft sm" id="soMoreBtn" data-tip="More actions" aria-haspopup="menu" aria-expanded="false" aria-label="More actions">${ic('more')}<span>${esc(t('usr.more'))}</span></button></div>
+        <div class="dactions">${statusBadge(displayStatus)}${canConfirm?btn(copy.confirm,{icon:'check',cls:'primary',attrs:'data-act="confirm-order"'}):''}${btn(t('common.print'),{icon:'print',cls:'soft'})}<button class="btn soft sm" id="soMoreBtn" data-tip="${esc(copy.more)}" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(copy.more)}">${ic('more')}<span>${esc(copy.more)}</span></button></div>
       </div>
       ${stepperHtml}
       <div class="docmeta">
@@ -202,25 +220,26 @@ SCREENS['sales-order'] = async function(root, params){
     </div>
 
     ${showAlert?`<div class="alert warn" style="margin:0 0 14px"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M12 10v5M12 18h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <span class="grow"><b>${esc(t('doc.so.alert'))}</b> ${esc(alertReasons.join(', and '))}.</span></div>`:''}
+      <span class="grow"><b>${esc(t('doc.so.alert'))}</b> ${esc(alertReasons.join('；'))}</span></div>`:''}
+    ${approvalBlocked?`<div class="alert warn" style="margin:0 0 14px">${ic('lock')}<span class="grow"><b>${esc(copy.pendingTitle)}</b> ${esc(copy.pendingBody)}</span></div>`:''}
 
     <div class="doclayout">
       <div class="docmain">
         <div class="panel">
           <div class="panel-h"><h3>${esc(t('appr.panel.lines'))}</h3></div>
-          <table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('appr.col.item'))}</th><th>${esc(t('appr.col.qty'))}</th><th>${esc(t('appr.col.unitprice'))}</th><th>${esc(t('doc.col.disc'))}</th><th class="c">${esc(t('doc.col.stock'))}</th><th>${esc(t('appr.col.amount'))}</th></tr></thead><tbody>${lineRows}</tbody></table>
-          <div class="linefoot" style="display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px"><span>${esc(t('doc.linesunits').replaceAll('{n}',d.lines.length).replaceAll('{u}',d.lines.reduce((s,l)=>s+l.qty,0)))}</span><span>Canonical order lines</span></div>
+          <div class="sales-order-lines-scroll" tabindex="0" role="region" aria-label="${esc(t('appr.panel.lines'))}"><table class="lines"><thead><tr><th class="lineno">#</th><th class="l">${esc(t('appr.col.item'))}</th><th>${esc(t('appr.col.qty'))}</th><th>${esc(t('appr.col.unitprice'))}</th><th>${esc(t('doc.col.disc'))}</th><th class="c">${esc(t('doc.col.stock'))}</th><th>${esc(t('appr.col.amount'))}</th></tr></thead><tbody>${lineRows}</tbody></table></div>
+          <div class="linefoot" style="display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px"><span>${esc(t('doc.linesunits').replaceAll('{n}',d.lines.length).replaceAll('{u}',d.lines.reduce((s,l)=>s+l.qty,0)))}</span><span>${esc(copy.canonicalLines)}</span></div>
         </div>
         <div class="panel">
           <div class="panel-h"><h3>${t('doc.notes')}</h3></div>
           <div class="panel-body docnotes">
             <div class="note-block">
               <div class="note-h">${ic('comment')}${esc(t('doc.custnote'))}<span class="note-sub">${t('doc.custnote.sub')}</span></div>
-              <p>${esc(d.note)}</p>
+              <p>${esc(copy.note)}</p>
             </div>
             <div class="note-block internal">
               <div class="note-h">${ic('lock')}${esc(t('doc.intmemo'))}<span class="note-sub">${t('doc.intmemo.sub')}</span></div>
-              <p>${esc(d.memo)}</p>
+              <p>${esc(copy.memo)}</p>
             </div>
           </div>
         </div>
@@ -244,25 +263,25 @@ SCREENS['sales-order'] = async function(root, params){
           <div class="sectitle" style="margin-top:0">${esc(t('doc.custcredit'))}</div>
           ${hasCreditLimit
             ?indicator({tone:overLimit?'danger':creditPct>85?'warn':'ok',icon:'handshake',label:overLimit?t('doc.overcredit'):t('doc.creditlimit'),value:money0(creditUsed)+' / '+money0(c.limit),sub:t('doc.balanceplus').replaceAll('{b}',money0(c.balance)).replaceAll('{t}',money0(total)).replaceAll('{x}',overLimit?t('doc.apprrequired'):t('doc.withinlimit')),pct:creditPct})
-            :indicator({tone:'neutral',icon:'handshake',label:t('doc.creditlimit'),value:'—',sub:'Credit limits are not modeled in the canonical customer master yet.'})}
+            :indicator({tone:'neutral',icon:'handshake',label:t('doc.creditlimit'),value:'—',sub:copy.noCredit})}
           ${c.overdue>0?`<div style="margin-top:8px">${indicator({tone:'warn',icon:'receipt',label:t('doc.overduerec'),value:money0(c.overdue),sub:t('doc.overduesub')})}</div>`:''}
         </div>
         <div class="sumcard">
           <div class="sectitle" style="margin-top:0">${esc(t('doc.actions'))}</div>
-          <p style="font-size:12px;color:var(--muted);margin:0">${d.rawStatus==='draft'?'Confirming this draft issues stock, creates the invoice and posts the balanced journal in one transaction.':'This posted order is immutable. Corrections must use a return or reversal workflow.'}</p>
+          <p style="font-size:12px;color:var(--muted);margin:0">${approvalBlocked?esc(copy.pendingHelp):(canConfirm?esc(copy.confirmHelp):esc(copy.postedHelp))}</p>
         </div>
       </aside>
     </div>
     <div style="height:50px"></div>
   </div></div></section></div>
-  <div class="pop moremenu" id="soMoreMenu" style="width:250px" role="menu" aria-label="More actions">
+  <div class="pop moremenu" id="soMoreMenu" style="width:250px" role="menu" aria-label="${esc(copy.more)}">
     <div class="menu-section">
       <div class="menu-head">${esc(d.no)}</div>
-      <button class="menu-item" data-act="export" role="menuitem">${ic('download')}<span>Export as PDF</span></button>
-      <button class="menu-item" data-act="link" role="menuitem">${ic('link')}<span>Copy link</span><span class="meta mono">${esc(d.no)}</span></button>
+      <button class="menu-item" data-act="export" role="menuitem">${ic('download')}<span>${esc(copy.exportPdf)}</span></button>
+      <button class="menu-item" data-act="link" role="menuitem">${ic('link')}<span>${esc(copy.copyLink)}</span><span class="meta mono">${esc(d.no)}</span></button>
     </div>
     <div class="menu-section">
-      <button class="menu-item" data-act="history" role="menuitem">${ic('history')}<span>View change history</span></button>
+      <button class="menu-item" data-act="history" role="menuitem">${ic('history')}<span>${esc(copy.history)}</span></button>
     </div>
   </div>`;
 
@@ -270,14 +289,14 @@ SCREENS['sales-order'] = async function(root, params){
   function tab(t){
     $$('#soTabs .tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
     if(t==='audit') body.innerHTML=auditTrail([
-      {kind:'current',when:esc(d.date),what:`Order status — <b>${esc(d.status)}</b>`,who:'System'},
-      {kind:'add',when:esc(d.date),what:'Canonical sales order created',who:'System'},
+      {kind:'current',when:esc(d.date),what:`${esc(copy.statusAudit)} — <b>${esc(ts(displayStatus))}</b>`,who:copy.system},
+      {kind:'add',when:esc(d.date),what:copy.createdAudit,who:copy.system},
     ]);
-    else if(t==='attach') body.innerHTML='<div class="empty">No canonical attachments.</div>';
-    else if(t==='comments') body.innerHTML='<div class="empty">No canonical comments.</div>';
+    else if(t==='attach') body.innerHTML=`<div class="empty">${esc(copy.noAttachments)}</div>`;
+    else if(t==='comments') body.innerHTML=`<div class="empty">${esc(copy.noComments)}</div>`;
     else body.innerHTML=relatedDocs(
       d.rawStatus==='confirmed'
-        ?[{no:'INV-'+d.no,label:'Posted sales invoice',meta:d.cust.name,status:'Posted'}]
+        ?[{no:'INV-'+d.no,label:copy.postedInvoice,meta:d.cust.name,status:copy.posted}]
         :[],
     );
   }
@@ -287,10 +306,10 @@ SCREENS['sales-order'] = async function(root, params){
   /* ---- Confirm draft: live cross-module transaction in PGlite ---- */
   const confirmBtn=root.querySelector('[data-act="confirm-order"]');
   confirmBtn&&confirmBtn.addEventListener('click',async()=>{
-    if(!(window.ErpSystemData&&window.ErpSystemData.action)){ toast('ERP data adapter not loaded','warn'); return; }
-    confirmBtn.disabled=true; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent='Confirming…');
+    if(!(window.ErpSystemData&&window.ErpSystemData.action)){ toast(copy.adapterMissing,'warn'); return; }
+    confirmBtn.disabled=true; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent=copy.confirming);
     try{
-      if(!Number.isSafeInteger(d.warehouseId)) throw new Error('No warehouse is available for this order.');
+      if(!Number.isSafeInteger(d.warehouseId)) throw new Error(copy.noWarehouse);
       const response=await window.ErpSystemData.action(
         'sales/orders',
         d.id,
@@ -299,12 +318,12 @@ SCREENS['sales-order'] = async function(root, params){
         'sales-confirm-'+d.id,
       );
       const res=response.data;
-      toast(d.no+' confirmed — stock issued, '+res.invDocNo+' posted to GL ('+money(res.total)+')','ok');
+      toast(d.no+' '+copy.confirmed+' · '+res.invDocNo+' ('+money(res.total)+')','ok');
       await prepareCanonicalSalesData();
       navigate('sales-order',{no:d.no});   // re-render from refreshed data
     }catch(e){
-      toast((e&&e.message)||'Confirm failed','danger');
-      confirmBtn.disabled=false; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent='Confirm order');
+      toast((e&&e.message)||copy.confirmFailed,'danger');
+      confirmBtn.disabled=false; confirmBtn.querySelector('span')&&(confirmBtn.querySelector('span').textContent=copy.confirm);
     }
   });
 
@@ -314,9 +333,9 @@ SCREENS['sales-order'] = async function(root, params){
   $$('#soMoreMenu [data-act]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation(); closeAllPops();
     const a=b.dataset.act;
-    if(a==='export') toast('Exporting '+d.no+' as PDF…','info');
-    else if(a==='link'){ const url=location.origin+location.pathname+'#sales-order'; (navigator.clipboard&&navigator.clipboard.writeText(url).catch(()=>{})); toast('Link to '+d.no+' copied','ok'); }
-    else if(a==='history'){ tab('audit'); toast('Showing change history','info'); }
+    if(a==='export') toast(d.no+' · '+copy.exporting,'info');
+    else if(a==='link'){ const url=location.href; (navigator.clipboard&&navigator.clipboard.writeText(url).catch(()=>{})); toast(copy.linkCopied+' · '+d.no,'ok'); }
+    else if(a==='history'){ tab('audit'); toast(copy.showingHistory,'info'); }
   }));
 };
 
@@ -519,18 +538,20 @@ async function prepareCanonicalPaymentVoucherData(){
 
 function paymentVoucherCopy(){
   const packs={
-    en:{title:'Payment Voucher',sub:'Canonical supplier settlement',posted:'Posted',payTo:'Pay to',date:'Date',bankRef:'Bank reference',invoiceCount:'Invoices settled',invoices:'Invoices settled',supplierInvoice:'Supplier invoice',amount:'Amount',net:'Net payment',balance:'Payment balances',debit:'Debit · Accounts Payable',credit:'Credit · Cash & Bank',difference:'Difference',balanced:'Posting balances',supplierBalance:'Supplier balance',remaining:'Remaining open balance',outstanding:'unpaid invoices still outstanding.',recent:'Recent vouchers',audit:'Audit trail',postedAudit:'Payment posted — supplier invoices settled',sourceAudit:'Created from canonical payment voucher',newVoucher:'New voucher',empty:'No payment vouchers yet',emptyHelp:'Settle a real unpaid supplier invoice to see it here.',error:'Payment vouchers could not be loaded.',retry:'Retry'},
-    ms:{title:'Baucar Bayaran',sub:'Penyelesaian pembekal kanonik',posted:'Dipos',payTo:'Bayar kepada',date:'Tarikh',bankRef:'Rujukan bank',invoiceCount:'Invois diselesaikan',invoices:'Invois diselesaikan',supplierInvoice:'Invois pembekal',amount:'Amaun',net:'Bayaran bersih',balance:'Baki posting',debit:'Debit · Akaun Belum Bayar',credit:'Kredit · Tunai & Bank',difference:'Perbezaan',balanced:'Posting seimbang',supplierBalance:'Baki pembekal',remaining:'Baki terbuka',outstanding:'invois belum bayar masih tertunggak.',recent:'Baucar terkini',audit:'Jejak audit',postedAudit:'Bayaran dipos — invois pembekal diselesaikan',sourceAudit:'Dicipta daripada baucar bayaran kanonik',newVoucher:'Baucar baharu',empty:'Belum ada baucar bayaran',emptyHelp:'Selesaikan invois pembekal sebenar yang belum dibayar untuk melihatnya di sini.',error:'Baucar bayaran tidak dapat dimuatkan.',retry:'Cuba lagi'},
-    zh:{title:'付款凭证',sub:'Canonical 供应商结算',posted:'已过账',payTo:'付款对象',date:'日期',bankRef:'银行参考号',invoiceCount:'已结算发票',invoices:'已结算发票',supplierInvoice:'供应商发票',amount:'金额',net:'付款净额',balance:'过账平衡',debit:'借方 · 应付账款',credit:'贷方 · 现金与银行',difference:'差额',balanced:'借贷平衡',supplierBalance:'供应商余额',remaining:'剩余未结余额',outstanding:'未付款发票仍待结算。',recent:'最近付款凭证',audit:'审计轨迹',postedAudit:'付款已过账 — 供应商发票已结算',sourceAudit:'由 Canonical 付款凭证创建',newVoucher:'新建付款凭证',empty:'尚无付款凭证',emptyHelp:'结算一张真实的未付款供应商发票后即可在此查看。',error:'无法加载付款凭证。',retry:'重试'},
-    ja:{title:'支払伝票',sub:'Canonical 仕入先決済',posted:'転記済',payTo:'支払先',date:'日付',bankRef:'銀行参照',invoiceCount:'決済済請求書',invoices:'決済済請求書',supplierInvoice:'仕入先請求書',amount:'金額',net:'正味支払額',balance:'転記残高',debit:'借方 · 買掛金',credit:'貸方 · 現金・預金',difference:'差額',balanced:'転記は貸借一致',supplierBalance:'仕入先残高',remaining:'未決済残高',outstanding:'未払請求書が残っています。',recent:'最近の伝票',audit:'監査証跡',postedAudit:'支払を転記 — 仕入先請求書を決済',sourceAudit:'Canonical 支払伝票から作成',newVoucher:'新規伝票',empty:'支払伝票はまだありません',emptyHelp:'実際の未払仕入先請求書を決済すると、ここに表示されます。',error:'支払伝票を読み込めませんでした。',retry:'再試行'},
-    vi:{title:'Phiếu chi',sub:'Thanh toán nhà cung cấp Canonical',posted:'Đã ghi sổ',payTo:'Thanh toán cho',date:'Ngày',bankRef:'Tham chiếu ngân hàng',invoiceCount:'Hóa đơn đã thanh toán',invoices:'Hóa đơn đã thanh toán',supplierInvoice:'Hóa đơn nhà cung cấp',amount:'Số tiền',net:'Thanh toán ròng',balance:'Cân đối ghi sổ',debit:'Nợ · Phải trả người bán',credit:'Có · Tiền mặt & Ngân hàng',difference:'Chênh lệch',balanced:'Bút toán cân bằng',supplierBalance:'Số dư nhà cung cấp',remaining:'Số dư còn mở',outstanding:'hóa đơn chưa thanh toán vẫn còn.',recent:'Phiếu gần đây',audit:'Dấu vết kiểm toán',postedAudit:'Đã ghi sổ thanh toán — hóa đơn nhà cung cấp đã tất toán',sourceAudit:'Tạo từ phiếu chi Canonical',newVoucher:'Phiếu mới',empty:'Chưa có phiếu chi',emptyHelp:'Thanh toán một hóa đơn nhà cung cấp thực tế để xem tại đây.',error:'Không thể tải phiếu chi.',retry:'Thử lại'},
+    en:{title:'Payment Voucher',sub:'Governed supplier settlement',posted:'Posted',payTo:'Pay to',date:'Date',bankRef:'Bank reference',invoiceCount:'Invoices settled',invoices:'Invoices settled',supplierInvoice:'Supplier invoice',amount:'Amount',net:'Net payment',balance:'Payment balances',debit:'Debit · Accounts Payable',credit:'Credit · Cash & Bank',difference:'Difference',balanced:'Posting balances',supplierBalance:'Supplier balance',remaining:'Remaining open balance',outstanding:'unpaid invoices still outstanding.',settled:'all selected supplier invoices are settled.',recent:'Recent vouchers',audit:'Audit trail',postedAudit:'Payment posted — supplier invoices settled',sourceAudit:'Created from governed payment voucher',newVoucher:'New voucher',empty:'No payment vouchers yet',emptyHelp:'Settle a real unpaid supplier invoice to see it here.',error:'Payment vouchers could not be loaded.',retry:'Retry'},
+    ms:{title:'Baucar Bayaran',sub:'Penyelesaian pembekal terkawal',posted:'Dipos',payTo:'Bayar kepada',date:'Tarikh',bankRef:'Rujukan bank',invoiceCount:'Invois diselesaikan',invoices:'Invois diselesaikan',supplierInvoice:'Invois pembekal',amount:'Amaun',net:'Bayaran bersih',balance:'Baki posting',debit:'Debit · Akaun Belum Bayar',credit:'Kredit · Tunai & Bank',difference:'Perbezaan',balanced:'Posting seimbang',supplierBalance:'Baki pembekal',remaining:'Baki terbuka',outstanding:'invois belum bayar masih tertunggak.',settled:'semua invois pembekal yang dipilih telah dijelaskan.',recent:'Baucar terkini',audit:'Jejak audit',postedAudit:'Bayaran dipos — invois pembekal diselesaikan',sourceAudit:'Dicipta daripada baucar bayaran terkawal',newVoucher:'Baucar baharu',empty:'Belum ada baucar bayaran',emptyHelp:'Selesaikan invois pembekal sebenar yang belum dibayar untuk melihatnya di sini.',error:'Baucar bayaran tidak dapat dimuatkan.',retry:'Cuba lagi'},
+    zh:{title:'付款凭证',sub:'规范供应商结算',posted:'已过账',payTo:'付款对象',date:'日期',bankRef:'银行参考号',invoiceCount:'已结算发票',invoices:'已结算发票',supplierInvoice:'供应商发票',amount:'金额',net:'付款净额',balance:'过账平衡',debit:'借方 · 应付账款',credit:'贷方 · 现金与银行',difference:'差额',balanced:'借贷平衡',supplierBalance:'供应商余额',remaining:'剩余未结余额',outstanding:'未付款发票仍待结算。',settled:'本次选择的供应商发票已全部结清。',recent:'最近付款凭证',audit:'审计轨迹',postedAudit:'付款已过账 — 供应商发票已结算',sourceAudit:'由规范付款凭证创建',newVoucher:'新建付款凭证',empty:'尚无付款凭证',emptyHelp:'结算一张真实的未付款供应商发票后即可在此查看。',error:'无法加载付款凭证。',retry:'重试'},
+    ja:{title:'支払伝票',sub:'統制された仕入先決済',posted:'転記済',payTo:'支払先',date:'日付',bankRef:'銀行参照',invoiceCount:'決済済請求書',invoices:'決済済請求書',supplierInvoice:'仕入先請求書',amount:'金額',net:'正味支払額',balance:'転記残高',debit:'借方 · 買掛金',credit:'貸方 · 現金・預金',difference:'差額',balanced:'転記は貸借一致',supplierBalance:'仕入先残高',remaining:'未決済残高',outstanding:'未払請求書が残っています。',settled:'選択した仕入先請求書はすべて決済済みです。',recent:'最近の伝票',audit:'監査証跡',postedAudit:'支払を転記 — 仕入先請求書を決済',sourceAudit:'統制された支払伝票から作成',newVoucher:'新規伝票',empty:'支払伝票はまだありません',emptyHelp:'実際の未払仕入先請求書を決済すると、ここに表示されます。',error:'支払伝票を読み込めませんでした。',retry:'再試行'},
+    vi:{title:'Phiếu chi',sub:'Thanh toán nhà cung cấp được kiểm soát',posted:'Đã ghi sổ',payTo:'Thanh toán cho',date:'Ngày',bankRef:'Tham chiếu ngân hàng',invoiceCount:'Hóa đơn đã thanh toán',invoices:'Hóa đơn đã thanh toán',supplierInvoice:'Hóa đơn nhà cung cấp',amount:'Số tiền',net:'Thanh toán ròng',balance:'Cân đối ghi sổ',debit:'Nợ · Phải trả người bán',credit:'Có · Tiền mặt & Ngân hàng',difference:'Chênh lệch',balanced:'Bút toán cân bằng',supplierBalance:'Số dư nhà cung cấp',remaining:'Số dư còn mở',outstanding:'hóa đơn chưa thanh toán vẫn còn.',settled:'tất cả hóa đơn nhà cung cấp đã chọn đã được tất toán.',recent:'Phiếu gần đây',audit:'Dấu vết kiểm toán',postedAudit:'Đã ghi sổ thanh toán — hóa đơn nhà cung cấp đã tất toán',sourceAudit:'Tạo từ phiếu chi được kiểm soát',newVoucher:'Phiếu mới',empty:'Chưa có phiếu chi',emptyHelp:'Thanh toán một hóa đơn nhà cung cấp thực tế để xem tại đây.',error:'Không thể tải phiếu chi.',retry:'Thử lại'},
   };
   return i18nLegacy(packs);
 }
 
 SCREENS['payment-voucher'] = async function(root, params){
   const copy=paymentVoucherCopy();
-  const newVoucherAction={label:copy.newVoucher,icon:'plus',cls:'primary',onClick:()=>navigate('new-payment-voucher')};
+  const newVoucherAction=userHasAnyPermission('finance.create')
+    ?{label:copy.newVoucher,icon:'plus',cls:'primary',onClick:()=>navigate('new-payment-voucher')}
+    :null;
   try{
     await prepareCanonicalPaymentVoucherData();
   }catch(error){
@@ -581,7 +602,7 @@ SCREENS['payment-voucher'] = async function(root, params){
       ${indicator({tone:'ok',icon:'checkc',label:copy.balanced,value:'Dr = Cr'})}
     </section>
     ${supplier?`<section class="posting-context-card"><small>${esc(copy.supplierBalance)}</small>
-      ${indicator({tone:'ok',icon:'bank',label:copy.remaining,value:money0(supplier.balance),sub:`${esc(supplier.name)} · ${esc(copy.outstanding)}`})}
+      ${indicator({tone:Number(supplier.balance)>0?'warn':'ok',icon:'bank',label:copy.remaining,value:money0(supplier.balance),sub:`${esc(supplier.name)} · ${esc(Number(supplier.balance)>0?copy.outstanding:copy.settled)}`})}
     </section>`:''}
     ${recent.length>1?`<section class="posting-context-card"><small>${esc(copy.recent)}</small>
       <div data-related-vouchers>${relatedDocs(recent.map(row=>({no:row.no,label:row.supplierName,meta:money0(row.total),status:copy.posted})))}</div>

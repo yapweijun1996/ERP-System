@@ -38,15 +38,15 @@
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
   var DEMO_SCHEMA_VERSION = 74;
-  var DEMO_PACK_VERSION = '2';
+  var DEMO_PACK_VERSION = '15';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
      Crypto API — no dependency needed. This is what completeSetup() uses to
      store a REAL password hash for a wizard-created admin, matching the
-     schema's password_hash NOT NULL constraint. The demo login form still does
-     not verify passwords (see screens-ops.js / renderLogin) — this hash exists
-     so the demo's data shape matches production's, not to gate demo access. */
+     schema's password_hash NOT NULL constraint. One-click access remains
+     available only for the twelve deterministic showcase personas; manually
+     created staff identities use their real hashed temporary password. */
   async function hashPasswordBrowser(password){
     var PBKDF2_ITERATIONS = 100000;
     var enc = new TextEncoder();
@@ -60,6 +60,32 @@
     }
     return 'pbkdf2$' + PBKDF2_ITERATIONS + '$' + toHex(salt) + '$' + toHex(new Uint8Array(bits));
   }
+  async function verifyPasswordBrowser(password,stored){
+    var parts=String(stored||'').split('$');
+    if(parts.length!==4||parts[0]!=='pbkdf2') return false;
+    var iterations=Number(parts[1]);
+    function fromHex(value){
+      if(!value||value.length%2) return new Uint8Array();
+      var bytes=new Uint8Array(value.length/2);
+      for(var i=0;i<bytes.length;i++) bytes[i]=parseInt(value.slice(i*2,i*2+2),16);
+      return bytes;
+    }
+    var salt=fromHex(parts[2]), expected=fromHex(parts[3]);
+    if(!Number.isFinite(iterations)||iterations<=0||!salt.length||!expected.length) return false;
+    var material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),{name:'PBKDF2'},false,['deriveBits']);
+    var actual=new Uint8Array(await crypto.subtle.deriveBits(
+      {name:'PBKDF2',salt:salt,iterations:iterations,hash:'SHA-256'},material,expected.length*8));
+    if(actual.length!==expected.length) return false;
+    var mismatch=0;
+    for(var j=0;j<actual.length;j++) mismatch|=actual[j]^expected[j];
+    return mismatch===0;
+  }
+  var DEMO_ONE_CLICK_EMAILS=new Set([
+    'admin@acme.co','company-admin@acme.co','manager@acme.co','sales@acme.co',
+    'buyer@acme.co','warehouse@acme.co','production@acme.co',
+    'finance-preparer@acme.co','finance-checker@acme.co','hr@acme.co',
+    'service@acme.co','viewer@acme.co',
+  ]);
   function demoBase64Url(bytes){
     var binary=''; Array.prototype.forEach.call(bytes,function(b){binary+=String.fromCharCode(b);});
     return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -110,7 +136,7 @@
 
   var state = {
     db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null,
-    demoPack: null, demoPackAvailable: null,
+    activationRequired: false, demoPack: null, demoPackAvailable: null,
   };
 
   /* ---------------- PGlite boot ---------------- */
@@ -410,11 +436,12 @@
     var companies = await rows(
       "select company_fn, master_fn, name, country, currency, tax_regime, locale " +
       "from company where " + w('company') + " order by company_fn");
-    /* TASK-024: real seeded users (password_hash never selected — it never needs
-       to leave the server, and the demo login form doesn't check it anyway,
-       matching "auto-login a labeled demo user"). */
+    /* Password hashes stay inside the login query and are never copied into the
+       screen payload. Account lifecycle flags are safe session metadata needed
+       to enforce first-login activation in Demo exactly as API mode does. */
     var users = await rows(
-      "select u.user_id, u.email, u.full_name, u.language, " +
+      "select u.user_id, u.username, u.email, u.full_name, u.language, " +
+      "u.password_change_required, u.initial_password_expires_at, u.account_state, " +
       "coalesce(bool_or(r.is_superadmin), false) as is_superadmin, " +
       "coalesce(array_agg(distinct r.name) filter (where r.name is not null), '{}') as roles, " +
       "coalesce(array_agg(distinct rp.permission_key) filter (where rp.allowed), '{}') as permissions, " +
@@ -423,7 +450,8 @@
       "left join role r on r.role_id = ucr.role_id " +
       "left join role_permission rp on rp.role_id = r.role_id " +
       "where " + w('u') + " and u.is_active " +
-      "group by u.user_id, u.email, u.full_name, u.language order by u.user_id");
+      "group by u.user_id, u.username, u.email, u.full_name, u.language, " +
+      "u.password_change_required, u.initial_password_expires_at, u.account_state order by u.user_id");
     var products = await rows(
       "select p.id, p.company_fn, p.sku, p.name, p.uom, p.standard_cost::float as standard_cost, " +
       "p.average_cost::float as average_cost, " +
@@ -476,6 +504,12 @@
       "coalesce((select sum(s.qty) from stock_level s where s.product_id = p.id),0)::float as avail " +
       "from sales_order_line l join product p on p.id = l.product_id " +
       "where " + wc('l') + " order by l.order_id, l.line_no");
+    var salesOrderApprovals = await rows(
+      "select approval.id, approval.order_id, approval.status, approval.submitted_at::text as submitted_at, " +
+      "orders.doc_no, orders.total_amount::float as total, customer.name as requested_by " +
+      "from sales_order_approval approval join sales_order orders on orders.id=approval.order_id " +
+      "join customer on customer.id=orders.customer_id where " + wc('approval') +
+      " order by approval.submitted_at, approval.id");
     var invoices = await rows(
       "select i.doc_no, i.status, i.invoice_date::text as invoice_date, i.currency, " +
       "i.net_amount::float as net, i.tax_amount::float as tax, i.total_amount::float as total, " +
@@ -511,6 +545,12 @@
       "l.tax_rate::float as tax_rate, l.tax_amount::float as tax " +
       "from purchase_order_line l join product p on p.id = l.product_id " +
       "where " + wc('l') + " order by l.order_id, l.line_no");
+    var purchaseOrderApprovals = await rows(
+      "select approval.id, approval.order_id, approval.status, approval.submitted_at::text as submitted_at, " +
+      "orders.doc_no, orders.total_amount::float as total, supplier.name as requested_by " +
+      "from purchase_order_approval approval join purchase_order orders on orders.id=approval.order_id " +
+      "join supplier on supplier.id=orders.supplier_id where " + wc('approval') +
+      " order by approval.submitted_at, approval.id");
     var goodsReceipts = await rows(
       "select gr.id, gr.order_id, gr.warehouse_id, gr.doc_no, gr.received_date::text as received_date, po.doc_no as po_no, " +
       "s.name as supplier, s.code as supplier_code, w.code as warehouse " +
@@ -523,6 +563,11 @@
       "s.name as supplier, s.code as supplier_code, po.doc_no as po_no " +
       "from supplier_invoice si join supplier s on s.id = si.supplier_id " +
       "join purchase_order po on po.id = si.order_id where " + wc('si') + " order by si.id");
+    var leaveApprovals = await rows(
+      "select request.id, request.status, request.submitted_at::text as submitted_at, " +
+      "employee.employee_no as doc_no, employee.full_name as requested_by, request.days::float as days " +
+      "from leave_request request join employee on employee.id=request.employee_id " +
+      "where " + wc('request') + " order by request.id");
 
     /* TASK-028: CRM chain (TASK-027's schema/business logic wired into the
        browser demo). owner is a left join — an opportunity may have no
@@ -539,10 +584,12 @@
              warehouses: warehouses, stockLevels: stockLevels, bins: bins, lots: lots,
              serials: serials, locationBalances: locationBalances, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
+             salesOrderApprovals: salesOrderApprovals,
              invoices: invoices, glLegs: glLegs, movements: movements,
              suppliers: suppliers, purchaseOrders: purchaseOrders, purchaseOrderLines: purchaseOrderLines,
+             purchaseOrderApprovals: purchaseOrderApprovals,
              goodsReceipts: goodsReceipts, supplierInvoices: supplierInvoices,
-             opportunities: opportunities };
+             leaveApprovals: leaveApprovals, opportunities: opportunities };
   }
 
   /* ---------------- static fallback (same canonical values) ---------------- */
@@ -684,6 +731,7 @@
       || { email: 'admin@acme.co', full_name: 'Admin', is_superadmin: true };
     var userDisplayName = activeUser.full_name || activeUser.email;
     state.activeUserId = activeUser.user_id || null;
+    state.activationRequired = !!activeUser.password_change_required;
     DB.user = {
       name: userDisplayName,
       email: activeUser.email,
@@ -1000,11 +1048,23 @@
       return { cust: c.name, code: c.code, cur: c.balance, b30: 0, b60: 0, b90: 0, b90p: 0 };
     });
 
-    DB.approvals = [
-      { no: 'SETUP-1', kind: 'Company setup wizard', who: 'Admin', amt: null, age: 'now', risk: 'low', route: 'settings' },
-    ].concat(d.orders.filter(function(o){ return o.status !== 'confirmed'; }).map(function(o){
-      return { no: o.doc_no, kind: 'Sales Order Draft', who: 'Admin', amt: o.net,
-               age: 'today', risk: o.total > 1000 ? 'med' : 'low', route: 'sales-orders' };
+    DB.approvals = (d.salesOrderApprovals || []).filter(function(row){
+      return row.status === 'pending';
+    }).map(function(row){
+      return { no: row.doc_no, kind: 'Sales Order', kindKey: 'dash.approval.salesOrder', who: row.requested_by,
+               amt: row.total, age: 'today', ageKey: 'dash.age.today', risk: row.total > 1000 ? 'med' : 'low',
+               route: 'so-approvals' };
+    }).concat((d.purchaseOrderApprovals || []).filter(function(row){
+      return row.status === 'pending';
+    }).map(function(row){
+      return { no: row.doc_no, kind: 'Purchase Order', kindKey: 'dash.approval.purchaseOrder', who: row.requested_by,
+               amt: row.total, age: 'today', ageKey: 'dash.age.today', risk: row.total > 1000 ? 'med' : 'low',
+               route: 'po-approvals' };
+    }), (d.leaveApprovals || []).filter(function(row){
+      return row.status === 'pending';
+    }).map(function(row){
+      return { no: 'LV-' + row.id, kind: 'Leave Request', kindKey: 'dash.approval.leaveRequest', who: row.requested_by,
+               amt: null, age: 'today', ageKey: 'dash.age.today', risk: 'low', route: 'leave-approval' };
     }));
     DB.salesByMonth = [
       { m: 'Jan', val: 0 }, { m: 'Feb', val: 0 }, { m: 'Mar', val: 0 },
@@ -1024,7 +1084,7 @@
       openDeliveries: DB.deliveries.filter(function(dd){ return dd.status !== 'Delivered' && dd.status !== 'Cancelled'; }).length,
       goodsReceipts: 0,
       pickTasks: 0,
-      leaveRequests: 0,
+      leaveRequests: (d.leaveApprovals || []).filter(function(row){ return row.status === 'pending'; }).length,
       openOrderValue: DB.salesOrders.filter(function(o){ return o.status !== 'Closed' && o.status !== 'Cancelled'; })
         .reduce(function(sum, o){ return sum + o.total; }, 0),
       cash: 842000,
@@ -1476,24 +1536,53 @@
     location.reload();
   }
 
-  /* TASK-024 — demo-mode auth. "Auto-login a clearly-labeled demo user, allow
-     switching among seeded users" (no password check in demo: there is no real
-     security boundary in a client-only demo — see docs/STATUS.md). login()
-     still recognizes a known seeded email and switches identity to it, so
-     entering a different seeded email in the login form does something real. */
+  /* Demo-mode auth keeps one-click switching for the twelve deterministic
+     showcase personas. User-created staff identities use the same PBKDF2
+     password and first-login activation flags as production so the onboarding
+     journey cannot claim success while silently bypassing its controls. */
   async function needsSetup(){
     return (typeof needsSetupWizard === 'function') ? needsSetupWizard() : false;
   }
   async function isSignedIn(){
     return (typeof isDemoSignedIn === 'function') ? isDemoSignedIn() : false;
   }
-  async function login(email){
+  async function login(email,password){
     var trimmed = String(email || '').trim().toLowerCase();
+    if(!trimmed) throw new Error('Enter your account email.');
+    var result=await requireDemoDb().query(
+      'select user_id,email,password_hash,password_change_required,initial_password_expires_at,account_state '+
+      'from app_user where master_fn=$1 and lower(email)=$2 and is_active=true limit 1',
+      [SCOPE.masterFn,trimmed]);
+    var user=result.rows[0];
+    if(!user||user.account_state==='offboarded') throw new Error('Invalid email or password.');
+    if(password==null||password===''){
+      if(!DEMO_ONE_CLICK_EMAILS.has(trimmed)) throw new Error('Enter this staff account password.');
+    }else if(!await verifyPasswordBrowser(String(password),user.password_hash)){
+      throw new Error('Invalid email or password.');
+    }
+    if(user.password_change_required&&user.initial_password_expires_at
+      &&new Date(user.initial_password_expires_at)<=new Date()){
+      throw new Error('The temporary password has expired. Ask HR to reset it.');
+    }
     try {
       if (trimmed) localStorage.setItem('aria-active-user-email', trimmed);
       localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: trimmed || 'admin@acme.co', at: new Date().toISOString() }));
     } catch {}
-    return { email: trimmed };
+    return { email: trimmed, passwordChangeRequired:!!user.password_change_required };
+  }
+  async function completeActivation(input){
+    input=input||{};
+    var email=String(input.email||'').trim().toLowerCase();
+    var password=String(input.password||'');
+    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
+    if(password.length<8||password!==String(input.confirmPassword||'')) throw new Error('Use matching passwords of at least 8 characters.');
+    var passwordHash=await hashPasswordBrowser(password);
+    var data=await state.runtime.commands.completeEmployeeActivation(
+      state.orm,Number(state.activeUserId),email,passwordHash);
+    state.activationRequired=false;
+    try{ localStorage.removeItem('aria-demo-auth'); }catch{}
+    await refresh();
+    return data;
   }
   async function logout(){
     try { localStorage.removeItem('aria-demo-auth'); } catch {}
@@ -1804,6 +1893,7 @@
       'inventory/stock-movements':{refId:'ref_id'},
       'purchasing/purchase-order-lines':{orderId:'order_id'},
       'purchasing/goods-receipts':{orderId:'order_id'},
+      'payroll/run-lines':{runId:'run_id'},
       'finance/bank-statements':{bankAccountId:'bank_account_id'},
       'finance/bank-statement-lines':{statementId:'statement_id'},
       'integration/import-rows':{jobId:'job_id'},
@@ -3772,24 +3862,34 @@
           orm,SCOPE,actor.id);
         var expandedIds=await state.runtime.commands.resolveTeamEmployeeIdsWithin(
           orm,SCOPE,actor.id);
+        var canCompany=Boolean(DB.user&&DB.user.role==='Superadmin');
         var directSet=new Set(directIds);
         var canExpand=expandedIds.some(function(id){return !directSet.has(id);});
+        if(query.scope==='company'&&!canCompany){
+          var companyScopeError=new Error('Company-wide calendar scope is reserved for the tenant Superadmin.');
+          companyScopeError.code='calendar_scope_not_authorized';
+          throw companyScopeError;
+        }
         if(query.scope==='expanded'&&!canExpand){
           var scopeError=new Error('No active hierarchy grant authorizes an expanded reporting tree.');
           scopeError.code='calendar_scope_not_authorized';
           throw scopeError;
         }
+        var employeeIds=query.scope==='company'
+          ?await state.runtime.commands.resolveCompanyEmployeeIdsWithin(orm,SCOPE)
+          :query.scope==='expanded'?expandedIds:directIds;
         var data=await state.runtime.commands.listTeamCalendarWithin(
-          orm,SCOPE,query.scope==='expanded'?expandedIds:directIds,{
+          orm,SCOPE,employeeIds,{
             from:String(query.from||''),to:String(query.to||''),
             department:query.department||null,status:query.status||'all',
           });
-        return {data:data,canExpand:canExpand,directCount:directIds.length};
+        return {data:data,canExpand:canExpand,canCompany:canCompany,directCount:directIds.length};
       });
       return {data:response.data,meta:{
         actorDerived:true,privacy:'reason_and_evidence_redacted',
-        scope:query.scope==='expanded'?'expanded':'direct',
-        canExpand:response.canExpand,directReportCount:response.directCount,limit:300,
+        scope:query.scope==='company'?'company':query.scope==='expanded'?'expanded':'direct',
+        canExpand:response.canExpand,canCompany:response.canCompany,
+        directReportCount:response.directCount,limit:300,
       }};
     },
     approvals:async function(){
@@ -3889,6 +3989,7 @@
     isSignedIn: isSignedIn,
     login: login,
     logout: logout,
+    completeActivation:completeActivation,
     switchUser: switchUser,
     auth: {
       needsSetup:needsSetup,
@@ -3896,6 +3997,8 @@
       login:login,
       logout:logout,
     },
+    get activationRequired(){ return !!state.activationRequired; },
+    get demoOneClickAvailable(){ return DEMO_ONE_CLICK_EMAILS.has(String(DB.user&&DB.user.email||'').toLowerCase()); },
     get mode(){ return state.mode; },
     get db(){ return state.db; },
   };

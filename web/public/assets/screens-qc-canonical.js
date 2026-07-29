@@ -279,7 +279,7 @@
     root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage">
       ${crumbs([DB.company.name,t('nav.quality'),s('inspections'),{cur:inspection.docNo}])}
       <div class="dochead"><div class="dh-row1"><div>
-        <div class="dt">${ic('checkc')}${esc(s('inspection'))} <span class="dnum">${esc(inspection.docNo)}</span></div>
+        <h1 class="dt">${ic('checkc')}${esc(s('inspection'))} <span class="dnum">${esc(inspection.docNo)}</span></h1>
         <div class="h1sub">${esc(item.sku||'#'+inspection.productId)} · ${esc(item.name||s('product'))}</div>
       </div><div class="dactions">${cap(statusLabel(s,inspection.status),statusTone(inspection.status))}
         ${ncr?btn(ncr.docNo,{icon:'shield',cls:'soft',attrs:`data-open-ncr="${ncr.id}"`}):inspection.status==='failed'?btn(s('raiseNcr'),{icon:'shield',cls:'primary',attrs:'data-raise-ncr'}):''}

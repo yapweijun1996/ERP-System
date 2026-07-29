@@ -149,10 +149,13 @@
     "^(?:Widget|Gadget) \\(SG\\)\\s+·\\s+\\d+(?:\\.\\d+)?\\s+(?:unit|box)$",
     "^.*(?:Singapore|Malaysia) Showcase (?:Employee|Item|Customer|Supplier) \\d{3}.*$",
     "^.*DEMO-(?:SG|MY)-[A-Z0-9-]+.*$",
+    "^DEMO-PAY-(?:SG|MY)-\\d{4}-\\d{2}\\s+·\\s+#\\d+$",
     "^Deterministic showcase activity \\d+$",
     "^demo pack #\\d+$",
     "^(?:Chen Wei|Mei Lin|Daniel Lim|Nur Aisyah|Ravi Kumar|Kenji Sato|Siti Aminah|Grace Lee|Linh Nguyen|Marcus Ong) · .+$",
     "^(?:Company Admin|Manager|Sales|Buyer|Warehouse|Production|Finance Preparer|Finance Checker|HR|Service|Viewer)$",
+    "^(?:Superadmin|Company Admin|Manager|Sales|Buyer|Warehouse|Production|Finance Preparer|Finance Checker|HR|Service|Viewer), Employee$",
+    "^(?:Sales|Purchasing|Warehouse|Production|Finance|HR|Service)$",
     "^(?:Executive|Specialist|Coordinator|Analyst|Full-time)$"
     ,"^(?:company_admin|manager|sales|buyer|warehouse|production|finance_preparer|finance_checker|hr|service|viewer)$"
     ,"^Demo showcase activity$"

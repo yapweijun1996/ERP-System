@@ -108,11 +108,33 @@ Before publishing the demo:
 
 Fresh Demo databases load the generated `erp-system-showcase-v1.sql` after the small
 regression seed. The browser verifies the manifest SHA-256 and commits the whole pack
-in one transaction. Manifest version 2 is fixed to 2026-07-27 and makes all 12 real
+in one transaction. Manifest version 15 is fixed to 2026-07-27 and makes all 12 real
 permission personas self-contained in the enterprise pack: Superadmin is assigned to
 both legal entities with unrestricted setup/module access, while Viewer and the ten
 department personas exercise their actual company roles. The pack also contains
-SG/MY legal entities and exactly 10,000 linked activity/inventory/GL records. Existing
+SG/MY legal entities and 10,436 linked activity/inventory/GL/leave/payroll/procure-to-pay records,
+including manager reporting lines, governed annual-leave openings and reservations,
+one real pending sales-order approval per company, pending/approved/rejected leave and
+draft/posted/cancelled payroll cases. Existing
 IndexedDB is preserved unless the user explicitly confirms the irreversible upgrade
 or reset. The pack and production seed protections are specified in
 [EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).
+
+Version 6 is self-healing for historical Demo databases: it idempotently supplies
+missing SG/MY default work calendars, confirmed calendar versions, Annual/Medical/
+Unpaid types and confirmed policy versions before it creates leave ledger openings.
+It therefore does not assume that an older IndexedDB was originally created from the
+current regression seed.
+
+Version 9 keeps the historical SO-2 confirm-success and SO-3 insufficient-stock
+rollback teaching drafts outside the approval queue. Dashboard and approval inbox
+rows are derived only from real pending approval/request tables; the pack supplies
+separate `DEMO-SO-APP-SG-0001` and `DEMO-SO-APP-MY-0001` maker-checker cases, each
+with sufficient opening stock in the exact fulfilment warehouse.
+
+Version 15 adds 24 deterministic SG/MY leave cases across July and early August,
+including approved, pending, rejected, cancelled, multi-day and overlapping coverage
+examples. Earlier controlled Demo leave rows are upgraded in place so a historical
+IndexedDB converges on the same fixed business-date calendar as a fresh installation.
+Superadmin receives company-wide privacy-redacted calendar scope; managers remain
+restricted to direct reports or an explicitly granted reporting tree.

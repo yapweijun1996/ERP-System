@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v144';
+const CACHE_VERSION = 'erp-system-pwa-v210';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -169,6 +169,10 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports?.[0]?.postMessage({ type:'PWA_VERSION', version:CACHE_VERSION });
+    return;
+  }
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }

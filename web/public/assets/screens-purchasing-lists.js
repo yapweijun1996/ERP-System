@@ -86,6 +86,93 @@ function buildPurTxn(kind, r){
 }
 function suppCellInline(name){ return `<div class="partner">${profileAvatar({name,cls:'pav',size:26})}<b>${esc(name)}</b></div>`; }
 
+function supplierDetailCopy(){
+  const packs={
+    en:{purchasing:'Purchasing',supplier:'Supplier',suppliers:'Suppliers',description:'Review the supplier master and its real purchasing and payable activity for the active company.',active:'Active',masterData:'Master data',company:'Company',code:'Supplier code',name:'Supplier name',country:'Country',currency:'Currency',contact:'Contact details',terms:'Payment terms',notMaintained:'Not maintained',activity:'Purchasing activity',orders:'Purchase orders',orderValue:'Order value',invoices:'Supplier invoices',outstanding:'Outstanding AP',recentOrders:'Recent purchase orders',recentInvoices:'Recent supplier invoices',document:'Document',date:'Date',total:'Total',status:'Status',noOrders:'No purchase orders are linked to this supplier.',noInvoices:'No supplier invoices are linked to this supplier.',back:'Back to suppliers',newOrder:'New purchase order',openInvoice:'Open invoice',reviewOrder:'Review order',missing:'The requested supplier is unavailable in this company.',empty:'No supplier is available for this company.'},
+    ms:{purchasing:'Pembelian',supplier:'Pembekal',suppliers:'Pembekal',description:'Semak data induk pembekal serta aktiviti pembelian dan belum bayar sebenar untuk syarikat aktif.',active:'Aktif',masterData:'Data induk',company:'Syarikat',code:'Kod pembekal',name:'Nama pembekal',country:'Negara',currency:'Mata wang',contact:'Maklumat hubungan',terms:'Terma bayaran',notMaintained:'Belum diselenggara',activity:'Aktiviti pembelian',orders:'Pesanan belian',orderValue:'Nilai pesanan',invoices:'Invois pembekal',outstanding:'AP belum bayar',recentOrders:'Pesanan belian terkini',recentInvoices:'Invois pembekal terkini',document:'Dokumen',date:'Tarikh',total:'Jumlah',status:'Status',noOrders:'Tiada pesanan belian dipautkan kepada pembekal ini.',noInvoices:'Tiada invois pembekal dipautkan kepada pembekal ini.',back:'Kembali ke pembekal',newOrder:'Pesanan belian baharu',openInvoice:'Buka invois',reviewOrder:'Semak pesanan',missing:'Pembekal yang diminta tidak tersedia dalam syarikat ini.',empty:'Tiada pembekal tersedia untuk syarikat ini.'},
+    zh:{purchasing:'采购',supplier:'供应商',suppliers:'供应商',description:'查看当前公司的供应商主档，以及真实采购和应付活动。',active:'在职',masterData:'主档资料',company:'公司',code:'供应商编号',name:'供应商名称',country:'国家／地区',currency:'币种',contact:'联系人资料',terms:'付款条件',notMaintained:'尚未维护',activity:'采购活动',orders:'采购订单',orderValue:'订单金额',invoices:'供应商发票',outstanding:'未付应付账款',recentOrders:'近期采购订单',recentInvoices:'近期供应商发票',document:'单据',date:'日期',total:'合计',status:'状态',noOrders:'此供应商没有关联采购订单。',noInvoices:'此供应商没有关联供应商发票。',back:'返回供应商',newOrder:'新建采购订单',openInvoice:'查看发票',reviewOrder:'查看订单',missing:'当前公司找不到指定的供应商。',empty:'当前公司没有供应商。'},
+    ja:{purchasing:'購買',supplier:'仕入先',suppliers:'仕入先',description:'現在の会社における仕入先マスターと実際の購買・買掛活動を確認します。',active:'有効',masterData:'マスターデータ',company:'会社',code:'仕入先コード',name:'仕入先名',country:'国・地域',currency:'通貨',contact:'連絡先',terms:'支払条件',notMaintained:'未登録',activity:'購買活動',orders:'購買発注',orderValue:'発注金額',invoices:'仕入先請求書',outstanding:'未払買掛金',recentOrders:'最近の購買発注',recentInvoices:'最近の仕入先請求書',document:'伝票',date:'日付',total:'合計',status:'ステータス',noOrders:'この仕入先に紐づく購買発注はありません。',noInvoices:'この仕入先に紐づく請求書はありません。',back:'仕入先一覧へ戻る',newOrder:'購買発注を作成',openInvoice:'請求書を開く',reviewOrder:'発注を確認',missing:'指定された仕入先はこの会社では利用できません。',empty:'この会社には仕入先がありません。'},
+    vi:{purchasing:'Mua hàng',supplier:'Nhà cung cấp',suppliers:'Nhà cung cấp',description:'Xem hồ sơ nhà cung cấp cùng hoạt động mua hàng và công nợ thực tế của công ty đang chọn.',active:'Đang hoạt động',masterData:'Dữ liệu chính',company:'Công ty',code:'Mã nhà cung cấp',name:'Tên nhà cung cấp',country:'Quốc gia/khu vực',currency:'Tiền tệ',contact:'Thông tin liên hệ',terms:'Điều khoản thanh toán',notMaintained:'Chưa duy trì',activity:'Hoạt động mua hàng',orders:'Đơn mua hàng',orderValue:'Giá trị đơn',invoices:'Hóa đơn nhà cung cấp',outstanding:'AP chưa thanh toán',recentOrders:'Đơn mua gần đây',recentInvoices:'Hóa đơn gần đây',document:'Chứng từ',date:'Ngày',total:'Tổng',status:'Trạng thái',noOrders:'Không có đơn mua hàng liên kết với nhà cung cấp này.',noInvoices:'Không có hóa đơn liên kết với nhà cung cấp này.',back:'Quay lại nhà cung cấp',newOrder:'Tạo đơn mua hàng',openInvoice:'Mở hóa đơn',reviewOrder:'Xem đơn hàng',missing:'Nhà cung cấp được yêu cầu không có trong công ty này.',empty:'Công ty này chưa có nhà cung cấp.'},
+  };
+  const pack=i18nLegacy(packs);
+  return key=>pack[key]||packs.en[key]||key;
+}
+
+function openSupplier(supplier){ navigate('supplier',{supplierCode:supplier.code}); }
+
+function supplierActivityTable(rows,kind,s){
+  if(!rows.length) return `<div class="posting-inline-empty">${ic(kind==='invoice'?'receipt':'cart')}<span>${esc(kind==='invoice'?s('noInvoices'):s('noOrders'))}</span></div>`;
+  return buildTable({
+    rowId:row=>row.id,
+    columns:[
+      {label:s('document'),w:'minmax(170px,1.5fr)',render:row=>`<div class="cellsub"><b>${esc(row.no)}</b><small>${esc(kind==='invoice'?(row.po||'—'):(row.suppCode||'—'))}</small></div>`},
+      {label:s('date'),align:'l',w:'minmax(110px,.9fr)',render:row=>`<span>${esc(dateLabel(row.date))}</span>`},
+      {label:s('total'),align:'r',w:'minmax(120px,1fr)',render:row=>`<b class="tnum">${money(row.total,row.currency)}</b>`},
+      {label:s('status'),align:'l',w:'minmax(120px,1fr)',render:row=>cap(row.status,kind==='invoice'?SINV_TONE[row.status]:PO_TONE[row.status])},
+      {label:'',align:'r',w:'minmax(126px,1fr)',render:row=>kind==='invoice'
+        ?btn(s('openInvoice'),{icon:'ext',cls:'soft',attrs:`data-open-supplier-invoice="${row.id}"`})
+        :(row.approval?btn(s('reviewOrder'),{icon:'ext',cls:'soft',attrs:`data-open-supplier-order="${row.id}"`}):'')},
+    ],
+    rows:rows.slice(0,5),
+  });
+}
+
+SCREENS['supplier']=async function(root,params){
+  const s=supplierDetailCopy();
+  await prepareCanonicalPurchasingData();
+  const requested=params&&params.supplierCode?String(params.supplierCode):null;
+  const supplier=requested?DB.suppliers.find(row=>row.code===requested):DB.suppliers[0];
+  const crumb=[DB.company.name,{label:s('purchasing'),route:'purchasing-home'},{label:s('suppliers'),route:'suppliers'}];
+  if(!supplier){
+    postingDetailPage(root,{
+      module:'purchasing',route:'supplier',active:'suppliers',title:s('supplier'),description:s('description'),
+      crumb:[...crumb,{cur:requested||s('supplier')}],
+      empty:{icon:'users',title:requested?s('missing'):s('empty'),description:s('description'),action:{label:s('back'),icon:'chevL',onClick:()=>navigate('suppliers')}},
+    });
+    return;
+  }
+  const orders=DB.purchaseOrders.filter(row=>row.supplierId===supplier.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const invoices=DB.supplierInvoices.filter(row=>row.supplierId===supplier.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const orderValue=orders.reduce((sum,row)=>sum+purchasingNumber(row.total),0);
+  const outstanding=invoices.reduce((sum,row)=>sum+purchasingNumber(row.outstanding),0);
+  const main=`<section class="posting-detail-card">
+      <div class="posting-detail-card-head"><h3>${esc(s('activity'))}</h3></div>
+      <div class="so-kpibar">
+        <div class="so-kpi"><small>${esc(s('orders'))}</small><b class="tnum">${orders.length}</b></div>
+        <div class="so-kpi"><small>${esc(s('orderValue'))}</small><b class="tnum">${money(orderValue,DB.company.currency)}</b></div>
+        <div class="so-kpi"><small>${esc(s('invoices'))}</small><b class="tnum">${invoices.length}</b></div>
+        <div class="so-kpi"><small>${esc(s('outstanding'))}</small><b class="tnum">${money(outstanding,DB.company.currency)}</b></div>
+      </div>
+    </section>
+    <section class="posting-detail-card"><div class="posting-detail-card-head"><h3>${esc(s('recentOrders'))}</h3></div><div class="posting-lines-scroll">${supplierActivityTable(orders,'order',s)}</div></section>
+    <section class="posting-detail-card"><div class="posting-detail-card-head"><h3>${esc(s('recentInvoices'))}</h3></div><div class="posting-lines-scroll">${supplierActivityTable(invoices,'invoice',s)}</div></section>`;
+  const context=`<section class="posting-context-card"><small>${esc(s('masterData'))}</small>
+      <div class="posting-balance-row"><span>${esc(s('company'))}</span><b>${esc(DB.company.name)}</b></div>
+      <div class="posting-balance-row"><span>${esc(s('code'))}</span><b class="mono">${esc(supplier.code)}</b></div>
+      <div class="posting-balance-row"><span>${esc(s('name'))}</span><b>${esc(supplier.name)}</b></div>
+      <div class="posting-balance-row"><span>${esc(s('country'))}</span><b>${esc(supplier.country||s('notMaintained'))}</b></div>
+      <div class="posting-balance-row"><span>${esc(s('currency'))}</span><b>${esc(supplier.currency||DB.company.currency)}</b></div>
+      <div class="posting-balance-row"><span>${esc(s('contact'))}</span><b>${esc(supplier.contact&&supplier.contact!=='—'?supplier.contact:s('notMaintained'))}</b></div>
+      <div class="posting-balance-row"><span>${esc(s('terms'))}</span><b>${esc(supplier.terms&&supplier.terms!=='—'?supplier.terms:s('notMaintained'))}</b></div>
+    </section>`;
+  postingDetailPage(root,{
+    module:'purchasing',route:'supplier',active:'suppliers',title:`${s('supplier')} ${supplier.code}`,
+    description:s('description'),crumb:[...crumb,{cur:supplier.code}],
+    identity:{title:s('supplier'),code:supplier.code,meta:supplier.name},
+    status:{label:s('active'),tone:'ok'},
+    facts:[{label:s('orders'),value:orders.length,numeric:true},{label:s('orderValue'),value:money(orderValue,DB.company.currency),numeric:true},{label:s('invoices'),value:invoices.length,numeric:true},{label:s('outstanding'),value:money(outstanding,DB.company.currency),numeric:true}],
+    main,context:{body:context},
+    headerAction:{label:s('newOrder'),icon:'plus',onClick:()=>navigate('new-purchase-order',{supplierId:supplier.id})},
+    actions:[{label:s('back'),icon:'chevL',cls:'soft',onClick:()=>navigate('suppliers')}],
+    afterRender:({postingRoot})=>{
+      postingRoot.querySelectorAll('[data-open-supplier-invoice]').forEach(button=>button.addEventListener('click',()=>navigate('supplier-invoice',{invoiceId:Number(button.dataset.openSupplierInvoice)})));
+      postingRoot.querySelectorAll('[data-open-supplier-order]').forEach(button=>button.addEventListener('click',()=>navigate('po-approval',{purchaseOrderId:Number(button.dataset.openSupplierOrder)})));
+      postingRoot.setAttribute('data-layout','document-detail');
+      postingRoot.setAttribute('data-canonical-supplier-detail','true');
+    },
+  });
+};
+
 SCREENS['pur-txn-view'] = function(root){
   if(!PUR_TXN_OPEN){ navigate('purchasing-home'); return; }
   const C = buildPurTxn(PUR_TXN_OPEN.kind, PUR_TXN_OPEN.rec);
@@ -95,7 +182,7 @@ SCREENS['pur-txn-view'] = function(root){
       <div class="docwrap"><div class="docpage" style="padding-top:4px">
         <div class="dochead">
           <div class="dh-row1">
-            <div><div class="dt">${ic(C.icon)}${esc(C.title)} <span class="dnum">${esc(C.no)}</span></div>
+            <div><h1 class="dt">${ic(C.icon)}${esc(C.title)} <span class="dnum">${esc(C.no)}</span></h1>
               <div style="color:var(--muted);font-size:13px;margin-top:4px">${C.subtitle}</div></div>
             <div class="dactions">${cap(C.status,C.tone)}${btn('Print',{icon:'print',cls:'soft'})}</div>
           </div>
@@ -139,11 +226,15 @@ registerPurchasingTransactionList({
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(96px,0.9fr)', render:s=>s.approved==null?cap(s.status,'ok'):s.approved?cap('Approved','ok'):cap('Review','warn')},
     {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
-  rowMenu:()=>[
+  rowMenu:(s)=>[
+    {id:'view',icon:'ext',label:'View supplier',run:()=>openSupplier(s)},
     {id:'po',icon:'cart',label:'New purchase order',run:()=>navigate('new-purchase-order')},
     {id:'perf',icon:'shield',label:'View performance',run:()=>navigate('vendor-performance')},
   ],
-  rowAction:null,
+  rowAction:{
+    label:s=>`${t('common.open')} ${s.code}`,
+    run:s=>openSupplier(s),
+  },
 });
 
 /* ---------------- PURCHASE REQUISITIONS ---------------- */
@@ -734,7 +825,7 @@ registerPurchasingTransactionList({
   columns:[
     {label:'Invoice', w:'minmax(140px,1.2fr)', render:i=>docNoCell(i.no, i.date)},
     {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:i=>suppCell(i.supplier,i.code)},
-    {label:'PO · GRN', align:'l', w:'minmax(150px,1.4fr)', render:i=>`<span class="mono" style="font-size:11.5px">${esc(i.po||'—')}${i.grn?' · '+esc(i.grn):''}</span>`},
+    {label:'PO · GRN', align:'l', w:'minmax(150px,1.4fr)', render:i=>`<span class="mono" style="font-size:11.5px" data-business-text>${esc(i.po||'—')}${i.grn?' · '+esc(i.grn):''}</span>`},
     {label:'Due', align:'l', w:'minmax(96px,0.9fr)', render:i=>`<span style="color:${i.status==='Overdue'?'var(--danger)':'var(--muted)'}">${esc(i.due)}</span>`},
     {label:'Match', align:'l', cls:'cap-cell', w:'minmax(106px,1fr)', render:i=>cap(i.match, i.match==='Matched'?'ok':i.match==='Mismatch'?'danger':i.match==='No GRN'?'warn':'info')},
     {label:'Total', align:'r', sortable:true, w:'minmax(108px,1fr)', render:i=>`<b class="tnum">${money(i.total,i.currency)}</b>${i.currency!=='USD'?`<div style="font-size:11px;color:var(--muted)">${i.currency}</div>`:''}`},
@@ -1148,6 +1239,8 @@ SCREENS['pur-txn-view']=async function(root){
     const quotes=DB.supplierQuotes.filter(row=>row.rfqId===record.id);
     const actions=`${btn(d('back'),{icon:'chevL',cls:'soft',attrs:'data-doc-back'})}${record.rawStatus==='draft'?btn(c.issue,{icon:'send',cls:'primary',attrs:'data-doc-issue'}):''}${['sent','responded'].includes(record.rawStatus)?btn(c.record,{icon:'receipt',cls:'soft',attrs:'data-doc-quote'})+btn(c.compare,{icon:'flow',cls:'primary',attrs:'data-doc-compare'}):''}`;
     root.innerHTML=`<div class="content full"><section class="master" data-screen-label="${esc(d('rfq'))} ${esc(record.no)}"><div class="scrollarea"><div class="pagehead">${crumbs([DB.company.name,{label:d('rfq'),route:'rfqs'},{cur:record.no}])}${purNav('rfqs')}</div><div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('comment')}${esc(d('rfq'))} <span class="dnum">${esc(record.no)}</span></div><div class="h1sub">${esc(record.subject)}</div></div><div class="dactions">${cap(sourcingRfqStatus(record),RFQ_TONE[record.status]||'neutral')}</div></div><div class="docmeta"><div class="dm"><small>${esc(d('date'))}</small><b>${esc(record.date)}</b></div><div class="dm"><small>${esc(d('due'))}</small><b>${esc(record.due)}</b></div><div class="dm"><small>${esc(d('source'))}</small><b>${esc(record.pr||'—')}</b></div><div class="dm"><small>${esc(d('responses'))}</small><b>${record.responded} / ${record.suppliers}</b></div></div></div><div class="doclayout"><div class="docmain"><div class="panel"><div class="panel-h"><h3>${esc(d('lines'))}</h3></div><table class="lines"><thead><tr><th class="l">${esc(c.item)}</th><th>${esc(d('qty'))}</th></tr></thead><tbody>${record.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td class="tnum">${num(line.qty)} ${esc(line.uom)}</td></tr>`).join('')}</tbody></table></div><div class="alert info" style="margin-top:14px">${ic('info')}<span>${esc(d('rfqNote'))}</span></div></div><aside class="summary"><div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(d('invited'))}</div>${invited.map(row=>`<div class="sumrow"><span>${esc(row.code)}</span><b>${esc(row.name)}</b></div>`).join('')||'—'}</div><div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(d('responses'))}</div>${quotes.map(row=>`<button class="related" data-open-quote="${row.id}"><span><b>${esc(row.no)}</b><small>${esc(row.supplier)}</small></span>${cap(sourcingQuoteStatus(row),SQ_TONE[row.status]||'neutral')}</button>`).join('')||`<p class="h1sub">${esc(d('noQuotes'))}</p>`}</div></aside></div><div class="responsive-actionbar">${actions}<div class="grow"></div></div></div></div></div></section></div>`;
+    promoteDocumentTitle(root);
+    promoteDocumentTitle(root);
     root.querySelector('[data-doc-back]')?.addEventListener('click',()=>navigate('rfqs'));
     root.querySelector('[data-doc-issue]')?.addEventListener('click',()=>runRfqAction(record,'issue'));
     root.querySelector('[data-doc-quote]')?.addEventListener('click',()=>newSupplierQuoteModal(record.id));
@@ -1157,6 +1250,8 @@ SCREENS['pur-txn-view']=async function(root){
   }
   const rfq=DB.rfqs.find(row=>row.id===record.rfqId);
   root.innerHTML=`<div class="content full"><section class="master" data-screen-label="${esc(d('quote'))} ${esc(record.no)}"><div class="scrollarea"><div class="pagehead">${crumbs([DB.company.name,{label:d('quote'),route:'supplier-quotations'},{cur:record.no}])}${purNav('supplier-quotations')}</div><div class="docwrap"><div class="docpage"><div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('receipt')}${esc(d('quote'))} <span class="dnum">${esc(record.no)}</span></div><div class="h1sub">${esc(record.supplier)} · ${esc(record.rfq)}</div></div><div class="dactions">${cap(sourcingQuoteStatus(record),SQ_TONE[record.status]||'neutral')}</div></div><div class="docmeta"><div class="dm"><small>${esc(d('supplier'))}</small><b>${esc(record.supplier)}</b></div><div class="dm"><small>${esc(d('date'))}</small><b>${esc(record.quoteDate)}</b></div><div class="dm"><small>${esc(d('valid'))}</small><b>${esc(record.validity)}</b></div><div class="dm"><small>${esc(d('lead'))}</small><b>${record.leadTime}d</b></div><div class="dm"><small>${esc(d('terms'))}</small><b>${esc(record.terms)}</b></div></div></div><div class="doclayout"><div class="docmain"><div class="panel"><div class="panel-h"><h3>${esc(d('lines'))}</h3></div><table class="lines"><thead><tr><th class="l">${esc(c.item)}</th><th>${esc(d('qty'))}</th><th>${esc(d('unitCost'))}</th><th>${esc(d('net'))}</th><th>${esc(d('tax'))}</th></tr></thead><tbody>${record.lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)}</small></td><td class="tnum">${num(line.qty)}</td><td class="tnum">${money(line.unitCost,record.currency)}</td><td class="tnum">${money(line.net,record.currency)}</td><td class="tnum">${money(line.tax,record.currency)}</td></tr>`).join('')}</tbody></table></div><div class="alert info" style="margin-top:14px">${ic('info')}<span>${esc(d('immutable'))}</span></div></div><aside class="summary"><div class="sumcard"><div class="sumrow"><span>${esc(d('net'))}</span><b>${money(record.net,record.currency)}</b></div><div class="sumrow"><span>${esc(d('tax'))}</span><b>${money(record.tax,record.currency)}</b></div><div class="sumrow total"><span>${esc(d('total'))}</span><b>${money(record.total,record.currency)}</b></div></div>${rfq?`<div class="sumcard"><div class="sectitle" style="margin-top:0">${esc(d('rfq'))}</div><button class="related" data-open-rfq><span><b>${esc(rfq.no)}</b><small>${esc(rfq.subject)}</small></span>${ic('chevR')}</button></div>`:''}</aside></div><div class="responsive-actionbar">${btn(d('back'),{icon:'chevL',cls:'soft',attrs:'data-doc-back'})}<div class="grow"></div>${record.rawStatus==='received'?btn(c.convert,{icon:'check',cls:'primary',sm:false,attrs:'data-doc-convert'}):''}</div></div></div></div></section></div>`;
+  promoteDocumentTitle(root);
+  promoteDocumentTitle(root);
   root.querySelector('[data-doc-back]')?.addEventListener('click',()=>navigate('supplier-quotations'));
   root.querySelector('[data-open-rfq]')?.addEventListener('click',()=>openPurTxn('rfq',rfq));
   root.querySelector('[data-doc-convert]')?.addEventListener('click',()=>convertSupplierQuote(record.id));

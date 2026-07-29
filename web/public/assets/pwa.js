@@ -3,101 +3,68 @@
   let deferredInstallPrompt = null;
   let refreshing = false;
   let waitingWorker = null;
-  let sourceUpdatePromptOpen = false;
-  const SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
-  const SOURCE_PROBE_BASE_FILES = ['./index.html', './sw.js'];
+  let offeredUpdateKey = null;
+  let applyingUpdate = false;
+  const DISMISSED_UPDATE_KEY = 'erp-system-dismissed-pwa-update';
+  const LEGACY_SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
+  const copy = (key, fallback) => typeof window.t === 'function' ? window.t(key) : fallback;
 
-  function sourceProbeFiles(){
-    const files = new Set(SOURCE_PROBE_BASE_FILES);
-    document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach((el) => {
-      const raw = el.getAttribute('src') || el.getAttribute('href');
-      if (raw) files.add(new URL(raw, window.location.href).href);
-    });
-    return [...files];
-  }
-
-  async function hashText(value){
-    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
-      const data = new TextEncoder().encode(value);
-      const digest = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
-    }
-    let hash = 0;
-    for (let i = 0; i < value.length; i += 1) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
-    return String(hash >>> 0);
-  }
-
-  async function sourceFingerprint(){
-    const stamp = Date.now().toString(36);
-    const parts = await Promise.all(sourceProbeFiles().map(async (file) => {
-      const url = new URL(file, window.location.href);
-      url.searchParams.set('__source_probe', stamp);
-      const response = await fetch(url, {
-        cache:'no-store',
-        headers:{ 'Cache-Control':'no-cache' },
-      });
-      if (!response.ok) throw new Error(`Source probe failed: ${file}`);
-      return `${file}:${await response.text()}`;
-    }));
-    return hashText(parts.join('\n---erp-source---\n'));
-  }
-
-  async function clearAppCaches(){
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
-    }
-  }
-
-  function reloadWithFreshUrl(fingerprint){
-    const url = new URL(window.location.href);
-    url.searchParams.set('source', fingerprint.slice(0, 12));
-    window.location.replace(url.toString());
-  }
-
-  async function applySourceUpdate(fingerprint){
-    sourceUpdatePromptOpen = false;
-    hideToast();
-    localStorage.setItem(SOURCE_FINGERPRINT_KEY, fingerprint);
-    await clearAppCaches();
-    reloadWithFreshUrl(fingerprint);
-  }
-
-  function showSourceUpdatePrompt(fingerprint){
-    sourceUpdatePromptOpen = true;
-    showToast({
-      title:'Update ready',
-      body:'New source code is available. Update now to load the latest ERP demo files.',
-      primary:'Update now',
-      secondary:'Later',
-      onPrimary(){
-        applySourceUpdate(fingerprint);
-      },
-      onSecondary(){
-        sourceUpdatePromptOpen = false;
-        hideToast();
-      },
-    });
-  }
-
-  async function showUpdateIfSourceChanged(){
+  function cleanLegacySourceMarker(){
     try {
-      const latest = await sourceFingerprint();
-      const previous = localStorage.getItem(SOURCE_FINGERPRINT_KEY);
+      localStorage.removeItem(LEGACY_SOURCE_FINGERPRINT_KEY);
+    } catch { /* storage may be unavailable in a locked-down browser */ }
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('source')) return;
+      url.searchParams.delete('source');
+      window.history.replaceState(window.history.state, '', url.toString());
+    } catch { /* keep the current URL if History API access is unavailable */ }
+  }
 
-      if (!previous) {
-        localStorage.setItem(SOURCE_FINGERPRINT_KEY, latest);
-        return;
-      }
-
-      if (previous === latest) {
-        return;
-      }
-
-      showSourceUpdatePrompt(latest);
-    } catch (error) {
-      console.warn('Source freshness check failed:', error);
+  function readDismissedUpdate(){
+    try {
+      return sessionStorage.getItem(DISMISSED_UPDATE_KEY);
+    } catch {
+      return null;
     }
+  }
+
+  function dismissUpdate(updateKey){
+    try {
+      sessionStorage.setItem(DISMISSED_UPDATE_KEY, updateKey);
+    } catch { /* session-only suppression is optional */ }
+  }
+
+  function clearDismissedUpdate(){
+    try {
+      sessionStorage.removeItem(DISMISSED_UPDATE_KEY);
+    } catch { /* session-only suppression is optional */ }
+  }
+
+  function getWorkerVersion(worker){
+    if (!worker || typeof MessageChannel === 'undefined') {
+      return Promise.resolve(worker?.scriptURL || 'unknown');
+    }
+    return new Promise((resolve) => {
+      const channel = new MessageChannel();
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        channel.port1.close();
+        resolve(value || worker.scriptURL || 'unknown');
+      };
+      const timer = window.setTimeout(() => finish(null), 1500);
+      channel.port1.onmessage = (event) => {
+        if (event.data?.type === 'PWA_VERSION') finish(String(event.data.version || ''));
+      };
+      try {
+        worker.postMessage({ type:'GET_VERSION' }, [channel.port2]);
+      } catch {
+        finish(null);
+      }
+    });
   }
 
   function ensureToast(){
@@ -132,30 +99,44 @@
     requestAnimationFrame(() => el.classList.add('show'));
   }
 
-  function showUpdatePrompt(worker){
-    if (sourceUpdatePromptOpen) return;
+  async function showUpdatePrompt(worker){
+    if (!worker || applyingUpdate || worker.state === 'redundant') return;
+    const updateKey = await getWorkerVersion(worker);
+    if (applyingUpdate || worker.state === 'redundant' || offeredUpdateKey === updateKey) return;
+    offeredUpdateKey = updateKey;
+    if (readDismissedUpdate() === updateKey) return;
     waitingWorker = worker;
     showToast({
-      title:'Update ready',
-      body:'A new ERP System version is available.',
-      primary:'Update now',
-      secondary:'Later',
+      title:copy('pwa.updateReady','Update ready'),
+      body:copy('pwa.updateBody','A new ERP System version is available.'),
+      primary:copy('pwa.updateNow','Update now'),
+      secondary:copy('pwa.later','Later'),
       onPrimary(){
-        if (!waitingWorker) return;
+        if (!waitingWorker || applyingUpdate) return;
+        applyingUpdate = true;
+        clearDismissedUpdate();
+        const toast = document.getElementById('pwaToast');
+        toast?.setAttribute('aria-busy', 'true');
+        toast?.querySelectorAll('button').forEach((button) => { button.disabled = true; });
         waitingWorker.postMessage({ type:'SKIP_WAITING' });
       },
-      onSecondary:hideToast,
+      onSecondary(){
+        dismissUpdate(updateKey);
+        waitingWorker = null;
+        hideToast();
+      },
     });
   }
 
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
+    if (waitingWorker || applyingUpdate) return;
     showToast({
-      title:'Install ERP System',
-      body:'Add the demo to your home screen for app-style access.',
-      primary:'Install',
-      secondary:'Later',
+      title:copy('pwa.installTitle','Install ERP System'),
+      body:copy('pwa.installBody','Add the demo to your home screen for app-style access.'),
+      primary:copy('pwa.install','Install'),
+      secondary:copy('pwa.later','Later'),
       async onPrimary(){
         hideToast();
         if (!deferredInstallPrompt) return;
@@ -175,20 +156,20 @@
   if (!canUseServiceWorker) return;
 
   window.addEventListener('load', () => {
-    showUpdateIfSourceChanged();
+    cleanLegacySourceMarker();
 
     const swUrl = new URL('sw.js', window.location.href);
-    navigator.serviceWorker.register(swUrl, { scope:'./' })
+    navigator.serviceWorker.register(swUrl, { scope:'./', updateViaCache:'none' })
       .then((registration) => {
         if (registration.waiting && navigator.serviceWorker.controller) {
-          showUpdatePrompt(registration.waiting);
+          void showUpdatePrompt(registration.waiting);
         }
         registration.addEventListener('updatefound', () => {
           const installing = registration.installing;
           if (!installing) return;
           installing.addEventListener('statechange', () => {
             if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-              showUpdatePrompt(installing);
+              void showUpdatePrompt(installing);
             }
           });
         });
@@ -202,8 +183,10 @@
   });
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
+    if (!applyingUpdate || refreshing) return;
     refreshing = true;
+    clearDismissedUpdate();
+    hideToast();
     window.location.reload();
   });
 

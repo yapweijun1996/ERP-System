@@ -184,6 +184,23 @@ export async function resolveDirectReportEmployeeIdsWithin(
   return rows.map((row) => row.id);
 }
 
+/**
+ * Company-wide employee visibility is reserved for callers that have already
+ * established company data scope (currently the tenant Superadmin path). Keep
+ * the tenant predicates here so browser Demo and API mode share one boundary.
+ */
+export async function resolveCompanyEmployeeIdsWithin(
+  exec: DB,
+  scope: Scope,
+) {
+  const rows = await exec.select({ id: employee.id }).from(employee).where(and(
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+    eq(employee.isActive, true),
+  )).orderBy(asc(employee.id));
+  return rows.map((row) => row.id);
+}
+
 export async function listTeamLeaveWithin(
   exec: DB,
   scope: Scope,

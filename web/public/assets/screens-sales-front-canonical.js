@@ -486,8 +486,8 @@
     root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">
       ${crumbs([DB.company.name,{label:t('nav.sales'),route:'sales-home'},{label:s('quotations'),route:'quotations'},{cur:quotation.docNo}])}
       ${typeof salesNav==='function'?salesNav('quotations'):''}</div><div class="docwrap"><div class="docpage">
-      <div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('receipt')}${esc(s('details'))}
-        <span class="dnum">${esc(quotation.docNo)}</span></div>
+      <div class="dochead"><div class="dh-row1"><div><h1 class="dt">${ic('receipt')}${esc(s('details'))}
+        <span class="dnum">${esc(quotation.docNo)}</span></h1>
         <div class="h1sub">${esc(customer.name||'#'+quotation.customerId)}</div></div>
         <div class="dactions">${cap(statusLabel(s,quotation.status),statusTone(quotation.status))}</div></div>
         <div class="docmeta">

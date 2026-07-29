@@ -48,7 +48,7 @@ SCREENS['my-activity'] = async function(root){
     <div class="activity-toolbar"><div class="filterchips" id="personalActivityFilters"><button class="chip on" data-filter="all">${esc(p.all)}</button>${cats.map(cat=>`<button class="chip" data-filter="${esc(cat)}">${esc(categoryLabels[cat]||cat)}</button>`).join('')}</div><span class="activity-count">${rows.length} ${esc(p.records)}</span></div>
     <div class="act-feed" id="personalActivityFeed">${rows.length?rows.map(rowHtml).join(''):statePanel({icon:'history',title:p.empty,body:p.emptyBody})}</div>
   </div>`;
-  root.innerHTML=modulePage({module:'admin',route:'my-activity',active:'my-activity',title:p.title,count:rows.length,sub:p.sub,body});
+  root.innerHTML=modulePage({module:'account',route:'my-activity',active:'my-activity',title:p.title,count:rows.length,sub:p.sub,body});
   root.querySelectorAll('#personalActivityFilters .chip').forEach(button=>button.addEventListener('click',()=>{
     const filter=button.dataset.filter;
     root.querySelectorAll('#personalActivityFilters .chip').forEach(chip=>chip.classList.toggle('on',chip===button));
@@ -72,7 +72,7 @@ SCREENS['notifications'] = async function(root){
   try{ rows=await loadNotifications(); }
   catch(error){
     const body=`<div class="notification-error">${statePanel({icon:'error',title:p.loadError,body:(error&&error.message)||p.loadError})}<button class="btn primary" data-notification-retry>${ic('refresh')}<span>${esc(p.retry)}</span></button></div>`;
-    root.innerHTML=modulePage({module:'admin',route:'notifications',active:'notifications',title:p.title,sub:p.sub,body});
+    root.innerHTML=modulePage({module:'account',route:'notifications',active:'notifications',title:p.title,sub:p.sub,body});
     root.querySelector('[data-notification-retry]')?.addEventListener('click',()=>navigate('notifications'));
     return;
   }
@@ -107,7 +107,7 @@ SCREENS['notifications'] = async function(root){
       <div class="notification-toolbar"><div class="filterchips" id="notificationFilters">${chips.map(([key,label,count])=>`<button class="chip ${filter===key?'on':''}" data-filter="${esc(key)}">${esc(label)} <span>${count}</span></button>`).join('')}</div><div class="notification-bulk"><button class="btn soft" data-notification-bulk="read" ${unread?'':'disabled'}>${ic('checkc')}<span>${esc(p.markAll)}</span></button><button class="btn soft" data-notification-bulk="dismiss" ${rows.length?'':'disabled'}>${ic('x')}<span>${esc(p.dismissAll)}</span></button></div></div>
       <div id="notificationFeed">${feed}</div>
     </div>`;
-    root.innerHTML=modulePage({module:'admin',route:'notifications',active:'notifications',title:p.title,count:rows.length,sub:p.sub,body});
+    root.innerHTML=modulePage({module:'account',route:'notifications',active:'notifications',title:p.title,count:rows.length,sub:p.sub,body});
     wire();
   }
   async function run(action,id){

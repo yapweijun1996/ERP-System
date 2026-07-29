@@ -21,6 +21,7 @@ import {
   listActorLeaveWithin,
   listTeamLeaveWithin,
   resolveActorEmployeeWithin,
+  resolveCompanyEmployeeIdsWithin,
   resolveDirectReportEmployeeIdsWithin,
   resolveTeamEmployeeIdsWithin,
 } from '../../src/modules/hr/actorScope';
@@ -376,6 +377,7 @@ import {
   createStaffOnboardingDraftWithin,
   type StaffOnboardingDraftInput,
 } from '../../src/modules/hr/staffOnboarding';
+import { completeEmployeeActivation } from '../../src/modules/hr/employeeAccount';
 import type { SessionData } from '../../src/auth/session';
 import ExcelJS from 'exceljs';
 import {
@@ -808,6 +810,9 @@ export const erpDemoRuntime = Object.freeze({
     resolveDirectReportEmployeeIdsWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return resolveDirectReportEmployeeIdsWithin(asDomainDb(db), scope, employeeId);
     },
+    resolveCompanyEmployeeIdsWithin(db: DemoOrm, scope: Scope) {
+      return resolveCompanyEmployeeIdsWithin(asDomainDb(db), scope);
+    },
     listTeamLeaveWithin(db: DemoOrm, scope: Scope, employeeIds: number[]) {
       return listTeamLeaveWithin(asDomainDb(db), scope, employeeIds);
     },
@@ -964,6 +969,13 @@ export const erpDemoRuntime = Object.freeze({
       return activateStaffOnboardingWithin(
         asDomainDb(db), demoSession(scope, actorUserId), draftId,
         expectedVersion, passwordHash, 'demo',
+      );
+    },
+    completeEmployeeActivation(
+      db: DemoOrm, userId: number, email: string, passwordHash: string,
+    ) {
+      return completeEmployeeActivation(
+        asDomainDb(db), userId, email, passwordHash, 'demo-activation',
       );
     },
     createProductWithin(db: DemoOrm, scope: Scope, input: CreateProductInput) {

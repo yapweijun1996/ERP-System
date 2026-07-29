@@ -7,6 +7,9 @@ SCREENS['leave-approval'] = async function(root){
   const s=hrCopy();
   const leaveStatusTone={pending:'warn',approved:'ok',rejected:'danger'};
   const leaveStatusLabel=st=>({pending:s('statusPending'),approved:s('statusApproved'),rejected:s('statusRejected')}[st]||st);
+  const leaveTypeLabel=type=>({
+    Annual:s('leaveTypeAnnual'),Medical:s('leaveTypeMedical'),Unpaid:s('leaveTypeUnpaid'),
+  }[type]||type||'—');
   let {employees,leaveRequests}=await prepareHrData();
   let page=null;
   let busyId=null;
@@ -35,7 +38,7 @@ SCREENS['leave-approval'] = async function(root){
         <button class="close" data-master-detail-close>${ic('chevL')}${esc(t('common.close'))}</button>
         <div class="dh-top">
           ${profileAvatar({name:employee.fullName,src:employee.photoUrl||employee.imageUrl||employee.avatarUrl,cls:'cav',size:42})}
-          <div><h2>${esc(employee.fullName)}</h2><span class="sub">${esc(employee.department)} · ${esc(employee.jobTitle||'—')}</span></div>
+          <div data-business-text><h2>${esc(employee.fullName)}</h2><span class="sub">${esc(employee.department)} · ${esc(employee.jobTitle||'—')}</span></div>
           <div style="margin-left:auto">${cap(leaveStatusLabel(leaveRequest.status),leaveStatusTone[leaveRequest.status]||'neutral')}</div>
         </div>
       </div>
@@ -43,7 +46,7 @@ SCREENS['leave-approval'] = async function(root){
         ${error?`<div class="alert danger" data-leave-action-error>${ic('warn')}<span>${esc(error)}</span></div>`:''}
         <div class="statgrid c3"><div class="stat"><small>${esc(s('requestedDays'))}</small><b class="tnum">${esc(s('daysValue').replace('{count}',String(leaveRequest.days)))}</b></div></div>
         <div class="card">
-          <div class="field"><span class="k">${esc(s('colLeaveType'))}</span><span class="v">${esc(leaveRequest.leaveType||'—')}</span></div>
+          <div class="field"><span class="k">${esc(s('colLeaveType'))}</span><span class="v">${esc(leaveTypeLabel(leaveRequest.leaveType))}</span></div>
           <div class="field"><span class="k">${esc(s('fromDate'))}</span><span class="v">${esc(dateValue(leaveRequest.startDate))}</span></div>
           <div class="field"><span class="k">${esc(s('toDate'))}</span><span class="v">${esc(dateValue(leaveRequest.endDate))}</span></div>
           <div class="field"><span class="k">${esc(s('employeeReason'))}</span><span class="v">${leaveRequest.reason?esc(leaveRequest.reason):'—'}</span></div>
@@ -128,14 +131,14 @@ SCREENS['leave-approval'] = async function(root){
           const employee=empOf(leaveRequest);
           return `<div style="display:flex;align-items:center;gap:10px;min-width:0">
             ${profileAvatar({name:employee.fullName,src:employee.photoUrl||employee.imageUrl||employee.avatarUrl,cls:'cav',size:30})}
-            <div class="cellsub"><b>${esc(employee.fullName)}</b><small>${esc(employee.department)}</small></div>
+            <div class="cellsub" data-business-text><b>${esc(employee.fullName)}</b><small>${esc(employee.department)}</small></div>
           </div>`;
         },
       },
       {
         label:s('colLeaveType'),align:'l',
         render:leaveRequest=>cap(
-          leaveRequest.leaveType||'—',
+          leaveTypeLabel(leaveRequest.leaveType),
           leaveRequest.leaveType==='Medical'?'violet':leaveRequest.leaveType==='Unpaid'?'neutral':'accent',
         ),
       },

@@ -31,7 +31,11 @@ function profileAvatar({name='',src='',cls='kc-av',size=null,title='',attrs=''}=
 window.profileAvatarMedia=profileAvatarMedia;
 window.profileAvatar=profileAvatar;
 function cap(label, tone){ return `<span class="cap ${tone||statusCap(label)}"><span class="dot"></span>${esc(label)}</span>`; }
-function statusBadge(st){ return cap(typeof ts==='function'?ts(st):st, statusCap(st)); }
+function statusBadge(st){
+  const value=String(st==null?'':st).trim();
+  if(!value||value==='—') return cap('—','neutral');
+  return cap(typeof ts==='function'?ts(value):value,statusCap(value));
+}
 function btn(label, {icon,cls='soft',sm=true,attrs=''}={}){
   return `<button class="btn ${cls} ${sm?'sm':''}" ${attrs}>${icon?ic(icon):''}${label?`<span>${esc(label)}</span>`:''}</button>`;
 }
@@ -74,7 +78,7 @@ function combobox({id, value='', options=[], placeholder='Search…'}={}){
     <input id="${id}" class="combo-in" type="text" role="combobox" autocomplete="off" spellcheck="false"
       aria-expanded="false" aria-autocomplete="list" placeholder="${esc(placeholder)}"
       value="${sel?esc(sel.label):''}" data-value="${esc(value)}">
-    <button type="button" class="combo-caret" tabindex="-1" aria-label="Show options">${ic('chevD')}</button>
+    <button type="button" class="combo-caret" tabindex="-1" aria-label="${esc(typeof t==='function'?t('common.showOptions'):'Show options')}">${ic('chevD')}</button>
     <div class="combo-pop" role="listbox" hidden></div>
   </div>`;
 }
@@ -201,7 +205,8 @@ function closeModal(){ const m=$('#modalEl'),s=$('#modalScrim'); if(m){m.classLi
    appModal({icon,title,body,actions,width}) renders the head/body/foot shell.
    confirmModal(...) is the standard confirm dialog built on top of it. */
 function appModal({icon, title, body='', actions='', width}={}){
-  openModal(`<div class="modal-head">${icon?ic(icon):''}<h3>${esc(title)}</h3><button class="iconbtn x" onclick="closeModal()" aria-label="Close">${ic('x')}</button></div>
+  const closeLabel=typeof t==='function'?t('common.close'):'Close';
+  openModal(`<div class="modal-head">${icon?ic(icon):''}<h3>${esc(title)}</h3><button class="iconbtn x" onclick="closeModal()" aria-label="${esc(closeLabel)}">${ic('x')}</button></div>
     <div class="modal-body">${body}</div>
     ${actions?`<div class="modal-foot">${actions}</div>`:''}`);
   if(width){

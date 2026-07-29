@@ -22,7 +22,7 @@
     if(!window.ErpSystemData) throw new Error('ERP data adapter is unavailable.');
     return window.ErpSystemData;
   }
-  function today(){return new Date().toISOString().slice(0,10);}
+  function today(){return typeof workingBusinessDate==='function'?workingBusinessDate():new Date().toISOString().slice(0,10);}
   function sequence(){return `SO-${Date.now().toString().slice(-8)}`;}
   function currency(){return DB.company&&DB.company.currency||'SGD';}
   function taxCode(){return DB.company&&DB.company.country==='MY'?'SV':'SR';}
@@ -135,7 +135,7 @@
       columns:[
         {label:s('order'),render:row=>`<div class="cellsub"><b class="docnum">${esc(row.order.docNo||'#'+row.orderId)}</b><small>${esc(dateValue(row.order.orderDate||row.submittedAt))}</small></div>`},
         {label:s('customer'),render:row=>`<div class="cellsub"><b>${esc(row.customer.name||'#'+row.order.customerId)}</b><small>${esc(row.customer.code||'')}</small></div>`},
-        {label:s('reason'),render:row=>`<span style="color:var(--muted)">${esc(row.reason)}</span>`},
+        {label:s('reason'),render:row=>`<span style="color:var(--muted)" data-business-text>${esc(row.reason)}</span>`},
         {label:s('queueValue'),align:'r',render:row=>`<b class="tnum">${amount(row.order.totalAmount,row.order.currency)}</b>`},
         {label:s('submitted'),render:row=>esc(dateValue(row.submittedAt))},
         {label:s('status'),render:row=>cap(label(s,row.status),tone(row.status))},

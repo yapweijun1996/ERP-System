@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import type { DB } from '../../data/db';
-import { account, glEntry, purchaseOrder, supplier, supplierInvoice } from '../../data/schema';
+import {
+  account, accountingPeriod, glEntry, paymentVoucher, purchaseOrder, supplier, supplierInvoice,
+} from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { createPaymentVoucher, PaymentVoucherError } from './paymentVoucher';
 
@@ -13,6 +15,10 @@ async function fixture(db: DB) {
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '1000', name: 'Cash', type: 'asset' },
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '2100', name: 'AP', type: 'liability' },
   ]);
+  await db.insert(accountingPeriod).values({
+    masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, fiscalYear: 2026, periodNo: 1,
+    label: 'January 2026', startDate: '2026-01-01', endDate: '2026-01-31', status: 'open',
+  });
   return sup;
 }
 
@@ -79,5 +85,27 @@ describe('payment voucher', () => {
     await expect(createPaymentVoucher(db, SCOPE, {
       docNo: 'PV-SECOND', supplierId: sup.id, paymentDate: '2026-01-11', supplierInvoiceIds: [inv.id],
     })).rejects.toThrow("is 'paid', not unpaid");
+  });
+
+  it('rejects a locked posting period and rolls back every settlement effect', async () => {
+    const db = await freshDb();
+    const sup = await fixture(db);
+    const inv = await unpaidInvoice(db, sup.id, 'SINV-PV-LOCKED', '100.00');
+    await db.insert(accountingPeriod).values({
+      masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, fiscalYear: 2026, periodNo: 5,
+      label: 'May 2026', startDate: '2026-05-01', endDate: '2026-05-31', status: 'locked',
+    });
+
+    await expect(createPaymentVoucher(db, SCOPE, {
+      docNo: 'PV-LOCKED', supplierId: sup.id, paymentDate: '2026-05-31',
+      supplierInvoiceIds: [inv.id],
+    })).rejects.toThrow('Accounting period May 2026 is locked.');
+    expect(await db.select().from(paymentVoucher).where(eq(paymentVoucher.docNo, 'PV-LOCKED')))
+      .toHaveLength(0);
+    expect(await db.select().from(glEntry).where(eq(glEntry.journalRef, 'PV-LOCKED')))
+      .toHaveLength(0);
+    const [invoice] = await db.select({ status: supplierInvoice.status })
+      .from(supplierInvoice).where(eq(supplierInvoice.id, inv.id));
+    expect(invoice.status).toBe('unpaid');
   });
 });

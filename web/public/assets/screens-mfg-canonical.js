@@ -453,7 +453,7 @@
     root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage work-order-detail" data-work-order-detail="canonical">
       ${crumbs([DB.company.name,t('nav.manufacturing'),s('orders'),{cur:order.docNo}])}
       <div class="dochead"><div class="dh-row1"><div>
-        <div class="dt">${ic('factory')}${esc(order.docNo)} <span class="dnum">${esc(finished.sku||'')}</span></div>
+        <h1 class="dt">${ic('factory')}${esc(order.docNo)} <span class="dnum">${esc(finished.sku||'')}</span></h1>
         <div class="h1sub">${esc(finished.name||s('product'))} · ${num(Number(order.plannedQty))} ${esc(finished.uom||'')}</div>
       </div><div class="dactions">${cap(statusLabel(s,order.status),statusTone(order.status))}
         ${executionActions}
@@ -555,8 +555,9 @@
       const item=bom&&products.get(Number(bom.productId));
       return bom&&routing&&item?{bom,version,routing,item}:null;
     }).filter(Boolean);
-    const today=new Date().toISOString().slice(0,10);
-    const dueDate=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+    const today=typeof workingBusinessDate==='function'?workingBusinessDate():new Date().toISOString().slice(0,10);
+    const dueCursor=new Date(`${today}T00:00:00Z`);dueCursor.setUTCDate(dueCursor.getUTCDate()+7);
+    const dueDate=dueCursor.toISOString().slice(0,10);
     const docNo=`WO-${(pages[5].data||[]).length+1}`;
     if(!configs.length||!warehouses.length){
       root.innerHTML=`<div class="content full"><section class="master"><div class="statepanel empty">
@@ -566,7 +567,7 @@
     root.innerHTML=`<div class="content full"><section class="master">
       <div class="docwrap"><div class="docpage">
         ${crumbs([DB.company.name,t('nav.manufacturing'),s('orders'),{cur:s('newOrder')}])}
-        <div class="dochead"><div class="dh-row1"><div><div class="dt">${ic('factory')}${esc(s('newOrder'))}</div>
+        <div class="dochead"><div class="dh-row1"><div><h1 class="dt">${ic('factory')}${esc(s('newOrder'))}</h1>
           <div class="h1sub">${esc(docNo)} · ${esc(DB.company.name)}</div></div>${cap(s('planned'),'neutral')}</div></div>
         <div class="doclayout"><div class="docmain">
           <div class="panel"><div class="panel-h"><h3>${esc(s('product'))}</h3></div><div class="panel-body">

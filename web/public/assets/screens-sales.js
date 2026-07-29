@@ -26,7 +26,7 @@ SCREENS['quotation'] = function(root){
   root.innerHTML=`<div class="content full"><section class="master"><div class="pagehead">${crumbs([DB.company.name,{label:'Sales',route:'sales-home'},{label:'Quotations',route:'quotations'},{cur:d.no}])}${typeof salesNav==='function'?salesNav('quotations'):''}</div><div class="docwrap"><div class="docpage" style="padding-top:4px">
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('receipt')}Quotation <span class="dnum">${esc(d.no)}</span></div>
+        <div><h1 class="dt">${ic('receipt')}Quotation <span class="dnum">${esc(d.no)}</span></h1>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.cust)} · owner ${esc(d.owner)} · valid until ${esc(d.valid)}</div></div>
         <div class="dactions">${cap(d.status,salesTone(d.status))}${btn('Download PDF',{icon:'filepdf',cls:'soft'})}${btn('Duplicate',{icon:'copy',cls:'soft'})}</div>
       </div>
@@ -108,7 +108,7 @@ SCREENS['delivery-order'] = function(root){
     ${crumbs([DB.company.name,{label:'Sales',route:'sales-home'},{label:'Deliveries',route:'delivery-orders'},{cur:d.no}])}
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('truck')}Delivery Order <span class="dnum">${esc(d.no)}</span></div>
+        <div><h1 class="dt">${ic('truck')}Delivery Order <span class="dnum">${esc(d.no)}</span></h1>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.cust)} · from ${esc(d.so)} · ${esc(d.carrier)}</div></div>
         <div class="dactions">${cap(d.status,salesTone(d.status))}${btn('Print packing list',{icon:'print',cls:'soft'})}</div>
       </div>
@@ -182,7 +182,7 @@ SCREENS['sales-invoice'] = async function(root, params){
     ${crumbs([DB.company.name,{label:'Sales',route:'sales-home'},{label:'Invoices',route:'sales-invoices'},{cur:d.no}])}
     <div class="dochead">
       <div class="dh-row1">
-        <div><div class="dt">${ic('receipt')}Sales Invoice <span class="dnum">${esc(d.no)}</span></div>
+        <div><h1 class="dt">${ic('receipt')}Sales Invoice <span class="dnum">${esc(d.no)}</span></h1>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(d.cust)} · from ${esc(d.do)} · due ${esc(d.due)}</div></div>
         <div class="dactions">${cap(d.status,salesTone(d.status))}${btn('Download PDF',{icon:'filepdf',cls:'soft'})}</div>
       </div>

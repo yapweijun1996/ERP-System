@@ -46,7 +46,7 @@ DB.nav = [
     { id:'asset', label:'Fixed Assets', icon:'asset', route:'asset-register' },
   ]},
   { group:'Platform', items:[
-    { id:'workflow', label:'Approvals', icon:'flow', route:'po-approval' },
+    { id:'workflow', label:'Approvals', icon:'flow', route:'approval-inbox' },
     { id:'bi', label:'Reporting / BI', icon:'chart', route:'bi-dashboard' },
     { id:'admin', label:'Admin', icon:'shield', route:'user-mgmt' },
     { id:'integration', label:'Integration', icon:'plug', route:'integration' },
@@ -62,8 +62,8 @@ DB.nav = [
 /* ---- approvals queue (cross-module) ---- */
 DB.approvals = [
   { no:'PO-26-0291', kind:'Purchase Order', who:'R. Haddad', amt:88500, age:'2h', risk:'high', route:'po-approval' },
-  { no:'SO-26-0418', kind:'Sales Discount', who:'J. Okafor', amt:96420, age:'5h', risk:'warn', route:'sales-order' },
-  { no:'JE-26-0611', kind:'Journal Entry', who:'A. Costa', amt:4280, age:'6h', risk:'low', route:'journal-entry' },
+  { no:'SO-26-0418', kind:'Sales Discount', who:'J. Okafor', amt:96420, age:'5h', risk:'warn', route:'sales-order', params:{no:'SO-26-0418'} },
+  { no:'JE-26-0611', kind:'Journal Entry', who:'A. Costa', amt:4280, age:'6h', risk:'low', route:'journal-entry', params:{no:'JE-26-0611'} },
   { no:'LV-26-0331', kind:'Leave Request', who:'M. Silva', amt:null, age:'1d', risk:'low', route:'leave-approval' },
   { no:'PO-26-0290', kind:'Purchase Order', who:'R. Haddad', amt:64200, age:'1d', risk:'warn', route:'po-approval' },
   { no:'ADJ-26-0044', kind:'Stock Adjustment', who:'Dana Reyes', amt:null, age:'1d', risk:'warn', route:'stock-movement' },

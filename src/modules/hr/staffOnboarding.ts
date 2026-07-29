@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
   appUser, employee, employeeActivationSecret,
@@ -251,7 +251,7 @@ export async function activateStaffOnboardingWithin(
   await exec.update(employee).set({ userId, updatedAt: now }).where(eq(employee.id, createdEmployee.id));
   const [employeeBaseRole] = await exec.select({ id: role.roleId }).from(role).where(and(
     eq(role.masterFn, session.masterFn),
-    eq(role.companyFn, session.activeCompanyFn),
+    or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
     eq(role.name, 'Employee'),
   )).limit(1);
   const allRoleIds = [...new Set([...roleIds, ...(employeeBaseRole ? [employeeBaseRole.id] : [])])];

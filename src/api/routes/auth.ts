@@ -271,7 +271,7 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   router.get('/session', async (req, res) => {
     const session = await requireSession(db, req, res, { allowActivationPending: true });
     if (!session) return;
-    const [capabilities, modules, onboarding] = await Promise.all([
+    const [capabilities, modules, onboarding, companyAssignments] = await Promise.all([
       effectiveCapabilities(db, session),
       listCompanyModules(db, session.masterFn, session.activeCompanyFn),
       db.select({
@@ -281,8 +281,20 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
         eq(companyOnboarding.masterFn, session.masterFn),
         eq(companyOnboarding.companyFn, session.activeCompanyFn),
       )).limit(1),
+      db.select({ companyFn: userCompany.companyFn }).from(userCompany)
+        .innerJoin(company, eq(company.companyFn, userCompany.companyFn))
+        .where(and(
+          eq(userCompany.userId, session.userId),
+          eq(company.masterFn, session.masterFn),
+        )),
     ]);
-    res.json({ ...session, capabilities, modules, onboarding: onboarding[0] ?? null });
+    res.json({
+      ...session,
+      capabilities,
+      modules,
+      onboarding: onboarding[0] ?? null,
+      companyFns: companyAssignments.map((assignment) => assignment.companyFn),
+    });
   });
 
   router.post('/activation/actions/complete', async (req, res) => {

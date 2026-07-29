@@ -523,6 +523,8 @@
       name: name, email: (sessionUser && sessionUser.email) || '', initials: initials || 'U', role: 'Signed in',
       permissionKeys: sessionUser && sessionUser.capabilities
         ? (sessionUser.capabilities.permissions || []) : [],
+      companyFns: sessionUser && Array.isArray(sessionUser.companyFns)
+        ? sessionUser.companyFns : [payload.scope.companyFn],
       perms: { post: false, approve: false, salaryView: false, costView: false },
     };
 

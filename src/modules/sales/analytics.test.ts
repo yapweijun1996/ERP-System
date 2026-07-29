@@ -6,6 +6,8 @@ import {
   product,
   salesCreditNote,
   salesDebitNote,
+  salesOrder,
+  salesOrderApproval,
   salesQuotation,
   salesReturn,
   stockLevel,
@@ -143,6 +145,30 @@ describe('canonical sales analytics', () => {
     });
     expect(second.data.length).toBeGreaterThan(0);
     expect(second.data.every((row) => row.id > (first.nextCursor ?? 0))).toBe(true);
+  });
+
+  it('reports an approved draft by its effective approval state', async () => {
+    const db = await seedSalesFacts();
+    const [buyer] = await db.select({ id: customer.id }).from(customer).where(and(
+      eq(customer.masterFn, SCOPE.masterFn),
+      eq(customer.companyFn, SCOPE.companyFn),
+      eq(customer.code, 'CUST1'),
+    ));
+    const [order] = await db.insert(salesOrder).values({
+      ...SCOPE, docNo: 'SO-ANALYTICS-APPROVED', customerId: buyer.id,
+      status: 'draft', orderDate: '2024-06-21', currency: 'SGD',
+      netAmount: '100.00', taxAmount: '9.00', totalAmount: '109.00',
+    }).returning({ id: salesOrder.id });
+    await db.insert(salesOrderApproval).values({
+      ...SCOPE, orderId: order.id, status: 'approved',
+      reason: 'Analytics effective-status fixture',
+      decidedAt: new Date('2024-06-21T09:00:00Z'),
+      decidedByName: 'Approver', decisionNote: 'Approved for analytics proof',
+    });
+    const page = await listSalesAnalyticsWithin(db, SCOPE, { limit: 100 });
+    expect(page.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'order-status', status: 'approved', count: 1, value: '109.00' }),
+    ]));
   });
 
   it('returns an honest empty company summary without leaking another company', async () => {

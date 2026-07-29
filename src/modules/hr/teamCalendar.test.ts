@@ -16,6 +16,7 @@ import {
 } from '../../data/schema';
 import { freshDb } from '../../test/helpers';
 import {
+  resolveCompanyEmployeeIdsWithin,
   resolveDirectReportEmployeeIdsWithin,
   resolveTeamEmployeeIdsWithin,
 } from './actorScope';
@@ -174,6 +175,13 @@ describe('team calendar workspace and outbound sync', () => {
     );
     expect(directIds).not.toContain(scopeChild.id);
     expect(expandedIds).toContain(scopeChild.id);
+    const companyIds = await resolveCompanyEmployeeIdsWithin(data.db, scope);
+    expect(companyIds).toEqual(expect.arrayContaining([
+      data.managerEmployee.id,
+      data.subject.id,
+      scopeRoot.id,
+      scopeChild.id,
+    ]));
 
     const direct = await listTeamCalendarWithin(data.db, scope, directIds, {
       from: '2026-08-01',

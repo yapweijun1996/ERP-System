@@ -4,15 +4,16 @@
    Reached from Quick create, the command palette and the
    Purchase Orders list. Confirms to the PO list.
    Mirrors the Sales Order wizard; buys at item cost, suggests
-   reorder quantities, and routes high-value POs for approval.
+   reorder quantities, and submits every new PO into the canonical
+   maker-checker approval workflow.
    ============================================================ */
 SCREENS['new-purchase-order'] = async function(root, params){
   await Promise.all([prepareCanonicalPurchasingData(), prepareCanonicalProjectData()]);
-  const TODAY=new Date().toISOString().slice(0,10);
+  const TODAY=typeof workingPeriodEndDate==='function'?workingPeriodEndDate():new Date().toISOString().slice(0,10);
   /* TASK-023: 9% matches the real seeded SG GST rate (tax_rule 'SR', effective
      2024-01-01) — createPurchaseOrder looks this up for real per line at
      submit time; this constant is only a live preview while the user edits. */
-  const TAX=0.09, APPROVAL_THRESHOLD=50000;
+  const TAX=0.09;
   const poSuffix=typeof crypto!=='undefined'&&crypto.randomUUID
     ?crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase()
     :String(Date.now()).slice(-8);
@@ -47,6 +48,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
         <div class="panel-h">${ic('truck')}<h3>Supplier</h3></div>
         <div class="panel-body">
           <div class="fld"><span>Pay-to supplier <span class="req">*</span></span>
+            <input type="search" id="wSupSearch" class="select-filter" autocomplete="off" placeholder="${esc(t('quickCreate.searchSuppliers'))}" aria-label="${esc(t('quickCreate.searchSuppliers'))}">
             <select id="wSup"><option value="">Choose a supplier…</option>
               ${DB.suppliers.map(s=>`<option value="${s.code}" ${s.code===S.supplier?'selected':''}>${esc(s.name)} · ${esc(s.code)}</option>`).join('')}</select></div>
           ${s?`<div class="fld" style="margin-top:12px"><span>Status</span><input value="${esc(s.status)}" readonly></div>`:''}
@@ -71,6 +73,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
   }
   function wire1(){
     const su=$('#wSup'); su.addEventListener('change',()=>{ S.supplier=su.value; render(); });
+    bindSelectFilter($('#wSupSearch'),su,t('quickCreate.noMatches'));
     const bind=(id,key)=>{ const el=$('#'+id); el&&el.addEventListener('change',()=>S[key]=el.value); };
     bind('wDate','orderDate');
     const pr=$('#wProject'); pr&&pr.addEventListener('change',()=>{ S.projectId=pr.value?Number(pr.value):null; });
@@ -156,7 +159,6 @@ SCREENS['new-purchase-order'] = async function(root, params){
   /* ---------------- STEP 3 — review & confirm ---------------- */
   function step3(){
     const s=sup(), t=totals();
-    const over=t.total>APPROVAL_THRESHOLD;
     const rows=S.lines.map((l,i)=>`<tr><td class="lineno">${i+1}</td>
       <td class="l li-name"><b>${esc(l.name)}</b><small>${esc(l.sku)}</small></td>
       <td class="tnum">${num(l.qty)} ${esc(l.uom)}</td><td class="tnum">${money(l.price)}</td>
@@ -174,9 +176,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
       <aside class="summary">
         <div class="sumcard">${totalsCard()}</div>
         <div class="sumcard"><div class="sectitle" style="margin-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:10px">Approval routing</div>
-          ${over
-            ?indicator({tone:'warn',icon:'flow',label:'Above approval threshold',value:money0(t.total),sub:`Exceeds the ${money0(APPROVAL_THRESHOLD)} limit — routes to Procurement Manager on submit.`})
-            :indicator({tone:'ok',icon:'checkc',label:'Within auto-approval limit',value:money0(t.total),sub:`Under ${money0(APPROVAL_THRESHOLD)} — issues directly to the supplier.`})}
+          ${indicator({tone:'accent',icon:'flow',label:'Approval required',value:money0(t.total),sub:'Creates a pending approval request. The order is issued only after an authorized checker approves it.'})}
         </div>
       </aside></div>`;
   }
@@ -201,11 +201,11 @@ SCREENS['new-purchase-order'] = async function(root, params){
   function render(){
     root.innerHTML=`<div class="content full"><section class="master" data-screen-label="New Purchase Order">
       <div class="docwrap"><div class="docpage">
-        ${crumbs([DB.company.name,'Purchasing','Orders',{cur:'New'}])}
+        ${crumbs([DB.company.name,t('nav.purchasing'),t('po.title'),{cur:t('quickCreate.new')}])}
         ${typeof purNav==='function'?'<div style="padding:0 0 4px">'+purNav('purchase-orders')+'</div>':''}
         <div class="dochead">
           <div class="dh-row1">
-            <div><div class="dt">${ic('cart')}New Purchase Order</div>
+            <div><h1 class="dt">${ic('cart')}New Purchase Order</h1>
               <div style="color:var(--muted);font-size:13px;margin-top:4px">Draft · ${esc(DB.company.name)} · ${esc(DB.company.branch)}</div></div>
             <div class="dactions">${cap('Draft','neutral')}</div>
           </div>
@@ -247,7 +247,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
         });
         const res=response.data;
         await navigate('purchase-orders');
-        toast(`Purchase order ${poDocNo} created for ${s.name} · ${money0(res.total)} · issued`,'ok');
+        toast(`Purchase order ${poDocNo} created for ${s.name} · ${money0(res.total)} · submitted for approval`,'ok');
       }catch(e){
         toast((e&&e.message)||'Create PO failed','danger');
         create.disabled=false;

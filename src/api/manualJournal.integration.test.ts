@@ -65,7 +65,7 @@ describe('manual journal API vertical slice', () => {
     const createResponse = await fetch(`${baseUrl}/api/finance/journals`, {
       method: 'POST', headers: { ...headers, 'x-request-id': 'manual-journal-create' },
       body: JSON.stringify({
-        docNo: 'MJ-API-1', postingDate: '2026-07-22', journalType: 'standard',
+        docNo: 'MJ-API-1', postingDate: '2026-06-22', journalType: 'standard',
         memo: 'Fictional API journal', reference: 'API-TEST',
         lines: [
           { accountId: arId, dimension: 'SG', debit: '75.25', credit: '0' },
@@ -109,7 +109,7 @@ describe('manual journal API vertical slice', () => {
       method: 'POST',
       headers: { ...headers, 'idempotency-key': 'manual-journal-reverse' },
       body: JSON.stringify({
-        docNo: 'MJ-API-REV-1', postingDate: '2026-07-23', reason: 'Fictional correction',
+        docNo: 'MJ-API-REV-1', postingDate: '2026-06-23', reason: 'Fictional correction',
       }),
     });
     const reversedResponse = await reverse();

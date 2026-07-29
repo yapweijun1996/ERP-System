@@ -112,11 +112,13 @@ describe('production API security contract', () => {
       headers: { cookie: cookies.header },
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    const sessionBody = await response.json();
+    expect(sessionBody).toMatchObject({
       masterFn: 'M1',
       activeCompanyFn: 'C-SG',
       email: 'admin@acme.co',
     });
+    expect(sessionBody.companyFns.sort()).toEqual(['C-MY', 'C-SG']);
   });
 
   it('signs in with organization code and organization-scoped username', async () => {
@@ -1433,7 +1435,7 @@ describe('production API security contract', () => {
       body: JSON.stringify({
         docNo: 'ADJ-API-1',
         warehouseId: locations[0].id,
-        adjustmentDate: '2026-07-18',
+        adjustmentDate: '2026-06-30',
         reason: 'API count',
         lines: [{ productId: item.id, countedQty: 12 }],
       }),

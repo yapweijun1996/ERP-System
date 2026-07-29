@@ -25,6 +25,7 @@
 //     CALENDAR_WORKSPACE_ONLY=1 for team calendar workspaces, or
 //     MASTER_DETAIL_EDITOR_ONLY=1 for versioned master-data detail editors, or
 //     CASE_DETAIL_ONLY=1 for actionable lifecycle case details, or
+//     DOCUMENT_DETAIL_ONLY=1 for legacy-compatible business documents, or
 //     LEDGER_DETAIL_ONLY=1 for immutable financial account ledgers, or
 //     POSTING_DETAIL_ONLY=1 for immutable balanced accounting postings.
 //   - stateful transaction detail routes are opened through real fixtures
@@ -53,6 +54,7 @@ const POSTING_DETAIL_ONLY = process.env.POSTING_DETAIL_ONLY === '1';
 const FINANCIAL_STATEMENT_ONLY = process.env.FINANCIAL_STATEMENT_ONLY === '1';
 const PAYROLL_RUN_ONLY = process.env.PAYROLL_RUN_ONLY === '1';
 const REPORT_LAYOUTS = process.env.REPORT_LAYOUTS === '1';
+const DOCUMENT_DETAIL_ONLY = process.env.DOCUMENT_DETAIL_ONLY === '1';
 const LIST_LAYOUTS = new Set(['transaction-list-v1','master-detail-register-v1','report-list-v1']);
 const OPERATIONAL_WORKSPACE_LAYOUT = 'operational-workspace-v1';
 const CALENDAR_WORKSPACE_LAYOUT = 'calendar-workspace-v1';
@@ -67,7 +69,7 @@ const VALID_LAYOUTS = new Set([
   'master-detail','workspace','board','activity-feed',
 ]);
 
-if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,CALENDAR_WORKSPACE_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY,FINANCIAL_STATEMENT_ONLY,PAYROLL_RUN_ONLY].filter(Boolean).length > 1) {
+if ([LIST_LAYOUT_ONLY,WORKSPACE_LAYOUT_ONLY,CALENDAR_WORKSPACE_ONLY,MASTER_DETAIL_EDITOR_ONLY,CASE_DETAIL_ONLY,LEDGER_DETAIL_ONLY,POSTING_DETAIL_ONLY,FINANCIAL_STATEMENT_ONLY,PAYROLL_RUN_ONLY,DOCUMENT_DETAIL_ONLY].filter(Boolean).length > 1) {
   throw new Error('Layout-only audit switches are mutually exclusive.');
 }
 
@@ -462,6 +464,13 @@ async function auditRoutes(browser, viewport) {
 
   page.on('console', (msg) => {
     if (msg.type() === 'error') events.push({ kind: 'console.error', message: msg.text() });
+    if (msg.type() === 'warning' && [
+      'Missing i18n key st.— ',
+      'Missing i18n key route.sales-order ',
+      'Missing i18n key route.sales-return ',
+    ].some((prefix)=>msg.text().startsWith(prefix))) {
+      events.push({ kind: 'console.error', message: `console.warn: ${msg.text()}` });
+    }
   });
   page.on('pageerror', (err) => {
     events.push({ kind: 'pageerror', message: err.message });
@@ -564,7 +573,12 @@ async function auditRoutes(browser, viewport) {
               ? allRoutes.filter((route) => screenMeta[route]?.layout === POSTING_DETAIL_LAYOUT)
               : FINANCIAL_STATEMENT_ONLY
                 ? allRoutes.filter((route) => screenMeta[route]?.layout === FINANCIAL_STATEMENT_LAYOUT)
+                : DOCUMENT_DETAIL_ONLY
+                  ? allRoutes.filter((route) => screenMeta[route]?.layout === 'document-detail')
                 : allRoutes;
+  if (DOCUMENT_DETAIL_ONLY && routes.length === 0) {
+    throw new Error('No SCREEN_META routes declare a document-detail layout.');
+  }
   if (LIST_LAYOUT_ONLY && routes.length === 0) {
     throw new Error('No SCREEN_META routes declare a shared list layout.');
   }
@@ -650,6 +664,39 @@ async function auditRoutes(browser, viewport) {
           layoutIssues.push(`${bar.className} overflow ${bar.scrollWidth}>${bar.clientWidth}`);
         }
       });
+      const isDocumentDetail=window.SCREEN_META?.[CURRENT_ROUTE]?.layout==='document-detail';
+      if (isDocumentDetail) {
+        const documentPage=el.querySelector('.docpage,.payslip-page,[data-supplier-detail]');
+        const legacyTitles=[...el.querySelectorAll('.dh-row1 .dt:not(h1)')];
+        if (!el.querySelector('h1')) {
+          layoutIssues.push('document detail is missing a semantic H1');
+        }
+        if (legacyTitles.length) {
+          layoutIssues.push(`document detail uses ${legacyTitles.length} non-semantic title element(s)`);
+        }
+        [...el.querySelectorAll('table.lines')].forEach((table,index)=>{
+          const parent=table.parentElement;
+          const style=parent?getComputedStyle(parent):null;
+          if (!style||!['auto','scroll'].includes(style.overflowX)) {
+            layoutIssues.push(`document detail table ${index+1} is missing a bounded horizontal scroll container`);
+          }
+        });
+        if (documentPage&&window.innerWidth>1180) {
+          const available=el.querySelector('.master')?.clientWidth||window.innerWidth;
+          const expected=Math.min(1280,Math.max(0,available-48));
+          const width=documentPage.getBoundingClientRect().width;
+          if (width+2<expected) {
+            layoutIssues.push(`document detail wastes desktop width (${Math.round(width)}<${Math.round(expected)})`);
+          }
+        }
+        const pageRect=documentPage?.getBoundingClientRect();
+        [...el.querySelectorAll('.docwrap + .set-savebar,.docwrap + .responsive-actionbar')].forEach((bar)=>{
+          const rect=bar.getBoundingClientRect();
+          if (pageRect&&window.innerWidth>980&&rect.width>pageRect.width+2) {
+            layoutIssues.push(`document action bar is wider than its document (${Math.round(rect.width)}>${Math.round(pageRect.width)})`);
+          }
+        });
+      }
       const avatarNodes = [
         ...document.querySelectorAll('#avatarBtn,.acct-head .av'),
         ...el.querySelectorAll('.kc-av,.pav,.pmini,.cav,.set-avatar'),
@@ -820,6 +867,13 @@ async function auditRoutes(browser, viewport) {
         if (window.innerWidth > 980 && contextRect.left < mainRect.right - 1) {
           layoutIssues.push('case detail main and context are not separate desktop columns');
         }
+        const actions = caseDetailRegions[4];
+        if (window.innerWidth <= 560 && actions?.offsetParent !== null) {
+          const actionRect = actions.getBoundingClientRect();
+          if (actionRect.top < Math.max(mainRect.bottom,contextRect.bottom) - 1) {
+            layoutIssues.push('case detail actions obscure review content on mobile');
+          }
+        }
       }
       if (caseDetailRoot && caseDetailRoot.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.appr-layout,.stepper')) {
         layoutIssues.push('case detail still renders legacy document chrome');
@@ -924,6 +978,14 @@ async function auditRoutes(browser, viewport) {
         }
         if (window.innerWidth > 980 && postingDetailRegions[3].offsetParent !== null && contextRect.left < mainRect.right - 1) {
           layoutIssues.push('posting detail main and context are not separate desktop columns');
+        }
+        const actions = postingDetailRegions[4];
+        if (window.innerWidth <= 560 && actions?.offsetParent !== null
+            && postingDetailRegions[3].offsetParent !== null) {
+          const actionRect = actions.getBoundingClientRect();
+          if (actionRect.top < Math.max(mainRect.bottom,contextRect.bottom) - 1) {
+            layoutIssues.push('posting detail actions obscure accounting context on mobile');
+          }
         }
       }
       if (postingDetailRoot && postingDetailRoot.querySelector('.docwrap,.docpage,.dochead,.docmeta,.doclayout,.summary')) {
@@ -1345,6 +1407,13 @@ async function auditRoutes(browser, viewport) {
             `static list rows expose false interaction affordances: ${rendered.listLayout.invalidStaticRows.join(', ')}`,
           );
         }
+        if (meta.layout === 'transaction-list-v1'
+            && rendered.listLayout.rowCount > 0
+            && rendered.listLayout.staticRows > 0) {
+          rendered.layoutIssues.push(
+            `transaction-list-v1 leaves ${rendered.listLayout.staticRows}/${rendered.listLayout.rowCount} records without a details action`,
+          );
+        }
       }
     }
     if (rendered.listLayout.present && !LIST_LAYOUTS.has(meta?.layout)) {
@@ -1475,6 +1544,205 @@ async function auditRoutes(browser, viewport) {
           && !rendered.payrollRunLayout.detailOpen) {
         rendered.layoutIssues.push('Payroll Run did not select the newest desktop run');
       }
+      const createDefaults = await page.evaluate(() => {
+        const button = document.querySelector('[data-list-primary-action]');
+        if (!(button instanceof HTMLButtonElement)) return { opened:false };
+        button.click();
+        const defaults = payrollPeriodDefaults();
+        const result = {
+          opened:Boolean(document.querySelector('#modalEl')),
+          docNo:document.querySelector('#prDocNo')?.value || '',
+          start:document.querySelector('#prStart')?.value || '',
+          end:document.querySelector('#prEnd')?.value || '',
+          payDate:document.querySelector('#prPayDate')?.value || '',
+          closeLabel:document.querySelector('#modalEl .iconbtn.x')?.getAttribute('aria-label') || '',
+          expected:defaults,
+          translatedClose:typeof t === 'function' ? t('common.close') : 'Close',
+        };
+        closeModal();
+        return result;
+      });
+      if (!createDefaults.opened) {
+        rendered.layoutIssues.push('Payroll Run create dialog did not open');
+      } else {
+        if (createDefaults.start !== createDefaults.expected.start
+            || createDefaults.end !== createDefaults.expected.end
+            || createDefaults.payDate !== createDefaults.expected.payDate) {
+          rendered.layoutIssues.push('Payroll Run create dates do not match the selected fiscal period');
+        }
+        if (!createDefaults.docNo.startsWith(`PAY-${createDefaults.expected.year}-`)) {
+          rendered.layoutIssues.push('Payroll Run number does not use the selected fiscal period year');
+        }
+        if (createDefaults.closeLabel !== createDefaults.translatedClose) {
+          rendered.layoutIssues.push('Payroll Run dialog close label is not localized');
+        }
+      }
+    }
+    if (route === 'payslip') {
+      const payslipContract = await page.evaluate(() => {
+        const copy=hrCopy();
+        const text=document.querySelector('#viewRoot')?.textContent||'';
+        const page=document.querySelector('.payslip-page');
+        const layout=document.querySelector('.payslip-layout');
+        const summary=document.querySelector('.payslip-summary');
+        const related=document.querySelector('.payslip-related');
+        const relatedList=related?.querySelector('.minilist');
+        const actionbar=document.querySelector('.payslip-actionbar');
+        const overflow=[page,layout,summary,related,actionbar]
+          .filter((node)=>node&&node.offsetParent!==null&&node.scrollWidth>node.clientWidth+1)
+          .map((node)=>`${node.className||node.tagName} ${node.scrollWidth}>${node.clientWidth}`);
+        return {
+          isDraft:text.includes(copy('statusDraft')),
+          hasDisbursed:text.includes(copy('netPayDisbursed')),
+          hasPending:text.includes(copy('netPayPending')),
+          hasScheduled:text.includes(copy('scheduledFor').replace('{date}','').split(';')[0].trim()),
+          hasStructure:Boolean(page&&layout&&summary&&related&&actionbar),
+          pageWidth:page?.getBoundingClientRect().width||0,
+          layoutColumns:layout?getComputedStyle(layout).gridTemplateColumns:'',
+          summaryColumns:summary?getComputedStyle(summary).gridTemplateColumns:'',
+          relatedColumns:relatedList?getComputedStyle(relatedList).gridTemplateColumns:'',
+          overflow,
+        };
+      });
+      if (payslipContract.isDraft && (payslipContract.hasDisbursed || !payslipContract.hasPending || !payslipContract.hasScheduled)) {
+        rendered.layoutIssues.push('Draft payslip presents net pay as disbursed instead of scheduled and unpaid');
+      }
+      if (!payslipContract.hasStructure) {
+        rendered.layoutIssues.push('Payslip is missing its responsive document, related-data or action regions');
+      }
+      if (payslipContract.overflow.length) {
+        rendered.layoutIssues.push(`Payslip internal overflow: ${payslipContract.overflow.join(', ')}`);
+      }
+      if (viewport.width > 980 && payslipContract.pageWidth < 1000) {
+        rendered.layoutIssues.push(`Payslip wastes the desktop canvas (${Math.round(payslipContract.pageWidth)}px wide)`);
+      }
+      if (viewport.width > 980 && payslipContract.layoutColumns.split(' ').filter(Boolean).length < 2) {
+        rendered.layoutIssues.push('Payslip desktop detail and summary are not separate columns');
+      }
+      if (viewport.width <= 620 && payslipContract.summaryColumns.split(' ').filter(Boolean).length !== 1) {
+        rendered.layoutIssues.push('Payslip mobile summary does not collapse to one column');
+      }
+      if (viewport.width <= 620 && payslipContract.relatedColumns.split(' ').filter(Boolean).length !== 1) {
+        rendered.layoutIssues.push('Payslip mobile related records do not collapse to one column');
+      }
+    }
+    if (route === 'hr-directory') {
+      const employeeSearch = page.locator('[data-list-search]');
+      if (await employeeSearch.count() !== 1) {
+        rendered.layoutIssues.push('Employee directory has no accessible employee search');
+      } else {
+        const employeeNo = await page.locator('[data-list-table] .dt-r[data-row] .cellsub small').first().textContent();
+        if (employeeNo?.trim()) {
+          await employeeSearch.fill(employeeNo.trim());
+          await page.waitForTimeout(40);
+          const resultCount = await page.locator('[data-list-table] .dt-r[data-row]').count();
+          const focused = await page.evaluate(() => document.activeElement?.matches('[data-list-search]'));
+          if (resultCount !== 1 || !focused) {
+            rendered.layoutIssues.push(`Employee search returned ${resultCount} rows or lost keyboard focus`);
+          }
+        }
+        await page.locator('[data-list-search]').fill('__no_matching_employee__');
+        await page.waitForTimeout(40);
+        if (await page.locator('[data-list-empty]').count() !== 1) {
+          rendered.layoutIssues.push('Employee search has no governed no-results state');
+        }
+      }
+    }
+    if (route === 'dashboard' && viewport.width > 980) {
+      const arAgingCard = page.locator('#viewRoot button.wcard[data-route="ar-aging"]');
+      if (await arAgingCard.count() !== 1) {
+        rendered.layoutIssues.push('Dashboard AR aging card is missing or does not target ar-aging');
+      } else {
+        await arAgingCard.click();
+        await page.waitForFunction(() => CURRENT_ROUTE === 'ar-aging',null,{timeout:5000}).catch(()=>{});
+        if (await page.evaluate(() => CURRENT_ROUTE) !== 'ar-aging') {
+          rendered.layoutIssues.push('Dashboard AR aging card did not navigate to ar-aging');
+        }
+        await page.evaluate(() => navigate('dashboard'));
+        await page.waitForSelector('.dashgrid',{timeout:5000});
+      }
+      await page.locator('#ctxCompany').click();
+      await page.locator('[data-co="C-MY"]').click();
+      await page.waitForFunction(() => {
+        const company=document.querySelector('#ctxCompany')?.textContent||'';
+        const period=document.querySelector('#ctxPeriod')?.textContent||'';
+        return company.includes('Acme Malaysia') && period.includes('MYR');
+      },null,{timeout:5000}).catch(()=>{});
+      const malaysiaContext = await page.evaluate(() => ({
+        company:document.querySelector('#ctxCompany')?.textContent||'',
+        period:document.querySelector('#ctxPeriod')?.textContent||'',
+      }));
+      if (!malaysiaContext.company.includes('Acme Malaysia') || !malaysiaContext.period.includes('MYR')) {
+        rendered.layoutIssues.push(`Malaysia company switch left a stale fiscal context: ${malaysiaContext.period.trim()}`);
+      }
+      await page.locator('#ctxCompany').click();
+      await page.locator('[data-co="C-SG"]').click();
+      await page.waitForFunction(() => {
+        const company=document.querySelector('#ctxCompany')?.textContent||'';
+        const period=document.querySelector('#ctxPeriod')?.textContent||'';
+        return company.includes('Acme Singapore') && period.includes('SGD');
+      },null,{timeout:5000}).catch(()=>{});
+      const singaporeContext = await page.evaluate(() => ({
+        company:document.querySelector('#ctxCompany')?.textContent||'',
+        period:document.querySelector('#ctxPeriod')?.textContent||'',
+      }));
+      if (!singaporeContext.company.includes('Acme Singapore') || !singaporeContext.period.includes('SGD')) {
+        rendered.layoutIssues.push(`Singapore company switch left a stale fiscal context: ${singaporeContext.period.trim()}`);
+      }
+      await page.evaluate(() => window.ErpSystemDemo.switchUser('sales@acme.co'));
+      await page.reload({waitUntil:'networkidle',timeout:30000});
+      await page.waitForFunction(() => typeof DB!=='undefined' && DB.user?.email==='sales@acme.co',null,{timeout:15000});
+      await page.waitForSelector('#sidebar .nav[data-mod="home"]',{timeout:5000});
+      await page.waitForSelector('.dash',{timeout:5000});
+      const salesShell = await page.evaluate(() => ({
+        sidebar:[...document.querySelectorAll('#sidebar .nav[data-mod]')].map(node=>node.dataset.mod),
+        quickCreate:[...document.querySelectorAll('#qcMenu [data-route]')].map(node=>node.dataset.route),
+        companies:[...document.querySelectorAll('#companyMenu [data-co]')].map(node=>node.dataset.co),
+        masterControl:document.querySelectorAll('#companyMenu [data-co-action="master"]').length,
+        dashboardRoutes:[...document.querySelectorAll('#viewRoot .wcard[data-route]')].map(node=>node.dataset.route),
+        approvalQueue:document.querySelectorAll('#viewRoot .minilist').length,
+        headerKpis:document.querySelectorAll('#viewRoot .headright .kfig').length,
+      }));
+      // Every linked staff persona also receives the system-managed Employee
+      // base role, so Sales must retain My Work without gaining unrelated
+      // company operations or finance controls.
+      if (JSON.stringify(salesShell.sidebar)!==JSON.stringify(['home','sales','crm','mywork'])
+          || JSON.stringify(salesShell.quickCreate)!==JSON.stringify(['new-sales-order'])
+          || JSON.stringify(salesShell.companies)!==JSON.stringify(['C-SG'])
+          || salesShell.masterControl!==0
+          || salesShell.dashboardRoutes.some(routeName=>routeName!=='sales-orders')
+          || salesShell.approvalQueue!==0
+          || salesShell.headerKpis!==2) {
+        rendered.layoutIssues.push(`Sales permission-aware shell leaked unavailable controls or data: ${JSON.stringify(salesShell)}`);
+      }
+      await page.evaluate(() => navigate('new-journal-entry'));
+      await page.waitForSelector('[data-access-denied="403"]',{timeout:5000});
+      const deniedCreate = await page.evaluate(() => ({
+        form:document.querySelectorAll('[data-manual-journal="canonical"]').length,
+        text:document.querySelector('#viewRoot')?.textContent||'',
+      }));
+      if (deniedCreate.form || !deniedCreate.text.includes('403') || !deniedCreate.text.includes('No records were loaded')) {
+        rendered.layoutIssues.push('Sales direct-create denial exposed the manual-journal composer or lacked governed 403 copy');
+      }
+      await page.evaluate(() => navigate('dashboard'));
+      await page.waitForSelector('.dash',{timeout:5000});
+      await page.evaluate(() => navigate('purchasing-home'));
+      await page.waitForSelector('[data-access-denied="403"]',{timeout:5000});
+      const deniedRoute = await page.evaluate(() => ({
+        rows:document.querySelectorAll('#viewRoot [data-row]').length,
+        subnav:document.querySelectorAll('#viewRoot .sales-subnav').length,
+        text:document.querySelector('#viewRoot')?.textContent||'',
+        nav:document.querySelector('#sidebar')?.textContent||'',
+      }));
+      if (deniedRoute.rows || deniedRoute.subnav || deniedRoute.nav.includes('Purchasing')
+          || !deniedRoute.text.includes('403') || !deniedRoute.text.includes('No records were loaded')) {
+        rendered.layoutIssues.push('Sales permission denial leaked purchasing UI/data or lacked governed 403 copy');
+      }
+      await page.evaluate(() => window.ErpSystemDemo.switchUser('admin@acme.co'));
+      await page.reload({waitUntil:'networkidle',timeout:30000});
+      await page.waitForFunction(() => typeof DB!=='undefined' && DB.user?.email==='admin@acme.co',null,{timeout:15000});
+      await page.evaluate(() => navigate('dashboard'));
+      await page.waitForSelector('.dashgrid',{timeout:5000});
     }
     if (meta?.layout === OPERATIONAL_WORKSPACE_LAYOUT) {
       if (!rendered.workspaceLayout.present) {
@@ -1529,6 +1797,35 @@ async function auditRoutes(browser, viewport) {
     }
     if (rendered.masterDetailEditorLayout.present && meta?.layout !== MASTER_DETAIL_EDITOR_LAYOUT) {
       rendered.layoutIssues.push(`rendered ${rendered.masterDetailEditorLayout.actualLayout} but declared ${meta?.layout || 'none'}`);
+    }
+    if (route === 'new-employee') {
+      const onboarding = await page.evaluate(() => {
+        const next = document.querySelector('#neNext');
+        if (!(next instanceof HTMLButtonElement)) return { present:false };
+        const before = {
+          dots:document.querySelectorAll('.staff-onboarding-progress .sdot').length,
+          connectors:document.querySelectorAll('.staff-onboarding-progress .stepline').length,
+          managerSearch:Boolean(document.querySelector('#neManager[role="combobox"]')),
+          saveContext:Boolean(document.querySelector('.staff-onboarding-save-context b + small')),
+        };
+        next.click();
+        return {
+          present:true,
+          ...before,
+          invalidFields:document.querySelectorAll('[aria-invalid="true"]').length,
+          bannerVisible:Boolean(document.querySelector('[data-staff-onboarding-error]:not([hidden])')),
+          firstInvalidFocused:document.activeElement?.id === 'neName',
+        };
+      });
+      if (!onboarding.present) rendered.layoutIssues.push('Staff onboarding primary action is missing');
+      if (onboarding.dots !== 3 || onboarding.connectors !== 2) {
+        rendered.layoutIssues.push(`Staff onboarding progress expected 3 steps and 2 connectors, found ${onboarding.dots} and ${onboarding.connectors}`);
+      }
+      if (!onboarding.managerSearch) rendered.layoutIssues.push('Staff onboarding manager selector is not searchable');
+      if (!onboarding.saveContext) rendered.layoutIssues.push('Staff onboarding save context is not separated into two lines');
+      if (onboarding.invalidFields !== 5 || !onboarding.bannerVisible || !onboarding.firstInvalidFocused) {
+        rendered.layoutIssues.push('Staff onboarding required-field feedback is incomplete or does not focus the first invalid field');
+      }
     }
     if (route === 'employee') {
       if (!rendered.employeeLayout.canonicalMarker) {
@@ -1809,9 +2106,60 @@ async function auditRoutes(browser, viewport) {
       && !rendered.layoutProfile.formSurface
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
-      && !['report','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT].includes(meta?.layout);
+      && !['report','document-detail','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT].includes(meta?.layout);
     if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
+    }
+
+    if (meta?.layout === 'transaction-list-v1' && rendered.listLayout.rowCount > 0) {
+      await page.evaluate((originalRoute) => navigate(originalRoute),route);
+      const listSelector=`[data-layout="transaction-list-v1"][data-list-route="${route}"]`;
+      await page.waitForSelector(listSelector,{state:'visible',timeout:5000});
+      const row=page.locator(`${listSelector} [data-list-table] .dt-body .dt-r[data-row]`).first();
+      const rowPresent=await row.count()===1;
+      const beforeParams=rowPresent
+        ?await page.evaluate(()=>JSON.stringify(CURRENT_ROUTE_PARAMS||{}))
+        :'{}';
+      if (rowPresent) {
+        await row.click();
+        await page.waitForFunction(({originalRoute,params,listSelector})=>{
+          const modal=Boolean(document.querySelector('#modalEl'));
+          const navigated=(CURRENT_ROUTE!==originalRoute||JSON.stringify(CURRENT_ROUTE_PARAMS||{})!==params)
+            && !document.querySelector(listSelector)
+            && !document.querySelector('#viewRoot .screen-loading');
+          const inPageDetail=Boolean(document.querySelector(
+            '[data-master-detail-panel].open,[data-layout="document-detail"],[data-layout="case-detail-v1"],[data-layout="ledger-detail-v1"],[data-layout="posting-detail-v1"]',
+          ));
+          return modal||navigated||inPageDetail;
+        },{originalRoute:route,params:beforeParams,listSelector},{timeout:5000}).catch(()=>{});
+      }
+      const detailProbe = await page.evaluate((originalRoute) => {
+        const modal=document.querySelector('#modalEl');
+        const navigated=CURRENT_ROUTE!==originalRoute;
+        const inPageDetail=Boolean(document.querySelector(
+          '[data-master-detail-panel].open,[data-layout="document-detail"],[data-layout="case-detail-v1"],[data-layout="ledger-detail-v1"],[data-layout="posting-detail-v1"]',
+        ));
+        return {
+          opened:Boolean(modal)||navigated||inPageDetail,
+          outcome:modal?(modal.querySelector('[data-record-preview]')?'record-preview':'modal'):(navigated?'navigation':(inPageDetail?'in-page-detail':'none')),
+        };
+      },route);
+      if (!rowPresent || !detailProbe.opened) {
+        rendered.layoutIssues.push('first transaction record did not open a detail view');
+      }
+      await page.evaluate((originalRoute) => {
+        if (document.querySelector('#modalEl')) closeModal();
+        navigate(originalRoute);
+      },route);
+      try {
+        await page.waitForSelector(listSelector,{state:'visible',timeout:5000});
+      } catch {
+        // A slow native detail request may finish after the first restore.
+        // Re-issue the list navigation only after that response has settled.
+        await page.waitForTimeout(SETTLE_MS);
+        await page.evaluate((originalRoute)=>navigate(originalRoute),route);
+        await page.waitForSelector(listSelector,{state:'visible',timeout:5000});
+      }
     }
 
     results.push({
@@ -1954,6 +2302,14 @@ async function auditRoutes(browser, viewport) {
 
         setContext(false);
         renderSidebar();
+        syncTeamCalendarEntry();
+        if (!document.querySelector('#calendarBtn')?.hidden) {
+          issues.push('employee without team capability can see the global calendar entry');
+        }
+        await navigate('team-calendar');
+        if (!document.querySelector('#viewRoot [data-access-denied="403"]')) {
+          issues.push('employee without team capability did not receive a fail-closed calendar route');
+        }
         const expectedTitles = {
           en:'My Leave',ms:'Cuti Saya',zh:'我的请假',ja:'自分の休暇',vi:'Nghỉ phép của tôi',
         };
@@ -2008,6 +2364,17 @@ async function auditRoutes(browser, viewport) {
 
         setContext(true);
         renderSidebar();
+        syncTeamCalendarEntry();
+        const calendarEntry=document.querySelector('#calendarBtn');
+        if (!calendarEntry || calendarEntry.hidden) {
+          issues.push('manager capability did not expose the global calendar entry');
+        } else {
+          calendarEntry.click();
+          await new Promise((resolve)=>setTimeout(resolve,50));
+          if (!document.querySelector('#viewRoot [data-layout="calendar-workspace-v1"]')) {
+            issues.push('global calendar entry did not open the canonical calendar workspace');
+          }
+        }
         await navigate('team-calendar');
         const managerRoot=document.querySelector('#viewRoot [data-my-work-shell="true"]');
         const managerTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
@@ -2124,18 +2491,21 @@ async function auditRoutes(browser, viewport) {
       }
 
       await navigate('user-mgmt');
-      const staticRow=document.querySelector('#viewRoot [data-list-route="user-mgmt"] .dt-r[data-row]');
-      if (!staticRow) {
-        issues.push('User Management has no static row for interaction proof');
+      const previewRow=document.querySelector('#viewRoot [data-list-route="user-mgmt"] .dt-r[data-row]');
+      if (!previewRow) {
+        issues.push('User Management has no row for record-preview proof');
       } else {
-        staticRow.click();
+        previewRow.click();
         await settle();
-        if (CURRENT_ROUTE!=='user-mgmt') issues.push('static User row unexpectedly navigated');
-        if (staticRow.classList.contains('sel')) issues.push('static User row acquired a false selected state');
-        if (staticRow.dataset.rowInteraction!=='none'||staticRow.hasAttribute('tabindex')
-            ||getComputedStyle(staticRow).cursor==='pointer') {
-          issues.push('static User row exposes open affordances');
+        if (CURRENT_ROUTE!=='user-mgmt') issues.push('User record preview unexpectedly navigated');
+        if (!document.querySelector('#modalEl [data-record-preview]')) {
+          issues.push('User row did not open the shared record preview');
         }
+        if (previewRow.dataset.rowInteraction!=='open'||previewRow.tabIndex!==0
+            ||!previewRow.getAttribute('aria-label')||getComputedStyle(previewRow).cursor!=='pointer') {
+          issues.push('User row is missing the accessible record-preview affordance');
+        }
+        closeModal();
       }
       return issues;
     });
@@ -2469,18 +2839,17 @@ async function auditRoutes(browser, viewport) {
           const payDate = modal.querySelector('#prPayDate');
           const create = modal.querySelector('[data-payroll-create]');
           const error = modal.querySelector('[data-payroll-create-error]');
-          const localIso = (date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-          const now = new Date();
-          const expectedStart = localIso(new Date(now.getFullYear(),now.getMonth(),1));
-          const expectedEnd = localIso(new Date(now.getFullYear(),now.getMonth()+1,0));
-          const expectedPayDate = localIso(now);
+          const defaults = payrollPeriodDefaults();
+          const expectedStart = defaults.start;
+          const expectedEnd = defaults.end;
+          const expectedPayDate = defaults.payDate;
           const modalRect = modal.getBoundingClientRect();
           const createRect = create?.getBoundingClientRect();
           if (!start || !end || !payDate || !create || !error) {
             issues.push('new payroll run modal is missing its period fields');
           } else {
             if (start.value !== expectedStart || end.value !== expectedEnd || payDate.value !== expectedPayDate) {
-              issues.push(`new payroll run defaults are not local calendar dates: ${start.value}/${end.value}/${payDate.value}`);
+              issues.push(`new payroll run defaults do not follow the active fiscal period: ${start.value}/${end.value}/${payDate.value}`);
             }
             if (!error.hidden || getComputedStyle(error).display !== 'none') {
               issues.push('new payroll run modal exposes its empty error before validation');
@@ -3824,7 +4193,10 @@ async function auditRoutes(browser, viewport) {
         }
         adapter.list = originalList;
         errorRoot?.querySelector('[data-ledger-retry]')?.click();
-        await new Promise((resolve) => setTimeout(resolve,250));
+        for (let attempt=0; attempt<20; attempt+=1) {
+          await new Promise((resolve) => setTimeout(resolve,100));
+          if (ledgerRoot()&&!ledgerRoot()?.querySelector('[data-ledger-error]:not([hidden])')) break;
+        }
         if (!ledgerRoot() || ledgerRoot()?.querySelector('[data-ledger-error]:not([hidden])')) {
           issues.push('Retry did not recover the Account Ledger');
         }
@@ -3911,7 +4283,10 @@ async function auditRoutes(browser, viewport) {
         }
         adapter.list = originalList;
         errorRoot?.querySelector('[data-posting-retry]')?.click();
-        await new Promise((resolve) => setTimeout(resolve,250));
+        for (let attempt=0; attempt<20; attempt+=1) {
+          await new Promise((resolve) => setTimeout(resolve,100));
+          if (postingRoot()&&!postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) break;
+        }
         if (!postingRoot() || postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) {
           issues.push('Retry did not recover the Journal Entry');
         }
@@ -4170,7 +4545,10 @@ async function auditRoutes(browser, viewport) {
           ? {data:[movement],meta:{nextCursor:null}}
           : originalListPage(resource);
         errorRoot?.querySelector('[data-posting-retry]')?.click();
-        await new Promise((resolve) => setTimeout(resolve,250));
+        for (let attempt=0; attempt<20; attempt+=1) {
+          await new Promise((resolve) => setTimeout(resolve,100));
+          if (postingRoot()&&!postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) break;
+        }
         if (!postingRoot() || postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) {
           issues.push('Retry did not recover the Goods Receipt');
         }

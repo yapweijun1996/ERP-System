@@ -128,6 +128,45 @@ describe('completeDemoSetup', () => {
     }]);
   });
 
+  it('applies the entered credentials when setup reuses the exact seeded admin identity', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const usersBefore = await db.select().from(appUser);
+
+    const result = await completeDemoSetup(db, {
+      masterFn: 'M1',
+      organizationCode: 'ACME',
+      companyFn: 'C-SG-SECOND',
+      companyName: 'Acme Singapore Second',
+      country: 'SG',
+      adminName: 'Avery Tan',
+      adminUsername: 'admin',
+      adminEmail: 'admin@acme.co',
+      adminPasswordHash: PASSWORD_HASH,
+      language: 'ms',
+    });
+
+    expect(await db.select().from(appUser)).toHaveLength(usersBefore.length);
+    const [admin] = await db.select().from(appUser).where(and(
+      eq(appUser.masterFn, 'M1'),
+      eq(appUser.username, 'admin'),
+    ));
+    expect(admin).toMatchObject({
+      userId: result.userId,
+      email: 'admin@acme.co',
+      fullName: 'Avery Tan',
+      passwordHash: PASSWORD_HASH,
+      language: 'ms',
+      isActive: true,
+      accountState: 'active',
+      passwordChangeRequired: false,
+    });
+    expect(await db.select().from(userCompany).where(and(
+      eq(userCompany.userId, admin.userId),
+      eq(userCompany.companyFn, 'C-SG-SECOND'),
+    ))).toHaveLength(1);
+  });
+
   it('rejects a plaintext password before writing anything', async () => {
     const db = await freshDb();
     await seedDemo(db);

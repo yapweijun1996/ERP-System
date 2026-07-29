@@ -582,7 +582,9 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['post'],
     createPermission: 'payroll.write',
   }),
-  'payroll/run-lines': resource(payrollRunLine, 'payroll.read'),
+  'payroll/run-lines': resource(payrollRunLine, 'payroll.read', {
+    numericFilters: { runId: payrollRunLine.runId },
+  }),
   'payroll/leave-types': resource(leaveType, 'payroll.read'),
   'payroll/leave-policies': resource(leavePolicyVersion, 'payroll.read'),
   'payroll/leave-sources': resource(payrollLeaveSource, 'payroll.read', {
