@@ -116,18 +116,22 @@ export function createHttpByokVisionExtractor(urlValue: string): DocumentExtract
   const url = boundedUrl(urlValue, 'DOCUMENT_VISION_GATEWAY_URL');
   return {
     async extract(input) {
-      if (!input.credential || !input.region || input.retentionDays == null) {
-        throw new Error('BYOK Vision requires credential, region and retention policy.');
+      if (!input.region || input.retentionDays == null) {
+        throw new Error('BYOK Vision requires region and retention policy.');
       }
+      const headers: Record<string, string> = {
+        'content-type': input.mimeType,
+        'x-content-sha256': input.sha256,
+        'x-data-region': input.region,
+        'x-retention-days': String(input.retentionDays),
+      };
+      if (input.credential) headers.authorization = `Bearer ${input.credential}`;
+      if (input.provider) headers['x-vision-provider'] = input.provider;
+      if (input.baseUrl) headers['x-provider-base-url'] = input.baseUrl;
+      if (input.model) headers['x-provider-model'] = input.model;
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          authorization: `Bearer ${input.credential}`,
-          'content-type': input.mimeType,
-          'x-content-sha256': input.sha256,
-          'x-data-region': input.region,
-          'x-retention-days': String(input.retentionDays),
-        },
+        headers,
         body: Buffer.from(input.content),
         signal: AbortSignal.timeout(120_000),
       });

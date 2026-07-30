@@ -121,6 +121,38 @@ describe('canonical control-plane API', () => {
     expect(documentPolicyReplay.status).toBe(200);
     expect(documentPolicyReplay.headers.get('idempotency-replayed')).toBe('true');
 
+    const compatiblePolicy = await fetch(
+      `${baseUrl}/api/integration/document-processing-policy/actions/update`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: auth.header,
+          'x-csrf-token': auth.csrf,
+          'content-type': 'application/json',
+          'idempotency-key': 'document-policy-openai-compatible',
+        },
+        body: JSON.stringify({
+          extractionProvider: 'byok_vision',
+          visionProvider: 'openai_compatible',
+          visionRegion: 'local',
+          visionRetentionDays: 0,
+          visionBaseUrl: 'http://127.0.0.1:1234/v1',
+          visionModel: 'receipt-vision-local',
+          visionCredentialRequired: false,
+        }),
+      },
+    );
+    expect(compatiblePolicy.status).toBe(200);
+    expect(await compatiblePolicy.json()).toMatchObject({
+      data: {
+        extractionProvider: 'byok_vision',
+        visionProvider: 'openai_compatible',
+        visionBaseUrl: 'http://127.0.0.1:1234/v1',
+        visionModel: 'receipt-vision-local',
+        visionCredentialRequired: false,
+      },
+    });
+
     const belowMinimum = await fetch(
       `${baseUrl}/api/integration/receipt-auto-submit-policy/actions/update`,
       {

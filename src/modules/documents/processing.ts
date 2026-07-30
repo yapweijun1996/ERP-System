@@ -81,6 +81,9 @@ export interface DocumentExtractor {
     region?: string;
     retentionDays?: number;
     credential?: string;
+    provider?: string;
+    baseUrl?: string;
+    model?: string;
   }): Promise<ExtractionResult>;
 }
 
@@ -223,6 +226,9 @@ async function policyFor(db: DB, scope: Scope) {
     visionProvider: null,
     visionRegion: null,
     visionRetentionDays: null,
+    visionBaseUrl: null,
+    visionModel: null,
+    visionCredentialRequired: true,
     autoSubmitEnabled: false,
     autoSubmitMinConfidence: '0.9800',
   };
@@ -512,19 +518,21 @@ async function createExtractionAfterClean(
         eq(integrationConnector.companyFn, scope.companyFn),
         eq(integrationConnector.connectorKey, 'document-vision'),
       )).limit(1);
-      model = `${policy.visionProvider ?? 'vision'}-vision`;
+      model = policy.visionModel ?? `${policy.visionProvider ?? 'vision'}-vision`;
       if (
         !options.vision
         || !policy.visionProvider
         || !policy.visionRegion
         || policy.visionRetentionDays == null
-        || !connector
-        || !connector.enabled
-        || connector.status !== 'connected'
-        || !connector.credentialEnvelope
+        || (policy.visionCredentialRequired && (
+          !connector
+          || !connector.enabled
+          || connector.status !== 'connected'
+          || !connector.credentialEnvelope
+        ))
       ) {
         status = 'unavailable';
-        error = 'BYOK Vision requires a connected credential, provider, region and retention policy.';
+        error = 'BYOK Vision requires a configured provider, gateway and retention policy.';
       }
     }
     await tx.insert(documentExtraction).values({
@@ -730,7 +738,7 @@ export async function processDocumentJobBatch(
           : 'BYOK Vision is unavailable.',
       );
       let credential: string | undefined;
-      if (job.provider === 'byok_vision') {
+      if (job.provider === 'byok_vision' && policy.visionCredentialRequired) {
         if (!connector?.enabled || connector.status !== 'connected'
           || !connector.credentialEnvelope || !policy.visionRegion
           || policy.visionRetentionDays == null) {
@@ -753,6 +761,9 @@ export async function processDocumentJobBatch(
         region: policy.visionRegion ?? undefined,
         retentionDays: policy.visionRetentionDays ?? undefined,
         credential,
+        provider: policy.visionProvider ?? undefined,
+        baseUrl: policy.visionBaseUrl ?? undefined,
+        model: policy.visionModel ?? undefined,
       });
       const completed = await withTenantTransaction(db, scope, async (tx) => {
         if (source.document.purpose === 'receipt') {

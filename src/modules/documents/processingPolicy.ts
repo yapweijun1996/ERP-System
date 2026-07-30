@@ -20,9 +20,12 @@ export type DocumentProcessingPolicyInput =
   | { extractionProvider: 'local_ocr' }
   | {
     extractionProvider: 'byok_vision';
-    visionProvider: 'openai' | 'google';
+    visionProvider: 'openai' | 'google' | 'openai_compatible';
     visionRegion: string;
     visionRetentionDays: number;
+    visionBaseUrl?: string;
+    visionModel?: string;
+    visionCredentialRequired?: boolean;
   };
 
 export class DocumentProcessingPolicyError extends Error {
@@ -36,6 +39,9 @@ const PUBLIC_COLUMNS = {
   visionProvider: documentProcessingPolicy.visionProvider,
   visionRegion: documentProcessingPolicy.visionRegion,
   visionRetentionDays: documentProcessingPolicy.visionRetentionDays,
+  visionBaseUrl: documentProcessingPolicy.visionBaseUrl,
+  visionModel: documentProcessingPolicy.visionModel,
+  visionCredentialRequired: documentProcessingPolicy.visionCredentialRequired,
   autoSubmitEnabled: documentProcessingPolicy.autoSubmitEnabled,
   autoSubmitMinConfidence: documentProcessingPolicy.autoSubmitMinConfidence,
   version: documentProcessingPolicy.version,
@@ -55,6 +61,9 @@ export async function getDocumentProcessingPolicyWithin(
     visionProvider: null,
     visionRegion: null,
     visionRetentionDays: null,
+    visionBaseUrl: null,
+    visionModel: null,
+    visionCredentialRequired: true,
     autoSubmitEnabled: false,
     autoSubmitMinConfidence: '0.9800',
     version: 0,
@@ -69,6 +78,9 @@ function normalizePolicy(input: DocumentProcessingPolicyInput) {
       visionProvider: null,
       visionRegion: null,
       visionRetentionDays: null,
+      visionBaseUrl: null,
+      visionModel: null,
+      visionCredentialRequired: true,
     };
   }
   const region = input.visionRegion.trim();
@@ -85,11 +97,41 @@ function normalizePolicy(input: DocumentProcessingPolicyInput) {
       'Vision retention must be a whole number from 0 to 365 days.',
     );
   }
+  const compatible = input.visionProvider === 'openai_compatible';
+  let visionBaseUrl: string | null = null;
+  let visionModel: string | null = null;
+  if (compatible) {
+    try {
+      const parsed = new URL(input.visionBaseUrl?.trim() ?? '');
+      if (!['http:', 'https:'].includes(parsed.protocol)
+        || parsed.username || parsed.password || parsed.search || parsed.hash) {
+        throw new Error('unsupported URL');
+      }
+      visionBaseUrl = parsed.toString().replace(/\/$/, '');
+    } catch {
+      throw new DocumentProcessingPolicyError(
+        'invalid_compatible_base_url',
+        'OpenAI-compatible base URL must be an absolute HTTP(S) URL without credentials, query or fragment.',
+      );
+    }
+    visionModel = input.visionModel?.trim() ?? '';
+    if (!visionModel || visionModel.length > 160 || /[\r\n]/.test(visionModel)) {
+      throw new DocumentProcessingPolicyError(
+        'invalid_compatible_model',
+        'OpenAI-compatible model must contain 1–160 characters.',
+      );
+    }
+  }
   return {
     extractionProvider: 'byok_vision' as const,
     visionProvider: input.visionProvider,
     visionRegion: region,
     visionRetentionDays: input.visionRetentionDays,
+    visionBaseUrl,
+    visionModel,
+    visionCredentialRequired: compatible
+      ? input.visionCredentialRequired !== false
+      : true,
   };
 }
 
@@ -100,7 +142,7 @@ export async function configureDocumentProcessingPolicyWithin(
   input: DocumentProcessingPolicyInput,
 ) {
   const values = normalizePolicy(input);
-  if (values.extractionProvider === 'byok_vision') {
+  if (values.extractionProvider === 'byok_vision' && values.visionCredentialRequired) {
     const [connector] = await exec.select({
       status: integrationConnector.status,
       enabled: integrationConnector.enabled,

@@ -80,10 +80,13 @@ export function createTaxEvidenceRouter(db: DB): Router {
       filters: {
         startDate: String(req.body?.filters?.startDate ?? ''),
         endDate: String(req.body?.filters?.endDate ?? ''),
+        employeeIds: req.body?.filters?.employeeIds,
         categoryCodes: req.body?.filters?.categoryCodes,
         projectKeys: req.body?.filters?.projectKeys,
+        currencyCodes: req.body?.filters?.currencyCodes,
         taxStates: req.body?.filters?.taxStates,
         completeness: req.body?.filters?.completeness,
+        paperCustodyStatuses: req.body?.filters?.paperCustodyStatuses,
       },
     };
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };

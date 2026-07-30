@@ -151,6 +151,9 @@ export const documentProcessingPolicy = pgTable('document_processing_policy', {
   visionProvider: text('vision_provider'),
   visionRegion: text('vision_region'),
   visionRetentionDays: integer('vision_retention_days'),
+  visionBaseUrl: text('vision_base_url'),
+  visionModel: text('vision_model'),
+  visionCredentialRequired: boolean('vision_credential_required').notNull().default(true),
   autoSubmitEnabled: boolean('auto_submit_enabled').notNull().default(false),
   autoSubmitMinConfidence: numeric('auto_submit_min_confidence', {
     precision: 5,
@@ -165,16 +168,25 @@ export const documentProcessingPolicy = pgTable('document_processing_policy', {
   check('ck_document_processing_policy_provider',
     sql`${t.extractionProvider} in ('local_ocr', 'byok_vision')`),
   check('ck_document_processing_policy_vision_provider',
-    sql`${t.visionProvider} is null or ${t.visionProvider} in ('openai', 'google')`),
+    sql`${t.visionProvider} is null
+      or ${t.visionProvider} in ('openai', 'google', 'openai_compatible')`),
   check('ck_document_processing_policy_vision_config',
     sql`(${t.extractionProvider} = 'local_ocr'
       and ${t.visionProvider} is null
       and ${t.visionRegion} is null
-      and ${t.visionRetentionDays} is null)
+      and ${t.visionRetentionDays} is null
+      and ${t.visionBaseUrl} is null
+      and ${t.visionModel} is null)
       or (${t.extractionProvider} = 'byok_vision'
         and char_length(${t.visionProvider}) > 0
         and char_length(${t.visionRegion}) between 2 and 80
-        and ${t.visionRetentionDays} between 0 and 365)`),
+        and ${t.visionRetentionDays} between 0 and 365
+        and ((${t.visionProvider} in ('openai', 'google')
+            and ${t.visionBaseUrl} is null and ${t.visionModel} is null
+            and ${t.visionCredentialRequired} = true)
+          or (${t.visionProvider} = 'openai_compatible'
+            and char_length(${t.visionBaseUrl}) between 8 and 500
+            and char_length(${t.visionModel}) between 1 and 160)))`),
   check('ck_document_processing_policy_version', sql`${t.version} > 0`),
   check('ck_document_processing_policy_auto_submit_confidence',
     sql`${t.autoSubmitMinConfidence} between 0.9800 and 1.0000`),

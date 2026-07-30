@@ -78,15 +78,26 @@ export function createIntegrationRouter(db: DB, encryptionKey?: Buffer): Router 
             policyInput = { extractionProvider: 'local_ocr' };
           } else if (
             provider === 'byok_vision'
-            && (payload.visionProvider === 'openai' || payload.visionProvider === 'google')
+            && ['openai', 'google', 'openai_compatible'].includes(
+              String(payload.visionProvider ?? ''),
+            )
             && typeof payload.visionRegion === 'string'
             && typeof payload.visionRetentionDays === 'number'
           ) {
             policyInput = {
               extractionProvider: 'byok_vision',
-              visionProvider: payload.visionProvider,
+              visionProvider: payload.visionProvider as 'openai' | 'google' | 'openai_compatible',
               visionRegion: payload.visionRegion,
               visionRetentionDays: payload.visionRetentionDays,
+              visionBaseUrl: typeof payload.visionBaseUrl === 'string'
+                ? payload.visionBaseUrl
+                : undefined,
+              visionModel: typeof payload.visionModel === 'string'
+                ? payload.visionModel
+                : undefined,
+              visionCredentialRequired: typeof payload.visionCredentialRequired === 'boolean'
+                ? payload.visionCredentialRequired
+                : undefined,
             };
           } else {
             throw new DocumentProcessingPolicyError(

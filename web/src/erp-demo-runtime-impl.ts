@@ -410,6 +410,11 @@ import {
   setConnectorEnabledWithin,
 } from '../../src/modules/integration/connector';
 import {
+  configureDocumentProcessingPolicyWithin,
+  getDocumentProcessingPolicyWithin,
+  type DocumentProcessingPolicyInput,
+} from '../../src/modules/documents/processingPolicy';
+import {
   getMasterControlWithin,
   getSystemSettingsWithin,
   setAccountingPeriodStatusWithin,
@@ -1360,6 +1365,19 @@ export const erpDemoRuntime = Object.freeze({
     },
     listConnectorsWithin(db: DemoOrm, scope: Scope) {
       return listConnectorsWithin(asDomainDb(db), scope);
+    },
+    getDocumentProcessingPolicyWithin(db: DemoOrm, scope: Scope) {
+      return getDocumentProcessingPolicyWithin(asDomainDb(db), scope);
+    },
+    configureDocumentProcessingPolicyWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      input: DocumentProcessingPolicyInput,
+    ) {
+      return configureDocumentProcessingPolicyWithin(
+        asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, input,
+      );
     },
     setConnectorEnabledWithin(
       db: DemoOrm, scope: Scope, actorUserId: number, connectorId: number, enabled: boolean,

@@ -224,6 +224,46 @@ describe('quarantined document processing', () => {
     });
   });
 
+  it('passes a credential-free OpenAI-compatible endpoint through the governed vision gateway', async () => {
+    const { db, viewer } = await setup();
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai_compatible',
+      visionRegion: 'local',
+      visionRetentionDays: 0,
+      visionBaseUrl: 'http://127.0.0.1:1234/v1',
+      visionModel: 'receipt-vision-local',
+      visionCredentialRequired: false,
+      updatedByUserId: viewer.userId,
+    });
+    await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_compatible_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const vision = vi.fn(async () => ({
+      rawText: 'LM Studio receipt',
+      model: 'receipt-vision-local',
+    }));
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      vision: { extract: vision },
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+    expect(result).toMatchObject({ clean: 1, extracted: 1, failed: 0 });
+    expect(vision).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'openai_compatible',
+      baseUrl: 'http://127.0.0.1:1234/v1',
+      model: 'receipt-vision-local',
+      region: 'local',
+      retentionDays: 0,
+      credential: undefined,
+    }));
+  });
+
   it('auto-submits exactly once only with prior uploader authorization and every check clear', async () => {
     const { db, viewer } = await setup();
     await db.insert(documentProcessingPolicy).values({

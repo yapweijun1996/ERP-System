@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 74;
+  var DEMO_SCHEMA_VERSION = 75;
   var DEMO_PACK_VERSION = '15';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
@@ -3484,9 +3484,97 @@
       });
       return {data:data,meta:{settlementPosting:'successful_lines_only',idempotent:true}};
     },
-    createTaxEvidenceSnapshot:async function(){
-      throw new Error(
-        'Tax evidence snapshot creation uses the production report worker in API mode.');
+    createTaxEvidenceSnapshot:async function(payload){
+      var filters=payload&&payload.filters||{};
+      var startDate=String(filters.startDate||'');
+      var endDate=String(filters.endDate||'');
+      var result=await requireDemoDb().query(
+        `select ep.id as posting_id,ep.posting_date,ep.journal_ref,ep.claim_version,
+                ep.payment_source,ep.functional_currency,ep.base_expense,
+                ep.base_input_tax,ep.base_gross,c.id as claim_id,c.claim_no,
+                c.owner_user_id,l.id as line_id,l.line_no,l.merchant,
+                l.merchant_tax_number,l.transaction_date,l.purpose,l.category_code,
+                l.original_currency,l.original_gross,p.tax_treatment,p.tax_code,
+                p.tax_rate,p.input_tax_recoverable_pct,e.id as employee_id,
+                e.employee_no,e.full_name as employee_name,e.department as employee_department,
+                d.id as evidence_document_id,d.original_file_name as evidence_file_name,d.record_status,
+                d.paper_custody_status,d.paper_original_reference,d.retention_until,d.legal_hold,
+                v.id as evidence_version_id,v.sha256 as evidence_sha256,s.status as scan_status,
+                coalesce((select jsonb_agg(a.dimension_key order by a.allocation_no)
+                  from expense_allocation a where a.master_fn=l.master_fn
+                    and a.company_fn=l.company_fn and a.line_id=l.id
+                    and a.dimension_type='project'),'[]'::jsonb) as project_keys,
+                coalesce((select jsonb_agg(jsonb_build_object(
+                  'fieldKey',f.field_key,'value',f.value_text,
+                  'normalizedValue',f.normalized_value,'confidence',f.confidence,
+                  'reviewState',f.review_state,'model',f.model) order by f.field_key,f.candidate_no)
+                  from document_extraction_field f where f.master_fn=l.master_fn
+                    and f.company_fn=l.company_fn and f.extraction_id=i.extraction_id),'[]'::jsonb) as ocr_fields
+         from expense_posting ep
+         join expense_claim c on c.master_fn=ep.master_fn and c.company_fn=ep.company_fn and c.id=ep.claim_id
+         join expense_claim_line l on l.master_fn=ep.master_fn and l.company_fn=ep.company_fn and l.id=ep.line_id
+         join expense_line_policy_snapshot p on p.master_fn=ep.master_fn and p.company_fn=ep.company_fn and p.id=ep.policy_snapshot_id
+         left join employee e on e.master_fn=ep.master_fn and e.company_fn=ep.company_fn and e.user_id=c.owner_user_id
+         left join receipt_inbox_item i on i.master_fn=ep.master_fn and i.company_fn=ep.company_fn and i.id=l.receipt_inbox_item_id
+         left join document_version v on v.master_fn=ep.master_fn and v.company_fn=ep.company_fn and v.id=i.version_id
+         left join managed_document d on d.master_fn=ep.master_fn and d.company_fn=ep.company_fn and d.id=v.document_id
+         left join document_scan_job s on s.master_fn=ep.master_fn and s.company_fn=ep.company_fn and s.version_id=v.id
+         where ep.master_fn=$1 and ep.company_fn=$2 and ep.posting_date >= $3 and ep.posting_date <= $4
+         order by ep.posting_date,ep.id limit 5001`,
+        [SCOPE.masterFn,SCOPE.companyFn,startDate,endDate]);
+      var selectedEmployees=(filters.employeeIds||[]).map(Number);
+      var categories=filters.categoryCodes||[],projects=filters.projectKeys||[];
+      var currencies=filters.currencyCodes||[],taxStates=filters.taxStates||[];
+      var completenessStates=filters.completeness||[],paperStates=filters.paperCustodyStatuses||[];
+      var facts=result.rows.map(function(row){
+        var ocrFields=Array.isArray(row.ocr_fields)?row.ocr_fields:[];
+        var completeness=!row.evidence_version_id?'missing_receipt':
+          row.scan_status==='clean'&&row.evidence_document_id
+            &&row.record_status!=='voided'&&row.record_status!=='draft'
+            ?'complete':'unverified_receipt';
+        var confidences=ocrFields.map(function(field){return Number(field.confidence);}).filter(Number.isFinite);
+        return {
+          postingId:Number(row.posting_id),postingDate:row.posting_date,journalRef:row.journal_ref,
+          claimId:Number(row.claim_id),claimNo:row.claim_no,claimVersion:Number(row.claim_version),
+          ownerUserId:Number(row.owner_user_id),employeeId:row.employee_id==null?null:Number(row.employee_id),
+          employeeNo:row.employee_no,employeeName:row.employee_name,employeeDepartment:row.employee_department,
+          lineId:Number(row.line_id),lineNo:Number(row.line_no),merchant:row.merchant,
+          merchantTaxNumber:row.merchant_tax_number,transactionDate:row.transaction_date,purpose:row.purpose,
+          categoryCode:row.category_code,projectKeys:row.project_keys||[],paymentSource:row.payment_source,
+          originalCurrency:row.original_currency,originalGross:String(row.original_gross),
+          functionalCurrency:row.functional_currency,baseExpense:String(row.base_expense),
+          baseInputTax:String(row.base_input_tax),baseGross:String(row.base_gross),
+          taxTreatment:row.tax_treatment,taxCode:row.tax_code,taxRate:String(row.tax_rate),
+          inputTaxRecoverablePct:String(row.input_tax_recoverable_pct),completeness:completeness,
+          ocrMinConfidence:confidences.length?String(Math.min.apply(Math,confidences)):null,
+          ocrReviewState:ocrFields.some(function(field){return field.reviewState!=='accepted';})?'review_required':(ocrFields.length?'accepted':null),
+          ocrFields:ocrFields,evidenceDocumentId:row.evidence_document_id==null?null:Number(row.evidence_document_id),
+          evidenceVersionId:row.evidence_version_id==null?null:Number(row.evidence_version_id),
+          evidenceSha256:row.evidence_sha256,evidenceFileName:row.evidence_file_name,
+          paperCustodyStatus:row.paper_custody_status,paperOriginalReference:row.paper_original_reference,
+          retentionUntil:row.retention_until,legalHold:Boolean(row.legal_hold),
+        };
+      }).filter(function(row){
+        return (!selectedEmployees.length||selectedEmployees.indexOf(row.employeeId)!==-1)
+          &&(!categories.length||categories.indexOf(row.categoryCode)!==-1)
+          &&(!projects.length||row.projectKeys.some(function(key){return projects.indexOf(key)!==-1;}))
+          &&(!currencies.length||currencies.indexOf(row.originalCurrency)!==-1)
+          &&(!taxStates.length||taxStates.indexOf(row.taxTreatment)!==-1)
+          &&(!completenessStates.length||completenessStates.indexOf(row.completeness)!==-1)
+          &&(!paperStates.length||paperStates.indexOf(row.paperCustodyStatus)!==-1);
+      });
+      if(!facts.length) throw new Error('No posted expense evidence matches the selected filters.');
+      var sourceSha256=await state.runtime.sha256Hex(JSON.stringify({filters:filters,lines:facts}));
+      var sum=function(key){return facts.reduce(function(total,row){return total+Number(row[key]||0);},0).toFixed(2);};
+      return {data:{snapshot:{
+        id:'demo-'+sourceSha256.slice(0,12),snapshotKey:String(payload&&payload.snapshotKey||''),
+        filters:filters,sourceSha256:sourceSha256,rowCount:facts.length,
+        documentCount:new Set(facts.map(function(row){return row.evidenceVersionId;}).filter(Boolean)).size,
+        originalGross:sum('originalGross'),baseExpense:sum('baseExpense'),
+        baseInputTax:sum('baseInputTax'),baseGross:sum('baseGross'),
+        createdByUserId:myActorUserId(),createdAt:new Date().toISOString(),
+      },lines:facts.map(function(facts,index){return {id:index+1,ordinal:index+1,facts:facts};}),replayed:false},
+      meta:{demo:true,sourceSnapshot:'ephemeral-read-only',packageGeneration:'api-worker'}};
     },
     createTaxEvidenceJob:async function(){
       throw new Error(
@@ -3495,6 +3583,27 @@
     taxEvidenceJob:async function(){
       throw new Error(
         'Tax evidence report jobs are available through the production API.');
+    },
+    documentProcessingPolicy:async function(){
+      var data=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.getDocumentProcessingPolicyWithin(
+          state.runtime.createOrm(tx),SCOPE);
+      });
+      return {data:data,meta:{localOcrDefault:true,demo:true}};
+    },
+    updateDocumentProcessingPolicy:async function(payload){
+      var input=payload||{};
+      var data=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.configureDocumentProcessingPolicyWithin(
+          state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),input);
+      });
+      return {data:data,meta:{demo:true,credentialsPersisted:false}};
+    },
+    documentGovernance:async function(){
+      throw new Error('Document governance details are available through the production API.');
+    },
+    setDocumentPaperCustody:async function(){
+      throw new Error('Paper custody updates are available through the production API.');
     },
     configureTaxEvidenceRetention:async function(){
       throw new Error(

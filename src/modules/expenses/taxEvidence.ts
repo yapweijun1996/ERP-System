@@ -21,7 +21,9 @@ import {
 } from '../../data/tenantTransaction';
 import {
   documentScanJob,
+  documentExtractionField,
   documentVersion,
+  employee,
   expenseAllocation,
   expenseClaim,
   expenseClaimLine,
@@ -52,10 +54,22 @@ export type TaxEvidenceAction = 'view' | 'download' | 'print' | 'export';
 export interface TaxEvidenceFilters {
   startDate: string;
   endDate: string;
+  employeeIds?: number[];
   categoryCodes?: string[];
   projectKeys?: string[];
+  currencyCodes?: string[];
   taxStates?: Array<'input_tax' | 'non_deductible' | 'exempt'>;
   completeness?: TaxEvidenceCompleteness[];
+  paperCustodyStatuses?: Array<'none' | 'employee' | 'finance_archive' | 'returned' | 'destroyed'>;
+}
+
+export interface TaxEvidenceOcrField {
+  fieldKey: string;
+  value: string;
+  normalizedValue: string;
+  confidence: string;
+  reviewState: string;
+  model: string;
 }
 
 export interface TaxEvidenceLineFacts {
@@ -66,6 +80,10 @@ export interface TaxEvidenceLineFacts {
   claimNo: string;
   claimVersion: number;
   ownerUserId: number;
+  employeeId: number | null;
+  employeeNo: string | null;
+  employeeName: string | null;
+  employeeDepartment: string | null;
   lineId: number;
   lineNo: number;
   merchant: string;
@@ -86,9 +104,17 @@ export interface TaxEvidenceLineFacts {
   taxRate: string;
   inputTaxRecoverablePct: string;
   completeness: TaxEvidenceCompleteness;
+  ocrMinConfidence: string | null;
+  ocrReviewState: string | null;
+  ocrFields: TaxEvidenceOcrField[];
+  evidenceDocumentId: number | null;
   evidenceVersionId: number | null;
   evidenceSha256: string | null;
   evidenceFileName: string | null;
+  paperCustodyStatus: string | null;
+  paperOriginalReference: string | null;
+  retentionUntil: string | null;
+  legalHold: boolean;
 }
 
 export class TaxEvidenceError extends Error {
@@ -166,6 +192,30 @@ function strings(
   return result.sort();
 }
 
+function positiveIds(values: unknown, label: string): number[] {
+  if (values == null) return [];
+  if (!Array.isArray(values) || values.length > 50) {
+    throw new TaxEvidenceError(
+      'tax_evidence_invalid',
+      `${label} must contain at most 50 values.`,
+    );
+  }
+  if (values.some((value) => !Number.isSafeInteger(value) || Number(value) <= 0)) {
+    throw new TaxEvidenceError(
+      'tax_evidence_invalid',
+      `${label} must contain positive integer identifiers.`,
+    );
+  }
+  const result = values.map(Number);
+  if (new Set(result).size !== result.length) {
+    throw new TaxEvidenceError(
+      'tax_evidence_invalid',
+      `${label} contains duplicate values.`,
+    );
+  }
+  return result.sort((a, b) => a - b);
+}
+
 function normalizeFilters(input: TaxEvidenceFilters): Required<TaxEvidenceFilters> {
   const startDate = dateValue(input.startDate, 'Start date');
   const endDate = dateValue(input.endDate, 'End date');
@@ -196,10 +246,17 @@ function normalizeFilters(input: TaxEvidenceFilters): Required<TaxEvidenceFilter
   return {
     startDate,
     endDate,
+    employeeIds: positiveIds(input.employeeIds, 'Employees'),
     categoryCodes: strings(input.categoryCodes, 'Categories', /^[A-Z][A-Z0-9_-]{1,31}$/),
     projectKeys: strings(input.projectKeys, 'Projects', /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/),
+    currencyCodes: strings(input.currencyCodes, 'Currencies', /^[A-Z]{3}$/),
     taxStates,
     completeness,
+    paperCustodyStatuses: strings(
+      input.paperCustodyStatuses,
+      'Paper custody states',
+      /^(none|employee|finance_archive|returned|destroyed)$/,
+    ) as Required<TaxEvidenceFilters>['paperCustodyStatuses'],
   };
 }
 
@@ -234,6 +291,21 @@ export async function createTaxEvidenceSnapshotWithin(
 ) {
   const snapshotKey = safeKey(snapshotKeyValue, 'Snapshot key');
   const filters = normalizeFilters(input);
+  if (filters.employeeIds.length) {
+    const selectedEmployees = await tx.select({ id: employee.id }).from(employee).where(and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      inArray(employee.id, filters.employeeIds),
+    ));
+    const selectedIds = new Set(selectedEmployees.map((row) => row.id));
+    if (filters.employeeIds.some((id) => !selectedIds.has(id))) {
+      throw new TaxEvidenceError(
+        'tax_evidence_employee_invalid',
+        'One or more selected employees are unavailable in the active company.',
+        422,
+      );
+    }
+  }
   const [existing] = await tx.select().from(taxEvidenceSnapshot).where(and(
     eq(taxEvidenceSnapshot.masterFn, scope.masterFn),
     eq(taxEvidenceSnapshot.companyFn, scope.companyFn),
@@ -264,6 +336,7 @@ export async function createTaxEvidenceSnapshotWithin(
     version: documentVersion,
     document: managedDocument,
     scan: documentScanJob,
+    employee,
   }).from(expensePosting)
     .innerJoin(expenseClaim, and(
       eq(expenseClaim.masterFn, scope.masterFn),
@@ -279,6 +352,11 @@ export async function createTaxEvidenceSnapshotWithin(
       eq(expenseLinePolicySnapshot.masterFn, scope.masterFn),
       eq(expenseLinePolicySnapshot.companyFn, scope.companyFn),
       eq(expenseLinePolicySnapshot.id, expensePosting.policySnapshotId),
+    ))
+    .leftJoin(employee, and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      eq(employee.userId, expenseClaim.ownerUserId),
     ))
     .leftJoin(receiptInboxItem, and(
       eq(receiptInboxItem.masterFn, scope.masterFn),
@@ -305,11 +383,20 @@ export async function createTaxEvidenceSnapshotWithin(
       eq(expensePosting.companyFn, scope.companyFn),
       sql`${expensePosting.postingDate} >= ${filters.startDate}`,
       sql`${expensePosting.postingDate} <= ${filters.endDate}`,
+      filters.employeeIds.length
+        ? inArray(employee.id, filters.employeeIds)
+        : undefined,
       filters.categoryCodes.length
         ? inArray(expenseClaimLine.categoryCode, filters.categoryCodes)
         : undefined,
       filters.taxStates.length
         ? inArray(expenseLinePolicySnapshot.taxTreatment, filters.taxStates)
+        : undefined,
+      filters.currencyCodes.length
+        ? inArray(expenseClaimLine.originalCurrency, filters.currencyCodes)
+        : undefined,
+      filters.paperCustodyStatuses.length
+        ? inArray(managedDocument.paperCustodyStatus, filters.paperCustodyStatuses)
         : undefined,
     ))
     .orderBy(asc(expensePosting.postingDate), asc(expensePosting.id))
@@ -336,6 +423,34 @@ export async function createTaxEvidenceSnapshotWithin(
     projects.set(allocation.lineId, values);
   }
 
+  const extractionIds = [...new Set(candidates
+    .map((row) => row.receipt?.extractionId)
+    .filter((id): id is number => id != null))];
+  const extractionFields = extractionIds.length
+    ? await tx.select().from(documentExtractionField).where(and(
+        eq(documentExtractionField.masterFn, scope.masterFn),
+        eq(documentExtractionField.companyFn, scope.companyFn),
+        inArray(documentExtractionField.extractionId, extractionIds),
+      )).orderBy(
+        asc(documentExtractionField.extractionId),
+        asc(documentExtractionField.fieldKey),
+        asc(documentExtractionField.candidateNo),
+      )
+    : [];
+  const ocrFieldsByExtraction = new Map<number, TaxEvidenceOcrField[]>();
+  for (const field of extractionFields) {
+    const values = ocrFieldsByExtraction.get(field.extractionId) ?? [];
+    values.push({
+      fieldKey: field.fieldKey,
+      value: field.valueText,
+      normalizedValue: field.normalizedValue,
+      confidence: field.confidence,
+      reviewState: field.reviewState,
+      model: field.model,
+    });
+    ocrFieldsByExtraction.set(field.extractionId, values);
+  }
+
   const facts = candidates.map((row): TaxEvidenceLineFacts => {
     const projectKeys = [...new Set(projects.get(row.line.id) ?? [])].sort();
     const completeness: TaxEvidenceCompleteness = !row.version
@@ -353,6 +468,10 @@ export async function createTaxEvidenceSnapshotWithin(
       claimNo: row.claim.claimNo,
       claimVersion: row.posting.claimVersion,
       ownerUserId: row.claim.ownerUserId,
+      employeeId: row.employee?.id ?? null,
+      employeeNo: row.employee?.employeeNo ?? null,
+      employeeName: row.employee?.fullName ?? null,
+      employeeDepartment: row.employee?.department ?? null,
       lineId: row.line.id,
       lineNo: row.line.lineNo,
       merchant: row.line.merchant,
@@ -373,9 +492,31 @@ export async function createTaxEvidenceSnapshotWithin(
       taxRate: row.policy.taxRate,
       inputTaxRecoverablePct: row.policy.inputTaxRecoverablePct,
       completeness,
+      ocrMinConfidence: row.receipt
+        ? (ocrFieldsByExtraction.get(row.receipt.extractionId) ?? [])
+          .reduce<string | null>((lowest, field) => (
+            lowest == null || new Decimal(field.confidence).lt(lowest)
+              ? field.confidence
+              : lowest
+          ), null)
+        : null,
+      ocrReviewState: row.receipt
+        ? (ocrFieldsByExtraction.get(row.receipt.extractionId) ?? [])
+          .some((field) => field.reviewState !== 'accepted')
+          ? 'review_required'
+          : 'accepted'
+        : null,
+      ocrFields: row.receipt
+        ? ocrFieldsByExtraction.get(row.receipt.extractionId) ?? []
+        : [],
+      evidenceDocumentId: row.document?.id ?? null,
       evidenceVersionId: row.version?.id ?? null,
       evidenceSha256: row.version?.sha256 ?? null,
       evidenceFileName: row.document?.originalFileName ?? null,
+      paperCustodyStatus: row.document?.paperCustodyStatus ?? null,
+      paperOriginalReference: row.document?.paperOriginalReference ?? null,
+      retentionUntil: row.document?.retentionUntil.toISOString() ?? null,
+      legalHold: row.document?.legalHold ?? false,
     };
   }).filter((row) =>
     (!filters.projectKeys.length
@@ -548,6 +689,11 @@ const registerColumns: Array<keyof TaxEvidenceLineFacts> = [
   'postingDate',
   'journalRef',
   'claimNo',
+  'ownerUserId',
+  'employeeId',
+  'employeeNo',
+  'employeeName',
+  'employeeDepartment',
   'lineNo',
   'merchant',
   'merchantTaxNumber',
@@ -566,6 +712,13 @@ const registerColumns: Array<keyof TaxEvidenceLineFacts> = [
   'taxRate',
   'inputTaxRecoverablePct',
   'completeness',
+  'ocrMinConfidence',
+  'ocrReviewState',
+  'paperCustodyStatus',
+  'paperOriginalReference',
+  'retentionUntil',
+  'legalHold',
+  'evidenceDocumentId',
   'evidenceVersionId',
   'evidenceSha256',
   'evidenceFileName',
@@ -677,7 +830,10 @@ async function renderRegisterPdf(
       y = 560;
       heading();
     }
-    const left = `${line.postingDate} | ${line.claimNo}/${line.lineNo} | ${line.merchant}`;
+    const employeeLabel = line.employeeName
+      ? `${line.employeeName}${line.employeeNo ? ` (${line.employeeNo})` : ''}`
+      : `User ${line.ownerUserId}`;
+    const left = `${line.postingDate} | ${employeeLabel} | ${line.claimNo}/${line.lineNo} | ${line.merchant}`;
     const right = `${line.categoryCode} | ${line.taxTreatment} | ${line.baseGross} ${line.functionalCurrency}`;
     page.drawText(left.slice(0, 92), { x: 32, y, size: 8, font: bold });
     page.drawText(right.slice(0, 74), { x: 455, y, size: 8, font });

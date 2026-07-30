@@ -526,6 +526,13 @@
       "when": 1785159740158,
       "tag": "0074_employee_leave_opening",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1785417969783,
+      "tag": "0075_lumpy_star_brand",
+      "breakpoints": true
     }
   ]
 }

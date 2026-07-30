@@ -584,7 +584,7 @@ const SUBROUTES = {
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
-  mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','team-calendar','my-approvals'],
+  mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
   workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
@@ -618,7 +618,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
-  'my-leave','leave-application','my-claims','expense-claim','my-receipts','team-calendar','my-approvals',
+  'my-leave','leave-application','my-claims','expense-claim','my-receipts','receipt-tax-evidence','team-calendar','my-approvals',
   'integration-logs','data-import',
   'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
@@ -679,7 +679,7 @@ const API_SCREEN_ROUTES = new Set([
   'my-activity',
   'notifications',
   'integration','master-control','sys-settings',
-  'my-leave','leave-application','my-claims','expense-claim','my-receipts','team-calendar','my-approvals',
+  'my-leave','leave-application','my-claims','expense-claim','my-receipts','receipt-tax-evidence','team-calendar','my-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -743,6 +743,7 @@ const MODULE_DEFS = {
     {route:'my-leave',labelKey:'myWork.nav.leave',icon:'calendar'},
     {route:'my-claims',labelKey:'myWork.nav.claims',icon:'receipt'},
     {route:'my-receipts',labelKey:'myWork.nav.receipts',icon:'upload'},
+    {route:'receipt-tax-evidence',labelKey:'myWork.nav.taxEvidence',icon:'filepdf'},
     {route:'team-calendar',labelKey:'myWork.nav.teamCalendar',icon:'people',capability:'team'},
     {route:'my-approvals',labelKey:'myWork.nav.approvals',icon:'check',capability:'team'},
   ]},
@@ -828,7 +829,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'dashboard','sales-home','purchasing-home','bi-dashboard',
   ],
   report:[
-    'audit-log','purchasing-reports',
+    'audit-log','purchasing-reports','receipt-tax-evidence',
     'report-generic','report-pur-buyer','report-pur-generic','report-pur-price-var',
     'report-pur-supplier','report-pur-vendor','report-quote-conversion',
     'report-sales-customer','report-sales-rep','sales-analysis','sales-reports',

@@ -9,6 +9,7 @@ import {
   appUser,
   documentExtraction,
   documentScanJob,
+  employee,
   expensePosting,
   managedDocument,
   receiptInboxItem,
@@ -274,6 +275,19 @@ describe('tax evidence snapshots and artifact jobs', () => {
     expect(created.lines.map((row) =>
       (row.facts as { completeness: string }).completeness))
       .toEqual(['complete', 'missing_receipt']);
+    const [viewerEmployee] = await context.db.select().from(employee).where(and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      eq(employee.userId, (created.lines[0].facts as { ownerUserId: number }).ownerUserId),
+    ));
+    expect(created.lines.map((row) => row.facts)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        employeeId: viewerEmployee.id,
+        employeeNo: viewerEmployee.employeeNo,
+        employeeName: viewerEmployee.fullName,
+        employeeDepartment: viewerEmployee.department,
+      }),
+    ]));
 
     const filtered = await withTenantTransaction(context.db, scope, (tx) =>
       createTaxEvidenceSnapshotWithin(
@@ -289,6 +303,33 @@ describe('tax evidence snapshots and artifact jobs', () => {
         },
       ));
     expect(filtered.snapshot).toMatchObject({ rowCount: 1, documentCount: 1 });
+
+    const employeeFiltered = await withTenantTransaction(context.db, scope, (tx) =>
+      createTaxEvidenceSnapshotWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        'tax-snapshot-employee-0001',
+        {
+          startDate: '2026-07-01',
+          endDate: '2026-07-31',
+          employeeIds: [viewerEmployee.id],
+          currencyCodes: ['SGD'],
+        },
+      ));
+    expect(employeeFiltered.snapshot).toMatchObject({ rowCount: 2, documentCount: 1 });
+    await expect(withTenantTransaction(context.db, scope, (tx) =>
+      createTaxEvidenceSnapshotWithin(
+        tx,
+        scope,
+        context.admin.userId,
+        'tax-snapshot-employee-bad-0001',
+        {
+          startDate: '2026-07-01',
+          endDate: '2026-07-31',
+          employeeIds: [999999],
+        },
+      ))).rejects.toMatchObject({ code: 'tax_evidence_employee_invalid' });
 
     const job = await withTenantTransaction(context.db, scope, (tx) =>
       createTaxEvidenceReportJobWithin(tx, scope, context.admin.userId, {
