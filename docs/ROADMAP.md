@@ -896,6 +896,14 @@ domain/API/browser and current release gates.
    executable evidence index, five-language responsive audits, real PostgreSQL
    forced RLS and every release gate, without adding direct bank API or direct
    IRAS/LHDN filing.
+4. **Self-service evidence UI and a third vision provider** (TASK-160 done
+   2026-07-30) gives TASK-133's Tax Evidence Center its first screen — a My Work
+   `receipt-tax-evidence` route filtering by employee/currency/paper-custody in
+   addition to period/category/project/tax/completeness, generating the same
+   register/PDF/XLSX/CSV/ZIP/manifest package — and extends TASK-119's
+   `document_processing_policy` (migration 0075) with an `openai_compatible` BYOK
+   vision provider (base URL + model, optional no-credential mode) alongside
+   openai/google.
 
 Exit criteria: payout privacy, maker/checker separation, partial payment replay,
 balanced cash posting, package consistency/hash verification, SG/MY retention, legal

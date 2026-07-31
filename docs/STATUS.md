@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-07-28
+# Project Status — reviewed 2026-07-30
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -137,6 +137,26 @@ retained hard-coded July dates after manual-journal posting became correctly gov
 by the selected FY2026 P06 accounting period. The proof now derives its journal,
 reversal and bank-reconciliation dates from the canonical open-period boundary;
 one rebuilt Demo run passes both 1280px and 375px with zero console/page errors.
+
+## 2026-07-30 receipt tax evidence enhancement
+
+TASK-160 gives TASK-133's Tax Evidence Center its first screen instead of leaving it
+API/report-job-only: a My Work → Receipt & Tax Evidence route
+(`receipt-tax-evidence`) filters posted expense evidence by period, employee,
+category, project, currency, tax state, completeness and paper-custody status, runs a
+snapshot, generates the same register/merged-PDF/XLSX/CSV/ZIP/manifest package,
+manages per-receipt paper custody and legal hold, and configures the document
+OCR/Vision provider inline. Migration 0075 extends TASK-119's
+`document_processing_policy` with a third `byok_vision` provider —
+`openai_compatible` (OpenRouter, LM Studio, custom endpoints) — adding
+`vision_base_url`/`vision_model` columns and an optional `vision_credential_required`
+flag for endpoints that need no stored API key, alongside the existing `openai`/
+`google` providers. `createTaxEvidenceSnapshotWithin` gained `employeeIds`/
+`currencyCodes`/`paperCustodyStatuses` filters, and each snapshot line now carries
+employee identity plus per-field OCR confidence/review state. Five-language copy
+(en/ms/zh/ja/vi); the targeted `taxEvidence`/`processing`/`controlPlane` tests pass.
+Schema stays at 232 tables across 76 migrations (new columns only, no new table), and
+the Canonical route count moves from 124 to 125.
 
 ## What actually works (verified in code)
 
@@ -1481,7 +1501,10 @@ The programme is intentionally ordered:
    to Employee Payable or company-paid clearing.
 5. **EPIC-056 — Reimbursement Payments & Tax Evidence:** encrypted payout profiles,
    maker/checker bank-file batches, partial bank results, balanced cash settlement and
-   immutable PDF/XLSX/CSV/ZIP/hash tax-support packages with correction versions.
+   immutable PDF/XLSX/CSV/ZIP/hash tax-support packages with correction versions. A
+   self-service My Work screen (TASK-160) now fronts the Tax Evidence Center with
+   employee/currency/paper-custody filters and an `openai_compatible` BYOK vision
+   provider option.
 
 Confirmed constraints are recorded honestly. MFA, sensitive-operation step-up and
 email verification remain optional by product decision; this is an accepted risk, not

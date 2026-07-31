@@ -153,12 +153,15 @@ SG and MY demo companies; production wires real auth.
 > event entities. TASK-125 adds the five control, assessment, signal, override and
 > line-approval entities listed below. TASK-126 adds the corporate-card import,
 > transaction, candidate, follow-up and event entities. TASK-127 adds the allowance
-> policy/calculation and cash-advance application/posting/event entities. The remaining
-> targets for TASK-128–135 are
-> **not yet present**. Each task
-> must add migrations,
-> tenant indexes, API contracts and cross-engine proofs before its capability becomes
-> Canonical.
+> policy/calculation and cash-advance application/posting/event entities.
+> **Correction (2026-07-30): this note previously said TASK-128–135 were "not yet
+> present" — that is stale.** All of TASK-128 through TASK-160 are done (see
+> `EPICS.md` EPIC-056 through EPIC-060 for the authoritative per-task entity/migration
+> record); the schema is at 232 tables across 76 migrations. TASK-160 (2026-07-30)
+> adds `vision_base_url`/`vision_model`/`vision_credential_required` columns to the
+> existing `document_processing_policy` (migration 0075) without a new entity. A full
+> entity-by-entity backfill of this section for TASK-128–160 is still pending — treat
+> `EPICS.md` as the source of truth for that range until this section is rewritten.
 
 ### 8.1 Identity, employment and delegated authority
 

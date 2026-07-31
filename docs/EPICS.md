@@ -2093,6 +2093,19 @@ not submit returns directly to IRAS or LHDN.
       `docs/EMPLOYEE_TO_TAX_RELEASE_PROOF.md`; the final proof passed 506 tests plus
       one expected skip, real PostgreSQL 16 forced RLS, 226-table parity, both builds,
       desktop/375px smoke, five-language expense states and all 122 Canonical routes.
+- [x] **TASK-160 — Ship self-service Receipt & Tax Evidence screen and
+      OpenAI-compatible vision provider.** Give TASK-133's Tax Evidence Center its
+      first UI: a My Work screen (`receipt-tax-evidence`) that filters by period,
+      employee, category, project, currency, tax state, completeness and paper-custody
+      status, runs a snapshot, generates the register/merged-PDF/XLSX/CSV/ZIP/manifest
+      package, manages paper custody/legal hold per receipt, and configures the
+      document OCR/Vision provider inline. Migration 0075 extends TASK-119's
+      `document_processing_policy` with a third `byok_vision` provider,
+      `openai_compatible` (OpenRouter/LM Studio/custom endpoints), adding
+      `vision_base_url`/`vision_model` columns and an optional
+      `vision_credential_required` flag for endpoints that need no stored API key.
+      Schema stays at 232 tables across 76 migrations — new columns only, no new
+      table.
 
 ## EPIC-057 — Canonical UI Internationalization ✅
 

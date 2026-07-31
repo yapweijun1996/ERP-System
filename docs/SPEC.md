@@ -179,8 +179,11 @@ capabilities must not be represented as current Canonical behavior.
   at most one run; Legacy Policy rows retain their original day values.
 - **Receipt evidence:** JPEG/PNG/HEIC/PDF only, maximum 20 MB and 20 PDF pages. Every
   file is quarantined until a fail-closed scan succeeds. Local OCR is default; external
-  Vision is explicit company BYOK. Governed auto-submit requires every critical field
-  at 98% confidence or above plus safety, amount and duplicate checks.
+  Vision is explicit company BYOK across three providers (`openai`, `google`,
+  `openai_compatible` for OpenRouter/LM Studio/custom endpoints), the last optionally
+  configured without a stored credential for endpoints that need none. Governed
+  auto-submit requires every critical field at 98% confidence or above plus safety,
+  amount and duplicate checks.
 - **Expense claims:** employee-paid and company-paid evidence, multi-line claims,
   tax/GL/FX/category policy, manager + Finance line decisions, duplicate/budget
   control, card-statement matching, mileage/per diem/cash advances and final-approval
