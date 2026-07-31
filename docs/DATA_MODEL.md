@@ -153,12 +153,55 @@ SG and MY demo companies; production wires real auth.
 > event entities. TASK-125 adds the five control, assessment, signal, override and
 > line-approval entities listed below. TASK-126 adds the corporate-card import,
 > transaction, candidate, follow-up and event entities. TASK-127 adds the allowance
-> policy/calculation and cash-advance application/posting/event entities. The remaining
-> targets for TASK-128–135 are
-> **not yet present**. Each task
-> must add migrations,
-> tenant indexes, API contracts and cross-engine proofs before its capability becomes
-> Canonical.
+> policy/calculation and cash-advance application/posting/event entities. TASK-128
+> adds `expense_posting` and `expense_posting_leg` entities. TASK-129 adds
+> five-language expense SSOT screens and audit proof without a new table. TASK-130
+> adds `employee_payout_profile` and `employee_payout_profile_event` entities.
+> TASK-131 adds `reimbursement_payment_batch`, `reimbursement_payment_batch_line`
+> and `reimbursement_payment_batch_event` entities. TASK-132 adds
+> `reimbursement_bank_template_version`, `reimbursement_bank_export`
+> (+`_line`/`_access_event`), `reimbursement_bank_result_import`,
+> `reimbursement_bank_line_result` and `reimbursement_settlement` entities. TASK-133
+> adds `tax_evidence_snapshot` (+`_line`/`_document`), `tax_evidence_report_job`,
+> `tax_evidence_artifact` and `tax_evidence_access_event` entities. TASK-134 adds
+> `tax_evidence_pack`, `tax_evidence_pack_legal_hold_event` and
+> `tax_evidence_retention_policy` entities. TASK-135 proves the complete
+> employee-to-tax chain without a new table. TASK-136 locks the i18n contract with
+> no new entity. TASK-137 adds the locale/message/formatting engine without a new
+> table. TASK-138 migrates Canonical UI to live i18n bindings without a new table.
+> TASK-139 proves five-language Canonical release quality without a new table.
+> TASK-140 registers the dual-mode end-user audit findings without a new table.
+> TASK-141 adds migration 0074's deterministic `employee_opening` leave-balance
+> backfill without a new table. TASK-142 opens Invite user to every eligible
+> tenant role without a new table. TASK-143 remediates dependency advisories
+> without a new table. TASK-144 makes document-queue tests clock-independent
+> without a new table. TASK-145 derives shell navigation from effective
+> permissions without a new table. TASK-146 stabilizes integration-test setup
+> without a new table. TASK-147 guards the PostgreSQL demo proof against seeded
+> databases without a new table. TASK-148 deduplicates My Work identity conflicts
+> without a new table. TASK-149 names icon-only user administration controls
+> without a new table. TASK-150 locks the employee access, Demo and onboarding
+> specification with no new entity. TASK-151 adds migration 0073's
+> `role_resource_scope`, `company_module`, `staff_onboarding_draft`,
+> `company_onboarding`, `onboarding_import_job` and `onboarding_import_row`
+> entities plus `role.company_fn`, `role.source_template_key` and
+> `app_user.initial_password_expires_at` (see "EPIC-059 access and onboarding
+> tables" below). TASK-152 implements atomic Staff onboarding and credential
+> lifecycle without a new table. TASK-153 enforces action permissions and data
+> scopes server-side without a new table. TASK-154 delivers the deterministic
+> enterprise Demo and 12 personas without a new table. TASK-155 delivers
+> production onboarding, atomic imports and Go Live without a new table. TASK-156
+> completes five-language UI and operator documentation without a new table.
+> TASK-157 proves dual-mode release quality and performance without a new table.
+> TASK-158 completes the interactive walkthrough and remediates every confirmed
+> issue without a new table. TASK-159 polishes Team Calendar and deterministic
+> Demo leave coverage without a new table. TASK-160 adds `vision_base_url`,
+> `vision_model` and `vision_credential_required` columns to
+> `document_processing_policy` (migration 0075's `openai_compatible` BYOK vision
+> provider) without a new table. TASK-160 is the latest completed task against
+> the current 76-migration, 232-table Drizzle schema; each subsequent task must
+> still add migrations, tenant indexes, API contracts and cross-engine proofs
+> before its capability becomes Canonical.
 
 ### 8.1 Identity, employment and delegated authority
 
@@ -418,20 +461,65 @@ Failure rolls back the approval, claim refresh and every ledger effect together.
 ### 8.5 Reimbursement and tax evidence
 
 ```
-employee_payout_profile         encrypted, masked and verification-versioned bank details
-reimbursement_batch(+line)      maker/checker release and per-line bank result
-payment_export_artifact         versioned bank file, checksum and access audit
-tax_evidence_pack               immutable company/period/version seal
-tax_evidence_artifact           PDF/XLSX/CSV/ZIP/hash-manifest member
-record_legal_hold               scoped retention override and release history
+employee_payout_profile           encrypted, masked and verification-versioned bank details [0068]
+employee_payout_profile_event     append-only non-sensitive lifecycle/access proof [0068]
+reimbursement_payment_batch(+line/+event) maker-authored batch; checker release freezes membership [0069]
+reimbursement_bank_template_version confirmed effective-dated bank CSV layout [0070]
+reimbursement_bank_export(+line)  versioned encrypted bank artifact from one released batch [0070]
+reimbursement_bank_export_access_event append-only audited plaintext artifact access [0070]
+reimbursement_bank_result_import  one immutable bank-result import [0070]
+reimbursement_bank_line_result    one final bank outcome per export attempt line [0070]
+reimbursement_settlement          idempotent balanced cash settlement from a successful result [0070]
+tax_evidence_snapshot(+line/+document) immutable filtered period/category evidence snapshot [0071]
+tax_evidence_report_job           retryable async register/PDF/XLSX/CSV/ZIP generation job [0071]
+tax_evidence_artifact             one rendered output owned by exactly one job/snapshot [0071]
+tax_evidence_access_event         append-only purpose-bound sensitive artifact access [0071]
+tax_evidence_retention_policy     immutable effective-dated company retention policy [0072]
+tax_evidence_pack                 immutable sealed envelope; corrections form one chain [0072]
+tax_evidence_pack_legal_hold_event append-only legal-hold placed/released trail [0072]
 ```
 
-Batch release enforces separation of duties and excludes self-release. Only successful
-bank-result lines post Dr Employee Payable / Cr Bank; failures remain independently
-retryable under the same idempotency scope. Tax evidence packs are immutable after seal;
-late evidence or corrections create a new version and delta manifest. Default minimum
-retention is five years for Singapore and seven years for Malaysia, subject to longer
-company policy and legal hold.
+Migration 0068 implements `employee_payout_profile` and `employee_payout_profile_event`.
+Bank facts live only inside an AES-256-GCM envelope; ordinary self-service and HR/Finance
+reads expose masked holder/account projections only. Reveal requires a distinct
+permission, an explicit purpose and an audited no-store response. Verification requires
+an independent HR/Finance actor, and any subsequent owner modification invalidates that
+verification; every change and reveal is recorded as an immutable, non-sensitive event.
+
+Migration 0069 implements `reimbursement_payment_batch`, `reimbursement_payment_batch_line`
+and `reimbursement_payment_batch_event`. A batch reserves only posted, open employee
+payables whose same-currency payout profile remains verified. Only the preparer may
+replace draft membership, and release requires a distinct checker who never released
+their own claim. Release re-locks every profile version, snapshots only its encrypted
+envelope, hashes the complete release facts and freezes both batch and membership with
+database triggers — enforcing separation of duties and excluding self-release.
+
+Migration 0070 implements `reimbursement_bank_template_version`, `reimbursement_bank_export`
+(+`_line`/`_access_event`), `reimbursement_bank_result_import`,
+`reimbursement_bank_line_result` and `reimbursement_settlement`. A confirmed
+effective-dated template renders one immutable, encrypted export per released batch;
+every plaintext access is append-only audited. Bank-result imports may cover disjoint
+export subsets, and a failed line may be re-exported while a successful line is
+protected by settlement uniqueness. Settlement posts Dr Employee Payable / Cr Bank only
+for successful lines, is idempotent per result line under the same key, and links the
+accounting period plus both balanced GL leg ids; failures remain independently retryable.
+
+Migration 0071 implements `tax_evidence_snapshot` (+`_line`/`_document`),
+`tax_evidence_report_job`, `tax_evidence_artifact` and `tax_evidence_access_event`. A
+snapshot freezes filtered source rows by period, category, project and tax status, their
+reconciliation totals and the exact evidence document versions behind one source hash.
+One retryable job per snapshot renders a deterministic artifact set — register PDF/XLSX/
+CSV, merged PDF, originals ZIP and hash manifest — and every access to a rendered
+artifact is purpose-bound and append-only audited.
+
+Migration 0072 implements `tax_evidence_pack`, `tax_evidence_pack_legal_hold_event` and
+`tax_evidence_retention_policy`. Sealing an artifact set creates an immutable pack
+version; late evidence or a correction creates a new version with an explicit
+difference manifest in a single, non-branching supersession chain — the original is
+never silently overwritten. An immutable, effective-dated policy sets the statutory
+minimum (five years for Singapore, seven years for Malaysia) and company retention
+floor; legal-hold events are appended, never deleted, and the latest event is
+authoritative.
 
 ## 9. Migrations
 
