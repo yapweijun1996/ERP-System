@@ -38,6 +38,7 @@ import {
 } from './reimbursementBatches';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+const julyApprovalNow = new Date('2026-07-26T00:00:00.000Z');
 const encryptionKey = Buffer.alloc(32, 21);
 const payoutDetails = {
   bankCountry: 'SG',
@@ -143,12 +144,12 @@ async function setup(verifyProfile = true) {
     lineApprovalId: submitted.controls![0].lineApproval.id,
     actorUserId: admin.userId,
     decision: 'approved',
-  }));
+  }, julyApprovalNow));
   await withTenantTransaction(db, scope, (tx) => decideExpenseLineWithin(tx, scope, {
     lineApprovalId: submitted.controls![0].lineApproval.id,
     actorUserId: admin.userId,
     decision: 'approved',
-  }));
+  }, julyApprovalNow));
   const [posting] = await db.select().from(expensePosting);
   const [employeeOwner] = await db.select().from(employee).where(and(
     eq(employee.masterFn, scope.masterFn),

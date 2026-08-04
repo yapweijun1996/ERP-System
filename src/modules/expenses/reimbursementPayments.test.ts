@@ -45,6 +45,7 @@ import {
 } from './reimbursementBatches';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+const julyApprovalNow = new Date('2026-07-26T00:00:00.000Z');
 const key = Buffer.alloc(32, 23);
 const hash = (value: string) =>
   createHash('sha256').update(value).digest('hex');
@@ -145,12 +146,12 @@ async function setup() {
       lineApprovalId: control.lineApproval.id,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
     await withTenantTransaction(db, scope, (tx) => decideExpenseLineWithin(tx, scope, {
       lineApprovalId: control.lineApproval.id,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
   }
   const postings = await db.select().from(expensePosting)
     .orderBy(expensePosting.lineId);

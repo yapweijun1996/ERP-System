@@ -56,6 +56,7 @@ import {
 } from './taxEvidenceGovernance';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+const julyApprovalNow = new Date('2026-07-26T00:00:00.000Z');
 
 function cookies(response: Response): { header: string; csrf: string } {
   const headers = response.headers as Headers & { getSetCookie?: () => string[] };
@@ -235,12 +236,12 @@ async function setup() {
       lineApprovalId: control.lineApproval.id,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
     await withTenantTransaction(db, scope, (tx) => decideExpenseLineWithin(tx, scope, {
       lineApprovalId: control.lineApproval.id,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
   }
   expect(await db.select().from(expensePosting)).toHaveLength(2);
   return { db, admin, receipt };

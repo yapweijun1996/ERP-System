@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Server } from 'node:http';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
@@ -30,10 +30,12 @@ function cookies(response: Response): string {
 
 describe('actor-owned My Work API', () => {
   let db: DB;
-  let server: Server;
+  let server: Server | undefined;
   let baseUrl: string;
 
   beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-26T02:00:00.000Z'));
     db = await freshDb();
     await seedDemo(db);
     await db.insert(accountingPeriod).values({
@@ -46,16 +48,20 @@ describe('actor-owned My Work API', () => {
       endDate: '2026-07-31',
       status: 'open',
     });
-    server = createApp(db).listen(0, '127.0.0.1');
-    await new Promise<void>((resolve) => server.once('listening', resolve));
-    const address = server.address();
+    const activeServer = createApp(db).listen(0, '127.0.0.1');
+    server = activeServer;
+    await new Promise<void>((resolve) => activeServer.once('listening', resolve));
+    const address = activeServer.address();
     if (!address || typeof address === 'string') throw new Error('Missing API address');
     baseUrl = `http://127.0.0.1:${address.port}`;
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
+    if (!server) return;
+    const activeServer = server;
     await new Promise<void>((resolve, reject) => {
-      server.close((error) => error ? reject(error) : resolve());
+      activeServer.close((error) => error ? reject(error) : resolve());
     });
   });
 

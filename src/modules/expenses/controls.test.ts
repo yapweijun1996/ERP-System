@@ -30,6 +30,7 @@ import {
 import { configureExpensePolicyVersion } from './policy';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+const julyApprovalNow = new Date('2026-07-26T00:00:00.000Z');
 const jpeg = Uint8Array.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
 ]);
@@ -152,19 +153,19 @@ describe('expense line approval and controls', () => {
       lineApprovalId,
       actorUserId: viewer.userId,
       decision: 'approved',
-    }))).rejects.toMatchObject({ code: 'self_approval_forbidden' });
+    }, julyApprovalNow))).rejects.toMatchObject({ code: 'self_approval_forbidden' });
 
     const manager = await db.transaction((tx) => decideExpenseLineWithin(tx, scope, {
       lineApprovalId,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
     expect(manager).toMatchObject({ status: 'pending', claimStatus: 'pending_approval' });
     const finance = await db.transaction((tx) => decideExpenseLineWithin(tx, scope, {
       lineApprovalId,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
     expect(finance).toMatchObject({ status: 'approved', claimStatus: 'approved' });
     expect((await db.select().from(expenseClaim))[0].status).toBe('approved');
   });
@@ -186,7 +187,7 @@ describe('expense line approval and controls', () => {
       actorUserId: admin.userId,
       decision: 'returned',
       reason: 'Please provide a clearer business purpose.',
-    }));
+    }, julyApprovalNow));
     expect((await db.select().from(expenseLineApproval))[0].status).toBe('returned');
     expect((await db.select().from(expenseClaim))[0].status).toBe('returned');
   });
@@ -248,12 +249,12 @@ describe('expense line approval and controls', () => {
       lineApprovalId: control.lineApproval.id,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
     await expect(db.transaction((tx) => decideExpenseLineWithin(tx, scope, {
       lineApprovalId: control.lineApproval.id,
       actorUserId: admin.userId,
       decision: 'approved',
-    }))).rejects.toMatchObject({ code: 'expense_duplicate_override_required' });
+    }, julyApprovalNow))).rejects.toMatchObject({ code: 'expense_duplicate_override_required' });
     await expect(db.transaction((tx) => overrideHighRiskDuplicateWithin(
       tx,
       scope,
@@ -274,7 +275,7 @@ describe('expense line approval and controls', () => {
       lineApprovalId: control.lineApproval.id,
       actorUserId: admin.userId,
       decision: 'approved',
-    }));
+    }, julyApprovalNow));
     expect((await db.select().from(expenseLineApproval)
       .where(eq(expenseLineApproval.id, control.lineApproval.id)))[0].status).toBe('approved');
     await expect(db.update(expenseDuplicateOverride).set({

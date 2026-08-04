@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import { and, eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { encryptToken } from '../auth/tokenCrypto';
 import {
   account,
@@ -57,12 +57,14 @@ function cookies(response: Response): { header: string; csrf: string } {
 
 describe('reimbursement payment batch API', () => {
   let db: DB;
-  let server: Server;
+  let server: Server | undefined;
   let baseUrl: string;
   let postingId: number;
   let sourceBankAccountId: number;
 
   beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-26T02:00:00.000Z'));
     db = await freshDb();
     await seedDemo(db);
     const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
@@ -213,18 +215,22 @@ describe('reimbursement payment batch API', () => {
         'Matched bank evidence for API payment batch.',
       ));
 
-    server = createApp(db, {
+    const activeServer = createApp(db, {
       tokenEncryptionKey: encryptionKey.toString('base64'),
     }).listen(0, '127.0.0.1');
-    await new Promise<void>((resolve) => server.once('listening', resolve));
-    const address = server.address();
+    server = activeServer;
+    await new Promise<void>((resolve) => activeServer.once('listening', resolve));
+    const address = activeServer.address();
     if (!address || typeof address === 'string') throw new Error('Missing API address');
     baseUrl = `http://127.0.0.1:${address.port}`;
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
+    if (!server) return;
+    const activeServer = server;
     await new Promise<void>((resolve, reject) => {
-      server.close((error) => error ? reject(error) : resolve());
+      activeServer.close((error) => error ? reject(error) : resolve());
     });
   });
 
