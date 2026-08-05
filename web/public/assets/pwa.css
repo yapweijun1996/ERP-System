@@ -90,3 +90,47 @@
 @media (prefers-reduced-motion:reduce){
   .pwa-toast{transition:none;}
 }
+
+/* Keep the desktop first-run wizard visually complete inside its fixed 80vh
+   card. The mobile rules above retain the existing safe-area treatment. */
+@media (min-width:981px){
+  #setupWizardView.auth-view{padding:12px 20px;}
+  #setupWizardView .wizard-panel{
+    width:min(680px,100%);
+    height:80vh;
+    min-height:80vh;
+    max-height:80vh;
+    padding:24px 32px 16px;
+    overflow:hidden;
+  }
+  #setupWizardView .wizard-brandbar{align-items:center;gap:12px;}
+  #setupWizardView .wizard-brandbar .auth-brand{gap:12px;}
+  #setupWizardView .wizard-brandbar .auth-brand .mark{width:56px;height:56px;border-radius:16px;}
+  #setupWizardView .wizard-brandbar .auth-brand .mark .ico{width:28px;height:28px;}
+  #setupWizardView .wizard-brandbar .auth-brand b{font-size:calc(22px * var(--fs,1));}
+  #setupWizardView .wizard-brandbar .auth-brand small{font-size:calc(12px * var(--fs,1));margin-top:2px;}
+  #setupWizardView .stepper{margin:24px 0 0;}
+  #setupWizardView .step{gap:4px;font-size:calc(10px * var(--fs,1));}
+  #setupWizardView .step .sdot{width:28px;height:28px;font-size:calc(12px * var(--fs,1));}
+  #setupWizardView .step .sdot span{font-size:12px !important;}
+  #setupWizardView .step.current .sdot{box-shadow:0 0 0 4px var(--accent-tint);}
+  #setupWizardView .stepline{min-width:8px;margin:0 5px;}
+  #setupWizardView .wizard-step-body{margin-top:18px;}
+  #setupWizardView .wizard-step-body .wiz-h{font-size:calc(24px * var(--fs,1));line-height:1.15;}
+  #setupWizardView .wizard-step-body .wiz-p{margin-top:6px;font-size:calc(13px * var(--fs,1));line-height:1.35;}
+  .wiz-language-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px;}
+  .wiz-language-card,.wiz-language-card.is-wide{grid-column:auto;min-height:64px;padding:10px;gap:9px;border-radius:12px;}
+  .wiz-language-badge{width:34px;height:34px;font-size:11px;}
+  .wiz-language-badge .ico{width:18px;height:18px;}
+  .wiz-language-copy{gap:1px;padding-right:16px;}
+  .wiz-language-copy b{font-size:calc(13.5px * var(--fs,1));}
+  .wiz-language-copy small{font-size:calc(11.5px * var(--fs,1));}
+  .wiz-language-check{top:8px;right:8px;width:20px;height:20px;}
+  .wiz-language-check .ico{width:12px;height:12px;}
+  .wiz-language-note{margin-top:10px;padding:9px 11px;font-size:calc(11.5px * var(--fs,1));line-height:1.3;}
+  .wiz-language-note>.ico{width:16px;height:16px;}
+  #setupWizardView .wizard-savebar{padding-top:12px;gap:10px;}
+  #setupWizardView .wizard-primary,#setupWizardView #wizBack{min-height:44px;border-radius:11px;}
+  #setupWizardView .wizard-primary{font-size:calc(14px * var(--fs,1));}
+  #setupWizardView .wizard-primary .ico{right:15px;width:18px;height:18px;}
+}
