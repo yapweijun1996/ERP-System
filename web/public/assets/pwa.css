@@ -46,6 +46,22 @@
 .pwa-toast .pwa-primary{background:var(--accent);color:#fff;}
 .pwa-toast .pwa-secondary{background:var(--hairline);color:var(--muted);}
 
+/* Keep the shell header to one row before the full mobile layout kicks in.
+   At tablet widths the sidebar can still be open, leaving the main column
+   narrower than the viewport breakpoint suggests. */
+@media (max-width:1180px){
+  .topbar{
+    min-width:0;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .topbar::-webkit-scrollbar{display:none;}
+  .topbar>*{flex:0 0 auto;}
+  .topbar .search{min-width:0;flex:1 1 auto;}
+  .topbar .ctxbtn,.topbar .env{display:none;}
+}
+
 @media (max-width:980px){
   body{padding-left:var(--safe-left);padding-right:var(--safe-right);}
   .main{padding-bottom:calc(var(--mobile-tabbar-base) + var(--safe-bottom));}

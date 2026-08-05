@@ -24,6 +24,9 @@ npm-debug.log*
 pgdata/
 /backup/
 
+# Local audit reports, screenshots, and database dumps
+/output/
+
 # Odoo study material — NEVER commit (LGPL contamination risk; see docs/STUDYING_ODOO.md)
 /odoo/
 /vendor-study/
