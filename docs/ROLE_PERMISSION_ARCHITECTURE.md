@@ -165,8 +165,9 @@ The following current behaviors are compatibility facts, not the final architect
   authoritative. The remaining approval-architecture gaps are deeper delegation
   binding and any future approval domain that has not yet been registered with context.
 - Unknown module keys now fail the module gate; payroll is included in the registered
-  module set. Registered resources still require their permission checks. No
-  authorization-version cache is claimed yet.
+  module set. Registered resources still require their permission checks. Migration
+  0088 provides the company authorization-version marker, and current core writers
+  bump it atomically; no centralized authorization-version cache is claimed yet.
 - Employee-workspace impersonation is company-bounded and audited, but it is not a
   platform support-access grant.
 - Platform principal and session issuance is intentionally out-of-band; there is no
@@ -338,8 +339,8 @@ The current centralized evaluator implements this subset in this order:
 10. Return a safe reason code; full diagnostic fields are available only through the
    audited administrator explanation path.
 
-Module/resource/action validation, ABAC policy evaluation, authorization-version
-invalidation and complete approval-policy enforcement remain later work. A
+Module/resource/action validation, ABAC policy evaluation, complete authorization-
+version invalidation and complete approval-policy enforcement remain later work. A
 `role_permission.allowed=false` row still cannot be represented as an explicit deny.
 
 ## 8. Platform administration and support access
@@ -416,10 +417,12 @@ access, impersonation, approval-policy changes, sensitive reads/exports and brea
 use. Audit retention, read/export permission and database write restrictions must be
 documented per deployment.
 
-Authorization caches require a tenant/company `permission_version`. It must change on
-role, permission, assignment, scope, organization hierarchy, module, policy, support
-grant and sensitive restriction changes. A stale cache or session cannot preserve
-revoked authority.
+Authorization caches require the tenant/company `authorization_version` introduced by
+migration 0088. The current implementation advances it for core role, assignment,
+scope, module, override and invitation mutations and exposes it in session/capability
+projections. It must also change on organization hierarchy, every policy domain,
+master-wide support grant and sensitive restriction changes before a centralized cache
+can be enabled; a stale cache or session must never preserve revoked authority.
 
 Role deletion, template upgrade, last-owner recovery, assignment expiry and user
 offboarding must have deterministic lifecycle behavior and tests.
@@ -435,6 +438,8 @@ offboarding must have deterministic lifecycle behavior and tests.
 - Company module activation
 - Backend checks, audit and production RLS
 - Versioned approval governance
+- Company authorization-version source and first atomic role/assignment/scope/module/
+  override/invitation bump paths; complete cache invalidation remains pending
 
 ### EPIC-062 — required authorization migration
 
@@ -451,8 +456,10 @@ offboarding must have deterministic lifecycle behavior and tests.
   implemented for the generic leave/expense approval domains
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation
   — in progress; unknown business-module keys fail closed, payroll is registered and
-  authenticated `account/*` services are explicitly non-module-gated, while
-  authorization-version invalidation remains
+  authenticated `account/*` services are explicitly non-module-gated. Migration 0088
+  supplies the company version source and first atomic bump paths; centralized cache,
+  organization/policy/master-wide support coverage and stale-session/direct-URL tests
+  remain.
 - TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions
 
 Branch/business-unit/region target validation, enterprise access reviews, SSO/
@@ -471,7 +478,9 @@ The target architecture is implemented only when:
 - approval permission cannot bypass active workflow authority or SoD;
 - support access is reasoned, time-bounded, restricted, revocable and audited;
 - effective decisions can be safely explained;
-- cache invalidation and immediate revocation are proven;
+- backend immediate revocation is proven through current-state evaluation; the
+  authorization-version source/first bump paths are delivered, but centralized cache
+  invalidation is not yet proven;
 - adversarial tests cover cross-tenant IDs, disabled modules, conflicting grants,
   expiry boundaries, stale sessions, self-approval and support access.
 

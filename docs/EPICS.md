@@ -2271,10 +2271,12 @@ slice without weakening tenant, accounting, leave or approval invariants.
       one expected skip.
 
 Implementation is delivered through migration 0083 and EPIC-061 is complete. The current
-overall Drizzle journal now contains 88 migrations and generated schema contains 244
+overall Drizzle journal now contains 89 migrations and generated schema contains 244
 tables after TASK-170's 0084/0085 platform-support additions, TASK-172's additive
-assignment-scope migration 0086 and TASK-173's authorization-override migration 0087.
-TASK-017 remains the separate non-programmatic blocker.
+assignment-scope migration 0086, TASK-173's authorization-override migration 0087 and
+TASK-174-B's authorization-version source migration 0088. The version marker and first
+atomic bump paths are implemented; centralized cache and complete invalidation remain
+in progress. TASK-017 remains the separate non-programmatic blocker.
 
 ## EPIC-062 — Role & Permission Architecture Evolution 🔶
 
@@ -2307,8 +2309,9 @@ approval subsystem. Normative current/target behavior is in
       platform-domain keys are rejected before the current tenant Superadmin bypass;
       role/template and approval configuration paths validate
       tenant permissions. `npm run check:permissions` passes. Existing text keys and
-      compatibility aliases remain during the expand phase; authorization-version
-      invalidation and Company Owner cutover remain TASK-174–175, while TASK-173's
+      compatibility aliases remain during the expand phase; migration 0088 now
+      supplies the authorization-version source and first atomic bump paths, while
+      complete invalidation and Company Owner cutover remain TASK-174–175. TASK-173's
       central decision boundary is complete in the next item.
       The pre-TASK-172 152-file Vitest regression passed in three resource-safe
       shards: 610 tests passed, one intentional skip and zero failures. The latest
@@ -2342,9 +2345,11 @@ approval subsystem. Normative current/target behavior is in
 - [~] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** Unknown business-module keys now fail closed, payroll is
       in the registered module set, and authenticated `account/*` service routes are
-      explicitly non-module-gated while still permission-protected. Authorization-
-      version invalidation, full resource/action coverage gating and stale-session/
-      direct-URL tests remain.
+      explicitly non-module-gated while still permission-protected. Migration 0088
+      adds the company authorization-version source; core role/assignment/scope/module/
+      override/invitation changes bump it and session/capability projections expose it.
+      Centralized cache invalidation, organization/policy/master-wide support coverage,
+      full resource/action gating and stale-session/direct-URL tests remain.
 - [ ] **TASK-175 — Replace the tenant Superadmin bypass with explicit Company Owner
       permissions.** Depends on the completed TASK-173/TASK-174 decision, registry and
       cache boundaries; it must preserve last-owner recovery and tenant/platform

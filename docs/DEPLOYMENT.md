@@ -9,11 +9,12 @@ an active production deployment:
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
 Current schema boundary: migration
-`0087_pink_shadowcat` (88 journal entries, 244 generated tables). Migrations
+`0088_early_marvel_boy` (89 journal entries, 244 generated tables). Migrations
 0084–0085 add the separate platform support control plane and exact master/company
 boundary; migration 0086 adds assignment validity/provenance and assignment-owned
 scope rows with a compatibility backfill; migration 0087 adds tenant-scoped reasoned
-user permission overrides and explicit deny precedence. Application-only release does
+user permission overrides and explicit deny precedence; migration 0088 adds the
+company-scoped `authorization_version` freshness source. Application-only release does
 not apply migrations automatically. Production RLS includes the new override table;
 the application central evaluator remains authoritative for decision semantics.
 
@@ -29,7 +30,8 @@ npm run audit:access-matrix
 ```
 
 The access-matrix checks are regression evidence for the current route/module/permission
-catalog; they do not imply that TASK-174's authorization-version cache is complete.
+catalog; migration 0088's version marker is now present, but TASK-174's centralized
+authorization-version cache and complete invalidation coverage are not complete.
 Unknown business-module keys now fail closed; authenticated `account/*` services are
 explicitly non-module-gated but still permission-protected. `./deploy/release.sh` is
 application-only;
@@ -178,7 +180,7 @@ deployment-managed and are never returned to the browser. Appointment recurrence
 reminder jobs are bounded to a 93-day look-ahead and are safe to retry by their unique
 tenant-scoped event keys.
 
-Migrations through **0087** are additive schema changes for appointment automation,
+Migrations through **0088** are additive schema changes for appointment automation,
 the platform support control plane, assignment-scoped authorization and reasoned
 user-level permission overrides. Apply all committed migrations explicitly before the application release,
 then re-apply the production-only RLS script so the calendar worker receives only its
@@ -349,8 +351,9 @@ Every release must run `npm run check:permissions` before building or deploying.
 gate validates application permission literals, role templates, compatibility mappings,
 resource/action metadata and canonical route projections. It currently checks 299
 static registry definitions, 116 resources, 62 actions and 5 update contracts. This
-gate does not replace the later database expand/cutover, authorization-version cache or
-production platform identity bootstrap.
+gate does not replace the later database expand/cutover, centralized authorization-
+version cache/invalidation work or production platform identity bootstrap. Migration
+0088 is additive and must be applied before code paths that read the freshness marker.
 
 ### CI/CD — deploy to a *different* public repo
 
@@ -432,5 +435,5 @@ backup and staging proof, production deployment must:
 4. verify health and one idempotent reminder/outbound retry path;
 5. confirm the worker cannot read unrelated tenant business tables.
 
-Do not deploy only the application containers when migrations through 0087 have not been applied;
+Do not deploy only the application containers when migrations through 0088 have not been applied;
 the source code cannot safely invent missing tables at runtime.

@@ -351,7 +351,11 @@ The following approved requirements remain pending under TASK-174–175:
 - instance/step/resource/policy-bound delegation and any additional approval domain
   mappings not yet registered in the central workflow context;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
-- authorization-version invalidation prevents stale role/scope/module/policy state;
+- migration 0088 adds a company-scoped authorization version. Core role, assignment,
+  scope, module, override and invitation writers bump it atomically, and session/
+  effective-capability projections expose it. Full stale-state invalidation remains
+  pending for centralized caches, organization changes, additional policy domains,
+  master-wide support grants and direct-URL/session regression coverage;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;
 
 Approval authorization must preserve the existing immutable version/instance/decision

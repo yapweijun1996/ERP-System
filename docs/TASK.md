@@ -67,19 +67,23 @@ not a source failure.
   impersonation checks share the active-assignment predicate. Existing
   `role_resource_scope` rows remain a dual-read fallback for assignments whose
   `scope_backfilled_at` is null. Expired and revoked assignments are denied immediately;
-  TASK-173 is complete in migration 0087; authorization-version caching and Company
-  Owner cutover remain TASK-174–175.
+  TASK-173 is complete in migration 0087. Migration 0088 now provides the company
+  authorization-version source and first atomic bump paths; centralized cache
+  invalidation and Company Owner cutover remain TASK-174–175.
 
 ## Current in-progress task
 
-- **TASK-174 — In progress:** TASK-174-A now treats unknown business-module keys as
+- **TASK-174 — In progress:** TASK-174-A treats unknown business-module keys as
   disabled at the backend gate, registers payroll and explicitly keeps authenticated
   `account/*` service routes outside business-module switching while retaining their
-  route permissions. The remaining slice is authorization-version invalidation for
-  role, assignment, scope, module, policy and support-grant changes, followed by
-  stale-session/direct-URL regression tests. TASK-175 remains blocked on this boundary
-  and will replace the tenant Superadmin compatibility bypass with an explicit Company
-  Owner permission bundle.
+  route permissions. TASK-174-B now has migration 0088's company-scoped
+  `authorization_version`; core role, assignment, scope, module, override and
+  invitation mutations bump it atomically, and session/effective-capability
+  projections expose it. The remaining slice is centralized cache invalidation,
+  organization/policy/master-wide support coverage and stale-session/direct-URL
+  regression tests. TASK-175 remains blocked on this boundary and will replace the
+  tenant Superadmin compatibility bypass with an explicit Company Owner permission
+  bundle.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -92,8 +96,8 @@ not a source failure.
   approval configuration reject unregistered tenant permissions. Existing broad
   `role_permission` text keys remain compatible through explicit mapping metadata;
   TASK-172 owns the assignment migration; TASK-173 now owns the central decision and
-  explicit-override boundary, while authorization-versioning and Company Owner cutover
-  remain pending.
+  explicit-override boundary, while authorization-versioning is partially delivered by
+  migration 0088 and Company Owner cutover remain pending.
   `npm run check:permissions` is the CI gate for source literals, role templates,
   resource/action contracts and compatibility metadata. The complete 152-file Vitest
   regression baseline passes in three resource-safe shards: 610 tests passed, one
@@ -144,9 +148,10 @@ statuses above and keep each change independently testable:
    is part of the registered module set, and authenticated `account/*` services are
    explicitly non-module-gated while retaining permission checks. Resource/action
    coverage and startup/CI assertions are still required for every new module prefix.
-4. **TASK-174-B — Authorization versioning:** invalidate cached/session capability state
-   on role, assignment, scope, organization, module, policy and support-grant changes;
-   add stale-version/direct-URL revocation tests.
+4. **TASK-174-B — Authorization versioning:** migration 0088 and the first core bump
+   paths are implemented; finish cached/session capability invalidation on organization,
+   policy and master-wide support-grant changes, then add stale-version/direct-URL
+   revocation tests.
 5. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
    explicit registered permissions, retaining last-owner recovery and platform isolation.
 6. **RELEASE-I18N-001 — localization gate closure: Done in the current worktree.**

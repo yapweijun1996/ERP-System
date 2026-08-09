@@ -235,8 +235,9 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > generic approval-instance/step table. Budget approval uses the existing
 > `budget_version.status`/`is_active`/`version` state plus imported `budget_line` rows;
 > it also adds no generic approval-instance/step table.
-> The current boundary is migration 0087: **88 journaled migrations and 244 generated
-> tables**. Each subsequent schema capability must still
+> The current boundary is migration 0088: **89 journaled migrations and 244 generated
+> tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
+> the tenant authorization freshness source. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
@@ -258,6 +259,7 @@ support_access_grant             bounded, auditable customer-support authorizati
 user_company_role_scope          assignment-owned scope grants and validated targets (0086)
 user_company_role                 stable assignment identity, validity and provenance (0086)
 user_permission_override          reasoned user-level explicit allow/deny exception (0087)
+company.authorization_version     monotonic tenant authorization freshness marker (0088)
 audit_log.platform_principal_id platform actor correlation for platform events (0084)
 ```
 

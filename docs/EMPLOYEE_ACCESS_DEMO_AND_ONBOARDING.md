@@ -157,8 +157,8 @@ TASK-017.
 - At the EPIC-059 release boundary, migration 0073 and the ordered PGlite v73/v74
   compatibility path passed fresh install, persistent upgrade and obsolete-index repair;
   PostgreSQL and generated Demo schemas agreed on 232 tables. This is historical evidence,
-  not the current schema count; see `STATUS.md` for the live 88-migration/244-table
-  baseline through migration 0087.
+  not the current schema count; see `STATUS.md` for the live 89-migration/244-table
+  baseline through migration 0088.
 - `npm test` passes 134 files plus one expected skip: 518 tests pass, one skips and none
   fail. Lint, root/Web typechecks, generated-schema/pack/i18n checks and both builds pass.
 - Demo/PGlite and the retained isolated PostgreSQL proof database

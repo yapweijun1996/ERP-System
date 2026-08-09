@@ -124,6 +124,10 @@ role                (role_id, master_fn, name, is_superadmin)
   active master/company membership. Its explicit `deny` effect is evaluated before
   explicit allow, role grants and the current Superadmin compatibility path; validity
   and revocation are checked on every central authorization decision.
+- Migration 0088 adds `company.authorization_version`, defaulting to `1`. Core tenant
+  authorization lifecycle writers bump it in the same transaction as role, assignment,
+  scope, module, override and invitation changes; it is a freshness marker for session
+  and capability projections, not a substitute for tenant-bound backend checks.
 
 ## 5. Scoping rules (enforced everywhere)
 

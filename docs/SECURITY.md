@@ -127,7 +127,11 @@ current/target record. The following are implemented compatibility facts:
   `account/*` service routes are an explicit non-module prefix: they remain protected
   by tenant/session and route permissions, but are not disabled with business-module
   switches. Resource registration remains a runtime application allowlist; no database
-  FK or authorization-version cache is claimed yet.
+  FK or centralized authorization-version cache is claimed yet. Migration 0088 now
+  supplies the company-scoped freshness marker and core role/assignment/scope/module/
+  override/invitation writers bump it atomically; the marker is not itself an access
+  grant and remaining cache, organization, policy and master-wide support invalidation
+  is still open under TASK-174.
 
 TASK-170 now separates platform/support authority. `platform_principal`, platform roles,
 hash-backed bearer/CSRF sessions and `support_access_grant` are outside tenant role
@@ -151,15 +155,19 @@ takeover. Delegation remains tenant/domain/authority/delegate/time/revocation bo
 instance/step/resource/policy-bound delegation is still a later hardening slice.
 TASK-174-A now fails closed for unknown business-module keys, registers payroll as a
 gateable module and keeps authenticated `account/*` service routes explicitly outside
-business-module switching while retaining route permissions. Authorization-version
-invalidation and TASK-175's explicit Company Owner cutover remain pending. TASK-170's
-implemented platform boundary grants no platform operator permanent implicit
-customer-data authority.
+business-module switching while retaining route permissions. Migration 0088 now
+provides the company authorization-version source and first atomic bump paths; complete
+cache invalidation, broader organization/policy/support coverage and TASK-175's explicit
+Company Owner cutover remain pending. TASK-170's implemented platform boundary grants
+no platform operator permanent implicit customer-data authority.
 
 The shared access matrix (`src/auth/accessMatrix.ts`) and its API/browser checks are
 defence-in-depth regression contracts for route visibility, module/permission metadata
 and record drill-in. They do not replace backend authorization and do not close the
-remaining TASK-174 authorization-version gap.
+remaining TASK-174 authorization-version gap. Session and effective-capability
+responses expose the current version so future caches can reject stale projections;
+backend authorization still re-evaluates current database state on every protected
+request.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company
 Superadmin and active linked non-Superadmin employee, records entry/return and blocks

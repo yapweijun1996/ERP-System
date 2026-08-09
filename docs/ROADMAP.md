@@ -1011,17 +1011,21 @@ pack was regenerated from the current authoritative Manager template, and permis
 module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
 one expected skip and zero failures. Generic module collections use company scopes because
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
-actor-derived and team/direct-tree scoped. The current schema journal contains 88
-migrations and generated Drizzle SQL contains 244 tables. TASK-173's authorization
-override migration is now included. The latest full regression attempt completed with
+actor-derived and team/direct-tree scoped. The current schema journal contains 89
+migrations and generated Drizzle SQL contains 244 tables. TASK-170's platform-support
+migrations 0084/0085, TASK-172's assignment-scope migration 0086, TASK-173's
+authorization-override migration 0087 and TASK-174-B's authorization-version migration
+0088 are included. The latest full regression attempt completed with
 622 passed, 8 failed and 1 skipped across 155 files. The account-service module-gate
 omission was corrected and targeted notification/access-matrix/module coverage now
 passes 15/15; two Team Calendar tests still use a Manager actor against the current
 seed's HR-permission leave policy and need fixture alignment. The 149-file/599-test
 result above is retained as TASK-168's historical shard evidence. `src/auth/accessMatrix.ts`,
 its authenticated API matrix suite and `npm run audit:access-matrix` now provide a
-cross-layer route/permission regression foundation, while authorization-version
-invalidation remains open under TASK-174. Physical-phone verification remains
+cross-layer route/permission regression foundation. Migration 0088 now supplies the
+company authorization-version marker and first atomic bump paths for role,
+assignment, scope, module, override and invitation changes; centralized cache and
+complete invalidation remain open under TASK-174. Physical-phone verification remains
 separately blocked under TASK-017.
 
 ## Phase 44 — Authorization Architecture Evolution 🔶
@@ -1041,12 +1045,14 @@ separately blocked under TASK-017.
    the locked current step and resolved resource/module/scope/policy context, reject
    inactive named authorities and keep older in-flight instances on their snapshot
    without implicit takeover. Focused strict-step coverage passes 18/18.
-4. **Fail-closed registry and cache invalidation** (TASK-174) is next: unknown
+4. **Fail-closed registry and cache invalidation** (TASK-174) is in progress: unknown
    business-module keys now fail closed, payroll is registered and authenticated
    `account/*` services are explicitly non-module-gated; finish the
    unknown module/resource/ownership checks, make route metadata coverage a release gate,
-   and add prompt authorization-version invalidation for role, scope, module, policy and
-   support-grant changes. The access matrix is a partial precursor, not task completion.
+   and add prompt authorization-version invalidation for organization, policy,
+   master-wide support-grant and cached capability changes, plus stale-session/direct-
+   URL regressions. Migration 0088 is the delivered source/marker foundation; the
+   access matrix is a partial precursor, not task completion.
 5. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,
    explainable Company Owner permissions after TASK-173 and TASK-174 pass their gates.
 

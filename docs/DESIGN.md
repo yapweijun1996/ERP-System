@@ -396,9 +396,13 @@ Current runtime facts:
   canonical route, module, permission and API drill-in contract together. Unknown
   business-module keys now fail closed and payroll is registered in
   `src/auth/moduleAccess.ts`; authenticated `account/*` service routes are explicitly
-  non-module-gated but still require their own permissions. Authorization-version
-  invalidation is not yet implemented, so the matrix remains a regression foundation
-  rather than proof that TASK-174 is complete.
+  non-module-gated but still require their own permissions. Migration 0088 adds the
+  company-scoped `authorization_version`; core role, assignment, scope, module,
+  override and invitation writes bump it atomically, while session and effective-
+  capability responses expose the current marker. There is still no centralized
+  capability cache, and organization changes, some policy domains, master-wide
+  support grants and stale-session/direct-URL regression coverage remain open, so
+  the matrix is a regression foundation rather than proof that TASK-174 is complete.
 
 TASK-170 now adds a separate platform control-plane domain: platform principals, static
 application-owned support roles, hash-backed bearer/CSRF sessions and auditable support
@@ -415,7 +419,7 @@ owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. TA
 is complete: migration 0087 and the central evaluator govern explicit user-level
 overrides, safe explanations and strict current-step approval decisions with resolved
 resource/module/scope/policy context. Code behavior above is authoritative. Remaining
-EPIC-062 target work is authorization-version invalidation, broader delegation binding
+EPIC-062 target work is complete authorization-version invalidation, broader delegation binding
 and explicit Company Owner permissions under TASK-174–175. Broad
 `role_permission` rows remain a text compatibility store; registry telemetry,
 centralized decision caching and the Company Owner cutover are not yet delivered.
@@ -440,3 +444,9 @@ centralized decision caching and the Company Owner cutover are not yet delivered
   explicit allow/deny effects, validity/revocation metadata and resource/department
   target support. The admin explanation endpoint is privileged and append-audited;
   public authorization callers receive safe reason codes only.
+- Migration 0088 adds `company.authorization_version` with default `1`. The central
+  marker is read on every durable session/effective-capability projection, and the
+  current lifecycle writers bump it after successful role, assignment, scope, module,
+  override and invitation changes. It is a freshness signal, not an authorization
+  bypass or a replacement for the backend evaluator; cache invalidation and remaining
+  organization/policy/support coverage are still pending under TASK-174.

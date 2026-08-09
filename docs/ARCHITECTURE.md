@@ -13,9 +13,10 @@ TASK-173 now centralizes the tenant permission decision path, explicit user-leve
 overrides, safe/audited explanations and strict current-step context for mapped generic
 approvals; the current access matrix adds a shared route/module/permission regression
 contract. Unknown business-module keys now fail closed; authenticated `account/*`
-service routes are explicitly non-module-gated but still permission-protected.
-Authorization-version invalidation, deeper delegation binding and Company Owner cutover
-remain open under TASK-174–175.
+service routes are explicitly non-module-gated but still permission-protected. Migration
+0088 now supplies the company authorization-version marker and first atomic bump paths;
+centralized invalidation, deeper delegation binding and Company Owner cutover remain
+open under TASK-174–175.
 
 ## 1. Goal
 
