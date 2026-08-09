@@ -33,29 +33,37 @@ are rejected before the current tenant Superadmin bypass. Migration 0087 now add
 reasoned user-level explicit allow/deny overrides, and `src/auth/authorization.ts`
 centralizes membership, registry, override, role and assignment decisions. Public
 callers receive safe reason codes; audit-read administrators can request full audited
-explanations. TASK-173 remains in progress because strict permission-plus-active-
-workflow-authority behavior across every approval-like legacy path and broader
-resource/module/policy context are not complete. EPIC-062/TASK-174–175 track the
+explanations. TASK-173 remains in progress because strict permission-plus-current-
+workflow-authority behavior across every remaining approval-like legacy path and
+broader resource/module/policy context are not complete. Direct Sales/Purchasing order
+decisions and Purchase Requisition decisions now have dedicated permission checks;
+requisitions use their locked `submitted` row as the implemented legacy authority and
+do not claim a generic approval instance/step. EPIC-062/TASK-174–175 track the
 remaining fail-closed module/cache and explicit Company Owner migration. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
-The first TASK-173 approval slice is now complete: direct Sales Order and Purchase
+The first TASK-173 approval slices are now complete: direct Sales Order and Purchase
 Order approve/reject action definitions require `sales.approve` or `purchasing.approve`,
-and `src/modules/sales/salesOrderApproval.ts` plus
-`src/modules/purchasing/purchaseOrderApproval.ts` call `authorizeWithin` before
-mutating a still-pending order/approval pair. Permission-removal adversarial tests keep
-both rows pending; the focused order/authorization/API contract suites pass 20/20.
+and their domain commands call `authorizeWithin` before mutating a still-pending
+order/approval pair. Purchase Requisition approve/reject actions require
+`purchasing.approve`; its domain command validates the active actor and only mutates a
+locked `submitted` row. Permission-removal adversarial tests keep protected rows
+unchanged; the order/authorization/API contract suites pass 20/20, the requisition
+suite passes 9/9, and the combined regression passes 29/29.
 
 Current verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof, Demo build,
 generated Demo schema, 244-table drift, Demo-pack and permission-registry checks pass.
 The Demo proof is PGlite-only in this environment; PostgreSQL parity and true
 concurrency remain conditional on `POSTGRES_URL`. Focused
 central-authorization/API explanation/RBAC/assignment/resource/approval suites pass.
-The full Vitest regression is also green: 154 files passed + 1 skipped file (155 total),
-623 tests passed + 1 intentional skip (624 test slots), zero failures. Assignment/RBAC,
-admin/manager and approval-focused tests pass, including expiry, revoke, multi-target,
-explicit deny precedence and safe
-explanation access-control cases.
+The latest full Vitest attempt reached 153 passed files + 1 skipped file and one failed
+Demo showcase-pack assertion: the Manager template had gained `purchasing.approve` but
+the generated showcase permission list had not. That fixture and manifest are now
+synchronized, and the previously failing `demoShowcasePack.test.ts` passes 1/1;
+the focused authorization/purchasing/API suites also pass. A clean full-suite rerun
+after this fixture correction remains pending. Assignment/RBAC, admin/manager and
+approval-focused tests pass, including expiry, revoke, multi-target, explicit deny
+precedence and safe explanation access-control cases.
 The current screen audit reaches all 128 registered routes and confirms 128
 Canonical/0 Preview with no console/page errors. Its desktop/375 px release
 layout/behavior gate now passes, including active-tab visibility, HR Calendar detail
@@ -365,7 +373,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ⚠️ Current smoke gate failed | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. The 2026-08-10 smoke run still exposes 18 numeric `0` navigation badges in each viewport; actionable counts must remain in canonical module KPIs and approval queues, or the badge semantics must be explicitly defined. |
 | Full screen audit — every route in `SCREENS` (128), desktop + 375px | ✅ Green | 2026-08-10: all 128 routes render at desktop and mobile with no console/page errors; 128 Canonical / 0 Preview, active-tab visibility, layout, action-bar and declared-contract checks all pass. Permission-aware navigation and the separate access-matrix API/browser checks remain green. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green | 2026-08-10: the full Vitest run has 154 passed files + 1 skipped file (155 total); 623 tests passed + 1 intentional skip (624 test slots), zero failed. The permission registry, resource/action contracts, Demo v15 pack, permission/module tests and authenticated integration coverage agree with the current application catalog. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ⚠️ Focused green; full rerun pending | 2026-08-10: the latest full attempt reached 153 passed files + 1 skipped file and one stale Demo showcase-pack permission assertion. The Manager `purchasing.approve` fixture mismatch is fixed; `demoShowcasePack.test.ts` now passes 1/1, and focused purchasing/authorization/API suites are green. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |

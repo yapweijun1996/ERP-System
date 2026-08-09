@@ -7,10 +7,12 @@
 // a requisition never creates a PO itself.
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import Decimal from 'decimal.js';
+import { authorizeWithin } from '../../auth/authorization';
+import { PERMISSIONS } from '../../auth/permissionKeys';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
-  product, purchaseRequisition, purchaseRequisitionLine,
+  appUser, product, purchaseRequisition, purchaseRequisitionLine, userCompany,
   PURCHASE_REQUISITION_PRIORITIES,
 } from '../../data/schema';
 
@@ -34,6 +36,12 @@ export interface CreatePurchaseRequisitionInput {
   priority?: string;
   justification?: string | null;
   lines: PurchaseRequisitionLineInput[];
+}
+
+export interface DecidePurchaseRequisitionInput {
+  decision: 'approved' | 'rejected';
+  actorUserId: number;
+  rejectionReason?: string | null;
 }
 
 export async function createPurchaseRequisitionWithin(
@@ -106,12 +114,41 @@ export async function decidePurchaseRequisitionWithin(
   exec: DB,
   scope: Scope,
   requisitionId: number,
-  decision: 'approved' | 'rejected',
-  rejectionReason?: string | null,
+  input: DecidePurchaseRequisitionInput,
 ) {
-  if (decision === 'rejected' && !rejectionReason?.trim()) {
+  if (!Number.isSafeInteger(input.actorUserId) || input.actorUserId <= 0) {
+    throw new PurchaseRequisitionError('actorUserId must be a positive integer');
+  }
+  if (input.decision === 'rejected' && !input.rejectionReason?.trim()) {
     throw new PurchaseRequisitionError('rejectionReason is required to reject a requisition');
   }
+
+  const [actor] = await exec.select({
+    userId: appUser.userId,
+  }).from(appUser).innerJoin(userCompany, and(
+    eq(userCompany.userId, appUser.userId),
+    eq(userCompany.companyFn, scope.companyFn),
+  )).where(and(
+    eq(appUser.userId, input.actorUserId),
+    eq(appUser.masterFn, scope.masterFn),
+    eq(appUser.isActive, true),
+  )).limit(1);
+  if (!actor) {
+    throw new PurchaseRequisitionError('The approving user is not active in this company');
+  }
+
+  const authorization = await authorizeWithin(
+    exec,
+    { userId: actor.userId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+    PERMISSIONS.purchasingApprove,
+    { resourceKey: 'purchasing/purchase-requisitions', requireScope: false },
+  );
+  if (!authorization.allowed) {
+    throw new PurchaseRequisitionError(
+      'The actor is not authorized to decide this active purchase requisition',
+    );
+  }
+
   const [req] = await exec.select().from(purchaseRequisition).where(and(
     eq(purchaseRequisition.masterFn, scope.masterFn),
     eq(purchaseRequisition.companyFn, scope.companyFn),
@@ -123,8 +160,8 @@ export async function decidePurchaseRequisitionWithin(
   }
 
   const [updated] = await exec.update(purchaseRequisition).set({
-    status: decision,
-    rejectionReason: decision === 'rejected' ? rejectionReason!.trim() : null,
+    status: input.decision,
+    rejectionReason: input.decision === 'rejected' ? input.rejectionReason!.trim() : null,
     decidedAt: sql`now()`,
     updatedAt: sql`now()`,
   }).where(and(
@@ -149,8 +186,7 @@ export function decidePurchaseRequisition(
   db: DB,
   scope: Scope,
   requisitionId: number,
-  decision: 'approved' | 'rejected',
-  rejectionReason?: string | null,
+  input: DecidePurchaseRequisitionInput,
 ) {
-  return db.transaction((tx) => decidePurchaseRequisitionWithin(tx, scope, requisitionId, decision, rejectionReason));
+  return db.transaction((tx) => decidePurchaseRequisitionWithin(tx, scope, requisitionId, input));
 }

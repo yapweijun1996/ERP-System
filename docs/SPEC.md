@@ -308,12 +308,17 @@ safe/audited explanations:
   registered `sales.approve`/`purchasing.approve` permission in both the API action
   definition and the domain command; the command also requires the tenant-scoped order
   and approval row to remain pending before changing either record.
+- Purchase Requisition approve/reject actions now require the registered
+  `purchasing.approve` permission in both the API action definition and the domain
+  command; the command validates the active tenant actor and only changes a locked
+  requisition whose existing status is `submitted`. This legacy path has no generic
+  approval instance/step yet.
 
 The following approved requirements remain pending under TASK-173–175:
 
-- strict permission-plus-active-workflow-authority behavior across the remaining
-  requisition, commission, allowance, budget and HR compatibility approval-like paths,
-  plus complete resource/policy context;
+- strict permission-plus-current-workflow-authority behavior across the remaining
+  commission, allowance, budget and HR compatibility approval-like paths, plus complete
+  resource/policy context;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
 - authorization-version invalidation prevents stale role/scope/module/policy state;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;

@@ -843,21 +843,31 @@ const ACTIONS: Record<string, ActionDefinition> = {
     },
   },
   'purchasing/purchase-requisitions/approve': {
-    permission: 'purchasing.write',
+    permission: 'purchasing.approve',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
-      return decidePurchaseRequisitionWithin(tx, scope, input.resourceId, 'approved');
+      return decidePurchaseRequisitionWithin(tx, scope, input.resourceId, {
+        decision: 'approved',
+        actorUserId: input.actorUserId,
+      });
     },
   },
   'purchasing/purchase-requisitions/reject': {
-    permission: 'purchasing.write',
+    permission: 'purchasing.approve',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
       const reason = (input.payload as { rejectionReason?: unknown } | undefined)?.rejectionReason;
       return decidePurchaseRequisitionWithin(
-        tx, scope, input.resourceId, 'rejected', typeof reason === 'string' ? reason : null,
+        tx,
+        scope,
+        input.resourceId,
+        {
+          decision: 'rejected',
+          actorUserId: input.actorUserId,
+          rejectionReason: typeof reason === 'string' ? reason : null,
+        },
       );
     },
   },

@@ -48,7 +48,7 @@ const personaEmployeeSpecs = [
 const rolePermissions = {
   Employee: ['employee.self.read','employee.leave.write','employee.receipts.write','employee.claims.write','employee.payout.manage'],
   'Company Admin': ['dashboard.read','admin.users.invite','admin.users.read','admin.users.manage','admin.roles.read','admin.roles.write','admin.modules.manage','admin.audit.read','settings.read','settings.manage','session.switch_company','hr.read','hr.write'],
-  Manager: ['dashboard.read','employee.self.read','employee.team.read','employee.leave.write','employee.receipts.write','employee.claims.write','expenses.approve.manager','sales.read','crm.read','inventory.read','project.read','service.read','sales.approve','project.approve'],
+  Manager: ['dashboard.read','employee.self.read','employee.team.read','employee.leave.write','employee.receipts.write','employee.claims.write','expenses.approve.manager','sales.read','crm.read','inventory.read','project.read','service.read','sales.approve','purchasing.approve','project.approve'],
   Sales: ['dashboard.read','sales.read','sales.write','sales.create','sales.edit','sales.export','crm.read','crm.write','crm.create','crm.edit','crm.export'],
   Buyer: ['dashboard.read','purchasing.read','purchasing.write','purchasing.create','purchasing.edit','purchasing.export','inventory.read'],
   Warehouse: ['dashboard.read','inventory.read','inventory.write','inventory.adjust','inventory.transfer','inventory.track','inventory.create','inventory.edit','inventory.post','warehouse.read','warehouse.create','warehouse.edit','warehouse.post'],

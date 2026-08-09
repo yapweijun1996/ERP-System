@@ -101,6 +101,7 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.payout.manage' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.approve.manager' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'purchasing.approve' },
   ]);
   await db.insert(roleResourceScope).values([
     { masterFn: 'M1', companyFn: 'C-SG', roleId: viewerRole.id, resourceKey: '*', scope: 'company' },

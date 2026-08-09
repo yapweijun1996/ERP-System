@@ -144,11 +144,14 @@ The following current behaviors are compatibility facts, not the final architect
   checks delegation. Direct Sales Order and Purchase Order approve/reject decisions
   now require the registered `sales.approve` or `purchasing.approve` permission through
   `authorizeWithin`, while the locked pending order/approval rows remain the active
-  legacy workflow authority. The existing HR management `overridePermissionKey` remains
-  a compatibility escalation for an active pending step; strict domain-permission plus
+  legacy workflow authority. Purchase Requisition approve/reject decisions now also
+  require `purchasing.approve` through `authorizeWithin`; that legacy path has no
+  `approval_instance`/`approval_step`, so the locked `submitted` row is its current
+  workflow authority. The existing HR management `overridePermissionKey` remains a
+  compatibility escalation for an active pending step; strict domain-permission plus
   current-step authority for every approval-like legacy path is not yet complete. The
-  remaining direct-domain gaps are requisition, commission, allowance and budget
-  approval-like commands, plus the HR compatibility escalation.
+  remaining direct-domain gaps are commission, allowance and budget approval-like
+  commands, plus the HR compatibility escalation.
 - Unknown module keys currently pass the module gate. Registered resources still have
   permission checks, but this is not the target fail-closed module/resource cache
   behavior. No database foreign key or authorization-version cache is claimed yet.
@@ -309,7 +312,11 @@ The current centralized evaluator implements this subset in this order:
 7. Direct Sales/Purchasing order decisions additionally require their dedicated
    registered approval permission; the domain command then locks and validates the
    pending order and approval rows before mutation.
-8. Return a safe reason code; full diagnostic fields are available only through the
+8. Purchase Requisition decisions additionally require `purchasing.approve`; the
+   domain command then locks and validates the tenant-scoped requisition remains
+   `submitted` before mutation. This is the current legacy workflow authority, not a
+   claim that a generic approval instance/step exists for requisitions.
+9. Return a safe reason code; full diagnostic fields are available only through the
    audited administrator explanation path.
 
 Module/resource/action validation, ABAC policy evaluation, authorization-version

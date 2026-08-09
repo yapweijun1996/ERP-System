@@ -177,7 +177,9 @@ safe/audited explanations. Direct Sales/Purchasing order decisions now require t
 dedicated approval permission in both the action dispatcher and domain command, while
 their pending order/approval rows remain the active workflow gate. The cross-layer access
 matrix is a regression contract for route/module/permission metadata, not a replacement
-for backend authorization. Remaining
-EPIC-062 tasks add strict approval-authority coverage, fail-closed module/resource
+for backend authorization. Purchase Requisition decisions now use the same
+`purchasing.approve` central check and its locked `submitted` row as the current legacy
+workflow gate; no generic approval instance/step is claimed. Remaining EPIC-062 tasks
+add strict approval-authority coverage, fail-closed module/resource
 validation, authorization-version invalidation and explicit Company Owner permissions.
 Those target capabilities must not be inferred from the current `is_superadmin` column.

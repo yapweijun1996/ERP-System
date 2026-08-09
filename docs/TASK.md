@@ -65,15 +65,23 @@ both desktop and mobile runs.
   `purchasing.approve`, and each domain command calls `authorizeWithin` before changing
   the tenant-scoped order plus its still-pending approval row. The focused order,
   authorization and API contract suites pass 20/20 tests, with lint, typecheck and
-  `npm run check:permissions` also green.
+  `npm run check:permissions` also green. `TASK-173-A2-R1` is now delivered for
+  Purchase Requisition approve/reject decisions: both actions require
+  `purchasing.approve`, and the domain command validates the active tenant actor and
+  central authorization before locking and changing the existing submitted-state row.
+  This legacy requisition path has no `approval_instance`/`approval_step`; its locked
+  `submitted` state is the currently implemented workflow authority. The requisition
+  suite passes 9/9 and the combined purchasing/sales/authorization regression passes
+  29/29.
   Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
   lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
-  Remaining before Done: strict permission-plus-active-workflow-authority behavior for
-  the remaining requisition/commission/allowance/budget commands and the HR compatibility
-  escalation, plus broader resource/module/policy context. The full current regression
-  run is green:
-  154 files passed + 1 skipped file (155 total), 623 tests passed + 1 intentional skip
-  (624 test slots), zero failures.
+  Remaining before Done: strict permission-plus-current-workflow-authority behavior for
+  the remaining commission/allowance/budget commands and the HR compatibility
+  escalation, plus broader resource/module/policy context. The previously recorded
+  full regression baseline remains 154 files passed + 1 skipped file (155 total),
+  623 tests passed + 1 intentional skip (624 test slots), zero failures; the latest
+  A2-R1 slice has the focused evidence above and has not yet been added to a new full
+  suite run.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -92,8 +100,9 @@ both desktop and mobile runs.
   resource/action contracts and compatibility metadata. The complete 152-file Vitest
   regression baseline passes in three resource-safe shards: 610 tests passed, one
   intentional skip and zero failures before TASK-172 added its four assignment/seed
-  regression cases. The current full-suite run is green at 154 files passed + 1 skipped
-  file (155 total): 623 tests passed + 1 intentional skip, zero failures (624 test slots).
+  regression cases. The latest full attempt reached 153 passed files + 1 skipped file
+  and one stale Demo showcase-pack permission assertion; the corrected Manager fixture
+  now passes its showcase test 1/1, while a clean full rerun remains pending.
 
 - **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,
   hash-backed bearer/CSRF sessions, auditable support grants and exact master/company
@@ -123,10 +132,12 @@ statuses above and keep each change independently testable:
    approve/reject actions now require their dedicated registered approval permission and
    the domain commands require an active tenant actor plus the pending order/approval
    workflow state. Adversarial tests prove permission removal leaves both rows unchanged.
-2. **TASK-173-A2 — approval authority unification:** route the remaining legacy
-   requisition, commission, allowance and budget decisions through domain permission
-   plus active workflow-step authority; preserve the existing HR takeover behavior only
-   as an explicit, audited compatibility policy until its replacement is implemented.
+2. **TASK-173-A2 — approval authority unification (in progress; R1 done):** Purchase
+   Requisition approve/reject now routes through `purchasing.approve` plus the current
+   locked `submitted` state. Route the remaining legacy commission, allowance and
+   budget decisions through domain permission plus their active workflow authority;
+   preserve the existing HR takeover behavior only as an explicit, audited
+   compatibility policy until its replacement is implemented.
 3. **TASK-173-B — decision-context completion:** register the remaining ownership,
    module and policy context consumed by authorization, and prove that missing context
    denies without changing the current assignment/Superadmin compatibility boundary.

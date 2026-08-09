@@ -2294,8 +2294,10 @@ approval subsystem. Normative current/target behavior is in
       and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
       grant evaluation does not proxy customer data. The pre-TASK-172 complete
       152-file Vitest baseline passed in three resource-safe shards: 610 passed, one
-      expected skip, zero failures. The current full run is green at 154 files passed +
-      1 skipped file (155 total): 623 tests passed + 1 intentional skip (624 test slots).
+      expected skip, zero failures. The latest full attempt reached 153 passed files +
+      1 skipped file and one stale Demo showcase-pack permission assertion; the
+      corrected Manager fixture now passes its showcase test 1/1, while a clean full
+      rerun remains pending.
 - [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
       migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
       (157 compatibility and 142 canonical, with platform permissions kept in a
@@ -2309,9 +2311,10 @@ approval subsystem. Normative current/target behavior is in
       invalidation and Company Owner cutover remain TASK-174–175, while TASK-173's
       central decision boundary is tracked in the next item.
       The pre-TASK-172 152-file Vitest regression passed in three resource-safe
-      shards: 610 tests passed, one intentional skip and zero failures. The current
-      full run is green at 154 files passed + 1 skipped file (155 total): 623 tests
-      passed + 1 intentional skip (624 test slots), zero failures.
+      shards: 610 tests passed, one intentional skip and zero failures. The latest
+      full attempt reached 153 passed files + 1 skipped file and one stale Demo
+      showcase-pack permission assertion; the corrected Manager fixture now passes
+      its showcase test 1/1, while a clean full rerun remains pending.
 - [x] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
       Migration 0086 makes `user_company_role.assignment_id` the stable primary key,
       adds validity/revocation/provenance fields and creates `user_company_role_scope`.
@@ -2324,15 +2327,21 @@ approval subsystem. Normative current/target behavior is in
       explanation.** Migration 0087 adds `user_permission_override`; the central
       evaluator is used by permission wrappers, resource/action gates and approval
       permission checks. Public callers receive safe reason codes; audit-read admins
-      receive audited full explanations. The current full regression is green at 154
-      files passed + 1 skipped file (155 total): 623 tests passed + 1 intentional skip
-      (624 test slots), zero failures. `TASK-173-A1` is delivered: direct Sales Order
-      and Purchase Order approve/reject action definitions require `sales.approve` or
-      `purchasing.approve`, and their domain commands call the central evaluator before
-      changing an order or its pending approval row; focused authorization/order/API
-      contract tests pass 20/20. Remaining work is strict permission-plus-active-
-      workflow-authority behavior for requisition/commission/allowance/budget commands,
-      the HR compatibility escalation and broader resource/module/policy context.
+      receive audited full explanations. The previously recorded full regression
+      baseline is 154 files passed + 1 skipped file (155 total): 623 tests passed + 1
+      intentional skip (624 test slots), zero failures. `TASK-173-A1` is delivered:
+      direct Sales Order and Purchase Order approve/reject action definitions require
+      `sales.approve` or `purchasing.approve`, and their domain commands call the central
+      evaluator before changing an order or its pending approval row; focused
+      authorization/order/API contract tests pass 20/20. `TASK-173-A2-R1` is also
+      delivered: Purchase Requisition approve/reject actions require
+      `purchasing.approve`, and the domain command checks the active tenant actor and
+      central evaluator before locking and changing the existing submitted-state legacy
+      workflow row; its focused suite passes 9/9 and the combined purchasing/sales/
+      authorization regression passes 29/29. Remaining work is strict
+      permission-plus-current-workflow-authority behavior for commission, allowance
+      and budget commands, the HR compatibility escalation and broader resource/module/
+      policy context. A new full suite run is still pending for A2-R1.
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** The access matrix and browser/API route contract are a
       partial precursor; unknown module keys still fail open and no authorization-version

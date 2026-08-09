@@ -1,6 +1,18 @@
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import type { DB } from '../../data/db';
-import { product } from '../../data/schema';
+import {
+  appUser,
+  company,
+  currency,
+  master,
+  product,
+  purchaseRequisition,
+  role,
+  rolePermission,
+  userCompany,
+  userCompanyRole,
+} from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import {
   createPurchaseRequisition,
@@ -14,6 +26,50 @@ async function fixtureProduct(db: DB) {
     sku: 'PR-WIDGET', name: 'Fictional Widget', uom: 'unit',
   }).returning({ id: product.id });
   return row;
+}
+
+async function fixtureApprover(db: DB) {
+  await db.insert(master).values({
+    masterFn: SCOPE.masterFn,
+    loginCode: 'PR-APPROVAL-TEST',
+    name: 'Test Master',
+  });
+  await db.insert(currency).values({ code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' });
+  await db.insert(company).values({
+    masterFn: SCOPE.masterFn,
+    companyFn: SCOPE.companyFn,
+    name: 'Test Company',
+    country: 'SG',
+    currency: 'SGD',
+    taxRegime: 'GST',
+  });
+  const [approver] = await db.insert(appUser).values({
+    masterFn: SCOPE.masterFn,
+    username: 'fictional.requisition.approver',
+    email: 'requisition.approver@example.test',
+    fullName: 'Fictional Requisition Approver',
+    passwordHash: 'test-only-hash',
+  }).returning({ id: appUser.userId });
+  const [approverRole] = await db.insert(role).values({
+    masterFn: SCOPE.masterFn,
+    name: 'Purchase Requisition Approver',
+  }).returning({ id: role.roleId });
+  await db.insert(userCompany).values({
+    userId: approver.id,
+    companyFn: SCOPE.companyFn,
+    roleId: approverRole.id,
+  });
+  await db.insert(rolePermission).values({
+    masterFn: SCOPE.masterFn,
+    roleId: approverRole.id,
+    permissionKey: 'purchasing.approve',
+  });
+  await db.insert(userCompanyRole).values({
+    userId: approver.id,
+    companyFn: SCOPE.companyFn,
+    roleId: approverRole.id,
+  });
+  return { approverId: approver.id, approverRoleId: approverRole.id };
 }
 
 describe('purchase requisitions', () => {
@@ -69,6 +125,7 @@ describe('purchase requisitions', () => {
   it('approves a submitted requisition', async () => {
     const db = await freshDb();
     const widget = await fixtureProduct(db);
+    const approver = await fixtureApprover(db);
     const created = await createPurchaseRequisition(db, SCOPE, {
       reqNo: 'PR-APPROVE',
       requestedByName: 'Fictional Requester',
@@ -76,13 +133,17 @@ describe('purchase requisitions', () => {
       neededByDate: '2026-08-01',
       lines: [{ productId: widget.id, qty: 1, estimatedUnitCost: 1 }],
     });
-    const decided = await decidePurchaseRequisition(db, SCOPE, created.id, 'approved');
+    const decided = await decidePurchaseRequisition(db, SCOPE, created.id, {
+      decision: 'approved',
+      actorUserId: approver.approverId,
+    });
     expect(decided.status).toBe('approved');
   });
 
   it('rejects a submitted requisition with a real reason', async () => {
     const db = await freshDb();
     const widget = await fixtureProduct(db);
+    const approver = await fixtureApprover(db);
     const created = await createPurchaseRequisition(db, SCOPE, {
       reqNo: 'PR-REJECT',
       requestedByName: 'Fictional Requester',
@@ -90,13 +151,18 @@ describe('purchase requisitions', () => {
       neededByDate: '2026-08-01',
       lines: [{ productId: widget.id, qty: 1, estimatedUnitCost: 1 }],
     });
-    const decided = await decidePurchaseRequisition(db, SCOPE, created.id, 'rejected', 'Over budget this quarter.');
+    const decided = await decidePurchaseRequisition(db, SCOPE, created.id, {
+      decision: 'rejected',
+      actorUserId: approver.approverId,
+      rejectionReason: 'Over budget this quarter.',
+    });
     expect(decided).toMatchObject({ status: 'rejected', rejectionReason: 'Over budget this quarter.' });
   });
 
   it('rejects rejecting without a reason', async () => {
     const db = await freshDb();
     const widget = await fixtureProduct(db);
+    const approver = await fixtureApprover(db);
     const created = await createPurchaseRequisition(db, SCOPE, {
       reqNo: 'PR-REJECT-EMPTY',
       requestedByName: 'Fictional Requester',
@@ -104,13 +170,18 @@ describe('purchase requisitions', () => {
       neededByDate: '2026-08-01',
       lines: [{ productId: widget.id, qty: 1, estimatedUnitCost: 1 }],
     });
-    await expect(decidePurchaseRequisition(db, SCOPE, created.id, 'rejected', '  '))
+    await expect(decidePurchaseRequisition(db, SCOPE, created.id, {
+      decision: 'rejected',
+      actorUserId: approver.approverId,
+      rejectionReason: '  ',
+    }))
       .rejects.toThrow('rejectionReason is required');
   });
 
   it('rejects deciding an already-decided requisition', async () => {
     const db = await freshDb();
     const widget = await fixtureProduct(db);
+    const approver = await fixtureApprover(db);
     const created = await createPurchaseRequisition(db, SCOPE, {
       reqNo: 'PR-DECIDE-TWICE',
       requestedByName: 'Fictional Requester',
@@ -118,8 +189,41 @@ describe('purchase requisitions', () => {
       neededByDate: '2026-08-01',
       lines: [{ productId: widget.id, qty: 1, estimatedUnitCost: 1 }],
     });
-    await decidePurchaseRequisition(db, SCOPE, created.id, 'approved');
-    await expect(decidePurchaseRequisition(db, SCOPE, created.id, 'rejected', 'Too late'))
+    await decidePurchaseRequisition(db, SCOPE, created.id, {
+      decision: 'approved',
+      actorUserId: approver.approverId,
+    });
+    await expect(decidePurchaseRequisition(db, SCOPE, created.id, {
+      decision: 'rejected',
+      actorUserId: approver.approverId,
+      rejectionReason: 'Too late',
+    }))
       .rejects.toThrow(PurchaseRequisitionError);
+  });
+
+  it('requires purchasing.approve before deciding the requisition', async () => {
+    const db = await freshDb();
+    const widget = await fixtureProduct(db);
+    const approver = await fixtureApprover(db);
+    const created = await createPurchaseRequisition(db, SCOPE, {
+      reqNo: 'PR-NO-PERMISSION',
+      requestedByName: 'Fictional Requester',
+      department: 'Fictional Department',
+      neededByDate: '2026-08-01',
+      lines: [{ productId: widget.id, qty: 1, estimatedUnitCost: 1 }],
+    });
+    await db.delete(rolePermission).where(
+      eq(rolePermission.roleId, approver.approverRoleId),
+    );
+
+    await expect(decidePurchaseRequisition(db, SCOPE, created.id, {
+      decision: 'approved',
+      actorUserId: approver.approverId,
+    })).rejects.toThrow('not authorized');
+
+    const [unchanged] = await db.select({ status: purchaseRequisition.status })
+      .from(purchaseRequisition)
+      .where(eq(purchaseRequisition.id, created.id));
+    expect(unchanged.status).toBe('submitted');
   });
 });

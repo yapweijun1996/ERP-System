@@ -1013,9 +1013,11 @@ one expected skip and zero failures. Generic module collections use company scop
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
 actor-derived and team/direct-tree scoped. The current schema journal contains 88
 migrations and generated Drizzle SQL contains 244 tables. TASK-173's authorization
-override migration is now included. The current full regression has 154 passed files + 1
-skipped file (155 total), 623 tests passed + 1 intentional skip (624 test slots), zero
-failures; the 149-file/599-test result above is retained as
+override migration is now included. The latest full regression attempt reached 153
+passed files + 1 skipped file and one stale Demo showcase-pack permission assertion;
+the Manager `purchasing.approve` fixture and manifest are now synchronized and the
+previously failing showcase test passes 1/1. A clean full rerun after that correction
+remains pending; the 149-file/599-test result above is retained as
 TASK-168's historical shard evidence. `src/auth/accessMatrix.ts`, its authenticated API
 matrix suite and `npm run audit:access-matrix` now provide a cross-layer route/permission
 regression foundation, while unknown module keys and authorization-version invalidation
@@ -1034,11 +1036,12 @@ TASK-017.
 3. **Assignment and decision model** (TASK-172–173): TASK-172 moves validity, provenance
    and scope to assignments. TASK-173 is in progress: migration 0087 adds the central
    decision service, explicit user-level overrides and privileged audited explanations;
-   the direct Sales/Purchasing order decision slice is now complete, including dedicated
-   approval permissions in the API and domain guard. Strict approval-authority
-   unification remains open across requisition/commission/allowance/budget approval-like
-   commands and the HR compatibility escalation. Broader resource/module/policy context
-   is also open.
+   the direct Sales/Purchasing order decision slice and the Purchase Requisition legacy
+   state slice are now complete, including dedicated approval permissions in the API and
+   domain guards. Requisitions use their locked `submitted` state because no generic
+   approval instance/step exists yet. Strict approval-authority unification remains
+   open across commission/allowance/budget approval-like commands and the HR
+   compatibility escalation. Broader resource/module/policy context is also open.
 4. **Fail-closed registry and cache invalidation** (TASK-174) is next: finish the
    unknown module/resource/ownership checks, make route metadata coverage a release gate,
    and add prompt authorization-version invalidation for role, scope, module, policy and

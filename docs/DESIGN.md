@@ -356,7 +356,13 @@ Current runtime facts:
 - Direct Sales Order and Purchase Order approve/reject action definitions now require
   `sales.approve` or `purchasing.approve`; their domain commands call
   `authorizeWithin` and then lock/validate the still-pending order and approval rows
-  before mutation. The targeted order/authorization/API contract tests pass 20/20.
+  before mutation. Purchase Requisition approve/reject actions now require
+  `purchasing.approve`; its domain command validates the active actor and central
+  evaluator before locking the legacy `submitted` requisition row. Requisitions do not
+  yet have a generic approval instance/step, so that submitted-state row is the
+  implemented workflow authority. The targeted order/authorization/API contract tests
+  pass 20/20, the requisition suite passes 9/9, and the combined regression passes
+  29/29.
 - `authorize()` and `authorizeWithin()` expose only safe `allowed/reasonCode` results;
   `explainAuthorization()` is reserved for the audit-read admin endpoint, which
   records every explanation. Override creation/revocation is reasoned and audited.
@@ -379,12 +385,12 @@ TASK-172 now delivers assignment-scoped validity, revocation/provenance and vali
 scope targets through migration 0086, with a stable assignment primary key, assignment-
 owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. TASK-173
 is in progress: migration 0087 and the central evaluator now govern explicit user-level
-overrides and safe explanations; its first approval-authority slice covers direct Sales
-and Purchasing order decisions. Code behavior above is authoritative. Remaining
-EPIC-062 target work is requisition/commission/allowance/budget authority, the HR
-compatibility escalation, broader decision context, fail-closed module/resource
-behavior, authorization-version invalidation and explicit Company Owner permissions
-under TASK-173–175. Broad
+overrides and safe explanations; its first order slice and the Purchase Requisition
+approval slice are delivered. Code behavior above is authoritative. Remaining
+EPIC-062 target work is commission/allowance/budget authority, the HR compatibility
+escalation, broader decision context, fail-closed module/resource behavior,
+authorization-version invalidation and explicit Company Owner permissions under
+TASK-173–175. Broad
 `role_permission` rows remain a text compatibility store; registry telemetry,
 centralized decision caching and the Company Owner cutover are not yet delivered.
 

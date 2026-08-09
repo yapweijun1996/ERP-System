@@ -225,7 +225,10 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > `document_processing_policy` (migration 0075's `openai_compatible` BYOK vision
 > provider) without a new table. TASK-161–171 synchronize the subsequent operational,
 > editable-record, Sales, session, HR Calendar, Staff Calendar and authorization
-> documentation work. TASK-173 adds migration 0087's `user_permission_override` table.
+> documentation work. TASK-173 adds migration 0087's `user_permission_override` table. The
+> delivered Purchase Requisition approval slice is additive application logic only: it
+> uses the existing `purchase_requisition.status`/`decided_at` state row and adds no
+> generic approval-instance table.
 > The current boundary is migration 0087: **88 journaled migrations and 244 generated
 > tables**. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
