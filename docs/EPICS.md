@@ -2338,10 +2338,15 @@ approval subsystem. Normative current/target behavior is in
       `purchasing.approve`, and the domain command checks the active tenant actor and
       central evaluator before locking and changing the existing submitted-state legacy
       workflow row; its focused suite passes 9/9 and the combined purchasing/sales/
-      authorization regression passes 29/29. Remaining work is strict
-      permission-plus-current-workflow-authority behavior for commission, allowance
-      and budget commands, the HR compatibility escalation and broader resource/module/
-      policy context. A new full suite run is still pending for A2-R1.
+      authorization regression passes 29/29. `TASK-173-A2-R2` is also delivered:
+      Sales Commission run approval now re-checks the existing
+      `sales.commission.approve` permission in the domain command before locking the
+      legacy `draft` run; no generic approval instance/step is claimed. Its focused
+      suite passes 5/5 and the combined commission/authorization/API regression passes
+      15/15. Remaining work is strict permission-plus-current-workflow-authority
+      behavior for allowance and budget commands, the HR compatibility escalation and
+      broader resource/module/policy context. A new full suite run is still pending for
+      A2-R1/A2-R2.
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** The access matrix and browser/API route contract are a
       partial precursor; unknown module keys still fail open and no authorization-version

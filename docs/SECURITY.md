@@ -118,6 +118,10 @@ current/target record. The following are implemented compatibility facts:
   dispatcher and domain command. The command checks active tenant membership before
   locking the legacy requisition row and only mutates a `submitted` request; no generic
   approval instance/step is claimed for this path;
+- Sales Commission run approval now requires `sales.commission.approve` in the domain
+  command as well as the dispatcher. The command checks the active tenant actor before
+  locking and mutating a `draft` run; its versioned header snapshot is the current
+  legacy authority and no generic approval instance/step is claimed;
 - unknown module keys currently pass the module gate and therefore remain a migration
   risk even though registered resources retain their own authorization checks. Resource
   registration is currently a runtime application allowlist; no database FK or
@@ -133,10 +137,10 @@ creation, decisions and revocation. Principal/session issuance is out-of-band, a
 evaluator is a decision/audit boundary rather than an automatic customer-data proxy.
 
 TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173
-has completed the direct Sales/Purchasing order slice and the Purchase Requisition
-legacy-state slice, but remains in progress for strict permission-plus-current-workflow-
-authority coverage across commission, allowance, budget and HR compatibility paths, plus
-broader resource/module/policy context. TASK-174–175 must
+has completed the direct Sales/Purchasing order slice, the Purchase Requisition
+legacy-state slice and the Sales Commission legacy-state slice, but remains in progress
+for strict permission-plus-current-workflow-authority coverage across allowance, budget
+and HR compatibility paths, plus broader resource/module/policy context. TASK-174–175 must
 invalidate stale authorization state and remove the tenant Superadmin bypass. TASK-170's
 implemented platform boundary grants no platform operator permanent implicit
 customer-data authority.

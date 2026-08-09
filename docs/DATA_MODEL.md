@@ -228,7 +228,9 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > documentation work. TASK-173 adds migration 0087's `user_permission_override` table. The
 > delivered Purchase Requisition approval slice is additive application logic only: it
 > uses the existing `purchase_requisition.status`/`decided_at` state row and adds no
-> generic approval-instance table.
+> generic approval-instance table. The Sales Commission approval slice likewise uses
+> the existing `sales_commission_run.status`/`version`/approval snapshot columns and
+> adds no workflow table.
 > The current boundary is migration 0087: **88 journaled migrations and 244 generated
 > tables**. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.

@@ -180,6 +180,9 @@ matrix is a regression contract for route/module/permission metadata, not a repl
 for backend authorization. Purchase Requisition decisions now use the same
 `purchasing.approve` central check and its locked `submitted` row as the current legacy
 workflow gate; no generic approval instance/step is claimed. Remaining EPIC-062 tasks
-add strict approval-authority coverage, fail-closed module/resource
+add Sales Commission's dedicated `sales.commission.approve` domain check to the
+implemented legacy-state coverage; its locked `draft` run is the current workflow gate
+without a generic approval instance/step. Remaining tasks add strict approval-authority
+coverage, fail-closed module/resource
 validation, authorization-version invalidation and explicit Company Owner permissions.
 Those target capabilities must not be inferred from the current `is_superadmin` column.

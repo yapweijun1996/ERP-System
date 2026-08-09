@@ -72,16 +72,21 @@ both desktop and mobile runs.
   This legacy requisition path has no `approval_instance`/`approval_step`; its locked
   `submitted` state is the currently implemented workflow authority. The requisition
   suite passes 9/9 and the combined purchasing/sales/authorization regression passes
-  29/29.
+  29/29. `TASK-173-A2-R2` is now delivered for Sales Commission run approvals: the
+  existing `sales.commission.approve` action permission is enforced again in the domain
+  command before locking the draft run, whose existing `draft` state/version snapshot
+  remains the legacy workflow authority. This path also has no generic
+  `approval_instance`/`approval_step`; its commission suite passes 5/5 and the combined
+  commission/authorization/API regression passes 15/15.
   Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
   lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
   Remaining before Done: strict permission-plus-current-workflow-authority behavior for
-  the remaining commission/allowance/budget commands and the HR compatibility
+  the remaining allowance/budget commands and the HR compatibility
   escalation, plus broader resource/module/policy context. The previously recorded
   full regression baseline remains 154 files passed + 1 skipped file (155 total),
   623 tests passed + 1 intentional skip (624 test slots), zero failures; the latest
-  A2-R1 slice has the focused evidence above and has not yet been added to a new full
-  suite run.
+  A2-R1/A2-R2 slices have the focused evidence above and have not yet been added to a
+  new full suite run.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -132,10 +137,12 @@ statuses above and keep each change independently testable:
    approve/reject actions now require their dedicated registered approval permission and
    the domain commands require an active tenant actor plus the pending order/approval
    workflow state. Adversarial tests prove permission removal leaves both rows unchanged.
-2. **TASK-173-A2 — approval authority unification (in progress; R1 done):** Purchase
+2. **TASK-173-A2 — approval authority unification (in progress; R1/R2 done):** Purchase
    Requisition approve/reject now routes through `purchasing.approve` plus the current
-   locked `submitted` state. Route the remaining legacy commission, allowance and
-   budget decisions through domain permission plus their active workflow authority;
+   locked `submitted` state; Sales Commission run approval now routes through
+   `sales.commission.approve` plus the current locked `draft` state. Route the remaining
+   legacy allowance and budget decisions through domain permission plus their active
+   workflow authority;
    preserve the existing HR takeover behavior only as an explicit, audited
    compatibility policy until its replacement is implemented.
 3. **TASK-173-B — decision-context completion:** register the remaining ownership,

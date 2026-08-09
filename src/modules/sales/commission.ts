@@ -5,6 +5,8 @@ import {
   and, asc, between, eq, gt, gte, isNull, lte, ne, or, sql,
 } from 'drizzle-orm';
 import Decimal from 'decimal.js';
+import { authorizeWithin } from '../../auth/authorization';
+import { PERMISSIONS } from '../../auth/permissionKeys';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
@@ -519,6 +521,19 @@ export async function approveCommissionRunWithin(
   input: { note: string; actorUserId: number },
 ) {
   const note = required(input.note, 'Approval note', 1000);
+  const actor = await companyActor(exec, scope, input.actorUserId);
+  const authorization = await authorizeWithin(
+    exec,
+    { userId: actor.userId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+    PERMISSIONS.salesCommissionApprove,
+    { resourceKey: 'sales/commission-runs', requireScope: false },
+  );
+  if (!authorization.allowed) {
+    throw new SalesCommissionError(
+      'The actor is not authorized to approve this commission run.',
+    );
+  }
+
   const [run] = await exec.select().from(salesCommissionRun).where(and(
     eq(salesCommissionRun.masterFn, scope.masterFn),
     eq(salesCommissionRun.companyFn, scope.companyFn),
@@ -527,7 +542,6 @@ export async function approveCommissionRunWithin(
   if (!run || run.status !== 'draft') {
     throw new SalesCommissionError('Only a draft commission run can be approved.');
   }
-  const actor = await companyActor(exec, scope, input.actorUserId);
   const [approved] = await exec.update(salesCommissionRun).set({
     status: 'approved',
     approvedAt: sql`now()`,

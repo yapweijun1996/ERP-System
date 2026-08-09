@@ -150,8 +150,11 @@ The following current behaviors are compatibility facts, not the final architect
   workflow authority. The existing HR management `overridePermissionKey` remains a
   compatibility escalation for an active pending step; strict domain-permission plus
   current-step authority for every approval-like legacy path is not yet complete. The
-  remaining direct-domain gaps are commission, allowance and budget approval-like
-  commands, plus the HR compatibility escalation.
+  Sales Commission run approval now also requires `sales.commission.approve` through
+  `authorizeWithin`; that legacy path has no `approval_instance`/`approval_step`, so
+  the locked `draft` run/version snapshot is its current workflow authority. The
+  remaining direct-domain gaps are allowance and budget approval-like commands, plus
+  the HR compatibility escalation.
 - Unknown module keys currently pass the module gate. Registered resources still have
   permission checks, but this is not the target fail-closed module/resource cache
   behavior. No database foreign key or authorization-version cache is claimed yet.
@@ -316,7 +319,11 @@ The current centralized evaluator implements this subset in this order:
    domain command then locks and validates the tenant-scoped requisition remains
    `submitted` before mutation. This is the current legacy workflow authority, not a
    claim that a generic approval instance/step exists for requisitions.
-9. Return a safe reason code; full diagnostic fields are available only through the
+9. Sales Commission run decisions additionally require `sales.commission.approve`; the
+   domain command then locks and validates the tenant-scoped run remains `draft` before
+   mutation. Its versioned header snapshot is the current legacy workflow authority,
+   not a generic approval instance/step.
+10. Return a safe reason code; full diagnostic fields are available only through the
    audited administrator explanation path.
 
 Module/resource/action validation, ABAC policy evaluation, authorization-version

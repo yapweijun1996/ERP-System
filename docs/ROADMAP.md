@@ -1036,12 +1036,14 @@ TASK-017.
 3. **Assignment and decision model** (TASK-172–173): TASK-172 moves validity, provenance
    and scope to assignments. TASK-173 is in progress: migration 0087 adds the central
    decision service, explicit user-level overrides and privileged audited explanations;
-   the direct Sales/Purchasing order decision slice and the Purchase Requisition legacy
-   state slice are now complete, including dedicated approval permissions in the API and
-   domain guards. Requisitions use their locked `submitted` state because no generic
-   approval instance/step exists yet. Strict approval-authority unification remains
-   open across commission/allowance/budget approval-like commands and the HR
-   compatibility escalation. Broader resource/module/policy context is also open.
+   the direct Sales/Purchasing order decision slice, the Purchase Requisition legacy
+   state slice and the Sales Commission legacy state slice are now complete, including
+   dedicated approval permissions in the API and domain guards. Requisitions use their
+   locked `submitted` state and commission runs use their locked `draft` state/version
+   snapshot because no generic approval instance/step exists for either path. Strict
+   approval-authority unification remains open across allowance/budget approval-like
+   commands and the HR compatibility escalation. Broader resource/module/policy
+   context is also open.
 4. **Fail-closed registry and cache invalidation** (TASK-174) is next: finish the
    unknown module/resource/ownership checks, make route metadata coverage a release gate,
    and add prompt authorization-version invalidation for role, scope, module, policy and

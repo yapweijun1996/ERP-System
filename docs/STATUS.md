@@ -36,9 +36,10 @@ callers receive safe reason codes; audit-read administrators can request full au
 explanations. TASK-173 remains in progress because strict permission-plus-current-
 workflow-authority behavior across every remaining approval-like legacy path and
 broader resource/module/policy context are not complete. Direct Sales/Purchasing order
-decisions and Purchase Requisition decisions now have dedicated permission checks;
-requisitions use their locked `submitted` row as the implemented legacy authority and
-do not claim a generic approval instance/step. EPIC-062/TASK-174–175 track the
+decisions, Purchase Requisition decisions and Sales Commission run approvals now have
+dedicated permission checks; requisitions use their locked `submitted` row and
+commission runs use their locked `draft`/version snapshot as the implemented legacy
+authorities, without claiming generic approval instances/steps. EPIC-062/TASK-174–175 track the
 remaining fail-closed module/cache and explicit Company Owner migration. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
@@ -50,6 +51,9 @@ order/approval pair. Purchase Requisition approve/reject actions require
 locked `submitted` row. Permission-removal adversarial tests keep protected rows
 unchanged; the order/authorization/API contract suites pass 20/20, the requisition
 suite passes 9/9, and the combined regression passes 29/29.
+Sales Commission run approval now also re-checks `sales.commission.approve` in the
+domain command before changing a locked `draft` run; its suite passes 5/5 and the
+combined commission/authorization/API regression passes 15/15.
 
 Current verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof, Demo build,
 generated Demo schema, 244-table drift, Demo-pack and permission-registry checks pass.

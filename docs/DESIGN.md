@@ -362,7 +362,11 @@ Current runtime facts:
   yet have a generic approval instance/step, so that submitted-state row is the
   implemented workflow authority. The targeted order/authorization/API contract tests
   pass 20/20, the requisition suite passes 9/9, and the combined regression passes
-  29/29.
+  29/29. Sales Commission run approval now also calls `authorizeWithin` for
+  `sales.commission.approve` before locking the legacy `draft` run; its versioned header
+  snapshot remains the implemented workflow authority and no generic approval
+  instance/step is claimed. The commission suite passes 5/5 and its combined
+  authorization/API regression passes 15/15.
 - `authorize()` and `authorizeWithin()` expose only safe `allowed/reasonCode` results;
   `explainAuthorization()` is reserved for the audit-read admin endpoint, which
   records every explanation. Override creation/revocation is reasoned and audited.
@@ -385,10 +389,10 @@ TASK-172 now delivers assignment-scoped validity, revocation/provenance and vali
 scope targets through migration 0086, with a stable assignment primary key, assignment-
 owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. TASK-173
 is in progress: migration 0087 and the central evaluator now govern explicit user-level
-overrides and safe explanations; its first order slice and the Purchase Requisition
-approval slice are delivered. Code behavior above is authoritative. Remaining
-EPIC-062 target work is commission/allowance/budget authority, the HR compatibility
-escalation, broader decision context, fail-closed module/resource behavior,
+overrides and safe explanations; its order, Purchase Requisition and Sales Commission
+approval slices are delivered. Code behavior above is authoritative. Remaining
+EPIC-062 target work is allowance/budget authority, the HR compatibility escalation,
+broader decision context, fail-closed module/resource behavior,
 authorization-version invalidation and explicit Company Owner permissions under
 TASK-173–175. Broad
 `role_permission` rows remain a text compatibility store; registry telemetry,

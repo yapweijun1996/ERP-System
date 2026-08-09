@@ -5,13 +5,17 @@ import {
   appUser,
   customer,
   invoice,
+  role,
+  rolePermission,
   salesCommissionLine,
+  salesCommissionRun,
   salesCommissionSource,
   salesCreditNote,
   salesDebitNote,
   salesDelivery,
   salesReturn,
   salesOrder,
+  userCompanyRole,
   warehouse,
 } from '../../data/schema';
 import { freshDb } from '../../test/helpers';
@@ -167,6 +171,49 @@ describe('sales commission', () => {
     await expect(approveCommissionRunWithin(db, scope, run.id, {
       note: 'Again', actorUserId: admin.id,
     })).rejects.toBeInstanceOf(SalesCommissionError);
+  });
+
+  it('requires sales.commission.approve before a direct domain approval', async () => {
+    const { db, admin, viewer } = await fixture();
+    const [viewerRole] = await db.select({ id: role.roleId }).from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.name, 'Viewer'),
+    ));
+    await db.insert(rolePermission).values({
+      masterFn: scope.masterFn,
+      roleId: viewerRole.id,
+      permissionKey: 'sales.commission.approve',
+    });
+    const [assignment] = await db.select({ id: userCompanyRole.assignmentId })
+      .from(userCompanyRole)
+      .where(and(
+        eq(userCompanyRole.userId, viewer.id),
+        eq(userCompanyRole.companyFn, scope.companyFn),
+        eq(userCompanyRole.roleId, viewerRole.id),
+      ));
+    expect(assignment).toBeTruthy();
+
+    const plan = await createCommissionPlanWithin(db, scope, {
+      code: 'COMM-PERMISSION', name: 'Permission fixture', salespersonUserId: admin.id,
+      ratePct: '4', effectiveFrom: '2026-01-01', effectiveTo: null,
+    });
+    await activateCommissionPlanWithin(db, scope, plan.id);
+    const run = await createCommissionRunWithin(db, scope, {
+      docNo: 'COMRUN-PERMISSION', periodStart: '2026-06-01', periodEnd: '2026-06-30',
+      currency: 'SGD',
+    }, admin.id);
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, viewerRole.id),
+      eq(rolePermission.permissionKey, 'sales.commission.approve'),
+    ));
+
+    await expect(approveCommissionRunWithin(db, scope, run.id, {
+      note: 'Viewer must not approve after grant removal.', actorUserId: viewer.id,
+    })).rejects.toThrow('not authorized');
+    const [unchanged] = await db.select({ status: salesCommissionRun.status })
+      .from(salesCommissionRun)
+      .where(eq(salesCommissionRun.id, run.id));
+    expect(unchanged.status).toBe('draft');
   });
 
   it('lists only active company-assigned salespeople and rejects cross-company assignment', async () => {
