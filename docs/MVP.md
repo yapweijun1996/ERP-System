@@ -26,7 +26,7 @@ in localStorage).
 | 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
 | 8 | Static demo bundle suitable for Pages or another public host | ✅ build verified; Pages workflow disabled for this private repo |
 | 9 | First-run **setup wizard** (language → company → country/tax → admin) | ✅ done (TASK-009, TASK-010) |
-| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ⚠️ 128 routes render and maturity passes; current release layout gate has 17 assertions to fix |
+| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ 128 routes render at desktop/mobile, 128 Canonical / 0 Preview, and the screen layout/behavior gate passes; five-language static audit remains a separate release blocker |
 | 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 (permanently blocked — needs a physical phone) |
 
 ### Explicitly OUT of MVP-1

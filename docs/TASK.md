@@ -16,12 +16,12 @@ not a second task registry.
 
 ## Current release-quality note
 
-This is a working-tree regression, not a new task record or a change to the totals:
-`npm run audit:screens` renders all 128 routes and passes the 128 Canonical / 0 Preview
-maturity contract, but currently fails 17 layout/behavior assertions across active
-subnav visibility, HR Calendar detail ordering, Leave Approval's pending action and
-My Work's employee tab count. It must be assigned and fixed before a release is called
-green; TASK-017 remains the separate physical-device blocker.
+The 2026-08-10 screen follow-up is complete: `npm run audit:screens` renders all 128
+routes at desktop/mobile and passes the 128 Canonical / 0 Preview maturity plus
+layout/behavior contracts. A separate release-quality blocker remains: the same-date
+`npm run audit:i18n` matrix renders 128 routes × 5 languages × 2 viewports but exits
+with 263 static blocking findings. TASK-017 remains the separate physical-device
+blocker; neither blocker changes the machine-readable task totals.
 
 ## Current authorization programme
 
@@ -126,6 +126,12 @@ statuses above and keep each change independently testable:
    add stale-version/direct-URL revocation tests.
 5. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
    explicit registered permissions, retaining last-owner recovery and platform isolation.
+6. **RELEASE-I18N-001 — localization gate closure:** resolve the 263 findings from the
+   2026-08-10 `audit:i18n` run, covering missing locale-pack keys and hardcoded/dynamic
+   user-facing text. Re-run the full 128-route × 5-language × 2-viewport matrix and
+   keep the route screen pass and i18n pass as separate evidence. This is an execution
+   slice, not a new machine-readable task record, and can proceed independently of
+   TASK-173–175.
 
 ## Blocker
 

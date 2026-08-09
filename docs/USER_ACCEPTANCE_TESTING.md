@@ -19,9 +19,11 @@ checks supplement the journey but do not replace it.
   endpoint is in scope. A simulated or local export is not an external-service pass.
 
 Current release note (2026-08-10): the live screen registry contains 128 Canonical /
-0 Preview routes. The current audit renders all routes without console/page errors but
-fails 17 layout/behavior assertions; do not record the screen gate as passed until
-those regressions are fixed. The last green five-language matrix covered 125 routes.
+0 Preview routes. `npm run audit:screens` renders every route at desktop and mobile
+without console/page errors and passes the layout/behavior contracts. The separate
+`npm run audit:i18n` browser matrix also renders all 128 × 5 languages × 2 viewports,
+but its static gate reports 263 blocking findings, so five-language acceptance is not
+yet green. TASK-017 remains the physical-device blocker.
 
 ## Baseline and environment checklist
 

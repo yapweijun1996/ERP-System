@@ -31,10 +31,13 @@ npm install
 | `npm test` | **Unit tests** (`vitest run`) — `confirmSalesOrder` (success + GL-balance, whole-chain rollback on insufficient stock, `PostingError` when no tax rule covers the date), `issueStock` (deduct, insufficient, boundary at exactly available qty), `getEffectiveTaxRate` (dated-boundary cases: inclusive `validFrom`, exclusive `validTo`, open-ended, no-match). Each test gets its own fresh in-memory PGlite instance (`src/test/helpers.ts`). Runs in CI on every PR. |
 | `npm run lint` | ESLint over the current root/Web source set |
 
-Release note (2026-08-10): the screen audit reaches all 128 routes and passes the
-Canonical/Preview maturity check, but the current worktree has 17 layout/behavior
-assertion failures. Treat `npm run audit:screens` as red until those failures are fixed;
-the access-matrix audit is a separate passing authorization regression gate.
+Release note (2026-08-10): `npm run audit:screens` now passes all 128 routes at desktop
+and 375 px, with 128 Canonical / 0 Preview, no console/page errors, and no active-tab,
+layout, action-bar or declared-contract failures. The same release pass must still be
+kept separate from localization: `npm run audit:i18n` covers the complete 128-route ×
+5-language × 2-viewport browser matrix, but exits non-zero on 263 static blocking
+findings (missing locale keys and hardcoded/dynamic user-facing text). The access-matrix
+audit remains a separate passing authorization regression gate.
 
 ### Browser smoke test
 

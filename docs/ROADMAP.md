@@ -304,9 +304,11 @@ confirmation rather than silently altering a well-tested design.
 
 Historical exit criteria were met by the Phase 8 implementation: `npm run audit:screens`
 passed after each mechanical change and the module-access-control toggle hid a module
-from both the sidebar and API for a restricted non-superadmin tenant. The current
-working-tree release gate has 17 layout/behavior regressions, recorded in
-STATUS.md and TASK.md, so the current release is not green.
+from both the sidebar and API for a restricted non-superadmin tenant. The 2026-08-10
+screen follow-up now passes the current 128-route desktop/mobile layout and behavior
+gate. Release readiness is still open because `npm run audit:i18n` reports 263 static
+blocking findings; API-mode full-browser proof and physical-device verification remain
+separate pending gates.
 
 ## Phase 9 — Deployment Ergonomics ✅ (interactive host bootstrap done; desktop installer deliberately deferred, not phase-scoped)
 
@@ -1045,3 +1047,9 @@ Exit criteria: all TASK-170–175 adversarial migration and compatibility tests 
 existing tenants retain access without a hidden bypass; platform operators obtain no
 implicit customer-data authority; and the current task index, code, migrations and
 release/runbook documents agree on the same implementation boundary.
+
+Current release evidence (2026-08-10): the screen audit is green for all 128
+Canonical routes at desktop and mobile, while the complete i18n browser matrix renders
+but its static audit fails on 263 blocking findings. This localization debt is the next
+release-quality slice and is independent of the TASK-173 → TASK-175 authorization
+dependency chain.

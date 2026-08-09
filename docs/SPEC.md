@@ -110,6 +110,12 @@ incomplete feature may be introduced only as an explicitly labelled `Preview · 
 Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
 schema, resource/command, permission, tests and localization are complete.
 
+Current verification boundary (2026-08-10): `npm run audit:screens` passes all 128
+routes at desktop and 375 px with 128 Canonical / 0 Preview and no layout/behavior
+contract failures. `npm run audit:i18n` renders the complete 128-route × 5-language ×
+2-viewport matrix but exits with 263 static blocking findings, so the requirement that
+every system-authored browser string is localized remains open for remediation.
+
 Module depth that is not yet represented by a route or command remains future scope;
 it must not be simulated with fabricated data or silently treated as implemented.
 
@@ -233,7 +239,9 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. ([I18N.md](I18N.md))
+  for compatibility and is not currently wired. The 2026-08-10 full matrix renders all
+  current routes but the static audit still has 263 blocking findings; this requirement
+  is not yet release-green. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))
 
@@ -249,6 +257,7 @@ controls exist.
 | Permission registry | `npm run check:permissions` | every PR and release |
 | Authorization matrix | `npx vitest run src/api/permissionMatrix.integration.test.ts` + `npm run audit:access-matrix` | every authorization change |
 | Schema parity | `npm run check:demo-schema` + `npm run check:drift` | every migration/release |
+| Five-language route audit | `npm run audit:i18n` | every Canonical route/localization change and before release |
 
 ## EPIC-059 employee access and customer onboarding
 

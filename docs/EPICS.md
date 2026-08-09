@@ -46,9 +46,10 @@ Acceptance criteria:
 - [x] Finance screen shows chart of accounts and GL entries.
 - [x] Every routed screen opened error-free under canonical data at the 2026-07-17
       TASK-018 baseline; leftover Northwind sample shapes were cleaned or labeled.
-      The route boundary has since grown to 128 Canonical / 0 Preview. The current
-      render/maturity audit still passes, while the 2026-08-10 release layout gate
-      has 17 working-tree regressions tracked in STATUS.md.
+      The route boundary has since grown to 128 Canonical / 0 Preview. The 2026-08-10
+      render/maturity/layout audit passes for desktop and mobile. The separate
+      five-language i18n audit renders the complete route matrix but remains blocked by
+      263 static findings tracked in STATUS.md.
 
 ## EPIC-004 — Setup Wizard ✅
 

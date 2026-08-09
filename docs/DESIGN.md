@@ -56,6 +56,13 @@ docs/                    This documentation suite
   5. Add five-language copy, set the route Canonical only after Demo/API parity, then
      run the type/test/schema/build/current-route gates and live desktop + 375 px checks.
 
+Current release verification (2026-08-10): `npm run audit:screens` is green for all
+128 registered routes at desktop and 375 px (128 Canonical / 0 Preview, no console/page
+errors, and no active-tab, layout, action-bar or declared-contract failures). This does
+not make localization green: `npm run audit:i18n` renders the complete 128 × 5 × 2
+matrix but reports 263 static blocking findings, so missing locale keys and
+hardcoded/dynamic UI text remain an implementation slice before release.
+
 ## 3. Data layer design
 
 - **Two runtimes, one schema.** `src/data/db.ts` returns a Drizzle instance backed by

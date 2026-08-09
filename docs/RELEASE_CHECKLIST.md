@@ -17,11 +17,16 @@ section for the path you are releasing. Deployment mechanics live in
       be dedicated and empty; the preflight rejects any user table before writes.
 - [ ] `npm run check:demo-schema && npm run check:drift` — generated PGlite artifacts
       and all Drizzle migrations agree
-- [ ] `npm run build:demo` then `npm run smoke` and `npm run audit:screens`
-      (all current 128 routes, desktop + 375 px, zero console errors, and the
-      release layout/behavior assertions must also pass). As of 2026-08-10, all
-      routes render and the maturity contract passes, but 17 layout/behavior
-      assertions fail in the current worktree; this checklist is therefore not green.
+- [x] `npm run build:demo` — the 2026-08-10 Demo build passed.
+- [ ] `npm run smoke` — rerun this shell/dashboard proof after the current working-tree
+      changes; the screen audit below is a separate route/layout proof.
+- [x] `npm run audit:screens` — all current 128 routes at desktop + 375 px, zero
+      console errors, 128 Canonical / 0 Preview, and no route, maturity, active-tab,
+      layout or action contract failures in the 2026-08-10 run.
+- [ ] `npm run audit:i18n` — the 2026-08-10 browser matrix renders all 128 routes ×
+      5 languages × 2 viewports, but the static audit exits with 263 blocking
+      findings. The release remains localization-red until those missing keys and
+      hardcoded/dynamic UI strings are resolved or explicitly reviewed.
 - [ ] `npm run check:permissions` and `npm run audit:access-matrix`
 - [ ] `tasks/tasks.jsonl` statuses current; `docs/STATUS.md` updated if an epic-level
       milestone lands in this release
