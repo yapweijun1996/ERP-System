@@ -16,7 +16,8 @@ Acceptance criteria:
 - [x] Demo mode can boot in the browser.
 - [x] Follow-up tasks replace prototype data with this project's PGlite/API data
       (done for sales/inventory/finance; rest tracked in TASK-018/EPIC-008).
-- [ ] Data access is behind a `VITE_DATA_MODE` seam → **moved to EPIC-007 (TASK-019)**.
+- [x] Data access is behind a `VITE_DATA_MODE` seam → delivered by EPIC-007
+      (TASK-019); the current Demo/API adapter contract remains the source of truth.
 
 ## EPIC-002 — Demo Mode And GitHub Pages ✅
 
@@ -28,7 +29,8 @@ Acceptance criteria:
 - [x] PGlite persists demo data to IndexedDB.
 - [x] Reset demo clears and reseeds browser data.
 - [x] GitHub Pages base path and refresh behavior are handled.
-- [x] GitHub Actions can deploy the static demo.
+- [x] GitHub Actions can build/deploy the static demo when Pages is enabled; the
+      workflow is currently disabled because this repository is private.
 - [x] PWA shell, update prompt, mobile safe areas (TASK-016).
 
 ## EPIC-003 — Core ERP Modules ✅
@@ -42,12 +44,11 @@ Acceptance criteria:
 - [x] Sales order confirmation demonstrates stock deduction (+ rollback on over-sell).
 - [x] Invoice screen shows generated invoices.
 - [x] Finance screen shows chart of accounts and GL entries.
-- [x] Every routed screen opens error-free under canonical data; leftover Northwind
-      sample shapes cleaned or labeled (TASK-018) — `npm run audit:screens` (new,
-      wired into CI) drives all 114 routes through the live `SCREENS` registry;
-      0 crashes, 0 leftover-identity leaks on canonical screens as of 2026-07-17.
-      Routes belonging to modules with no schema yet (see docs/STATUS.md) are an
-      intentional, allowlisted exception, not a gap in this criterion.
+- [x] Every routed screen opened error-free under canonical data at the 2026-07-17
+      TASK-018 baseline; leftover Northwind sample shapes were cleaned or labeled.
+      The route boundary has since grown to 128 Canonical / 0 Preview. The current
+      render/maturity audit still passes, while the 2026-08-10 release layout gate
+      has 17 working-tree regressions tracked in STATUS.md.
 
 ## EPIC-004 — Setup Wizard ✅
 
@@ -105,9 +106,9 @@ Acceptance criteria:
       adjustments/transfers, warehouse picking, manufacturing execution, quality
       disposition and fixed-asset depreciation posting. No stock or money write
       available in api mode executes client-side. Remaining gaps are feature
-      breadth (e.g. manual journal entries, payment vouchers — their screens are
-      still Preview), tracked under Phase 7 module expansion, not missing
-      server-side transaction plumbing.
+      breadth (for example deeper accounting/commercial actions), tracked under the
+      current Canonical boundary and STATUS.md, not missing server-side transaction
+      plumbing.
 - [x] PostgreSQL concurrency test prevents stock over-sell — proven by
       `POSTGRES_URL=... npm run demo` (exactly 1 of 2 racing issues wins), verified
       live twice (TASK-011 host run, TASK-013).
@@ -151,16 +152,19 @@ Acceptance criteria:
 Close the gap between the documented dual-mode design and the code: one adapter
 interface, two backends, no silent schema drift. (TASK-019, TASK-020, TASK-026 done)
 
+The original acceptance notes below are retained as delivery history. The current
+`ErpSystemData` adapters already implement Demo/PGlite and API/PostgreSQL parity for
+the present Canonical route/resource boundary; unsupported future depth remains
+explicit rather than being represented by fabricated API writes.
+
 Acceptance criteria:
 
 - [x] Frontend reads `VITE_DATA_MODE` and selects the demo (PGlite) or api (HTTP)
       adapter (`erp-system-data-adapter.js` / `erp-system-api-adapter.js`, mutually
       exclusive self-disable guards, chosen via `window.erpDataMode()`).
-- [x] The api adapter exposes every method the demo adapter exposes with the same
-      signature (`ready/reset/refresh/confirmOrder/completeSetup/switchCompany/mode/db`);
-      every write currently rejects with a clear "not available yet" error since
-      TASK-011's server doesn't have write endpoints — this is the documented
-      contract for it to implement.
+- [x] The api adapter exposes the shared `ErpSystemData` contract, including current
+      Canonical reads and transactional writes; future actions remain explicit
+      unsupported/deferred contracts rather than silent client-side fabrication.
 - [x] A repeatable check detects drift between `drizzle/0000_init.sql` and
       `web/public/db/erp-system-schema.sql`, and runs in CI (TASK-020 done
       2026-07-17 — `scripts/check-drift.mjs`, semantic table/column comparison,
@@ -169,19 +173,22 @@ Acceptance criteria:
       data) — worth a follow-up if seed drift becomes a real incident.
 - [x] `confirmOrder`/`completeSetup`/`switchCompany` exist in exactly one place per
       runtime (demo adapter vs. api adapter), never both active at once.
-- [x] `VITE_DATA_MODE=api` renders the real dashboard once a server is reachable
-      (TASK-026 done 2026-07-16) — including a working company switcher
-      (`switchCompany` re-fetches with a different scope, no new endpoint needed);
-      other modules (inventory/sales/finance) still have no api-mode data source.
+- [x] `VITE_DATA_MODE=api` renders current Canonical routes with real data once a
+      server is reachable, including a working company switcher. The current route
+      baseline is 128 Canonical / 0 Preview; any deeper future action remains a
+      separate schema/resource/command task.
 
-## EPIC-008 — Purchasing Module ✅ (core chain done; RFQ/quotes/returns/analytics stay mock)
+## EPIC-008 — Purchasing Module ✅ (current Canonical purchasing; depth explicitly bounded)
 
 First new domain built end-to-end after the sales chain: supplier → purchase order →
 goods receipt (stock IN) → supplier invoice (GL). Replaces the mock purchasing screens
-for that core chain specifically — RFQs, quotations, requisitions, purchase returns,
-credit/debit notes, price lists, landed cost, vendor performance, and the purchasing
-analytics reports have no schema and stay on sample data, same as every other
-not-yet-converted module (see docs/STATUS.md). (TASK-022 done, TASK-023 done)
+for that core chain specifically. Later purchasing work promoted requisitions, RFQs,
+quotations, returns, credit/debit notes, price lists, landed cost, vendor performance
+and purchasing reports to the current Canonical route boundary; remaining depth is
+tracked in STATUS.md. (TASK-022/023 and TASK-064–068)
+
+The checklist below records the original core-chain milestone; the current purchasing
+route boundary and later sourcing/controls are summarized in STATUS.md.
 
 Acceptance criteria:
 
@@ -412,8 +419,10 @@ own generic create/action dispatch, which also retroactively gives every existin
 a real audit trail in demo mode. The mock's 4-level (None/View/Edit/Full) permission
 matrix doesn't match the real boolean-per-key `role_permission` model — the real screen
 uses an honest 2-state (allowed/not-allowed) grid instead of forcing a fake 4th level.
-`master-control`, `sys-settings` and `module-activation-control` stay mock (need new
-schema or a data-repointing decision — out of scope for this pass). (TASK-041, TASK-042)
+At the EPIC-016 phase boundary, `master-control`, `sys-settings` and
+`module-activation-control` still needed new persistence. Later EPIC-049/EPIC-059
+work promoted those routes and module activation is now server-enforced Canonical.
+(TASK-041, TASK-042)
 
 Acceptance criteria:
 
@@ -583,14 +592,11 @@ Acceptance criteria:
 
 ## EPIC-020 — HR-lite: Employee Master & Leave Management ✅
 
-First Phase 7 module opened after Phase 8's platform work. Deliberately scoped to
-**employee master + leave request/approval only** — the mock's Payroll screens
-(`payroll-run`, `payslip`) and the onboarding wizard's compensation/pay-grade/
-provisioning-checklist fields stay mock, matching how every prior module conversion
-left schema-less siblings alone rather than expanding scope to "complete" a whole UI
-area (Purchasing's RFQs, Sales' Commission, Assets' Transfer/Dispose). Payroll is a
-materially different, statutory-contribution-heavy domain (EPF/SOCSO/PCB) that belongs
-in its own future epic, not bundled into a "lite" pass. (TASK-049, TASK-050)
+First Phase 7 module opened after Phase 8's platform work. The original EPIC-020 scope
+was deliberately limited to **employee master + leave request/approval only**; its
+Payroll deferral and schema-less sibling notes are historical. EPIC-026/TASK-061/062
+later delivered Payroll, while compensation/pay-grade/provisioning depth outside the
+implemented contracts remains separately bounded. (TASK-049, TASK-050)
 
 Acceptance criteria:
 
@@ -695,10 +701,9 @@ Acceptance criteria:
 
 ## EPIC-022 — Service-lite: Tickets & Contracts ✅
 
-Third Phase 7 module. `screens-service.js` has no schema: `service-ticket` is a real
-list rendering mock rows, but `service-order` always shows the same hardcoded ticket
-(`SVC-26-0042`, the same bug class already fixed for `asset-detail`/`employee`/
-`project-detail`), and `service-contracts` has no detail or create flow at all.
+Third Phase 7 module. The following opening describes the pre-EPIC-022 state and is
+retained as historical context: `screens-service.js` initially had no schema-backed
+ticket/contract depth, a hardcoded `service-order`, and no contract create flow.
 
 Scoped like every prior "lite" conversion — the register/lifecycle core goes real, a
 materially separate depth feature stays mock:
@@ -770,19 +775,14 @@ worktree list` explained why) — fixed by excluding `**/.claude/worktrees/**`.
 ## EPIC-023 — Purchase Requisition: register, approval & real PO linkage ✅
 
 Fourth Phase 7 module, and the last not-started item on the original Phase 7 list.
-Unlike every prior "lite" module, this one is a **new table inside an existing, already-
-Canonical domain** (Purchasing — `suppliers`/`purchase-orders`/`goods-receipts`/
-`supplier-invoices` are already real from EPIC-008), not a new domain of its own. `
-purchase-requisitions` renders real-looking rows today but off pure static mock data
-(`DB.purchaseReqs`, no `prepare:` hook in its `makePurList` config, unlike its already-
-Canonical siblings); `purchase-request` (singular, detail) always shows the same
-hardcoded `PR-26-0142` record — the same bug class already fixed for `asset-detail`/
-`employee`/`project-detail`/`service-order`.
+The following opening describes the pre-EPIC-023 state and is retained as historical
+context: requisitions initially rendered from static mock data and the singular detail
+opened a hardcoded `PR-26-0142` record. The implemented route now has a real
+requisition register, approval and PO linkage.
 
-RFQs, supplier quotations, purchase returns, and supplier credit/debit notes sit at the
-same mock maturity tier and are explicitly **out of scope** — ROADMAP.md already flagged
-Purchase Requisition specifically (not its siblings) as the one gap worth closing, since
-it's the direct upstream of the already-real PO chain.
+At the EPIC-023 boundary RFQs, supplier quotations, purchase returns, and supplier
+credit/debit notes were still out of scope. TASK-064–068 later promoted those
+purchasing routes; current purchasing maturity and any remaining depth are in STATUS.md.
 
 **Real, and the one thing that makes this more than a register:** a genuine
 requisition → purchase order link. `purchase_order` gains a nullable `requisition_id` FK
@@ -1037,12 +1037,14 @@ the identical cross-workspace-import problem.
 
 EPIC-020 (HR-lite) deliberately deferred Payroll (`payroll-run`, `payslip`) as "a
 materially different, statutory-contribution-heavy domain," not a lite extension of
-employee master. This epic closes that deferral. Confirmed by direct research before
+employee master. This epic closed that historical deferral. The bullets below record
+the pre-implementation discovery that justified the scope. Confirmed by direct research before
 scoping (not assumed):
 
-- **`employee` has zero compensation data today** — no salary, wage, or pay-rate column
-  anywhere in `src/data/schema/hr.ts`. Payroll cannot compute anything until this exists.
-- **The mock data is Malaysia-only.** `DB.payrollRun`/`DB.payslip1042` in
+- **At the time of scoping, `employee` had zero compensation data** — no salary, wage,
+  or pay-rate column anywhere in `src/data/schema/hr.ts`. Payroll could not compute
+  anything until this existed.
+- **The pre-implementation mock data was Malaysia-only.** `DB.payrollRun`/`DB.payslip1042` in
   `web/public/assets/data-hr.js` use exclusively Malaysian statutory terms (EPF, SOCSO,
   EIS, PCB) — Singapore's CPF appears nowhere in the mock. Worse, `src/data/seed.ts`
   only seeds employees for the Singapore company (`C-SG`); the Malaysia company (`C-MY`)
@@ -1060,10 +1062,10 @@ scoping (not assumed):
   posts the payroll journal... and releases net pay...") already describes this as one
   combined action, matching Depreciation Run's single-step post rather than a two-step
   accrue-then-disburse workflow — no evidence in the mock or docs asks for the latter.
-- **No payroll GL accounts exist** in the seeded chart of accounts (confirmed by reading
-  the full seed insert — nothing in the `2xxx`/`6xxx` ranges relates to payroll). New
-  accounts are required.
-- **No payroll-specific permission exists** — only the general `hr.read`/`hr.write` pair,
+- **No payroll GL accounts existed at the time** in the seeded chart of accounts
+  (nothing in the `2xxx`/`6xxx` ranges related to payroll). New accounts were required.
+- **No payroll-specific permission existed at the time** — only the general `hr.read`/
+  `hr.write` pair,
   which also gates the leave-approval flow. Compensation data is materially more
   sensitive than the employee directory; this epic adds dedicated `payroll.read`/
   `payroll.write` keys rather than overloading `hr.write`.
@@ -2286,8 +2288,8 @@ approval subsystem. Normative current/target behavior is in
       and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
       grant evaluation does not proxy customer data. The pre-TASK-172 complete
       152-file Vitest baseline passed in three resource-safe shards: 610 passed, one
-      expected skip, zero failures. The current full run is green at 154 files: 623
-      passed, one intentional skip, zero failures (624 test slots).
+      expected skip, zero failures. The current full run is green at 154 files passed +
+      1 skipped file (155 total): 623 tests passed + 1 intentional skip (624 test slots).
 - [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
       migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
       (157 compatibility and 142 canonical, with platform permissions kept in a
@@ -2302,8 +2304,8 @@ approval subsystem. Normative current/target behavior is in
       central decision boundary is tracked in the next item.
       The pre-TASK-172 152-file Vitest regression passed in three resource-safe
       shards: 610 tests passed, one intentional skip and zero failures. The current
-      full run is green at 154 files: 623 tests passed, one intentional skip and zero
-      failures (624 test slots).
+      full run is green at 154 files passed + 1 skipped file (155 total): 623 tests
+      passed + 1 intentional skip (624 test slots), zero failures.
 - [x] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
       Migration 0086 makes `user_company_role.assignment_id` the stable primary key,
       adds validity/revocation/provenance fields and creates `user_company_role_scope`.
@@ -2316,13 +2318,20 @@ approval subsystem. Normative current/target behavior is in
       explanation.** Migration 0087 adds `user_permission_override`; the central
       evaluator is used by permission wrappers, resource/action gates and approval
       permission checks. Public callers receive safe reason codes; audit-read admins
-      receive audited full explanations. Remaining work is strict permission-plus-
-      active-workflow-authority behavior for every approval-like legacy path and
-      broader resource/module/policy context.
+      receive audited full explanations. The current full regression is green at 154
+      files passed + 1 skipped file (155 total): 623 tests passed + 1 intentional skip
+      (624 test slots), zero failures. Remaining work is
+      strict permission-plus-active-workflow-authority behavior for every approval-like
+      legacy path (including direct Sales/Purchasing decisions and the HR compatibility
+      escalation), plus broader resource/module/policy context.
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
-      authorization caches.**
+      authorization caches.** The access matrix and browser/API route contract are a
+      partial precursor; unknown module keys still fail open and no authorization-version
+      cache is implemented yet.
 - [ ] **TASK-175 — Replace the tenant Superadmin bypass with explicit Company Owner
-      permissions.**
+      permissions.** Depends on the completed TASK-173/TASK-174 decision, registry and
+      cache boundaries; it must preserve last-owner recovery and tenant/platform
+      separation.
 
 Dependencies are sequential by design: owner-bypass removal cannot start before the
 platform boundary, canonical registry, assignment migration, decision semantics and

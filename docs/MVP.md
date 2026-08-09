@@ -1,5 +1,9 @@
 # MVP Definition
 
+Reviewed: **2026-08-10**. MVP-1/MVP-2 below are the original release gates; the
+implementation has progressed beyond them. Current code/status truth is in
+[STATUS.md](STATUS.md), with the current 128 Canonical / 0 Preview boundary.
+
 Two MVP gates, in order. Do not start MVP-2 items while MVP-1 exit criteria are open,
 except where a task is explicitly cross-cutting (CI, tests).
 
@@ -20,9 +24,9 @@ in localStorage).
 | 5 | Finance: invoices, journal entries, chart of accounts, ledger drill-down, P&L, AR aging | ✅ done |
 | 6 | Settings → Demo data reset (drop + reseed IndexedDB) | ✅ done |
 | 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
-| 8 | Deployed to GitHub Pages via Actions | ✅ done |
+| 8 | Static demo bundle suitable for Pages or another public host | ✅ build verified; Pages workflow disabled for this private repo |
 | 9 | First-run **setup wizard** (language → company → country/tax → admin) | ✅ done (TASK-009, TASK-010) |
-| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ done (TASK-018, 2026-07-17) — `npm run audit:screens` enforces both in CI |
+| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ⚠️ 128 routes render and maturity passes; current release layout gate has 17 assertions to fix |
 | 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 (permanently blocked — needs a physical phone) |
 
 ### Explicitly OUT of MVP-1
@@ -34,7 +38,8 @@ in localStorage).
 
 ### MVP-1 exit criteria
 
-- Public Pages URL boots offline-capable PWA with seeded data on a phone and a laptop.
+- Static demo artifact boots offline-capable PWA with seeded data in local/static preview;
+  public hosting is a separate follow-up because this repository is private.
 - Order → stock → invoice → GL demo works and rolls back on over-sell (SO-2 / SO-3).
 - Setup wizard can create a fresh company and land on its empty dashboard.
 - Zero console errors on every registered route in demo mode.
@@ -49,8 +54,8 @@ proven in the demo.
 
 | # | Capability | Task |
 | --- | --- | --- |
-| 1 | Frontend data seam actually switches on `VITE_DATA_MODE=demo\|api` | ✅ done (TASK-019) — `api` mode shows an honest "waiting for API" screen until it's wired to render real data (TASK-026) |
-| 2 | API server: `/health`, `GET /api/dashboard` ✅ (TASK-011); sales-order confirmation and the other business writes run server-side through the unified transactional dispatcher (`sales/orders/confirm` + 24 create resources / 28 actions — TASK-040 audit 2026-07-19) ✅ |
+| 1 | Frontend data seam actually switches on `VITE_DATA_MODE=demo\|api` | ✅ done (TASK-019/026) — API mode uses the HTTP/PostgreSQL adapter for the current Canonical boundary |
+| 2 | API server: `/health`, `GET /api/dashboard` ✅ (TASK-011); current Canonical business writes run server-side through the unified transactional dispatcher (TASK-040 and later domain work) ✅ |
 | 3 | Docker Compose stack `web` + `api` + `db` with health checks | ✅ done (TASK-012) — built, run, and torn down for real |
 | 4 | Drizzle migrations + seed run against PostgreSQL | ✅ done (TASK-011/012) — verified both on the host and inside the `api` container |
 | 5 | `Makefile` / `scripts/setup.sh` aligned with the real compose assets (`make setup` works end-to-end) | ✅ done (TASK-021, 2026-07-17) — `scripts/setup.sh` run for real end-to-end plus every individual `make` target against a live, isolated stack |

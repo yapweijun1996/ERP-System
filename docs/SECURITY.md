@@ -127,8 +127,14 @@ evaluator is a decision/audit boundary rather than an automatic customer-data pr
 TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173
 remains in progress for strict permission-plus-active-workflow-authority coverage across
 legacy approval paths and broader resource/module/policy context. TASK-174–175 must
-invalidate stale authorization state and remove the tenant Superadmin bypass. No platform operator has been granted permanent implicit
-customer-data authority by documenting or implementing TASK-170.
+invalidate stale authorization state and remove the tenant Superadmin bypass. TASK-170's
+implemented platform boundary grants no platform operator permanent implicit
+customer-data authority.
+
+The shared access matrix (`src/auth/accessMatrix.ts`) and its API/browser checks are
+defence-in-depth regression contracts for route visibility, module/permission metadata
+and record drill-in. They do not replace backend authorization and do not close the
+remaining TASK-174 unknown-module or authorization-version gaps.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company
 Superadmin and active linked non-Superadmin employee, records entry/return and blocks

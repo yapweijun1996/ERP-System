@@ -80,12 +80,15 @@ and [SCALABILITY.md](SCALABILITY.md).
   admin → optional sample seed. Demo can re-run via reset; production locks after
   the first admin. Production setup is a one-time empty-database command and does
   not require a deployment setup token. Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
-- **Auth** (TASK-024/TASK-106–110/TASK-172): production login resolves `master.login_code`
-  before the organisation-scoped `app_user.username`; the server-side session carries
-  `master_fn`/`company_fn`, authorization unions only live `user_company_role` grants
-  inside `[valid_from, valid_until)` and before `revoked_at`, and the remembered-device
-  cookie enforces its bounded idle/absolute lifetime. Demo
-  mode hashes wizard-created passwords too and labels its demo session.
+- **Auth** (TASK-024/TASK-106–110/TASK-172/TASK-173): production login resolves
+  `master.login_code` before the organisation-scoped `app_user.username`; the server-side
+  session carries `master_fn`/`company_fn`, authorization unions only live
+  `user_company_role` grants inside `[valid_from, valid_until)` and before `revoked_at`,
+  and the remembered-device cookie enforces its bounded idle/absolute lifetime. Role
+  grants remain an allow union, while the central evaluator now supports tenant-scoped
+  user-level explicit allow/deny overrides with deny precedence. `role_permission.allowed=false`
+  is not itself the explicit-deny mechanism. Demo mode hashes wizard-created passwords
+  too and labels its demo session.
 - **Production API** (TASK-011/TASK-040 and subsequent resource/command work):
   Node/Express uses `DATABASE_URL`, real PostgreSQL, server-side session tenant scope,
   and shared transactional commands for current Canonical reads/writes. Remaining
@@ -97,19 +100,27 @@ and [SCALABILITY.md](SCALABILITY.md).
   Additional module breadth remains governed by the Canonical/Preview boundary in
   [STATUS.md](STATUS.md).
 
-### 4.3 Mock screens (allowed, must be labeled)
+### 4.3 Preview and deferred depth
 
-CRM, Manufacturing, Quality, HR/Payroll, Projects, Service, Fixed Assets, BI,
-Integration, Admin render sample data. Requirement: each such screen must be visibly
-marked as sample/demo content and must not crash under canonical data (TASK-018).
+The current route baseline is **128 Canonical / 0 Preview**. The old Mock-screen
+statement from the early MVP is historical and no longer describes the shipped route
+set: CRM, Manufacturing, Quality, HR, Payroll, Projects, Service, Fixed Assets, BI,
+Integration and Admin now use Canonical data/contracts at the route boundary. A future
+incomplete feature may be introduced only as an explicitly labelled `Preview · Sample
+Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
+schema, resource/command, permission, tests and localization are complete.
+
+Module depth that is not yet represented by a route or command remains future scope;
+it must not be simulated with fabricated data or silently treated as implemented.
 
 ### 4.4 Approved expansion (EPIC-052–056)
 
 The following requirements are approved product scope. TASK-106 implemented the
 organisation username/multi-role identity foundation, TASK-107 implemented the
 employee account lifecycle, TASK-108 implemented actor-owned self/team reads and
-TASK-109 delivered the five-language My Work shell as five Preview routes, and
-TASK-110 proved the identity/security boundary including reporting-derived Manager
+TASK-109 delivered the five-language My Work shell initially as five Preview routes;
+later tasks promoted the My Work data and route contracts to the current Canonical
+boundary. TASK-110 proved the identity/security boundary including reporting-derived Manager
 authorization. TASK-111 implements the versioned policy/calendar foundation.
 TASK-112 implements the immutable leave-balance ledger and Pending reservation
 boundary. TASK-113 implements the versioned leave lifecycle, actor-owned authoring,
@@ -135,8 +146,10 @@ view/download/print/export and proves database/filesystem authorization, retenti
 integrity, quarantine and tenant parity. TASK-123 adds confirmed effective-dated
 expense category versions and immutable submission snapshots for Decimal-exact
 tax/FX/account mappings, plus Finance-only clean-evidence actual-bank overrides.
-TASK-127–135 remain **Planned** until their individual acceptance gates pass. Planned
-capabilities must not be represented as current Canonical behavior.
+TASK-124–135 are also complete, covering claim authoring, line-level approval,
+duplicate/budget controls, corporate-card reconciliation, mileage/per diem/cash
+advances, balanced posting, reimbursement payment batches and immutable tax-evidence
+packages. Planned capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
   organisation-unique username, with nullable email before activation. HR employee
@@ -233,6 +246,9 @@ controls exist.
 | PG parity + concurrency | `POSTGRES_URL=... npm run demo` | before any production release (TASK-013) |
 | Demo build | `npm run build:demo` | every PR |
 | Browser smoke | TASK-015 script (desktop + 375 px, zero console errors) | once built: every PR |
+| Permission registry | `npm run check:permissions` | every PR and release |
+| Authorization matrix | `npx vitest run src/api/permissionMatrix.integration.test.ts` + `npm run audit:access-matrix` | every authorization change |
+| Schema parity | `npm run check:demo-schema` + `npm run check:drift` | every migration/release |
 
 ## EPIC-059 employee access and customer onboarding
 

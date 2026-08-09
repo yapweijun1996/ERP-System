@@ -190,9 +190,10 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 ## 7. Employee self-service architecture (EPIC-052–056)
 
 TASK-106 identity primitives, TASK-107 employee account lifecycle, TASK-108
-actor-owned self/team read contracts, TASK-109's five Preview My Work routes and
-TASK-110 identity/security proof and TASK-111's versioned leave policy calendar are
-implemented. TASK-112 adds the immutable leave-balance ledger and serialized Pending
+actor-owned self/team read contracts, TASK-109's initial five Preview My Work routes
+(later promoted to the current Canonical boundary), TASK-110 identity/security proof
+and TASK-111's versioned leave policy calendar are implemented. TASK-112 adds the
+immutable leave-balance ledger and serialized Pending
 reservation. TASK-113 adds the versioned leave lifecycle, immutable revision/event
 trail, actor-owned authoring and privacy-controlled evidence metadata. TASK-114 adds
 versioned approval policy resolution, snapshotted workflow authority, bounded
@@ -346,6 +347,11 @@ Current runtime facts:
 - `authorize()` and `authorizeWithin()` expose only safe `allowed/reasonCode` results;
   `explainAuthorization()` is reserved for the audit-read admin endpoint, which
   records every explanation. Override creation/revocation is reasoned and audited.
+- `src/auth/accessMatrix.ts` and the authenticated/browser matrix checks keep the
+  canonical route, module, permission and API drill-in contract together. The matrix
+  is a current regression foundation, not proof that TASK-174 is complete: unknown
+  module keys still fail open and authorization-version invalidation is not yet
+  implemented.
 
 TASK-170 now adds a separate platform control-plane domain: platform principals, static
 application-owned support roles, hash-backed bearer/CSRF sessions and auditable support

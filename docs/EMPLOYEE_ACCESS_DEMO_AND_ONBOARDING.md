@@ -24,12 +24,15 @@ Buyer, Warehouse, Production, Finance Preparer, Finance Checker, HR, Service and
 Viewer. An administrator copies a template into an editable role owned by the
 active company; a role assigned in one legal entity grants nothing in another.
 
-Effective permissions are an Allow-only union across active, non-revoked role
-assignments. Action keys include read, create, edit, approve, post, pay and export.
+Role grants are an Allow-only union across active, non-revoked role assignments.
+The central evaluator additionally supports tenant-scoped user-level explicit
+allow/deny overrides with deny precedence. Action keys include read, create, edit,
+approve, post, pay and export.
 Assignment-owned resource scopes are `self < team < department < company`, with
 validated `none/company/department/team/employee` targets; multiple assignments use
 the widest applicable scope. Unbackfilled assignments temporarily dual-read legacy
-role-level scopes. There is no explicit Deny. A restricted resource without a usable owner,
+role-level scopes. A `user_permission_override` deny is explicit; a false
+`role_permission.allowed` value is not. A restricted resource without a usable owner,
 reporting line or department mapping fails closed. Navigation, search, quick-create,
 buttons and sensitive fields derive from the same effective capability response,
 while direct URLs and API calls remain protected by server-side 403/404 responses.
@@ -154,7 +157,8 @@ TASK-017.
 - At the EPIC-059 release boundary, migration 0073 and the ordered PGlite v73/v74
   compatibility path passed fresh install, persistent upgrade and obsolete-index repair;
   PostgreSQL and generated Demo schemas agreed on 232 tables. This is historical evidence,
-  not the current schema count; see `STATUS.md` for the live 86-migration/242-table baseline.
+  not the current schema count; see `STATUS.md` for the live 88-migration/244-table
+  baseline through migration 0087.
 - `npm test` passes 134 files plus one expected skip: 518 tests pass, one skips and none
   fail. Lint, root/Web typechecks, generated-schema/pack/i18n checks and both builds pass.
 - Demo/PGlite and the retained isolated PostgreSQL proof database

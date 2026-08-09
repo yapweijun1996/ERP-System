@@ -10,8 +10,10 @@ customer-data proxy. TASK-171 adds the application-owned tenant permission regis
 and canonical resource/action projections. TASK-172 now changes the role-assignment
 tables to carry stable identity, validity, provenance and assignment-owned scope rows.
 TASK-173 now centralizes the tenant permission decision path, explicit user-level
-overrides and safe/audited explanations; module/resource fail-closed validation, cache
-invalidation and complete approval-authority unification remain open.
+overrides and safe/audited explanations; the current access matrix adds a shared
+route/module/permission regression contract. Module/resource fail-closed validation,
+authorization-version invalidation and complete approval-authority unification remain
+open under TASK-173–174.
 
 ## 1. Goal
 
@@ -129,10 +131,11 @@ Clone its shell, navigation, spacing, and component look, while avoiding unrelat
 data, duplicate schemas, and static screens outside the current milestone.
 
 Current implementation note: `web/index.html` directly runs the cloned Aria classic-script
-layout. `web/public/assets/erp-system-data-adapter.js` is the temporary data boundary: it
-maps the canonical Acme SG seed and `SO-1 -> INV-SO-1 -> GL` proof into Aria's `DB`
-contract before the screens boot. This lets the team keep the user's layout intact while
-the long-term `demo=PGlite` and `api=PostgreSQL` adapters are built.
+layout. `web/public/assets/erp-system-data-adapter.js` and
+`web/public/assets/erp-system-api-adapter.js` are the two active `ErpSystemData`
+implementations: Demo uses PGlite/IndexedDB and API uses HTTP against PostgreSQL. The
+legacy Aria `DB` shape is a compatibility projection, not a temporary substitute; current
+Canonical route/resource depth is tracked in STATUS.md.
 
 The source of truth stays split as follows:
 

@@ -143,7 +143,9 @@ The following current behaviors are compatibility facts, not the final architect
   versioned workflow still locks the active instance/step, prevents self-approval and
   checks delegation. The existing HR management `overridePermissionKey` remains a
   compatibility escalation for an active pending step; strict domain-permission plus
-  current-step authority for every approval-like legacy path is not yet complete.
+  current-step authority for every approval-like legacy path is not yet complete. The
+  known direct-domain gaps include Sales/Purchasing order decisions and the
+  requisition, commission, allowance and budget approval-like commands.
 - Unknown module keys currently pass the module gate. Registered resources still have
   permission checks, but this is not the target fail-closed module/resource cache
   behavior. No database foreign key or authorization-version cache is claimed yet.
@@ -249,8 +251,9 @@ The current application registry is split into two layers:
 resource contracts, 62 action contracts and 5 update contracts. TASK-172 added the
 assignment migration, dual-read scope path, active-assignment predicate and assignment
 API. TASK-173 now adds the central decision service, user-level explicit overrides and
-safe/audited explanations. Module/resource fail-closed validation, authorization-version
-invalidation and Company Owner cutover remain TASK-174–175.
+safe/audited explanations. The access matrix and authenticated/browser checks are a
+partial cross-layer regression contract. Module/resource fail-closed validation,
+authorization-version invalidation and Company Owner cutover remain TASK-174–175.
 
 ## 6. Scope and resource ownership
 

@@ -18,6 +18,11 @@ checks supplement the journey but do not replace it.
 - External SMTP, bank and tax submissions remain Blocked unless a real approved test
   endpoint is in scope. A simulated or local export is not an external-service pass.
 
+Current release note (2026-08-10): the live screen registry contains 128 Canonical /
+0 Preview routes. The current audit renders all routes without console/page errors but
+fails 17 layout/behavior assertions; do not record the screen gate as passed until
+those regressions are fixed. The last green five-language matrix covered 125 routes.
+
 ## Baseline and environment checklist
 
 - [ ] Working tree and baseline SHA recorded.

@@ -1,8 +1,10 @@
 # Deployment
 
-Two independent deploy targets from one repo:
+Two release targets are defined from one repo; only the Docker path is currently
+an active production deployment:
 
-1. **Demo** → static `web/dist/` → GitHub Pages (public showcase, no backend).
+1. **Demo artifact** → static `web/dist/` → GitHub Pages or another public static host
+   when the separate public-demo plan is enabled (no backend).
 2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), sized for 100–800 GB.
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
@@ -14,6 +16,23 @@ scope rows with a compatibility backfill; migration 0087 adds tenant-scoped reas
 user permission overrides and explicit deny precedence. Application-only release does
 not apply migrations automatically. Production RLS includes the new override table;
 the application central evaluator remains authoritative for decision semantics.
+
+Before a release, the current authorization/schema gates are:
+
+```bash
+npm run check:permissions
+npm run check:demo-schema
+npm run check:drift
+npm run typecheck && npm run typecheck:web && npm run lint
+npx vitest run src/api/permissionMatrix.integration.test.ts
+npm run audit:access-matrix
+```
+
+The access-matrix checks are regression evidence for the current route/module/permission
+catalog; they do not imply that TASK-174's unknown-module fail-closed behavior or
+authorization-version cache is complete. `./deploy/release.sh` is application-only;
+`CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` is the separate, reviewed schema-change
+operation.
 
 ---
 
@@ -156,8 +175,9 @@ deployment-managed and are never returned to the browser. Appointment recurrence
 reminder jobs are bounded to a 93-day look-ahead and are safe to retry by their unique
 tenant-scoped event keys.
 
-Migrations 0083–0086 are additive schema changes for appointment automation, the
-platform support control plane and assignment-scoped authorization. Apply them explicitly before the application release,
+Migrations through **0087** are additive schema changes for appointment automation,
+the platform support control plane, assignment-scoped authorization and reasoned
+user-level permission overrides. Apply all committed migrations explicitly before the application release,
 then re-apply the production-only RLS script so the calendar worker receives only its
 allow-listed queue/source tables and the API database role keeps platform/security
 tables behind its separately restricted service boundary:
@@ -270,9 +290,10 @@ PostgreSQL, or any private environment variable.
 It also includes the PWA shell (`manifest.webmanifest`, `sw.js`, icons, safe-area CSS,
 and update prompt). See [PWA.md](PWA.md).
 
-The repository includes `.github/workflows/deploy-pages.yml`, which builds the demo and
-deploys `web/dist` to GitHub Pages on every push to `main` and on manual
-`workflow_dispatch`.
+The repository includes `.github/workflows/deploy-pages.yml` as a reproducible Pages
+workflow, but it is intentionally disabled for this private repository. The current
+release artifact is `web/dist/`; public showcase hosting is planned for a separate
+public demo repository.
 
 ### Vite config requirements (Pages-specific)
 
@@ -291,7 +312,7 @@ export default defineConfig({
 - **SPA fallback file:** copy `web/dist/index.html` to `web/dist/404.html` in the build
   step.
 
-### CI/CD — deploy to this repo's GitHub Pages
+### CI/CD — Pages workflow (currently disabled)
 
 For the normal same-repository Pages deploy, use the checked-in workflow:
 
@@ -309,14 +330,15 @@ It uses GitHub's official Pages actions:
 - `actions/upload-pages-artifact`
 - `actions/deploy-pages`
 
-GitHub setup:
+If this repository is later made public or the public-demo plan changes, GitHub setup is:
 
 1. Push the workflow to `main`.
 2. Open repository **Settings → Pages**.
 3. Set **Build and deployment → Source** to **GitHub Actions**.
 4. Run the workflow or push to `main`.
 
-No PAT is required for same-repository Pages deployment.
+No PAT is required for same-repository Pages deployment. This is not a current release
+claim; verify Pages is enabled before reactivating the workflow.
 
 ### Authorization registry CI gate (TASK-171)
 
@@ -407,5 +429,5 @@ backup and staging proof, production deployment must:
 4. verify health and one idempotent reminder/outbound retry path;
 5. confirm the worker cannot read unrelated tenant business tables.
 
-Do not deploy only the application containers when migrations 0083–0086 have not been applied;
+Do not deploy only the application containers when migrations through 0087 have not been applied;
 the source code cannot safely invent missing tables at runtime.

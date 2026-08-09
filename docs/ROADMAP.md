@@ -14,27 +14,31 @@ project's demo and production data paths.
 Delivered: Vite frontend under `web/`, Aria ERP layout cloned, PGlite demo data path,
 local preview and build verification.
 
-Carry-over: the `VITE_DATA_MODE=demo|api` adapter seam is documented but not wired —
-now Phase 5 entry work (TASK-019, EPIC-007).
+Carry-over is closed: the `VITE_DATA_MODE=demo|api` adapter seam is implemented by
+the Demo/PGlite and API/PostgreSQL adapters (TASK-019, EPIC-007). Remaining work is
+module/resource depth, not the mode switch itself.
 
 ## Phase 2 — Demo ERP ✅
 
 Goal: publish a public static ERP demo that feels real but contains only sample data.
 
 Delivered: PGlite schema/seed aligned with the Drizzle schema, IndexedDB persistence +
-reset action, dashboard/inventory/sales/invoice/finance/settings screens, GitHub
-Pages build + Actions deploy, PWA shell with update prompt.
+reset action, dashboard/inventory/sales/invoice/finance/settings screens, a validated
+GitHub Pages build artifact, and the PWA shell with update prompt. The Pages workflow
+is currently disabled because this repository is private; Docker/PostgreSQL is the
+active production path (see STATUS.md and DEPLOYMENT.md).
 
-Exit criteria: met (`build:demo` works, Pages URL boots with no backend, no secrets
-bundled).
+Exit criteria: the static bundle builds and boots without a backend in local/static
+preview, with no secrets bundled. The historical Pages URL acceptance remains in the
+delivery record, but this private repository does not currently publish Pages.
 
 ## Phase 3 — Core ERP Flow ✅
 
 Goal: make the demo show a believable end-to-end ERP transaction.
 
 Delivered: customer/product browse, confirm sales order (SO-2), stock deduction,
-invoice generation, GL posting view, insufficient-stock rollback (SO-3); full screen
-audit across all 114 routes (TASK-018 ✅ done 2026-07-17 — `npm run audit:screens`,
+invoice generation, GL posting view, insufficient-stock rollback (SO-3); the original
+114-route screen audit (TASK-018 ✅ done 2026-07-17 — `npm run audit:screens`,
 wired into CI, drives every route through the live router and asserts zero errors
 plus no leftover prototype identity leaks on canonical screens; found and fixed 3 real
 bugs — a stale sales-rep dropdown, a stale default-company picker, and a genuine async
@@ -118,8 +122,9 @@ verification and rollback).
 
 Exit criteria: every PR can be validated with documented commands (✅ — typecheck,
 demo-build, drift, smoke, unit-tests and PG-parity all run in CI on every PR); demo
-and production paths have separate deployment checks (✅ — `deploy-pages.yml` deploys
-the demo, `ci.yml` validates every PR, Docker Compose is the production runtime).
+and production paths have separate deployment checks (✅ — the Pages workflow is
+configured but intentionally disabled for this private repository, `ci.yml` validates
+every PR, and Docker Compose is the active production runtime).
 
 ## Phase 7 — Module Expansion ✅ (every originally-scoped module converted: Purchasing, CRM, Fixed Assets, Admin, HR-lite, Project incl. finance depth, Service, Purchase Requisition)
 
@@ -188,11 +193,11 @@ Order of attack:
    the demo's own audit trail — see docs/STATUS.md) are both done. At this historical
    phase boundary, `master-control`, `sys-settings` and `module-activation-control`
    still remained Preview; later epics promoted every route, and the current baseline
-   is 125 Canonical / 0 Preview.
+   is 128 Canonical / 0 Preview.
 6. **HR-lite: Employee Master & Leave Management** (EPIC-020 ✅, TASK-049/050,
-   2026-07-19) — deliberately scoped to employee master + leave request/approval only;
-   Payroll (`payroll-run`/`payslip`) stays mock, deferred to its own future epic since
-   it's a materially different, statutory-contribution-heavy domain (EPF/SOCSO/PCB).
+   2026-07-19) — the original slice deliberately scoped itself to employee master +
+   leave request/approval only. Payroll was later delivered by EPIC-026/TASK-061/062;
+   the historical deferred boundary is retained here for traceability.
    `employee`/`leave_request` tables, `src/modules/hr/`, registered as standard generic
    resources gated on new `hr.read`/`hr.write` permissions. `hr-directory`, `employee`
    (real per-employee detail, not always the same hardcoded record),  `new-employee`
@@ -222,24 +227,22 @@ Order of attack:
    (TASK-058/059, 2026-07-21): `purchase_order`/`supplier_invoice` gained a nullable
    `project_id`; a real Bank Receipt settles a posted progress claim's AR; a real Payment
    Voucher settles one or more of a supplier's unpaid invoices — closing the gap this item
-   named without inventing a full bank-reconciliation engine (Finance's generic `bank-rec`
-   screen stays mock/Preview, materially out of scope). Live-verified with a real,
+   named without inventing a separate bank-reconciliation engine. The generic `bank-rec`
+   screen was later promoted to a Canonical import/match/lock workflow; the dedicated
+   project Bank Receipt/Payment documents remain the separate scope described here. Live-verified with a real,
    mathematically balanced double-entry result: one Payment Voucher (S$1,220.80 across two
    real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash &
    Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts.
 8. **Service** (EPIC-022 ✅) — service tickets/orders/contracts, distinct from
-   Manufacturing's work orders. Mock screens in `screens-service.js` had `service-ticket`
-   (list), `service-order` (always the same hardcoded ticket — the same bug class already
-   fixed for `asset-detail`/`employee`/`project-detail`), `service-contracts` (no detail/
-   create). EPIC-022 (TASK-053/054, 2026-07-20) made the ticket + contract register real
-   (3 real statuses, not the mock's 5 — Resolved/Closed already collapsed to one "done"
-   filter bucket in the mock's own UI); spare-parts consumption and labour costing stay
-   mock, deferred as Inventory-consumption depth work.
+   Manufacturing's work orders. The first implementation converted the former mock
+   list/detail/register into Canonical ticket and contract flows (TASK-053/054,
+   2026-07-20), with three real statuses; the separate spare-parts consumption and
+   labour-costing depth remains deferred as Inventory-consumption work.
 9. **Purchase Requisition** (EPIC-023 ✅) — the natural upstream step before the
-   already-Canonical PO chain. Mock screen (`purchase-requisitions` list in
-   `screens-purchasing-lists.js`, detail in `screens-purchase.js`) and mock data
-   (`data-purchasing-ext.js`) existed but no schema table, same maturity tier as
-   RFQs/quotations (which stay mock — only Purchase Requisition itself was in scope).
+   already-Canonical PO chain. The initial gap was a mock list/detail with no schema;
+   TASK-055/056 (2026-07-20) added the real requisition register, approval and PO link.
+   RFQs and quotation sourcing were later promoted by TASK-064–068; the remaining
+   non-canonical purchasing depth is documented separately in STATUS.md.
    EPIC-023 (TASK-055/056, 2026-07-20) closed the real gap this item named: `purchase_
    order` gained a nullable `requisition_id` FK, so an approved requisition can be
    genuinely converted to a real, linked purchase order through the existing
@@ -299,9 +302,11 @@ one `master_fn` per database without needing a hard schema constraint that would
 the deliberate multi-tenant test fixtures. No code change was made here; flagged for
 confirmation rather than silently altering a well-tested design.
 
-Exit criteria: `npm run audit:screens` passes after each mechanical change; the
-module-access-control toggle demonstrably hides a module from both the sidebar and the
-API for a non-superadmin user of a restricted tenant.
+Historical exit criteria were met by the Phase 8 implementation: `npm run audit:screens`
+passed after each mechanical change and the module-access-control toggle hid a module
+from both the sidebar and API for a restricted non-superadmin tenant. The current
+working-tree release gate has 17 layout/behavior regressions, recorded in
+STATUS.md and TASK.md, so the current release is not green.
 
 ## Phase 9 — Deployment Ergonomics ✅ (interactive host bootstrap done; desktop installer deliberately deferred, not phase-scoped)
 
@@ -397,7 +402,7 @@ only through registered commands, and passes domain/API/browser/audit verificati
    `supplier-quotations` became Canonical in Demo/API with five-language workflows,
    moving that phase's route boundary from 70/44 to **72/42**. At this historical
    boundary, `pur-txn-view` remained Preview because it was shared by still-sample
-   purchasing document types; later work promoted the current route set to 125/0.
+   purchasing document types; later work promoted the current route set to 128/0.
 
 Exit criteria: met when the domain/API/browser and 114-route gates below pass.
 
@@ -1005,8 +1010,14 @@ one expected skip and zero failures. Generic module collections use company scop
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
 actor-derived and team/direct-tree scoped. The current schema journal contains 88
 migrations and generated Drizzle SQL contains 244 tables. TASK-173's authorization
-override migration is now included; physical-phone verification remains separately
-blocked under TASK-017.
+override migration is now included. The current full regression has 154 passed files + 1
+skipped file (155 total), 623 tests passed + 1 intentional skip (624 test slots), zero
+failures; the 149-file/599-test result above is retained as
+TASK-168's historical shard evidence. `src/auth/accessMatrix.ts`, its authenticated API
+matrix suite and `npm run audit:access-matrix` now provide a cross-layer route/permission
+regression foundation, while unknown module keys and authorization-version invalidation
+remain open under TASK-174. Physical-phone verification remains separately blocked under
+TASK-017.
 
 ## Phase 44 — Authorization Architecture Evolution 🔶
 
@@ -1017,14 +1028,20 @@ blocked under TASK-017.
    complete: the application-owned registry has 299 static definitions, explicit
    compatibility mappings/removal metadata, canonical projections for 116 resources
    and 62 actions, and the `check:permissions` CI gate.
-3. **Assignment and decision model** (TASK-172–174): TASK-172 moves validity, provenance
+3. **Assignment and decision model** (TASK-172–173): TASK-172 moves validity, provenance
    and scope to assignments. TASK-173 is in progress: migration 0087 adds the central
    decision service, explicit user-level overrides and privileged audited explanations;
-   strict approval-authority unification and broader resource/policy context remain
-   open. TASK-174 will make unknown/stale state fail closed and add version invalidation.
-4. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,
-   explainable Company Owner permissions after all prerequisites pass.
+   strict approval-authority unification remains open across the legacy Sales/Purchasing
+   order decisions, requisition/commission/allowance/budget approval-like commands and
+   the HR compatibility escalation. Broader resource/module/policy context is also open.
+4. **Fail-closed registry and cache invalidation** (TASK-174) is next: finish the
+   unknown module/resource/ownership checks, make route metadata coverage a release gate,
+   and add prompt authorization-version invalidation for role, scope, module, policy and
+   support-grant changes. The access matrix is a partial precursor, not task completion.
+5. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,
+   explainable Company Owner permissions after TASK-173 and TASK-174 pass their gates.
 
 Exit criteria: all TASK-170–175 adversarial migration and compatibility tests pass;
 existing tenants retain access without a hidden bypass; platform operators obtain no
-implicit customer-data authority.
+implicit customer-data authority; and the current task index, code, migrations and
+release/runbook documents agree on the same implementation boundary.

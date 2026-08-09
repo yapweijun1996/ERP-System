@@ -9,15 +9,20 @@ section for the path you are releasing. Deployment mechanics live in
 - [ ] Working tree clean, on `main`, latest CI run green (CI already runs everything
       below on each PR — re-running locally is belt-and-braces for a release cut).
 - [ ] `npm run typecheck && npm run typecheck:web`
-- [ ] `npm test` (157+ tests; the PostgreSQL 16 proof needs `POSTGRES_URL`, or rely
-      on CI's service-container run)
+- [ ] `npm test` (current baseline: 154 passed files + 1 skipped file (155 total),
+      623 passed tests + 1 intentional skip (624 total); the
+      PostgreSQL 16 proof needs `POSTGRES_URL`, or rely on CI's service-container run)
 - [ ] `npm run demo` — transaction proof; with `POSTGRES_URL` set it also proves
       cross-engine parity and the true-concurrency race. The PostgreSQL database must
       be dedicated and empty; the preflight rejects any user table before writes.
 - [ ] `npm run check:demo-schema && npm run check:drift` — generated PGlite artifacts
       and all Drizzle migrations agree
 - [ ] `npm run build:demo` then `npm run smoke` and `npm run audit:screens`
-      (all current 125 routes, desktop + 375 px, zero console errors)
+      (all current 128 routes, desktop + 375 px, zero console errors, and the
+      release layout/behavior assertions must also pass). As of 2026-08-10, all
+      routes render and the maturity contract passes, but 17 layout/behavior
+      assertions fail in the current worktree; this checklist is therefore not green.
+- [ ] `npm run check:permissions` and `npm run audit:access-matrix`
 - [ ] `tasks/tasks.jsonl` statuses current; `docs/STATUS.md` updated if an epic-level
       milestone lands in this release
 - [ ] No secrets in the diff or the bundle: no provider API keys, nothing

@@ -14,6 +14,15 @@ not a second task registry.
 - Blocked: **1**
 - Total: **175**
 
+## Current release-quality note
+
+This is a working-tree regression, not a new task record or a change to the totals:
+`npm run audit:screens` renders all 128 routes and passes the 128 Canonical / 0 Preview
+maturity contract, but currently fails 17 layout/behavior assertions across active
+subnav visibility, HR Calendar detail ordering, Leave Approval's pending action and
+My Work's employee tab count. It must be assigned and fixed before a release is called
+green; TASK-017 remains the separate physical-device blocker.
+
 ## Current authorization programme
 
 | Task | Status | Purpose |
@@ -36,7 +45,7 @@ not a second task registry.
   impersonation checks share the active-assignment predicate. Existing
   `role_resource_scope` rows remain a dual-read fallback for assignments whose
   `scope_backfilled_at` is null. Expired and revoked assignments are denied immediately;
-  The TASK-173 central decision boundary is now partially implemented in migration
+  the TASK-173 central decision boundary is now partially implemented in migration
   0087; authorization-version caching and Company Owner cutover remain TASK-174–175.
 
 ## Current in-progress task
@@ -51,9 +60,11 @@ not a second task registry.
   Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
   lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
   Remaining before Done: strict permission-plus-active-workflow-authority behavior for
-  every approval-like legacy path and broader resource/module/policy context. The full
-  current regression run is green: 154 files, 623 passed, one intentional skip, zero
-  failures (624 test slots).
+  every approval-like legacy path (including direct Sales/Purchasing decisions,
+  requisition/commission/allowance/budget commands and the HR compatibility escalation)
+  and broader resource/module/policy context. The full current regression run is green:
+  154 files passed + 1 skipped file (155 total), 623 tests passed + 1 intentional skip
+  (624 test slots), zero failures.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -72,8 +83,8 @@ not a second task registry.
   resource/action contracts and compatibility metadata. The complete 152-file Vitest
   regression baseline passes in three resource-safe shards: 610 tests passed, one
   intentional skip and zero failures before TASK-172 added its four assignment/seed
-  regression cases. The current full-suite run is green at 154 files: 623 tests passed,
-  one intentional skip and zero failures (624 test slots).
+  regression cases. The current full-suite run is green at 154 files passed + 1 skipped
+  file (155 total): 623 tests passed + 1 intentional skip, zero failures (624 test slots).
 
 - **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,
   hash-backed bearer/CSRF sessions, auditable support grants and exact master/company
@@ -93,6 +104,28 @@ not a second task registry.
   whose rows do not carry actor ownership. Actor-derived My Work and Team Calendar APIs
   continue to enforce direct/granted-tree boundaries. The complete 149-file Vitest set
   passes in three resource-safe shards: 599 passed, one expected skip, zero failures.
+
+## Next dependency-ordered execution slices
+
+These are implementation slices, not new task records. They preserve the task index
+statuses above and keep each change independently testable:
+
+1. **TASK-173-A — approval authority unification:** route every legacy approval-like
+   decision through a domain-permission check plus active workflow-step authority;
+   preserve the existing HR takeover behavior only as an explicit, audited compatibility
+   policy until its replacement is implemented. Add adversarial tests for direct Sales,
+   Purchasing, requisition, commission, allowance and budget decisions.
+2. **TASK-173-B — decision-context completion:** register the remaining ownership,
+   module and policy context consumed by authorization, and prove that missing context
+   denies without changing the current assignment/Superadmin compatibility boundary.
+3. **TASK-174-A — fail-closed registration:** reject unknown module/resource/action and
+   ownership mappings; make the access matrix a CI/startup coverage gate rather than only
+   a regression helper.
+4. **TASK-174-B — authorization versioning:** invalidate cached/session capability state
+   on role, assignment, scope, organization, module, policy and support-grant changes;
+   add stale-version/direct-URL revocation tests.
+5. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
+   explicit registered permissions, retaining last-owner recovery and platform isolation.
 
 ## Blocker
 

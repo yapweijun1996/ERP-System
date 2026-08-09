@@ -6,7 +6,8 @@ PGlite (demo) and PostgreSQL (production).
 ## 1. Modules and core tables
 
 ```
-tenancy/     master, company, app_user, role, user_company
+tenancy/     master, company, app_user, role, user_company,
+             user_company_role, user_company_role_scope, role_resource_scope
 localization/ tax_rule (effective-dated), currency, fx_rate
 inventory/   product, warehouse, stock_level, stock_movement,
              warehouse_bin, inventory_lot, inventory_serial,
@@ -16,7 +17,9 @@ sales/       customer, sales_order, sales_order_line, delivery, invoice, payment
 purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt,
              purchase_order_approval, landed_cost(+line)
 finance/     account (chart of accounts), gl_entry
-system/      audit_log, user_permission_override
+system/      audit_log, user_permission_override, company_module
+platform/    platform_principal, platform_role, platform_principal_role,
+             platform_role_permission, platform_session, support_access_grant
 integration/ import_job, import_job_row, import_row_error, outbox_event
 ```
 
