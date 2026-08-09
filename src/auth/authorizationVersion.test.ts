@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { company, role } from '../data/schema';
+import { company } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { effectiveCapabilities } from './permissions';
