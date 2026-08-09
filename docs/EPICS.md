@@ -2285,7 +2285,7 @@ approval subsystem. Normative current/target behavior is in
       and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
       grant evaluation does not proxy customer data. The pre-TASK-172 complete
       152-file Vitest baseline passed in three resource-safe shards: 610 passed, one
-      expected skip, zero failures; the current 614-test result is recorded on
+      expected skip, zero failures; the current 613-test result is recorded on
       TASK-172.
 - [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
       migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
@@ -2300,7 +2300,7 @@ approval subsystem. Normative current/target behavior is in
       invalidation and Company Owner cutover remain TASK-173–175.
       The pre-TASK-172 152-file Vitest regression passed in three resource-safe
       shards: 610 tests passed, one intentional skip and zero failures. TASK-172's
-      current 614-test regression is recorded above in the task index.
+      current 613-test regression is recorded above in the task index.
 - [x] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
       Migration 0086 makes `user_company_role.assignment_id` the stable primary key,
       adds validity/revocation/provenance fields and creates `user_company_role_scope`.

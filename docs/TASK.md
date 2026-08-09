@@ -39,8 +39,8 @@ not a second task registry.
   explicit-deny decisions, authorization-version caching and Company Owner cutover
   remain TASK-173–175.
 
-- **Verification:** three resource-safe Vitest shards cover all 152 files with 614 tests
-  passed, one intentional skip and zero failures. Root/Web typecheck, ESLint, both
+- **Verification:** three resource-safe Vitest shards cover all 152 files with 613 tests
+  passed, one intentional skip and zero failures (614 test slots). Root/Web typecheck, ESLint, both
   Demo/API builds, generated Demo schema/drift, Demo-pack and permission-registry checks
   also pass after the PK and migration cutover.
 
@@ -60,7 +60,7 @@ not a second task registry.
   resource/action contracts and compatibility metadata. The complete 152-file Vitest
   regression baseline passes in three resource-safe shards: 610 tests passed, one
   intentional skip and zero failures before TASK-172 added its four assignment/seed
-  regression cases; the current 614-test result is recorded in the TASK-172 section.
+  regression cases; the current 613-test result is recorded in the TASK-172 section.
 
 - **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,
   hash-backed bearer/CSRF sessions, auditable support grants and exact master/company
