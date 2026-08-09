@@ -5,7 +5,9 @@ implementation. It is not the final platform-scale authorization design. Current
 compatibility facts and the EPIC-062 migration target are in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md); in particular,
 current scopes are role-level and current tenant Superadmin remains a bypass until
-TASK-170–175 complete.
+TASK-171–175 are complete. TASK-170 now provides a separate platform support control plane;
+the employee-workspace convenience below remains tenant-scoped and is not platform
+support access.
 
 This is the authoritative EPIC-059 contract. It defines company-level access,
 atomic Staff onboarding, the deterministic enterprise Demo and the production
@@ -147,7 +149,7 @@ TASK-017.
 - At the EPIC-059 release boundary, migration 0073 and the ordered PGlite v73/v74
   compatibility path passed fresh install, persistent upgrade and obsolete-index repair;
   PostgreSQL and generated Demo schemas agreed on 232 tables. This is historical evidence,
-  not the current schema count; see `STATUS.md` for the live 84-migration/236-table baseline.
+  not the current schema count; see `STATUS.md` for the live 86-migration/242-table baseline.
 - `npm test` passes 134 files plus one expected skip: 518 tests pass, one skips and none
   fail. Lint, root/Web typechecks, generated-schema/pack/i18n checks and both builds pass.
 - Demo/PGlite and the retained isolated PostgreSQL proof database

@@ -2260,9 +2260,10 @@ slice without weakening tenant, accounting, leave or approval invariants.
       integration and complete 149-file Vitest shard gates pass with 599 tests passed and
       one expected skip.
 
-Implementation is delivered through migration 0083 and EPIC-061 is complete. The Drizzle
-journal contains 84 migrations and generated schema contains 236 tables. TASK-017 remains
-the separate non-programmatic blocker.
+Implementation is delivered through migration 0083 and EPIC-061 is complete. The current
+overall Drizzle journal now contains 86 migrations and generated schema contains 242
+tables after TASK-170's 0084/0085 platform-support additions. TASK-017 remains the
+separate non-programmatic blocker.
 
 ## EPIC-062 — Role & Permission Architecture Evolution 🔶
 
@@ -2274,7 +2275,14 @@ approval subsystem. Normative current/target behavior is in
 - [x] **TASK-169 — Align architecture and project documentation.** Record
       `master -> company`, current Superadmin bypass, role-level scopes, mixed permission
       keys and unknown-module compatibility separately from the approved target.
-- [ ] **TASK-170 — Separate platform principals and time-bounded support access.**
+- [x] **TASK-170 — Separate platform principals and time-bounded support access.**
+      Migrations 0084–0085 add a platform-only principal/role/session domain, exact
+      master/company support targets, bounded read-only/restricted-write/break-glass
+      grants, default sensitive-field denial, immediate revoke and platform audit
+      correlation. `/api/platform` rejects tenant cookies and uses platform CSRF. Identity
+      and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
+      grant evaluation does not proxy customer data. The complete 151-file Vitest set
+      passes in three resource-safe shards: 606 passed, one expected skip, zero failures.
 - [ ] **TASK-171 — Introduce the canonical permission registry and compatibility-key
       migration.**
 - [ ] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
@@ -2287,5 +2295,6 @@ approval subsystem. Normative current/target behavior is in
 
 Dependencies are sequential by design: owner-bypass removal cannot start before the
 platform boundary, canonical registry, assignment migration, decision semantics and
-cache invalidation are independently proven. Branch/business-unit/region scopes, SSO,
-provisioning and enterprise access reviews remain later phases.
+cache invalidation are independently proven. TASK-170 is a prerequisite boundary, not
+the platform identity provider: SSO/provisioning, production data-plane adapters and
+enterprise access reviews remain later phases.

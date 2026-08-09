@@ -30,6 +30,7 @@ export const company = pgTable('company', {
   ...timestamps,
 }, (t) => [
   index('idx_company_master').on(t.masterFn),
+  uniqueIndex('uq_company_master_company').on(t.masterFn, t.companyFn),
 ]);
 
 /** A person who logs in. Belongs to exactly ONE master. `language` = UI i18n preference.

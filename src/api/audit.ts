@@ -5,6 +5,7 @@ export interface AuditEvent {
   masterFn: string;
   companyFn?: string | null;
   actorUserId?: number | null;
+  platformPrincipalId?: number | null;
   requestId: string;
   entity: string;
   entityId?: string | number | null;
@@ -19,6 +20,7 @@ export async function appendAudit(db: DB, event: AuditEvent): Promise<number> {
   const [row] = await db.insert(auditLog).values({
     masterFn: event.masterFn,
     companyFn: event.companyFn ?? null,
+    platformPrincipalId: event.platformPrincipalId ?? null,
     actorUserId: event.actorUserId ?? null,
     requestId: event.requestId,
     entity: event.entity,

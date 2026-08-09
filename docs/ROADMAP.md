@@ -1003,16 +1003,17 @@ pack was regenerated from the current authoritative Manager template, and permis
 module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
 one expected skip and zero failures. Generic module collections use company scopes because
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
-actor-derived and team/direct-tree scoped. The current schema journal contains 84
-migrations and generated Drizzle SQL contains 236 tables. Physical-phone verification
+actor-derived and team/direct-tree scoped. The current schema journal contains 86
+migrations and generated Drizzle SQL contains 242 tables. Physical-phone verification
 remains separately blocked under TASK-017.
 
 ## Phase 44 — Authorization Architecture Evolution 🔶
 
 1. **Architecture alignment** (TASK-169 complete) records current compatibility facts
    and the target in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
-2. **Principal and permission foundation** (TASK-170–171) separates platform/support
-   authority and introduces the canonical permission registry.
+2. **Principal and permission foundation** (TASK-170–171): TASK-170 is complete with a
+   separate platform/support control plane, bounded grants and audit; TASK-171 remains
+   for the canonical permission registry and compatibility-key migration.
 3. **Assignment and decision model** (TASK-172–174) moves validity/scope to assignments,
    centralizes deterministic decisions and makes unknown/stale state fail closed.
 4. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,

@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **168**
+- Done: **169**
 - In progress: **0**
-- Todo: **6**
+- Todo: **5**
 - Blocked: **1**
 - Total: **175**
 
@@ -19,7 +19,7 @@ not a second task registry.
 | Task | Status | Purpose |
 | --- | --- | --- |
 | TASK-169 | Done | Align architecture and documentation with current authorization code |
-| TASK-170 | Todo | Separate platform principals and time-bounded support access |
+| TASK-170 | Done | Separate platform principals and time-bounded support access |
 | TASK-171 | Todo | Canonical permission registry and compatibility-key migration |
 | TASK-172 | Todo | Assignment-scoped grants, targets and expiry |
 | TASK-173 | Todo | Central authorization decision, explicit deny and safe explanation |
@@ -27,6 +27,17 @@ not a second task registry.
 | TASK-175 | Todo | Replace tenant Superadmin bypass with explicit Company Owner permissions |
 
 ## Latest completed task
+
+- **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,
+  hash-backed bearer/CSRF sessions, auditable support grants and exact master/company
+  boundaries without making platform principals tenant users. Read-only, restricted-
+  write and approval-referenced break-glass modes are bounded to 24 hours, default-deny
+  sensitive fields, and revocable. `/api/platform` accepts only the separate platform
+  session contract; principal/session issuance is intentionally out-of-band and the
+  support evaluator is a fail-closed decision/audit boundary, not an automatic customer
+  data proxy. Domain/API tests cover tenant-cookie rejection, CSRF, expiry, revoke,
+  cross-tenant and sensitive-field denial. The complete 151-file Vitest set passes in
+  three resource-safe shards: 606 passed, one expected skip, zero failures.
 
 - **TASK-168 — Done:** permission-aware shell navigation, global search, quick actions,
   module state, employee workspace behavior and the role matrix are verified against

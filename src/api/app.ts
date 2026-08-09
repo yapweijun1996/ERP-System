@@ -34,6 +34,7 @@ import { createReimbursementBatchesRouter } from './routes/reimbursementBatches'
 import { createReimbursementPaymentsRouter } from './routes/reimbursementPayments';
 import { createTaxEvidenceRouter } from './routes/taxEvidence';
 import { createOnboardingRouter } from './routes/onboarding';
+import { createPlatformRouter } from './routes/platform';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -64,6 +65,13 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use(express.json({ limit: '1mb' }));
 
   app.use(async (req, res, next) => {
+    // Platform routes authenticate with their separate bearer session and run
+    // their own platform-CSRF check; a tenant erp_session must never be used
+    // as a platform credential or become their CSRF authority.
+    if (req.path === '/api/platform' || req.path.startsWith('/api/platform/')) {
+      next();
+      return;
+    }
     if (
       ['GET', 'HEAD', 'OPTIONS'].includes(req.method)
       || !req.path.startsWith('/api/')
@@ -105,6 +113,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     lifecycle,
   }));
 
+  app.use('/api/platform', createPlatformRouter(db));
   app.use('/api/admin', createAdminRouter(db, { lifecycle }));
   app.use('/api/account', createAccountRouter(db));
   app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey));

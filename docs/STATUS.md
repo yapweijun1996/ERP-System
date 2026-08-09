@@ -6,23 +6,28 @@ an epic-level milestone lands.
 
 ## 2026-08-09 source-of-truth synchronization
 
-The current worktree is at migration 0083: the Drizzle journal contains **84
-migrations** and generated canonical SQL contains **236 tables**. TASK-161–168 now
+The current worktree is at migration 0085: the Drizzle journal contains **86
+migrations** and generated canonical SQL contains **242 tables**. TASK-161–170 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
-permission-matrix work that had landed in code without matching task records.
+permission-matrix and platform-support boundary work that had landed in code without
+matching task records.
 
 Authorization documentation now distinguishes present behavior from the approved
 target. Present behavior remains tenant `master -> company`, active-company multi-role
 Allow union, role-level `self/team/department/company` scopes and tenant-bounded
-`is_superadmin` bypass. EPIC-062/TASK-170–175 track the unimplemented platform-principal,
-support-grant, canonical permission, assignment-scope, centralized-decision,
+`is_superadmin` bypass. TASK-170 now provides a separate platform-principal, platform
+session/role and reasoned support-grant control plane: grants are bounded to a master
+and optional company, expire within 24 hours, default-deny sensitive fields, audit
+allow/deny/revoke events and never proxy customer data by themselves. Principal/session
+issuance remains an out-of-band deployment/SSO bootstrap boundary. EPIC-062/TASK-171–175
+track the remaining canonical permission, assignment-scope, centralized-decision,
 fail-closed registry/cache and explicit Company Owner migration. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
 Current verification on 2026-08-09: root/Web typecheck, ESLint, generated Demo schema
-and 236-table drift checks pass. The complete Vitest set is green when run in three
-resource-safe shards covering all 149 files: 599 tests passed, one intentional skip and
+and 242-table drift checks pass. The complete Vitest set is green when run in three
+resource-safe shards covering all 151 files: 606 tests passed, one intentional skip and
 zero failures. TASK-168 reconciled the generated Demo Manager scopes with the current
 authoritative catalog. Generic sales/CRM/inventory/warehouse/project/service collections
 are company-scoped because their rows do not carry actor ownership; actor-derived My Work
@@ -247,7 +252,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (236 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 84 ordered migrations through schema version 83; `drizzle/`, `src/data/schema/` |
+| Canonical schema (242 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 86 ordered migrations through schema version 85; `drizzle/`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -288,6 +293,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
 | Admin: users, roles & audit log | ✅ Canonical Demo/API data and writes | No schema migration — `app_user`/`role`/`role_permission`/`audit_log` already existed from TASK-024. These tables are deliberately outside the generic `resource()`/RLS-company-scope framework (see `deploy/sql/production-rls.sql`), so `src/api/admin.ts` (plain read-model functions) and `src/api/routes/admin.ts` (bespoke `/api/admin/*` routes, mirroring `routes/auth.ts`) were added instead of `ResourceDefinition` entries. `src/auth/adminLifecycle.ts` provides `setUserActiveWithin`/`createRoleWithin`/`setRolePermissionWithin` — split out of `lifecycle.ts` specifically because `lifecycle.ts` hard-imports `node:crypto` (via `./password`/`./tokenCrypto`), which breaks `npm run build:demo` outright if bundled into the browser. `user-mgmt` reads real users + pending invitations and gains a real "Invite user" flow (the backend `createInvitation` already existed from TASK-024 but no screen had ever called it) plus a real enable/disable action; `role-permission` replaced the mock's fabricated 4-level None/View/Edit/Full matrix with an honest 2-state allowed/not-allowed grid matching the real boolean `role_permission` model, with a real "Add role" flow and a read-only Superadmin column; `audit-log` reads real `audit_log` rows. Fixed a real product gap along the way: `audit_log` was permanently empty in browser demo mode (the demo adapter calls `*Within` commands directly, bypassing the production HTTP layer that was the only place `appendAudit` was ever called) — wiring `appendAudit` into the demo adapter's own generic create/action dispatch retroactively gives every existing module a real audit trail in the browser demo, not just Admin. All three former Preview routes (`master-control`, `sys-settings`, `module-activation-control`) are now Canonical; their current contracts are described by route metadata and the relevant admin/domain sections below. |
+| Platform support control plane | ✅ Control-plane foundation (TASK-170) | `platform_principal`, application-owned platform roles, hash-backed bearer/CSRF sessions and `support_access_grant` are separate from tenant `app_user`/roles. Grants enforce exact master/optional company targets, reason/ticket, 24-hour maximum, read-only/restricted-write/break-glass modes, default sensitive-field denial, immediate revoke and platform-correlated audit. `/api/platform` rejects tenant cookies; identity/session issuance is out-of-band and the evaluator does not proxy customer data. |
 | Company module access control | ✅ Canonical Demo/API data and writes, incl. server-side enforcement | The current authority is company-scoped `company_module` (`company_id` + `module_key` + `enabled`); missing known-module rows are disabled. The older tenant-scoped `master_module` design is retained only as migration history. `src/auth/moduleAccess.ts` supplies company-aware reads/writes and generic resource handlers enforce disabled modules server-side. The authenticated session carries company module state so the shell and command search can hide disabled modules without requiring a separate admin read. The Admin module remains protected so an authorized administrator can re-enable business modules. One known gap remains explicit: an unregistered/unknown module key currently fails open until TASK-175 changes this to deny-by-default. |
 | HR-lite: employee master + leave request/approval | ✅ Canonical Demo/API data and writes | First Phase 7 module opened after Phase 8. `employee` (self-referencing `manager_id`, no link to `app_user`) and `leave_request` tables, `src/modules/hr/` (`createEmployee`, `createLeaveRequest`/`decideLeaveRequest`), registered as standard generic resources gated on new `hr.read`/`hr.write` permissions. `hr-directory` and `employee` read real data (per-employee detail, not always the same hardcoded record); `new-employee` is a single real form replacing the mock's 3-step compensation/provisioning wizard (no schema backed those steps); `leave-approval` reads real requests and its approve/reject actions are real, including a required-reason reject flow. That initial task deliberately excluded Payroll and compensation; later Payroll and Full Leave tasks supersede that historical boundary. Verified live: created a real employee, approved one leave request, rejected another with a reason, confirmed the employee detail's leave balance and history reflected both decisions. |
 | Staff Calendar appointments | ✅ Canonical Demo/API data and writes | Migration 0082 adds tenant-scoped `staff_appointment` facts with employee, type, title, time range, location, status and optimistic version. `staffCalendar` combines appointments with canonical leave rows; HR write users can create, edit and cancel without deleting history. API/domain tests cover tenant isolation, idempotent replay, version conflicts and invalid ranges; the browser contract covers mixed leave/appointment rendering, create, filter and shared searchable listing. |
@@ -1611,13 +1617,14 @@ v259.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 168 tasks
+- Done: 169 tasks
 - In progress: none
-- Todo: TASK-170–175 (6)
+- Todo: TASK-171–175 (5)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 125 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
-  complete documentation baseline and six pending implementation tasks.
+  complete documentation baseline, TASK-170's platform-support foundation, and five
+  pending implementation tasks.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

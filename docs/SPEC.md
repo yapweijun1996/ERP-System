@@ -247,10 +247,16 @@ The binding current/target contract is
 
 Implemented behavior remains `master -> company`, multiple company roles, Allow-union
 permissions, role-level `self/team/department/company` scopes, company module state,
-tenant-bounded Superadmin bypass and backend enforcement. The following are approved
-requirements but remain pending under TASK-170–175:
+tenant-bounded Superadmin bypass and backend enforcement. TASK-170 now implements the
+separate platform-principal/support-grant control plane: platform operators use
+dedicated hash-backed bearer/CSRF sessions and application-owned platform roles; grants
+target an exact master and optional company, require reason and ticket, are
+time-bounded/revocable, default-deny sensitive fields and audit every create/use/deny/
+revoke event. Principal/session issuance remains an out-of-band deployment/SSO bootstrap
+responsibility, and grant evaluation only returns a decision; it does not automatically
+proxy tenant business data. The following approved requirements remain pending under
+TASK-171–175:
 
-- platform principals and time-bounded support access are a separate domain;
 - permission identifiers converge on application-owned `module.resource.action`;
 - scope targets and validity belong to role assignments;
 - missing or unknown module/resource/action/policy/ownership state fails closed;

@@ -100,10 +100,19 @@ current/target record. The following are implemented compatibility facts:
 - unknown module keys currently pass the module gate and therefore remain a migration
   risk even though registered resources retain their own authorization checks.
 
-TASK-170–175 must separate platform/support authority, introduce the canonical registry
-and assignment scopes, centralize deterministic deny-by-default decisions, invalidate
-stale authorization state and remove the tenant Superadmin bypass. No platform operator
-has been granted a new customer-data path by documenting this target.
+TASK-170 now separates platform/support authority. `platform_principal`, platform roles,
+hash-backed bearer/CSRF sessions and `support_access_grant` are outside tenant role
+administration. A grant requires a target master, optional matching company, reason,
+ticket, validity window and mode; read-only, restricted-write and break-glass checks
+default-deny sensitive fields and write operations unless explicitly allowed. Platform
+API routes reject tenant cookies, require platform CSRF for mutations and audit grant
+creation, decisions and revocation. Principal/session issuance is out-of-band, and the
+evaluator is a decision/audit boundary rather than an automatic customer-data proxy.
+
+TASK-171–175 must introduce the canonical registry and assignment scopes, centralize
+deterministic deny-by-default decisions, invalidate stale authorization state and remove
+the tenant Superadmin bypass. No platform operator has been granted permanent implicit
+customer-data authority by documenting or implementing TASK-170.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company
 Superadmin and active linked non-Superadmin employee, records entry/return and blocks

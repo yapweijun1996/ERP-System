@@ -330,12 +330,20 @@ Current runtime facts:
 - versioned approval policy/instance/decision/delegation tables remain the approval
   SSOT and must not be simplified during authorization refactoring.
 
-Target work under EPIC-062 introduces a separate platform principal domain, canonical
-`module.resource.action` registry, assignment-scoped validity and targets, one
-deterministic authorization decision service, fail-closed module/resource registration,
-authorization-version invalidation and explicit Company Owner permissions. Until those
-tasks complete, code behavior above is authoritative and target behavior must not be
-claimed as delivered.
+TASK-170 now adds a separate platform control-plane domain: platform principals, static
+application-owned support roles, hash-backed bearer/CSRF sessions and auditable support
+grants. Grants target an existing `master_fn` and optional matching `company_fn`, use
+read-only/restricted-write/break-glass modes, expire within 24 hours, deny sensitive
+fields by default and can be revoked immediately. `/api/platform` never accepts the
+tenant cookie; platform principal/session issuance is out-of-band, and evaluating a
+grant does not automatically expose or proxy business records. The employee workspace
+continues to be a tenant Superadmin convenience and is a separate authority path.
+
+Remaining target work under EPIC-062 introduces the canonical `module.resource.action`
+registry, assignment-scoped validity and targets, one deterministic authorization
+decision service, fail-closed module/resource registration, authorization-version
+invalidation and explicit Company Owner permissions. Until those tasks complete, code
+behavior above is authoritative and target behavior must not be claimed as delivered.
 
 ## 10. August 2026 implementation additions
 

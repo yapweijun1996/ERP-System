@@ -204,10 +204,10 @@ are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > Demo leave coverage without a new table. TASK-160 adds `vision_base_url`,
 > `vision_model` and `vision_credential_required` columns to
 > `document_processing_policy` (migration 0075's `openai_compatible` BYOK vision
-> provider) without a new table. TASK-161–169 synchronize the subsequent operational,
+> provider) without a new table. TASK-161–170 synchronize the subsequent operational,
 > editable-record, Sales, session, HR Calendar, Staff Calendar and authorization
-> documentation work. The current boundary is migration 0083: **84 journaled
-> migrations and 236 generated tables**. Each subsequent schema capability must still
+> documentation work. The current boundary is migration 0085: **86 journaled
+> migrations and 242 generated tables**. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
@@ -221,6 +221,12 @@ calendar_holiday              + submit/reject/version governance (0080)
 staff_appointment               retained versioned employee appointment (0082)
 staff_appointment_reminder      durable occurrence reminder queue (0083)
 staff_appointment_outbound_event durable one-way calendar projection queue (0083)
+platform_principal              platform operator identity, separate from app_user (0084)
+platform_role / *_permission    application-owned platform support roles (0084)
+platform_principal_role         platform role assignments (0084)
+platform_session                hash-backed platform bearer/CSRF session (0084)
+support_access_grant             bounded, auditable customer-support authorization (0084/0085)
+audit_log.platform_principal_id platform actor correlation for platform events (0084)
 ```
 
 Appointment recurrence remains a bounded rule on the appointment master; occurrences

@@ -148,12 +148,16 @@ before repointing memberships, while existing tenants are explicitly marked live
 ## Platform, tenant and company terminology
 
 `master_fn` is the customer tenant/group security boundary. `company_fn` is one legal
-entity inside it. A platform principal is neither a master user nor a company employee;
-the current schema has no separate platform-principal or support-grant domain.
+entity inside it. A platform principal is neither a master user nor a company employee.
+Migration 0084/0085 implements separate `platform_principal`, `platform_role`,
+`platform_session` and `support_access_grant` tables. A support grant is master-scoped,
+optionally company-scoped, time-bounded and audited; it does not by itself bypass the
+tenant API or proxy customer data. Platform identity/session issuance remains outside
+the tenant API.
 
 Current roles, multiple-role union, role-level scopes and tenant Superadmin behavior are
 documented as compatibility facts in
-[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). EPIC-062 will add
-platform separation, assignment-scoped validity/targets and explicit Company Owner
-permissions. Those target capabilities must not be inferred from the current
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). Remaining EPIC-062
+tasks will add assignment-scoped validity/targets, canonical permissions and explicit
+Company Owner permissions. Those target capabilities must not be inferred from the current
 `is_superadmin` column.

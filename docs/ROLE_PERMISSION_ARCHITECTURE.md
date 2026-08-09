@@ -1,7 +1,7 @@
 # ERP Role & Permission Architecture
 
-Status: **Proposed target architecture; current implementation and migration gaps are
-normative below**
+Status: **Proposed target architecture with TASK-170 platform-support foundation;
+current implementation and migration gaps are normative below**
 Reviewed: **2026-08-09**
 Scope: platform authorization, tenant/company roles, permissions, data scope,
 approval authority, support access and audit
@@ -83,6 +83,11 @@ The current code already implements:
 - append-only API audit events;
 - versioned approval policies, snapshotted workflow instances, ambiguity rejection,
   self-approval prevention and bounded delegation.
+- a separate platform principal/role/session domain and a bounded support-grant control
+  plane (TASK-170), with platform-only bearer/CSRF credentials and no tenant-role path;
+- master/optional-company support targets, 24-hour maximum grants, read-only or explicit
+  restricted-write/break-glass modes, default sensitive-field denial, and audited grant
+  lifecycle/decision events.
 
 The following current behaviors are compatibility facts, not the final architecture:
 
@@ -96,6 +101,9 @@ The following current behaviors are compatibility facts, not the final architect
   permission checks, but this is not the target fail-closed registry behavior.
 - Employee-workspace impersonation is company-bounded and audited, but it is not a
   platform support-access grant.
+- Platform principal and session issuance is intentionally out-of-band; there is no
+  tenant-login route that creates platform sessions. Support evaluation returns a safe
+  allow/deny decision and does not itself authorize arbitrary business-data queries.
 
 No document may describe the target items below as implemented before its task and
 tests are complete.
@@ -313,7 +321,8 @@ offboarding must have deterministic lifecycle behavior and tests.
 ### EPIC-062 — required authorization migration
 
 - TASK-169: current/target architecture and documentation alignment — done
-- TASK-170: platform principal and time-bounded support-access domain
+- TASK-170: platform principal and time-bounded support-access domain — done; migration
+  0084/0085 and domain/API adversarial tests are green
 - TASK-171: canonical permission registry and compatibility-key migration
 - TASK-172: assignment-scoped grants, scope targets and expiry
 - TASK-173: centralized decision service, explicit deny semantics and safe explanation

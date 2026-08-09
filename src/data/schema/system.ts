@@ -4,11 +4,11 @@
 // production migration.
 import {
   pgTable, text, bigint, integer, boolean, timestamp, jsonb,
-  index, uniqueIndex, primaryKey,
+  index, uniqueIndex, primaryKey, check, foreignKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
-import { appUser, company, role } from './tenancy';
+import { appUser, company, master, role } from './tenancy';
 
 export const appSession = pgTable('app_session', {
   tokenHash: text('token_hash').primaryKey(),
@@ -36,6 +36,108 @@ export const rolePermission = pgTable('role_permission', {
 }, (t) => [
   primaryKey({ columns: [t.roleId, t.permissionKey] }),
   index('idx_role_permission_master').on(t.masterFn, t.permissionKey, t.roleId),
+]);
+
+/**
+ * Platform operators are deliberately not app_user rows. They do not belong to
+ * a customer master, cannot be assigned a tenant role, and receive no customer
+ * data access unless a separate, expiring support_access_grant authorizes it.
+ */
+export const platformPrincipal = pgTable('platform_principal', {
+  principalId: bigint('principal_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  principalKey: text('principal_key').notNull(),
+  displayName: text('display_name').notNull(),
+  email: text('email'),
+  isActive: boolean('is_active').notNull().default(true),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_platform_principal_key').on(t.principalKey),
+  index('idx_platform_principal_active').on(t.isActive, t.principalId),
+]);
+
+/** Application-owned platform role catalogue; tenant role administration never
+ * reads or writes this table. TASK-171 may later move these keys to the global
+ * permission registry without changing the authority boundary. */
+export const platformRole = pgTable('platform_role', {
+  platformRoleId: bigint('platform_role_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  isSystemRole: boolean('is_system_role').notNull().default(true),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_platform_role_code').on(t.code),
+]);
+
+export const platformRolePermission = pgTable('platform_role_permission', {
+  platformRoleId: bigint('platform_role_id', { mode: 'number' })
+    .notNull().references(() => platformRole.platformRoleId),
+  permissionKey: text('permission_key').notNull(),
+  ...timestamps,
+}, (t) => [
+  primaryKey({ columns: [t.platformRoleId, t.permissionKey] }),
+  index('idx_platform_role_permission_key').on(t.permissionKey, t.platformRoleId),
+]);
+
+export const platformPrincipalRole = pgTable('platform_principal_role', {
+  principalId: bigint('principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  platformRoleId: bigint('platform_role_id', { mode: 'number' })
+    .notNull().references(() => platformRole.platformRoleId),
+  ...timestamps,
+}, (t) => [
+  primaryKey({ columns: [t.principalId, t.platformRoleId] }),
+  index('idx_platform_principal_role_role').on(t.platformRoleId, t.principalId),
+]);
+
+/** Hash-backed bearer sessions for the separate platform authorization domain. */
+export const platformSession = pgTable('platform_session', {
+  tokenHash: text('token_hash').primaryKey(),
+  csrfHash: text('csrf_hash').notNull(),
+  principalId: bigint('principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  index('idx_platform_session_principal').on(t.principalId, t.revokedAt),
+  index('idx_platform_session_expiry').on(t.expiresAt, t.revokedAt),
+]);
+
+export const supportAccessGrant = pgTable('support_access_grant', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  createdByPrincipalId: bigint('created_by_principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  masterFn: text('master_fn').notNull().references(() => master.masterFn),
+  /** Null means the grant may cover any company in the target master. */
+  companyFn: text('company_fn').references(() => company.companyFn),
+  reason: text('reason').notNull(),
+  ticketReference: text('ticket_reference').notNull(),
+  mode: text('mode').notNull(),
+  validFrom: timestamp('valid_from', { withTimezone: true }).notNull(),
+  validUntil: timestamp('valid_until', { withTimezone: true }).notNull(),
+  sensitiveRestrictions: jsonb('sensitive_restrictions').notNull().default(sql`'{}'::jsonb`),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  revokedByPrincipalId: bigint('revoked_by_principal_id', { mode: 'number' })
+    .references(() => platformPrincipal.principalId),
+  revocationReason: text('revocation_reason'),
+  ...timestamps,
+}, (t) => [
+  check('ck_support_access_grant_mode', sql`${t.mode} in ('read_only', 'restricted_write', 'break_glass')`),
+  check('ck_support_access_grant_window', sql`${t.validUntil} > ${t.validFrom}`),
+  foreignKey({
+    columns: [t.masterFn, t.companyFn],
+    foreignColumns: [company.masterFn, company.companyFn],
+    name: 'fk_support_access_grant_company_master',
+  }),
+  index('idx_support_access_grant_principal_window').on(
+    t.platformPrincipalId, t.validFrom, t.validUntil, t.revokedAt,
+  ),
+  index('idx_support_access_grant_tenant_window').on(
+    t.masterFn, t.companyFn, t.validFrom, t.validUntil,
+  ),
 ]);
 
 /** Superadmin-controlled per-tenant module gate. Absence of a row for a
@@ -77,6 +179,8 @@ export const auditLog = pgTable('audit_log', {
   masterFn: text('master_fn').notNull(),
   companyFn: text('company_fn'),
   actorUserId: bigint('actor_user_id', { mode: 'number' }).references(() => appUser.userId),
+  platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
+    .references(() => platformPrincipal.principalId),
   requestId: text('request_id').notNull(),
   entity: text('entity').notNull(),
   entityId: text('entity_id'),
@@ -87,6 +191,7 @@ export const auditLog = pgTable('audit_log', {
 }, (t) => [
   index('idx_audit_tenant_time').on(t.masterFn, t.companyFn, t.occurredAt, t.id),
   index('idx_audit_actor_activity').on(t.masterFn, t.companyFn, t.actorUserId, t.id),
+  index('idx_audit_platform_activity').on(t.platformPrincipalId, t.occurredAt, t.id),
   index('idx_audit_entity').on(t.masterFn, t.companyFn, t.entity, t.entityId, t.occurredAt),
   index('idx_audit_request').on(t.requestId),
 ]);
