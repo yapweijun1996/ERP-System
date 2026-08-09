@@ -151,6 +151,31 @@ describe('central authorization decision service', () => {
     })).toEqual({ allowed: false, reasonCode: 'DENY_EXPLICIT' });
   });
 
+  it('fails closed when server-resolved module context mismatches the permission', async () => {
+    const { db, viewer } = await fixture();
+    const decision = await authorize(db, {
+      principal: principalFromSession(viewer),
+      permissionKey: 'inventory.read',
+      context: {
+        moduleKey: 'finance',
+        approvalInstanceId: 101,
+        approvalStepId: 202,
+      },
+    });
+    expect(decision).toEqual({ allowed: false, reasonCode: 'DENY_CONTEXT_MISMATCH' });
+
+    const explanation = await explainAuthorization(db, {
+      principal: principalFromSession(viewer),
+      permissionKey: 'inventory.read',
+      context: { moduleKey: 'finance' },
+    });
+    expect(explanation).toMatchObject({
+      allowed: false,
+      reasonCode: 'DENY_CONTEXT_MISMATCH',
+      context: { moduleKey: 'finance' },
+    });
+  });
+
   it('allows a registered exception and projects it into effective capabilities', async () => {
     const { db, viewer } = await fixture();
     await db.insert(userPermissionOverride).values(overrideValues(viewer, {

@@ -30,6 +30,7 @@ export const AUTHORIZATION_REASON_CODES = [
   'DENY_EXPLICIT',
   'DENY_SCOPE_UNRESOLVED',
   'DENY_SCOPE_UNAVAILABLE',
+  'DENY_CONTEXT_MISMATCH',
   'DENY_PERMISSION_NOT_GRANTED',
 ] as const;
 
@@ -48,6 +49,17 @@ export interface AuthorizationScopeTarget {
   targetId: string | null;
 }
 
+/** Optional business context carried by sensitive domain decisions. The
+ * evaluator does not infer this context from a user-controlled permission
+ * string; callers provide the already-resolved module/resource/workflow
+ * identity and the evaluator rejects mismatched module context. */
+export interface AuthorizationContext {
+  moduleKey?: string | null;
+  policyVersionId?: number | null;
+  approvalInstanceId?: number | null;
+  approvalStepId?: number | null;
+}
+
 export interface AuthorizationRequest {
   principal: AuthorizationPrincipal;
   permissionKey: string;
@@ -57,6 +69,8 @@ export interface AuthorizationRequest {
   scopeTarget?: AuthorizationScopeTarget | null;
   /** Require an active role-assignment scope for the requested resource. */
   requireScope?: boolean;
+  /** Server-resolved business context for sensitive decisions. */
+  context?: AuthorizationContext | null;
   now?: Date;
 }
 
@@ -70,6 +84,7 @@ export interface AuthorizationDecision {
 export interface AuthorizationExplanation extends AuthorizationDecision {
   permissionKey: string;
   resourceKey: string | null;
+  context: AuthorizationContext | null;
   candidateKeys: string[];
   matchedEffect: AuthorizationEffect;
   matchedAssignmentId: number | null;
@@ -241,12 +256,14 @@ async function evaluateAuthorization(
 ): Promise<AuthorizationExplanation> {
   const permissionKey = request.permissionKey.trim();
   const resourceKey = request.resourceKey?.trim() || null;
+  const context = request.context ?? null;
   const now = request.now ?? new Date();
   const empty = (reasonCode: AuthorizationReasonCode): AuthorizationExplanation => ({
     allowed: false,
     reasonCode,
     permissionKey,
     resourceKey,
+    context,
     candidateKeys: [],
     matchedEffect: 'none',
     matchedAssignmentId: null,
@@ -265,6 +282,10 @@ async function evaluateAuthorization(
 
   if (permissionDefinition(permissionKey)?.domain === 'platform') {
     return empty('DENY_PLATFORM_PERMISSION');
+  }
+  const definition = permissionDefinition(permissionKey);
+  if (context?.moduleKey && (!definition || definition.module !== context.moduleKey)) {
+    return empty('DENY_CONTEXT_MISMATCH');
   }
   const candidates = [...permissionCandidates(permissionKey)];
   if (!candidates.length) return empty('DENY_PERMISSION_NOT_REGISTERED');
@@ -290,6 +311,7 @@ async function evaluateAuthorization(
   const overrideDetails = (row: typeof userPermissionOverride.$inferSelect) => ({
     permissionKey,
     resourceKey,
+    context,
     candidateKeys,
     matchedEffect: row.effect as AuthorizationEffect,
     matchedAssignmentId: null,
@@ -343,6 +365,7 @@ async function evaluateAuthorization(
       reasonCode: 'ALLOW_SUPERADMIN_COMPATIBILITY',
       permissionKey,
       resourceKey,
+      context,
       candidateKeys,
       matchedEffect: 'superadmin',
       matchedAssignmentId: superadminAssignment.assignmentId,
@@ -389,6 +412,7 @@ async function evaluateAuthorization(
         reasonCode: 'ALLOW_ROLE_PERMISSION',
         permissionKey,
         resourceKey,
+        context,
         candidateKeys,
         matchedEffect: 'role',
         matchedAssignmentId: assignment.assignmentId,
@@ -412,6 +436,7 @@ async function evaluateAuthorization(
         reasonCode: 'ALLOW_ROLE_PERMISSION',
         permissionKey,
         resourceKey,
+        context,
         candidateKeys,
         matchedEffect: 'role',
         matchedAssignmentId: assignment.assignmentId,

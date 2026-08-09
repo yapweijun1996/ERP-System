@@ -22,6 +22,7 @@ import {
   processApprovalTimersWithin,
   resolveApprovalPolicyVersionWithin,
 } from '../approval/workflow';
+import { listMyLeaveApprovalsWithin } from './leaveApproval';
 import {
   createLeaveDraftWithin,
   decideGovernedLeaveWithin,
@@ -229,6 +230,37 @@ describe('configurable leave approval governance', () => {
       'employee',
       'permission',
     ]);
+  });
+
+  it('does not let HR permission bypass an in-flight manager step', async () => {
+    const data = await fixture();
+    const now = new Date('2026-07-25T08:00:00Z');
+    const created = await draftAndSubmit(data, {
+      startDate: '2026-10-05',
+      endDate: '2026-10-12',
+    }, now);
+
+    const queue = await data.db.transaction((tx) => listMyLeaveApprovalsWithin(
+      tx,
+      scope,
+      data.admin.userId,
+      now,
+    ));
+    expect(queue).toHaveLength(0);
+
+    await expect(data.db.transaction((tx) => decideGovernedLeaveWithin(
+      tx,
+      scope,
+      { userId: data.admin.userId, employeeId: null, canManage: true },
+      created.draft.id,
+      created.pending.version,
+      'approved',
+      'HR governance attempt',
+      now,
+    ))).rejects.toMatchObject({
+      code: 'approval_authority_required',
+      status: 403,
+    });
   });
 
   it('permits only an active bounded delegate and preserves original authority in the decision', async () => {

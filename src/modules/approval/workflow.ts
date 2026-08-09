@@ -19,7 +19,11 @@ import {
 import { deliverNotificationWithin } from '../account/notification';
 import { fixedUnits } from '../inventory/decimal';
 import { isTenantPermission } from '../../auth/permissionRegistry';
-import { authorizeWithin } from '../../auth/authorization';
+import {
+  authorizeWithin,
+  type AuthorizationContext,
+  type AuthorizationScopeTarget,
+} from '../../auth/authorization';
 import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 
 export class ApprovalWorkflowError extends Error {
@@ -370,12 +374,24 @@ async function hasPermissionWithin(
   userId: number,
   permissionKey: string,
   now = new Date(),
+  context: {
+    resourceKey?: string;
+    scopeTarget?: AuthorizationScopeTarget;
+    requireScope?: boolean;
+    authorizationContext?: AuthorizationContext;
+  } = {},
 ): Promise<boolean> {
   return (await authorizeWithin(
     exec,
     { userId, masterFn: scope.masterFn, companyFn: scope.companyFn },
     permissionKey,
-    { now },
+    {
+      now,
+      resourceKey: context.resourceKey,
+      scopeTarget: context.scopeTarget,
+      requireScope: context.requireScope,
+      context: context.authorizationContext,
+    },
   )).allowed;
 }
 
@@ -604,8 +620,16 @@ async function authorizeDecision(
       403,
     );
   }
+  const authorizationContext = approvalAuthorizationContext(instance, step, scope);
   if (step.currentAuthorityType === 'permission' && step.currentAuthorityPermissionKey) {
-    if (!await hasPermissionWithin(exec, scope, actorUserId, step.currentAuthorityPermissionKey)) {
+    if (!await hasPermissionWithin(
+      exec,
+      scope,
+      actorUserId,
+      step.currentAuthorityPermissionKey,
+      now,
+      authorizationContext,
+    )) {
       throw new ApprovalWorkflowError(
         'approval_authority_required',
         'The signed-in user does not hold the required approval authority.',
@@ -619,8 +643,15 @@ async function authorizeDecision(
     };
   }
   if (step.currentAuthorityUserId === actorUserId) {
+    if (!actorEmployee) {
+      throw new ApprovalWorkflowError(
+        'approval_authority_required',
+        'The assigned employee account is no longer active in this company.',
+        403,
+      );
+    }
     return {
-      actorEmployeeId: actorEmployee?.id ?? null,
+      actorEmployeeId: actorEmployee.id,
       authoritySource: step.escalatedAt ? 'escalated' as const : 'direct' as const,
       delegationId: null,
     };
@@ -651,6 +682,45 @@ async function authorizeDecision(
     actorEmployeeId: actorEmployee.id,
     authoritySource: 'delegated' as const,
     delegationId: delegation.id,
+  };
+}
+
+function approvalAuthorizationContext(
+  instance: typeof approvalInstance.$inferSelect,
+  step: typeof approvalInstanceStep.$inferSelect,
+  scope: Scope,
+): {
+  resourceKey: string;
+  scopeTarget: AuthorizationScopeTarget;
+  requireScope: true;
+  authorizationContext: AuthorizationContext;
+} {
+  const resource = instance.domain === 'leave' && instance.entityType === 'leave_request'
+    ? { moduleKey: 'hr', resourceKey: 'hr/leave-requests' }
+    : instance.domain === 'expense' && instance.entityType === 'expense_claim_line'
+      ? { moduleKey: 'finance', resourceKey: 'expenses/claims' }
+      : null;
+  if (!resource) {
+    throw new ApprovalWorkflowError(
+      'approval_context_missing',
+      'The approval entity is not mapped to a registered module and resource.',
+      409,
+    );
+  }
+  return {
+    ...resource,
+    scopeTarget: instance.department
+      ? { scope: 'department', targetType: 'department', targetId: instance.department }
+      : instance.subjectEmployeeId
+        ? { scope: 'self', targetType: 'employee', targetId: String(instance.subjectEmployeeId) }
+        : { scope: 'company', targetType: 'company', targetId: scope.companyFn },
+    requireScope: true,
+    authorizationContext: {
+      moduleKey: resource.moduleKey,
+      policyVersionId: instance.policyVersionId,
+      approvalInstanceId: instance.id,
+      approvalStepId: step.id,
+    },
   };
 }
 
@@ -731,6 +801,21 @@ export async function decideApprovalWithin(
       'The current approval step is unavailable.',
       409,
     );
+  }
+  if (step.policyStepId) {
+    const [policyStep] = await exec.select({ id: approvalPolicyStep.id }).from(approvalPolicyStep).where(and(
+      eq(approvalPolicyStep.id, step.policyStepId),
+      eq(approvalPolicyStep.masterFn, scope.masterFn),
+      eq(approvalPolicyStep.companyFn, scope.companyFn),
+      eq(approvalPolicyStep.policyVersionId, instance.policyVersionId),
+    )).limit(1);
+    if (!policyStep) {
+      throw new ApprovalWorkflowError(
+        'approval_policy_context_mismatch',
+        'The active approval step is not part of the instance policy snapshot.',
+        409,
+      );
+    }
   }
   const authority = await authorizeDecision(
     exec,
