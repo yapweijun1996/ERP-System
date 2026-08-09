@@ -65,6 +65,20 @@ The demo also ships as an installable PWA shell; see [PWA.md](PWA.md).
   pages should read through the PGlite data adapter so demo behavior matches production
   schema and transactions.
 
+### Curated HR starter roster
+
+The compact canonical seed creates 18 fictional employee master records: 12 for Acme
+Singapore and 6 for Acme Malaysia. Farah Wong and Amirul Rashid are the two reporting
+roots; the remaining rows include department, job title, start date, salary, employment
+type and manager relationships. Only the existing Demo personas have login accounts;
+the additional roster uses `demo.example.test` addresses and cannot be used to sign in.
+
+The roster is loaded only when a Demo database is first created (or after **Settings →
+Demo data → Reset demo data**). An existing browser IndexedDB database is intentionally
+not reseeded automatically, because reseeding would overwrite the user's Demo work.
+Fresh Demo databases then load the separate enterprise showcase pack, which adds its
+larger deterministic employee population for list, permissions and reporting demos.
+
 ## 4. What the demo is NOT
 
 | Misconception | Reality |

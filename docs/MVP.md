@@ -67,7 +67,8 @@ proven in the demo.
 
 ### MVP-2 exit criteria
 
-- Fresh machine: `make setup` → app at `:8080`, API `:3000`, DB `:5432`, seeded.
+- Fresh machine: `make setup` → app at `:8080`, API `:3000`, DB `:5432`, migrated and
+  empty of Demo business data; `make seed` is a separate explicit Demo-only action.
 - Browser in api mode performs the confirm-order flow **through the API**; stock and
   money writes never execute client-side.
 - Concurrency test passes against real PostgreSQL.

@@ -59,7 +59,14 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
       ...read('sales', 'crm', 'inventory', 'project', 'service'),
       ...actions('sales', 'approve'), ...actions('project', 'approve'),
     ],
-    scopes: { '*': 'team' },
+    // Generic module collections contain many reference/master-data rows that
+    // do not have an owner column. A team scope therefore makes an otherwise
+    // authorized manager request fail closed with data_scope_unavailable.
+    // Keep the manager boundary on actor-derived My Work routes, while making
+    // the explicitly granted read-only module lists usable at company scope.
+    scopes: companyScopes(
+      'sales/*', 'crm/*', 'inventory/*', 'warehouse/*', 'project/*', 'service/*',
+    ),
   },
   {
     key: 'sales', name: 'Sales',

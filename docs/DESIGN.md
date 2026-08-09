@@ -54,7 +54,7 @@ docs/                    This documentation suite
   4. Add the `<script>` tag to `web/index.html` (order matters: data → adapter →
      screens → app).
   5. Add five-language copy, set the route Canonical only after Demo/API parity, then
-     run the type/test/schema/build/115-route gates and live desktop + 375 px checks.
+     run the type/test/schema/build/current-route gates and live desktop + 375 px checks.
 
 ## 3. Data layer design
 
@@ -128,7 +128,8 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 ```
 
 - API is the only writer for stock/money. Session (cookie) carries tenant scope.
-- **`docker-compose.yml` + `Dockerfile.api` + `web/Dockerfile` + `web/nginx.conf`**
+- **`docker-compose.yml` + `docker-compose.production.yml` + `Dockerfile.api` +
+  `web/Dockerfile` + `web/nginx.conf`**
   (TASK-012) implement the diagram above for real: `db` = `postgres:16-alpine`,
   `api` = `Dockerfile.api` (repo-root context — no separate `api/` workspace, ships
   devDependencies since `tsx`/`drizzle-kit` run untranspiled), `web` = multi-stage
@@ -137,9 +138,9 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
   `erp-system-api-adapter.js`'s `API_BASE` defaults to a relative `/api`: same-origin,
   zero CORS). Host ports default to the documented 8080/3000/5432 but are overridable
   (`WEB_PORT`/`API_PORT`/`DB_PORT`) for machines where those are already taken.
-  `Makefile`/`scripts/setup.sh` targets were written to match this shape and every
-  underlying `docker compose` command and both the normal and interactive setup paths
-  have been verified against real bundled and external PostgreSQL deployments.
+  `Makefile`/`scripts/setup.sh` targets were written to match this shape. The production
+  release path is intentionally split: `deploy/release.sh` rebuilds only web/api, while
+  `deploy/migrate.sh` is the explicit, reviewed database-change path.
 - **`src/server.ts`** is the real API — run with `DATABASE_URL=... npm run server`
   locally, or as the `api` service in Docker. Besides health/auth/dashboard it
   exposes allowlisted resources plus registered create/action handlers. Reads are
@@ -309,3 +310,46 @@ retention workflows and expense linkage under TASK-119–135.
 - Rule: every business bug or new command gets a same-slice domain/API assertion; every
   route promoted to Canonical must also prove Demo/API loading, five-language UI, write
   behavior and responsive rendering.
+
+## 9. Authorization design — current and target
+
+The current implementation is intentionally recorded separately from the target in
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
+
+Current runtime facts:
+
+- security hierarchy is `master -> company -> user/company membership`;
+- users may hold multiple company roles and permissions are an Allow union;
+- `self/team/department/company` visibility is stored per role/resource and the widest
+  matching role scope is used;
+- `is_superadmin` is a tenant/company-bounded full-permission bypass;
+- permission keys are a compatibility mix of broad module actions and resource-specific
+  actions;
+- module activation, tenant scope, permission, ownership and workflow authority are
+  enforced by the backend for current Canonical operations;
+- versioned approval policy/instance/decision/delegation tables remain the approval
+  SSOT and must not be simplified during authorization refactoring.
+
+Target work under EPIC-062 introduces a separate platform principal domain, canonical
+`module.resource.action` registry, assignment-scoped validity and targets, one
+deterministic authorization decision service, fail-closed module/resource registration,
+authorization-version invalidation and explicit Company Owner permissions. Until those
+tasks complete, code behavior above is authoritative and target behavior must not be
+claimed as delivered.
+
+## 10. August 2026 implementation additions
+
+- Migrations 0076–0078 make Sales enquiry, quotation and order authoring use immutable
+  stock/non-stock line snapshots. Inventory movement and delivery apply only to stock
+  lines; service lines remain invoice/GL-bearing business rows.
+- Migration 0079 adds audited, active-company employee-workspace impersonation. This is
+  a tenant support convenience, not platform support access.
+- Migrations 0080–0081 add governed HR holiday transitions and route the active standard
+  leave workflow through explicit HR permission authority while preserving original
+  workflow facts.
+- Migrations 0082–0083 add versioned Staff Calendar appointments, bounded recurrence,
+  durable reminders and a separate one-way outbound queue. The calendar worker owns
+  retries and supersession; external calendars never become authoritative.
+- Tenant-scoped employee, product, customer and supplier updates use explicit field
+  allowlists, optimistic versions and audit. Security-owned identity fields remain in
+  dedicated lifecycle commands.

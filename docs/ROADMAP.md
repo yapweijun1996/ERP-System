@@ -2,7 +2,7 @@
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-07-21** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-08-09** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 
@@ -54,8 +54,8 @@ topbar company switcher rewired to the canonical company list.)
 
 Exit criteria: empty demo opens wizard first (✅ met); production API can persist wizard
 results to PostgreSQL (✅ — `POST /api/setup/actions/complete` runs
-`completeProductionSetup` server-side, token-gated and locked once the first admin
-exists; stale "⬜ needs TASK-011/TASK-019" claim corrected by the TASK-040 audit).
+`completeProductionSetup` server-side and is available only for an empty
+tenant-foundation/zero-user database; a database singleton locks concurrent attempts).
 
 ## Phase 5 — Production Runtime ✅
 
@@ -87,7 +87,8 @@ resource/dispatcher work and was confirmed closed by the TASK-040 audit
 and 28 actions including `sales/orders/confirm`, purchasing receipt/invoice
 posting, CRM conversion, inventory adjustments/transfers and depreciation
 posting; production `completeSetup` runs server-side via
-`POST /api/setup/actions/complete` (token-gated, zero-user locked).
+`POST /api/setup/actions/complete` (empty-foundation/zero-user locked; no deployment
+setup token).
 
 Exit criteria: `docker compose up -d` starts all services (✅); production
 transaction + concurrency tests pass against PostgreSQL (✅ TASK-013, and in CI on
@@ -184,9 +185,10 @@ Order of attack:
    flow, `role-permission` replaced the mock's fabricated 4-level matrix with a real
    2-state grid matching the actual `role_permission` model, `audit-log` reads real
    events, verified live including the fix making every module's writes show up in
-   the demo's own audit trail — see docs/STATUS.md) are both done. `master-control`,
-   `sys-settings` and `module-activation-control` remain Preview (need new schema or
-   a data-repointing decision).
+   the demo's own audit trail — see docs/STATUS.md) are both done. At this historical
+   phase boundary, `master-control`, `sys-settings` and `module-activation-control`
+   still remained Preview; later epics promoted every route, and the current baseline
+   is 125 Canonical / 0 Preview.
 6. **HR-lite: Employee Master & Leave Management** (EPIC-020 ✅, TASK-049/050,
    2026-07-19) — deliberately scoped to employee master + leave request/approval only;
    Payroll (`payroll-run`/`payslip`) stays mock, deferred to its own future epic since
@@ -272,13 +274,12 @@ platform-safety work found by auditing the existing 53 Canonical + 61 Preview ro
    Inventory's real Chinese translations.
 2. **Super-Admin Module Access Control** (EPIC-018 ✅, TASK-047/048, 2026-07-19) —
    `module-activation-control` was a pure `localStorage` mock (confirmed: zero server
-   persistence, zero enforcement). Now real: a tenant-scoped `master_module` table,
-   bespoke `/api/admin/modules` routes, and — beyond the original scope — real
+   persistence, zero enforcement). EPIC-018 first added tenant-scoped legacy
+   `master_module`; EPIC-059 migration 0073 later moved active decisions to
+   company-scoped `company_module`. Bespoke `/api/admin/modules` routes and real
    server-side enforcement across all 4 generic resource-router handlers, not just a
-   client-side nav hide. A superadmin is exempt from their own toggle on both sides.
-   Verified live: disabling Purchasing hid it from a real Viewer session's sidebar and
-   blocked API access, while the superadmin who disabled it kept full access to
-   configure it back.
+   client-side nav hide. Current disabled business modules apply to every signed-in
+   session; `admin` itself cannot be disabled, preserving the recovery path.
 3. **Superadmin Safety Guard** (EPIC-019 ✅, TASK-046, 2026-07-19) — found while
    verifying "every database must always have a super admin account": nothing stopped
    another admin user from deactivating a tenant's *last* active superadmin, leaving
@@ -313,8 +314,8 @@ the app (and its own in-app Phase B first-run wizard, already fully built) ever 
 1. **Interactive Host Bootstrap** (EPIC-025 ✅, TASK-060 done 2026-07-21) — `make setup`/
    `scripts/setup.sh` used to be one-command but zero-prompt: it copied `.env.example` to
    `.env` verbatim (shipping the literal `DB_PASSWORD=change-me` placeholder and blank
-   `ERP_SETUP_TOKEN`/`ERP_TOKEN_ENCRYPTION_KEY` unless the installer remembered to
-   hand-edit them first) and always provisioned the bundled `db` container — no way to
+   `ERP_TOKEN_ENCRYPTION_KEY` unless the installer remembered to hand-edit it first)
+   and always provisioned the bundled `db` container — no way to
    point at a database an installer had already provisioned themselves (a managed
    RDS/Cloud SQL/Supabase instance, for example) without manually editing `.env` and
    understanding `docker-compose.yml`'s service graph. `scripts/setup.sh --interactive`
@@ -393,9 +394,10 @@ only through registered commands, and passes domain/API/browser/audit verificati
    capture, comparable Decimal/tax-snapshotted quotation totals and an atomic award
    action that creates exactly one linked pending-approval PO. Award closes the RFQ, converts the
    winner and rejects competitors without touching stock or GL. `rfqs` and
-   `supplier-quotations` are now Canonical in Demo/API with five-language workflows,
-   moving the route boundary from 70/44 to **72/42**. `pur-txn-view` remains Preview
-   because it is shared by still-sample purchasing document types.
+   `supplier-quotations` became Canonical in Demo/API with five-language workflows,
+   moving that phase's route boundary from 70/44 to **72/42**. At this historical
+   boundary, `pur-txn-view` remained Preview because it was shared by still-sample
+   purchasing document types; later work promoted the current route set to 125/0.
 
 Exit criteria: met when the domain/API/browser and 114-route gates below pass.
 
@@ -734,14 +736,15 @@ Android verification remains the only human-only release check.
     the stock register is reached from one header action and duplicate footer
     navigation is removed.
 
-Exit criteria: 43 shared list-layout routes and all 115 routes pass desktop/375px
+Historical exit criteria for this phase: 43 shared list-layout routes and the then-current
+115-route baseline pass desktop/375px
 structural audits; Timesheet and Employee pass their dedicated five-language/state
 proofs, and the four master-detail editor routes pass focused and live browser
 verification; Payroll modal initial/error/mobile states and all three Case Detail routes
 pass focused state proofs, and Fixed Assets detail/run states pass with
 service-worker v103. All three Posting Detail routes pass focused state proofs.
 
-## Phase 34 — Employee Identity & My Work (In progress)
+## Phase 34 — Employee Identity & My Work ✅
 
 1. **Organisation username and multiple roles** (TASK-106 done 2026-07-25) extend the
    account with organisation code + username login, nullable pre-activation email and
@@ -773,7 +776,7 @@ Exit criteria: organisation/username collisions, migration, first activation,
 multi-role permission union, actor isolation, hierarchy scope, offboarding and the
 explicit no-MFA/unverified-email risks are covered in Demo/API and browser proof.
 
-## Phase 35 — Full Leave Management (In progress)
+## Phase 35 — Full Leave Management ✅
 
 1. **Policy and calendar** (TASK-111 done 2026-07-25) add confirmed country/region
    holiday calendars, company work patterns, effective-dated leave types and
@@ -812,7 +815,7 @@ Exit criteria: working-day/half-day calculation, pending reservation, insufficie
 balance split, privacy, approval/delegation/capacity, calendar, outbound sync and
 Payroll effects pass five-language desktop/375px and domain/API proof.
 
-## Phase 36 — Receipt & Secure Document Processing (In progress)
+## Phase 36 — Receipt & Secure Document Processing ✅
 
 1. **Storage provider** (TASK-117 done 2026-07-26) adds database-default
    PostgreSQL/PGlite byte content and an optional explicit single-node filesystem
@@ -844,7 +847,7 @@ Exit criteria: storage backends, upload limits, quarantine, extraction retry,
 confidence policy, auto-submit attribution, void/purge states, privacy and PWA logout
 cleanup pass Demo/API, five-language and responsive proof.
 
-## Phase 37 — Expense Claims & Accounting (Planned)
+## Phase 37 — Expense Claims & Accounting ✅
 
 1. **Effective tax/GL/FX policy** (TASK-123 done 2026-07-26) snapshots category,
    evidence, limits, payment source, Decimal tax/FX and account mappings at submission;
@@ -982,3 +985,39 @@ one managed Employee base role and deterministic employee/manager identity per
 persona. Final proof passed 531 tests plus one expected skip, dual builds, smoke,
 the dedicated PWA v210 lifecycle audit, 124 Canonical routes at desktop/375px and
 124 routes × five languages × two viewports.
+
+## Phase 43 — Operational Editing, Sales Authoring & Staff Calendar ✅
+
+1. **Production operations** (TASK-161) separate source-only release from explicitly
+   confirmed migration and keep database volumes/private services protected.
+2. **Editable canonical records** (TASK-162–163) provide allowlisted employee and
+   master-data updates plus atomic Sales enquiry/quotation/order Header–Detail authoring
+   with stock and non-stock lines.
+3. **Session and HR governance** (TASK-164–166) add bounded remembered sessions,
+   audited employee-workspace entry, holiday approval and retained Staff appointments.
+4. **Calendar automation and access proof** (TASK-167–168) add bounded recurrence,
+   retryable reminders/one-way sync and permission-aware shell/search/module matrices.
+
+Delivered across migrations 0076–0083. TASK-168 is complete: the deterministic Demo v15
+pack was regenerated from the current authoritative Manager template, and permission,
+module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
+one expected skip and zero failures. Generic module collections use company scopes because
+their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
+actor-derived and team/direct-tree scoped. The current schema journal contains 84
+migrations and generated Drizzle SQL contains 236 tables. Physical-phone verification
+remains separately blocked under TASK-017.
+
+## Phase 44 — Authorization Architecture Evolution 🔶
+
+1. **Architecture alignment** (TASK-169 complete) records current compatibility facts
+   and the target in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
+2. **Principal and permission foundation** (TASK-170–171) separates platform/support
+   authority and introduces the canonical permission registry.
+3. **Assignment and decision model** (TASK-172–174) moves validity/scope to assignments,
+   centralizes deterministic decisions and makes unknown/stale state fail closed.
+4. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,
+   explainable Company Owner permissions after all prerequisites pass.
+
+Exit criteria: all TASK-170–175 adversarial migration and compatibility tests pass;
+existing tenants retain access without a hidden bypass; platform operators obtain no
+implicit customer-data authority.

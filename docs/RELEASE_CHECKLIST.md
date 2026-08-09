@@ -17,7 +17,7 @@ section for the path you are releasing. Deployment mechanics live in
 - [ ] `npm run check:demo-schema && npm run check:drift` — generated PGlite artifacts
       and all Drizzle migrations agree
 - [ ] `npm run build:demo` then `npm run smoke` and `npm run audit:screens`
-      (115 routes, desktop + 375 px, zero console errors)
+      (all current 125 routes, desktop + 375 px, zero console errors)
 - [ ] `tasks/tasks.jsonl` statuses current; `docs/STATUS.md` updated if an epic-level
       milestone lands in this release
 - [ ] No secrets in the diff or the bundle: no provider API keys, nothing
@@ -52,9 +52,10 @@ producing and verifying a distributable `web/dist/`.
 - [ ] **Backup first**: snapshot the `pgdata` volume / `pg_dump` before touching a
       running deployment — this is the rollback point
 - [ ] Build + start: `make up` (or `make setup` on a fresh host — env + build +
-      health-wait + migrate + seed in one command)
+      health-wait + migrate; production setup does not seed demo/business data)
 - [ ] Migrations: `docker compose exec api npm run migrate` (idempotent; already part
-      of `make setup`). **Seed only on first install** — never re-seed a live tenant
+      of `make setup`). Never seed a production tenant; `make seed` is a separate,
+      explicit Demo/development action and must not be run against live data
 - [ ] Health: `make ps` shows all three services healthy; `curl :3000/health` OK;
       dashboard renders through the nginx proxy at `:8080` with real figures
 - [ ] Auth sanity: login works against `app_user`; setup wizard stays locked

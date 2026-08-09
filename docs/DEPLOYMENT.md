@@ -4,6 +4,11 @@ Two independent deploy targets from one repo:
 
 1. **Demo** → static `web/dist/` → GitHub Pages (public showcase, no backend).
 2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), sized for 100–800 GB.
+   Use `docker-compose.production.yml` on a client server so only `web` is exposed.
+
+Current schema boundary: migration
+`0083_staff_appointment_recurrence_reminders_calendar_sync` (84 journal entries,
+236 generated tables). Application-only release does not apply migrations automatically.
 
 ---
 
@@ -49,21 +54,24 @@ This shape is a target contract. The repository must include real Docker assets 
 production is considered supported:
 
 - `docker-compose.yml`
+- `docker-compose.production.yml` (private DB/API production overlay)
 - API Dockerfile
 - web Dockerfile or static web image build
 - Postgres volume and init directory
 - health checks for `web`, `api`, and `db`
-- scripts for migrate, seed, backup, and reset
+- an always-on `calendar-worker` for appointment reminders and optional one-way calendar delivery
+- separate application-release and migration scripts
 
 ### First-run setup — ONE command
 
 ```bash
-make setup        # creates .env, starts services, waits for DB, migrates, seeds
+make setup             # local: creates .env, starts services, waits for DB, migrates
+make setup-production  # client server: same first install, only web is published
 ```
 
 `make setup` runs [`scripts/setup.sh`](../scripts/setup.sh), which is idempotent (safe to
-re-run) and prints the app/API/DB URLs when done. That is the entire onboarding — no
-manual multi-step sequence. `make help` lists every target (`up`, `down`, `logs`,
+re-run), creates the schema and prints the app/API/DB URLs when done. It does **not** load
+demo rows by default. `make help` lists every target (`up`, `down`, `release`, `logs`,
 `migrate`, `seed`, `reset`, `psql`, …).
 
 <details>
@@ -74,39 +82,104 @@ cp .env.example .env                       # only if missing
 docker compose up -d                       # db + api + web
 # wait until pg_isready, then:
 docker compose exec api npm run migrate    # apply Drizzle migrations
-docker compose exec api npm run seed       # SG + MY demo data
+# optional, disposable local demo only:
+docker compose exec -e ERP_ENV=demo -e ERP_DEMO_SEED=I_UNDERSTAND_DEMO_DATA api npm run seed
 ```
 </details>
 
 > ⚠️ **Init scripts only run once.** Anything in `/docker-entrypoint-initdb.d/` runs
-> **only on the first boot with an empty `pgdata` volume**. To re-seed, use `make reset`
-> (wipes the volume and re-runs setup) or `make seed`. Don't expect the init script to
-> re-run on an existing volume.
+> **only on the first boot with an empty `pgdata` volume**. For intentional demo data,
+> use `make seed` against a disposable database. `make reset` wipes the volume and is
+> destructive; it is not a production update mechanism.
 
 ### Connecting to an already-provisioned external database
 
 ```bash
 make setup-interactive     # scripts/setup.sh --interactive
+# For a client server, use the hardened overlay from the first boot:
+make setup-production      # scripts/setup.sh --production --interactive
 ```
 
-By default `make setup` provisions the bundled `db` container. If you already run a
-managed PostgreSQL instance (RDS, Cloud SQL, Supabase, a shared on-prem server, …),
-`make setup-interactive` walks through it instead of hand-editing `.env`:
+By default `make setup` provisions the bundled `db` container for local use. If you
+already run a managed PostgreSQL instance (RDS, Cloud SQL, Supabase, a shared on-prem
+server, …), `make setup-production` walks through it instead of hand-editing `.env`
+and keeps the API private on the Compose network. `make setup-interactive` is the
+convenient local/base-Compose variant:
 
 1. Choose **[2] already-provisioned external database** and paste its
    `postgres://user:pass@host:port/db` connection string (validated by prefix before
    continuing).
-2. Answer (or leave blank to auto-generate) `ERP_SETUP_TOKEN` / `ERP_TOKEN_ENCRYPTION_KEY`
-   / `ERP_PUBLIC_URL`, same as the bundled path.
+2. Answer (or leave blank to auto-generate) `ERP_TOKEN_ENCRYPTION_KEY` /
+   `ERP_PUBLIC_URL`, same as the bundled path. The first-run web setup is tokenless
+   when the database has no tenant data.
 3. The script never starts or waits on the bundled `db` service
    (`docker compose up -d api web --no-deps`) and proves readiness by retrying
    `docker compose exec -T api npm run migrate` directly against your database instead
    of `pg_isready` against a container that was never started.
 
-This only takes effect the first time — once `.env` exists, both `make setup` and
-`make setup-interactive` leave it untouched. To switch an *existing* deployment onto an
-external database later, edit `.env`'s `DATABASE_URL` by hand (see the comment above it
-in `.env.example`) and `docker compose up -d api web --no-deps` yourself.
+This first-install path intentionally applies the committed migrations to the selected
+database. Take a backup and use a staging copy first when the external database already
+contains client data. It is not the command to use for routine source-code releases.
+
+This only takes effect the first time — once `.env` exists, `make setup`,
+`make setup-interactive`, and `make setup-production` leave it untouched. To switch an
+*existing* deployment onto an external database later, edit `.env`'s `DATABASE_URL` by
+hand (see the comment above it in `.env.example`) and use the production overlay when
+starting the application containers.
+
+### Updating source code without replacing the database
+
+The normal client-server release is application-only:
+
+```bash
+make release                 # rebuild/restart web + api + calendar-worker; no migration, no seed
+# or: ./deploy/release.sh
+```
+
+The production overlay keeps PostgreSQL and the document-storage volume in place and
+removes the DB/API host ports. The release script never calls `docker compose down -v`,
+never runs `npm run migrate`, and never runs the seed. A source-only change therefore
+does not alter existing rows or schema. Keep `COMPOSE_PROJECT_NAME=erp-system` stable in
+`.env` so the named volume namespace remains stable even if the checkout path changes.
+
+The `calendar-worker` is part of the application release and does not own the database
+schema. It always processes durable Staff Calendar reminders; external delivery is
+enabled only when `CALENDAR_OUTBOUND_URL` is configured. `CALENDAR_OUTBOUND_TOKEN` and
+`CALENDAR_OUTBOUND_TIMEOUT_MS` stay server-side. HR Staff Calendar connection records
+contain only a provider label and calendar reference; connector credentials are
+deployment-managed and are never returned to the browser. Appointment recurrence and
+reminder jobs are bounded to a 93-day look-ahead and are safe to retry by their unique
+tenant-scoped event keys.
+
+Migration 0083 is an additive schema change for appointment time zones, recurrence,
+reminders and appointment calendar delivery. Apply it explicitly before the application
+release, then re-apply the production-only RLS script so the calendar worker receives
+only its allow-listed queue/source tables:
+
+```bash
+CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh
+docker compose -f docker-compose.yml -f docker-compose.production.yml \
+  exec -T db sh -lc 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < deploy/sql/production-rls.sql
+./deploy/release.sh
+```
+
+This sequence does not delete or reseed existing employee, leave or appointment data.
+
+Do not promise that every future feature can avoid database work: code that requires a
+new table/column needs a schema migration. Use an expand/contract release:
+
+1. Back up the client database and test the migration against a staging copy.
+2. Make the migration backward-compatible (add nullable/table/index first; do not drop or
+   rename data in the same release).
+3. Apply it only when explicitly approved:
+   `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh`.
+4. Run `make release` with code that supports the old and new shape, then backfill or
+   remove legacy columns in a later reviewed release.
+
+`deploy/migrate.sh` is the only deployment entry point that changes database schema. It
+does not create backups because an 800 GB PostgreSQL backup should use the client's
+physical backup/WAL/PITR tooling, not an application container.
 
 ### Auto-creating the database
 
@@ -130,7 +203,7 @@ PGlite demo — see [MULTI_TENANCY.md](MULTI_TENANCY.md#3-isolation-model--app-l
 Apply it as a **production-only** step after the shared migrations:
 
 ```bash
-docker compose exec api npm run migrate:prod-rls   # enables + FORCEs RLS policies
+psql "$DATABASE_URL" -f deploy/sql/production-rls.sql   # enables + FORCEs RLS policies
 ```
 
 This keeps tenant isolation enforced at the database level in production without breaking
@@ -282,6 +355,7 @@ jobs:
 | `VITE_DATA_MODE` | both | `demo` (PGlite) or `api` (Node+Postgres) |
 | `DATABASE_URL` | production | Postgres connection string |
 | `DB_USER` / `DB_PASSWORD` | production | Compose DB credentials |
+| `COMPOSE_PROJECT_NAME` | production | Stable namespace for named volumes |
 | `DEPLOY_PAT` | CI | token to push demo to the public Pages repo |
 
 Never commit `.env`. See `.env.example`.
@@ -298,8 +372,25 @@ Demo is ready when:
 Production is ready when:
 
 - `docker compose up -d` starts `web`, `api`, and `db`.
+- `make release` replaces only application containers and passes the `/health` readiness
+  check, including a real `SELECT 1` against PostgreSQL.
 - API migrations apply successfully against PostgreSQL.
 - first-run setup wizard can create the initial master, company, admin user, tax rules,
   and base chart of accounts.
 - stock and finance writes run through the API, not directly from the browser.
 - PostgreSQL transaction/concurrency tests pass, including no stock over-sell.
+
+## Staff Calendar worker deployment
+
+Migration 0083 adds durable appointment reminder and outbound calendar queues. After
+backup and staging proof, production deployment must:
+
+1. run the explicit guarded migration command;
+2. re-apply the production RLS script so the new tables and narrow calendar-worker
+   policies are present;
+3. deploy/restart the API and resident calendar worker;
+4. verify health and one idempotent reminder/outbound retry path;
+5. confirm the worker cannot read unrelated tenant business tables.
+
+Do not deploy only the application containers when migration 0083 has not been applied;
+the source code cannot safely invent missing tables at runtime.

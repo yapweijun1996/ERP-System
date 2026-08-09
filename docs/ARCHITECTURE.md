@@ -1,5 +1,11 @@
 # Architecture
 
+Authorization terminology and the current-to-target migration are specified separately
+in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). In diagrams,
+`master` means customer tenant/group and `company` means legal entity; they are not
+interchangeable. Platform operators are a future separate principal domain and are
+never modeled as customer-company employees by implication.
+
 ## 1. Goal
 
 One codebase, two runtime modes, identical behavior:

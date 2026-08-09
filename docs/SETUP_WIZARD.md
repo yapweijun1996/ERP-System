@@ -21,7 +21,7 @@ Nothing is running, so this **cannot** be an in-browser wizard. It is a script.
 
 ### Engineer
 ```bash
-make setup        # → scripts/setup.sh: .env + docker compose up + wait DB + migrate + seed
+make setup        # → scripts/setup.sh: .env + docker compose up + wait DB + migrate; no Demo seed
 ```
 Idempotent, prints URLs when done. See [DEPLOYMENT.md](DEPLOYMENT.md#first-run-setup--one-command).
 
@@ -31,8 +31,8 @@ from least to most effort to build:
 1. **Guided script** — `scripts/setup.sh` already checks for Docker and gives a clear
    error/instructions if missing. Good enough for a semi-technical user.
 2. **Interactive prompts** — `make setup-interactive` (`scripts/setup.sh --interactive`)
-   asks for a bundled-vs-external database, DB password / connection string, setup
-   token, encryption key, public URL, and checks host ports for collisions —
+   asks for a bundled-vs-external database, DB password / connection string,
+   encryption key, public URL, and checks host ports for collisions —
    auto-generating strong secrets on a blank answer instead of shipping
    `DB_PASSWORD=change-me`. Done, EPIC-025/TASK-060. Only takes effect on a first-time
    `.env` (still never overwrites an existing one). See
@@ -72,12 +72,11 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
 6. **Finish** — seed optional sample data; land on the dashboard.
 
 For production, `POST /api/setup/actions/complete` now writes the tenant foundation to
-PostgreSQL in one transaction. It is available only while there are zero users and
-requires the deployment-only `ERP_SETUP_TOKEN` in `X-ERP-Setup-Token`. The API creates
-the master, first company, Superadmin, permissions, effective-dated tax rule and base
-chart of accounts, then permanently marks setup complete. In API mode the wizard asks
-for the installer-provided token, keeps it only in page memory and sends it in
-`X-ERP-Setup-Token`; it is never placed in the JSON body or localStorage. The public
+PostgreSQL in one transaction. It is available only while the tenant foundation tables
+are empty; no deployment token is required. The API creates the master, first company,
+Superadmin, permissions, effective-dated tax rule and base chart of accounts, then
+permanently marks setup complete. After the first setup, the endpoint returns
+`409 setup_not_empty`/`409 already_initialized` and normal sign-in is used. The public
 demo continues to write to PGlite/IndexedDB and can be reset for visitors. Because its
 reference master already contains demo identities, the wizard proposes an
 organisation-derived username such as `admin.acme` instead of the seeded `admin`.
@@ -90,9 +89,9 @@ failed setup remains a clean retry rather than exposing a database constraint er
   wizard.
 - The wizard writes through the **same data layer** as everything else, so it works
   against PGlite (demo) and the API/PostgreSQL (prod) without special-casing.
-- Production setup is a privileged, one-time deployment action. The raw setup token is
-  never accepted in JSON or stored in the database; after the first admin exists the
-  command returns `409 already_initialized`.
+- Production setup is a one-time empty-database bootstrap. After the first admin exists
+  the command returns `409 already_initialized`, and a database with any tenant
+  foundation rows is rejected before setup begins.
 
 ---
 

@@ -13,8 +13,9 @@ A modular, multi-tenant ERP that runs in two modes from one codebase:
 | **demo** | Static site (GitHub Pages / any static host) | PGlite (Postgres-WASM) persisted to IndexedDB; UI prefs in localStorage | Single browser, no accounts |
 | **api** (production) | Docker: `web` (static) + `api` (Node) + `db` (PostgreSQL) | PostgreSQL, target 100–800 GB | Multi-user, authenticated |
 
-Mode is selected at build time by `VITE_DATA_MODE=demo|api` (SPEC requirement — wiring
-is TASK-019; see [STATUS.md](STATUS.md) for current reality).
+Mode is selected at build time by `VITE_DATA_MODE=demo|api`. The adapter seam is
+implemented; current Canonical screens use Demo/PGlite or authenticated API resources
+without silently falling back to sample data.
 
 ## 2. Hard invariants (never violate)
 
@@ -39,7 +40,7 @@ is TASK-019; see [STATUS.md](STATUS.md) for current reality).
 8. **No secrets in the demo bundle.** `build:demo` output must contain no production
    URLs, credentials, or customer data.
 
-## 3. Data model (implemented — 18 tables)
+## 3. Original MVP-1 core data model (implemented baseline — 18 tables)
 
 Source of truth: `src/data/schema/` → generated `drizzle/0000_init.sql`.
 
@@ -72,24 +73,28 @@ and [SCALABILITY.md](SCALABILITY.md).
   aging derived from `gl_entry` aggregates (must reconcile with demo transactions).
 - **Settings:** demo data reset (drop + reseed).
 
-### 4.2 Required, not yet built
+### 4.2 Implemented foundation and remaining coverage
 
-- **Setup wizard** (TASK-009/010): first run on an empty database walks through
-  language → master/company → country (sets currency + tax regime) → first admin →
-  optional sample seed. Demo can re-run via reset; production locks after first admin.
-  Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
-- **Auth** (TASK-024/TASK-106): production login resolves `master.login_code` before
-  the organisation-scoped `app_user.username`; session carries
-  `master_fn`/`company_fn` and authorization unions active `user_company_role`
-  grants. Demo mode may auto-login a demo user but must label it.
-- **Production API** (TASK-011 ✅ scaffolded, `src/server.ts`): Node/Express service,
-  `DATABASE_URL` env. `GET /health` and `GET /api/dashboard` exist and are verified
-  against real PostgreSQL. Still needed: more module reads, `POST` writes for
-  stock/money flows executing `src/modules/*` inside transactions, and session-derived
-  tenant scope (`masterFn`/`companyFn` are query params today — a documented
-  scaffold-only shortcut, never acceptable for a write endpoint per invariant #4).
-- **Purchasing** (TASK-022/023): supplier, purchase order + lines, goods receipt
-  (increases stock), supplier invoice (posts GL). Mirrors the sales chain.
+- **Setup wizard** (TASK-009/010/024/059): first run on an empty database walks
+  through language → master/company → country (sets currency + tax regime) → first
+  admin → optional sample seed. Demo can re-run via reset; production locks after
+  the first admin. Production setup is a one-time empty-database command and does
+  not require a deployment setup token. Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
+- **Auth** (TASK-024/TASK-106–110): production login resolves `master.login_code`
+  before the organisation-scoped `app_user.username`; the server-side session carries
+  `master_fn`/`company_fn`, authorization unions active `user_company_role` grants,
+  and the remembered-device cookie enforces its bounded idle/absolute lifetime. Demo
+  mode hashes wizard-created passwords too and labels its demo session.
+- **Production API** (TASK-011/TASK-040 and subsequent resource/command work):
+  Node/Express uses `DATABASE_URL`, real PostgreSQL, server-side session tenant scope,
+  and shared transactional commands for current Canonical reads/writes. Remaining
+  Preview or deferred module depth must be added as separate schema/resource/command
+  work; the frontend must not fabricate production writes.
+- **Purchasing and core transaction chains** (TASK-022/023 and later phases):
+  supplier, purchase order + lines, goods receipt, supplier invoice, sales order,
+  service-capable lines and balanced GL/stock effects are real in Demo/API modes.
+  Additional module breadth remains governed by the Canonical/Preview boundary in
+  [STATUS.md](STATUS.md).
 
 ### 4.3 Mock screens (allowed, must be labeled)
 
@@ -156,9 +161,9 @@ capabilities must not be represented as current Canonical behavior.
   split when insufficient; approval or rejection appends consumption or release.
 - **My Work shell:** My Leave, My Claims and My Receipts use the shared list SSOT.
   Team Calendar and My Approvals are present only when the actor context grants team
-  scope; team rows omit private reasons/evidence. Claims/Receipts remain honest
-  unavailable states. `my-leave`, its governed `leave-application` detail and
-  `my-approvals` plus Team Calendar are Canonical; Claims and Receipts remain Preview.
+  scope; team rows omit private reasons/evidence. My Leave, Claims, Receipts,
+  Approvals, Team Calendar and Receipt & Tax Evidence are Canonical current routes;
+  each still enforces its own employee identity, permission and workflow boundary.
 - **Governed approval:** confirmed effective-dated policy versions match employee,
   department, leave type, days, amount and currency before instantiating ordered
   direct-manager, named-employee or permission steps. Original authority is
@@ -234,3 +239,39 @@ Company roles, action permissions, data scopes, company module dependencies, ato
 Staff activation, deterministic enterprise Demo data and gated production Go Live are
 binding requirements. The complete contract and compatibility rules are in
 [EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md](EMPLOYEE_ACCESS_DEMO_AND_ONBOARDING.md).
+
+## 7. Authorization requirements
+
+The binding current/target contract is
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
+
+Implemented behavior remains `master -> company`, multiple company roles, Allow-union
+permissions, role-level `self/team/department/company` scopes, company module state,
+tenant-bounded Superadmin bypass and backend enforcement. The following are approved
+requirements but remain pending under TASK-170–175:
+
+- platform principals and time-bounded support access are a separate domain;
+- permission identifiers converge on application-owned `module.resource.action`;
+- scope targets and validity belong to role assignments;
+- missing or unknown module/resource/action/policy/ownership state fails closed;
+- one decision service defines explicit deny, scope and policy precedence;
+- Company Owner uses explicit permissions instead of `is_superadmin` bypass;
+- safe reason codes are public, while full explanations are privileged and audited.
+
+Approval authorization must preserve the existing immutable version/instance/decision
+model. An approval requires domain permission, resource scope, current workflow-step
+authority, policy conditions and separation-of-duties checks.
+
+## 8. August 2026 functional requirements
+
+- Tenant-scoped employee and master-data edits use field allowlists, optimistic
+  versions, audit and Demo/API parity.
+- Sales enquiries, quotations and orders support repeatable stock and non-stock lines;
+  only stock lines participate in delivery and inventory movement.
+- Employee-workspace impersonation is active-company-only, audited and blocks sensitive
+  activation actions; it is not platform support access.
+- HR holidays follow draft, pending approval, confirmed and rejected governance. Only
+  confirmed holidays affect leave calculation.
+- Staff appointments are versioned retained facts combined with leave in bounded
+  calendar reads. Recurrence is time-zone-aware and bounded; reminder/outbound jobs are
+  durable, idempotent and revision-aware.

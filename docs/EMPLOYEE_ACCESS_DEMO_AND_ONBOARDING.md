@@ -1,5 +1,12 @@
 # Employee Access, Enterprise Demo and Customer Onboarding
 
+The role/scope/module behavior in this document describes the current EPIC-059
+implementation. It is not the final platform-scale authorization design. Current
+compatibility facts and the EPIC-062 migration target are in
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md); in particular,
+current scopes are role-level and current tenant Superadmin remains a bypass until
+TASK-170–175 complete.
+
 This is the authoritative EPIC-059 contract. It defines company-level access,
 atomic Staff onboarding, the deterministic enterprise Demo and the production
 customer Go Live boundary. The Chinese summary is
@@ -43,9 +50,12 @@ use or after seven days, and force a password change. Reset revokes active sessi
 offboarding disables the identity while preserving historical ownership. Setup-stage
 employees cannot establish a session before the company is live.
 
-Production has no impersonation endpoint. Demo-only persona switching establishes a
-real session for each of the 12 personas and therefore exercises the same company,
-role, scope and module checks as an ordinary login.
+Production provides a Superadmin-only employee-workspace entry point. It lists only
+active employee accounts linked to the current company, never exposes passwords, and
+records the reason and target in the audit log. The session can return to Superadmin
+without signing in again. Demo-only persona switching remains available for the
+seeded personas and exercises the same company, role, scope and module checks as an
+ordinary login.
 
 ## 3. Deterministic enterprise Demo
 
@@ -80,8 +90,8 @@ a non-empty database.
 
 ## 4. Production onboarding and import
 
-The deployment setup token creates only the organization, first company and
-Superadmin. The authenticated company onboarding state advances sequentially through:
+The first-run setup creates only the organization, first company and Superadmin. The
+authenticated company onboarding state advances sequentially through:
 
 1. company and tax;
 2. fiscal year and chart of accounts;
@@ -134,9 +144,10 @@ TASK-017.
 
 ### Verified release evidence — 2026-07-27
 
-- Migration 0073 and the ordered PGlite v73/v74 compatibility path pass fresh install,
-  persistent upgrade and obsolete-index repair. PostgreSQL and generated Demo schemas
-  agree on 232 tables.
+- At the EPIC-059 release boundary, migration 0073 and the ordered PGlite v73/v74
+  compatibility path passed fresh install, persistent upgrade and obsolete-index repair;
+  PostgreSQL and generated Demo schemas agreed on 232 tables. This is historical evidence,
+  not the current schema count; see `STATUS.md` for the live 84-migration/236-table baseline.
 - `npm test` passes 134 files plus one expected skip: 518 tests pass, one skips and none
   fail. Lint, root/Web typechecks, generated-schema/pack/i18n checks and both builds pass.
 - Demo/PGlite and the retained isolated PostgreSQL proof database

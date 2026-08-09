@@ -111,8 +111,8 @@ role                (role_id, master_fn, name, is_superadmin)
   backfills exactly one role assignment from every existing membership.
 - On login the user picks an **active company**; the session carries
   `(master_fn, active company_fn)` and scopes all queries.
-- `is_superadmin` (master-level) can see all companies under its master; a platform root
-  can cross masters (administration only).
+- `is_superadmin` is currently a tenant/company-role permission bypass for the active
+  company. It is not a platform principal and cannot cross masters.
 
 ## 5. Scoping rules (enforced everywhere)
 
@@ -144,3 +144,16 @@ actions, scopes and enabled modules. Data-scope resolution reads only active emp
 inside the same master/company. Records without an ownership mapping are unavailable
 to restricted roles. The migration copies legacy shared roles per assigned company
 before repointing memberships, while existing tenants are explicitly marked live.
+
+## Platform, tenant and company terminology
+
+`master_fn` is the customer tenant/group security boundary. `company_fn` is one legal
+entity inside it. A platform principal is neither a master user nor a company employee;
+the current schema has no separate platform-principal or support-grant domain.
+
+Current roles, multiple-role union, role-level scopes and tenant Superadmin behavior are
+documented as compatibility facts in
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). EPIC-062 will add
+platform separation, assignment-scoped validity/targets and explicit Company Owner
+permissions. Those target capabilities must not be inferred from the current
+`is_superadmin` column.

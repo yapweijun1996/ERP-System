@@ -87,7 +87,8 @@ Acceptance criteria:
 - [x] API exposes a dashboard read endpoint (`GET /api/dashboard`) — and the
       once-"scaffolded only" write endpoints are now implemented server-side:
       confirm order (`sales/orders/confirm`), complete setup
-      (`POST /api/setup/actions/complete`, token-gated, zero-user locked) and the
+      (`POST /api/setup/actions/complete`, zero-user locked and intentionally not
+      protected by a separate setup token) and the
       audited session company switch all run through the production API.
 - [x] API connects to PostgreSQL through configured `DATABASE_URL`
       (`src/server.ts`, `npm run server`).
@@ -524,6 +525,9 @@ Acceptance criteria:
 - [x] A new tenant-scoped `master_module` table (`master_fn` + `module_key` + `enabled`,
       following the composite-key style `role_permission` already uses) added via a
       Drizzle migration; module keys mirror the existing `MODULE_DEFS` set.
+      This is historical EPIC-018 delivery: EPIC-059 migration 0073 later superseded
+      active decisions with company-scoped `company_module`; `master_module` remains
+      legacy/backfill compatibility only.
 - [x] Business logic to list/set a master's enabled modules, audited, superadmin-gated
       (new `admin.modules.manage`-style permission key), mirroring `adminLifecycle.ts`'s
       raw-exec-`...Within` + self-transacting-wrapper split.
@@ -537,18 +541,16 @@ Acceptance criteria:
       manufacturing/purchasing/quality/sales/warehouse). The `admin` module itself can
       never be disabled (would lock every superadmin out of re-enabling it).
 - [x] `module-activation-control` reads/writes the real backend instead of `localStorage`.
-- [x] A disabled module is hidden from the sidebar/module shell for non-superadmin users
-      of that master (`renderSidebar()`/`routeAllowed()`/`moduleBlockedPanel()` all read
-      the real state through `moduleState()`, unchanged from before except what backs it),
-      AND rejected server-side if called directly (API mode) — a client-only toggle would
-      not have met the stated requirement.
-- [x] Superadmin's own access is never gated by this mechanism (it controls what a
-      master's *other* users can reach, not the superadmin's own visibility) — enforced
-      on both sides: server-side via `isSuperadminSession()` (`src/auth/permissions.ts`,
-      same tenant-bounded lookup `hasPermission`'s bypass uses) in all 4 generic
-      resource-router handlers, and client-side via `moduleState()` (not
-      `readModuleControl()`, which the admin screen itself calls directly so it always
-      shows the *true* state, never the exemption) checking `isModuleAdmin()`.
+- [x] A disabled module is hidden from the sidebar/module shell for every signed-in
+      user of that company (`renderSidebar()`/`routeAllowed()`/`moduleBlockedPanel()`
+      all read the real state through `moduleState()`), AND rejected server-side if
+      called directly (API mode) — a client-only toggle would not have met the stated
+      requirement. The Admin module remains required so the managing account can
+      restore a disabled business module.
+- [x] The authenticated `/api/auth/session` module list is loaded into the shell for
+      every user. Regular users therefore do not call the admin-only module management
+      endpoint just to render navigation, and a denied management read cannot silently
+      make all disabled modules appear enabled.
 
 Design simplification made during TASK-048, found while reading the mock's own screen
 code: the mock modeled two independent toggles per module (`visible` + `active`,
@@ -1491,6 +1493,21 @@ Acceptance criteria:
       present in canonical records are displayed.
 - [x] The five-language workspace, Demo/API build, browser smoke and full desktop/375px
       audit pass at 100 Canonical / 14 Preview.
+- [x] The workspace reads the canonical enquiry aggregate and saves header + lines through
+      one audited, idempotent, optimistic-version `save-draft` action; invalid line input
+      rolls back the whole draft and the API exposes an ETag version for refresh checks.
+- [x] The New-enquiry Document Info tab provides a responsive editable Header editor for
+      Customer, Subject, Date, Channel, Owner and Currency. Estimated Value remains a
+      server-derived total from persisted rows; mobile save state is explicit and the PWA
+      asset version is bumped with the UI contract.
+- [x] New enquiry always exposes a Create customer action, including when existing
+      customers are already present. The quick customer form creates through the
+      tenant-scoped `sales/customers` contract, preserves the current enquiry draft and
+      reopens the enquiry with the new customer selected.
+- [x] New quotation uses a Header–Detail editor with repeatable stock and non-stock
+      lines, free-text service descriptions, effective tax-rate previews, per-line
+      amounts, server-derived totals and idempotent multi-line creation; the browser
+      proof covers add, type toggle, remove, mobile layout and persisted detail rows.
 
 ## EPIC-040 — Canonical Manual Journal Posting and Reversal
 
@@ -1836,7 +1853,7 @@ Delivery slices:
       Five-language state audits and service worker v103 enforce the desktop/375px
       contract.
 
-## EPIC-052 — Employee Self-Service Identity & My Work (In progress)
+## EPIC-052 — Employee Self-Service Identity & My Work ✅
 
 Build the identity boundary required for employee-owned leave, receipt and expense
 workflows. This epic extends the current email/single-role account model without
@@ -1887,7 +1904,7 @@ company, and every self-service resource derives the employee identity from Sess
       preserved and locked in User Management. PWA v108 and `docs/SECURITY.md`
       document and prove the boundary without promoting the five Preview routes.
 
-## EPIC-053 — Full Leave Management (In progress)
+## EPIC-053 — Full Leave Management ✅
 
 Replace the current HR-lite three-type/calendar-day request model with versioned leave
 policy, immutable entitlement facts, multi-stage approval and a team calendar. Existing
@@ -1948,7 +1965,7 @@ Legacy Policy marker and is never silently recomputed.
       prevent duplicate effects. Persistent Demo SQL is versioned and post-verified so
       stale service-worker assets cannot write a false schema marker. PWA v116.
 
-## EPIC-054 — Receipt & Secure Document Processing (In progress)
+## EPIC-054 — Receipt & Secure Document Processing ✅
 
 Create the reusable document boundary for leave evidence, expense receipts, card
 proof and tax evidence. PostgreSQL/PGlite byte storage is the default confirmed
@@ -1992,7 +2009,7 @@ deployment; a server-filesystem provider is optional and explicitly single-node.
       retry key. Database and filesystem providers pass the same authorization,
       retention, SHA-256, privacy and tenant proofs. PWA v122.
 
-## EPIC-055 — Expense Claims & Accounting (Planned)
+## EPIC-055 — Expense Claims & Accounting ✅
 
 Add employee reimbursement, company-paid evidence and policy-driven non-receipt
 expenses without treating employees as suppliers or mixing reimbursement into payroll.
@@ -2209,3 +2226,66 @@ SG/MY write and denial paths, 40 transaction-list drill-downs, 29 detail-page
 contracts, 531 tests plus one expected skip and the 124-route five-language/two-
 viewport release matrix; Demo v15 contains 10,436 linked records and 24 controlled
 leave cases. TASK-017 remains separately blocked for a physical phone.
+
+## EPIC-061 — Operational Editing, Sales Authoring & Staff Calendar ✅
+
+Synchronize the production operating path and the next Canonical business-editing
+slice without weakening tenant, accounting, leave or approval invariants.
+
+- [x] **TASK-161 — Harden production setup, release and explicit migration
+      operations.** Source-only release preserves PostgreSQL; schema change remains an
+      explicitly confirmed, backed-up operation.
+- [x] **TASK-162 — Deliver tenant-scoped employee and master-data editing.** Employee,
+      product, customer and supplier updates use allowlists, optimistic versions,
+      validation, audit and Demo/API parity.
+- [x] **TASK-163 — Complete canonical Sales enquiry, quotation and service-line
+      authoring.** Migrations 0076–0078 persist atomic Header–Detail rows and keep
+      non-stock service lines outside inventory while retaining invoice/GL effects.
+- [x] **TASK-164 — Add bounded remembered sessions and employee-workspace
+      impersonation.** Entry is active-company-only and audited; sensitive activation
+      commands remain blocked while impersonating.
+- [x] **TASK-165 — Complete HR Calendar holiday governance and leave authority.**
+      Migrations 0080–0081 add governed holiday transitions and explicit HR permission
+      authority without rewriting original approval facts.
+- [x] **TASK-166 — Add canonical Staff Calendar appointments.** Migration 0082 adds
+      versioned retained appointment facts and combined leave/appointment reads.
+- [x] **TASK-167 — Add appointment recurrence, reminders and optional external calendar
+      sync.** Migration 0083 adds bounded time-zone recurrence plus durable revision-aware
+      reminder and outbound queues.
+- [x] **TASK-168 — Verify permission-aware navigation, search, modules and role matrix.**
+      Shell visibility follows active-company effective capabilities while direct APIs
+      remain authoritative denial boundaries. The Manager template and Demo v15 pack now
+      agree on company-scoped generic module collections; actor-derived My Work and Team
+      Calendar routes retain direct/granted-tree boundaries. Permission, module, Demo-pack,
+      integration and complete 149-file Vitest shard gates pass with 599 tests passed and
+      one expected skip.
+
+Implementation is delivered through migration 0083 and EPIC-061 is complete. The Drizzle
+journal contains 84 migrations and generated schema contains 236 tables. TASK-017 remains
+the separate non-programmatic blocker.
+
+## EPIC-062 — Role & Permission Architecture Evolution 🔶
+
+Evolve the current tenant RBAC compatibility model into a platform-separated,
+assignment-scoped and explainable authorization system without replacing the mature
+approval subsystem. Normative current/target behavior is in
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
+
+- [x] **TASK-169 — Align architecture and project documentation.** Record
+      `master -> company`, current Superadmin bypass, role-level scopes, mixed permission
+      keys and unknown-module compatibility separately from the approved target.
+- [ ] **TASK-170 — Separate platform principals and time-bounded support access.**
+- [ ] **TASK-171 — Introduce the canonical permission registry and compatibility-key
+      migration.**
+- [ ] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
+- [ ] **TASK-173 — Centralize authorization decisions, explicit deny and safe
+      explanation.**
+- [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
+      authorization caches.**
+- [ ] **TASK-175 — Replace the tenant Superadmin bypass with explicit Company Owner
+      permissions.**
+
+Dependencies are sequential by design: owner-bypass removal cannot start before the
+platform boundary, canonical registry, assignment migration, decision semantics and
+cache invalidation are independently proven. Branch/business-unit/region scopes, SSO,
+provisioning and enterprise access reviews remain later phases.

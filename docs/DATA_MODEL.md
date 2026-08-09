@@ -118,16 +118,22 @@ updated. Columns: `master_fn, company_fn, actor_user_id, entity, entity_id, acti
 master         (master_fn, name)                          -- top tenant
 company        (company_fn, master_fn, country, currency, tax_regime, ...)
 app_user       (user_id, master_fn, email, language, ...)  -- user belongs to ONE master; language reserved, current Web uses localStorage
-role           (role_id, master_fn, name, is_superadmin)
-user_company   (user_id, company_fn, role_id)             -- M:N: user ↔ many companies
+role           (role_id, master_fn, company_fn, name, is_superadmin, source_template_key)
+user_company   (user_id, company_fn, role_id)             -- membership + compatibility role
+user_company_role (user_id, company_fn, role_id, managed_by_system) -- active multi-role grants
+role_permission (role_id, permission_key, allowed)        -- current Allow grants
+role_resource_scope (role_id, resource_key, scope)        -- current role-level scope
+company_module (master_fn, company_fn, module_key, enabled, configured)
 ```
 
-A user belongs to one `master_fn` but can be granted **many companies** (the
-`user_company` junction), each with a role — e.g. an accountant covering both the SG and
-MY entities. `is_superadmin` (master-level) sees all companies under its master. Full
-rules and the app-level-vs-RLS isolation model are in
-[MULTI_TENANCY.md](MULTI_TENANCY.md). The demo ships a sample user with access to both the
-SG and MY demo companies; production wires real auth.
+A user belongs to one `master_fn` but can be granted **many companies** through
+`user_company`, and may hold multiple active roles per company through
+`user_company_role`. Current permissions union Allow rows; current
+`role_resource_scope` rows union to the widest `self/team/department/company` scope.
+`is_superadmin` is a tenant/company-bounded permission bypass in the current runtime,
+not a platform role and not the target Company Owner model. Full current/target rules
+are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
 ## 8. Employee self-service, leave and expenses
 
@@ -198,10 +204,29 @@ SG and MY demo companies; production wires real auth.
 > Demo leave coverage without a new table. TASK-160 adds `vision_base_url`,
 > `vision_model` and `vision_credential_required` columns to
 > `document_processing_policy` (migration 0075's `openai_compatible` BYOK vision
-> provider) without a new table. TASK-160 is the latest completed task against
-> the current 76-migration, 232-table Drizzle schema; each subsequent task must
-> still add migrations, tenant indexes, API contracts and cross-engine proofs
-> before its capability becomes Canonical.
+> provider) without a new table. TASK-161–169 synchronize the subsequent operational,
+> editable-record, Sales, session, HR Calendar, Staff Calendar and authorization
+> documentation work. The current boundary is migration 0083: **84 journaled
+> migrations and 236 generated tables**. Each subsequent schema capability must still
+> add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
+
+### Current schema boundary — August 2026 Sales and Staff Calendar additions
+
+```text
+sales_enquiry_line               enquiry Header–Detail rows (migration 0076)
+sales_quotation_line           + stock/non_stock description/UoM snapshot (0077)
+sales_order_line               + stock/non_stock description/UoM snapshot (0078)
+app_session                    + impersonator_user_id/impersonated_at (0079)
+calendar_holiday              + submit/reject/version governance (0080)
+staff_appointment               retained versioned employee appointment (0082)
+staff_appointment_reminder      durable occurrence reminder queue (0083)
+staff_appointment_outbound_event durable one-way calendar projection queue (0083)
+```
+
+Appointment recurrence remains a bounded rule on the appointment master; occurrences
+are projected for reads/jobs and are not copied into a second authoritative event table.
+Reminder and outbound rows are retryable derived work with revision and supersession
+checks. Migration 0081 is a data-only approval-authority transition and adds no table.
 
 ### 8.1 Identity, employment and delegated authority
 
@@ -240,11 +265,14 @@ approval_policy(+version/+step) configurable multi-stage workflow definition (im
 approval_instance(+step)        snapshotted authority and current workflow projection (implemented)
 approval_decision/event         immutable actor, authority, outcome and timer trail (implemented)
 working_calendar(+version)      workdays and effective dates
-calendar_holiday                official draft/company-confirmed holiday
+calendar_holiday                tenant-scoped holiday with draft/approval lifecycle
 leave_type / leave_policy       effective-dated eligibility, evidence and carry rules
 leave_request                   versioned governed header + retained Legacy rows (implemented)
 leave_request_revision          immutable policy/calendar/day/reason snapshot (implemented)
 leave_request_event             immutable transition and actor trail (implemented)
+staff_appointment               tenant-scoped appointment fact with optimistic version (implemented, migration 0082)
+staff_appointment_reminder      durable bounded occurrence reminder queue (implemented, migration 0083)
+staff_appointment_outbound_event appointment occurrence calendar delivery projection (implemented, migration 0083)
 leave_cancellation_request      separately decided approved-leave cancellation (implemented)
 leave_balance_entry             append-only grant/accrual/reserve/use/cancel/adjust ledger (implemented)
 leave_evidence                  immutable private evidence metadata; content deferred (implemented)
@@ -264,9 +292,12 @@ recalculated.
 
 `working_calendar`, `working_calendar_version`, `calendar_holiday`, `leave_type` and
 `leave_policy_version` are implemented by migration 0050. Confirmed versions may not
-overlap. Official holiday imports start as drafts; company holidays are explicit
-confirmed facts. Only confirmed facts affect calculation, so historical versions
-remain reproducible while current HR-lite `leave_request.days` stays untouched.
+overlap. Official holiday imports start as drafts; the HR Calendar management flow
+uses `draft → pending_approval → confirmed` or `rejected`, with an optimistic
+`record_version` and an audit event for each command. Legacy company-holiday seed/import
+helpers may still create an already-confirmed fact. Only confirmed facts affect
+calculation, so historical versions remain reproducible while current HR-lite
+`leave_request.days` stays untouched.
 
 `leave_balance_entry` is implemented by migration 0051 as an append-only,
 tenant-scoped ledger. A database trigger rejects `UPDATE` and `DELETE`; a
@@ -311,6 +342,26 @@ days, monthly base salary, the 26-day divisor, exact amount and effective date.
 resulting run line. Both tables are append-only. `payroll_run_line` separately
 snapshots base gross, leave earnings and unpaid-leave deductions so Payslip history
 does not depend on later salary or policy changes.
+
+Migration 0082 implements `staff_appointment` as the canonical appointment fact source.
+It is deliberately separate from `leave_request`: Staff Calendar is a read-model
+projection that combines tenant-scoped leave and appointment facts, while each source
+retains its own lifecycle and permissions. Appointment writes use idempotent API
+commands, optimistic `record_version` updates, cancellation instead of deletion and
+audit events; production RLS includes the new table. Appointments overlap the selected
+calendar window and are returned with namespaced `appointment:` IDs so leave and
+appointment events cannot collide in the shared listing.
+
+Migration 0083 extends that same appointment SSOT without materialising recurring rows
+in the master table. `time_zone` preserves the local wall-clock context, and the
+bounded recurrence subset (daily/weekly/monthly with `COUNT` or `UNTIL`) is expanded
+only for a requested calendar window or the worker's 93-day horizon. DST gaps and
+ambiguous folds are rejected rather than silently shifted. `staff_appointment_reminder`
+is a durable, recipient-scoped in-app notification queue; `staff_appointment_outbound_event`
+is a separate idempotent projection for appointment occurrences because the existing
+Leave outbound table remains hard-wired to `leave_request`. Both queues re-read the
+current appointment revision before delivery, supersede stale work, and never become a
+second source of appointment truth.
 
 ### 8.3 Managed documents and extraction
 

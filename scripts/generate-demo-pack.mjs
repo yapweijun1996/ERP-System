@@ -61,7 +61,9 @@ const rolePermissions = {
 };
 const roleScopes = {
   Employee: [['employee/*','self']],
-  'Company Admin': [['admin/*','company'],['hr/*','company']], Manager: [['*','team']],
+  'Company Admin': [['admin/*','company'],['hr/*','company']],
+  Manager: [['sales/*','company'],['crm/*','company'],['inventory/*','company'],
+    ['warehouse/*','company'],['project/*','company'],['service/*','company']],
   Sales: [['sales/*','self'],['crm/*','self']], Buyer: [['purchasing/*','company'],['inventory/*','company']],
   Warehouse: [['inventory/*','company'],['warehouse/*','company']], Production: [['manufacturing/*','company'],['inventory/*','company'],['warehouse/*','company'],['quality/*','company']],
   'Finance Preparer': [['finance/*','company'],['expenses/*','company']], 'Finance Checker': [['finance/*','company'],['expenses/*','company']],
@@ -552,11 +554,11 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO sales_order_line (
-  master_fn, company_fn, order_id, line_no, product_id, qty, unit_price,
-  net_amount, tax_code, tax_rate, tax_amount
+  master_fn, company_fn, order_id, line_no, line_type, product_id, description, uom,
+  qty, unit_price, net_amount, tax_code, tax_rate, tax_amount
 )
-SELECT orders.master_fn, orders.company_fn, orders.id, 1, product.id, 10,
-  orders.net_amount / 10, orders.net_amount,
+SELECT orders.master_fn, orders.company_fn, orders.id, 1, 'stock', product.id,
+  product.name, product.uom, 10, orders.net_amount / 10, orders.net_amount,
   CASE orders.company_fn WHEN 'C-SG' THEN 'SR' ELSE 'ZR' END,
   CASE orders.company_fn WHEN 'C-SG' THEN 9.000 ELSE 0.000 END,
   orders.tax_amount

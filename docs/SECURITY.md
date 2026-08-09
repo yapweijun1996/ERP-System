@@ -28,6 +28,10 @@ It is not a substitute for deployment-specific threat modelling or operating pol
 - Authentication failures use a generic response and rate limiting. State-changing
   operations require an authenticated session, CSRF protection, permission checks,
   request idempotency where applicable and an audit record.
+- Production login offers an explicit “Remember this device” option. It extends the
+  database-backed session to a 30-day absolute / 7-day idle lifetime using only
+  `HttpOnly`, `Secure`, `SameSite=Strict` cookies; passwords, bearer tokens and device
+  fingerprints are never stored in localStorage or IndexedDB.
 
 ### Explicitly accepted optional controls
 
@@ -65,10 +69,12 @@ unioned and scopes use the widest of self/team/department/company; a restricted 
 without enforceable ownership fails closed. UI hiding is defence in depth: the API
 rechecks action permission, module state, tenant, scope and resource visibility.
 Initial Staff passwords are hash-only, force change and expire at first use or seven
-days. Setup-stage employees cannot log in. Production exposes no impersonation and
-Demo seed is guarded by explicit Demo-only environment flags plus an empty-database
-check. Import preflight and commit remain server-side, bounded, replay-resistant,
-audited and transactionally atomic.
+days. Setup-stage employees cannot log in. Production provides a Superadmin-only
+employee-workspace entry point limited to active, company-linked employee accounts;
+passwords and activation secrets are never exposed. Entry and return are audited,
+while Demo seed remains guarded by explicit Demo-only environment flags plus an
+empty-database check. Import preflight and commit remain server-side, bounded,
+replay-resistant, audited and transactionally atomic.
 
 ## Dependency supply-chain boundary (TASK-143)
 
@@ -79,3 +85,35 @@ releases; `brace-expansion` is pinned to 5.0.8. The Web workspace pins PostCSS t
 8.5.23. As of 2026-07-27 both production audits report zero vulnerabilities, so no
 security exception or expiry is being accepted. Focused XLSX read/write tests, both
 build modes and clean `npm ci` Docker builds are required whenever these pins change.
+
+## Authorization architecture boundary (EPIC-062)
+
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) is the normative
+current/target record. The following are implemented compatibility facts:
+
+- user permissions are the Allow union of active-company roles;
+- resource scopes are currently stored on roles and union to the widest matching
+  `self/team/department/company` value;
+- tenant-local `is_superadmin` bypasses role-permission checks inside the active company;
+- permission keys are not yet uniformly `module.resource.action`;
+- an `allowed=false` role-permission row is not an explicit deny override;
+- unknown module keys currently pass the module gate and therefore remain a migration
+  risk even though registered resources retain their own authorization checks.
+
+TASK-170–175 must separate platform/support authority, introduce the canonical registry
+and assignment scopes, centralize deterministic deny-by-default decisions, invalidate
+stale authorization state and remove the tenant Superadmin bypass. No platform operator
+has been granted a new customer-data path by documenting this target.
+
+The current employee-workspace impersonation endpoint is restricted to an active-company
+Superadmin and active linked non-Superadmin employee, records entry/return and blocks
+sensitive activation operations. It is not time-bounded platform support access and
+must not be represented as such.
+
+## Calendar worker boundary (TASK-167)
+
+The resident calendar worker receives narrowly scoped transaction flags only for the
+employee, appointment, reminder, appointment-outbound and notification rows required
+for delivery. It does not receive general tenant bypass. Jobs revalidate current
+appointment revision, recipient and connection state; stale work is superseded, and an
+external calendar remains a one-way projection rather than a source of ERP truth.
