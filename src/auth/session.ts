@@ -17,6 +17,9 @@ export interface SessionData {
   username: string;
   email: string | null;
   fullName: string | null;
+  /** Current company authorization freshness marker. It is informational and
+   * never replaces backend permission evaluation. */
+  authorizationVersion?: number;
   /** Always populated by getSession; optional keeps domain/test synthetic
    * sessions source-compatible while they migrate to the richer identity. */
   accountState?: 'preactivated' | 'active' | 'offboarded';
@@ -103,6 +106,7 @@ export async function getSession(
       username: appUser.username,
       email: appUser.email,
       fullName: appUser.fullName,
+      authorizationVersion: company.authorizationVersion,
       accountState: appUser.accountState,
       passwordChangeRequired: appUser.passwordChangeRequired,
       expiresAt: appSession.expiresAt,
@@ -142,6 +146,7 @@ export async function getSession(
     username: row.username,
     email: row.email,
     fullName: row.fullName,
+    authorizationVersion: row.authorizationVersion,
     accountState: row.accountState as SessionData['accountState'],
     passwordChangeRequired: row.passwordChangeRequired,
   };

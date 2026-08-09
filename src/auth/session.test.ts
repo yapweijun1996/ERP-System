@@ -36,6 +36,7 @@ describe('database session store', () => {
     expect(await getSession(db, created.sessionId)).toEqual({
       userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
       username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
+      authorizationVersion: 1,
       accountState: 'active', passwordChangeRequired: false,
     });
   });

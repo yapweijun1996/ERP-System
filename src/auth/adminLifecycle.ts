@@ -30,6 +30,7 @@ import {
 import { isTenantPermission } from './permissionRegistry';
 import type { SessionData } from './session';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
+import { bumpAuthorizationVersionWithin } from './authorizationVersion';
 
 export async function setUserActiveWithin(
   exec: DB,
@@ -106,6 +107,10 @@ export async function setUserActiveWithin(
       isNull(appSession.revokedAt),
     ));
   }
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -260,6 +265,10 @@ export async function setUserRolesWithin(
     eq(userCompany.userId, userId),
     eq(userCompany.companyFn, session.activeCompanyFn),
   ));
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -317,6 +326,10 @@ export async function createRoleWithin(
     isSuperadmin: false,
     sourceTemplateKey: 'custom',
   }).returning({ id: role.roleId, name: role.name });
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  });
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -390,6 +403,10 @@ export async function setRolePermissionWithin(
       allowed,
     });
   }
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -465,6 +482,10 @@ export async function cloneRoleTemplateWithin(
       scope,
     })));
   }
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  });
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -524,6 +545,10 @@ export async function setRoleResourceScopeWithin(
   }).onConflictDoUpdate({
     target: [roleResourceScope.roleId, roleResourceScope.resourceKey],
     set: { scope, updatedAt: new Date() },
+  });
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
   });
   await appendAudit(exec, {
     masterFn: session.masterFn,

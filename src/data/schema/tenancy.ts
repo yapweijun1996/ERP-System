@@ -27,6 +27,10 @@ export const company = pgTable('company', {
   taxRegime: text('tax_regime').notNull(),     // 'GST' | 'SST' | …
   locale: text('locale').notNull().default('en'),
   fiscalYearStart: date('fiscal_year_start'),
+  /** Monotonic tenant authorization state version. Any role, scope, module or
+   * policy mutation advances this value so capability/session consumers can
+   * detect stale derived state without making the version the authority itself. */
+  authorizationVersion: bigint('authorization_version', { mode: 'number' }).notNull().default(1),
   ...timestamps,
 }, (t) => [
   index('idx_company_master').on(t.masterFn),

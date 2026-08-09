@@ -15,6 +15,7 @@ import {
   supportAccessGrant,
 } from '../data/schema';
 import { appendAudit } from '../api/audit';
+import { bumpAuthorizationVersionWithin } from './authorizationVersion';
 
 export const PLATFORM_PERMISSIONS = {
   supportRead: 'platform.support.read',
@@ -444,6 +445,9 @@ export async function createSupportAccessGrant(
       validFrom: supportAccessGrant.validFrom,
       validUntil: supportAccessGrant.validUntil,
     });
+    if (companyFn) {
+      await bumpAuthorizationVersionWithin(exec, { masterFn: input.masterFn, companyFn }, now);
+    }
     await appendAudit(exec, {
       masterFn: input.masterFn,
       companyFn,
@@ -504,6 +508,12 @@ export async function revokeSupportAccessGrant(
       .returning({ id: supportAccessGrant.id });
     if (!revoked.length) {
       throw new PlatformAccessError(409, 'support_grant_already_revoked', 'Support grant is already revoked.');
+    }
+    if (grant.companyFn) {
+      await bumpAuthorizationVersionWithin(exec, {
+        masterFn: grant.masterFn,
+        companyFn: grant.companyFn,
+      }, now);
     }
     await appendAudit(exec, {
       masterFn: grant.masterFn,

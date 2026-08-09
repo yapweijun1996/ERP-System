@@ -13,6 +13,7 @@ import {
   userCompanyRoleScope,
 } from '../data/schema';
 import { AuthLifecycleError } from './authErrors';
+import { bumpAuthorizationVersionWithin } from './authorizationVersion';
 import type { DataScope } from './accessCatalog';
 import type { SessionData } from './session';
 
@@ -233,6 +234,10 @@ export async function createRoleAssignmentWithin(
       set: { scope: scope.scope, updatedAt: now },
     });
   }
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -306,6 +311,10 @@ export async function revokeRoleAssignmentWithin(
     roleId: userCompanyRole.roleId,
   });
   if (!assignment) throw new AuthLifecycleError(404, 'assignment_not_found', 'Role assignment not found or already revoked.');
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,

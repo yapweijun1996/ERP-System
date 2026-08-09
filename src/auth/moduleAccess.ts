@@ -10,6 +10,7 @@ import { companyModule } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
+import { bumpAuthorizationVersionWithin } from './authorizationVersion';
 import type { SessionData } from './session';
 
 /** Matches every gateable id in web/public/assets/data-core.js's DB.nav (i.e. every
@@ -207,6 +208,10 @@ export async function setMasterModuleWithin(
       configured: enabled,
     });
   }
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,

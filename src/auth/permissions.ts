@@ -10,6 +10,7 @@ import { PERMISSIONS } from './permissionKeys';
 import { PERMISSION_REGISTRY, permissionCandidates } from './permissionRegistry';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
 import { authorize, principalFromSession } from './authorization';
+import { getAuthorizationVersionWithin } from './authorizationVersion';
 
 export { PERMISSIONS } from './permissionKeys';
 
@@ -47,6 +48,7 @@ const SCOPE_RANK: Record<DataScope, number> = {
 };
 
 export interface EffectiveCapability {
+  authorizationVersion: number;
   permissions: string[];
   scopes: Record<string, DataScope>;
   scopeGrants: Record<string, ScopeGrant[]>;
@@ -63,6 +65,10 @@ export async function effectiveCapabilities(
   session: SessionData,
   now = new Date(),
 ): Promise<EffectiveCapability> {
+  const authorizationVersion = await getAuthorizationVersionWithin(db, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  });
   const superadmin = await isSuperadminSession(db, session, now);
   const overrides = await db.select().from(userPermissionOverride).where(and(
     eq(userPermissionOverride.masterFn, session.masterFn),
@@ -83,7 +89,12 @@ export async function effectiveCapabilities(
     .filter((row) => row.effect === 'allow')
     .flatMap((row) => permissionCandidates(row.permissionKey)));
   if (superadmin && !overrides.length) {
-    return { permissions: ['*'], scopes: { '*': 'company' }, scopeGrants: {} };
+    return {
+      authorizationVersion,
+      permissions: ['*'],
+      scopes: { '*': 'company' },
+      scopeGrants: {},
+    };
   }
   const permissions = await db.select({ permissionKey: rolePermission.permissionKey })
     .from(userCompanyRole)
@@ -192,6 +203,7 @@ export async function effectiveCapabilities(
     scopeGrants[resourceKey] = grants;
   }
   return {
+    authorizationVersion,
     permissions: visiblePermissions,
     scopes,
     scopeGrants,

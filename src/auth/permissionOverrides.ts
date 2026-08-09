@@ -9,6 +9,7 @@ import {
 } from '../data/schema';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
+import { bumpAuthorizationVersionWithin } from './authorizationVersion';
 import { permissionCandidates, permissionDefinition } from './permissionRegistry';
 import type { DataScope } from './accessCatalog';
 import type { SessionData } from './session';
@@ -170,6 +171,10 @@ export async function createPermissionOverrideWithin(
     assignedByUserId: session.userId,
   }).returning({ id: userPermissionOverride.id });
   if (!created) throw new AuthLifecycleError(409, 'override_conflict', 'The permission override could not be saved.');
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -235,6 +240,10 @@ export async function revokePermissionOverrideWithin(
     effect: userPermissionOverride.effect,
   });
   if (!revoked) throw new AuthLifecycleError(404, 'override_not_found', 'Permission override not found or already revoked.');
+  await bumpAuthorizationVersionWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,

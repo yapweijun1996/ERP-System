@@ -15,6 +15,7 @@ import {
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
+import { bumpAuthorizationVersionWithin } from './authorizationVersion';
 import { hashPassword } from './password';
 import { usernameFromEmail } from './identifiers';
 import type { SessionData } from './session';
@@ -227,6 +228,10 @@ export async function acceptInvitation(
       assignedByUserId: invitation.invitedByUserId,
       assignmentSource: 'invitation',
     });
+    await bumpAuthorizationVersionWithin(tx, {
+      masterFn: invitation.masterFn,
+      companyFn: invitation.companyFn,
+    }, now);
     await tx.update(userInvitation).set({
       acceptedAt: now,
       updatedAt: now,

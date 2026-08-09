@@ -617,6 +617,13 @@
       "when": 1786295116348,
       "tag": "0087_pink_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1786318264341,
+      "tag": "0088_early_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

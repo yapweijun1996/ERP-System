@@ -1,0 +1,1 @@
+ALTER TABLE "company" ADD COLUMN "authorization_version" bigint DEFAULT 1 NOT NULL;
