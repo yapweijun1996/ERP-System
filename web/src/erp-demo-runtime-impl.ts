@@ -321,6 +321,7 @@ import {
   createPurchaseRequisitionWithin,
   decidePurchaseRequisitionWithin,
   type CreatePurchaseRequisitionInput,
+  type DecidePurchaseRequisitionInput,
 } from '../../src/modules/purchasing/purchaseRequisition';
 import {
   convertSupplierQuotationToPurchaseOrderWithin,
@@ -1271,9 +1272,9 @@ export const erpDemoRuntime = Object.freeze({
     },
     decidePurchaseRequisitionWithin(
       db: DemoOrm, scope: Scope, requisitionId: number,
-      decision: 'approved' | 'rejected', rejectionReason?: string | null,
+      input: DecidePurchaseRequisitionInput,
     ) {
-      return decidePurchaseRequisitionWithin(asDomainDb(db), scope, requisitionId, decision, rejectionReason);
+      return decidePurchaseRequisitionWithin(asDomainDb(db), scope, requisitionId, input);
     },
     createBankReceiptWithin(db: DemoOrm, scope: Scope, input: CreateBankReceiptInput) {
       return createBankReceiptWithin(asDomainDb(db), scope, input);

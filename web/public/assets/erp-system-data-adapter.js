@@ -2854,7 +2854,9 @@
     if(key==='purchasing/purchase-requisitions'&&name==='approve'){
       var approvedRequisition = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.decidePurchaseRequisitionWithin(
-          state.runtime.createOrm(tx), SCOPE, Number(id), 'approved');
+          state.runtime.createOrm(tx), SCOPE, Number(id), {
+            decision:'approved', actorUserId:myActorUserId(),
+          });
       });
       await refresh();
       return {data:approvedRequisition,meta:{}};
@@ -2862,7 +2864,10 @@
     if(key==='purchasing/purchase-requisitions'&&name==='reject'){
       var rejectedRequisition = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.decidePurchaseRequisitionWithin(
-          state.runtime.createOrm(tx), SCOPE, Number(id), 'rejected', payload&&payload.rejectionReason);
+          state.runtime.createOrm(tx), SCOPE, Number(id), {
+            decision:'rejected', actorUserId:myActorUserId(),
+            rejectionReason:payload&&payload.rejectionReason,
+          });
       });
       await refresh();
       return {data:rejectedRequisition,meta:{}};
