@@ -2,7 +2,7 @@
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-08-09** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-08-10** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 
@@ -1003,9 +1003,10 @@ pack was regenerated from the current authoritative Manager template, and permis
 module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
 one expected skip and zero failures. Generic module collections use company scopes because
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
-actor-derived and team/direct-tree scoped. The current schema journal contains 87
-migrations and generated Drizzle SQL contains 243 tables. Physical-phone verification
-remains separately blocked under TASK-017.
+actor-derived and team/direct-tree scoped. The current schema journal contains 88
+migrations and generated Drizzle SQL contains 244 tables. TASK-173's authorization
+override migration is now included; physical-phone verification remains separately
+blocked under TASK-017.
 
 ## Phase 44 — Authorization Architecture Evolution 🔶
 
@@ -1017,8 +1018,10 @@ remains separately blocked under TASK-017.
    compatibility mappings/removal metadata, canonical projections for 116 resources
    and 62 actions, and the `check:permissions` CI gate.
 3. **Assignment and decision model** (TASK-172–174): TASK-172 moves validity, provenance
-   and scope to assignments; TASK-173 centralizes deterministic decisions; TASK-174
-   makes unknown/stale state fail closed.
+   and scope to assignments. TASK-173 is in progress: migration 0087 adds the central
+   decision service, explicit user-level overrides and privileged audited explanations;
+   strict approval-authority unification and broader resource/policy context remain
+   open. TASK-174 will make unknown/stale state fail closed and add version invalidation.
 4. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,
    explainable Company Owner permissions after all prerequisites pass.
 

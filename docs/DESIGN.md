@@ -339,6 +339,13 @@ Current runtime facts:
   enforced by the backend for current Canonical operations;
 - versioned approval policy/instance/decision/delegation tables remain the approval
   SSOT and must not be simplified during authorization refactoring.
+- migration 0087 adds `user_permission_override`; `src/auth/authorization.ts` is now
+  the central tenant decision service. It validates active membership, registered
+  permission candidates, active assignments and override precedence, while retaining
+  the current registered-permission Superadmin compatibility path until TASK-175.
+- `authorize()` and `authorizeWithin()` expose only safe `allowed/reasonCode` results;
+  `explainAuthorization()` is reserved for the audit-read admin endpoint, which
+  records every explanation. Override creation/revocation is reasoned and audited.
 
 TASK-170 now adds a separate platform control-plane domain: platform principals, static
 application-owned support roles, hash-backed bearer/CSRF sessions and auditable support
@@ -351,13 +358,13 @@ continues to be a tenant Superadmin convenience and is a separate authority path
 
 TASK-172 now delivers assignment-scoped validity, revocation/provenance and validated
 scope targets through migration 0086, with a stable assignment primary key, assignment-
-owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. Code
-behavior above is authoritative. Remaining EPIC-062 target work is one deterministic
-authorization decision service, fail-closed module/resource behavior,
-authorization-version invalidation and explicit Company Owner permissions under
-TASK-173–175. Broad `role_permission` rows remain a text compatibility store; registry
-telemetry, centralized decision caching and the Company Owner cutover are not yet
-delivered.
+owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. TASK-173
+is in progress: migration 0087 and the central evaluator now govern explicit user-level
+overrides and safe explanations. Code behavior above is authoritative. Remaining
+EPIC-062 target work is fail-closed module/resource behavior, authorization-version
+invalidation and explicit Company Owner permissions under TASK-174–175. Broad
+`role_permission` rows remain a text compatibility store; registry telemetry,
+centralized decision caching and the Company Owner cutover are not yet delivered.
 
 ## 10. August 2026 implementation additions
 
@@ -375,3 +382,7 @@ delivered.
 - Tenant-scoped employee, product, customer and supplier updates use explicit field
   allowlists, optimistic versions and audit. Security-owned identity fields remain in
   dedicated lifecycle commands.
+- Migration 0087 adds tenant-scoped, reasoned `user_permission_override` records with
+  explicit allow/deny effects, validity/revocation metadata and resource/department
+  target support. The admin explanation endpoint is privileged and append-audited;
+  public authorization callers receive safe reason codes only.

@@ -610,6 +610,13 @@
       "when": 1786289661614,
       "tag": "0086_youthful_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1786295116348,
+      "tag": "0087_pink_shadowcat",
+      "breakpoints": true
     }
   ]
 }

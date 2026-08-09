@@ -1,6 +1,6 @@
 # Task Index
 
-Reviewed: **2026-08-09**
+Reviewed: **2026-08-10**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -9,8 +9,8 @@ not a second task registry.
 ## Current totals
 
 - Done: **171**
-- In progress: **0**
-- Todo: **3**
+- In progress: **1**
+- Todo: **2**
 - Blocked: **1**
 - Total: **175**
 
@@ -22,7 +22,7 @@ not a second task registry.
 | TASK-170 | Done | Separate platform principals and time-bounded support access |
 | TASK-171 | Done | Canonical permission registry and compatibility-key migration |
 | TASK-172 | Done | Assignment-scoped grants, targets and expiry |
-| TASK-173 | Todo | Central authorization decision, explicit deny and safe explanation |
+| TASK-173 | In progress | Central authorization decision, explicit deny and safe explanation |
 | TASK-174 | Todo | Fail-closed module/resource registry and authorization versioning |
 | TASK-175 | Todo | Replace tenant Superadmin bypass with explicit Company Owner permissions |
 
@@ -36,13 +36,24 @@ not a second task registry.
   impersonation checks share the active-assignment predicate. Existing
   `role_resource_scope` rows remain a dual-read fallback for assignments whose
   `scope_backfilled_at` is null. Expired and revoked assignments are denied immediately;
-  explicit-deny decisions, authorization-version caching and Company Owner cutover
-  remain TASK-173–175.
+  The TASK-173 central decision boundary is now partially implemented in migration
+  0087; authorization-version caching and Company Owner cutover remain TASK-174–175.
 
-- **Verification:** three resource-safe Vitest shards cover all 152 files with 613 tests
-  passed, one intentional skip and zero failures (614 test slots). Root/Web typecheck, ESLint, both
-  Demo/API builds, generated Demo schema/drift, Demo-pack and permission-registry checks
-  also pass after the PK and migration cutover.
+## Current in-progress task
+
+- **TASK-173 — In progress:** `src/auth/authorization.ts` now provides the central
+  tenant decision contract and boolean compatibility wrappers. Migration 0087 adds
+  reasoned user-level `user_permission_override` rows with validity, revocation,
+  resource/department targeting and explicit deny precedence. Action/resource gates,
+  approval permission checks and effective-capability snapshots use the central
+  evaluator. `/api/admin/authorization/explain` is restricted to audit-read users and
+  writes an audit event; override create/revoke operations are also audited.
+  Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
+  lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
+  Remaining before Done: strict permission-plus-active-workflow-authority behavior for
+  every approval-like legacy path and broader resource/module/policy context. The full
+  current regression run is green: 154 files, 623 passed, one intentional skip, zero
+  failures (624 test slots).
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -54,13 +65,15 @@ not a second task registry.
   Role editing/template cloning, leave approval configuration and expense extra-
   approval configuration reject unregistered tenant permissions. Existing broad
   `role_permission` text keys remain compatible through explicit mapping metadata;
-  TASK-172 now owns the assignment migration while centralized decisions, cache
-  versioning and Company Owner cutover remain pending.
+  TASK-172 owns the assignment migration; TASK-173 now owns the central decision and
+  explicit-override boundary, while authorization-versioning and Company Owner cutover
+  remain pending.
   `npm run check:permissions` is the CI gate for source literals, role templates,
   resource/action contracts and compatibility metadata. The complete 152-file Vitest
   regression baseline passes in three resource-safe shards: 610 tests passed, one
   intentional skip and zero failures before TASK-172 added its four assignment/seed
-  regression cases; the current 613-test result is recorded in the TASK-172 section.
+  regression cases. The current full-suite run is green at 154 files: 623 tests passed,
+  one intentional skip and zero failures (624 test slots).
 
 - **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,
   hash-backed bearer/CSRF sessions, auditable support grants and exact master/company

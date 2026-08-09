@@ -8,8 +8,10 @@ implemented by TASK-170 and are never modeled as customer-company employees by
 implication. Its support grant is a bounded authorization decision, not an implicit
 customer-data proxy. TASK-171 adds the application-owned tenant permission registry
 and canonical resource/action projections. TASK-172 now changes the role-assignment
-tables to carry stable identity, validity, provenance and assignment-owned scope rows;
-it does not yet centralize every authorization decision.
+tables to carry stable identity, validity, provenance and assignment-owned scope rows.
+TASK-173 now centralizes the tenant permission decision path, explicit user-level
+overrides and safe/audited explanations; module/resource fail-closed validation, cache
+invalidation and complete approval-authority unification remain open.
 
 ## 1. Goal
 

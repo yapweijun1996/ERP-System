@@ -38,9 +38,12 @@ describe('server-side RBAC', () => {
       email: appUser.email,
       fullName: appUser.fullName,
     }).from(appUser).where(eq(appUser.email, 'admin@acme.co'));
+    // Superadmin remains a tenant-bounded compatibility grant, but it does
+    // not make an unregistered permission meaningful. Unknown keys deny by
+    // default before any role bypass is considered.
     expect(await hasPermission(db, {
       ...admin, masterFn: 'M1', activeCompanyFn: 'C-SG',
-    }, 'anything.write')).toBe(true);
+    }, 'anything.write')).toBe(false);
     expect(await hasPermission(db, {
       ...admin, masterFn: 'OTHER-MASTER', activeCompanyFn: 'C-SG',
     }, 'anything.write')).toBe(false);

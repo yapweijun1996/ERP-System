@@ -1,13 +1,15 @@
-import { and, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, lte, or } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   company, role, rolePermission, roleResourceScope, userCompanyRole, userCompanyRoleScope,
+  userPermissionOverride,
 } from '../data/schema';
 import type { SessionData } from './session';
 import type { DataScope } from './accessCatalog';
 import { PERMISSIONS } from './permissionKeys';
-import { permissionCandidates, permissionDefinition } from './permissionRegistry';
+import { PERMISSION_REGISTRY, permissionCandidates } from './permissionRegistry';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
+import { authorize, principalFromSession } from './authorization';
 
 export { PERMISSIONS } from './permissionKeys';
 
@@ -19,55 +21,11 @@ export async function hasPermission(
   permissionKey: PermissionKey,
   now = new Date(),
 ): Promise<boolean> {
-  // Platform grants are evaluated only by the platform support boundary. A
-  // tenant Superadmin must never turn a platform-domain key into tenant access.
-  if (permissionDefinition(permissionKey)?.domain === 'platform') return false;
-  const [superadminGrant] = await db.select({
-    roleId: role.roleId,
-    roleMasterFn: role.masterFn,
-    companyMasterFn: company.masterFn,
-    isSuperadmin: role.isSuperadmin,
-  }).from(userCompanyRole)
-    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
-    .innerJoin(company, eq(company.companyFn, userCompanyRole.companyFn))
-    .where(and(
-      eq(userCompanyRole.userId, session.userId),
-      eq(userCompanyRole.companyFn, session.activeCompanyFn),
-      eq(role.masterFn, session.masterFn),
-      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
-      eq(company.masterFn, session.masterFn),
-      eq(role.isSuperadmin, true),
-      activeRoleAssignmentCondition(now),
-    ))
-    .limit(1);
-  // Superadmin bypass is deliberately bounded to the current master/company
-  // role grant above; it is never a cross-master bypass.
-  if (superadminGrant) return true;
-
-  const candidates = permissionCandidates(permissionKey);
-  if (!candidates.length) return false;
-  const [grant] = await db.select({ allowed: rolePermission.allowed })
-    .from(userCompanyRole)
-    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
-    .innerJoin(company, eq(company.companyFn, userCompanyRole.companyFn))
-    .innerJoin(rolePermission, and(
-      eq(rolePermission.roleId, userCompanyRole.roleId),
-      eq(rolePermission.masterFn, session.masterFn),
-    ))
-    .where(and(
-      eq(userCompanyRole.userId, session.userId),
-      eq(userCompanyRole.companyFn, session.activeCompanyFn),
-      eq(role.masterFn, session.masterFn),
-      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
-      eq(company.masterFn, session.masterFn),
-      activeRoleAssignmentCondition(now),
-      // Compatibility aliases are resolved by the application-owned registry;
-      // role_permission never accepts arbitrary tenant-created permission codes.
-      inArray(rolePermission.permissionKey, candidates),
-      eq(rolePermission.allowed, true),
-    ))
-    .limit(1);
-  return grant?.allowed === true;
+  return (await authorize(db, {
+    principal: principalFromSession(session),
+    permissionKey,
+    now,
+  })).allowed;
 }
 
 export async function hasAnyPermission(
@@ -105,7 +63,26 @@ export async function effectiveCapabilities(
   session: SessionData,
   now = new Date(),
 ): Promise<EffectiveCapability> {
-  if (await isSuperadminSession(db, session, now)) {
+  const superadmin = await isSuperadminSession(db, session, now);
+  const overrides = await db.select().from(userPermissionOverride).where(and(
+    eq(userPermissionOverride.masterFn, session.masterFn),
+    eq(userPermissionOverride.companyFn, session.activeCompanyFn),
+    eq(userPermissionOverride.userId, session.userId),
+    lte(userPermissionOverride.validFrom, now),
+    or(isNull(userPermissionOverride.validUntil), gt(userPermissionOverride.validUntil, now)),
+    isNull(userPermissionOverride.revokedAt),
+  ));
+  // Capabilities are a UX/session snapshot, not the authorization source of
+  // truth. A scoped deny is conservatively removed from the snapshot as a
+  // whole so the UI cannot advertise access that the central decision service
+  // will reject. Record-level evaluation remains in authorize().
+  const deniedKeys = new Set(overrides
+    .filter((row) => row.effect === 'deny')
+    .flatMap((row) => permissionCandidates(row.permissionKey)));
+  const allowedKeys = new Set(overrides
+    .filter((row) => row.effect === 'allow')
+    .flatMap((row) => permissionCandidates(row.permissionKey)));
+  if (superadmin && !overrides.length) {
     return { permissions: ['*'], scopes: { '*': 'company' }, scopeGrants: {} };
   }
   const permissions = await db.select({ permissionKey: rolePermission.permissionKey })
@@ -168,7 +145,16 @@ export async function effectiveCapabilities(
       targetId: '',
     })),
   ];
-  const scopes: Record<string, DataScope> = {};
+  const capabilityPermissions = superadmin
+    ? PERMISSION_REGISTRY
+      .filter((definition) => definition.domain === 'tenant')
+      .map((definition) => definition.code)
+    : permissions.map((row) => row.permissionKey);
+  const visiblePermissions = [...new Set([
+    ...capabilityPermissions.filter((permissionKey) => permissionKey === '*' || !deniedKeys.has(permissionKey)),
+    ...allowedKeys,
+  ])].sort();
+  const scopes: Record<string, DataScope> = superadmin ? { '*': 'company' } : {};
   const scopeGrants: Record<string, ScopeGrant[]> = {};
   for (const row of scopeRows) {
     const value = row.scope as DataScope;
@@ -187,8 +173,26 @@ export async function effectiveCapabilities(
     }
     scopeGrants[row.resourceKey] = grants;
   }
+  for (const row of overrides.filter((override) => override.effect === 'allow')) {
+    const resourceKey = row.resourceKey || '*';
+    const value = row.scope as DataScope;
+    const current = scopes[resourceKey];
+    if (!current || SCOPE_RANK[value] > SCOPE_RANK[current]) scopes[resourceKey] = value;
+    const grants = scopeGrants[resourceKey] ?? [];
+    if (!grants.some((grant) =>
+      grant.scope === value
+      && grant.targetType === row.targetType
+      && grant.targetId === (row.targetId || null))) {
+      grants.push({
+        scope: value,
+        targetType: row.targetType,
+        targetId: row.targetId || null,
+      });
+    }
+    scopeGrants[resourceKey] = grants;
+  }
   return {
-    permissions: [...new Set(permissions.map((row) => row.permissionKey))].sort(),
+    permissions: visiblePermissions,
     scopes,
     scopeGrants,
   };

@@ -102,7 +102,14 @@ current/target record. The following are implemented compatibility facts:
   application-owned registry with explicit canonical mappings; route/resource/action
   projections are registered and unknown or platform-domain keys cannot be used as
   tenant role or approval permissions;
-- an `allowed=false` role-permission row is not an explicit deny override;
+- an `allowed=false` role-permission row is not an explicit deny override. TASK-173's
+  migration 0087 adds reasoned user-level `user_permission_override` rows; matching
+  deny rows are evaluated before explicit allows, role grants and the tenant-local
+  Superadmin compatibility grant, with validity/revocation enforced;
+- `src/auth/authorization.ts` is the central evaluator used by permission wrappers,
+  action/resource gates and approval permission checks. Public callers receive safe
+  reason codes; audit-read administrators can request full explanation details through
+  an append-audited endpoint;
 - unknown module keys currently pass the module gate and therefore remain a migration
   risk even though registered resources retain their own authorization checks. Resource
   registration is currently a runtime application allowlist; no database FK or
@@ -117,9 +124,10 @@ API routes reject tenant cookies, require platform CSRF for mutations and audit 
 creation, decisions and revocation. Principal/session issuance is out-of-band, and the
 evaluator is a decision/audit boundary rather than an automatic customer-data proxy.
 
-TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173–175
-must centralize deterministic deny-by-default decisions, invalidate stale authorization
-state and remove the tenant Superadmin bypass. No platform operator has been granted permanent implicit
+TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173
+remains in progress for strict permission-plus-active-workflow-authority coverage across
+legacy approval paths and broader resource/module/policy context. TASK-174–175 must
+invalidate stale authorization state and remove the tenant Superadmin bypass. No platform operator has been granted permanent implicit
 customer-data authority by documenting or implementing TASK-170.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company

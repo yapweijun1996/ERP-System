@@ -1,6 +1,6 @@
 import type { DB } from '../data/db';
 import { withTenantTransaction } from '../data/tenantTransaction';
-import { hasAnyPermission } from '../auth/permissions';
+import { hasAnyAuthorization } from '../auth/authorization';
 import { fineGrainedActionPermission } from '../auth/accessCatalog';
 import type { SessionData } from '../auth/session';
 import { appendAudit } from './audit';
@@ -74,10 +74,10 @@ export async function dispatchAction(
     companyFn: context.session.activeCompanyFn,
   };
   return withTenantTransaction(context.db, scope, async (tx) => {
-    if (!await hasAnyPermission(tx, context.session, [
+    if (!await hasAnyAuthorization(tx, context.session, [
       fineGrainedActionPermission(context.resource, context.action, definition.permission),
       definition.permission,
-    ])) {
+    ], { resourceKey: context.resource })) {
       throw new ActionDispatchError(403, 'permission_denied', 'You cannot perform this action.');
     }
     const operation = `${context.resource}:${context.resourceId}:${context.action}`;

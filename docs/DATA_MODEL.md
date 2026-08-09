@@ -16,7 +16,7 @@ sales/       customer, sales_order, sales_order_line, delivery, invoice, payment
 purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt,
              purchase_order_approval, landed_cost(+line)
 finance/     account (chart of accounts), gl_entry
-system/      audit_log
+system/      audit_log, user_permission_override
 integration/ import_job, import_job_row, import_row_error, outbox_event
 ```
 
@@ -125,6 +125,8 @@ user_company_role (assignment_id PK, user_id, company_fn, role_id, valid_from, v
 user_company_role_scope (assignment_id, resource_key, scope, target_type, target_id) -- assignment scope
 role_permission (role_id, permission_key, allowed)        -- current Allow grants
 role_resource_scope (role_id, resource_key, scope)        -- legacy role-level fallback
+user_permission_override (id, user_id, permission_key, resource_key, effect,
+                          scope, target_type, target_id, validity, revocation) -- explicit exception
 company_module (master_fn, company_fn, module_key, enabled, configured)
 ```
 
@@ -142,8 +144,10 @@ not a platform role and not the target Company Owner model. `role_permission.per
 remains a text compatibility store: TASK-171 adds the application-owned registry in
 `src/auth/permissionRegistry.ts`, explicit canonical aliases and tenant/platform-domain
 separation without adding a permission database table or foreign key. Migration 0086
-adds the assignment lifecycle and scope table; authorization versioning and Company
-Owner cutover remain later migrations.
+adds the assignment lifecycle and scope table; migration 0087 adds reasoned, valid and
+revocable user-level explicit allow/deny overrides. Deny overrides are evaluated before
+role grants and the current Superadmin compatibility path. Authorization versioning and
+Company Owner cutover remain later migrations.
 Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
@@ -218,8 +222,9 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > `document_processing_policy` (migration 0075's `openai_compatible` BYOK vision
 > provider) without a new table. TASK-161–171 synchronize the subsequent operational,
 > editable-record, Sales, session, HR Calendar, Staff Calendar and authorization
-> documentation work. The current boundary is migration 0086: **87 journaled
-> migrations and 243 generated tables**. Each subsequent schema capability must still
+> documentation work. TASK-173 adds migration 0087's `user_permission_override` table.
+> The current boundary is migration 0087: **88 journaled migrations and 244 generated
+> tables**. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
@@ -240,6 +245,7 @@ platform_session                hash-backed platform bearer/CSRF session (0084)
 support_access_grant             bounded, auditable customer-support authorization (0084/0085)
 user_company_role_scope          assignment-owned scope grants and validated targets (0086)
 user_company_role                 stable assignment identity, validity and provenance (0086)
+user_permission_override          reasoned user-level explicit allow/deny exception (0087)
 audit_log.platform_principal_id platform actor correlation for platform events (0084)
 ```
 

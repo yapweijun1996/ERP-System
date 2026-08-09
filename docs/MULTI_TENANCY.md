@@ -98,6 +98,8 @@ user_company        (user_id, company_fn, role_id)              -- company membe
 user_company_role   (assignment_id PK, user_id, company_fn, role_id,
                      valid_from, valid_until, revoked_at, provenance) -- active assignments
 user_company_role_scope (assignment_id, resource_key, scope, target_type, target_id)
+user_permission_override (id, user_id, company_fn, permission_key, effect, validity,
+                          resource_key, scope target and revocation metadata)
 role                (role_id, master_fn, name, is_superadmin)
 ```
 
@@ -118,6 +120,10 @@ role                (role_id, master_fn, name, is_superadmin)
   `(master_fn, active company_fn)` and scopes all queries.
 - `is_superadmin` is currently a tenant/company-role permission bypass for the active
   company. It is not a platform principal and cannot cross masters.
+- Migration 0087 adds `user_permission_override`, which is always filtered by the
+  active master/company membership. Its explicit `deny` effect is evaluated before
+  explicit allow, role grants and the current Superadmin compatibility path; validity
+  and revocation are checked on every central authorization decision.
 
 ## 5. Scoping rules (enforced everywhere)
 
@@ -166,6 +172,7 @@ documented as compatibility facts in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). TASK-171 now adds
 the application-owned tenant permission registry, explicit compatibility mappings and
 platform/tenant domain separation; TASK-172 adds the assignment lifecycle and scope
-table. Remaining EPIC-062 tasks add centralized decisions, authorization-version
+table; TASK-173 adds the central decision service, explicit user-level overrides and
+safe/audited explanations. Remaining EPIC-062 tasks add authorization-version
 invalidation and explicit Company Owner permissions. Those target capabilities must
 not be inferred from the current `is_superadmin` column.

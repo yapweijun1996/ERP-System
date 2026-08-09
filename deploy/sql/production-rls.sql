@@ -92,7 +92,7 @@ DECLARE
     'app_notification',
     'integration_connector',
     'company_policy',
-    'role_resource_scope', 'company_module',
+    'role_resource_scope', 'user_permission_override', 'company_module',
     'staff_onboarding_draft', 'company_onboarding',
     'onboarding_import_job', 'onboarding_import_row',
     'document_sequence',

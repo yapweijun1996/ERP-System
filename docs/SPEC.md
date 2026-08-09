@@ -258,21 +258,39 @@ time-bounded/revocable, default-deny sensitive fields and audit every create/use
 revoke event. Principal/session issuance remains an out-of-band deployment/SSO bootstrap
 responsibility, and grant evaluation only returns a decision; it does not automatically
 proxy tenant business data. TASK-171 now supplies the first approved registry slice and
-TASK-172 supplies the assignment migration/service. The following approved requirements
-remain pending under TASK-173–175:
+TASK-172 supplies the assignment migration/service. TASK-173 is in progress and now
+supplies the first central tenant decision boundary, explicit user-level overrides and
+safe/audited explanations:
 
 - route/resource/action declarations are now checked against an application-owned
   registry of 299 static definitions, with canonical projections for 116 resources,
   62 actions and 5 updates; existing broad keys remain explicit compatibility aliases
   until a later data migration and cutover;
+- `authorize`, `authorizeWithin` and `hasAnyAuthorization` are the central decision
+  entry points used by boolean permission wrappers, action/resource gates and approval
+  permission checks;
+- `user_permission_override` supports reasoned, valid and revocable explicit `allow`
+  and `deny` rows. A matching deny wins before an allow, role grant or tenant-local
+  Superadmin compatibility grant;
+- public decision callers receive only a safe `{ allowed, reasonCode }` result, while
+  the audit-read administrator explanation endpoint returns full assignment/role/
+  override details and records an audit event.
+
+The following approved requirements remain pending under TASK-173–175:
+
+- strict permission-plus-active-workflow-authority behavior across every approval-like
+  legacy path and complete resource/policy context;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
-- one decision service defines explicit deny, scope and policy precedence;
+- authorization-version invalidation prevents stale role/scope/module/policy state;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;
-- safe reason codes are public, while full explanations are privileged and audited.
 
 Approval authorization must preserve the existing immutable version/instance/decision
-model. An approval requires domain permission, resource scope, current workflow-step
-authority, policy conditions and separation-of-duties checks.
+model. The shared workflow locks the active instance/step, checks current permission
+authority through the central evaluator, prevents self-approval and validates bounded
+delegation. The HR management permission override remains a documented compatibility
+escalation for an active pending step; the target contract still requires domain
+permission, resource scope, current workflow-step authority, policy conditions and
+separation-of-duties checks for every approval-like path.
 
 ## 8. August 2026 functional requirements
 

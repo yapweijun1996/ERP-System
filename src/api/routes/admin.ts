@@ -31,8 +31,19 @@ import {
   revokeRoleAssignment,
   type RoleAssignmentScopeInput,
 } from '../../auth/roleAssignments';
+import {
+  createPermissionOverride,
+  revokePermissionOverride,
+  type PermissionOverrideEffect,
+} from '../../auth/permissionOverrides';
 import { listMasterModules, setMasterModule } from '../../auth/moduleAccess';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
+import {
+  explainAuthorization,
+  principalFromSession,
+  type AuthorizationScopeTarget,
+} from '../../auth/authorization';
+import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import { getMasterControlWithin } from '../../modules/admin/controlPlane';
 import { withTenantTransaction } from '../../data/tenantTransaction';
@@ -182,6 +193,79 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
     }
   });
 
+  router.post('/users/:userId/permission-overrides', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersManage)) {
+      apiError(res, 403, 'permission_denied', 'You cannot manage permission overrides.');
+      return;
+    }
+    const userId = Number(req.params.userId);
+    const body = (req.body ?? {}) as {
+      permissionKey?: unknown;
+      resourceKey?: unknown;
+      effect?: unknown;
+      scope?: unknown;
+      targetType?: unknown;
+      targetId?: unknown;
+      validFrom?: unknown;
+      validUntil?: unknown;
+      reason?: unknown;
+    };
+    const validFrom = body.validFrom == null ? undefined : new Date(String(body.validFrom));
+    const validUntil = body.validUntil == null ? undefined : new Date(String(body.validUntil));
+    if (!Number.isSafeInteger(userId) || userId <= 0
+      || typeof body.permissionKey !== 'string'
+      || !['allow', 'deny'].includes(String(body.effect))
+      || typeof body.reason !== 'string'
+      || (validFrom && Number.isNaN(validFrom.getTime()))
+      || (validUntil && Number.isNaN(validUntil.getTime()))) {
+      apiError(res, 400, 'invalid_request', 'userId, permissionKey, effect, reason and valid dates are required.');
+      return;
+    }
+    try {
+      const result = await createPermissionOverride(db, session, {
+        userId,
+        permissionKey: body.permissionKey,
+        resourceKey: typeof body.resourceKey === 'string' ? body.resourceKey : null,
+        effect: String(body.effect) as PermissionOverrideEffect,
+        scope: typeof body.scope === 'string' ? body.scope as 'self' | 'team' | 'department' | 'company' : undefined,
+        targetType: typeof body.targetType === 'string' ? body.targetType : undefined,
+        targetId: typeof body.targetId === 'string' || typeof body.targetId === 'number'
+          ? body.targetId : null,
+        validFrom,
+        validUntil: validUntil ?? null,
+        reason: body.reason,
+      }, context(res).requestId);
+      res.status(201).json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/permission-overrides/:overrideId/actions/revoke', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersManage)) {
+      apiError(res, 403, 'permission_denied', 'You cannot revoke permission overrides.');
+      return;
+    }
+    const overrideId = Number(req.params.overrideId);
+    const reason = (req.body as { reason?: unknown } | undefined)?.reason;
+    if (!Number.isSafeInteger(overrideId) || overrideId <= 0 || typeof reason !== 'string') {
+      apiError(res, 400, 'invalid_request', 'overrideId and a revocation reason are required.');
+      return;
+    }
+    try {
+      const result = await revokePermissionOverride(
+        db, session, overrideId, reason, context(res).requestId,
+      );
+      res.json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
   router.post('/role-assignments/:assignmentId/actions/revoke', async (req, res) => {
     const session = await requireSession(db, req, res);
     if (!session) return;
@@ -265,6 +349,93 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
     res.json({
       data: await listRoleScopes(db, session.masterFn, session.activeCompanyFn), meta: {},
     });
+  });
+
+  /**
+   * Privileged authorization diagnostics. Ordinary API clients only receive
+   * safe denial behavior; this endpoint requires audit-read authority and
+   * records every explanation request in the append-only audit log.
+   */
+  router.post('/authorization/explain', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.auditRead)) {
+      apiError(res, 403, 'permission_denied', 'Authorization explanations require audit permission.');
+      return;
+    }
+    const body = (req.body ?? {}) as {
+      userId?: unknown;
+      permissionKey?: unknown;
+      resourceKey?: unknown;
+      requireScope?: unknown;
+      scopeTarget?: unknown;
+    };
+    if (typeof body.permissionKey !== 'string' || !body.permissionKey.trim()) {
+      apiError(res, 400, 'invalid_request', 'permissionKey is required.');
+      return;
+    }
+    const subjectUserId = body.userId == null ? session.userId : Number(body.userId);
+    if (!Number.isSafeInteger(subjectUserId) || subjectUserId <= 0) {
+      apiError(res, 400, 'invalid_request', 'userId must be a positive integer.');
+      return;
+    }
+    const resourceKey = body.resourceKey == null ? null : String(body.resourceKey).trim();
+    if (resourceKey && resourceKey.length > 180) {
+      apiError(res, 400, 'invalid_request', 'resourceKey is too long.');
+      return;
+    }
+    let scopeTarget: AuthorizationScopeTarget | null = null;
+    if (body.scopeTarget != null) {
+      if (!body.scopeTarget || typeof body.scopeTarget !== 'object' || Array.isArray(body.scopeTarget)) {
+        apiError(res, 400, 'invalid_request', 'scopeTarget must be an object.');
+        return;
+      }
+      const raw = body.scopeTarget as Record<string, unknown>;
+      const scope = raw.scope;
+      const targetType = raw.targetType;
+      const targetId = raw.targetId;
+      if (!['self', 'team', 'department', 'company'].includes(String(scope))
+        || typeof targetType !== 'string'
+        || (targetId != null && typeof targetId !== 'string' && typeof targetId !== 'number')) {
+        apiError(res, 400, 'invalid_request', 'scopeTarget is invalid.');
+        return;
+      }
+      scopeTarget = {
+        scope: String(scope) as AuthorizationScopeTarget['scope'],
+        targetType,
+        targetId: targetId == null ? null : String(targetId),
+      };
+    }
+    const explanation = await explainAuthorization(db, {
+      principal: {
+        ...principalFromSession(session),
+        userId: subjectUserId,
+      },
+      permissionKey: body.permissionKey,
+      resourceKey,
+      requireScope: body.requireScope === true,
+      scopeTarget,
+    });
+    await appendAudit(db, {
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+      actorUserId: session.userId,
+      requestId: context(res).requestId,
+      entity: 'authorization_decision',
+      action: 'explain',
+      after: {
+        permissionKey: explanation.permissionKey,
+        userId: subjectUserId,
+        resourceKey: explanation.resourceKey,
+        allowed: explanation.allowed,
+        reasonCode: explanation.reasonCode,
+        matchedEffect: explanation.matchedEffect,
+        matchedAssignmentId: explanation.matchedAssignmentId,
+        matchedRoleId: explanation.matchedRoleId,
+        matchedOverrideId: explanation.matchedOverrideId,
+      },
+    });
+    res.json({ data: explanation, meta: { privileged: true, audited: true } });
   });
 
   router.post('/roles/actions/clone-template', async (req, res) => {

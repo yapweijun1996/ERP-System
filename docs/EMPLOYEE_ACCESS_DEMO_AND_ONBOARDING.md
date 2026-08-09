@@ -6,7 +6,9 @@ compatibility facts and the EPIC-062 migration target are in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md); in particular,
 current assignment-owned scopes, validity and revocation are implemented by TASK-172,
 with role-level scope retained only as a dual-read fallback for unbackfilled assignments;
-current tenant Superadmin remains a bypass until TASK-173–175 are complete. TASK-170 now provides a separate platform support control plane;
+TASK-173 now centralizes tenant decisions and adds reasoned user-level explicit
+overrides, while the current tenant Superadmin remains a compatibility bypass until
+TASK-175. TASK-170 now provides a separate platform support control plane;
 the employee-workspace convenience below remains tenant-scoped and is not platform
 support access.
 

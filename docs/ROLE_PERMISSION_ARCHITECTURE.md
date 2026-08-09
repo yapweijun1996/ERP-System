@@ -1,8 +1,8 @@
 # ERP Role & Permission Architecture
 
 Status: **Current implementation plus remaining target architecture; TASK-170–172
-foundations are delivered and TASK-173–175 remain pending**
-Reviewed: **2026-08-09**
+foundations are delivered, TASK-173 is in progress, and TASK-174–175 remain pending**
+Reviewed: **2026-08-10**
 Scope: platform authorization, tenant/company roles, permissions, data scope,
 approval authority, support access and audit
 Target scale: one-person company to 10,000+ employees
@@ -105,6 +105,23 @@ The current code already implements:
 - assignment-owned scope rows in `user_company_role_scope`, with validated current
   target types (`none`, `company`, `department`, `team`, `employee`). A reusable role
   can therefore be attached to multiple independent assignments and target rows.
+- the first centralized tenant decision service in `src/auth/authorization.ts`:
+  `authorize`, `authorizeWithin` and `hasAnyAuthorization` validate active membership,
+  registered tenant permissions, active assignments, explicit overrides and the
+  tenant-local Superadmin compatibility path before returning ALLOW/DENY;
+- migration 0087 adds reasoned, time-bounded `user_permission_override` rows. Explicit
+  `deny` wins over every matching allow, explicit `allow` is evaluated before role
+  grants, revoked/expired rows are ignored, and resource/department targets do not
+  widen unrelated requests;
+- public callers receive only `{ allowed, reasonCode }`. A privileged administrator
+  may call `/api/admin/authorization/explain` with audit-read permission (including a
+  tenant member subject) to receive full assignment/role/override details; every such
+  explanation is appended to the audit log. Override creation and revocation are also
+  reasoned and audited;
+- `hasPermission`, action dispatch, resource permission gates and approval permission
+  checks now use the centralized evaluator. Effective-capability snapshots include
+  active override effects conservatively for UX, while the backend decision remains
+  authoritative.
 
 The following current behaviors are compatibility facts, not the final architecture:
 
@@ -116,7 +133,17 @@ The following current behaviors are compatibility facts, not the final architect
   the registry maps them explicitly but the expand-phase data migration and runtime
   compatibility telemetry are not complete.
 - `role_permission.allowed=false` is a disabled grant, not an explicit deny that wins
-  over another role's allow.
+  over another role's allow. Explicit deny semantics live in
+  `user_permission_override` until a later role/assignment-level data migration.
+- Explicit overrides are currently user-level, tenant/company-bounded exceptions. The
+  service supports `self/team/department/company` and `none/company/department/team/
+  employee` targets; branch, region, business-unit and other enterprise targets remain
+  schema-reserved but are not yet assignable through the API.
+- Approval permission checks now call the centralized evaluator, and the shared
+  versioned workflow still locks the active instance/step, prevents self-approval and
+  checks delegation. The existing HR management `overridePermissionKey` remains a
+  compatibility escalation for an active pending step; strict domain-permission plus
+  current-step authority for every approval-like legacy path is not yet complete.
 - Unknown module keys currently pass the module gate. Registered resources still have
   permission checks, but this is not the target fail-closed module/resource cache
   behavior. No database foreign key or authorization-version cache is claimed yet.
@@ -219,10 +246,11 @@ The current application registry is split into two layers:
   strings. Unknown candidates return no grant.
 
 `npm run check:permissions` currently verifies 299 static registry definitions, 116
-resource contracts, 62 action contracts and 5 update contracts. TASK-172 now adds the
+resource contracts, 62 action contracts and 5 update contracts. TASK-172 added the
 assignment migration, dual-read scope path, active-assignment predicate and assignment
-API. This is still not a centralized authorization decision service, explicit-deny
-engine, authorization-version cache or Company Owner cutover; those remain TASK-173–175.
+API. TASK-173 now adds the central decision service, user-level explicit overrides and
+safe/audited explanations. Module/resource fail-closed validation, authorization-version
+invalidation and Company Owner cutover remain TASK-174–175.
 
 ## 6. Scope and resource ownership
 
@@ -246,7 +274,7 @@ If ownership cannot be resolved for a restricted permission, access is denied.
 
 ## 7. Deterministic evaluation order
 
-Authorization is deny-by-default and follows this order:
+The target authorization order is deny-by-default and follows this order:
 
 1. Authenticate and resolve the principal.
 2. Resolve tenant and active legal entity from server-side session state.
@@ -263,9 +291,21 @@ Authorization is deny-by-default and follows this order:
 11. Audit the decision where the permission or resource is sensitive.
 12. Return ALLOW or DENY with a safe reason code.
 
-Until explicit deny is implemented, the runtime remains allow-union plus default deny.
-An `allowed=false` row must not be represented in UI or documentation as an effective
-deny override.
+The current centralized evaluator implements this subset in this order:
+
+1. Validate principal shape and active master/company membership.
+2. Reject platform-domain keys and unregistered permission keys.
+3. Load active user overrides; matching explicit `deny` wins over matching `allow`.
+4. Resolve active role assignments and registered role-permission candidates.
+5. Preserve the tenant-local Superadmin compatibility grant for registered tenant
+   permissions only, after explicit denies.
+6. When requested, match assignment-owned scope rows and the legacy dual-read scope.
+7. Return a safe reason code; full diagnostic fields are available only through the
+   audited administrator explanation path.
+
+Module/resource/action validation, ABAC policy evaluation, authorization-version
+invalidation and complete approval-policy enforcement remain later work. A
+`role_permission.allowed=false` row still cannot be represented as an explicit deny.
 
 ## 8. Platform administration and support access
 
@@ -371,6 +411,9 @@ offboarding must have deterministic lifecycle behavior and tests.
 - TASK-172: assignment-scoped grants, scope targets and expiry — done; migration 0086,
   assignment service/API, active predicate and role-scope dual-read are implemented
 - TASK-173: centralized decision service, explicit deny semantics and safe explanation
+  — in progress; migration 0087, central evaluator, override lifecycle, safe reason
+  contract and audited diagnostic endpoint are implemented, while strict approval
+  authority unification and broader resource/policy context remain open
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation
 - TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions
 

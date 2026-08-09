@@ -1,5 +1,5 @@
 import {
-  and, asc, desc, eq, gte, inArray, isNull, lte, or,
+  and, asc, desc, eq, gte, isNull, lte, or,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
@@ -14,13 +14,12 @@ import {
   approvalPolicyStep,
   approvalPolicyVersion,
   employee,
-  role,
-  rolePermission,
   userCompanyRole,
 } from '../../data/schema';
 import { deliverNotificationWithin } from '../account/notification';
 import { fixedUnits } from '../inventory/decimal';
-import { isTenantPermission, permissionCandidates } from '../../auth/permissionRegistry';
+import { isTenantPermission } from '../../auth/permissionRegistry';
+import { authorizeWithin } from '../../auth/authorization';
 import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 
 export class ApprovalWorkflowError extends Error {
@@ -372,37 +371,12 @@ async function hasPermissionWithin(
   permissionKey: string,
   now = new Date(),
 ): Promise<boolean> {
-  const candidates = permissionCandidates(permissionKey);
-  if (!candidates.length) return false;
-  const [superadmin] = await exec.select({ userId: userCompanyRole.userId }).from(userCompanyRole)
-    .innerJoin(role, and(
-      eq(role.roleId, userCompanyRole.roleId),
-      eq(role.masterFn, scope.masterFn),
-    ))
-    .where(and(
-      eq(userCompanyRole.userId, userId),
-      eq(userCompanyRole.companyFn, scope.companyFn),
-      eq(role.isSuperadmin, true),
-      activeRoleAssignmentCondition(now),
-    )).limit(1);
-  if (superadmin) return true;
-  const [grant] = await exec.select({ allowed: rolePermission.allowed }).from(userCompanyRole)
-    .innerJoin(role, and(
-      eq(role.roleId, userCompanyRole.roleId),
-      eq(role.masterFn, scope.masterFn),
-    ))
-    .innerJoin(rolePermission, and(
-      eq(rolePermission.roleId, userCompanyRole.roleId),
-      eq(rolePermission.masterFn, scope.masterFn),
-    ))
-    .where(and(
-      eq(userCompanyRole.userId, userId),
-      eq(userCompanyRole.companyFn, scope.companyFn),
-      inArray(rolePermission.permissionKey, candidates),
-      eq(rolePermission.allowed, true),
-      activeRoleAssignmentCondition(now),
-    )).limit(1);
-  return grant?.allowed === true;
+  return (await authorizeWithin(
+    exec,
+    { userId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+    permissionKey,
+    { now },
+  )).allowed;
 }
 
 async function usersWithPermissionWithin(
@@ -411,40 +385,31 @@ async function usersWithPermissionWithin(
   permissionKey: string,
   now = new Date(),
 ): Promise<number[]> {
-  const candidates = permissionCandidates(permissionKey);
-  if (!candidates.length) return [];
-  const rows = await exec.select({
-    userId: userCompanyRole.userId,
-    superadmin: role.isSuperadmin,
-    permissionKey: rolePermission.permissionKey,
-    allowed: rolePermission.allowed,
-  }).from(userCompanyRole)
-    .innerJoin(role, and(
-      eq(role.roleId, userCompanyRole.roleId),
-      eq(role.masterFn, scope.masterFn),
-    ))
-    .leftJoin(rolePermission, and(
-      eq(rolePermission.roleId, userCompanyRole.roleId),
-      eq(rolePermission.masterFn, scope.masterFn),
-      inArray(rolePermission.permissionKey, candidates),
-    ))
+  const rows = await exec.select({ userId: userCompanyRole.userId })
+    .from(userCompanyRole)
     .where(and(
       eq(userCompanyRole.companyFn, scope.companyFn),
       activeRoleAssignmentCondition(now),
     ));
-  return [...new Set(rows
-    .filter((row) => row.superadmin || row.allowed === true)
-    .map((row) => row.userId))];
+  const userIds = [...new Set(rows.map((row) => row.userId))];
+  const authorized: number[] = [];
+  for (const userId of userIds) {
+    if (await hasPermissionWithin(exec, scope, userId, permissionKey, now)) {
+      authorized.push(userId);
+    }
+  }
+  return authorized;
 }
 
 async function authorityRecipients(
   exec: DB,
   scope: Scope,
   authority: ResolvedAuthority,
+  now = new Date(),
 ): Promise<number[]> {
   if (authority.type === 'employee') return authority.userId ? [authority.userId] : [];
   return authority.permissionKey
-    ? usersWithPermissionWithin(exec, scope, authority.permissionKey)
+    ? usersWithPermissionWithin(exec, scope, authority.permissionKey, now)
     : [];
 }
 

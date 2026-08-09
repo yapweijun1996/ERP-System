@@ -7,11 +7,13 @@ Two independent deploy targets from one repo:
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
 Current schema boundary: migration
-`0086_youthful_mac_gargan` (87 journal entries, 243 generated tables). Migrations
+`0087_pink_shadowcat` (88 journal entries, 244 generated tables). Migrations
 0084–0085 add the separate platform support control plane and exact master/company
 boundary; migration 0086 adds assignment validity/provenance and assignment-owned
-scope rows with a compatibility backfill. Application-only release does not apply
-migrations automatically.
+scope rows with a compatibility backfill; migration 0087 adds tenant-scoped reasoned
+user permission overrides and explicit deny precedence. Application-only release does
+not apply migrations automatically. Production RLS includes the new override table;
+the application central evaluator remains authoritative for decision semantics.
 
 ---
 
