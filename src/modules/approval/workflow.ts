@@ -1,5 +1,5 @@
 import {
-  and, asc, desc, eq, gte, isNull, lte, or,
+  and, asc, desc, eq, gte, inArray, isNull, lte, or,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
@@ -20,6 +20,7 @@ import {
 } from '../../data/schema';
 import { deliverNotificationWithin } from '../account/notification';
 import { fixedUnits } from '../inventory/decimal';
+import { isTenantPermission, permissionCandidates } from '../../auth/permissionRegistry';
 
 export class ApprovalWorkflowError extends Error {
   constructor(
@@ -221,6 +222,13 @@ async function managerAuthority(
 }
 
 function permissionAuthority(permissionKey: string): ResolvedAuthority {
+  if (!isTenantPermission(permissionKey)) {
+    throw new ApprovalWorkflowError(
+      'approval_permission_unknown',
+      'The approval permission is not registered in the tenant permission catalog.',
+      409,
+    );
+  }
   return {
     type: 'permission',
     employeeId: null,
@@ -362,6 +370,8 @@ async function hasPermissionWithin(
   userId: number,
   permissionKey: string,
 ): Promise<boolean> {
+  const candidates = permissionCandidates(permissionKey);
+  if (!candidates.length) return false;
   const [superadmin] = await exec.select({ userId: userCompanyRole.userId }).from(userCompanyRole)
     .innerJoin(role, and(
       eq(role.roleId, userCompanyRole.roleId),
@@ -385,7 +395,7 @@ async function hasPermissionWithin(
     .where(and(
       eq(userCompanyRole.userId, userId),
       eq(userCompanyRole.companyFn, scope.companyFn),
-      eq(rolePermission.permissionKey, permissionKey),
+      inArray(rolePermission.permissionKey, candidates),
       eq(rolePermission.allowed, true),
     )).limit(1);
   return grant?.allowed === true;
@@ -396,6 +406,8 @@ async function usersWithPermissionWithin(
   scope: Scope,
   permissionKey: string,
 ): Promise<number[]> {
+  const candidates = permissionCandidates(permissionKey);
+  if (!candidates.length) return [];
   const rows = await exec.select({
     userId: userCompanyRole.userId,
     superadmin: role.isSuperadmin,
@@ -409,7 +421,7 @@ async function usersWithPermissionWithin(
     .leftJoin(rolePermission, and(
       eq(rolePermission.roleId, userCompanyRole.roleId),
       eq(rolePermission.masterFn, scope.masterFn),
-      eq(rolePermission.permissionKey, permissionKey),
+      inArray(rolePermission.permissionKey, candidates),
     ))
     .where(eq(userCompanyRole.companyFn, scope.companyFn));
   return [...new Set(rows

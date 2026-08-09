@@ -27,6 +27,7 @@
     "worker": "tsx src/worker.ts",
     "seed": "tsx src/seed.ts",
     "check:drift": "node scripts/check-drift.mjs",
+    "check:permissions": "tsx scripts/check-permissions.ts",
     "smoke": "node scripts/smoke.mjs",
     "audit:screens": "node scripts/audit-screens.mjs",
     "audit:i18n": "node scripts/audit-i18n.mjs --browser",

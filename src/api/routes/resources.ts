@@ -15,6 +15,7 @@ import {
   getResource,
   isKnownResource,
   listResource,
+  createPermissionForResource,
   readPermissionForResource,
   resourceDefinitionFor,
 } from '../resources';
@@ -134,9 +135,8 @@ export function createResourceRouter(db: DB): Router {
     };
     try {
       const result = await withTenantTransaction(db, scope, async (tx) => {
-        const moduleKey = resource.split('/')[0] === 'assets' ? 'asset' : resource.split('/')[0];
         if (!await hasAnyPermission(tx, session, [
-          `${moduleKey}.create`,
+          createPermissionForResource(resource),
           createDefinition.permission,
         ])) {
           throw new ActionDispatchError(403, 'permission_denied', 'You cannot create this ERP resource.');

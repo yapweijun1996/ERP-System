@@ -5,7 +5,7 @@ implementation. It is not the final platform-scale authorization design. Current
 compatibility facts and the EPIC-062 migration target are in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md); in particular,
 current scopes are role-level and current tenant Superadmin remains a bypass until
-TASK-171–175 are complete. TASK-170 now provides a separate platform support control plane;
+TASK-172–175 are complete. TASK-170 now provides a separate platform support control plane;
 the employee-workspace convenience below remains tenant-scoped and is not platform
 support access.
 

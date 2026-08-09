@@ -1,7 +1,8 @@
 # ERP Role & Permission Architecture
 
-Status: **Proposed target architecture with TASK-170 platform-support foundation;
-current implementation and migration gaps are normative below**
+Status: **Proposed target architecture with TASK-170 platform-support and TASK-171
+permission-registry foundations; current implementation and migration gaps are
+normative below**
 Reviewed: **2026-08-09**
 Scope: platform authorization, tenant/company roles, permissions, data scope,
 approval authority, support access and audit
@@ -88,17 +89,30 @@ The current code already implements:
 - master/optional-company support targets, 24-hour maximum grants, read-only or explicit
   restricted-write/break-glass modes, default sensitive-field denial, and audited grant
   lifecycle/decision events.
+- an application-owned permission registry (TASK-171) with 299 static definitions:
+  157 tenant compatibility entries and 142 canonical entries, including a distinct
+  platform permission domain;
+- exact canonical route projections registered for 116 resources, 62 actions and 5
+  update contracts. Ordinary role evaluation and approval authority resolution use
+  explicit compatibility candidates and reject unknown requests; platform-domain
+  tenant requests are rejected before the current tenant Superadmin bypass;
+- role editing/template cloning, leave approval configuration and expense extra-approval
+  configuration reject unregistered tenant permission codes, and
+  `npm run check:permissions` audits source literals, templates, routes and actions.
 
 The following current behaviors are compatibility facts, not the final architecture:
 
 - A tenant-local role with `role.is_superadmin=true` bypasses `role_permission`.
 - Resource scope is stored on the role (`role_resource_scope`), not on an individual
   user-role assignment.
-- Permission keys mix broad `module.action` and resource-specific forms.
+- Existing role data still stores broad compatibility keys alongside canonical projections;
+  the registry maps them explicitly but the expand-phase data migration and runtime
+  compatibility telemetry are not complete.
 - `role_permission.allowed=false` is a disabled grant, not an explicit deny that wins
   over another role's allow.
 - Unknown module keys currently pass the module gate. Registered resources still have
-  permission checks, but this is not the target fail-closed registry behavior.
+  permission checks, but this is not the target fail-closed module/resource cache
+  behavior. No database foreign key or authorization-version cache is claimed yet.
 - Employee-workspace impersonation is company-bounded and audited, but it is not a
   platform support-access grant.
 - Platform principal and session issuance is intentionally out-of-band; there is no
@@ -183,6 +197,25 @@ Tenants may create roles, but may not invent permission codes. Every protected r
 command and resource action must map to a registered permission, and CI must reject an
 unknown or unmapped permission. Broad compatibility keys such as `sales.write` require
 an explicit migration and removal date; they must not permanently override finer keys.
+
+### TASK-171 implementation boundary
+
+The current application registry is split into two layers:
+
+- `src/auth/permissionKeys.ts` owns the dependency-free tenant compatibility constants;
+- `src/auth/permissionRegistry.ts` owns canonical definitions, compatibility mappings,
+  telemetry keys, removal-gate metadata and the separate platform domain;
+- `src/api/resources.ts` registers canonical route projections only from the application
+  resource allowlist, and `src/api/actions.ts` exposes action metadata for the CI audit;
+- `src/auth/permissions.ts` resolves canonical requests to explicit stored-key candidates,
+  so existing broad grants continue to work during expand without accepting arbitrary
+  strings. Unknown candidates return no grant.
+
+`npm run check:permissions` currently verifies 299 static registry definitions, 116
+resource contracts, 62 action contracts and 5 update contracts. This is an application
+registry and compatibility layer, not yet a database permission table, role-assignment
+migration, runtime usage telemetry system or centralized authorization decision service.
+Those boundaries remain TASK-172–175 work.
 
 ## 6. Scope and resource ownership
 
@@ -323,7 +356,9 @@ offboarding must have deterministic lifecycle behavior and tests.
 - TASK-169: current/target architecture and documentation alignment — done
 - TASK-170: platform principal and time-bounded support-access domain — done; migration
   0084/0085 and domain/API adversarial tests are green
-- TASK-171: canonical permission registry and compatibility-key migration
+- TASK-171: canonical permission registry and compatibility-key migration — done;
+  application registry/route CI and compatibility aliases are in place, while the
+  database expand/cutover remains part of the later migration
 - TASK-172: assignment-scoped grants, scope targets and expiry
 - TASK-173: centralized decision service, explicit deny semantics and safe explanation
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation

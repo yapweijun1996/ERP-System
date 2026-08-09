@@ -7,7 +7,7 @@ an epic-level milestone lands.
 ## 2026-08-09 source-of-truth synchronization
 
 The current worktree is at migration 0085: the Drizzle journal contains **86
-migrations** and generated canonical SQL contains **242 tables**. TASK-161–170 now
+migrations** and generated canonical SQL contains **242 tables**. TASK-161–171 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
@@ -20,15 +20,22 @@ Allow union, role-level `self/team/department/company` scopes and tenant-bounded
 session/role and reasoned support-grant control plane: grants are bounded to a master
 and optional company, expire within 24 hours, default-deny sensitive fields, audit
 allow/deny/revoke events and never proxy customer data by themselves. Principal/session
-issuance remains an out-of-band deployment/SSO bootstrap boundary. EPIC-062/TASK-171–175
-track the remaining canonical permission, assignment-scope, centralized-decision,
-fail-closed registry/cache and explicit Company Owner migration. See
+issuance remains an out-of-band deployment/SSO bootstrap boundary. TASK-171 now adds
+an application-owned tenant permission registry with 299 static definitions (157
+compatibility and 142 canonical), explicit alias metadata, canonical projections for
+116 resources and 62 actions, tenant/platform-domain separation and a CI gate. Ordinary
+role checks fail closed for unknown permission candidates, while platform-domain keys
+are rejected before the current tenant Superadmin bypass. Existing text rows remain
+compatible during expand. EPIC-062/TASK-172–175 track the remaining
+assignment-scope, centralized-decision, fail-closed module/cache and explicit Company
+Owner migration. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
-Current verification on 2026-08-09: root/Web typecheck, ESLint, generated Demo schema
-and 242-table drift checks pass. The complete Vitest set is green when run in three
-resource-safe shards covering all 151 files: 606 tests passed, one intentional skip and
-zero failures. TASK-168 reconciled the generated Demo Manager scopes with the current
+Current verification on 2026-08-09: root/Web typecheck, ESLint, generated Demo schema,
+242-table drift and permission-registry checks pass. The complete Vitest set is green
+when run in three resource-safe shards covering all 152 files: 610 tests passed, one
+intentional skip and zero failures. TASK-168 reconciled the generated Demo Manager
+scopes with the current
 authoritative catalog. Generic sales/CRM/inventory/warehouse/project/service collections
 are company-scoped because their rows do not carry actor ownership; actor-derived My Work
 and Team Calendar routes still enforce direct/granted-tree hierarchy boundaries.
@@ -314,7 +321,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. The sidebar does not show unexplained static counters; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — every route in `SCREENS` (125), desktop + 375px | ✅ Demo/API behavior | Screen and five-language audits pass at 125 Canonical / 0 Preview. Permission-aware navigation matches effective capabilities; every unlinked My Work route now performs one handled context preflight, zero downstream reads and renders its localized empty state. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green in complete shards | 2026-08-09: three resource-safe Vitest shards cover all 149 files; 599 passed, one expected skip, zero failed (600 tests total). `demoShowcasePack.test.ts`, permission/module tests and authenticated integration coverage agree with the authoritative role catalog and Demo v15 pack. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green in complete shards | 2026-08-09: three resource-safe Vitest shards cover all 152 files; 610 passed, one expected skip, zero failed (611 tests total). The permission registry, resource/action contracts, Demo v15 pack, permission/module tests and authenticated integration coverage agree with the current application catalog. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -1617,14 +1624,14 @@ v259.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 169 tasks
+- Done: 170 tasks
 - In progress: none
-- Todo: TASK-171–175 (5)
+- Todo: TASK-172–175 (4)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 125 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
-  complete documentation baseline, TASK-170's platform-support foundation, and five
-  pending implementation tasks.
+  complete documentation baseline, TASK-170's platform-support foundation,
+  TASK-171's canonical permission registry and four pending implementation tasks.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

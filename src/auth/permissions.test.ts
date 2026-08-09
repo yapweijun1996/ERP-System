@@ -6,6 +6,7 @@ import {
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { hasPermission } from './permissions';
+import '../api/resources';
 
 describe('server-side RBAC', () => {
   it('grants declared viewer permissions and denies undeclared writes', async () => {
@@ -23,6 +24,8 @@ describe('server-side RBAC', () => {
       activeCompanyFn: 'C-SG',
     };
     expect(await hasPermission(db, session, 'inventory.read')).toBe(true);
+    expect(await hasPermission(db, session, 'inventory.products.view')).toBe(true);
+    expect(await hasPermission(db, session, 'inventory.products.adjust')).toBe(false);
     expect(await hasPermission(db, session, 'inventory.adjust')).toBe(false);
   });
 
@@ -41,6 +44,9 @@ describe('server-side RBAC', () => {
     expect(await hasPermission(db, {
       ...admin, masterFn: 'OTHER-MASTER', activeCompanyFn: 'C-SG',
     }, 'anything.write')).toBe(false);
+    expect(await hasPermission(db, {
+      ...admin, masterFn: 'M1', activeCompanyFn: 'C-SG',
+    }, 'platform.support.grant')).toBe(false);
   });
 
   it('unions permissions from every role in the active company only', async () => {

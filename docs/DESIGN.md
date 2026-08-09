@@ -303,7 +303,8 @@ retention workflows and expense linkage under TASK-119–135.
 ## 8. Testing design
 
 - Required local gates are root/web typecheck, ESLint, Vitest, `npm run demo`, generated
-  schema/drift checks, Demo and API builds, and the live-route desktop/375px audit.
+  schema/drift checks, `npm run check:permissions`, Demo and API builds, and the
+  live-route desktop/375px audit.
 - CI adds PostgreSQL 16 migration/RLS/integration coverage and the same schema and route
   gates. Stateful browser fixtures ensure detail routes are not skipped for lack of
   context.
@@ -323,8 +324,12 @@ Current runtime facts:
 - `self/team/department/company` visibility is stored per role/resource and the widest
   matching role scope is used;
 - `is_superadmin` is a tenant/company-bounded full-permission bypass;
-- permission keys are a compatibility mix of broad module actions and resource-specific
-  actions;
+- permission storage remains compatibility-first, but TASK-171 now supplies an
+  application-owned registry with 299 static definitions (157 compatibility and 142
+  canonical, including a separate platform domain). Resource/action projections are
+  registered for 116 resources, 62 actions and 5 update contracts; ordinary role
+  checks resolve explicit compatibility candidates and deny unknown keys, while
+  platform-domain keys are rejected before the current tenant Superadmin bypass;
 - module activation, tenant scope, permission, ownership and workflow authority are
   enforced by the backend for current Canonical operations;
 - versioned approval policy/instance/decision/delegation tables remain the approval
@@ -339,11 +344,13 @@ tenant cookie; platform principal/session issuance is out-of-band, and evaluatin
 grant does not automatically expose or proxy business records. The employee workspace
 continues to be a tenant Superadmin convenience and is a separate authority path.
 
-Remaining target work under EPIC-062 introduces the canonical `module.resource.action`
-registry, assignment-scoped validity and targets, one deterministic authorization
-decision service, fail-closed module/resource registration, authorization-version
-invalidation and explicit Company Owner permissions. Until those tasks complete, code
-behavior above is authoritative and target behavior must not be claimed as delivered.
+Remaining target work under EPIC-062 introduces assignment-scoped validity and targets,
+one deterministic authorization decision service, fail-closed module/resource behavior,
+authorization-version invalidation and explicit Company Owner permissions. Until those
+tasks complete, code behavior above is authoritative and target behavior must not be
+claimed as delivered. Broad role_permission rows remain a text compatibility store;
+TASK-171 does not claim a database migration, runtime compatibility telemetry or cache
+versioning.
 
 ## 10. August 2026 implementation additions
 

@@ -95,10 +95,15 @@ current/target record. The following are implemented compatibility facts:
 - resource scopes are currently stored on roles and union to the widest matching
   `self/team/department/company` value;
 - tenant-local `is_superadmin` bypasses role-permission checks inside the active company;
-- permission keys are not yet uniformly `module.resource.action`;
+- permission storage still contains broad compatibility keys, but TASK-171 now adds an
+  application-owned registry with explicit canonical mappings; route/resource/action
+  projections are registered and unknown or platform-domain keys cannot be used as
+  tenant role or approval permissions;
 - an `allowed=false` role-permission row is not an explicit deny override;
 - unknown module keys currently pass the module gate and therefore remain a migration
-  risk even though registered resources retain their own authorization checks.
+  risk even though registered resources retain their own authorization checks. Resource
+  registration is currently a runtime application allowlist; no database FK or
+  authorization-version cache is claimed yet.
 
 TASK-170 now separates platform/support authority. `platform_principal`, platform roles,
 hash-backed bearer/CSRF sessions and `support_access_grant` are outside tenant role
@@ -109,8 +114,8 @@ API routes reject tenant cookies, require platform CSRF for mutations and audit 
 creation, decisions and revocation. Principal/session issuance is out-of-band, and the
 evaluator is a decision/audit boundary rather than an automatic customer-data proxy.
 
-TASK-171–175 must introduce the canonical registry and assignment scopes, centralize
-deterministic deny-by-default decisions, invalidate stale authorization state and remove
+TASK-172–175 must introduce assignment scopes, centralize deterministic deny-by-default
+decisions, invalidate stale authorization state and remove
 the tenant Superadmin bypass. No platform operator has been granted permanent implicit
 customer-data authority by documenting or implementing TASK-170.
 

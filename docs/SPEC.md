@@ -254,10 +254,13 @@ target an exact master and optional company, require reason and ticket, are
 time-bounded/revocable, default-deny sensitive fields and audit every create/use/deny/
 revoke event. Principal/session issuance remains an out-of-band deployment/SSO bootstrap
 responsibility, and grant evaluation only returns a decision; it does not automatically
-proxy tenant business data. The following approved requirements remain pending under
-TASK-171–175:
+proxy tenant business data. TASK-171 now supplies the first approved registry slice.
+The following approved requirements remain pending under TASK-172–175:
 
-- permission identifiers converge on application-owned `module.resource.action`;
+- route/resource/action declarations are now checked against an application-owned
+  registry of 299 static definitions, with canonical projections for 116 resources,
+  62 actions and 5 updates; existing broad keys remain explicit compatibility aliases
+  until a later data migration and cutover;
 - scope targets and validity belong to role assignments;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
 - one decision service defines explicit deny, scope and policy precedence;

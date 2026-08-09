@@ -6,7 +6,9 @@ in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). In diagra
 interchangeable. Platform operators use the separate `platform_principal` domain
 implemented by TASK-170 and are never modeled as customer-company employees by
 implication. Its support grant is a bounded authorization decision, not an implicit
-customer-data proxy.
+customer-data proxy. TASK-171 adds the application-owned tenant permission registry
+and canonical resource/action projections; it does not yet change the role tables or
+centralize every authorization decision.
 
 ## 1. Goal
 

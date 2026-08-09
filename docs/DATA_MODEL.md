@@ -131,8 +131,13 @@ A user belongs to one `master_fn` but can be granted **many companies** through
 `user_company_role`. Current permissions union Allow rows; current
 `role_resource_scope` rows union to the widest `self/team/department/company` scope.
 `is_superadmin` is a tenant/company-bounded permission bypass in the current runtime,
-not a platform role and not the target Company Owner model. Full current/target rules
-are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
+not a platform role and not the target Company Owner model. `role_permission.permission_key`
+remains a text compatibility store: TASK-171 adds the application-owned registry in
+`src/auth/permissionRegistry.ts`, explicit canonical aliases and tenant/platform-domain
+separation without adding a database table or foreign key. The resource registry
+projects canonical permissions for 116 resources and 62 actions, while assignment
+scope, authorization versioning and Company Owner cutover remain later migrations.
+Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
 ## 8. Employee self-service, leave and expenses
@@ -204,7 +209,7 @@ are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > Demo leave coverage without a new table. TASK-160 adds `vision_base_url`,
 > `vision_model` and `vision_credential_required` columns to
 > `document_processing_policy` (migration 0075's `openai_compatible` BYOK vision
-> provider) without a new table. TASK-161–170 synchronize the subsequent operational,
+> provider) without a new table. TASK-161–171 synchronize the subsequent operational,
 > editable-record, Sales, session, HR Calendar, Staff Calendar and authorization
 > documentation work. The current boundary is migration 0085: **86 journaled
 > migrations and 242 generated tables**. Each subsequent schema capability must still

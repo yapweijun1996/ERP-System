@@ -315,6 +315,15 @@ GitHub setup:
 
 No PAT is required for same-repository Pages deployment.
 
+### Authorization registry CI gate (TASK-171)
+
+Every release must run `npm run check:permissions` before building or deploying. The
+gate validates application permission literals, role templates, compatibility mappings,
+resource/action metadata and canonical route projections. It currently checks 299
+static registry definitions, 116 resources, 62 actions and 5 update contracts. This
+gate does not replace the later database expand/cutover, authorization-version cache or
+production platform identity bootstrap.
+
 ### CI/CD — deploy to a *different* public repo
 
 The demo is pushed to a separate public project for hosting.

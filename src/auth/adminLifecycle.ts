@@ -25,11 +25,10 @@ import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import {
-  PERMISSION_CATALOG, ROLE_TEMPLATES, roleTemplate, type DataScope,
+  ROLE_TEMPLATES, roleTemplate, type DataScope,
 } from './accessCatalog';
+import { isTenantPermission } from './permissionRegistry';
 import type { SessionData } from './session';
-
-const KNOWN_PERMISSION_KEYS = new Set<string>(PERMISSION_CATALOG);
 
 export async function setUserActiveWithin(
   exec: DB,
@@ -340,7 +339,7 @@ export async function setRolePermissionWithin(
   requestId: string,
   now = new Date(),
 ): Promise<{ roleId: number; permissionKey: string; allowed: boolean }> {
-  if (!KNOWN_PERMISSION_KEYS.has(permissionKey)) {
+  if (!isTenantPermission(permissionKey)) {
     throw new AuthLifecycleError(400, 'invalid_permission_key', 'Unknown permission key.');
   }
   const [targetRole] = await exec.select({ roleId: role.roleId, isSuperadmin: role.isSuperadmin })
@@ -418,6 +417,14 @@ export async function cloneRoleTemplateWithin(
   const template = roleTemplate(templateKey);
   if (!template) {
     throw new AuthLifecycleError(400, 'invalid_role_template', 'Unknown role template.');
+  }
+  const invalidPermission = template.permissions.find((permissionKey) => !isTenantPermission(permissionKey));
+  if (invalidPermission) {
+    throw new AuthLifecycleError(
+      500,
+      'invalid_role_template',
+      `Role template '${template.key}' contains an unregistered permission '${invalidPermission}'.`,
+    );
   }
   const name = nameInput?.trim() || template.name;
   const [existing] = await exec.select({ roleId: role.roleId }).from(role).where(and(

@@ -75,7 +75,7 @@ export async function dispatchAction(
   };
   return withTenantTransaction(context.db, scope, async (tx) => {
     if (!await hasAnyPermission(tx, context.session, [
-      fineGrainedActionPermission(context.resource, context.action),
+      fineGrainedActionPermission(context.resource, context.action, definition.permission),
       definition.permission,
     ])) {
       throw new ActionDispatchError(403, 'permission_denied', 'You cannot perform this action.');

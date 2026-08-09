@@ -966,3 +966,20 @@ export function actionDefinitionFor(
 ): ActionDefinition | null {
   return ACTIONS[`${resource}/${action}`] ?? null;
 }
+
+export interface ActionPermissionContract {
+  resource: string;
+  action: string;
+  permission: string;
+}
+
+export function listActionPermissionContracts(): readonly ActionPermissionContract[] {
+  return Object.freeze(Object.entries(ACTIONS).map(([key, definition]) => {
+    const separator = key.lastIndexOf('/');
+    return {
+      resource: key.slice(0, separator),
+      action: key.slice(separator + 1),
+      permission: definition.permission,
+    };
+  }));
+}

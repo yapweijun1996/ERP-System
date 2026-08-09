@@ -44,6 +44,7 @@ import {
   startApprovalWithin,
 } from '../approval/workflow';
 import { postApprovedExpenseLineWithin } from './postings';
+import { isTenantPermission } from '../../auth/permissionRegistry';
 
 export class ExpenseControlError extends Error {
   constructor(
@@ -146,6 +147,13 @@ export async function configureExpenseControlPolicyVersionWithin(
     throw new ExpenseControlError(
       'expense_control_policy_invalid',
       'Expense control policy configuration is invalid.',
+      422,
+    );
+  }
+  if (extraPermission && !isTenantPermission(extraPermission)) {
+    throw new ExpenseControlError(
+      'expense_control_permission_unknown',
+      'The budget extra-approval permission is not registered by the application.',
       422,
     );
   }

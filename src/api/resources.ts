@@ -1,5 +1,10 @@
 import { and, asc, eq, gt, gte, inArray, lte, sql } from 'drizzle-orm';
 import type { DataScope } from '../auth/accessCatalog';
+import {
+  canonicalPermissionForAction,
+  canonicalPermissionForResource,
+  registerRoutePermission,
+} from '../auth/permissionRegistry';
 import type { DB } from '../data/db';
 import {
   account,
@@ -619,6 +624,23 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
 };
 
+// The resource registry is the only runtime registration point for
+// resource-specific canonical permissions. This keeps a tenant role editor
+// from treating an arbitrary three-segment string as a valid permission.
+for (const [resource, definition] of Object.entries(RESOURCE_DEFINITIONS)) {
+  registerRoutePermission(canonicalPermissionForResource(resource, 'view', definition.readPermission));
+  if (definition.createPermission) {
+    registerRoutePermission(canonicalPermissionForResource(resource, 'create', definition.createPermission));
+  }
+  if (definition.updatePermission) {
+    registerRoutePermission(canonicalPermissionForResource(resource, 'edit', definition.updatePermission));
+  }
+  for (const action of definition.allowedActions) {
+    registerRoutePermission(canonicalPermissionForResource(resource, action, definition.readPermission));
+    registerRoutePermission(canonicalPermissionForAction(resource, action, definition.readPermission));
+  }
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any -- mirrors
    ResourceDefinition's own any usage above; this factory constructs one. */
 function resource(
@@ -906,9 +928,72 @@ export function isKnownResource(resource: string): boolean {
 }
 
 export function readPermissionForResource(resource: string): string {
-  return definitionFor(resource).readPermission;
+  const definition = definitionFor(resource);
+  return canonicalPermissionForResource(resource, 'view', definition.readPermission);
+}
+
+export function createPermissionForResource(resource: string): string {
+  const definition = definitionFor(resource);
+  if (!definition.createPermission) throw new Error(`Resource '${resource}' does not support create.`);
+  return canonicalPermissionForResource(resource, 'create', definition.createPermission);
+}
+
+export function updatePermissionForResource(resource: string): string {
+  const definition = definitionFor(resource);
+  if (!definition.updatePermission) {
+    throw new Error(`Resource '${resource}' does not support update.`);
+  }
+  return canonicalPermissionForResource(resource, 'edit', definition.updatePermission ?? undefined);
+}
+
+export function actionPermissionForResource(resource: string, action: string): string {
+  const definition = definitionFor(resource);
+  if (!definition.allowedActions.includes(action)) {
+    throw new Error(`Action '${action}' is not registered for '${resource}'.`);
+  }
+  return canonicalPermissionForResource(resource, action, definition.readPermission);
 }
 
 export function resourceDefinitionFor(resource: string): ResourceDefinition {
   return definitionFor(resource);
+}
+
+/**
+ * Read-only contract view used by permission-matrix audits and diagnostics.
+ * Keep the route registry private while exposing the permission-bearing
+ * surface in a stable, non-schema form for automated checks.
+ */
+export interface ResourcePermissionContract {
+  resource: string;
+  readPermission: string;
+  createPermission: string | null;
+  updatePermission: string | null;
+  allowedActions: readonly string[];
+  canonicalReadPermission: string;
+  canonicalCreatePermission: string | null;
+  canonicalUpdatePermission: string | null;
+  canonicalActionPermissions: Readonly<Record<string, string>>;
+}
+
+export function listResourcePermissionContracts(): readonly ResourcePermissionContract[] {
+  return Object.freeze(Object.entries(RESOURCE_DEFINITIONS).map(([resource, definition]) => ({
+    resource,
+    readPermission: definition.readPermission,
+    createPermission: definition.createPermission,
+    updatePermission: definition.updatePermission,
+    allowedActions: [...definition.allowedActions],
+    canonicalReadPermission: canonicalPermissionForResource(resource, 'view', definition.readPermission),
+    canonicalCreatePermission: definition.createPermission
+      ? canonicalPermissionForResource(resource, 'create', definition.createPermission)
+      : null,
+    canonicalUpdatePermission: definition.updatePermission
+      ? canonicalPermissionForResource(resource, 'edit', definition.updatePermission ?? undefined)
+      : null,
+    canonicalActionPermissions: Object.freeze(Object.fromEntries(
+      definition.allowedActions.map((action) => [
+        action,
+        canonicalPermissionForResource(resource, action, definition.readPermission),
+      ]),
+    )),
+  })));
 }

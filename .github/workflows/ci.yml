@@ -62,6 +62,9 @@ jobs:
       - name: Check schema drift (all Drizzle migrations vs generated PGlite schema)
         run: npm run check:drift
 
+      - name: Check application permission registry and route contracts
+        run: npm run check:permissions
+
       - name: Run unit tests (confirmOrder, issueStock, effective-dated tax)
         run: npm test
 

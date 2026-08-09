@@ -1,23 +1,17 @@
-import { PERMISSIONS } from './permissions';
+import { PERMISSIONS } from './permissionKeys';
+import {
+  PERMISSION_ACTIONS,
+  PERMISSION_CATALOG,
+  canonicalPermissionForAction,
+} from './permissionRegistry';
+
+export { ACTION_PERMISSION_KEYS, PERMISSION_CATALOG } from './permissionRegistry';
 
 export type DataScope = 'self' | 'team' | 'department' | 'company';
 export type RoleTemplateKey =
   | 'superadmin' | 'company_admin' | 'manager' | 'sales' | 'buyer'
   | 'warehouse' | 'production' | 'finance_preparer' | 'finance_checker'
   | 'hr' | 'service' | 'viewer';
-
-const ACTION_MODULES = [
-  'sales', 'purchasing', 'crm', 'inventory', 'warehouse', 'manufacturing',
-  'quality', 'finance', 'hr', 'payroll', 'project', 'service', 'asset',
-] as const;
-const ACTIONS = ['create', 'edit', 'approve', 'post', 'pay', 'export'] as const;
-
-export const ACTION_PERMISSION_KEYS = ACTION_MODULES.flatMap((moduleKey) =>
-  ACTIONS.map((action) => `${moduleKey}.${action}`));
-export const PERMISSION_CATALOG = [
-  ...Object.values(PERMISSIONS),
-  ...ACTION_PERMISSION_KEYS,
-] as const;
 
 export interface RoleTemplate {
   key: RoleTemplateKey;
@@ -28,7 +22,7 @@ export interface RoleTemplate {
 }
 
 const read = (...modules: string[]) => modules.map((moduleKey) => `${moduleKey}.read`);
-const actions = (moduleKey: string, ...names: typeof ACTIONS[number][]) =>
+const actions = (moduleKey: string, ...names: typeof PERMISSION_ACTIONS[number][]) =>
   names.map((name) => `${moduleKey}.${name}`);
 const companyScopes = (...resources: string[]) =>
   Object.fromEntries(resources.map((resource) => [resource, 'company' as const]));
@@ -144,11 +138,10 @@ export function roleTemplate(key: string): RoleTemplate | undefined {
   return ROLE_TEMPLATES.find((template) => template.key === key);
 }
 
-export function fineGrainedActionPermission(resource: string, action: string): string {
-  const moduleKey = resource.split('/')[0] === 'assets' ? 'asset' : resource.split('/')[0];
-  if (/approve|reject|decide/.test(action)) return `${moduleKey}.approve`;
-  if (/export|download/.test(action)) return `${moduleKey}.export`;
-  if (/pay|release-payment/.test(action)) return `${moduleKey}.pay`;
-  if (/post|confirm|complete|release|reconcile/.test(action)) return `${moduleKey}.post`;
-  return `${moduleKey}.edit`;
+export function fineGrainedActionPermission(
+  resource: string,
+  action: string,
+  compatibilityCode?: string,
+): string {
+  return canonicalPermissionForAction(resource, action, compatibilityCode);
 }

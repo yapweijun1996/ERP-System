@@ -157,7 +157,9 @@ the tenant API.
 
 Current roles, multiple-role union, role-level scopes and tenant Superadmin behavior are
 documented as compatibility facts in
-[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). Remaining EPIC-062
-tasks will add assignment-scoped validity/targets, canonical permissions and explicit
-Company Owner permissions. Those target capabilities must not be inferred from the current
-`is_superadmin` column.
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). TASK-171 now adds
+the application-owned tenant permission registry, explicit compatibility mappings and
+platform/tenant domain separation without changing the shared role tables. Remaining
+EPIC-062 tasks will add assignment-scoped validity/targets, centralized decisions,
+authorization-version invalidation and explicit Company Owner permissions. Those target
+capabilities must not be inferred from the current `is_superadmin` column.

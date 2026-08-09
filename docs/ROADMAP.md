@@ -1012,8 +1012,10 @@ remains separately blocked under TASK-017.
 1. **Architecture alignment** (TASK-169 complete) records current compatibility facts
    and the target in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 2. **Principal and permission foundation** (TASK-170–171): TASK-170 is complete with a
-   separate platform/support control plane, bounded grants and audit; TASK-171 remains
-   for the canonical permission registry and compatibility-key migration.
+   separate platform/support control plane, bounded grants and audit. TASK-171 is also
+   complete: the application-owned registry has 299 static definitions, explicit
+   compatibility mappings/removal metadata, canonical projections for 116 resources
+   and 62 actions, and the `check:permissions` CI gate.
 3. **Assignment and decision model** (TASK-172–174) moves validity/scope to assignments,
    centralizes deterministic decisions and makes unknown/stale state fail closed.
 4. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,

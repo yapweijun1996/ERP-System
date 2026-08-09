@@ -1699,8 +1699,10 @@ Acceptance criteria:
       only safe notification content and never tenant/user identifiers. The notification
       model is independent of operational outbox delivery and append-only audit history.
 - [x] Demo/API use shared TypeScript list/read/dismiss commands. Authenticated actions
-      require explicit permissions, CSRF, idempotency and audit, while cross-user and
-      cross-company rows remain unavailable.
+      require the addressed user's notification-read permission, CSRF, idempotency and
+      audit, while cross-user and cross-company rows remain unavailable. A registered
+      destination is filtered against the recipient's current permission, linked
+      employee identity and company module state before it reaches the feed.
 - [x] The bell and five-language `notifications` workspace read the same canonical feed;
       read/dismiss state persists in the database, company switching reloads it, and no
       localStorage state, fake preference or sample fallback remains.
@@ -2281,10 +2283,22 @@ approval subsystem. Normative current/target behavior is in
       grants, default sensitive-field denial, immediate revoke and platform audit
       correlation. `/api/platform` rejects tenant cookies and uses platform CSRF. Identity
       and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
-      grant evaluation does not proxy customer data. The complete 151-file Vitest set
-      passes in three resource-safe shards: 606 passed, one expected skip, zero failures.
-- [ ] **TASK-171 — Introduce the canonical permission registry and compatibility-key
-      migration.**
+      grant evaluation does not proxy customer data. The current complete 152-file
+      Vitest set passes in three resource-safe shards: 610 passed, one expected skip,
+      zero failures.
+- [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
+      migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
+      (157 compatibility and 142 canonical, with platform permissions kept in a
+      separate domain). The resource registry registers canonical projections for
+      116 resources, 62 actions and 5 updates. Backend permission checks and approval
+      authority resolution use explicit candidates and fail closed for unknown keys;
+      platform-domain keys are rejected before the current tenant Superadmin bypass;
+      role/template and approval configuration paths validate
+      tenant permissions. `npm run check:permissions` passes. Existing text keys and
+      compatibility aliases remain during the expand phase; assignment scope, central
+      decisions, cache invalidation and Company Owner cutover remain TASK-172–175.
+      The complete 152-file Vitest regression passes in three resource-safe shards:
+      610 tests passed, one intentional skip and zero failures.
 - [ ] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
 - [ ] **TASK-173 — Centralize authorization decisions, explicit deny and safe
       explanation.**
