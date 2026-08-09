@@ -189,7 +189,9 @@ transition; neither introduces a generic approval instance/step. HR leave and ex
 decisions now bind permission checks to the locked current step and pass resolved
 resource/module/scope/policy context into the central evaluator. A manager-owned step
 cannot be covered by a broad HR permission; existing in-flight instances retain their
-snapshot without an implicit migration. Unknown module keys fail closed, while
-authorization-version invalidation, instance/step/resource/policy-bound delegation and
-explicit Company Owner permissions remain target work.
+snapshot without an implicit migration. Unknown business-module keys fail closed;
+authenticated `account/*` services are explicitly non-module-gated but still
+permission-protected. Authorization-version invalidation,
+instance/step/resource/policy-bound delegation and explicit Company Owner permissions
+remain target work.
 Those target capabilities must not be inferred from the current `is_superadmin` column.

@@ -112,9 +112,11 @@ export async function isModuleEnabled(
 }
 
 /** Generic-resource URL prefix (req.params.module in routes/resources.ts) -> the
- *  MODULE_KEYS entry that gates it. Prefixes whose resource name already matches
- *  the module key can rely on the fallback, but keeping active modules explicit
- *  makes this security boundary easy to audit. */
+ *  MODULE_KEYS entry that gates it. Account services are authenticated platform
+ *  services, not tenant business modules, so they are explicitly non-gated here;
+ *  their own permission checks remain authoritative. Prefixes whose resource name
+ *  already matches the module key can rely on the fallback, but keeping active
+ *  modules explicit makes this security boundary easy to audit. */
 const RESOURCE_PREFIX_TO_MODULE: Partial<Record<string, ModuleKey>> = {
   assets: 'asset',
   crm: 'crm',
@@ -128,7 +130,10 @@ const RESOURCE_PREFIX_TO_MODULE: Partial<Record<string, ModuleKey>> = {
   warehouse: 'warehouse',
 };
 
-export function moduleKeyForResourcePrefix(prefix: string): string {
+const UNGATED_RESOURCE_PREFIXES = new Set(['account']);
+
+export function moduleKeyForResourcePrefix(prefix: string): string | null {
+  if (UNGATED_RESOURCE_PREFIXES.has(prefix)) return null;
   return RESOURCE_PREFIX_TO_MODULE[prefix] ?? prefix;
 }
 

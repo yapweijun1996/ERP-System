@@ -2334,11 +2334,17 @@ approval subsystem. Normative current/target behavior is in
       resource/module/scope/policy context; policy-step snapshot mismatches and
       inactive named authorities fail closed. No HR permission takeover or implicit
       migration of older in-flight instances is allowed. The strict-step focused suite
-      passes 18/18; a clean full-suite rerun remains a release verification item.
+      passes 18/18. The latest full run completed with 622 passed, 8 failed and 1
+      skipped across 155 files; the account-service module-gate omission is fixed and
+      targeted notification/access-matrix/module coverage passes 15/15. Two Team
+      Calendar tests still use a Manager actor against the current seed's HR-permission
+      leave policy and require fixture alignment.
 - [~] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
-      authorization caches.** Unknown module keys now fail closed and payroll is in the
-      registered module set. Authorization-version invalidation, full resource/action
-      coverage gating and stale-session/direct-URL tests remain.
+      authorization caches.** Unknown business-module keys now fail closed, payroll is
+      in the registered module set, and authenticated `account/*` service routes are
+      explicitly non-module-gated while still permission-protected. Authorization-
+      version invalidation, full resource/action coverage gating and stale-session/
+      direct-URL tests remain.
 - [ ] **TASK-175 — Replace the tenant Superadmin bypass with explicit Company Owner
       permissions.** Depends on the completed TASK-173/TASK-174 decision, registry and
       cache boundaries; it must preserve last-owner recovery and tenant/platform

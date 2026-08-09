@@ -10,9 +10,12 @@ section for the path you are releasing. Deployment mechanics live in
       below on each PR — re-running locally is belt-and-braces for a release cut).
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — 154 passed files + 1 skipped file (155 total),
-      623 passed tests + 1 intentional skip (624 total) on 2026-08-10; the
-      PostgreSQL 16 proof needs `POSTGRES_URL`, or rely on CI's service-container run.
+- [ ] `npm test` — the 2026-08-10 full run completed with 151 passed files,
+      3 failed files and 1 skipped file (155 total): 622 passed, 8 failed and 1
+      skipped tests. The account-service module-gate omission is fixed and targeted
+      notification/access-matrix/module coverage passes 15/15; two Team Calendar
+      fixture/seed-policy failures still require alignment. The PostgreSQL 16 proof
+      needs `POSTGRES_URL`, or rely on CI's service-container run.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. With
       `POSTGRES_URL` it also proves cross-engine parity and the true-concurrency race;
       that PostgreSQL proof remains pending in this environment. The database must be
@@ -32,10 +35,11 @@ section for the path you are releasing. Deployment mechanics live in
       69 local five-language packs, and the browser matrix passes all 128 routes ×
       5 languages × 2 viewports with zero blocking findings. Business-record values
       remain outside the system-authored UI-resource boundary.
-- [ ] `npm run check:permissions` and `npm run audit:access-matrix` — the permission
-      registry check passes (299 codes; 116 resources; 62 actions; 5 updates), but the
-      access-matrix command currently stops during `build:demo` at the same Web
-      integration mismatch, so its full result must be rerun after reconciliation.
+- [x] `npm run check:permissions` and `npm run audit:access-matrix` — the permission
+      registry check passes (299 codes; 116 resources; 62 actions; 5 updates), and the
+      serial access-matrix audit passes (58 canonical route contracts × 12 role
+      templates; 128 registered screens fail closed). The first parallel build attempt
+      raced on shared `web/dist`; serial execution is the release evidence.
 - [x] `tasks/tasks.jsonl` statuses current; the task index and `docs/STATUS.md` were
       updated for the completed localization slice and current smoke gate.
 - [ ] No secrets in the diff or the bundle: no provider API keys, nothing

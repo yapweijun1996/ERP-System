@@ -81,6 +81,7 @@ describe('company module access control', () => {
   it('maps generic-resource URL prefixes to their gating module key', () => {
     expect(moduleKeyForResourcePrefix('assets')).toBe('asset');
     expect(moduleKeyForResourcePrefix('crm')).toBe('crm');
+    expect(moduleKeyForResourcePrefix('account')).toBeNull();
     expect(moduleKeyForResourcePrefix('some-future-resource')).toBe('some-future-resource');
   });
 

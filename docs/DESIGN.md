@@ -394,9 +394,11 @@ Current runtime facts:
   records every explanation. Override creation/revocation is reasoned and audited.
 - `src/auth/accessMatrix.ts` and the authenticated/browser matrix checks keep the
   canonical route, module, permission and API drill-in contract together. Unknown
-  module keys now fail closed and payroll is registered in `src/auth/moduleAccess.ts`;
-  authorization-version invalidation is not yet implemented, so the matrix remains a
-  regression foundation rather than proof that TASK-174 is complete.
+  business-module keys now fail closed and payroll is registered in
+  `src/auth/moduleAccess.ts`; authenticated `account/*` service routes are explicitly
+  non-module-gated but still require their own permissions. Authorization-version
+  invalidation is not yet implemented, so the matrix remains a regression foundation
+  rather than proof that TASK-174 is complete.
 
 TASK-170 now adds a separate platform control-plane domain: platform principals, static
 application-owned support roles, hash-backed bearer/CSRF sessions and auditable support

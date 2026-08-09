@@ -271,9 +271,10 @@ assignment migration, dual-read scope path, active-assignment predicate and assi
 API. TASK-173 now adds the central decision service, user-level explicit overrides,
 safe/audited explanations and strict current-step approval context for the generic leave
 and expense domains. The access matrix and authenticated/browser checks are a partial
-cross-layer regression contract. Unknown module keys now fail closed; authorization-
-version invalidation, deeper delegation binding and Company Owner cutover remain
-TASK-174–175.
+cross-layer regression contract. Unknown business-module keys now fail closed;
+authenticated `account/*` service routes are explicitly non-module-gated but remain
+tenant/session and permission guarded. Authorization-version invalidation, deeper
+delegation binding and Company Owner cutover remain TASK-174–175.
 
 ## 6. Scope and resource ownership
 
@@ -449,7 +450,8 @@ offboarding must have deterministic lifecycle behavior and tests.
   audited diagnostic endpoint and strict current-step/resource/module/policy context are
   implemented for the generic leave/expense approval domains
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation
-  — in progress; unknown module keys fail closed and payroll is registered, while
+  — in progress; unknown business-module keys fail closed, payroll is registered and
+  authenticated `account/*` services are explicitly non-module-gated, while
   authorization-version invalidation remains
 - TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions
 

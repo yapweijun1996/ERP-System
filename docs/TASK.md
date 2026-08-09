@@ -53,8 +53,12 @@ not a source failure.
   taken over by an HR permission. Existing in-flight instances continue under their
   snapshotted authority with no implicit migration. Focused authorization, approval and
   API regressions pass 18/18 for the current strict-step slice; root typecheck passes.
-  The clean full-suite rerun after the latest worktree changes remains pending, and
-  instance/step/resource/policy-bound delegation remains a follow-up hardening item.
+  The latest full Vitest run completed with 622 passed, 8 failed and 1 skipped across
+  155 files. The account-service module-gate omission is fixed and targeted
+  notification/access-matrix/module coverage passes 15/15; two Team Calendar tests
+  still use a Manager actor against the current seed's HR-permission leave policy and
+  need fixture alignment. Instance/step/resource/policy-bound delegation remains a
+  follow-up hardening item.
 - **TASK-172 — Done:** migration `0086_youthful_mac_gargan.sql` adds the stable
   `user_company_role.assignment_id` primary key, `[valid_from, valid_until)` validity,
   assignment/revocation provenance and `user_company_role_scope`. The role-assignment
@@ -68,13 +72,14 @@ not a source failure.
 
 ## Current in-progress task
 
-- **TASK-174 — In progress:** TASK-174-A now treats unknown module keys as disabled at
-  the backend gate and registers the payroll module so every resource prefix resolves
-  to a known module contract. The remaining slice is authorization-version
-  invalidation for role, assignment, scope, module, policy and support-grant changes,
-  followed by stale-session/direct-URL regression tests. TASK-175 remains blocked on
-  this boundary and will replace the tenant Superadmin compatibility bypass with an
-  explicit Company Owner permission bundle.
+- **TASK-174 — In progress:** TASK-174-A now treats unknown business-module keys as
+  disabled at the backend gate, registers payroll and explicitly keeps authenticated
+  `account/*` service routes outside business-module switching while retaining their
+  route permissions. The remaining slice is authorization-version invalidation for
+  role, assignment, scope, module, policy and support-grant changes, followed by
+  stale-session/direct-URL regression tests. TASK-175 remains blocked on this boundary
+  and will replace the tenant Superadmin compatibility bypass with an explicit Company
+  Owner permission bundle.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -135,9 +140,10 @@ statuses above and keep each change independently testable:
    passes resolved resource/module/scope/policy context into the central evaluator; no
    implicit in-flight migration or takeover is allowed. Focused strict-step coverage
    passes 18/18.
-3. **TASK-174-A — In progress:** unknown module keys now fail closed and payroll is part
-   of the registered module set. Resource/action coverage and startup/CI assertions are
-   still required for every new module prefix.
+3. **TASK-174-A — In progress:** unknown business-module keys now fail closed, payroll
+   is part of the registered module set, and authenticated `account/*` services are
+   explicitly non-module-gated while retaining permission checks. Resource/action
+   coverage and startup/CI assertions are still required for every new module prefix.
 4. **TASK-174-B — Authorization versioning:** invalidate cached/session capability state
    on role, assignment, scope, organization, module, policy and support-grant changes;
    add stale-version/direct-URL revocation tests.

@@ -12,8 +12,10 @@ tables to carry stable identity, validity, provenance and assignment-owned scope
 TASK-173 now centralizes the tenant permission decision path, explicit user-level
 overrides, safe/audited explanations and strict current-step context for mapped generic
 approvals; the current access matrix adds a shared route/module/permission regression
-contract. Unknown module keys now fail closed. Authorization-version invalidation,
-deeper delegation binding and Company Owner cutover remain open under TASK-174–175.
+contract. Unknown business-module keys now fail closed; authenticated `account/*`
+service routes are explicitly non-module-gated but still permission-protected.
+Authorization-version invalidation, deeper delegation binding and Company Owner cutover
+remain open under TASK-174–175.
 
 ## 1. Goal
 

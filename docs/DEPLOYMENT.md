@@ -30,7 +30,9 @@ npm run audit:access-matrix
 
 The access-matrix checks are regression evidence for the current route/module/permission
 catalog; they do not imply that TASK-174's authorization-version cache is complete.
-Unknown module keys now fail closed. `./deploy/release.sh` is application-only;
+Unknown business-module keys now fail closed; authenticated `account/*` services are
+explicitly non-module-gated but still permission-protected. `./deploy/release.sh` is
+application-only;
 `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` is the separate, reviewed schema-change
 operation. After the purchase-requisition adapter was aligned, serial `npm run build:demo`
 and `npm run audit:access-matrix` pass; no deployment is implied by this audit.

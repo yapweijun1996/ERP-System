@@ -266,7 +266,12 @@ controls exist.
 Current working-tree note (2026-08-10): the purchase-requisition Web adapter now uses
 the actor-input command shape. Serial `npm run build:demo` and
 `npm run audit:access-matrix` pass; the first parallel build attempt raced on the
-shared `web/dist` output. The clean full-suite rerun remains pending.
+shared `web/dist` output. The full Vitest run completed with 622 passed, 8 failed and
+1 skipped across 155 files; the account-service module-gate omission was fixed and its
+15-test notification/matrix/module regression now passes. Two HR Team Calendar tests
+still use a Manager actor against the current seed's HR-permission approval policy and
+remain a fixture-alignment blocker. PostgreSQL parity and API-mode browser proof remain
+pending.
 
 ## EPIC-059 employee access and customer onboarding
 

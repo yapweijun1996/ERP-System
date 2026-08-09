@@ -122,10 +122,12 @@ current/target record. The following are implemented compatibility facts:
   command as well as the dispatcher. The command checks the active tenant actor before
   locking and mutating a `draft` run; its versioned header snapshot is the current
   legacy authority and no generic approval instance/step is claimed;
-- unknown module keys now fail the module gate and therefore cannot bypass module
-  activation while resource registration is incomplete. Resource registration remains
-  a runtime application allowlist; no database FK or authorization-version cache is
-  claimed yet.
+- unknown business-module keys now fail the module gate and therefore cannot bypass
+  module activation while resource registration is incomplete. Authenticated
+  `account/*` service routes are an explicit non-module prefix: they remain protected
+  by tenant/session and route permissions, but are not disabled with business-module
+  switches. Resource registration remains a runtime application allowlist; no database
+  FK or authorization-version cache is claimed yet.
 
 TASK-170 now separates platform/support authority. `platform_principal`, platform roles,
 hash-backed bearer/CSRF sessions and `support_access_grant` are outside tenant role
@@ -147,10 +149,12 @@ direct authority must still be an active employee. Existing in-flight approvals 
 their snapshotted current authority; there is no implicit time-based migration or
 takeover. Delegation remains tenant/domain/authority/delegate/time/revocation bounded;
 instance/step/resource/policy-bound delegation is still a later hardening slice.
-TASK-174-A now fails closed for unknown module keys and registers payroll as a gateable
-module; authorization-version invalidation and TASK-175's explicit Company Owner cutover
-remain pending. TASK-170's implemented platform boundary grants no platform operator
-permanent implicit customer-data authority.
+TASK-174-A now fails closed for unknown business-module keys, registers payroll as a
+gateable module and keeps authenticated `account/*` service routes explicitly outside
+business-module switching while retaining route permissions. Authorization-version
+invalidation and TASK-175's explicit Company Owner cutover remain pending. TASK-170's
+implemented platform boundary grants no platform operator permanent implicit
+customer-data authority.
 
 The shared access matrix (`src/auth/accessMatrix.ts`) and its API/browser checks are
 defence-in-depth regression contracts for route visibility, module/permission metadata

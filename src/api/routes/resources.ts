@@ -93,11 +93,13 @@ export function createResourceRouter(db: DB): Router {
   // Superadmins are exempt: this gate restricts what a master's *other* users can
   // reach, not the superadmin's own visibility (EPIC-018).
   async function moduleAccessDenied(session: SessionData, modulePrefix: string): Promise<boolean> {
+    const moduleKey = moduleKeyForResourcePrefix(modulePrefix);
+    if (moduleKey === null) return false;
     if (await isModuleEnabled(
       db,
       session.masterFn,
       session.activeCompanyFn,
-      moduleKeyForResourcePrefix(modulePrefix),
+      moduleKey,
     )) return false;
     return !await isSuperadminSession(db, session);
   }
