@@ -1,7 +1,7 @@
 # ERP Role & Permission Architecture
 
-Status: **Current implementation plus remaining target architecture; TASK-170–172
-foundations are delivered, TASK-173 is in progress, and TASK-174–175 remain pending**
+Status: **Current implementation plus remaining target architecture; TASK-170–173
+foundations are delivered, TASK-174 is in progress, and TASK-175 remains pending**
 Reviewed: **2026-08-10**
 Scope: platform authorization, tenant/company roles, permissions, data scope,
 approval authority, support access and audit
@@ -147,11 +147,14 @@ The following current behaviors are compatibility facts, not the final architect
   legacy workflow authority. Purchase Requisition approve/reject decisions now also
   require `purchasing.approve` through `authorizeWithin`; that legacy path has no
   `approval_instance`/`approval_step`, so the locked `submitted` row is its current
-  workflow authority. The existing HR management `overridePermissionKey` is an
-  explicit, audited compatibility escalation for an active pending step: only the
-  management path supplies `hr.write`, the workflow domain re-checks that permission,
-  and the decision preserves the original authority. Strict replacement with current-
-  step-only authority is not yet complete. The
+  workflow authority. HR leave and expense approval decisions now require the locked
+  current step authority and pass resolved resource/module/scope context plus policy-
+  version, approval-instance and approval-step identifiers into the central evaluator.
+  The active step must belong to the instance policy snapshot, and named direct
+  authorities must still be active employees. A broad HR permission cannot take over a
+  manager-owned step; older in-flight instances keep their snapshotted authority with
+  no implicit migration. Delegation is still bounded by tenant/domain/authority/
+  delegate/time/revocation rather than instance/step/resource/policy.
   Sales Commission run approval now also requires `sales.commission.approve` through
   `authorizeWithin`; that legacy path has no `approval_instance`/`approval_step`, so
   the locked `draft` run/version snapshot is its current workflow authority. The
@@ -159,11 +162,11 @@ The following current behaviors are compatibility facts, not the final architect
   locked `calculated` transition, and budget approval now re-checks
   `finance.budget.approve` before its draft/active/version/line transition. Neither
   path has a generic `approval_instance`/`approval_step`; the existing legacy state is
-  authoritative. The remaining approval-architecture gap is replacing the HR
-  compatibility escalation with strict current-step authority.
-- Unknown module keys currently pass the module gate. Registered resources still have
-  permission checks, but this is not the target fail-closed module/resource cache
-  behavior. No database foreign key or authorization-version cache is claimed yet.
+  authoritative. The remaining approval-architecture gaps are deeper delegation
+  binding and any future approval domain that has not yet been registered with context.
+- Unknown module keys now fail the module gate; payroll is included in the registered
+  module set. Registered resources still require their permission checks. No
+  authorization-version cache is claimed yet.
 - Employee-workspace impersonation is company-bounded and audited, but it is not a
   platform support-access grant.
 - Platform principal and session issuance is intentionally out-of-band; there is no
@@ -265,17 +268,12 @@ The current application registry is split into two layers:
 `npm run check:permissions` currently verifies 299 static registry definitions, 116
 resource contracts, 62 action contracts and 5 update contracts. TASK-172 added the
 assignment migration, dual-read scope path, active-assignment predicate and assignment
-API. TASK-173 now adds the central decision service, user-level explicit overrides and
-safe/audited explanations. The access matrix and authenticated/browser checks are a
-partial cross-layer regression contract. TASK-173's Sales/Purchasing, requisition,
-commission, allowance and budget approval guards are implemented against their current
-legacy states; the HR compatibility escalation is explicit/audited but its strict
-replacement remains. The 2026-08-10 HR decision-context audit confirms that the
-compatibility override is evaluated before current-step authority, and that workflow
-authorization does not yet carry resource, scope, module or policy context. Direct
-manager active-state revalidation and instance/step/resource/policy-bound delegation
-are also open. Module/resource fail-closed validation,
-authorization-version invalidation and Company Owner cutover remain TASK-174–175.
+API. TASK-173 now adds the central decision service, user-level explicit overrides,
+safe/audited explanations and strict current-step approval context for the generic leave
+and expense domains. The access matrix and authenticated/browser checks are a partial
+cross-layer regression contract. Unknown module keys now fail closed; authorization-
+version invalidation, deeper delegation binding and Company Owner cutover remain
+TASK-174–175.
 
 ## 6. Scope and resource ownership
 
@@ -447,12 +445,12 @@ offboarding must have deterministic lifecycle behavior and tests.
 - TASK-172: assignment-scoped grants, scope targets and expiry — done; migration 0086,
   assignment service/API, active predicate and role-scope dual-read are implemented
 - TASK-173: centralized decision service, explicit deny semantics and safe explanation
-  — in progress; migration 0087, central evaluator, override lifecycle, safe reason
-  contract and audited diagnostic endpoint are implemented. Sales/Purchasing,
-  requisition, commission, allowance and budget approval guards now use the domain
-  evaluator; the HR compatibility policy is explicit/audited, while its strict
-  replacement and broader resource/policy context remain open
+  — done; migration 0087, central evaluator, override lifecycle, safe reason contract,
+  audited diagnostic endpoint and strict current-step/resource/module/policy context are
+  implemented for the generic leave/expense approval domains
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation
+  — in progress; unknown module keys fail closed and payroll is registered, while
+  authorization-version invalidation remains
 - TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions
 
 Branch/business-unit/region target validation, enterprise access reviews, SSO/

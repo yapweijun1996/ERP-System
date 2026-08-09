@@ -263,12 +263,10 @@ controls exist.
 | Schema parity | `npm run check:demo-schema` + `npm run check:drift` | every migration/release |
 | Five-language route audit | `npm run audit:i18n` | every Canonical route/localization change and before release |
 
-Current working-tree note (2026-08-10): the committed baseline has the recorded green
-verification above, but the current uncommitted Web overlay fails
-`npm run typecheck:web` at `web/src/erp-demo-runtime-impl.ts:1481`. The Demo
-purchase-requisition wrapper still uses the old positional call shape while the current
-domain command expects an actor input object, so `build:demo` and the access-matrix
-audit remain pending until that user-owned integration mismatch is reconciled.
+Current working-tree note (2026-08-10): the purchase-requisition Web adapter now uses
+the actor-input command shape. Serial `npm run build:demo` and
+`npm run audit:access-matrix` pass; the first parallel build attempt raced on the
+shared `web/dist` output. The clean full-suite rerun remains pending.
 
 ## EPIC-059 employee access and customer onboarding
 
@@ -294,9 +292,9 @@ time-bounded/revocable, default-deny sensitive fields and audit every create/use
 revoke event. Principal/session issuance remains an out-of-band deployment/SSO bootstrap
 responsibility, and grant evaluation only returns a decision; it does not automatically
 proxy tenant business data. TASK-171 now supplies the first approved registry slice and
-TASK-172 supplies the assignment migration/service. TASK-173 is in progress and now
-supplies the first central tenant decision boundary, explicit user-level overrides and
-safe/audited explanations:
+TASK-172 supplies the assignment migration/service. TASK-173 is complete and supplies
+the central tenant decision boundary, explicit user-level overrides, safe/audited
+explanations and strict current-step approval context:
 
 - route/resource/action declarations are now checked against an application-owned
   registry of 299 static definitions, with canonical projections for 116 resources,
@@ -333,20 +331,20 @@ safe/audited explanations:
   changing a draft budget. The existing draft/approved status, active flag, version and
   imported lines remain its workflow authority; no generic approval instance/step is
   introduced. Direct-domain denial maps to the API's stable 403 response.
-- Governed HR leave management retains a compatibility escalation for active steps that
-  were assigned under an older policy. Only the management path supplies
-  `overridePermissionKey: 'hr.write'`; the workflow domain re-checks that permission,
-  and `approval_decision` preserves the original authority and `authoritySource`.
-  Replacing this compatibility policy with strict current-step authority remains a
-  target requirement. The 2026-08-10 audit also records that the override currently
-  precedes current-step authority, while resource, scope, module and policy context
-  are not passed into the central evaluator; manager active-state revalidation and
-  instance/step/resource/policy-bound delegation remain open.
+- Governed HR leave and expense approval decisions require the permission authority of
+  the locked current step, when the step is permission-based, and pass the resolved
+  resource/module/scope context plus policy-version, approval-instance and step
+  identifiers into the central evaluator. The active step must belong to the instance
+  policy snapshot; named direct authorities must be active employees. There is no
+  management `hr.write` takeover and no implicit migration of older in-flight
+  instances; the stored snapshot remains authoritative. Delegation remains bounded by
+  tenant/domain/authority/delegate/time/revocation and is not yet instance/step/
+  resource/policy-bound.
 
-The following approved requirements remain pending under TASK-173–175:
+The following approved requirements remain pending under TASK-174–175:
 
-- strict permission-plus-current-workflow-authority behavior across the remaining
-  explicit/audited HR compatibility escalation, plus complete resource/policy context;
+- instance/step/resource/policy-bound delegation and any additional approval domain
+  mappings not yet registered in the central workflow context;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
 - authorization-version invalidation prevents stale role/scope/module/policy state;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;
@@ -354,10 +352,9 @@ The following approved requirements remain pending under TASK-173–175:
 Approval authorization must preserve the existing immutable version/instance/decision
 model. The shared workflow locks the active instance/step, checks current permission
 authority through the central evaluator, prevents self-approval and validates bounded
-delegation. The HR management permission override remains a documented compatibility
-escalation for an active pending step; the target contract still requires domain
-permission, resource scope, current workflow-step authority, policy conditions and
-separation-of-duties checks for every approval-like path.
+delegation. The current contract requires domain permission, resource scope, current
+workflow-step authority and policy conditions for every mapped approval-like path;
+deeper delegation binding and separation-of-duties rules remain later target work.
 
 ## 8. August 2026 functional requirements
 

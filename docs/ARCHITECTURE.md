@@ -10,10 +10,10 @@ customer-data proxy. TASK-171 adds the application-owned tenant permission regis
 and canonical resource/action projections. TASK-172 now changes the role-assignment
 tables to carry stable identity, validity, provenance and assignment-owned scope rows.
 TASK-173 now centralizes the tenant permission decision path, explicit user-level
-overrides and safe/audited explanations; the current access matrix adds a shared
-route/module/permission regression contract. Module/resource fail-closed validation,
-authorization-version invalidation and complete approval-authority unification remain
-open under TASK-173–174.
+overrides, safe/audited explanations and strict current-step context for mapped generic
+approvals; the current access matrix adds a shared route/module/permission regression
+contract. Unknown module keys now fail closed. Authorization-version invalidation,
+deeper delegation binding and Company Owner cutover remain open under TASK-174–175.
 
 ## 1. Goal
 

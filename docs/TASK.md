@@ -24,12 +24,10 @@ passes 1,531 canonical keys / 69 local five-language packs and the full
 blocking findings. TASK-017 remains the separate physical-device blocker; it does not
 change the machine-readable task totals. The current post-build `npm run smoke` still
 fails its navigation contract because 18 unexplained numeric `0` badges are visible in
-both desktop and mobile runs. A separate current-worktree integration blocker prevents
-the Web build from being treated as green: `npm run typecheck:web` fails at
-`web/src/erp-demo-runtime-impl.ts:1481` because the Demo purchase-requisition wrapper
-still uses the old positional call shape while the domain command expects an actor
-input object. This is user-owned uncommitted overlay work, not a new machine-readable
-task status; reconcile it before rerunning `build:demo` and the access-matrix audit.
+both desktop and mobile runs. The purchase-requisition Web adapter has since been
+aligned with the actor-input command shape; serial `build:demo` and
+`audit:access-matrix` pass. The first parallel build attempt was a shared-output race,
+not a source failure.
 
 ## Current authorization programme
 
@@ -39,12 +37,24 @@ task status; reconcile it before rerunning `build:demo` and the access-matrix au
 | TASK-170 | Done | Separate platform principals and time-bounded support access |
 | TASK-171 | Done | Canonical permission registry and compatibility-key migration |
 | TASK-172 | Done | Assignment-scoped grants, targets and expiry |
-| TASK-173 | In progress | Central authorization decision, explicit deny and safe explanation |
-| TASK-174 | Todo | Fail-closed module/resource registry and authorization versioning |
+| TASK-173 | Done | Central authorization decision, explicit deny and safe explanation |
+| TASK-174 | In progress | Fail-closed module/resource registry and authorization versioning |
 | TASK-175 | Todo | Replace tenant Superadmin bypass with explicit Company Owner permissions |
 
 ## Latest completed task
 
+- **TASK-173 — Done:** migration `0087_pink_shadowcat.sql` and
+  `src/auth/authorization.ts` provide the central tenant decision boundary, safe public
+  reason codes, explicit user-level override precedence and audited explanations. All
+  approval slices now re-check their registered permission in the domain command. The
+  versioned leave/expense workflow additionally binds permission decisions to the
+  current locked step, server-resolved resource/module/scope context and policy
+  snapshot; inactive named authorities are denied, and manager-owned steps cannot be
+  taken over by an HR permission. Existing in-flight instances continue under their
+  snapshotted authority with no implicit migration. Focused authorization, approval and
+  API regressions pass 18/18 for the current strict-step slice; root typecheck passes.
+  The clean full-suite rerun after the latest worktree changes remains pending, and
+  instance/step/resource/policy-bound delegation remains a follow-up hardening item.
 - **TASK-172 — Done:** migration `0086_youthful_mac_gargan.sql` adds the stable
   `user_company_role.assignment_id` primary key, `[valid_from, valid_until)` validity,
   assignment/revocation provenance and `user_company_role_scope`. The role-assignment
@@ -53,69 +63,18 @@ task status; reconcile it before rerunning `build:demo` and the access-matrix au
   impersonation checks share the active-assignment predicate. Existing
   `role_resource_scope` rows remain a dual-read fallback for assignments whose
   `scope_backfilled_at` is null. Expired and revoked assignments are denied immediately;
-  the TASK-173 central decision boundary is now partially implemented in migration
-  0087; authorization-version caching and Company Owner cutover remain TASK-174–175.
+  TASK-173 is complete in migration 0087; authorization-version caching and Company
+  Owner cutover remain TASK-174–175.
 
 ## Current in-progress task
 
-- **TASK-173 — In progress:** `src/auth/authorization.ts` now provides the central
-  tenant decision contract and boolean compatibility wrappers. Migration 0087 adds
-  reasoned user-level `user_permission_override` rows with validity, revocation,
-  resource/department targeting and explicit deny precedence. Action/resource gates,
-  approval permission checks and effective-capability snapshots use the central
-  evaluator. `/api/admin/authorization/explain` is restricted to audit-read users and
-  writes an audit event; override create/revoke operations are also audited.
-  `TASK-173-A1` is now delivered for direct Sales Order and Purchase Order approve/
-  reject decisions: the action dispatcher requires `sales.approve` or
-  `purchasing.approve`, and each domain command calls `authorizeWithin` before changing
-  the tenant-scoped order plus its still-pending approval row. The focused order,
-  authorization and API contract suites pass 20/20 tests, with lint, typecheck and
-  `npm run check:permissions` also green. `TASK-173-A2-R1` is now delivered for
-  Purchase Requisition approve/reject decisions: both actions require
-  `purchasing.approve`, and the domain command validates the active tenant actor and
-  central authorization before locking and changing the existing submitted-state row.
-  This legacy requisition path has no `approval_instance`/`approval_step`; its locked
-  `submitted` state is the currently implemented workflow authority. The requisition
-  suite passes 9/9 and the combined purchasing/sales/authorization regression passes
-  29/29. `TASK-173-A2-R2` is now delivered for Sales Commission run approvals: the
-  existing `sales.commission.approve` action permission is enforced again in the domain
-  command before locking the draft run, whose existing `draft` state/version snapshot
-  remains the legacy workflow authority. This path also has no generic
-  `approval_instance`/`approval_step`; its commission suite passes 5/5 and the combined
-  commission/authorization/API regression passes 15/15.
-  `TASK-173-A2-R3` is now delivered for allowance calculation approvals: the domain
-  command re-checks `expenses.allowance.manage` before changing a locked `calculated`
-  row. The allowance calculation status remains the legacy workflow authority and this
-  path has no generic `approval_instance`/`approval_step`; the allowance/API/auth
-  regression passes 12/12. `TASK-173-A2-R4` is now delivered for budget approvals: the
-  domain command re-checks `finance.budget.approve` before changing a draft budget. Its
-  existing draft/approved status, active flag, version and imported lines remain the
-  legacy workflow authority, with direct-domain denial mapped to HTTP 403; the
-  budget/finance/API/auth regression passes 18/18.
-  Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
-  lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
-  Remaining before Done: strict permission-plus-current-workflow-authority behavior for
-  replacement of the explicit, audited HR compatibility escalation, plus broader
-  resource/module/policy context. The current HR management path passes the
-  compatibility override only when the workflow domain re-checks `hr.write`; its
-  `approval_decision` keeps the original authority and `authoritySource`, and the
-  focused leave-approval/application regression passes 17/17. The previously recorded
-  full regression baseline remains 154 files passed + 1 skipped file (155 total),
-  623 tests passed + 1 intentional skip (624 test slots), zero failures; the latest
-  A2-R1 through A2-R4 slices have the focused evidence above and have not yet been
-  added to a new full suite run.
-
-  TASK-173-B audit (2026-08-10) confirms the remaining decision-context gap: the
-  `hr.write` compatibility override is evaluated before current-step authority, so an
-  HR manager can intentionally cover a manager-owned active step; the path is explicit
-  and audited, but it is not strict current-step replacement. The workflow decision
-  also does not yet pass `resourceKey`, scope target, module or policy context into the
-  central evaluator. Manager direct-user authority does not re-check employee active
-  state, and delegation is bounded by tenant/domain/authority/delegate/time/revocation
-  but not by instance, step, resource or policy. The approved product decision still
-  required before coding is how to handle older in-flight approvals: retain an explicit
-  migration window, reissue them under the confirmed policy, or reject them; no implicit
-  time-based exception is acceptable.
+- **TASK-174 — In progress:** TASK-174-A now treats unknown module keys as disabled at
+  the backend gate and registers the payroll module so every resource prefix resolves
+  to a known module contract. The remaining slice is authorization-version
+  invalidation for role, assignment, scope, module, policy and support-grant changes,
+  followed by stale-session/direct-URL regression tests. TASK-175 remains blocked on
+  this boundary and will replace the tenant Superadmin compatibility bypass with an
+  explicit Company Owner permission bundle.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -166,36 +125,31 @@ statuses above and keep each change independently testable:
    approve/reject actions now require their dedicated registered approval permission and
    the domain commands require an active tenant actor plus the pending order/approval
    workflow state. Adversarial tests prove permission removal leaves both rows unchanged.
-2. **TASK-173-A2 — approval authority unification (in progress; R1–R4 done):** Purchase
+2. **TASK-173-A2 — Done (2026-08-10):** Purchase
    Requisition approve/reject now routes through `purchasing.approve` plus the current
    locked `submitted` state; Sales Commission run approval now routes through
    `sales.commission.approve` plus the current locked `draft` state; allowance approval
    now re-checks `expenses.allowance.manage` before its locked `calculated → approved`
    transition; budget approval now re-checks `finance.budget.approve` before its draft
-   activation transition. The existing HR management takeover is now explicitly
-   audited compatibility behavior: only the management path supplies
-   `overridePermissionKey: 'hr.write'`, the workflow domain re-checks that permission
-   before covering an active step, and the decision keeps the original authority.
-   Replace that compatibility policy with strict current-step authority when the
-   broader workflow decision is implemented.
-3. **TASK-173-B — decision-context completion:** register the remaining ownership,
-   module and policy context consumed by authorization, and prove that missing context
-   denies without changing the current assignment/Superadmin compatibility boundary.
-4. **TASK-174-A — fail-closed registration:** reject unknown module/resource/action and
-   ownership mappings; make the access matrix a CI/startup coverage gate rather than only
-   a regression helper.
-5. **TASK-174-B — authorization versioning:** invalidate cached/session capability state
+   activation transition. The HR workflow now requires the current step authority and
+   passes resolved resource/module/scope/policy context into the central evaluator; no
+   implicit in-flight migration or takeover is allowed. Focused strict-step coverage
+   passes 18/18.
+3. **TASK-174-A — In progress:** unknown module keys now fail closed and payroll is part
+   of the registered module set. Resource/action coverage and startup/CI assertions are
+   still required for every new module prefix.
+4. **TASK-174-B — Authorization versioning:** invalidate cached/session capability state
    on role, assignment, scope, organization, module, policy and support-grant changes;
    add stale-version/direct-URL revocation tests.
-6. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
+5. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
    explicit registered permissions, retaining last-owner recovery and platform isolation.
-7. **RELEASE-I18N-001 — localization gate closure: Done in the current worktree.**
+6. **RELEASE-I18N-001 — localization gate closure: Done in the current worktree.**
    Missing local-pack keys and hardcoded/dynamic system-authored UI text were resolved;
    `node scripts/audit-i18n.mjs` passes 1,531 canonical keys / 69 local packs and the
    full 128-route × 5-language × 2-viewport `npm run audit:i18n` matrix passes with
    zero blocking findings. This remains an execution slice, not a new machine-readable
    task record, and is independent of TASK-173–175.
-8. **RELEASE-SMOKE-001 — navigation badge contract: Pending.** The 2026-08-10
+7. **RELEASE-SMOKE-001 — navigation badge contract: Pending.** The 2026-08-10
    `npm run smoke` run renders the dashboard at desktop/mobile but fails on 18
    unexplained numeric `0` badges in each viewport. Either hide non-semantic zero
    badges or define their accessible/business meaning and update the smoke contract.

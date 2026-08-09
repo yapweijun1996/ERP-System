@@ -185,11 +185,11 @@ legacy-state coverage; its locked `draft` run is the current workflow gate witho
 generic approval instance/step. Allowance calculation approval now re-checks
 `expenses.allowance.manage` before its locked `calculated` transition, and budget
 approval now re-checks `finance.budget.approve` before its draft/active/version/line
-transition; neither introduces a generic approval instance/step. Remaining tasks add
-the HR compatibility approval-authority guard, fail-closed module/resource validation,
-the existing HR compatibility policy is explicit and audited: only the management path
-supplies `overridePermissionKey: 'hr.write'`, the workflow domain re-checks that
-permission before covering an active step, and the decision preserves the original
-authority. Strict replacement of that compatibility policy, authorization-version
-invalidation and explicit Company Owner permissions remain target work.
+transition; neither introduces a generic approval instance/step. HR leave and expense
+decisions now bind permission checks to the locked current step and pass resolved
+resource/module/scope/policy context into the central evaluator. A manager-owned step
+cannot be covered by a broad HR permission; existing in-flight instances retain their
+snapshot without an implicit migration. Unknown module keys fail closed, while
+authorization-version invalidation, instance/step/resource/policy-bound delegation and
+explicit Company Owner permissions remain target work.
 Those target capabilities must not be inferred from the current `is_superadmin` column.

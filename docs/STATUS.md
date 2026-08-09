@@ -33,16 +33,17 @@ are rejected before the current tenant Superadmin bypass. Migration 0087 now add
 reasoned user-level explicit allow/deny overrides, and `src/auth/authorization.ts`
 centralizes membership, registry, override, role and assignment decisions. Public
 callers receive safe reason codes; audit-read administrators can request full audited
-explanations. TASK-173 remains in progress because strict permission-plus-current-
-workflow-authority behavior across every remaining approval-like legacy path and
-broader resource/module/policy context are not complete. Direct Sales/Purchasing order
-decisions, Purchase Requisition decisions, Sales Commission run approvals, allowance
-calculation approvals and budget approvals now have dedicated domain permission checks;
+explanations. TASK-173 is complete: strict permission-plus-current-workflow-authority
+behavior now covers the versioned leave/expense workflow with resolved resource/module/
+scope/policy context. Direct Sales/Purchasing order decisions, Purchase Requisition
+decisions, Sales Commission run approvals, allowance calculation approvals and budget
+approvals now have dedicated domain permission checks;
 requisitions use their locked `submitted` row, commission runs use their locked
 `draft`/version snapshot, allowance uses its locked `calculated` row, and budget uses
 its draft/active/version/line state as the implemented legacy authorities, without
-claiming generic approval instances/steps. EPIC-062/TASK-174–175 track the
-remaining fail-closed module/cache and explicit Company Owner migration. See
+claiming generic approval instances/steps. TASK-174-A now fails closed for unknown
+module keys and registers payroll; EPIC-062/TASK-174–175 track the remaining
+authorization-version and explicit Company Owner migration. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
 The first TASK-173 approval slices are now complete: direct Sales Order and Purchase
@@ -60,12 +61,11 @@ approval re-checks `expenses.allowance.manage` before changing a locked `calcula
 row; its allowance/API/auth regression passes 12/12. Budget approval re-checks
 `finance.budget.approve` before changing a draft budget; its budget/finance/API/auth
 regression passes 18/18, with direct-domain denial mapped to HTTP 403. Neither path
-claims a generic approval instance/step. The governed HR management takeover is an
-explicit compatibility policy rather than a hidden bypass: only the management path
-supplies `overridePermissionKey: 'hr.write'`, the workflow domain re-checks `hr.write`
-before covering an active step, and `approval_decision` records the original authority
-and `authoritySource`; leave-approval/application tests pass 17/17. Strict replacement
-of that compatibility escalation remains open.
+claims a generic approval instance/step. Governed HR leave and expense approvals now
+remain bound to the current locked step; manager-owned steps cannot be taken over by a
+broad HR permission, policy-step snapshot mismatches fail closed, inactive named
+authorities are denied, and older in-flight instances retain their snapshot without
+implicit migration. The current strict-step authorization/API regression passes 18/18.
 
 Committed-baseline verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof,
 Demo build, generated Demo schema, 244-table drift, Demo-pack and permission-registry
@@ -99,15 +99,12 @@ packs or the explicit business-text boundary markers.
 The current cross-layer access contract is also present in `src/auth/accessMatrix.ts`:
 the authenticated API matrix suite and `npm run audit:access-matrix` check route
 visibility, module/permission metadata and available detail drill-ins. This is a
-regression foundation, not completion of TASK-174; unknown module keys still fail open
-and no authorization-version cache is claimed. The current uncommitted worktree overlay
-does not currently reach that audit: `npm run typecheck:web` and the `build:demo` step
-inside `npm run audit:access-matrix` stop at
-`web/src/erp-demo-runtime-impl.ts:1481`, where the Demo wrapper still calls
-`decidePurchaseRequisitionWithin` with the old positional signature while the domain
-command now expects the actor input object. This is preserved as a working-tree
-integration blocker and is not counted as a completed TASK-173 change; reconcile that
-user-owned overlay before treating the release gates below as green again.
+regression foundation, not completion of TASK-174; unknown module keys now fail closed
+and no authorization-version cache is claimed. After the purchase-requisition adapter
+was aligned, serial `npm run build:demo` and `npm run audit:access-matrix` pass; the
+first parallel build attempt was a shared-`web/dist` race, not a source failure. The
+clean full Vitest rerun, PostgreSQL parity, API-mode browser proof and physical-device
+verification remain separate pending gates.
 TASK-168 reconciled the generated Demo Manager
 scopes with the current
 authoritative catalog. Generic sales/CRM/inventory/warehouse/project/service collections
@@ -370,13 +367,13 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ⚠️ Current gate failed | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-08-10 run renders the dashboard at desktop/mobile but rejects 18 unexplained numeric `0` navigation badges in each viewport; fix or explicitly define those badge semantics before release. |
 | Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 128 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **128 Canonical / 0 Preview**. Preview pages, if reintroduced by a future task, distinguish Sample Data from Canonical Data and lock write-like actions. |
-| Cross-layer authorization matrix | ✅ Regression foundation | `src/auth/accessMatrix.ts` is shared by `src/api/permissionMatrix.integration.test.ts` and `scripts/audit-access-matrix.ts`; the API/browser checks cover authenticated role fixtures, 401/403 boundaries, route metadata, list/detail probes and fail-closed UI visibility. It does not yet close TASK-174: unknown module keys remain a fail-open compatibility gap and authorization-version invalidation is not implemented. |
+| Cross-layer authorization matrix | ✅ Regression foundation | `src/auth/accessMatrix.ts` is shared by `src/api/permissionMatrix.integration.test.ts` and `scripts/audit-access-matrix.ts`; the API/browser checks cover authenticated role fixtures, 401/403 boundaries, route metadata, list/detail probes and fail-closed UI visibility. Unknown module keys now fail closed; authorization-version invalidation is not implemented yet. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; both `item-master` and the separate five-language `new-item` composer write through that audited Demo/API command. `new-item` now stores only real product fields, accepts a company-unique SKU and removes the sample form's fabricated USD/GST, accounting, costing, shelf-life and negative-stock controls. New items start at 0 on hand with no stock projection or movement — initial quantity must use Purchase Receipt or Stock Adjustment. Duplicate SKU is an atomic 409; delete remains honestly unsupported rather than mutating local sample data. |
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
 | Admin: users, roles & audit log | ✅ Canonical Demo/API data and writes | `app_user`/`role`/`role_permission`/`audit_log` remain the original Admin tables. Migration 0087 adds tenant-scoped `user_permission_override`; `/api/admin/users/:userId/permission-overrides` creates reasoned allow/deny exceptions, `/actions/revoke` revokes them, and `/api/admin/authorization/explain` exposes full decision details only to audit-read users while appending an audit event. These Admin tables and routes remain bespoke rather than generic resources because of composite/non-standard keys and security boundaries. Existing `user-mgmt`, `role-permission` and `audit-log` contracts remain real and backend-enforced; the central evaluator is the authorization source of truth. |
 | Platform support control plane | ✅ Control-plane foundation (TASK-170) | `platform_principal`, application-owned platform roles, hash-backed bearer/CSRF sessions and `support_access_grant` are separate from tenant `app_user`/roles. Grants enforce exact master/optional company targets, reason/ticket, 24-hour maximum, read-only/restricted-write/break-glass modes, default sensitive-field denial, immediate revoke and platform-correlated audit. `/api/platform` rejects tenant cookies; identity/session issuance is out-of-band and the evaluator does not proxy customer data. |
-| Company module access control | ✅ Canonical Demo/API data and writes, incl. server-side enforcement | The current authority is company-scoped `company_module` (`master_fn` + `company_fn` + `module_key` + `enabled`); missing known-module rows are disabled. The older tenant-scoped `master_module` design is retained only as migration history. `src/auth/moduleAccess.ts` supplies company-aware reads/writes and generic resource handlers enforce disabled modules server-side. The authenticated session carries company module state so the shell and command search can hide disabled modules without requiring a separate admin read. The Admin module remains protected so an authorized administrator can re-enable business modules. One known gap remains explicit: an unregistered/unknown module key currently fails open until TASK-174 changes this to deny-by-default. |
+| Company module access control | ✅ Canonical Demo/API data and writes, incl. server-side enforcement | The current authority is company-scoped `company_module` (`master_fn` + `company_fn` + `module_key` + `enabled`); missing known-module rows are disabled. The older tenant-scoped `master_module` design is retained only as migration history. `src/auth/moduleAccess.ts` supplies company-aware reads/writes and generic resource handlers enforce disabled modules server-side. The authenticated session carries company module state so the shell and command search can hide disabled modules without requiring a separate admin read. The Admin module remains protected so an authorized administrator can re-enable business modules. Unknown module keys now fail closed, and payroll is registered as a gateable module. Authorization-version invalidation remains TASK-174 work. |
 | HR-lite: employee master + leave request/approval | ✅ Canonical Demo/API data and writes | First Phase 7 module opened after Phase 8. `employee` (self-referencing `manager_id`, no link to `app_user`) and `leave_request` tables, `src/modules/hr/` (`createEmployee`, `createLeaveRequest`/`decideLeaveRequest`), registered as standard generic resources gated on new `hr.read`/`hr.write` permissions. `hr-directory` and `employee` read real data (per-employee detail, not always the same hardcoded record); `new-employee` is a single real form replacing the mock's 3-step compensation/provisioning wizard (no schema backed those steps); `leave-approval` reads real requests and its approve/reject actions are real, including a required-reason reject flow. That initial task deliberately excluded Payroll and compensation; later Payroll and Full Leave tasks supersede that historical boundary. Verified live: created a real employee, approved one leave request, rejected another with a reason, confirmed the employee detail's leave balance and history reflected both decisions. |
 | Staff Calendar appointments | ✅ Canonical Demo/API data and writes | Migration 0082 adds tenant-scoped `staff_appointment` facts with employee, type, title, time range, location, status and optimistic version. `staffCalendar` combines appointments with canonical leave rows; HR write users can create, edit and cancel without deleting history. API/domain tests cover tenant isolation, idempotent replay, version conflicts and invalid ranges; the browser contract covers mixed leave/appointment rendering, create, filter and shared searchable listing. |
 | Leave-to-Payroll integration | ✅ Canonical Demo/API data and writes | Migration 0055 adds append-only unpaid-leave, approved-cancellation and encashment sources plus unique run mappings. Payroll lines snapshot base gross and leave earnings/deductions; the 26-day Decimal formula rounds half-up to cents and every source can be consumed once only. Legacy Policy rows retain original days. Five-language Payroll Run/Payslip surfaces and authenticated API/domain proofs cover balance, trace and overlapping-run replay. |
@@ -1701,16 +1698,16 @@ and browser gates now pass 1,531 canonical keys / 69 local packs across 128 rout
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 171 tasks
-- In progress: TASK-173 (1)
-- Todo: TASK-174–175 (2)
+- Done: 172 tasks
+- In progress: TASK-174 (1)
+- Todo: TASK-175 (1)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
   complete documentation baseline, TASK-170's platform-support foundation,
   TASK-171's canonical permission registry, TASK-172's assignment migration and
-  TASK-173's in-progress central decision/override boundary. TASK-174–175 remain the
-  pending implementation tasks.
+  TASK-173's completed central decision/override boundary. TASK-174 is in progress and
+  TASK-175 remains pending.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -1724,9 +1721,8 @@ and browser gates now pass 1,531 canonical keys / 69 local packs across 128 rout
 
 ## Next implementation boundary
 
-The dependency order is TASK-173 strict replacement of the explicit HR compatibility
-policy and decision context, then TASK-174 unknown-module/resource fail-closed validation and authorization-
-version invalidation, then TASK-175 explicit Company Owner permissions. The current
+The dependency order is TASK-174 authorization-version invalidation and broader
+resource/ownership coverage, then TASK-175 explicit Company Owner permissions. The current
 working tree contains additional uncommitted application changes; this status records
 only behavior verified from the current files/tests and does not imply that those
 changes have been committed or deployed.

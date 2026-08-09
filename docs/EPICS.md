@@ -2309,7 +2309,7 @@ approval subsystem. Normative current/target behavior is in
       tenant permissions. `npm run check:permissions` passes. Existing text keys and
       compatibility aliases remain during the expand phase; authorization-version
       invalidation and Company Owner cutover remain TASK-174–175, while TASK-173's
-      central decision boundary is tracked in the next item.
+      central decision boundary is complete in the next item.
       The pre-TASK-172 152-file Vitest regression passed in three resource-safe
       shards: 610 tests passed, one intentional skip and zero failures. The latest
       full attempt reached 153 passed files + 1 skipped file and one stale Demo
@@ -2323,51 +2323,22 @@ approval subsystem. Normative current/target behavior is in
       child scopes on update. Permission, approval, setup and impersonation checks use
       the active assignment window; legacy `role_resource_scope` remains a dual-read
       fallback for unbackfilled rows.
-- [~] **TASK-173 — Centralize authorization decisions, explicit deny and safe
+- [x] **TASK-173 — Centralize authorization decisions, explicit deny and safe
       explanation.** Migration 0087 adds `user_permission_override`; the central
       evaluator is used by permission wrappers, resource/action gates and approval
       permission checks. Public callers receive safe reason codes; audit-read admins
-      receive audited full explanations. The previously recorded full regression
-      baseline is 154 files passed + 1 skipped file (155 total): 623 tests passed + 1
-      intentional skip (624 test slots), zero failures. `TASK-173-A1` is delivered:
-      direct Sales Order and Purchase Order approve/reject action definitions require
-      `sales.approve` or `purchasing.approve`, and their domain commands call the central
-      evaluator before changing an order or its pending approval row; focused
-      authorization/order/API contract tests pass 20/20. `TASK-173-A2-R1` is also
-      delivered: Purchase Requisition approve/reject actions require
-      `purchasing.approve`, and the domain command checks the active tenant actor and
-      central evaluator before locking and changing the existing submitted-state legacy
-      workflow row; its focused suite passes 9/9 and the combined purchasing/sales/
-      authorization regression passes 29/29. `TASK-173-A2-R2` is also delivered:
-      Sales Commission run approval now re-checks the existing
-      `sales.commission.approve` permission in the domain command before locking the
-      legacy `draft` run; no generic approval instance/step is claimed. Its focused
-      suite passes 5/5 and the combined commission/authorization/API regression passes
-      15/15. `TASK-173-A2-R3` is delivered: allowance calculation approval re-checks
-      `expenses.allowance.manage` in the domain before changing a locked `calculated`
-      row; the existing calculation status remains the legacy workflow authority and
-      no generic approval instance/step is claimed. The allowance/API/auth regression
-      passes 12/12. `TASK-173-A2-R4` is delivered: budget approval re-checks
-      `finance.budget.approve` in the domain before changing a draft budget; its
-      existing status/active/version/line state remains the workflow authority and no
-      generic approval instance/step is claimed. The budget/finance/API/auth regression
-      passes 18/18, with direct-domain denial mapped to HTTP 403. Remaining work is the
-      strict replacement of the existing HR compatibility escalation and broader
-      resource/module/policy context. The current HR takeover remains explicit and
-      audited: only the management path supplies `overridePermissionKey: 'hr.write'`,
-      the workflow domain re-checks that permission before covering an active step, and
-      `approval_decision` preserves the original authority plus `authoritySource`; the
-      focused leave-approval/application regression passes 17/17. A new full suite run
-      is still pending for A2-R1 through A2-R4. The TASK-173-B audit confirms that this
-      compatibility override is evaluated before current-step authority and that the
-      workflow evaluator call still lacks resource/scope/module/policy context;
-      manager active-state revalidation and instance/step/resource/policy-bound
-      delegation remain open. The old in-flight approval handling policy must be chosen
-      explicitly before strict replacement is implemented.
-- [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
-      authorization caches.** The access matrix and browser/API route contract are a
-      partial precursor; unknown module keys still fail open and no authorization-version
-      cache is implemented yet.
+      receive audited full explanations. Direct Sales/Purchasing, requisition,
+      commission, allowance and budget approvals now use domain-level permission
+      rechecks against their current legacy workflow states. Generic leave/expense
+      approval decisions are bound to the locked current step and server-resolved
+      resource/module/scope/policy context; policy-step snapshot mismatches and
+      inactive named authorities fail closed. No HR permission takeover or implicit
+      migration of older in-flight instances is allowed. The strict-step focused suite
+      passes 18/18; a clean full-suite rerun remains a release verification item.
+- [~] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
+      authorization caches.** Unknown module keys now fail closed and payroll is in the
+      registered module set. Authorization-version invalidation, full resource/action
+      coverage gating and stale-session/direct-URL tests remain.
 - [ ] **TASK-175 — Replace the tenant Superadmin bypass with explicit Company Owner
       permissions.** Depends on the completed TASK-173/TASK-174 decision, registry and
       cache boundaries; it must preserve last-owner recovery and tenant/platform

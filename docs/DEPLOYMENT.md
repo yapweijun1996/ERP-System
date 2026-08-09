@@ -29,14 +29,11 @@ npm run audit:access-matrix
 ```
 
 The access-matrix checks are regression evidence for the current route/module/permission
-catalog; they do not imply that TASK-174's unknown-module fail-closed behavior or
-authorization-version cache is complete. `./deploy/release.sh` is application-only;
+catalog; they do not imply that TASK-174's authorization-version cache is complete.
+Unknown module keys now fail closed. `./deploy/release.sh` is application-only;
 `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` is the separate, reviewed schema-change
-operation. On the current uncommitted worktree, `npm run typecheck:web` fails at
-`web/src/erp-demo-runtime-impl.ts:1481` because the Demo purchase-requisition wrapper
-still passes the old positional arguments to a domain command that now expects an actor
-input object; therefore the Demo build and access-matrix gate must be rerun after that
-user-owned integration mismatch is reconciled. No deployment is implied by this audit.
+operation. After the purchase-requisition adapter was aligned, serial `npm run build:demo`
+and `npm run audit:access-matrix` pass; no deployment is implied by this audit.
 
 ---
 

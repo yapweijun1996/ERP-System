@@ -1020,8 +1020,8 @@ previously failing showcase test passes 1/1. A clean full rerun after that corre
 remains pending; the 149-file/599-test result above is retained as
 TASK-168's historical shard evidence. `src/auth/accessMatrix.ts`, its authenticated API
 matrix suite and `npm run audit:access-matrix` now provide a cross-layer route/permission
-regression foundation, while unknown module keys and authorization-version invalidation
-remain open under TASK-174. Physical-phone verification remains separately blocked under
+regression foundation, while authorization-version invalidation remains open under
+TASK-174. Physical-phone verification remains separately blocked under
 TASK-017.
 
 ## Phase 44 — Authorization Architecture Evolution 🔶
@@ -1034,22 +1034,15 @@ TASK-017.
    compatibility mappings/removal metadata, canonical projections for 116 resources
    and 62 actions, and the `check:permissions` CI gate.
 3. **Assignment and decision model** (TASK-172–173): TASK-172 moves validity, provenance
-   and scope to assignments. TASK-173 is in progress: migration 0087 adds the central
+   and scope to assignments. TASK-173 is complete: migration 0087 provides the central
    decision service, explicit user-level overrides and privileged audited explanations;
-   the direct Sales/Purchasing order decision slice, the Purchase Requisition legacy
-   state slice and the Sales Commission legacy state slice are now complete, including
-   dedicated approval permissions in the API and domain guards. Requisitions use their
-   locked `submitted` state and commission runs use their locked `draft` state/version
-   snapshot because no generic approval instance/step exists for either path. Allowance
-   calculations now re-check `expenses.allowance.manage` before changing their locked
-   `calculated` state, and budgets now re-check `finance.budget.approve` before changing
-   their draft/active/version/line state; neither path introduces a generic approval
-   instance/step. The existing HR management override is now an explicit, audited
-   compatibility policy: the workflow domain re-checks `hr.write` before it can cover
-   an active step assigned under an older policy, and records the original authority
-   plus `authoritySource`. Strict replacement of that compatibility escalation remains
-   open. Broader resource/module/policy context is also open.
-4. **Fail-closed registry and cache invalidation** (TASK-174) is next: finish the
+   direct Sales/Purchasing, requisition, commission, allowance and budget guards use
+   their current legacy workflow states. Generic leave/expense approvals are bound to
+   the locked current step and resolved resource/module/scope/policy context, reject
+   inactive named authorities and keep older in-flight instances on their snapshot
+   without implicit takeover. Focused strict-step coverage passes 18/18.
+4. **Fail-closed registry and cache invalidation** (TASK-174) is next: unknown module
+   keys now fail closed and payroll is registered; finish the
    unknown module/resource/ownership checks, make route metadata coverage a release gate,
    and add prompt authorization-version invalidation for role, scope, module, policy and
    support-grant changes. The access matrix is a partial precursor, not task completion.
@@ -1068,8 +1061,8 @@ keys / 69 local packs, and the complete browser matrix passes 128 routes × 5 la
 physical-device verification remain separate pending gates, independent of the
 TASK-173 → TASK-175 authorization dependency chain. The current desktop/mobile smoke
 gate remains pending because it reports 18 unexplained numeric `0` navigation badges in
-each viewport. The current uncommitted Web overlay also fails `npm run typecheck:web`
-at `web/src/erp-demo-runtime-impl.ts:1481`: its Demo purchase-requisition wrapper
-still uses the old positional call shape while the domain command requires an actor
-input object. Treat `build:demo` and `npm run audit:access-matrix` as pending until
-that user-owned integration mismatch is reconciled.
+each viewport. After the purchase-requisition adapter was aligned, serial
+`npm run build:demo` and `npm run audit:access-matrix` pass; the first parallel build
+attempt was a shared-`web/dist` race, not a source failure. API-mode full-browser proof,
+physical-device verification and the clean full Vitest rerun remain separate pending
+gates.

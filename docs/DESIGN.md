@@ -380,19 +380,23 @@ Current runtime facts:
   imported lines remain the workflow authority, also without a generic approval
   instance/step. The allowance/API/auth regression passes 12/12 and the
   budget/finance/API/auth regression passes 18/18.
-- Governed HR leave management retains an explicit compatibility escalation for active
-  steps created under older policy configuration. Only the management path supplies
-  `overridePermissionKey: 'hr.write'`; the workflow domain re-checks that permission,
-  and `approval_decision` retains the original authority and `authoritySource`. Strict
-  current-step-only replacement remains a target, not current behavior.
+- Governed HR leave and expense approval decisions are bound to the locked current
+  workflow step. Permission authorities are evaluated with the server-resolved
+  resource/module/scope context and policy-version, approval-instance and step
+  identifiers; the active step must belong to the instance policy snapshot, and a
+  named direct authority must still be active. There is no HR permission takeover of
+  a manager-owned step and no implicit migration of older in-flight instances; their
+  snapshotted authority remains authoritative. Delegation is still bounded by
+  tenant/domain/authority/delegate/time/revocation, not yet by instance/step/resource/
+  policy.
 - `authorize()` and `authorizeWithin()` expose only safe `allowed/reasonCode` results;
   `explainAuthorization()` is reserved for the audit-read admin endpoint, which
   records every explanation. Override creation/revocation is reasoned and audited.
 - `src/auth/accessMatrix.ts` and the authenticated/browser matrix checks keep the
-  canonical route, module, permission and API drill-in contract together. The matrix
-  is a current regression foundation, not proof that TASK-174 is complete: unknown
-  module keys still fail open and authorization-version invalidation is not yet
-  implemented.
+  canonical route, module, permission and API drill-in contract together. Unknown
+  module keys now fail closed and payroll is registered in `src/auth/moduleAccess.ts`;
+  authorization-version invalidation is not yet implemented, so the matrix remains a
+  regression foundation rather than proof that TASK-174 is complete.
 
 TASK-170 now adds a separate platform control-plane domain: platform principals, static
 application-owned support roles, hash-backed bearer/CSRF sessions and auditable support
@@ -406,13 +410,11 @@ continues to be a tenant Superadmin convenience and is a separate authority path
 TASK-172 now delivers assignment-scoped validity, revocation/provenance and validated
 scope targets through migration 0086, with a stable assignment primary key, assignment-
 owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. TASK-173
-is in progress: migration 0087 and the central evaluator now govern explicit user-level
-overrides and safe explanations; its order, Purchase Requisition, Sales Commission,
-allowance and budget approval slices are delivered. Code behavior above is authoritative.
-Remaining EPIC-062 target work is the strict replacement of the explicit, audited HR
-compatibility escalation, broader decision context, fail-closed module/resource behavior,
-authorization-version invalidation and explicit Company Owner permissions under
-TASK-173–175. Broad
+is complete: migration 0087 and the central evaluator govern explicit user-level
+overrides, safe explanations and strict current-step approval decisions with resolved
+resource/module/scope/policy context. Code behavior above is authoritative. Remaining
+EPIC-062 target work is authorization-version invalidation, broader delegation binding
+and explicit Company Owner permissions under TASK-174–175. Broad
 `role_permission` rows remain a text compatibility store; registry telemetry,
 centralized decision caching and the Company Owner cutover are not yet delivered.
 

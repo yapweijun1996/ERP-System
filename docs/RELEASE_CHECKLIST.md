@@ -8,11 +8,8 @@ section for the path you are releasing. Deployment mechanics live in
 
 - [ ] Working tree clean, on `main`, latest CI run green (CI already runs everything
       below on each PR — re-running locally is belt-and-braces for a release cut).
-- [ ] `npm run typecheck && npm run typecheck:web` — root typecheck passes, but the
-      current uncommitted Web overlay fails at
-      `web/src/erp-demo-runtime-impl.ts:1481`: the Demo purchase-requisition wrapper
-      still uses the old positional call shape while the domain command expects an
-      actor input object.
+- [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
+      aligning the Demo purchase-requisition adapter with the actor-input command shape.
 - [x] `npm test` — 154 passed files + 1 skipped file (155 total),
       623 passed tests + 1 intentional skip (624 total) on 2026-08-10; the
       PostgreSQL 16 proof needs `POSTGRES_URL`, or rely on CI's service-container run.
@@ -22,8 +19,8 @@ section for the path you are releasing. Deployment mechanics live in
       dedicated and empty; the preflight rejects any user table before writes.
 - [x] `npm run check:demo-schema && npm run check:drift` — passed on 2026-08-10;
       generated PGlite artifacts and all Drizzle migrations agree
-- [ ] `npm run build:demo` — blocked by the same current Web typecheck mismatch; rerun
-      after the user-owned overlay is reconciled.
+- [x] `npm run build:demo` — serial build passed on 2026-08-10; a parallel attempt raced
+      on the shared `web/dist` output and is not a source failure.
 - [ ] `npm run smoke` — current 2026-08-10 run renders the dashboard at desktop/mobile
       but fails the navigation assertion on 18 unexplained numeric `0` badges in each
       viewport. Resolve the badge contract, then rerun this shell/dashboard proof; the

@@ -122,10 +122,10 @@ current/target record. The following are implemented compatibility facts:
   command as well as the dispatcher. The command checks the active tenant actor before
   locking and mutating a `draft` run; its versioned header snapshot is the current
   legacy authority and no generic approval instance/step is claimed;
-- unknown module keys currently pass the module gate and therefore remain a migration
-  risk even though registered resources retain their own authorization checks. Resource
-  registration is currently a runtime application allowlist; no database FK or
-  authorization-version cache is claimed yet.
+- unknown module keys now fail the module gate and therefore cannot bypass module
+  activation while resource registration is incomplete. Resource registration remains
+  a runtime application allowlist; no database FK or authorization-version cache is
+  claimed yet.
 
 TASK-170 now separates platform/support authority. `platform_principal`, platform roles,
 hash-backed bearer/CSRF sessions and `support_access_grant` are outside tenant role
@@ -137,24 +137,25 @@ creation, decisions and revocation. Principal/session issuance is out-of-band, a
 evaluator is a decision/audit boundary rather than an automatic customer-data proxy.
 
 TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173
-has completed the direct Sales/Purchasing order slice, the Purchase Requisition
-legacy-state slice, the Sales Commission legacy-state slice, the allowance calculation
-slice and the budget slice, but remains in progress for strict replacement of the
-explicit, audited HR compatibility path, plus broader resource/module/policy context.
-The current HR audit confirms that `overridePermissionKey: 'hr.write'` is checked before
-the active step's manager/delegate authority; this is an explicit compatibility policy,
-not a hidden bypass, but it can intentionally cover a manager-owned step. The central
-workflow call also omits resource/scope/module/policy context, and direct manager active
-state plus instance/step/resource/policy-bound delegation checks remain pending.
-TASK-174–175 must
-invalidate stale authorization state and remove the tenant Superadmin bypass. TASK-170's
-implemented platform boundary grants no platform operator permanent implicit
-customer-data authority.
+is now implemented across the direct Sales/Purchasing order slice, Purchase Requisition,
+Sales Commission, allowance, budget and versioned leave/expense approval paths. Approval
+decisions are bound to the locked current step; a management `hr.write` permission no
+longer bypasses a manager-owned step. Permission authorities receive server-resolved
+resource/module/scope context plus policy-version, approval-instance and approval-step
+identifiers; the active step must belong to the instance's policy snapshot, and a named
+direct authority must still be an active employee. Existing in-flight approvals keep
+their snapshotted current authority; there is no implicit time-based migration or
+takeover. Delegation remains tenant/domain/authority/delegate/time/revocation bounded;
+instance/step/resource/policy-bound delegation is still a later hardening slice.
+TASK-174-A now fails closed for unknown module keys and registers payroll as a gateable
+module; authorization-version invalidation and TASK-175's explicit Company Owner cutover
+remain pending. TASK-170's implemented platform boundary grants no platform operator
+permanent implicit customer-data authority.
 
 The shared access matrix (`src/auth/accessMatrix.ts`) and its API/browser checks are
 defence-in-depth regression contracts for route visibility, module/permission metadata
 and record drill-in. They do not replace backend authorization and do not close the
-remaining TASK-174 unknown-module or authorization-version gaps.
+remaining TASK-174 authorization-version gap.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company
 Superadmin and active linked non-Superadmin employee, records entry/return and blocks
