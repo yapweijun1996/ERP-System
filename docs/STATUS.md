@@ -60,7 +60,12 @@ approval re-checks `expenses.allowance.manage` before changing a locked `calcula
 row; its allowance/API/auth regression passes 12/12. Budget approval re-checks
 `finance.budget.approve` before changing a draft budget; its budget/finance/API/auth
 regression passes 18/18, with direct-domain denial mapped to HTTP 403. Neither path
-claims a generic approval instance/step.
+claims a generic approval instance/step. The governed HR management takeover is an
+explicit compatibility policy rather than a hidden bypass: only the management path
+supplies `overridePermissionKey: 'hr.write'`, the workflow domain re-checks `hr.write`
+before covering an active step, and `approval_decision` records the original authority
+and `authoritySource`; leave-approval/application tests pass 17/17. Strict replacement
+of that compatibility escalation remains open.
 
 Current verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof, Demo build,
 generated Demo schema, 244-table drift, Demo-pack and permission-registry checks pass.
@@ -1712,8 +1717,8 @@ and browser gates now pass 1,531 canonical keys / 69 local packs across 128 rout
 
 ## Next implementation boundary
 
-The dependency order is TASK-173 remaining HR approval-authority unification and
-decision context, then TASK-174 unknown-module/resource fail-closed validation and authorization-
+The dependency order is TASK-173 strict replacement of the explicit HR compatibility
+policy and decision context, then TASK-174 unknown-module/resource fail-closed validation and authorization-
 version invalidation, then TASK-175 explicit Company Owner permissions. The current
 working tree contains additional uncommitted application changes; this status records
 only behavior verified from the current files/tests and does not imply that those

@@ -90,8 +90,11 @@ both desktop and mobile runs.
   Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
   lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
   Remaining before Done: strict permission-plus-current-workflow-authority behavior for
-  the HR compatibility escalation, plus broader resource/module/policy context. The
-  previously recorded
+  replacement of the explicit, audited HR compatibility escalation, plus broader
+  resource/module/policy context. The current HR management path passes the
+  compatibility override only when the workflow domain re-checks `hr.write`; its
+  `approval_decision` keeps the original authority and `authoritySource`, and the
+  focused leave-approval/application regression passes 17/17. The previously recorded
   full regression baseline remains 154 files passed + 1 skipped file (155 total),
   623 tests passed + 1 intentional skip (624 test slots), zero failures; the latest
   A2-R1 through A2-R4 slices have the focused evidence above and have not yet been
@@ -152,10 +155,12 @@ statuses above and keep each change independently testable:
    `sales.commission.approve` plus the current locked `draft` state; allowance approval
    now re-checks `expenses.allowance.manage` before its locked `calculated → approved`
    transition; budget approval now re-checks `finance.budget.approve` before its draft
-   activation transition. Route the remaining HR compatibility decision through domain
-   permission plus its active workflow authority;
-   preserve the existing HR takeover behavior only as an explicit, audited
-   compatibility policy until its replacement is implemented.
+   activation transition. The existing HR management takeover is now explicitly
+   audited compatibility behavior: only the management path supplies
+   `overridePermissionKey: 'hr.write'`, the workflow domain re-checks that permission
+   before covering an active step, and the decision keeps the original authority.
+   Replace that compatibility policy with strict current-step authority when the
+   broader workflow decision is implemented.
 3. **TASK-173-B — decision-context completion:** register the remaining ownership,
    module and policy context consumed by authorization, and prove that missing context
    denies without changing the current assignment/Superadmin compatibility boundary.

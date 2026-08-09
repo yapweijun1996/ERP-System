@@ -2352,8 +2352,13 @@ approval subsystem. Normative current/target behavior is in
       existing status/active/version/line state remains the workflow authority and no
       generic approval instance/step is claimed. The budget/finance/API/auth regression
       passes 18/18, with direct-domain denial mapped to HTTP 403. Remaining work is the
-      HR compatibility escalation and broader resource/module/policy context. A new
-      full suite run is still pending for A2-R1 through A2-R4.
+      strict replacement of the existing HR compatibility escalation and broader
+      resource/module/policy context. The current HR takeover remains explicit and
+      audited: only the management path supplies `overridePermissionKey: 'hr.write'`,
+      the workflow domain re-checks that permission before covering an active step, and
+      `approval_decision` preserves the original authority plus `authoritySource`; the
+      focused leave-approval/application regression passes 17/17. A new full suite run
+      is still pending for A2-R1 through A2-R4.
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** The access matrix and browser/API route contract are a
       partial precursor; unknown module keys still fail open and no authorization-version

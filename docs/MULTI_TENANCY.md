@@ -187,5 +187,9 @@ generic approval instance/step. Allowance calculation approval now re-checks
 approval now re-checks `finance.budget.approve` before its draft/active/version/line
 transition; neither introduces a generic approval instance/step. Remaining tasks add
 the HR compatibility approval-authority guard, fail-closed module/resource validation,
-authorization-version invalidation and explicit Company Owner permissions.
+the existing HR compatibility policy is explicit and audited: only the management path
+supplies `overridePermissionKey: 'hr.write'`, the workflow domain re-checks that
+permission before covering an active step, and the decision preserves the original
+authority. Strict replacement of that compatibility policy, authorization-version
+invalidation and explicit Company Owner permissions remain target work.
 Those target capabilities must not be inferred from the current `is_superadmin` column.

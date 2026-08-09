@@ -326,11 +326,17 @@ safe/audited explanations:
   changing a draft budget. The existing draft/approved status, active flag, version and
   imported lines remain its workflow authority; no generic approval instance/step is
   introduced. Direct-domain denial maps to the API's stable 403 response.
+- Governed HR leave management retains a compatibility escalation for active steps that
+  were assigned under an older policy. Only the management path supplies
+  `overridePermissionKey: 'hr.write'`; the workflow domain re-checks that permission,
+  and `approval_decision` preserves the original authority and `authoritySource`.
+  Replacing this compatibility policy with strict current-step authority remains a
+  target requirement.
 
 The following approved requirements remain pending under TASK-173–175:
 
 - strict permission-plus-current-workflow-authority behavior across the remaining
-  HR compatibility approval-like path, plus complete resource/policy context;
+  explicit/audited HR compatibility escalation, plus complete resource/policy context;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
 - authorization-version invalidation prevents stale role/scope/module/policy state;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;

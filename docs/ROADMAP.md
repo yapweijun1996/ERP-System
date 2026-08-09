@@ -1044,8 +1044,11 @@ TASK-017.
    calculations now re-check `expenses.allowance.manage` before changing their locked
    `calculated` state, and budgets now re-check `finance.budget.approve` before changing
    their draft/active/version/line state; neither path introduces a generic approval
-   instance/step. Strict approval-authority unification remains open for the HR
-   compatibility escalation. Broader resource/module/policy context is also open.
+   instance/step. The existing HR management override is now an explicit, audited
+   compatibility policy: the workflow domain re-checks `hr.write` before it can cover
+   an active step assigned under an older policy, and records the original authority
+   plus `authoritySource`. Strict replacement of that compatibility escalation remains
+   open. Broader resource/module/policy context is also open.
 4. **Fail-closed registry and cache invalidation** (TASK-174) is next: finish the
    unknown module/resource/ownership checks, make route metadata coverage a release gate,
    and add prompt authorization-version invalidation for role, scope, module, policy and

@@ -375,6 +375,11 @@ Current runtime facts:
   imported lines remain the workflow authority, also without a generic approval
   instance/step. The allowance/API/auth regression passes 12/12 and the
   budget/finance/API/auth regression passes 18/18.
+- Governed HR leave management retains an explicit compatibility escalation for active
+  steps created under older policy configuration. Only the management path supplies
+  `overridePermissionKey: 'hr.write'`; the workflow domain re-checks that permission,
+  and `approval_decision` retains the original authority and `authoritySource`. Strict
+  current-step-only replacement remains a target, not current behavior.
 - `authorize()` and `authorizeWithin()` expose only safe `allowed/reasonCode` results;
   `explainAuthorization()` is reserved for the audit-read admin endpoint, which
   records every explanation. Override creation/revocation is reasoned and audited.
@@ -399,8 +404,8 @@ owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. TA
 is in progress: migration 0087 and the central evaluator now govern explicit user-level
 overrides and safe explanations; its order, Purchase Requisition, Sales Commission,
 allowance and budget approval slices are delivered. Code behavior above is authoritative.
-Remaining EPIC-062 target work is the HR compatibility escalation, broader decision
-context, fail-closed module/resource behavior,
+Remaining EPIC-062 target work is the strict replacement of the explicit, audited HR
+compatibility escalation, broader decision context, fail-closed module/resource behavior,
 authorization-version invalidation and explicit Company Owner permissions under
 TASK-173–175. Broad
 `role_permission` rows remain a text compatibility store; registry telemetry,
