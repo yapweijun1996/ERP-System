@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **170**
+- Done: **171**
 - In progress: **0**
-- Todo: **4**
+- Todo: **3**
 - Blocked: **1**
 - Total: **175**
 
@@ -21,12 +21,28 @@ not a second task registry.
 | TASK-169 | Done | Align architecture and documentation with current authorization code |
 | TASK-170 | Done | Separate platform principals and time-bounded support access |
 | TASK-171 | Done | Canonical permission registry and compatibility-key migration |
-| TASK-172 | Todo | Assignment-scoped grants, targets and expiry |
+| TASK-172 | Done | Assignment-scoped grants, targets and expiry |
 | TASK-173 | Todo | Central authorization decision, explicit deny and safe explanation |
 | TASK-174 | Todo | Fail-closed module/resource registry and authorization versioning |
 | TASK-175 | Todo | Replace tenant Superadmin bypass with explicit Company Owner permissions |
 
 ## Latest completed task
+
+- **TASK-172 — Done:** migration `0086_youthful_mac_gargan.sql` adds the stable
+  `user_company_role.assignment_id` primary key, `[valid_from, valid_until)` validity,
+  assignment/revocation provenance and `user_company_role_scope`. The role-assignment
+  service/API supports multiple independently scoped assignments and validated
+  `none/company/department/team/employee` targets; permission, approval, setup and
+  impersonation checks share the active-assignment predicate. Existing
+  `role_resource_scope` rows remain a dual-read fallback for assignments whose
+  `scope_backfilled_at` is null. Expired and revoked assignments are denied immediately;
+  explicit-deny decisions, authorization-version caching and Company Owner cutover
+  remain TASK-173–175.
+
+- **Verification:** three resource-safe Vitest shards cover all 152 files with 614 tests
+  passed, one intentional skip and zero failures. Root/Web typecheck, ESLint, both
+  Demo/API builds, generated Demo schema/drift, Demo-pack and permission-registry checks
+  also pass after the PK and migration cutover.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -38,12 +54,13 @@ not a second task registry.
   Role editing/template cloning, leave approval configuration and expense extra-
   approval configuration reject unregistered tenant permissions. Existing broad
   `role_permission` text keys remain compatible through explicit mapping metadata;
-  no database FK/data migration, runtime compatibility telemetry, assignment scope,
-  centralized decision service, cache versioning or Company Owner cutover is claimed.
+  TASK-172 now owns the assignment migration while centralized decisions, cache
+  versioning and Company Owner cutover remain pending.
   `npm run check:permissions` is the CI gate for source literals, role templates,
   resource/action contracts and compatibility metadata. The complete 152-file Vitest
-  regression passes in three resource-safe shards: 610 tests passed, one intentional
-  skip and zero failures.
+  regression baseline passes in three resource-safe shards: 610 tests passed, one
+  intentional skip and zero failures before TASK-172 added its four assignment/seed
+  regression cases; the current 614-test result is recorded in the TASK-172 section.
 
 - **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,
   hash-backed bearer/CSRF sessions, auditable support grants and exact master/company

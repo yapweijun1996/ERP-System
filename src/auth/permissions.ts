@@ -1,12 +1,13 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  company, role, rolePermission, roleResourceScope, userCompanyRole,
+  company, role, rolePermission, roleResourceScope, userCompanyRole, userCompanyRoleScope,
 } from '../data/schema';
 import type { SessionData } from './session';
 import type { DataScope } from './accessCatalog';
 import { PERMISSIONS } from './permissionKeys';
 import { permissionCandidates, permissionDefinition } from './permissionRegistry';
+import { activeRoleAssignmentCondition } from './roleAssignmentState';
 
 export { PERMISSIONS } from './permissionKeys';
 
@@ -16,6 +17,7 @@ export async function hasPermission(
   db: DB,
   session: SessionData,
   permissionKey: PermissionKey,
+  now = new Date(),
 ): Promise<boolean> {
   // Platform grants are evaluated only by the platform support boundary. A
   // tenant Superadmin must never turn a platform-domain key into tenant access.
@@ -35,6 +37,7 @@ export async function hasPermission(
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(company.masterFn, session.masterFn),
       eq(role.isSuperadmin, true),
+      activeRoleAssignmentCondition(now),
     ))
     .limit(1);
   // Superadmin bypass is deliberately bounded to the current master/company
@@ -57,6 +60,7 @@ export async function hasPermission(
       eq(role.masterFn, session.masterFn),
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(company.masterFn, session.masterFn),
+      activeRoleAssignmentCondition(now),
       // Compatibility aliases are resolved by the application-owned registry;
       // role_permission never accepts arbitrary tenant-created permission codes.
       inArray(rolePermission.permissionKey, candidates),
@@ -87,14 +91,22 @@ const SCOPE_RANK: Record<DataScope, number> = {
 export interface EffectiveCapability {
   permissions: string[];
   scopes: Record<string, DataScope>;
+  scopeGrants: Record<string, ScopeGrant[]>;
+}
+
+export interface ScopeGrant {
+  scope: DataScope;
+  targetType: string;
+  targetId: string | null;
 }
 
 export async function effectiveCapabilities(
   db: DB,
   session: SessionData,
+  now = new Date(),
 ): Promise<EffectiveCapability> {
-  if (await isSuperadminSession(db, session)) {
-    return { permissions: ['*'], scopes: { '*': 'company' } };
+  if (await isSuperadminSession(db, session, now)) {
+    return { permissions: ['*'], scopes: { '*': 'company' }, scopeGrants: {} };
   }
   const permissions = await db.select({ permissionKey: rolePermission.permissionKey })
     .from(userCompanyRole)
@@ -106,10 +118,30 @@ export async function effectiveCapabilities(
       eq(role.masterFn, session.masterFn),
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(rolePermission.allowed, true),
+      activeRoleAssignmentCondition(now),
     ));
-  const scopeRows = await db.select({
+  const assignmentScopeRows = await db.select({
+    resourceKey: userCompanyRoleScope.resourceKey,
+    scope: userCompanyRoleScope.scope,
+    targetType: userCompanyRoleScope.targetType,
+    targetId: userCompanyRoleScope.targetId,
+  }).from(userCompanyRole)
+    .innerJoin(userCompanyRoleScope, eq(
+      userCompanyRoleScope.assignmentId,
+      userCompanyRole.assignmentId,
+    ))
+    .where(and(
+      eq(userCompanyRole.userId, session.userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(userCompanyRoleScope.masterFn, session.masterFn),
+      eq(userCompanyRoleScope.companyFn, session.activeCompanyFn),
+      activeRoleAssignmentCondition(now),
+    ));
+  const legacyScopeRows = await db.select({
     resourceKey: roleResourceScope.resourceKey,
     scope: roleResourceScope.scope,
+    targetType: roleResourceScope.resourceKey,
+    targetId: roleResourceScope.resourceKey,
   }).from(userCompanyRole)
     .innerJoin(roleResourceScope, and(
       eq(roleResourceScope.roleId, userCompanyRole.roleId),
@@ -119,17 +151,54 @@ export async function effectiveCapabilities(
     .where(and(
       eq(userCompanyRole.userId, session.userId),
       eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      isNull(userCompanyRole.scopeBackfilledAt),
+      activeRoleAssignmentCondition(now),
     ));
+  const scopeRows: ScopeGrantRow[] = [
+    ...assignmentScopeRows.map((row) => ({
+      resourceKey: row.resourceKey,
+      scope: row.scope,
+      targetType: row.targetType,
+      targetId: row.targetId,
+    })),
+    ...legacyScopeRows.map((row) => ({
+      resourceKey: row.resourceKey,
+      scope: row.scope,
+      targetType: 'none',
+      targetId: '',
+    })),
+  ];
   const scopes: Record<string, DataScope> = {};
+  const scopeGrants: Record<string, ScopeGrant[]> = {};
   for (const row of scopeRows) {
     const value = row.scope as DataScope;
     const current = scopes[row.resourceKey];
     if (!current || SCOPE_RANK[value] > SCOPE_RANK[current]) scopes[row.resourceKey] = value;
+    const grants = scopeGrants[row.resourceKey] ?? [];
+    if (!grants.some((grant) =>
+      grant.scope === value
+      && grant.targetType === row.targetType
+      && grant.targetId === (row.targetId || null))) {
+      grants.push({
+        scope: value,
+        targetType: row.targetType,
+        targetId: row.targetId || null,
+      });
+    }
+    scopeGrants[row.resourceKey] = grants;
   }
   return {
     permissions: [...new Set(permissions.map((row) => row.permissionKey))].sort(),
     scopes,
+    scopeGrants,
   };
+}
+
+interface ScopeGrantRow {
+  resourceKey: string;
+  scope: string;
+  targetType: string;
+  targetId: string;
 }
 
 export function scopeForResource(
@@ -143,13 +212,31 @@ export function scopeForResource(
   return null;
 }
 
+export function scopeGrantsForResource(
+  capabilities: EffectiveCapability,
+  resource: string,
+): ScopeGrant[] {
+  const candidates = [resource, `${resource.split('/')[0]}/*`, '*'];
+  for (const candidate of candidates) {
+    if (capabilities.scopeGrants[candidate]) return capabilities.scopeGrants[candidate];
+    if (capabilities.scopes[candidate]) {
+      return [{ scope: capabilities.scopes[candidate], targetType: 'none', targetId: null }];
+    }
+  }
+  return [];
+}
+
 /**
  * True only if the session's role for its *current* company assignment is
  * Superadmin (same tenant-bounded lookup hasPermission uses, never a
  * cross-master bypass). Used by capabilities and administrative workflows
  * that need to distinguish the tenant's superadmin from ordinary role grants.
  */
-export async function isSuperadminSession(db: DB, session: SessionData): Promise<boolean> {
+export async function isSuperadminSession(
+  db: DB,
+  session: SessionData,
+  now = new Date(),
+): Promise<boolean> {
   const [assignment] = await db.select({
     roleMasterFn: role.masterFn,
     companyMasterFn: company.masterFn,
@@ -164,6 +251,7 @@ export async function isSuperadminSession(db: DB, session: SessionData): Promise
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(company.masterFn, session.masterFn),
       eq(role.isSuperadmin, true),
+      activeRoleAssignmentCondition(now),
     ))
     .limit(1);
   if (!assignment) return false;

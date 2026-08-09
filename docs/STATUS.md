@@ -6,8 +6,8 @@ an epic-level milestone lands.
 
 ## 2026-08-09 source-of-truth synchronization
 
-The current worktree is at migration 0085: the Drizzle journal contains **86
-migrations** and generated canonical SQL contains **242 tables**. TASK-161–171 now
+The current worktree is at migration 0086: the Drizzle journal contains **87
+migrations** and generated canonical SQL contains **243 tables**. TASK-161–172 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
@@ -15,8 +15,12 @@ matching task records.
 
 Authorization documentation now distinguishes present behavior from the approved
 target. Present behavior remains tenant `master -> company`, active-company multi-role
-Allow union, role-level `self/team/department/company` scopes and tenant-bounded
-`is_superadmin` bypass. TASK-170 now provides a separate platform-principal, platform
+Allow union and tenant-bounded `is_superadmin` bypass. TASK-172 now adds a stable
+assignment primary key, `[valid_from, valid_until)` validity, revocation/provenance and
+assignment-owned `self/team/department/company` scope rows with validated
+`none/company/department/team/employee` targets. `role_resource_scope` remains a
+dual-read fallback for assignments whose `scope_backfilled_at` is null. TASK-170 now
+provides a separate platform-principal, platform
 session/role and reasoned support-grant control plane: grants are bounded to a master
 and optional company, expire within 24 hours, default-deny sensitive fields, audit
 allow/deny/revoke events and never proxy customer data by themselves. Principal/session
@@ -26,15 +30,16 @@ compatibility and 142 canonical), explicit alias metadata, canonical projections
 116 resources and 62 actions, tenant/platform-domain separation and a CI gate. Ordinary
 role checks fail closed for unknown permission candidates, while platform-domain keys
 are rejected before the current tenant Superadmin bypass. Existing text rows remain
-compatible during expand. EPIC-062/TASK-172–175 track the remaining
-assignment-scope, centralized-decision, fail-closed module/cache and explicit Company
-Owner migration. See
+compatible during expand. EPIC-062/TASK-173–175 track the remaining centralized-
+decision, fail-closed module/cache and explicit Company Owner migration. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
-Current verification on 2026-08-09: root/Web typecheck, ESLint, generated Demo schema,
-242-table drift and permission-registry checks pass. The complete Vitest set is green
-when run in three resource-safe shards covering all 152 files: 610 tests passed, one
-intentional skip and zero failures. TASK-168 reconciled the generated Demo Manager
+Current verification on 2026-08-09: root/Web typecheck, ESLint, both Demo/API builds,
+generated Demo schema, 243-table drift, Demo-pack and permission-registry checks pass.
+Three resource-safe Vitest shards cover all 152 files: 614 tests passed, one intentional
+skip and zero failures. Assignment/RBAC/admin/manager and approval-focused tests pass,
+including expiry, revoke, multi-target and same-role independent-assignment cases.
+TASK-168 reconciled the generated Demo Manager
 scopes with the current
 authoritative catalog. Generic sales/CRM/inventory/warehouse/project/service collections
 are company-scoped because their rows do not carry actor ownership; actor-derived My Work
@@ -259,7 +264,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (242 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 86 ordered migrations through schema version 85; `drizzle/`, `src/data/schema/` |
+| Canonical schema (243 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 87 ordered migrations through schema version 86; `drizzle/`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -311,7 +316,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Confidence-governed receipt inbox | ✅ Canonical domain/API and My Receipts boundary | Migration 0059 stores immutable field provenance/confidence, uploader authorization and ready/review/submitted inbox states. Company auto-submit defaults off and cannot use a threshold below 98%. Clean safety, critical-field validity/confidence, conflict, amount and exact-duplicate checks must all pass; system submission records uploader authorization plus `receipt-auto-submit-v1`, while failures enter explicit human review. |
 | Project-lite: register + progress-claim billing | ✅ Canonical Demo/API data and writes | Second Phase 7 module. `project` (nullable `customer_id` — null means Internal — running `billed_to_date` aggregate) and `progress_claim` (draft/posted billing document, tax-snapshotted like `sales_debit_note`) tables, `src/modules/project/` (`createProject`, `createProgressClaim`/`postProgressClaim`), registered as standard generic resources gated on `project.read`/`project.write` permissions. Posting a claim inserts the exact same balanced `gl_entry` legs `postSalesDebitNote` already uses (Dr `1100` AR / Cr `4000` Revenue / Cr `2200` Output Tax) and increments the project's `billed_to_date`. `project-pl` and `project-detail` expose only real contract, billing, claim and customer relationships; unsupported cost/budget/team/milestone data remains absent rather than fabricated. |
 | Project Timesheet | ✅ Canonical Demo/API data and writes | Migration 0040 adds actor-owned `project_time_entry` facts with Decimal hours, project/date indexes, version and append-preserving void metadata. Creation derives the actor from the signed-in Session, accepts only an open tenant project and a real work date, and never exposes another user's entries. Correction voids under a row lock instead of deleting or rewriting hours. The five-language `timesheet` route loads a bounded weekly view, reports only active totals, keeps voided facts visible and explicitly does not invent approval, capacity or payroll workflow. Domain/API tests cover validation, tenant/actor isolation, Viewer denial, audit and idempotent void replay; Demo smoke and live in-app browser prove create → void at desktop and 375px. |
-| Actor-addressed Notifications | ✅ Canonical Demo/API data and writes | Migration 0043 adds first-class `app_notification` delivery/read/dismiss facts scoped to one master, company and recipient. Shared TypeScript commands serve both adapters; public rows omit tenant/user identifiers and cross-user records stay unavailable. `notifications.read`/`notifications.manage`, CSRF, idempotency, audit and production RLS protect the API. The bell plus five-language full page share the canonical feed and reload on company switch; localStorage state, fictional notifications and fake preferences are removed. |
+| Actor-addressed Notifications | ✅ Canonical Demo/API data and writes | Migration 0043 adds first-class `app_notification` delivery/read/dismiss facts scoped to one master, company and recipient. Shared TypeScript commands serve both adapters; public rows omit tenant/user identifiers and cross-user records stay unavailable. A server-owned destination registry filters notifications against the recipient's current permission, employee link and company module state, while legacy approval routes resolve to the usable HR or My Work destination. Recipient-owned read/dismiss actions require `notifications.read`, not admin-only `notifications.manage`; CSRF, idempotency, audit and production RLS still protect the API. The bell plus five-language full page share the canonical feed and reload on company switch; localStorage state, fictional notifications and fake preferences are removed. |
 | Service-lite: warranty contracts + tickets | ✅ Canonical Demo/API data and writes | Third Phase 7 module. `service_contract` (customer's warranty/maintenance register, computed-not-stored Active/Expiring/Expired status from `expiry_date` vs. today) and `service_ticket` (customer-scoped, nullable `contract_id` link, 3-state `open`/`in_progress`/`closed` lifecycle — simplifies the mock's 5 statuses since Resolved+Closed already collapsed to one "done" bucket in the mock's own filter chips) tables, `src/modules/service/` (`createServiceTicket` always starts open/unassigned, `assignServiceTicket` open→in_progress, `resolveServiceTicket` any non-closed→closed requiring a real typed diagnosis), registered as standard generic resources gated on new `service.read`/`service.write` permissions. `service-ticket` reads real Open/Overdue KPIs (Overdue computed from a linked contract's SLA response hours, replacing the mock's hardcoded, never-computed "96%" figure) and a real over-SLA alert; `service-order` is a real per-ticket detail (not always the same hardcoded `SVC-26-0042` record) with real Assign/Resolve actions and an SLA panel that only shows a countdown when a linked contract actually has a response-time commitment; `service-contracts` has a real list with computed status and a real create flow. Parts/labour cost panels removed, not fabricated — a materially separate Inventory-consumption feature deferred like Fixed Assets' Transfer/Dispose. Verified live: assigned an open contract-covered ticket and watched its real overdue-by-23h SLA indicator stay accurate through the transition, resolved a ticket with a real typed diagnosis, registered a new contract and logged a new ticket against it with a fresh real SLA countdown. Also found and fixed two issues unrelated to Service itself: the Viewer role's seed permissions were missing `project.read` (a real EPIC-021 gap, only missed because every prior live check used the Admin/superadmin persona which bypasses permission checks), and `vitest.config.ts` had no exclude pattern, so `npm test` was silently combining this checkout's results with ~100 test files from concurrent background agents' `.claude/worktrees/` checkouts. |
 | Supplier contracts and vendor performance | ✅ Canonical Demo/API controls and derived read model | Migration 0035 adds effective-dated supplier price-list headers and quantity tiers. Shared commands validate tenant/date/product/value rules, prevent overlapping active product coverage and activate through idempotent audit. Vendor scorecards are rebuilt from canonical purchase facts and expose honest unavailable states where quoted lead or invoice evidence does not yet exist. |
 | Purchase Order approval gate | ✅ Canonical Demo/API data and writes | Migration 0034 adds one versioned `purchase_order_approval` per PO. New and RFQ-awarded POs start `pending_approval`; an authorised approve/reject command requires a note, snapshots the active deciding user and changes only PO/approval state. Pending/rejected orders cannot be received, approval itself writes no stock movement or GL entry, and the queue/detail routes use bounded five-language Demo/API data. Live proof approved `PO-APP-2026-0001`, recorded Admin plus its note, opened the order for receipt, and passed Chinese/375px with zero console issues. |
@@ -321,7 +326,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. The sidebar does not show unexplained static counters; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — every route in `SCREENS` (125), desktop + 375px | ✅ Demo/API behavior | Screen and five-language audits pass at 125 Canonical / 0 Preview. Permission-aware navigation matches effective capabilities; every unlinked My Work route now performs one handled context preflight, zero downstream reads and renders its localized empty state. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green in complete shards | 2026-08-09: three resource-safe Vitest shards cover all 152 files; 610 passed, one expected skip, zero failed (611 tests total). The permission registry, resource/action contracts, Demo v15 pack, permission/module tests and authenticated integration coverage agree with the current application catalog. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green in complete shards | 2026-08-09: three resource-safe Vitest shards cover all 152 files; 614 passed, one intentional skip, zero failed (615 tests total). The permission registry, resource/action contracts, Demo v15 pack, permission/module tests and authenticated integration coverage agree with the current application catalog. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -1624,14 +1629,15 @@ v259.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 170 tasks
+- Done: 171 tasks
 - In progress: none
-- Todo: TASK-172–175 (4)
+- Todo: TASK-173–175 (3)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 125 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
   complete documentation baseline, TASK-170's platform-support foundation,
-  TASK-171's canonical permission registry and four pending implementation tasks.
+  TASK-171's canonical permission registry, TASK-172's assignment migration and three
+  pending implementation tasks.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently

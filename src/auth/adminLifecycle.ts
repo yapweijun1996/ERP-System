@@ -29,6 +29,7 @@ import {
 } from './accessCatalog';
 import { isTenantPermission } from './permissionRegistry';
 import type { SessionData } from './session';
+import { activeRoleAssignmentCondition } from './roleAssignmentState';
 
 export async function setUserActiveWithin(
   exec: DB,
@@ -63,6 +64,7 @@ export async function setUserActiveWithin(
         eq(userCompanyRole.companyFn, session.activeCompanyFn),
         eq(role.masterFn, session.masterFn),
         eq(role.isSuperadmin, true),
+        activeRoleAssignmentCondition(now),
       ))
       .limit(1);
     if (targetSuperadminGrant) {
@@ -76,6 +78,7 @@ export async function setUserActiveWithin(
           eq(userCompanyRole.companyFn, session.activeCompanyFn),
           eq(role.masterFn, session.masterFn),
           eq(role.isSuperadmin, true),
+          activeRoleAssignmentCondition(now),
           ne(appUser.userId, userId),
         ))
         .limit(1);
@@ -193,6 +196,7 @@ export async function setUserRolesWithin(
       eq(userCompanyRole.userId, userId),
       eq(userCompanyRole.companyFn, session.activeCompanyFn),
       eq(role.masterFn, session.masterFn),
+      activeRoleAssignmentCondition(now),
     ))
     .orderBy(role.roleId);
   const managedRoleIds = before
@@ -220,6 +224,7 @@ export async function setUserRolesWithin(
         eq(userCompanyRole.companyFn, session.activeCompanyFn),
         eq(role.masterFn, session.masterFn),
         eq(role.isSuperadmin, true),
+        activeRoleAssignmentCondition(now),
         ne(appUser.userId, userId),
       ))
       .limit(1);
@@ -244,6 +249,8 @@ export async function setUserRolesWithin(
       companyFn: session.activeCompanyFn,
       roleId,
       managedBySystem: false,
+      assignedByUserId: session.userId,
+      assignmentSource: 'manual' as const,
     })));
   }
   await exec.update(userCompany).set({

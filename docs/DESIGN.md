@@ -321,8 +321,13 @@ Current runtime facts:
 
 - security hierarchy is `master -> company -> user/company membership`;
 - users may hold multiple company roles and permissions are an Allow union;
-- `self/team/department/company` visibility is stored per role/resource and the widest
-  matching role scope is used;
+- `user_company_role.assignment_id` is the stable assignment primary key. Live grants
+  satisfy `valid_from <= now` and (`valid_until` is null or `valid_until > now`) with
+  `revoked_at is null`; permissions and approval recipients use the same predicate;
+- assignment-owned scope rows in `user_company_role_scope` union the validated
+  `self/team/department/company` grants and target `none/company/department/team/
+  employee`. Assignments with `scope_backfilled_at is null` dual-read the legacy
+  `role_resource_scope` rows;
 - `is_superadmin` is a tenant/company-bounded full-permission bypass;
 - permission storage remains compatibility-first, but TASK-171 now supplies an
   application-owned registry with 299 static definitions (157 compatibility and 142
@@ -344,13 +349,15 @@ tenant cookie; platform principal/session issuance is out-of-band, and evaluatin
 grant does not automatically expose or proxy business records. The employee workspace
 continues to be a tenant Superadmin convenience and is a separate authority path.
 
-Remaining target work under EPIC-062 introduces assignment-scoped validity and targets,
-one deterministic authorization decision service, fail-closed module/resource behavior,
-authorization-version invalidation and explicit Company Owner permissions. Until those
-tasks complete, code behavior above is authoritative and target behavior must not be
-claimed as delivered. Broad role_permission rows remain a text compatibility store;
-TASK-171 does not claim a database migration, runtime compatibility telemetry or cache
-versioning.
+TASK-172 now delivers assignment-scoped validity, revocation/provenance and validated
+scope targets through migration 0086, with a stable assignment primary key, assignment-
+owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. Code
+behavior above is authoritative. Remaining EPIC-062 target work is one deterministic
+authorization decision service, fail-closed module/resource behavior,
+authorization-version invalidation and explicit Company Owner permissions under
+TASK-173–175. Broad `role_permission` rows remain a text compatibility store; registry
+telemetry, centralized decision caching and the Company Owner cutover are not yet
+delivered.
 
 ## 10. August 2026 implementation additions
 

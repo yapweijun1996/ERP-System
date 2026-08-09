@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
   account,
@@ -243,11 +243,22 @@ export async function completeDemoSetupWithin(
     companyFn,
     roleId: adminRole.roleId,
   }).onConflictDoNothing();
-  await exec.insert(userCompanyRole).values({
-    userId: admin.userId,
-    companyFn,
-    roleId: adminRole.roleId,
-  }).onConflictDoNothing();
+  const [existingAssignment] = await exec.select({ assignmentId: userCompanyRole.assignmentId })
+    .from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, admin.userId),
+      eq(userCompanyRole.companyFn, companyFn),
+      eq(userCompanyRole.roleId, adminRole.roleId),
+      isNull(userCompanyRole.revokedAt),
+    )).limit(1);
+  if (!existingAssignment) {
+    await exec.insert(userCompanyRole).values({
+      userId: admin.userId,
+      companyFn,
+      roleId: adminRole.roleId,
+      assignedByUserId: admin.userId,
+      assignmentSource: 'onboarding',
+    });
+  }
   await exec.insert(companyModule).values(MODULE_KEYS.map((moduleKey) => ({
     masterFn, companyFn, moduleKey, enabled: true, configured: true,
   }))).onConflictDoNothing();

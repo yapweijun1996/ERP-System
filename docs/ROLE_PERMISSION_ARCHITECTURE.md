@@ -1,8 +1,7 @@
 # ERP Role & Permission Architecture
 
-Status: **Proposed target architecture with TASK-170 platform-support and TASK-171
-permission-registry foundations; current implementation and migration gaps are
-normative below**
+Status: **Current implementation plus remaining target architecture; TASK-170–172
+foundations are delivered and TASK-173–175 remain pending**
 Reviewed: **2026-08-09**
 Scope: platform authorization, tenant/company roles, permissions, data scope,
 approval authority, support access and audit
@@ -99,12 +98,20 @@ The current code already implements:
 - role editing/template cloning, leave approval configuration and expense extra-approval
   configuration reject unregistered tenant permission codes, and
   `npm run check:permissions` audits source literals, templates, routes and actions.
+- stable assignment identity and assignment lifecycle (TASK-172):
+  `user_company_role.assignment_id` is the primary key; validity is the half-open
+  `[valid_from, valid_until)` window, `revoked_at` stops access immediately, and
+  assignment/revocation provenance is stored and exposed to admin reads;
+- assignment-owned scope rows in `user_company_role_scope`, with validated current
+  target types (`none`, `company`, `department`, `team`, `employee`). A reusable role
+  can therefore be attached to multiple independent assignments and target rows.
 
 The following current behaviors are compatibility facts, not the final architecture:
 
 - A tenant-local role with `role.is_superadmin=true` bypasses `role_permission`.
-- Resource scope is stored on the role (`role_resource_scope`), not on an individual
-  user-role assignment.
+- `role_resource_scope` remains a compatibility fallback only for assignments whose
+  `scope_backfilled_at` is null; assignment-owned scope rows are preferred once the
+  assignment is marked backfilled.
 - Existing role data still stores broad compatibility keys alongside canonical projections;
   the registry maps them explicitly but the expand-phase data migration and runtime
   compatibility telemetry are not complete.
@@ -212,17 +219,17 @@ The current application registry is split into two layers:
   strings. Unknown candidates return no grant.
 
 `npm run check:permissions` currently verifies 299 static registry definitions, 116
-resource contracts, 62 action contracts and 5 update contracts. This is an application
-registry and compatibility layer, not yet a database permission table, role-assignment
-migration, runtime usage telemetry system or centralized authorization decision service.
-Those boundaries remain TASK-172–175 work.
+resource contracts, 62 action contracts and 5 update contracts. TASK-172 now adds the
+assignment migration, dual-read scope path, active-assignment predicate and assignment
+API. This is still not a centralized authorization decision service, explicit-deny
+engine, authorization-version cache or Company Owner cutover; those remain TASK-173–175.
 
 ## 6. Scope and resource ownership
 
 Supported target scope types are introduced in phases:
 
 ```text
-Phase 1: self, team, department, company
+Implemented assignment target validation: none, company, department, team, employee
 Phase 2: branch, business_unit
 Phase 3: region, legal_entity, cost_center, all
 ```
@@ -245,8 +252,10 @@ Authorization is deny-by-default and follows this order:
 2. Resolve tenant and active legal entity from server-side session state.
 3. Validate active tenant/company membership.
 4. Validate that the module is enabled and the permission/resource/action is registered.
-5. Load non-expired role assignments and role permissions.
-6. Keep only assignments whose scope contains the resource.
+5. Load active role assignments (`valid_from <= now`, `valid_until > now` or null,
+   `revoked_at is null`) and role permissions.
+6. Keep assignment-owned scope rows whose target contains the resource; for an
+   unbackfilled assignment, dual-read the legacy role-level scope.
 7. Apply scoped explicit denies, temporary restrictions and sensitive-data controls.
 8. Evaluate ABAC conditions and separation-of-duties rules.
 9. For approval actions, also validate the active workflow step and snapshotted authority.
@@ -346,7 +355,8 @@ offboarding must have deterministic lifecycle behavior and tests.
 
 - Tenant/company isolation and active-company sessions
 - Multiple roles and allow-union permissions
-- Current self/team/department/company role-level scopes
+- Assignment-owned self/team/department/company scopes, with legacy role-level fallback
+  only for unbackfilled assignments
 - Company module activation
 - Backend checks, audit and production RLS
 - Versioned approval governance
@@ -357,15 +367,15 @@ offboarding must have deterministic lifecycle behavior and tests.
 - TASK-170: platform principal and time-bounded support-access domain — done; migration
   0084/0085 and domain/API adversarial tests are green
 - TASK-171: canonical permission registry and compatibility-key migration — done;
-  application registry/route CI and compatibility aliases are in place, while the
-  database expand/cutover remains part of the later migration
-- TASK-172: assignment-scoped grants, scope targets and expiry
+  application registry/route CI and compatibility aliases are in place
+- TASK-172: assignment-scoped grants, scope targets and expiry — done; migration 0086,
+  assignment service/API, active predicate and role-scope dual-read are implemented
 - TASK-173: centralized decision service, explicit deny semantics and safe explanation
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation
 - TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions
 
-Branch/business-unit/region scopes, enterprise access reviews, SSO/provisioning and
-advanced SoD follow only after this migration is complete.
+Branch/business-unit/region target validation, enterprise access reviews, SSO/
+provisioning and advanced SoD follow only after TASK-173–175.
 
 ## 14. Definition of done
 
@@ -383,3 +393,25 @@ The target architecture is implemented only when:
 - cache invalidation and immediate revocation are proven;
 - adversarial tests cover cross-tenant IDs, disabled modules, conflicting grants,
   expiry boundaries, stale sessions, self-approval and support access.
+
+## 15. Cross-layer permission regression matrix
+
+`src/auth/accessMatrix.ts` is the shared contract for canonical ERP routes. Each
+entry connects the expected module/permission boundary to its API list probe and,
+when a record is available, its detail/drill-in probe. This keeps navigation
+visibility, direct API access and record drill-in behavior aligned instead of
+maintaining separate route lists in the UI and tests.
+
+Run the checks with:
+
+```bash
+npx vitest run src/api/permissionMatrix.integration.test.ts
+npm run audit:access-matrix
+```
+
+The integration suite checks authenticated role fixtures, 401/403 behavior, list
+responses and detail responses. The browser audit loads the built demo shell,
+checks all canonical screen metadata, evaluates every route against the role
+templates, and fails closed on unmapped or accidentally public routes. The browser
+audit does not write application data; records without demo seed data are checked
+for drill-in consistency when a row exists.

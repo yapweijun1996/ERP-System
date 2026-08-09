@@ -92,8 +92,11 @@ build modes and clean `npm ci` Docker builds are required whenever these pins ch
 current/target record. The following are implemented compatibility facts:
 
 - user permissions are the Allow union of active-company roles;
-- resource scopes are currently stored on roles and union to the widest matching
-  `self/team/department/company` value;
+- assignment-owned scope rows are preferred and union to the widest matching
+  `self/team/department/company` value; assignments with a null
+  `scope_backfilled_at` dual-read legacy `role_resource_scope` rows;
+- role assignments are active only inside `[valid_from, valid_until)` and while
+  `revoked_at` is null; creation/revocation provenance is audited;
 - tenant-local `is_superadmin` bypasses role-permission checks inside the active company;
 - permission storage still contains broad compatibility keys, but TASK-171 now adds an
   application-owned registry with explicit canonical mappings; route/resource/action
@@ -114,9 +117,9 @@ API routes reject tenant cookies, require platform CSRF for mutations and audit 
 creation, decisions and revocation. Principal/session issuance is out-of-band, and the
 evaluator is a decision/audit boundary rather than an automatic customer-data proxy.
 
-TASK-172–175 must introduce assignment scopes, centralize deterministic deny-by-default
-decisions, invalidate stale authorization state and remove
-the tenant Superadmin bypass. No platform operator has been granted permanent implicit
+TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173–175
+must centralize deterministic deny-by-default decisions, invalidate stale authorization
+state and remove the tenant Superadmin bypass. No platform operator has been granted permanent implicit
 customer-data authority by documenting or implementing TASK-170.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company

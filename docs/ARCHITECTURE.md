@@ -7,8 +7,9 @@ interchangeable. Platform operators use the separate `platform_principal` domain
 implemented by TASK-170 and are never modeled as customer-company employees by
 implication. Its support grant is a bounded authorization decision, not an implicit
 customer-data proxy. TASK-171 adds the application-owned tenant permission registry
-and canonical resource/action projections; it does not yet change the role tables or
-centralize every authorization decision.
+and canonical resource/action projections. TASK-172 now changes the role-assignment
+tables to carry stable identity, validity, provenance and assignment-owned scope rows;
+it does not yet centralize every authorization decision.
 
 ## 1. Goal
 

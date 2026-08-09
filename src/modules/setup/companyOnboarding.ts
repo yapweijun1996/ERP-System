@@ -8,6 +8,7 @@ import { appendAudit } from '../../api/audit';
 import type { SessionData } from '../../auth/session';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import { MODULE_DEPENDENCIES, type ModuleKey } from '../../auth/moduleAccess';
+import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 
 export const ONBOARDING_STAGES = [
   'company', 'fiscal', 'warehouse', 'modules', 'roles', 'staff',
@@ -95,7 +96,7 @@ export async function completeCompanyOnboardingStageWithin(
   return { ...updated, completedSteps: updated.completedSteps as OnboardingStage[], stages: ONBOARDING_STAGES };
 }
 
-async function goLiveBlockers(exec: DB, session: SessionData): Promise<string[]> {
+async function goLiveBlockers(exec: DB, session: SessionData, now = new Date()): Promise<string[]> {
   const blockers: string[] = [];
   const state = await readCompanyOnboardingWithin(exec, session);
   const completed = new Set(state.completedSteps);
@@ -127,6 +128,7 @@ async function goLiveBlockers(exec: DB, session: SessionData): Promise<string[]>
       eq(appUser.masterFn, session.masterFn), eq(appUser.isActive, true),
       eq(userCompanyRole.companyFn, session.activeCompanyFn),
       eq(role.companyFn, session.activeCompanyFn), eq(role.isSuperadmin, true),
+      activeRoleAssignmentCondition(now),
     )).limit(1);
   if (!activeSuperadmin) blockers.push('roles:active_superadmin');
   const modules = await exec.select().from(companyModule).where(and(
@@ -159,7 +161,7 @@ export async function goLiveCompanyWithin(
   if (current.version !== expectedVersion) {
     throw new CompanyOnboardingError(409, 'version_conflict', 'Reload the setup checklist and try again.');
   }
-  const blockers = await goLiveBlockers(exec, session);
+  const blockers = await goLiveBlockers(exec, session, now);
   if (blockers.length) {
     throw new CompanyOnboardingError(422, 'go_live_blocked', 'Complete every setup control before Go Live.', {
       blockers: blockers.join(','),

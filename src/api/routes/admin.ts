@@ -26,6 +26,11 @@ import {
   setUserActive,
   setUserRoles,
 } from '../../auth/adminLifecycle';
+import {
+  createRoleAssignment,
+  revokeRoleAssignment,
+  type RoleAssignmentScopeInput,
+} from '../../auth/roleAssignments';
 import { listMasterModules, setMasterModule } from '../../auth/moduleAccess';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
 import { apiError, context, requireSession } from '../http';
@@ -124,6 +129,75 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
         userId,
         rawRoleIds.map((roleId) => Number(roleId)),
         context(res).requestId,
+      );
+      res.json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/users/:userId/role-assignments', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersManage)) {
+      apiError(res, 403, 'permission_denied', 'You cannot manage role assignments.');
+      return;
+    }
+    const userId = Number(req.params.userId);
+    const body = (req.body ?? {}) as {
+      roleId?: unknown;
+      validFrom?: unknown;
+      validUntil?: unknown;
+      reason?: unknown;
+      scopes?: unknown;
+    };
+    const roleId = Number(body.roleId);
+    if (!Number.isSafeInteger(userId) || userId <= 0 || !Number.isSafeInteger(roleId) || roleId <= 0) {
+      apiError(res, 400, 'invalid_request', 'userId and roleId must be positive integers.');
+      return;
+    }
+    const validFrom = body.validFrom == null ? undefined : new Date(String(body.validFrom));
+    const validUntil = body.validUntil == null ? undefined : new Date(String(body.validUntil));
+    if ((validFrom && Number.isNaN(validFrom.getTime())) || (validUntil && Number.isNaN(validUntil.getTime()))) {
+      apiError(res, 400, 'invalid_request', 'validFrom and validUntil must be valid ISO dates.');
+      return;
+    }
+    try {
+      const result = await createRoleAssignment(
+        db,
+        session,
+        {
+          userId,
+          roleId,
+          validFrom,
+          validUntil,
+          reason: typeof body.reason === 'string' ? body.reason : null,
+          scopes: Array.isArray(body.scopes) ? body.scopes as RoleAssignmentScopeInput[] : undefined,
+        },
+        context(res).requestId,
+      );
+      res.status(201).json({ data: result, meta: {} });
+    } catch (error) {
+      handleLifecycleError(res, error);
+    }
+  });
+
+  router.post('/role-assignments/:assignmentId/actions/revoke', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.usersManage)) {
+      apiError(res, 403, 'permission_denied', 'You cannot revoke role assignments.');
+      return;
+    }
+    const assignmentId = Number(req.params.assignmentId);
+    const reason = (req.body as { reason?: unknown } | undefined)?.reason;
+    if (!Number.isSafeInteger(assignmentId) || assignmentId <= 0 || typeof reason !== 'string') {
+      apiError(res, 400, 'invalid_request', 'assignmentId and a revocation reason are required.');
+      return;
+    }
+    try {
+      const result = await revokeRoleAssignment(
+        db, session, assignmentId, reason, context(res).requestId,
       );
       res.json({ data: result, meta: {} });
     } catch (error) {

@@ -35,6 +35,7 @@ import { MODULE_KEYS } from '../auth/moduleAccess';
  */
 const ADMIN_PASSWORD_HASH = 'pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48';
 const VIEWER_PASSWORD_HASH = 'pbkdf2$100000$da9fd51416f6c2fb48c282c0b370bdf1$072cf69c4fb68981cbb43a5af00b11435244a758e0a0ea4b538dd1074fac60a3';
+const DEMO_ASSIGNMENT_VALID_FROM = new Date('2026-01-01T00:00:00Z');
 
 export async function seedDemo(db: DB): Promise<void> {
   await db.insert(master).values({ masterFn: 'M1', loginCode: 'ACME', name: 'Acme Group' });
@@ -75,10 +76,10 @@ export async function seedDemo(db: DB): Promise<void> {
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
   ]);
   await db.insert(userCompanyRole).values([
-    { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
-    { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
-    { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
-    { userId: viewerUser.id, companyFn: 'C-SG', roleId: employeeRole.id },
+    { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
+    { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
+    { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
+    { userId: viewerUser.id, companyFn: 'C-SG', roleId: employeeRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'system' as const },
   ]);
   await db.insert(rolePermission).values([
     'dashboard.read', 'inventory.read', 'sales.read', 'finance.read',

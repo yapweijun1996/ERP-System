@@ -120,23 +120,30 @@ company        (company_fn, master_fn, country, currency, tax_regime, ...)
 app_user       (user_id, master_fn, email, language, ...)  -- user belongs to ONE master; language reserved, current Web uses localStorage
 role           (role_id, master_fn, company_fn, name, is_superadmin, source_template_key)
 user_company   (user_id, company_fn, role_id)             -- membership + compatibility role
-user_company_role (user_id, company_fn, role_id, managed_by_system) -- active multi-role grants
+user_company_role (assignment_id PK, user_id, company_fn, role_id, valid_from, valid_until,
+                   revoked_at, provenance, managed_by_system)       -- effective role grants
+user_company_role_scope (assignment_id, resource_key, scope, target_type, target_id) -- assignment scope
 role_permission (role_id, permission_key, allowed)        -- current Allow grants
-role_resource_scope (role_id, resource_key, scope)        -- current role-level scope
+role_resource_scope (role_id, resource_key, scope)        -- legacy role-level fallback
 company_module (master_fn, company_fn, module_key, enabled, configured)
 ```
 
 A user belongs to one `master_fn` but can be granted **many companies** through
 `user_company`, and may hold multiple active roles per company through
-`user_company_role`. Current permissions union Allow rows; current
-`role_resource_scope` rows union to the widest `self/team/department/company` scope.
+`user_company_role`. Current permissions union Allow rows from assignments whose
+`[valid_from, valid_until)` window is active and which are not revoked. Assignment-owned
+`user_company_role_scope` rows union to the widest `self/team/department/company` scope
+after target validation; assignments with a null `scope_backfilled_at` also dual-read
+the legacy `role_resource_scope` rows. The assignment service records source, actor,
+reason and revocation metadata. The stable assignment key allows multiple independent
+assignments of the same reusable role.
 `is_superadmin` is a tenant/company-bounded permission bypass in the current runtime,
 not a platform role and not the target Company Owner model. `role_permission.permission_key`
 remains a text compatibility store: TASK-171 adds the application-owned registry in
 `src/auth/permissionRegistry.ts`, explicit canonical aliases and tenant/platform-domain
-separation without adding a database table or foreign key. The resource registry
-projects canonical permissions for 116 resources and 62 actions, while assignment
-scope, authorization versioning and Company Owner cutover remain later migrations.
+separation without adding a permission database table or foreign key. Migration 0086
+adds the assignment lifecycle and scope table; authorization versioning and Company
+Owner cutover remain later migrations.
 Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
@@ -211,8 +218,8 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > `document_processing_policy` (migration 0075's `openai_compatible` BYOK vision
 > provider) without a new table. TASK-161–171 synchronize the subsequent operational,
 > editable-record, Sales, session, HR Calendar, Staff Calendar and authorization
-> documentation work. The current boundary is migration 0085: **86 journaled
-> migrations and 242 generated tables**. Each subsequent schema capability must still
+> documentation work. The current boundary is migration 0086: **87 journaled
+> migrations and 243 generated tables**. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
@@ -231,6 +238,8 @@ platform_role / *_permission    application-owned platform support roles (0084)
 platform_principal_role         platform role assignments (0084)
 platform_session                hash-backed platform bearer/CSRF session (0084)
 support_access_grant             bounded, auditable customer-support authorization (0084/0085)
+user_company_role_scope          assignment-owned scope grants and validated targets (0086)
+user_company_role                 stable assignment identity, validity and provenance (0086)
 audit_log.platform_principal_id platform actor correlation for platform events (0084)
 ```
 

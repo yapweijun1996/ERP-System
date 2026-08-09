@@ -4,9 +4,22 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
-import { appUser, role } from './tenancy';
+import { appUser, role, userCompanyRole } from './tenancy';
 
 export const DATA_SCOPES = ['self', 'team', 'department', 'company'] as const;
+
+export const ROLE_ASSIGNMENT_SCOPE_TARGET_TYPES = [
+  'none',
+  'company',
+  'branch',
+  'department',
+  'team',
+  'employee',
+  'region',
+  'business_unit',
+  'legal_entity',
+  'cost_center',
+] as const;
 
 /** Per-role row visibility. Absence is intentionally fail-closed for resources
  * that opt into scoped authorization. */
@@ -22,6 +35,34 @@ export const roleResourceScope = pgTable('role_resource_scope', {
     t.masterFn, t.companyFn, t.resourceKey, t.scope, t.roleId,
   ),
   check('ck_role_resource_scope_value', sql`${t.scope} in ('self', 'team', 'department', 'company')`),
+]);
+
+/**
+ * Assignment-owned scope grants. `none`/empty target is the compatibility
+ * representation for a role-level scope copied during backfill. A single
+ * assignment may own several target rows without duplicating the reusable
+ * role, while separate role assignments remain independently expirable.
+ */
+export const userCompanyRoleScope = pgTable('user_company_role_scope', {
+  ...tenant,
+  assignmentId: bigint('assignment_id', { mode: 'number' })
+    .notNull().references(() => userCompanyRole.assignmentId, { onDelete: 'cascade' }),
+  resourceKey: text('resource_key').notNull(),
+  scope: text('scope').notNull(),
+  targetType: text('target_type').notNull().default('none'),
+  targetId: text('target_id').notNull().default(''),
+  ...timestamps,
+}, (t) => [
+  primaryKey({ columns: [t.assignmentId, t.resourceKey, t.targetType, t.targetId] }),
+  index('idx_user_company_role_scope_tenant').on(
+    t.masterFn, t.companyFn, t.resourceKey, t.scope, t.targetType, t.targetId,
+  ),
+  index('idx_user_company_role_scope_assignment').on(t.assignmentId, t.resourceKey),
+  check('ck_user_company_role_scope_value', sql`${t.scope} in ('self', 'team', 'department', 'company')`),
+  check(
+    'ck_user_company_role_scope_target',
+    sql`(${t.targetType} = 'none' and ${t.targetId} = '') or (${t.targetType} <> 'none' and char_length(${t.targetId}) > 0)`,
+  ),
 ]);
 
 /** Company-local module readiness replaces the legacy master-wide override.

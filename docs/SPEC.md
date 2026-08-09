@@ -46,7 +46,7 @@ Source of truth: `src/data/schema/` → generated `drizzle/0000_init.sql`.
 
 | Domain | Tables |
 | --- | --- |
-| Tenancy/auth | `master`, `company`, `app_user`, `role`, `user_company`, `user_company_role` |
+| Tenancy/auth | `master`, `company`, `app_user`, `role`, `user_company`, `user_company_role`, `user_company_role_scope` |
 | Localization | `currency`, `fx_rate`, `tax_rule` |
 | Inventory | `product`, `warehouse`, `stock_level`, `stock_movement` |
 | Sales | `customer`, `sales_order`, `sales_order_line`, `invoice` |
@@ -80,10 +80,11 @@ and [SCALABILITY.md](SCALABILITY.md).
   admin → optional sample seed. Demo can re-run via reset; production locks after
   the first admin. Production setup is a one-time empty-database command and does
   not require a deployment setup token. Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
-- **Auth** (TASK-024/TASK-106–110): production login resolves `master.login_code`
+- **Auth** (TASK-024/TASK-106–110/TASK-172): production login resolves `master.login_code`
   before the organisation-scoped `app_user.username`; the server-side session carries
-  `master_fn`/`company_fn`, authorization unions active `user_company_role` grants,
-  and the remembered-device cookie enforces its bounded idle/absolute lifetime. Demo
+  `master_fn`/`company_fn`, authorization unions only live `user_company_role` grants
+  inside `[valid_from, valid_until)` and before `revoked_at`, and the remembered-device
+  cookie enforces its bounded idle/absolute lifetime. Demo
   mode hashes wizard-created passwords too and labels its demo session.
 - **Production API** (TASK-011/TASK-040 and subsequent resource/command work):
   Node/Express uses `DATABASE_URL`, real PostgreSQL, server-side session tenant scope,
@@ -246,22 +247,24 @@ The binding current/target contract is
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
 Implemented behavior remains `master -> company`, multiple company roles, Allow-union
-permissions, role-level `self/team/department/company` scopes, company module state,
-tenant-bounded Superadmin bypass and backend enforcement. TASK-170 now implements the
+permissions, assignment validity/revocation and assignment-owned
+`self/team/department/company` scopes, company module state, tenant-bounded Superadmin
+bypass and backend enforcement. `role_resource_scope` is retained as a dual-read
+fallback for assignments with a null `scope_backfilled_at`. TASK-170 now implements the
 separate platform-principal/support-grant control plane: platform operators use
 dedicated hash-backed bearer/CSRF sessions and application-owned platform roles; grants
 target an exact master and optional company, require reason and ticket, are
 time-bounded/revocable, default-deny sensitive fields and audit every create/use/deny/
 revoke event. Principal/session issuance remains an out-of-band deployment/SSO bootstrap
 responsibility, and grant evaluation only returns a decision; it does not automatically
-proxy tenant business data. TASK-171 now supplies the first approved registry slice.
-The following approved requirements remain pending under TASK-172–175:
+proxy tenant business data. TASK-171 now supplies the first approved registry slice and
+TASK-172 supplies the assignment migration/service. The following approved requirements
+remain pending under TASK-173–175:
 
 - route/resource/action declarations are now checked against an application-owned
   registry of 299 static definitions, with canonical projections for 116 resources,
   62 actions and 5 updates; existing broad keys remain explicit compatibility aliases
   until a later data migration and cutover;
-- scope targets and validity belong to role assignments;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
 - one decision service defines explicit deny, scope and policy precedence;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;

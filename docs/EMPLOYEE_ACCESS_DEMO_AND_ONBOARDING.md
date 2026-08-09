@@ -4,8 +4,9 @@ The role/scope/module behavior in this document describes the current EPIC-059
 implementation. It is not the final platform-scale authorization design. Current
 compatibility facts and the EPIC-062 migration target are in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md); in particular,
-current scopes are role-level and current tenant Superadmin remains a bypass until
-TASK-172–175 are complete. TASK-170 now provides a separate platform support control plane;
+current assignment-owned scopes, validity and revocation are implemented by TASK-172,
+with role-level scope retained only as a dual-read fallback for unbackfilled assignments;
+current tenant Superadmin remains a bypass until TASK-173–175 are complete. TASK-170 now provides a separate platform support control plane;
 the employee-workspace convenience below remains tenant-scoped and is not platform
 support access.
 
@@ -21,10 +22,12 @@ Buyer, Warehouse, Production, Finance Preparer, Finance Checker, HR, Service and
 Viewer. An administrator copies a template into an editable role owned by the
 active company; a role assigned in one legal entity grants nothing in another.
 
-Effective permissions are an Allow-only union across active-company roles. Action
-keys include read, create, edit, approve, post, pay and export. Resource scopes are
-`self < team < department < company`; multiple roles use the widest applicable
-scope. There is no explicit Deny. A restricted resource without a usable owner,
+Effective permissions are an Allow-only union across active, non-revoked role
+assignments. Action keys include read, create, edit, approve, post, pay and export.
+Assignment-owned resource scopes are `self < team < department < company`, with
+validated `none/company/department/team/employee` targets; multiple assignments use
+the widest applicable scope. Unbackfilled assignments temporarily dual-read legacy
+role-level scopes. There is no explicit Deny. A restricted resource without a usable owner,
 reporting line or department mapping fails closed. Navigation, search, quick-create,
 buttons and sensitive fields derive from the same effective capability response,
 while direct URLs and API calls remain protected by server-side 403/404 responses.

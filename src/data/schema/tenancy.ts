@@ -92,19 +92,58 @@ export const userCompany = pgTable('user_company', {
 ]);
 
 /** Multiple roles may be active for one user/company membership; permissions union. */
+export const ROLE_ASSIGNMENT_SOURCES = [
+  'manual',
+  'system',
+  'invitation',
+  'onboarding',
+  'legacy_backfill',
+] as const;
+
+/**
+ * A reusable role assignment is the stable authorization grant identity.
+ * Assignment identity is the primary key. Scope targets live in
+ * user_company_role_scope, so the same reusable role can have multiple
+ * independently valid target grants for one principal without role copies.
+ */
 export const userCompanyRole = pgTable('user_company_role', {
+  assignmentId: bigint('assignment_id', { mode: 'number' }).generatedAlwaysAsIdentity(),
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => appUser.userId),
   companyFn: text('company_fn').notNull().references(() => company.companyFn),
   roleId: bigint('role_id', { mode: 'number' }).notNull().references(() => role.roleId),
   managedBySystem: boolean('managed_by_system').notNull().default(false),
+  validFrom: timestamp('valid_from', { withTimezone: true }).notNull().defaultNow(),
+  validUntil: timestamp('valid_until', { withTimezone: true }),
+  assignedByUserId: bigint('assigned_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  assignmentSource: text('assignment_source').notNull().default('legacy_backfill'),
+  assignmentReason: text('assignment_reason'),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  revokedByUserId: bigint('revoked_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  revocationReason: text('revocation_reason'),
+  /** Null means the dual-read fallback must still consult role_resource_scope. */
+  scopeBackfilledAt: timestamp('scope_backfilled_at', { withTimezone: true }),
   ...timestamps,
 }, (t) => [
-  primaryKey({ columns: [t.userId, t.companyFn, t.roleId] }),
+  primaryKey({ columns: [t.assignmentId] }),
   foreignKey({
     columns: [t.userId, t.companyFn],
     foreignColumns: [userCompany.userId, userCompany.companyFn],
     name: 'fk_user_company_role_membership',
   }),
+  uniqueIndex('uq_user_company_role_assignment_id').on(t.assignmentId),
   index('idx_user_company_role_company').on(t.companyFn, t.userId),
   index('idx_user_company_role_role').on(t.roleId),
+  index('idx_user_company_role_active').on(
+    t.companyFn, t.userId, t.validFrom, t.validUntil, t.revokedAt,
+  ),
+  check(
+    'ck_user_company_role_valid_window',
+    sql`${t.validUntil} is null or ${t.validUntil} > ${t.validFrom}`,
+  ),
+  check(
+    'ck_user_company_role_assignment_source',
+    sql`${t.assignmentSource} in ('manual', 'system', 'invitation', 'onboarding', 'legacy_backfill')`,
+  ),
 ]);

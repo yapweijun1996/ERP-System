@@ -95,7 +95,9 @@ entities under one master:
 master              (master_fn, login_code, …)                 -- login tenant
 app_user            (user_id, master_fn, username, email, …)   -- ONE master
 user_company        (user_id, company_fn, role_id)              -- company membership
-user_company_role   (user_id, company_fn, role_id)              -- MANY active roles
+user_company_role   (assignment_id PK, user_id, company_fn, role_id,
+                     valid_from, valid_until, revoked_at, provenance) -- active assignments
+user_company_role_scope (assignment_id, resource_key, scope, target_type, target_id)
 role                (role_id, master_fn, name, is_superadmin)
 ```
 
@@ -104,8 +106,11 @@ role                (role_id, master_fn, name, is_superadmin)
   the normalized `app_user.username`, whose uniqueness is scoped to that master.
 - A user can be granted access to **many `company_fn`** within that master through
   `user_company`.
-- `user_company_role` may assign several active roles to one membership. Authorization
-  unions their permissions without widening the membership's company boundary.
+- `user_company_role` may assign several reusable roles, including multiple independent
+  assignments of the same role, to one membership. Authorization unions only active
+  assignments without widening the membership's company boundary. Assignment validity
+  is `[valid_from, valid_until)` and `revoked_at` denies immediately; child scope rows
+  carry validated `none/company/department/team/employee` targets.
 - `user_company.role_id` remains a compatibility/default-role column for existing
   integrations; current authorization reads `user_company_role`. Migration 0046
   backfills exactly one role assignment from every existing membership.
@@ -155,11 +160,12 @@ optionally company-scoped, time-bounded and audited; it does not by itself bypas
 tenant API or proxy customer data. Platform identity/session issuance remains outside
 the tenant API.
 
-Current roles, multiple-role union, role-level scopes and tenant Superadmin behavior are
+Current roles, multiple-role union, assignment-owned scopes with legacy role-scope
+fallback, and tenant Superadmin behavior are
 documented as compatibility facts in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). TASK-171 now adds
 the application-owned tenant permission registry, explicit compatibility mappings and
-platform/tenant domain separation without changing the shared role tables. Remaining
-EPIC-062 tasks will add assignment-scoped validity/targets, centralized decisions,
-authorization-version invalidation and explicit Company Owner permissions. Those target
-capabilities must not be inferred from the current `is_superadmin` column.
+platform/tenant domain separation; TASK-172 adds the assignment lifecycle and scope
+table. Remaining EPIC-062 tasks add centralized decisions, authorization-version
+invalidation and explicit Company Owner permissions. Those target capabilities must
+not be inferred from the current `is_superadmin` column.

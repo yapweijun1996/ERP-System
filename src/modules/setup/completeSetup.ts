@@ -216,6 +216,8 @@ export async function completeProductionSetup(
       userId: admin.userId,
       companyFn,
       roleId: adminRole.roleId,
+      assignedByUserId: admin.userId,
+      assignmentSource: 'onboarding',
     });
     await tx.insert(rolePermission).values(
       Object.values(PERMISSIONS).map((permissionKey) => ({

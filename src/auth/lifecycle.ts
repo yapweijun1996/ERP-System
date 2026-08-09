@@ -224,6 +224,8 @@ export async function acceptInvitation(
       userId: created.userId,
       companyFn: invitation.companyFn,
       roleId: invitation.roleId,
+      assignedByUserId: invitation.invitedByUserId,
+      assignmentSource: 'invitation',
     });
     await tx.update(userInvitation).set({
       acceptedAt: now,

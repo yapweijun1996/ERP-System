@@ -21,6 +21,7 @@ import {
 import { deliverNotificationWithin } from '../account/notification';
 import { fixedUnits } from '../inventory/decimal';
 import { isTenantPermission, permissionCandidates } from '../../auth/permissionRegistry';
+import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 
 export class ApprovalWorkflowError extends Error {
   constructor(
@@ -369,6 +370,7 @@ async function hasPermissionWithin(
   scope: Scope,
   userId: number,
   permissionKey: string,
+  now = new Date(),
 ): Promise<boolean> {
   const candidates = permissionCandidates(permissionKey);
   if (!candidates.length) return false;
@@ -381,6 +383,7 @@ async function hasPermissionWithin(
       eq(userCompanyRole.userId, userId),
       eq(userCompanyRole.companyFn, scope.companyFn),
       eq(role.isSuperadmin, true),
+      activeRoleAssignmentCondition(now),
     )).limit(1);
   if (superadmin) return true;
   const [grant] = await exec.select({ allowed: rolePermission.allowed }).from(userCompanyRole)
@@ -397,6 +400,7 @@ async function hasPermissionWithin(
       eq(userCompanyRole.companyFn, scope.companyFn),
       inArray(rolePermission.permissionKey, candidates),
       eq(rolePermission.allowed, true),
+      activeRoleAssignmentCondition(now),
     )).limit(1);
   return grant?.allowed === true;
 }
@@ -405,6 +409,7 @@ async function usersWithPermissionWithin(
   exec: DB,
   scope: Scope,
   permissionKey: string,
+  now = new Date(),
 ): Promise<number[]> {
   const candidates = permissionCandidates(permissionKey);
   if (!candidates.length) return [];
@@ -423,7 +428,10 @@ async function usersWithPermissionWithin(
       eq(rolePermission.masterFn, scope.masterFn),
       inArray(rolePermission.permissionKey, candidates),
     ))
-    .where(eq(userCompanyRole.companyFn, scope.companyFn));
+    .where(and(
+      eq(userCompanyRole.companyFn, scope.companyFn),
+      activeRoleAssignmentCondition(now),
+    ));
   return [...new Set(rows
     .filter((row) => row.superadmin || row.allowed === true)
     .map((row) => row.userId))];

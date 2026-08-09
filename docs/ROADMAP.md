@@ -1003,8 +1003,8 @@ pack was regenerated from the current authoritative Manager template, and permis
 module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
 one expected skip and zero failures. Generic module collections use company scopes because
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
-actor-derived and team/direct-tree scoped. The current schema journal contains 86
-migrations and generated Drizzle SQL contains 242 tables. Physical-phone verification
+actor-derived and team/direct-tree scoped. The current schema journal contains 87
+migrations and generated Drizzle SQL contains 243 tables. Physical-phone verification
 remains separately blocked under TASK-017.
 
 ## Phase 44 — Authorization Architecture Evolution 🔶
@@ -1016,8 +1016,9 @@ remains separately blocked under TASK-017.
    complete: the application-owned registry has 299 static definitions, explicit
    compatibility mappings/removal metadata, canonical projections for 116 resources
    and 62 actions, and the `check:permissions` CI gate.
-3. **Assignment and decision model** (TASK-172–174) moves validity/scope to assignments,
-   centralizes deterministic decisions and makes unknown/stale state fail closed.
+3. **Assignment and decision model** (TASK-172–174): TASK-172 moves validity, provenance
+   and scope to assignments; TASK-173 centralizes deterministic decisions; TASK-174
+   makes unknown/stale state fail closed.
 4. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,
    explainable Company Owner permissions after all prerequisites pass.
 

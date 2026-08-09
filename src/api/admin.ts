@@ -26,10 +26,16 @@ export async function listCompanyUsers(db: DB, masterFn: string, companyFn: stri
     ))
     .orderBy(appUser.userId);
   const userRoleRows = await db.select({
+    assignmentId: userCompanyRole.assignmentId,
     userId: userCompanyRole.userId,
     roleId: role.roleId,
     roleName: role.name,
     managedBySystem: userCompanyRole.managedBySystem,
+    validFrom: userCompanyRole.validFrom,
+    validUntil: userCompanyRole.validUntil,
+    revokedAt: userCompanyRole.revokedAt,
+    assignmentSource: userCompanyRole.assignmentSource,
+    scopeBackfilledAt: userCompanyRole.scopeBackfilledAt,
   }).from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
     .where(and(
@@ -38,16 +44,28 @@ export async function listCompanyUsers(db: DB, masterFn: string, companyFn: stri
     ))
     .orderBy(userCompanyRole.userId, role.roleId);
   const rolesByUser = new Map<number, Array<{
+    assignmentId: number;
     roleId: number;
     roleName: string;
     managedBySystem: boolean;
+    validFrom: Date;
+    validUntil: Date | null;
+    revokedAt: Date | null;
+    assignmentSource: string;
+    scopeBackfilledAt: Date | null;
   }>>();
   for (const row of userRoleRows) {
     const grants = rolesByUser.get(row.userId) ?? [];
     grants.push({
+      assignmentId: row.assignmentId,
       roleId: row.roleId,
       roleName: row.roleName,
       managedBySystem: row.managedBySystem,
+      validFrom: row.validFrom,
+      validUntil: row.validUntil,
+      revokedAt: row.revokedAt,
+      assignmentSource: row.assignmentSource,
+      scopeBackfilledAt: row.scopeBackfilledAt,
     });
     rolesByUser.set(row.userId, grants);
   }

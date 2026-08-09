@@ -7,10 +7,11 @@ Two independent deploy targets from one repo:
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
 Current schema boundary: migration
-`0085_support_grant_company_boundary` (86 journal entries, 242 generated tables).
-Migrations 0084–0085 add the separate platform support control plane and exact
-master/company boundary. Application-only release does not apply migrations
-automatically.
+`0086_youthful_mac_gargan` (87 journal entries, 243 generated tables). Migrations
+0084–0085 add the separate platform support control plane and exact master/company
+boundary; migration 0086 adds assignment validity/provenance and assignment-owned
+scope rows with a compatibility backfill. Application-only release does not apply
+migrations automatically.
 
 ---
 
@@ -153,8 +154,8 @@ deployment-managed and are never returned to the browser. Appointment recurrence
 reminder jobs are bounded to a 93-day look-ahead and are safe to retry by their unique
 tenant-scoped event keys.
 
-Migrations 0083–0085 are additive schema changes for appointment automation and the
-platform support control plane. Apply them explicitly before the application release,
+Migrations 0083–0086 are additive schema changes for appointment automation, the
+platform support control plane and assignment-scoped authorization. Apply them explicitly before the application release,
 then re-apply the production-only RLS script so the calendar worker receives only its
 allow-listed queue/source tables and the API database role keeps platform/security
 tables behind its separately restricted service boundary:
@@ -404,5 +405,5 @@ backup and staging proof, production deployment must:
 4. verify health and one idempotent reminder/outbound retry path;
 5. confirm the worker cannot read unrelated tenant business tables.
 
-Do not deploy only the application containers when migrations 0083–0085 have not been applied;
+Do not deploy only the application containers when migrations 0083–0086 have not been applied;
 the source code cannot safely invent missing tables at runtime.

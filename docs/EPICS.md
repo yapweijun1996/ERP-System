@@ -2263,9 +2263,9 @@ slice without weakening tenant, accounting, leave or approval invariants.
       one expected skip.
 
 Implementation is delivered through migration 0083 and EPIC-061 is complete. The current
-overall Drizzle journal now contains 86 migrations and generated schema contains 242
-tables after TASK-170's 0084/0085 platform-support additions. TASK-017 remains the
-separate non-programmatic blocker.
+overall Drizzle journal now contains 87 migrations and generated schema contains 243
+tables after TASK-170's 0084/0085 platform-support additions and TASK-172's additive
+assignment-scope migration 0086. TASK-017 remains the separate non-programmatic blocker.
 
 ## EPIC-062 — Role & Permission Architecture Evolution 🔶
 
@@ -2283,9 +2283,10 @@ approval subsystem. Normative current/target behavior is in
       grants, default sensitive-field denial, immediate revoke and platform audit
       correlation. `/api/platform` rejects tenant cookies and uses platform CSRF. Identity
       and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
-      grant evaluation does not proxy customer data. The current complete 152-file
-      Vitest set passes in three resource-safe shards: 610 passed, one expected skip,
-      zero failures.
+      grant evaluation does not proxy customer data. The pre-TASK-172 complete
+      152-file Vitest baseline passed in three resource-safe shards: 610 passed, one
+      expected skip, zero failures; the current 614-test result is recorded on
+      TASK-172.
 - [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
       migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
       (157 compatibility and 142 canonical, with platform permissions kept in a
@@ -2295,11 +2296,19 @@ approval subsystem. Normative current/target behavior is in
       platform-domain keys are rejected before the current tenant Superadmin bypass;
       role/template and approval configuration paths validate
       tenant permissions. `npm run check:permissions` passes. Existing text keys and
-      compatibility aliases remain during the expand phase; assignment scope, central
-      decisions, cache invalidation and Company Owner cutover remain TASK-172–175.
-      The complete 152-file Vitest regression passes in three resource-safe shards:
-      610 tests passed, one intentional skip and zero failures.
-- [ ] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
+      compatibility aliases remain during the expand phase; central decisions, cache
+      invalidation and Company Owner cutover remain TASK-173–175.
+      The pre-TASK-172 152-file Vitest regression passed in three resource-safe
+      shards: 610 tests passed, one intentional skip and zero failures. TASK-172's
+      current 614-test regression is recorded above in the task index.
+- [x] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
+      Migration 0086 makes `user_company_role.assignment_id` the stable primary key,
+      adds validity/revocation/provenance fields and creates `user_company_role_scope`.
+      The assignment service/API validates current company/department/team/employee
+      targets, supports multiple independently scoped assignments and removes stale
+      child scopes on update. Permission, approval, setup and impersonation checks use
+      the active assignment window; legacy `role_resource_scope` remains a dual-read
+      fallback for unbackfilled rows.
 - [ ] **TASK-173 — Centralize authorization decisions, explicit deny and safe
       explanation.**
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
