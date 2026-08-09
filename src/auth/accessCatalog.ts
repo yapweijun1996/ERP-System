@@ -51,7 +51,8 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
       PERMISSIONS.employeeLeaveWrite, PERMISSIONS.employeeReceiptsWrite,
       PERMISSIONS.employeeClaimsWrite, PERMISSIONS.expensesManagerApprove,
       ...read('sales', 'crm', 'inventory', 'project', 'service'),
-      ...actions('sales', 'approve'), ...actions('project', 'approve'),
+      ...actions('sales', 'approve'), ...actions('purchasing', 'approve'),
+      ...actions('project', 'approve'),
     ],
     // Generic module collections contain many reference/master-data rows that
     // do not have an owner column. A team scope therefore makes an otherwise

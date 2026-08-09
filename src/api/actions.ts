@@ -215,7 +215,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
     },
   },
   'purchasing/purchase-orders/approve': {
-    permission: 'purchasing.write',
+    permission: 'purchasing.approve',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
@@ -235,7 +235,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
     },
   },
   'purchasing/purchase-orders/reject': {
-    permission: 'purchasing.write',
+    permission: 'purchasing.approve',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
@@ -712,7 +712,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
     },
   },
   'sales/orders/approve': {
-    permission: 'sales.write',
+    permission: 'sales.approve',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
@@ -732,7 +732,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
     },
   },
   'sales/orders/reject': {
-    permission: 'sales.write',
+    permission: 'sales.approve',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {

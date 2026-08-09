@@ -304,11 +304,16 @@ safe/audited explanations:
 - public decision callers receive only a safe `{ allowed, reasonCode }` result, while
   the audit-read administrator explanation endpoint returns full assignment/role/
   override details and records an audit event.
+- direct Sales Order and Purchase Order approve/reject actions now require the dedicated
+  registered `sales.approve`/`purchasing.approve` permission in both the API action
+  definition and the domain command; the command also requires the tenant-scoped order
+  and approval row to remain pending before changing either record.
 
 The following approved requirements remain pending under TASK-173–175:
 
-- strict permission-plus-active-workflow-authority behavior across every approval-like
-  legacy path and complete resource/policy context;
+- strict permission-plus-active-workflow-authority behavior across the remaining
+  requisition, commission, allowance, budget and HR compatibility approval-like paths,
+  plus complete resource/policy context;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
 - authorization-version invalidation prevents stale role/scope/module/policy state;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;

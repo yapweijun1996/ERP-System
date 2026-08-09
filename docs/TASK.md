@@ -60,12 +60,18 @@ both desktop and mobile runs.
   approval permission checks and effective-capability snapshots use the central
   evaluator. `/api/admin/authorization/explain` is restricted to audit-read users and
   writes an audit event; override create/revoke operations are also audited.
+  `TASK-173-A1` is now delivered for direct Sales Order and Purchase Order approve/
+  reject decisions: the action dispatcher requires `sales.approve` or
+  `purchasing.approve`, and each domain command calls `authorizeWithin` before changing
+  the tenant-scoped order plus its still-pending approval row. The focused order,
+  authorization and API contract suites pass 20/20 tests, with lint, typecheck and
+  `npm run check:permissions` also green.
   Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
   lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
   Remaining before Done: strict permission-plus-active-workflow-authority behavior for
-  every approval-like legacy path (including direct Sales/Purchasing decisions,
-  requisition/commission/allowance/budget commands and the HR compatibility escalation)
-  and broader resource/module/policy context. The full current regression run is green:
+  the remaining requisition/commission/allowance/budget commands and the HR compatibility
+  escalation, plus broader resource/module/policy context. The full current regression
+  run is green:
   154 files passed + 1 skipped file (155 total), 623 tests passed + 1 intentional skip
   (624 test slots), zero failures.
 
@@ -113,29 +119,32 @@ both desktop and mobile runs.
 These are implementation slices, not new task records. They preserve the task index
 statuses above and keep each change independently testable:
 
-1. **TASK-173-A — approval authority unification:** route every legacy approval-like
-   decision through a domain-permission check plus active workflow-step authority;
-   preserve the existing HR takeover behavior only as an explicit, audited compatibility
-   policy until its replacement is implemented. Add adversarial tests for direct Sales,
-   Purchasing, requisition, commission, allowance and budget decisions.
-2. **TASK-173-B — decision-context completion:** register the remaining ownership,
+1. **TASK-173-A1 — Done (2026-08-10):** direct Sales Order and Purchase Order
+   approve/reject actions now require their dedicated registered approval permission and
+   the domain commands require an active tenant actor plus the pending order/approval
+   workflow state. Adversarial tests prove permission removal leaves both rows unchanged.
+2. **TASK-173-A2 — approval authority unification:** route the remaining legacy
+   requisition, commission, allowance and budget decisions through domain permission
+   plus active workflow-step authority; preserve the existing HR takeover behavior only
+   as an explicit, audited compatibility policy until its replacement is implemented.
+3. **TASK-173-B — decision-context completion:** register the remaining ownership,
    module and policy context consumed by authorization, and prove that missing context
    denies without changing the current assignment/Superadmin compatibility boundary.
-3. **TASK-174-A — fail-closed registration:** reject unknown module/resource/action and
+4. **TASK-174-A — fail-closed registration:** reject unknown module/resource/action and
    ownership mappings; make the access matrix a CI/startup coverage gate rather than only
    a regression helper.
-4. **TASK-174-B — authorization versioning:** invalidate cached/session capability state
+5. **TASK-174-B — authorization versioning:** invalidate cached/session capability state
    on role, assignment, scope, organization, module, policy and support-grant changes;
    add stale-version/direct-URL revocation tests.
-5. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
+6. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
    explicit registered permissions, retaining last-owner recovery and platform isolation.
-6. **RELEASE-I18N-001 — localization gate closure: Done in the current worktree.**
+7. **RELEASE-I18N-001 — localization gate closure: Done in the current worktree.**
    Missing local-pack keys and hardcoded/dynamic system-authored UI text were resolved;
    `node scripts/audit-i18n.mjs` passes 1,531 canonical keys / 69 local packs and the
    full 128-route × 5-language × 2-viewport `npm run audit:i18n` matrix passes with
    zero blocking findings. This remains an execution slice, not a new machine-readable
    task record, and is independent of TASK-173–175.
-7. **RELEASE-SMOKE-001 — navigation badge contract: Pending.** The 2026-08-10
+8. **RELEASE-SMOKE-001 — navigation badge contract: Pending.** The 2026-08-10
    `npm run smoke` run renders the dashboard at desktop/mobile but fails on 18
    unexplained numeric `0` badges in each viewport. Either hide non-semantic zero
    badges or define their accessible/business meaning and update the smoke contract.

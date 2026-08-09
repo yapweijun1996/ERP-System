@@ -141,11 +141,14 @@ The following current behaviors are compatibility facts, not the final architect
   schema-reserved but are not yet assignable through the API.
 - Approval permission checks now call the centralized evaluator, and the shared
   versioned workflow still locks the active instance/step, prevents self-approval and
-  checks delegation. The existing HR management `overridePermissionKey` remains a
-  compatibility escalation for an active pending step; strict domain-permission plus
+  checks delegation. Direct Sales Order and Purchase Order approve/reject decisions
+  now require the registered `sales.approve` or `purchasing.approve` permission through
+  `authorizeWithin`, while the locked pending order/approval rows remain the active
+  legacy workflow authority. The existing HR management `overridePermissionKey` remains
+  a compatibility escalation for an active pending step; strict domain-permission plus
   current-step authority for every approval-like legacy path is not yet complete. The
-  known direct-domain gaps include Sales/Purchasing order decisions and the
-  requisition, commission, allowance and budget approval-like commands.
+  remaining direct-domain gaps are requisition, commission, allowance and budget
+  approval-like commands, plus the HR compatibility escalation.
 - Unknown module keys currently pass the module gate. Registered resources still have
   permission checks, but this is not the target fail-closed module/resource cache
   behavior. No database foreign key or authorization-version cache is claimed yet.
@@ -303,7 +306,10 @@ The current centralized evaluator implements this subset in this order:
 5. Preserve the tenant-local Superadmin compatibility grant for registered tenant
    permissions only, after explicit denies.
 6. When requested, match assignment-owned scope rows and the legacy dual-read scope.
-7. Return a safe reason code; full diagnostic fields are available only through the
+7. Direct Sales/Purchasing order decisions additionally require their dedicated
+   registered approval permission; the domain command then locks and validates the
+   pending order and approval rows before mutation.
+8. Return a safe reason code; full diagnostic fields are available only through the
    audited administrator explanation path.
 
 Module/resource/action validation, ABAC policy evaluation, authorization-version

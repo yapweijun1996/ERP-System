@@ -173,8 +173,11 @@ documented as compatibility facts in
 the application-owned tenant permission registry, explicit compatibility mappings and
 platform/tenant domain separation; TASK-172 adds the assignment lifecycle and scope
 table; TASK-173 adds the central decision service, explicit user-level overrides and
-safe/audited explanations. The cross-layer access matrix is a regression contract for
-route/module/permission metadata, not a replacement for backend authorization. Remaining
+safe/audited explanations. Direct Sales/Purchasing order decisions now require their
+dedicated approval permission in both the action dispatcher and domain command, while
+their pending order/approval rows remain the active workflow gate. The cross-layer access
+matrix is a regression contract for route/module/permission metadata, not a replacement
+for backend authorization. Remaining
 EPIC-062 tasks add strict approval-authority coverage, fail-closed module/resource
 validation, authorization-version invalidation and explicit Company Owner permissions.
 Those target capabilities must not be inferred from the current `is_superadmin` column.

@@ -2326,10 +2326,13 @@ approval subsystem. Normative current/target behavior is in
       permission checks. Public callers receive safe reason codes; audit-read admins
       receive audited full explanations. The current full regression is green at 154
       files passed + 1 skipped file (155 total): 623 tests passed + 1 intentional skip
-      (624 test slots), zero failures. Remaining work is
-      strict permission-plus-active-workflow-authority behavior for every approval-like
-      legacy path (including direct Sales/Purchasing decisions and the HR compatibility
-      escalation), plus broader resource/module/policy context.
+      (624 test slots), zero failures. `TASK-173-A1` is delivered: direct Sales Order
+      and Purchase Order approve/reject action definitions require `sales.approve` or
+      `purchasing.approve`, and their domain commands call the central evaluator before
+      changing an order or its pending approval row; focused authorization/order/API
+      contract tests pass 20/20. Remaining work is strict permission-plus-active-
+      workflow-authority behavior for requisition/commission/allowance/budget commands,
+      the HR compatibility escalation and broader resource/module/policy context.
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** The access matrix and browser/API route contract are a
       partial precursor; unknown module keys still fail open and no authorization-version

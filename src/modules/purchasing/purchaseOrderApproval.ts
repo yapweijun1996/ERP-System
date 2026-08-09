@@ -2,6 +2,8 @@
 // executable order. A decision changes only purchase_order and its approval row:
 // inventory and GL remain untouched until the existing receive/invoice commands.
 import { and, eq, sql } from 'drizzle-orm';
+import { authorizeWithin } from '../../auth/authorization';
+import { PERMISSIONS } from '../../auth/permissionKeys';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
@@ -54,6 +56,18 @@ export async function decidePurchaseOrderWithin(
   )).limit(1);
   if (!actor) {
     throw new PurchaseOrderApprovalError('The approving user is not active in this company');
+  }
+
+  const authorization = await authorizeWithin(
+    exec,
+    { userId: actor.userId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+    PERMISSIONS.purchasingApprove,
+    { resourceKey: 'purchasing/purchase-orders', requireScope: false, now },
+  );
+  if (!authorization.allowed) {
+    throw new PurchaseOrderApprovalError(
+      'The actor is not authorized to decide this active purchase order approval',
+    );
   }
 
   const [order] = await exec.select({

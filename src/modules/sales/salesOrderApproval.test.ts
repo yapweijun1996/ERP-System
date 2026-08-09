@@ -11,12 +11,14 @@ import {
   master,
   product,
   role,
+  rolePermission,
   salesOrder,
   salesOrderApproval,
   salesOrderLine,
   stockMovement,
   taxRule,
   userCompany,
+  userCompanyRole,
 } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import {
@@ -56,6 +58,16 @@ async function seedFixture(db: DB) {
     name: 'Sales Approver',
   }).returning({ id: role.roleId });
   await db.insert(userCompany).values({
+    userId: approver.id,
+    companyFn: SCOPE.companyFn,
+    roleId: approverRole.id,
+  });
+  await db.insert(rolePermission).values({
+    masterFn: SCOPE.masterFn,
+    roleId: approverRole.id,
+    permissionKey: 'sales.approve',
+  });
+  await db.insert(userCompanyRole).values({
     userId: approver.id,
     companyFn: SCOPE.companyFn,
     roleId: approverRole.id,
@@ -263,5 +275,28 @@ describe('sales order creation and approval', () => {
       eq(salesOrder.id, created.orderId),
     ));
     expect(order.status).toBe('pending_approval');
+  });
+
+  it('denies direct decisions without the approval permission and preserves the active workflow', async () => {
+    const db = await freshDb();
+    const fixture = await seedFixture(db);
+    const created = await createPendingOrder(db, fixture, 'SO-APP-AUTH');
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, fixture.approverRoleId),
+      eq(rolePermission.permissionKey, 'sales.approve'),
+    ));
+
+    await expect(decideSalesOrder(db, SCOPE, created.orderId, {
+      decision: 'approve',
+      note: 'Attempt without the approval grant.',
+      actorUserId: fixture.approverId,
+    })).rejects.toThrow('not authorized to decide this active sales order approval');
+
+    const [order] = await db.select({ status: salesOrder.status }).from(salesOrder)
+      .where(eq(salesOrder.id, created.orderId));
+    const [approval] = await db.select({ status: salesOrderApproval.status })
+      .from(salesOrderApproval).where(eq(salesOrderApproval.orderId, created.orderId));
+    expect(order.status).toBe('pending_approval');
+    expect(approval.status).toBe('pending');
   });
 });

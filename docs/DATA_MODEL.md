@@ -819,7 +819,8 @@ original invoice:
 ```
 company ||--o{ supplier ||--o{ purchase_order ||--o{ purchase_order_line }o--|| product
 purchase_order ||--|| purchase_order_approval
-purchase_order create → pending_approval; approve/reject snapshots actor + required note
+purchase_order create → pending_approval; approve/reject requires `purchasing.approve`,
+locks the pending order/approval pair and snapshots actor + required note
 purchase_order approval writes no stock_movement or gl_entry
 goods receipt requires purchase_order.status = open (approved)
 purchase_order ||--o{ goods_receipt   (receive stock → stock_movement 'in')

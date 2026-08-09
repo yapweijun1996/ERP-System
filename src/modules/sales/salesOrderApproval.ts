@@ -2,6 +2,8 @@
 // an order to `draft`; the existing confirmation command is still required to
 // issue stock, deliver, invoice and post accounting entries.
 import { and, eq, sql } from 'drizzle-orm';
+import { authorizeWithin } from '../../auth/authorization';
+import { PERMISSIONS } from '../../auth/permissionKeys';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
@@ -54,6 +56,18 @@ export async function decideSalesOrderWithin(
   )).limit(1);
   if (!actor) {
     throw new SalesOrderApprovalError('The approving user is not active in this company.');
+  }
+
+  const authorization = await authorizeWithin(
+    exec,
+    { userId: actor.userId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+    PERMISSIONS.salesApprove,
+    { resourceKey: 'sales/orders', requireScope: false, now },
+  );
+  if (!authorization.allowed) {
+    throw new SalesOrderApprovalError(
+      'The actor is not authorized to decide this active sales order approval.',
+    );
   }
 
   const [order] = await exec.select({
