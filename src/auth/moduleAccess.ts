@@ -18,7 +18,7 @@ import type { SessionData } from './session';
  *  -- see setMasterModuleWithin. */
 export const MODULE_KEYS = [
   'sales', 'purchasing', 'crm', 'inventory', 'warehouse', 'manufacturing', 'quality',
-  'finance', 'hr', 'project', 'service', 'asset', 'workflow', 'bi', 'admin', 'integration',
+  'finance', 'hr', 'payroll', 'project', 'service', 'asset', 'workflow', 'bi', 'admin', 'integration',
 ] as const;
 export type ModuleKey = typeof MODULE_KEYS[number];
 const KNOWN_MODULE_KEYS = new Set<string>(MODULE_KEYS);
@@ -35,6 +35,7 @@ export const MODULE_DEPENDENCIES: Readonly<Record<ModuleKey, readonly ModuleKey[
   quality: ['inventory'],
   finance: [],
   hr: [],
+  payroll: ['finance'],
   project: ['finance'],
   service: ['crm'],
   asset: ['finance'],
@@ -88,17 +89,17 @@ export async function listCompanyModules(
 
 export const listMasterModules = listCompanyModules;
 
-/** True unless a master_module row explicitly disables this module. Used by
- *  server-side enforcement (routes/resources.ts). Unknown module keys are treated
- *  as enabled (fail open) -- a resource prefix must be explicitly mapped below to
- *  become gateable, so a forgotten mapping entry never blocks legitimate access. */
+/** True only for a registered, explicitly enabled module. Used by server-side
+ * enforcement (routes/resources.ts). Unknown module keys fail closed so a new
+ * resource prefix cannot accidentally bypass module activation while its registry
+ * mapping is incomplete. */
 export async function isModuleEnabled(
   exec: DB,
   masterFn: string,
   companyFn: string,
   moduleKey: string,
 ): Promise<boolean> {
-  if (!KNOWN_MODULE_KEYS.has(moduleKey)) return true;
+  if (!KNOWN_MODULE_KEYS.has(moduleKey)) return false;
   const [row] = await exec.select({ enabled: companyModule.enabled })
     .from(companyModule)
     .where(and(

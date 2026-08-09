@@ -83,4 +83,16 @@ describe('company module access control', () => {
     expect(moduleKeyForResourcePrefix('crm')).toBe('crm');
     expect(moduleKeyForResourcePrefix('some-future-resource')).toBe('some-future-resource');
   });
+
+  it('fails closed for an unregistered module key', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const session = await adminSession(db);
+    expect(await isModuleEnabled(
+      db,
+      session.masterFn,
+      session.activeCompanyFn,
+      'some-future-resource',
+    )).toBe(false);
+  });
 });
