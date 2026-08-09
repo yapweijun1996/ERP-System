@@ -2343,10 +2343,17 @@ approval subsystem. Normative current/target behavior is in
       `sales.commission.approve` permission in the domain command before locking the
       legacy `draft` run; no generic approval instance/step is claimed. Its focused
       suite passes 5/5 and the combined commission/authorization/API regression passes
-      15/15. Remaining work is strict permission-plus-current-workflow-authority
-      behavior for allowance and budget commands, the HR compatibility escalation and
-      broader resource/module/policy context. A new full suite run is still pending for
-      A2-R1/A2-R2.
+      15/15. `TASK-173-A2-R3` is delivered: allowance calculation approval re-checks
+      `expenses.allowance.manage` in the domain before changing a locked `calculated`
+      row; the existing calculation status remains the legacy workflow authority and
+      no generic approval instance/step is claimed. The allowance/API/auth regression
+      passes 12/12. `TASK-173-A2-R4` is delivered: budget approval re-checks
+      `finance.budget.approve` in the domain before changing a draft budget; its
+      existing status/active/version/line state remains the workflow authority and no
+      generic approval instance/step is claimed. The budget/finance/API/auth regression
+      passes 18/18, with direct-domain denial mapped to HTTP 403. Remaining work is the
+      HR compatibility escalation and broader resource/module/policy context. A new
+      full suite run is still pending for A2-R1 through A2-R4.
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** The access matrix and browser/API route contract are a
       partial precursor; unknown module keys still fail open and no authorization-version

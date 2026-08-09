@@ -10,6 +10,8 @@ import {
   employee,
   expenseAllowanceCalculation,
   glEntry,
+  role,
+  rolePermission,
 } from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { withTenantTransaction } from '../../data/tenantTransaction';
@@ -128,6 +130,27 @@ describe('mileage, per diem and cash advances', () => {
       },
     )).replayed).toBe(true);
 
+    await expect(withTenantTransaction(context.db, scope, (tx) =>
+      approveAllowanceCalculationWithin(
+        tx,
+        scope,
+        context.viewer.userId,
+        first.calculation.id,
+      ))).rejects.toMatchObject({
+      code: 'allowance_approval_unauthorized',
+      status: 403,
+    });
+
+    const [viewerRole] = await context.db.select({ id: role.roleId }).from(role)
+      .where(and(
+        eq(role.masterFn, scope.masterFn),
+        eq(role.name, 'Viewer'),
+      ));
+    await context.db.insert(rolePermission).values({
+      masterFn: scope.masterFn,
+      roleId: viewerRole.id,
+      permissionKey: 'expenses.allowance.manage',
+    });
     await expect(withTenantTransaction(context.db, scope, (tx) =>
       approveAllowanceCalculationWithin(
         tx,

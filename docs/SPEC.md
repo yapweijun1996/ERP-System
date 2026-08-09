@@ -318,12 +318,19 @@ safe/audited explanations:
   definition; it validates the active tenant actor and only changes a locked run whose
   existing status is `draft`. Its versioned header snapshot is the current legacy
   workflow authority, not a generic approval instance/step.
+- Allowance calculation approval now re-checks the existing
+  `expenses.allowance.manage` permission in the domain command before changing a locked
+  `calculated` calculation. Its calculation status is the current legacy workflow
+  authority; no generic approval instance/step is introduced.
+- Budget approval now re-checks `finance.budget.approve` in the domain command before
+  changing a draft budget. The existing draft/approved status, active flag, version and
+  imported lines remain its workflow authority; no generic approval instance/step is
+  introduced. Direct-domain denial maps to the API's stable 403 response.
 
 The following approved requirements remain pending under TASK-173–175:
 
 - strict permission-plus-current-workflow-authority behavior across the remaining
-  allowance, budget and HR compatibility approval-like paths, plus complete
-  resource/policy context;
+  HR compatibility approval-like path, plus complete resource/policy context;
 - missing or unknown module/resource/action/policy/ownership state fails closed;
 - authorization-version invalidation prevents stale role/scope/module/policy state;
 - Company Owner uses explicit permissions instead of `is_superadmin` bypass;

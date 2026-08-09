@@ -27,7 +27,9 @@ async function fixture() {
   await seedDemo(db);
   const [actor] = await db.select({ id: appUser.userId }).from(appUser)
     .where(eq(appUser.email, 'admin@acme.co')).limit(1);
-  return { db, actorUserId: actor.id };
+  const [viewer] = await db.select({ id: appUser.userId }).from(appUser)
+    .where(eq(appUser.username, 'viewer')).limit(1);
+  return { db, actorUserId: actor.id, viewerUserId: viewer.id };
 }
 
 describe('canonical profit and loss', () => {
@@ -106,6 +108,26 @@ describe('versioned finance budgets', () => {
     ))).toHaveLength(2);
     expect(await db.select().from(budgetVersion).where(eq(budgetVersion.id, draft.id)))
       .toMatchObject([{ status: 'approved', isActive: true }]);
+  });
+
+  it('requires finance.budget.approve before a direct domain approval', async () => {
+    const { db, viewerUserId } = await fixture();
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const draft = await createBudgetVersionWithin(db, scope, {
+      fiscalYear: 2029,
+      name: 'Unauthorized approval fixture',
+      currency: 'SGD',
+    });
+    await importBudgetLinesWithin(db, scope, draft.id, [
+      { accountCode: '4000', periodNo: 1, amount: '100.00' },
+    ]);
+
+    await expect(approveBudgetWithin(db, scope, draft.id, viewerUserId))
+      .rejects.toMatchObject({ code: 'budget_approval_unauthorized' });
+    expect(await db.select({ status: budgetVersion.status, isActive: budgetVersion.isActive })
+      .from(budgetVersion)
+      .where(eq(budgetVersion.id, draft.id)))
+      .toEqual([{ status: 'draft', isActive: false }]);
   });
 
   it('returns row-level validation without partially replacing a draft', async () => {

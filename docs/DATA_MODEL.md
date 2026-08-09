@@ -230,7 +230,11 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > uses the existing `purchase_requisition.status`/`decided_at` state row and adds no
 > generic approval-instance table. The Sales Commission approval slice likewise uses
 > the existing `sales_commission_run.status`/`version`/approval snapshot columns and
-> adds no workflow table.
+> adds no workflow table. Allowance calculation approval likewise uses the existing
+> `expense_allowance_calculation.status` row (`calculated` → `approved`) and adds no
+> generic approval-instance/step table. Budget approval uses the existing
+> `budget_version.status`/`is_active`/`version` state plus imported `budget_line` rows;
+> it also adds no generic approval-instance/step table.
 > The current boundary is migration 0087: **88 journaled migrations and 244 generated
 > tables**. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
@@ -533,6 +537,13 @@ unapplied employee-owned sources in functional currency, applies the lesser of t
 expenses and advance, requires the remaining employee repayment exactly, and records
 any excess as employee payable. Every posting stores both balanced GL leg ids; source,
 posting and event evidence cannot be rewritten or deleted.
+
+Allowance approval now re-checks the registered `expenses.allowance.manage` permission
+inside the domain command before changing a locked `calculated` calculation; the
+existing status is the current legacy workflow authority. Budget approval re-checks
+`finance.budget.approve` inside the domain command before changing a draft budget; the
+existing status/active/version/line state is the current legacy workflow authority.
+Neither path introduces a generic approval-instance/step table.
 
 Migration 0067 implements `expense_posting` and `expense_posting_leg`. Final Finance
 approval and posting occur in one transaction after locking exactly one open accounting

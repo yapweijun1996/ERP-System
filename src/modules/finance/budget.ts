@@ -1,5 +1,7 @@
 import { and, asc, desc, eq } from 'drizzle-orm';
 import Decimal from 'decimal.js';
+import { authorizeWithin } from '../../auth/authorization';
+import { PERMISSIONS } from '../../auth/permissionKeys';
 import type { DB } from '../../data/db';
 import {
   account,
@@ -26,7 +28,8 @@ export class BudgetError extends Error {
       | 'budget_invalid'
       | 'budget_immutable'
       | 'budget_empty'
-      | 'budget_currency_mismatch',
+      | 'budget_currency_mismatch'
+      | 'budget_approval_unauthorized',
     message: string,
     public readonly fieldErrors?: Record<string, string>,
   ) {
@@ -224,6 +227,18 @@ export async function approveBudgetWithin(
   budgetVersionId: number,
   actorUserId: number,
 ) {
+  const authorization = await authorizeWithin(
+    db,
+    { userId: actorUserId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+    PERMISSIONS.financeBudgetApprove,
+    { resourceKey: 'finance/budgets', requireScope: false },
+  );
+  if (!authorization.allowed) {
+    throw new BudgetError(
+      'budget_approval_unauthorized',
+      'The actor is not authorized to approve this budget.',
+    );
+  }
   const [version] = await db.select().from(budgetVersion).where(and(
     eq(budgetVersion.id, budgetVersionId),
     eq(budgetVersion.masterFn, scope.masterFn),

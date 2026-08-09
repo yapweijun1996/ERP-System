@@ -36,10 +36,12 @@ callers receive safe reason codes; audit-read administrators can request full au
 explanations. TASK-173 remains in progress because strict permission-plus-current-
 workflow-authority behavior across every remaining approval-like legacy path and
 broader resource/module/policy context are not complete. Direct Sales/Purchasing order
-decisions, Purchase Requisition decisions and Sales Commission run approvals now have
-dedicated permission checks; requisitions use their locked `submitted` row and
-commission runs use their locked `draft`/version snapshot as the implemented legacy
-authorities, without claiming generic approval instances/steps. EPIC-062/TASK-174–175 track the
+decisions, Purchase Requisition decisions, Sales Commission run approvals, allowance
+calculation approvals and budget approvals now have dedicated domain permission checks;
+requisitions use their locked `submitted` row, commission runs use their locked
+`draft`/version snapshot, allowance uses its locked `calculated` row, and budget uses
+its draft/active/version/line state as the implemented legacy authorities, without
+claiming generic approval instances/steps. EPIC-062/TASK-174–175 track the
 remaining fail-closed module/cache and explicit Company Owner migration. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
@@ -53,7 +55,12 @@ unchanged; the order/authorization/API contract suites pass 20/20, the requisiti
 suite passes 9/9, and the combined regression passes 29/29.
 Sales Commission run approval now also re-checks `sales.commission.approve` in the
 domain command before changing a locked `draft` run; its suite passes 5/5 and the
-combined commission/authorization/API regression passes 15/15.
+combined commission/authorization/API regression passes 15/15. Allowance calculation
+approval re-checks `expenses.allowance.manage` before changing a locked `calculated`
+row; its allowance/API/auth regression passes 12/12. Budget approval re-checks
+`finance.budget.approve` before changing a draft budget; its budget/finance/API/auth
+regression passes 18/18, with direct-domain denial mapped to HTTP 403. Neither path
+claims a generic approval instance/step.
 
 Current verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof, Demo build,
 generated Demo schema, 244-table drift, Demo-pack and permission-registry checks pass.
@@ -1705,8 +1712,8 @@ and browser gates now pass 1,531 canonical keys / 69 local packs across 128 rout
 
 ## Next implementation boundary
 
-The dependency order is TASK-173 remaining approval-authority unification and decision
-context, then TASK-174 unknown-module/resource fail-closed validation and authorization-
+The dependency order is TASK-173 remaining HR approval-authority unification and
+decision context, then TASK-174 unknown-module/resource fail-closed validation and authorization-
 version invalidation, then TASK-175 explicit Company Owner permissions. The current
 working tree contains additional uncommitted application changes; this status records
 only behavior verified from the current files/tests and does not imply that those

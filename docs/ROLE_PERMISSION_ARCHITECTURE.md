@@ -153,8 +153,11 @@ The following current behaviors are compatibility facts, not the final architect
   Sales Commission run approval now also requires `sales.commission.approve` through
   `authorizeWithin`; that legacy path has no `approval_instance`/`approval_step`, so
   the locked `draft` run/version snapshot is its current workflow authority. The
-  remaining direct-domain gaps are allowance and budget approval-like commands, plus
-  the HR compatibility escalation.
+  allowance calculation approval now re-checks `expenses.allowance.manage` before its
+  locked `calculated` transition, and budget approval now re-checks
+  `finance.budget.approve` before its draft/active/version/line transition. Neither
+  path has a generic `approval_instance`/`approval_step`; the existing legacy state is
+  authoritative. The remaining direct-domain gap is the HR compatibility escalation.
 - Unknown module keys currently pass the module gate. Registered resources still have
   permission checks, but this is not the target fail-closed module/resource cache
   behavior. No database foreign key or authorization-version cache is claimed yet.
@@ -261,7 +264,9 @@ resource contracts, 62 action contracts and 5 update contracts. TASK-172 added t
 assignment migration, dual-read scope path, active-assignment predicate and assignment
 API. TASK-173 now adds the central decision service, user-level explicit overrides and
 safe/audited explanations. The access matrix and authenticated/browser checks are a
-partial cross-layer regression contract. Module/resource fail-closed validation,
+partial cross-layer regression contract. TASK-173's Sales/Purchasing, requisition,
+commission, allowance and budget approval guards are implemented against their current
+legacy states; the HR compatibility escalation remains. Module/resource fail-closed validation,
 authorization-version invalidation and Company Owner cutover remain TASK-174–175.
 
 ## 6. Scope and resource ownership
@@ -435,8 +440,10 @@ offboarding must have deterministic lifecycle behavior and tests.
   assignment service/API, active predicate and role-scope dual-read are implemented
 - TASK-173: centralized decision service, explicit deny semantics and safe explanation
   — in progress; migration 0087, central evaluator, override lifecycle, safe reason
-  contract and audited diagnostic endpoint are implemented, while strict approval
-  authority unification and broader resource/policy context remain open
+  contract and audited diagnostic endpoint are implemented. Sales/Purchasing,
+  requisition, commission, allowance and budget approval guards now use the domain
+  evaluator; the HR compatibility escalation and broader resource/policy context remain
+  open
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation
 - TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions
 

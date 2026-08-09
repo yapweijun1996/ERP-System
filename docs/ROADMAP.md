@@ -1040,10 +1040,12 @@ TASK-017.
    state slice and the Sales Commission legacy state slice are now complete, including
    dedicated approval permissions in the API and domain guards. Requisitions use their
    locked `submitted` state and commission runs use their locked `draft` state/version
-   snapshot because no generic approval instance/step exists for either path. Strict
-   approval-authority unification remains open across allowance/budget approval-like
-   commands and the HR compatibility escalation. Broader resource/module/policy
-   context is also open.
+   snapshot because no generic approval instance/step exists for either path. Allowance
+   calculations now re-check `expenses.allowance.manage` before changing their locked
+   `calculated` state, and budgets now re-check `finance.budget.approve` before changing
+   their draft/active/version/line state; neither path introduces a generic approval
+   instance/step. Strict approval-authority unification remains open for the HR
+   compatibility escalation. Broader resource/module/policy context is also open.
 4. **Fail-closed registry and cache invalidation** (TASK-174) is next: finish the
    unknown module/resource/ownership checks, make route metadata coverage a release gate,
    and add prompt authorization-version invalidation for role, scope, module, policy and

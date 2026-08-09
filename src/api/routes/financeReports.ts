@@ -83,6 +83,7 @@ function sendKnownError(res: Parameters<typeof apiError>[0], error: unknown): bo
   }
   if (error instanceof BudgetError) {
     const status = error.code === 'budget_not_found' ? 404
+      : error.code === 'budget_approval_unauthorized' ? 403
       : error.code === 'budget_immutable' ? 409 : 422;
     apiError(res, status, error.code, error.message, error.fieldErrors);
     return true;

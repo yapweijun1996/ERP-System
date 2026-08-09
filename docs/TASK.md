@@ -78,15 +78,24 @@ both desktop and mobile runs.
   remains the legacy workflow authority. This path also has no generic
   `approval_instance`/`approval_step`; its commission suite passes 5/5 and the combined
   commission/authorization/API regression passes 15/15.
+  `TASK-173-A2-R3` is now delivered for allowance calculation approvals: the domain
+  command re-checks `expenses.allowance.manage` before changing a locked `calculated`
+  row. The allowance calculation status remains the legacy workflow authority and this
+  path has no generic `approval_instance`/`approval_step`; the allowance/API/auth
+  regression passes 12/12. `TASK-173-A2-R4` is now delivered for budget approvals: the
+  domain command re-checks `finance.budget.approve` before changing a draft budget. Its
+  existing draft/approved status, active flag, version and imported lines remain the
+  legacy workflow authority, with direct-domain denial mapped to HTTP 403; the
+  budget/finance/API/auth regression passes 18/18.
   Focused authorization, API explanation, RBAC, role-assignment, resource, approval,
   lint, typecheck, permission-registry, schema/drift and Demo build gates pass.
   Remaining before Done: strict permission-plus-current-workflow-authority behavior for
-  the remaining allowance/budget commands and the HR compatibility
-  escalation, plus broader resource/module/policy context. The previously recorded
+  the HR compatibility escalation, plus broader resource/module/policy context. The
+  previously recorded
   full regression baseline remains 154 files passed + 1 skipped file (155 total),
   623 tests passed + 1 intentional skip (624 test slots), zero failures; the latest
-  A2-R1/A2-R2 slices have the focused evidence above and have not yet been added to a
-  new full suite run.
+  A2-R1 through A2-R4 slices have the focused evidence above and have not yet been
+  added to a new full suite run.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -137,12 +146,14 @@ statuses above and keep each change independently testable:
    approve/reject actions now require their dedicated registered approval permission and
    the domain commands require an active tenant actor plus the pending order/approval
    workflow state. Adversarial tests prove permission removal leaves both rows unchanged.
-2. **TASK-173-A2 — approval authority unification (in progress; R1/R2 done):** Purchase
+2. **TASK-173-A2 — approval authority unification (in progress; R1–R4 done):** Purchase
    Requisition approve/reject now routes through `purchasing.approve` plus the current
    locked `submitted` state; Sales Commission run approval now routes through
-   `sales.commission.approve` plus the current locked `draft` state. Route the remaining
-   legacy allowance and budget decisions through domain permission plus their active
-   workflow authority;
+   `sales.commission.approve` plus the current locked `draft` state; allowance approval
+   now re-checks `expenses.allowance.manage` before its locked `calculated → approved`
+   transition; budget approval now re-checks `finance.budget.approve` before its draft
+   activation transition. Route the remaining HR compatibility decision through domain
+   permission plus its active workflow authority;
    preserve the existing HR takeover behavior only as an explicit, audited
    compatibility policy until its replacement is implemented.
 3. **TASK-173-B — decision-context completion:** register the remaining ownership,

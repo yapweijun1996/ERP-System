@@ -138,9 +138,10 @@ evaluator is a decision/audit boundary rather than an automatic customer-data pr
 
 TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173
 has completed the direct Sales/Purchasing order slice, the Purchase Requisition
-legacy-state slice and the Sales Commission legacy-state slice, but remains in progress
-for strict permission-plus-current-workflow-authority coverage across allowance, budget
-and HR compatibility paths, plus broader resource/module/policy context. TASK-174–175 must
+legacy-state slice, the Sales Commission legacy-state slice, the allowance calculation
+slice and the budget slice, but remains in progress for strict permission-plus-current-
+workflow-authority coverage across the HR compatibility path, plus broader
+resource/module/policy context. TASK-174–175 must
 invalidate stale authorization state and remove the tenant Superadmin bypass. TASK-170's
 implemented platform boundary grants no platform operator permanent implicit
 customer-data authority.

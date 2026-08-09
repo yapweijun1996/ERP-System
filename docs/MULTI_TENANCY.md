@@ -179,10 +179,13 @@ their pending order/approval rows remain the active workflow gate. The cross-lay
 matrix is a regression contract for route/module/permission metadata, not a replacement
 for backend authorization. Purchase Requisition decisions now use the same
 `purchasing.approve` central check and its locked `submitted` row as the current legacy
-workflow gate; no generic approval instance/step is claimed. Remaining EPIC-062 tasks
-add Sales Commission's dedicated `sales.commission.approve` domain check to the
-implemented legacy-state coverage; its locked `draft` run is the current workflow gate
-without a generic approval instance/step. Remaining tasks add strict approval-authority
-coverage, fail-closed module/resource
-validation, authorization-version invalidation and explicit Company Owner permissions.
+workflow gate; no generic approval instance/step is claimed. Sales Commission's
+dedicated `sales.commission.approve` domain check is now part of the implemented
+legacy-state coverage; its locked `draft` run is the current workflow gate without a
+generic approval instance/step. Allowance calculation approval now re-checks
+`expenses.allowance.manage` before its locked `calculated` transition, and budget
+approval now re-checks `finance.budget.approve` before its draft/active/version/line
+transition; neither introduces a generic approval instance/step. Remaining tasks add
+the HR compatibility approval-authority guard, fail-closed module/resource validation,
+authorization-version invalidation and explicit Company Owner permissions.
 Those target capabilities must not be inferred from the current `is_superadmin` column.

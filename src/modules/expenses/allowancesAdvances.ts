@@ -11,6 +11,8 @@ import {
   or,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
+import { authorizeWithin } from '../../auth/authorization';
+import { PERMISSIONS } from '../../auth/permissionKeys';
 import type { Scope } from '../../data/repo';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import {
@@ -348,6 +350,19 @@ export async function approveAllowanceCalculationWithin(
     throw new ExpenseSettlementError(
       'allowance_calculation_not_pending',
       'Only a calculated allowance can be approved.',
+    );
+  }
+  const authorization = await authorizeWithin(
+    tx,
+    { userId: actorUserId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+    PERMISSIONS.expensesAllowanceManage,
+    { resourceKey: 'expense-settlements/allowances/calculations', requireScope: false },
+  );
+  if (!authorization.allowed) {
+    throw new ExpenseSettlementError(
+      'allowance_approval_unauthorized',
+      'The actor is not authorized to approve this allowance calculation.',
+      403,
     );
   }
   if (calculation.ownerUserId === actorUserId) {
