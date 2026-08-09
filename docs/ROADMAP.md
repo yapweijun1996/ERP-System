@@ -1068,4 +1068,8 @@ keys / 69 local packs, and the complete browser matrix passes 128 routes × 5 la
 physical-device verification remain separate pending gates, independent of the
 TASK-173 → TASK-175 authorization dependency chain. The current desktop/mobile smoke
 gate remains pending because it reports 18 unexplained numeric `0` navigation badges in
-each viewport.
+each viewport. The current uncommitted Web overlay also fails `npm run typecheck:web`
+at `web/src/erp-demo-runtime-impl.ts:1481`: its Demo purchase-requisition wrapper
+still uses the old positional call shape while the domain command requires an actor
+input object. Treat `build:demo` and `npm run audit:access-matrix` as pending until
+that user-owned integration mismatch is reconciled.

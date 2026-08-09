@@ -63,7 +63,12 @@ i18n gates are green as well: `node scripts/audit-i18n.mjs` passes 1,531 canonic
 keys across 69 local five-language packs, and `npm run audit:i18n` passes the complete
 128 × 5 × 2 browser matrix. Business-record values are not treated as UI copy; the
 remaining smoke/navigation-badge, authorization, API-mode and physical-device gates
-are tracked separately.
+are tracked separately. The current uncommitted worktree also has a Web integration
+blocker: `npm run typecheck:web` fails at
+`web/src/erp-demo-runtime-impl.ts:1481` because its Demo wrapper still passes the old
+positional arguments to `decidePurchaseRequisitionWithin`, whose current domain
+signature requires an actor input object. Until that user-owned overlay is reconciled,
+`build:demo` and `npm run audit:access-matrix` are not release-green.
 
 ## 3. Data layer design
 

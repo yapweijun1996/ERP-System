@@ -2358,7 +2358,12 @@ approval subsystem. Normative current/target behavior is in
       the workflow domain re-checks that permission before covering an active step, and
       `approval_decision` preserves the original authority plus `authoritySource`; the
       focused leave-approval/application regression passes 17/17. A new full suite run
-      is still pending for A2-R1 through A2-R4.
+      is still pending for A2-R1 through A2-R4. The TASK-173-B audit confirms that this
+      compatibility override is evaluated before current-step authority and that the
+      workflow evaluator call still lacks resource/scope/module/policy context;
+      manager active-state revalidation and instance/step/resource/policy-bound
+      delegation remain open. The old in-flight approval handling policy must be chosen
+      explicitly before strict replacement is implemented.
 - [ ] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** The access matrix and browser/API route contract are a
       partial precursor; unknown module keys still fail open and no authorization-version

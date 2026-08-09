@@ -67,10 +67,10 @@ before covering an active step, and `approval_decision` records the original aut
 and `authoritySource`; leave-approval/application tests pass 17/17. Strict replacement
 of that compatibility escalation remains open.
 
-Current verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof, Demo build,
-generated Demo schema, 244-table drift, Demo-pack and permission-registry checks pass.
-The Demo proof is PGlite-only in this environment; PostgreSQL parity and true
-concurrency remain conditional on `POSTGRES_URL`. Focused
+Committed-baseline verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof,
+Demo build, generated Demo schema, 244-table drift, Demo-pack and permission-registry
+checks passed. The Demo proof is PGlite-only in this environment; PostgreSQL parity and
+true concurrency remain conditional on `POSTGRES_URL`. Focused
 central-authorization/API explanation/RBAC/assignment/resource/approval suites pass.
 The latest full Vitest attempt reached 153 passed files + 1 skipped file and one failed
 Demo showcase-pack assertion: the Manager template had gained `purchasing.approve` but
@@ -100,7 +100,14 @@ The current cross-layer access contract is also present in `src/auth/accessMatri
 the authenticated API matrix suite and `npm run audit:access-matrix` check route
 visibility, module/permission metadata and available detail drill-ins. This is a
 regression foundation, not completion of TASK-174; unknown module keys still fail open
-and no authorization-version cache is claimed.
+and no authorization-version cache is claimed. The current uncommitted worktree overlay
+does not currently reach that audit: `npm run typecheck:web` and the `build:demo` step
+inside `npm run audit:access-matrix` stop at
+`web/src/erp-demo-runtime-impl.ts:1481`, where the Demo wrapper still calls
+`decidePurchaseRequisitionWithin` with the old positional signature while the domain
+command now expects the actor input object. This is preserved as a working-tree
+integration blocker and is not counted as a completed TASK-173 change; reconcile that
+user-owned overlay before treating the release gates below as green again.
 TASK-168 reconciled the generated Demo Manager
 scopes with the current
 authoritative catalog. Generic sales/CRM/inventory/warehouse/project/service collections

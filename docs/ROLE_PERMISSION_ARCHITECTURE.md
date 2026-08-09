@@ -270,7 +270,11 @@ safe/audited explanations. The access matrix and authenticated/browser checks ar
 partial cross-layer regression contract. TASK-173's Sales/Purchasing, requisition,
 commission, allowance and budget approval guards are implemented against their current
 legacy states; the HR compatibility escalation is explicit/audited but its strict
-replacement remains. Module/resource fail-closed validation,
+replacement remains. The 2026-08-10 HR decision-context audit confirms that the
+compatibility override is evaluated before current-step authority, and that workflow
+authorization does not yet carry resource, scope, module or policy context. Direct
+manager active-state revalidation and instance/step/resource/policy-bound delegation
+are also open. Module/resource fail-closed validation,
 authorization-version invalidation and Company Owner cutover remain TASK-174–175.
 
 ## 6. Scope and resource ownership

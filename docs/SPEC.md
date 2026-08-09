@@ -263,6 +263,13 @@ controls exist.
 | Schema parity | `npm run check:demo-schema` + `npm run check:drift` | every migration/release |
 | Five-language route audit | `npm run audit:i18n` | every Canonical route/localization change and before release |
 
+Current working-tree note (2026-08-10): the committed baseline has the recorded green
+verification above, but the current uncommitted Web overlay fails
+`npm run typecheck:web` at `web/src/erp-demo-runtime-impl.ts:1481`. The Demo
+purchase-requisition wrapper still uses the old positional call shape while the current
+domain command expects an actor input object, so `build:demo` and the access-matrix
+audit remain pending until that user-owned integration mismatch is reconciled.
+
 ## EPIC-059 employee access and customer onboarding
 
 Company roles, action permissions, data scopes, company module dependencies, atomic
@@ -331,7 +338,10 @@ safe/audited explanations:
   `overridePermissionKey: 'hr.write'`; the workflow domain re-checks that permission,
   and `approval_decision` preserves the original authority and `authoritySource`.
   Replacing this compatibility policy with strict current-step authority remains a
-  target requirement.
+  target requirement. The 2026-08-10 audit also records that the override currently
+  precedes current-step authority, while resource, scope, module and policy context
+  are not passed into the central evaluator; manager active-state revalidation and
+  instance/step/resource/policy-bound delegation remain open.
 
 The following approved requirements remain pending under TASK-173–175:
 

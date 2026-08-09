@@ -24,7 +24,12 @@ passes 1,531 canonical keys / 69 local five-language packs and the full
 blocking findings. TASK-017 remains the separate physical-device blocker; it does not
 change the machine-readable task totals. The current post-build `npm run smoke` still
 fails its navigation contract because 18 unexplained numeric `0` badges are visible in
-both desktop and mobile runs.
+both desktop and mobile runs. A separate current-worktree integration blocker prevents
+the Web build from being treated as green: `npm run typecheck:web` fails at
+`web/src/erp-demo-runtime-impl.ts:1481` because the Demo purchase-requisition wrapper
+still uses the old positional call shape while the domain command expects an actor
+input object. This is user-owned uncommitted overlay work, not a new machine-readable
+task status; reconcile it before rerunning `build:demo` and the access-matrix audit.
 
 ## Current authorization programme
 
@@ -99,6 +104,18 @@ both desktop and mobile runs.
   623 tests passed + 1 intentional skip (624 test slots), zero failures; the latest
   A2-R1 through A2-R4 slices have the focused evidence above and have not yet been
   added to a new full suite run.
+
+  TASK-173-B audit (2026-08-10) confirms the remaining decision-context gap: the
+  `hr.write` compatibility override is evaluated before current-step authority, so an
+  HR manager can intentionally cover a manager-owned active step; the path is explicit
+  and audited, but it is not strict current-step replacement. The workflow decision
+  also does not yet pass `resourceKey`, scope target, module or policy context into the
+  central evaluator. Manager direct-user authority does not re-check employee active
+  state, and delegation is bounded by tenant/domain/authority/delegate/time/revocation
+  but not by instance, step, resource or policy. The approved product decision still
+  required before coding is how to handle older in-flight approvals: retain an explicit
+  migration window, reissue them under the confirmed policy, or reject them; no implicit
+  time-based exception is acceptable.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142

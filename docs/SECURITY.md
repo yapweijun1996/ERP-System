@@ -141,6 +141,11 @@ has completed the direct Sales/Purchasing order slice, the Purchase Requisition
 legacy-state slice, the Sales Commission legacy-state slice, the allowance calculation
 slice and the budget slice, but remains in progress for strict replacement of the
 explicit, audited HR compatibility path, plus broader resource/module/policy context.
+The current HR audit confirms that `overridePermissionKey: 'hr.write'` is checked before
+the active step's manager/delegate authority; this is an explicit compatibility policy,
+not a hidden bypass, but it can intentionally cover a manager-owned step. The central
+workflow call also omits resource/scope/module/policy context, and direct manager active
+state plus instance/step/resource/policy-bound delegation checks remain pending.
 TASK-174–175 must
 invalidate stale authorization state and remove the tenant Superadmin bypass. TASK-170's
 implemented platform boundary grants no platform operator permanent implicit

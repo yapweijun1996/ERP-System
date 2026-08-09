@@ -8,7 +8,11 @@ section for the path you are releasing. Deployment mechanics live in
 
 - [ ] Working tree clean, on `main`, latest CI run green (CI already runs everything
       below on each PR — re-running locally is belt-and-braces for a release cut).
-- [x] `npm run typecheck && npm run typecheck:web` — passed on 2026-08-10.
+- [ ] `npm run typecheck && npm run typecheck:web` — root typecheck passes, but the
+      current uncommitted Web overlay fails at
+      `web/src/erp-demo-runtime-impl.ts:1481`: the Demo purchase-requisition wrapper
+      still uses the old positional call shape while the domain command expects an
+      actor input object.
 - [x] `npm test` — 154 passed files + 1 skipped file (155 total),
       623 passed tests + 1 intentional skip (624 total) on 2026-08-10; the
       PostgreSQL 16 proof needs `POSTGRES_URL`, or rely on CI's service-container run.
@@ -18,7 +22,8 @@ section for the path you are releasing. Deployment mechanics live in
       dedicated and empty; the preflight rejects any user table before writes.
 - [x] `npm run check:demo-schema && npm run check:drift` — passed on 2026-08-10;
       generated PGlite artifacts and all Drizzle migrations agree
-- [x] `npm run build:demo` — the 2026-08-10 Demo build passed.
+- [ ] `npm run build:demo` — blocked by the same current Web typecheck mismatch; rerun
+      after the user-owned overlay is reconciled.
 - [ ] `npm run smoke` — current 2026-08-10 run renders the dashboard at desktop/mobile
       but fails the navigation assertion on 18 unexplained numeric `0` badges in each
       viewport. Resolve the badge contract, then rerun this shell/dashboard proof; the
@@ -30,9 +35,10 @@ section for the path you are releasing. Deployment mechanics live in
       69 local five-language packs, and the browser matrix passes all 128 routes ×
       5 languages × 2 viewports with zero blocking findings. Business-record values
       remain outside the system-authored UI-resource boundary.
-- [x] `npm run check:permissions` and `npm run audit:access-matrix` — both passed on
-      2026-08-10 (299 permission codes; 116 resources; 62 actions; 5 updates; 128
-      registered screens fail closed in the access matrix).
+- [ ] `npm run check:permissions` and `npm run audit:access-matrix` — the permission
+      registry check passes (299 codes; 116 resources; 62 actions; 5 updates), but the
+      access-matrix command currently stops during `build:demo` at the same Web
+      integration mismatch, so its full result must be rerun after reconciliation.
 - [x] `tasks/tasks.jsonl` statuses current; the task index and `docs/STATUS.md` were
       updated for the completed localization slice and current smoke gate.
 - [ ] No secrets in the diff or the bundle: no provider API keys, nothing
