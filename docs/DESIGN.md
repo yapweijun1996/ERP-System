@@ -58,10 +58,12 @@ docs/                    This documentation suite
 
 Current release verification (2026-08-10): `npm run audit:screens` is green for all
 128 registered routes at desktop and 375 px (128 Canonical / 0 Preview, no console/page
-errors, and no active-tab, layout, action-bar or declared-contract failures). This does
-not make localization green: `npm run audit:i18n` renders the complete 128 × 5 × 2
-matrix but reports 263 static blocking findings, so missing locale keys and
-hardcoded/dynamic UI text remain an implementation slice before release.
+errors, and no active-tab, layout, action-bar or declared-contract failures). The two
+i18n gates are green as well: `node scripts/audit-i18n.mjs` passes 1,531 canonical
+keys across 69 local five-language packs, and `npm run audit:i18n` passes the complete
+128 × 5 × 2 browser matrix. Business-record values are not treated as UI copy; the
+remaining smoke/navigation-badge, authorization, API-mode and physical-device gates
+are tracked separately.
 
 ## 3. Data layer design
 

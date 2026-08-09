@@ -112,9 +112,12 @@ schema, resource/command, permission, tests and localization are complete.
 
 Current verification boundary (2026-08-10): `npm run audit:screens` passes all 128
 routes at desktop and 375 px with 128 Canonical / 0 Preview and no layout/behavior
-contract failures. `npm run audit:i18n` renders the complete 128-route × 5-language ×
-2-viewport matrix but exits with 263 static blocking findings, so the requirement that
-every system-authored browser string is localized remains open for remediation.
+contract failures. The i18n requirement is also verified: the static audit passes 1,531
+canonical keys / 69 local five-language packs, and `npm run audit:i18n` passes the
+complete 128-route × 5-language × 2-viewport matrix with zero blocking findings.
+Business-record values remain outside system-authored UI copy. The current smoke gate
+still reports unexplained numeric `0` navigation badges at both supported viewports;
+this is a release verification issue, not an i18n resource failure.
 
 Module depth that is not yet represented by a route or command remains future scope;
 it must not be simulated with fabricated data or silently treated as implemented.
@@ -239,9 +242,10 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. The 2026-08-10 full matrix renders all
-  current routes but the static audit still has 263 blocking findings; this requirement
-  is not yet release-green. ([I18N.md](I18N.md))
+  for compatibility and is not currently wired. The 2026-08-10 static audit passes
+  1,531 canonical keys / 69 local packs, and the full 128-route × 5-language ×
+  2-viewport browser matrix passes with zero blocking findings. Business-record values
+  remain outside system-authored UI copy. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))
 

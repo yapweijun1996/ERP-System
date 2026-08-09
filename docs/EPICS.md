@@ -48,8 +48,8 @@ Acceptance criteria:
       TASK-018 baseline; leftover Northwind sample shapes were cleaned or labeled.
       The route boundary has since grown to 128 Canonical / 0 Preview. The 2026-08-10
       render/maturity/layout audit passes for desktop and mobile. The separate
-      five-language i18n audit renders the complete route matrix but remains blocked by
-      263 static findings tracked in STATUS.md.
+      five-language i18n static and browser audits now pass 1,531 canonical keys / 69
+      local packs across the complete 128-route × 5-language × 2-viewport matrix.
 
 ## EPIC-004 — Setup Wizard ✅
 
@@ -120,7 +120,7 @@ Acceptance criteria:
       `seed`/`reset`/`ps`/`psql`) exercised against a live, isolated stack —
       see docs/STATUS.md.
 
-## EPIC-006 — CI, Testing, And Release 🔶 (CI/smoke/unit-tests all live; release checklist + device open)
+## EPIC-006 — CI, Testing, And Release 🔶 (CI/unit-tests live; smoke/release checklist + device open)
 
 Add repeatable validation and deployment checks. (TASK-014, TASK-015, TASK-020,
 TASK-025 done; TASK-017 permanently blocked — needs a physical phone, no agent can
@@ -147,6 +147,11 @@ Acceptance criteria:
       migrate-only-upgrades, health verification and rollback.
 - [x] Docs stay aligned with package scripts and deployment assets — actively kept
       current through TASK-009…014.
+
+Current verification note (2026-08-10): the smoke script and transaction proof are
+implemented, but the latest desktop/mobile run is not release-green because the
+navigation assertion finds 18 unexplained numeric `0` badges in each viewport. The
+release checklist and physical-device gate remain open until this is resolved.
 
 ## EPIC-007 — Data Seam Integrity ✅ (core acceptance criteria met)
 

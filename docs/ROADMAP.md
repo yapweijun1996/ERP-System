@@ -306,9 +306,10 @@ Historical exit criteria were met by the Phase 8 implementation: `npm run audit:
 passed after each mechanical change and the module-access-control toggle hid a module
 from both the sidebar and API for a restricted non-superadmin tenant. The 2026-08-10
 screen follow-up now passes the current 128-route desktop/mobile layout and behavior
-gate. Release readiness is still open because `npm run audit:i18n` reports 263 static
-blocking findings; API-mode full-browser proof and physical-device verification remain
-separate pending gates.
+gate, and the static plus browser i18n gates pass 1,531 canonical keys / 69 local packs
+across 128 routes × 5 languages × 2 viewports. API-mode full-browser proof and
+physical-device verification remain separate pending gates; the current smoke gate also
+needs the unexplained numeric `0` navigation badges resolved.
 
 ## Phase 9 — Deployment Ergonomics ✅ (interactive host bootstrap done; desktop installer deliberately deferred, not phase-scoped)
 
@@ -1049,7 +1050,10 @@ implicit customer-data authority; and the current task index, code, migrations a
 release/runbook documents agree on the same implementation boundary.
 
 Current release evidence (2026-08-10): the screen audit is green for all 128
-Canonical routes at desktop and mobile, while the complete i18n browser matrix renders
-but its static audit fails on 263 blocking findings. This localization debt is the next
-release-quality slice and is independent of the TASK-173 → TASK-175 authorization
-dependency chain.
+Canonical routes at desktop and mobile. The static i18n audit passes 1,531 canonical
+keys / 69 local packs, and the complete browser matrix passes 128 routes × 5 languages
+× 2 viewports with zero blocking findings. API-mode full-browser proof and
+physical-device verification remain separate pending gates, independent of the
+TASK-173 → TASK-175 authorization dependency chain. The current desktop/mobile smoke
+gate remains pending because it reports 18 unexplained numeric `0` navigation badges in
+each viewport.

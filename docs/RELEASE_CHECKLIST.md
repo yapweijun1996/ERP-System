@@ -8,28 +8,33 @@ section for the path you are releasing. Deployment mechanics live in
 
 - [ ] Working tree clean, on `main`, latest CI run green (CI already runs everything
       below on each PR — re-running locally is belt-and-braces for a release cut).
-- [ ] `npm run typecheck && npm run typecheck:web`
-- [ ] `npm test` (current baseline: 154 passed files + 1 skipped file (155 total),
-      623 passed tests + 1 intentional skip (624 total); the
-      PostgreSQL 16 proof needs `POSTGRES_URL`, or rely on CI's service-container run)
-- [ ] `npm run demo` — transaction proof; with `POSTGRES_URL` set it also proves
-      cross-engine parity and the true-concurrency race. The PostgreSQL database must
-      be dedicated and empty; the preflight rejects any user table before writes.
-- [ ] `npm run check:demo-schema && npm run check:drift` — generated PGlite artifacts
-      and all Drizzle migrations agree
+- [x] `npm run typecheck && npm run typecheck:web` — passed on 2026-08-10.
+- [x] `npm test` — 154 passed files + 1 skipped file (155 total),
+      623 passed tests + 1 intentional skip (624 total) on 2026-08-10; the
+      PostgreSQL 16 proof needs `POSTGRES_URL`, or rely on CI's service-container run.
+- [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. With
+      `POSTGRES_URL` it also proves cross-engine parity and the true-concurrency race;
+      that PostgreSQL proof remains pending in this environment. The database must be
+      dedicated and empty; the preflight rejects any user table before writes.
+- [x] `npm run check:demo-schema && npm run check:drift` — passed on 2026-08-10;
+      generated PGlite artifacts and all Drizzle migrations agree
 - [x] `npm run build:demo` — the 2026-08-10 Demo build passed.
-- [ ] `npm run smoke` — rerun this shell/dashboard proof after the current working-tree
-      changes; the screen audit below is a separate route/layout proof.
+- [ ] `npm run smoke` — current 2026-08-10 run renders the dashboard at desktop/mobile
+      but fails the navigation assertion on 18 unexplained numeric `0` badges in each
+      viewport. Resolve the badge contract, then rerun this shell/dashboard proof; the
+      screen audit below is a separate route/layout proof.
 - [x] `npm run audit:screens` — all current 128 routes at desktop + 375 px, zero
       console errors, 128 Canonical / 0 Preview, and no route, maturity, active-tab,
       layout or action contract failures in the 2026-08-10 run.
-- [ ] `npm run audit:i18n` — the 2026-08-10 browser matrix renders all 128 routes ×
-      5 languages × 2 viewports, but the static audit exits with 263 blocking
-      findings. The release remains localization-red until those missing keys and
-      hardcoded/dynamic UI strings are resolved or explicitly reviewed.
-- [ ] `npm run check:permissions` and `npm run audit:access-matrix`
-- [ ] `tasks/tasks.jsonl` statuses current; `docs/STATUS.md` updated if an epic-level
-      milestone lands in this release
+- [x] `npm run audit:i18n` — the 2026-08-10 static audit passes 1,531 canonical keys /
+      69 local five-language packs, and the browser matrix passes all 128 routes ×
+      5 languages × 2 viewports with zero blocking findings. Business-record values
+      remain outside the system-authored UI-resource boundary.
+- [x] `npm run check:permissions` and `npm run audit:access-matrix` — both passed on
+      2026-08-10 (299 permission codes; 116 resources; 62 actions; 5 updates; 128
+      registered screens fail closed in the access matrix).
+- [x] `tasks/tasks.jsonl` statuses current; the task index and `docs/STATUS.md` were
+      updated for the completed localization slice and current smoke gate.
 - [ ] No secrets in the diff or the bundle: no provider API keys, nothing
       `VITE_`-prefixed that shouldn't be public (`grep -ri "sk-\|api_key" web/dist`
       returns nothing sensitive)

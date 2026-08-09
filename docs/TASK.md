@@ -18,10 +18,13 @@ not a second task registry.
 
 The 2026-08-10 screen follow-up is complete: `npm run audit:screens` renders all 128
 routes at desktop/mobile and passes the 128 Canonical / 0 Preview maturity plus
-layout/behavior contracts. A separate release-quality blocker remains: the same-date
-`npm run audit:i18n` matrix renders 128 routes × 5 languages × 2 viewports but exits
-with 263 static blocking findings. TASK-017 remains the separate physical-device
-blocker; neither blocker changes the machine-readable task totals.
+layout/behavior contracts. The i18n release gate is also complete: the static audit
+passes 1,531 canonical keys / 69 local five-language packs and the full
+`npm run audit:i18n` matrix passes 128 routes × 5 languages × 2 viewports with zero
+blocking findings. TASK-017 remains the separate physical-device blocker; it does not
+change the machine-readable task totals. The current post-build `npm run smoke` still
+fails its navigation contract because 18 unexplained numeric `0` badges are visible in
+both desktop and mobile runs.
 
 ## Current authorization programme
 
@@ -126,15 +129,22 @@ statuses above and keep each change independently testable:
    add stale-version/direct-URL revocation tests.
 5. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
    explicit registered permissions, retaining last-owner recovery and platform isolation.
-6. **RELEASE-I18N-001 — localization gate closure:** resolve the 263 findings from the
-   2026-08-10 `audit:i18n` run, covering missing locale-pack keys and hardcoded/dynamic
-   user-facing text. Re-run the full 128-route × 5-language × 2-viewport matrix and
-   keep the route screen pass and i18n pass as separate evidence. This is an execution
-   slice, not a new machine-readable task record, and can proceed independently of
-   TASK-173–175.
+6. **RELEASE-I18N-001 — localization gate closure: Done in the current worktree.**
+   Missing local-pack keys and hardcoded/dynamic system-authored UI text were resolved;
+   `node scripts/audit-i18n.mjs` passes 1,531 canonical keys / 69 local packs and the
+   full 128-route × 5-language × 2-viewport `npm run audit:i18n` matrix passes with
+   zero blocking findings. This remains an execution slice, not a new machine-readable
+   task record, and is independent of TASK-173–175.
+7. **RELEASE-SMOKE-001 — navigation badge contract: Pending.** The 2026-08-10
+   `npm run smoke` run renders the dashboard at desktop/mobile but fails on 18
+   unexplained numeric `0` badges in each viewport. Either hide non-semantic zero
+   badges or define their accessible/business meaning and update the smoke contract.
 
 ## Blocker
 
+- **RELEASE-SMOKE-001:** current desktop/mobile smoke gate fails on unexplained numeric
+  `0` navigation badges; the dashboard and transaction proof do not reach a clean
+  release result until this contract is resolved.
 - **TASK-017:** physical-phone PWA verification. Automated desktop and emulated 375 px
   checks do not satisfy the real-device acceptance criterion.
 

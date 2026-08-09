@@ -21,9 +21,10 @@ checks supplement the journey but do not replace it.
 Current release note (2026-08-10): the live screen registry contains 128 Canonical /
 0 Preview routes. `npm run audit:screens` renders every route at desktop and mobile
 without console/page errors and passes the layout/behavior contracts. The separate
-`npm run audit:i18n` browser matrix also renders all 128 × 5 languages × 2 viewports,
-but its static gate reports 263 blocking findings, so five-language acceptance is not
-yet green. TASK-017 remains the physical-device blocker.
+`npm run audit:i18n` browser matrix passes all 128 × 5 languages × 2 viewports, and
+the static audit passes 1,531 canonical keys / 69 local packs with zero blocking
+findings. The current smoke gate still fails on 18 unexplained numeric `0` navigation
+badges in both desktop and mobile runs. TASK-017 remains the physical-device blocker.
 
 ## Baseline and environment checklist
 
