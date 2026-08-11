@@ -8,8 +8,8 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **184**
-- In progress: **1**
+- Done: **185**
+- In progress: **0**
 - Todo: **2**
 - Blocked: **1**
 - Total: **188**
@@ -69,25 +69,25 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | TASK-185 | Done | Module Catalog, Master entitlement, Company allocation, platform API and Demo harness |
 | TASK-186 | Done | Removed tenant MAC permission/UI/onboarding authority; legacy API denies and dual-layer enforcement/defaults are live |
 | TASK-187 | Done | Independent Platform Superadmin login/workspace and audited exact-user simulation (migration 0096) |
-| TASK-188 | In progress | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
+| TASK-188 | Done | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master
 defaults to new Companies and cut registered tenant enforcement over to both layers.
 TASK-187 delivered migration 0096, independent password/cookie Platform Superadmin login,
 the shared API-mode realm chooser, Master/Company workspace and bounded exact-user
-simulation with dual identity audit. TASK-188 is in progress: its focused platform proof,
-root/Web typechecks, schema drift, Demo build, PGlite browser boot, desktop/mobile Company
-Receipts E2E, direct PGlite/PostgreSQL 16 migration-preservation replay and disposable
-PostgreSQL 16 non-superuser RLS proof pass. The final full-source Vitest,
-access-matrix/i18n/smoke and release proofs remain open. A same-origin 375px browser check
-now covers Platform Superadmin realm login,
-workspace rendering, exact-user simulation, explicit return and document-width containment.
+simulation with dual identity audit. TASK-188 completed source verification: focused platform
+proof, root/Web typechecks, lint, schema drift, API/Demo builds, PGlite browser boot,
+desktop/mobile Company Receipts E2E, direct PGlite/PostgreSQL 16 migration-preservation
+replay, disposable PostgreSQL 16 non-superuser RLS proof, access-matrix, browser i18n and
+desktop/375px smoke all pass. A same-origin 375px browser check covers Platform Superadmin
+realm login, workspace rendering, exact-user simulation, explicit return and document-width
+containment. Full `npm test -- --pool=threads --maxWorkers=1 --reporter=dot` passes 167 files
+and 660 tests with one expected skip in 976.88 seconds.
 TASK-186's recorded focused authorization proof remains 8 files / 45 tests. TASK-187's
 isolated proof passes 3 files / 12 tests, root/Web typechecks, API build and schema v96
-drift; its browser check covers API-mode realm login and workspace only. During TASK-188,
-the full `npx vitest run src --pool=threads --maxWorkers=1` runner produced no per-file
-result after more than eight minutes and was terminated; it is not recorded as passing.
+drift; its browser check covers API-mode realm login and workspace only. No production
+deployment or production-data mutation was authorized or performed for TASK-188.
 
 TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
@@ -95,7 +95,7 @@ bounded Demo/API reads and responsive desktop/mobile register UI. TASK-180 adds
 query-side search/date behavior; TASK-181 adds the immutable complete-result Receipt
 Pack and one PDF for preview, download and Print. Module entitlement and the final
 canonical permission cutover remain pending. TASK-182 is now dependency-eligible; the
-remaining EPIC-064 closeout is TASK-188.
+remaining EPIC-064 closeout is complete; TASK-182 remains the next dependency-eligible work.
 
 ## Latest implementation milestones
 
