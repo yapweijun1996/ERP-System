@@ -190,8 +190,10 @@ the tenant mutation surface:
 - automated tests use an explicit Demo platform harness to change entitlement/allocation
   and prove dependency, migration and tenant isolation. It is not exposed as a tenant
   business control or backed by browser localStorage;
-- Platform Superadmin login/workspace and exact-user simulation must preserve the same
-  authority/audit semantics in Demo and API modes when TASK-187 lands.
+- API mode now provides Platform Superadmin login/workspace and exact-user simulation
+  with the same authority/audit semantics. The static Demo fixture remains a
+  deterministic entitlement harness, not a browser-login realm; TASK-188 owns the
+  final dual-mode browser/release proof.
 
 The fixture/API and TASK-186 tenant cutover are implementation evidence. TASK-188 still
 owns final dual-mode browser, security and release proof.

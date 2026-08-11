@@ -206,6 +206,7 @@ means Master entitlement AND Company allocation.
 
 Demo is deterministic: fixtures represent the platform-selected entitlement and
 allocation, while domain/API tests exercise platform-only changes. New Company creation
-applies the Master default and tenant users see only effective availability. Platform
-password login, workspace and simulation remain TASK-187; final browser/security proof
-remains TASK-188.
+applies the Master default and tenant users see only effective availability. API mode
+now exposes the independent Platform Superadmin password login, workspace and
+simulation; static Demo remains fixture-driven rather than exposing platform
+credentials. TASK-188 owns final browser/security proof.

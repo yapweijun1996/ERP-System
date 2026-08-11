@@ -48,6 +48,10 @@ export const platformPrincipal = pgTable('platform_principal', {
   principalKey: text('principal_key').notNull(),
   displayName: text('display_name').notNull(),
   email: text('email'),
+  /** Independent credential verifier for the platform realm. It is never an
+   * app_user credential and is intentionally nullable for pre-login bootstrap
+   * principals that can still receive an out-of-band bearer session. */
+  passwordHash: text('password_hash'),
   isActive: boolean('is_active').notNull().default(true),
   ...timestamps,
 }, (t) => [
@@ -102,6 +106,38 @@ export const platformSession = pgTable('platform_session', {
 }, (t) => [
   index('idx_platform_session_principal').on(t.principalId, t.revokedAt),
   index('idx_platform_session_expiry').on(t.expiresAt, t.revokedAt),
+]);
+
+/** A short-lived platform-superadmin view of one exact tenant user. The
+ * platform session remains distinct; this row never creates or mutates an
+ * app_session and is revoked immediately when the operator returns. */
+export const platformSimulationSession = pgTable('platform_simulation_session', {
+  simulationId: bigint('simulation_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  platformSessionHash: text('platform_session_hash').notNull()
+    .references(() => platformSession.tokenHash),
+  platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  targetUserId: bigint('target_user_id', { mode: 'number' })
+    .notNull().references(() => appUser.userId),
+  masterFn: text('master_fn').notNull().references(() => master.masterFn),
+  companyFn: text('company_fn').notNull().references(() => company.companyFn),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  foreignKey({
+    columns: [t.masterFn, t.companyFn],
+    foreignColumns: [company.masterFn, company.companyFn],
+    name: 'fk_platform_simulation_company_master',
+  }),
+  uniqueIndex('uq_platform_simulation_active_session').on(t.platformSessionHash)
+    .where(sql`${t.revokedAt} is null`),
+  index('idx_platform_simulation_principal_window').on(
+    t.platformPrincipalId, t.expiresAt, t.revokedAt,
+  ),
+  index('idx_platform_simulation_target_window').on(
+    t.masterFn, t.companyFn, t.targetUserId, t.expiresAt, t.revokedAt,
+  ),
 ]);
 
 export const supportAccessGrant = pgTable('support_access_grant', {

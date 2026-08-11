@@ -225,13 +225,16 @@ Tenant enforcement now requires both rows. `/api/admin/modules` is a deny-only l
 boundary, `admin.modules.manage` is deprecated/non-assignable, and the onboarding
 selector and Module Activation UI are removed by TASK-186/migration 0095.
 
-The web entry may reuse the visual login component, but platform authentication is a
-separate realm, credential store, session and CSRF boundary. Its minimal workspace lists
-Masters/Companies and MAC; it is not a Company Owner shell. Explicit end-user simulation
-creates a bounded linked support session whose decisions run exactly as the active
-target user and whose audit retains the real platform principal.
+The API-mode web entry reuses the visual login surface but selects a distinct platform
+realm. `platform_principal.password_hash`, `erp_platform_session` and
+`erp_platform_csrf` are separate from `app_user`/`erp_session`; interactive platform
+sessions last at most one hour and cannot be remembered. Its workspace lists
+Masters/Companies and versioned MAC state; it is not a Company Owner shell. Explicit
+end-user simulation creates a default-15-minute linked session whose decisions run
+exactly as the active target user, whose platform mutations are blocked until return,
+and whose audit retains the real platform principal.
 
-TASK-185–186 are current code; platform password login/workspace, simulation and final
-release proof remain TASK-187–188 target architecture. See
+TASK-185–187 are current code; full adversarial, PostgreSQL and release proof remains
+TASK-188. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) and
 [SECURITY.md](SECURITY.md) for authority and residual-risk requirements.

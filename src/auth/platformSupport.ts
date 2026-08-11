@@ -20,6 +20,7 @@ import {
   bumpMasterAuthorizationVersionsWithin,
 } from './authorizationVersion';
 import { PLATFORM_PERMISSIONS, type PlatformPermission } from './platformPermissionCatalog';
+import { hashPassword, verifyPassword } from './password';
 
 export { PLATFORM_PERMISSIONS, type PlatformPermission } from './platformPermissionCatalog';
 
@@ -27,7 +28,11 @@ export const PLATFORM_ROLE_TEMPLATES = {
   superadmin: {
     code: 'platform_superadmin',
     name: 'Platform Superadmin',
-    permissions: [PLATFORM_PERMISSIONS.modulesRead, PLATFORM_PERMISSIONS.modulesManage],
+    permissions: [
+      PLATFORM_PERMISSIONS.modulesRead,
+      PLATFORM_PERMISSIONS.modulesManage,
+      PLATFORM_PERMISSIONS.simulationManage,
+    ],
   },
   supportEngineer: {
     code: 'platform_support_engineer',
@@ -77,6 +82,10 @@ export interface PlatformSessionCredentials {
   csrfToken: string;
   expiresAt: Date;
 }
+
+export const PLATFORM_SESSION_COOKIE = 'erp_platform_session';
+export const PLATFORM_CSRF_COOKIE = 'erp_platform_csrf';
+export const PLATFORM_SESSION_TTL_MS = 60 * 60 * 1000;
 
 export interface SupportAccessRestrictions {
   blockedSensitiveFields?: readonly string[];
@@ -242,6 +251,9 @@ export async function provisionPlatformPrincipal(
     principalKey: string;
     displayName: string;
     email?: string | null;
+    /** Optional while legacy bootstrap continues to issue out-of-band bearer
+     * sessions. Interactive platform login requires this independent hash. */
+    password?: string;
     roleCodes?: readonly string[];
   },
 ): Promise<{ principalId: number; principalKey: string }> {
@@ -257,6 +269,14 @@ export async function provisionPlatformPrincipal(
   if (roleCodes.length === 0 || roleCodes.some((code) => !ROLE_TEMPLATES_BY_CODE.has(code))) {
     throw new PlatformAccessError(400, 'invalid_platform_role', 'Only application-owned platform roles may be assigned.');
   }
+  if (input.password != null && (typeof input.password !== 'string'
+    || input.password.length < 12 || input.password.length > 1024)) {
+    throw new PlatformAccessError(
+      400,
+      'invalid_platform_password',
+      'Platform passwords must be from 12 to 1024 characters.',
+    );
+  }
   return db.transaction(async (tx) => {
     const exec = tx as unknown as DB;
     const roleIds = await ensurePlatformRoles(exec);
@@ -271,6 +291,7 @@ export async function provisionPlatformPrincipal(
       principalKey,
       displayName,
       email: input.email?.trim() || null,
+      passwordHash: input.password ? hashPassword(input.password) : null,
       isActive: true,
     }).returning({ principalId: platformPrincipal.principalId });
     await exec.insert(platformPrincipalRole).values(roleCodes.map((code) => ({
@@ -287,8 +308,8 @@ export async function createPlatformSession(
   options: { ttlMs?: number; now?: Date } = {},
 ): Promise<PlatformSessionCredentials> {
   const now = options.now ?? new Date();
-  const ttlMs = options.ttlMs ?? 60 * 60 * 1000;
-  if (!Number.isFinite(ttlMs) || ttlMs <= 0 || ttlMs > 8 * 60 * 60 * 1000) {
+  const ttlMs = options.ttlMs ?? PLATFORM_SESSION_TTL_MS;
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0 || ttlMs > PLATFORM_SESSION_TTL_MS) {
     throw new PlatformAccessError(400, 'invalid_platform_session_ttl', 'Platform session TTL is invalid.');
   }
   const [principal] = await db.select({ isActive: platformPrincipal.isActive })
@@ -309,6 +330,34 @@ export async function createPlatformSession(
     lastSeenAt: now,
   });
   return { token, csrfToken, expiresAt };
+}
+
+/** Authenticate only against the independent platform-principal credential
+ * store. Tenant app_user records and erp_session are deliberately absent. */
+export async function authenticatePlatformPrincipal(
+  db: DB,
+  principalKeyInput: string,
+  password: string,
+): Promise<{ principalId: number; principalKey: string; displayName: string } | null> {
+  const principalKey = principalKeyInput.trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9._-]{1,63}$/.test(principalKey) || password.length === 0) return null;
+  const [principal] = await db.select({
+    principalId: platformPrincipal.principalId,
+    principalKey: platformPrincipal.principalKey,
+    displayName: platformPrincipal.displayName,
+    passwordHash: platformPrincipal.passwordHash,
+    isActive: platformPrincipal.isActive,
+  }).from(platformPrincipal)
+    .where(eq(platformPrincipal.principalKey, principalKey))
+    .limit(1);
+  if (!principal?.isActive || !principal.passwordHash || !verifyPassword(password, principal.passwordHash)) {
+    return null;
+  }
+  return {
+    principalId: principal.principalId,
+    principalKey: principal.principalKey,
+    displayName: principal.displayName,
+  };
 }
 
 export async function getPlatformSession(

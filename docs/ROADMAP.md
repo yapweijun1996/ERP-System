@@ -1117,9 +1117,10 @@ cross-currency totals, hidden missing-date omissions or page-limited export resu
 
 ## Phase 46 — Platform Module Entitlement & Superadmin Workspace 🟨
 
-This phase is in progress. TASK-186 has removed Company Owner MAC authority and switched
+This phase is in progress. TASK-186 removed Company Owner MAC authority and switched
 tenant enforcement to the platform-owned Master entitlement plus Company allocation.
-The independent visual Platform Superadmin workspace/login and simulation remain.
+TASK-187 delivered the independent visual Platform Superadmin workspace/login and
+exact-user simulation; final proof remains.
 
 1. **Contract and tracking** (TASK-184 complete): record current tenant MAC separately
    from the approved platform-owned target, preserve EPIC-018 as historical evidence,
@@ -1133,9 +1134,10 @@ The independent visual Platform Superadmin workspace/login and simulation remain
    tenant MAC UI/onboarding selector, made legacy endpoints deny, applied each Master's
    default allocation to new Companies, and enforced `Master enabled AND Company
    allocated` across registered tenant paths.
-4. **Platform workspace** (TASK-187): add a separate Platform Superadmin login realm,
-   Master/Company entitlement workspace and time-bounded simulation of any active
-   tenant user with exact target-user authority and dual actor audit.
+4. **Platform workspace** (TASK-187 complete): migration 0096 adds the separate
+   platform password/cookie realm; the shared API-mode entry exposes it, the workspace
+   manages versioned Master/Company entitlement, and a visible default-15-minute
+   simulation runs with exact target-user authority and dual actor audit.
 5. **Proof and closeout** (TASK-188): prove migration preservation, cross-tenant denial,
    stale/direct bypass denial, dual-mode parity, platform login/simulation and full
    browser/release gates before changing status or KB from planned to implemented.

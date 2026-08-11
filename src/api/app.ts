@@ -9,6 +9,11 @@ import {
   parseCookies,
   verifyCsrfToken,
 } from '../auth/session';
+import {
+  PLATFORM_SESSION_COOKIE,
+  verifyPlatformCsrfToken,
+} from '../auth/platformSupport';
+import { getPlatformSimulation } from '../auth/platformSimulation';
 import { PERMISSIONS, hasPermission } from '../auth/permissions';
 import { buildDashboard } from './dashboard';
 import { apiError, context, requireSession } from './http';
@@ -37,6 +42,7 @@ import { createOnboardingRouter } from './routes/onboarding';
 import { createPlatformRouter } from './routes/platform';
 import { createCompanyReceiptsRouter } from './routes/companyReceipts';
 import { createTenantModuleEntitlementGate } from './moduleEntitlement';
+import { runWithAuditAttribution } from './auditContext';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -54,6 +60,15 @@ const CSRF_EXEMPT_PATHS = new Set([
   '/api/setup/actions/complete',
 ]);
 
+function platformSessionToken(req: express.Request): string | undefined {
+  const authorization = req.header('authorization');
+  if (authorization?.startsWith('Bearer ')) {
+    const bearer = authorization.slice('Bearer '.length).trim();
+    if (bearer) return bearer;
+  }
+  return parseCookies(req.headers.cookie)[PLATFORM_SESSION_COOKIE];
+}
+
 export function createApp(db: DB, options: AppOptions = {}): Express {
   const app = express();
   if (options.trustProxy) app.set('trust proxy', 1);
@@ -65,6 +80,28 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     next();
   });
   app.use(express.json({ limit: '1mb' }));
+
+  // A valid platform session gains tenant access only through an explicit,
+  // active simulation. The target SessionData replaces rather than augments
+  // tenant identity, while AsyncLocalStorage preserves the real platform actor
+  // for every existing appendAudit call reached by the request.
+  app.use(async (req, res, next) => {
+    if (!req.path.startsWith('/api/') || req.path === '/api/platform' || req.path.startsWith('/api/platform/')) {
+      next();
+      return;
+    }
+    try {
+      const simulation = await getPlatformSimulation(db, platformSessionToken(req), { touch: false });
+      if (!simulation) {
+        next();
+        return;
+      }
+      context(res).platformSimulation = simulation;
+      runWithAuditAttribution({ platformPrincipalId: simulation.platformPrincipalId }, () => next());
+    } catch (error) {
+      next(error);
+    }
+  });
 
   app.use(async (req, res, next) => {
     // Platform routes authenticate with their separate bearer session and run
@@ -82,12 +119,19 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
       next();
       return;
     }
+    const simulation = context(res).platformSimulation;
     const cookies = parseCookies(req.headers.cookie);
-    const valid = await verifyCsrfToken(
-      db,
-      cookies[SESSION_COOKIE],
-      req.header('x-csrf-token'),
-    );
+    const valid = simulation
+      ? await verifyPlatformCsrfToken(
+        db,
+        platformSessionToken(req),
+        req.header('x-platform-csrf-token'),
+      )
+      : await verifyCsrfToken(
+        db,
+        cookies[SESSION_COOKIE],
+        req.header('x-csrf-token'),
+      );
     if (!valid) {
       apiError(res, 403, 'csrf_invalid', 'A valid CSRF token is required.');
       return;
@@ -115,7 +159,9 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     lifecycle,
   }));
 
-  app.use('/api/platform', createPlatformRouter(db));
+  app.use('/api/platform', createPlatformRouter(db, {
+    secureCookies: options.secureCookies ?? false,
+  }));
   app.use(createTenantModuleEntitlementGate(db));
   app.use('/api/admin', createAdminRouter(db, { lifecycle }));
   app.use('/api/account', createAccountRouter(db));

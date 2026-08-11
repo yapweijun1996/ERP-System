@@ -2438,13 +2438,15 @@ commercial entitlement model while preserving the server-side disabled-module ga
 already delivered by EPIC-018. TASK-185's platform foundation and TASK-186's tenant
 authority/enforcement cutover are implemented.
 
-Current source-verified boundary (2026-08-11): Company Owner cannot read or mutate
+Current source-verified boundary (2026-08-12): Company Owner cannot read or mutate
 commercial entitlement. Legacy `/api/admin/modules` endpoints deny with
 `platform_authority_required`; the tenant screen and onboarding module selector are
 removed; all registered tenant module gates evaluate Master entitlement plus Company
-allocation. `/api/platform` has separate principal/session/support-grant and versioned
-module-entitlement APIs, but no password login, visual MAC workspace or end-user
-simulation.
+allocation. Migration 0096 adds the separate platform password verifier and durable
+simulation link. `/api/platform` now has independent password/cookie login, one-hour
+non-remembered platform sessions, a visual Master/Company MAC workspace and explicit
+default-15-minute target-user simulation; no platform credential or session is written
+to `app_user` or `erp_session`.
 
 Approved target:
 
@@ -2461,11 +2463,12 @@ Approved target:
   API and UI contracts. Unknown or missing entitlement state denies with
   `module_not_enabled`;
 - `admin.modules.manage` is retired from tenant templates, grants and assignable
-  permissions. `platform_superadmin` alone receives `platform.modules.read/manage`;
-- the shared visual login gains a separate platform realm with independent password
+  permissions. `platform_superadmin` alone receives `platform.modules.read/manage` and
+  `platform.simulation.manage`;
+- the shared visual login has a separate platform realm with independent password
   credentials and a non-remembered session of at most one hour. The platform workspace
   lists Masters/Companies, previews effective MAC and performs audited mutations;
-- a Platform Superadmin may explicitly and temporarily simulate any active tenant user.
+- a Platform Superadmin may explicitly and temporarily simulate any active assigned tenant user.
   Effective authority is exactly the target user's entitlement, permissions, scope and
   workflow authority, never a union with platform power. Audit stores both the target
   `actorUserId` and real `platformPrincipalId`.
@@ -2479,16 +2482,17 @@ Approved target:
 - [x] **TASK-186 — Remove tenant MAC authority, UI, API and onboarding backdoors.**
       Migration 0095, dual-layer enforcement, new-Company defaults and tenant surface
       retirement completed 2026-08-12; TASK-182 is now dependency-eligible.
-- [ ] **TASK-187 — Add Platform Superadmin login/workspace and audited end-user
-      simulation.** Depends on TASK-185 and TASK-186.
+- [x] **TASK-187 — Add Platform Superadmin login/workspace and audited end-user
+      simulation.** Migration 0096, separate credentials/cookies, realm chooser,
+      workspace, visible return and exact-target dual audit completed 2026-08-12.
 - [ ] **TASK-188 — Prove the cutover and synchronize final docs/KB.** Depends on
       TASK-186 and TASK-187.
 
 EPIC-018 remains valid historical evidence for company module storage and backend
 enforcement, but its tenant mutation authority is explicitly superseded by this target.
-TASK-185/186 are complete, so TASK-187 and TASK-182 are dependency-eligible. Platform MFA is
-not part of the approved v1; password-only access to full user simulation is a recorded
-security risk, not an implemented control.
+TASK-185–187 are complete, so TASK-182 and TASK-188 are dependency-eligible. Platform
+MFA is not part of the approved v1; password-only access to full user simulation is a
+recorded security risk, not an implemented control.
 
 Exit criteria: only an independently authenticated Platform Superadmin can change
 Master entitlement or Company allocation; Company Owner and stale permissions cannot;

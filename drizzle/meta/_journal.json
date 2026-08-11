@@ -673,6 +673,13 @@
       "when": 1786461600000,
       "tag": "0095_retire_tenant_module_authority",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1786465200000,
+      "tag": "0096_platform_superadmin_realm",
+      "breakpoints": true
     }
   ]
 }

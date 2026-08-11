@@ -435,7 +435,7 @@ generation API-only. Its document-loading and PDF composition code may be reused
 Company Receipts now has that standalone query/snapshot contract; only the reusable
 document/PDF primitive is shared with Tax Evidence, not claim or tax semantics.
 
-## 10. Platform Module Entitlement contract (tenant cutover implemented)
+## 10. Platform Module Entitlement contract (tenant cutover and platform workspace implemented)
 
 TASK-185/186 implement the commercial entitlement and tenant enforcement boundary.
 Company Owner has no MAC read/mutation authority. The deprecated
@@ -458,7 +458,9 @@ EPIC-064 requires:
 - only business modules are sellable. Dashboard/Home, My Work, Admin, Settings and
   Account/Notifications are baseline services;
 - only the independent `platform_superadmin` role with
-  `platform.modules.read/manage` may read or mutate commercial entitlement.
+  `platform.modules.read/manage` may read or mutate commercial entitlement; its separate
+  `platform.simulation.manage` permission is required to select or enter a tenant-user
+  simulation. Support roles receive neither authority.
   `admin.modules.manage` becomes deprecated/non-assignable and no tenant API consumes it;
 - platform mutations require the separate platform session, CSRF, expected version,
   correlation and before/after audit. v1 applies immediately without reason/ticket or
@@ -477,5 +479,10 @@ permissions, CSRF/version/correlation/audit-protected APIs, authorization invali
 and deterministic Demo fixtures. TASK-186 adds migration 0095, makes tenant module
 projection and enforcement depend on both stored layers, retires the permission/API/UI,
 removes the onboarding module stage and applies Master defaults to new Companies.
-TASK-187/188 still own platform password login/workspace, simulation and final release
-proof; the tenant cutover must not be mistaken for those remaining capabilities.
+TASK-187 adds migration 0096, independent platform password login, one-hour
+non-remembered `erp_platform_session`/CSRF cookies, the shared API-mode realm chooser,
+Master/Company workspace and a default 15-minute (never beyond the parent session)
+exact-user simulation. It never creates `app_user` or `erp_session`; the simulation row
+is immediately revocable and all existing tenant `appendAudit` calls inherit the real
+platform principal while retaining the target actor. TASK-188 alone owns final release
+proof; implementation tests must not be represented as complete release evidence.

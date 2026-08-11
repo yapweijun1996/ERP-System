@@ -179,9 +179,10 @@ The following current behaviors are compatibility facts, not new authorization g
   bump it atomically; no centralized authorization-version cache is claimed yet.
 - Employee-workspace impersonation is company-bounded and audited, but it is not a
   platform support-access grant.
-- Platform principal and session issuance is intentionally out-of-band; there is no
-  tenant-login route that creates platform sessions. Support evaluation returns a safe
-  allow/deny decision and does not itself authorize arbitrary business-data queries.
+- Platform principal and tenant identity remain separate. TASK-187 adds an independent
+  password login route and one-hour non-remembered platform cookie session; it never
+  creates an `app_user` or `erp_session`. Support evaluation returns a safe allow/deny
+  decision and does not itself authorize arbitrary business-data queries.
 
 No document may describe the target items below as implemented before its task and
 tests are complete.
@@ -589,6 +590,7 @@ platform-only MAC API remains unreachable from the simulated tenant context.
 
 TASK-185 delivered the versioned platform API, migration, audit and Demo fixture.
 TASK-186 removes tenant surfaces, applies defaults and completes TASK-182's entitlement
-dependency. TASK-187 adds platform login, workspace and simulation; TASK-188 owns final
-adversarial proof. EPIC-018 remains historical implementation evidence, but its tenant
+dependency. TASK-187 delivers platform login, workspace and simulation behind the
+separate `platform.simulation.manage` authority; TASK-188 owns final adversarial proof.
+EPIC-018 remains historical implementation evidence, but its tenant
 mutation authority is superseded by EPIC-064.

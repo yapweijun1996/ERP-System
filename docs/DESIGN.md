@@ -547,11 +547,14 @@ Company allocation writes. They validate hard dependencies, optimistic versions,
 before/after plus platform principal/request correlation, and invalidate affected tenant
 authorization versions. The tenant Module Activation UI is removed, Company onboarding
 contains no module selector, and new Companies copy the selected Master's stored default
-allocation. Planned platform login uses the shared visual entry
-but an independent realm/password/session, at most one hour with no remember option.
+allocation. TASK-187 adds the shared API-mode visual entry with an independent platform
+realm/password/session, at most one hour with no remember option; these credentials and
+cookies never enter the tenant identity tables or `erp_session`.
 
-User simulation is a separate, explicit platform support session linked to the real
+User simulation is a separate, explicit platform session linked to the real
 platform principal, target active user and exact Master/Company. Tenant authorization
 runs as the target user without a platform bypass; writes audit both identities. The
-platform workspace remains the only MAC mutation surface. Password-only platform login
-without MFA is an accepted v1 risk and must remain prominent in security/release review.
+platform workspace remains the only MAC mutation surface, and platform mutations reject
+while a simulation is active. Simulations default to 15 minutes and cannot outlive their
+one-hour parent session. Password-only platform login without MFA is an accepted v1 risk
+and must remain prominent in security/release review.

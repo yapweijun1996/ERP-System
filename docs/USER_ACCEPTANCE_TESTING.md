@@ -250,6 +250,8 @@ all of the following pass:
 
 This section remains final-cutover acceptance, not release evidence. TASK-185's focused
 suite proves the platform foundation; TASK-186 focused tests prove tenant authority
-removal, default application, dual-layer masking and mapped API denial. They do not
-prove platform password login/workspace, simulation or TASK-188's final whole-path and
-release gates.
+removal, default application, dual-layer masking and mapped API denial. TASK-187 adds
+focused API coverage for independent password/cookie login, exact-user simulation,
+workspace mutation lockout and dual-actor audit, plus an API-mode browser login/workspace
+smoke. It is not yet TASK-188's complete browser, dual-mode, cross-engine or release
+proof.

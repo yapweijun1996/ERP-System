@@ -6,11 +6,15 @@ import {
   parseCookies,
   type SessionData,
 } from '../auth/session';
+import type { PlatformSimulationData } from '../auth/platformSimulation';
 
 export interface RequestContext {
   requestId: string;
   sessionId?: string;
   session?: SessionData;
+  /** Set by the app middleware only when a valid platform session is actively
+   * simulating an exact target tenant user. */
+  platformSimulation?: PlatformSimulationData;
 }
 
 export function context(res: express.Response): RequestContext {
@@ -71,6 +75,9 @@ export async function requireSession(
     return false;
   };
   const ctx = context(res);
+  if (ctx.platformSimulation) {
+    ctx.session = ctx.platformSimulation.target;
+  }
   if (ctx.session) {
     if (ctx.session.passwordChangeRequired && !options.allowActivationPending) {
       apiError(res, 403, 'activation_required', 'Complete first-login activation before using the application.');

@@ -68,17 +68,20 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | TASK-184 | Done | Source-audit current tenant MAC, record the approved target and synchronize docs/KB |
 | TASK-185 | Done | Module Catalog, Master entitlement, Company allocation, platform API and Demo harness |
 | TASK-186 | Done | Removed tenant MAC permission/UI/onboarding authority; legacy API denies and dual-layer enforcement/defaults are live |
-| TASK-187 | Todo | Independent Platform Superadmin login/workspace and audited exact-user simulation |
+| TASK-187 | Done | Independent Platform Superadmin login/workspace and audited exact-user simulation (migration 0096) |
 | TASK-188 | Todo | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master
 defaults to new Companies and cut registered tenant enforcement over to both layers.
-Its focused authorization proof passes 8 files / 45 tests; root/Web typechecks, lint,
-API/Demo builds, schema v95 across 96 migrations, 246-table drift, Demo pack, access
-matrix, targeted five-language dual-viewport onboarding audit, task-graph validation,
-Markdown links and `git diff --check` pass. TASK-188 retains final PostgreSQL, complete
-browser and release proof.
+TASK-187 delivered migration 0096, independent password/cookie Platform Superadmin login,
+the shared API-mode realm chooser, Master/Company workspace and bounded exact-user
+simulation with dual identity audit. TASK-188 retains the final PostgreSQL, full dual-mode,
+browser, migration-preservation and release proof.
+TASK-186's recorded focused authorization proof remains 8 files / 45 tests. TASK-187's
+isolated proof passes 3 files / 12 tests, root/Web typechecks, API build and schema v96
+drift; its browser check covers API-mode realm login and workspace only. TASK-188 retains
+the complete browser, PostgreSQL, migration-preservation and release gates.
 
 TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
@@ -86,7 +89,7 @@ bounded Demo/API reads and responsive desktop/mobile register UI. TASK-180 adds
 query-side search/date behavior; TASK-181 adds the immutable complete-result Receipt
 Pack and one PDF for preview, download and Print. Module entitlement and the final
 canonical permission cutover remain pending. TASK-182 is now dependency-eligible; the
-remaining EPIC-064 sequence is TASK-187 then TASK-188.
+remaining EPIC-064 closeout is TASK-188.
 
 ## Latest implementation milestones
 

@@ -944,9 +944,12 @@ revokes active overrides, increments affected authorization versions and normali
 legacy onboarding rows from the removed modules stage to roles. The keys remain only
 as deprecated/non-assignable migration and audit identifiers.
 
-TASK-187 additionally needs independent platform password credentials and a bounded
-platform-to-tenant simulation session linking the platform principal/session, target
-active `app_user`, exact Master/Company, issue/expiry/revoke facts and audit correlation.
-It must not turn the platform principal into an `app_user`, persist platform permission
+TASK-187/migration 0096 adds nullable `platform_principal.password_hash` for the
+independent interactive realm and `platform_simulation_session`, linking a platform
+session hash/principal to one active assigned target `app_user`, exact Master/Company,
+expiry/revoke facts and audit correlation. The active-session partial unique index allows
+one explicit target view per platform session; immediate return/revoke is durable. It
+does not turn the platform principal into an `app_user`, persist platform permission
 inside tenant roles or union platform authority into target-user decisions. Those
-TASK-187 session/linkage schema changes do not exist yet.
+TASK-187 session/linkage facts are current schema; TASK-188 remains the cross-engine
+migration and release-proof owner.

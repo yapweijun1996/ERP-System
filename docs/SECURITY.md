@@ -245,11 +245,13 @@ tenant's entitlement facts. TASK-186 applies that check to generic resources, ma
 bespoke APIs, route projection and notifications. TASK-188 still owns exhaustive
 worker/browser/adversarial and release proof.
 
-Platform end-user simulation may target any active user in the selected Master/Company
-and may perform that user's legitimate writes. It therefore requires a visible banner,
-one-hour maximum, no remember option, immediate revoke/return, expiry, rate limiting,
-CSRF and dual `actorUserId`/`platformPrincipalId` audit. Platform permissions are never
-unioned into the target session and MAC writes remain platform-workspace-only.
+Platform end-user simulation may target any active assigned user in the selected
+Master/Company and may perform that user's legitimate writes. TASK-187 implements a
+visible banner, default 15-minute expiry bounded by the one-hour platform session, no
+Remember Me, immediate durable revoke/return, login rate limiting, platform CSRF and dual
+`actorUserId`/`platformPrincipalId` audit. Platform permissions are never unioned into
+the target session and MAC writes reject until the operator returns to the platform
+workspace.
 
 Approved v1 uses password-only platform login and no MFA. Because that principal can
 alter commercial access and fully simulate active users, this is a high-severity

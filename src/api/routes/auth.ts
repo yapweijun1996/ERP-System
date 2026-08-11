@@ -262,6 +262,11 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   });
 
   router.post('/logout', async (req, res) => {
+    if (context(res).platformSimulation) {
+      apiError(res, 409, 'platform_simulation_return_required',
+        'Return to the Platform workspace before signing out of the simulated tenant session.');
+      return;
+    }
     const sessionId = parseCookies(req.headers.cookie)[SESSION_COOKIE];
     await destroySession(db, sessionId);
     clearAuthCookies(res, options.secureCookies);
@@ -353,6 +358,11 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   router.post('/session/actions/switch-company', async (req, res) => {
     const session = await requireSession(db, req, res);
     if (!session) return;
+    if (context(res).platformSimulation) {
+      apiError(res, 409, 'platform_simulation_company_locked',
+        'Return to the Platform workspace before switching company.');
+      return;
+    }
     if (!await hasPermission(db, session, PERMISSIONS.companySwitch)) {
       apiError(res, 403, 'permission_denied', 'You cannot switch companies.');
       return;

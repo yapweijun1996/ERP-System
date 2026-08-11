@@ -251,7 +251,7 @@ or Company control layers.
   onboarding contains no module selector.
 
 Platform Superadmin may list all Masters/Companies only through the separate platform
-realm. When explicitly simulating an active tenant user, the trusted target
+realm. When explicitly simulating an active assigned tenant user, the trusted target
 `masterFn/companyFn` and user membership are fixed server-side; authorization is exactly
 the target user's and audit retains the platform principal. Simulation never converts
 the platform principal into a tenant user or grants cross-target access.

@@ -499,10 +499,10 @@ Current source truth (verified 2026-08-12):
 - the tenant Module Activation route/UI and onboarding modules stage are removed. New
   Masters receive the product default and new Companies inherit the Master default
   allocation through trusted bootstrap code;
-- `src/auth/moduleCatalog.ts`, `src/auth/platformEntitlement.ts` and
-  `src/api/routes/platform.ts` provide the commercial catalog and platform-session-only
-  Master/Company entitlement API. They do not yet provide platform password login, a
-  MAC workspace UI or user simulation.
+- `src/auth/moduleCatalog.ts`, `src/auth/platformEntitlement.ts`,
+  `src/auth/platformSupport.ts`, `src/auth/platformSimulation.ts` and
+  `src/api/routes/platform.ts` provide the commercial catalog, separate password/cookie
+  platform realm, Master/Company entitlement API and exact-user simulation.
 
 TASK-185 foundation and TASK-186 tenant-authority cutover:
 
@@ -515,15 +515,17 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
    bespoke tenant paths to the dual-layer check.
 4. TASK-186 applies the stored platform-owned Master default to newly created Companies;
    tenant onboarding can no longer select modules.
-5. TASK-187 authenticates Platform Superadmin with independent password credentials. Explicit
-   simulation of any active tenant user runs with exactly that user's authority and
-   dual audit; it never provides a MAC bypass.
+5. TASK-187/migration 0096 authenticates Platform Superadmin with independent password
+   credentials, one-hour non-remembered platform cookies and `platform.simulation.manage`.
+   Explicit simulation of an active assigned tenant user is default-15-minute, cannot
+   outlive the platform session, runs with exactly the target authority, remains visibly
+   marked/revocable and records both identities; it never provides a MAC bypass.
 
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |
 | Platform entitlement foundation | `moduleCatalog.ts`, `platformEntitlement.ts`, migration 0094 and focused tests | TASK-185 done |
 | Tenant effective module state | `moduleAccess.ts`, `moduleEntitlement.ts`, focused tests | TASK-186 done |
 | Retired tenant mutation API/UI | `routes/admin.ts`, migration 0095, web app | TASK-186 done |
-| Platform session/support | `platformSupport.ts`, `routes/platform.ts`, platform tests | extension in TASK-185/187 |
+| Platform login and simulation | `platformSupport.ts`, `platformSimulation.ts`, `routes/platform.ts`, `platformSuperadmin.integration.test.ts` | TASK-187 done |
 | Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
-| Full adversarial/release proof | TASK-186 focused proof is implementation evidence, not release proof | TASK-188 |
+| Full adversarial/release proof | Focused platform and tenant proof is implementation evidence, not release proof | TASK-188 |

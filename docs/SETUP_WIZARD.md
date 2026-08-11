@@ -123,5 +123,7 @@ TASK-185 now stores the versioned entitlement/default and exposes the platform-o
 API. TASK-186 applies defaults during trusted Master/Company bootstrap and removes the
 legacy modules stage, so this is now the live setup boundary.
 
-Platform password login, Master/Company workspace and exact-user simulation are planned
-under TASK-187 and remain separate from the tenant setup session.
+TASK-187 now provides a separate one-hour, no-Remember-Me Platform Superadmin password
+realm, Master/Company workspace and exact-user simulation. It remains outside the
+tenant setup session: a Platform Superadmin returns to the platform workspace before
+switching Company or signing out of a simulated tenant view.

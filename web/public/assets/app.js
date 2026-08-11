@@ -1672,6 +1672,13 @@ async function boot(){
      side effect (see erp-system-api-adapter.js), so DB.* is ready by the time
      we reach the shell below. */
   const ed=window.ErpSystemDemo;
+  const platformSession=(typeof window.erpDataMode==='function' && window.erpDataMode()==='api'
+    && window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.getSession==='function')
+    ?await window.ErpPlatformWorkspace.getSession():null;
+  if(platformSession&&!platformSession.simulation){
+    await window.ErpPlatformWorkspace.renderWorkspace(platformSession);
+    return;
+  }
   const needsWizard = (ed && typeof ed.needsSetup==='function') ? await ed.needsSetup()
     : (typeof needsSetupWizard==='function' && needsSetupWizard());
   if(needsWizard){
@@ -1680,6 +1687,11 @@ async function boot(){
   }
   const signedIn = (ed && typeof ed.isSignedIn==='function') ? await ed.isSignedIn() : isDemoSignedIn();
   if(!signedIn){
+    if(typeof window.erpDataMode==='function' && window.erpDataMode()==='api'
+      && window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.renderLogin==='function'){
+      window.ErpPlatformWorkspace.renderLogin();
+      return;
+    }
     renderLogin();
     return;
   }
@@ -1711,6 +1723,9 @@ async function boot(){
   const envEl=$('.env'); if(envEl) envEl.textContent=DB.company.env||envEl.textContent;
   syncAccountUi();
   ensureUserSwitcherMenuItem();
+  if(window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.syncSimulationBanner==='function'){
+    await window.ErpPlatformWorkspace.syncSimulationBanner();
+  }
   // restore persisted working period, then paint the fiscal-period switcher
   try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch{}
   applyPeriod(DB.fiscal.selectedPeriod);
