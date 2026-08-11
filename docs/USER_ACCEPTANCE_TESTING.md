@@ -221,8 +221,9 @@ after final entitlement/canonical authorization and complete browser proof pass.
 ## Planned Platform Module Entitlement acceptance (EPIC-064)
 
 The earlier Company Owner module-control checks remain a current-regression checklist,
-not the approved future authority. TASK-188 may replace them only after TASK-185–187
-land and the following pass:
+not the approved future authority. TASK-185 has automated the platform foundation;
+TASK-188 may replace the tenant checklist only after TASK-186–187 land and all of the
+following pass:
 
 - [ ] Platform Superadmin signs in through the separate platform realm, sees all
       authorised Masters/Companies and previews Master, Company and effective module state.
@@ -246,5 +247,8 @@ land and the following pass:
 - [ ] Platform password session expires within one hour, cannot be remembered and is
       rate-limited. Absence of MFA remains a recorded release risk rather than a pass.
 
-This section is planned acceptance, not evidence. The current 4-file/15-test focused
-suite proves only the pre-cutover Company module/platform support behavior.
+This section remains final-cutover acceptance, not release evidence. TASK-185's focused
+5-file/20-test suite proves catalog, platform permission/CSRF/version/audit behavior,
+mask/restore, dependencies, authorization invalidation and migration preservation. It
+does not prove tenant authority removal, platform password login/workspace, simulation
+or the final whole-path cutover.

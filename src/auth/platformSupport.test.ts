@@ -58,7 +58,7 @@ describe('platform principal and support access boundary', () => {
       PLATFORM_PERMISSIONS.supportUse,
       PLATFORM_PERMISSIONS.supportRevoke,
     ]));
-    expect(await db.select().from(platformRole)).toHaveLength(2);
+    expect(await db.select().from(platformRole)).toHaveLength(3);
     expect(await db.select().from(role).where(eq(role.name, 'platform_support_admin'))).toHaveLength(0);
     expect(await db.select().from(platformPrincipal).where(eq(platformPrincipal.principalId, principalId))).toHaveLength(1);
     await expect(getPlatformSession(db, credentials.token, { now: new Date(NOW.getTime() + 9 * 60 * 60 * 1000) }))

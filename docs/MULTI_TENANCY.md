@@ -227,25 +227,28 @@ authorization scope over the same aggregate—not a client filter—and is imple
 list/detail reads. TASK-182 owns the final canonical/module-entitlement cutover; the
 current Pack path is permission-gated but remains under the pre-cutover tenant MAC.
 
-## Planned Master entitlement and Company allocation
+## Master entitlement and Company allocation foundation
 
 Current `company_module` is an active-Company setting mutable by tenant Company Owner.
-EPIC-064 will replace only that mutation authority and layer model; no text here should
-be read as current implementation before TASK-186.
+TASK-185 has added the platform-owned data/API foundation, but TASK-186 must still
+replace tenant mutation authority and switch tenant enforcement. Until that cutover,
+`src/auth/moduleAccess.ts` remains the current company-only decision path.
 
-- Master/client is the commercial purchaser. `master_module` stores the platform-owned
-  purchased-module ceiling.
+- Master/client is the commercial purchaser. Migration 0094 and
+  `src/auth/platformEntitlement.ts` now store the platform-owned purchased-module
+  ceiling in versioned `master_module` rows.
 - Company/legal entity receives a platform-owned `company_module` allocation inside the
   same Master. Its `(master_fn, company_fn)` pair remains validated and tenant-scoped.
 - Effective availability is `master_module.enabled AND company_module.allocated`.
   Missing Master, Company, module, entitlement or allocation state denies.
 - Master disable masks all Companies but preserves their allocation rows. Re-enable
   restores the previous Company distribution.
-- Migration enables a Master module if any of its current Companies has that module
-  enabled, then preserves every Company row, so effective access does not change.
-- Each Master stores one default Company allocation set selected by Platform
-  Superadmin. New Company onboarding applies it automatically and exposes no tenant
-  module selector.
+- Migration 0094 enables a Master module if any of its current Companies has that
+  module enabled, then preserves every Company row, so current effective access is
+  unchanged when TASK-186 switches reads.
+- Each Master now stores one default Company allocation set selected by Platform
+  Superadmin. Applying it to new Companies and removing the tenant module selector
+  remain TASK-186.
 
 Platform Superadmin may list all Masters/Companies only through the separate platform
 realm. When explicitly simulating an active tenant user, the trusted target

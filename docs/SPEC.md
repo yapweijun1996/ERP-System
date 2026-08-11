@@ -435,7 +435,7 @@ generation API-only. Its document-loading and PDF composition code may be reused
 Company Receipts now has that standalone query/snapshot contract; only the reusable
 document/PDF primitive is shared with Tax Evidence, not claim or tax semantics.
 
-## 10. Platform Module Entitlement contract (approved, not implemented)
+## 10. Platform Module Entitlement contract (foundation implemented; cutover pending)
 
 Current implementation remains tenant-controlled: Company Owner holds
 `admin.modules.manage`, `/api/admin/modules` mutates active-Company `company_module`,
@@ -471,6 +471,11 @@ EPIC-064 requires:
   remains visibly marked/revocable/expiring, and audits `actorUserId` plus
   `platformPrincipalId`. MAC writes remain platform-workspace-only.
 
-TASK-184 records this contract. TASK-185–188 own implementation and proof; TASK-174 is
-the prerequisite stale-authorization boundary. No current status or test may describe
-this target as delivered before TASK-188.
+TASK-185 implements the Module Catalog, migration 0094, versioned Master/default and
+Company allocation rows, hard-dependency validation, independent platform read/manage
+permissions, CSRF/version/correlation/audit-protected APIs, authorization invalidation
+and deterministic Demo fixtures. Its focused tests prove platform isolation, migration
+preservation, mask/restore, dependency and conflict behavior. TASK-186 still removes
+tenant MAC authority and switches all tenant paths to both entitlement layers;
+TASK-187/188 own login/workspace/simulation and final proof. No current status may
+describe the platform-owned cutover as delivered before those tasks pass.

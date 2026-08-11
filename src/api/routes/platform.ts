@@ -15,6 +15,13 @@ import {
   verifyPlatformCsrfToken,
   type SupportAccessMode,
 } from '../../auth/platformSupport';
+import {
+  listCompanyAllocations,
+  listMasterEntitlements,
+  listPlatformTenants,
+  setCompanyAllocation,
+  setMasterEntitlement,
+} from '../../auth/platformEntitlement';
 import { apiError, context } from '../http';
 
 function bearerToken(req: express.Request): string | undefined {
@@ -53,6 +60,77 @@ function handlePlatformError(res: express.Response, error: unknown): void {
 
 export function createPlatformRouter(db: DB): Router {
   const router = Router();
+
+  router.get('/entitlements', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res);
+    if (!auth) return;
+    try {
+      res.json({ data: await listPlatformTenants(db, auth.session), meta: { realm: 'platform' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.get('/masters/:masterFn/modules', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res);
+    if (!auth) return;
+    try {
+      res.json({ data: await listMasterEntitlements(db, auth.session, String(req.params.masterFn)), meta: { realm: 'platform' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.patch('/masters/:masterFn/modules/:moduleKey', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true });
+    if (!auth) return;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    try {
+      if (typeof body.enabled !== 'boolean' || typeof body.defaultCompanyAllocated !== 'boolean') {
+        throw new PlatformAccessError(400, 'invalid_request', 'enabled and defaultCompanyAllocated must be booleans.');
+      }
+      const data = await setMasterEntitlement(db, auth.session, {
+        masterFn: String(req.params.masterFn), moduleKey: String(req.params.moduleKey),
+        enabled: body.enabled, defaultCompanyAllocated: body.defaultCompanyAllocated,
+        expectedVersion: body.expectedVersion,
+      }, context(res).requestId);
+      res.json({ data, meta: { realm: 'platform', immediate: true } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.get('/masters/:masterFn/companies/:companyFn/modules', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res);
+    if (!auth) return;
+    try {
+      const data = await listCompanyAllocations(
+        db, auth.session, String(req.params.masterFn), String(req.params.companyFn),
+      );
+      res.json({ data, meta: { realm: 'platform' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.patch('/masters/:masterFn/companies/:companyFn/modules/:moduleKey', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true });
+    if (!auth) return;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    try {
+      if (typeof body.allocated !== 'boolean') {
+        throw new PlatformAccessError(400, 'invalid_request', 'allocated must be a boolean.');
+      }
+      const data = await setCompanyAllocation(db, auth.session, {
+        masterFn: String(req.params.masterFn), companyFn: String(req.params.companyFn),
+        moduleKey: String(req.params.moduleKey), allocated: body.allocated,
+        expectedVersion: body.expectedVersion,
+      }, context(res).requestId);
+      res.json({ data, meta: { realm: 'platform', immediate: true } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
 
   router.get('/support-grants', async (req, res) => {
     const auth = await requirePlatformSession(db, req, res);

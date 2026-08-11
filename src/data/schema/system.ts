@@ -149,10 +149,13 @@ export const masterModule = pgTable('master_module', {
   masterFn: text('master_fn').notNull(),
   moduleKey: text('module_key').notNull(),
   enabled: boolean('enabled').notNull().default(true),
+  defaultCompanyAllocated: boolean('default_company_allocated').notNull().default(false),
+  version: integer('version').notNull().default(1),
   ...timestamps,
 }, (t) => [
   primaryKey({ columns: [t.masterFn, t.moduleKey] }),
   index('idx_master_module_master').on(t.masterFn),
+  check('ck_master_module_version', sql`${t.version} > 0`),
 ]);
 
 export const apiIdempotency = pgTable('api_idempotency', {

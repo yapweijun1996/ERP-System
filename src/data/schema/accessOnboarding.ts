@@ -73,10 +73,12 @@ export const companyModule = pgTable('company_module', {
   moduleKey: text('module_key').notNull(),
   enabled: boolean('enabled').notNull().default(false),
   configured: boolean('configured').notNull().default(false),
+  version: integer('version').notNull().default(1),
   ...timestamps,
 }, (t) => [
   primaryKey({ columns: [t.masterFn, t.companyFn, t.moduleKey] }),
   index('idx_company_module_state').on(t.masterFn, t.companyFn, t.enabled, t.moduleKey),
+  check('ck_company_module_version', sql`${t.version} > 0`),
 ]);
 
 /** Non-secret resumable HR draft. Initial passwords are accepted only by the

@@ -1115,9 +1115,9 @@ Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md
 works end to end in both modes without `expense_claim`, cross-tenant access,
 cross-currency totals, hidden missing-date omissions or page-limited export results.
 
-## Phase 46 — Platform Module Entitlement & Superadmin Workspace ⬜
+## Phase 46 — Platform Module Entitlement & Superadmin Workspace 🟨
 
-This phase is approved backlog, not current behavior. The source-verified application
+This phase is in progress. The source-verified tenant application
 still lets Company Owner use `admin.modules.manage`, `/api/admin/modules` and the
 tenant Module Activation screen to mutate company-scoped `company_module`. Existing
 server-side route/resource/API module denial remains valuable and will be retained.
@@ -1125,10 +1125,11 @@ server-side route/resource/API module denial remains valuable and will be retain
 1. **Contract and tracking** (TASK-184 complete): record current tenant MAC separately
    from the approved platform-owned target, preserve EPIC-018 as historical evidence,
    register TASK-185–188 and synchronize the project KB.
-2. **Entitlement foundation** (TASK-185, now eligible): create the commercial
+2. **Entitlement foundation** (TASK-185 complete): created the commercial
    Module Catalog; normalize `master_module` from the union of current Company-enabled
    states; treat `company_module` as platform allocation; add versioned platform API,
-   audit and deterministic Demo fixture/harness behavior.
+   audit, hard-dependency validation, authorization invalidation and deterministic Demo
+   fixture/harness behavior. This does not switch tenant enforcement.
 3. **Tenant cutover** (TASK-186): retire `admin.modules.manage`, remove tenant MAC UI,
    endpoints and onboarding selection, apply each Master's default allocation to new
    Companies, and enforce `Master enabled AND Company allocated` everywhere.

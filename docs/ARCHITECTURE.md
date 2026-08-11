@@ -208,18 +208,20 @@ resource/action authorization, route/access matrix, Demo/API adapters and PWA
 navigation so unknown or disabled access continues to fail closed. See
 [SPEC.md](SPEC.md) and [EPICS.md](EPICS.md) for the remaining boundary.
 
-## 10. Planned commercial Module Catalog and platform realm
+## 10. Commercial Module Catalog foundation and platform realm
 
-EPIC-064 introduces a commercial Module Catalog beside, not instead of, the existing
+TASK-185 introduces a commercial Module Catalog beside, not instead of, the existing
 route access matrix and resource registry. Routes/resources reference catalog keys;
 the catalog defines sellable business modules, hard dependencies and baseline services.
-CI/startup rejects unmapped business contracts, and runtime missing state denies.
+The platform entitlement domain rejects unknown/missing state and dependency-breaking
+mutations. Tenant route/resource mapping and enforcement cut over in TASK-186.
 
-The data path becomes Platform → Master entitlement (`master_module`) → Company
-allocation (`company_module`) → tenant permission/scope/workflow. Existing disabled-
-module backend checks are retained. Current tenant `/api/admin/modules`, onboarding
-module selection and Module Activation UI are removed only after the platform API and
-migration preservation proof exist.
+The versioned platform path now exists: Platform → Master entitlement
+(`master_module`) → Company allocation (`company_module`), with optimistic conflict
+checks, authorization-version invalidation and dual-layer `effectiveEnabled`. Migration
+0094 preserves Company rows and normalizes Master rows from their enabled union.
+Existing tenant enforcement still reads only `company_module`; `/api/admin/modules`,
+onboarding module selection and Module Activation UI remain until TASK-186.
 
 The web entry may reuse the visual login component, but platform authentication is a
 separate realm, credential store, session and CSRF boundary. Its minimal workspace lists
@@ -227,6 +229,7 @@ Masters/Companies and MAC; it is not a Company Owner shell. Explicit end-user si
 creates a bounded linked support session whose decisions run exactly as the active
 target user and whose audit retains the real platform principal.
 
-This is TASK-185–188 target architecture, not current code. See
+TASK-185 is current code; tenant cutover, platform password login/workspace and
+simulation remain TASK-186–188 target architecture. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) and
 [SECURITY.md](SECURITY.md) for authority and residual-risk requirements.

@@ -176,21 +176,23 @@ must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,
 preview or export acceptance.
 
-## Planned Demo platform entitlement behavior
+## Demo platform entitlement foundation
 
 Current Demo Company Owner can operate the tenant Module Activation screen; that is
-legacy/current behavior and TASK-184 does not remove it. EPIC-064 replaces it with a
-deterministic platform-selected fixture:
+legacy/current behavior and TASK-185 does not remove it. TASK-185 adds a deterministic
+platform-selected fixture and domain/API harness:
 
 - Demo seeds explicit Master entitlement and Company allocation for every registered
   business module; effective state is their intersection and missing state denies;
-- one Master default allocation initializes newly created Demo Companies;
-- Company Owner has no MAC screen, `admin.modules.manage` grant or onboarding selector;
+- one Master default allocation is stored; applying it to newly created Demo Companies
+  remains TASK-186;
+- removing Company Owner's MAC screen, `admin.modules.manage` grant and onboarding
+  selector remains TASK-186;
 - automated tests use an explicit Demo platform harness to change entitlement/allocation
   and prove dependency, migration and tenant isolation. It is not exposed as a tenant
   business control or backed by browser localStorage;
 - Platform Superadmin login/workspace and exact-user simulation must preserve the same
   authority/audit semantics in Demo and API modes when TASK-187 lands.
 
-Until TASK-185/186 is verified, the existing Company-controlled Demo behavior remains
-Canonical and must not be described as platform-owned implementation.
+The TASK-185 platform fixture/API is verified, but the existing Company-controlled Demo
+behavior remains Canonical until TASK-186 and must not be described as cut over.

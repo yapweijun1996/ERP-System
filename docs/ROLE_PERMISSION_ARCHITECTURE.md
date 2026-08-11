@@ -556,12 +556,12 @@ Preview/download/Print reuse the resolved own/company read capability and creato
 snapshot scope; TASK-182 retains final export/action identifiers plus the canonical
 module/access-matrix cutover after TASK-186.
 
-## 16. Planned platform-owned Module Access Control (EPIC-064)
+## 16. Platform Module Entitlement authority (EPIC-064)
 
 Current Company Owner authority is explicit rather than a hidden bypass, but its
-`admin.modules.manage` grant still lets the tenant change `company_module`. That is
-current source truth and will remain until TASK-185/186; it is not the approved product
-ownership model.
+`admin.modules.manage` grant still lets the tenant change `company_module`. That remains
+current source truth until TASK-186; TASK-185's platform authority is present in
+parallel and is not yet the tenant enforcement owner.
 
 Target evaluation order:
 
@@ -573,11 +573,12 @@ Target evaluation order:
 6. enforce assignment scope/ownership;
 7. enforce locked workflow/business authority.
 
-The commercial Module Catalog is application-owned. Tenant roles cannot create,
+The commercial Module Catalog and independent `platform_superadmin` role are now
+application-owned. Tenant roles cannot create,
 assign or evaluate `platform.modules.*`. `admin.modules.manage` is removed from Company
-Owner, Company Admin, custom role grants and the assignable registry. Only the
-application-owned `platform_superadmin` receives `platform.modules.read/manage`; current
-support roles remain separate.
+Owner, Company Admin, custom role grants and the assignable registry in TASK-186. Only
+`platform_superadmin` receives `platform.modules.read/manage`; current support roles
+remain separate.
 
 Platform user simulation is not a role assignment or permission union. It binds an
 independent platform session to one active tenant user and exact Master/Company for at
@@ -585,7 +586,8 @@ most one hour. Every tenant decision uses the target user's roles, overrides, sc
 module availability and workflow authority. Both identities are audited, and the
 platform-only MAC API remains unreachable from the simulated tenant context.
 
-TASK-174 has closed cache/direct-URL coverage, so TASK-185 is eligible. TASK-186 removes tenant
+TASK-185 has delivered the versioned platform API, migration, audit and Demo fixture.
+TASK-186 removes tenant
 surfaces and becomes TASK-182's entitlement dependency; TASK-187 adds platform login,
-workspace and simulation; TASK-188 owns final adversarial proof. Until then EPIC-018's
-tenant API/UI remains current, while EPIC-064 remains approved target only.
+workspace and simulation; TASK-188 owns final adversarial proof. Until TASK-186,
+EPIC-018's tenant API/UI remains current even though the EPIC-064 foundation now exists.

@@ -496,26 +496,30 @@ Current source truth (verified 2026-08-11):
   `admin.modules.manage`; Company Owner currently receives that permission;
 - `src/auth/accessMatrix.ts` and `web/public/assets/app.js` expose the tenant
   `module-activation-control` route; generic resources re-check module state server-side;
-- `src/api/routes/platform.ts` provides platform support grants only. It has no module
-  entitlement, platform password login, Master/Company MAC UI or user simulation.
+- `src/auth/moduleCatalog.ts`, `src/auth/platformEntitlement.ts` and
+  `src/api/routes/platform.ts` now provide the TASK-185 commercial catalog and
+  platform-session-only Master/Company entitlement API. They do not provide platform
+  password login, a MAC UI or user simulation.
 
-Approved EPIC-064 logic, not yet source-backed implementation:
+TASK-185 source-backed foundation and remaining EPIC-064 cutover:
 
-1. Rebuild `master_module` as the purchased Master entitlement from the union of current
-   enabled Company state; retain `company_module` as Company allocation.
-2. Compute effective module access as Master entitlement AND Company allocation before
-   permission, scope and workflow checks. Missing/unknown facts deny.
-3. Let only `platform_superadmin` with `platform.modules.read/manage` mutate either
-   layer. Remove `admin.modules.manage`, tenant MAC UI/API and onboarding selection.
-4. Apply one platform-owned Master default allocation to newly created Companies.
-5. Authenticate Platform Superadmin in a separate platform realm/session. Explicit
+1. Migration 0094 rebuilds `master_module` from the union of current enabled Company
+   state, preserves `company_module`, and adds optimistic versions/default allocation.
+2. The platform domain computes `effectiveEnabled = Master entitlement AND Company
+   allocation`; missing/unknown facts deny and hard dependency violations conflict.
+3. Only `platform_superadmin` with `platform.modules.read/manage` can use the new
+   platform APIs. TASK-186 still removes `admin.modules.manage`, tenant MAC UI/API and
+   onboarding selection and switches all tenant enforcement to both layers.
+4. TASK-186 applies the stored platform-owned Master default to newly created Companies.
+5. TASK-187 authenticates Platform Superadmin with independent password credentials. Explicit
    simulation of any active tenant user runs with exactly that user's authority and
    dual audit; it never provides a MAC bypass.
 
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |
-| Company module state | `moduleAccess.ts`, `moduleAccess.test.ts` | TASK-185/186 |
+| Platform entitlement foundation | `moduleCatalog.ts`, `platformEntitlement.ts`, migration 0094 and focused tests | TASK-185 done |
+| Current tenant module state | `moduleAccess.ts`, `moduleAccess.test.ts` | cutover in TASK-186 |
 | Tenant mutation API/UI | `routes/admin.ts`, `accessMatrix.ts`, `screens-admin.js` | removal in TASK-186 |
 | Platform session/support | `platformSupport.ts`, `routes/platform.ts`, platform tests | extension in TASK-185/187 |
-| Migration preservation | migrations 0022/0073 and current Company rows | TASK-185 |
+| Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
 | Full adversarial proof | current 15/15 focused baseline is current-state proof only | TASK-188 |

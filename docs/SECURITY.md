@@ -225,21 +225,24 @@ merchant/date/amount similarity must never auto-delete or merge evidence.
 
 The current tenant mutation route is a recorded security/product gap, not a hidden
 claim: Company Owner currently holds `admin.modules.manage` and may call
-`/api/admin/modules`. EPIC-064 will retire that permission and surface; existing backend
+`/api/admin/modules`. TASK-186 will retire that permission and surface; existing backend
 module denial remains required throughout migration.
 
 Only a separately authenticated `platform_superadmin` may receive
 `platform.modules.read/manage`. Platform credentials/sessions remain outside
 `app_user`/`erp_session`; platform CSRF, expected-version checks, request correlation
 and append-only before/after audit protect every immediate entitlement mutation.
-Support roles do not inherit commercial authority.
+Support roles do not inherit commercial authority. TASK-185 implements this platform
+API boundary and bumps affected Company authorization versions, but does not yet remove
+the tenant mutation route.
 
 Module authorization fails closed in this order: authenticated target identity,
 trusted Master/Company context, Master entitlement, Company allocation, permission,
 scope, then workflow authority. A stale role permission or simulated user cannot bypass
 either entitlement layer. Direct routes, bespoke/generic APIs, notifications, workers
 and writes must return a bounded 403 `module_not_enabled` without revealing another
-tenant's entitlement facts.
+tenant's entitlement facts. That whole-path dual-layer cutover remains TASK-186/188;
+current tenant paths still enforce the legacy Company-only gate.
 
 Platform end-user simulation may target any active user in the selected Master/Company
 and may perform that user's legitimate writes. It therefore requires a visible banner,

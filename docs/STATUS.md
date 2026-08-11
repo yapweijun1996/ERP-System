@@ -395,7 +395,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
 | Admin: users, roles & audit log | ✅ Canonical Demo/API data and writes | `app_user`/`role`/`role_permission`/`audit_log` remain the original Admin tables. Migration 0087 adds tenant-scoped `user_permission_override`; `/api/admin/users/:userId/permission-overrides` creates reasoned allow/deny exceptions, `/actions/revoke` revokes them, and `/api/admin/authorization/explain` exposes full decision details only to audit-read users while appending an audit event. Migration 0088 adds the company authorization-version marker used by current session/capability freshness projections. Migration 0089 replaces the tenant Superadmin bypass with an immutable, company-scoped Company Owner role containing 112 explicit permission rows; legacy flags are inert and legacy assignments are backfilled idempotently. These Admin tables and routes remain bespoke rather than generic resources because of composite/non-standard keys and security boundaries. Existing `user-mgmt`, `role-permission` and `audit-log` contracts remain real and backend-enforced; the central evaluator is the authorization source of truth. |
 | Platform support control plane | ✅ Control-plane foundation (TASK-170) | `platform_principal`, application-owned platform roles, hash-backed bearer/CSRF sessions and `support_access_grant` are separate from tenant `app_user`/roles. Grants enforce exact master/optional company targets, reason/ticket, 24-hour maximum, read-only/restricted-write/break-glass modes, default sensitive-field denial, immediate revoke and platform-correlated audit. `/api/platform` rejects tenant cookies; identity/session issuance is out-of-band and the evaluator does not proxy customer data. |
-| Company module access control | ✅ Current Canonical enforcement; ⚠️ tenant mutation authority is approved for replacement | The current authority is company-scoped `company_module` (`master_fn` + `company_fn` + `module_key` + `enabled`); missing known-module rows are disabled. Company Owner currently receives `admin.modules.manage`, `/api/admin/modules` reads/writes the active Company, and the tenant `module-activation-control` screen exposes those writes. `src/auth/moduleAccess.ts` and generic resource handlers enforce disabled modules server-side; session state lets shell/search hide them. Unknown business keys fail closed, payroll is gateable and `account/*` remains outside business switching. This is current implementation truth, not the approved commercial model. EPIC-064/TASK-185–188 will make `master_module` the Platform Superadmin-owned Master entitlement, reinterpret `company_module` as platform allocation, retire tenant MAC and use `Master enabled AND Company allocated`. TASK-174 has closed the cache/direct-URL prerequisite. |
+| Company module access control | ✅ Current tenant enforcement; 🟨 platform foundation present, cutover pending | Company Owner still receives `admin.modules.manage`; `/api/admin/modules`, `module-activation-control` and `src/auth/moduleAccess.ts` still use active-Company `company_module.enabled`. TASK-185 separately adds the commercial catalog, migration 0094 versioned Master/default and Company allocation state, `platform_superadmin` read/manage permissions and platform-only audited APIs whose `effectiveEnabled` is `Master enabled AND Company allocated`. Support roles receive no entitlement authority. This foundation does not remove tenant mutation or switch tenant routes/resources; TASK-186 owns that security cutover. |
 | HR-lite: employee master + leave request/approval | ✅ Canonical Demo/API data and writes | First Phase 7 module opened after Phase 8. `employee` (self-referencing `manager_id`, no link to `app_user`) and `leave_request` tables, `src/modules/hr/` (`createEmployee`, `createLeaveRequest`/`decideLeaveRequest`), registered as standard generic resources gated on new `hr.read`/`hr.write` permissions. `hr-directory` and `employee` read real data (per-employee detail, not always the same hardcoded record); `new-employee` is a single real form replacing the mock's 3-step compensation/provisioning wizard (no schema backed those steps); `leave-approval` reads real requests and its approve/reject actions are real, including a required-reason reject flow. That initial task deliberately excluded Payroll and compensation; later Payroll and Full Leave tasks supersede that historical boundary. Verified live: created a real employee, approved one leave request, rejected another with a reason, confirmed the employee detail's leave balance and history reflected both decisions. |
 | Staff Calendar appointments | ✅ Canonical Demo/API data and writes | Migration 0082 adds tenant-scoped `staff_appointment` facts with employee, type, title, time range, location, status and optimistic version. `staffCalendar` combines appointments with canonical leave rows; HR write users can create, edit and cancel without deleting history. API/domain tests cover tenant isolation, idempotent replay, version conflicts and invalid ranges; the browser contract covers mixed leave/appointment rendering, create, filter and shared searchable listing. |
 | Leave-to-Payroll integration | ✅ Canonical Demo/API data and writes | Migration 0055 adds append-only unpaid-leave, approved-cancellation and encashment sources plus unique run mappings. Payroll lines snapshot base gross and leave earnings/deductions; the 26-day Decimal formula rounds half-up to cents and every source can be consumed once only. Legacy Policy rows retain original days. Five-language Payroll Run/Payslip surfaces and authenticated API/domain proofs cover balance, trace and overlapping-run replay. |
@@ -1719,25 +1719,27 @@ audit passes 1,533 canonical keys / 69 local packs and the full 128-route × 5-l
 × 2-viewport browser matrix. Current PWA cache version is v259 and the PWA update audit
 passes.
 
-## Platform Module Entitlement source audit and approved target (2026-08-11)
+## Platform Module Entitlement foundation and pending cutover (2026-08-11)
 
-TASK-184 is documentation/knowledge work only. No application code, schema, migration,
-permission, route or production deployment changed. The following target is approved
-but not implemented:
+TASK-184 recorded the source/target split. TASK-185 now implements the commercial
+Module Catalog, migration 0094, versioned Master/default and Company allocation state,
+independent `platform_superadmin` permissions, platform-only APIs, hard dependencies,
+authorization-version invalidation, audit/correlation and deterministic Demo fixtures.
+No production deployment was performed.
 
 - Platform Superadmin owns the Master commercial entitlement and Company allocation;
   Company Owner owns tenant users/roles/permissions only.
-- Existing `master_module` will be normalized from the union of current Company-enabled
+- Existing `master_module` is normalized by migration 0094 from the union of current Company-enabled
   states so no effective access is lost. `company_module` will retain per-Company
   allocation. Effective access is `Master enabled AND Company allocated`; Master disable
   masks rather than overwrites allocation.
-- One platform-defined default allocation set per Master initializes new Companies.
-  Tenant onboarding will no longer offer module selection.
-- A shared Module Catalog will enumerate business modules and validate route/resource/
-  API contracts. Dashboard/Home, My Work, Admin, Settings and Account/Notifications are
+- One platform-defined default allocation set per Master is stored; TASK-186 applies it
+  to new Companies and removes tenant onboarding selection.
+- A shared Module Catalog enumerates business modules for the platform domain and Demo.
+  TASK-186 connects it to every tenant route/resource/API contract. Dashboard/Home, My Work, Admin, Settings and Account/Notifications are
   baseline services, not sellable entitlement switches.
-- `admin.modules.manage` will be deprecated and removed from tenant grants. The
-  application-owned `platform_superadmin` role will own `platform.modules.read/manage`.
+- `platform_superadmin` now owns `platform.modules.read/manage`; support roles do not.
+  TASK-186 still removes/deprecates `admin.modules.manage` from tenant authority.
 - The existing visual login will gain a separate platform realm backed by independent
   password credentials and a non-remembered session of at most one hour. No MFA is
   planned for v1, which remains an explicit high-risk limitation.
@@ -1747,7 +1749,13 @@ but not implemented:
   real platform principal. MAC writes remain unavailable from the simulated tenant
   session.
 
-EPIC-064 owns TASK-184–188. TASK-174 is complete and TASK-185 is eligible; TASK-186 is the entitlement
+TASK-185 verification passed: 5 focused files / 20 tests; full Vitest 163 passed + 1
+skipped files and 652 passed + 1 skipped tests; lint; core/web typechecks; permission
+registry; schema version 94 across 95 migrations; 246-table drift; Demo pack; and API/
+Demo builds. This is implementation proof for the foundation, not deployment or tenant
+cutover proof.
+
+EPIC-064 owns TASK-184–188. TASK-185 is complete; TASK-186 is the entitlement
 prerequisite added to Expenses & Tax TASK-182. EPIC-018 remains historical proof of
 server-side module enforcement but does not define the approved future mutation owner.
 
@@ -1818,9 +1826,9 @@ future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 181 tasks
+- Done: 182 tasks
 - In progress: 0
-- Todo: TASK-182–183 and TASK-185–188 (6)
+- Todo: TASK-182–183 and TASK-186–188 (5)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -1837,9 +1845,9 @@ future/optional phases rather than v1 defects.
   behavior and TASK-181 delivered immutable Receipt Pack Preview/PDF/Print. TASK-182–183
   remain todo, so final entitlement/canonical permission integration and release proof
   must not be represented as complete.
-- EPIC-064 is registered but not implemented. TASK-184 completed the source-backed MAC
-  documentation/KB boundary; TASK-185–188 remain todo. Current tenant MAC remains
-  Canonical until TASK-185/186 deliver and verify the platform-owned cutover.
+- EPIC-064 is in progress. TASK-184 completed the source-backed boundary and TASK-185
+  delivered the platform entitlement foundation; TASK-186–188 remain todo. Current
+  tenant MAC remains Canonical until TASK-186 delivers the platform-owned cutover.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -1853,13 +1861,13 @@ future/optional phases rather than v1 defects.
 
 ## Next implementation boundary
 
-The next dependency-ordered work is TASK-185, the platform Module Catalog, Master
-entitlement, Company allocation, platform API and Demo harness. TASK-177–181's Company
+The next dependency-ordered work is TASK-186, removing tenant MAC permission/UI/API/
+onboarding authority and switching enforcement to both entitlement layers. TASK-185's
+catalog, migration, platform API and Demo harness, plus TASK-177–181's Company
 Receipt model/API, confirmation, register, search/date and Pack boundary, TASK-175's
 production release verification and TASK-174's invalidation boundary are complete.
-EPIC-063 entitlement integration TASK-182 waits for EPIC-064 TASK-186. EPIC-064 begins with TASK-185
-and then proceeds through tenant cutover, platform workspace and proof in
-TASK-186–188. The current working tree contains additional uncommitted application changes;
+EPIC-063 entitlement integration TASK-182 waits for EPIC-064 TASK-186, then EPIC-064
+proceeds through platform workspace and proof in TASK-187–188. The current working tree contains additional uncommitted application changes;
 this status records behavior verified from the current files/tests and the deployed
 Compose target, but does not imply that the changes have been committed.
 

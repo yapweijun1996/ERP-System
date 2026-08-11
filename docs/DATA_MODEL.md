@@ -130,7 +130,7 @@ role_permission (role_id, permission_key, allowed)        -- current Allow grant
 role_resource_scope (role_id, resource_key, scope)        -- legacy role-level fallback
 user_permission_override (id, user_id, permission_key, resource_key, effect,
                           scope, target_type, target_id, validity, revocation) -- explicit exception
-company_module (master_fn, company_fn, module_key, enabled, configured)
+company_module (master_fn, company_fn, module_key, enabled, configured, version)
 ```
 
 A user belongs to one `master_fn` but can be granted **many companies** through
@@ -913,23 +913,24 @@ rendering rereads the frozen `document_version` identities from governed storage
 fails if tenant, creator, scan state, version/hash/content or the 250 MB source bound no
 longer matches. It is included in the production Company RLS policy set.
 
-## 11. Planned platform module entitlement data changes (EPIC-064)
+## 11. Platform module entitlement foundation (EPIC-064)
 
-Current rows remain authoritative until TASK-185/186: `master_module` is legacy history
-and `company_module` is the active tenant-mutable Company switch. The planned migration
-reuses rather than duplicates those tables:
+Migration 0094 reuses rather than duplicates the existing tables. The new columns and
+normalized rows exist, but current tenant enforcement remains authoritative until
+TASK-186: `src/auth/moduleAccess.ts` still treats `company_module.enabled` as the active
+tenant-mutable Company switch.
 
 ```text
 master_module
   master_fn, module_key, enabled, default_company_allocated, version, timestamps
 
 company_module
-  master_fn, company_fn, module_key, allocated, configured, version, timestamps
+  master_fn, company_fn, module_key, enabled (allocation), configured, version, timestamps
 
 effective_enabled = master_module.enabled AND company_module.allocated
 ```
 
-Before switching reads, migration upserts one Master row per business module with
+Migration 0094 upserts one Master row per business module with
 `enabled=true` when any current Company row is enabled, and preserves each current
 Company state as its allocation. Master disable never rewrites Company rows. Missing
 rows deny. Baseline Dashboard/Home, My Work, Admin, Settings and Account/Notifications
@@ -937,13 +938,13 @@ do not receive commercial rows.
 
 Platform mutations use optimistic versions and audit before/after with
 `platform_principal_id`. The independent `platform_superadmin` role gains
-`platform.modules.read/manage`; `admin.modules.manage` tenant grants are removed and
-retained only as deprecated compatibility metadata where historical explanation needs
-them.
+`platform.modules.read/manage`; support roles receive neither permission. Removing
+`admin.modules.manage` tenant grants and making the compatibility key non-assignable
+remain TASK-186.
 
 TASK-187 additionally needs independent platform password credentials and a bounded
 platform-to-tenant simulation session linking the platform principal/session, target
 active `app_user`, exact Master/Company, issue/expiry/revoke facts and audit correlation.
 It must not turn the platform principal into an `app_user`, persist platform permission
-inside tenant roles or union platform authority into target-user decisions. Exact schema
-and migration files do not exist yet; this section is approved target only.
+inside tenant roles or union platform authority into target-user decisions. Those
+TASK-187 session/linkage schema changes do not exist yet.

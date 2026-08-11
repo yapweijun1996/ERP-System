@@ -19,17 +19,16 @@ import {
   bumpAuthorizationVersionWithin,
   bumpMasterAuthorizationVersionsWithin,
 } from './authorizationVersion';
+import { PLATFORM_PERMISSIONS, type PlatformPermission } from './platformPermissionCatalog';
 
-export const PLATFORM_PERMISSIONS = {
-  supportRead: 'platform.support.read',
-  supportUse: 'platform.support.use',
-  supportGrant: 'platform.support.grant',
-  supportRevoke: 'platform.support.revoke',
-} as const;
-
-export type PlatformPermission = typeof PLATFORM_PERMISSIONS[keyof typeof PLATFORM_PERMISSIONS];
+export { PLATFORM_PERMISSIONS, type PlatformPermission } from './platformPermissionCatalog';
 
 export const PLATFORM_ROLE_TEMPLATES = {
+  superadmin: {
+    code: 'platform_superadmin',
+    name: 'Platform Superadmin',
+    permissions: [PLATFORM_PERMISSIONS.modulesRead, PLATFORM_PERMISSIONS.modulesManage],
+  },
   supportEngineer: {
     code: 'platform_support_engineer',
     name: 'Platform Support Engineer',
@@ -370,7 +369,7 @@ export async function revokePlatformSession(db: DB, token: string, now = new Dat
     .where(and(eq(platformSession.tokenHash, hashSecret(token)), isNull(platformSession.revokedAt)));
 }
 
-function requirePlatformPermission(session: PlatformSessionData, permission: PlatformPermission): void {
+export function requirePlatformPermission(session: PlatformSessionData, permission: PlatformPermission): void {
   if (!session.permissions.includes(permission)) {
     throw new PlatformAccessError(403, 'platform_permission_denied', 'Platform permission is required.');
   }

@@ -66,22 +66,23 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | Task | Status | Purpose |
 | --- | --- | --- |
 | TASK-184 | Done | Source-audit current tenant MAC, record the approved target and synchronize docs/KB |
-| TASK-185 | Todo | Module Catalog, Master entitlement, Company allocation, platform API and Demo harness |
+| TASK-185 | Done | Module Catalog, Master entitlement, Company allocation, platform API and Demo harness |
 | TASK-186 | Todo | Remove tenant MAC permission/UI/API/onboarding authority and cut over enforcement |
 | TASK-187 | Todo | Independent Platform Superadmin login/workspace and audited exact-user simulation |
 | TASK-188 | Todo | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
 
-TASK-174 has closed the cache/direct-URL dependency, so TASK-185 is now eligible. The
-current application remains tenant-controlled until TASK-185 and TASK-186 are delivered;
-TASK-184 did not change code, schema, routes, permissions or production.
+TASK-185 delivered migration 0094, the commercial catalog, versioned/audited platform
+entitlement APIs, hard dependencies, authorization invalidation and deterministic Demo
+fixtures. The current application remains tenant-controlled until TASK-186 removes the
+legacy authority and cuts enforcement over to both layers.
 
 TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
 bounded Demo/API reads and responsive desktop/mobile register UI. TASK-180 adds
 query-side search/date behavior; TASK-181 adds the immutable complete-result Receipt
 Pack and one PDF for preview, download and Print. Module entitlement and the final
-canonical permission cutover remain pending. TASK-182 waits for TASK-186, so TASK-185
-is now the next dependency-eligible implementation task.
+canonical permission cutover remain pending. TASK-182 waits for TASK-186, which is now
+the next dependency-eligible implementation task.
 
 ## Latest implementation milestones
 

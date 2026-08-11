@@ -19,11 +19,14 @@ import {
   payrollRun, payrollRunLine, appNotification,
   integrationConnector, companyPolicy, documentSequence, accountingPeriod,
   financialStatementAccountMap, budgetVersion, budgetLine, consolidationRate,
-  companyModule, companyOnboarding, roleResourceScope,
+  companyModule, companyOnboarding, roleResourceScope, masterModule,
+  platformRole, platformRolePermission,
 } from './schema';
 import { computeStatutoryContributions } from '../modules/payroll/statutory';
 import { fixedUnits, fixedString } from '../modules/inventory/decimal';
 import { MODULE_KEYS } from '../auth/moduleAccess';
+import { COMMERCIAL_MODULE_CATALOG } from '../auth/moduleCatalog';
+import { PLATFORM_PERMISSIONS } from '../auth/platformPermissionCatalog';
 
 /**
  * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
@@ -115,6 +118,23 @@ export async function seedDemo(db: DB): Promise<void> {
       masterFn: 'M1', companyFn, moduleKey, enabled: true, configured: true,
     }))),
   );
+  await db.insert(masterModule).values(COMMERCIAL_MODULE_CATALOG.map((module) => ({
+    masterFn: 'M1', moduleKey: module.key,
+    enabled: module.key !== 'expenses_tax',
+    defaultCompanyAllocated: module.key !== 'expenses_tax',
+  })));
+  await db.insert(companyModule).values((['C-SG', 'C-MY'] as const).map((companyFn) => ({
+    masterFn: 'M1', companyFn, moduleKey: 'expenses_tax', enabled: false, configured: true,
+  })));
+  const [platformSuperadminRole] = await db.insert(platformRole).values({
+    code: 'platform_superadmin',
+    name: 'Platform Superadmin',
+    isSystemRole: true,
+  }).returning({ platformRoleId: platformRole.platformRoleId });
+  await db.insert(platformRolePermission).values([
+    { platformRoleId: platformSuperadminRole.platformRoleId, permissionKey: PLATFORM_PERMISSIONS.modulesRead },
+    { platformRoleId: platformSuperadminRole.platformRoleId, permissionKey: PLATFORM_PERMISSIONS.modulesManage },
+  ]);
   await db.insert(companyOnboarding).values((['C-SG', 'C-MY'] as const).map((companyFn) => ({
     masterFn: 'M1', companyFn, status: 'live', currentStage: 'live',
     completedSteps: [
