@@ -38,7 +38,7 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
     permissions: [
       PERMISSIONS.dashboardRead, PERMISSIONS.usersInvite, PERMISSIONS.usersRead,
       PERMISSIONS.usersManage, PERMISSIONS.rolesRead, PERMISSIONS.rolesWrite,
-      PERMISSIONS.modulesManage, PERMISSIONS.auditRead, PERMISSIONS.settingsRead,
+      PERMISSIONS.auditRead, PERMISSIONS.settingsRead,
       PERMISSIONS.settingsManage, PERMISSIONS.companySwitch,
       PERMISSIONS.hrRead, PERMISSIONS.hrWrite,
     ],

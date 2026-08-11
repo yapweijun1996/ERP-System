@@ -2433,17 +2433,18 @@ mobile/desktop and current release gates pass.
 
 ## EPIC-064 — Platform Module Entitlement & Superadmin Workspace 🟨
 
-Replace the current tenant-controlled Module Activation boundary with a platform-owned
+Replace the former tenant-controlled Module Activation boundary with a platform-owned
 commercial entitlement model while preserving the server-side disabled-module gates
-already delivered by EPIC-018. TASK-185's platform foundation is implemented; tenant
-authority remains unchanged until TASK-186.
+already delivered by EPIC-018. TASK-185's platform foundation and TASK-186's tenant
+authority/enforcement cutover are implemented.
 
-Current source-verified boundary (2026-08-11): Company Owner receives the explicit
-tenant permission `admin.modules.manage`, `/api/admin/modules` reads and writes
-company-scoped `company_module`, and the tenant `module-activation-control` screen
-exposes those mutations. `/api/platform` now has separate principal/session/support-
-grant and versioned module-entitlement APIs, but no password login, Master/Company MAC
-workspace or end-user simulation.
+Current source-verified boundary (2026-08-11): Company Owner cannot read or mutate
+commercial entitlement. Legacy `/api/admin/modules` endpoints deny with
+`platform_authority_required`; the tenant screen and onboarding module selector are
+removed; all registered tenant module gates evaluate Master entitlement plus Company
+allocation. `/api/platform` has separate principal/session/support-grant and versioned
+module-entitlement APIs, but no password login, visual MAC workspace or end-user
+simulation.
 
 Approved target:
 
@@ -2475,8 +2476,9 @@ Approved target:
 - [x] **TASK-185 — Implement Module Catalog, Master entitlement, platform API and Demo
       harness.** Migration 0094, versioned/audited APIs, hard dependencies, invalidation,
       preservation proof and deterministic fixtures completed 2026-08-11.
-- [ ] **TASK-186 — Remove tenant MAC authority, UI, API and onboarding backdoors.**
-      Depends on TASK-185 and becomes the entitlement prerequisite for TASK-182.
+- [x] **TASK-186 — Remove tenant MAC authority, UI, API and onboarding backdoors.**
+      Migration 0095, dual-layer enforcement, new-Company defaults and tenant surface
+      retirement completed 2026-08-12; TASK-182 is now dependency-eligible.
 - [ ] **TASK-187 — Add Platform Superadmin login/workspace and audited end-user
       simulation.** Depends on TASK-185 and TASK-186.
 - [ ] **TASK-188 — Prove the cutover and synchronize final docs/KB.** Depends on
@@ -2484,7 +2486,7 @@ Approved target:
 
 EPIC-018 remains valid historical evidence for company module storage and backend
 enforcement, but its tenant mutation authority is explicitly superseded by this target.
-TASK-185 is complete, so TASK-186 is now dependency-eligible. Platform MFA is
+TASK-185/186 are complete, so TASK-187 and TASK-182 are dependency-eligible. Platform MFA is
 not part of the approved v1; password-only access to full user simulation is a recorded
 security risk, not an implemented control.
 

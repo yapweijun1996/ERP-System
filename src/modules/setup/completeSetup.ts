@@ -5,7 +5,6 @@ import {
   account,
   appUser,
   company,
-  companyModule,
   companyOnboarding,
   currency,
   master,
@@ -26,7 +25,7 @@ import {
   normalizeUsername,
 } from '../../auth/identifiers';
 import { createDefaultControlPlane } from './defaultControlPlane';
-import { MODULE_KEYS } from '../../auth/moduleAccess';
+import { applyMasterCompanyAllocationDefaultsWithin } from '../../auth/moduleProvisioning';
 
 const SETUP_STATE_KEY = 'production_setup';
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
@@ -235,13 +234,7 @@ export async function completeProductionSetup(
       validFrom: defaults.taxValidFrom,
     });
     await createDefaultControlPlane(tx, { masterFn, companyFn }, country as 'SG' | 'MY');
-    await tx.insert(companyModule).values(MODULE_KEYS.map((moduleKey) => ({
-      masterFn,
-      companyFn,
-      moduleKey,
-      enabled: moduleKey === 'admin',
-      configured: moduleKey === 'admin',
-    })));
+    await applyMasterCompanyAllocationDefaultsWithin(tx, masterFn, companyFn);
     await tx.insert(companyOnboarding).values({
       masterFn,
       companyFn,

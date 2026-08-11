@@ -32,13 +32,6 @@ function adminCopy(){
       auditColAction:'Action',auditColRecord:'Record',auditTitle:'Audit Trail',auditMeta:'{count} events · immutable system log{truncated}',
       auditTruncated:' · showing latest 100',auditNoEvents:'No activity recorded yet — actions you take are logged here in real time.',
       auditSystem:'System',
-      modActTitle:'Module Activation Control',
-      modActSubtitle:'Turn ERP modules on or off for {master}. Disabled modules are hidden from navigation and blocked from access, including through the API.',
-      modActColModule:'Module',modActColStatus:'Status',modActColAction:'Action',
-      modActEnabled:'Enabled',modActDisabled:'Disabled',modActOpen:'Open',modActRequired:'Required',
-      modActResetDefaults:'Enable all',modActResetDone:'All modules enabled',modActUpdateError:'Could not update this module',
-      modActAdminOnly:'Admin access required',modActAdminOnlyBody:'Only Admin and Superadmin accounts can manage module activation.',
-      modActEnabledCount:'Enabled',
     },
     ms:{
   "fieldEmail": "E-mel",
@@ -94,22 +87,7 @@ function adminCopy(){
   "auditMeta": "{count} peristiwa · log sistem tidak boleh diubah{truncated}",
   "auditTruncated": " · memaparkan 100 terkini",
   "auditNoEvents": "Belum ada aktiviti direkodkan — tindakan anda akan dilog di sini secara masa nyata.",
-  "auditSystem": "Sistem",
-  "modActTitle": "Kawalan Pengaktifan Modul",
-  "modActSubtitle": "Hidupkan atau matikan modul ERP untuk {master}. Modul yang dilumpuhkan disembunyikan daripada navigasi dan disekat daripada akses, termasuk melalui API.",
-  "modActColModule": "Modul",
-  "modActColStatus": "Status",
-  "modActColAction": "Tindakan",
-  "modActEnabled": "Diaktifkan",
-  "modActDisabled": "Dilumpuhkan",
-  "modActOpen": "Buka",
-  "modActRequired": "Diperlukan",
-  "modActResetDefaults": "Aktifkan semua",
-  "modActResetDone": "Semua modul diaktifkan",
-  "modActUpdateError": "Modul ini tidak dapat dikemas kini",
-  "modActAdminOnly": "Akses admin diperlukan",
-  "modActAdminOnlyBody": "Hanya akaun Admin dan Superadmin boleh mengurus pengaktifan modul.",
-  "modActEnabledCount": "Diaktifkan"
+  "auditSystem": "Sistem"
 },
     zh:{
   "fieldEmail": "邮箱",
@@ -165,22 +143,7 @@ function adminCopy(){
   "auditMeta": "{count} 条事件 · 不可篡改的系统日志{truncated}",
   "auditTruncated": " · 显示最近 100 条",
   "auditNoEvents": "暂无活动记录 — 您执行的操作会实时记录在此处。",
-  "auditSystem": "系统",
-  "modActTitle": "模块启用控制",
-  "modActSubtitle": "为 {master} 开启或关闭 ERP 模块。已停用的模块会从导航中隐藏,并且包括通过 API 在内的所有访问都会被阻止。",
-  "modActColModule": "模块",
-  "modActColStatus": "状态",
-  "modActColAction": "操作",
-  "modActEnabled": "已启用",
-  "modActDisabled": "已停用",
-  "modActOpen": "打开",
-  "modActRequired": "必需",
-  "modActResetDefaults": "全部启用",
-  "modActResetDone": "所有模块已启用",
-  "modActUpdateError": "无法更新此模块",
-  "modActAdminOnly": "需要管理员权限",
-  "modActAdminOnlyBody": "只有管理员和超级管理员账户可以管理模块启用状态。",
-  "modActEnabledCount": "已启用"
+  "auditSystem": "系统"
 },
     ja:{
   "fieldEmail": "メール",
@@ -236,22 +199,7 @@ function adminCopy(){
   "auditMeta": "{count} 件のイベント · 改ざん不可のシステムログ{truncated}",
   "auditTruncated": " · 最新100件を表示",
   "auditNoEvents": "まだ活動記録がありません — 実行した操作はここにリアルタイムで記録されます。",
-  "auditSystem": "システム",
-  "modActTitle": "モジュール有効化管理",
-  "modActSubtitle": "{master} 用に ERP モジュールを有効/無効にします。無効化したモジュールはナビゲーションから非表示になり、API を含むすべてのアクセスがブロックされます。",
-  "modActColModule": "モジュール",
-  "modActColStatus": "ステータス",
-  "modActColAction": "操作",
-  "modActEnabled": "有効",
-  "modActDisabled": "無効",
-  "modActOpen": "開く",
-  "modActRequired": "必須",
-  "modActResetDefaults": "すべて有効化",
-  "modActResetDone": "すべてのモジュールを有効化しました",
-  "modActUpdateError": "このモジュールを更新できませんでした",
-  "modActAdminOnly": "管理者権限が必要です",
-  "modActAdminOnlyBody": "Admin および Superadmin アカウントのみがモジュールの有効化を管理できます。",
-  "modActEnabledCount": "有効"
+  "auditSystem": "システム"
 },
     vi:{
   "fieldEmail": "E-mail",
@@ -307,22 +255,7 @@ function adminCopy(){
   "auditMeta": "{count} sự kiện · nhật ký hệ thống không thể sửa đổi{truncated}",
   "auditTruncated": " · hiển thị 100 gần nhất",
   "auditNoEvents": "Chưa có hoạt động nào được ghi nhận — các hành động của bạn sẽ được ghi lại tại đây theo thời gian thực.",
-  "auditSystem": "Hệ thống",
-  "modActTitle": "Kiểm soát kích hoạt mô-đun",
-  "modActSubtitle": "Bật hoặc tắt các mô-đun ERP cho {master}. Các mô-đun bị vô hiệu hóa sẽ bị ẩn khỏi điều hướng và bị chặn truy cập, kể cả qua API.",
-  "modActColModule": "Mô-đun",
-  "modActColStatus": "Trạng thái",
-  "modActColAction": "Hành động",
-  "modActEnabled": "Đã kích hoạt",
-  "modActDisabled": "Đã vô hiệu hóa",
-  "modActOpen": "Mở",
-  "modActRequired": "Bắt buộc",
-  "modActResetDefaults": "Kích hoạt tất cả",
-  "modActResetDone": "Đã kích hoạt tất cả mô-đun",
-  "modActUpdateError": "Không thể cập nhật mô-đun này",
-  "modActAdminOnly": "Yêu cầu quyền quản trị",
-  "modActAdminOnlyBody": "Chỉ tài khoản Admin và Superadmin mới có thể quản lý kích hoạt mô-đun.",
-  "modActEnabledCount": "Đã kích hoạt"
+  "auditSystem": "Hệ thống"
 },
   };
   const pack=i18nLegacy(packs);
@@ -608,49 +541,45 @@ SCREENS['sys-settings'] = function(root){
   </section></div>`;
 };
 
-/* ---------------- MODULE ACTIVATION CONTROL (master/client module toggles) ---------------- */
-SCREENS['module-activation-control'] = async function(root){
-  const s=adminCopy();
-  if(!isModuleAdmin()){
+/* ---------------- COMPANY ONBOARDING (tenant setup; no module authority) ---------------- */
+SCREENS['company-onboarding'] = async function(root){
+  if(!userHasAnyPermission('admin.roles.write')){
     root.innerHTML=`<div class="content full"><section class="master">
-      <div class="pagehead">${crumbs([DB.company.name,'Admin',s('modActTitle')])}
-        <div class="h1row"><h1>${esc(s('modActTitle'))}</h1>${cap('Admin only','warn')}</div>
+      <div class="pagehead">${crumbs([DB.company.name,'Admin',t('onboard.title')])}
+        <div class="h1row"><h1>${esc(t('onboard.title'))}</h1>${cap('Permission required','warn')}</div>
       </div>
-      ${statePanel({icon:'lock',title:s('modActAdminOnly'),body:s('modActAdminOnlyBody')})}
+      ${statePanel({icon:'lock',title:t('access.routeDenied'),body:t('access.routeBody',{company:DB.company.name})})}
     </section></div>`;
     return;
   }
 
-  await loadModuleControl();
   let onboarding=null;
   try{ onboarding=window.ErpSystemData.onboardingStatus?(await window.ErpSystemData.onboardingStatus()).data:null; }catch{}
-  const rows=()=>moduleControlItems();
-  let busy=null;
-
-  function enabledCount(){ return rows().filter(m=>readModuleControl()[m.id]&&readModuleControl()[m.id].active).length; }
-
-  function table(){
-    const cfg=readModuleControl();
-    const body=rows().map(m=>{
-      const st=cfg[m.id]||{visible:true,active:true};
-      return `<tr data-module="${esc(m.id)}">
-        <td class="l li-name"><b>${ic(m.icon)} ${esc(m.label)}</b><small>${esc(m.group)} · ${esc(m.route)}${m.required?' · '+esc(s('modActRequired')):''}</small></td>
-        <td class="l mono">${esc(DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn||'')}</td>
-        <td class="l">${cap(st.active?s('modActEnabled'):s('modActDisabled'),st.active?'ok':'neutral')}</td>
-        <td class="c">${m.required
-          ?cap(s('modActRequired'),'accent')
-          :`<input class="checkbox" type="checkbox" data-toggle="enabled" ${st.active?'checked':''} ${busy===m.id?'disabled':''} aria-label="${esc(s('modActEnabled'))} ${esc(m.label)}">`}</td>
-        <td class="c">${btn(s('modActOpen'),{icon:'ext',cls:'plain',attrs:`data-open="${esc(m.route)}"`})}</td>
-      </tr>`;
-    }).join('');
-    return `<table class="lines"><thead><tr><th class="l">${esc(s('modActColModule'))}</th><th class="l">${esc(t('onboard.company'))}</th><th class="l">${esc(s('modActColStatus'))}</th><th class="c">${esc(s('modActEnabled'))}</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+  function captureScroll(){
+    const surface=root.querySelector('.scrollarea');
+    return surface?{top:surface.scrollTop,left:surface.scrollLeft}:null;
   }
-
-  function render(){
+  function restoreScroll(state){
+    if(!state) return;
+    const apply=()=>{
+      const surface=root.querySelector('.scrollarea');
+      if(!surface) return;
+      surface.scrollTop=state.top;
+      surface.scrollLeft=state.left;
+    };
+    apply();
+    requestAnimationFrame(()=>{
+      apply();
+      requestAnimationFrame(apply);
+    });
+    setTimeout(apply,0);
+    setTimeout(apply,50);
+  }
+  function render(preserveScroll=captureScroll()){
     const onboardingStatus=onboarding&&(onboarding.status||'setup');
     const onboardingStage=onboarding&&(onboarding.currentStage||onboarding.current_stage||'company');
     const onboardingVersion=onboarding&&Number(onboarding.version||1);
-    const stages=['company','fiscal','warehouse','modules','roles','staff','import','opening_balance','uat'];
+    const stages=['company','fiscal','warehouse','roles','staff','import','opening_balance','uat'];
     const completed=onboarding&&(onboarding.completedSteps||onboarding.completed_steps)||[];
     const onboardingPanel=onboarding?`<div class="panel" style="margin:0 24px 24px">
       <div class="panel-h"><h3>${esc(t('onboard.title'))}</h3>${cap(t('onboard.status.'+onboardingStatus),onboardingStatus==='live'?'ok':'warn')}</div>
@@ -661,58 +590,14 @@ SCREENS['module-activation-control'] = async function(root){
     </div>`:'';
     root.innerHTML=`<div class="content full"><section class="master"><div class="scrollarea">
       <div class="pagehead">
-        ${crumbs([DB.company.name,'Admin',s('modActTitle')])}
-        <div class="h1row"><h1>${esc(s('modActTitle'))}</h1><span class="acct-role" style="font-size:11px">${ic('shield')}${esc(DB.user.role)}</span>
-          <div class="headright">
-            <div class="kfig"><small>${esc(t('onboard.company'))}</small><b class="tnum">${esc(DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.companyFn||'')}</b></div>
-            <div class="kfig"><small>${esc(s('modActEnabledCount'))}</small><b class="tnum">${enabledCount()}/${rows().length}</b></div>
-          </div></div>
-        <div class="h1sub">${esc(s('modActSubtitle').replace('{master}',currentMasterFn()))}</div>
-      </div>
-      <div class="toolbar">
-        ${btn(s('modActResetDefaults'),{icon:'refresh',cls:'soft',attrs:'data-act="reset"'})}
-      </div>
-      <div class="panel" style="margin:0 24px 24px">
-        <div class="panel-h"><h3>${esc(s('modActColModule'))}</h3></div>
-        ${table()}
+        ${crumbs([DB.company.name,'Admin',t('onboard.title')])}
+        <div class="h1row"><h1>${esc(t('onboard.title'))}</h1><span class="acct-role" style="font-size:11px">${ic('shield')}${esc(DB.user.role)}</span></div>
+        <div class="h1sub">${esc(t('onboard.setupHint'))}</div>
       </div>
       ${onboardingPanel}
     </div></section></div>`;
+    restoreScroll(preserveScroll);
 
-    root.querySelectorAll('[data-toggle="enabled"]').forEach(input=>input.addEventListener('change',async()=>{
-      const id=input.closest('[data-module]').dataset.module;
-      const item=rows().find(m=>m.id===id);
-      if(!item||item.required) return;
-      const enabled=input.checked;
-      busy=id; render();
-      try{
-        await setModuleEnabled(id, enabled);
-        renderSidebar(); renderTabbar(); setActiveNav(CURRENT_ROUTE);
-        toast(`${item.label} ${enabled?s('modActEnabled'):s('modActDisabled')}`,'ok');
-      }catch{
-        toast(s('modActUpdateError'),'danger');
-      }
-      busy=null; render();
-    }));
-    root.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.open)));
-    root.querySelector('[data-act="reset"]').addEventListener('click',async()=>{
-      const toEnable=rows().filter(m=>!m.required&&!(readModuleControl()[m.id]&&readModuleControl()[m.id].active));
-      if(!toEnable.length){ toast(s('modActResetDone'),'ok'); return; }
-      try{
-        const pending=new Map(toEnable.map(item=>[item.id,item]));
-        while(pending.size){
-          const ready=[...pending.values()].filter(item=>(item.dependencies||[]).every(dep=>!pending.has(dep)));
-      if(!ready.length) throw new Error(t('onboard.moduleCycle'));
-          for(const item of ready){ await setModuleEnabled(item.id,true); pending.delete(item.id); }
-        }
-        await loadModuleControl();
-        renderSidebar(); renderTabbar(); setActiveNav(CURRENT_ROUTE);
-        toast(s('modActResetDone'),'ok');
-      }catch{
-        toast(s('modActUpdateError'),'danger');
-      }
-      render();
-    });
     root.querySelector('[data-onboarding="complete"]')?.addEventListener('click',async()=>{
       try{ onboarding=(await window.ErpSystemData.completeOnboardingStage(onboardingStage,onboardingVersion)).data; toast(t('onboard.stageDone'),'ok'); render(); }
       catch(error){ toast(error&&error.message?error.message:t('onboard.stageFailed'),'danger'); }

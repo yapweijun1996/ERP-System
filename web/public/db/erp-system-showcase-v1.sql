@@ -65,7 +65,6 @@ JOIN (VALUES ('Employee','employee.self.read'),
   ('Company Admin','admin.users.manage'),
   ('Company Admin','admin.roles.read'),
   ('Company Admin','admin.roles.write'),
-  ('Company Admin','admin.modules.manage'),
   ('Company Admin','admin.audit.read'),
   ('Company Admin','settings.read'),
   ('Company Admin','settings.manage'),
@@ -257,15 +256,21 @@ JOIN app_user ON app_user.master_fn='M1' AND app_user.username=assignment.userna
 JOIN role ON role.master_fn='M1' AND role.company_fn=assignment.company_fn AND role.name=assignment.role_name
 ON CONFLICT (user_id, company_fn) DO NOTHING;
 
-INSERT INTO user_company_role (user_id, company_fn, role_id)
-SELECT membership.user_id, membership.company_fn, membership.role_id
+INSERT INTO user_company_role (user_id, company_fn, role_id, assignment_source)
+SELECT membership.user_id, membership.company_fn, membership.role_id, 'onboarding'
 FROM user_company membership
 JOIN app_user ON app_user.user_id=membership.user_id
 WHERE app_user.master_fn='M1' AND app_user.username IN ('admin','company-admin','manager','sales','buyer','warehouse','production','finance-preparer','finance-checker','hr','service','viewer')
-ON CONFLICT (user_id, company_fn, role_id) DO NOTHING;
+  AND NOT EXISTS (
+    SELECT 1 FROM user_company_role existing
+    WHERE existing.user_id=membership.user_id
+      AND existing.company_fn=membership.company_fn
+      AND existing.role_id=membership.role_id
+      AND existing.revoked_at IS NULL
+  );
 
-INSERT INTO user_company_role (user_id, company_fn, role_id, managed_by_system)
-SELECT membership.user_id, membership.company_fn, employee_role.role_id, true
+INSERT INTO user_company_role (user_id, company_fn, role_id, managed_by_system, assignment_source)
+SELECT membership.user_id, membership.company_fn, employee_role.role_id, true, 'system'
 FROM user_company membership
 JOIN app_user ON app_user.user_id=membership.user_id
 JOIN role employee_role ON employee_role.master_fn=app_user.master_fn
@@ -273,8 +278,27 @@ JOIN role employee_role ON employee_role.master_fn=app_user.master_fn
   AND employee_role.name='Employee'
 WHERE app_user.master_fn='M1'
   AND app_user.username IN ('admin','company-admin','manager','sales','buyer','warehouse','production','finance-preparer','finance-checker','hr','service','viewer')
-ON CONFLICT (user_id, company_fn, role_id)
-DO UPDATE SET managed_by_system=true;
+  AND NOT EXISTS (
+    SELECT 1 FROM user_company_role existing
+    WHERE existing.user_id=membership.user_id
+      AND existing.company_fn=membership.company_fn
+      AND existing.role_id=employee_role.role_id
+      AND existing.revoked_at IS NULL
+  );
+
+UPDATE user_company_role assignment
+SET managed_by_system=true, assignment_source='system', updated_at=now()
+FROM user_company membership, app_user, role employee_role
+WHERE assignment.user_id=membership.user_id
+  AND assignment.company_fn=membership.company_fn
+  AND assignment.role_id=employee_role.role_id
+  AND app_user.user_id=membership.user_id
+  AND employee_role.master_fn=app_user.master_fn
+  AND employee_role.company_fn=membership.company_fn
+  AND employee_role.name='Employee'
+  AND app_user.master_fn='M1'
+  AND app_user.username IN ('admin','company-admin','manager','sales','buyer','warehouse','production','finance-preparer','finance-checker','hr','service','viewer')
+  AND assignment.revoked_at IS NULL;
 
 -- Replace the pre-company legacy Employee compatibility assignment once the
 -- company-managed base role exists; otherwise an upgraded Viewer displays the

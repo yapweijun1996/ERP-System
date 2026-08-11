@@ -27,7 +27,7 @@ import { AuthLifecycleError } from './authErrors';
 import {
   ROLE_TEMPLATES, roleTemplate, type DataScope,
 } from './accessCatalog';
-import { isTenantPermission } from './permissionRegistry';
+import { isAssignableTenantPermission } from './permissionRegistry';
 import type { SessionData } from './session';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
 import { bumpAuthorizationVersionWithin } from './authorizationVersion';
@@ -359,7 +359,7 @@ export async function setRolePermissionWithin(
   requestId: string,
   now = new Date(),
 ): Promise<{ roleId: number; permissionKey: string; allowed: boolean }> {
-  if (!isTenantPermission(permissionKey)) {
+  if (!isAssignableTenantPermission(permissionKey)) {
     throw new AuthLifecycleError(400, 'invalid_permission_key', 'Unknown permission key.');
   }
   const [targetRole] = await exec.select({ roleId: role.roleId, isSuperadmin: role.isSuperadmin })
@@ -442,7 +442,7 @@ export async function cloneRoleTemplateWithin(
   if (!template) {
     throw new AuthLifecycleError(400, 'invalid_role_template', 'Unknown role template.');
   }
-  const invalidPermission = template.permissions.find((permissionKey) => !isTenantPermission(permissionKey));
+  const invalidPermission = template.permissions.find((permissionKey) => !isAssignableTenantPermission(permissionKey));
   if (invalidPermission) {
     throw new AuthLifecycleError(
       500,

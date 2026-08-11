@@ -2,7 +2,7 @@
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-08-10** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-08-12** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 
@@ -1117,10 +1117,9 @@ cross-currency totals, hidden missing-date omissions or page-limited export resu
 
 ## Phase 46 — Platform Module Entitlement & Superadmin Workspace 🟨
 
-This phase is in progress. The source-verified tenant application
-still lets Company Owner use `admin.modules.manage`, `/api/admin/modules` and the
-tenant Module Activation screen to mutate company-scoped `company_module`. Existing
-server-side route/resource/API module denial remains valuable and will be retained.
+This phase is in progress. TASK-186 has removed Company Owner MAC authority and switched
+tenant enforcement to the platform-owned Master entitlement plus Company allocation.
+The independent visual Platform Superadmin workspace/login and simulation remain.
 
 1. **Contract and tracking** (TASK-184 complete): record current tenant MAC separately
    from the approved platform-owned target, preserve EPIC-018 as historical evidence,
@@ -1129,10 +1128,11 @@ server-side route/resource/API module denial remains valuable and will be retain
    Module Catalog; normalize `master_module` from the union of current Company-enabled
    states; treat `company_module` as platform allocation; add versioned platform API,
    audit, hard-dependency validation, authorization invalidation and deterministic Demo
-   fixture/harness behavior. This does not switch tenant enforcement.
-3. **Tenant cutover** (TASK-186): retire `admin.modules.manage`, remove tenant MAC UI,
-   endpoints and onboarding selection, apply each Master's default allocation to new
-   Companies, and enforce `Master enabled AND Company allocated` everywhere.
+   fixture/harness behavior.
+3. **Tenant cutover** (TASK-186 complete): retired `admin.modules.manage`, removed the
+   tenant MAC UI/onboarding selector, made legacy endpoints deny, applied each Master's
+   default allocation to new Companies, and enforced `Master enabled AND Company
+   allocated` across registered tenant paths.
 4. **Platform workspace** (TASK-187): add a separate Platform Superadmin login realm,
    Master/Company entitlement workspace and time-bounded simulation of any active
    tenant user with exact target-user authority and dual actor audit.

@@ -1106,7 +1106,7 @@
   "route.sys-settings": "システム設定",
   "route.role-permission": "ロールと権限",
   "route.master-control": "マスター管理",
-  "route.module-activation-control": "モジュール有効化管理",
+  "route.company-onboarding": "会社オンボーディング",
   "route.notifications": "通知センター",
   "route.account-ledger": "勘定元帳",
   "route.journal-entry": "仕訳伝票",

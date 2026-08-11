@@ -36,6 +36,7 @@ import { createTaxEvidenceRouter } from './routes/taxEvidence';
 import { createOnboardingRouter } from './routes/onboarding';
 import { createPlatformRouter } from './routes/platform';
 import { createCompanyReceiptsRouter } from './routes/companyReceipts';
+import { createTenantModuleEntitlementGate } from './moduleEntitlement';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -115,6 +116,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   }));
 
   app.use('/api/platform', createPlatformRouter(db));
+  app.use(createTenantModuleEntitlementGate(db));
   app.use('/api/admin', createAdminRouter(db, { lifecycle }));
   app.use('/api/account', createAccountRouter(db));
   app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey));

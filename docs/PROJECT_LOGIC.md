@@ -488,29 +488,33 @@ the minimum local checks are `git diff --check` and Markdown/link inspection.
 
 ## 9. Module Access Control — current logic and approved replacement
 
-Current source truth (verified 2026-08-11):
+Current source truth (verified 2026-08-12):
 
-- `src/auth/moduleAccess.ts` reads/writes company-scoped `company_module`, treats missing
-  known rows as disabled, rejects unknown modules and enforces dependency order;
-- `src/api/routes/admin.ts` authorizes `/api/admin/modules` with tenant permission
-  `admin.modules.manage`; Company Owner currently receives that permission;
-- `src/auth/accessMatrix.ts` and `web/public/assets/app.js` expose the tenant
-  `module-activation-control` route; generic resources re-check module state server-side;
+- `src/auth/moduleAccess.ts` is now a read-only tenant projection and requires both
+  `master_module.enabled` and `company_module.enabled`; missing/unknown state denies;
+- `/api/admin/modules` and its mutation action now return 403
+  `platform_authority_required` after tenant authentication and disclose no entitlement
+  state. `admin.modules.manage` is deprecated/non-assignable and migration 0095 removes
+  stored tenant grants and revokes active overrides;
+- the tenant Module Activation route/UI and onboarding modules stage are removed. New
+  Masters receive the product default and new Companies inherit the Master default
+  allocation through trusted bootstrap code;
 - `src/auth/moduleCatalog.ts`, `src/auth/platformEntitlement.ts` and
-  `src/api/routes/platform.ts` now provide the TASK-185 commercial catalog and
-  platform-session-only Master/Company entitlement API. They do not provide platform
-  password login, a MAC UI or user simulation.
+  `src/api/routes/platform.ts` provide the commercial catalog and platform-session-only
+  Master/Company entitlement API. They do not yet provide platform password login, a
+  MAC workspace UI or user simulation.
 
-TASK-185 source-backed foundation and remaining EPIC-064 cutover:
+TASK-185 foundation and TASK-186 tenant-authority cutover:
 
 1. Migration 0094 rebuilds `master_module` from the union of current enabled Company
    state, preserves `company_module`, and adds optimistic versions/default allocation.
 2. The platform domain computes `effectiveEnabled = Master entitlement AND Company
    allocation`; missing/unknown facts deny and hard dependency violations conflict.
-3. Only `platform_superadmin` with `platform.modules.read/manage` can use the new
-   platform APIs. TASK-186 still removes `admin.modules.manage`, tenant MAC UI/API and
-   onboarding selection and switches all tenant enforcement to both layers.
-4. TASK-186 applies the stored platform-owned Master default to newly created Companies.
+3. Only `platform_superadmin` with `platform.modules.read/manage` can use the platform
+   APIs. TASK-186 removed tenant mutation authority and switched generic and mapped
+   bespoke tenant paths to the dual-layer check.
+4. TASK-186 applies the stored platform-owned Master default to newly created Companies;
+   tenant onboarding can no longer select modules.
 5. TASK-187 authenticates Platform Superadmin with independent password credentials. Explicit
    simulation of any active tenant user runs with exactly that user's authority and
    dual audit; it never provides a MAC bypass.
@@ -518,8 +522,8 @@ TASK-185 source-backed foundation and remaining EPIC-064 cutover:
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |
 | Platform entitlement foundation | `moduleCatalog.ts`, `platformEntitlement.ts`, migration 0094 and focused tests | TASK-185 done |
-| Current tenant module state | `moduleAccess.ts`, `moduleAccess.test.ts` | cutover in TASK-186 |
-| Tenant mutation API/UI | `routes/admin.ts`, `accessMatrix.ts`, `screens-admin.js` | removal in TASK-186 |
+| Tenant effective module state | `moduleAccess.ts`, `moduleEntitlement.ts`, focused tests | TASK-186 done |
+| Retired tenant mutation API/UI | `routes/admin.ts`, migration 0095, web app | TASK-186 done |
 | Platform session/support | `platformSupport.ts`, `routes/platform.ts`, platform tests | extension in TASK-185/187 |
 | Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
-| Full adversarial proof | current 15/15 focused baseline is current-state proof only | TASK-188 |
+| Full adversarial/release proof | TASK-186 focused proof is implementation evidence, not release proof | TASK-188 |

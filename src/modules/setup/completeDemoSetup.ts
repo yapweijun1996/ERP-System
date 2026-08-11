@@ -4,7 +4,6 @@ import {
   account,
   appUser,
   company,
-  companyModule,
   companyOnboarding,
   currency,
   master,
@@ -22,7 +21,7 @@ import {
   normalizeOrganizationCode,
   normalizeUsername,
 } from '../../auth/identifiers';
-import { MODULE_KEYS } from '../../auth/moduleAccess';
+import { applyMasterCompanyAllocationDefaultsWithin } from '../../auth/moduleProvisioning';
 
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
 
@@ -259,12 +258,10 @@ export async function completeDemoSetupWithin(
       assignmentSource: 'onboarding',
     });
   }
-  await exec.insert(companyModule).values(MODULE_KEYS.map((moduleKey) => ({
-    masterFn, companyFn, moduleKey, enabled: true, configured: true,
-  }))).onConflictDoNothing();
+  await applyMasterCompanyAllocationDefaultsWithin(exec, masterFn, companyFn);
   await exec.insert(companyOnboarding).values({
     masterFn, companyFn, status: 'live', currentStage: 'live',
-    completedSteps: ['company', 'fiscal', 'warehouse', 'modules', 'roles', 'staff', 'import', 'opening_balance', 'uat'],
+    completedSteps: ['company', 'fiscal', 'warehouse', 'roles', 'staff', 'import', 'opening_balance', 'uat'],
     goLiveAt: new Date(), goLiveByUserId: admin.userId,
   }).onConflictDoNothing();
 

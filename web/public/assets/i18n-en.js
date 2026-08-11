@@ -1107,7 +1107,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "route.sys-settings": "System Settings",
   "route.role-permission": "Roles & Permissions",
   "route.master-control": "Master Control",
-  "route.module-activation-control": "Module Activation Control",
+  "route.company-onboarding": "Company Onboarding",
   "route.notifications": "Notifications Center",
   "route.account-ledger": "Account Ledger",
   "route.journal-entry": "Journal Entries",

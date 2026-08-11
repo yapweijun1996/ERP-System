@@ -212,7 +212,7 @@ const ADMIN_PERMISSION_KEYS=[
   'session.switch_company',
   'admin.audit.read','admin.users.invite','admin.users.read','admin.users.manage',
   'admin.roles.read','admin.roles.write',
-  'admin.modules.manage','settings.read','settings.manage','reporting.read','integration.read',
+  'settings.read','settings.manage','reporting.read','integration.read',
 ].concat(['sales','purchasing','crm','inventory','warehouse','manufacturing','quality','finance','hr','payroll','project','service','asset']
   .flatMap(moduleKey=>['create','edit','approve','post','pay','export'].map(action=>`${moduleKey}.${action}`)));
 const ADMIN_SCOPE_RESOURCES=['*','sales/*','purchasing/*','crm/*','inventory/*','warehouse/*','manufacturing/*','quality/*','finance/*','hr/*','payroll/*','project/*','service/*','asset/*'];

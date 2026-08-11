@@ -221,28 +221,29 @@ mutating Company Receipt state. Sellable module entitlement remains TASK-182/186
 Exact hash duplicates may warn/prevent accidental storage, but
 merchant/date/amount similarity must never auto-delete or merge evidence.
 
-## Planned platform-owned Module Access Control security boundary
+## Platform-owned Module Access Control security boundary
 
-The current tenant mutation route is a recorded security/product gap, not a hidden
-claim: Company Owner currently holds `admin.modules.manage` and may call
-`/api/admin/modules`. TASK-186 will retire that permission and surface; existing backend
-module denial remains required throughout migration.
+TASK-186 closes the former tenant mutation gap. Company Owner and Company Admin no
+longer receive `admin.modules.manage`; the compatibility key is deprecated and
+non-assignable, migration 0095 removes stored tenant grants/revokes active overrides,
+and `/api/admin/modules` returns 403 `platform_authority_required` without disclosing
+state. The tenant Module Activation UI and onboarding selector are absent.
 
 Only a separately authenticated `platform_superadmin` may receive
 `platform.modules.read/manage`. Platform credentials/sessions remain outside
 `app_user`/`erp_session`; platform CSRF, expected-version checks, request correlation
 and append-only before/after audit protect every immediate entitlement mutation.
 Support roles do not inherit commercial authority. TASK-185 implements this platform
-API boundary and bumps affected Company authorization versions, but does not yet remove
-the tenant mutation route.
+API boundary; TASK-186 owns the tenant cutover and authorization-version invalidation.
 
 Module authorization fails closed in this order: authenticated target identity,
 trusted Master/Company context, Master entitlement, Company allocation, permission,
 scope, then workflow authority. A stale role permission or simulated user cannot bypass
 either entitlement layer. Direct routes, bespoke/generic APIs, notifications, workers
 and writes must return a bounded 403 `module_not_enabled` without revealing another
-tenant's entitlement facts. That whole-path dual-layer cutover remains TASK-186/188;
-current tenant paths still enforce the legacy Company-only gate.
+tenant's entitlement facts. TASK-186 applies that check to generic resources, mapped
+bespoke APIs, route projection and notifications. TASK-188 still owns exhaustive
+worker/browser/adversarial and release proof.
 
 Platform end-user simulation may target any active user in the selected Master/Company
 and may perform that user's legitimate writes. It therefore requires a visible banner,

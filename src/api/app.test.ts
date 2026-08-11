@@ -7,12 +7,14 @@ import {
   apiIdempotency,
   activity,
   auditLog,
+  companyModule,
   customer,
   glEntry,
   invoice,
   inventoryAdjustment,
   inventoryLot,
   inventorySerial,
+  masterModule,
   opportunity,
   product,
   purchaseOrder,
@@ -293,33 +295,32 @@ describe('production API security contract', () => {
     expect((await response.json()).error.code).toBe('permission_denied');
   });
 
-  it('blocks a non-superadmin from a disabled module, but exempts the superadmin who disabled it', async () => {
+  it('blocks every tenant session when either platform entitlement layer is disabled', async () => {
     const adminCookies = await login(running.baseUrl);
     const adminJsonHeaders = {
       cookie: adminCookies.header,
       'content-type': 'application/json',
       'x-csrf-token': adminCookies.csrf,
     };
-    const disableService = await fetch(`${running.baseUrl}/api/admin/modules/service/actions/set-enabled`, {
+    const legacyMutation = await fetch(`${running.baseUrl}/api/admin/modules/crm/actions/set-enabled`, {
       method: 'POST',
       headers: adminJsonHeaders,
       body: JSON.stringify({ enabled: false }),
     });
-    expect(disableService.status).toBe(200);
-    const disable = await fetch(`${running.baseUrl}/api/admin/modules/crm/actions/set-enabled`, {
-      method: 'POST',
-      headers: adminJsonHeaders,
-      body: JSON.stringify({ enabled: false }),
-    });
-    expect(disable.status).toBe(200);
-    expect((await disable.json()).data).toMatchObject({ moduleKey: 'crm', enabled: false });
+    expect(legacyMutation.status).toBe(403);
+    expect((await legacyMutation.json()).error.code).toBe('platform_authority_required');
 
-    // Superadmin is exempt from a gate meant to restrict their own organization's
-    // other users, not their own visibility.
+    await db.update(masterModule).set({ enabled: false }).where(and(
+      eq(masterModule.masterFn, 'M1'),
+      eq(masterModule.moduleKey, 'crm'),
+    ));
+
+    // Platform entitlement is company-wide and applies equally to Company Owner.
     const adminList = await fetch(`${running.baseUrl}/api/crm/customers`, {
       headers: { cookie: adminCookies.header },
     });
-    expect(adminList.status).toBe(200);
+    expect(adminList.status).toBe(403);
+    expect((await adminList.json()).error.code).toBe('module_not_enabled');
 
     // viewer@acme.co genuinely holds crm.read (seed.ts) -- the only reason this
     // request can fail is the module gate, not a permission gap.
@@ -328,7 +329,7 @@ describe('production API security contract', () => {
       headers: { cookie: viewerCookies.header },
     });
     expect(viewerList.status).toBe(403);
-    expect((await viewerList.json()).error.code).toBe('module_disabled');
+    expect((await viewerList.json()).error.code).toBe('module_not_enabled');
 
     // Unrelated modules are unaffected for the same viewer.
     const viewerInventory = await fetch(`${running.baseUrl}/api/inventory/products`, {
@@ -336,31 +337,59 @@ describe('production API security contract', () => {
     });
     expect(viewerInventory.status).toBe(200);
 
-    const reenable = await fetch(`${running.baseUrl}/api/admin/modules/crm/actions/set-enabled`, {
-      method: 'POST',
-      headers: adminJsonHeaders,
-      body: JSON.stringify({ enabled: true }),
+    await db.update(masterModule).set({ enabled: true }).where(and(
+      eq(masterModule.masterFn, 'M1'),
+      eq(masterModule.moduleKey, 'crm'),
+    ));
+    await db.update(companyModule).set({ enabled: false }).where(and(
+      eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.moduleKey, 'crm'),
+    ));
+    const companyMasked = await fetch(`${running.baseUrl}/api/crm/customers`, {
+      headers: { cookie: viewerCookies.header },
     });
-    expect(reenable.status).toBe(200);
+    expect(companyMasked.status).toBe(403);
+    expect((await companyMasked.json()).error.code).toBe('module_not_enabled');
+    await db.update(companyModule).set({ enabled: true }).where(and(
+      eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.moduleKey, 'crm'),
+    ));
     const viewerListAgain = await fetch(`${running.baseUrl}/api/crm/customers`, {
       headers: { cookie: viewerCookies.header },
     });
     expect(viewerListAgain.status).toBe(200);
   });
 
-  it('never allows disabling the admin module itself', async () => {
+  it('never exposes tenant module state through the legacy admin endpoint', async () => {
     const cookies = await login(running.baseUrl);
-    const response = await fetch(`${running.baseUrl}/api/admin/modules/admin/actions/set-enabled`, {
-      method: 'POST',
-      headers: {
-        cookie: cookies.header,
-        'content-type': 'application/json',
-        'x-csrf-token': cookies.csrf,
-      },
-      body: JSON.stringify({ enabled: false }),
+    const response = await fetch(`${running.baseUrl}/api/admin/modules`, {
+      headers: { cookie: cookies.header },
     });
-    expect(response.status).toBe(400);
-    expect((await response.json()).error.code).toBe('admin_module_required');
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe('platform_authority_required');
+  });
+
+  it('fails closed before bespoke business APIs while baseline services remain available', async () => {
+    const cookies = await login(running.baseUrl);
+    await db.update(masterModule).set({ enabled: false }).where(and(
+      eq(masterModule.masterFn, 'M1'),
+      eq(masterModule.moduleKey, 'hr'),
+    ));
+
+    const hr = await fetch(`${running.baseUrl}/api/hr/calendar/holidays`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(hr.status).toBe(403);
+    expect((await hr.json()).error.code).toBe('module_not_enabled');
+
+    const dashboard = await fetch(`${running.baseUrl}/api/dashboard`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(dashboard.status).toBe(200);
+    const users = await fetch(`${running.baseUrl}/api/admin/users`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(users.status).toBe(200);
   });
 
   it('takes tenant scope only from the session and rejects query overrides', async () => {

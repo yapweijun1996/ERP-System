@@ -1,17 +1,16 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  accountingPeriod, appUser, company, companyModule, companyOnboarding,
+  accountingPeriod, appUser, company, companyOnboarding,
   onboardingImportJob, role, userCompanyRole, warehouse,
 } from '../../data/schema';
 import { appendAudit } from '../../api/audit';
 import type { SessionData } from '../../auth/session';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import { MODULE_DEPENDENCIES, type ModuleKey } from '../../auth/moduleAccess';
 import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 
 export const ONBOARDING_STAGES = [
-  'company', 'fiscal', 'warehouse', 'modules', 'roles', 'staff',
+  'company', 'fiscal', 'warehouse', 'roles', 'staff',
   'import', 'opening_balance', 'uat', 'live',
 ] as const;
 export type OnboardingStage = typeof ONBOARDING_STAGES[number];
@@ -131,15 +130,6 @@ async function goLiveBlockers(exec: DB, session: SessionData, now = new Date()):
       activeRoleAssignmentCondition(now),
     )).limit(1);
   if (!activeSuperadmin) blockers.push('roles:active_superadmin');
-  const modules = await exec.select().from(companyModule).where(and(
-    eq(companyModule.masterFn, session.masterFn), eq(companyModule.companyFn, session.activeCompanyFn),
-  ));
-  const enabled = new Set(modules.filter((item) => item.enabled).map((item) => item.moduleKey));
-  for (const moduleKey of enabled) {
-    for (const dependency of MODULE_DEPENDENCIES[moduleKey as ModuleKey] ?? []) {
-      if (!enabled.has(dependency)) blockers.push(`modules:${moduleKey}->${dependency}`);
-    }
-  }
   const [invalidImport] = await exec.select({ id: onboardingImportJob.id }).from(onboardingImportJob).where(and(
     eq(onboardingImportJob.masterFn, session.masterFn),
     eq(onboardingImportJob.companyFn, session.activeCompanyFn),

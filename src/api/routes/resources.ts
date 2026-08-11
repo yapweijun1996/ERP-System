@@ -3,7 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import {
-  effectiveCapabilities, hasAnyPermission, hasPermission, isSuperadminSession,
+  effectiveCapabilities, hasAnyPermission, hasPermission,
   scopeForResource,
 } from '../../auth/permissions';
 import { resolveScopedUserIds } from '../../auth/dataScope';
@@ -90,18 +90,15 @@ export function createResourceRouter(db: DB): Router {
     };
   }
 
-  // Superadmins are exempt: this gate restricts what a master's *other* users can
-  // reach, not the superadmin's own visibility (EPIC-018).
   async function moduleAccessDenied(session: SessionData, modulePrefix: string): Promise<boolean> {
     const moduleKey = moduleKeyForResourcePrefix(modulePrefix);
     if (moduleKey === null) return false;
-    if (await isModuleEnabled(
+    return !await isModuleEnabled(
       db,
       session.masterFn,
       session.activeCompanyFn,
       moduleKey,
-    )) return false;
-    return !await isSuperadminSession(db, session);
+    );
   }
 
   router.post('/:module/:resource', async (req, res) => {
@@ -119,7 +116,7 @@ export function createResourceRouter(db: DB): Router {
     const session = await requireSession(db, req, res);
     if (!session) return;
     if (await moduleAccessDenied(session, req.params.module)) {
-      apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
+      apiError(res, 403, 'module_not_enabled', `The ${req.params.module} module is disabled for this organization.`);
       return;
     }
     const payload = req.body;
@@ -234,7 +231,7 @@ export function createResourceRouter(db: DB): Router {
         return;
       }
       if (await moduleAccessDenied(session, req.params.module)) {
-        apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
+        apiError(res, 403, 'module_not_enabled', `The ${req.params.module} module is disabled for this organization.`);
         return;
       }
       const scope = {
@@ -276,7 +273,7 @@ export function createResourceRouter(db: DB): Router {
         return;
       }
       if (await moduleAccessDenied(session, req.params.module)) {
-        apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
+        apiError(res, 403, 'module_not_enabled', `The ${req.params.module} module is disabled for this organization.`);
         return;
       }
       const scope = {
@@ -333,7 +330,7 @@ export function createResourceRouter(db: DB): Router {
     const session = await requireSession(db, req, res);
     if (!session) return;
     if (await moduleAccessDenied(session, req.params.module)) {
-      apiError(res, 403, 'module_disabled', `The ${req.params.module} module is disabled for this organization.`);
+      apiError(res, 403, 'module_not_enabled', `The ${req.params.module} module is disabled for this organization.`);
       return;
     }
     const payload = req.body;

@@ -551,6 +551,8 @@
       dataMode: 'api',
       scope: payload.scope,
       companies: payload.companies,
+      /* Tenant UI receives only the effective module decision. */
+      modules: Array.isArray(sessionUser && sessionUser.modules) ? sessionUser.modules : [],
     };
 
     DB.company = {

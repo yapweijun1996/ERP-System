@@ -47,7 +47,8 @@ outside version control and do not remove its volumes until the report owner con
 For every role verify visible navigation, a permitted read, a permitted write, a direct
 URL, a direct API denial and sensitive-data minimisation.
 
-- [ ] Company Owner/Admin: tenant control, users, roles, modules, audit and company switch.
+- [ ] Company Owner/Admin: tenant users, roles, audit and company switch; no commercial
+      entitlement read or mutation surface.
 - [ ] Viewer: permitted read-only modules; write controls absent; write APIs return 403.
 - [ ] Pure Employee: only My Work and allowed settings; identity derives from the linked
       employee, never from a client-selected employee ID.
@@ -220,22 +221,22 @@ after final entitlement/canonical authorization and complete browser proof pass.
 
 ## Planned Platform Module Entitlement acceptance (EPIC-064)
 
-The earlier Company Owner module-control checks remain a current-regression checklist,
-not the approved future authority. TASK-185 has automated the platform foundation;
-TASK-188 may replace the tenant checklist only after TASK-186–187 land and all of the
-following pass:
+Any earlier Company Owner module-control checks are historical regression evidence, not
+approved authority. TASK-185 automates the platform foundation and TASK-186 removes the
+tenant authority. TASK-188 may declare final release proof only after TASK-187 lands and
+all of the following pass:
 
 - [ ] Platform Superadmin signs in through the separate platform realm, sees all
       authorised Masters/Companies and previews Master, Company and effective module state.
 - [ ] Platform Superadmin enables/disables Master entitlement and Company allocation;
       expected-version conflict, CSRF, cross-Master target and audit assertions pass.
-- [ ] Company Owner, Company Admin, normal user and stale `admin.modules.manage` grants
+- [x] Company Owner, Company Admin, normal user and stale `admin.modules.manage` grants
       cannot list or mutate entitlement; the tenant MAC screen/onboarding selector is absent.
 - [ ] Master OFF + Company allocated denies; Master ON + Company not allocated denies;
       both ON + permission/scope/workflow allowed succeeds. Missing/unknown state denies.
 - [ ] Master disable does not overwrite Company allocation, and re-enable restores the
       previous distribution. Migration preserves every Company's effective state.
-- [ ] New Company setup receives the platform-defined Master default allocation without
+- [x] New Company setup receives the platform-defined Master default allocation without
       a tenant choice.
 - [ ] Disabled modules are absent from sidebar/mobile/search/quick actions and reject
       direct route, list/detail/create/update/action, notification and worker paths.
@@ -248,7 +249,7 @@ following pass:
       rate-limited. Absence of MFA remains a recorded release risk rather than a pass.
 
 This section remains final-cutover acceptance, not release evidence. TASK-185's focused
-5-file/20-test suite proves catalog, platform permission/CSRF/version/audit behavior,
-mask/restore, dependencies, authorization invalidation and migration preservation. It
-does not prove tenant authority removal, platform password login/workspace, simulation
-or the final whole-path cutover.
+suite proves the platform foundation; TASK-186 focused tests prove tenant authority
+removal, default application, dual-layer masking and mapped API denial. They do not
+prove platform password login/workspace, simulation or TASK-188's final whole-path and
+release gates.

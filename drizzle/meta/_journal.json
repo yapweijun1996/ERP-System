@@ -666,6 +666,13 @@
       "when": 1786458000000,
       "tag": "0094_platform_module_entitlement",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1786461600000,
+      "tag": "0095_retire_tenant_module_authority",
+      "breakpoints": true
     }
   ]
 }

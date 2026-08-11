@@ -4,6 +4,7 @@ import {
   ACTION_PERMISSION_KEYS,
   PERMISSION_REGISTRY,
   canonicalPermissionForResource,
+  isAssignableTenantPermission,
   isRegisteredPermission,
   isTenantPermission,
   permissionCandidates,
@@ -20,9 +21,22 @@ describe('application-owned permission registry', () => {
       expect(definition?.kind, key).toBe('compatibility');
       expect(definition?.canonicalCode, key).toMatch(/^[a-z][a-z0-9_]*\.(?:\*|[a-z][a-z0-9_]*)\.[a-z][a-z0-9_]*$/);
       expect(definition?.telemetryKey, key).toBeTruthy();
-      expect(definition?.removalGate, key).toBe('TASK-171-compatibility-cutover');
+      expect(definition?.removalGate, key).toBe(
+        key === PERMISSIONS.modulesManage
+          ? 'TASK-186-platform-mac-cutover'
+          : 'TASK-171-compatibility-cutover',
+      );
       expect(isRegisteredPermission(key), key).toBe(true);
     }
+  });
+
+  it('recognizes retired tenant MAC permission without allowing new grants', () => {
+    expect(permissionDefinition(PERMISSIONS.modulesManage)).toMatchObject({
+      deprecated: true,
+      assignable: false,
+    });
+    expect(isTenantPermission(PERMISSIONS.modulesManage)).toBe(true);
+    expect(isAssignableTenantPermission(PERMISSIONS.modulesManage)).toBe(false);
   });
 
   it('resolves resource requests through explicit broad compatibility aliases', () => {

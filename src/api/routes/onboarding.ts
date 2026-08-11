@@ -2,7 +2,7 @@ import { Router, raw } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { onboardingImportJob, onboardingImportRow } from '../../data/schema';
-import { PERMISSIONS, hasAnyPermission } from '../../auth/permissions';
+import { PERMISSIONS, hasPermission } from '../../auth/permissions';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import {
   CompanyOnboardingError, completeCompanyOnboardingStage,
@@ -22,7 +22,7 @@ export function createOnboardingRouter(db: DB): Router {
   ) {
     const session = await requireSession(db, req, res);
     if (!session) return null;
-    if (!await hasAnyPermission(db, session, [PERMISSIONS.modulesManage, PERMISSIONS.rolesWrite])) {
+    if (!await hasPermission(db, session, PERMISSIONS.rolesWrite)) {
       apiError(res, 403, 'permission_denied', 'You cannot manage company onboarding.');
       return null;
     }

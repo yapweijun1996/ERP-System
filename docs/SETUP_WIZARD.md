@@ -108,22 +108,20 @@ Trying to make Phase A a web wizard is impossible (no server to serve it). Tryin
 Phase B a shell script throws away the friendly GUI that the demo needs. Keep them
 separate.
 
-## Platform-owned module provisioning foundation (EPIC-064)
+## Platform-owned module provisioning (EPIC-064)
 
-Current in-app onboarding may configure Company modules through tenant
-`admin.modules.manage`; that remains source truth until TASK-186. The approved target
-removes module purchase/allocation from Phase B tenant setup.
+TASK-186 removes module purchase/allocation from Phase B tenant setup. Company Owner
+and Company Admin cannot list or mutate entitlement through the retired tenant API.
 
 Before a new Company reaches module-dependent onboarding, Platform Superadmin defines
 the Master purchased entitlement and one default Company allocation set. Company
-creation applies that set automatically and records platform/system audit. The tenant
-wizard may display readiness/error state needed to continue, but offers no module
-selector, Enable/Disable action or entitlement API. Missing Master entitlement/default
-allocation fails closed rather than assuming all modules are purchased.
+creation applies that set automatically. The tenant wizard offers no module selector,
+Enable/Disable action or entitlement API. Missing Master entitlement/default allocation
+fails closed rather than assuming all modules are purchased.
 
 TASK-185 now stores the versioned entitlement/default and exposes the platform-only
-API. Automatic default application plus removal of the current tenant modules stage are
-TASK-186; the preceding paragraph is not yet the live setup flow.
+API. TASK-186 applies defaults during trusted Master/Company bootstrap and removes the
+legacy modules stage, so this is now the live setup boundary.
 
 Platform password login, Master/Company workspace and exact-user simulation are planned
 under TASK-187 and remain separate from the tenant setup session.

@@ -36,7 +36,6 @@ import {
   revokePermissionOverride,
   type PermissionOverrideEffect,
 } from '../../auth/permissionOverrides';
-import { listMasterModules, setMasterModule } from '../../auth/moduleAccess';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
 import {
   explainAuthorization,
@@ -563,37 +562,23 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
   router.get('/modules', async (req, res) => {
     const session = await requireSession(db, req, res);
     if (!session) return;
-    if (!await hasPermission(db, session, PERMISSIONS.modulesManage)) {
-      apiError(res, 403, 'permission_denied', 'You cannot read module activation state.');
-      return;
-    }
-    const result = await listMasterModules(db, session.masterFn, session.activeCompanyFn);
-    res.json({ data: result, meta: {} });
+    apiError(
+      res,
+      403,
+      'platform_authority_required',
+      'Commercial module entitlement is managed only from the Platform workspace.',
+    );
   });
 
   router.post('/modules/:moduleKey/actions/set-enabled', async (req, res) => {
     const session = await requireSession(db, req, res);
     if (!session) return;
-    if (!await hasPermission(db, session, PERMISSIONS.modulesManage)) {
-      apiError(res, 403, 'permission_denied', 'You cannot change module activation state.');
-      return;
-    }
-    const { moduleKey } = req.params;
-    const enabled = (req.body as { enabled?: unknown } | undefined)?.enabled;
-    if (typeof enabled !== 'boolean') {
-      apiError(res, 400, 'invalid_request', 'enabled must be a boolean.', {
-        enabled: 'enabled must be a boolean.',
-      });
-      return;
-    }
-    try {
-      const result = await setMasterModule(
-        db, session, moduleKey, enabled, context(res).requestId,
-      );
-      res.json({ data: result, meta: {} });
-    } catch (error) {
-      handleLifecycleError(res, error);
-    }
+    apiError(
+      res,
+      403,
+      'platform_authority_required',
+      'Commercial module entitlement is managed only from the Platform workspace.',
+    );
   });
 
   return router;

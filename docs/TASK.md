@@ -1,6 +1,6 @@
 # Task Index
 
-Reviewed: **2026-08-11**
+Reviewed: **2026-08-12**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **181**
+- Done: **183**
 - In progress: **0**
-- Todo: **6**
+- Todo: **4**
 - Blocked: **1**
 - Total: **188**
 
@@ -67,22 +67,26 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | --- | --- | --- |
 | TASK-184 | Done | Source-audit current tenant MAC, record the approved target and synchronize docs/KB |
 | TASK-185 | Done | Module Catalog, Master entitlement, Company allocation, platform API and Demo harness |
-| TASK-186 | Todo | Remove tenant MAC permission/UI/API/onboarding authority and cut over enforcement |
+| TASK-186 | Done | Removed tenant MAC permission/UI/onboarding authority; legacy API denies and dual-layer enforcement/defaults are live |
 | TASK-187 | Todo | Independent Platform Superadmin login/workspace and audited exact-user simulation |
 | TASK-188 | Todo | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
 
-TASK-185 delivered migration 0094, the commercial catalog, versioned/audited platform
-entitlement APIs, hard dependencies, authorization invalidation and deterministic Demo
-fixtures. The current application remains tenant-controlled until TASK-186 removes the
-legacy authority and cuts enforcement over to both layers.
+TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
+migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master
+defaults to new Companies and cut registered tenant enforcement over to both layers.
+Its focused authorization proof passes 8 files / 45 tests; root/Web typechecks, lint,
+API/Demo builds, schema v95 across 96 migrations, 246-table drift, Demo pack, access
+matrix, targeted five-language dual-viewport onboarding audit, task-graph validation,
+Markdown links and `git diff --check` pass. TASK-188 retains final PostgreSQL, complete
+browser and release proof.
 
 TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
 bounded Demo/API reads and responsive desktop/mobile register UI. TASK-180 adds
 query-side search/date behavior; TASK-181 adds the immutable complete-result Receipt
 Pack and one PDF for preview, download and Print. Module entitlement and the final
-canonical permission cutover remain pending. TASK-182 waits for TASK-186, which is now
-the next dependency-eligible implementation task.
+canonical permission cutover remain pending. TASK-182 is now dependency-eligible; the
+remaining EPIC-064 sequence is TASK-187 then TASK-188.
 
 ## Latest implementation milestones
 

@@ -214,14 +214,16 @@ TASK-185 introduces a commercial Module Catalog beside, not instead of, the exis
 route access matrix and resource registry. Routes/resources reference catalog keys;
 the catalog defines sellable business modules, hard dependencies and baseline services.
 The platform entitlement domain rejects unknown/missing state and dependency-breaking
-mutations. Tenant route/resource mapping and enforcement cut over in TASK-186.
+mutations. TASK-186 cuts tenant route/resource enforcement over to both entitlement
+layers.
 
 The versioned platform path now exists: Platform → Master entitlement
 (`master_module`) → Company allocation (`company_module`), with optimistic conflict
 checks, authorization-version invalidation and dual-layer `effectiveEnabled`. Migration
 0094 preserves Company rows and normalizes Master rows from their enabled union.
-Existing tenant enforcement still reads only `company_module`; `/api/admin/modules`,
-onboarding module selection and Module Activation UI remain until TASK-186.
+Tenant enforcement now requires both rows. `/api/admin/modules` is a deny-only legacy
+boundary, `admin.modules.manage` is deprecated/non-assignable, and the onboarding
+selector and Module Activation UI are removed by TASK-186/migration 0095.
 
 The web entry may reuse the visual login component, but platform authentication is a
 separate realm, credential store, session and CSRF boundary. Its minimal workspace lists
@@ -229,7 +231,7 @@ Masters/Companies and MAC; it is not a Company Owner shell. Explicit end-user si
 creates a bounded linked support session whose decisions run exactly as the active
 target user and whose audit retains the real platform principal.
 
-TASK-185 is current code; tenant cutover, platform password login/workspace and
-simulation remain TASK-186–188 target architecture. See
+TASK-185–186 are current code; platform password login/workspace, simulation and final
+release proof remain TASK-187–188 target architecture. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) and
 [SECURITY.md](SECURITY.md) for authority and residual-risk requirements.

@@ -1,6 +1,6 @@
 # Epic Index
 
-Reviewed: **2026-08-11**
+Reviewed: **2026-08-12**
 
 The canonical epic registry is [EPICS.md](EPICS.md). This singular filename exists as
 a compatibility entry point for tools and requests that refer to `EPIC.md`; do not

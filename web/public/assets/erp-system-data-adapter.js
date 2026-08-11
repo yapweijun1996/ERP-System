@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 94;
+  var DEMO_SCHEMA_VERSION = 95;
   var DEMO_PACK_VERSION = '15';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
@@ -584,6 +584,13 @@
       "from opportunity o join customer c on c.id = o.customer_id " +
       "left join app_user u on u.user_id = o.owner_user_id " +
       "where " + wc('o') + " order by o.id");
+    var modules = await rows(
+      "select allocation.module_key, " +
+      "(entitlement.enabled and allocation.enabled) as enabled, " +
+      "(entitlement.enabled and allocation.enabled and allocation.configured) as configured " +
+      "from company_module allocation join master_module entitlement " +
+      "on entitlement.master_fn=allocation.master_fn and entitlement.module_key=allocation.module_key " +
+      "where " + wc('allocation') + " order by allocation.module_key");
 
     return { master: master, companies: companies, users: users, products: products,
              warehouses: warehouses, stockLevels: stockLevels, bins: bins, lots: lots,
@@ -594,7 +601,7 @@
              suppliers: suppliers, purchaseOrders: purchaseOrders, purchaseOrderLines: purchaseOrderLines,
              purchaseOrderApprovals: purchaseOrderApprovals,
              goodsReceipts: goodsReceipts, supplierInvoices: supplierInvoices,
-             leaveApprovals: leaveApprovals, opportunities: opportunities };
+             leaveApprovals: leaveApprovals, opportunities: opportunities, modules: modules };
   }
 
   /* ---------------- static fallback (same canonical values) ---------------- */
@@ -614,6 +621,11 @@
         { user_id: 1, email: 'admin@acme.co', full_name: 'Admin', language: 'zh', is_superadmin: true },
         { user_id: 2, email: 'viewer@acme.co', full_name: 'Demo Viewer', language: 'en', is_superadmin: false },
       ],
+      modules: [
+        'sales','purchasing','crm','inventory','warehouse','manufacturing','quality',
+        'finance','hr','payroll','project','service','asset','workflow','bi','integration',
+      ].map(function(moduleKey){ return {module_key:moduleKey,enabled:true,configured:true}; })
+        .concat([{module_key:'expenses_tax',enabled:false,configured:false}]),
       products: [
         { id: 1, company_fn: 'C-SG', sku: 'SG-WIDGET', name: 'Widget (SG)', uom: 'unit', standard_cost: 6.5, tracking_type: 'none', on_hand: 95 },
         { id: 2, company_fn: 'C-SG', sku: 'SG-GADGET', name: 'Gadget (SG)', uom: 'box', standard_cost: 13, tracking_type: 'none', on_hand: 97 },
@@ -699,6 +711,7 @@
       scope: SCOPE,
       master: d.master,
       companies: d.companies,
+      modules: d.modules || [],
       users: d.users,
       products: d.products,
       warehouses: d.warehouses || [],
@@ -1717,6 +1730,25 @@
   function normalizeResource(resource){
     return String(resource||'').replace(/^\/+|\/+$/g,'').replace(/^api\//,'');
   }
+  var DEMO_RESOURCE_MODULES={
+    assets:'asset',crm:'crm',finance:'finance',hr:'hr',integration:'integration',
+    inventory:'inventory',manufacturing:'manufacturing',payroll:'payroll',
+    project:'project',purchasing:'purchasing',quality:'quality',reporting:'bi',
+    sales:'sales',service:'service',warehouse:'warehouse',
+  };
+  function requireEffectiveModuleForResource(key){
+    var moduleKey=DEMO_RESOURCE_MODULES[String(key||'').split('/')[0]];
+    if(!moduleKey) return;
+    var rows=DB.erpSystem&&Array.isArray(DB.erpSystem.modules)?DB.erpSystem.modules:[];
+    var stateRow=rows.find(function(row){
+      return String(row&&row.moduleKey||row&&row.module_key||'')===moduleKey;
+    });
+    if(!stateRow||stateRow.enabled!==true){
+      var denied=new Error('The '+moduleKey+' module is not enabled for this organization.');
+      denied.code='module_not_enabled';
+      throw denied;
+    }
+  }
   function requireDemoDb(){
     if(!state.db) throw new Error('Demo database unavailable (offline fallback) — this operation needs PGlite.');
     return state.db;
@@ -1769,10 +1801,9 @@
       return {data:auditPage.data,meta:{nextCursor:auditPage.nextCursor}};
     }
     if(key==='admin/modules'){
-      var modules = await requireDemoDb().transaction(function(tx){
-        return state.runtime.commands.listMasterModules(state.runtime.createOrm(tx), SCOPE);
-      });
-      return {data:modules,meta:{}};
+      var moduleReadDenied=new Error('Commercial module entitlement is managed only from the Platform workspace.');
+      moduleReadDenied.code='platform_authority_required';
+      throw moduleReadDenied;
     }
     if(key==='admin/master-control'){
       var masterControl = await requireDemoDb().transaction(function(tx){
@@ -1796,6 +1827,7 @@
   }
   async function list(resource, query){
     var key=normalizeResource(resource);
+    requireEffectiveModuleForResource(key);
     var adminResult=await listAdminResource(key, query);
     if(adminResult) return adminResult;
     if(key==='account/activity'){
@@ -1933,6 +1965,7 @@
   }
   async function get(resource,id){
     var key=normalizeResource(resource);
+    requireEffectiveModuleForResource(key);
     if(key==='hr/employee-accounts'){
       return {data:await state.runtime.commands.readEmployeeAccount(
         state.orm,SCOPE,Number(id)),meta:{}};
@@ -1986,6 +2019,7 @@
   }
   async function createInner(resource,payload){
     var key=normalizeResource(resource);
+    requireEffectiveModuleForResource(key);
     if(key==='integration/import-jobs'){
       var importJob = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.createCustomerImportJobWithin(
@@ -2403,6 +2437,7 @@
   }
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
+    requireEffectiveModuleForResource(key);
     if(key==='hr/employee-accounts'){
       var employeeId=Number(id), actorUserId=Number(state.activeUserId);
       if(name==='create'){
@@ -2577,12 +2612,9 @@
       return {data:scopeResult,meta:{}};
     }
     if(key==='admin/modules'&&name==='set-enabled'){
-      var updatedModule = await requireDemoDb().transaction(function(tx){
-        return state.runtime.commands.setMasterModuleWithin(
-          state.runtime.createOrm(tx), SCOPE, state.activeUserId, String(id),
-          !!(payload&&payload.enabled));
-      });
-      return {data:updatedModule,meta:{}};
+      var moduleWriteDenied=new Error('Commercial module entitlement is managed only from the Platform workspace.');
+      moduleWriteDenied.code='platform_authority_required';
+      throw moduleWriteDenied;
     }
     if(key==='inventory/products'&&name==='update'){
       var updatedProduct = await requireDemoDb().transaction(function(tx){

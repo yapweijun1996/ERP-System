@@ -229,10 +229,10 @@ current Pack path is permission-gated but remains under the pre-cutover tenant M
 
 ## Master entitlement and Company allocation foundation
 
-Current `company_module` is an active-Company setting mutable by tenant Company Owner.
-TASK-185 has added the platform-owned data/API foundation, but TASK-186 must still
-replace tenant mutation authority and switch tenant enforcement. Until that cutover,
-`src/auth/moduleAccess.ts` remains the current company-only decision path.
+`company_module` is now the platform-owned Company allocation. TASK-186 removed tenant
+mutation authority and changed `src/auth/moduleAccess.ts` to require both entitlement
+layers. Tenant APIs receive only the effective projection; they cannot read the Master
+or Company control layers.
 
 - Master/client is the commercial purchaser. Migration 0094 and
   `src/auth/platformEntitlement.ts` now store the platform-owned purchased-module
@@ -244,11 +244,11 @@ replace tenant mutation authority and switch tenant enforcement. Until that cuto
 - Master disable masks all Companies but preserves their allocation rows. Re-enable
   restores the previous Company distribution.
 - Migration 0094 enables a Master module if any of its current Companies has that
-  module enabled, then preserves every Company row, so current effective access is
-  unchanged when TASK-186 switches reads.
-- Each Master now stores one default Company allocation set selected by Platform
-  Superadmin. Applying it to new Companies and removing the tenant module selector
-  remain TASK-186.
+  module enabled, then preserves every Company row, so TASK-186's dual-layer read
+  preserves the pre-cutover effective access.
+- Each Master stores one default Company allocation set selected by Platform
+  Superadmin. Trusted Master/Company bootstrap applies those defaults; tenant
+  onboarding contains no module selector.
 
 Platform Superadmin may list all Masters/Companies only through the separate platform
 realm. When explicitly simulating an active tenant user, the trusted target

@@ -238,10 +238,11 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > generic approval-instance/step table. Budget approval uses the existing
 > `budget_version.status`/`is_active`/`version` state plus imported `budget_line` rows;
 > it also adds no generic approval-instance/step table.
-> The current boundary is migration 0089: **90 journal entries and 244 generated
+> The current boundary is migration 0095: **96 journal entries and 246 generated
 > tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
 > the tenant authorization freshness source. Migration 0089 adds the Company Owner
-> role/permission/scope expand-backfill cutover. Each subsequent schema capability must still
+> role/permission/scope expand-backfill cutover; migrations 0090–0095 add Company
+> Receipt evidence, platform entitlement and tenant-MAC retirement. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
@@ -915,10 +916,9 @@ longer matches. It is included in the production Company RLS policy set.
 
 ## 11. Platform module entitlement foundation (EPIC-064)
 
-Migration 0094 reuses rather than duplicates the existing tables. The new columns and
-normalized rows exist, but current tenant enforcement remains authoritative until
-TASK-186: `src/auth/moduleAccess.ts` still treats `company_module.enabled` as the active
-tenant-mutable Company switch.
+Migration 0094 reuses rather than duplicates the existing tables. TASK-186 changes
+`src/auth/moduleAccess.ts` to treat `company_module.enabled` as the platform-owned
+Company allocation and to require the Master entitlement at read time.
 
 ```text
 master_module
@@ -938,9 +938,11 @@ do not receive commercial rows.
 
 Platform mutations use optimistic versions and audit before/after with
 `platform_principal_id`. The independent `platform_superadmin` role gains
-`platform.modules.read/manage`; support roles receive neither permission. Removing
-`admin.modules.manage` tenant grants and making the compatibility key non-assignable
-remain TASK-186.
+`platform.modules.read/manage`; support roles receive neither permission. Migration
+0095 removes stored `admin.modules.manage`/`system.modules.manage` tenant role grants,
+revokes active overrides, increments affected authorization versions and normalizes
+legacy onboarding rows from the removed modules stage to roles. The keys remain only
+as deprecated/non-assignable migration and audit identifiers.
 
 TASK-187 additionally needs independent platform password credentials and a bounded
 platform-to-tenant simulation session linking the platform principal/session, target

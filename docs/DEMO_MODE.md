@@ -178,21 +178,20 @@ preview or export acceptance.
 
 ## Demo platform entitlement foundation
 
-Current Demo Company Owner can operate the tenant Module Activation screen; that is
-legacy/current behavior and TASK-185 does not remove it. TASK-185 adds a deterministic
-platform-selected fixture and domain/API harness:
+Demo now follows the same platform-owned entitlement boundary as API mode. TASK-185
+adds the deterministic platform-selected fixture/domain harness and TASK-186 removes
+the tenant mutation surface:
 
 - Demo seeds explicit Master entitlement and Company allocation for every registered
   business module; effective state is their intersection and missing state denies;
-- one Master default allocation is stored; applying it to newly created Demo Companies
-  remains TASK-186;
-- removing Company Owner's MAC screen, `admin.modules.manage` grant and onboarding
-  selector remains TASK-186;
+- one Master default allocation is stored and applied to newly created Demo Companies;
+- Company Owner's MAC screen, `admin.modules.manage` grant and onboarding selector are
+  absent; Demo calls to the legacy tenant API fail `platform_authority_required`;
 - automated tests use an explicit Demo platform harness to change entitlement/allocation
   and prove dependency, migration and tenant isolation. It is not exposed as a tenant
   business control or backed by browser localStorage;
 - Platform Superadmin login/workspace and exact-user simulation must preserve the same
   authority/audit semantics in Demo and API modes when TASK-187 lands.
 
-The TASK-185 platform fixture/API is verified, but the existing Company-controlled Demo
-behavior remains Canonical until TASK-186 and must not be described as cut over.
+The fixture/API and TASK-186 tenant cutover are implementation evidence. TASK-188 still
+owns final dual-mode browser, security and release proof.

@@ -518,18 +518,22 @@ and `accessMatrix` under TASK-182. TASK-181 now provides Preview/PDF/Print in bo
 adapters, but until TASK-182–183 land neither `my-receipts`, `/api/company-receipts`
 nor `receipt-tax-evidence` may be presented as the fully released v1.
 
-## 12. Platform Module Entitlement foundation and pending cutover
+## 12. Platform Module Entitlement and tenant cutover
 
-EPIC-018's current `company_module` gate and backend checks remain implementation truth:
-Company Owner can currently mutate the active Company through `admin.modules.manage`,
-`/api/admin/modules` and `module-activation-control`. TASK-185 adds the replacement
-foundation without changing that current authority; TASK-186 performs the cutover.
+TASK-186 completes the tenant authority cutover on top of TASK-185. Company Owner and
+Company Admin no longer receive or may assign `admin.modules.manage`; migration 0095
+removes role grants, revokes active overrides, invalidates affected authorization
+versions and advances legacy onboarding rows past the removed `modules` stage.
+Authenticated calls to either legacy `/api/admin/modules` endpoint now return only 403
+`platform_authority_required` and never return entitlement state.
 
 `src/auth/moduleCatalog.ts` now defines the application-owned commercial Module Catalog
 used by the platform entitlement domain and Demo fixtures. Catalog
 entries distinguish sellable business modules from baseline Dashboard/Home, My Work,
-Admin, Settings and Account/Notifications services. Unknown references fail CI/startup
-and platform runtime access fails closed; tenant route/UI adoption remains TASK-186.
+Admin, Settings and Account/Notifications services. Tenant session/module projections,
+generic resources, registered bespoke APIs and notification destinations now fail closed
+on `Master enabled AND Company allocated`; missing or unknown state returns
+`module_not_enabled`.
 
 Migration 0094 makes `master_module` a versioned Master entitlement with the new-Company
 default allocation flag and versions `company_module` as Company allocation. Platform reads return
@@ -541,8 +545,9 @@ Platform APIs now live only under the independent platform session/CSRF boundary
 Master/Company listing, entitlement summaries, versioned Master writes and versioned
 Company allocation writes. They validate hard dependencies, optimistic versions, audit
 before/after plus platform principal/request correlation, and invalidate affected tenant
-authorization versions. Tenant `/api/admin/modules`, onboarding selection and Module
-Activation UI are retired under TASK-186. Planned platform login uses the shared visual entry
+authorization versions. The tenant Module Activation UI is removed, Company onboarding
+contains no module selector, and new Companies copy the selected Master's stored default
+allocation. Planned platform login uses the shared visual entry
 but an independent realm/password/session, at most one hour with no remember option.
 
 User simulation is a separate, explicit platform support session linked to the real

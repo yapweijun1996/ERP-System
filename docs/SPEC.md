@@ -435,13 +435,13 @@ generation API-only. Its document-loading and PDF composition code may be reused
 Company Receipts now has that standalone query/snapshot contract; only the reusable
 document/PDF primitive is shared with Tax Evidence, not claim or tax semantics.
 
-## 10. Platform Module Entitlement contract (foundation implemented; cutover pending)
+## 10. Platform Module Entitlement contract (tenant cutover implemented)
 
-Current implementation remains tenant-controlled: Company Owner holds
-`admin.modules.manage`, `/api/admin/modules` mutates active-Company `company_module`,
-and the tenant Module Activation screen exposes that API. Current server-side disabled-
-module enforcement is Canonical and must be preserved, but this mutation owner is not
-the approved commercial model.
+TASK-185/186 implement the commercial entitlement and tenant enforcement boundary.
+Company Owner has no MAC read/mutation authority. The deprecated
+`admin.modules.manage` code is registry-recognized only for migration/audit history and
+is non-assignable; migration 0095 removes role grants and revokes active overrides.
+Legacy tenant MAC endpoints return 403 `platform_authority_required` without state.
 
 EPIC-064 requires:
 
@@ -474,8 +474,8 @@ EPIC-064 requires:
 TASK-185 implements the Module Catalog, migration 0094, versioned Master/default and
 Company allocation rows, hard-dependency validation, independent platform read/manage
 permissions, CSRF/version/correlation/audit-protected APIs, authorization invalidation
-and deterministic Demo fixtures. Its focused tests prove platform isolation, migration
-preservation, mask/restore, dependency and conflict behavior. TASK-186 still removes
-tenant MAC authority and switches all tenant paths to both entitlement layers;
-TASK-187/188 own login/workspace/simulation and final proof. No current status may
-describe the platform-owned cutover as delivered before those tasks pass.
+and deterministic Demo fixtures. TASK-186 adds migration 0095, makes tenant module
+projection and enforcement depend on both stored layers, retires the permission/API/UI,
+removes the onboarding module stage and applies Master defaults to new Companies.
+TASK-187/188 still own platform password login/workspace, simulation and final release
+proof; the tenant cutover must not be mistaken for those remaining capabilities.

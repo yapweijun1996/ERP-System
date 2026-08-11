@@ -273,75 +273,60 @@ async function signOutDemo(){
   location.reload();
 }
 
-function isModuleAdmin(){
-  const role=String(DB.user&&DB.user.role||'').toLowerCase().replace(/\s+/g,'');
-  return userHasAnyPermission('*')||role==='admin'||role==='superadmin'||role.includes('superadmin');
-}
-function currentMasterFn(){
-  return (DB.erpSystem&&DB.erpSystem.scope&&DB.erpSystem.scope.masterFn)
-    || (DB.masters&&DB.masters[0]&&DB.masters[0].id)
-    || (DB.company&&DB.company.name)
-    || 'default-master';
+function isTenantControlAdmin(){
+  return userHasAnyPermission('admin.master.read');
 }
 function moduleControlItems(){
   return DB.nav.flatMap(g=>g.items.map(m=>({
     ...m,
     group:g.group,
-    required:m.id==='home'||m.id==='admin',
+    /* My Work is the employee self-service surface. It is intentionally
+       available even when optional company modules are disabled, and it is
+       not part of the commercial entitlement catalog. */
+    required:m.id==='home'||m.id==='mywork'||m.id==='admin',
   })));
 }
-/* Real per-tenant module state (EPIC-018/TASK-047), cached in-memory because
+/* Effective platform-owned module state, cached in-memory because
    readModuleControl()/moduleState() are called synchronously from render paths
-   (renderSidebar, routeAllowed, ...) that cannot await a fetch. loadModuleControl()
-   populates this cache once at boot (see boot()) and again after any write in
-   module-activation-control; before the first load resolves, or if it fails (e.g.
-   a non-admin user with no admin.modules.manage grant), every module reads as
-   enabled -- fail open, matching the server's own "no override row = enabled"
-   default, so a slow/denied fetch never locks a signed-in user out of navigation. */
+   (renderSidebar, routeAllowed, ...) that cannot await a fetch. The authenticated
+   session carries the safe effective projection for every user.
+   Missing projection data fails closed; tenant code never reads allocation or
+   Master-entitlement facts. */
 let MODULE_CONTROL_CACHE=null;
-async function loadModuleControl(){
-  try{
-    const adapter=window.ErpSystemData;
-    if(!adapter||typeof adapter.list!=='function'){ MODULE_CONTROL_CACHE={}; return; }
-    const response=await adapter.list('admin/modules',{});
-    const cfg={};
-    (response&&response.data||[]).forEach(row=>{
-      cfg[row.moduleKey]={ visible:!!row.enabled, active:!!row.enabled };
-    });
-    MODULE_CONTROL_CACHE=cfg;
-  }catch{
-    MODULE_CONTROL_CACHE={};
-  }
-}
-/* Raw per-module state, exactly as configured -- used by module-activation-control
-   itself so the admin managing it always sees the true on/off state, never the
-   exemption below. Everything else should call moduleState(), not this. */
-function readModuleControl(){
+const BASELINE_MODULE_IDS=new Set(['home','mywork','admin','settings','account']);
+function moduleConfigFromRows(rows){
   const cfg={};
-  moduleControlItems().forEach(m=>{
-    if(m.required){ cfg[m.id]={ visible:true, active:true }; return; }
-    const cached=MODULE_CONTROL_CACHE&&MODULE_CONTROL_CACHE[m.id];
-    cfg[m.id]=cached?{ visible:cached.visible, active:cached.active }:{ visible:true, active:true };
+  (Array.isArray(rows)?rows:[]).forEach(row=>{
+    const moduleKey=String(row&&row.moduleKey||row&&row.module_key||'');
+    if(!moduleKey) return;
+    cfg[moduleKey]={
+      visible:row.enabled===true,
+      active:row.enabled===true,
+      dependencies:Array.isArray(row.dependencies)?row.dependencies.map(String):[],
+      blockers:Array.isArray(row.blockers)?row.blockers.map(String):[],
+    };
   });
   return cfg;
 }
-async function setModuleEnabled(moduleId, enabled){
-  const adapter=window.ErpSystemData;
-  if(!adapter||typeof adapter.action!=='function'){
-    throw new Error('The canonical ERP data adapter is unavailable.');
-  }
-  await adapter.action('admin/modules', moduleId, 'set-enabled', { enabled:!!enabled });
-  await loadModuleControl();
+async function loadModuleControl(){
+  const sessionModules=DB.erpSystem&&DB.erpSystem.modules;
+  MODULE_CONTROL_CACHE=moduleConfigFromRows(sessionModules);
 }
-/* What navigation/route-guards should treat a module as. Mirrors the server's
-   isSuperadminSession() bypass (TASK-047): a superadmin is always exempt from
-   this gate -- it restricts what a master's other users can reach, never the
-   superadmin's own visibility, so a superadmin can never lock themselves out of
-   a module they just disabled for everyone else. module-activation-control
-   itself calls readModuleControl() directly to show the true, unexempted state. */
+function readModuleControl(){
+  const cfg={};
+  moduleControlItems().forEach(m=>{
+    if(m.required){ cfg[m.id]={ visible:true, active:true, dependencies:[], blockers:[] }; return; }
+    const cached=MODULE_CONTROL_CACHE&&MODULE_CONTROL_CACHE[m.id];
+    cfg[m.id]=cached
+      ?{ ...cached, visible:cached.visible, active:cached.active }
+      :{ visible:false, active:false, dependencies:[], blockers:[] };
+  });
+  return cfg;
+}
+/* The session's effective decision applies to every tenant identity. */
 function moduleState(moduleId){
-  if(isModuleAdmin()) return { visible:true, active:true };
-  return readModuleControl()[moduleId]||{ visible:true, active:true };
+  if(BASELINE_MODULE_IDS.has(moduleId)) return {visible:true,active:true,dependencies:[],blockers:[]};
+  return readModuleControl()[moduleId]||{ visible:false, active:false };
 }
 const NOTIFICATION_VISUALS={
   approval:{ic:'flow',clr:'accent'},inventory:{ic:'box',clr:'warn'},quality:{ic:'shield',clr:'danger'},
@@ -438,7 +423,7 @@ const ROUTE_ACTION_PERMISSION={
   'company-receipts':['expenses.company_receipts.read_company','expenses.company_receipts.read_own'],
   'user-mgmt':'admin.users.read','role-permission':'admin.roles.read',
   'audit-log':'admin.audit.read','master-control':'admin.master.read',
-  'sys-settings':'settings.read','module-activation-control':'admin.modules.manage',
+  'sys-settings':'settings.read','company-onboarding':'admin.roles.write',
 };
 function routeCapabilityAllowed(route){
   const actionPermission=ROUTE_ACTION_PERMISSION[route];
@@ -494,15 +479,12 @@ function moduleBlockedPanel(route){
   const label=item?item.label:(mod||route);
   const st=mod?moduleState(mod):{ visible:true, active:true };
   const reason=st.visible?'inactive for this client':'hidden for this client';
-  const action=isModuleAdmin()
-    ? btn('Open Module Activation Control',{icon:'sliders',cls:'primary',attrs:"onclick=\"navigate('module-activation-control')\""})
-    : '';
   return `<div class="content full"><section class="master">
     <div class="pagehead">${crumbs([DB.company.name,'Module access'])}
       <div class="h1row"><h1>${esc(label)} unavailable</h1>${cap(reason,'warn')}</div>
-      <div class="h1sub">This module is controlled at master/client level for ${esc(currentMasterFn())}.</div>
+      <div class="h1sub">Commercial access is controlled by the platform for this company.</div>
     </div>
-    ${statePanel({icon:'lock',title:'Module is not available',body:'Ask an admin or superadmin to enable this module in Module Activation Control.',action})}
+    ${statePanel({icon:'lock',title:'Module is not available',body:'Ask your Platform Superadmin to review the Master entitlement and Company allocation.'})}
   </section></div>`;
 }
 function permissionBlockedPanel(){
@@ -518,24 +500,6 @@ function permissionBlockedPanel(){
     </div>
   </section></div>`;
 }
-function ensureModuleActivationMenuItem(){
-  const menu=$('#acctMenu'); if(!menu) return;
-  const existing=menu.querySelector('[data-acct="module-control"]');
-  if(!isModuleAdmin()){ if(existing) existing.remove(); return; }
-  if(existing) return;
-  const firstSection=menu.querySelector('.menu-section');
-  if(!firstSection) return;
-  const btnEl=document.createElement('button');
-  btnEl.className='menu-item';
-  btnEl.setAttribute('data-acct','module-control');
-  btnEl.innerHTML=`${ic('sliders')}<span>${esc(t('acct.moduleControl'))}</span><span class="meta">${ic('arrowR')}</span>`;
-  firstSection.appendChild(btnEl);
-}
-
-/* TASK-024: demo mode only — "allow switching among seeded users". Not offered
-   in api mode (DB.erpSystem.users is a demo-adapter-only field; switching to
-   another real user without their password isn't offered — sign out and sign
-   in as them instead). */
 function ensureUserSwitcherMenuItem(){
   const menu=$('#acctMenu'); if(!menu) return;
   const existing=menu.querySelector('[data-acct="switch-user"]');
@@ -591,7 +555,7 @@ const SUBROUTES = {
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging','company-receipts'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
   mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
-  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
+  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','company-onboarding','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
@@ -621,7 +585,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'debit-notes','price-lists','discount-mgmt','credit-control',
   'item-master','crm-customer',
   'asset-register','asset-detail','depreciation',
-  'user-mgmt','audit-log','role-permission','module-activation-control',
+  'user-mgmt','audit-log','role-permission','company-onboarding',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
   'my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals',
@@ -664,7 +628,7 @@ const API_SCREEN_ROUTES = new Set([
   'debit-notes','price-lists','discount-mgmt','credit-control',
   'item-master','crm-customer',
   'asset-register','asset-detail','depreciation',
-  'user-mgmt','audit-log','role-permission','module-activation-control',
+  'user-mgmt','audit-log','role-permission','company-onboarding',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
   'integration-logs','data-import',
@@ -778,7 +742,7 @@ const MODULE_DEFS = {
   admin:{ labelKey:'nav.admin', home:'user-mgmt', items:[
     ['user-mgmt','Users','people'],['role-permission','Roles & Permissions','shield'],
     ['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
-    ['sys-settings','System Settings','gear'],['module-activation-control','Module Activation','sliders'],
+    ['sys-settings','System Settings','gear'],['company-onboarding','Company Onboarding','check'],
   ]},
 };
 const MODULE_READ_PERMISSION = {
@@ -859,7 +823,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   ],
   workspace:[
     'bank-rec','data-import','integration','master-control',
-    'module-activation-control','mrp',
+    'company-onboarding','mrp',
     'sales-commission','settings','sys-settings',
   ],
   board:['crm-pipeline'],
@@ -871,7 +835,10 @@ const SCREEN_LAYOUTS = Object.freeze(Object.fromEntries(
 ));
 const SCREEN_META = {};
 Object.keys(SCREENS).forEach(route=>{
-  const moduleId=ROUTE_MODULE[route]||(
+  // Keep metadata on the same canonical resolver used by routeAllowed().
+  // Notifications and account activity are also present in the Admin nav for
+  // legacy layout reasons, but their access boundary is account-scoped.
+  const moduleId=routeModuleId(route)||(
     route==='dashboard'?'home':
     route==='settings'?'settings':
     ['notifications','my-activity'].includes(route)?'account':'unmapped'
@@ -1381,7 +1348,7 @@ const PAL_COMMANDS=[
     {label:'System Settings · numbering, tax, currency', icon:'gear', route:'sys-settings'},
     {label:'Role Permissions', icon:'shield', route:'role-permission'},
     {label:'Master Control · tenants & users', icon:'grid', route:'master-control'},
-    {label:'Module Activation Control', icon:'sliders', route:'module-activation-control'},
+    {label:'Company Onboarding', icon:'check', route:'company-onboarding'},
     {label:'Notifications center', icon:'bell', route:'notifications'},
   ]},
   {cat:'Create', items:[
@@ -1518,7 +1485,7 @@ function buildCompanyMenu(){
      active company scope via ErpSystemDemo.switchCompany(). */
   const allCompanies=(DB.erpSystem && DB.erpSystem.companies) || [];
   const allowedFns=new Set((DB.user&&DB.user.companyFns)||[]);
-  const companies=isModuleAdmin()?allCompanies:allCompanies.filter(c=>allowedFns.has(c.company_fn||c.companyFn));
+  const companies=isTenantControlAdmin()?allCompanies:allCompanies.filter(c=>allowedFns.has(c.company_fn||c.companyFn));
   const activeFn=DB.erpSystem && DB.erpSystem.scope && DB.erpSystem.scope.companyFn;
   const masterName=(DB.erpSystem && DB.erpSystem.master && DB.erpSystem.master.name) || DB.company.name;
   const head=`<div class="menu-head">${esc(masterName)}</div>`;
@@ -1532,7 +1499,7 @@ function buildCompanyMenu(){
     <span>${esc(c.name)}<small style="display:block;color:var(--muted);font-size:11px">${esc(c.currency)} · ${esc(c.country)}</small></span>
     <span class="meta">${fn===activeFn?ic('check'):''}</span></button>`;
   }).join('');
-  return `<div class="menu-section">${head}${rows}</div>${isModuleAdmin()
+  return `<div class="menu-section">${head}${rows}</div>${isTenantControlAdmin()
     ?`<div class="menu-section"><button class="menu-item" data-co-action="master">${ic('grid')}<span>Master Control</span><span class="meta">${ic('arrowR')}</span></button></div>`
     :''}`;
 }
@@ -1743,7 +1710,6 @@ async function boot(){
   $('#ctxCompany').innerHTML=`<b>${esc(DB.company.name)} ${ic('chevD')}</b><small>${esc(DB.company.branch)}</small>`;
   const envEl=$('.env'); if(envEl) envEl.textContent=DB.company.env||envEl.textContent;
   syncAccountUi();
-  ensureModuleActivationMenuItem();
   ensureUserSwitcherMenuItem();
   // restore persisted working period, then paint the fiscal-period switcher
   try{ const sp=localStorage.getItem('aria-period'); if(sp){ const parts=sp.split('|'); const fy=(DB.fiscalYears||[]).find(y=>y.fyLabel===parts[0]); if(fy){ DB.fiscal=fy; const i=+parts[1]; if(i>=1&&i<=fy.periodCount) fy.selectedPeriod=i; } } }catch{}
@@ -1792,7 +1758,7 @@ async function boot(){
   });
   $('#palInput').addEventListener('input',e=>renderPalette(e.target.value));
   // account menu items
-  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){signOutDemo(); return;} else if(a==='module-control'){navigate('module-activation-control');} else if(a==='switch-user'){closeAllPops();openUserSwitcher();return;} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
+  $$('#acctMenu .menu-item[data-acct]').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.acct; if(a==='signout'){signOutDemo(); return;} else if(a==='switch-user'){closeAllPops();openUserSwitcher();return;} else if(a==='prefs'){navigate('settings',{section:'set-appearance'});} else if(a==='profile'){navigate('settings');} else if(a==='activity'){navigate('my-activity');} else if(a==='shortcuts'){openShortcuts();} else if(a!=='theme'){toast(b.textContent.trim()+' — not in this build','info');} closeAllPops(); }));
   // initial route
   let start=(location.hash||'').replace('#','');
   if(!SCREENS[start]&&!DB.nav.flatMap(g=>g.items).some(m=>m.route===start)) start='dashboard';

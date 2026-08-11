@@ -1,123 +1,108 @@
-// Super-admin per-tenant module gating (EPIC-018). Deliberately its own file, not
-// folded into adminLifecycle.ts: same node:crypto-free constraint (bundled into the
-// browser demo runtime, web/src/erp-demo-runtime-impl.ts -- see adminLifecycle.ts's
-// header comment for why that matters), but a different concern (tenant module
-// access, not user/role lifecycle). Same two-tier shape as every other write in this
-// repo: a raw-exec `...Within(exec, ...)` core plus a thin self-transacting wrapper.
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { companyModule } from '../data/schema';
-import { withTenantTransaction } from '../data/tenantTransaction';
-import { appendAudit } from '../api/audit';
-import { AuthLifecycleError } from './authErrors';
-import { bumpAuthorizationVersionWithin } from './authorizationVersion';
-import type { SessionData } from './session';
-
-/** Matches every gateable id in web/public/assets/data-core.js's DB.nav (i.e. every
- *  sidebar entry except 'home', which -- like 'settings' -- is deliberately always
- *  on; see app.js's routeAllowed()). 'admin' is included but can never be disabled
- *  -- see setMasterModuleWithin. */
-export const MODULE_KEYS = [
-  'sales', 'purchasing', 'crm', 'inventory', 'warehouse', 'manufacturing', 'quality',
-  'finance', 'hr', 'payroll', 'project', 'service', 'asset', 'workflow', 'bi', 'admin', 'integration',
-] as const;
-export type ModuleKey = typeof MODULE_KEYS[number];
-const KNOWN_MODULE_KEYS = new Set<string>(MODULE_KEYS);
-
-/** Only hard technical prerequisites belong here. Commercial packaging remains
- * independent from the authorization boundary. */
-export const MODULE_DEPENDENCIES: Readonly<Record<ModuleKey, readonly ModuleKey[]>> = {
-  sales: ['finance'],
-  purchasing: ['finance'],
-  crm: [],
-  inventory: [],
-  warehouse: ['inventory'],
-  manufacturing: ['inventory', 'warehouse'],
-  quality: ['inventory'],
-  finance: [],
-  hr: [],
-  payroll: ['finance'],
-  project: ['finance'],
-  service: ['crm'],
-  asset: ['finance'],
-  workflow: [],
-  bi: [],
-  admin: [],
-  integration: [],
-};
-
-export interface CompanyModuleState {
-  moduleKey: string;
-  enabled: boolean;
-  configured: boolean;
-  dependencies: readonly string[];
-  blockers: string[];
-}
-
-/** Compatibility name retained for existing adapter consumers. */
-export type MasterModuleState = CompanyModuleState;
+import { companyModule, masterModule } from '../data/schema';
+import {
+  COMMERCIAL_MODULE_CATALOG,
+  type CommercialModuleKey,
+  isCommercialModuleKey,
+} from './moduleCatalog';
 
 /**
- * Absence of a master_module row for a (masterFn, moduleKey) pair means enabled --
- * only rows disabling a module need to exist, so a brand-new master starts with
- * every module on, matching today's client-side default in app.js's
- * defaultModuleControl().
+ * Tenant-facing module projection after the EPIC-064 authority cutover.
+ *
+ * Tenants may consume only the effective decision. Master entitlement and
+ * Company allocation remain platform-owned facts and are never returned by
+ * this service.
  */
+export const MODULE_KEYS = COMMERCIAL_MODULE_CATALOG.map(
+  (definition) => definition.key,
+) as readonly CommercialModuleKey[];
+export type ModuleKey = CommercialModuleKey;
+
+export const MODULE_DEPENDENCIES: Readonly<Record<ModuleKey, readonly ModuleKey[]>> =
+  Object.freeze(Object.fromEntries(COMMERCIAL_MODULE_CATALOG.map((definition) => [
+    definition.key,
+    definition.dependencies,
+  ])) as unknown as Record<ModuleKey, readonly ModuleKey[]>);
+
+export interface CompanyModuleState {
+  moduleKey: ModuleKey;
+  enabled: boolean;
+  configured: boolean;
+  dependencies: readonly ModuleKey[];
+  blockers: ModuleKey[];
+}
+
+/** Compatibility type/name retained for session and Demo adapter consumers. */
+export type MasterModuleState = CompanyModuleState;
+
 export async function listCompanyModules(
   exec: DB,
   masterFn: string,
   companyFn: string,
 ): Promise<CompanyModuleState[]> {
-  const rows = await exec.select({
-    moduleKey: companyModule.moduleKey,
-    enabled: companyModule.enabled,
-    configured: companyModule.configured,
-  }).from(companyModule).where(and(
-    eq(companyModule.masterFn, masterFn),
-    eq(companyModule.companyFn, companyFn),
-  ));
-  const states = new Map(rows.map((row) => [row.moduleKey, row]));
+  const [entitlements, allocations] = await Promise.all([
+    exec.select({
+      moduleKey: masterModule.moduleKey,
+      enabled: masterModule.enabled,
+    }).from(masterModule).where(eq(masterModule.masterFn, masterFn)),
+    exec.select({
+      moduleKey: companyModule.moduleKey,
+      enabled: companyModule.enabled,
+      configured: companyModule.configured,
+    }).from(companyModule).where(and(
+      eq(companyModule.masterFn, masterFn),
+      eq(companyModule.companyFn, companyFn),
+    )),
+  ]);
+  const masterByKey = new Map(entitlements.map((row) => [row.moduleKey, row]));
+  const companyByKey = new Map(allocations.map((row) => [row.moduleKey, row]));
+  const effective = new Map<ModuleKey, boolean>(MODULE_KEYS.map((moduleKey) => [
+    moduleKey,
+    masterByKey.get(moduleKey)?.enabled === true
+      && companyByKey.get(moduleKey)?.enabled === true,
+  ]));
+
   return MODULE_KEYS.map((moduleKey) => ({
     moduleKey,
-    enabled: states.get(moduleKey)?.enabled ?? false,
-    configured: states.get(moduleKey)?.configured ?? false,
+    enabled: effective.get(moduleKey) === true,
+    configured: effective.get(moduleKey) === true
+      && companyByKey.get(moduleKey)?.configured === true,
     dependencies: MODULE_DEPENDENCIES[moduleKey],
     blockers: MODULE_DEPENDENCIES[moduleKey].filter(
-      (dependency) => !(states.get(dependency)?.enabled ?? false),
+      (dependency) => effective.get(dependency) !== true,
     ),
   }));
 }
 
 export const listMasterModules = listCompanyModules;
 
-/** True only for a registered, explicitly enabled module. Used by server-side
- * enforcement (routes/resources.ts). Unknown module keys fail closed so a new
- * resource prefix cannot accidentally bypass module activation while its registry
- * mapping is incomplete. */
+/** Missing, unknown, or partially configured entitlement state fails closed. */
 export async function isModuleEnabled(
   exec: DB,
   masterFn: string,
   companyFn: string,
   moduleKey: string,
 ): Promise<boolean> {
-  if (!KNOWN_MODULE_KEYS.has(moduleKey)) return false;
-  const [row] = await exec.select({ enabled: companyModule.enabled })
-    .from(companyModule)
-    .where(and(
+  if (!isCommercialModuleKey(moduleKey)) return false;
+  const [entitlement, allocation] = await Promise.all([
+    exec.select({ enabled: masterModule.enabled }).from(masterModule).where(and(
+      eq(masterModule.masterFn, masterFn),
+      eq(masterModule.moduleKey, moduleKey),
+    )).limit(1),
+    exec.select({ enabled: companyModule.enabled }).from(companyModule).where(and(
       eq(companyModule.masterFn, masterFn),
       eq(companyModule.companyFn, companyFn),
       eq(companyModule.moduleKey, moduleKey),
-    ))
-    .limit(1);
-  return row?.enabled === true;
+    )).limit(1),
+  ]);
+  return entitlement[0]?.enabled === true && allocation[0]?.enabled === true;
 }
 
-/** Generic-resource URL prefix (req.params.module in routes/resources.ts) -> the
- *  MODULE_KEYS entry that gates it. Account services are authenticated platform
- *  services, not tenant business modules, so they are explicitly non-gated here;
- *  their own permission checks remain authoritative. Prefixes whose resource name
- *  already matches the module key can rely on the fallback, but keeping active
- *  modules explicit makes this security boundary easy to audit. */
+/**
+ * Generic-resource URL prefix -> commercial module. Baseline Account and
+ * Notifications resources are deliberately outside the sellable catalog.
+ */
 const RESOURCE_PREFIX_TO_MODULE: Partial<Record<string, ModuleKey>> = {
   assets: 'asset',
   crm: 'crm',
@@ -125,9 +110,12 @@ const RESOURCE_PREFIX_TO_MODULE: Partial<Record<string, ModuleKey>> = {
   integration: 'integration',
   inventory: 'inventory',
   manufacturing: 'manufacturing',
+  payroll: 'payroll',
+  project: 'project',
   purchasing: 'purchasing',
   quality: 'quality',
   sales: 'sales',
+  service: 'service',
   warehouse: 'warehouse',
 };
 
@@ -136,106 +124,4 @@ const UNGATED_RESOURCE_PREFIXES = new Set(['account']);
 export function moduleKeyForResourcePrefix(prefix: string): string | null {
   if (UNGATED_RESOURCE_PREFIXES.has(prefix)) return null;
   return RESOURCE_PREFIX_TO_MODULE[prefix] ?? prefix;
-}
-
-export async function setMasterModuleWithin(
-  exec: DB,
-  session: SessionData,
-  moduleKey: string,
-  enabled: boolean,
-  requestId: string,
-  now = new Date(),
-): Promise<CompanyModuleState> {
-  if (!KNOWN_MODULE_KEYS.has(moduleKey)) {
-    throw new AuthLifecycleError(400, 'invalid_module_key', 'Unknown module key.');
-  }
-  if (moduleKey === 'admin' && !enabled) {
-    throw new AuthLifecycleError(
-      400,
-      'admin_module_required',
-      'The Admin module cannot be disabled -- doing so would lock every superadmin out of re-enabling it.',
-    );
-  }
-  const states = await listCompanyModules(exec, session.masterFn, session.activeCompanyFn);
-  const current = states.find((state) => state.moduleKey === moduleKey)!;
-  if (enabled && current.blockers.length) {
-    throw new AuthLifecycleError(
-      409,
-      'module_dependencies_required',
-      `Enable required modules first: ${current.blockers.join(', ')}.`,
-      { moduleKey: current.blockers.join(',') },
-    );
-  }
-  if (!enabled) {
-    const dependents = states.filter((state) =>
-      state.enabled && state.dependencies.includes(moduleKey as ModuleKey));
-    if (dependents.length) {
-      throw new AuthLifecycleError(
-        409,
-        'module_required_by_enabled_module',
-        `Disable dependent modules first: ${dependents.map((state) => state.moduleKey).join(', ')}.`,
-        { moduleKey: dependents.map((state) => state.moduleKey).join(',') },
-      );
-    }
-  }
-  const [existing] = await exec.select({
-    enabled: companyModule.enabled,
-    configured: companyModule.configured,
-  })
-    .from(companyModule)
-    .where(and(
-      eq(companyModule.masterFn, session.masterFn),
-      eq(companyModule.companyFn, session.activeCompanyFn),
-      eq(companyModule.moduleKey, moduleKey),
-    ))
-    .limit(1);
-  if (existing) {
-    await exec.update(companyModule).set({
-      enabled,
-      configured: enabled || existing.configured,
-      updatedAt: now,
-    }).where(and(
-      eq(companyModule.masterFn, session.masterFn),
-      eq(companyModule.companyFn, session.activeCompanyFn),
-      eq(companyModule.moduleKey, moduleKey),
-    ));
-  } else {
-    await exec.insert(companyModule).values({
-      masterFn: session.masterFn,
-      companyFn: session.activeCompanyFn,
-      moduleKey,
-      enabled,
-      configured: enabled,
-    });
-  }
-  await bumpAuthorizationVersionWithin(exec, {
-    masterFn: session.masterFn,
-    companyFn: session.activeCompanyFn,
-  }, now);
-  await appendAudit(exec, {
-    masterFn: session.masterFn,
-    companyFn: session.activeCompanyFn,
-    actorUserId: session.userId,
-    requestId,
-    entity: 'company_module',
-    entityId: moduleKey,
-    action: 'set_enabled',
-    before: existing ? { enabled: existing.enabled } : null,
-    after: { moduleKey, enabled },
-  });
-  return (await listCompanyModules(exec, session.masterFn, session.activeCompanyFn))
-    .find((state) => state.moduleKey === moduleKey)!;
-}
-
-export function setMasterModule(
-  db: DB,
-  session: SessionData,
-  moduleKey: string,
-  enabled: boolean,
-  requestId: string,
-) {
-  return withTenantTransaction(db, {
-    masterFn: session.masterFn,
-    companyFn: session.activeCompanyFn,
-  }, (tx) => setMasterModuleWithin(tx, session, moduleKey, enabled, requestId));
 }

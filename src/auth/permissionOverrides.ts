@@ -10,7 +10,7 @@ import {
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import { bumpAuthorizationVersionWithin } from './authorizationVersion';
-import { permissionCandidates, permissionDefinition } from './permissionRegistry';
+import { isAssignableTenantPermission, permissionCandidates } from './permissionRegistry';
 import type { DataScope } from './accessCatalog';
 import type { SessionData } from './session';
 
@@ -43,7 +43,7 @@ function normalizeReason(reason: string): string {
 function normalizeInput(input: PermissionOverrideInput, now: Date) {
   const permissionKey = input.permissionKey.trim();
   if (!permissionKey || !permissionCandidates(permissionKey).length
-    || permissionDefinition(permissionKey)?.domain === 'platform') {
+    || !isAssignableTenantPermission(permissionKey)) {
     throw new AuthLifecycleError(400, 'invalid_permission', 'The permission is not registered for tenant authorization.');
   }
   if (input.effect !== 'allow' && input.effect !== 'deny') {

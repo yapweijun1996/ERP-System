@@ -20,6 +20,9 @@ export interface PermissionDefinition {
   action: string;
   domain: PermissionDomain;
   kind: PermissionRegistryKind;
+  /** False means the code is recognized for migration/audit compatibility only. */
+  assignable: boolean;
+  deprecated?: boolean;
   telemetryKey?: string;
   removalGate?: string;
 }
@@ -72,6 +75,7 @@ function canonicalPartsForCompatibility(code: string): {
 
 function compatibilityDefinition(code: string): PermissionDefinition {
   const { module, resource, action } = canonicalPartsForCompatibility(code);
+  const retiredTenantMac = code === PERMISSIONS.modulesManage;
   return {
     code,
     canonicalCode: `${module}.${resource}.${action}`,
@@ -80,8 +84,10 @@ function compatibilityDefinition(code: string): PermissionDefinition {
     action,
     domain: 'tenant',
     kind: 'compatibility',
+    assignable: !retiredTenantMac,
+    deprecated: retiredTenantMac || undefined,
     telemetryKey: `permission.compatibility.${code.replace(/[^a-zA-Z0-9]+/g, '_')}`,
-    removalGate: 'TASK-171-compatibility-cutover',
+    removalGate: retiredTenantMac ? 'TASK-186-platform-mac-cutover' : 'TASK-171-compatibility-cutover',
   };
 }
 
@@ -99,6 +105,7 @@ const canonicalDefinitions = [...new Map(
       ...canonicalPartsForCompatibility(code),
       domain: 'platform' as const,
       kind: 'canonical' as const,
+      assignable: false,
     })),
   ].map((definition) => [definition.canonicalCode, {
     ...definition,
@@ -125,7 +132,9 @@ for (const definition of PERMISSION_REGISTRY) {
 }
 
 /** Legacy seed/template catalog. Canonical records are available separately. */
-export const PERMISSION_CATALOG = Object.freeze([...compatibilityKeys]);
+export const PERMISSION_CATALOG = Object.freeze(compatibilityDefinitions
+  .filter((definition) => definition.assignable)
+  .map((definition) => definition.code));
 
 export function permissionDefinition(code: string): PermissionDefinition | undefined {
   return BY_CODE.get(code);
@@ -137,6 +146,11 @@ export function isRegisteredPermission(code: string): boolean {
 
 export function isTenantPermission(code: string): boolean {
   return BY_CODE.get(code)?.domain === 'tenant';
+}
+
+export function isAssignableTenantPermission(code: string): boolean {
+  const definition = BY_CODE.get(code);
+  return definition?.domain === 'tenant' && definition.assignable;
 }
 
 export function isCompatibilityPermission(code: string): boolean {

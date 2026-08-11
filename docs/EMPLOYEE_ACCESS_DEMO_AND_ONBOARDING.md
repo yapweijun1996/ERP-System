@@ -194,10 +194,9 @@ outside this Epic. A 375px emulator is not a physical phone; TASK-017 remains bl
 
 ## EPIC-064 module-entitlement foundation and onboarding replacement
 
-This document's earlier company-owned module controls describe current EPIC-059 code:
-Company Owner can use `admin.modules.manage`, onboarding includes a modules stage and
-`company_module` is the active Company switch. TASK-185 adds the parallel platform
-entitlement foundation but does not change that tenant behavior.
+Any earlier company-owned module-control instructions in this document are historical
+EPIC-059 evidence only. TASK-186 retires `admin.modules.manage`, removes the modules
+stage and treats `company_module` as platform-owned Company allocation.
 
 The approved replacement is platform-owned. Platform Superadmin defines the Master
 entitlement and one default Company allocation set. New Companies receive that default
@@ -205,8 +204,8 @@ automatically; Company Owner onboarding no longer selects, enables or disables m
 Tenant users and roles may be configured only inside effective modules, where effective
 means Master entitlement AND Company allocation.
 
-Demo is now deterministic: fixtures represent the platform-selected entitlement and
-allocation, while domain/API tests exercise platform-only changes. The legacy Company
-Owner switch is still exposed; TASK-186 removes it, applies Master defaults during new
-Company creation and must preserve current effective access before the earlier
-onboarding instructions are rewritten as delivered behavior.
+Demo is deterministic: fixtures represent the platform-selected entitlement and
+allocation, while domain/API tests exercise platform-only changes. New Company creation
+applies the Master default and tenant users see only effective availability. Platform
+password login, workspace and simulation remain TASK-187; final browser/security proof
+remains TASK-188.

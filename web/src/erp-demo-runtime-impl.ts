@@ -377,7 +377,6 @@ import {
   setUserActiveWithin,
   setUserRolesWithin,
 } from '../../src/auth/adminLifecycle';
-import { listMasterModules, setMasterModuleWithin } from '../../src/auth/moduleAccess';
 import {
   activateStaffOnboardingWithin,
   createStaffOnboardingDraftWithin,
@@ -1372,9 +1371,6 @@ export const erpDemoRuntime = Object.freeze({
         asDomainDb(db), scope, actorUserId, notificationId,
       );
     },
-    listMasterModules(db: DemoOrm, scope: Scope) {
-      return listMasterModules(asDomainDb(db), scope.masterFn, scope.companyFn);
-    },
     listConnectorsWithin(db: DemoOrm, scope: Scope) {
       return listConnectorsWithin(asDomainDb(db), scope);
     },
@@ -1428,17 +1424,6 @@ export const erpDemoRuntime = Object.freeze({
     ) {
       return setAccountingPeriodStatusWithin(
         asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, id, status,
-      );
-    },
-    setMasterModuleWithin(
-      db: DemoOrm,
-      scope: Scope,
-      actorUserId: number,
-      moduleKey: string,
-      enabled: boolean,
-    ) {
-      return setMasterModuleWithin(
-        asDomainDb(db), demoSession(scope, actorUserId), moduleKey, enabled, 'demo',
       );
     },
     setUserActiveWithin(
