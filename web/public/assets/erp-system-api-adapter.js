@@ -39,7 +39,37 @@
   var API_BASE = window.__ERP_API_BASE__ || '/api';
   var HEALTH_URL = API_BASE.replace(/\/api\/?$/, '') + '/health';
   var SCOPE = { companyFn: null }; // masterFn is never client-held — it comes from the session, server-side, on every request
-  var state = { mode: 'api-unavailable', session: null };
+  var state = { mode: 'api-unavailable', session: null, authorizationRefreshPending: false };
+
+  function currentAuthorizationVersion(){
+    var value=state.session&&state.session.capabilities
+      &&state.session.capabilities.authorizationVersion;
+    var version=Number(value);
+    return Number.isSafeInteger(version)&&version>0?version:null;
+  }
+
+  async function apiFetch(url,options){
+    options=options||{};
+    var headers=Object.assign({},options.headers||{});
+    var authorizationVersion=currentAuthorizationVersion();
+    if(authorizationVersion!=null&&!headers['X-ERP-Authorization-Version']){
+      headers['X-ERP-Authorization-Version']=String(authorizationVersion);
+    }
+    var response=await fetch(url,Object.assign({},options,{
+      cache:'no-store',credentials:'same-origin',headers:headers,
+    }));
+    if(response.status===409&&!state.authorizationRefreshPending){
+      var staleBody=await jsonBody(response.clone());
+      if(staleBody&&staleBody.error&&staleBody.error.code==='authorization_state_stale'){
+        state.authorizationRefreshPending=true;
+        await fetchSession();
+        /* Do not replay a rejected write. Reloading rebuilds synchronous
+           navigation/module caches from the recovered session snapshot. */
+        window.location.reload();
+      }
+    }
+    return response;
+  }
 
   function notAvailable(action){
     return Promise.reject(new Error(
@@ -114,9 +144,8 @@
       var csrf=cookieValue('erp_csrf');
       if(csrf) headers['X-CSRF-Token']=csrf;
     }
-    var res=await fetch(API_BASE+'/'+path.replace(/^\/+/,''),{
+    var res=await apiFetch(API_BASE+'/'+path.replace(/^\/+/,''),{
       method:method,
-      credentials:'same-origin',
       headers:headers,
       body:options.body==null?undefined:JSON.stringify(options.body),
     });
@@ -294,7 +323,7 @@
       });
     },
     downloadReimbursementBankExport:async function(exportId,accessKey,purpose){
-      var response=await fetch(API_BASE+'/reimbursement-payments/exports/'+
+      var response=await apiFetch(API_BASE+'/reimbursement-payments/exports/'+
         encodeURIComponent(exportId)+'/actions/download',{
           method:'POST',
           credentials:'same-origin',
@@ -383,7 +412,7 @@
     },
     accessTaxEvidenceArtifact:async function(artifactId,payload){
       payload=payload||{};
-      var response=await fetch(API_BASE+'/tax-evidence/artifacts/'+
+      var response=await apiFetch(API_BASE+'/tax-evidence/artifacts/'+
         encodeURIComponent(artifactId)+'/actions/access',{
           method:'POST',
           credentials:'same-origin',
@@ -419,7 +448,7 @@
     receipts:function(){ return apiRequest('my/receipts'); },
     uploadReceipt:async function(draft){
       var csrf=cookieValue('erp_csrf');
-      var res=await fetch(API_BASE+'/my/receipts/actions/upload',{
+      var res=await apiFetch(API_BASE+'/my/receipts/actions/upload',{
         method:'POST',
         credentials:'same-origin',
         headers:{
@@ -495,7 +524,7 @@
 
   async function fetchDashboard(){
     var url = API_BASE + '/dashboard';
-    var res = await fetch(url, { method: 'GET', credentials: 'same-origin' });
+    var res = await apiFetch(url, { method: 'GET' });
     if (res.status === 401) throw new Error('not_authenticated');
     if (!res.ok) throw new Error('GET ' + url + ' -> HTTP ' + res.status);
     var payload = await res.json();
@@ -682,7 +711,7 @@
     });
   }
   async function preflightOnboardingImport(file,target){
-    var response=await fetch(API_BASE+'/onboarding/imports/actions/preflight',{
+    var response=await apiFetch(API_BASE+'/onboarding/imports/actions/preflight',{
       method:'POST',credentials:'same-origin',
       headers:{'Content-Type':file.type||'application/octet-stream','X-CSRF-Token':cookieValue('erp_csrf'),
         'X-Import-Target':target,'X-Import-Format':file.name.toLowerCase().endsWith('.xlsx')?'xlsx':'csv','X-File-Name':file.name},

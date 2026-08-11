@@ -47,14 +47,36 @@ export async function requireSession(
   db: DB,
   req: express.Request,
   res: express.Response,
-  options: { allowActivationPending?: boolean } = {},
+  options: {
+    allowActivationPending?: boolean;
+    /** The session endpoint is the recovery path for a stale browser snapshot. */
+    allowStaleAuthorization?: boolean;
+  } = {},
 ): Promise<SessionData | null> {
+  const checkAuthorizationFreshness = (session: SessionData): boolean => {
+    const currentVersion = session.authorizationVersion;
+    if (currentVersion == null) return true;
+    res.setHeader('X-ERP-Authorization-Version', String(currentVersion));
+    const supplied = req.get('x-erp-authorization-version');
+    if (options.allowStaleAuthorization || supplied == null || supplied === '') return true;
+    if (/^[1-9]\d*$/.test(supplied) && Number(supplied) === currentVersion) return true;
+    apiError(
+      res,
+      409,
+      'authorization_state_stale',
+      'Authorization changed. Refresh the signed-in workspace before retrying.',
+      undefined,
+      { params: { authorizationVersion: currentVersion } },
+    );
+    return false;
+  };
   const ctx = context(res);
   if (ctx.session) {
     if (ctx.session.passwordChangeRequired && !options.allowActivationPending) {
       apiError(res, 403, 'activation_required', 'Complete first-login activation before using the application.');
       return null;
     }
+    if (!checkAuthorizationFreshness(ctx.session)) return null;
     return ctx.session;
   }
   const sessionId = parseCookies(req.headers.cookie)[SESSION_COOKIE];
@@ -74,5 +96,6 @@ export async function requireSession(
     );
     return null;
   }
+  if (!checkAuthorizationFreshness(session)) return null;
   return session;
 }

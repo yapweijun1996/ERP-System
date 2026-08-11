@@ -15,7 +15,10 @@ import {
   supportAccessGrant,
 } from '../data/schema';
 import { appendAudit } from '../api/audit';
-import { bumpAuthorizationVersionWithin } from './authorizationVersion';
+import {
+  bumpAuthorizationVersionWithin,
+  bumpMasterAuthorizationVersionsWithin,
+} from './authorizationVersion';
 
 export const PLATFORM_PERMISSIONS = {
   supportRead: 'platform.support.read',
@@ -447,6 +450,8 @@ export async function createSupportAccessGrant(
     });
     if (companyFn) {
       await bumpAuthorizationVersionWithin(exec, { masterFn: input.masterFn, companyFn }, now);
+    } else {
+      await bumpMasterAuthorizationVersionsWithin(exec, input.masterFn, now);
     }
     await appendAudit(exec, {
       masterFn: input.masterFn,
@@ -514,6 +519,8 @@ export async function revokeSupportAccessGrant(
         masterFn: grant.masterFn,
         companyFn: grant.companyFn,
       }, now);
+    } else {
+      await bumpMasterAuthorizationVersionsWithin(exec, grant.masterFn, now);
     }
     await appendAudit(exec, {
       masterFn: grant.masterFn,

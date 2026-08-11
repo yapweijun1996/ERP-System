@@ -134,6 +134,37 @@ describe('platform principal and support access boundary', () => {
     expect(audits.every((audit) => audit.platformPrincipalId === session.principalId)).toBe(true);
   });
 
+  it('invalidates every Company snapshot for a Master-wide support grant', async () => {
+    const { db, session } = await platformFixture();
+    const before = await db.select({
+      companyFn: company.companyFn,
+      authorizationVersion: company.authorizationVersion,
+    }).from(company).where(eq(company.masterFn, 'M1'));
+
+    const grant = await createSupportAccessGrant(db, session, grantInput({ companyFn: null }),
+      'platform-test-master-wide-create', NOW);
+    const afterCreate = await db.select({
+      companyFn: company.companyFn,
+      authorizationVersion: company.authorizationVersion,
+    }).from(company).where(eq(company.masterFn, 'M1'));
+    expect(afterCreate).toHaveLength(before.length);
+    for (const row of afterCreate) {
+      const previous = before.find((candidate) => candidate.companyFn === row.companyFn);
+      expect(row.authorizationVersion).toBe((previous?.authorizationVersion ?? 0) + 1);
+    }
+
+    await revokeSupportAccessGrant(db, session, grant.id, 'Master incident closed',
+      'platform-test-master-wide-revoke', NOW);
+    const afterRevoke = await db.select({
+      companyFn: company.companyFn,
+      authorizationVersion: company.authorizationVersion,
+    }).from(company).where(eq(company.masterFn, 'M1'));
+    for (const row of afterRevoke) {
+      const created = afterCreate.find((candidate) => candidate.companyFn === row.companyFn);
+      expect(row.authorizationVersion).toBe((created?.authorizationVersion ?? 0) + 1);
+    }
+  });
+
   it('defaults restricted writes to deny and models break-glass approval', async () => {
     const { db, session } = await platformFixture();
     const restricted = await createSupportAccessGrant(db, session, grantInput({

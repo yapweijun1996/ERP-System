@@ -51,3 +51,25 @@ export async function bumpAuthorizationVersionWithin(
   }
   return row.authorizationVersion;
 }
+
+/**
+ * Advance every Company authorization marker for one Master. Master-wide
+ * platform grants can affect any Company under that Master, so invalidating
+ * only the currently selected Company would leave other capability snapshots
+ * stale until their next unrelated tenant mutation.
+ */
+export async function bumpMasterAuthorizationVersionsWithin(
+  exec: DB,
+  masterFn: string,
+  now = new Date(),
+): Promise<number> {
+  const rows = await exec.update(company).set({
+    authorizationVersion: sql`${company.authorizationVersion} + 1`,
+    updatedAt: now,
+  }).where(eq(company.masterFn, masterFn))
+    .returning({ companyFn: company.companyFn });
+  if (!rows.length) {
+    throw new AuthLifecycleError(404, 'master_not_found', 'Master not found.');
+  }
+  return rows.length;
+}

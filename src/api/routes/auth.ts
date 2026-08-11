@@ -269,7 +269,10 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   });
 
   router.get('/session', async (req, res) => {
-    const session = await requireSession(db, req, res, { allowActivationPending: true });
+    const session = await requireSession(db, req, res, {
+      allowActivationPending: true,
+      allowStaleAuthorization: true,
+    });
     if (!session) return;
     const [capabilities, modules, onboarding, companyAssignments] = await Promise.all([
       effectiveCapabilities(db, session),
