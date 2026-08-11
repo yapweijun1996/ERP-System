@@ -1,0 +1,3 @@
+ALTER TABLE "app_session" ADD COLUMN "impersonator_user_id" bigint;--> statement-breakpoint
+ALTER TABLE "app_session" ADD COLUMN "impersonated_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "app_session" ADD CONSTRAINT "app_session_impersonator_user_id_app_user_user_id_fk" FOREIGN KEY ("impersonator_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;

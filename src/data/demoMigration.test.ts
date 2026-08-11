@@ -110,7 +110,7 @@ describe('browser demo compatibility migrations', () => {
       `);
       expect(migratedIdentity.rows).toEqual([{
         login_code: 'M-LEGACY',
-        role_name: 'Legacy Admin Role',
+        role_name: 'Company Owner',
       }]);
 
       const roleIndexes = await db.query<{ indexname: string }>(`
