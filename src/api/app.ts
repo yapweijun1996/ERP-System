@@ -1,5 +1,6 @@
 import express, { type Express } from 'express';
 import { randomUUID } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { sql } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { withTenantTransaction } from '../data/tenantTransaction';
@@ -42,7 +43,19 @@ import { createOnboardingRouter } from './routes/onboarding';
 import { createPlatformRouter } from './routes/platform';
 import { createCompanyReceiptsRouter } from './routes/companyReceipts';
 import { createTenantModuleEntitlementGate } from './moduleEntitlement';
-import { runWithAuditAttribution } from './auditContext';
+import {
+  configureAuditAttributionStorage,
+  runWithAuditAttribution,
+  type AuditAttribution,
+} from './auditContext';
+
+let auditAttributionStorageConfigured = false;
+
+function ensureAuditAttributionStorage(): void {
+  if (auditAttributionStorageConfigured) return;
+  configureAuditAttributionStorage(new AsyncLocalStorage<AuditAttribution>());
+  auditAttributionStorageConfigured = true;
+}
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -70,6 +83,7 @@ function platformSessionToken(req: express.Request): string | undefined {
 }
 
 export function createApp(db: DB, options: AppOptions = {}): Express {
+  ensureAuditAttributionStorage();
   const app = express();
   if (options.trustProxy) app.set('trust proxy', 1);
   app.use((req, res, next) => {
