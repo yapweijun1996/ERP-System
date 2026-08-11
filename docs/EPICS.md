@@ -2487,9 +2487,10 @@ Approved target:
       workspace, visible return and exact-target dual audit completed 2026-08-12.
 - [ ] **TASK-188 — Prove the cutover and synchronize final docs/KB.** Depends on
       TASK-186 and TASK-187. In progress: focused platform tests, typechecks/schema
-      drift, Demo/PGlite browser proof, same-origin 375px platform simulation/browser and
-      disposable PostgreSQL 16 RLS proof pass; full-source Vitest, migration-preservation,
-      access-matrix/i18n/smoke and release gates are still open.
+      drift, Demo/PGlite browser proof, same-origin 375px platform simulation/browser,
+      direct PGlite/PostgreSQL 16 migration-preservation replay and disposable PostgreSQL 16
+      RLS proof pass; full-source Vitest, access-matrix/i18n/smoke and release gates are
+      still open.
 
 EPIC-018 remains valid historical evidence for company module storage and backend
 enforcement, but its tenant mutation authority is explicitly superseded by this target.
