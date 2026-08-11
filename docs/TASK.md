@@ -79,8 +79,9 @@ the shared API-mode realm chooser, Master/Company workspace and bounded exact-us
 simulation with dual identity audit. TASK-188 is in progress: its focused platform proof,
 root/Web typechecks, schema drift, Demo build, PGlite browser boot, desktop/mobile Company
 Receipts E2E and disposable PostgreSQL 16 non-superuser RLS proof pass. The final
-full-source Vitest, platform 375px simulation/browser, migration-preservation,
-access-matrix/i18n/smoke and release proofs remain open.
+full-source Vitest, migration-preservation, access-matrix/i18n/smoke and release proofs
+remain open. A same-origin 375px browser check now covers Platform Superadmin realm login,
+workspace rendering, exact-user simulation, explicit return and document-width containment.
 TASK-186's recorded focused authorization proof remains 8 files / 45 tests. TASK-187's
 isolated proof passes 3 files / 12 tests, root/Web typechecks, API build and schema v96
 drift; its browser check covers API-mode realm login and workspace only. During TASK-188,
