@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **183**
-- In progress: **0**
-- Todo: **4**
+- Done: **184**
+- In progress: **1**
+- Todo: **2**
 - Blocked: **1**
 - Total: **188**
 
@@ -69,19 +69,23 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | TASK-185 | Done | Module Catalog, Master entitlement, Company allocation, platform API and Demo harness |
 | TASK-186 | Done | Removed tenant MAC permission/UI/onboarding authority; legacy API denies and dual-layer enforcement/defaults are live |
 | TASK-187 | Done | Independent Platform Superadmin login/workspace and audited exact-user simulation (migration 0096) |
-| TASK-188 | Todo | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
+| TASK-188 | In progress | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master
 defaults to new Companies and cut registered tenant enforcement over to both layers.
 TASK-187 delivered migration 0096, independent password/cookie Platform Superadmin login,
 the shared API-mode realm chooser, Master/Company workspace and bounded exact-user
-simulation with dual identity audit. TASK-188 retains the final PostgreSQL, full dual-mode,
-browser, migration-preservation and release proof.
+simulation with dual identity audit. TASK-188 is in progress: its focused platform proof,
+root/Web typechecks, schema drift, Demo build, PGlite browser boot, desktop/mobile Company
+Receipts E2E and disposable PostgreSQL 16 non-superuser RLS proof pass. The final
+full-source Vitest, platform 375px simulation/browser, migration-preservation,
+access-matrix/i18n/smoke and release proofs remain open.
 TASK-186's recorded focused authorization proof remains 8 files / 45 tests. TASK-187's
 isolated proof passes 3 files / 12 tests, root/Web typechecks, API build and schema v96
-drift; its browser check covers API-mode realm login and workspace only. TASK-188 retains
-the complete browser, PostgreSQL, migration-preservation and release gates.
+drift; its browser check covers API-mode realm login and workspace only. During TASK-188,
+the full `npx vitest run src --pool=threads --maxWorkers=1` runner produced no per-file
+result after more than eight minutes and was terminated; it is not recorded as passing.
 
 TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,

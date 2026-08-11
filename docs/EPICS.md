@@ -2486,7 +2486,10 @@ Approved target:
       simulation.** Migration 0096, separate credentials/cookies, realm chooser,
       workspace, visible return and exact-target dual audit completed 2026-08-12.
 - [ ] **TASK-188 — Prove the cutover and synchronize final docs/KB.** Depends on
-      TASK-186 and TASK-187.
+      TASK-186 and TASK-187. In progress: focused platform tests, typechecks/schema
+      drift, Demo/PGlite browser proof and disposable PostgreSQL 16 RLS proof pass;
+      full-source Vitest, complete 375px platform simulation/browser, migration-preservation,
+      access-matrix/i18n/smoke and release gates are still open.
 
 EPIC-018 remains valid historical evidence for company module storage and backend
 enforcement, but its tenant mutation authority is explicitly superseded by this target.
