@@ -22,7 +22,6 @@ import type { SessionData } from './session';
 export const AUTHORIZATION_REASON_CODES = [
   'ALLOW_EXPLICIT_OVERRIDE',
   'ALLOW_ROLE_PERMISSION',
-  'ALLOW_SUPERADMIN_COMPATIBILITY',
   'DENY_INVALID_PRINCIPAL',
   'DENY_TENANT_MISMATCH',
   'DENY_PLATFORM_PERMISSION',
@@ -35,7 +34,7 @@ export const AUTHORIZATION_REASON_CODES = [
 ] as const;
 
 export type AuthorizationReasonCode = typeof AUTHORIZATION_REASON_CODES[number];
-export type AuthorizationEffect = 'allow' | 'deny' | 'role' | 'superadmin' | 'none';
+export type AuthorizationEffect = 'allow' | 'deny' | 'role' | 'none';
 
 export interface AuthorizationPrincipal {
   userId: number;
@@ -101,7 +100,6 @@ interface AssignmentPermissionRow {
   roleId: number;
   roleName: string;
   permissionKey: string;
-  isSuperadmin: boolean;
   scopeBackfilledAt: Date | null;
 }
 
@@ -337,53 +335,11 @@ async function evaluateAuthorization(
     };
   }
 
-  // Preserve the current tenant-local Superadmin compatibility behavior for
-  // registered tenant permissions even though the legacy Superadmin role has
-  // no role_permission rows of its own. This remains deliberately after
-  // explicit denies and after the registry/domain checks; TASK-175 will
-  // replace this compatibility path with an explicit Company Owner bundle.
-  const [superadminAssignment] = await db.select({
-    assignmentId: userCompanyRole.assignmentId,
-    roleId: role.roleId,
-  }).from(userCompanyRole)
-    .innerJoin(role, and(
-      eq(role.roleId, userCompanyRole.roleId),
-      eq(role.masterFn, request.principal.masterFn),
-      or(eq(role.companyFn, request.principal.companyFn), isNull(role.companyFn)),
-      eq(role.isSuperadmin, true),
-    ))
-    .where(and(
-      eq(userCompanyRole.userId, request.principal.userId),
-      eq(userCompanyRole.companyFn, request.principal.companyFn),
-      activeRoleAssignmentCondition(now),
-    ))
-    .orderBy(asc(userCompanyRole.assignmentId))
-    .limit(1);
-  if (superadminAssignment) {
-    return {
-      allowed: true,
-      reasonCode: 'ALLOW_SUPERADMIN_COMPATIBILITY',
-      permissionKey,
-      resourceKey,
-      context,
-      candidateKeys,
-      matchedEffect: 'superadmin',
-      matchedAssignmentId: superadminAssignment.assignmentId,
-      matchedRoleId: superadminAssignment.roleId,
-      matchedOverrideId: null,
-      matchedScope: 'company',
-      matchedTargetType: 'none',
-      matchedTargetId: null,
-      conflictingOverride: false,
-    };
-  }
-
   const assignments = await db.select({
     assignmentId: userCompanyRole.assignmentId,
     roleId: role.roleId,
     roleName: role.name,
     permissionKey: rolePermission.permissionKey,
-    isSuperadmin: role.isSuperadmin,
     scopeBackfilledAt: userCompanyRole.scopeBackfilledAt,
   }).from(userCompanyRole)
     .innerJoin(role, and(

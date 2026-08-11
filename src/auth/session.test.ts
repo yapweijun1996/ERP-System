@@ -10,6 +10,8 @@ import {
   getSession,
   hashSecret,
   parseCookies,
+  REMEMBERED_ABSOLUTE_TTL_MS,
+  REMEMBERED_IDLE_TTL_MS,
   switchSessionCompany,
   verifyCsrfToken,
 } from './session';
@@ -88,6 +90,63 @@ describe('database session store', () => {
     const later = new Date(Date.now() + 10);
     expect(await getSession(db, created.sessionId, { now: later })).toBeNull();
     expect(await cleanupExpiredSessions(db, later)).toBe(1);
+  });
+
+  it('keeps a remembered-device session alive for seven idle days after auth/session is checked', async () => {
+    const { db, userId } = await fixture();
+    const created = await createSession(db, {
+      userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
+      absoluteTtlMs: REMEMBERED_ABSOLUTE_TTL_MS,
+      idleTtlMs: REMEMBERED_IDLE_TTL_MS,
+      rememberedDevice: true,
+    });
+    const [initial] = await db.select({
+      tokenHash: appSession.tokenHash,
+      expiresAt: appSession.expiresAt,
+      idleExpiresAt: appSession.idleExpiresAt,
+    }).from(appSession).where(eq(appSession.tokenHash, hashSecret(created.sessionId)));
+    const firstTouch = new Date(initial.idleExpiresAt.getTime() - REMEMBERED_IDLE_TTL_MS + 1000);
+    expect(await getSession(db, created.sessionId, { now: firstTouch })).not.toBeNull();
+
+    const [touched] = await db.select({
+      expiresAt: appSession.expiresAt,
+      idleExpiresAt: appSession.idleExpiresAt,
+    }).from(appSession).where(eq(appSession.tokenHash, hashSecret(created.sessionId)));
+    expect(touched.idleExpiresAt.getTime()).toBeGreaterThan(firstTouch.getTime() + 6 * 24 * 60 * 60 * 1000);
+    expect(touched.idleExpiresAt.getTime()).toBeLessThanOrEqual(firstTouch.getTime() + REMEMBERED_IDLE_TTL_MS);
+    expect(touched.idleExpiresAt.getTime()).toBeLessThanOrEqual(touched.expiresAt.getTime());
+
+    const justBeforeIdleExpiry = new Date(touched.idleExpiresAt.getTime() - 1000);
+    expect(await getSession(db, created.sessionId, { now: justBeforeIdleExpiry, touch: false })).not.toBeNull();
+    expect(await getSession(db, created.sessionId, {
+      now: new Date(touched.idleExpiresAt.getTime() + 1),
+      touch: false,
+    })).toBeNull();
+  });
+
+  it('never extends a remembered-device session beyond its thirty-day absolute expiry', async () => {
+    const { db, userId } = await fixture();
+    const created = await createSession(db, {
+      userId, masterFn: 'M1', activeCompanyFn: 'C-SG',
+      username: 'admin', email: 'admin@acme.co', fullName: 'Admin',
+      absoluteTtlMs: REMEMBERED_ABSOLUTE_TTL_MS,
+      idleTtlMs: REMEMBERED_IDLE_TTL_MS,
+      rememberedDevice: true,
+    });
+    const [initial] = await db.select({
+      tokenHash: appSession.tokenHash,
+      expiresAt: appSession.expiresAt,
+    }).from(appSession).where(eq(appSession.tokenHash, hashSecret(created.sessionId)));
+    const nearAbsoluteExpiry = new Date(initial.expiresAt.getTime() - 60 * 60 * 1000);
+    await db.update(appSession).set({
+      idleExpiresAt: new Date(nearAbsoluteExpiry.getTime() + 60 * 60 * 1000),
+    }).where(eq(appSession.tokenHash, initial.tokenHash));
+
+    expect(await getSession(db, created.sessionId, { now: nearAbsoluteExpiry })).not.toBeNull();
+    const [touched] = await db.select({ idleExpiresAt: appSession.idleExpiresAt })
+      .from(appSession).where(eq(appSession.tokenHash, initial.tokenHash));
+    expect(touched.idleExpiresAt.getTime()).toBe(initial.expiresAt.getTime());
   });
 
   it('returns null for an unknown or undefined session id', async () => {

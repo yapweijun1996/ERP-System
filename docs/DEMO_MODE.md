@@ -169,8 +169,17 @@ dated selection, stable-key replay, creator scope, exact currency totals, govern
 document reads and one PDF renderer. Tax Evidence package generation remains a separate
 claim flow even though both now reuse the evidence-PDF primitive.
 
-TASK-180 keeps search/date predicates query-side in both adapters; TASK-182–183 must
-continue using the shared schema/domain contract.
+TASK-180 keeps search/date predicates query-side in both adapters. TASK-182 now applies
+the same `expenses_tax` Master-entitlement-plus-Company-allocation fail-closed gate to
+Demo/PGlite and API-facing route behavior. TASK-183 is complete: the register can
+select the signed-in uploader's stored evidence, read its confirmation context and call
+the shared Demo/PGlite create command. A brand-new static Demo upload is deliberately
+`scanner unavailable`, so it cannot self-confirm; browser proof simulates the external
+worker recording a clean scan before testing confirmation. TASK-183 also drives the
+API bundle through authenticated confirmation, persistence, query, Pack and 375px checks
+with an isolated same-origin PGlite API fixture. It also passes the same authenticated
+browser journey against a newly created disposable local PostgreSQL 16 database. PGlite
+evidence remains distinct from PostgreSQL evidence; neither is a production deployment.
 Browser PGlite proof
 must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence is real;
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,
@@ -192,8 +201,9 @@ the tenant mutation surface:
   business control or backed by browser localStorage;
 - API mode now provides Platform Superadmin login/workspace and exact-user simulation
   with the same authority/audit semantics. The static Demo fixture remains a
-  deterministic entitlement harness, not a browser-login realm; TASK-188 owns the
-  final dual-mode browser/release proof.
+  deterministic entitlement harness, not a browser-login realm; TASK-188 completed the
+  recorded final dual-mode browser and release-gate proof.
 
-The fixture/API and TASK-186 tenant cutover are implementation evidence. TASK-188 still
-owns final dual-mode browser, security and release proof.
+The fixture/API and TASK-186 tenant cutover are implementation evidence. TASK-188 adds
+recorded dual-mode browser, security and release-gate evidence; neither statement
+authorizes a production migration or deployment.

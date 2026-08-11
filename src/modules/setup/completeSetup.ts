@@ -10,6 +10,7 @@ import {
   master,
   role,
   rolePermission,
+  roleResourceScope,
   systemState,
   taxRule,
   userCompany,
@@ -17,7 +18,7 @@ import {
 } from '../../data/schema';
 import { appendAudit } from '../../api/audit';
 import { hashPassword } from '../../auth/password';
-import { PERMISSIONS } from '../../auth/permissions';
+import { COMPANY_OWNER_PERMISSION_KEYS, COMPANY_OWNER_ROLE_TEMPLATE_KEY } from '../../auth/accessCatalog';
 import {
   isValidOrganizationCode,
   isValidUsername,
@@ -194,9 +195,9 @@ export async function completeProductionSetup(
     const [adminRole] = await tx.insert(role).values({
       masterFn,
       companyFn,
-      name: 'Superadmin',
-      isSuperadmin: true,
-      sourceTemplateKey: 'superadmin',
+      name: 'Company Owner',
+      isSuperadmin: false,
+      sourceTemplateKey: COMPANY_OWNER_ROLE_TEMPLATE_KEY,
     }).returning({ roleId: role.roleId });
     const [admin] = await tx.insert(appUser).values({
       masterFn,
@@ -219,12 +220,19 @@ export async function completeProductionSetup(
       assignmentSource: 'onboarding',
     });
     await tx.insert(rolePermission).values(
-      Object.values(PERMISSIONS).map((permissionKey) => ({
+      COMPANY_OWNER_PERMISSION_KEYS.map((permissionKey) => ({
         masterFn,
         roleId: adminRole.roleId,
         permissionKey,
       })),
     );
+    await tx.insert(roleResourceScope).values({
+      masterFn,
+      companyFn,
+      roleId: adminRole.roleId,
+      resourceKey: '*',
+      scope: 'company',
+    });
     await tx.insert(taxRule).values({
       masterFn,
       companyFn,

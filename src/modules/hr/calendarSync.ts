@@ -8,9 +8,12 @@ import {
   calendarOutboundEvent,
   employee,
   leaveRequest,
+  staffAppointment,
+  staffAppointmentOutboundEvent,
 } from '../../data/schema';
+import { expandAppointmentOccurrences } from './recurrence';
 
-export interface CalendarOutboundPayload {
+export interface LeaveCalendarOutboundPayload {
   summary: string;
   startDate: string;
   endDateExclusive: string;
@@ -20,15 +23,33 @@ export interface CalendarOutboundPayload {
   source: 'erp';
 }
 
+export interface StaffAppointmentCalendarOutboundPayload {
+  summary: string;
+  startAt: string;
+  endAt: string;
+  timeZone: string;
+  allDay: boolean;
+  employeeNo: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  source: 'erp';
+  eventKind: 'appointment';
+}
+
+export type CalendarOutboundPayload =
+  | LeaveCalendarOutboundPayload
+  | StaffAppointmentCalendarOutboundPayload;
+
 export interface CalendarOutboundDriver {
   upsert(input: {
     calendarRef: string;
+    provider?: 'generic' | 'google' | 'microsoft';
     externalEventId: string | null;
     idempotencyKey: string;
     event: CalendarOutboundPayload;
   }): Promise<{ externalEventId: string }>;
   cancel(input: {
     calendarRef: string;
+    provider?: 'generic' | 'google' | 'microsoft';
     externalEventId: string | null;
     idempotencyKey: string;
   }): Promise<void>;
@@ -47,6 +68,10 @@ export function createGenericCalendarDriverFromEnv(
   const endpoint = env.CALENDAR_OUTBOUND_URL?.trim();
   if (!endpoint) throw new Error('CALENDAR_OUTBOUND_URL is required.');
   const token = env.CALENDAR_OUTBOUND_TOKEN?.trim();
+  const timeoutMs = Math.min(
+    Math.max(Number(env.CALENDAR_OUTBOUND_TIMEOUT_MS) || 15000, 1000),
+    120000,
+  );
   async function deliver(
     action: 'upsert' | 'cancel',
     body: Record<string, unknown>,
@@ -58,6 +83,7 @@ export function createGenericCalendarDriverFromEnv(
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ action, ...body }),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) {
       throw new Error(`Calendar outbound endpoint returned HTTP ${response.status}.`);
@@ -102,6 +128,9 @@ export async function createCalendarOutboundConnectionWithin(
 ) {
   const name = input.name.trim();
   const calendarRef = input.calendarRef.trim();
+  if (!['generic', 'google', 'microsoft'].includes(input.provider)) {
+    throw new Error('Calendar provider must be generic, google or microsoft.');
+  }
   if (name.length < 2 || calendarRef.length < 2) {
     throw new Error('Calendar connection name and reference are required.');
   }
@@ -172,7 +201,7 @@ export async function enqueueLeaveCalendarSyncWithin(
         ? 'changed'
         : 'approved'
     : input.eventType;
-  const payload: CalendarOutboundPayload = {
+  const payload: LeaveCalendarOutboundPayload = {
     summary: `${source.employeeName} · Unavailable`,
     startDate: source.startDate,
     endDateExclusive: addDays(source.endDate, 1),
@@ -336,6 +365,7 @@ export async function processCalendarOutboundBatch(
       if (row.eventType !== 'cancelled') {
         const result = await driver.upsert({
           calendarRef: row.calendarRef,
+          provider: row.provider as 'generic' | 'google' | 'microsoft',
           externalEventId,
           idempotencyKey: row.eventKey,
           event: row.payload as CalendarOutboundPayload,
@@ -344,6 +374,7 @@ export async function processCalendarOutboundBatch(
       } else {
         await driver.cancel({
           calendarRef: row.calendarRef,
+          provider: row.provider as 'generic' | 'google' | 'microsoft',
           externalEventId,
           idempotencyKey: row.eventKey,
         });
@@ -375,6 +406,285 @@ export async function processCalendarOutboundBatch(
       }).where(and(
         eq(calendarOutboundEvent.id, row.id),
         eq(calendarOutboundEvent.lockedBy, workerId),
+      ));
+      failed += 1;
+    }
+  }
+  return { claimed: rows.length, delivered, failed, superseded };
+}
+
+type StaffAppointmentEventType = 'created' | 'changed' | 'cancelled';
+
+function appointmentEventTypeForSource(
+  source: { status: string; syncToExternal: boolean },
+  requested: StaffAppointmentEventType,
+): boolean {
+  // Opting an appointment out of external sync must also remove the external
+  // event. The worker later validates the exact revision before cancelling.
+  if (requested === 'cancelled') return source.status === 'cancelled' || !source.syncToExternal;
+  return source.status !== 'cancelled' && source.syncToExternal;
+}
+
+/** Queue the current appointment projection for every enabled connection. The
+ * worker will re-read the appointment and only deliver the current revision. */
+export async function enqueueStaffAppointmentCalendarSyncWithin(
+  exec: DB,
+  scope: Scope,
+  input: { appointmentId: number; eventType: StaffAppointmentEventType },
+  now = new Date(),
+) {
+  const [source] = await exec.select({
+    id: staffAppointment.id,
+    employeeId: staffAppointment.employeeId,
+    revisionNo: staffAppointment.recordVersion,
+    status: staffAppointment.status,
+    syncToExternal: staffAppointment.syncToExternal,
+    title: staffAppointment.title,
+    startAt: staffAppointment.startAt,
+    endAt: staffAppointment.endAt,
+    timeZone: staffAppointment.timeZone,
+    recurrenceRule: staffAppointment.recurrenceRule,
+    allDay: staffAppointment.allDay,
+    employeeNo: employee.employeeNo,
+    employeeName: employee.fullName,
+  }).from(staffAppointment).innerJoin(employee, eq(employee.id, staffAppointment.employeeId))
+    .where(and(
+      eq(staffAppointment.id, input.appointmentId),
+      eq(staffAppointment.masterFn, scope.masterFn),
+      eq(staffAppointment.companyFn, scope.companyFn),
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+    )).limit(1);
+  if (!source) throw new Error('Appointment is unavailable for calendar sync.');
+  if (!appointmentEventTypeForSource(source, input.eventType)) {
+    return { queued: 0, eventIds: [] as number[] };
+  }
+  const connections = await exec.select().from(calendarOutboundConnection).where(and(
+    eq(calendarOutboundConnection.masterFn, scope.masterFn),
+    eq(calendarOutboundConnection.companyFn, scope.companyFn),
+    eq(calendarOutboundConnection.isEnabled, true),
+  )).orderBy(asc(calendarOutboundConnection.id));
+  if (!connections.length) return { queued: 0, eventIds: [] as number[] };
+
+  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const to = new Date(now.getTime() + 93 * 24 * 60 * 60 * 1000);
+  const occurrences = expandAppointmentOccurrences({
+    startAt: source.startAt,
+    endAt: source.endAt,
+    timeZone: source.timeZone,
+    recurrenceRule: source.recurrenceRule,
+    from,
+    to,
+  });
+  const eventIds: number[] = [];
+  for (const connection of connections) {
+    for (const occurrence of occurrences) {
+      const eventKey = [
+        'calendar', connection.id, 'appointment', source.id,
+        'occurrence', occurrence.occurrenceStartAt,
+        'revision', source.revisionNo, input.eventType,
+      ].join(':');
+      const payload: StaffAppointmentCalendarOutboundPayload = {
+        summary: `${source.employeeName} · ${source.title}`,
+        startAt: occurrence.startAt.toISOString(),
+        endAt: occurrence.endAt.toISOString(),
+        timeZone: source.timeZone,
+        allDay: source.allDay,
+        employeeNo: source.employeeNo,
+        status: source.status as StaffAppointmentCalendarOutboundPayload['status'],
+        source: 'erp',
+        eventKind: 'appointment',
+      };
+      const [created] = await exec.insert(staffAppointmentOutboundEvent).values({
+        ...scope,
+        connectionId: connection.id,
+        appointmentId: source.id,
+        appointmentRevisionNo: source.revisionNo,
+        occurrenceStartAt: occurrence.startAt,
+        eventType: input.eventType,
+        eventKey,
+        payload,
+        availableAt: now,
+      }).onConflictDoNothing({
+        target: [
+          staffAppointmentOutboundEvent.masterFn,
+          staffAppointmentOutboundEvent.companyFn,
+          staffAppointmentOutboundEvent.eventKey,
+        ],
+      }).returning({ id: staffAppointmentOutboundEvent.id });
+      if (created) eventIds.push(created.id);
+    }
+  }
+  return { queued: eventIds.length, eventIds };
+}
+
+async function claimStaffAppointmentCalendarBatch(
+  db: DB,
+  workerId: string,
+  batchSize: number,
+  now: Date,
+  leaseMs: number,
+) {
+  const expiredLease = new Date(now.getTime() - leaseMs);
+  return db.transaction(async (tx) => {
+    const rows = await tx.select({
+      id: staffAppointmentOutboundEvent.id,
+      masterFn: staffAppointmentOutboundEvent.masterFn,
+      companyFn: staffAppointmentOutboundEvent.companyFn,
+      connectionId: staffAppointmentOutboundEvent.connectionId,
+      appointmentId: staffAppointmentOutboundEvent.appointmentId,
+      revisionNo: staffAppointmentOutboundEvent.appointmentRevisionNo,
+      occurrenceStartAt: staffAppointmentOutboundEvent.occurrenceStartAt,
+      eventType: staffAppointmentOutboundEvent.eventType,
+      eventKey: staffAppointmentOutboundEvent.eventKey,
+      payload: staffAppointmentOutboundEvent.payload,
+      attempts: staffAppointmentOutboundEvent.attempts,
+      provider: calendarOutboundConnection.provider,
+      calendarRef: calendarOutboundConnection.calendarRef,
+    }).from(staffAppointmentOutboundEvent)
+      .innerJoin(calendarOutboundConnection, and(
+        eq(calendarOutboundConnection.id, staffAppointmentOutboundEvent.connectionId),
+        eq(calendarOutboundConnection.masterFn, staffAppointmentOutboundEvent.masterFn),
+        eq(calendarOutboundConnection.companyFn, staffAppointmentOutboundEvent.companyFn),
+      ))
+      .where(and(
+        inArray(staffAppointmentOutboundEvent.status, ['pending', 'failed']),
+        eq(calendarOutboundConnection.isEnabled, true),
+        lte(staffAppointmentOutboundEvent.availableAt, now),
+        or(
+          isNull(staffAppointmentOutboundEvent.lockedAt),
+          lt(staffAppointmentOutboundEvent.lockedAt, expiredLease),
+        ),
+      ))
+      .orderBy(asc(staffAppointmentOutboundEvent.id))
+      .limit(batchSize)
+      .for('update', { skipLocked: true });
+    if (!rows.length) return rows;
+    await tx.update(staffAppointmentOutboundEvent).set({
+      lockedAt: now,
+      lockedBy: workerId,
+      lastAttemptAt: now,
+      attempts: sql`${staffAppointmentOutboundEvent.attempts} + 1`,
+      updatedAt: now,
+    }).where(inArray(staffAppointmentOutboundEvent.id, rows.map(row => row.id)));
+    return rows;
+  });
+}
+
+async function currentStaffAppointmentSource(db: DB, appointmentId: number, scope: Scope) {
+  const [row] = await db.select({
+    status: staffAppointment.status,
+    recordVersion: staffAppointment.recordVersion,
+    syncToExternal: staffAppointment.syncToExternal,
+  }).from(staffAppointment).where(and(
+    eq(staffAppointment.id, appointmentId),
+    eq(staffAppointment.masterFn, scope.masterFn),
+    eq(staffAppointment.companyFn, scope.companyFn),
+  )).limit(1);
+  return row;
+}
+
+async function priorStaffAppointmentExternalEventId(
+  db: DB,
+  connectionId: number,
+  appointmentId: number,
+  occurrenceStartAt: Date,
+  scope: Scope,
+) {
+  const [row] = await db.select({
+    externalEventId: staffAppointmentOutboundEvent.externalEventId,
+  }).from(staffAppointmentOutboundEvent).where(and(
+    eq(staffAppointmentOutboundEvent.masterFn, scope.masterFn),
+    eq(staffAppointmentOutboundEvent.companyFn, scope.companyFn),
+    eq(staffAppointmentOutboundEvent.connectionId, connectionId),
+    eq(staffAppointmentOutboundEvent.appointmentId, appointmentId),
+    eq(staffAppointmentOutboundEvent.occurrenceStartAt, occurrenceStartAt),
+    inArray(staffAppointmentOutboundEvent.eventType, ['created', 'changed']),
+    eq(staffAppointmentOutboundEvent.status, 'delivered'),
+  )).orderBy(desc(staffAppointmentOutboundEvent.id)).limit(1);
+  return row?.externalEventId ?? null;
+}
+
+export async function processStaffAppointmentOutboundBatch(
+  db: DB,
+  drivers: Partial<Record<'generic' | 'google' | 'microsoft', CalendarOutboundDriver>>,
+  options: CalendarWorkerOptions = {},
+) {
+  const now = options.now ?? new Date();
+  const workerId = options.workerId ?? `appointment-calendar-${Date.now()}`;
+  const rows = await claimStaffAppointmentCalendarBatch(
+    db,
+    workerId,
+    Math.min(Math.max(options.batchSize ?? 25, 1), 100),
+    now,
+    options.leaseMs ?? 5 * 60 * 1000,
+  );
+  let delivered = 0;
+  let failed = 0;
+  let superseded = 0;
+  for (const row of rows) {
+    const scope = { masterFn: row.masterFn, companyFn: row.companyFn };
+    const current = await currentStaffAppointmentSource(db, row.appointmentId, scope);
+    const isCurrent = row.eventType === 'cancelled'
+      ? current?.recordVersion === row.revisionNo
+        && (current.status === 'cancelled' || current.syncToExternal === false)
+      : current?.status !== 'cancelled'
+        && current?.syncToExternal === true
+        && current.recordVersion === row.revisionNo;
+    if (!isCurrent) {
+      await db.update(staffAppointmentOutboundEvent).set({
+        status: 'superseded', supersededAt: now, lockedAt: null, lockedBy: null,
+        lastError: null, updatedAt: now,
+      }).where(and(
+        eq(staffAppointmentOutboundEvent.id, row.id),
+        eq(staffAppointmentOutboundEvent.lockedBy, workerId),
+      ));
+      superseded += 1;
+      continue;
+    }
+    try {
+      const driver = drivers[row.provider as keyof typeof drivers];
+      if (!driver) throw new Error(`Calendar provider is not configured: ${row.provider}`);
+      const externalEventId = await priorStaffAppointmentExternalEventId(
+        db, row.connectionId, row.appointmentId, row.occurrenceStartAt, scope,
+      );
+      let deliveredExternalId = externalEventId;
+      if (row.eventType !== 'cancelled') {
+        const result = await driver.upsert({
+          calendarRef: row.calendarRef,
+          provider: row.provider as 'generic' | 'google' | 'microsoft',
+          externalEventId,
+          idempotencyKey: row.eventKey,
+          event: row.payload as CalendarOutboundPayload,
+        });
+        deliveredExternalId = result.externalEventId;
+      } else {
+        await driver.cancel({
+          calendarRef: row.calendarRef,
+          provider: row.provider as 'generic' | 'google' | 'microsoft',
+          externalEventId,
+          idempotencyKey: row.eventKey,
+        });
+      }
+      await db.update(staffAppointmentOutboundEvent).set({
+        status: 'delivered', externalEventId: deliveredExternalId, deliveredAt: now,
+        lockedAt: null, lockedBy: null, lastError: null, updatedAt: now,
+      }).where(and(
+        eq(staffAppointmentOutboundEvent.id, row.id),
+        eq(staffAppointmentOutboundEvent.lockedBy, workerId),
+      ));
+      delivered += 1;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const attempt = row.attempts + 1;
+      const delayMs = Math.min(60 * 60 * 1000, 2 ** Math.min(attempt, 10) * 1000);
+      await db.update(staffAppointmentOutboundEvent).set({
+        status: 'failed', lockedAt: null, lockedBy: null,
+        availableAt: new Date(now.getTime() + delayMs),
+        lastError: message.slice(0, 1000), updatedAt: now,
+      }).where(and(
+        eq(staffAppointmentOutboundEvent.id, row.id),
+        eq(staffAppointmentOutboundEvent.lockedBy, workerId),
       ));
       failed += 1;
     }

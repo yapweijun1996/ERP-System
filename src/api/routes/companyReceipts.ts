@@ -74,11 +74,11 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   async function requireReceiptMutationAccess(
     req: import('express').Request,
     res: import('express').Response,
+    permission: string,
   ) {
     const session = await requireSession(db, req, res);
     if (!session) return null;
-    /* TASK-182 replaces this compatibility mutation permission atomically. */
-    if (!await hasPermission(db, session, PERMISSIONS.employeeReceiptsWrite)) {
+    if (!await hasPermission(db, session, permission)) {
       apiError(res, 403, 'permission_denied', 'You cannot access Company Receipts.');
       return null;
     }
@@ -170,7 +170,9 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.get('/confirmations/:documentVersionId', async (req, res) => {
-    const session = await requireReceiptMutationAccess(req, res);
+    const session = await requireReceiptMutationAccess(
+      req, res, PERMISSIONS.expensesCompanyReceiptsCreate,
+    );
     if (!session) return;
     const documentVersionId = positiveId(req.params.documentVersionId);
     if (!documentVersionId) {
@@ -346,7 +348,9 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.post('/', async (req, res) => {
-    const session = await requireReceiptMutationAccess(req, res);
+    const session = await requireReceiptMutationAccess(
+      req, res, PERMISSIONS.expensesCompanyReceiptsCreate,
+    );
     if (!session) return;
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
@@ -375,7 +379,9 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.patch('/:receiptId', async (req, res) => {
-    const session = await requireReceiptMutationAccess(req, res);
+    const session = await requireReceiptMutationAccess(
+      req, res, PERMISSIONS.expensesCompanyReceiptsEdit,
+    );
     if (!session) return;
     const receiptId = positiveId(req.params.receiptId);
     if (!receiptId) {
@@ -412,7 +418,9 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.post('/:receiptId/actions/void', async (req, res) => {
-    const session = await requireReceiptMutationAccess(req, res);
+    const session = await requireReceiptMutationAccess(
+      req, res, PERMISSIONS.expensesCompanyReceiptsVoid,
+    );
     if (!session) return;
     const receiptId = positiveId(req.params.receiptId);
     if (!receiptId) {

@@ -25,7 +25,7 @@ import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import {
-  ROLE_TEMPLATES, roleTemplate, type DataScope,
+  COMPANY_OWNER_ROLE_TEMPLATE_KEY, ROLE_TEMPLATES, isCompanyOwnerRole, roleTemplate, type DataScope,
 } from './accessCatalog';
 import { isAssignableTenantPermission } from './permissionRegistry';
 import type { SessionData } from './session';
@@ -54,22 +54,29 @@ export async function setUserActiveWithin(
     throw new AuthLifecycleError(404, 'user_not_found', 'User not found.');
   }
   if (!isActive) {
-    // A tenant must never end up with zero working superadmins -- role.isSuperadmin
-    // bypasses rolePermission entirely, so losing the last one means nobody left who
-    // can manage users/roles at all, including re-enabling this same account.
-    const [targetSuperadminGrant] = await exec.select({ roleId: role.roleId })
+    // A tenant must never end up with zero working Company Owners. The legacy
+    // is_superadmin flag is included only while the expand/backfill migration
+    // is being rolled out; it no longer bypasses role_permission.
+    const [targetOwnerGrant] = await exec.select({
+      roleId: role.roleId,
+      isSuperadmin: role.isSuperadmin,
+      sourceTemplateKey: role.sourceTemplateKey,
+    })
       .from(userCompanyRole)
       .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
       .where(and(
         eq(userCompanyRole.userId, userId),
         eq(userCompanyRole.companyFn, session.activeCompanyFn),
         eq(role.masterFn, session.masterFn),
-        eq(role.isSuperadmin, true),
+        or(
+          eq(role.isSuperadmin, true),
+          eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
+        ),
         activeRoleAssignmentCondition(now),
       ))
       .limit(1);
-    if (targetSuperadminGrant) {
-      const [otherActiveSuperadmin] = await exec.select({ userId: appUser.userId })
+    if (targetOwnerGrant) {
+      const [otherActiveOwner] = await exec.select({ userId: appUser.userId })
         .from(appUser)
         .innerJoin(userCompanyRole, eq(userCompanyRole.userId, appUser.userId))
         .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
@@ -78,12 +85,15 @@ export async function setUserActiveWithin(
           eq(appUser.isActive, true),
           eq(userCompanyRole.companyFn, session.activeCompanyFn),
           eq(role.masterFn, session.masterFn),
-          eq(role.isSuperadmin, true),
+          or(
+            eq(role.isSuperadmin, true),
+            eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
+          ),
           activeRoleAssignmentCondition(now),
           ne(appUser.userId, userId),
         ))
         .limit(1);
-      if (!otherActiveSuperadmin) {
+      if (!otherActiveOwner) {
         throw new AuthLifecycleError(
           400,
           'cannot_disable_last_superadmin',
@@ -181,6 +191,7 @@ export async function setUserRolesWithin(
     roleId: role.roleId,
     name: role.name,
     isSuperadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
   }).from(role).where(and(
     eq(role.masterFn, session.masterFn),
     or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
@@ -194,6 +205,7 @@ export async function setUserRolesWithin(
     roleId: role.roleId,
     name: role.name,
     isSuperadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
     managedBySystem: userCompanyRole.managedBySystem,
   }).from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
@@ -216,10 +228,12 @@ export async function setUserRolesWithin(
       { roleIds: 'Update the employee reporting line before removing this role.' },
     );
   }
-  const removesSuperadmin = before.some((grant) => grant.isSuperadmin)
-    && !selectedRoles.some((grant) => grant.isSuperadmin);
-  if (removesSuperadmin) {
-    const [otherActiveSuperadmin] = await exec.select({ userId: appUser.userId })
+  const hasOwnerGrant = (grant: { isSuperadmin: boolean; sourceTemplateKey: string | null }) =>
+    grant.isSuperadmin || isCompanyOwnerRole(grant.sourceTemplateKey);
+  const removesOwner = before.some(hasOwnerGrant)
+    && !selectedRoles.some(hasOwnerGrant);
+  if (removesOwner) {
+    const [otherActiveOwner] = await exec.select({ userId: appUser.userId })
       .from(appUser)
       .innerJoin(userCompanyRole, eq(userCompanyRole.userId, appUser.userId))
       .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
@@ -228,12 +242,15 @@ export async function setUserRolesWithin(
         eq(appUser.isActive, true),
         eq(userCompanyRole.companyFn, session.activeCompanyFn),
         eq(role.masterFn, session.masterFn),
-        eq(role.isSuperadmin, true),
+        or(
+          eq(role.isSuperadmin, true),
+          eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
+        ),
         activeRoleAssignmentCondition(now),
         ne(appUser.userId, userId),
       ))
       .limit(1);
-    if (!otherActiveSuperadmin) {
+    if (!otherActiveOwner) {
       throw new AuthLifecycleError(
         400,
         'cannot_remove_last_superadmin',
@@ -362,7 +379,11 @@ export async function setRolePermissionWithin(
   if (!isAssignableTenantPermission(permissionKey)) {
     throw new AuthLifecycleError(400, 'invalid_permission_key', 'Unknown permission key.');
   }
-  const [targetRole] = await exec.select({ roleId: role.roleId, isSuperadmin: role.isSuperadmin })
+  const [targetRole] = await exec.select({
+    roleId: role.roleId,
+    isSuperadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
+  })
     .from(role)
     .where(and(
       eq(role.roleId, roleId),
@@ -373,11 +394,15 @@ export async function setRolePermissionWithin(
   if (!targetRole) {
     throw new AuthLifecycleError(404, 'role_not_found', 'Role not found.');
   }
-  if (targetRole.isSuperadmin) {
+  if (targetRole.isSuperadmin || isCompanyOwnerRole(targetRole.sourceTemplateKey)) {
     throw new AuthLifecycleError(
       400,
-      'superadmin_immutable',
-      'The superadmin role always has full access and cannot be edited.',
+      isCompanyOwnerRole(targetRole.sourceTemplateKey)
+        ? 'company_owner_immutable'
+        : 'superadmin_immutable',
+      isCompanyOwnerRole(targetRole.sourceTemplateKey)
+        ? 'The Company Owner role is system-managed and cannot be edited.'
+        : 'The legacy superadmin role is immutable during migration.',
     );
   }
   const [existing] = await exec.select({ allowed: rolePermission.allowed })
@@ -422,10 +447,11 @@ export async function setRolePermissionWithin(
 }
 
 export function listRoleTemplates() {
-  return ROLE_TEMPLATES.map((template) => ({
+  return ROLE_TEMPLATES.filter((template) => !template.deprecated).map((template) => ({
     key: template.key,
     name: template.name,
     isSuperadmin: template.isSuperadmin === true,
+    immutable: template.immutable === true,
     permissions: [...template.permissions],
     scopes: { ...template.scopes },
   }));
@@ -441,6 +467,20 @@ export async function cloneRoleTemplateWithin(
   const template = roleTemplate(templateKey);
   if (!template) {
     throw new AuthLifecycleError(400, 'invalid_role_template', 'Unknown role template.');
+  }
+  if (template.deprecated) {
+    throw new AuthLifecycleError(
+      400,
+      'invalid_role_template',
+      'The legacy Superadmin template cannot be assigned to a new role.',
+    );
+  }
+  if (template.key === COMPANY_OWNER_ROLE_TEMPLATE_KEY) {
+    throw new AuthLifecycleError(
+      400,
+      'immutable_role_template',
+      'Company Owner is created by tenant setup and cannot be cloned.',
+    );
   }
   const invalidPermission = template.permissions.find((permissionKey) => !isAssignableTenantPermission(permissionKey));
   if (invalidPermission) {
@@ -526,15 +566,27 @@ export async function setRoleResourceScopeWithin(
   if (!resourceKey.trim() || resourceKey.length > 120) {
     throw new AuthLifecycleError(400, 'invalid_resource_key', 'Resource key is required.');
   }
-  const [targetRole] = await exec.select({ id: role.roleId, superadmin: role.isSuperadmin })
+  const [targetRole] = await exec.select({
+    id: role.roleId,
+    superadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
+  })
     .from(role).where(and(
       eq(role.roleId, roleId),
       eq(role.masterFn, session.masterFn),
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
     )).limit(1);
   if (!targetRole) throw new AuthLifecycleError(404, 'role_not_found', 'Role not found.');
-  if (targetRole.superadmin) {
-    throw new AuthLifecycleError(400, 'superadmin_immutable', 'Superadmin scope cannot be edited.');
+  if (targetRole.superadmin || isCompanyOwnerRole(targetRole.sourceTemplateKey)) {
+    throw new AuthLifecycleError(
+      400,
+      isCompanyOwnerRole(targetRole.sourceTemplateKey)
+        ? 'company_owner_immutable'
+        : 'superadmin_immutable',
+      isCompanyOwnerRole(targetRole.sourceTemplateKey)
+        ? 'Company Owner scope is system-managed.'
+        : 'Legacy Superadmin scope cannot be edited.',
+    );
   }
   await exec.insert(roleResourceScope).values({
     masterFn: session.masterFn,

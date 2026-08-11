@@ -10,9 +10,10 @@ SCREENS['leave-approval'] = async function(root){
   const leaveTypeLabel=type=>({
     Annual:s('leaveTypeAnnual'),Medical:s('leaveTypeMedical'),Unpaid:s('leaveTypeUnpaid'),
   }[type]||type||'—');
-  let {employees,leaveRequests}=await prepareHrData();
+  let {employees,leaveRequests,approvalQueue}=await prepareHrData();
   let page=null;
   let busyId=null;
+  let busyAction=null;
   let actionError=null;
   let skipSelectionId=null;
   const isDesktop=()=>!window.matchMedia('(max-width:980px)').matches;
@@ -22,14 +23,33 @@ SCREENS['leave-approval'] = async function(root){
       fullName:s('unknownEmployee'),department:'—',jobTitle:'—',
     };
   }
+  function approvalFor(lv){
+    return approvalQueue.find(item=>String(item.requestId)===String(lv.id))||null;
+  }
+  function visibleLeaveRequests(){
+    // Legacy HR leave records remain actionable through the compatibility
+    // command until TASK-173 migrates every approval-like path to workflow
+    // authority. Governed records still require an active queue assignment.
+    return leaveRequests.filter(row=>row.status!=='pending'||row.legacyPolicy===true||approvalFor(row));
+  }
+  function authorityLabel(approval){
+    const authority=approval&&approval.currentAuthority;
+    if(!authority) return s('hrApprovalTeam');
+    if(authority.type==='permission'){
+      return s('hrApprovalTeam');
+    }
+    return authority.employeeName||authority.employeeNo||s('hrApprovalTeam');
+  }
   async function reload(){
     const fresh=await prepareHrData();
-    employees=fresh.employees; leaveRequests=fresh.leaveRequests;
+    employees=fresh.employees; leaveRequests=fresh.leaveRequests; approvalQueue=fresh.approvalQueue;
   }
   function detailContent(leaveRequest){
     const employee=empOf(leaveRequest);
+    const approval=approvalFor(leaveRequest);
     const pending=leaveRequest.status==='pending';
     const busy=String(busyId)===String(leaveRequest.id);
+    const busyLabel=busyAction==='approve'?s('approve')+'…':busyAction==='reject'?s('reject')+'…':'';
     const error=actionError&&String(actionError.id)===String(leaveRequest.id)
       ?actionError.message:null;
     return `
@@ -50,27 +70,44 @@ SCREENS['leave-approval'] = async function(root){
           <div class="field"><span class="k">${esc(s('fromDate'))}</span><span class="v">${esc(dateValue(leaveRequest.startDate))}</span></div>
           <div class="field"><span class="k">${esc(s('toDate'))}</span><span class="v">${esc(dateValue(leaveRequest.endDate))}</span></div>
           <div class="field"><span class="k">${esc(s('employeeReason'))}</span><span class="v">${leaveRequest.reason?esc(leaveRequest.reason):'—'}</span></div>
+          ${approval?`<div class="field"><span class="k">${esc(s('currentApprover'))}</span><span class="v">${esc(authorityLabel(approval))}</span></div>
+          <div class="field"><span class="k">${esc(s('approvalStep'))}</span><span class="v">${esc(approval.stepLabel||'—')}</span></div>`:''}
           ${leaveRequest.status==='rejected'?`<div class="field"><span class="k">${esc(s('hrDecisionReason'))}</span><span class="v">${leaveRequest.rejectionReason?esc(leaveRequest.rejectionReason):'—'}</span></div>`:''}
           ${leaveRequest.status!=='pending'?`<div class="field"><span class="k">${esc(s('decidedAt'))}</span><span class="v">${leaveRequest.decidedAt?esc(dateValue(leaveRequest.decidedAt)):'—'}</span></div>`:''}
         </div>
       </div>
       ${pending?`<div class="set-savebar" data-leave-actions>
         <div class="grow"></div>
-        ${btn(s('reject'),{icon:'x',cls:'danger',sm:false,attrs:`data-leave-action="reject"${busy?' disabled':''}`})}
-        ${btn(s('approve'),{icon:'check',cls:'primary',sm:false,attrs:`data-leave-action="approve"${busy?' disabled':''}`})}
+        ${busy?`<span class="leave-action-progress" role="status" aria-live="polite">${ic('refresh')}<span>${esc(busyLabel)}</span></span>`:''}
+        ${btn(busy&&busyAction==='reject'?busyLabel:s('reject'),{icon:'x',cls:'danger',sm:false,attrs:`data-leave-action="reject"${busy?' disabled aria-busy="true"':''}`})}
+        ${btn(busy&&busyAction==='approve'?busyLabel:s('approve'),{icon:'check',cls:'primary',sm:false,attrs:`data-leave-action="approve"${busy?' disabled aria-busy="true"':''}`})}
       </div>`:''}`;
   }
 
   async function decide(leaveRequest,action,payload){
+    if(busyId!=null) return;
     busyId=leaveRequest.id;
+    busyAction=action;
     actionError=null;
     page.render();
+    const governed=leaveRequest.legacyPolicy===false;
+    const actionPayload=governed
+      ?{
+        expectedVersion:Number(leaveRequest.version),
+        reason:typeof payload?.reason==='string'?payload.reason:'',
+      }
+      :action==='reject'
+        ?{rejectionReason:typeof payload?.rejectionReason==='string'?payload.rejectionReason:''}
+        :{};
+    const idempotencyKey=`hr-leave-${leaveRequest.id}-${action}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     try{
-      await window.ErpSystemData.action('hr/leave-requests',leaveRequest.id,action,payload);
+      await window.ErpSystemData.action('hr/leave-requests',leaveRequest.id,action,actionPayload,idempotencyKey);
       if(!routeStillActive()) return;
       await reload();
       if(!routeStillActive()) return;
+      if(typeof refreshApprovalBadges==='function') await refreshApprovalBadges();
       busyId=null;
+      busyAction=null;
       actionError=null;
       skipSelectionId=leaveRequest.id;
       toast(
@@ -78,10 +115,16 @@ SCREENS['leave-approval'] = async function(root){
         action==='approve'?'ok':'danger',
       );
       page.setFilter(page.getFilter());
-    }catch{
+    }catch(error){
       if(!routeStillActive()) return;
       busyId=null;
-      actionError={id:leaveRequest.id,message:s('actionError')};
+      busyAction=null;
+      actionError={
+        id:leaveRequest.id,
+        message:error&&typeof error.message==='string'&&error.message.trim()
+          ?error.message
+          :s('actionError'),
+      };
       page.render();
     }
   }
@@ -91,7 +134,7 @@ SCREENS['leave-approval'] = async function(root){
     route:'leave-approval',
     title:s('leaveApprovalTitle'),
     description:s('leaveApprovalDescription'),
-    rows:()=>leaveRequests,
+    rows:visibleLeaveRequests,
     rowId:leaveRequest=>leaveRequest.id,
     initialFilter:'pending',
     filters:[
@@ -104,12 +147,12 @@ SCREENS['leave-approval'] = async function(root){
     kpis:()=>[
       {
         label:s('kpiPendingRequests'),
-        value:leaveRequests.filter(row=>row.status==='pending').length,
+        value:visibleLeaveRequests().filter(row=>row.status==='pending').length,
         filter:'pending',
       },
       {
         label:s('kpiPendingDays'),
-        value:leaveRequests.filter(row=>row.status==='pending').reduce((sum,row)=>sum+Number(row.days||0),0),
+        value:visibleLeaveRequests().filter(row=>row.status==='pending').reduce((sum,row)=>sum+Number(row.days||0),0),
         filter:'pending',
       },
       {
@@ -148,6 +191,15 @@ SCREENS['leave-approval'] = async function(root){
       },
       {label:s('colDays'),align:'r',w:'70px',render:leaveRequest=>`<span class="tnum">${leaveRequest.days}</span>`},
       {
+        label:s('currentApprover'),align:'l',w:'minmax(150px,1.3fr)',
+        render:leaveRequest=>{
+          const approval=approvalFor(leaveRequest);
+          return approval
+            ?`<div class="cellsub"><b>${esc(authorityLabel(approval))}</b><small>${esc(approval.stepLabel||'—')}</small></div>`
+            :'—';
+        },
+      },
+      {
         label:t('col.status'),align:'l',
         render:leaveRequest=>cap(leaveStatusLabel(leaveRequest.status),leaveStatusTone[leaveRequest.status]||'neutral'),
       },
@@ -160,7 +212,7 @@ SCREENS['leave-approval'] = async function(root){
     detailPane:{
       rowLabel:leaveRequest=>`${t('common.open')} ${empOf(leaveRequest).fullName}`,
       initialSelectedId:()=>isDesktop()
-        ?leaveRequests.find(row=>row.status==='pending')?.id??null
+        ?visibleLeaveRequests().find(row=>row.status==='pending')?.id??null
         :null,
       selectionOnFilter:rows=>{
         const skipped=skipSelectionId;
@@ -173,7 +225,7 @@ SCREENS['leave-approval'] = async function(root){
       afterRender:({detailRoot,row})=>{
         if(!detailRoot||!row) return;
         detailRoot.querySelector('[data-leave-action="approve"]')?.addEventListener('click',()=>{
-          decide(row,'approve',{});
+          decide(row,'approve',{reason:''});
         });
         detailRoot.querySelector('[data-leave-action="reject"]')?.addEventListener('click',()=>{
           appModal({
@@ -186,7 +238,7 @@ SCREENS['leave-approval'] = async function(root){
             const reason=$('#lvRejectReason').value.trim();
             if(!requireField(reason,s('rejectReasonRequired'),'#lvRejectReason')) return;
             closeModal();
-            decide(row,'reject',{rejectionReason:reason});
+            decide(row,'reject',{rejectionReason:reason,reason});
           });
         });
       },

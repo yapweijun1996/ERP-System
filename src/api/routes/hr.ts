@@ -13,15 +13,22 @@ import {
   offboardEmployeeAccount,
   readEmployeeAccount,
 } from '../../modules/hr/employeeAccount';
+import {
+  EmployeeCreateError,
+  EmployeeUpdateError,
+  InvalidEmployeeStateError,
+  updateEmployeeWithin,
+} from '../../modules/hr/employee';
+import { ManagerRoleSyncError } from '../../modules/hr/managerRole';
 import { PERMISSIONS, hasPermission } from '../../auth/permissions';
-import { appendAudit } from '../audit';
+import { appendAudit, listEntityAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import {
   beginIdempotentRequest,
   completeIdempotentRequest,
 } from '../idempotency';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import { employee } from '../../data/schema';
+import { calendarOutboundConnection, employee } from '../../data/schema';
 import {
   LeaveApplicationError,
   createLeaveDraftWithin,
@@ -30,6 +37,7 @@ import {
   readGovernedLeaveWithin,
   voidLeaveApplicationWithin,
 } from '../../modules/hr/leaveApplication';
+import { listMyLeaveApprovalsWithin } from '../../modules/hr/leaveApproval';
 import {
   LeaveBalanceError,
   projectEmployeeAnnualLeaveWithin,
@@ -44,6 +52,41 @@ import {
   updateStaffOnboardingDraft,
   type StaffOnboardingDraftInput,
 } from '../../modules/hr/staffOnboarding';
+import {
+  HolidayCalendarError,
+  listCalendarHolidaysWithin,
+} from '../../modules/hr/holidayCalendar';
+import {
+  LeaveApprovalWorkflowError,
+  confirmLeaveApprovalWorkflowWithin,
+  createLeaveApprovalWorkflowDraftWithin,
+  listLeaveApprovalWorkflowsWithin,
+  retireLeaveApprovalWorkflowWithin,
+  type LeaveApprovalWorkflowInput,
+} from '../../modules/hr/leaveApprovalWorkflow';
+import {
+  createCalendarHolidayDraftWithin,
+  decideCalendarHolidayWithin,
+  submitCalendarHolidayWithin,
+  updateCalendarHolidayDraftWithin,
+  type ManagedHolidayInput,
+} from '../../modules/hr/holidayManagement';
+import {
+  cancelStaffAppointmentWithin,
+  createStaffAppointmentWithin,
+  StaffAppointmentError,
+  updateStaffAppointmentWithin,
+  type StaffAppointmentInput,
+} from '../../modules/hr/appointment';
+import {
+  createCalendarOutboundConnectionWithin,
+  enqueueStaffAppointmentCalendarSyncWithin,
+} from '../../modules/hr/calendarSync';
+import {
+  listStaffCalendarWithin,
+  StaffCalendarError,
+  type StaffCalendarQuery,
+} from '../../modules/hr/staffCalendar';
 
 export interface HrRouterOptions {
   tokenEncryptionKey?: Buffer;
@@ -58,11 +101,35 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
   }
 
   function handleError(res: import('express').Response, error: unknown): void {
+    if (error instanceof EmployeeCreateError || error instanceof EmployeeUpdateError) {
+      apiError(res, error.status, error.code, error.message, error.fieldErrors);
+      return;
+    }
+    if (error instanceof InvalidEmployeeStateError || error instanceof ManagerRoleSyncError) {
+      apiError(res, 422, 'validation_failed', error.message);
+      return;
+    }
     if (error instanceof EmployeeAccountError) {
       apiError(res, error.status, error.code, error.message, error.fieldErrors);
       return;
     }
     if (error instanceof StaffOnboardingError) {
+      apiError(res, error.status, error.code, error.message, error.fieldErrors);
+      return;
+    }
+    if (error instanceof HolidayCalendarError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
+    if (error instanceof StaffAppointmentError) {
+      apiError(res, error.status, error.code, error.message, error.details);
+      return;
+    }
+    if (error instanceof StaffCalendarError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
+    if (error instanceof LeaveApprovalWorkflowError) {
       apiError(res, error.status, error.code, error.message, error.fieldErrors);
       return;
     }
@@ -152,6 +219,598 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       eq(employee.userId, userId),
     )).limit(1);
     return { userId, employeeId: linked?.id ?? null, canManage: true };
+  }
+
+  router.patch('/employees/:employeeId', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const employeeId = employeeIdParam(req.params.employeeId);
+    if (!employeeId) {
+      apiError(res, 400, 'invalid_id', 'employeeId must be a positive integer.');
+      return;
+    }
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      apiError(res, 400, 'invalid_request', 'A JSON object body is required.');
+      return;
+    }
+    const forbidden = [
+      'id', 'masterFn', 'companyFn', 'userId', 'isActive', 'createdAt', 'updatedAt',
+    ].find((field) => field in body);
+    if (forbidden) {
+      apiError(res, 400, 'immutable_field', `${forbidden} cannot be changed from the employee profile.`);
+      return;
+    }
+    const rawIfMatch = req.header('if-match')?.trim() ?? '';
+    const expectedUpdatedAt = rawIfMatch
+      .replace(/^W\//i, '')
+      .replace(/^"|"$/g, '');
+    if (!expectedUpdatedAt) {
+      apiError(res, 428, 'if_match_required', 'If-Match is required when updating an employee profile.');
+      return;
+    }
+    const rawManagerId = (body as Record<string, unknown>).managerId;
+    const managerId = rawManagerId == null || rawManagerId === '' ? null : Number(rawManagerId);
+    if (managerId != null && !Number.isSafeInteger(managerId)) {
+      apiError(res, 422, 'validation_failed', 'managerId must be a valid employee id.');
+      return;
+    }
+    const scope = {
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+    };
+    const input = {
+      employeeNo: typeof body.employeeNo === 'string' ? body.employeeNo : '',
+      fullName: typeof body.fullName === 'string' ? body.fullName : '',
+      email: typeof body.email === 'string' ? body.email : '',
+      phone: body.phone == null ? null : typeof body.phone === 'string' ? body.phone : '',
+      department: typeof body.department === 'string' ? body.department : '',
+      jobTitle: typeof body.jobTitle === 'string' ? body.jobTitle : '',
+      employmentType: typeof body.employmentType === 'string' ? body.employmentType : '',
+      managerId,
+      startDate: typeof body.startDate === 'string' ? body.startDate : '',
+      annualLeaveDays: Number(body.annualLeaveDays),
+      baseSalary: typeof body.baseSalary === 'number'
+        ? String(body.baseSalary)
+        : typeof body.baseSalary === 'string' ? body.baseSalary : '',
+      expectedUpdatedAt,
+      actorUserId: session.userId,
+      requestId: context(res).requestId,
+    };
+    try {
+      const updated = await withTenantTransaction(db, scope, async (tx) => {
+        const result = await updateEmployeeWithin(tx, scope, employeeId, input);
+        const auditRow = (row: typeof result.employee) => ({
+          employeeNo: row.employeeNo,
+          fullName: row.fullName,
+          email: row.email,
+          phone: row.phone,
+          department: row.department,
+          jobTitle: row.jobTitle,
+          employmentType: row.employmentType,
+          managerId: row.managerId,
+          startDate: row.startDate,
+          annualLeaveDays: row.annualLeaveDays,
+          baseSalary: row.baseSalary,
+          userId: row.userId,
+          isActive: row.isActive,
+        });
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'hr/employees',
+          entityId: employeeId,
+          action: 'update',
+          before: auditRow(result.before),
+          after: auditRow(result.employee),
+        });
+        return result.employee;
+      });
+      res.json({ data: updated, meta: { concurrency: 'updated_at' } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/employees/:employeeId/history', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const employeeId = employeeIdParam(req.params.employeeId);
+    if (!employeeId) {
+      apiError(res, 400, 'invalid_id', 'employeeId must be a positive integer.');
+      return;
+    }
+    const limit = req.query.limit == null ? 50 : Number(req.query.limit);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      apiError(res, 400, 'invalid_query', 'limit must be an integer between 1 and 100.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const visible = await withTenantTransaction(db, scope, (tx) => tx.select({ id: employee.id })
+        .from(employee).where(and(
+          eq(employee.id, employeeId),
+          eq(employee.masterFn, scope.masterFn),
+          eq(employee.companyFn, scope.companyFn),
+        )).limit(1));
+      if (!visible[0]) {
+        apiError(res, 404, 'employee_not_found', 'Employee not found in the active company.');
+        return;
+      }
+      const data = await withTenantTransaction(db, scope, (tx) => listEntityAudit(
+        tx, scope, 'hr/employees', employeeId, limit,
+      ));
+      res.json({ data, meta: { entity: 'hr/employees', entityId: employeeId } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/calendar/holidays', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const from = typeof req.query.from === 'string' ? req.query.from : '';
+    const to = typeof req.query.to === 'string' ? req.query.to : '';
+    const scope = {
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+    };
+    try {
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        listCalendarHolidaysWithin(tx, scope, { from, to }));
+      res.json({
+        data,
+        meta: {
+          source: 'calendar_holiday',
+          tenantScoped: true,
+          limit: 366,
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/calendar/staff', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const from = typeof req.query.from === 'string' ? req.query.from : '';
+    const to = typeof req.query.to === 'string' ? req.query.to : '';
+    const rawEmployeeId = typeof req.query.employeeId === 'string' ? req.query.employeeId : '';
+    const employeeId = rawEmployeeId ? employeeIdParam(rawEmployeeId) : null;
+    if (rawEmployeeId && !employeeId) {
+      apiError(res, 400, 'invalid_id', 'employeeId must be a positive integer.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const response = await withTenantTransaction(db, scope, async (tx) => {
+        const employees = await tx.select({ id: employee.id }).from(employee).where(and(
+          eq(employee.masterFn, scope.masterFn),
+          eq(employee.companyFn, scope.companyFn),
+          eq(employee.isActive, true),
+        ));
+        const data = await listStaffCalendarWithin(tx, scope, employees.map(row => row.id), {
+          from,
+          to,
+          employeeId,
+          department: typeof req.query.department === 'string' ? req.query.department : null,
+          status: typeof req.query.status === 'string'
+            ? req.query.status as StaffCalendarQuery['status']
+            : 'all',
+        });
+        return {
+          data,
+          canManage: await hasPermission(tx, session, PERMISSIONS.hrWrite),
+        };
+      });
+      res.json({
+        data: response.data,
+        meta: {
+          tenantScoped: true,
+          canManage: response.canManage,
+          privacy: 'hr_private',
+          limit: 300,
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/calendar/connections', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, tx => tx.select({
+        id: calendarOutboundConnection.id,
+        name: calendarOutboundConnection.name,
+        provider: calendarOutboundConnection.provider,
+        calendarRef: calendarOutboundConnection.calendarRef,
+        isEnabled: calendarOutboundConnection.isEnabled,
+        createdAt: calendarOutboundConnection.createdAt,
+      }).from(calendarOutboundConnection).where(and(
+        eq(calendarOutboundConnection.masterFn, scope.masterFn),
+        eq(calendarOutboundConnection.companyFn, scope.companyFn),
+      )).orderBy(calendarOutboundConnection.id));
+      res.json({ data, meta: { tenantScoped: true, credentials: 'deployment-managed' } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/calendar/connections', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const provider = String(req.body?.provider ?? '').trim();
+    if (!['generic', 'google', 'microsoft'].includes(provider)) {
+      apiError(res, 400, 'invalid_provider', 'provider must be generic, google or microsoft.');
+      return;
+    }
+    const payload = {
+      name: String(req.body?.name ?? ''),
+      provider: provider as 'generic' | 'google' | 'microsoft',
+      calendarRef: String(req.body?.calendarRef ?? ''),
+      isEnabled: req.body?.isEnabled !== false,
+    };
+    try {
+      await runIdempotent(req, res, session, 'hr.calendar-connection.create', payload, async () => {
+        const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+        const data = await withTenantTransaction(db, scope, async tx => {
+          const connection = await createCalendarOutboundConnectionWithin(tx, scope, {
+            ...payload,
+            createdByUserId: session.userId,
+          });
+          await appendAudit(tx, {
+            ...scope,
+            actorUserId: session.userId,
+            requestId: context(res).requestId,
+            entity: 'hr/calendar-connections',
+            entityId: connection.id,
+            action: 'create',
+            after: connection,
+          });
+          return connection;
+        });
+        return { status: 201, data };
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.patch('/calendar/connections/:connectionId', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const connectionId = employeeIdParam(req.params.connectionId);
+    if (!connectionId) {
+      apiError(res, 400, 'invalid_id', 'connectionId must be a positive integer.');
+      return;
+    }
+    try {
+      const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+      const data = await withTenantTransaction(db, scope, async tx => {
+        const [before] = await tx.select().from(calendarOutboundConnection).where(and(
+          eq(calendarOutboundConnection.id, connectionId),
+          eq(calendarOutboundConnection.masterFn, scope.masterFn),
+          eq(calendarOutboundConnection.companyFn, scope.companyFn),
+        )).limit(1);
+        if (!before) throw new Error('Calendar connection not found.');
+        const [after] = await tx.update(calendarOutboundConnection).set({
+          isEnabled: req.body?.isEnabled !== false,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(calendarOutboundConnection.id, connectionId),
+          eq(calendarOutboundConnection.masterFn, scope.masterFn),
+          eq(calendarOutboundConnection.companyFn, scope.companyFn),
+        )).returning();
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'hr/calendar-connections',
+          entityId: connectionId,
+          action: 'update',
+          before,
+          after,
+        });
+        return after;
+      });
+      res.json({ data, meta: { tenantScoped: true } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  function staffAppointmentInput(body: Record<string, unknown>): StaffAppointmentInput {
+    return {
+      employeeId: Number(body.employeeId),
+      appointmentType: typeof body.appointmentType === 'string' ? body.appointmentType : undefined,
+      title: typeof body.title === 'string' ? body.title : '',
+      description: body.description == null ? null : String(body.description),
+      startAt: typeof body.startAt === 'string' ? body.startAt : '',
+      endAt: typeof body.endAt === 'string' ? body.endAt : '',
+      timeZone: body.timeZone == null ? null : String(body.timeZone),
+      recurrenceRule: body.recurrenceRule == null ? null : String(body.recurrenceRule),
+      reminderMinutesBefore: body.reminderMinutesBefore == null || body.reminderMinutesBefore === ''
+        ? null : Number(body.reminderMinutesBefore),
+      syncToExternal: body.syncToExternal === true,
+      allDay: body.allDay === true,
+      location: body.location == null ? null : String(body.location),
+      status: typeof body.status === 'string' ? body.status : undefined,
+    };
+  }
+
+  router.post('/calendar/appointments', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      apiError(res, 400, 'invalid_request', 'A JSON object body is required.');
+      return;
+    }
+    const payload = staffAppointmentInput(body as Record<string, unknown>);
+    try {
+      await runIdempotent(req, res, session, 'hr.staff-appointment.create', payload, async () => {
+        const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+        const data = await withTenantTransaction(db, scope, async (tx) => {
+          const result = await createStaffAppointmentWithin(tx, scope, payload, session.userId);
+          if (result.syncToExternal) {
+            await enqueueStaffAppointmentCalendarSyncWithin(tx, scope, {
+              appointmentId: result.id,
+              eventType: 'created',
+            });
+          }
+          await appendAudit(tx, {
+            ...scope,
+            actorUserId: session.userId,
+            requestId: context(res).requestId,
+            entity: 'hr/staff-appointments',
+            entityId: result.id,
+            action: 'create',
+            after: result,
+          });
+          return result;
+        });
+        return { status: 201, data };
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.put('/calendar/appointments/:appointmentId', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const appointmentId = employeeIdParam(req.params.appointmentId);
+    if (!appointmentId) {
+      apiError(res, 400, 'invalid_id', 'appointmentId must be a positive integer.');
+      return;
+    }
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      apiError(res, 400, 'invalid_request', 'A JSON object body is required.');
+      return;
+    }
+    const expectedVersion = Number((body as Record<string, unknown>).expectedVersion);
+    const payload = staffAppointmentInput(body as Record<string, unknown>);
+    try {
+      await runIdempotent(req, res, session, `hr.staff-appointment.update:${appointmentId}`, {
+        expectedVersion, ...payload,
+      }, async () => {
+        const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+        const data = await withTenantTransaction(db, scope, async (tx) => {
+          const result = await updateStaffAppointmentWithin(
+            tx, scope, appointmentId, expectedVersion, payload, session.userId,
+          );
+          const syncEvent = result.after.syncToExternal
+            ? result.before.syncToExternal ? 'changed' : 'created'
+            : result.before.syncToExternal ? 'cancelled' : null;
+          if (syncEvent) {
+            await enqueueStaffAppointmentCalendarSyncWithin(tx, scope, {
+              appointmentId,
+              eventType: syncEvent,
+            });
+          }
+          await appendAudit(tx, {
+            ...scope,
+            actorUserId: session.userId,
+            requestId: context(res).requestId,
+            entity: 'hr/staff-appointments',
+            entityId: appointmentId,
+            action: 'update',
+            before: result.before,
+            after: result.after,
+          });
+          return result.after;
+        });
+        return { status: 200, data };
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/calendar/appointments/:appointmentId/actions/cancel', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const appointmentId = employeeIdParam(req.params.appointmentId);
+    if (!appointmentId) {
+      apiError(res, 400, 'invalid_id', 'appointmentId must be a positive integer.');
+      return;
+    }
+    const expectedVersion = Number(req.body?.expectedVersion);
+    try {
+      await runIdempotent(req, res, session, `hr.staff-appointment.cancel:${appointmentId}`, {
+        expectedVersion,
+      }, async () => {
+        const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+        const data = await withTenantTransaction(db, scope, async (tx) => {
+          const result = await cancelStaffAppointmentWithin(
+            tx, scope, appointmentId, expectedVersion, session.userId,
+          );
+          if (result.syncToExternal) {
+            await enqueueStaffAppointmentCalendarSyncWithin(tx, scope, {
+              appointmentId,
+              eventType: 'cancelled',
+            });
+          }
+          await appendAudit(tx, {
+            ...scope,
+            actorUserId: session.userId,
+            requestId: context(res).requestId,
+            entity: 'hr/staff-appointments',
+            entityId: appointmentId,
+            action: 'cancel',
+            after: result,
+          });
+          return result;
+        });
+        return { status: 200, data };
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/calendar/holidays', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const payload: ManagedHolidayInput = {
+      calendarVersionId: Number(req.body?.calendarVersionId),
+      holidayDate: typeof req.body?.holidayDate === 'string' ? req.body.holidayDate : '',
+      name: typeof req.body?.name === 'string' ? req.body.name : '',
+      source: req.body?.source,
+      country: typeof req.body?.country === 'string' ? req.body.country : null,
+    };
+    try {
+      await runIdempotent(
+        req,
+        res,
+        session,
+        'hr.calendar-holiday.create',
+        payload,
+        async () => {
+          const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+          const data = await withTenantTransaction(db, scope, async (tx) => {
+            const result = await createCalendarHolidayDraftWithin(tx, scope, payload);
+            await appendAudit(tx, {
+              ...scope,
+              actorUserId: session.userId,
+              requestId: context(res).requestId,
+              entity: 'calendar_holiday',
+              entityId: result.id,
+              action: 'create_draft',
+              after: result,
+            });
+            return result;
+          });
+          return { status: 201, data };
+        },
+      );
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.put('/calendar/holidays/:holidayId', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const holidayId = employeeIdParam(req.params.holidayId);
+    const expectedVersion = Number(req.body?.expectedVersion);
+    const payload: ManagedHolidayInput = {
+      calendarVersionId: Number(req.body?.calendarVersionId),
+      holidayDate: typeof req.body?.holidayDate === 'string' ? req.body.holidayDate : '',
+      name: typeof req.body?.name === 'string' ? req.body.name : '',
+      source: req.body?.source,
+      country: typeof req.body?.country === 'string' ? req.body.country : null,
+    };
+    if (!holidayId || !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0) {
+      apiError(res, 400, 'invalid_request', 'holidayId and expectedVersion are required.');
+      return;
+    }
+    try {
+      await runIdempotent(
+        req,
+        res,
+        session,
+        `hr.calendar-holiday.update:${holidayId}`,
+        { holidayId, expectedVersion, ...payload },
+        async () => {
+          const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+          const data = await withTenantTransaction(db, scope, async (tx) => {
+            const result = await updateCalendarHolidayDraftWithin(tx, scope, holidayId, expectedVersion, payload);
+            await appendAudit(tx, {
+              ...scope,
+              actorUserId: session.userId,
+              requestId: context(res).requestId,
+              entity: 'calendar_holiday',
+              entityId: holidayId,
+              action: 'update_draft',
+              after: result,
+            });
+            return result;
+          });
+          return { status: 200, data };
+        },
+      );
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  for (const action of ['submit', 'approve', 'reject'] as const) {
+    router.post(`/calendar/holidays/:holidayId/actions/${action}`, async (req, res) => {
+      const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+      if (!session) return;
+      const holidayId = employeeIdParam(req.params.holidayId);
+      const expectedVersion = Number(req.body?.expectedVersion);
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason : '';
+      if (!holidayId || !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0) {
+        apiError(res, 400, 'invalid_request', 'holidayId and expectedVersion are required.');
+        return;
+      }
+      try {
+        await runIdempotent(
+          req,
+          res,
+          session,
+          `hr.calendar-holiday.${action}:${holidayId}`,
+          { holidayId, expectedVersion, reason },
+          async () => {
+            const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+            const data = await withTenantTransaction(db, scope, async (tx) => {
+              const result = action === 'submit'
+                ? await submitCalendarHolidayWithin(tx, scope, holidayId, expectedVersion, session.userId)
+                : await decideCalendarHolidayWithin(
+                  tx,
+                  scope,
+                  holidayId,
+                  expectedVersion,
+                  action,
+                  session.userId,
+                  reason,
+                );
+              await appendAudit(tx, {
+                ...scope,
+                actorUserId: session.userId,
+                requestId: context(res).requestId,
+                entity: 'calendar_holiday',
+                entityId: holidayId,
+                action: action === 'submit' ? 'submit_for_approval' : action,
+                after: result,
+              });
+              return result;
+            });
+            return { status: 200, data };
+          },
+        );
+      } catch (error) {
+        handleError(res, error);
+      }
+    });
   }
 
   router.get('/staff-onboarding-drafts', async (req, res) => {
@@ -452,6 +1111,140 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       handleError(res, error);
     }
   });
+
+  router.get('/leave-approval-queue', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        listMyLeaveApprovalsWithin(
+          tx,
+          scope,
+          session.userId,
+          new Date(),
+        ));
+      res.json({
+        data,
+        meta: {
+          actorDerived: true,
+          actionableOnly: true,
+          privacy: 'reason_and_evidence_redacted',
+          decisionCommands: true,
+          limit: 100,
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/leave-workflows', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        listLeaveApprovalWorkflowsWithin(tx, scope));
+      res.json({
+        data,
+        meta: {
+          companyScoped: true,
+          domain: 'leave',
+          immutableConfirmedVersions: true,
+          statuses: ['draft', 'confirmed', 'retired'],
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/leave-workflows', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const payload = (req.body ?? {}) as LeaveApprovalWorkflowInput;
+    try {
+      await runIdempotent(
+        req,
+        res,
+        session,
+        'hr.leave-workflow.create-draft',
+        payload,
+        async () => {
+          const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+          const data = await withTenantTransaction(db, scope, async (tx) => {
+            const result = await createLeaveApprovalWorkflowDraftWithin(tx, scope, payload);
+            await appendAudit(tx, {
+              ...scope,
+              actorUserId: session.userId,
+              requestId: context(res).requestId,
+              entity: 'approval_policy_version',
+              entityId: result.id,
+              action: 'draft_created',
+              after: {
+                code: result.code,
+                versionNo: result.versionNo,
+                department: result.department,
+                typeRef: result.typeRef,
+                stepCount: result.steps.length,
+              },
+            });
+            return result;
+          });
+          return { status: 201, data };
+        },
+      );
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  for (const action of ['confirm', 'retire'] as const) {
+    router.post(`/leave-workflows/:versionId/actions/${action}`, async (req, res) => {
+      const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+      if (!session) return;
+      const versionId = employeeIdParam(req.params.versionId);
+      if (!versionId) {
+        apiError(res, 400, 'invalid_id', 'versionId must be a positive integer.');
+        return;
+      }
+      try {
+        await runIdempotent(
+          req,
+          res,
+          session,
+          `hr.leave-workflow.${action}:${versionId}`,
+          { versionId },
+          async () => {
+            const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+            const data = await withTenantTransaction(db, scope, async (tx) => {
+              const result = action === 'confirm'
+                ? await confirmLeaveApprovalWorkflowWithin(tx, scope, versionId, session.userId)
+                : await retireLeaveApprovalWorkflowWithin(tx, scope, versionId);
+              await appendAudit(tx, {
+                ...scope,
+                actorUserId: session.userId,
+                requestId: context(res).requestId,
+                entity: 'approval_policy_version',
+                entityId: versionId,
+                action,
+                after: {
+                  code: result.code,
+                  versionNo: result.versionNo,
+                  status: result.status,
+                },
+              });
+              return result;
+            });
+            return { status: 200, data };
+          },
+        );
+      } catch (error) {
+        handleError(res, error);
+      }
+    });
+  }
 
   router.post('/leave-applications', async (req, res) => {
     const session = await requireHr(req, res, PERMISSIONS.hrWrite);

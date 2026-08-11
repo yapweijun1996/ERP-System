@@ -46,6 +46,7 @@ DECLARE
     'activity', 'opportunity', 'contact',
     'asset', 'depreciation_run', 'depreciation_run_line',
     'employee', 'employee_activation_secret', 'employee_account_handoff',
+    'staff_appointment', 'staff_appointment_reminder', 'staff_appointment_outbound_event',
     'employee_hierarchy_scope', 'working_calendar', 'working_calendar_version',
     'calendar_holiday', 'leave_type', 'leave_policy_version', 'leave_balance_entry',
     'leave_request', 'leave_request_revision', 'leave_request_event', 'leave_evidence',
@@ -119,11 +120,9 @@ BEGIN
            AND company_fn = current_setting(''app.company_fn'', true)
          )
          OR (
-           %L
-           AND (
-             current_setting(''app.reporting_worker'', true) = ''on''
-             OR current_setting(''app.document_worker'', true) = ''on''
-           )
+           (%L AND current_setting(''app.reporting_worker'', true) = ''on'')
+           OR (%L AND current_setting(''app.document_worker'', true) = ''on'')
+           OR (%L AND current_setting(''app.calendar_worker'', true) = ''on'')
          )
        )
        WITH CHECK (
@@ -132,21 +131,25 @@ BEGIN
            AND company_fn = current_setting(''app.company_fn'', true)
          )
          OR (
-           %L
-           AND (
-             current_setting(''app.reporting_worker'', true) = ''on''
-             OR current_setting(''app.document_worker'', true) = ''on''
-           )
+           (%L AND current_setting(''app.reporting_worker'', true) = ''on'')
+           OR (%L AND current_setting(''app.document_worker'', true) = ''on'')
+           OR (%L AND current_setting(''app.calendar_worker'', true) = ''on'')
          )
        )',
       table_name,
+      table_name IN ('report_job', 'report_artifact', 'tax_evidence_report_job'),
+      table_name IN ('document_scan_job', 'document_extraction'),
       table_name IN (
-        'report_job', 'report_artifact', 'tax_evidence_report_job',
-        'document_scan_job', 'document_extraction'
+        'employee', 'leave_request', 'staff_appointment', 'staff_appointment_reminder',
+        'staff_appointment_outbound_event', 'calendar_outbound_connection',
+        'calendar_outbound_event', 'app_notification'
       ),
+      table_name IN ('report_job', 'report_artifact', 'tax_evidence_report_job'),
+      table_name IN ('document_scan_job', 'document_extraction'),
       table_name IN (
-        'report_job', 'report_artifact', 'tax_evidence_report_job',
-        'document_scan_job', 'document_extraction'
+        'employee', 'leave_request', 'staff_appointment', 'staff_appointment_reminder',
+        'staff_appointment_outbound_event', 'calendar_outbound_connection',
+        'calendar_outbound_event', 'app_notification'
       )
     );
   END LOOP;

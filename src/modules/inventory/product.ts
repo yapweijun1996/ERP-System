@@ -10,9 +10,21 @@ import { product, PRODUCT_CATEGORIES } from '../../data/schema';
 import { fixedUnits } from './decimal';
 
 export class InventoryProductValidationError extends Error {
-  constructor(message: string) {
+  constructor(message: string, public readonly fieldErrors?: Record<string, string>) {
     super(message);
     this.name = 'InventoryProductValidationError';
+  }
+}
+
+export class InventoryProductUpdateError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly status = 422,
+    public readonly fieldErrors?: Record<string, string>,
+  ) {
+    super(message);
+    this.name = 'InventoryProductUpdateError';
   }
 }
 
@@ -34,21 +46,24 @@ export interface ProductFields {
 }
 
 export type CreateProductInput = ProductFields;
-export type UpdateProductInput = Omit<ProductFields, 'sku'>;
+export type UpdateProductInput = Omit<ProductFields, 'sku'> & {
+  expectedVersion?: number | null;
+};
 
 function validateFields(input: Partial<ProductFields>, requireSku: boolean) {
   if (requireSku && !input.sku?.trim()) {
-    throw new InventoryProductValidationError('sku is required');
+    throw new InventoryProductValidationError('sku is required', { sku: 'SKU is required.' });
   }
   if (!input.name?.trim()) {
-    throw new InventoryProductValidationError('name is required');
+    throw new InventoryProductValidationError('name is required', { name: 'Item name is required.' });
   }
   if (!input.uom?.trim()) {
-    throw new InventoryProductValidationError('uom is required');
+    throw new InventoryProductValidationError('uom is required', { uom: 'Unit of measure is required.' });
   }
   if (!input.category || !PRODUCT_CATEGORIES.includes(input.category as typeof PRODUCT_CATEGORIES[number])) {
     throw new InventoryProductValidationError(
       `category must be one of: ${PRODUCT_CATEGORIES.join(', ')}`,
+      { category: 'Choose a valid product category.' },
     );
   }
   for (const [field, value] of [
@@ -57,7 +72,10 @@ function validateFields(input: Partial<ProductFields>, requireSku: boolean) {
     ['reorderQty', input.reorderQty],
   ] as const) {
     if (value == null || fixedUnits(value) < 0n) {
-      throw new InventoryProductValidationError(`${field} must be a non-negative number`);
+      throw new InventoryProductValidationError(
+        `${field} must be a non-negative number`,
+        { [field]: 'Enter a non-negative number.' },
+      );
     }
   }
 }
@@ -92,13 +110,20 @@ export async function updateProductWithin(
   input: UpdateProductInput,
 ) {
   validateFields(input, false);
-  const [existing] = await exec.select({ id: product.id }).from(product).where(and(
+  const [before] = await exec.select().from(product).where(and(
     eq(product.masterFn, scope.masterFn),
     eq(product.companyFn, scope.companyFn),
     eq(product.id, productId),
   )).for('update');
-  if (!existing) {
+  if (!before) {
     throw new InventoryProductConflictError('Product not found in the active company.');
+  }
+  if (input.expectedVersion != null && input.expectedVersion !== before.version) {
+    throw new InventoryProductUpdateError(
+      'product_stale',
+      'This product changed in another session. Refresh and review the latest values before saving.',
+      409,
+    );
   }
   const [updated] = await exec.update(product).set({
     name: input.name.trim(),
@@ -113,6 +138,19 @@ export async function updateProductWithin(
     eq(product.masterFn, scope.masterFn),
     eq(product.companyFn, scope.companyFn),
     eq(product.id, productId),
+    ...(input.expectedVersion != null ? [eq(product.version, input.expectedVersion)] : []),
   )).returning({ id: product.id, version: product.version });
-  return { id: updated.id, version: updated.version };
+  if (!updated) {
+    throw new InventoryProductUpdateError(
+      'product_stale',
+      'This product changed in another session. Refresh and review the latest values before saving.',
+      409,
+    );
+  }
+  const [after] = await exec.select().from(product).where(and(
+    eq(product.masterFn, scope.masterFn),
+    eq(product.companyFn, scope.companyFn),
+    eq(product.id, productId),
+  )).limit(1);
+  return { id: updated.id, version: updated.version, before, after };
 }

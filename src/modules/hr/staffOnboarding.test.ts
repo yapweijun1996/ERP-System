@@ -47,8 +47,11 @@ describe('atomic staff onboarding', () => {
       db, session, draft.id, draft.version, hashPassword('temporary-pass'), 'activate',
     );
     expect(activated).toMatchObject({ username: 'new.staff', passwordChangeRequired: true });
-    const [employeeRole] = await db.select({ id: role.roleId }).from(role)
-      .where(eq(role.name, 'Employee'));
+    const [employeeRole] = await db.select({ id: role.roleId }).from(role).where(and(
+      eq(role.masterFn, 'M1'),
+      eq(role.companyFn, 'C-SG'),
+      eq(role.name, 'Employee'),
+    ));
     expect(activated.roleIds).toContain(employeeRole.id);
     expect(await db.select().from(employee).where(eq(employee.employeeNo, 'EMP-NEW-1'))).toHaveLength(1);
     expect(await db.select().from(userCompany).where(eq(userCompany.userId, activated.userId))).toHaveLength(1);
@@ -68,6 +71,27 @@ describe('atomic staff onboarding', () => {
     expect(entries[0]).toMatchObject({
       entryType: 'grant', balanceDelta: '14.00', sourceType: 'employee_opening',
     });
+  });
+
+  it('allocates the employee number inside the activation transaction', async () => {
+    const { db, session, roleId } = await fixture();
+    const draft = await createStaffOnboardingDraft(db, session, {
+      employee: {
+        ...employeeInput,
+        employeeNo: 'preview-from-browser',
+        employeeNoMode: 'auto',
+        fullName: 'Auto Numbered Staff',
+        email: 'auto.numbered@example.test',
+      },
+      username: 'auto.numbered', email: 'auto.numbered@example.test', roleIds: [roleId],
+    }, 'auto-number-draft');
+    const activated = await activateStaffOnboarding(
+      db, session, draft.id, draft.version, hashPassword('temporary-pass'), 'auto-number-activate',
+    );
+    expect(activated.employeeNo).toBe(`EMP-${new Date().getUTCFullYear()}-0001`);
+    expect(await db.select().from(employee).where(and(
+      eq(employee.id, activated.employeeId), eq(employee.employeeNo, `EMP-${new Date().getUTCFullYear()}-0001`),
+    ))).toHaveLength(1);
   });
 
   it('links an existing organization identity across companies without resetting its password', async () => {

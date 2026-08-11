@@ -121,6 +121,7 @@ export async function listReceiptDocuments(
 ) {
   return withTenantTransaction(db, scope, (tx) => tx.select({
     id: managedDocument.id,
+    documentVersionId: documentVersion.id,
     documentKey: managedDocument.documentKey,
     originalFileName: managedDocument.originalFileName,
     currentVersionNo: managedDocument.currentVersionNo,

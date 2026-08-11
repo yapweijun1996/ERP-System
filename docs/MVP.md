@@ -84,3 +84,35 @@ proven in the demo.
 Demo (localStorage/IndexedDB via PGlite) and production (PostgreSQL) are **one product
 with a swappable data backend** — every feature must state which mode(s) it targets,
 and schema changes ship as one Drizzle migration used by both.
+
+## Approved Expenses & Tax v1 extension (planned)
+
+The approved next product slice is deliberately smaller than the existing expense,
+reimbursement and tax-evidence programme:
+
+```text
+Expenses & Tax
+└── Company Receipts
+    ├── Add Receipt
+    ├── All Receipts
+    └── Preview / Export PDF / Print
+```
+
+For this slice, done means an authorised company user can capture or upload a safe
+receipt, confirm basic merchant/date/amount/currency/category facts, save it without an
+Employee Claim, browse/search company receipts, select an inclusive transaction-date
+range, preview the complete matching set and generate an A4-readable Receipt Pack.
+Receipts without `transaction_date` may remain actionable drafts but must be visibly
+marked and excluded from date-range packages. Mixed currencies must be totalled by
+currency or not totalled at all.
+
+This extension is **partially implemented, not released** as of 2026-08-12. TASK-177–181
+deliver the Company Receipt model, confirmation, permission-scoped register, query-side
+date/search and immutable Receipt Pack preview/PDF/Print in Demo and API paths. TASK-182
+delivers platform entitlement/canonical authorization integration. TASK-183 is complete:
+the register confirmation hand-off, actual PGlite clean-evidence persistence, authenticated
+same-origin API/PGlite browser journey and the same journey against a newly created
+disposable PostgreSQL 16 database are browser-proven. Neither fixture is production.
+Expense accounting, Tax
+Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois remain future
+or optional phases and are not v1 exit criteria.

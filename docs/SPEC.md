@@ -264,8 +264,9 @@ controls exist.
 Current release evidence (2026-08-10): the purchase-requisition Web adapter uses the
 actor-input command shape. Typecheck, lint, serial `npm run build:demo`,
 `npm run audit:access-matrix`, permission/schema/drift checks, `npm run smoke` at
-desktop/mobile and `npm run audit:pwa-update` pass. The full Vitest run is green at
-156 passed files plus 1 skipped file (635 passed, 1 skipped tests). The full i18n
+desktop/mobile and `npm run audit:pwa-update` pass. The latest current-worktree full
+Vitest run (2026-08-12) is green at 168 passed files plus 1 skipped file (663 passed,
+1 skipped tests). The full i18n
 browser matrix is green at 128 routes × 5 languages × 2 viewports over 1,533 canonical
 keys and 69 local packs. Disposable PostgreSQL 16 parity, true concurrency and
 RLS/security proof passed; the target database was backed up, migrations 0084–0089
@@ -381,7 +382,7 @@ deeper delegation binding and separation-of-duties rules remain later target wor
   calendar reads. Recurrence is time-zone-aware and bounded; reminder/outbound jobs are
   durable, idempotent and revision-aware.
 
-## 9. Expenses & Tax v1 contract (approved; backend foundation implemented)
+## 9. Expenses & Tax v1 contract (implemented; release proof pending)
 
 The official v1 product name is **Expenses & Tax** and its only primary workflow is
 **Company Receipts**. The current `my-receipts` route remains an actor-owned secure
@@ -390,8 +391,14 @@ TASK-177–179 implement migrations 0090–0092, the Company Receipt schema/comm
 uploader-scoped mutations and confirmation, explicit own/company list/detail reads,
 exact-hash duplicate prevention, Demo/API adapters and a responsive five-language
 Company Receipts register. TASK-180 search/date-range behavior and TASK-181's immutable
-Receipt Pack are current; the final platform-owned module entitlement/canonical
-permission cutover remains pending.
+Receipt Pack are current. TASK-182 now applies the platform-owned module
+entitlement/canonical permission cutover. TASK-183 is complete: the register now
+offers a canonical permission-gated confirmation entry that selects uploader-owned
+My Receipts evidence, reads immutable confirmation facts and submits only the user's
+confirmed metadata through the shared Demo/API adapter contract. An authenticated
+same-origin API-mode browser journey passes against an isolated PGlite fixture at desktop
+and 375px, and against a newly created disposable PostgreSQL 16 database. These are
+release-verification fixtures, not a production deployment.
 
 The future implementation must satisfy these binding requirements:
 
@@ -408,11 +415,18 @@ The future implementation must satisfy these binding requirements:
   extraction failure cannot block manual completion after the document is safe. OCR
   candidates retain source, model, confidence and review state and are never rewritten
   by confirmed metadata.
+- The browser confirmation entry may list only the signed-in uploader's receipt evidence
+  and calls `GET /api/company-receipts/confirmations/:documentVersionId` followed by the
+  canonical create action. It does not accept an evidence owner, Master or Company from
+  the browser. A static Demo upload remains quarantined when no scanner exists; only a
+  clean scan result can enable confirmation.
 - Register list/detail reads require explicit `expenses.company_receipts.read_own` or
   `expenses.company_receipts.read_company`; the API resolves that permission before
   passing `own | company` visibility to tenant-scoped domain queries. Reads are bounded
-  to 1–100 rows and cursor-paginated. TASK-180 applies search/date predicates before pagination, and
-  TASK-182 owns the final compatibility-to-canonical permission and entitlement cutover.
+  to 1–100 rows and cursor-paginated. TASK-180 applies search/date predicates before
+  pagination. Confirmation/create require `expenses.company_receipts.create`, update
+  requires `.edit`, and void requires `.void`; `employee.receipts.write` cannot authorize
+  those Company Receipt operations.
 - Date filters are inclusive company-local business dates:
   `from <= transaction_date <= to`. Missing dates are visible and excluded from a
   date-range package until corrected.
@@ -425,9 +439,10 @@ The future implementation must satisfy these binding requirements:
   originals; unsupported formats receive an explicit identity placeholder. Access and
   render actions reapply receipt-read permission, tenant/creator scope, scan-clean
   state, document-version identity and content hash. Currencies are never summed together.
-- Demo/PGlite and PostgreSQL/API modes implement one contract. Module entitlement,
-  route guards, canonical resource/action permissions, `accessMatrix`, RLS, audit,
-  five-language UI and mobile/desktop behavior must fail closed together.
+- Demo/PGlite and PostgreSQL/API modes implement one contract. `expenses_tax` availability
+  is platform-owned `Master enabled AND Company allocated`; missing or disabled state
+  returns `module_not_enabled` before the canonical resource/action permission,
+  `accessMatrix`, RLS, audit, five-language UI and mobile/desktop behavior evaluation.
 
 The current Tax Evidence generator cannot be relabelled as this feature: it selects
 posted `expense_claim` lines by posting date and its Demo adapter leaves package
@@ -484,5 +499,6 @@ non-remembered `erp_platform_session`/CSRF cookies, the shared API-mode realm ch
 Master/Company workspace and a default 15-minute (never beyond the parent session)
 exact-user simulation. It never creates `app_user` or `erp_session`; the simulation row
 is immediately revocable and all existing tenant `appendAudit` calls inherit the real
-platform principal while retaining the target actor. TASK-188 alone owns final release
-proof; implementation tests must not be represented as complete release evidence.
+platform principal while retaining the target actor. TASK-188 completed the recorded
+automated release-gate proof. Implementation tests and fixtures remain distinct from
+human UAT and do not authorize a production release or migration.

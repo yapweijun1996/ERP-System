@@ -390,8 +390,14 @@ domain-approved correction/void/tombstone path, never an ad-hoc physical delete.
 
 TASK-177–179 implement the canonical aggregate, secure capture-to-confirmation
 foundation and permission-scoped browser register. TASK-180 query-side search/date
-behavior and TASK-181's standalone immutable Receipt Pack are current. The final
-platform-owned module entitlement/canonical permission cutover remains TASK-182/186.
+behavior and TASK-181's standalone immutable Receipt Pack are current. TASK-182 completes
+the platform-owned `expenses_tax` entitlement and canonical Company Receipt mutation
+permission cutover. TASK-183 is complete: `screens-company-receipts.js` now selects
+the uploader's evidence from `my.receipts()`, reads the immutable confirmation context
+and creates the receipt through the same adapter contract in both modes. The authenticated
+API-mode browser harness passes against an isolated same-origin PGlite fixture and a
+newly created disposable PostgreSQL 16 database. The two fixture types remain distinct
+from production deployment evidence.
 
 ### 6.1 Ownership and evidence
 
@@ -414,6 +420,11 @@ The confirmation context reads candidate value, normalized value, source, model,
 confidence, critical/review state and duplicate warnings without changing extraction
 facts. Clean evidence permits manual entry when extraction is failed, unavailable or
 not started; quarantined/void/stale evidence remains blocked.
+The Company Receipts UI is an orchestration-only client: it can select only uploader-owned
+document versions returned by `my.receipts()`, then delegates the clean/current/duplicate
+decision to `readCompanyReceiptConfirmationWithin` and creation to
+`createCompanyReceiptWithin`. It cannot elevate a My Receipts document into a receipt
+while the security scan remains unavailable.
 Metadata correction requires `expectedVersion`; evidence/uploader identity is immutable.
 Void requires a reason and retains who/when rather than physically deleting the row.
 
@@ -422,10 +433,14 @@ Void requires a reason and retains who/when rather than physically deleting the 
 Current list/detail reads derive `masterFn`, `companyFn` and actor from Session, then
 require explicit `expenses.company_receipts.read_own` or
 `expenses.company_receipts.read_company`. The API passes only `own | company` visibility
-to tenant-scoped domain predicates and paginates by bounded `afterId`; mutation and
-confirmation paths remain uploader-scoped under `employee.receipts.write` until
-TASK-182. Migration 0092 gives Employee/Manager own scope and Finance/Receipt Manager/
-Company Owner explicit company scope without role-name authorization at request time.
+to tenant-scoped domain predicates and paginates by bounded `afterId`. Confirmation and
+create require `expenses.company_receipts.create`, metadata correction requires `.edit`,
+and retained void requires `.void`; all remain uploader-scoped in the domain. Migration
+0097 backfills those canonical grants for roles that previously held the old
+`employee.receipts.write` capability and invalidates affected Company authorization
+versions. That compatibility key now remains only for the My Receipts document flow.
+Migration 0092 gives Employee/Manager own scope and Finance/Receipt Manager/Company Owner
+explicit company scope without role-name authorization at request time.
 TASK-180 implements query-side merchant, receipt-number, notes and category search. Date range
 is inclusive on company-local `transaction_date`;
 missing-date records stay visible in the current register with a My Receipts correction
@@ -446,12 +461,15 @@ The shared PDF primitive is technical reuse only: Tax Evidence still joins
 
 Current source: `src/data/schema/expenses.ts`, migration
 `drizzle/0090_company_receipts.sql`, `drizzle/0091_sloppy_blackheart.sql`,
-`drizzle/0093_company_receipt_pack.sql`, `src/modules/expenses/companyReceipt.ts`,
+`drizzle/0093_company_receipt_pack.sql`, `drizzle/0097_company_receipt_canonical_permissions.sql`,
+`src/modules/expenses/companyReceipt.ts`,
 `src/modules/expenses/companyReceiptPack.ts`, `src/modules/expenses/companyReceiptPackPdf.ts` and
 `src/api/routes/companyReceipts.ts`. Evidence/upload dependencies remain
 `src/data/schema/documents.ts`, `src/modules/documents/upload.ts`,
 `src/modules/documents/processing.ts`, `src/modules/documents/evidencePdf.ts` and
-`src/api/routes/my.ts`.
+`src/api/routes/my.ts`. `src/api/moduleEntitlement.ts`,
+`src/auth/accessMatrix.ts` and both data adapters apply the same commercial
+`expenses_tax` Master-entitlement-plus-Company-allocation gate before route or API use.
 
 ## 7. Cross-cutting safety rules
 
@@ -528,4 +546,4 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
 | Retired tenant mutation API/UI | `routes/admin.ts`, migration 0095, web app | TASK-186 done |
 | Platform login and simulation | `platformSupport.ts`, `platformSimulation.ts`, `routes/platform.ts`, `platformSuperadmin.integration.test.ts` | TASK-187 done |
 | Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
-| Full adversarial/release proof | Focused platform and tenant proof is implementation evidence, not release proof | TASK-188 |
+| Full adversarial/release proof | Focused platform/tenant evidence plus recorded cross-engine, browser and release gates; no production deployment implied | TASK-188 done |

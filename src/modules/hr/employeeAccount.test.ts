@@ -13,6 +13,8 @@ import {
   employeeActivationSecret,
   opportunity,
   role,
+  rolePermission,
+  roleResourceScope,
   userCompanyRole,
 } from '../../data/schema';
 import { hashPassword, verifyPassword } from '../../auth/password';
@@ -74,9 +76,106 @@ describe('employee account lifecycle', () => {
       accountState: 'preactivated',
       passwordChangeRequired: true,
     });
+    const [employeeGrant] = await data.db.select().from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, account.userId),
+      eq(userCompanyRole.companyFn, scope.companyFn),
+    ));
+    expect(employeeGrant.managedBySystem).toBe(true);
     expect(JSON.stringify(secret.credentialEnvelope)).not.toContain('Temp-employee-123!');
     await expect(provision(data, data.source.id, 'other.name'))
       .rejects.toMatchObject({ code: 'employee_account_exists' });
+  });
+
+  it('creates the missing company Employee role before provisioning the first account', async () => {
+    const data = await fixture();
+    const [employeeRole] = await data.db.select().from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.name, 'Employee'),
+    )).limit(1);
+    await data.db.delete(userCompanyRole).where(eq(userCompanyRole.roleId, employeeRole.roleId));
+    await data.db.delete(roleResourceScope).where(eq(roleResourceScope.roleId, employeeRole.roleId));
+    await data.db.delete(rolePermission).where(eq(rolePermission.roleId, employeeRole.roleId));
+    await data.db.delete(role).where(eq(role.roleId, employeeRole.roleId));
+
+    const account = await provision(data, data.source.id, 'employee.auto-role');
+    const [createdRole] = await data.db.select().from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.companyFn, scope.companyFn),
+      eq(role.name, 'Employee'),
+    )).limit(1);
+    const permissions = await data.db.select().from(rolePermission)
+      .where(eq(rolePermission.roleId, createdRole.roleId));
+    const [resourceScope] = await data.db.select().from(roleResourceScope).where(and(
+      eq(roleResourceScope.roleId, createdRole.roleId),
+      eq(roleResourceScope.companyFn, scope.companyFn),
+    ));
+
+    expect(account.username).toBe('employee.auto-role');
+    expect(permissions.map((row) => row.permissionKey).sort()).toEqual([
+      'employee.claims.write',
+      'employee.leave.write',
+      'employee.payout.manage',
+      'employee.receipts.write',
+      'employee.self.read',
+      'expenses.company_receipts.read_own',
+    ]);
+    expect(resourceScope).toMatchObject({ resourceKey: 'employee/*', scope: 'self' });
+  });
+
+  it('fails closed when an Employee role has privileged or altered access', async () => {
+    const data = await fixture();
+    const [employeeRole] = await data.db.insert(role).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      name: 'Employee',
+      isSuperadmin: true,
+    }).returning();
+    await data.db.update(role).set({ isSuperadmin: true }).where(eq(role.roleId, employeeRole.roleId));
+
+    await expect(provision(data, data.source.id, 'employee.privileged-role'))
+      .rejects.toMatchObject({ code: 'employee_role_misconfigured', status: 503 });
+    const [linked] = await data.db.select({ userId: employee.userId }).from(employee)
+      .where(eq(employee.id, data.source.id));
+    expect(linked.userId).toBeNull();
+  });
+
+  it('creates the canonical Manager role when the first manager account is provisioned', async () => {
+    const data = await fixture();
+    await data.db.insert(employee).values({
+      ...scope,
+      employeeNo: 'EMP-MGR-AUTO',
+      fullName: 'Auto Manager Report',
+      email: 'auto.manager.report@example.test',
+      department: 'Operations',
+      jobTitle: 'Coordinator',
+      managerId: data.source.id,
+      startDate: '2026-07-25',
+      baseSalary: '3200.00',
+    });
+    const [managerRole] = await data.db.select().from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.name, 'Manager'),
+    )).limit(1);
+    await data.db.delete(userCompanyRole).where(eq(userCompanyRole.roleId, managerRole.roleId));
+    await data.db.delete(roleResourceScope).where(eq(roleResourceScope.roleId, managerRole.roleId));
+    await data.db.delete(rolePermission).where(eq(rolePermission.roleId, managerRole.roleId));
+    await data.db.delete(role).where(eq(role.roleId, managerRole.roleId));
+
+    const account = await provision(data, data.source.id, 'employee.auto-manager');
+    const [createdRole] = await data.db.select().from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.companyFn, scope.companyFn),
+      eq(role.name, 'Manager'),
+    )).limit(1);
+    const [managedGrant] = await data.db.select().from(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, account.userId),
+      eq(userCompanyRole.companyFn, scope.companyFn),
+      eq(userCompanyRole.roleId, createdRole.roleId),
+      eq(userCompanyRole.managedBySystem, true),
+    ));
+
+    expect(createdRole.sourceTemplateKey).toBe('manager');
+    expect(managedGrant).toBeDefined();
   });
 
   it('completes first login, destroys the envelope and revokes all sessions', async () => {

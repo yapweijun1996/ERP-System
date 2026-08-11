@@ -29,6 +29,8 @@ export default defineConfig({
     // files that did not reproduce in isolation or in git status; `git
     // worktree list` revealed two concurrent agent worktrees, and every
     // failing file existed only under .claude/worktrees/**.
-    exclude: ['**/node_modules/**', '**/.claude/worktrees/**'],
+    // Playwright/Node E2E scripts are intentionally invoked by their own
+    // `npm run test:e2e:*` commands; they are not Vitest suites.
+    exclude: ['**/node_modules/**', '**/.claude/worktrees/**', '**/tests/e2e/**'],
   },
 });

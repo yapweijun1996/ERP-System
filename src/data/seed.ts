@@ -6,7 +6,7 @@ import type { DB } from './db';
 import {
   master, company, currency, appUser, role, rolePermission, userCompany, userCompanyRole,
   product, taxRule, customer, account, supplier, opportunity, contact, activity, asset,
-  employee, leaveRequest, project, progressClaim, serviceContract, serviceTicket,
+  employee, leaveRequest, staffAppointment, project, progressClaim, serviceContract, serviceTicket,
   calendarHoliday, leaveBalanceEntry, leavePolicyVersion, leaveType,
   workingCalendar, workingCalendarVersion,
   approvalPolicy, approvalPolicyVersion, approvalPolicyStep, leaveCapacityRule,
@@ -26,6 +26,11 @@ import { computeStatutoryContributions } from '../modules/payroll/statutory';
 import { fixedUnits, fixedString } from '../modules/inventory/decimal';
 import { COMMERCIAL_MODULE_CATALOG } from '../auth/moduleCatalog';
 import { PLATFORM_PERMISSIONS } from '../auth/platformPermissionCatalog';
+import {
+  COMPANY_OWNER_PERMISSION_KEYS,
+  COMPANY_OWNER_ROLE_TEMPLATE_KEY,
+  PERMISSION_CATALOG,
+} from '../auth/accessCatalog';
 
 /**
  * Fixed PBKDF2 hashes for the two demo passwords below (see src/auth/password.ts).
@@ -63,6 +68,16 @@ export async function seedDemo(db: DB): Promise<void> {
   const [superadminRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Superadmin', isSuperadmin: true,
   }).returning({ id: role.roleId });
+  const [singaporeOwnerRole, malaysiaOwnerRole] = await db.insert(role).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', name: 'Company Owner', isSuperadmin: false,
+      sourceTemplateKey: COMPANY_OWNER_ROLE_TEMPLATE_KEY,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', name: 'Company Owner', isSuperadmin: false,
+      sourceTemplateKey: COMPANY_OWNER_ROLE_TEMPLATE_KEY,
+    },
+  ]).returning({ id: role.roleId });
   const [viewerRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Viewer', isSuperadmin: false,
   }).returning({ id: role.roleId });
@@ -72,16 +87,48 @@ export async function seedDemo(db: DB): Promise<void> {
   const [managerRole] = await db.insert(role).values({
     masterFn: 'M1', name: 'Manager', isSuperadmin: false,
   }).returning({ id: role.roleId });
+  // The compact regression fixture needs one explicit all-capability operator
+  // to exercise the complete API surface. This is deliberately a normal role
+  // assignment: it is not Company Owner, is not a system template, and does
+  // not rely on the legacy is_superadmin bypass. Production onboarding never
+  // creates this demo-only role.
+  const [demoOperatorSingaporeRole, demoOperatorMalaysiaRole] = await db.insert(role).values([
+    { masterFn: 'M1', companyFn: 'C-SG', name: 'Demo Operator', isSuperadmin: false },
+    { masterFn: 'M1', companyFn: 'C-MY', name: 'Demo Operator', isSuperadmin: false },
+  ]).returning({ id: role.roleId });
   await db.insert(userCompany).values([
-    { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id },
-    { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id },
-    { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id },
+    // Keep the compact fixture's initial company deterministic. Production
+    // accounts use the membership creation timestamp as the same stable
+    // first-company rule; explicit dates avoid same-timestamp ties in PGlite.
+    { userId: adminUser.id, companyFn: 'C-SG', roleId: singaporeOwnerRole.id, createdAt: new Date('2026-01-01T00:00:00Z') },
+    { userId: adminUser.id, companyFn: 'C-MY', roleId: malaysiaOwnerRole.id, createdAt: new Date('2026-01-02T00:00:00Z') },
+    { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id, createdAt: new Date('2026-01-01T00:00:00Z') },
   ]);
   await db.insert(userCompanyRole).values([
+    { userId: adminUser.id, companyFn: 'C-SG', roleId: singaporeOwnerRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
+    { userId: adminUser.id, companyFn: 'C-MY', roleId: malaysiaOwnerRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
+    // The compact demo deliberately gives Admin an explicit Manager role so
+    // its purchasing-approval scenario is a real permission grant, not an
+    // implicit Company Owner approval bypass.
+    { userId: adminUser.id, companyFn: 'C-SG', roleId: managerRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'system' as const },
+    { userId: adminUser.id, companyFn: 'C-SG', roleId: demoOperatorSingaporeRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'system' as const },
+    { userId: adminUser.id, companyFn: 'C-MY', roleId: demoOperatorMalaysiaRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'system' as const },
     { userId: adminUser.id, companyFn: 'C-SG', roleId: superadminRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
     { userId: adminUser.id, companyFn: 'C-MY', roleId: superadminRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: viewerRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'onboarding' as const },
     { userId: viewerUser.id, companyFn: 'C-SG', roleId: employeeRole.id, validFrom: DEMO_ASSIGNMENT_VALID_FROM, assignedByUserId: adminUser.id, assignmentSource: 'system' as const },
+  ]);
+  await db.insert(rolePermission).values([
+    ...[demoOperatorSingaporeRole.id, demoOperatorMalaysiaRole.id].flatMap((roleId) =>
+      PERMISSION_CATALOG.map((permissionKey) => ({ masterFn: 'M1', roleId, permissionKey }))),
+  ]);
+  await db.insert(rolePermission).values([
+    ...COMPANY_OWNER_PERMISSION_KEYS.map((permissionKey) => ({
+      masterFn: 'M1', roleId: singaporeOwnerRole.id, permissionKey,
+    })),
+    ...COMPANY_OWNER_PERMISSION_KEYS.map((permissionKey) => ({
+      masterFn: 'M1', roleId: malaysiaOwnerRole.id, permissionKey,
+    })),
   ]);
   await db.insert(rolePermission).values([
     'dashboard.read', 'inventory.read', 'sales.read', 'finance.read',
@@ -95,12 +142,18 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.leave.write' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.receipts.write' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'expenses.company_receipts.read_own' },
+    { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'expenses.company_receipts.create' },
+    { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'expenses.company_receipts.edit' },
+    { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'expenses.company_receipts.void' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.claims.write' },
     { masterFn: 'M1', roleId: employeeRole.id, permissionKey: 'employee.payout.manage' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.self.read' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.leave.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.receipts.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.company_receipts.read_own' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.company_receipts.create' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.company_receipts.edit' },
+    { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'expenses.company_receipts.void' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.claims.write' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.payout.manage' },
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'employee.team.read' },
@@ -108,9 +161,13 @@ export async function seedDemo(db: DB): Promise<void> {
     { masterFn: 'M1', roleId: managerRole.id, permissionKey: 'purchasing.approve' },
   ]);
   await db.insert(roleResourceScope).values([
+    { masterFn: 'M1', companyFn: 'C-SG', roleId: singaporeOwnerRole.id, resourceKey: '*', scope: 'company' },
+    { masterFn: 'M1', companyFn: 'C-MY', roleId: malaysiaOwnerRole.id, resourceKey: '*', scope: 'company' },
     { masterFn: 'M1', companyFn: 'C-SG', roleId: viewerRole.id, resourceKey: '*', scope: 'company' },
     { masterFn: 'M1', companyFn: 'C-SG', roleId: employeeRole.id, resourceKey: 'employee/*', scope: 'self' },
     { masterFn: 'M1', companyFn: 'C-SG', roleId: managerRole.id, resourceKey: '*', scope: 'team' },
+    { masterFn: 'M1', companyFn: 'C-SG', roleId: demoOperatorSingaporeRole.id, resourceKey: '*', scope: 'company' },
+    { masterFn: 'M1', companyFn: 'C-MY', roleId: demoOperatorMalaysiaRole.id, resourceKey: '*', scope: 'company' },
   ]);
   await db.insert(masterModule).values(COMMERCIAL_MODULE_CATALOG.map((module) => ({
     masterFn: 'M1', moduleKey: module.key,
@@ -254,7 +311,9 @@ export async function seedDemo(db: DB): Promise<void> {
     masterFn: 'M1', companyFn, documentType, prefix, nextNumber: 1, padding: 4, resetPolicy: 'yearly',
   }));
   await db.insert(documentSequence).values([
+    ...sequenceSeed('C-SG', [['employee', 'EMP']]),
     ...sequenceSeed('C-SG', [['sales_order', 'SO'], ['sales_invoice', 'INV'], ['purchase_order', 'PO'], ['journal_entry', 'JE']]),
+    ...sequenceSeed('C-MY', [['employee', 'EMP']]),
     ...sequenceSeed('C-MY', [['sales_order', 'SO'], ['sales_invoice', 'INV'], ['purchase_order', 'PO'], ['journal_entry', 'JE']]),
   ]);
   await db.insert(accountingPeriod).values([
@@ -460,10 +519,12 @@ export async function seedDemo(db: DB): Promise<void> {
     },
   ]);
 
-  // HR-lite (TASK-049): employee master + a few leave requests spanning every real
-  // status (pending/approved/rejected) so the demo isn't empty on first boot. Farah
-  // Wong has no manager (top of the reporting line); the others report to her,
-  // exercising the self-referencing manager_id FK.
+  // HR-lite (TASK-049): an 18-person starter roster plus a few leave requests
+  // spanning every real status (pending/approved/rejected). The roster is
+  // intentionally made only from fictional records: existing Demo personas keep
+  // their accounts, while the additional employees have no login credentials.
+  // Farah Wong and Amirul Rashid are the two company-level roots; the remaining
+  // records exercise the self-referencing manager_id FK and department filters.
   const [manager] = await db.insert(employee).values({
     masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1001', fullName: 'Farah Wong',
     email: 'farah.wong@acme.co', department: 'Operations', jobTitle: 'Operations Director',
@@ -498,22 +559,95 @@ export async function seedDemo(db: DB): Promise<void> {
     },
   ]).returning({ id: employee.id });
 
-  // Payroll (EPIC-026): two Malaysia employees so C-MY -- the company whose
-  // statutory scheme the payroll mock always demonstrated -- has a real
-  // headcount to run payroll for, matching C-SG's above (previously zero, see
-  // docs/EPICS.md EPIC-026's research note).
+  const [jasonSG, priyaSG, amirulSG, chloeSG, ethanSG, meiSG, noahSG] =
+    await db.insert(employee).values([
+      {
+        masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1095', fullName: 'Jason Tan',
+        email: 'jason.tan@demo.example.test', department: 'Sales', jobTitle: 'Sales Manager',
+        employmentType: 'Full-time', managerId: manager.id, startDate: '2020-04-01',
+        annualLeaveDays: 18, baseSalary: '6200.00',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1102', fullName: 'Priya Nair',
+        email: 'priya.nair@demo.example.test', department: 'Human Resources', jobTitle: 'HR Manager',
+        employmentType: 'Full-time', managerId: manager.id, startDate: '2020-08-15',
+        annualLeaveDays: 18, baseSalary: '6500.00',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1110', fullName: 'Amirul Hakim',
+        email: 'amirul.hakim@demo.example.test', department: 'Service', jobTitle: 'Service Coordinator',
+        employmentType: 'Full-time', managerId: manager.id, startDate: '2022-02-14',
+        annualLeaveDays: 14, baseSalary: '3900.00',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1116', fullName: 'Chloe Wong',
+        email: 'chloe.wong@demo.example.test', department: 'Purchasing', jobTitle: 'Purchasing Executive',
+        employmentType: 'Full-time', managerId: manager.id, startDate: '2021-11-01',
+        annualLeaveDays: 16, baseSalary: '4300.00',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1121', fullName: 'Ethan Goh',
+        email: 'ethan.goh@demo.example.test', department: 'Finance', jobTitle: 'Finance Analyst',
+        employmentType: 'Full-time', managerId: aisha.id, startDate: '2023-01-09',
+        annualLeaveDays: 14, baseSalary: '3800.00',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1128', fullName: 'Mei Chen',
+        email: 'mei.chen@demo.example.test', department: 'Quality', jobTitle: 'Quality Specialist',
+        employmentType: 'Full-time', managerId: tom.id, startDate: '2022-06-20',
+        annualLeaveDays: 14, baseSalary: '4100.00',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', employeeNo: 'EMP-1134', fullName: 'Noah Lim',
+        email: 'noah.lim@demo.example.test', department: 'IT', jobTitle: 'IT Administrator',
+        employmentType: 'Full-time', managerId: manager.id, startDate: '2024-03-04',
+        annualLeaveDays: 14, baseSalary: '4500.00',
+      },
+    ]).returning({ id: employee.id });
+
+  // Payroll (EPIC-026): keep Farid and Siti as the two payroll-ready Malaysia
+  // employees, while the rest of the MY starter roster supplies a realistic
+  // organisation chart without fabricating payroll transactions for every row.
+  const [myManager] = await db.insert(employee).values({
+    masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2000', fullName: 'Amirul Rashid',
+    email: 'amirul.rashid@demo.example.test', department: 'Operations', jobTitle: 'Operations Manager',
+    employmentType: 'Full-time', startDate: '2020-06-01', annualLeaveDays: 18,
+    baseSalary: '7000.00',
+  }).returning({ id: employee.id });
   const [faridMY, sitiMY] = await db.insert(employee).values([
     {
       masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2001', fullName: 'Farid Iskandar',
       email: 'farid.iskandar@acme.my', department: 'Warehouse', jobTitle: 'Warehouse Supervisor',
-      employmentType: 'Full-time', startDate: '2022-09-01', annualLeaveDays: 16, baseSalary: '5500.00',
+      employmentType: 'Full-time', managerId: myManager.id, startDate: '2022-09-01',
+      annualLeaveDays: 16, baseSalary: '5500.00',
     },
     {
       masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2002', fullName: 'Siti Balqis',
       email: 'siti.balqis@acme.my', department: 'Sales', jobTitle: 'Sales Executive',
-      employmentType: 'Full-time', startDate: '2023-11-15', annualLeaveDays: 14, baseSalary: '4200.00',
+      employmentType: 'Full-time', managerId: myManager.id, startDate: '2023-11-15',
+      annualLeaveDays: 14, baseSalary: '4200.00',
     },
   ]).returning({ id: employee.id });
+  await db.insert(employee).values([
+    {
+      masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2003', fullName: 'Nurul Huda',
+      email: 'nurul.huda@demo.example.test', department: 'Finance', jobTitle: 'Finance Executive',
+      employmentType: 'Full-time', managerId: myManager.id, startDate: '2022-03-14',
+      annualLeaveDays: 16, baseSalary: '4800.00',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2004', fullName: 'Kelvin Tan',
+      email: 'kelvin.tan@demo.example.test', department: 'Service', jobTitle: 'Service Technician',
+      employmentType: 'Contract', managerId: myManager.id, startDate: '2023-07-03',
+      annualLeaveDays: 12, baseSalary: '3600.00',
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', employeeNo: 'EMP-2005', fullName: 'Maya Devi',
+      email: 'maya.devi@demo.example.test', department: 'Human Resources', jobTitle: 'HR Coordinator',
+      employmentType: 'Full-time', managerId: myManager.id, startDate: '2024-01-15',
+      annualLeaveDays: 14, baseSalary: '3900.00',
+    },
+  ]);
 
   // TASK-111: confirmed, effective-dated working calendars and leave policies.
   // Imported official holidays intentionally remain draft until HR confirms them;
@@ -656,21 +790,31 @@ export async function seedDemo(db: DB): Promise<void> {
     version.policyId,
     version.id,
   ]));
-  const defaultApprovalStep = (policyCode: string, stepNo: number) => ({
-    masterFn: 'M1',
-    companyFn: 'C-SG',
-    policyVersionId: approvalVersionByPolicy.get(approvalPolicyByCode.get(policyCode)!)!,
-    stepNo,
-    label: stepNo === 1 ? 'Direct manager approval' : 'HR governance approval',
-    authorityType: stepNo === 1 ? 'direct_manager' : 'permission',
-    authorityPermissionKey: stepNo === 1 ? null : 'hr.write',
-    managerLevel: 1,
-    fallbackPermissionKey: stepNo === 1 ? 'hr.write' : null,
-    reminderAfterHours: stepNo === 1 ? 24 : 48,
-    escalateAfterHours: stepNo === 1 ? 48 : null,
-    escalationAuthorityType: stepNo === 1 ? 'permission' : null,
-    escalationPermissionKey: stepNo === 1 ? 'hr.write' : null,
-  });
+  const defaultApprovalStep = (policyCode: string, stepNo: number) => {
+    const standardHrApproval = policyCode === 'LEAVE-DEFAULT';
+    const permissionStep = standardHrApproval || stepNo > 1;
+    return {
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      policyVersionId: approvalVersionByPolicy.get(approvalPolicyByCode.get(policyCode)!)!,
+      stepNo,
+      label: standardHrApproval
+        ? 'HR approval'
+        : stepNo === 1 ? 'Direct manager approval' : 'HR governance approval',
+      authorityType: permissionStep ? 'permission' : 'direct_manager',
+      authorityPermissionKey: permissionStep ? 'hr.write' : null,
+      managerLevel: 1,
+      fallbackPermissionKey: permissionStep ? null : 'hr.write',
+      reminderAfterHours: standardHrApproval ? null : stepNo === 1 ? 24 : 48,
+      escalateAfterHours: standardHrApproval ? null : stepNo === 1 ? 48 : null,
+      escalationAuthorityType: standardHrApproval
+        ? null
+        : stepNo === 1 ? 'permission' : null,
+      escalationPermissionKey: standardHrApproval
+        ? null
+        : stepNo === 1 ? 'hr.write' : null,
+    };
+  };
   await db.insert(approvalPolicyStep).values([
     defaultApprovalStep('LEAVE-DEFAULT', 1),
     defaultApprovalStep('LEAVE-LONG', 1),
@@ -747,6 +891,13 @@ export async function seedDemo(db: DB): Promise<void> {
     [aisha.id, 18],
     [tom.id, 14],
     [lena.id, 12],
+    [jasonSG.id, 18],
+    [priyaSG.id, 18],
+    [amirulSG.id, 14],
+    [chloeSG.id, 16],
+    [ethanSG.id, 14],
+    [meiSG.id, 14],
+    [noahSG.id, 14],
   ] as const;
   await db.insert(leaveBalanceEntry).values(sgEmployees.flatMap(([employeeId, annualDays]) => [
     {
@@ -788,6 +939,27 @@ export async function seedDemo(db: DB): Promise<void> {
       masterFn: 'M1', companyFn: 'C-SG', employeeId: lena.id, leaveType: 'Annual',
       startDate: '2026-08-24', endDate: '2026-08-24', days: '1.00',
       reason: 'Errand', status: 'pending',
+    },
+  ]);
+
+  // Staff Calendar demo facts: appointments are their own SSOT and are
+  // projected alongside leave requests by the canonical calendar read model.
+  await db.insert(staffAppointment).values([
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId: marcus.id,
+      appointmentType: 'client_visit', title: 'Client site inspection',
+      description: 'Review the service scope and confirm access requirements.',
+      startAt: new Date('2026-08-06T02:00:00Z'), endAt: new Date('2026-08-06T03:30:00Z'),
+      allDay: false, location: 'Beta Pte Ltd — Tuas site', status: 'scheduled',
+      createdByUserId: adminUser.id, updatedByUserId: adminUser.id,
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', employeeId: manager.id,
+      appointmentType: 'meeting', title: 'Operations weekly planning',
+      description: 'Review staffing, safety and delivery priorities for the week.',
+      startAt: new Date('2026-08-07T01:00:00Z'), endAt: new Date('2026-08-07T02:00:00Z'),
+      allDay: false, location: 'HQ — Meeting Room 2', status: 'scheduled',
+      createdByUserId: adminUser.id, updatedByUserId: adminUser.id,
     },
   ]);
 

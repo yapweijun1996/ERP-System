@@ -303,6 +303,7 @@ SCREENS['user-mgmt'] = async function(root){
       ],
       primaryAction:{label:t('usr.invite'),icon:'plus',onClick:openInviteModal},
       toolbarActions:[
+        {label:t('pal.newEmployee'),icon:'people',onClick:()=>navigate('new-employee')},
         {label:t('usr.roles'),icon:'shield',onClick:()=>navigate('role-permission')},
         {label:t('usr.audit'),icon:'history',onClick:()=>navigate('audit-log')},
       ],

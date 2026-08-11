@@ -474,15 +474,15 @@ SCREENS['settings'] = async function(root, params){
     toast(s('resetDone'),'ok');
     setTimeout(()=>location.reload(),250);
   });
-  root.querySelector('[data-act="demo-reset"]')?.addEventListener('click',()=>{
+  root.querySelector('[data-act="demo-reset"]')?.addEventListener('click',async()=>{
     if(!adapter||typeof adapter.reset!=='function'){
       toast(s('adapterMissing'),'warn');
       return;
     }
     if(!confirm(s('resetDemoConfirm'))) return;
-    if(typeof clearSetupWizardFlag==='function') clearSetupWizardFlag();
     toast(s('resetting'),'info');
-    adapter.reset();
+    try{ await adapter.reset(); }
+    catch(error){ toast(error&&error.message||s('adapterMissing'),'warn'); }
   });
   root.querySelector('[data-act="rerun-wizard"]')?.addEventListener('click',()=>{
     if(!confirm(s('rerunWizardConfirm'))) return;

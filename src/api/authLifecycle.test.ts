@@ -210,10 +210,13 @@ describe('auth lifecycle API', () => {
     expect((await beta.json()).masterFn).toBe('M-BETA');
   });
 
-  it('protects one-time production setup with the deployment token', async () => {
+  it('allows tokenless production setup only for a fresh database', async () => {
     const db = await freshDb();
-    const running = await startApi(db, { setupToken: 'deployment-secret' });
+    const running = await startApi(db);
     server = running.server;
+    const before = await fetch(`${running.baseUrl}/api/setup/status`);
+    expect(before.status).toBe(200);
+    expect(await before.json()).toMatchObject({ hasAdmin: false, isFreshDatabase: true });
     const payload = JSON.stringify({
       organizationName: 'Example Group',
       organizationCode: 'EXAMPLE',
@@ -225,33 +228,35 @@ describe('auth lifecycle API', () => {
       adminPassword: 'safe-password',
       language: 'vi',
     });
-    const wrong = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-erp-setup-token': 'wrong',
-      },
-      body: payload,
-    });
-    expect(wrong.status).toBe(403);
     const created = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-erp-setup-token': 'deployment-secret',
-      },
+      headers: { 'content-type': 'application/json' },
       body: payload,
     });
     expect(created.status).toBe(201);
+    const after = await fetch(`${running.baseUrl}/api/setup/status`);
+    expect(after.status).toBe(200);
+    expect(await after.json()).toMatchObject({ hasAdmin: true, isFreshDatabase: false });
     const replay = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-erp-setup-token': 'deployment-secret',
-      },
+      headers: { 'content-type': 'application/json' },
       body: payload,
     });
     expect(replay.status).toBe(409);
-    expect((await replay.json()).error.code).toBe('already_initialized');
+    expect((await replay.json()).error.code).toBe('setup_not_empty');
+  });
+
+  it('does not expose production setup once the database contains tenant data', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const running = await startApi(db);
+    server = running.server;
+    const response = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe('setup_not_empty');
   });
 });

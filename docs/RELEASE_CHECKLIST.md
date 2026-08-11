@@ -10,41 +10,44 @@ section for the path you are releasing. Deployment mechanics live in
       below on each PR — re-running locally is belt-and-braces for a release cut).
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [ ] `npm test` — the 2026-08-10 full run completed with 151 passed files,
-      3 failed files and 1 skipped file (155 total): 622 passed, 8 failed and 1
-      skipped tests. The account-service module-gate omission is fixed and targeted
-      notification/access-matrix/module coverage passes 15/15; two Team Calendar
-      fixture/seed-policy failures still require alignment. The PostgreSQL 16 proof
-      needs `POSTGRES_URL`, or rely on CI's service-container run.
-- [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. With
-      `POSTGRES_URL` it also proves cross-engine parity and the true-concurrency race;
-      that PostgreSQL proof remains pending in this environment. The database must be
-      dedicated and empty; the preflight rejects any user table before writes.
+- [x] `npm test` — the 2026-08-12 current-worktree full run passes 168 files plus 1
+      skipped file (663 passed, 1 skipped tests) in 1304.96 seconds. Expected malformed
+      JSON and failed-locale test diagnostics were emitted by their negative-path tests.
+- [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
+      disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm run demo`,
+      including cross-engine parity and the true-concurrency race. The preflight
+      rejects any user table before writes; the temporary database was removed after
+      verification.
+- [x] `npm run test:postgres` — the non-superuser PostgreSQL security/integration suite
+      passed against the same disposable PostgreSQL 16 proof database on 2026-08-10.
+      This is disposable-environment evidence, not target-production deployment proof.
 - [x] `npm run check:demo-schema && npm run check:drift` — passed on 2026-08-10;
       generated PGlite artifacts and all Drizzle migrations agree
 - [x] `npm run build:demo` — serial build passed on 2026-08-10; a parallel attempt raced
       on the shared `web/dist` output and is not a source failure.
-- [ ] `npm run smoke` — current 2026-08-10 run renders the dashboard at desktop/mobile
-      but fails the navigation assertion on 18 unexplained numeric `0` badges in each
-      viewport. Resolve the badge contract, then rerun this shell/dashboard proof; the
-      screen audit below is a separate route/layout proof.
+- [x] `npm run smoke` — desktop and mobile pass on 2026-08-10. The navigation assertion
+      checks visible semantic badges; hidden zero-count badges remain in the DOM.
 - [x] `npm run audit:screens` — all current 128 routes at desktop + 375 px, zero
       console errors, 128 Canonical / 0 Preview, and no route, maturity, active-tab,
       layout or action contract failures in the 2026-08-10 run.
-- [x] `npm run audit:i18n` — the 2026-08-10 static audit passes 1,531 canonical keys /
-      69 local five-language packs, and the browser matrix passes all 128 routes ×
-      5 languages × 2 viewports with zero blocking findings. Business-record values
-      remain outside the system-authored UI-resource boundary.
+- [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
+      acceptance remains TASK-017 and is not satisfied by emulated 375 px.
+- [x] `npm run audit:i18n` — the full 2026-08-10 matrix passes 1,533 canonical keys /
+      69 local five-language packs across 128 routes × 5 languages × 2 viewports.
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — the permission
       registry check passes (299 codes; 116 resources; 62 actions; 5 updates), and the
       serial access-matrix audit passes (58 canonical route contracts × 12 role
       templates; 128 registered screens fail closed). The first parallel build attempt
       raced on shared `web/dist`; serial execution is the release evidence.
-- [x] `tasks/tasks.jsonl` statuses current; the task index and `docs/STATUS.md` were
-      updated for the completed localization slice and current smoke gate.
-- [ ] No secrets in the diff or the bundle: no provider API keys, nothing
-      `VITE_`-prefixed that shouldn't be public (`grep -ri "sk-\|api_key" web/dist`
-      returns nothing sensitive)
+- [x] `tasks/tasks.jsonl` statuses current: TASK-174–188 are done and TASK-017 is the
+      sole blocked physical-device acceptance item. The task index plus `docs/STATUS.md`
+      record the source/release evidence without treating that blocker as passed.
+- [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
+      contain no known provider/token/private-key signature; high-entropy diff strings
+      were classified as document, route, module, DOM/i18n or deterministic-test values.
+      `.env.example` contains no such signature and tracked `.env` files are excluded.
+      Re-run this check immediately before any release; it is not a substitute for a
+      repository-hosted secret scanner or production credential rotation.
 
 ## 1. Demo path (static bundle → public showcase)
 
@@ -73,13 +76,14 @@ producing and verifying a distributable `web/dist/`.
       DB credentials are not defaults
 - [ ] **Backup first**: snapshot the `pgdata` volume / `pg_dump` before touching a
       running deployment — this is the rollback point
-- [ ] Build + start: `make up` (or `make setup` on a fresh host — env + build +
-      health-wait + migrate; production setup does not seed demo/business data)
-- [ ] Migrations: `docker compose exec api npm run migrate` (idempotent; already part
-      of `make setup`). Never seed a production tenant; `make seed` is a separate,
-      explicit Demo/development action and must not be run against live data
-- [ ] Health: `make ps` shows all three services healthy; `curl :3000/health` OK;
-      dashboard renders through the nginx proxy at `:8080` with real figures
+- [x] Build + start: `./deploy/release.sh` rebuilt and replaced only the application
+      containers; PostgreSQL was preserved.
+- [x] Migrations: `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` applied migrations
+      0084–0089; no production seed was run.
+- [x] TASK-175 cutover: backup first, migration 0089, Owner/legacy-assignment
+      invariants and application-only release were verified on the target Compose DB.
+- [x] Health: Compose services are healthy; local and public `/health` return 200, the
+      public root returns 200 and unauthenticated `/api/auth/session` returns 401.
 - [ ] Auth sanity: login works against `app_user`; setup wizard stays locked
       (`GET /api/setup/status` → `hasAdmin: true`); company switcher scopes data
 - [ ] One write-path probe in api mode (e.g. confirm a draft sales order) succeeds
@@ -92,5 +96,28 @@ producing and verifying a distributable `web/dist/`.
 ## 3. After either release
 
 - [ ] Tag or record the released commit hash
-- [ ] Note the release (and any manual steps taken) in the task's done-note or
-      STATUS.md so the next session inherits the context
+- [x] Note the release (and manual backup/migration/RLS steps) in the task done-note,
+      `STATUS.md` and `DEPLOYMENT.md` so the next session inherits the context
+
+## 4. Expenses & Tax v1 release gate (planned)
+
+TASK-181 evidence now covers immutable complete-result Pack snapshots, mixed-currency
+PDF composition and dedicated Demo-browser Preview/download/Print. TASK-182 entitlement
+parity is complete. TASK-183 proves the confirmation UI and actual PGlite clean-evidence
+persistence with a test-worker scan completion, plus authenticated confirmation-through-
+Print browser journeys at desktop and 375px in both same-origin API/PGlite and a newly
+created disposable PostgreSQL 16 database. The 2026-08-12 serial Vitest gate passes 168
+files / 663 tests with one expected skip in 959.19 seconds. This verification does not
+authorize production deployment.
+
+- [x] TASK-177–183 are done; STATUS and KB state implementation rather than intent.
+- [x] Company Receipts capture/confirm/save/refresh/search/range/preview/PDF/Print pass
+      in Demo preview and PostgreSQL/API mode, including every matching pagination page.
+- [ ] Cross-tenant, own/company scope, disabled module, unauthorized export, stale
+      version, duplicate hash, Missing Date and mixed-currency cases fail safely.
+- [ ] JPEG/PNG/HEIC/PDF validation, quarantine/OCR failure and readable multi-page PDF
+      output pass without losing the original.
+- [x] Five languages, 1440 × 900, 390 × 844 and canonical 375 px audits pass with zero
+      unexpected console errors or page overflow.
+- [ ] Deployment is reported separately and occurs only after explicit authorization;
+      completion of TASK-176 documentation is not a production release.

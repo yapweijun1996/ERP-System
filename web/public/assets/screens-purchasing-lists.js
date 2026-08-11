@@ -88,7 +88,7 @@ function suppCellInline(name){ return `<div class="partner">${profileAvatar({nam
 
 function supplierDetailCopy(){
   const packs={
-    en:{purchasing:'Purchasing',supplier:'Supplier',suppliers:'Suppliers',description:'Review the supplier master and its real purchasing and payable activity for the active company.',active:'Active',masterData:'Master data',company:'Company',code:'Supplier code',name:'Supplier name',country:'Country',currency:'Currency',contact:'Contact details',terms:'Payment terms',notMaintained:'Not maintained',activity:'Purchasing activity',orders:'Purchase orders',orderValue:'Order value',invoices:'Supplier invoices',outstanding:'Outstanding AP',recentOrders:'Recent purchase orders',recentInvoices:'Recent supplier invoices',document:'Document',date:'Date',total:'Total',status:'Status',noOrders:'No purchase orders are linked to this supplier.',noInvoices:'No supplier invoices are linked to this supplier.',back:'Back to suppliers',newOrder:'New purchase order',openInvoice:'Open invoice',reviewOrder:'Review order',missing:'The requested supplier is unavailable in this company.',empty:'No supplier is available for this company.'},
+    en:{purchasing:'Purchasing',supplier:'Supplier',suppliers:'Suppliers',description:'Review the supplier master and its real purchasing and payable activity for the active company.',active:'Active',masterData:'Master data',company:'Company',code:'Supplier code',name:'Supplier name',country:'Country',currency:'Currency',contact:'Contact details',terms:'Payment terms',notMaintained:'Not maintained',activity:'Purchasing activity',orders:'Purchase orders',orderValue:'Order value',invoices:'Supplier invoices',outstanding:'Outstanding AP',recentOrders:'Recent purchase orders',recentInvoices:'Recent supplier invoices',document:'Document',date:'Date',total:'Total',status:'Status',noOrders:'No purchase orders are linked to this supplier.',noInvoices:'No supplier invoices are linked to this supplier.',back:'Back to suppliers',newOrder:'New purchase order',openInvoice:'Open invoice',reviewOrder:'Review order',editSupplier:'Edit supplier',editSupplierTitle:'Edit supplier master data',saveChanges:'Save changes',supplierUpdated:'Supplier {name} updated',supplierUpdateError:'Supplier could not be saved',missing:'The requested supplier is unavailable in this company.',empty:'No supplier is available for this company.'},
     ms:{purchasing:'Pembelian',supplier:'Pembekal',suppliers:'Pembekal',description:'Semak data induk pembekal serta aktiviti pembelian dan belum bayar sebenar untuk syarikat aktif.',active:'Aktif',masterData:'Data induk',company:'Syarikat',code:'Kod pembekal',name:'Nama pembekal',country:'Negara',currency:'Mata wang',contact:'Maklumat hubungan',terms:'Terma bayaran',notMaintained:'Belum diselenggara',activity:'Aktiviti pembelian',orders:'Pesanan belian',orderValue:'Nilai pesanan',invoices:'Invois pembekal',outstanding:'AP belum bayar',recentOrders:'Pesanan belian terkini',recentInvoices:'Invois pembekal terkini',document:'Dokumen',date:'Tarikh',total:'Jumlah',status:'Status',noOrders:'Tiada pesanan belian dipautkan kepada pembekal ini.',noInvoices:'Tiada invois pembekal dipautkan kepada pembekal ini.',back:'Kembali ke pembekal',newOrder:'Pesanan belian baharu',openInvoice:'Buka invois',reviewOrder:'Semak pesanan',editSupplier:'Edit pembekal',editSupplierTitle:'Edit data induk pembekal',saveChanges:'Simpan perubahan',supplierUpdated:'Pembekal {name} dikemas kini',supplierUpdateError:'Pembekal tidak dapat disimpan',missing:'Pembekal yang diminta tidak tersedia dalam syarikat ini.',empty:'Tiada pembekal tersedia untuk syarikat ini.'},
     zh:{purchasing:'采购',supplier:'供应商',suppliers:'供应商',description:'查看当前公司的供应商主档，以及真实采购和应付活动。',active:'在职',masterData:'主档资料',company:'公司',code:'供应商编号',name:'供应商名称',country:'国家／地区',currency:'币种',contact:'联系人资料',terms:'付款条件',notMaintained:'尚未维护',activity:'采购活动',orders:'采购订单',orderValue:'订单金额',invoices:'供应商发票',outstanding:'未付应付账款',recentOrders:'近期采购订单',recentInvoices:'近期供应商发票',document:'单据',date:'日期',total:'合计',status:'状态',noOrders:'此供应商没有关联采购订单。',noInvoices:'此供应商没有关联供应商发票。',back:'返回供应商',newOrder:'新建采购订单',openInvoice:'查看发票',reviewOrder:'查看订单',editSupplier:'编辑供应商',editSupplierTitle:'编辑供应商主档',saveChanges:'保存更改',supplierUpdated:'供应商 {name} 已更新',supplierUpdateError:'无法保存供应商',missing:'当前公司找不到指定的供应商。',empty:'当前公司没有供应商。'},
     ja:{purchasing:'購買',supplier:'仕入先',suppliers:'仕入先',description:'現在の会社における仕入先マスターと実際の購買・買掛活動を確認します。',active:'有効',masterData:'マスターデータ',company:'会社',code:'仕入先コード',name:'仕入先名',country:'国・地域',currency:'通貨',contact:'連絡先',terms:'支払条件',notMaintained:'未登録',activity:'購買活動',orders:'購買発注',orderValue:'発注金額',invoices:'仕入先請求書',outstanding:'未払買掛金',recentOrders:'最近の購買発注',recentInvoices:'最近の仕入先請求書',document:'伝票',date:'日付',total:'合計',status:'ステータス',noOrders:'この仕入先に紐づく購買発注はありません。',noInvoices:'この仕入先に紐づく請求書はありません。',back:'仕入先一覧へ戻る',newOrder:'購買発注を作成',openInvoice:'請求書を開く',reviewOrder:'発注を確認',editSupplier:'仕入先を編集',editSupplierTitle:'仕入先マスターを編集',saveChanges:'変更を保存',supplierUpdated:'仕入先 {name} を更新しました',supplierUpdateError:'仕入先を保存できませんでした',missing:'指定された仕入先はこの会社では利用できません。',empty:'この会社には仕入先がありません。'},
@@ -133,6 +133,7 @@ SCREENS['supplier']=async function(root,params){
   }
   const orders=DB.purchaseOrders.filter(row=>row.supplierId===supplier.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   const invoices=DB.supplierInvoices.filter(row=>row.supplierId===supplier.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const canEdit=typeof userHasAnyPermission!=='function'||userHasAnyPermission('purchasing.write');
   const orderValue=orders.reduce((sum,row)=>sum+purchasingNumber(row.total),0);
   const outstanding=invoices.reduce((sum,row)=>sum+purchasingNumber(row.outstanding),0);
   const main=`<section class="posting-detail-card">
@@ -154,6 +155,7 @@ SCREENS['supplier']=async function(root,params){
       <div class="posting-balance-row"><span>${esc(s('currency'))}</span><b>${esc(supplier.currency||DB.company.currency)}</b></div>
       <div class="posting-balance-row"><span>${esc(s('contact'))}</span><b>${esc(supplier.contact&&supplier.contact!=='—'?supplier.contact:s('notMaintained'))}</b></div>
       <div class="posting-balance-row"><span>${esc(s('terms'))}</span><b>${esc(supplier.terms&&supplier.terms!=='—'?supplier.terms:s('notMaintained'))}</b></div>
+      ${canEdit?`<div style="margin-top:14px">${btn(s('editSupplier'),{icon:'edit',cls:'soft',attrs:'data-supplier-edit="1"'})}</div>`:''}
     </section>`;
   postingDetailPage(root,{
     module:'purchasing',route:'supplier',active:'suppliers',title:`${s('supplier')} ${supplier.code}`,
@@ -169,6 +171,25 @@ SCREENS['supplier']=async function(root,params){
       postingRoot.querySelectorAll('[data-open-supplier-order]').forEach(button=>button.addEventListener('click',()=>navigate('po-approval',{purchaseOrderId:Number(button.dataset.openSupplierOrder)})));
       postingRoot.setAttribute('data-layout','document-detail');
       postingRoot.setAttribute('data-canonical-supplier-detail','true');
+      postingRoot.querySelector('[data-supplier-edit]')?.addEventListener('click',()=>{
+        MasterDataEditor.open({
+          icon:'users',title:s('editSupplierTitle'),width:620,
+          description:s('description'),
+          fields:[
+            {key:'code',label:s('code'),required:true,autocomplete:'off'},
+            {key:'name',label:s('name'),required:true,autocomplete:'organization'},
+          ],
+          values:{code:supplier.code,name:supplier.name},
+          saveLabel:s('saveChanges'),cancelLabel:t('common.cancel'),
+          errorMessage:s('supplierUpdateError'),
+          onSave:async values=>{
+            const result=await window.ErpSystemData.update('purchasing/suppliers',supplier.id,{code:values.code,name:values.name},supplier.updatedAt);
+            toast(s('supplierUpdated').replace('{name}',values.name),'ok');
+            return result;
+          },
+          onSaved:result=>navigate('supplier',{supplierCode:String(result?.data?.code||supplier.code).toUpperCase()}),
+        });
+      });
     },
   });
 };

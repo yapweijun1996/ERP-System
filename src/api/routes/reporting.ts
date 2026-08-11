@@ -1,12 +1,32 @@
 import { Router } from 'express';
+import type { Request, Response } from 'express';
 import type { DB } from '../../data/db';
 import { withTenantTransaction } from '../../data/tenantTransaction';
+import { hasAnyPermission, PERMISSIONS } from '../../auth/permissions';
 import {
   getReportArtifact,
   getReportJob,
   ReportJobError,
 } from '../../modules/reporting/reportJobs';
 import { apiError, requireSession } from '../http';
+
+async function requireReportingAccess(
+  db: DB,
+  req: Request,
+  res: Response,
+) {
+  const session = await requireSession(db, req, res);
+  if (!session) return null;
+  if (!await hasAnyPermission(db, session, [
+    PERMISSIONS.reportingRead,
+    // Finance report exports poll this endpoint for their generated job.
+    PERMISSIONS.financeReportExport,
+  ])) {
+    apiError(res, 403, 'permission_denied', 'You cannot access reporting jobs or artifacts.');
+    return null;
+  }
+  return session;
+}
 
 function positiveId(value: unknown): number | null {
   const id = Number(value);
@@ -17,7 +37,7 @@ export function createReportingRouter(db: DB): Router {
   const router = Router();
 
   router.get('/jobs/:id', async (req, res) => {
-    const session = await requireSession(db, req, res);
+    const session = await requireReportingAccess(db, req, res);
     if (!session) return;
     const id = positiveId(req.params.id);
     if (!id) {
@@ -47,7 +67,7 @@ export function createReportingRouter(db: DB): Router {
   });
 
   router.get('/artifacts/:id/download', async (req, res) => {
-    const session = await requireSession(db, req, res);
+    const session = await requireReportingAccess(db, req, res);
     if (!session) return;
     const artifactId = positiveId(req.params.id);
     if (!artifactId) {

@@ -5,6 +5,7 @@ import { isModuleEnabled } from '../auth/moduleAccess';
 import { apiError, requireSession } from './http';
 
 const BESPOKE_API_MODULES: readonly [prefix: string, moduleKey: CommercialModuleKey][] = [
+  ['/api/company-receipts', 'expenses_tax'],
   ['/api/integration', 'integration'],
   ['/api/hr', 'hr'],
   ['/api/finance', 'finance'],

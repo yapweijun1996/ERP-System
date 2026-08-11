@@ -199,7 +199,10 @@ async function runSalesScenario(db: DB) {
     companyFn: SCOPE.companyFn,
     orderId: draft.id,
     lineNo: 1,
+    lineType: 'stock',
     productId: widgetId,
+    description: 'Widget',
+    uom: 'unit',
     qty: '1',
     unitPrice: '10',
     netAmount: '10',
@@ -635,12 +638,12 @@ ok = check('PGlite CRM chain: converting an opportunity creates a real order (ne
 ok = check('PGlite CRM rollback: double-convert rejected (stock stays 45); insufficient stock leaves the opportunity untouched, not half-converted',
   p.crm.doubleConvertErr === 'InvalidOpportunityStateError' && p.crm.stockAfterDoubleConvertAttempt === 45
   && p.crm.insufficientErr === 'InsufficientStockError' && p.crm.oppAfterFailedConvertStage === 'lead') && ok;
-ok = check('PGlite payroll SG: 5 lines, gross=26100 net=20880, balanced GL (Dr=Cr=30602.25)',
-  p.payroll.sg.lineCount === 5 && p.payroll.sg.totalGrossPay === '26100.00' && p.payroll.sg.totalNetPay === '20880.00'
-  && p.payroll.sg.glBalanced && p.payroll.sg.glDebit === 30602.25) && ok;
-ok = check('PGlite payroll MY: 2 lines, gross=9700 net=8342, balanced GL incl. PCB (Dr=Cr=11072.55)',
-  p.payroll.my.lineCount === 2 && p.payroll.my.totalGrossPay === '9700.00' && p.payroll.my.totalNetPay === '8342.00'
-  && p.payroll.my.glBalanced && p.payroll.my.glDebit === 11072.55) && ok;
+ok = check('PGlite payroll SG: 12 lines, gross=59400 net=47520, balanced GL (Dr=Cr=69646.50)',
+  p.payroll.sg.lineCount === 12 && p.payroll.sg.totalGrossPay === '59400.00' && p.payroll.sg.totalNetPay === '47520.00'
+  && p.payroll.sg.glBalanced && p.payroll.sg.glDebit === 69646.5) && ok;
+ok = check('PGlite payroll MY: 6 lines, gross=29000 net=24940, balanced GL incl. PCB (Dr=Cr=33103.50)',
+  p.payroll.my.lineCount === 6 && p.payroll.my.totalGrossPay === '29000.00' && p.payroll.my.totalNetPay === '24940.00'
+  && p.payroll.my.glBalanced && p.payroll.my.glDebit === 33103.5) && ok;
 ok = check('PGlite payroll rollback: re-posting an already-posted run is rejected',
   p.payroll.doublePostErr === 'InvalidPayrollRunStateError') && ok;
 

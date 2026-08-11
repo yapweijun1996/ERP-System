@@ -8,15 +8,33 @@ an active production deployment:
 2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), sized for 100–800 GB.
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
-Current schema boundary: migration
-`0088_early_marvel_boy` (89 journal entries, 244 generated tables). Migrations
-0084–0085 add the separate platform support control plane and exact master/company
-boundary; migration 0086 adds assignment validity/provenance and assignment-owned
-scope rows with a compatibility backfill; migration 0087 adds tenant-scoped reasoned
-user permission overrides and explicit deny precedence; migration 0088 adds the
-company-scoped `authorization_version` freshness source. Application-only release does
-not apply migrations automatically. Production RLS includes the new override table;
-the application central evaluator remains authoritative for decision semantics.
+Current code schema boundary: migration
+`0097_company_receipt_canonical_permissions` (98 journal entries, 247 generated
+tables). Migrations 0084–0085 add the separate platform support control plane and exact
+master/company boundary; migration 0086 adds assignment validity/provenance and
+assignment-owned scope rows with a compatibility backfill; migration 0087 adds
+tenant-scoped reasoned user permission overrides and explicit deny precedence;
+migration 0088 adds the company-scoped `authorization_version` freshness source; and
+migration 0089 adds the explicit, immutable company-scoped Company Owner role and
+legacy Superadmin assignment cutover. Migrations 0090–0093 add the Company Receipt
+aggregate, evidence/Pack rules and read grants; migrations 0094–0096 add platform-owned
+module entitlement, tenant-MAC retirement and the independent Platform Superadmin realm;
+migration 0097 adds canonical Company Receipt mutation grants. Application-only release
+does not apply migrations automatically. The target production deployment is verified
+through 0089 only; no later migration deployment is implied. Production RLS includes the
+override table; the application central evaluator remains authoritative for decision
+semantics.
+
+Current TASK-175 evidence (2026-08-10): a disposable PostgreSQL 16 database passed
+`POSTGRES_URL=... npm run demo` (cross-engine parity and exactly-one-winner stock
+concurrency) and `npm run test:postgres` (non-superuser RLS/security integration). The
+temporary database was removed after verification. The target database was backed up
+to `output/production-backup-20260810/erp-before-0089.dump`, migrations 0084–0089 were
+applied with `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh`, production RLS was
+re-applied, and `./deploy/release.sh` completed through the existing Cloudflare tunnel.
+Post-release verification confirmed 90 journal entries, 219 forced-RLS tenant
+tables/policies, zero active Superadmin flags/assignments, healthy Compose services,
+public `/health` 200, public root 200 and unauthenticated session 401.
 
 Before a release, the current authorization/schema gates are:
 
@@ -30,14 +48,17 @@ npm run audit:access-matrix
 ```
 
 The access-matrix checks are regression evidence for the current route/module/permission
-catalog; migration 0088's version marker is now present, but TASK-174's centralized
-authorization-version cache and complete invalidation coverage are not complete.
-Unknown business-module keys now fail closed; authenticated `account/*` services are
-explicitly non-module-gated but still permission-protected. `./deploy/release.sh` is
-application-only;
+catalog. TASK-174 completes authorization-version invalidation: browser API requests
+carry the active Company version, stale snapshots fail closed with
+`authorization_state_stale` and recover only through the session endpoint, while server
+permission, scope and workflow decisions remain current-row evaluations. Unknown
+business-module keys fail closed; authenticated `account/*` services are explicitly
+non-module-gated but still permission-protected. `./deploy/release.sh` is application-only;
 `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` is the separate, reviewed schema-change
-operation. After the purchase-requisition adapter was aligned, serial `npm run build:demo`
-and `npm run audit:access-matrix` pass; no deployment is implied by this audit.
+operation. After the purchase-requisition adapter was aligned, serial `npm run build:demo`,
+`npm run audit:access-matrix`, full Vitest, full i18n and desktop/mobile smoke pass.
+These repository gates and the deployment evidence above are separate from the remaining
+TASK-017 physical-device acceptance.
 
 ---
 
@@ -180,7 +201,7 @@ deployment-managed and are never returned to the browser. Appointment recurrence
 reminder jobs are bounded to a 93-day look-ahead and are safe to retry by their unique
 tenant-scoped event keys.
 
-Migrations through **0088** are additive schema changes for appointment automation,
+Migrations through **0089** are additive schema changes for appointment automation,
 the platform support control plane, assignment-scoped authorization and reasoned
 user-level permission overrides. Apply all committed migrations explicitly before the application release,
 then re-apply the production-only RLS script so the calendar worker receives only its
@@ -349,11 +370,13 @@ claim; verify Pages is enabled before reactivating the workflow.
 
 Every release must run `npm run check:permissions` before building or deploying. The
 gate validates application permission literals, role templates, compatibility mappings,
-resource/action metadata and canonical route projections. It currently checks 299
+resource/action metadata and canonical route projections. It currently checks 309
 static registry definitions, 116 resources, 62 actions and 5 update contracts. This
-gate does not replace the later database expand/cutover, centralized authorization-
-version cache/invalidation work or production platform identity bootstrap. Migration
-0088 is additive and must be applied before code paths that read the freshness marker.
+gate complements, but does not replace, the completed database cutover and browser
+authorization-version invalidation paths or the operational platform-identity bootstrap.
+All committed migrations through 0097 must be applied before a release; migration 0088
+provides the freshness marker, 0089 makes the legacy Superadmin flag inert, and 0094–0097
+provide the platform-entitlement and canonical Company Receipt authorization contracts.
 
 ### CI/CD — deploy to a *different* public repo
 
@@ -435,5 +458,5 @@ backup and staging proof, production deployment must:
 4. verify health and one idempotent reminder/outbound retry path;
 5. confirm the worker cannot read unrelated tenant business tables.
 
-Do not deploy only the application containers when migrations through 0088 have not been applied;
-the source code cannot safely invent missing tables at runtime.
+Do not deploy only the application containers when committed migrations through 0097 have
+not been applied; the source code cannot safely invent missing tables at runtime.

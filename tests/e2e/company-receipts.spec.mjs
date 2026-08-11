@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-/* TASK-179/180 Company Receipts register contract: permission-visible route,
-   query-side filters, bounded cursor pagination and responsive required facts. */
+/* TASK-179/180/182 Company Receipts contract: platform entitlement plus
+   permission-visible route, query-side filters, bounded cursor pagination and
+   responsive required facts. */
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -57,16 +58,31 @@ async function main(){
       if(typeof setLang==='function') setLang('en');
       DB.user.permissionKeys=Array.from(new Set([
         ...DB.user.permissionKeys,'finance.read','employee.self.read',
-        'expenses.company_receipts.read_company',
+        'expenses.company_receipts.read_company','expenses.company_receipts.create',
       ]));
       if(DB.erpSystem) DB.erpSystem.selfServiceOnly=false;
+      /* Company Receipts is commercial. This fixture intentionally grants the
+         safe effective projection that only the Platform workspace can mutate;
+         it does not revive a tenant Module Activation control. */
+      DB.erpSystem={...(DB.erpSystem||{}),modules:[
+        ...(Array.isArray(DB.erpSystem&&DB.erpSystem.modules)?DB.erpSystem.modules:[])
+          .filter(row=>String(row&&row.moduleKey||row&&row.module_key||'')!=='expenses_tax'),
+        {moduleKey:'expenses_tax',enabled:true},
+      ]};
+      await loadModuleControl();
+      window.__actualCompanyReceiptAdapter={
+        companyReceipts:ErpSystemData.companyReceipts,
+        companyReceiptConfirmation:ErpSystemData.companyReceiptConfirmation,
+        createCompanyReceipt:ErpSystemData.createCompanyReceipt,
+        myReceipts:ErpSystemData.my&&ErpSystemData.my.receipts,
+      };
       const makeRow=id=>({
         id,transactionDate:id===50?null:'2026-08-11',merchant:`Merchant ${id}`,
         receiptNumber:`R-${id}`,category:'Travel',amount:'12.3400',currency:'SGD',
         uploaderUserId:1,uploaderName:'Finance User',status:'ready',version:1,
         createdAt:'2026-08-11T08:00:00.000Z',updatedAt:'2026-08-11T08:00:00.000Z',
       });
-      window.__receiptQueries=[];
+      window.__receiptQueries=[];window.__receiptCreates=[];
       window.__receiptPackPayloads=[];window.__receiptPackPdfActions=[];
       ErpSystemData.companyReceipts=async query=>{
         window.__receiptQueries.push({...query});
@@ -88,6 +104,21 @@ async function main(){
         for(let index=0;index<raw.length;index+=1)bytes[index]=raw.charCodeAt(index);
         return {data:{content:bytes,mimeType:'application/pdf'},meta:{immutableSnapshot:true}};
       };
+      ErpSystemData.my={...(ErpSystemData.my||{}),receipts:async()=>({data:[{
+        id:601,documentVersionId:701,originalFileName:'confirmed-evidence.jpg',
+      }]})};
+      ErpSystemData.companyReceiptConfirmation=async documentVersionId=>({data:{
+        evidence:{documentId:601,documentVersionId,originalFileName:'confirmed-evidence.jpg',
+          scanStatus:'clean',recordStatus:'draft',current:true},
+        extraction:{status:'succeeded',candidates:[]},
+        suggestedMetadata:{transactionDate:'2026-08-11',merchant:'Confirmed Merchant',
+          receiptNumber:'CONF-701',amount:'28.5000',currency:'SGD'},
+        manualConfirmationAllowed:true,provenanceImmutable:true,
+      }});
+      ErpSystemData.createCompanyReceipt=async payload=>{
+        window.__receiptCreates.push({...payload});
+        return {data:{id:702,...payload,status:'ready',version:1},meta:{scope:'uploader'}};
+      };
       window.open=()=>({});
       await navigate('company-receipts');
     },mockPdfBase64);
@@ -103,6 +134,17 @@ async function main(){
     assert(await page.locator('.dt-body .dt-r').count()===25,'first page must contain 25 rows');
     assert(await page.locator('[data-missing-date-route]').count()===1,
       'undated receipts must remain visible with an explicit correction action');
+    await page.locator('[data-company-receipt-confirm]').click();
+    await page.locator('[data-company-receipt-evidence="701"]').click();
+    await page.locator('[data-company-receipt-confirm-form]').waitFor({timeout:TIMEOUT});
+    await page.locator('[data-receipt-confirm-purpose]').fill('Client-site transport');
+    await page.locator('[data-receipt-confirm-save]').click();
+    await page.waitForFunction(()=>window.__receiptCreates.length===1,{timeout:TIMEOUT});
+    assert(await page.evaluate(()=>window.__receiptCreates[0]).then(payload=>(
+      payload.documentId===601&&payload.documentVersionId===701
+      &&payload.merchant==='Confirmed Merchant'&&payload.amount==='28.5000'
+      &&payload.currency==='SGD'&&payload.businessPurpose==='Client-site transport'
+    )), 'receipt confirmation must preserve evidence IDs and submit user-confirmed metadata');
     await page.locator('[data-company-receipts-more]').click();
     await page.waitForFunction(()=>document.querySelectorAll('.dt-body .dt-r').length===26);
     assert(await page.locator('[data-company-receipts-more]').count()===0,
@@ -145,8 +187,63 @@ async function main(){
       'mobile register must render cards instead of a visible grid header');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'mobile page overflowed horizontally');
+    const actualEvidence=await page.evaluate(async()=>{
+      const actual=window.__actualCompanyReceiptAdapter;
+      ErpSystemData.companyReceipts=actual.companyReceipts;
+      ErpSystemData.companyReceiptConfirmation=actual.companyReceiptConfirmation;
+      ErpSystemData.createCompanyReceipt=actual.createCompanyReceipt;
+      ErpSystemData.my.receipts=actual.myReceipts;
+      await ErpSystemData.switchUser('viewer@acme.co');
+      const db=ErpSystemData.db;
+      await db.query(`insert into role_permission (master_fn,role_id,permission_key,allowed)
+        select r.master_fn,r.role_id,required.permission_key,true
+        from app_user u
+        join user_company_role ucr on ucr.user_id=u.user_id and ucr.company_fn='C-SG'
+        join role r on r.role_id=ucr.role_id
+        cross join (values
+          ('expenses.company_receipts.create'),('expenses.company_receipts.read_own'),
+          ('expenses.company_receipts.edit'),('expenses.company_receipts.void')
+        ) as required(permission_key)
+        where u.master_fn='M1' and u.email='viewer@acme.co'
+        on conflict (role_id,permission_key) do update set allowed=excluded.allowed`);
+      await db.query(`update master_module set enabled=true
+        where master_fn='M1' and module_key='expenses_tax'`);
+      await db.query(`update company_module set enabled=true
+        where master_fn='M1' and company_fn='C-SG' and module_key='expenses_tax'`);
+      await ErpSystemData.refresh();
+      await loadModuleControl();
+      const uploaded=await ErpSystemData.my.uploadReceipt({
+        id:'company-receipt-e2e-clean-0001',name:'actual-demo-receipt.jpg',type:'image/jpeg',
+        blob:new Blob([new Uint8Array([
+          0xff,0xd8,0xff,0xe0,0x00,0x10,0x4a,0x46,0x49,0x46,0x00,0x01,0x02,0x03,
+        ])],{type:'image/jpeg'}),autoSubmitAuthorized:false,
+      });
+      const receipts=await ErpSystemData.my.receipts();
+      const evidence=receipts.data.find(row=>row.id===uploaded.data.id);
+      if(!evidence) throw new Error('Uploaded Demo receipt evidence was not listed.');
+      await db.query(`update document_scan_job
+        set status='clean',scanner='browser-e2e',result_code='clean',completed_at=now()
+        where master_fn='M1' and company_fn='C-SG' and version_id=$1`,[evidence.documentVersionId]);
+      return {documentId:evidence.id,documentVersionId:evidence.documentVersionId};
+    });
+    await page.setViewportSize({width:1440,height:900});
+    await page.evaluate(()=>navigate('company-receipts'));
+    await page.locator('[data-company-receipt-register="canonical"]').waitFor({timeout:TIMEOUT});
+    await page.locator('[data-company-receipt-confirm]').click();
+    await page.locator(`[data-company-receipt-evidence="${actualEvidence.documentVersionId}"]`).click();
+    await page.locator('[data-company-receipt-confirm-form]').waitFor({timeout:TIMEOUT});
+    await page.locator('[data-receipt-confirm-date]').fill('2026-08-12');
+    await page.locator('[data-receipt-confirm-merchant]').fill('Actual Demo Merchant');
+    await page.locator('[data-receipt-confirm-amount]').fill('42.5000');
+    await page.locator('[data-receipt-confirm-currency]').fill('SGD');
+    await page.locator('[data-receipt-confirm-purpose]').fill('Browser-confirmed receipt');
+    await page.locator('[data-receipt-confirm-save]').click();
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('.dt-body .dt-r'))
+      .some(row=>row.textContent.includes('Actual Demo Merchant')),{timeout:TIMEOUT});
+    assert(await page.locator('.dt-body').innerText().then(text=>text.includes('Actual Demo Merchant')),
+      'Demo adapter must confirm clean captured evidence through the shared Company Receipt command');
     assert(browserErrors.length===0,`browser errors: ${browserErrors.join(' | ')}`);
-    console.log('PASS Company Receipts E2E: query-side filters, immutable PDF preview/download/print, pagination and responsive facts');
+    console.log('PASS Company Receipts E2E: mock/API-shape confirmation, actual Demo clean-evidence confirmation, query-side filters, immutable PDF preview/download/print, pagination and responsive facts');
   }finally{
     await context?.close();
     await browser?.close();

@@ -5,9 +5,18 @@
   let waitingWorker = null;
   let offeredUpdateKey = null;
   let applyingUpdate = false;
+  const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
+  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v261';
   const DISMISSED_UPDATE_KEY = 'erp-system-dismissed-pwa-update';
   const LEGACY_SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
   const copy = (key, fallback) => typeof window.t === 'function' ? window.t(key) : fallback;
+
+  /* Safari exposes pinch gestures separately from CSS touch-action. The
+     viewport meta tag is the primary lock; these handlers close the iOS
+     gesture path so the PWA remains at scale 1.0 during two-finger gestures. */
+  ['gesturestart','gesturechange','gestureend'].forEach((eventName) => {
+    document.addEventListener(eventName, (event) => event.preventDefault(), { passive:false });
+  });
 
   function cleanLegacySourceMarker(){
     try {
@@ -159,8 +168,13 @@
     cleanLegacySourceMarker();
 
     const swUrl = new URL('sw.js', window.location.href);
+    swUrl.searchParams.set('v', SERVICE_WORKER_VERSION);
     navigator.serviceWorker.register(swUrl, { scope:'./', updateViaCache:'none' })
       .then((registration) => {
+        const checkForUpdate = () => {
+          if (document.visibilityState !== 'visible') return;
+          registration.update().catch(() => { /* offline: keep the current worker */ });
+        };
         if (registration.waiting && navigator.serviceWorker.controller) {
           void showUpdatePrompt(registration.waiting);
         }
@@ -174,8 +188,10 @@
           });
         });
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') registration.update();
+          checkForUpdate();
         });
+        checkForUpdate();
+        window.setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
       })
       .catch((error) => {
         console.warn('PWA service worker registration failed:', error);

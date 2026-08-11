@@ -63,6 +63,10 @@ import {
   type CreateCustomerActivityInput,
 } from '../modules/crm/activity';
 import {
+  createCustomerWithin,
+  type CreateCustomerInput,
+} from '../modules/crm/customer';
+import {
   createWarehousePickWithin,
   type CreateWarehousePickInput,
 } from '../modules/warehouse/picking';
@@ -178,6 +182,7 @@ import {
 
 export interface CreateDefinition {
   permission: string;
+  idempotency?: 'required' | 'optional';
   audit: 'required';
   execute(
     tx: DB,
@@ -353,6 +358,18 @@ const CREATES: Record<string, CreateDefinition> = {
       return createContactWithin(tx, scope, payload as unknown as CreateContactInput);
     },
   },
+  'crm/customers': {
+    permission: 'crm.write',
+    audit: 'required',
+    execute(tx, scope, payload, actorUserId) {
+      return createCustomerWithin(
+        tx,
+        scope,
+        payload as unknown as CreateCustomerInput,
+        actorUserId,
+      );
+    },
+  },
   'crm/activities': {
     permission: 'crm.write',
     audit: 'required',
@@ -430,6 +447,7 @@ const CREATES: Record<string, CreateDefinition> = {
   },
   'sales/enquiries': {
     permission: 'sales.write',
+    idempotency: 'required',
     audit: 'required',
     execute(tx, scope, payload) {
       return createSalesEnquiryWithin(
@@ -439,8 +457,21 @@ const CREATES: Record<string, CreateDefinition> = {
       );
     },
   },
+  'sales/customers': {
+    permission: 'sales.write',
+    audit: 'required',
+    execute(tx, scope, payload, actorUserId) {
+      return createCustomerWithin(
+        tx,
+        scope,
+        payload as unknown as CreateCustomerInput,
+        actorUserId,
+      );
+    },
+  },
   'sales/orders': {
     permission: 'sales.write',
+    idempotency: 'required',
     audit: 'required',
     execute(tx, scope, payload) {
       return createSalesOrderWithin(tx, scope, payload as unknown as CreateSalesOrderInput);
@@ -448,6 +479,7 @@ const CREATES: Record<string, CreateDefinition> = {
   },
   'sales/quotations': {
     permission: 'sales.write',
+    idempotency: 'required',
     audit: 'required',
     execute(tx, scope, payload) {
       return createSalesQuotationWithin(

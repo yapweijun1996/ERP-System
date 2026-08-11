@@ -21,7 +21,10 @@ import {
 } from '../../data/schema';
 
 export interface OrderLineInput {
-  productId: number;
+  lineType?: 'stock' | 'non_stock';
+  productId?: number | null;
+  description?: string;
+  uom?: string;
   warehouseId: number;
   qty: number;
   unitPrice: number;
@@ -85,8 +88,9 @@ async function postOrderWithin(
   order: OrderToPost,
   lines: IssueLine[],
   bumpVersion: boolean,
+  lineCount = lines.length,
 ) {
-  if (lines.length === 0) throw new PostingError(`Sales order ${order.docNo} has no lines`);
+  if (lineCount === 0) throw new PostingError(`Sales order ${order.docNo} has no lines`);
   await assertCustomerCreditWithin(
     exec,
     scope,
@@ -94,39 +98,42 @@ async function postOrderWithin(
     order.currency,
     order.total,
   );
-  const deliveryDocNo = `DO-${order.docNo}`;
-  const [delivery] = await exec.insert(salesDelivery).values({
-    masterFn: scope.masterFn,
-    companyFn: scope.companyFn,
-    docNo: deliveryDocNo,
-    orderId: order.id,
-    status: 'draft',
-    deliveryDate: order.orderDate,
-  }).returning({ id: salesDelivery.id });
-  await exec.insert(salesDeliveryLine).values(lines.map((line) => ({
-    masterFn: scope.masterFn,
-    companyFn: scope.companyFn,
-    deliveryId: delivery.id,
-    lineNo: line.lineNo,
-    orderLineId: line.orderLineId,
-    productId: line.productId,
-    warehouseId: line.warehouseId,
-    deliveredQty: String(line.qty),
-  })));
+  let delivery: { id: number } | undefined;
+  const deliveryDocNo = lines.length ? `DO-${order.docNo}` : null;
   const movementIds: number[] = [];
-  // Lock stock rows in a deterministic order so concurrent orders containing
-  // the same products in different line order do not create a lock cycle.
-  const orderedLines = [...lines].sort((left, right) =>
-    left.warehouseId - right.warehouseId || left.productId - right.productId);
-  for (const line of orderedLines) {
-    const issue = await issueStockWithin(exec, scope, {
+  if (lines.length) {
+    [delivery] = await exec.insert(salesDelivery).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      docNo: deliveryDocNo!,
+      orderId: order.id,
+      status: 'draft',
+      deliveryDate: order.orderDate,
+    }).returning({ id: salesDelivery.id });
+    await exec.insert(salesDeliveryLine).values(lines.map((line) => ({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      deliveryId: delivery!.id,
+      lineNo: line.lineNo,
+      orderLineId: line.orderLineId,
       productId: line.productId,
       warehouseId: line.warehouseId,
-      qty: line.qty,
-      refType: 'sales_delivery',
-      refId: delivery.id,
-    });
-    movementIds.push(issue.movementId);
+      deliveredQty: String(line.qty),
+    })));
+    // Lock stock rows in a deterministic order so concurrent orders containing
+    // the same products in different line order do not create a lock cycle.
+    const orderedLines = [...lines].sort((left, right) =>
+      left.warehouseId - right.warehouseId || left.productId - right.productId);
+    for (const line of orderedLines) {
+      const issue = await issueStockWithin(exec, scope, {
+        productId: line.productId,
+        warehouseId: line.warehouseId,
+        qty: line.qty,
+        refType: 'sales_delivery',
+        refId: delivery.id,
+      });
+      movementIds.push(issue.movementId);
+    }
   }
 
   await exec.update(salesOrder).set({
@@ -163,23 +170,25 @@ async function postOrderWithin(
     { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: revId, debit: '0', credit: money(order.net), memo: 'Revenue' },
     { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: invDocNo, accountId: taxId, debit: '0', credit: money(order.tax), memo: 'Output tax' },
   ]);
-  await exec.update(salesDelivery).set({
-    invoiceId: inv.id,
-    status: 'delivered',
-    version: 2,
-    updatedAt: sql`now()`,
-  }).where(eq(salesDelivery.id, delivery.id));
+  if (delivery) {
+    await exec.update(salesDelivery).set({
+      invoiceId: inv.id,
+      status: 'delivered',
+      version: 2,
+      updatedAt: sql`now()`,
+    }).where(eq(salesDelivery.id, delivery.id));
+  }
 
   return {
     orderId: order.id,
-    deliveryId: delivery.id,
+    deliveryId: delivery?.id ?? null,
     deliveryDocNo,
     invoiceId: inv.id,
     invDocNo,
     net: order.net,
     tax: order.tax,
     total: order.total,
-    lines: lines.length,
+    lines: lineCount,
     movementIds,
   };
 }
@@ -203,6 +212,9 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
     eq(customer.id, input.customerId),
   ));
   if (!buyer) throw new PostingError(`Customer ${input.customerId} not found`);
+  if (!Array.isArray(input.lines) || input.lines.length === 0) {
+    throw new PostingError('A sales order requires at least one line.');
+  }
   // 1. Header (totals filled in after lines).
   const [order] = await exec.insert(salesOrder).values({
     masterFn: scope.masterFn, companyFn: scope.companyFn,
@@ -221,6 +233,23 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
   let lineNo = 0;
   for (const ln of input.lines) {
     lineNo += 1;
+    const lineType = ln.lineType ?? (ln.productId == null ? 'non_stock' : 'stock');
+    if (lineType !== 'stock' && lineType !== 'non_stock') {
+      throw new PostingError(`Line ${lineNo} type must be stock or non_stock.`);
+    }
+    if (lineType === 'stock' && (!Number.isSafeInteger(ln.productId) || Number(ln.productId) <= 0)) {
+      throw new PostingError(`Line ${lineNo} must reference a product.`);
+    }
+    if (lineType === 'non_stock' && ln.productId != null) {
+      throw new PostingError(`Line ${lineNo} non-stock rows cannot reference a product.`);
+    }
+    const description = (ln.description || (lineType === 'non_stock' ? '' : `Product ${ln.productId}`)).trim();
+    const uom = (ln.uom || 'unit').trim();
+    if (!description) throw new PostingError(`Line ${lineNo} description is required.`);
+    if (!uom) throw new PostingError(`Line ${lineNo} UoM is required.`);
+    if (!Number.isFinite(ln.qty) || ln.qty <= 0 || !Number.isFinite(ln.unitPrice) || ln.unitPrice < 0) {
+      throw new PostingError(`Line ${lineNo} quantity and unit price are invalid.`);
+    }
     const taxRow = await getEffectiveTaxRate(exec, scope, ln.taxCode, input.orderDate);
     if (!taxRow) throw new PostingError(`No tax rule for ${ln.taxCode} on ${input.orderDate}`);
     const rate = Number(taxRow.rate);
@@ -230,17 +259,26 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
     const [orderLine] = await exec.insert(salesOrderLine).values({
       masterFn: scope.masterFn, companyFn: scope.companyFn,
       orderId: order.id, lineNo,
-      productId: ln.productId, qty: String(ln.qty), unitPrice: String(ln.unitPrice),
+      lineType,
+      productId: lineType === 'stock' ? Number(ln.productId) : null,
+      description,
+      uom,
+      qty: String(ln.qty), unitPrice: String(ln.unitPrice),
       netAmount: money(net), taxCode: ln.taxCode, taxRate: String(rate), taxAmount: money(tax),
     }).returning({ id: salesOrderLine.id });
 
-    issueLines.push({
-      orderLineId: orderLine.id,
-      lineNo,
-      productId: ln.productId,
-      warehouseId: ln.warehouseId,
-      qty: ln.qty,
-    });
+    if (lineType === 'stock') {
+      if (!Number.isSafeInteger(ln.warehouseId) || ln.warehouseId <= 0) {
+        throw new PostingError(`Line ${lineNo} warehouse is invalid.`);
+      }
+      issueLines.push({
+        orderLineId: orderLine.id,
+        lineNo,
+        productId: Number(ln.productId),
+        warehouseId: ln.warehouseId,
+        qty: ln.qty,
+      });
+    }
 
     netTotal += net;
     taxTotal += tax;
@@ -264,7 +302,7 @@ export async function confirmSalesOrderWithin(exec: DB, scope: Scope, input: Con
     tax: taxTotal,
     total: grandTotal,
     version: order.version,
-  }, issueLines, false);
+  }, issueLines, false, input.lines.length);
 }
 
 /**
@@ -325,6 +363,7 @@ export async function confirmDraftSalesOrderWithin(
   const lines = await exec.select({
     orderLineId: salesOrderLine.id,
     lineNo: salesOrderLine.lineNo,
+    lineType: salesOrderLine.lineType,
     productId: salesOrderLine.productId,
     qty: salesOrderLine.qty,
   }).from(salesOrderLine).where(and(
@@ -344,13 +383,13 @@ export async function confirmDraftSalesOrderWithin(
     tax: Number(order.taxAmount),
     total: Number(order.totalAmount),
     version: order.version,
-  }, lines.map((line) => ({
+  }, lines.filter((line) => line.lineType === 'stock').map((line) => ({
     orderLineId: line.orderLineId,
     lineNo: line.lineNo,
-    productId: line.productId,
+    productId: Number(line.productId),
     warehouseId: input.warehouseId,
     qty: Number(line.qty),
-  })), true);
+  })), true, lines.length);
 }
 
 /**

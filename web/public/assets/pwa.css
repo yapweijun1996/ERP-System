@@ -1,10 +1,15 @@
-/* PWA install/update UI and mobile safe-area helpers. */
+/* PWA install/update UI, iOS safe-area helpers, and fixed mobile viewport scale. */
 :root{
   --safe-top:env(safe-area-inset-top,0px);
   --safe-right:env(safe-area-inset-right,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
   --safe-left:env(safe-area-inset-left,0px);
   --mobile-tabbar-base:58px;
+}
+
+html,body{
+  -webkit-text-size-adjust:100%;
+  touch-action:pan-x pan-y;
 }
 
 .pwa-toast{
@@ -45,6 +50,37 @@
 }
 .pwa-toast .pwa-primary{background:var(--accent);color:#fff;}
 .pwa-toast .pwa-secondary{background:var(--hairline);color:var(--muted);}
+
+/* Localized from the Vanilla HTML Loader Wave Bars and Shimmer Progress
+   patterns. Keeping the tiny visual here means the static build has no
+   runtime dependency on the showcase site while the database is opening. */
+#bootLoadingView .auth-panel{gap:18px;}
+.demo-boot-visual{display:grid;place-items:center;padding:12px 0 0;}
+.demo-boot-visual .vl-wave{height:48px;display:flex;align-items:center;justify-content:center;gap:5px;}
+.demo-boot-visual .vl-wave span{display:block;width:7px;height:22px;border-radius:999px;background:var(--accent);box-shadow:0 5px 14px color-mix(in srgb,var(--accent) 24%,transparent);animation:erp-demo-wave 1s ease-in-out infinite;}
+.demo-boot-visual .vl-wave span:nth-child(2){animation-delay:.12s;}
+.demo-boot-visual .vl-wave span:nth-child(3){animation-delay:.24s;}
+.demo-boot-visual .vl-wave span:nth-child(4){animation-delay:.36s;}
+.demo-boot-visual .vl-wave span:nth-child(5){animation-delay:.48s;}
+@keyframes erp-demo-wave{0%,100%{height:18px;opacity:.48;transform:translateY(6px);}50%{height:42px;opacity:1;transform:translateY(0);}}
+.demo-boot-copy{display:grid;gap:10px;}
+.demo-boot-heading{display:flex;align-items:baseline;justify-content:space-between;gap:14px;}
+.demo-boot-heading strong{font-size:13px;letter-spacing:-.01em;}
+.demo-boot-heading span{color:var(--accent);font-size:12px;font-weight:750;font-variant-numeric:tabular-nums;}
+.demo-boot-progress{height:8px;overflow:hidden;border-radius:999px;background:var(--accent-tint);}
+.demo-boot-progress span{position:relative;display:block;width:0;height:100%;overflow:hidden;border-radius:inherit;background:var(--accent);box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 28%,transparent);transition:width .28s ease;}
+.demo-boot-progress span::after{position:absolute;inset:0;content:"";background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.55) 48%,transparent 76%);animation:erp-demo-shimmer 1.35s linear infinite;}
+@keyframes erp-demo-shimmer{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
+.demo-boot-copy .wiz-p{margin:0;}
+.demo-boot-copy small{display:block;color:var(--muted);font-size:11px;line-height:1.45;}
+.auth-demo-actions{display:grid;gap:7px;margin-top:2px;padding-top:4px;border-top:1px solid var(--hairline);}
+.auth-demo-actions .btn{width:100%;justify-content:center;}
+.auth-demo-actions small{color:var(--muted);font-size:11px;line-height:1.4;text-align:center;}
+
+@media (prefers-reduced-motion:reduce){
+  .demo-boot-visual .vl-wave span,.demo-boot-progress span::after{animation:none;}
+  .demo-boot-progress span{transition:none;}
+}
 
 /* Keep the shell header to one row before the full mobile layout kicks in.
    At tablet widths the sidebar can still be open, leaving the main column
@@ -89,6 +125,61 @@
 
 @media (prefers-reduced-motion:reduce){
   .pwa-toast{transition:none;}
+}
+
+/* iOS standalone mode extends the viewport under the status bar and home
+   indicator. Keep every full-screen entry point inside those insets. */
+@media (max-width:980px){
+  .auth-view{
+    padding-top:calc(28px + var(--safe-top));
+    padding-right:max(28px,var(--safe-right));
+    padding-bottom:calc(28px + var(--safe-bottom));
+    padding-left:max(28px,var(--safe-left));
+  }
+  #setupWizardView.auth-view{
+    padding-top:calc(20px + var(--safe-top));
+    padding-right:max(20px,var(--safe-right));
+    padding-bottom:calc(20px + var(--safe-bottom));
+    padding-left:max(20px,var(--safe-left));
+  }
+  #setupWizardView .wizard-panel{
+    height:calc(100dvh - 40px - var(--safe-top) - var(--safe-bottom));
+    min-height:calc(100dvh - 40px - var(--safe-top) - var(--safe-bottom));
+  }
+  .detail{
+    padding-top:var(--safe-top);
+  }
+  .palette{
+    max-height:100dvh;
+  }
+}
+
+@media (max-width:560px){
+  .auth-view{
+    padding-top:calc(18px + var(--safe-top));
+    padding-right:max(18px,var(--safe-right));
+    padding-bottom:calc(18px + var(--safe-bottom));
+    padding-left:max(18px,var(--safe-left));
+  }
+  .auth-view .auth-panel{
+    min-height:calc(100dvh - 36px - var(--safe-top) - var(--safe-bottom));
+  }
+  #setupWizardView.auth-view{
+    padding-top:calc(16px + var(--safe-top));
+    padding-right:max(16px,var(--safe-right));
+    padding-bottom:calc(16px + var(--safe-bottom));
+    padding-left:max(16px,var(--safe-left));
+  }
+  #setupWizardView .wizard-panel{
+    height:calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
+    min-height:calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
+  }
+}
+
+/* iOS Safari zooms focused controls below 16px even when the viewport is
+   locked. Keep control text at the platform threshold on touch layouts. */
+@media (max-width:980px){
+  input,select,textarea{font-size:16px !important;}
 }
 
 /* Keep the desktop first-run wizard visually complete inside its fixed 80vh

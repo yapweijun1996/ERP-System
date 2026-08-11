@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../data/db';
-import { appNotification, auditLog, role, rolePermission } from '../data/schema';
+import { appNotification, appUser, auditLog, role, rolePermission } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { createApp } from './app';
@@ -118,7 +118,7 @@ describe('canonical notifications API', () => {
     expect(await denied.json()).toMatchObject({ error: { code: 'notification_not_found' } });
   });
 
-  it('keeps read access when notification-management permission is revoked', async () => {
+  it('lets the addressed user manage their own notification state without admin management permission', async () => {
     const [viewerRole] = await db.select({ id: role.roleId }).from(role)
       .where(and(eq(role.masterFn, 'M1'), eq(role.name, 'Viewer')));
     await db.delete(rolePermission).where(and(
@@ -131,10 +131,68 @@ describe('canonical notifications API', () => {
     });
     expect(listed.status).toBe(200);
     const id = (await listed.json()).data[0].id;
-    const denied = await fetch(`${baseUrl}/api/account/notifications/${id}/actions/dismiss`, {
+    const markedRead = await fetch(`${baseUrl}/api/account/notifications/${id}/actions/mark-read`, {
+      method: 'POST', headers: writeHeaders(viewer, 'viewer-notification-read-without-manage'), body: '{}',
+    });
+    expect(markedRead.status).toBe(200);
+    const dismissed = await fetch(`${baseUrl}/api/account/notifications/${id}/actions/dismiss`, {
       method: 'POST', headers: writeHeaders(viewer, 'permission-denied-notification'), body: '{}',
     });
-    expect(denied.status).toBe(403);
-    expect(await denied.json()).toMatchObject({ error: { code: 'permission_denied' } });
+    expect(dismissed.status).toBe(200);
+    expect(await dismissed.json()).toMatchObject({ data: { id } });
+  });
+
+  it('filters inaccessible destinations and resolves legacy approval routes before delivery to the UI', async () => {
+    const [viewerRole] = await db.select({ id: role.roleId }).from(role)
+      .where(and(eq(role.masterFn, 'M1'), eq(role.name, 'Viewer')));
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, viewerRole.id),
+      eq(rolePermission.permissionKey, 'hr.read'),
+    ));
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, viewerRole.id),
+      eq(rolePermission.permissionKey, 'dashboard.read'),
+    ));
+    const [viewerUser] = await db.select({ id: appUser.userId }).from(appUser)
+      .where(eq(appUser.email, 'viewer@acme.co'));
+    await db.insert(appNotification).values([
+      {
+        masterFn: 'M1', companyFn: 'C-SG', recipientUserId: viewerUser.id,
+        kind: 'approval_required', severity: 'warning',
+        subject: 'Legacy personal approval', detail: 'A personal approval is waiting.',
+        route: 'leave-approval', entityRef: 'leave_request:1',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', recipientUserId: viewerUser.id,
+        kind: 'system_notice', severity: 'info',
+        subject: 'Restricted staff calendar', detail: 'This must not be shown to a non-HR user.',
+        route: 'staff-calendar', entityRef: 'appointment:1',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', recipientUserId: viewerUser.id,
+        kind: 'system_notice', severity: 'info',
+        subject: 'Restricted dashboard', detail: 'This must not be shown without dashboard access.',
+        route: 'dashboard', entityRef: 'dashboard',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', recipientUserId: viewerUser.id,
+        kind: 'system_notice', severity: 'info',
+        subject: 'Unknown destination', detail: 'Unregistered destinations are not clickable.',
+        route: 'future-screen', entityRef: 'future:1',
+      },
+    ]);
+    const viewer = await login('viewer@acme.co', 'viewer1234');
+    const listed = await fetch(`${baseUrl}/api/account/notifications?limit=100`, {
+      headers: { cookie: viewer.header },
+    });
+    expect(listed.status).toBe(200);
+    const body = await listed.json();
+    expect(body.data).toEqual([
+      expect.objectContaining({ subject: 'Legacy personal approval', route: 'my-approvals' }),
+    ]);
+    const myApprovals = await fetch(`${baseUrl}/api/my/approvals`, {
+      headers: { cookie: viewer.header },
+    });
+    expect(myApprovals.status).toBe(200);
   });
 });

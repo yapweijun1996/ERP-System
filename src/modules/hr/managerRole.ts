@@ -1,11 +1,16 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
+  auditLog,
   employee,
   role,
+  rolePermission,
+  roleResourceScope,
   userCompanyRole,
 } from '../../data/schema';
 import type { Scope } from '../../data/repo';
+import { roleTemplate } from '../../auth/accessCatalog';
+import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 
 export class ManagerRoleSyncError extends Error {
   constructor(
@@ -15,6 +20,82 @@ export class ManagerRoleSyncError extends Error {
     super(message);
     this.name = 'ManagerRoleSyncError';
   }
+}
+
+/**
+ * Manager is a system-managed role for employees who have active direct
+ * reports. Older production companies may have imported employee master data
+ * before the role catalogue was initialized, so provisioning the first
+ * manager account creates the canonical company-scoped role on demand.
+ */
+export async function ensureManagerRoleWithin(
+  exec: DB,
+  scope: Scope,
+  actorUserId: number,
+  requestId?: string,
+) {
+  const template = roleTemplate('manager');
+  if (!template) {
+    throw new ManagerRoleSyncError(
+      'manager_role_missing',
+      'The Manager role is not configured for this organization.',
+    );
+  }
+
+  let [managerRole] = await exec.select({ roleId: role.roleId }).from(role).where(and(
+    eq(role.masterFn, scope.masterFn),
+    eq(role.companyFn, scope.companyFn),
+    eq(role.name, 'Manager'),
+  )).limit(1);
+  if (managerRole) return managerRole;
+
+  const [createdRole] = await exec.insert(role).values({
+    masterFn: scope.masterFn,
+    companyFn: scope.companyFn,
+    name: template.name,
+    isSuperadmin: false,
+    sourceTemplateKey: template.key,
+  }).onConflictDoNothing().returning({ roleId: role.roleId });
+  if (createdRole) {
+    await exec.insert(rolePermission).values(template.permissions.map((permissionKey) => ({
+      masterFn: scope.masterFn,
+      roleId: createdRole.roleId,
+      permissionKey,
+      allowed: true,
+    })));
+    await exec.insert(roleResourceScope).values(Object.entries(template.scopes).map(([resourceKey, dataScope]) => ({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      roleId: createdRole.roleId,
+      resourceKey,
+      scope: dataScope,
+    })));
+    if (requestId) {
+      await exec.insert(auditLog).values({
+        ...scope,
+        actorUserId,
+        requestId,
+        entity: 'role',
+        entityId: String(createdRole.roleId),
+        action: 'created_system_manager_role',
+        after: { name: template.name, templateKey: template.key },
+      });
+    }
+    return createdRole;
+  }
+
+  [managerRole] = await exec.select({ roleId: role.roleId }).from(role).where(and(
+    eq(role.masterFn, scope.masterFn),
+    eq(role.companyFn, scope.companyFn),
+    eq(role.name, 'Manager'),
+  )).limit(1);
+  if (!managerRole) {
+    throw new ManagerRoleSyncError(
+      'manager_role_missing',
+      'The Manager role is not configured for this organization.',
+    );
+  }
+  return managerRole;
 }
 
 /**
@@ -48,20 +129,6 @@ export async function syncManagerRoleWithin(
     };
   }
 
-  const [managerRole] = await exec.select({ roleId: role.roleId })
-    .from(role)
-    .where(and(
-      eq(role.masterFn, scope.masterFn),
-      eq(role.name, 'Manager'),
-    ))
-    .limit(1);
-  if (!managerRole) {
-    throw new ManagerRoleSyncError(
-      'manager_role_missing',
-      'The Manager role is not configured for this organization.',
-    );
-  }
-
   const [activeReport] = manager.isActive
     ? await exec.select({ id: employee.id }).from(employee).where(and(
       eq(employee.masterFn, scope.masterFn),
@@ -71,12 +138,40 @@ export async function syncManagerRoleWithin(
     )).limit(1)
     : [];
   const required = Boolean(activeReport);
+  let [managerRole] = await exec.select({ roleId: role.roleId })
+    .from(role)
+    .where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.companyFn, scope.companyFn),
+      eq(role.name, 'Manager'),
+    ))
+    .limit(1);
+  if (!managerRole) {
+    [managerRole] = await exec.select({ roleId: role.roleId })
+      .from(role)
+      .where(and(
+        eq(role.masterFn, scope.masterFn),
+        isNull(role.companyFn),
+        eq(role.name, 'Manager'),
+      ))
+      .limit(1);
+  }
+  if (!managerRole) {
+    if (!required) {
+      return { employeeId, userId: manager.userId, required, changed: false };
+    }
+    throw new ManagerRoleSyncError(
+      'manager_role_missing',
+      'The Manager role is not configured for this organization.',
+    );
+  }
   const [existing] = await exec.select({
     managedBySystem: userCompanyRole.managedBySystem,
   }).from(userCompanyRole).where(and(
     eq(userCompanyRole.userId, manager.userId),
     eq(userCompanyRole.companyFn, scope.companyFn),
     eq(userCompanyRole.roleId, managerRole.roleId),
+    activeRoleAssignmentCondition(now),
   )).limit(1);
 
   if (required) {
@@ -88,6 +183,7 @@ export async function syncManagerRoleWithin(
       companyFn: scope.companyFn,
       roleId: managerRole.roleId,
       managedBySystem: true,
+      assignmentSource: 'system',
       updatedAt: now,
     }).onConflictDoNothing().returning({ roleId: userCompanyRole.roleId });
     return {
@@ -104,6 +200,7 @@ export async function syncManagerRoleWithin(
       eq(userCompanyRole.companyFn, scope.companyFn),
       eq(userCompanyRole.roleId, managerRole.roleId),
       eq(userCompanyRole.managedBySystem, true),
+      activeRoleAssignmentCondition(now),
     ));
     return { employeeId, userId: manager.userId, required, changed: true };
   }

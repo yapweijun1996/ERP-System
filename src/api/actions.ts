@@ -1,4 +1,6 @@
 import { ActionDispatchError, type ActionDefinition } from './actionDispatcher';
+import { and, eq } from 'drizzle-orm';
+import { employee, leaveRequest } from '../data/schema';
 import {
   convertOpportunityToSalesOrderWithin,
   type ConvertOpportunityInput,
@@ -52,6 +54,8 @@ import {
 import {
   convertEnquiryToQuotationWithin,
   convertQuotationToOrderWithin,
+  replaceSalesEnquiryLinesWithin,
+  saveSalesEnquiryDraftWithin,
   transitionQuotationWithin,
 } from '../modules/sales/quotation';
 import {
@@ -72,7 +76,15 @@ import {
   approveCommissionRunWithin,
 } from '../modules/sales/commission';
 import { postDepreciationRunWithin } from '../modules/assets/depreciationRun';
-import { decideLeaveRequestWithin } from '../modules/hr/leaveRequest';
+import {
+  InvalidLeaveRequestStateError,
+  decideLeaveRequestWithin,
+} from '../modules/hr/leaveRequest';
+import {
+  decideGovernedLeaveWithin,
+  LeaveApplicationError,
+} from '../modules/hr/leaveApplication';
+import { ApprovalWorkflowError } from '../modules/approval/workflow';
 import { postPayrollRunWithin } from '../modules/payroll/payrollRun';
 import { postProgressClaimWithin } from '../modules/project/progressClaim';
 import { voidProjectTimeEntryWithin } from '../modules/project/timeEntry';
@@ -97,9 +109,102 @@ import {
   markNotificationReadWithin,
 } from '../modules/account/notification';
 
+type HrLeaveDecisionPayload = {
+  expectedVersion?: unknown;
+  reason?: unknown;
+  rejectionReason?: unknown;
+};
+
+/**
+ * The HR leave register predates the governed leave-application workflow and
+ * still uses the same resource action URL. Resolve the row inside the action
+ * transaction so the old register can safely handle both generations without
+ * bypassing version checks, approval policy or audit writes.
+ */
+async function decideHrLeaveRequestWithin(
+  tx: Parameters<ActionDefinition['execute']>[0],
+  scope: { masterFn: string; companyFn: string },
+  input: { resourceId: number; payload: Record<string, unknown>; actorUserId: number },
+  decision: 'approved' | 'rejected',
+) {
+  const [row] = await tx.select({
+    id: leaveRequest.id,
+    legacyPolicy: leaveRequest.legacyPolicy,
+    version: leaveRequest.version,
+  }).from(leaveRequest).where(and(
+    eq(leaveRequest.id, input.resourceId),
+    eq(leaveRequest.masterFn, scope.masterFn),
+    eq(leaveRequest.companyFn, scope.companyFn),
+  )).limit(1);
+  if (!row) {
+    throw new ActionDispatchError(404, 'leave_request_not_found', 'Leave request not found.');
+  }
+
+  const payload = input.payload as HrLeaveDecisionPayload;
+  if (!row.legacyPolicy) {
+    const expectedVersion = Number(payload.expectedVersion);
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion <= 0) {
+      throw new ActionDispatchError(
+        428,
+        'expected_version_required',
+        'A positive expectedVersion is required for governed leave decisions.',
+      );
+    }
+    const reason = typeof payload.reason === 'string' ? payload.reason : null;
+    const [linkedEmployee] = await tx.select({ id: employee.id }).from(employee).where(and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      eq(employee.userId, input.actorUserId),
+    )).limit(1);
+    try {
+      return await decideGovernedLeaveWithin(
+        tx,
+        scope,
+        {
+          userId: input.actorUserId,
+          employeeId: linkedEmployee?.id ?? null,
+          canManage: true,
+        },
+        input.resourceId,
+        expectedVersion,
+        decision,
+        reason,
+      );
+    } catch (error) {
+      if (error instanceof LeaveApplicationError || error instanceof ApprovalWorkflowError) {
+        throw new ActionDispatchError(error.status, error.code, error.message);
+      }
+      throw error;
+    }
+  }
+
+  const rejectionReason = decision === 'rejected'
+    ? (typeof payload.rejectionReason === 'string'
+      ? payload.rejectionReason
+      : typeof payload.reason === 'string' ? payload.reason : null)
+    : null;
+  try {
+    return await decideLeaveRequestWithin(
+      tx,
+      scope,
+      input.resourceId,
+      decision,
+      rejectionReason,
+    );
+  } catch (error) {
+    if (error instanceof InvalidLeaveRequestStateError) {
+      throw new ActionDispatchError(409, 'invalid_leave_state', error.message);
+    }
+    throw error;
+  }
+}
+
 const ACTIONS: Record<string, ActionDefinition> = {
   'account/notifications/mark-read': {
-    permission: 'notifications.manage',
+    /* Read/dismiss is an actor-owned attention state. It must not require an
+       admin-only management grant, otherwise an ordinary employee can see a
+       notification but clicking it fails before the drill-in navigation. */
+    permission: 'notifications.read',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
@@ -107,7 +212,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
     },
   },
   'account/notifications/dismiss': {
-    permission: 'notifications.manage',
+    permission: 'notifications.read',
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
@@ -291,11 +396,16 @@ const ACTIONS: Record<string, ActionDefinition> = {
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
+      const payload = input.payload as unknown as UpdateProductInput;
+      if (typeof payload.expectedVersion !== 'number'
+        || !Number.isSafeInteger(payload.expectedVersion) || payload.expectedVersion < 1) {
+        throw new ActionDispatchError(428, 'if_match_required', 'A product version is required when updating product master data.');
+      }
       return updateProductWithin(
         tx,
         scope,
         input.resourceId,
-        input.payload as unknown as UpdateProductInput,
+        payload,
       );
     },
   },
@@ -533,7 +643,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
-      return decideLeaveRequestWithin(tx, scope, input.resourceId, 'approved');
+      return decideHrLeaveRequestWithin(tx, scope, input, 'approved');
     },
   },
   'hr/leave-requests/reject': {
@@ -541,10 +651,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
     idempotency: 'required',
     audit: 'required',
     async execute(tx, scope, input) {
-      const reason = (input.payload as { rejectionReason?: unknown } | undefined)?.rejectionReason;
-      return decideLeaveRequestWithin(
-        tx, scope, input.resourceId, 'rejected', typeof reason === 'string' ? reason : null,
-      );
+      return decideHrLeaveRequestWithin(tx, scope, input, 'rejected');
     },
   },
   'project/progress-claims/post': {
@@ -620,6 +727,9 @@ const ACTIONS: Record<string, ActionDefinition> = {
         probability?: unknown;
         lines?: Array<{
           productId?: unknown;
+          lineType?: unknown;
+          description?: unknown;
+          uom?: unknown;
           qty?: unknown;
           unitPrice?: unknown;
           taxCode?: unknown;
@@ -646,10 +756,116 @@ const ACTIONS: Record<string, ActionDefinition> = {
         currency: payload.currency,
         probability: payload.probability as string | number | undefined,
         lines: payload.lines.map((line) => ({
-          productId: Number(line.productId),
+          lineType: line.lineType as 'stock' | 'non_stock' | undefined,
+          productId: line.productId == null ? null : Number(line.productId),
+          description: line.description == null ? undefined : String(line.description),
+          uom: line.uom == null ? undefined : String(line.uom),
           qty: line.qty as string | number,
           unitPrice: line.unitPrice as string | number,
           taxCode: String(line.taxCode ?? ''),
+        })),
+      });
+    },
+  },
+  'sales/enquiries/replace-lines': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as {
+        expectedVersion?: unknown;
+        lines?: Array<{
+          productId?: unknown;
+          lineType?: unknown;
+          description?: unknown;
+          uom?: unknown;
+          qty?: unknown;
+          estimatedUnitPrice?: unknown;
+        }>;
+      };
+      if (!Number.isSafeInteger(payload.expectedVersion) || !Array.isArray(payload.lines)) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'expectedVersion and lines are required.',
+        );
+      }
+      return replaceSalesEnquiryLinesWithin(tx, scope, input.resourceId, {
+        expectedVersion: Number(payload.expectedVersion),
+        lines: payload.lines.map((line) => ({
+          lineType: line.lineType as 'stock' | 'non_stock' | undefined,
+          productId: line.productId == null ? null : Number(line.productId),
+          description: line.description == null ? undefined : String(line.description),
+          uom: line.uom == null ? undefined : String(line.uom),
+          qty: line.qty as string | number,
+          estimatedUnitPrice: line.estimatedUnitPrice as string | number,
+        })),
+      });
+    },
+  },
+  'sales/enquiries/save-draft': {
+    permission: 'sales.write',
+    idempotency: 'required',
+    audit: 'required',
+    async execute(tx, scope, input) {
+      const payload = input.payload as {
+        expectedVersion?: unknown;
+        header?: {
+          customerId?: unknown;
+          subject?: unknown;
+          channel?: unknown;
+          currency?: unknown;
+          ownerName?: unknown;
+          enquiryDate?: unknown;
+        };
+        lines?: Array<{
+          productId?: unknown;
+          lineType?: unknown;
+          description?: unknown;
+          uom?: unknown;
+          qty?: unknown;
+          estimatedUnitPrice?: unknown;
+        }>;
+      };
+      if (
+        !Number.isSafeInteger(payload.expectedVersion)
+        || !payload.header
+        || !Array.isArray(payload.lines)
+      ) {
+        throw new ActionDispatchError(
+          400,
+          'invalid_action_payload',
+          'expectedVersion, header and lines are required.',
+        );
+      }
+      const header = payload.header;
+      if (
+        !Number.isSafeInteger(header.customerId)
+        || typeof header.subject !== 'string'
+        || typeof header.channel !== 'string'
+        || typeof header.currency !== 'string'
+        || typeof header.ownerName !== 'string'
+        || typeof header.enquiryDate !== 'string'
+      ) {
+        throw new ActionDispatchError(400, 'invalid_action_payload', 'A complete enquiry header is required.');
+      }
+      return saveSalesEnquiryDraftWithin(tx, scope, input.resourceId, {
+        expectedVersion: Number(payload.expectedVersion),
+        header: {
+          customerId: Number(header.customerId),
+          subject: header.subject,
+          channel: header.channel,
+          currency: header.currency,
+          ownerName: header.ownerName,
+          enquiryDate: header.enquiryDate,
+        },
+        lines: payload.lines.map((line) => ({
+          lineType: line.lineType as 'stock' | 'non_stock' | undefined,
+          productId: line.productId == null ? null : Number(line.productId),
+          description: line.description == null ? undefined : String(line.description),
+          uom: line.uom == null ? undefined : String(line.uom),
+          qty: line.qty as string | number,
+          estimatedUnitPrice: line.estimatedUnitPrice as string | number,
         })),
       });
     },
@@ -928,7 +1144,7 @@ const ACTIONS: Record<string, ActionDefinition> = {
           !line
           || typeof line !== 'object'
           || !Number.isSafeInteger(line.productId)
-          || line.productId <= 0
+          || Number(line.productId) <= 0
           || !Number.isSafeInteger(line.warehouseId)
           || line.warehouseId <= 0
           || !Number.isFinite(line.qty)

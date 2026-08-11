@@ -8,8 +8,44 @@ import {
 export { ACTION_PERMISSION_KEYS, PERMISSION_CATALOG } from './permissionRegistry';
 
 export type DataScope = 'self' | 'team' | 'department' | 'company';
+export const COMPANY_OWNER_ROLE_TEMPLATE_KEY = 'company_owner' as const;
+
+/**
+ * Company Owner is a tenant administrator, not a business-approval bypass.
+ * Keep the default bundle broad enough for one-person onboarding, while
+ * requiring an explicit approval/payment/payroll grant for sensitive actions.
+ */
+const COMPANY_OWNER_RESTRICTED_PERMISSION_KEYS = new Set([
+  ...PERMISSION_CATALOG.filter((permissionKey) =>
+    permissionKey.endsWith('.approve')
+      || permissionKey.endsWith('.pay')
+      || permissionKey.startsWith('payroll.')),
+  PERMISSIONS.salesApprove,
+  PERMISSIONS.salesCommissionApprove,
+  PERMISSIONS.purchasingApprove,
+  PERMISSIONS.expensesManagerApprove,
+  PERMISSIONS.expensesFinanceApprove,
+  PERMISSIONS.expensesBudgetApprove,
+  PERMISSIONS.expensesFinanceVerify,
+  PERMISSIONS.expensesPayoutVerify,
+  PERMISSIONS.expensesPayoutReveal,
+  PERMISSIONS.expensesPaymentBatchRelease,
+  PERMISSIONS.expensesPaymentResultImport,
+  PERMISSIONS.employeePayoutManage,
+  PERMISSIONS.payrollRead,
+  PERMISSIONS.payrollWrite,
+  PERMISSIONS.expensesTaxEvidenceAccess,
+  PERMISSIONS.expensesTaxEvidenceGovernance,
+  PERMISSIONS.expensesCompanyReceiptsReadOwn,
+]);
+
+export const COMPANY_OWNER_PERMISSION_KEYS = Object.freeze(
+  PERMISSION_CATALOG.filter((permissionKey) =>
+    !COMPANY_OWNER_RESTRICTED_PERMISSION_KEYS.has(permissionKey)),
+);
+
 export type RoleTemplateKey =
-  | 'superadmin' | 'company_admin' | 'manager' | 'sales' | 'buyer'
+  | 'superadmin' | 'company_owner' | 'company_admin' | 'manager' | 'sales' | 'buyer'
   | 'warehouse' | 'production' | 'finance_preparer' | 'finance_checker'
   | 'hr' | 'service' | 'viewer';
 
@@ -17,6 +53,8 @@ export interface RoleTemplate {
   key: RoleTemplateKey;
   name: string;
   isSuperadmin?: boolean;
+  immutable?: boolean;
+  deprecated?: boolean;
   permissions: readonly string[];
   scopes: Readonly<Record<string, DataScope>>;
 }
@@ -29,8 +67,13 @@ const companyScopes = (...resources: string[]) =>
 
 export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
   {
-    key: 'superadmin', name: 'Superadmin', isSuperadmin: true,
+    key: 'superadmin', name: 'Superadmin', isSuperadmin: true, immutable: true, deprecated: true,
     permissions: PERMISSION_CATALOG,
+    scopes: companyScopes('*'),
+  },
+  {
+    key: COMPANY_OWNER_ROLE_TEMPLATE_KEY, name: 'Company Owner', immutable: true,
+    permissions: COMPANY_OWNER_PERMISSION_KEYS,
     scopes: companyScopes('*'),
   },
   {
@@ -50,6 +93,8 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
       PERMISSIONS.dashboardRead, PERMISSIONS.employeeSelfRead, PERMISSIONS.employeeTeamRead,
       PERMISSIONS.employeeLeaveWrite, PERMISSIONS.employeeReceiptsWrite,
       PERMISSIONS.expensesCompanyReceiptsReadOwn,
+      PERMISSIONS.expensesCompanyReceiptsCreate, PERMISSIONS.expensesCompanyReceiptsEdit,
+      PERMISSIONS.expensesCompanyReceiptsVoid,
       PERMISSIONS.employeeClaimsWrite, PERMISSIONS.expensesManagerApprove,
       ...read('sales', 'crm', 'inventory', 'project', 'service'),
       ...actions('sales', 'approve'), ...actions('purchasing', 'approve'),
@@ -140,6 +185,10 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
 
 export function roleTemplate(key: string): RoleTemplate | undefined {
   return ROLE_TEMPLATES.find((template) => template.key === key);
+}
+
+export function isCompanyOwnerRole(sourceTemplateKey: string | null | undefined): boolean {
+  return sourceTemplateKey === COMPANY_OWNER_ROLE_TEMPLATE_KEY;
 }
 
 export function fineGrainedActionPermission(

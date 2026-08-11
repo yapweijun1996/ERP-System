@@ -56,15 +56,16 @@ docs/                    This documentation suite
   5. Add five-language copy, set the route Canonical only after Demo/API parity, then
      run the type/test/schema/build/current-route gates and live desktop + 375 px checks.
 
-Current release verification (2026-08-10): `npm run audit:screens` is green for all
+Release verification recorded through 2026-08-12: `npm run audit:screens` is green for all
 128 registered routes at desktop and 375 px (128 Canonical / 0 Preview, no console/page
 errors, and no active-tab, layout, action-bar or declared-contract failures). The full
 i18n matrix is green: 1,533 canonical keys across 69 local five-language packs and
 128 routes × 5 languages × 2 viewports. `npm run smoke` passes at desktop and mobile;
 the visible-only navigation-badge contract is explicit, so hidden zero-count badges do
 not fail the dashboard assertion. `npm run audit:pwa-update`,
-`npm run audit:access-matrix` and the permission/schema/drift gates also pass. The full
-Vitest baseline is 156 passed files plus 1 skipped file (635 passed, 1 skipped tests).
+`npm run audit:access-matrix` and the permission/schema/drift gates also pass. The latest
+current-worktree full Vitest run passes 168 files plus 1 skipped file (663 passed, 1
+skipped tests).
 Business-record values are not treated as UI copy. Physical-device acceptance remains
 separate from the automated 375 px browser gate.
 
@@ -509,14 +510,21 @@ scan/hash/version identity and 250 MB source size at render time, and uses one s
 PDF primitive for Company Receipt Pack and Tax Evidence composition without sharing
 their business queries.
 
-The product entry remains `Expenses & Tax → Company Receipts`. TASK-179 adds a temporary
+The product entry remains `Expenses & Tax → Company Receipts`. TASK-179 adds the
 permission-aware Company Receipts route under the existing Finance/My Work shells with
 Demo/API list parity, five-language copy, eight desktop columns and labelled mobile
-cards. Mutations still reuse `employee.receipts.write`; final module/resource/action
-identifiers must be registered atomically with the backend Module Catalog, route metadata
-and `accessMatrix` under TASK-182. TASK-181 now provides Preview/PDF/Print in both
-adapters, but until TASK-182–183 land neither `my-receipts`, `/api/company-receipts`
-nor `receipt-tax-evidence` may be presented as the fully released v1.
+cards. TASK-182 atomically registers `expenses_tax` in the backend entitlement gate,
+route metadata and `accessMatrix`, and moves confirmation/create, edit and void to
+`expenses.company_receipts.create`, `.edit` and `.void` respectively. The old
+`employee.receipts.write` key remains My Receipts-only. TASK-181 provides Preview/PDF/
+Print in both adapters. TASK-183 now adds the permission-gated UI hand-off from an
+uploader-owned My Receipts document version to the immutable confirmation read and
+canonical create action; Demo runtime delegates these operations to the shared
+`companyReceipt` commands rather than duplicating SQL. The static Demo still leaves new
+uploads quarantined without a malware scanner. TASK-183 passes the authenticated API-mode
+browser journey through both an isolated same-origin PGlite fixture and a newly created,
+empty disposable PostgreSQL 16 database. The fixtures prove separate adapter/database
+paths; they do not constitute a production deployment claim.
 
 ## 12. Platform Module Entitlement and tenant cutover
 

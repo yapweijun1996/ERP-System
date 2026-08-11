@@ -9,11 +9,12 @@ import {
   master,
   role,
   rolePermission,
+  roleResourceScope,
   taxRule,
   userCompany,
   userCompanyRole,
 } from '../../data/schema';
-import { PERMISSIONS } from '../../auth/permissions';
+import { COMPANY_OWNER_PERMISSION_KEYS, COMPANY_OWNER_ROLE_TEMPLATE_KEY } from '../../auth/accessCatalog';
 import { createDefaultControlPlane } from './defaultControlPlane';
 import {
   isValidOrganizationCode,
@@ -185,24 +186,31 @@ export async function completeDemoSetupWithin(
     .where(and(
       eq(role.masterFn, masterFn),
       eq(role.companyFn, companyFn),
-      eq(role.name, 'Superadmin'),
+      eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
     ));
   if (!adminRole) {
     [adminRole] = await exec.insert(role).values({
       masterFn,
       companyFn,
-      name: 'Superadmin',
-      isSuperadmin: true,
-      sourceTemplateKey: 'superadmin',
+      name: 'Company Owner',
+      isSuperadmin: false,
+      sourceTemplateKey: COMPANY_OWNER_ROLE_TEMPLATE_KEY,
     }).returning({ roleId: role.roleId });
   }
   await exec.insert(rolePermission).values(
-    Object.values(PERMISSIONS).map((permissionKey) => ({
+    COMPANY_OWNER_PERMISSION_KEYS.map((permissionKey) => ({
       masterFn,
       roleId: adminRole.roleId,
       permissionKey,
     })),
   ).onConflictDoNothing();
+  await exec.insert(roleResourceScope).values({
+    masterFn,
+    companyFn,
+    roleId: adminRole.roleId,
+    resourceKey: '*',
+    scope: 'company',
+  }).onConflictDoNothing();
 
   let admin = existingUsername && existingEmail
     && existingUsername.userId === existingEmail.userId

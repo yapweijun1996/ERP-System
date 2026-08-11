@@ -276,7 +276,7 @@ The current application registry is split into two layers:
   so existing broad grants continue to work during expand without accepting arbitrary
   strings. Unknown candidates return no grant.
 
-`npm run check:permissions` currently verifies 303 static registry definitions, 116
+`npm run check:permissions` currently verifies 309 static registry definitions, 116
 resource contracts, 62 action contracts and 5 update contracts. TASK-172 added the
 assignment migration, dual-read scope path, active-assignment predicate and assignment
 API. TASK-173 now adds the central decision service, user-level explicit overrides,
@@ -284,11 +284,13 @@ safe/audited explanations and strict current-step approval context for the gener
 and expense domains. The access matrix and authenticated/browser checks are a partial
 cross-layer regression contract. Unknown business-module keys now fail closed;
  authenticated `account/*` service routes are explicitly non-module-gated but remain
- tenant/session and permission guarded. Authorization-version invalidation and deeper
-delegation binding remain TASK-174 work; the Company Owner cutover is delivered by
-migration 0089. Disposable PostgreSQL 16 parity, true concurrency and non-superuser
-RLS/security proof are green; target-database migration, production RLS re-application
-and application release verification are complete.
+ tenant/session and permission guarded. TASK-174 completed authorization-version
+invalidation: browser requests carry the Company snapshot, stale state fails closed and
+session refresh is the sole recovery path. Deeper delegation binding remains future
+hardening rather than TASK-174 scope. The Company Owner cutover is delivered by migration
+0089. Disposable PostgreSQL 16 parity, true concurrency and non-superuser RLS/security
+proof are green; target-database migration, production RLS re-application and application
+release verification are complete.
 
 ## 6. Scope and resource ownership
 
@@ -538,24 +540,24 @@ templates, and fails closed on unmapped or accidentally public routes. The brows
 audit does not write application data; records without demo seed data are checked
 for drill-in consistency when a row exists.
 
-## 14. Planned Expenses & Tax authorization contract
+## 14. Expenses & Tax authorization contract
 
-EPIC-063 requires capabilities equivalent to create, read own, read company, update
-own draft, update company, export/print and void/manage Company Receipts. Exact
-canonical identifiers must follow the application registry and be added atomically
-with the module key, backend resource/actions, route metadata and `ACCESS_MATRIX`;
-hardcoded checks such as `role === 'Company Owner'` are forbidden.
+EPIC-063 uses registered create, read own, read company, edit and void Company Receipt
+capabilities. TASK-182 adds `expenses.company_receipts.create`, `.edit` and `.void`
+atomically with the `expenses_tax` module key, backend resource/actions, route metadata
+and `ACCESS_MATRIX`; hardcoded checks such as `role === 'Company Owner'` are forbidden.
 
 TASK-179 implements the read subset with registered
 `expenses.company_receipts.read_own` and
 `expenses.company_receipts.read_company` keys. Employee/Manager receive own read;
 Finance Preparer, Finance Checker, Receipt Manager and Company Owner receive stored
 company-read grants. Request authorization checks permission keys, never role names,
-and platform Superadmin/support receives no tenant business grant. Create/update/void
-still use the transitional `employee.receipts.write`. TASK-181 Pack creation and
-Preview/download/Print reuse the resolved own/company read capability and creator-only
-snapshot scope; TASK-182 retains final export/action identifiers plus the canonical
-module/access-matrix cutover after TASK-186.
+and platform Superadmin/support receives no tenant business grant. Confirmation/create,
+update and void use the canonical `.create`, `.edit` and `.void` keys; the transitional
+`employee.receipts.write` key no longer grants a Company Receipt mutation. TASK-181 Pack
+creation and Preview/download/Print reuse the resolved own/company read capability and
+creator-only snapshot scope. `expenses_tax` entitlement is Master enabled AND Company
+allocated before this tenant authorization decision.
 
 ## 16. Platform Module Entitlement authority (EPIC-064)
 
@@ -589,8 +591,9 @@ module availability and workflow authority. Both identities are audited, and the
 platform-only MAC API remains unreachable from the simulated tenant context.
 
 TASK-185 delivered the versioned platform API, migration, audit and Demo fixture.
-TASK-186 removes tenant surfaces, applies defaults and completes TASK-182's entitlement
-dependency. TASK-187 delivers platform login, workspace and simulation behind the
-separate `platform.simulation.manage` authority; TASK-188 owns final adversarial proof.
+TASK-186 removes tenant surfaces and applies defaults; TASK-182 consumes that entitlement
+boundary for Company Receipts. TASK-187 delivers platform login, workspace and simulation behind the
+separate `platform.simulation.manage` authority; TASK-188 completed the recorded final
+adversarial, cross-engine, browser and release-gate proof without a production migration.
 EPIC-018 remains historical implementation evidence, but its tenant
 mutation authority is superseded by EPIC-064.

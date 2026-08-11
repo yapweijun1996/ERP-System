@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v245';
+const CACHE_VERSION = 'erp-system-pwa-v261';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -9,6 +9,7 @@ const staticUrls = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/maskable-512.png',
+  './icons/aria-erp-logo.png?v=20260809-aria-brand-v1',
   './assets/erp.css',
   './assets/erp-blocks.css',
   './assets/i18n.css',
@@ -111,11 +112,31 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then(async (cache) => {
-        await cache.addAll(staticUrls);
+        await precacheStaticAssets(cache);
         await precacheBundledRuntime(cache);
       })
   );
 });
+
+/* One failed CDN/tunnel response must not discard the complete worker. The
+   fetch handler remains network-first for versioned assets, so a failed
+   optional precache is repaired on the next request while the update worker
+   can still reach the waiting state and offer its explicit Update action. */
+async function precacheStaticAssets(cache) {
+  const failures = [];
+  const scope = new URL(self.registration.scope);
+  for (const relativeUrl of staticUrls) {
+    const href = new URL(relativeUrl, scope).href;
+    try {
+      const response = await fetch(href, { cache:'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await cache.put(href, response);
+    } catch (error) {
+      failures.push(`${relativeUrl}: ${error?.message || error}`);
+    }
+  }
+  if (failures.length) console.warn('PWA precache skipped resources:', failures);
+}
 
 /* Vite gives the ESM runtime, PGlite WASM and database image content-hashed
    filenames. Discover that local module graph from the built index/JS rather
@@ -134,9 +155,14 @@ async function precacheBundledRuntime(cache) {
 
     let response = await cache.match(href);
     if (!response) {
-      response = await fetch(href, { cache: 'no-cache' });
-      if (!response.ok) throw new Error(`Unable to precache bundled ERP asset: ${url.pathname}`);
-      await cache.put(href, response.clone());
+      try {
+        response = await fetch(href, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        await cache.put(href, response.clone());
+      } catch (error) {
+        console.warn(`Unable to precache bundled ERP asset: ${url.pathname}`, error);
+        continue;
+      }
     }
     if (!/\.(?:html|js)$/.test(url.pathname)) continue;
 
@@ -217,7 +243,10 @@ self.addEventListener('fetch', (event) => {
 async function networkFirstNavigation(request) {
   const cache = await caches.open(STATIC_CACHE);
   try {
-    const response = await fetch(request);
+    /* Installed PWAs must not let the browser HTTP cache win over the
+     * network-first update contract. The HTML carries the cache-busted
+     * application script versions and is the source of the Update prompt. */
+    const response = await fetch(request, { cache: 'no-store' });
     if (response.ok) cache.put('./index.html', response.clone());
     return response;
   } catch {

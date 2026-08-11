@@ -35,7 +35,6 @@ services:
       PORT: 3000
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       TRUST_PROXY: ${TRUST_PROXY:-false}
-      ERP_SETUP_TOKEN: ${ERP_SETUP_TOKEN:-}
       ERP_TOKEN_ENCRYPTION_KEY: ${ERP_TOKEN_ENCRYPTION_KEY:-}
       ERP_PUBLIC_URL: ${ERP_PUBLIC_URL:-http://localhost:8080}
       DOCUMENT_STORAGE_FS_ROOT: ${DOCUMENT_STORAGE_FS_ROOT:-}
@@ -70,9 +69,26 @@ services:
       OUTBOX_POLL_MS: ${OUTBOX_POLL_MS:-5000}
       CALENDAR_OUTBOUND_URL: ${CALENDAR_OUTBOUND_URL:-}
       CALENDAR_OUTBOUND_TOKEN: ${CALENDAR_OUTBOUND_TOKEN:-}
+      CALENDAR_OUTBOUND_TIMEOUT_MS: ${CALENDAR_OUTBOUND_TIMEOUT_MS:-15000}
       DOCUMENT_STORAGE_FS_ROOT: ${DOCUMENT_STORAGE_FS_ROOT:-}
     volumes:
       - document_storage:/var/lib/erp-documents
+    depends_on:
+      db:
+        condition: service_healthy
+
+  calendar-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["npm", "run", "worker:calendar"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USER:-erp}:${DB_PASSWORD:-erp_dev_password}@db:5432/erp}
+      CALENDAR_WORKER_ID: ${CALENDAR_WORKER_ID:-erp-calendar-worker}
+      CALENDAR_POLL_MS: ${CALENDAR_POLL_MS:-15000}
+      CALENDAR_OUTBOUND_TIMEOUT_MS: ${CALENDAR_OUTBOUND_TIMEOUT_MS:-15000}
+      CALENDAR_OUTBOUND_URL: ${CALENDAR_OUTBOUND_URL:-}
+      CALENDAR_OUTBOUND_TOKEN: ${CALENDAR_OUTBOUND_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
@@ -89,6 +105,11 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pgdata:

@@ -59,6 +59,8 @@ function ageBucket(days: number | null) {
  * means days since the latest inbound movement for the current product/warehouse
  * balance: the present schema has no FIFO cost layers, so claiming layer age would be
  * false. Category revenue is invoice-line revenue less product-attributed credit lines;
+ * non-stock invoice lines are grouped into the Services category because they have no
+ * product master record to attribute them to.
  * header-only debit notes remain in the company recognized-revenue total but cannot be
  * honestly allocated to a product category.
  */
@@ -103,7 +105,7 @@ export async function listReportingAnalyticsWithin(
       eq(account.code, '1000'),
     )),
     exec.select({
-      category: product.category,
+      category: sql<string>`coalesce(${product.category}, 'Services')`,
       invoiceCount: countDistinct(invoice.id),
       units: sum(salesOrderLine.qty),
       net: sum(salesOrderLine.netAmount),
@@ -111,7 +113,7 @@ export async function listReportingAnalyticsWithin(
       eq(salesOrderLine.orderId, invoice.orderId),
       eq(salesOrderLine.masterFn, invoice.masterFn),
       eq(salesOrderLine.companyFn, invoice.companyFn),
-    )).innerJoin(product, and(
+    )).leftJoin(product, and(
       eq(product.id, salesOrderLine.productId),
       eq(product.masterFn, salesOrderLine.masterFn),
       eq(product.companyFn, salesOrderLine.companyFn),
@@ -119,7 +121,8 @@ export async function listReportingAnalyticsWithin(
       eq(invoice.masterFn, scope.masterFn),
       eq(invoice.companyFn, scope.companyFn),
       ne(invoice.status, 'cancelled'),
-    )).groupBy(product.category).orderBy(asc(product.category)).limit(50),
+    )).groupBy(sql`coalesce(${product.category}, 'Services')`)
+      .orderBy(asc(sql`coalesce(${product.category}, 'Services')`)).limit(50),
     exec.select({
       category: product.category,
       units: sum(salesCreditNoteLine.qty),

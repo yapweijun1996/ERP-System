@@ -172,9 +172,9 @@ describe('deterministic enterprise Demo pack', () => {
       group by u.user_id,u.username order by u.username
     `)).rows;
     expect(personas).toHaveLength(12);
-    const superadmin = personas.find((row) => row.username === 'admin');
-    expect(superadmin).toMatchObject({ is_superadmin: true, companies: ['C-MY', 'C-SG'] });
-    expect(superadmin?.roles).toContain('Superadmin');
+    const owner = personas.find((row) => row.username === 'admin');
+    expect(owner).toMatchObject({ is_superadmin: false, companies: ['C-MY', 'C-SG'] });
+    expect(owner?.roles).toContain('Company Owner');
     const viewer = personas.find((row) => row.username === 'viewer');
     expect(viewer?.roles).toContain('Viewer');
     expect(viewer?.roles).toContain('Employee');

@@ -2,20 +2,26 @@
 # Run `make` or `make help` to list targets.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-interactive up down restart logs migrate seed reset demo preview ps psql
+.PHONY: help setup setup-interactive setup-production up down restart logs release migrate seed reset demo preview ps psql
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-setup: ## First-time setup: env + start + migrate + seed (ONE command)
+setup: ## Local setup: env + start + migrate (no demo seed)
 	@./scripts/setup.sh
 
 setup-interactive: ## First-time setup with prompts for DB/tokens/ports instead of placeholders
 	@./scripts/setup.sh --interactive
 
+setup-production: ## First-time hardened setup: only web is published
+	@./scripts/setup.sh --production --interactive
+
 up: ## Start all services (web + api + db) in the background
 	docker compose up -d
+
+release: ## Rebuild/restart web + api only; never migrates or seeds the database
+	@./deploy/release.sh
 
 down: ## Stop all services (keeps the database volume)
 	docker compose down
@@ -27,7 +33,7 @@ logs: ## Tail logs from all services
 	docker compose logs -f
 
 migrate: ## Apply Drizzle migrations to PostgreSQL
-	docker compose exec api npm run migrate
+	@CONFIRM_DATABASE_CHANGE="$(CONFIRM_DATABASE_CHANGE)" ./deploy/migrate.sh
 
 seed: ## Seed sample data (SG + MY demo companies)
 	docker compose exec -e ERP_ENV=demo -e ERP_DEMO_SEED=I_UNDERSTAND_DEMO_DATA api npm run seed

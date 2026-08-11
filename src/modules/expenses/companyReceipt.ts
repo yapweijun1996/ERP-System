@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import Decimal from 'decimal.js';
 import { and, asc, desc, eq, gte, ilike, lt, lte, or } from 'drizzle-orm';
 import type { DB } from '../../data/db';
@@ -637,7 +636,7 @@ export async function createCompanyReceiptWithin(
   }
   const [inserted] = await exec.insert(companyReceipt).values({
     ...scope,
-    receiptKey: `company-receipt:${randomUUID()}`,
+    receiptKey: `company-receipt:${globalThis.crypto.randomUUID()}`,
     documentId,
     documentVersionId,
     evidenceSha256,

@@ -1,5 +1,6 @@
 import type { DB } from '../data/db';
-import { auditLog } from '../data/schema';
+import { and, desc, eq } from 'drizzle-orm';
+import { appUser, auditLog } from '../data/schema';
 import { currentAuditAttribution } from './auditContext';
 
 export interface AuditEvent {
@@ -33,4 +34,33 @@ export async function appendAudit(db: DB, event: AuditEvent): Promise<number> {
     occurredAt: event.occurredAt,
   }).returning({ id: auditLog.id });
   return row.id;
+}
+
+export async function listEntityAudit(
+  db: DB,
+  scope: { masterFn: string; companyFn: string },
+  entity: string,
+  entityId: string | number,
+  limit = 50,
+) {
+  const boundedLimit = Math.min(100, Math.max(1, Math.floor(limit)));
+  return db.select({
+    id: auditLog.id,
+    action: auditLog.action,
+    occurredAt: auditLog.occurredAt,
+    actorUserId: auditLog.actorUserId,
+    actorName: appUser.fullName,
+    actorEmail: appUser.email,
+    before: auditLog.before,
+    after: auditLog.after,
+  }).from(auditLog)
+    .leftJoin(appUser, eq(appUser.userId, auditLog.actorUserId))
+    .where(and(
+      eq(auditLog.masterFn, scope.masterFn),
+      eq(auditLog.companyFn, scope.companyFn),
+      eq(auditLog.entity, entity),
+      eq(auditLog.entityId, String(entityId)),
+    ))
+    .orderBy(desc(auditLog.occurredAt), desc(auditLog.id))
+    .limit(boundedLimit);
 }

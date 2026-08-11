@@ -43,6 +43,85 @@ async function listAllPages(resource, query, maxPages){
 }
 
 /**
+ * Shared render contract for same-route master-detail redraws.
+ *
+ * Module screens intentionally rebuild their view root when a row, filter or
+ * detail action changes. Capture every scrollable surface before that redraw
+ * and restore matching surfaces after the new markup has settled. The route
+ * marker prevents normal navigation from inheriting the previous screen's
+ * position.
+ */
+function erpScrollSurfaceSignature(element){
+  const markers=[
+    element.id||'',
+    element.getAttribute('data-layout')||'',
+    element.getAttribute('data-module-route')||'',
+    element.hasAttribute('data-table-listing-scroll')?'table-listing-scroll':'',
+    element.hasAttribute('data-list-table')?'list-table':'',
+    element.hasAttribute('data-master-detail-panel')?'master-detail-panel':'',
+    element.hasAttribute('data-calendar-detail')?'calendar-detail':'',
+    typeof element.className==='string'?element.className:'',
+  ];
+  return markers.join('|');
+}
+function erpScrollSurfaces(root){
+  if(!root) return [];
+  return [...root.querySelectorAll('*')].filter(element=>{
+    const style=getComputedStyle(element);
+    const vertical=/auto|scroll|overlay/.test(style.overflowY)
+      &&element.scrollHeight>element.clientHeight+1;
+    const horizontal=/auto|scroll|overlay/.test(style.overflowX)
+      &&element.scrollWidth>element.clientWidth+1;
+    return vertical||horizontal||element.scrollTop!==0||element.scrollLeft!==0;
+  });
+}
+function erpCaptureScrollState(root,route){
+  if(!root) return null;
+  const shell=root.querySelector('[data-module-route]');
+  // Only a module shell for the same route may restore its position. This
+  // prevents loading/error pages without a route marker from inheriting the
+  // previous screen's scroll state during navigation.
+  if(route&&(!shell||shell.getAttribute('data-module-route')!==String(route))) return null;
+  const surfaces=erpScrollSurfaces(root);
+  const seen=new Map();
+  const entries=surfaces.map(element=>{
+    const signature=erpScrollSurfaceSignature(element);
+    const ordinal=seen.get(signature)||0;
+    seen.set(signature,ordinal+1);
+    return {
+      signature,ordinal,
+      top:element.scrollTop,
+      left:element.scrollLeft,
+    };
+  });
+  return {entries,windowTop:window.scrollY||0,windowLeft:window.scrollX||0};
+}
+function erpRestoreScrollState(root,state){
+  if(!root||!state) return;
+  const restore=()=>{
+    const seen=new Map();
+    erpScrollSurfaces(root).forEach(element=>{
+      const signature=erpScrollSurfaceSignature(element);
+      const ordinal=seen.get(signature)||0;
+      seen.set(signature,ordinal+1);
+      const saved=state.entries.find(entry=>entry.signature===signature&&entry.ordinal===ordinal);
+      if(!saved) return;
+      const previousBehavior=element.style.scrollBehavior;
+      element.style.scrollBehavior='auto';
+      element.scrollTop=saved.top;
+      element.scrollLeft=saved.left;
+      element.style.scrollBehavior=previousBehavior;
+    });
+    window.scrollTo({top:state.windowTop,left:state.windowLeft,behavior:'auto'});
+  };
+  restore();
+  requestAnimationFrame(()=>requestAnimationFrame(restore));
+  setTimeout(restore,120);
+}
+window.erpCaptureScrollState=erpCaptureScrollState;
+window.erpRestoreScrollState=erpRestoreScrollState;
+
+/**
  * Page-level SSOT for operational execution workspaces.
  *
  * Unlike a transaction register, an operational workspace centres one active
@@ -770,12 +849,18 @@ function transactionListPage(root, config){
     if(!items.length) return '<div class="so-kpibar" data-list-kpis hidden></div>';
     return `<div class="so-kpibar" data-list-kpis>${items.map(item=>{
       const filter=value(item.filter,item,rows);
-      const clickable=filter!=null;
+      const hasAction=typeof item.onClick==='function'&&!item.disabled;
+      const clickable=hasAction||filter!=null;
       const classes=[
         'so-kpi',clickable?'clickable':'',filter===activeFilter?'active':'',
         item.negative?'neg':'',item.accent?'accent':'',
       ].filter(Boolean).join(' ');
-      return `<button class="${classes}" ${clickable?`data-list-kpi-filter="${esc(String(filter))}"`:'disabled'}>
+      const attrs=hasAction
+        ?`data-list-kpi-action="${items.indexOf(item)}"`
+        :filter!=null
+          ?`data-list-kpi-filter="${esc(String(filter))}"`
+          :'disabled';
+      return `<button class="${classes}" ${attrs}>
         <small>${esc(String(value(item.label,item,rows)||''))}</small>
         <b class="tnum">${esc(String(value(item.value,item,rows)??''))}</b>
       </button>`;
@@ -939,6 +1024,11 @@ function transactionListPage(root, config){
     root.querySelectorAll('[data-list-kpi-filter]').forEach(button=>button.addEventListener('click',()=>{
       setFilter(button.dataset.listKpiFilter);
     }));
+    const kpiItems=value(cfg.kpis,allRows())||[];
+    root.querySelectorAll('[data-list-kpi-action]').forEach(button=>button.addEventListener('click',event=>{
+      const item=kpiItems[Number(button.dataset.listKpiAction)];
+      if(item&&!item.disabled&&typeof item.onClick==='function') item.onClick(event,allRows());
+    }));
     root.querySelector('[data-list-search]')?.addEventListener('input',event=>{
       const input=event.currentTarget;
       searchTerm=input.value;
@@ -997,6 +1087,114 @@ function transactionListPage(root, config){
   };
 }
 window.transactionListPage=transactionListPage;
+
+/**
+ * Low-level SSOT for dense table listings that need the same interaction
+ * contract outside a transaction register: searchable rows, explicit page
+ * size, stable pagination, single-line cells and one horizontal scroll host.
+ * Domain screens provide rows, columns, labels and row behaviour only.
+ */
+function tableListing(config){
+  const cfg=config||{};
+  if(!Array.isArray(cfg.columns)) throw new Error('tableListing requires columns.');
+  const state=cfg.state||{};
+  const rows=Array.isArray(cfg.rows)?cfg.rows:[];
+  const rowId=typeof cfg.rowId==='function'?cfg.rowId:(row=>row.id);
+  const pageSizes=(Array.isArray(cfg.pageSizeOptions)?cfg.pageSizeOptions:[10,25,50])
+    .map(value=>Number(value)).filter(value=>Number.isFinite(value)&&value>0)
+    .map(value=>Math.floor(value));
+  const sizes=[...new Set(pageSizes.length?pageSizes:[10,25,50])];
+  const labels=cfg.labels||{};
+  const interpolate=(template,values)=>String(template||'').replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g,(match,key)=>values[key]??match);
+  const search=cfg.search||{};
+  const query=String(state.search||'').trim().toLocaleLowerCase();
+  const filteredRows=query&&typeof search.match==='function'
+    ?rows.filter(row=>Boolean(search.match(row,query)))
+    :query
+      ?rows.filter(row=>JSON.stringify(row).toLocaleLowerCase().includes(query))
+      :rows.slice();
+  const selectedPageSize=sizes.includes(Number(state.pageSize))?Number(state.pageSize):sizes[0];
+  state.pageSize=selectedPageSize;
+  const pageCount=Math.max(1,Math.ceil(filteredRows.length/selectedPageSize));
+  const currentPage=Math.max(1,Math.min(pageCount,Number(state.page)||1));
+  state.page=currentPage;
+  const from=filteredRows.length?(currentPage-1)*selectedPageSize+1:0;
+  const to=filteredRows.length?Math.min(currentPage*selectedPageSize,filteredRows.length):0;
+  const pageRows=filteredRows.slice(from?from-1:0,to||undefined);
+  const empty=cfg.empty||{};
+  const emptyTitle=query?(empty.searchTitle||empty.title||'No matching records'):(empty.title||'No records');
+  const emptyDescription=query?(empty.searchDescription||empty.description||''):(empty.description||'');
+  const table=pageRows.length
+    ?buildTable({
+      columns:cfg.columns,
+      rows:pageRows,
+      rowId,
+      rowSelected:(row,id)=>cfg.selectedId!=null&&String(cfg.selectedId)===String(id),
+      rowInteraction:typeof cfg.onRow==='function'
+        ?(row,id)=>({kind:'select',label:String(typeof cfg.rowLabel==='function'?cfg.rowLabel(row,id):id)})
+        :()=>({kind:'none',label:''}),
+    })
+    :`<div class="statepanel empty" data-table-listing-empty>${ic(empty.icon||'inbox')}
+      <h3>${esc(String(emptyTitle))}</h3>${emptyDescription?`<p>${esc(String(emptyDescription))}</p>`:''}</div>`;
+  const showing=interpolate(labels.showing||'{from}–{to} of {total}',{from,to,total:filteredRows.length});
+  const pageLabel=interpolate(labels.page||'Page {page} of {pages}',{page:currentPage,pages:pageCount});
+  const html=`<section class="table-listing" data-table-listing data-table-listing-view="${esc(String(cfg.view||'list'))}">
+    <div class="table-listing-toolbar" data-table-listing-toolbar>
+      <label class="table-listing-search" data-table-listing-search-wrap>
+        ${ic('search')}<input type="search" value="${esc(String(state.search||''))}"
+          placeholder="${esc(String(search.placeholder||labels.search||'Search'))}"
+          aria-label="${esc(String(search.label||labels.search||'Search'))}"
+          data-table-listing-search autocomplete="off" spellcheck="false">
+      </label>
+      <label class="table-listing-page-size"><span>${esc(String(labels.rowsPerPage||'Rows per page'))}</span>
+        <select data-table-listing-page-size aria-label="${esc(String(labels.rowsPerPage||'Rows per page'))}">
+          ${sizes.map(size=>`<option value="${size}" ${size===selectedPageSize?'selected':''}>${size}</option>`).join('')}
+        </select>
+      </label>
+      <span class="table-listing-result-count" aria-live="polite">${esc(showing)}</span>
+    </div>
+    ${cfg.scrollHint?`<div class="table-listing-scroll-hint">${ic('info')}<span>${esc(String(cfg.scrollHint))}</span></div>`:''}
+    <div class="table-listing-scroll" data-table-listing-table data-table-listing-scroll>${table}</div>
+    <footer class="table-listing-pagination" data-table-listing-pagination>
+      <span class="table-listing-page-label">${esc(pageLabel)}</span><div class="table-listing-page-actions">
+        ${btn(String(labels.previous||'Previous'),{icon:'chevL',cls:'soft',attrs:`type="button" data-table-listing-page="prev"${currentPage<=1?' disabled':''}`})}
+        ${btn(String(labels.next||'Next'),{icon:'chevR',cls:'soft',attrs:`type="button" data-table-listing-page="next"${currentPage>=pageCount?' disabled':''}`})}
+      </div>
+    </footer>
+  </section>`;
+  return {
+    html,pageRows,filteredRows,currentPage,pageCount,
+    wire(scope){
+      const listing=scope?.matches?.('[data-table-listing]')?scope:scope?.querySelector?.('[data-table-listing]');
+      if(!listing) return;
+      const tableRoot=listing.querySelector('[data-table-listing-table]');
+      if(pageRows.length&&typeof cfg.onRow==='function'){
+        wireTable(tableRoot,{onRow:id=>{
+          const row=pageRows.find(candidate=>String(rowId(candidate))===String(id));
+          if(row) cfg.onRow(row,id);
+        }});
+      }
+      listing.querySelector('[data-table-listing-search]')?.addEventListener('input',event=>{
+        const input=event.currentTarget;
+        state.search=input.value;
+        state.page=1;
+        cfg.onChange?.({reason:'search',caret:input.selectionStart??input.value.length,state});
+      });
+      listing.querySelector('[data-table-listing-page-size]')?.addEventListener('change',event=>{
+        state.pageSize=Number(event.currentTarget.value)||sizes[0];
+        state.page=1;
+        cfg.onChange?.({reason:'page-size',state});
+      });
+      listing.querySelectorAll('[data-table-listing-page]').forEach(button=>button.addEventListener('click',()=>{
+        if(button.disabled) return;
+        state.page+=button.dataset.tableListingPage==='next'?1:-1;
+        state.page=Math.max(1,Math.min(pageCount,state.page));
+        cfg.onChange?.({reason:'pagination',state});
+      }));
+    },
+  };
+}
+window.tableListing=tableListing;
 
 /**
  * Return the final date of the fiscal period selected in the global context.
@@ -1095,8 +1293,14 @@ window.reportListPage=reportListPage;
  */
 function calendarWorkspacePage(root,config){
   const cfg=config||{};
+  const scrollState=cfg.preserveScroll===false||typeof window.erpCaptureScrollState!=='function'
+    ?null
+    :window.erpCaptureScrollState(root,cfg.route);
   const rows=Array.isArray(cfg.rows)?cfg.rows:[];
   const view=['month','week','list'].includes(cfg.view)?cfg.view:'month';
+  const listTable=view==='list'&&cfg.listTable
+    ?tableListing({...cfg.listTable,selectedId:cfg.selectedId,onRow:row=>cfg.onSelect?.(row.id),onChange:change=>cfg.onListChange?.(change)})
+    :null;
   const selected=rows.find(row=>String(row.id)===String(cfg.selectedId))||null;
   const resolve=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
   const iso=value=>{
@@ -1116,10 +1320,18 @@ function calendarWorkspacePage(root,config){
   };
   const cursor=cfg.cursor||iso(new Date());
   const businessDate=cfg.businessDate||iso(new Date());
-  const eventLabel=row=>esc(String(row.employeeName||row.employeeNo||'Unavailable'));
-  const eventTone=row=>row.status==='approved'?'ok':row.status==='pending'?'warn':'neutral';
+  const eventLabel=row=>esc(String(resolve(cfg.eventLabel,row)||row.employeeName||row.employeeNo||'Unavailable'));
+  const eventAriaLabel=row=>[
+    row.employeeName||row.employeeNo||'Unavailable',
+    resolve(cfg.eventAriaSubtitle,row)||row.leaveType,
+    row.startDate&&row.endDate?`${row.startDate} → ${row.endDate}`:null,
+    cfg.statusLabel(row.status),
+  ].filter(Boolean).join(' · ');
+  const eventTone=row=>typeof cfg.eventTone==='function'
+    ?cfg.eventTone(row)
+    :row.status==='approved'?'ok':row.status==='pending'?'warn':'neutral';
   const eventButton=row=>`<button class="calendar-event ${eventTone(row)}${String(row.id)===String(cfg.selectedId)?' selected':''}"
-      data-calendar-event="${esc(String(row.id))}" aria-label="${eventLabel(row)} · ${esc(String(cfg.statusLabel(row.status)))}"
+      data-calendar-event="${esc(String(row.id))}" aria-label="${esc(eventAriaLabel(row))}"
       aria-pressed="${String(row.id)===String(cfg.selectedId)?'true':'false'}">
     <i class="calendar-event-dot" aria-hidden="true"></i>
     <span class="calendar-event-copy"><b>${eventLabel(row)}</b><small>${esc(String(resolve(cfg.eventSubtitle,row)||row.leaveType||cfg.statusLabel(row.status)))}</small></span>
@@ -1159,6 +1371,7 @@ function calendarWorkspacePage(root,config){
     </div>`;
   }
   function listSurface(){
+    if(listTable) return listTable.html;
     return `<div class="calendar-list">
       ${rows.length?rows.map(row=>`<button class="calendar-list-row" data-calendar-event="${esc(String(row.id))}">
         <span class="tnum">${esc(row.startDate)} → ${esc(row.endDate)}</span>
@@ -1169,27 +1382,34 @@ function calendarWorkspacePage(root,config){
     </div>`;
   }
   const surface=view==='week'?weekSurface():view==='list'?listSurface():monthSurface();
-  const summary={
+  const summary=Object.assign({
     total:rows.length,
     away:rows.filter(row=>row.status==='approved'&&row.startDate<=businessDate&&row.endDate>=businessDate).length,
     pending:rows.filter(row=>row.status==='pending').length,
     conflicts:rows.filter(row=>row.conflict).length,
-  };
+  },cfg.summaryValues||{});
   const summaryCards=cfg.summaryLabels?`<div class="calendar-workspace-summary" data-calendar-summary>
     <div class="calendar-summary-card"><span class="calendar-summary-icon blue">${ic('calendar')}</span><div><small>${esc(cfg.summaryLabels.total)}</small><b>${summary.total}</b></div></div>
     <div class="calendar-summary-card"><span class="calendar-summary-icon green">${ic('people')}</span><div><small>${esc(cfg.summaryLabels.away)}</small><b>${summary.away}</b></div></div>
     <div class="calendar-summary-card"><span class="calendar-summary-icon amber">${ic('clock')}</span><div><small>${esc(cfg.summaryLabels.pending)}</small><b>${summary.pending}</b></div></div>
     <div class="calendar-summary-card"><span class="calendar-summary-icon red">${ic('warn')}</span><div><small>${esc(cfg.summaryLabels.conflicts)}</small><b>${summary.conflicts}</b></div></div>
   </div>`:'';
+  const detailMode=cfg.detailMode==='modal'?'modal':'panel';
   const detail=selected
     ?resolve(cfg.detail,selected)
     :resolve(cfg.emptyDetail,summary)||`<div class="detail-empty">${ic('calendar')}<div><b>${esc(cfg.labels.select)}</b><small>${esc(cfg.labels.selectBody)}</small></div></div>`;
-  const actions=(cfg.actions||[]).map((action,index)=>btn(String(action.label),{
+  const footerActionList=detailMode==='modal'?(cfg.actions||[]).filter(action=>!action.modal):(cfg.actions||[]);
+  const modalActionList=detailMode==='modal'?(cfg.actions||[]).filter(action=>action.modal):[];
+  const actionButtons=(actionList,attribute)=>actionList.map((action,index)=>btn(String(action.label),{
     icon:action.icon||null,cls:action.cls||'soft',
-    attrs:`data-calendar-action="${index}"${action.disabled?' disabled':''}`,
+    attrs:`${attribute}="${index}"${action.disabled?' disabled':''}`,
   })).join('');
+  const actions=actionButtons(footerActionList,'data-calendar-action');
+  const modalDetail=selected?resolve(cfg.detailModalBody||cfg.detail,selected):null;
+  const modalTitle=selected?String(resolve(cfg.detailModalTitle,selected)||selected.name||selected.employeeName||cfg.labels.select):'';
+  const modalActions=selected?`${btn(String(cfg.labels.close||'Close'),{cls:'soft',attrs:'data-calendar-modal-close'})}${actionButtons(modalActionList,'data-calendar-modal-action')}`:'';
   const body=`<div class="calendar-workspace" data-layout="calendar-workspace-v1"
-      data-calendar-route="${esc(String(cfg.route||''))}">
+      data-calendar-route="${esc(String(cfg.route||''))}" data-calendar-view="${esc(view)}">
     <div class="calendar-workspace-header" data-calendar-header>
       <div class="calendar-nav">
         ${btn(cfg.labels.previous,{icon:'chevL',cls:'soft',attrs:'data-calendar-nav="-1"'})}
@@ -1205,11 +1425,9 @@ function calendarWorkspacePage(root,config){
     </div>
     ${summaryCards}
     <div class="calendar-workspace-filters" data-calendar-filters>${resolve(cfg.filters)||''}</div>
-    <div class="calendar-workspace-main">
+    <div class="calendar-workspace-main${detailMode==='modal'?' modal-detail':''}">
       <div class="calendar-workspace-surface" data-calendar-surface>${surface}</div>
-      <aside class="detail calendar-workspace-detail ${selected?'open':'is-empty'}" data-calendar-detail>
-        ${detail}
-      </aside>
+      <aside class="detail calendar-workspace-detail ${selected?'open':'is-empty'}${detailMode==='modal'?' calendar-workspace-detail-modal-placeholder':''}" data-calendar-detail${detailMode==='modal'?' hidden':''}>${detailMode==='modal'?'':detail}</aside>
     </div>
     <div class="calendar-workspace-error" data-calendar-error ${cfg.error?'':'hidden'}>
       ${cfg.error?`<div class="alert danger">${ic('warn')}<span>${esc(String(cfg.error))}</span></div>`:''}
@@ -1223,19 +1441,39 @@ function calendarWorkspacePage(root,config){
     title:String(cfg.title||''),sub:String(cfg.description||''),
     count:cfg.countLabel||rows.length,body,
   });
+  if(scrollState&&typeof window.erpRestoreScrollState==='function'){
+    window.erpRestoreScrollState(root,scrollState);
+  }
   root.querySelectorAll('[data-calendar-nav]').forEach(button=>button.addEventListener('click',()=>{
     cfg.onNavigate?.(button.dataset.calendarNav);
   }));
-  root.querySelectorAll('[data-calendar-view]').forEach(button=>button.addEventListener('click',()=>{
+  root.querySelectorAll('button[data-calendar-view]').forEach(button=>button.addEventListener('click',()=>{
     cfg.onView?.(button.dataset.calendarView);
   }));
   root.querySelectorAll('[data-calendar-event]').forEach(button=>button.addEventListener('click',()=>{
     cfg.onSelect?.(button.dataset.calendarEvent);
   }));
+  listTable?.wire(root);
   root.querySelectorAll('[data-calendar-action]').forEach(button=>button.addEventListener('click',()=>{
-    const action=(cfg.actions||[])[Number(button.dataset.calendarAction)];
+    const action=footerActionList[Number(button.dataset.calendarAction)];
     if(action&&!action.disabled) action.onClick?.(selected);
   }));
+  if(detailMode==='modal'&&selected&&typeof appModal==='function'){
+    appModal({
+      icon:cfg.detailModalIcon||'calendar',title:modalTitle,body:modalDetail||'',
+      actions:modalActions,width:cfg.detailModalWidth||'min(560px, calc(100vw - 24px))',
+      onClose:()=>cfg.onDetailClose?.(selected),
+    });
+    const modal=$('#modalEl');
+    modal?.classList.add('calendar-detail-modal');
+    modal?.setAttribute('role','dialog');
+    modal?.setAttribute('aria-modal','true');
+    modal?.querySelector('[data-calendar-modal-close]')?.addEventListener('click',closeModal);
+    modal?.querySelectorAll('[data-calendar-modal-action]').forEach(button=>button.addEventListener('click',()=>{
+      const action=modalActionList[Number(button.dataset.calendarModalAction)];
+      if(action&&!action.disabled){closeModal();action.onClick?.(selected);}
+    }));
+  }
   cfg.afterRender?.({root,selected});
 }
 window.calendarWorkspacePage=calendarWorkspacePage;

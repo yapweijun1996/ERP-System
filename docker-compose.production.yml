@@ -1,0 +1,24 @@
+# Hardened single-host production overlay.
+#
+# The base compose file is convenient for local development and exposes API/DB
+# ports for inspection. Production should expose only the web reverse proxy;
+# the database and API remain on the private Compose network. This overlay does
+# not add or remove volumes, so replacing api/web leaves PostgreSQL data intact.
+services:
+  db:
+    restart: unless-stopped
+    shm_size: "1gb"
+    ports: !override []
+
+  api:
+    restart: unless-stopped
+    ports: !override []
+
+  worker:
+    restart: unless-stopped
+
+  calendar-worker:
+    restart: unless-stopped
+
+  web:
+    restart: unless-stopped

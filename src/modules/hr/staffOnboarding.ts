@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
   appUser, employee, employeeActivationSecret,
@@ -9,6 +9,7 @@ import { appendAudit } from '../../api/audit';
 import type { SessionData } from '../../auth/session';
 import { isValidUsername, normalizeUsername } from '../../auth/identifiers';
 import { createEmployeeWithin, type CreateEmployeeInput } from './employee';
+import { ensureEmployeeRoleWithin } from './employeeAccount';
 
 export interface StaffOnboardingDraftInput {
   employee: CreateEmployeeInput;
@@ -196,13 +197,26 @@ export async function activateStaffOnboardingWithin(
   if (draft.version !== expectedVersion) throw new StaffOnboardingError(409, 'version_conflict', 'Reload the staff draft and try again.');
   const roleIds = draft.roleIds as number[];
   await assertCompanyRoles(exec, session, roleIds);
-  const employeeInput = draft.employeeData as unknown as CreateEmployeeInput;
-  const [existingEmployee] = await exec.select({ id: employee.id }).from(employee).where(and(
-    eq(employee.masterFn, session.masterFn),
-    eq(employee.companyFn, session.activeCompanyFn),
-    eq(employee.employeeNo, employeeInput.employeeNo.trim()),
-  )).limit(1);
-  if (existingEmployee) throw new StaffOnboardingError(409, 'employee_exists', 'Employee number already exists.');
+  const employeeInput = {
+    ...(draft.employeeData as unknown as CreateEmployeeInput),
+  };
+  const isAutoNumbered = employeeInput.employeeNoMode === 'auto';
+  if (!isAutoNumbered) {
+    const [existingEmployee] = await exec.select({ id: employee.id }).from(employee).where(and(
+      eq(employee.masterFn, session.masterFn),
+      eq(employee.companyFn, session.activeCompanyFn),
+      eq(employee.employeeNo, employeeInput.employeeNo.trim()),
+    )).limit(1);
+    if (existingEmployee) {
+      throw new StaffOnboardingError(409, 'employee_exists', 'Employee number already exists.', {
+        employeeNo: 'Employee number is already used in this company.',
+      });
+    }
+  } else {
+    // The browser may show a preview number, but the authoritative number is
+    // allocated inside createEmployeeWithin while the company row is locked.
+    employeeInput.employeeNo = '';
+  }
 
   const [existingUser] = await exec.select().from(appUser).where(and(
     eq(appUser.masterFn, session.masterFn),
@@ -249,17 +263,19 @@ export async function activateStaffOnboardingWithin(
     masterFn: session.masterFn, companyFn: session.activeCompanyFn,
   }, employeeInput, session.userId);
   await exec.update(employee).set({ userId, updatedAt: now }).where(eq(employee.id, createdEmployee.id));
-  const [employeeBaseRole] = await exec.select({ id: role.roleId }).from(role).where(and(
-    eq(role.masterFn, session.masterFn),
-    or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
-    eq(role.name, 'Employee'),
-  )).limit(1);
-  const allRoleIds = [...new Set([...roleIds, ...(employeeBaseRole ? [employeeBaseRole.id] : [])])];
+  const employeeBaseRole = await ensureEmployeeRoleWithin(exec, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, session.userId, requestId);
+  const allRoleIds = [...new Set([...roleIds, employeeBaseRole.roleId])];
   await exec.insert(userCompany).values({
     userId, companyFn: session.activeCompanyFn, roleId: allRoleIds[0],
   });
   await exec.insert(userCompanyRole).values(allRoleIds.map((roleId) => ({
     userId, companyFn: session.activeCompanyFn, roleId,
+    managedBySystem: roleId === employeeBaseRole.roleId,
+    assignedByUserId: session.userId,
+    assignmentSource: roleId === employeeBaseRole.roleId ? 'system' as const : 'onboarding' as const,
   })));
   if (newCredential) {
     await exec.insert(employeeActivationSecret).values({
@@ -291,6 +307,7 @@ export async function activateStaffOnboardingWithin(
   return {
     draftId: draft.id,
     employeeId: createdEmployee.id,
+    employeeNo: createdEmployee.employeeNo,
     userId,
     username: draft.username,
     roleIds: allRoleIds,

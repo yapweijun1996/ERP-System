@@ -160,21 +160,23 @@ takeover. Delegation remains tenant/domain/authority/delegate/time/revocation bo
 instance/step/resource/policy-bound delegation is still a later hardening slice.
 TASK-174-A now fails closed for unknown business-module keys, registers payroll as a
 gateable module and keeps authenticated `account/*` service routes explicitly outside
-  business-module switching while retaining route permissions. Migration 0088 now
-  provides the company authorization-version source and first atomic bump paths; migration
-0089 delivers the explicit Company Owner cutover. Complete cache invalidation, broader
-  organization/policy/support coverage remain pending; target migration, production RLS
-  re-application and application release verification are complete. Disposable PostgreSQL
-  16 parity, true concurrency and non-superuser RLS/security proof are green. TASK-170's implemented platform boundary grants
-no platform operator permanent implicit customer-data authority.
+business-module switching while retaining route permissions. Migration 0088 supplies the
+company authorization-version source; TASK-174 completes its atomic bump, Master-wide
+support-grant bump, stale-session/direct-URL denial and session-refresh recovery paths.
+Migration 0089 delivers the explicit Company Owner cutover. Server permission,
+organization and workflow-policy decisions remain current-row evaluations rather than a
+client cache; deeper delegation binding is separate future hardening, not an open
+TASK-174 requirement. Target migration, production RLS re-application and application
+release verification are complete. Disposable PostgreSQL 16 parity, true concurrency and
+non-superuser RLS/security proof are green. TASK-170's implemented platform boundary
+grants no platform operator permanent implicit customer-data authority.
 
 The shared access matrix (`src/auth/accessMatrix.ts`) and its API/browser checks are
 defence-in-depth regression contracts for route visibility, module/permission metadata
-and record drill-in. They do not replace backend authorization and do not close the
-remaining TASK-174 authorization-version gap. Session and effective-capability
-responses expose the current version so future caches can reject stale projections;
-backend authorization still re-evaluates current database state on every protected
-request.
+and record drill-in. They complement, rather than replace, backend authorization.
+Session and effective-capability responses expose the current version; stale browser
+projections are denied before dispatch, while backend authorization re-evaluates current
+database state on every protected request.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company
 Company Owner and active linked non-Owner employee, records entry/return and blocks
@@ -211,13 +213,16 @@ the same exact file twice. Only exact hashes block; similarity never auto-merges
 TASK-179 list/detail reads fail closed unless the tenant identity holds the explicit
 own or company receipt-read capability. The resulting visibility is enforced again in
 the tenant-scoped query; Company Owner receives a stored company-read grant and
-platform support receives no tenant business grant. Mutations and confirmation remain
-uploader-only under `employee.receipts.write` until TASK-182's canonical cutover.
+platform support receives no tenant business grant. TASK-182 keeps mutations and
+confirmation uploader-only but requires the canonical `.create`, `.edit` or `.void`
+Company Receipt permission; `employee.receipts.write` cannot authorize those paths.
 TASK-181 Pack creation and rendering reapply the same read capability and resolved
 own/company visibility; snapshots are creator-only, stable-key idempotent, bounded to
 5,000 rows and render only after scan, version/hash/content and 250 MB source checks.
 Preview/download/Print return one no-store artifact and append correlated audit without
-mutating Company Receipt state. Sellable module entitlement remains TASK-182/186.
+mutating Company Receipt state. `expenses_tax` availability is already platform-owned:
+both Master entitlement and Company allocation must be enabled before the API, Demo or
+route/command surface reaches tenant permission evaluation.
 Exact hash duplicates may warn/prevent accidental storage, but
 merchant/date/amount similarity must never auto-delete or merge evidence.
 
@@ -242,8 +247,9 @@ scope, then workflow authority. A stale role permission or simulated user cannot
 either entitlement layer. Direct routes, bespoke/generic APIs, notifications, workers
 and writes must return a bounded 403 `module_not_enabled` without revealing another
 tenant's entitlement facts. TASK-186 applies that check to generic resources, mapped
-bespoke APIs, route projection and notifications. TASK-188 still owns exhaustive
-worker/browser/adversarial and release proof.
+bespoke APIs, route projection and notifications. TASK-188 completed the recorded
+worker/browser/adversarial and release-gate proof; it does not authorize production
+deployment.
 
 Platform end-user simulation may target any active assigned user in the selected
 Master/Company and may perform that user's legitimate writes. TASK-187 implements a
@@ -255,4 +261,5 @@ workspace.
 
 Approved v1 uses password-only platform login and no MFA. Because that principal can
 alter commercial access and fully simulate active users, this is a high-severity
-residual risk that must remain in TASK-187/188 acceptance and release reporting.
+residual risk that must remain in future human acceptance and production-release
+reporting despite TASK-187/188 source verification.

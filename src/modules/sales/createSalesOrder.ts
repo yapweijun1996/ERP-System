@@ -23,7 +23,10 @@ export class SalesOrderValidationError extends Error {
 }
 
 export interface CreateSalesOrderLineInput {
-  productId: number;
+  lineType?: 'stock' | 'non_stock';
+  productId?: number | null;
+  description?: string;
+  uom?: string;
   qty: string | number;
   unitPrice: string | number;
   taxCode: string;
@@ -100,19 +103,36 @@ export async function createSalesOrderWithin(
     throw new SalesOrderValidationError('Customer is not available in this company.');
   }
 
-  const productIds = [...new Set(input.lines.map((line) => line.productId))];
-  if (
-    productIds.some((id) => !Number.isSafeInteger(id) || id <= 0)
-    || (await exec.select({ id: product.id }).from(product).where(and(
-      eq(product.masterFn, scope.masterFn),
-      eq(product.companyFn, scope.companyFn),
-      inArray(product.id, productIds),
-    ))).length !== productIds.length
-  ) {
+  const lineTypes = input.lines.map((line, index) => {
+    const lineType = line.lineType ?? (line.productId == null ? 'non_stock' : 'stock');
+    if (lineType !== 'stock' && lineType !== 'non_stock') {
+      throw new SalesOrderValidationError(`Line ${index + 1} type must be stock or non_stock.`);
+    }
+    if (lineType === 'stock' && (!Number.isSafeInteger(line.productId) || Number(line.productId) <= 0)) {
+      throw new SalesOrderValidationError(`Line ${index + 1} must reference a product.`);
+    }
+    if (lineType === 'non_stock' && line.productId != null) {
+      throw new SalesOrderValidationError(`Line ${index + 1} non-stock rows cannot reference a product.`);
+    }
+    return lineType as 'stock' | 'non_stock';
+  });
+  const productIds = [...new Set(input.lines
+    .filter((_line, index) => lineTypes[index] === 'stock')
+    .map((line) => Number(line.productId)))];
+  const productRows = productIds.length
+    ? await exec.select({ id: product.id, name: product.name, uom: product.uom })
+      .from(product).where(and(
+        eq(product.masterFn, scope.masterFn),
+        eq(product.companyFn, scope.companyFn),
+        inArray(product.id, productIds),
+      ))
+    : [];
+  if (productRows.length !== productIds.length) {
     throw new SalesOrderValidationError(
       'One or more products are not available in this company.',
     );
   }
+  const productById = new Map(productRows.map((row) => [row.id, row]));
 
   const [order] = await exec.insert(salesOrder).values({
     masterFn: scope.masterFn,
@@ -137,6 +157,13 @@ export async function createSalesOrderWithin(
   let taxTotal = new Decimal(0);
   for (let index = 0; index < input.lines.length; index += 1) {
     const line = input.lines[index];
+    const lineType = lineTypes[index];
+    const item = lineType === 'stock' ? productById.get(Number(line.productId)) : null;
+    const description = required(
+      line.description?.trim() || item?.name,
+      `Line ${index + 1} description`,
+    );
+    const uom = required(line.uom?.trim() || item?.uom || 'unit', `Line ${index + 1} UoM`);
     const qty = decimal(line.qty, `Line ${index + 1} quantity`);
     const unitPrice = decimal(line.unitPrice, `Line ${index + 1} unit price`, true);
     const taxCode = required(line.taxCode, `Line ${index + 1} tax code`);
@@ -154,7 +181,10 @@ export async function createSalesOrderWithin(
       companyFn: scope.companyFn,
       orderId: order.id,
       lineNo: index + 1,
-      productId: line.productId,
+      lineType,
+      productId: lineType === 'stock' ? Number(line.productId) : null,
+      description,
+      uom,
       qty: qty.toFixed(4),
       unitPrice: unitPrice.toFixed(4),
       netAmount: net.toFixed(2),

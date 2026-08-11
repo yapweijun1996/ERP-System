@@ -159,6 +159,30 @@ describe('sales order creation and approval', () => {
     })).rejects.toThrow("not 'draft'");
   });
 
+  it('persists a mixed stock and service order with canonical line snapshots', async () => {
+    const db = await freshDb();
+    const fixture = await seedFixture(db);
+    const created = await createSalesOrder(db, SCOPE, {
+      docNo: 'SO-SERVICE-MIXED',
+      customerId: fixture.customerId,
+      orderDate: '2024-06-01',
+      currency: 'SGD',
+      approvalReason: 'Service work is fulfilled outside the stock ledger.',
+      lines: [
+        { lineType: 'stock', productId: fixture.productId, qty: '1', unitPrice: '50', taxCode: 'SR' },
+        { lineType: 'non_stock', productId: null, description: 'On-site commissioning', uom: 'job', qty: '1', unitPrice: '250', taxCode: 'SR' },
+      ],
+    });
+
+    expect(created.lineCount).toBe(2);
+    expect(await db.select({ lineType: salesOrderLine.lineType, productId: salesOrderLine.productId, description: salesOrderLine.description, uom: salesOrderLine.uom })
+      .from(salesOrderLine).where(eq(salesOrderLine.orderId, created.orderId)))
+      .toEqual([
+        { lineType: 'stock', productId: fixture.productId, description: 'Approval Widget', uom: 'unit' },
+        { lineType: 'non_stock', productId: null, description: 'On-site commissioning', uom: 'job' },
+      ]);
+  });
+
   it('approves with an actor snapshot and releases only the document to draft', async () => {
     const db = await freshDb();
     const fixture = await seedFixture(db);

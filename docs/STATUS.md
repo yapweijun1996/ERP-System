@@ -6,12 +6,19 @@ an epic-level milestone lands.
 
 ## Source-of-truth synchronization
 
-The current worktree is at migration 0096: the Drizzle journal contains **97 migration
+The current worktree is at migration 0097: the Drizzle journal contains **98 migration
 entries** and generated canonical SQL contains **247 tables**. TASK-161–188 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
 matching task records.
+
+The 2026-08-12 status-document correction aligns deployment, security, architecture,
+role-permission, Demo and UAT material to that current boundary: TASK-174's
+authorization-version invalidation and TASK-188's automated cross-engine/browser
+release-gate proof are complete; TASK-017 remains the sole human physical-device blocker.
+This is documentation synchronization only and does not imply a production migration or
+deployment after 0089.
 
 Authorization documentation distinguishes the implemented platform-owned module
 boundary from the historical tenant-controlled design. Tenant authorization still uses
@@ -20,9 +27,10 @@ permissions, but commercial availability is now Master entitlement AND Company
 allocation. The legacy
 `is_superadmin` column is retained for migration/audit compatibility only; migration
 0089 makes it inert and central authorization no longer treats it as a bypass. The
-immutable, company-scoped Company Owner role now carries 112 explicit registered
-tenant permissions plus `* / company` scope after migration 0092 added Company Receipt
-company-read and migration 0095 removed module-management authority, but no automatic platform support, business
+immutable, company-scoped Company Owner role carries explicit registered tenant
+permissions plus `* / company` scope. Migrations 0092 and 0097 add Company Receipt read
+and canonical mutation grants, while migration 0095 removes module-management authority;
+it has no automatic platform support, business
 approval/payment, payroll or sensitive tax-evidence authority. TASK-172 now adds a stable
 assignment primary key, `[valid_from, valid_until)` validity, revocation/provenance and
 assignment-owned `self/team/department/company` scope rows with validated
@@ -33,8 +41,8 @@ session/role and reasoned support-grant control plane: grants are bounded to a m
 and optional company, expire within 24 hours, default-deny sensitive fields, audit
 allow/deny/revoke events and never proxy customer data by themselves. Principal/session
 issuance remains an out-of-band deployment/SSO bootstrap boundary. TASK-171 now adds
-an application-owned tenant permission registry with 303 static definitions (159
-compatibility and 144 canonical after TASK-179), explicit alias metadata, canonical projections for
+an application-owned tenant permission registry with 309 registered codes after TASK-182,
+explicit alias metadata, canonical projections for
 116 resources and 62 actions, tenant/platform-domain separation and a CI gate. Ordinary
 role checks fail closed for unknown permission candidates, while platform-domain keys
 are rejected before tenant role evaluation. Migration 0087 now adds
@@ -88,15 +96,17 @@ broad HR permission, policy-step snapshot mismatches fail closed, inactive named
 authorities are denied, and older in-flight instances retain their snapshot without
 implicit migration. The current strict-step authorization/API regression passes 18/18.
 
-Current working-tree verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof,
+Historical working-tree verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof,
 Demo build, generated Demo schema, 244-table drift, Demo-pack and permission-registry
 checks passed. A disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm
 run demo`, including cross-engine equality and the exactly-one-winner stock concurrency
 race; the PostgreSQL security integration suite passed against the same database.
 Focused
 central-authorization/API explanation/RBAC/assignment/resource/approval suites pass.
-The full Vitest run is green: 156 passed files plus 1 skipped file (635 passed, 1
-skipped tests). The authenticated `account/*` service prefix is explicitly
+That full Vitest run was green: 156 passed files plus 1 skipped file (635 passed, 1
+skipped tests). The later 2026-08-12 current-worktree full run is green at 168 passed
+files plus 1 skipped file (663 passed, 1 skipped tests). The authenticated `account/*`
+service prefix is explicitly
 non-module-gated while notification permissions remain enforced, and the 15-test
 targeted notification/matrix/module regression passes. HR Calendar fixtures now use
 explicit HR approval permissions; no production role template was widened to mask a
@@ -354,7 +364,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (244 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 89 ordered migrations through schema version 88; `drizzle/`, `src/data/schema/` |
+| Canonical schema (247 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 98 ordered migrations through schema version 97; `drizzle/`, `src/data/schema/` |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -417,7 +427,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — every route in `SCREENS` (128), desktop + 375px | ✅ Green | 2026-08-10: all 128 routes render at desktop and mobile with no console/page errors; 128 Canonical / 0 Preview, active-tab visibility, layout, action-bar and declared-contract checks all pass. Permission-aware navigation and the separate access-matrix API/browser checks remain green. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green | 2026-08-10: full Vitest passes 156 files plus 1 skipped file (635 passed, 1 skipped tests). HR Calendar fixtures use explicit approval permissions; targeted notification/access-matrix/module coverage passes 15/15. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green | 2026-08-12 current-worktree full Vitest passes 168 files plus 1 skipped file (663 passed, 1 skipped tests). The 2026-08-10 HR Calendar fixture/notification/access-matrix/module regression remains historical evidence. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -1768,19 +1778,23 @@ migration-preservation and release-gate proof: full Vitest passes 167 files / 66
 one expected skip; access-matrix, browser i18n, desktop/375px smoke, lint/typechecks,
 schema drift and API/Demo builds pass. No production deployment was performed.
 
-EPIC-064 owns TASK-184–188. TASK-185–188 are complete; TASK-182 is now
-dependency-eligible. EPIC-018 remains historical proof of
-server-side module enforcement but does not define the approved future mutation owner.
+EPIC-064 owns TASK-184–188. TASK-185–188 are complete, as are TASK-177–183 in
+EPIC-063. EPIC-018 remains historical proof of server-side module enforcement but does
+not define the approved future mutation owner.
 
-## Expenses & Tax v1 implementation boundary (2026-08-11)
+## Expenses & Tax v1 implementation boundary (2026-08-12)
 
 The approved product boundary is **Expenses & Tax v1 = Company Receipts + inclusive
 transaction-date range + Preview + Receipt Pack PDF/Print**. TASK-177 delivers the
 canonical backend/capture foundation: migration 0090, the `company_receipt` aggregate, its
 transactional command layer and `/api/company-receipts` list/detail/create/update/void
 API; TASK-178 adds migration 0091 exact-hash uniqueness and the read-only confirmation
-context. TASK-181 now delivers the standalone Pack slice, but this is not yet a completed
-or deployed Expenses & Tax product because TASK-182/183 remain pending.
+context. TASK-181 delivers the standalone Pack slice and TASK-182 completes the
+platform-entitlement/canonical-permission authorization boundary. TASK-183 completes
+the browser confirmation hand-off from uploader-owned My Receipts evidence to the shared
+confirmation/create contract. Authenticated API-mode journeys pass in the isolated
+same-origin PGlite fixture and a newly created empty disposable PostgreSQL 16 database;
+neither result authorizes production deployment.
 
 Current reusable implementation is substantial but narrower:
 
@@ -1798,8 +1812,10 @@ Employee, Expense Claim, reimbursement, GL posting or tax decision. Tenant scope
 uploader attribution come only from Session, reads are bounded by an `afterId` cursor,
 writes use optimistic `version`, and void is a retained audited tombstone. TASK-179
 changes list/detail reads to explicit `expenses.company_receipts.read_own` and
-`expenses.company_receipts.read_company`; mutations and confirmation remain
-uploader-only and temporarily reuse `employee.receipts.write`.
+`expenses.company_receipts.read_company`. TASK-182 completes the uploader-only mutation
+cutover: confirmation/create require `expenses.company_receipts.create`, correction
+requires `.edit`, and void requires `.void`. `employee.receipts.write` no longer grants
+any Company Receipt mutation; it remains a My Receipts document-capture compatibility key.
 
 TASK-178 reuses the existing magic-byte/size/page validation, managed-document custody,
 IndexedDB draft/edit/retry path and fail-closed scan/OCR pipeline. The confirmation
@@ -1807,6 +1823,12 @@ endpoint returns immutable candidate source/model/confidence/review provenance a
 suggestions; user-confirmed facts remain separate. A clean original is manually
 confirmable when OCR fails or is unavailable, and one exact SHA-256 cannot form two
 Company Receipts in the same Company. Similar merchant/date/amount never auto-merge.
+The current Company Receipts screen now has a permission-gated Confirm receipt action:
+it lists only `my.receipts()` evidence, reads its immutable confirmation context and
+submits the metadata through `createCompanyReceipt`. The API adapter uses the
+`/confirmations/:documentVersionId` and create endpoints; the PGlite adapter delegates
+to the same shared domain commands. New static Demo uploads remain `scanner unavailable`
+and cannot be confirmed until an external scan result marks the exact version clean.
 
 TASK-179 adds migration 0092, explicit Receipt Manager-compatible grants, stored own/company
 grants, permission-selected domain/API visibility, bounded Demo/API adapters and a
@@ -1822,16 +1844,35 @@ version/hash/content and the 250 MB source bound, then produces one no-store/aud
 for Preview, download and Print: an A4 landscape register followed by copied multi-page
 PDFs, embedded JPEG/PNG or an explicit unsupported-format identity placeholder. Demo/
 PGlite and PostgreSQL/API adapters share the contract. Current Tax Evidence remains a
-posted-claim flow and cannot be renamed as Company Receipts. There is still no
-`Expenses & Tax` commercial entitlement; TASK-182 owns final module/accessMatrix and
-compatibility-to-canonical permission cutover after TASK-186.
+posted-claim flow and cannot be renamed as Company Receipts. TASK-182 registers
+`expenses_tax` against the platform-owned Master entitlement AND Company allocation model:
+the bespoke `/api/company-receipts` gate, Demo/PGlite adapter, `accessMatrix` and PWA
+route guard deny missing/disabled state with `module_not_enabled` before tenant access
+assignment. Migration 0097 deterministically backfills the three canonical mutation
+grants from existing `employee.receipts.write` authorization and bumps the affected
+Company authorization versions. It does not change production data until a separately
+authorized migration deployment.
 
 TASK-181 verification passes: focused Pack/API/Tax Evidence 3 files / 7 tests; full
 Vitest 160 passed plus 1 skipped file (645 passed plus 1 skipped test); lint and both
 typechecks; schema v93 / 94 migrations / 246-table drift; Demo and API builds; dedicated
 Company Receipts E2E; five-language desktop/mobile route audit; 50-route desktop/mobile
-list-layout audit; and desktop/mobile smoke. This is implementation proof, not deployment
-proof and not evidence that EPIC-064 or TASK-182 is complete.
+list-layout audit; and desktop/mobile smoke. This historical TASK-181 evidence is
+implementation proof, not deployment proof. TASK-182 adds its scoped authorization/i18n
+evidence. TASK-183's current focused evidence adds `tests/e2e/company-receipts.spec.mjs`:
+the API-shaped confirmation UI and a real PGlite upload → clean-worker simulation →
+confirmation → persisted-register refresh both pass, alongside search/range, Pack
+Preview/PDF/Print, pagination and 1440×900/390×844 zero-overflow/zero-console checks.
+`tests/e2e/company-receipts-api.spec.ts` also passes an authenticated API-mode journey
+through the same-origin adapter at 1440×900 and 375px. It passes both the isolated
+PGlite fixture and a newly created empty disposable PostgreSQL 16 database, whose guard
+rejects non-empty targets before migration/seed. The test-worker update is not a static-
+Demo scanner implementation. The full 2026-08-12 serial Vitest run passes 168 files /
+663 tests with one expected skip in 959.19 seconds; this is source-suite evidence, not a
+production deployment claim. A post-TASK-183 compatibility correction serializes the six
+Dashboard reads within its transaction-bound PostgreSQL client (`src/api/dashboard.ts`).
+The disposable PostgreSQL browser journey now passes with no concurrent `client.query()`
+deprecation; its harness fails if that warning returns before pg@9 turns it into an error.
 
 EPIC-063 and TASK-177–183 register the implementation work. Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois are preserved
@@ -1839,9 +1880,9 @@ future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 185 tasks
+- Done: 187 tasks
 - In progress: 0
-- Todo: TASK-182–183 (2)
+- Todo: 0
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -1852,12 +1893,14 @@ future/optional phases rather than v1 defects.
   direct-URL revocation coverage are delivered. TASK-175 is done: migration 0089,
   production backup, target migration, RLS re-application, application release and
   public health/session verification all passed.
-- EPIC-063 is in progress. TASK-176 completed the source-backed Expenses & Tax boundary;
+- EPIC-063 is complete. TASK-176 completed the source-backed Expenses & Tax boundary;
   TASK-177–179 delivered the Company Receipt schema/domain/API, secure confirmation and
   permission-scoped responsive register; TASK-180 delivered query-side search/date
-  behavior and TASK-181 delivered immutable Receipt Pack Preview/PDF/Print. TASK-182–183
-  remain todo, so final entitlement/canonical permission integration and release proof
-  must not be represented as complete.
+  behavior and TASK-181 delivered immutable Receipt Pack Preview/PDF/Print. TASK-182
+  delivered platform entitlement, canonical Company Receipt mutation authorization,
+  accessMatrix and i18n parity. TASK-183 completed Demo/PGlite, authenticated API/PGlite
+  and disposable PostgreSQL 16 browser proof, plus final documentation/KB synchronization;
+  no production release claim follows.
 - EPIC-064 is complete. TASK-184 completed the source-backed boundary, TASK-185
   delivered the platform entitlement foundation, TASK-186 delivered the tenant cutover
   and TASK-187 delivered platform login/workspace/exact-user simulation. TASK-188 completed

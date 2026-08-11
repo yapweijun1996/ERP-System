@@ -2272,8 +2272,8 @@ slice without weakening tenant, accounting, leave or approval invariants.
       one expected skip.
 
 Implementation is delivered through migration 0083 and EPIC-061 is complete. The current
-overall Drizzle journal now contains 90 migration entries and generated schema contains
-244 tables after TASK-170's 0084/0085 platform-support additions, TASK-172's additive
+overall Drizzle journal now contains 98 migration entries and generated schema contains
+247 tables after TASK-170's 0084/0085 platform-support additions, TASK-172's additive
 assignment-scope migration 0086, TASK-173's authorization-override migration 0087,
 TASK-174-B's authorization-version source migration 0088 and TASK-175's Company Owner
 cutover migration 0089. TASK-174's version bump, stale-session recovery and direct-URL
@@ -2297,8 +2297,9 @@ approval subsystem. Normative current/target behavior is in
       correlation. `/api/platform` rejects tenant cookies and uses platform CSRF. Identity
       and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
       grant evaluation does not proxy customer data. The pre-TASK-172 complete
-      152-file Vitest baseline is retained as historical evidence. The current full
-      Vitest run passes 156 files plus 1 skipped file (635 passed, 1 skipped tests).
+      152-file Vitest baseline is retained as historical evidence. The latest
+      current-worktree full Vitest run passes 168 files plus 1 skipped file (663 passed,
+      1 skipped tests).
 - [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
       migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
       (157 compatibility and 142 canonical, with platform permissions kept in a
@@ -2309,15 +2310,16 @@ approval subsystem. Normative current/target behavior is in
       Superadmin role no longer bypasses explicit permission checks;
       role/template and approval configuration paths validate
       tenant permissions. `npm run check:permissions` passes. Existing text keys and
-      compatibility aliases remain during the expand phase; migration 0088 now
-      supplies the authorization-version source and first atomic bump paths, while
-      complete invalidation remains TASK-174. Migration 0089 delivers the Company
-      Owner cutover with explicit permissions, company scope and idempotent legacy
-      assignment backfill. TASK-173's
+      compatibility aliases remain during the expand phase; migration 0088 supplies the
+      authorization-version source and first atomic bump paths. TASK-174 subsequently
+      completed browser snapshot invalidation, stale-session/direct-URL denial and
+      session-refresh recovery. Migration 0089 delivers the Company Owner cutover with
+      explicit permissions, company scope and idempotent legacy assignment backfill.
+      TASK-173's
       central decision boundary is complete in the next item.
       The pre-TASK-172 152-file Vitest regression is retained as historical evidence;
-      the current full run passes 156 files plus 1 skipped file (635 passed, 1 skipped
-      tests).
+      the latest current-worktree full run passes 168 files plus 1 skipped file (663
+      passed, 1 skipped tests).
 - [x] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
       Migration 0086 makes `user_company_role.assignment_id` the stable primary key,
       adds validity/revocation/provenance fields and creates `user_company_role_scope`.
@@ -2337,8 +2339,8 @@ approval subsystem. Normative current/target behavior is in
       resource/module/scope/policy context; policy-step snapshot mismatches and
       inactive named authorities fail closed. No HR permission takeover or implicit
       migration of older in-flight instances is allowed. The strict-step focused suite
-      passes 18/18. The latest full run passes 156 files plus 1 skipped file (635
-      passed, 1 skipped tests); targeted notification/access-matrix/module coverage
+      passes 18/18. The latest current-worktree full run passes 168 files plus 1 skipped
+      file (663 passed, 1 skipped tests); targeted notification/access-matrix/module coverage
       passes 15/15 and HR Calendar fixtures use explicit approval permissions.
 - [x] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** Unknown business-module keys now fail closed, payroll is
@@ -2382,8 +2384,13 @@ TASK-178 adds migration 0091 exact-hash uniqueness plus an uploader-scoped confi
 context over immutable OCR provenance and safe manual fallback. TASK-179 adds migration
 0092, explicit own/company reads, bounded Demo/API adapters and the responsive
 five-language browser register. TASK-180 delivers query-side search/date behavior;
-TASK-181 adds migration 0093 and the standalone immutable Receipt Pack. The final
-`Expenses & Tax` module entitlement and canonical permission cutover remain pending.
+TASK-181 adds migration 0093 and the standalone immutable Receipt Pack. TASK-182 adds
+migration 0097, the platform-owned `expenses_tax` entitlement gate and canonical
+Company Receipt mutation permission cutover. TASK-183 is complete: browser evidence
+covers the confirmation hand-off, actual PGlite clean-evidence persistence, an
+authenticated same-origin API-mode PGlite journey at desktop and 375px, and the same
+authenticated journey against a newly created disposable PostgreSQL 16 database. None
+of these fixtures is a production deployment.
 
 - [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
       current source, approved scope, architecture, backlog and KB without changing
@@ -2413,16 +2420,25 @@ TASK-181 adds migration 0093 and the standalone immutable Receipt Pack. The fina
       facts and per-currency totals, then revalidate clean evidence and render one
       no-store PDF for preview/download/Print. Multi-page PDFs are copied losslessly;
       JPEG/PNG are embedded and unsupported originals receive an identity placeholder.
-- [ ] **TASK-182 — Complete dual-mode, entitlement, authorization and i18n parity.**
-      Register the module/resource/actions and accessMatrix together; prove Demo/PGlite
-      and PostgreSQL/API behavior with five-language fail-closed UI capability guards.
-- [ ] **TASK-183 — Run browser/release proof and final documentation/KB sync.** Cover
-      mobile/desktop capture, persistence, date range, preview, export and print plus
-      focused/full gates, then report the exact implemented boundary.
+- [x] **TASK-182 — Complete dual-mode, entitlement, authorization and i18n parity.**
+      Migration 0097 backfills canonical create/edit/void grants, invalidates affected
+      authorization snapshots and removes `employee.receipts.write` from Company Receipt
+      mutations. `expenses_tax` now fails closed at the API, accessMatrix, Demo/PGlite and
+      PWA boundaries unless Master entitlement AND Company allocation are enabled.
+- [x] **TASK-183 — Run browser/release proof and final documentation/KB sync.** The
+      2026-08-12 browser test covers the API-shaped confirmation UI and
+      an actual PGlite upload → clean-worker simulation → confirmation → register-refresh
+      path, in addition to query-side filters, Pack Preview/PDF/Print, pagination and
+      1440×900/390×844 checks. A separate authenticated same-origin API-mode PGlite
+      harness passes the journey at desktop and 375px. A newly created disposable
+      PostgreSQL 16 database also passes the same authenticated journey. Full serial
+      Vitest passes 168 files / 663 tests with one expected skip in 959.19 seconds;
+      documentation and KB are synchronized, while production deployment remains
+      separately unauthorized.
 
 Dependencies are deliberate. TASK-177 consumed TASK-174's authorization invalidation
-boundary and TASK-176's contract; TASK-181 is delivered, while TASK-182–183 follow the
-platform-entitlement cutover and release-proof order. Existing EPIC-054–056 functionality is
+boundary and TASK-176's contract; TASK-181–183 are delivered after the platform-
+entitlement cutover. Existing EPIC-054–056 functionality is
 preserved as reusable infrastructure or future/optional scope, not duplicated.
 
 Exit criteria: an authorised user can save safe company receipts without an Employee
@@ -2481,12 +2497,13 @@ Approved target:
       preservation proof and deterministic fixtures completed 2026-08-11.
 - [x] **TASK-186 — Remove tenant MAC authority, UI, API and onboarding backdoors.**
       Migration 0095, dual-layer enforcement, new-Company defaults and tenant surface
-      retirement completed 2026-08-12; TASK-182 is now dependency-eligible.
+      retirement completed 2026-08-12; TASK-182 consumed this dependency.
 - [x] **TASK-187 — Add Platform Superadmin login/workspace and audited end-user
       simulation.** Migration 0096, separate credentials/cookies, realm chooser,
       workspace, visible return and exact-target dual audit completed 2026-08-12.
 - [x] **TASK-188 — Prove the cutover and synchronize final docs/KB.** Focused platform
-      tests, 167-file/660-test full Vitest (one expected skip), lint/typechecks/schema drift,
+      tests, followed by the 2026-08-12 current-worktree 168-file/663-test full Vitest
+      run (one expected skip), lint/typechecks/schema drift,
       API/Demo builds, access-matrix, browser i18n, desktop/375px smoke, same-origin 375px
       platform simulation/browser, direct PGlite/PostgreSQL 16 migration-preservation replay
       and disposable PostgreSQL 16 RLS proof completed 2026-08-12. No production deployment
@@ -2494,7 +2511,7 @@ Approved target:
 
 EPIC-018 remains valid historical evidence for company module storage and backend
 enforcement, but its tenant mutation authority is explicitly superseded by this target.
-TASK-185–188 are complete, so TASK-182 is dependency-eligible. Platform
+TASK-185–188 and TASK-182 are complete. Platform
 MFA is not part of the approved v1; password-only access to full user simulation is a
 recorded security risk, not an implemented control.
 

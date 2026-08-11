@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **185**
+- Done: **187**
 - In progress: **0**
-- Todo: **2**
+- Todo: **0**
 - Blocked: **1**
 - Total: **188**
 
@@ -18,10 +18,10 @@ not a second task registry.
 
 The 2026-08-10 release follow-up is complete: `npm run audit:screens` rendered all 128
 routes at desktop/mobile and passed the 128 Canonical / 0 Preview maturity plus
-layout/behavior contracts. The full i18n matrix passes 1,533 canonical keys / 69 local
-five-language packs across 128 routes × 5 languages × 2 viewports. TASK-179 adds the
-129th registered route and 70th local five-language pack; its dedicated 1440×900 /
-390×844 browser proof and the current 50-route canonical list-layout audit pass. The
+layout/behavior contracts. The full i18n matrix passes 1,542 canonical keys / 72 local
+five-language packs across 129 routes × 5 languages × 2 viewports. TASK-182 registers
+the commercial Expenses & Tax gate and its translated unavailable state; the browser
+matrix verifies the same 129 registered routes at desktop and mobile. The
 2026-08-11 TASK-181 regression passes 160 files plus 1 skipped file (645 passed,
 1 skipped test); its focused Pack/API/Tax Evidence proof passes 3 files / 7 tests.
 TASK-180 adds query-side range/search, and TASK-181 adds migration 0093 plus immutable
@@ -54,8 +54,8 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | TASK-179 | Done | Migration 0092, explicit own/company read grants, bounded Demo/API register and responsive five-language desktop/mobile UI |
 | TASK-180 | Done | Query-side search, inclusive date presets/ranges, validation and actionable Missing Date behavior |
 | TASK-181 | Done | Migration 0093 immutable Receipt Pack snapshot, complete-set mixed-currency PDF preview/download/Print and audited Demo/API rendering |
-| TASK-182 | Todo | Demo/API parity, module entitlement, authorization, accessMatrix and i18n |
-| TASK-183 | Todo | Browser/release proof and final documentation/KB synchronization |
+| TASK-182 | Done | Migration 0097 canonical Company Receipt mutation grants, platform entitlement, Demo/API/UI fail-closed guards, accessMatrix and five-language parity |
+| TASK-183 | Done | Demo/PGlite, authenticated API/PGlite and disposable PostgreSQL 16 browser proof pass; final documentation and KB synchronization completed without a production deployment |
 
 TASK-182 additionally depends on TASK-186 so Expenses & Tax adopts the platform-owned
 entitlement model rather than extending the current tenant MAC authority. TASK-177–181
@@ -82,8 +82,10 @@ desktop/mobile Company Receipts E2E, direct PGlite/PostgreSQL 16 migration-prese
 replay, disposable PostgreSQL 16 non-superuser RLS proof, access-matrix, browser i18n and
 desktop/375px smoke all pass. A same-origin 375px browser check covers Platform Superadmin
 realm login, workspace rendering, exact-user simulation, explicit return and document-width
-containment. Full `npm test -- --pool=threads --maxWorkers=1 --reporter=dot` passes 167 files
-and 660 tests with one expected skip in 976.88 seconds.
+containment. The original TASK-188 single-worker proof passed 167 files and 660 tests
+with one expected skip in 976.88 seconds. The later 2026-08-12 current-worktree
+`npm test -- --reporter=dot` run passes 168 files and 663 tests with one expected skip
+in 1304.96 seconds.
 TASK-186's recorded focused authorization proof remains 8 files / 45 tests. TASK-187's
 isolated proof passes 3 files / 12 tests, root/Web typechecks, API build and schema v96
 drift; its browser check covers API-mode realm login and workspace only. No production
@@ -93,9 +95,13 @@ TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
 bounded Demo/API reads and responsive desktop/mobile register UI. TASK-180 adds
 query-side search/date behavior; TASK-181 adds the immutable complete-result Receipt
-Pack and one PDF for preview, download and Print. Module entitlement and the final
-canonical permission cutover remain pending. TASK-182 is now dependency-eligible; the
-remaining EPIC-064 closeout is complete; TASK-182 remains the next dependency-eligible work.
+Pack and one PDF for preview, download and Print. TASK-182 is complete: Expenses & Tax
+uses the platform-owned Master entitlement plus Company allocation in API, Demo and UI;
+Company Receipt create/edit/void now use registered canonical permissions rather than the
+compatibility key. TASK-183 is complete: the confirmation entry, PGlite clean-evidence
+browser persistence, isolated same-origin API/PGlite journey and a new disposable
+PostgreSQL 16 browser journey have passed. Full serial Vitest passes 168 files / 663 tests
+with one expected skip in 959.19 seconds. No production deployment was authorized.
 
 ## Latest implementation milestones
 
@@ -123,8 +129,8 @@ remaining EPIC-064 closeout is complete; TASK-182 remains the next dependency-el
   taken over by an HR permission. Existing in-flight instances continue under their
   snapshotted authority with no implicit migration. Focused authorization, approval and
   API regressions pass 18/18 for the current strict-step slice; root typecheck passes.
-  The latest full Vitest run passes 635 tests with 1 intentional skip across 156 test
-  files; the prior Team Calendar fixture failures were aligned to explicit HR approval
+  The latest current-worktree full Vitest run passes 663 tests with 1 intentional skip
+  across 168 test files; the prior Team Calendar fixture failures were aligned to explicit HR approval
   permissions. Instance/step/resource/policy-bound delegation remains a follow-up
   hardening item.
 - **TASK-172 — Done:** migration `0086_youthful_mac_gargan.sql` adds the stable
@@ -169,8 +175,9 @@ remaining EPIC-064 closeout is complete; TASK-182 remains the next dependency-el
   PostgreSQL 16 parity, concurrency and RLS proof for TASK-175 are green, and target
   production migration and release verification are complete.
   `npm run check:permissions` is the CI gate for source literals, role templates,
-  resource/action contracts and compatibility metadata. The latest full Vitest run
-  passes 156 files plus 1 skipped file (635 passed, 1 skipped tests); the prior HR
+  resource/action contracts and compatibility metadata. The latest current-worktree
+  full Vitest run passes 168 files plus 1 skipped file (663 passed, 1 skipped tests);
+  the prior HR
   fixture failures were corrected without widening the production role templates.
 
 - **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,

@@ -81,10 +81,12 @@ BEGIN
     v_line_net := round(v_line.qty * v_line.unit_price, 2);
     v_line_tax := round(v_line_net * v_rate / 100, 2);
 
-    INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, product_id,
-                                  qty, unit_price, net_amount, tax_code, tax_rate, tax_amount)
-      VALUES ('M1', 'C-SG', v_order_id, v_line_no, v_product_id,
-              v_line.qty, v_line.unit_price, v_line_net, v_line.tax_code, v_rate, v_line_tax);
+    INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, line_type,
+                                  product_id, description, uom, qty, unit_price,
+                                  net_amount, tax_code, tax_rate, tax_amount)
+      VALUES ('M1', 'C-SG', v_order_id, v_line_no, 'stock', v_product_id,
+              v_line.sku, 'unit', v_line.qty, v_line.unit_price, v_line_net,
+              v_line.tax_code, v_rate, v_line_tax);
 
     -- Row lock + insufficient-stock guard (stock.issueStockWithin semantics).
     SELECT qty INTO v_available FROM stock_level
@@ -311,8 +313,8 @@ BEGIN
     VALUES ('M1', 'C-SG', 'SO-CRM-1', v_customer_id, v_owner_id, 'confirmed', DATE '2024-06-01', 'SGD', v_net, v_tax, v_total)
     RETURNING id INTO v_order_id;
 
-  INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, product_id, qty, unit_price, net_amount, tax_code, tax_rate, tax_amount)
-    VALUES ('M1', 'C-SG', v_order_id, 1, v_product_id, v_qty, v_unit_price, v_net, 'SR', v_rate, v_tax);
+  INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, line_type, product_id, description, uom, qty, unit_price, net_amount, tax_code, tax_rate, tax_amount)
+    VALUES ('M1', 'C-SG', v_order_id, 1, 'stock', v_product_id, 'SG-WIDGET', 'unit', v_qty, v_unit_price, v_net, 'SR', v_rate, v_tax);
 
   SELECT qty INTO v_available FROM stock_level
     WHERE master_fn = 'M1' AND company_fn = 'C-SG'

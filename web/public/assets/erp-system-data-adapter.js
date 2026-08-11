@@ -37,8 +37,9 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 95;
+  var DEMO_SCHEMA_VERSION = 97;
   var DEMO_PACK_VERSION = '15';
+  var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
      format as src/auth/password.ts (TASK-024), via the browser's native Web
@@ -138,6 +139,29 @@
     db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null,
     activationRequired: false, demoPack: null, demoPackAvailable: null,
   };
+
+  /* The sign-in shell starts before PGlite resolves. Keep the current stage in
+     a small window seam so app.js can render useful progress even when the
+     database is slow to open on a first visit. */
+  function reportBootProgress(progress,title,detail,phase){
+    var payload={
+      progress:Math.max(0,Math.min(100,Number(progress)||0)),
+      title:String(title||''),
+      detail:String(detail||''),
+      phase:String(phase||'loading'),
+    };
+    try{
+      window.__ERP_DEMO_PROGRESS__=payload;
+      if(typeof window.dispatchEvent==='function'){
+        var event=typeof CustomEvent==='function'
+          ? new CustomEvent('erp:demo-progress',{detail:payload})
+          : document.createEvent('CustomEvent');
+        if(event.initCustomEvent) event.initCustomEvent('erp:demo-progress',false,false,payload);
+        window.dispatchEvent(event);
+      }
+    }catch{}
+  }
+  reportBootProgress(0,'Preparing local demo database','Opening IndexedDB and the bundled ERP runtime…','loading');
 
   /* ---------------- PGlite boot ---------------- */
 
@@ -305,6 +329,11 @@
       "where table_schema='public' and (" +
       "(table_name='role' and column_name in ('company_fn','source_template_key')) or " +
       "(table_name='app_user' and column_name='initial_password_expires_at'))")).rows[0];
+    var commercialLineSignature = (await db.query(
+      "select count(*)::int as n from information_schema.columns " +
+      "where table_schema='public' and (" +
+      "(table_name='sales_enquiry_line' and column_name in ('line_type','description','uom')) or " +
+      "(table_name='sales_quotation_line' and column_name in ('line_type','description','uom')))" )).rows[0];
     var hasCurrentSignature = signature && Number(signature.n) === 31
       && purchaseReturnSignature && Number(purchaseReturnSignature.n) === 4
       && supplierPricingSignature && Number(supplierPricingSignature.n) === 2
@@ -318,7 +347,8 @@
       && documentPageSignature && Number(documentPageSignature.n) === 1
       && documentProcessingSignature && Number(documentProcessingSignature.n) === 6
       && accessOnboardingSignature && Number(accessOnboardingSignature.n) === 6
-      && accessColumnSignature && Number(accessColumnSignature.n) === 3;
+      && accessColumnSignature && Number(accessColumnSignature.n) === 3
+      && commercialLineSignature && Number(commercialLineSignature.n) === 6;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) {
       /* Repair databases upgraded by an early v73 preview that retained the
          obsolete group-wide role-name index. Company roles must be independent. */
@@ -447,7 +477,8 @@
     var users = await rows(
       "select u.user_id, u.username, u.email, u.full_name, u.language, " +
       "u.password_change_required, u.initial_password_expires_at, u.account_state, " +
-      "coalesce(bool_or(r.is_superadmin), false) as is_superadmin, " +
+      "false as is_superadmin, " +
+      "coalesce(bool_or(r.source_template_key = 'company_owner'), false) as is_company_owner, " +
       "coalesce(array_agg(distinct r.name) filter (where r.name is not null), '{}') as roles, " +
       "coalesce(array_agg(distinct rp.permission_key) filter (where rp.allowed), '{}') as permissions, " +
       "coalesce((select array_agg(distinct all_uc.company_fn) from user_company all_uc where all_uc.user_id=u.user_id), '{}') as companies " +
@@ -503,11 +534,12 @@
       "from sales_order o join customer c on c.id = o.customer_id " +
       "where " + wc('o') + " order by o.id");
     var orderLines = await rows(
-      "select l.order_id, l.line_no, p.sku, p.name, p.uom, l.qty::float as qty, " +
+      "select l.order_id, l.line_no, l.line_type, l.product_id, coalesce(p.sku,'') as sku, " +
+      "coalesce(l.description,p.name,'') as name, coalesce(l.uom,p.uom,'unit') as uom, l.qty::float as qty, " +
       "l.unit_price::float as unit_price, l.net_amount::float as net, " +
       "l.tax_rate::float as tax_rate, l.tax_amount::float as tax, " +
-      "coalesce((select sum(s.qty) from stock_level s where s.product_id = p.id),0)::float as avail " +
-      "from sales_order_line l join product p on p.id = l.product_id " +
+      "coalesce((select sum(s.qty) from stock_level s where s.product_id = l.product_id),0)::float as avail " +
+      "from sales_order_line l left join product p on p.id = l.product_id " +
       "where " + wc('l') + " order by l.order_id, l.line_no");
     var salesOrderApprovals = await rows(
       "select approval.id, approval.order_id, approval.status, approval.submitted_at::text as submitted_at, " +
@@ -534,7 +566,7 @@
     /* TASK-023: purchasing chain (TASK-022's schema/business logic wired into
        the browser demo). Same shape/conventions as the sales queries above. */
     var suppliers = await rows(
-      "select s.id, s.code, s.name, coalesce(sum(case when si.status='unpaid' then si.total_amount end),0)::float as balance " +
+      "select s.id, s.code, s.name, s.updated_at::text as updated_at, coalesce(sum(case when si.status='unpaid' then si.total_amount end),0)::float as balance " +
       "from supplier s left join supplier_invoice si on si.supplier_id = s.id " +
       "where " + wc('s') + " group by s.id, s.code, s.name order by s.id");
     var purchaseOrders = await rows(
@@ -618,7 +650,8 @@
         { company_fn: 'C-MY', master_fn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', tax_regime: 'SST', locale: 'ms' },
       ],
       users: [
-        { user_id: 1, email: 'admin@acme.co', full_name: 'Admin', language: 'zh', is_superadmin: true },
+        { user_id: 1, email: 'admin@acme.co', full_name: 'Admin', language: 'zh', is_superadmin: false, is_company_owner: true,
+          permissions: ['dashboard.read', 'admin.users.read', 'admin.users.manage', 'admin.roles.read', 'admin.roles.write', 'inventory.read'] },
         { user_id: 2, email: 'viewer@acme.co', full_name: 'Demo Viewer', language: 'en', is_superadmin: false },
       ],
       modules: [
@@ -739,26 +772,36 @@
 
     /* TASK-024: real seeded user (was hardcoded "Admin" before), with a
        browser-persisted "switch demo user" selection. Defaults to whichever
-       seeded user is Superadmin, preserving the pre-TASK-024 default
+       seeded user is Company Owner, preserving the pre-TASK-024 default
        experience for anyone who never switches. */
     var activeUserEmail = null;
     try { activeUserEmail = localStorage.getItem('aria-active-user-email'); } catch {}
     var activeUser = (d.users || []).filter(function(u){ return u.email === activeUserEmail; })[0]
-      || (d.users || []).filter(function(u){ return u.is_superadmin; })[0]
+      || (d.users || []).filter(function(u){ return u.is_company_owner; })[0]
       || (d.users || [])[0]
-      || { email: 'admin@acme.co', full_name: 'Admin', is_superadmin: true };
+      || { email: 'admin@acme.co', full_name: 'Admin', is_superadmin: false, is_company_owner: true, permissions: [] };
     var userDisplayName = activeUser.full_name || activeUser.email;
     state.activeUserId = activeUser.user_id || null;
-    state.activationRequired = !!activeUser.password_change_required;
+    var impersonatorEmail = null;
+    try { impersonatorEmail = localStorage.getItem(DEMO_IMPERSONATOR_KEY); } catch {}
+    state.activationRequired = !!activeUser.password_change_required && !impersonatorEmail;
     DB.user = {
       name: userDisplayName,
       email: activeUser.email,
       initials: (userDisplayName.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2)
         .map(function(w){ return w[0]; }).join('').toUpperCase()) || 'U',
-      role: activeUser.is_superadmin ? 'Superadmin' : ((activeUser.roles||[]).join(' + ')||'Employee'),
-      permissionKeys: activeUser.is_superadmin ? ['*'] : (activeUser.permissions||[]),
+      role: impersonatorEmail ? 'Employee workspace' : (activeUser.is_company_owner ? 'Company Owner' : ((activeUser.roles||[]).join(' + ')||'Employee')),
+      is_company_owner: Boolean(activeUser.is_company_owner),
+      impersonating: !!impersonatorEmail,
+      impersonatorEmail: impersonatorEmail || '',
+      permissionKeys: activeUser.permissions || [],
       companyFns: activeUser.companies||[],
-      perms: { post: !!activeUser.is_superadmin, approve: !!activeUser.is_superadmin, salaryView: false, costView: !!activeUser.is_superadmin },
+      perms: {
+        post: (activeUser.permissions || []).some(function(key){ return /\.post$/.test(key); }),
+        approve: (activeUser.permissions || []).some(function(key){ return /\.approve$/.test(key); }),
+        salaryView: (activeUser.permissions || []).includes('payroll.read'),
+        costView: (activeUser.permissions || []).includes('finance.read'),
+      },
     };
     var currencySymbols = { SGD: 'S$', MYR: 'RM', USD: '$' };
     money = function erpSystemMoney(n, cur){
@@ -814,7 +857,7 @@
        module (see docs/STATUS.md). */
     DB.suppliers = (d.suppliers || []).map(function(s){
       return {
-        code: s.code, name: s.name, contact: '—', phone: '—', email: '—',
+        id: s.id, code: s.code, name: s.name, updatedAt: s.updatedAt || s.updated_at || null, contact: '—', phone: '—', email: '—',
         country: activeCompany.country, currency: activeCompany.currency,
         terms: 'Net 30', category: 'General', leadTime: 14, rating: 4.5,
         onTime: 95, approved: true, status: 'Active', balance: s.balance,
@@ -1133,33 +1176,48 @@
   }
 
   async function bootPglite(){
+    reportBootProgress(3,'Starting local demo database','Loading PGlite and connecting to IndexedDB…','loading');
     var runtime = await window.ErpDemoRuntimeReady;
     if (!runtime || typeof runtime.openDatabase !== 'function') {
       throw new Error('Bundled ERP demo runtime is unavailable.');
     }
+    reportBootProgress(8,'Opening local demo database','Creating the persistent browser connection…','loading');
     var opened = runtime.openDatabase(PG_DATA_DIR);
     var db = opened.client;
     state.db = db;
     state.orm = opened.orm;
     state.runtime = runtime;
     try {
+      reportBootProgress(12,'Preparing base demo records','Creating the canonical sample schema when needed…','loading');
       var freshlySeeded = await ensureSeeded(db);
+      reportBootProgress(28,'Checking database compatibility','Applying safe local schema migrations…','loading');
       await ensureSchemaUpToDate(db);
+      reportBootProgress(45,'Loading showcase data','Preparing the deterministic enterprise demo pack…','loading');
       var showcaseLoaded = await ensureShowcasePack(db, freshlySeeded);
       await ensureCompanyReceiptReadFixture(db);
+      reportBootProgress(53,'Loading warehouse fixtures','Preparing inventory and picking examples…','loading');
       await ensureWarehousePickFixture(db);
+      reportBootProgress(61,'Loading manufacturing fixtures','Preparing work orders and production examples…','loading');
       await ensureManufacturingFixture(db);
+      reportBootProgress(68,'Loading quality fixtures','Preparing inspection and quality examples…','loading');
       await ensureQualityFixture(db);
+      reportBootProgress(75,'Loading sales fixtures','Preparing the sales front workspace…','loading');
       await ensureSalesFrontFixture(db);
+      reportBootProgress(82,'Loading delivery fixtures','Preparing delivery and fulfillment examples…','loading');
       await ensureSalesDeliveryFixture(db);
+      reportBootProgress(87,'Loading return fixtures','Preparing sales return examples…','loading');
       await ensureSalesReturnFixture(db);
+      reportBootProgress(91,'Loading debit fixtures','Preparing debit-note examples…','loading');
       await ensureSalesDebitFixture(db);
+      reportBootProgress(95,'Loading pricing fixtures','Preparing pricing and credit examples…','loading');
       await ensureSalesPricingFixture(db);
       await ensureSalesCreditFixture(db);
+      reportBootProgress(98,'Reading demo workspace','Preparing the sign-in screen…','loading');
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
       applyOnce(payload, 'pglite');
+      reportBootProgress(100,'Demo database ready','Your local demo workspace is ready.','ready');
       console.info('[erp-system] demo data source: PGlite (' + PG_DATA_DIR + ')' +
         (freshlySeeded ? ' — freshly seeded' : ' — existing IndexedDB data') +
         (showcaseLoaded ? ' — enterprise showcase pack loaded' : '') +
@@ -1186,6 +1244,7 @@
     var timer = setTimeout(function(){
       console.warn('[erp-system] PGlite boot exceeded ' + BOOT_TIMEOUT_MS + 'ms — using static fallback.');
       applyOnce(fallbackPayload(), 'fallback');
+      reportBootProgress(100,'Opening offline demo mode','The bundled demo view is ready while local storage finishes recovering.','fallback');
       resolve();
     }, BOOT_TIMEOUT_MS);
     bootPglite().then(function(){
@@ -1195,6 +1254,7 @@
       clearTimeout(timer);
       console.warn('[erp-system] PGlite unavailable — using static fallback.', e && e.message ? e.message : e);
       applyOnce(fallbackPayload(), 'fallback');
+      reportBootProgress(100,'Opening offline demo mode','The bundled demo view is ready for this session.','fallback');
       resolve();
     });
   });
@@ -1443,7 +1503,7 @@
     var active=(DB.erpSystem&&DB.erpSystem.users||[]).find(function(user){
       return Number(user.user_id)===Number(state.activeUserId);
     });
-    if(active&&!active.is_superadmin&&!(active.companies||[]).includes(companyFn)){
+    if(active&&!active.is_company_owner&&!(active.companies||[]).includes(companyFn)){
       return Promise.reject(new Error('This Demo persona has no role in the selected company.'));
     }
     SCOPE.companyFn = companyFn;
@@ -1539,19 +1599,60 @@
     return {data:result.rows[0]||{status:'live',current_stage:'live',version:1,completed_steps:[]},meta:{demo:true}};
   }
 
-  /* Reset demo: drop the canonical schema and reload — next boot reseeds. */
+  function deleteDemoDatabase(){
+    if(typeof indexedDB==='undefined') return Promise.resolve();
+    return new Promise(function(resolve,reject){
+      var request=indexedDB.deleteDatabase(PG_IDB_NAME);
+      var timeout=setTimeout(function(){
+        reject(new Error('The demo database is still open in another tab. Close other Demo tabs and try again.'));
+      },10000);
+      request.onsuccess=function(){ clearTimeout(timeout); resolve(); };
+      request.onerror=function(){ clearTimeout(timeout); reject(request.error||new Error('IndexedDB delete failed.')); };
+      /* Keep waiting after a blocked event. The other PGlite connection may
+         close moments later; resolving here would reload against stale data. */
+      request.onblocked=function(){};
+    });
+  }
+
+  /* Reset demo: drop the canonical schema, clear the browser session, and
+     reload — next boot reseeds the original static demo state. */
   async function reset(){
+    reportBootProgress(8,'Resetting local demo database','Closing the current browser database…','reset');
+    var schemaDropped=false;
     try {
       if (state.db) {
+        reportBootProgress(35,'Resetting local demo database','Dropping local demo records…','reset');
         await state.db.exec('drop schema public cascade; create schema public;');
-        await state.db.close();
+        schemaDropped=true;
+        try { await state.db.close(); } catch {}
+        state.db=null;
+        state.orm=null;
+        state.runtime=null;
       } else if (typeof indexedDB !== 'undefined') {
-        indexedDB.deleteDatabase(PG_IDB_NAME);
+        reportBootProgress(65,'Resetting local demo database','Removing the persisted IndexedDB workspace…','reset');
+        await deleteDemoDatabase();
       }
     } catch (e) {
       console.warn('[erp-system] reset: drop failed, deleting IndexedDB instead.', e);
-      try { indexedDB.deleteDatabase(PG_IDB_NAME); } catch {}
+      if(!schemaDropped){
+        try { await deleteDemoDatabase(); }
+        catch(resetError){
+          reportBootProgress(0,'Demo reset could not finish',resetError&&resetError.message||'Close other Demo tabs and try again.','reset-error');
+          throw resetError;
+        }
+      }
     }
+    try{
+      ['aria-demo-auth','aria-active-user-email',DEMO_IMPERSONATOR_KEY,
+       'aria-period','aria-demo-employee-credential-key']
+        .forEach(function(key){ localStorage.removeItem(key); });
+      /* A static demo reset should return to the first-run wizard so the
+         showcase can be configured again from a clean browser state. Device
+         preferences and language remain intact. */
+      if(typeof clearSetupWizardFlag==='function') clearSetupWizardFlag();
+      else localStorage.removeItem('aria-setup-wizard-complete');
+    }catch{}
+    reportBootProgress(100,'Demo database reset','Reloading the original demo workspace…','reset');
     location.reload();
   }
 
@@ -1613,6 +1714,69 @@
     return refresh();
   }
 
+  async function impersonateUser(userId, reason){
+    if(localStorage.getItem(DEMO_IMPERSONATOR_KEY)) throw new Error('Return to Company Owner before entering another employee workspace.');
+    var target=await requireDemoDb().query('select email from app_user where user_id=$1 and is_active=true limit 1',[Number(userId)]);
+    var targetEmail=target.rows[0]&&target.rows[0].email;
+    if(!targetEmail) throw new Error('Employee account could not be found.');
+    var currentEmail=DB.user&&DB.user.email;
+    if(!currentEmail) throw new Error('The current administrator account could not be identified.');
+    try{
+      localStorage.setItem(DEMO_IMPERSONATOR_KEY,currentEmail);
+      localStorage.setItem('aria-active-user-email',String(targetEmail).toLowerCase());
+    }catch{}
+    await refresh();
+    return {userId:Number(userId),reason:String(reason||'')};
+  }
+
+  async function employeeWorkspaceTargets(){
+    var users=(DB.erpSystem&&DB.erpSystem.users)||[];
+    var allowedUserIds=new Set(users.filter(function(user){ return !user.is_company_owner; })
+      .map(function(user){ return Number(user.user_id); }));
+    var result=await requireDemoDb().query(
+      "select e.id as employee_id,e.user_id,e.full_name,e.employee_no,e.department,e.job_title,"+
+      "u.username,u.account_state " +
+      "from employee e join app_user u on u.user_id=e.user_id " +
+      "where e.master_fn=$1 and e.company_fn=$2 and e.is_active and u.is_active and e.user_id is not null " +
+      "order by e.full_name",
+      [SCOPE.masterFn,SCOPE.companyFn]);
+    return {data:result.rows.filter(function(row){ return allowedUserIds.has(Number(row.user_id)); })
+      .map(function(row){ return {
+        employeeId:Number(row.employee_id),
+        userId:Number(row.user_id),
+        username:row.username,
+        fullName:row.full_name,
+        employeeNo:row.employee_no,
+        department:row.department,
+        jobTitle:row.job_title,
+        accountState:row.account_state,
+      }; }),meta:{}};
+  }
+
+  async function employeeHistory(id,query){
+    var numericId=Number(id);
+    if(!Number.isSafeInteger(numericId)||numericId<=0) throw new Error('Employee id must be positive.');
+    query=query||{};
+    var rows=await requireDemoDb().transaction(function(tx){
+      return state.runtime.commands.listEntityAudit(
+        state.runtime.createOrm(tx),SCOPE,'hr/employees',numericId,
+        Math.max(1,Math.min(100,Number(query.limit)||50)));
+    });
+    return {data:rows,meta:{entity:'hr/employees',entityId:numericId}};
+  }
+
+  async function returnToAdmin(){
+    var original='';
+    try{ original=localStorage.getItem(DEMO_IMPERSONATOR_KEY)||''; }catch{}
+    if(!original) throw new Error('This session is not viewing an employee workspace.');
+    try{
+      localStorage.setItem('aria-active-user-email',original);
+      localStorage.removeItem(DEMO_IMPERSONATOR_KEY);
+    }catch{}
+    await refresh();
+    return {email:original};
+  }
+
   /* Formal resource contract used by new screens. Raw table access is strictly
      whitelisted; tenant scope is injected here and cannot be supplied by the
      caller. Existing vertical-slice helpers remain below as compatibility
@@ -1637,6 +1801,7 @@
     'sales/order-lines':'sales_order_line',
     'sales/invoices':'invoice',
     'sales/enquiries':'sales_enquiry',
+    'sales/enquiry-lines':'sales_enquiry_line',
     'sales/quotations':'sales_quotation',
     'sales/quotation-lines':'sales_quotation_line',
     'sales/deliveries':'sales_delivery',
@@ -1732,6 +1897,7 @@
   }
   var DEMO_RESOURCE_MODULES={
     assets:'asset',crm:'crm',finance:'finance',hr:'hr',integration:'integration',
+    expenses:'expenses_tax',
     inventory:'inventory',manufacturing:'manufacturing',payroll:'payroll',
     project:'project',purchasing:'purchasing',quality:'quality',reporting:'bi',
     sales:'sales',service:'service',warehouse:'warehouse',
@@ -1926,6 +2092,8 @@
       'sales/commission-lines':{runId:'run_id'},
       'sales/commission-sources':{runId:'run_id'},
       'sales/quotations':{enquiryId:'enquiry_id'},
+      'sales/enquiry-lines':{enquiryId:'enquiry_id'},
+      'sales/quotation-lines':{quotationId:'quotation_id'},
       'finance/journal-lines':{journalId:'journal_id'},
       'finance/gl-entries':{accountId:'account_id'},
       'inventory/stock-movements':{refId:'ref_id'},
@@ -1990,6 +2158,16 @@
     if(!row) throw new Error('ERP resource not found: '+key+'/'+numericId);
     return {data:contractRow(row),meta:{}};
   }
+  async function getSalesEnquiryAggregate(id){
+    var numericId=Number(id);
+    if(!Number.isSafeInteger(numericId)||numericId<=0) throw new Error('Resource id must be a positive integer.');
+    var aggregate=await requireDemoDb().transaction(function(tx){
+      return state.runtime.commands.getSalesEnquiryAggregateWithin(
+        state.runtime.createOrm(tx),SCOPE,numericId);
+    });
+    if(!aggregate) throw new Error('ERP resource not found: sales/enquiries/'+numericId);
+    return {data:aggregate,meta:{aggregate:'sales_enquiry',version:aggregate.enquiry.version}};
+  }
   /* Best-effort demo audit sink for create()/action() -- see appendDemoAudit's
      comment in erp-demo-runtime-impl.ts. Must never throw: an audit-write failure
      must not undo or block a create/action that already succeeded and already
@@ -2000,12 +2178,13 @@
      time either -- only routes/resources.ts's generic route layer (and this
      chokepoint, its demo-mode equivalent) audits on behalf of business logic
      that doesn't audit itself. */
-  async function recordDemoAudit(entity, entityId, actionName){
+  async function recordDemoAudit(entity, entityId, actionName, before, after){
     if(entity.indexOf('admin/')===0) return;
     try{
       await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.appendDemoAudit(
-          state.runtime.createOrm(tx), SCOPE, state.activeUserId, entity, entityId, actionName);
+          state.runtime.createOrm(tx), SCOPE, state.activeUserId, entity, entityId, actionName,
+          before, after);
       });
     }catch(e){
       if(typeof console!=='undefined'&&console.warn) console.warn('[erp-system] demo audit write failed', e);
@@ -2056,6 +2235,14 @@
       });
       await refresh();
       return {data:newContact,meta:{}};
+    }
+    if(key==='crm/customers'||key==='sales/customers'){
+      var newCustomer = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.createCustomerWithin(
+          state.runtime.createOrm(tx), SCOPE, payload, Number(state.activeUserId));
+      });
+      await refresh();
+      return {data:newCustomer,meta:{}};
     }
     if(key==='crm/activities'){
       var newActivity = await requireDemoDb().transaction(function(tx){
@@ -2427,14 +2614,95 @@
     }
     throw new Error('Create is not implemented for ERP resource: '+key);
   }
-  async function update(resource){
-    throw new Error('Update is not implemented for ERP resource: '+normalizeResource(resource));
+  async function update(resource,id,payload,version){
+    var key=normalizeResource(resource);
+    requireEffectiveModuleForResource(key);
+    if(key==='hr/employees'){
+      var employeeId=Number(id);
+      var result=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateEmployeeWithin(
+          state.runtime.createOrm(tx), SCOPE, employeeId, Object.assign({},payload||{},{
+            expectedUpdatedAt:version!=null?version:(payload&&payload.expectedUpdatedAt)||null,
+            actorUserId:Number(state.activeUserId),
+            requestId:'demo-employee-profile-'+(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now()),
+          }));
+      });
+      await recordDemoAudit('hr/employees',employeeId,'update',result.before,result.employee);
+      await refresh();
+      return {data:result.employee,meta:{concurrency:'updated_at'}};
+    }
+    if(key==='inventory/products'){
+      var productId=Number(id);
+      var productResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateProductWithin(
+          state.runtime.createOrm(tx), SCOPE, productId, Object.assign({},payload||{},
+            {expectedVersion:version!=null?Number(version):null}));
+      });
+      await recordDemoAudit(key,productId,'update',productResult.before,productResult.after);
+      await refresh();
+      return {data:productResult.after,meta:{concurrency:'integer'}};
+    }
+    if(key==='sales/customers'||key==='crm/customers'){
+      var customerId=Number(id);
+      var customerResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateCustomerWithin(
+          state.runtime.createOrm(tx), SCOPE, customerId, Object.assign({},payload||{},
+            {expectedUpdatedAt:version!=null?version:null}));
+      });
+      await recordDemoAudit(key,customerId,'update',customerResult.before,customerResult.after);
+      await refresh();
+      return {data:customerResult.after,meta:{concurrency:'updated_at'}};
+    }
+    if(key==='purchasing/suppliers'){
+      var supplierId=Number(id);
+      var supplierResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateSupplierWithin(
+          state.runtime.createOrm(tx), SCOPE, supplierId, Object.assign({},payload||{},
+            {expectedUpdatedAt:version!=null?version:null}));
+      });
+      await recordDemoAudit(key,supplierId,'update',supplierResult.before,supplierResult.after);
+      await refresh();
+      return {data:supplierResult.after,meta:{concurrency:'updated_at'}};
+    }
+    throw new Error('Update is not implemented for ERP resource: '+key);
   }
   async function action(resource,id,name,payload){
     var result=await actionInner(resource,id,name,payload);
     await recordDemoAudit(normalizeResource(resource), id, name);
     return result;
   }
+
+  async function decideDemoHrLeaveRequest(tx,leaveRequestId,decision,payload){
+    payload=payload||{};
+    var row=(await tx.query(
+      'select legacy_policy, version from leave_request where master_fn=$1 and company_fn=$2 and id=$3 limit 1',
+      [SCOPE.masterFn,SCOPE.companyFn,leaveRequestId])).rows[0];
+    if(!row) throw new Error('Leave request not found.');
+    if(!row.legacy_policy){
+      var expectedVersion=Number(payload.expectedVersion);
+      if(!Number.isSafeInteger(expectedVersion)||expectedVersion<=0){
+        throw new Error('A positive expectedVersion is required for governed leave decisions.');
+      }
+      var actorEmployee=(await tx.query(
+        'select id from employee where master_fn=$1 and company_fn=$2 and user_id=$3 limit 1',
+        [SCOPE.masterFn,SCOPE.companyFn,Number(state.activeUserId)])).rows[0];
+      return state.runtime.commands.decideGovernedLeaveWithin(
+        state.runtime.createOrm(tx),SCOPE,
+        {
+          userId:Number(state.activeUserId),
+          employeeId:actorEmployee?Number(actorEmployee.id):null,
+          canManage:true,
+        },
+        leaveRequestId,expectedVersion,decision,
+        typeof payload.reason==='string'?payload.reason:null,
+      );
+    }
+    return state.runtime.commands.decideLeaveRequestWithin(
+      state.runtime.createOrm(tx),SCOPE,leaveRequestId,decision,
+      typeof payload.rejectionReason==='string'?payload.rejectionReason:null,
+    );
+  }
+
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
     requireEffectiveModuleForResource(key);
@@ -2617,6 +2885,9 @@
       throw moduleWriteDenied;
     }
     if(key==='inventory/products'&&name==='update'){
+      if(!payload||!Number.isSafeInteger(Number(payload.expectedVersion))||Number(payload.expectedVersion)<1){
+        throw new Error('A product version is required when updating product master data.');
+      }
       var updatedProduct = await requireDemoDb().transaction(function(tx){
         return state.runtime.commands.updateProductWithin(
           state.runtime.createOrm(tx), SCOPE, Number(id), payload);
@@ -2724,6 +2995,22 @@
       });
       await refresh();
       return {data:convertedEnquiry,meta:{}};
+    }
+    if(key==='sales/enquiries'&&name==='replace-lines'){
+      var replacedEnquiryLines = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.replaceSalesEnquiryLinesWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload);
+      });
+      await refresh();
+      return {data:replacedEnquiryLines,meta:{}};
+    }
+    if(key==='sales/enquiries'&&name==='save-draft'){
+      var savedEnquiryDraft = await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.saveSalesEnquiryDraftWithin(
+          state.runtime.createOrm(tx), SCOPE, Number(id), payload);
+      });
+      await refresh();
+      return {data:savedEnquiryDraft,meta:{}};
     }
     if(key==='sales/quotations'&&(name==='issue'||name==='accept')){
       var transitionedQuotation = await requireDemoDb().transaction(function(tx){
@@ -2842,16 +3129,14 @@
     }
     if(key==='hr/leave-requests'&&name==='approve'){
       var approvedLeave = await requireDemoDb().transaction(function(tx){
-        return state.runtime.commands.decideLeaveRequestWithin(
-          state.runtime.createOrm(tx), SCOPE, Number(id), 'approved');
+        return decideDemoHrLeaveRequest(tx,Number(id),'approved',payload);
       });
       await refresh();
       return {data:approvedLeave,meta:{}};
     }
     if(key==='hr/leave-requests'&&name==='reject'){
       var rejectedLeave = await requireDemoDb().transaction(function(tx){
-        return state.runtime.commands.decideLeaveRequestWithin(
-          state.runtime.createOrm(tx), SCOPE, Number(id), 'rejected', payload&&payload.rejectionReason);
+        return decideDemoHrLeaveRequest(tx,Number(id),'rejected',payload);
       });
       await refresh();
       return {data:rejectedLeave,meta:{}};
@@ -3203,6 +3488,7 @@
     return data;
   }
   async function companyReceipts(query){
+    requireEffectiveModuleForResource('expenses/company-receipts');
     query=query||{};
     var requestedLimit=Number(query.limit==null?25:query.limit);
     var limit=Number.isSafeInteger(requestedLimit)
@@ -3270,6 +3556,64 @@
         filters:{search:search,dateFrom:dateFrom,dateTo:dateTo}}};
     });
   }
+  async function companyReceiptConfirmation(documentVersionId){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    var versionId=Number(documentVersionId);
+    if(!Number.isSafeInteger(versionId)||versionId<=0){
+      throw new Error('Company Receipt document version is invalid.');
+    }
+    var data=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var permitted=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.create');
+      if(!permitted) throw new Error('You cannot confirm Company Receipts.');
+      return state.runtime.commands.readCompanyReceiptConfirmationWithin(
+        orm,SCOPE,actorId,versionId);
+    });
+    return {data:data,meta:{scope:'uploader',ocrIsSuggestionOnly:true,originalPreserved:true}};
+  }
+  async function createCompanyReceipt(payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    var data=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var permitted=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.create');
+      if(!permitted) throw new Error('You cannot create Company Receipts.');
+      return state.runtime.commands.createCompanyReceiptWithin(orm,SCOPE,actorId,payload||{});
+    });
+    await recordDemoAudit('company_receipt',data.id,'created',null,data);
+    return {data:data,meta:{scope:'uploader',evidenceImmutable:true}};
+  }
+  async function updateCompanyReceipt(receiptId,payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    var id=Number(receiptId),body=payload||{};
+    if(!Number.isSafeInteger(id)||id<=0) throw new Error('Company Receipt id is invalid.');
+    var changed=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var permitted=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.edit');
+      if(!permitted) throw new Error('You cannot edit Company Receipts.');
+      return state.runtime.commands.updateCompanyReceiptWithin(
+        orm,SCOPE,actorId,id,body.expectedVersion,body);
+    });
+    await recordDemoAudit('company_receipt',id,'updated',changed.before,changed.after);
+    return {data:changed.after,meta:{scope:'uploader',evidenceImmutable:true}};
+  }
+  async function voidCompanyReceipt(receiptId,payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    var id=Number(receiptId),body=payload||{};
+    if(!Number.isSafeInteger(id)||id<=0) throw new Error('Company Receipt id is invalid.');
+    var changed=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var permitted=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.void');
+      if(!permitted) throw new Error('You cannot void Company Receipts.');
+      return state.runtime.commands.voidCompanyReceiptWithin(
+        orm,SCOPE,actorId,id,body.expectedVersion,body.reason);
+    });
+    await recordDemoAudit('company_receipt',id,'voided',changed.before,changed.after);
+    return {data:changed.after,meta:{scope:'uploader',tombstone:true}};
+  }
   function scaledReceiptAmount(value){
     var text=String(value||'0');
     var parts=text.split('.');
@@ -3280,6 +3624,7 @@
     return (negative?'-':'')+text.slice(0,-4)+'.'+text.slice(-4);
   }
   async function companyReceiptPack(payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
     payload=payload||{};
     var packKey=String(payload.packKey||'').trim();
     if(!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(packKey)) throw new Error('A valid Receipt Pack key is required.');
@@ -3369,6 +3714,7 @@
     return response;
   }
   async function companyReceiptPackPdf(packId,action){
+    requireEffectiveModuleForResource('expenses/company-receipts');
     action=String(action||'view');
     if(!['view','download','print'].includes(action)) throw new Error('Receipt Pack PDF action is invalid.');
     var response=await requireDemoDb().transaction(async function(tx){
@@ -3896,6 +4242,7 @@
       await withMyActor(function(){ return null; });
       var result=await requireDemoDb().query(
         `select d.id,d.document_key,d.original_file_name,d.current_version_no,
+                v.id as document_version_id,
                 d.retention_until,d.legal_hold,d.record_status,d.record_version,
                 d.void_reason,d.paper_custody_status,d.created_at,
                 v.sha256,v.mime_type,v.size_bytes,v.page_count,v.storage_backend,
@@ -3922,7 +4269,7 @@
          order by d.created_at desc,d.id desc limit 100`,
         [SCOPE.masterFn,SCOPE.companyFn,myActorUserId()]);
       return {data:result.rows.map(function(row){return {
-        id:Number(row.id),documentKey:row.document_key,
+        id:Number(row.id),documentVersionId:Number(row.document_version_id),documentKey:row.document_key,
         originalFileName:row.original_file_name,currentVersionNo:Number(row.current_version_no),
         retentionUntil:row.retention_until,legalHold:Boolean(row.legal_hold),createdAt:row.created_at,
         recordStatus:row.record_status,recordVersion:Number(row.record_version),
@@ -4203,6 +4550,138 @@
       });
       return {data:data,meta:{}};
     },
+    hrCalendarHolidays:async function(query){
+      query=query||{};
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canReadHr=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.read');
+        if(!canReadHr) throw new Error('You cannot read the HR calendar.');
+        return state.runtime.commands.listCalendarHolidaysWithin(orm,SCOPE,{
+          from:String(query.from||''),to:String(query.to||''),
+        });
+      });
+      return {data:data,meta:{tenantScoped:true,source:'calendar_holiday',limit:366}};
+    },
+    staffCalendar:async function(query){
+      query=query||{};
+      var response=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canRead=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.read');
+        if(!canRead) throw new Error('You cannot read the Staff Calendar.');
+        var employeeIds=await state.runtime.commands.resolveCompanyEmployeeIdsWithin(orm,SCOPE);
+        var data=await state.runtime.commands.listStaffCalendarWithin(orm,SCOPE,employeeIds,{
+          from:String(query.from||''),to:String(query.to||''),
+          employeeId:query.employeeId==null||query.employeeId===''?null:Number(query.employeeId),
+          department:query.department||null,status:query.status||'all',
+        });
+        var canManage=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        return {data:data,canManage:canManage};
+      });
+      return {data:response.data,meta:{tenantScoped:true,canManage:response.canManage,limit:300}};
+    },
+    createStaffAppointment:async function(payload){
+      payload=payload||{};
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWrite) throw new Error('You cannot manage Staff Calendar appointments.');
+        var created=await state.runtime.commands.createStaffAppointmentWithin(
+          orm,SCOPE,payload,myActorUserId());
+        if(created.syncToExternal){
+          await state.runtime.commands.enqueueStaffAppointmentCalendarSyncWithin(
+            orm,SCOPE,{appointmentId:created.id,eventType:'created'});
+        }
+        return created;
+      });
+      await recordDemoAudit('hr/staff-appointments',data.id,'create',null,data);
+      return {data:data,meta:{tenantScoped:true}};
+    },
+    updateStaffAppointment:async function(id,payload){
+      payload=payload||{};
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWrite) throw new Error('You cannot manage Staff Calendar appointments.');
+        var result=await state.runtime.commands.updateStaffAppointmentWithin(
+          orm,SCOPE,Number(id),Number(payload.expectedVersion),payload,myActorUserId());
+        var syncEvent=result.after.syncToExternal
+          ?result.before.syncToExternal?'changed':'created'
+          :result.before.syncToExternal?'cancelled':null;
+        if(syncEvent){
+          await state.runtime.commands.enqueueStaffAppointmentCalendarSyncWithin(
+            orm,SCOPE,{appointmentId:Number(id),eventType:syncEvent});
+        }
+        return result;
+      });
+      await recordDemoAudit('hr/staff-appointments',Number(id),'update',data.before,data.after);
+      return {data:data.after,meta:{tenantScoped:true,concurrency:'integer'}};
+    },
+    cancelStaffAppointment:async function(id,payload){
+      payload=payload||{};
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWrite) throw new Error('You cannot manage Staff Calendar appointments.');
+        var cancelled=await state.runtime.commands.cancelStaffAppointmentWithin(
+          orm,SCOPE,Number(id),Number(payload.expectedVersion),myActorUserId());
+        if(cancelled.syncToExternal){
+          await state.runtime.commands.enqueueStaffAppointmentCalendarSyncWithin(
+            orm,SCOPE,{appointmentId:Number(id),eventType:'cancelled'});
+        }
+        return cancelled;
+      });
+      await recordDemoAudit('hr/staff-appointments',Number(id),'cancel',null,data);
+      return {data:data,meta:{tenantScoped:true,concurrency:'integer'}};
+    },
+    createHrCalendarHoliday:async function(payload){
+      payload=payload||{};
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWrite) throw new Error('You cannot manage the HR calendar.');
+        return state.runtime.commands.createCalendarHolidayDraftWithin(
+          orm,SCOPE,payload);
+      });
+      return {data:data,meta:{}};
+    },
+    updateHrCalendarHoliday:async function(id,payload){
+      payload=payload||{};
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWrite) throw new Error('You cannot manage the HR calendar.');
+        return state.runtime.commands.updateCalendarHolidayDraftWithin(
+          orm,SCOPE,Number(id),Number(payload.expectedVersion),payload);
+      });
+      return {data:data,meta:{}};
+    },
+    hrCalendarHolidayAction:async function(id,action,payload){
+      payload=payload||{};
+      var actionName=String(action||'');
+      if(['submit','approve','reject'].indexOf(actionName)<0) throw new Error('Unsupported HR calendar action.');
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWrite=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWrite) throw new Error('You cannot manage the HR calendar.');
+        if(actionName==='submit'){
+          return state.runtime.commands.submitCalendarHolidayWithin(
+            orm,SCOPE,Number(id),Number(payload.expectedVersion),myActorUserId());
+        }
+        return state.runtime.commands.decideCalendarHolidayWithin(
+          orm,SCOPE,Number(id),Number(payload.expectedVersion),actionName,
+          myActorUserId(),String(payload.reason||''));
+      });
+      return {data:data,meta:{}};
+    },
     teamLeaveRequests:async function(){
       var data=await withMyActor(async function(orm,actor){
         var canReadTeam=await state.runtime.commands.hasPermissionWithin(
@@ -4225,11 +4704,11 @@
           orm,SCOPE,actor.id);
         var expandedIds=await state.runtime.commands.resolveTeamEmployeeIdsWithin(
           orm,SCOPE,actor.id);
-        var canCompany=Boolean(DB.user&&DB.user.role==='Superadmin');
+        var canCompany=Boolean(DB.user&&DB.user.is_company_owner);
         var directSet=new Set(directIds);
         var canExpand=expandedIds.some(function(id){return !directSet.has(id);});
         if(query.scope==='company'&&!canCompany){
-          var companyScopeError=new Error('Company-wide calendar scope is reserved for the tenant Superadmin.');
+          var companyScopeError=new Error('Company-wide calendar scope is reserved for the Company Owner.');
           companyScopeError.code='calendar_scope_not_authorized';
           throw companyScopeError;
         }
@@ -4254,6 +4733,55 @@
         canExpand:response.canExpand,canCompany:response.canCompany,
         directReportCount:response.directCount,limit:300,
       }};
+    },
+    approvalQueue:async function(){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canReadHr=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.read');
+        if(!canReadHr) throw new Error('You cannot read the HR approval queue.');
+        return state.runtime.commands.listMyLeaveApprovalsWithin(
+          orm,SCOPE,myActorUserId(),new Date());
+      });
+      return {data:data,meta:{actorDerived:true,actionableOnly:true,
+        privacy:'reason_and_evidence_redacted',decisionCommands:true,limit:100}};
+    },
+    leaveApprovalWorkflows:async function(){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canReadHr=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.read');
+        if(!canReadHr) throw new Error('You cannot read leave approval workflows.');
+        return state.runtime.commands.listLeaveApprovalWorkflowsWithin(orm,SCOPE);
+      });
+      return {data:data,meta:{companyScoped:true,domain:'leave',immutableConfirmedVersions:true}};
+    },
+    createLeaveApprovalWorkflow:async function(payload){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWriteHr=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWriteHr) throw new Error('You cannot manage leave approval workflows.');
+        return state.runtime.commands.createLeaveApprovalWorkflowDraftWithin(
+          orm,SCOPE,payload||{});
+      });
+      await refresh();
+      return {data:data,meta:{companyScoped:true,domain:'leave'}};
+    },
+    leaveApprovalWorkflowAction:async function(id,name){
+      var data=await requireDemoDb().transaction(async function(tx){
+        var orm=state.runtime.createOrm(tx);
+        var canWriteHr=await state.runtime.commands.hasPermissionWithin(
+          orm,SCOPE,myActorUserId(),'hr.write');
+        if(!canWriteHr) throw new Error('You cannot manage leave approval workflows.');
+        return name==='confirm'
+          ?state.runtime.commands.confirmLeaveApprovalWorkflowWithin(orm,SCOPE,Number(id),myActorUserId())
+          :name==='retire'
+            ?state.runtime.commands.retireLeaveApprovalWorkflowWithin(orm,SCOPE,Number(id))
+            :Promise.reject(new Error('Unsupported leave workflow action.'));
+      });
+      await refresh();
+      return {data:data,meta:{companyScoped:true,domain:'leave'}};
     },
     approvals:async function(){
       var data=await withMyActor(function(orm){
@@ -4331,12 +4859,17 @@
     refresh: refresh,
     list: list,
     get: get,
+    getSalesEnquiryAggregate: getSalesEnquiryAggregate,
     create: create,
     update: update,
     action: action,
     session: session,
     financeReports:financeReports,
     companyReceipts:companyReceipts,
+    companyReceiptConfirmation:companyReceiptConfirmation,
+    createCompanyReceipt:createCompanyReceipt,
+    updateCompanyReceipt:updateCompanyReceipt,
+    voidCompanyReceipt:voidCompanyReceipt,
     companyReceiptPack:companyReceiptPack,
     companyReceiptPackPdf:companyReceiptPackPdf,
     my:my,
@@ -4351,6 +4884,10 @@
     cloneRoleTemplate:cloneRoleTemplate,
     onboardingStatus:onboardingStatus,
     switchCompany: switchCompany,
+    impersonateUser: impersonateUser,
+    employeeWorkspaceTargets: employeeWorkspaceTargets,
+    employeeHistory: employeeHistory,
+    returnToAdmin: returnToAdmin,
     needsSetup: needsSetup,
     isSignedIn: isSignedIn,
     login: login,

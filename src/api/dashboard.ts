@@ -66,14 +66,16 @@ async function stockAlerts(db: DB, masterFn: string, companyFn: string, threshol
 }
 
 export async function buildDashboard(db: DB, masterFn: string, companyFn: string) {
-  const [companies, productCount, orders, receivables, revenue, alerts] = await Promise.all([
-    listCompanies(db, masterFn),
-    countProducts(db, masterFn, companyFn),
-    openOrders(db, masterFn, companyFn),
-    openReceivables(db, masterFn, companyFn),
-    revenueTotal(db, masterFn, companyFn),
-    stockAlerts(db, masterFn, companyFn),
-  ]);
+  // `/api/dashboard` runs inside withTenantTransaction(). On PostgreSQL that
+  // transaction is backed by one pg Client, so its queries must be awaited in
+  // order rather than dispatched through Promise.all(). node-postgres currently
+  // queues the concurrent calls but warns that this will be rejected in pg@9.
+  const companies = await listCompanies(db, masterFn);
+  const productCount = await countProducts(db, masterFn, companyFn);
+  const orders = await openOrders(db, masterFn, companyFn);
+  const receivables = await openReceivables(db, masterFn, companyFn);
+  const revenue = await revenueTotal(db, masterFn, companyFn);
+  const alerts = await stockAlerts(db, masterFn, companyFn);
   return {
     scope: { masterFn, companyFn },
     companies,

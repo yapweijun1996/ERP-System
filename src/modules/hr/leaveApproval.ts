@@ -371,7 +371,13 @@ export async function listMyLeaveApprovalsWithin(
   now = new Date(),
 ) {
   await processApprovalTimersWithin(exec, scope, now);
-  const queue = await listApprovalQueueWithin(exec, scope, actorUserId, 'leave', now);
+  const queue = await listApprovalQueueWithin(
+    exec,
+    scope,
+    actorUserId,
+    'leave',
+    now,
+  );
   const rows = [];
   for (const item of queue) {
     const [leave] = await exec.select({
@@ -401,6 +407,17 @@ export async function listMyLeaveApprovalsWithin(
         eq(leaveRequest.status, 'pending'),
       )).limit(1);
     if (!leave) continue;
+    const [authorityEmployee] = item.currentAuthorityEmployeeId
+      ? await exec.select({
+        id: employee.id,
+        employeeNo: employee.employeeNo,
+        fullName: employee.fullName,
+      }).from(employee).where(and(
+        eq(employee.id, item.currentAuthorityEmployeeId),
+        eq(employee.masterFn, scope.masterFn),
+        eq(employee.companyFn, scope.companyFn),
+      )).limit(1)
+      : [];
     const [capacity] = await exec.select().from(approvalCapacitySnapshot).where(and(
       eq(approvalCapacitySnapshot.instanceId, item.id),
       eq(approvalCapacitySnapshot.evaluationStage, 'submission'),
@@ -414,6 +431,14 @@ export async function listMyLeaveApprovalsWithin(
       stepActivatedAt: item.stepActivatedAt,
       stepDueAt: item.stepDueAt,
       escalatedAt: item.escalatedAt,
+      currentAuthority: {
+        type: item.currentAuthorityType,
+        permissionKey: item.currentAuthorityPermissionKey,
+        employeeId: item.currentAuthorityEmployeeId,
+        userId: item.currentAuthorityUserId,
+        employeeNo: authorityEmployee?.employeeNo ?? null,
+        employeeName: authorityEmployee?.fullName ?? null,
+      },
       capacity: capacity ? {
         action: capacity.action,
         breached: capacity.breached,

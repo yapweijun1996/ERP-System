@@ -28,9 +28,9 @@ where c.master_fn='M1' and c.company_fn='C-SG' and c.code='CUST1'
   );
 
 insert into sales_quotation_line
-  (master_fn, company_fn, quotation_id, line_no, product_id,
+  (master_fn, company_fn, quotation_id, line_no, line_type, product_id, description, uom,
    qty, unit_price, net_amount, tax_code, tax_rate, tax_amount)
-select 'M1', 'C-SG', q.id, 1, p.id,
+select 'M1', 'C-SG', q.id, 1, 'stock', p.id, p.name, p.uom,
        10, 10, 100, 'SR', 9, 9
 from sales_quotation q
 join product p on p.master_fn=q.master_fn and p.company_fn=q.company_fn

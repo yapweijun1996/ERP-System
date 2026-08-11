@@ -680,6 +680,13 @@
       "when": 1786465200000,
       "tag": "0096_platform_superadmin_realm",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1786468800000,
+      "tag": "0097_company_receipt_canonical_permissions",
+      "breakpoints": true
     }
   ]
 }

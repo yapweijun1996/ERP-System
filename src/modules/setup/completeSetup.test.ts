@@ -6,9 +6,12 @@ import {
   appUser,
   auditLog,
   company,
+  companyModule,
   companyOnboarding,
   master,
+  masterModule,
   role,
+  rolePermission,
   systemState,
   taxRule,
   userCompany,
@@ -44,7 +47,27 @@ describe('production setup command', () => {
     });
     expect(await db.select().from(account)).toHaveLength(11);
     expect(await db.select().from(taxRule)).toHaveLength(1);
-    expect((await db.select().from(role))[0].isSuperadmin).toBe(true);
+    expect((await db.select().from(role))[0]).toMatchObject({
+      name: 'Company Owner',
+      isSuperadmin: false,
+      sourceTemplateKey: 'company_owner',
+    });
+    const masterModules = await db.select().from(masterModule);
+    const companyModules = await db.select().from(companyModule);
+    expect(masterModules).toHaveLength(17);
+    expect(companyModules).toHaveLength(17);
+    expect(masterModules.find((row) => row.moduleKey === 'sales')).toMatchObject({
+      enabled: true,
+      defaultCompanyAllocated: true,
+    });
+    expect(companyModules.find((row) => row.moduleKey === 'sales')).toMatchObject({
+      enabled: true,
+    });
+    expect(companyModules.find((row) => row.moduleKey === 'expenses_tax')).toMatchObject({
+      enabled: false,
+    });
+    expect((await db.select({ permissionKey: rolePermission.permissionKey }).from(rolePermission))
+      .some((row) => row.permissionKey === 'admin.modules.manage')).toBe(false);
     expect((await db.select().from(auditLog))[0]).toMatchObject({
       action: 'production_setup',
       actorUserId: result.userId,

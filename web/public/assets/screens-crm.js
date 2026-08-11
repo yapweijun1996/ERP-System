@@ -500,6 +500,7 @@ function customer360Copy(){
       limitUsed:'Limit used',noCreditProfile:'No credit profile on file yet.',
       customerSince:'customer since',owner:'owner',unassigned:'Unassigned',newSalesOrder:'New sales order',
       salesOrder:'Sales order',customers:'Customers',
+      editCustomer:'Edit customer',editCustomerTitle:'Edit customer master data',customerCode:'Customer code',customerName:'Customer name',industry:'Industry',saveChanges:'Save changes',customerUpdated:'Customer {name} updated',customerUpdateError:'Customer could not be saved',
       nameLabel:'Name',roleLabel:'Role',emailLabel:'Email',phoneLabel:'Phone',
       namePlaceholder:'e.g. Alex Chen',rolePlaceholder:'e.g. Buyer',optional:'optional',
       nameRoleRequired:'Name and role are required',contactAdded:'Contact {name} added',
@@ -678,6 +679,7 @@ SCREENS['crm-customer'] = async function(root, params){
   function render(){
     const s=customer360Copy();
     const c=detail.customer;
+    const canEdit=typeof userHasAnyPermission!=='function'||userHasAnyPermission('crm.write');
     const limit=detail.creditProfile?crmNumber(detail.creditProfile.creditLimit):0;
     const usedPct=limit>0?Math.round(detail.balance/limit*100):0;
     const ownerLabel=c.ownerUserId?((DB.user&&DB.user.name)||s('unassigned')):s('unassigned');
@@ -703,7 +705,7 @@ SCREENS['crm-customer'] = async function(root, params){
       <div class="dochead">
         <div class="dh-row1"><div><div class="dt">${ic('user')}${esc(c.name)} <span class="dnum">${esc(c.code)}</span></div>
           <div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(c.industry||'—')} · ${esc(s('customerSince'))} ${esc(since)} · ${esc(s('owner'))} ${esc(ownerLabel)}</div></div>
-          <div class="dactions">${cap(ts('Active'),'ok')}${btn(t('crm.newopp'),{icon:'plus',cls:'soft',attrs:'onclick="navigate(\'new-opportunity\')"'})}${btn(s('newSalesOrder'),{icon:'bag',cls:'primary',attrs:'onclick="navigate(\'sales-orders\')"'})}</div></div>
+          <div class="dactions">${cap(ts('Active'),'ok')}${canEdit?btn(s('editCustomer'),{icon:'edit',cls:'soft',attrs:'data-customer-edit="1"'}):''}${btn(t('crm.newopp'),{icon:'plus',cls:'soft',attrs:'onclick="navigate(\'new-opportunity\')"'})}${btn(s('newSalesOrder'),{icon:'bag',cls:'primary',attrs:'onclick="navigate(\'sales-orders\')"'})}</div></div>
       </div>
       <div class="doclayout">
         <div class="docmain">
@@ -748,6 +750,27 @@ SCREENS['crm-customer'] = async function(root, params){
 
   function wire(){
     const s=customer360Copy();
+    const c=detail.customer;
+    root.querySelector('[data-customer-edit]')?.addEventListener('click',()=>{
+      MasterDataEditor.open({
+        icon:'user',title:s('editCustomerTitle'),width:620,
+        description:s('description'),
+        fields:[
+          {key:'code',label:s('customerCode'),required:true,autocomplete:'off'},
+          {key:'name',label:s('customerName'),required:true,autocomplete:'organization'},
+          {key:'industry',label:s('industry'),span:2,emptyValue:null},
+        ],
+        values:{code:c.code,name:c.name,industry:c.industry||''},
+        saveLabel:s('saveChanges'),cancelLabel:t('common.cancel'),
+        errorMessage:s('customerUpdateError'),
+        onSave:async values=>{
+          const result=await window.ErpSystemData.update('crm/customers',c.id,{code:values.code,name:values.name,industry:values.industry||null},c.updatedAt);
+          toast(s('customerUpdated').replace('{name}',values.name),'ok');
+          return result;
+        },
+        onSaved:()=>reload(),
+      });
+    });
     const addContactBtn=root.querySelector('[data-add-contact]');
     addContactBtn&&addContactBtn.addEventListener('click',()=>{
       appModal({

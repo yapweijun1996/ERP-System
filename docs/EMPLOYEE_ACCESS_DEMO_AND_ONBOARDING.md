@@ -163,8 +163,8 @@ TASK-017.
 - At the EPIC-059 release boundary, migration 0073 and the ordered PGlite v73/v74
   compatibility path passed fresh install, persistent upgrade and obsolete-index repair;
   PostgreSQL and generated Demo schemas agreed on 232 tables. This is historical evidence,
-  not the current schema count; see `STATUS.md` for the live 90-entry/244-table
-  baseline through migration 0089.
+  not the current schema count; see `STATUS.md` for the live 98-entry/247-table
+  baseline through migration 0097.
 - `npm test` passes 134 files plus one expected skip: 518 tests pass, one skips and none
   fail. Lint, root/Web typechecks, generated-schema/pack/i18n checks and both builds pass.
 - Demo/PGlite and the retained isolated PostgreSQL proof database
@@ -209,4 +209,6 @@ allocation, while domain/API tests exercise platform-only changes. New Company c
 applies the Master default and tenant users see only effective availability. API mode
 now exposes the independent Platform Superadmin password login, workspace and
 simulation; static Demo remains fixture-driven rather than exposing platform
-credentials. TASK-188 owns final browser/security proof.
+credentials. TASK-188 completed the recorded final browser/security and release-gate
+proof without making static Demo a platform credential realm or authorizing production
+deployment.

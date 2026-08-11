@@ -44,6 +44,10 @@ import {
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { setStockQtyForFixture } from '../modules/inventory/stock';
+import {
+  DEFAULT_ABSOLUTE_TTL_MS,
+  REMEMBERED_ABSOLUTE_TTL_MS,
+} from '../auth/session';
 import { createApp } from './app';
 
 interface RunningApi {
@@ -80,6 +84,15 @@ function responseCookies(response: Response): { header: string; csrf: string } {
     header: pairs.join('; '),
     csrf: decodeURIComponent(csrfPair.slice('erp_csrf='.length)),
   };
+}
+
+function cookieMaxAge(response: Response, cookieName: string): number {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+  const values = headers.getSetCookie?.() ?? [headers.get('set-cookie') ?? ''];
+  const value = values.find((candidate) => candidate.startsWith(`${cookieName}=`));
+  const match = value?.match(/(?:^|;)\s*Max-Age=(\d+)/i);
+  if (!match) throw new Error(`Missing Max-Age for ${cookieName}: ${values.join(' | ')}`);
+  return Number(match[1]);
 }
 
 async function login(baseUrl: string, email = 'admin@acme.co', password = 'demo1234') {
@@ -165,6 +178,28 @@ describe('production API security contract', () => {
         username: 'Username is required.',
       },
     });
+  });
+
+  it('uses an opt-in longer server-side session for a remembered device', async () => {
+    const normal = await fetch(`${running.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        organizationCode: 'ACME', username: 'admin', password: 'demo1234',
+      }),
+    });
+    expect(normal.status).toBe(200);
+    expect(cookieMaxAge(normal, 'erp_session')).toBe(DEFAULT_ABSOLUTE_TTL_MS / 1000);
+
+    const remembered = await fetch(`${running.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        organizationCode: 'ACME', username: 'admin', password: 'demo1234', rememberDevice: true,
+      }),
+    });
+    expect(remembered.status).toBe(200);
+    expect(cookieMaxAge(remembered, 'erp_session')).toBe(REMEMBERED_ABSOLUTE_TTL_MS / 1000);
   });
 
   it('manages an explicit union of company roles through the authenticated API', async () => {
@@ -343,6 +378,7 @@ describe('production API security contract', () => {
     ));
     await db.update(companyModule).set({ enabled: false }).where(and(
       eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.companyFn, 'C-SG'),
       eq(companyModule.moduleKey, 'crm'),
     ));
     const companyMasked = await fetch(`${running.baseUrl}/api/crm/customers`, {
@@ -352,6 +388,7 @@ describe('production API security contract', () => {
     expect((await companyMasked.json()).error.code).toBe('module_not_enabled');
     await db.update(companyModule).set({ enabled: true }).where(and(
       eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.companyFn, 'C-SG'),
       eq(companyModule.moduleKey, 'crm'),
     ));
     const viewerListAgain = await fetch(`${running.baseUrl}/api/crm/customers`, {
@@ -390,6 +427,40 @@ describe('production API security contract', () => {
       headers: { cookie: cookies.header },
     });
     expect(users.status).toBe(200);
+  });
+
+  it('fails closed before Company Receipts when its platform entitlement is disabled', async () => {
+    const cookies = await login(running.baseUrl);
+    const masterDisabled = await fetch(`${running.baseUrl}/api/company-receipts?limit=1`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(masterDisabled.status).toBe(403);
+    expect((await masterDisabled.json()).error.code).toBe('module_not_enabled');
+
+    await db.update(masterModule).set({ enabled: true }).where(and(
+      eq(masterModule.masterFn, 'M1'),
+      eq(masterModule.moduleKey, 'expenses_tax'),
+    ));
+    await db.update(companyModule).set({ enabled: true }).where(and(
+      eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.companyFn, 'C-SG'),
+      eq(companyModule.moduleKey, 'expenses_tax'),
+    ));
+    const enabled = await fetch(`${running.baseUrl}/api/company-receipts?limit=1`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(enabled.status).toBe(200);
+
+    await db.update(companyModule).set({ enabled: false }).where(and(
+      eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.companyFn, 'C-SG'),
+      eq(companyModule.moduleKey, 'expenses_tax'),
+    ));
+    const companyDisabled = await fetch(`${running.baseUrl}/api/company-receipts?limit=1`, {
+      headers: { cookie: cookies.header },
+    });
+    expect(companyDisabled.status).toBe(403);
+    expect((await companyDisabled.json()).error.code).toBe('module_not_enabled');
   });
 
   it('takes tenant scope only from the session and rejects query overrides', async () => {
@@ -516,7 +587,10 @@ describe('production API security contract', () => {
       companyFn: 'C-SG',
       orderId: order.id,
       lineNo: 1,
+      lineType: 'stock',
       productId: item.id,
+      description: 'SG Widget',
+      uom: 'unit',
       qty: '1',
       unitPrice: '10',
       netAmount: '10',
@@ -1237,7 +1311,7 @@ describe('production API security contract', () => {
     };
     const created = await fetch(`${running.baseUrl}/api/sales/orders`, {
       method: 'POST',
-      headers: { ...headers, 'x-request-id': 'sales-order-create-api' },
+      headers: { ...headers, 'x-request-id': 'sales-order-create-api', 'idempotency-key': 'sales-order-create-api-1' },
       body: JSON.stringify({
         docNo: 'SO-APPROVAL-API-1',
         customerId: buyer.id,
@@ -1318,6 +1392,7 @@ describe('production API security contract', () => {
         cookie: viewer.header,
         'content-type': 'application/json',
         'x-csrf-token': viewer.csrf,
+        'idempotency-key': 'sales-order-create-denied-api',
       },
       body: JSON.stringify({
         docNo: 'SO-DENIED', customerId: buyer.id, orderDate: '2026-07-22', currency: 'SGD',
@@ -1326,6 +1401,67 @@ describe('production API security contract', () => {
     });
     expect(denied.status).toBe(403);
     expect((await denied.json()).error.code).toBe('permission_denied');
+  });
+
+  it('creates and confirms a service-only order without inventory delivery side effects', async () => {
+    const [buyer] = await db.select({ id: customer.id }).from(customer)
+      .where(eq(customer.code, 'CUST1'));
+    const [location] = await db.insert(warehouse).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      code: 'SERVICE-API',
+      name: 'Service API warehouse',
+    }).returning({ id: warehouse.id });
+    const stockBefore = (await db.select().from(stockMovement)).length;
+    const cookies = await login(running.baseUrl);
+    const headers = {
+      cookie: cookies.header,
+      'content-type': 'application/json',
+      'x-csrf-token': cookies.csrf,
+    };
+    const payload = {
+      docNo: 'SO-SERVICE-API-1',
+      customerId: buyer.id,
+      orderDate: '2026-07-22',
+      currency: 'SGD',
+      approvalReason: 'Service work is fulfilled outside the stock ledger.',
+      lines: [{
+        lineType: 'non_stock', productId: null, description: 'On-site commissioning', uom: 'job',
+        qty: '2', unitPrice: '75', taxCode: 'SR',
+      }],
+    };
+    const create = (key: string) => fetch(`${running.baseUrl}/api/sales/orders`, {
+      method: 'POST',
+      headers: { ...headers, 'idempotency-key': key },
+      body: JSON.stringify(payload),
+    });
+    const created = await create('sales-service-create-1');
+    expect(created.status).toBe(201);
+    const createdBody = (await created.json()).data as { orderId: number; approvalId: number };
+    const replay = await create('sales-service-create-1');
+    expect(replay.status).toBe(201);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect((await replay.json()).data).toMatchObject({ orderId: createdBody.orderId });
+    expect(await db.select({ lineType: salesOrderLine.lineType, productId: salesOrderLine.productId, description: salesOrderLine.description, uom: salesOrderLine.uom })
+      .from(salesOrderLine).where(eq(salesOrderLine.orderId, createdBody.orderId)))
+      .toEqual([{ lineType: 'non_stock', productId: null, description: 'On-site commissioning', uom: 'job' }]);
+
+    const approved = await fetch(`${running.baseUrl}/api/sales/orders/${createdBody.orderId}/actions/approve`, {
+      method: 'POST',
+      headers: { ...headers, 'idempotency-key': 'sales-service-approve-1' },
+      body: JSON.stringify({ note: 'Service order reviewed.' }),
+    });
+    expect(approved.status).toBe(200);
+    const confirmed = await fetch(`${running.baseUrl}/api/sales/orders/${createdBody.orderId}/actions/confirm`, {
+      method: 'POST',
+      headers: { ...headers, 'idempotency-key': 'sales-service-confirm-1' },
+      body: JSON.stringify({ warehouseId: location.id }),
+    });
+    expect(confirmed.status).toBe(200);
+    expect((await confirmed.json()).data).toMatchObject({ deliveryId: null, deliveryDocNo: null, movementIds: [] });
+    expect((await db.select().from(stockMovement)).length).toBe(stockBefore);
+    expect(await db.select().from(salesDelivery).where(eq(salesDelivery.orderId, createdBody.orderId))).toHaveLength(0);
+    expect(await db.select().from(invoice).where(eq(invoice.orderId, createdBody.orderId))).toHaveLength(1);
   });
 
   it('confirms an existing sales draft through the transactional action dispatcher', async () => {
@@ -1363,7 +1499,10 @@ describe('production API security contract', () => {
       companyFn: 'C-SG',
       orderId: draft.id,
       lineNo: 1,
+      lineType: 'stock',
       productId: item.id,
+      description: 'SG Widget',
+      uom: 'unit',
       qty: '5',
       unitPrice: '10',
       netAmount: '50',

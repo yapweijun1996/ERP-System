@@ -272,7 +272,11 @@ SCREENS['stock-on-hand'] = async function(root){
     empty:{icon:'box',title:t('inv.empty')},
     detailPane:{
       rowLabel:it=>`${t('common.open')} ${it.sku}`,
-      initialSelectedId:DB.items[0]&&DB.items[0].sku,
+      // Mobile must open on the listing so the user chooses the item. Keep
+      // the desktop preview convenience without auto-opening a mobile drawer.
+      initialSelectedId:()=>window.matchMedia('(max-width:980px)').matches
+        ? null
+        : (DB.items[0]&&DB.items[0].sku),
       empty:`<div class="detail-empty">${ic('box')}<div>${esc(t('inv.empty'))}</div></div>`,
       content:detailContent,
       afterRender:({detailRoot,row})=>{
@@ -537,45 +541,41 @@ SCREENS['item-master'] = async function(root){
   function itemForm(it){
     const edit=!!it;
     const sku=edit?it.sku:nextSku();
-    appModal({
-      icon: edit?'edit':'plus',
-      title: edit?s('editItem'):t('inv.newitem'),
-      body: `<div class="set-grid">
-        <div class="fld"><span>${esc(s('itemNameLabel'))} <span class="req">*</span></span><input id="ifName" value="${edit?esc(it.name):''}" placeholder="${esc(s('itemNamePlaceholder'))}"></div>
-        <div class="fld"><span>${esc(s('fieldSku'))}</span><input value="${esc(sku)}" readonly><span class="locked">${ic('lock')} ${esc(s('systemNumbered'))}</span></div>
-        <div class="fld"><span>${esc(t('inv.category'))}</span><select id="ifCat">${CATS.map(c=>`<option value="${esc(c)}" ${edit&&it.cat===c?'selected':''}>${esc(s(CAT_KEYS[c]))}</option>`).join('')}</select></div>
-        <div class="fld"><span>${esc(s('fieldBaseUom'))}</span><select id="ifUom">${UOMS.map(u=>`<option ${edit&&it.uom===u?'selected':''}>${u}</option>`).join('')}</select></div>
-        <div class="fld"><span>${esc(s('fieldReorderPoint'))}</span><input id="ifReorder" type="number" min="0" class="tnum" value="${edit?it.reorder:50}"></div>
-        <div class="fld"><span>${esc(s('fieldReorderQty'))}</span><input id="ifRoq" type="number" min="0" class="tnum" value="${edit?it.roq:150}"></div>
-        <div class="fld"><span>${esc(s('colUnitCost'))} (USD)</span><input id="ifCost" type="number" min="0" step="0.01" class="tnum" value="${edit?it.cost:0}"></div>
-        ${edit?'':`<div class="fld"><span>${esc(s('openingQty'))}</span><input value="0" readonly><span class="locked">${ic('lock')} ${esc(s('useStockAdjustment'))}</span></div>`}
-      </div>`,
-      actions: `${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(edit?s('saveChanges'):s('createItem'),{icon:edit?'save':'plus',cls:'primary',attrs:'data-save="1"'})}`,
-    });
-    const saveBtn=$('#modalEl').querySelector('[data-save]');
-    saveBtn.addEventListener('click',async()=>{
-      const name=$('#ifName').value.trim();
-      if(!requireField(name, s('itemNameRequired'), '#ifName')) return;
-      const d={ name, category:$('#ifCat').value, uom:$('#ifUom').value,
-        reorderPoint:Math.max(0,+$('#ifReorder').value||0), reorderQty:Math.max(0,+$('#ifRoq').value||0),
-        standardCost:Math.max(0,+$('#ifCost').value||0) };
-      saveBtn.disabled=true;
-      try{
-        if(edit){
-          await window.ErpSystemData.action('inventory/products', it.id, 'update', d);
-          toast(s('itemUpdated').replace('{sku}',it.sku),'ok');
-        }else{
-          await window.ErpSystemData.create('inventory/products', Object.assign({sku},d));
-          toast(s('itemCreated').replace('{sku}',sku).replace('{name}',name),'ok');
-        }
-        closeModal();
+    MasterDataEditor.open({
+      icon:edit?'edit':'plus',
+      title:edit?s('editItem'):t('inv.newitem'),
+      description:s('subHeader'),
+      width:720,
+      fields:[
+        {key:'name',label:s('itemNameLabel'),required:true,requiredMessage:s('itemNameRequired'),placeholder:s('itemNamePlaceholder'),autocomplete:'off'},
+        {key:'sku',label:s('fieldSku'),readOnly:true,locked:s('systemNumbered')},
+        {key:'category',label:t('inv.category'),type:'select',options:CATS.map(c=>({value:c,label:s(CAT_KEYS[c])}))},
+        {key:'uom',label:s('fieldBaseUom'),type:'select',options:UOMS.map(u=>({value:u,label:u}))},
+        {key:'reorderPoint',label:s('fieldReorderPoint'),type:'number',valueType:'number',min:0,step:1},
+        {key:'reorderQty',label:s('fieldReorderQty'),type:'number',valueType:'number',min:0,step:1},
+        {key:'standardCost',label:`${s('colUnitCost')} (USD)`,type:'number',valueType:'number',min:0,step:0.01},
+        ...(edit?[]:[{key:'openingQty',label:s('openingQty'),readOnly:true,locked:s('useStockAdjustment')}]),
+      ],
+      values:{name:edit?it.name:'',sku,category:edit?it.cat:CATS[0],uom:edit?it.uom:UOMS[0],
+        reorderPoint:edit?it.reorder:50,reorderQty:edit?it.roq:150,standardCost:edit?it.cost:0,openingQty:'0'},
+      saveLabel:edit?s('saveChanges'):s('createItem'),
+      cancelLabel:t('common.cancel'),
+      errorMessage:s('itemSaveError'),
+      onSave:async values=>{
+        const d={name:values.name,category:values.category,uom:values.uom,
+          reorderPoint:Math.max(0,Number(values.reorderPoint)||0),reorderQty:Math.max(0,Number(values.reorderQty)||0),
+          standardCost:Math.max(0,Number(values.standardCost)||0)};
+        const result=edit
+          ?await window.ErpSystemData.update('inventory/products',it.id,d,it.version)
+          :await window.ErpSystemData.create('inventory/products',Object.assign({sku},d));
+        toast(edit?s('itemUpdated').replace('{sku}',it.sku):s('itemCreated').replace('{sku}',sku).replace('{name}',values.name),'ok');
+        return result;
+      },
+      onSaved:async()=>{
         await prepareCanonicalInventoryData();
         page.render();
         page.select(sku);
-      }catch(error){
-        saveBtn.disabled=false;
-        toast(error&&error.message?error.message:s('itemSaveError'),'danger');
-      }
+      },
     });
   }
 

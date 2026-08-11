@@ -14,6 +14,7 @@ jobs:
   validate:
     name: Typecheck, transaction proof, and demo build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -101,6 +102,26 @@ jobs:
       - name: Install Playwright OS deps only (browser cache hit)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+
+      - name: i18n browser matrix (en/ms/zh/ja/vi × desktop/mobile)
+        env:
+          I18N_LANGUAGES: en,ms,zh,ja,vi
+          I18N_VIEWPORTS: desktop,mobile
+          I18N_REQUIRE_PGLITE: 1
+          I18N_BOOT_TIMEOUT_MS: 60000
+          I18N_ROUTE_TIMEOUT_MS: 20000
+          I18N_REPORT_PATH: output/i18n-browser-report.json
+        run: |
+          mkdir -p output
+          npm run audit:i18n
+
+      - name: Upload i18n browser matrix report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i18n-browser-matrix
+          path: output/i18n-browser-report.json
+          if-no-files-found: ignore
 
       - name: Browser smoke test (desktop + mobile, zero console/page errors)
         run: npm run smoke

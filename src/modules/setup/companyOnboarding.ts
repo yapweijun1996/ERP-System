@@ -7,6 +7,7 @@ import {
 import { appendAudit } from '../../api/audit';
 import type { SessionData } from '../../auth/session';
 import { withTenantTransaction } from '../../data/tenantTransaction';
+import { COMPANY_OWNER_ROLE_TEMPLATE_KEY } from '../../auth/accessCatalog';
 import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 
 export const ONBOARDING_STAGES = [
@@ -116,20 +117,21 @@ async function goLiveBlockers(exec: DB, session: SessionData, now = new Date()):
     eq(warehouse.masterFn, session.masterFn), eq(warehouse.companyFn, session.activeCompanyFn),
   ));
   if (!(warehouseRow?.n ?? 0)) blockers.push('warehouse:required');
-  const roles = await exec.select({ id: role.roleId, isSuperadmin: role.isSuperadmin }).from(role).where(and(
+  const roles = await exec.select({ id: role.roleId }).from(role).where(and(
     eq(role.masterFn, session.masterFn), eq(role.companyFn, session.activeCompanyFn),
   ));
   if (roles.length < 2) blockers.push('roles:company_roles');
-  const [activeSuperadmin] = await exec.select({ userId: appUser.userId }).from(appUser)
+  const [activeCompanyOwner] = await exec.select({ userId: appUser.userId }).from(appUser)
     .innerJoin(userCompanyRole, eq(userCompanyRole.userId, appUser.userId))
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
     .where(and(
       eq(appUser.masterFn, session.masterFn), eq(appUser.isActive, true),
       eq(userCompanyRole.companyFn, session.activeCompanyFn),
-      eq(role.companyFn, session.activeCompanyFn), eq(role.isSuperadmin, true),
+      eq(role.companyFn, session.activeCompanyFn),
+      eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
       activeRoleAssignmentCondition(now),
     )).limit(1);
-  if (!activeSuperadmin) blockers.push('roles:active_superadmin');
+  if (!activeCompanyOwner) blockers.push('roles:active_company_owner');
   const [invalidImport] = await exec.select({ id: onboardingImportJob.id }).from(onboardingImportJob).where(and(
     eq(onboardingImportJob.masterFn, session.masterFn),
     eq(onboardingImportJob.companyFn, session.activeCompanyFn),

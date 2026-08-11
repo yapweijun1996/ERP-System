@@ -6,7 +6,8 @@
    summary, then on Finish calls the active ErpSystemData-compatible
    adapter to write the organization, company, starter chart of
    accounts, tax rule, admin app_user and user<->company link in one
-   PGlite or PostgreSQL transaction. Only then does it
+   PGlite or PostgreSQL transaction. Production setup is allowed only
+   against an empty database and needs no deployment token. Only then does it
    mark setup complete in localStorage and reload into the normal
    login/dashboard flow — a failed write leaves the wizard open so
    the user can retry.
@@ -57,16 +58,30 @@ function renderSetupWizard(){
     ['deepseek', 'DeepSeek'],
     ['lmstudio', 'LM Studio (local)'],
   ];
+  // The static Demo build is a click-through showcase. These are non-secret
+  // values only; API mode stays blank so production setup still requires input.
+  var DEMO_DEFAULTS = {
+    masterName:'Acme Group',
+    organizationCode:'ACME',
+    companyName:'Acme Singapore',
+    country:'SG',
+    adminName:'Demo Administrator',
+    adminUsername:'admin.acme',
+    adminEmail:'admin.acme@acme.co',
+    adminPassword:'demo1234',
+    adminPasswordConfirm:'demo1234',
+    aiProvider:'',
+    aiKey:'',
+  };
 
   var COPY = {
     en:{
       brand:'First-run setup', back:'Back', cont:'Continue', finish:'Finish setup',
       s0:'Language', s1:'Organization', s2:'Company', s3:'Admin user', s4:'AI (optional)', s5:'Finish',
       s0h:'Choose your language', s0p:'You can change this later from the top bar.',
+      s0note:'You can change your language anytime in System Settings after setup.',
       s1h:'Name your organization', s1p:'The top-level group or holding entity. Every company you add belongs to it.',
       s1lbl:'Organization name', s1ph:'e.g. Acme Group', s1code:'Organization login code', s1codeph:'e.g. ACME',
-      setupToken:'Deployment setup token', setupTokenPh:'Provided by your installer',
-      setupTokenNote:'Used once to authorize production setup. It is kept only in this page’s memory.',
       s2h:'Add your first company', s2p:'One legal entity per country. Country sets currency and tax regime automatically.',
       s2lbl:'Company name', s2ph:'e.g. Acme Singapore', s2country:'Country',
       s3h:'Create the first admin user', s3p:'This account will have full access once setup is applied.',
@@ -81,7 +96,6 @@ function renderSetupWizard(){
       sumAdmin:'Admin user', sumAi:'AI provider', none:'None selected',
       errMaster:'Enter an organization name to continue.',
       errOrgCode:'Use 3–32 letters, numbers or hyphens for the organization code.',
-      errSetupToken:'Enter the deployment setup token to continue.',
       errCompany:'Enter a company name to continue.',
       errAdminName:'Enter the admin user’s full name to continue.',
       errAdminUsername:'Use 3–64 lowercase letters, numbers, dots, underscores or hyphens for the username.',
@@ -96,10 +110,9 @@ function renderSetupWizard(){
       brand:'Persediaan pertama', back:'Kembali', cont:'Teruskan', finish:'Selesai persediaan',
       s0:'Bahasa', s1:'Organisasi', s2:'Syarikat', s3:'Pengguna admin', s4:'AI (pilihan)', s5:'Selesai',
       s0h:'Pilih bahasa anda', s0p:'Anda boleh menukarnya kemudian dari bar atas.',
+      s0note:'Anda boleh menukar bahasa pada bila-bila masa dalam Tetapan Sistem selepas persediaan.',
       s1h:'Namakan organisasi anda', s1p:'Kumpulan induk peringkat atas. Setiap syarikat yang anda tambah tergolong dalamnya.',
       s1lbl:'Nama organisasi', s1ph:'cth. Acme Group', s1code:'Kod log masuk organisasi', s1codeph:'cth. ACME',
-      setupToken:'Token persediaan penggunaan', setupTokenPh:'Diberikan oleh pemasang anda',
-      setupTokenNote:'Digunakan sekali untuk membenarkan persediaan produksi. Ia hanya disimpan dalam memori halaman ini.',
       s2h:'Tambah syarikat pertama anda', s2p:'Satu entiti sah bagi setiap negara. Negara menetapkan mata wang dan rejim cukai secara automatik.',
       s2lbl:'Nama syarikat', s2ph:'cth. Acme Malaysia', s2country:'Negara',
       s3h:'Cipta pengguna admin pertama', s3p:'Akaun ini akan mempunyai akses penuh selepas persediaan digunakan.',
@@ -114,7 +127,6 @@ function renderSetupWizard(){
       sumAdmin:'Pengguna admin', sumAi:'Pembekal AI', none:'Tiada dipilih',
       errMaster:'Masukkan nama organisasi untuk teruskan.',
       errOrgCode:'Gunakan 3–32 huruf, nombor atau tanda sempang untuk kod organisasi.',
-      errSetupToken:'Masukkan token persediaan penggunaan untuk teruskan.',
       errCompany:'Masukkan nama syarikat untuk teruskan.',
       errAdminName:'Masukkan nama penuh pengguna admin untuk teruskan.',
       errAdminUsername:'Gunakan 3–64 huruf kecil, nombor, titik, garis bawah atau tanda sempang untuk nama pengguna.',
@@ -129,10 +141,9 @@ function renderSetupWizard(){
       brand:'首次设置', back:'上一步', cont:'继续', finish:'完成设置',
       s0:'语言', s1:'组织', s2:'公司', s3:'管理员账户', s4:'AI(可选)', s5:'完成',
       s0h:'选择您的语言', s0p:'您稍后可以从顶部栏更改。',
+      s0note:'完成设置后，您可以随时在系统设置中更改语言。',
       s1h:'为您的组织命名', s1p:'顶层集团/控股实体。您添加的每家公司都属于它。',
       s1lbl:'组织名称', s1ph:'例如 Acme Group', s1code:'组织登录代码', s1codeph:'例如 ACME',
-      setupToken:'部署设置令牌', setupTokenPh:'由系统安装人员提供',
-      setupTokenNote:'仅用于授权一次生产设置,只保留在本页面内存中。',
       s2h:'添加您的第一家公司', s2p:'每个国家一个法人实体。国家会自动设置货币和税制。',
       s2lbl:'公司名称', s2ph:'例如 Acme Singapore', s2country:'国家',
       s3h:'创建第一个管理员账户', s3p:'设置生效后,此账户将拥有完整权限。',
@@ -147,7 +158,6 @@ function renderSetupWizard(){
       sumAdmin:'管理员账户', sumAi:'AI 提供商', none:'未选择',
       errMaster:'请输入组织名称以继续。',
       errOrgCode:'组织代码须为 3–32 个字母、数字或连字符。',
-      errSetupToken:'请输入部署设置令牌以继续。',
       errCompany:'请输入公司名称以继续。',
       errAdminName:'请输入管理员姓名以继续。',
       errAdminUsername:'用户名须为 3–64 个小写字母、数字、句点、下划线或连字符。',
@@ -172,15 +182,13 @@ function renderSetupWizard(){
       "s5": "仕上げる",
       "s0h": "言語を選択してください",
       "s0p": "これは後で上部のバーから変更できます。",
+      "s0note": "セットアップ後は、システム設定からいつでも言語を変更できます。",
       "s1h": "組織に名前を付けます",
       "s1p": "最上位のグループまたは保持エンティティ。追加したすべての会社はそれに属します。",
       "s1lbl": "組織名",
       "s1ph": "例えばアクメグループ",
       "s1code": "組織のログインコード",
       "s1codeph": "例えばアクメ",
-      "setupToken": "デプロイメントセットアップトークン",
-      "setupTokenPh": "設置者によって提供される",
-      "setupTokenNote": "運用セットアップを認証するために 1 回使用されます。このページのメモリ内にのみ保持されます。",
       "s2h": "最初の会社を追加する",
       "s2p": "国ごとに 1 つの法人。通貨と税制は国が自動的に設定します。",
       "s2lbl": "会社名",
@@ -217,7 +225,6 @@ function renderSetupWizard(){
       "none": "何も選択されていません",
       "errMaster": "続行するには組織名を入力してください。",
       "errOrgCode": "組織コードには 3 ～ 32 文字の文字、数字、またはハイフンを使用します。",
-      "errSetupToken": "続行するには、展開セットアップ トークンを入力します。",
       "errCompany": "続行するには会社名を入力してください。",
       "errAdminName": "続行するには、管理者ユーザーのフルネームを入力します。",
       "errAdminUsername": "ユーザー名には 3 ～ 64 文字の小文字、数字、ドット、アンダースコア、またはハイフンを使用します。",
@@ -241,15 +248,13 @@ function renderSetupWizard(){
       "s5": "Hoàn thành",
       "s0h": "Chọn ngôn ngữ của bạn",
       "s0p": "Bạn có thể thay đổi điều này sau từ thanh trên cùng.",
+      "s0note": "Sau khi thiết lập, bạn có thể thay đổi ngôn ngữ bất cứ lúc nào trong Cài đặt hệ thống.",
       "s1h": "Đặt tên cho tổ chức của bạn",
       "s1p": "Nhóm cấp cao nhất hoặc tổ chức nắm giữ. Mọi công ty bạn thêm đều thuộc về nó.",
       "s1lbl": "Tên tổ chức",
       "s1ph": "ví dụ. Tập đoàn Acme",
       "s1code": "Mã đăng nhập tổ chức",
       "s1codeph": "ví dụ. ACME",
-      "setupToken": "Mã thông báo thiết lập triển khai",
-      "setupTokenPh": "Được cung cấp bởi trình cài đặt của bạn",
-      "setupTokenNote": "Được sử dụng một lần để cho phép thiết lập sản xuất. Nó chỉ được lưu giữ trong bộ nhớ của trang này.",
       "s2h": "Thêm công ty đầu tiên của bạn",
       "s2p": "Một pháp nhân cho mỗi quốc gia. Quốc gia tự động thiết lập chế độ tiền tệ và thuế.",
       "s2lbl": "Tên công ty",
@@ -286,7 +291,6 @@ function renderSetupWizard(){
       "none": "Không có lựa chọn nào",
       "errMaster": "Nhập tên tổ chức để tiếp tục.",
       "errOrgCode": "Sử dụng 3–32 chữ cái, số hoặc dấu gạch nối cho mã tổ chức.",
-      "errSetupToken": "Nhập mã thông báo thiết lập triển khai để tiếp tục.",
       "errCompany": "Nhập tên công ty để tiếp tục.",
       "errAdminName": "Nhập tên đầy đủ của người dùng quản trị để tiếp tục.",
       "errAdminUsername": "Sử dụng 3–64 chữ cái viết thường, số, dấu chấm, dấu gạch dưới hoặc dấu gạch nối cho tên người dùng.",
@@ -301,9 +305,17 @@ function renderSetupWizard(){
   var S = {
     step:0, reached:0,
     lang:(typeof getLang==='function'?getLang():'en'),
-    masterName:'', organizationCode:'', setupToken:'', companyName:'', country:'SG',
-    adminName:'', adminUsername:IS_API?'admin':'', adminEmail:'', adminPassword:'', adminPasswordConfirm:'',
-    aiProvider:'', aiKey:'',
+    masterName:IS_API?'':DEMO_DEFAULTS.masterName,
+    organizationCode:IS_API?'':DEMO_DEFAULTS.organizationCode,
+    companyName:IS_API?'':DEMO_DEFAULTS.companyName,
+    country:IS_API?'SG':DEMO_DEFAULTS.country,
+    adminName:IS_API?'':DEMO_DEFAULTS.adminName,
+    adminUsername:IS_API?'admin':DEMO_DEFAULTS.adminUsername,
+    adminEmail:IS_API?'':DEMO_DEFAULTS.adminEmail,
+    adminPassword:IS_API?'':DEMO_DEFAULTS.adminPassword,
+    adminPasswordConfirm:IS_API?'':DEMO_DEFAULTS.adminPasswordConfirm,
+    aiProvider:IS_API?'':DEMO_DEFAULTS.aiProvider,
+    aiKey:IS_API?'':DEMO_DEFAULTS.aiKey,
   };
 
   var STEP_KEYS = ['s0','s1','s2','s3','s4','s5'];
@@ -329,17 +341,40 @@ function renderSetupWizard(){
     }).join('')+'</div>';
   }
 
+  function languagePicker(){
+    return '<label class="wiz-locale-picker" for="wizTopLang">'+
+      '<span class="wiz-locale-icon" aria-hidden="true">'+ic('globe')+'</span>'+
+      '<select id="wizTopLang" aria-label="'+esc(s('s0'))+'">'+I18N_LANGS.map(function(l){
+        return '<option value="'+esc(l.code)+'" '+(l.code===S.lang?'selected':'')+'>'+esc(l.native)+'</option>';
+      }).join('')+'</select><span class="wiz-locale-chevron" aria-hidden="true">'+ic('chevD')+'</span></label>';
+  }
+
+  function languageCards(){
+    var badges = { en:ic('globe'), ms:'BM', zh:'简', ja:'日', vi:'VI' };
+    var languageOrder = ['en','zh','ms','ja','vi'];
+    var languageLabels = { en:'English', zh:'Simplified Chinese', ms:'Bahasa Melayu', ja:'Japanese', vi:'Vietnamese' };
+    return '<div class="wiz-language-grid" id="wizLangSeg" role="radiogroup" aria-label="'+esc(s('s0'))+'">'+
+      languageOrder.map(function(code, i){
+        var l = I18N_LANGS.filter(function(item){ return item.code===code; })[0] || {code:code,native:code,label:code};
+        var selected = l.code===S.lang;
+        return '<button type="button" role="radio" aria-checked="'+selected+'" data-v="'+esc(l.code)+'" lang="'+(l.code==='zh'?'zh-Hans':esc(l.code))+'" class="wiz-language-card '+(selected?'is-selected ':'')+(i===I18N_LANGS.length-1?'is-wide':'')+'">'+
+          '<span class="wiz-language-badge wiz-language-badge-'+esc(l.code)+'">'+badges[l.code]+'</span>'+
+          '<span class="wiz-language-copy"><b>'+esc(l.native)+'</b><small>'+esc(languageLabels[l.code]||l.label)+'</small></span>'+
+          '<span class="wiz-language-check" aria-hidden="true">'+(selected?ic('check'):'')+'</span>'+
+        '</button>';
+      }).join('')+'</div>'+
+      '<div class="wiz-language-note" role="note">'+ic('info')+'<span>'+esc(s('s0note'))+'</span></div>';
+  }
+
   function stepBody(){
     if(S.step===0){
       return '<h2 class="wiz-h">'+esc(s('s0h'))+'</h2><p class="wiz-p">'+esc(s('s0p'))+'</p>'+
-        seg('lang', I18N_LANGS.map(function(l){ return [l.code, l.native]; }), S.lang, 'wizLangSeg');
+        languageCards();
     }
     if(S.step===1){
       return '<h2 class="wiz-h">'+esc(s('s1h'))+'</h2><p class="wiz-p">'+esc(s('s1p'))+'</p>'+
         fld(s('s1lbl'), '<input id="wizMaster" value="'+esc(S.masterName)+'" placeholder="'+esc(s('s1ph'))+'" autofocus>')+
         fld(s('s1code'), '<input id="wizOrganizationCode" value="'+esc(S.organizationCode)+'" placeholder="'+esc(s('s1codeph'))+'" autocomplete="organization">')+
-        (IS_API ? fld(s('setupToken'), '<input id="wizSetupToken" type="password" value="'+esc(S.setupToken)+'" placeholder="'+esc(s('setupTokenPh'))+'" autocomplete="off">')+
-          '<p class="wiz-p" style="margin-top:6px">'+esc(s('setupTokenNote'))+'</p>' : '')+
         '<div class="auth-error" id="wizErr"></div>';
     }
     if(S.step===2){
@@ -386,18 +421,20 @@ function renderSetupWizard(){
   function footer(){
     var isLast = S.step===STEP_KEYS.length-1;
     var right = isLast
-      ? btn(s('finish'),{icon:'checkc',cls:'primary',sm:false,attrs:'id="wizFinish"'})
-      : btn(s('cont'),{icon:'arrowR',cls:'primary',sm:false,attrs:'id="wizNext"'});
-    var left = S.step>0 ? btn(s('back'),{icon:'chevL',cls:'soft',attrs:'id="wizBack"'}) : '<span></span>';
-    return '<div class="set-savebar wizard-savebar" style="border-radius:12px;margin-top:16px">'+left+'<div class="grow"></div>'+right+'</div>';
+      ? '<button class="btn primary lg wizard-primary" id="wizFinish">'+esc(s('finish'))+ic('checkc')+'</button>'
+      : '<button class="btn primary lg wizard-primary" id="wizNext">'+esc(s('cont'))+ic('arrowR')+'</button>';
+    var left = S.step>0 ? btn(s('back'),{icon:'chevL',cls:'soft',attrs:'id="wizBack"'}) : '';
+    return '<div class="set-savebar wizard-savebar">'+left+(S.step>0?'<div class="grow"></div>':'')+right+'</div>';
   }
 
   function render(){
-    host.setAttribute('lang', S.lang==='zh'?'zh-Hans':S.lang);
-    host.innerHTML = '<section class="auth-panel" style="width:min(640px,100%)">'+
-      '<div class="auth-brand"><span class="mark">'+ic('box')+'</span><span><b>Aria ERP</b><small>'+esc(s('brand'))+'</small></span></div>'+
+    var langAttr = S.lang==='zh'?'zh-Hans':S.lang;
+    host.setAttribute('lang', langAttr);
+    document.documentElement.lang = langAttr;
+    host.innerHTML = '<section class="auth-panel wizard-panel">'+
+      '<div class="wizard-brandbar"><div class="auth-brand"><span class="mark brand-logo-mark">'+window.erpBrandLogo()+'</span><span><b>Aria ERP</b><small>'+esc(s('brand'))+'</small></span></div>'+languagePicker()+'</div>'+
       stepper()+
-      '<div id="wizStepBody">'+stepBody()+'</div>'+
+      '<div id="wizStepBody" class="wizard-step-body">'+stepBody()+'</div>'+
       footer()+
       '</section>';
     wire();
@@ -407,7 +444,6 @@ function renderSetupWizard(){
     if(S.step===1){
       var m=document.getElementById('wizMaster'); if(m) S.masterName=m.value;
       var oc=document.getElementById('wizOrganizationCode'); if(oc) S.organizationCode=oc.value.toUpperCase();
-      var st=document.getElementById('wizSetupToken'); if(st) S.setupToken=st.value;
     }
     else if(S.step===2){ var c=document.getElementById('wizCompany'); if(c) S.companyName=c.value; }
     else if(S.step===3){
@@ -426,7 +462,6 @@ function renderSetupWizard(){
   function validateStep(i){
     if(i===1 && !S.masterName.trim()) return s('errMaster');
     if(i===1 && !/^[A-Z0-9][A-Z0-9-]{2,31}$/.test(S.organizationCode.trim().toUpperCase())) return s('errOrgCode');
-    if(i===1 && IS_API && !S.setupToken) return s('errSetupToken');
     if(i===2 && !S.companyName.trim()) return s('errCompany');
     if(i===3){
       if(!S.adminName.trim()) return s('errAdminName');
@@ -449,6 +484,8 @@ function renderSetupWizard(){
     if(langSeg) langSeg.querySelectorAll('button').forEach(function(b){
       b.addEventListener('click',function(){ S.lang=b.dataset.v; render(); });
     });
+    var topLang=document.getElementById('wizTopLang');
+    if(topLang) topLang.addEventListener('change',function(){ S.lang=topLang.value; render(); });
     var countrySeg=document.getElementById('wizCountrySeg');
     if(countrySeg) countrySeg.querySelectorAll('button').forEach(function(b){
       b.addEventListener('click',function(){ readCurrentStepInputs(); S.country=b.dataset.v; render(); });
@@ -465,10 +502,7 @@ function renderSetupWizard(){
       var errEl=document.getElementById('wizErr');
       if(err){ if(errEl) errEl.textContent=err; return; }
       if(S.step===1 && !S.adminUsername){
-        // The deterministic Demo pack owns the canonical admin identity. Using
-        // the same default here lets first-run setup securely replace the
-        // seeded credentials instead of creating a conflicting second login.
-        S.adminUsername='admin';
+        S.adminUsername=IS_API?'admin':DEMO_DEFAULTS.adminUsername;
       }
       S.step++; S.reached=Math.max(S.reached,S.step); render();
     });
@@ -478,7 +512,7 @@ function renderSetupWizard(){
       var dataAdapter = window.ErpSystemData || window.ErpSystemDemo;
       var run = (dataAdapter && dataAdapter.completeSetup)
         ? dataAdapter.completeSetup({
-            masterName:S.masterName, organizationCode:S.organizationCode, setupToken:S.setupToken, companyName:S.companyName, country:S.country,
+            masterName:S.masterName, organizationCode:S.organizationCode, companyName:S.companyName, country:S.country,
             adminName:S.adminName, adminUsername:S.adminUsername, adminEmail:S.adminEmail, adminPassword:S.adminPassword, language:S.lang,
           })
         : Promise.reject(new Error('ERP data adapter is not ready yet — wait a moment and try again.'));

@@ -86,7 +86,7 @@ describe('sales return API vertical slice', () => {
       }],
     });
     const [deliveryLine] = await db.select({ id: salesDeliveryLine.id })
-      .from(salesDeliveryLine).where(eq(salesDeliveryLine.deliveryId, posted.deliveryId));
+      .from(salesDeliveryLine).where(eq(salesDeliveryLine.deliveryId, posted.deliveryId!));
     const login = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -103,7 +103,7 @@ describe('sales return API vertical slice', () => {
       headers,
       body: JSON.stringify({
         docNo: 'RMA-API-1',
-        deliveryId: posted.deliveryId,
+        deliveryId: posted.deliveryId!,
         invoiceId: posted.invoiceId,
         warehouseId: location.id,
         returnDate: '2026-07-19',

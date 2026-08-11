@@ -19,6 +19,8 @@ npm install
 | `npm run dev` | Vite dev server (demo data adapter by default) |
 | `npm run build:demo` | `VITE_DATA_MODE=demo` → static `web/dist/` (PGlite) |
 | `npm run build` | `VITE_DATA_MODE=api` → `web/dist/` for the Docker `web` image |
+| `npm run test:e2e:company-receipts-api` | Builds API mode, then serves it with an isolated same-origin PGlite API fixture and drives authenticated Company Receipts confirmation, refresh/search/range, Preview/PDF/Print and responsive checks. It passed at 1440×900 and 375px on 2026-08-12. This fixture never contacts PostgreSQL or production. |
+| `npm run test:e2e:company-receipts-postgres` | Uses the same authenticated browser journey against an explicitly supplied `TASK183_POSTGRES_URL`. It rejects a non-empty database before migrations/seed; the 2026-08-12 proof passed against a new disposable local PostgreSQL 16 database. It does not deploy or use production data. |
 | `npm run preview` | Serve the built `web/dist/` locally |
 | `npm run migrate` | Apply Drizzle migrations to PostgreSQL (production mode) |
 | `npm run generate` | Generate a Drizzle migration from schema changes |
@@ -33,13 +35,11 @@ npm install
 
 Release note (2026-08-10): `npm run audit:screens` passes all 128 routes at desktop and
 375 px, with 128 Canonical / 0 Preview, no console/page errors, and no active-tab,
-layout, action-bar or declared-contract failures. The i18n gates are also green:
-`node scripts/audit-i18n.mjs` passes 1,531 canonical keys / 69 local five-language
-packs, and `npm run audit:i18n` passes the complete 128-route × 5-language ×
-2-viewport browser matrix. The access-matrix audit remains a separate authorization
-regression gate. The current post-build `npm run smoke` remains pending: dashboard
-rendering passes at desktop/mobile, but the navigation assertion finds 18 unexplained
-numeric `0` badges in each viewport.
+layout, action-bar or declared-contract failures. The i18n static audit passes 1,533
+canonical keys / 69 local five-language packs across the full 128-route × 5-language ×
+2-viewport browser matrix. The access-matrix and PWA-update audits pass, and the
+post-build `npm run smoke` passes at desktop/mobile; hidden zero-count badges are
+excluded from the visible semantic-badge assertion.
 
 ### Browser smoke test
 

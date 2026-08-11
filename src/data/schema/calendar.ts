@@ -5,7 +5,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { appUser } from './tenancy';
-import { leaveRequest } from './hr';
+import { leaveRequest, staffAppointment } from './hr';
 
 /**
  * Optional one-way target for governed ERP calendar facts. Credentials stay in
@@ -73,4 +73,45 @@ export const calendarOutboundEvent = pgTable('calendar_outbound_event', {
   check('ck_calendar_outbound_event_status',
     sql`${t.status} in ('pending', 'delivered', 'failed', 'superseded')`),
   check('ck_calendar_outbound_event_attempts', sql`${t.attempts} >= 0`),
+]);
+
+/** Appointment-specific outbound projection. It is intentionally separate from
+ * calendar_outbound_event because Leave has a different lifecycle and its
+ * existing table is deliberately constrained to leave_request revisions. */
+export const staffAppointmentOutboundEvent = pgTable('staff_appointment_outbound_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  connectionId: bigint('connection_id', { mode: 'number' }).notNull()
+    .references(() => calendarOutboundConnection.id),
+  appointmentId: bigint('appointment_id', { mode: 'number' }).notNull()
+    .references(() => staffAppointment.id),
+  appointmentRevisionNo: integer('appointment_revision_no').notNull(),
+  occurrenceStartAt: timestamp('occurrence_start_at', { withTimezone: true }).notNull(),
+  eventType: text('event_type').notNull(),
+  eventKey: text('event_key').notNull(),
+  payload: jsonb('payload').notNull(),
+  status: text('status').notNull().default('pending'),
+  externalEventId: text('external_event_id'),
+  attempts: integer('attempts').notNull().default(0),
+  availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedBy: text('locked_by'),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  supersededAt: timestamp('superseded_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_staff_appointment_outbound_event_key')
+    .on(t.masterFn, t.companyFn, t.eventKey),
+  index('idx_staff_appointment_outbound_event_pending')
+    .on(t.status, t.availableAt, t.id),
+  index('idx_staff_appointment_outbound_event_appointment')
+    .on(t.masterFn, t.companyFn, t.appointmentId, t.occurrenceStartAt, t.id),
+  index('idx_staff_appointment_outbound_event_connection')
+    .on(t.masterFn, t.companyFn, t.connectionId, t.id),
+  check('ck_staff_appointment_outbound_event_type', sql`${t.eventType} in ('created', 'changed', 'cancelled')`),
+  check('ck_staff_appointment_outbound_event_status', sql`${t.status} in ('pending', 'delivered', 'failed', 'superseded')`),
+  check('ck_staff_appointment_outbound_event_attempts', sql`${t.attempts} >= 0`),
+  check('ck_staff_appointment_outbound_event_revision', sql`${t.appointmentRevisionNo} > 0`),
 ]);

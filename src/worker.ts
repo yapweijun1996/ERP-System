@@ -1,4 +1,5 @@
 import { createPostgresDb } from './data/db';
+import { withCalendarWorkerTransaction } from './data/tenantTransaction';
 import { runMaintenance } from './maintenance';
 import { parseTokenEncryptionKey } from './auth/tokenCrypto';
 import {
@@ -10,7 +11,9 @@ import { processTaxEvidenceJobBatch } from './modules/expenses/taxEvidence';
 import {
   createGenericCalendarDriverFromEnv,
   processCalendarOutboundBatch,
+  processStaffAppointmentOutboundBatch,
 } from './modules/hr/calendarSync';
+import { processStaffAppointmentReminderBatch } from './modules/hr/appointmentReminders';
 import { processDocumentJobBatch } from './modules/documents/processing';
 import {
   createHttpByokVisionExtractor,
@@ -31,6 +34,9 @@ const transport = mailEnabled ? createSmtpTransportFromEnv() : null;
 const tokenEncryptionKey = encryptionKey ? parseTokenEncryptionKey(encryptionKey) : null;
 const calendarEnabled = Boolean(process.env.CALENDAR_OUTBOUND_URL);
 const calendarDriver = calendarEnabled ? createGenericCalendarDriverFromEnv() : null;
+const calendarDrivers = calendarDriver
+  ? { generic: calendarDriver, google: calendarDriver, microsoft: calendarDriver }
+  : null;
 const documentScanner = process.env.DOCUMENT_SCANNER_URL
   ? createHttpMalwareScanner(process.env.DOCUMENT_SCANNER_URL)
   : undefined;
@@ -79,16 +85,30 @@ async function tick(): Promise<void> {
       + ` extracted=${documents.extracted} failed=${documents.failed}`,
     );
   }
-  if (calendarDriver) {
-    const calendar = await processCalendarOutboundBatch(
-      db,
-      { generic: calendarDriver },
-      { workerId },
+  const reminders = await withCalendarWorkerTransaction(db, tx => (
+    processStaffAppointmentReminderBatch(tx, { workerId })
+  ));
+  if (reminders.queued > 0 || reminders.claimed > 0) {
+    console.log(
+      `[erp-worker] appointment reminders queued=${reminders.queued}`
+      + ` claimed=${reminders.claimed} delivered=${reminders.delivered}`
+      + ` failed=${reminders.failed} superseded=${reminders.superseded}`,
     );
-    if (calendar.claimed > 0) {
+  }
+  if (calendarDriver) {
+    const [calendar, appointmentCalendar] = await withCalendarWorkerTransaction(db, async (tx) => {
+      const leave = await processCalendarOutboundBatch(tx, calendarDrivers!, { workerId });
+      const appointments = await processStaffAppointmentOutboundBatch(
+        tx, calendarDrivers!, { workerId },
+      );
+      return [leave, appointments] as const;
+    });
+    if (calendar.claimed > 0 || appointmentCalendar.claimed > 0) {
       console.log(
         `[erp-worker] calendar claimed=${calendar.claimed} delivered=${calendar.delivered}`
-        + ` failed=${calendar.failed} superseded=${calendar.superseded}`,
+        + ` failed=${calendar.failed} superseded=${calendar.superseded}`
+        + `; appointments claimed=${appointmentCalendar.claimed}`
+        + ` delivered=${appointmentCalendar.delivered} failed=${appointmentCalendar.failed}`,
       );
     }
   }

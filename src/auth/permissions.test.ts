@@ -29,7 +29,7 @@ describe('server-side RBAC', () => {
     expect(await hasPermission(db, session, 'inventory.adjust')).toBe(false);
   });
 
-  it('bounds superadmin bypass to a valid assignment in the same master', async () => {
+  it('requires explicit registered owner permissions in the same master', async () => {
     const db = await freshDb();
     await seedDemo(db);
     const [admin] = await db.select({
@@ -38,9 +38,8 @@ describe('server-side RBAC', () => {
       email: appUser.email,
       fullName: appUser.fullName,
     }).from(appUser).where(eq(appUser.email, 'admin@acme.co'));
-    // Superadmin remains a tenant-bounded compatibility grant, but it does
-    // not make an unregistered permission meaningful. Unknown keys deny by
-    // default before any role bypass is considered.
+    // The legacy Superadmin flag is inert. Unknown keys and platform-domain
+    // keys deny by default because Company Owner access is explicit.
     expect(await hasPermission(db, {
       ...admin, masterFn: 'M1', activeCompanyFn: 'C-SG',
     }, 'anything.write')).toBe(false);

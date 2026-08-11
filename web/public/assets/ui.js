@@ -7,6 +7,11 @@ const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---- small render helpers ---- */
+function erpBrandLogo(){
+  const src=new URL('icons/aria-erp-logo.png?v=20260809-aria-brand-v1',document.baseURI).href;
+  return `<img class="erp-brand-logo" src="${esc(src)}" alt="" aria-hidden="true" decoding="async">`;
+}
+window.erpBrandLogo=erpBrandLogo;
 function profileAvatarMedia({name='',src='',title=''}={}){
   const label=title||(typeof tf==='function'
     ?tf('common.profileImage','{name} profile image',{name:name||'User'})
@@ -187,11 +192,13 @@ function initTooltip(){
 }
 
 /* ---- modal ---- */
-function openModal(html){
+let modalCloseHandler=null;
+function openModal(html,{onClose=null}={}){
   // A new modal replaces the current one synchronously. closeModal() deliberately
   // keeps its node for the exit animation, which would otherwise leave duplicate
   // modalEl/modalScrim ids and let immediate follow-up actions bind to the old DOM.
   document.querySelectorAll('#modalEl,#modalScrim').forEach(node=>node.remove());
+  modalCloseHandler=typeof onClose==='function'?onClose:null;
   const scrim=document.createElement('div'); scrim.className='scrim show'; scrim.id='modalScrim';
   scrim.style.zIndex=110;
   const m=document.createElement('div'); m.className='modal'; m.id='modalEl'; m.innerHTML=html;
@@ -199,16 +206,21 @@ function openModal(html){
   requestAnimationFrame(()=>m.classList.add('show'));
   scrim.addEventListener('click',closeModal);
 }
-function closeModal(){ const m=$('#modalEl'),s=$('#modalScrim'); if(m){m.classList.remove('show');setTimeout(()=>m.remove(),200);} if(s)s.remove(); }
+function closeModal(){
+  const m=$('#modalEl'),s=$('#modalScrim'),onClose=modalCloseHandler;
+  modalCloseHandler=null;
+  if(m){m.classList.remove('show');setTimeout(()=>m.remove(),200);} if(s)s.remove();
+  if(typeof onClose==='function') onClose();
+}
 
 /* ---- standard modal builder (SINGLE SOURCE OF TRUTH for modal chrome) ----
    appModal({icon,title,body,actions,width}) renders the head/body/foot shell.
    confirmModal(...) is the standard confirm dialog built on top of it. */
-function appModal({icon, title, body='', actions='', width}={}){
+function appModal({icon, title, body='', actions='', width, onClose}={}){
   const closeLabel=typeof t==='function'?t('common.close'):'Close';
   openModal(`<div class="modal-head">${icon?ic(icon):''}<h3>${esc(title)}</h3><button class="iconbtn x" onclick="closeModal()" aria-label="${esc(closeLabel)}">${ic('x')}</button></div>
     <div class="modal-body">${body}</div>
-    ${actions?`<div class="modal-foot">${actions}</div>`:''}`);
+    ${actions?`<div class="modal-foot">${actions}</div>`:''}`,{onClose});
   if(width){
     const m=$('#modalEl');
     if(m){
@@ -296,7 +308,7 @@ function buildTable(cfg){
   if(cfg.checkable) h+=`<div class="dt-c colcheck"><input type="checkbox" class="checkbox" data-checkall aria-label="Select all"></div>`;
   cfg.columns.forEach((c,i)=>{
     const al=c.align==='r'?'r':(c.align==='c'?'c':'l');
-    h+=`<div class="dt-c ${al} ${c.sortable?'sortable':''}" role="columnheader" data-col="${i}">${esc(c.label)}${c.sortable?`<span class="sortarrow">▲</span>`:''}</div>`;
+    h+=`<div class="dt-c ${al} ${c.sortable?'sortable':''} ${c.cls||''}" role="columnheader" data-col="${i}">${esc(c.label)}${c.sortable?`<span class="sortarrow">▲</span>`:''}</div>`;
   });
   h+=`</div><div class="dt-body">`;
   cfg.rows.forEach(row=>{
@@ -305,11 +317,12 @@ function buildTable(cfg){
       ?cfg.rowInteraction(row,id)
       :null;
     const interactive=Boolean(interaction&&interaction.kind&&interaction.kind!=='none');
+    const selected=typeof cfg.rowSelected==='function'&&Boolean(cfg.rowSelected(row,id));
     const kind=interactive?String(interaction.kind):'none';
     const label=interactive?String(interaction.label||id):'';
-    h+=`<div class="dt-r ${interactive?'is-interactive':''}" role="row"
+    h+=`<div class="dt-r ${interactive?'is-interactive':''}${selected?' sel':''}" role="row"
         data-row="${esc(id)}" data-row-interaction="${esc(kind)}"
-        ${interactive?`tabindex="0" aria-label="${esc(label)}"`:''}>`;
+        ${interactive?`tabindex="0" aria-label="${esc(label)}" aria-selected="${selected?'true':'false'}"`:''}>`;
     if(cfg.checkable) h+=`<div class="dt-c colcheck"><input type="checkbox" class="checkbox" data-rowcheck aria-label="Select row"></div>`;
     cfg.columns.forEach(c=>{
       const al=c.align==='r'?'r':(c.align==='c'?'c':'l');

@@ -138,7 +138,9 @@ async function checkViewport(browser, viewport) {
     errors.push('[quick-create] visible trigger has no accessible name');
   }
 
-  const ambiguousNavBadges = await page.locator('#sidebar .nav .badge').allTextContents();
+  // Hidden zero-count approval badges remain in the DOM for stable layout and
+  // accessibility updates; only visible badges are unexplained navigation UI.
+  const ambiguousNavBadges = await page.locator('#sidebar .nav .badge:visible').allTextContents();
   if (ambiguousNavBadges.length) {
     errors.push(`[navigation] unexplained numeric badges are visible: ${ambiguousNavBadges.join(', ')}`);
   }

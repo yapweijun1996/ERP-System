@@ -13,6 +13,8 @@ import {
   leaveRequest,
   leaveType,
   role,
+  rolePermission,
+  roleResourceScope,
   userCompany,
   userCompanyRole,
 } from '../../data/schema';
@@ -51,7 +53,25 @@ describe('configurable leave approval governance', () => {
     }).returning({ id: appUser.userId });
     const managerRoles = await db.select().from(role).where(eq(role.masterFn, scope.masterFn));
     const managerRole = managerRoles.find((item) => item.name === 'Manager')!;
-    const superadminRole = managerRoles.find((item) => item.name === 'Superadmin')!;
+    const [hrApprovalRole] = await db.insert(role).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      name: 'HR Approval Test Role',
+      isSuperadmin: false,
+      sourceTemplateKey: 'hr',
+    }).returning({ roleId: role.roleId });
+    await db.insert(rolePermission).values({
+      masterFn: scope.masterFn,
+      roleId: hrApprovalRole.roleId,
+      permissionKey: 'hr.write',
+    });
+    await db.insert(roleResourceScope).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      roleId: hrApprovalRole.roleId,
+      resourceKey: 'hr/*',
+      scope: 'company',
+    });
     await db.insert(userCompany).values({
       userId: managerUser.id,
       companyFn: scope.companyFn,
@@ -62,11 +82,13 @@ describe('configurable leave approval governance', () => {
         userId: managerUser.id,
         companyFn: scope.companyFn,
         roleId: managerRole.roleId,
+        validFrom: new Date('2026-01-01T00:00:00Z'),
       },
       {
         userId: managerUser.id,
         companyFn: scope.companyFn,
-        roleId: superadminRole.roleId,
+        roleId: hrApprovalRole.roleId,
+        validFrom: new Date('2026-01-01T00:00:00Z'),
       },
     ]);
     await db.update(employee).set({ userId: managerUser.id }).where(eq(
@@ -187,6 +209,44 @@ describe('configurable leave approval governance', () => {
       currency: 'SGD',
     });
     expect(expense.policyCode).toBe('EXPENSE-HIGH');
+  });
+
+  it('routes standard leave approvals to the HR permission authority', async () => {
+    const data = await fixture();
+    const created = await draftAndSubmit(data);
+    expect(created.pending.approval).toMatchObject({
+      policyCode: 'LEAVE-DEFAULT',
+      stepCount: 1,
+      currentStepNo: 1,
+    });
+    const [step] = await data.db.select().from(approvalInstanceStep).where(eq(
+      approvalInstanceStep.instanceId,
+      created.pending.approval.id,
+    ));
+    expect(step).toMatchObject({
+      originalAuthorityType: 'permission',
+      originalAuthorityPermissionKey: 'hr.write',
+      currentAuthorityType: 'permission',
+      currentAuthorityPermissionKey: 'hr.write',
+    });
+    const [notification] = await data.db.select({ route: appNotification.route })
+      .from(appNotification).where(and(
+        eq(appNotification.companyFn, scope.companyFn),
+        eq(appNotification.subject, 'leave approval required'),
+        eq(appNotification.entityRef, `leave_request:${created.draft.id}`),
+      )).limit(1);
+    expect(notification?.route).toBe('leave-approval');
+
+    const approved = await data.db.transaction((tx) => decideGovernedLeaveWithin(
+      tx,
+      scope,
+      { userId: data.admin.userId, employeeId: null, canManage: true },
+      created.draft.id,
+      created.pending.version,
+      'approved',
+      'HR approval completed',
+    ));
+    expect(approved).toMatchObject({ status: 'approved' });
   });
 
   it('snapshots and completes an ordered multi-level approval without early balance use', async () => {
@@ -314,7 +374,10 @@ describe('configurable leave approval governance', () => {
       },
       now,
     ));
-    const created = await draftAndSubmit(data, {}, now);
+    const created = await draftAndSubmit(data, {
+      startDate: '2026-10-05',
+      endDate: '2026-10-12',
+    }, now);
     const approved = await data.db.transaction((tx) => decideGovernedLeaveWithin(
       tx,
       scope,
@@ -325,9 +388,20 @@ describe('configurable leave approval governance', () => {
       'Covered under active delegation',
       now,
     ));
-    expect(approved.status).toBe('approved');
-    const [decision] = await data.db.select().from(approvalDecision);
-    expect(decision).toMatchObject({
+    expect(approved.status).toBe('pending');
+    const completed = await data.db.transaction((tx) => decideGovernedLeaveWithin(
+      tx,
+      scope,
+      { userId: data.admin.userId, employeeId: null, canManage: true },
+      created.draft.id,
+      approved.version,
+      'approved',
+      'HR governance confirmed',
+      now,
+    ));
+    expect(completed.status).toBe('approved');
+    const decisions = await data.db.select().from(approvalDecision);
+    expect(decisions[0]).toMatchObject({
       actorUserId: delegateUser.id,
       originalAuthorityUserId: data.managerUser.id,
       authoritySource: 'delegated',
@@ -338,16 +412,19 @@ describe('configurable leave approval governance', () => {
   it('appends idempotent reminder and escalation facts and redirects the current authority', async () => {
     const data = await fixture();
     const now = new Date('2026-07-25T08:00:00Z');
-    const created = await draftAndSubmit(data, {}, now);
+    const created = await draftAndSubmit(data, {
+      startDate: '2026-10-05',
+      endDate: '2026-10-12',
+    }, now);
     const processed = await data.db.transaction((tx) => processApprovalTimersWithin(
       tx,
       scope,
       new Date('2026-07-27T09:00:00Z'),
     ));
     expect(processed).toEqual({ reminded: 1, escalated: 1 });
-    const [step] = await data.db.select().from(approvalInstanceStep).where(eq(
-      approvalInstanceStep.instanceId,
-      created.pending.approval.id,
+    const [step] = await data.db.select().from(approvalInstanceStep).where(and(
+      eq(approvalInstanceStep.instanceId, created.pending.approval.id),
+      eq(approvalInstanceStep.stepNo, 1),
     ));
     expect(step).toMatchObject({
       originalAuthorityType: 'employee',

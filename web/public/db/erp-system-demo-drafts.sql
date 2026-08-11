@@ -61,10 +61,12 @@ BEGIN
       v_line_net := round(v_line.qty * v_line.unit_price, 2);
       v_line_tax := round(v_line_net * v_rate / 100, 2);
 
-      INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, product_id,
-                                    qty, unit_price, net_amount, tax_code, tax_rate, tax_amount)
-        VALUES ('M1', 'C-SG', v_order_id, v_line_no, v_product_id,
-                v_line.qty, v_line.unit_price, v_line_net, v_line.tax_code, v_rate, v_line_tax);
+      INSERT INTO sales_order_line (master_fn, company_fn, order_id, line_no, line_type,
+                                    product_id, description, uom, qty, unit_price,
+                                    net_amount, tax_code, tax_rate, tax_amount)
+        VALUES ('M1', 'C-SG', v_order_id, v_line_no, 'stock', v_product_id,
+                v_line.sku, 'unit', v_line.qty, v_line.unit_price, v_line_net,
+                v_line.tax_code, v_rate, v_line_tax);
 
       v_net := v_net + v_line_net;
       v_tax := v_tax + v_line_tax;

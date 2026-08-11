@@ -4,7 +4,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { sql } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { withTenantTransaction } from '../data/tenantTransaction';
-import { appUser } from '../data/schema';
 import {
   SESSION_COOKIE,
   parseCookies,
@@ -23,6 +22,7 @@ import { createAuthRouter } from './routes/auth';
 import { createResourceRouter } from './routes/resources';
 import { parseTokenEncryptionKey } from '../auth/tokenCrypto';
 import { createSetupRouter } from './routes/setup';
+import { getProductionSetupStatus } from '../modules/setup/setupState';
 import { createAccountRouter } from './routes/account';
 import { createIntegrationRouter } from './routes/integration';
 import { createSettingsRouter } from './routes/settings';
@@ -62,7 +62,6 @@ export interface AppOptions {
   trustProxy?: boolean;
   tokenEncryptionKey?: string;
   publicUrl?: string;
-  setupToken?: string;
 }
 
 const CSRF_EXEMPT_PATHS = new Set([
@@ -153,15 +152,19 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     next();
   });
 
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'erp-system-api', time: new Date().toISOString() });
+  app.get('/health', async (_req, res) => {
+    try {
+      await db.execute(sql`select 1`);
+      res.json({ status: 'ok', service: 'erp-system-api', time: new Date().toISOString() });
+    } catch {
+      res.status(503).json({ status: 'unavailable', service: 'erp-system-api' });
+    }
   });
 
   app.get('/api/setup/status', async (_req, res) => {
-    const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(appUser);
-    res.json({ hasAdmin: (row?.n ?? 0) > 0 });
+    res.json(await getProductionSetupStatus(db));
   });
-  app.use('/api/setup', createSetupRouter(db, options.setupToken));
+  app.use('/api/setup', createSetupRouter(db));
 
   const lifecycle = options.tokenEncryptionKey ? {
     tokenEncryptionKey: parseTokenEncryptionKey(options.tokenEncryptionKey),

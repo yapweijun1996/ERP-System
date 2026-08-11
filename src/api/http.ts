@@ -79,7 +79,9 @@ export async function requireSession(
     ctx.session = ctx.platformSimulation.target;
   }
   if (ctx.session) {
-    if (ctx.session.passwordChangeRequired && !options.allowActivationPending) {
+    if (ctx.session.passwordChangeRequired
+      && ctx.session.impersonatorUserId == null
+      && !options.allowActivationPending) {
       apiError(res, 403, 'activation_required', 'Complete first-login activation before using the application.');
       return null;
     }
@@ -94,7 +96,9 @@ export async function requireSession(
   }
   ctx.sessionId = sessionId;
   ctx.session = session;
-  if (session.passwordChangeRequired && !options.allowActivationPending) {
+  if (session.passwordChangeRequired
+    && session.impersonatorUserId == null
+    && !options.allowActivationPending) {
     apiError(
       res,
       403,

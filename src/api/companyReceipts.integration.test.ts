@@ -7,10 +7,12 @@ import { seedDemo } from '../data/seed';
 import {
   appUser,
   auditLog,
+  companyModule,
   companyReceipt,
   companyReceiptPack,
   documentScanJob,
   employee,
+  masterModule,
   role,
   rolePermission,
   userCompanyRole,
@@ -40,6 +42,15 @@ describe('Company Receipts API', () => {
   beforeEach(async () => {
     db = await freshDb();
     await seedDemo(db);
+    await db.update(masterModule).set({ enabled: true }).where(and(
+      eq(masterModule.masterFn, 'M1'),
+      eq(masterModule.moduleKey, 'expenses_tax'),
+    ));
+    await db.update(companyModule).set({ enabled: true }).where(and(
+      eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.companyFn, 'C-SG'),
+      eq(companyModule.moduleKey, 'expenses_tax'),
+    ));
     const [viewer] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
     viewerId = viewer.userId;
     const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
@@ -426,6 +437,48 @@ describe('Company Receipts API', () => {
     });
     expect(response.status).toBe(403);
     expect((await response.json()).error.code).toBe('permission_denied');
+  });
+
+  it('does not treat the legacy My Receipts grant as a Company Receipt mutation grant', async () => {
+    const [employeeRole] = await db.select().from(role).where(and(
+      eq(role.masterFn, 'M1'),
+      eq(role.name, 'Employee'),
+    ));
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, employeeRole.roleId),
+      eq(rolePermission.permissionKey, 'expenses.company_receipts.create'),
+    ));
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, employeeRole.roleId),
+      eq(rolePermission.permissionKey, 'expenses.company_receipts.edit'),
+    ));
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, employeeRole.roleId),
+      eq(rolePermission.permissionKey, 'expenses.company_receipts.void'),
+    ));
+    const auth = await login();
+    const headers = {
+      cookie: auth.cookie,
+      'content-type': 'application/json',
+      'x-csrf-token': auth.csrf,
+    };
+
+    const confirmation = await fetch(`${baseUrl}/api/company-receipts/confirmations/1`, {
+      headers: { cookie: auth.cookie },
+    });
+    expect(confirmation.status).toBe(403);
+    const create = await fetch(`${baseUrl}/api/company-receipts`, {
+      method: 'POST', headers, body: JSON.stringify({}),
+    });
+    expect(create.status).toBe(403);
+    const edit = await fetch(`${baseUrl}/api/company-receipts/1`, {
+      method: 'PATCH', headers, body: JSON.stringify({}),
+    });
+    expect(edit.status).toBe(403);
+    const voided = await fetch(`${baseUrl}/api/company-receipts/1/actions/void`, {
+      method: 'POST', headers, body: JSON.stringify({}),
+    });
+    expect(voided.status).toBe(403);
   });
 
   it('uses an explicit company-read grant for a custom Receipt Manager role', async () => {

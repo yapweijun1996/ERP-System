@@ -951,5 +951,5 @@ expiry/revoke facts and audit correlation. The active-session partial unique ind
 one explicit target view per platform session; immediate return/revoke is durable. It
 does not turn the platform principal into an `app_user`, persist platform permission
 inside tenant roles or union platform authority into target-user decisions. Those
-TASK-187 session/linkage facts are current schema; TASK-188 remains the cross-engine
-migration and release-proof owner.
+TASK-187 session/linkage facts are current schema; TASK-188 completed the recorded
+cross-engine migration and release-gate proof without authorizing a production migration.

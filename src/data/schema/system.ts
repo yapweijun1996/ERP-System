@@ -14,6 +14,9 @@ export const appSession = pgTable('app_session', {
   tokenHash: text('token_hash').primaryKey(),
   csrfHash: text('csrf_hash').notNull(),
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => appUser.userId),
+  /** Original administrator while the session is temporarily viewing an employee workspace. */
+  impersonatorUserId: bigint('impersonator_user_id', { mode: 'number' }).references(() => appUser.userId),
+  impersonatedAt: timestamp('impersonated_at', { withTimezone: true }),
   masterFn: text('master_fn').notNull(),
   activeCompanyFn: text('active_company_fn').notNull().references(() => company.companyFn),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

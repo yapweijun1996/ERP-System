@@ -85,7 +85,10 @@ export const salesOrderLine = pgTable('sales_order_line', {
   ...tenant,
   orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => salesOrder.id),
   lineNo: integer('line_no').notNull(),
-  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  lineType: text('line_type').notNull().default('stock'),
+  productId: bigint('product_id', { mode: 'number' }).references(() => product.id),
+  description: text('description').notNull(),
+  uom: text('uom').notNull().default('unit'),
   qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
   unitPrice: numeric('unit_price', { precision: 18, scale: 4 }).notNull(),
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
@@ -95,6 +98,13 @@ export const salesOrderLine = pgTable('sales_order_line', {
   ...timestamps,
 }, (t) => [
   index('idx_sol_order').on(t.masterFn, t.companyFn, t.orderId),
+  check('ck_sales_order_line_type', sql`${t.lineType} in ('stock', 'non_stock')`),
+  check(
+    'ck_sales_order_line_product',
+    sql`(${t.lineType} = 'stock' and ${t.productId} is not null) or (${t.lineType} = 'non_stock' and ${t.productId} is null)`,
+  ),
+  check('ck_sales_order_line_description', sql`length(trim(${t.description})) > 0`),
+  check('ck_sales_order_line_qty', sql`${t.qty} > 0 and ${t.unitPrice} >= 0`),
 ]);
 
 export const salesEnquiry = pgTable('sales_enquiry', {
@@ -117,6 +127,44 @@ export const salesEnquiry = pgTable('sales_enquiry', {
   index('idx_sales_enquiry_customer').on(t.masterFn, t.companyFn, t.customerId, t.id),
   check('ck_sales_enquiry_status', sql`${t.status} in ('new', 'quoted', 'lost')`),
   check('ck_sales_enquiry_value', sql`${t.estimatedValue} >= 0`),
+]);
+
+/** Editable commercial requirements captured before quotation. The enquiry header's
+ * estimated_value is maintained transactionally as SUM(qty * estimated_unit_price)
+ * whenever this set is saved, so downstream screens never keep a second browser-only
+ * total. Existing enquiries with no rows retain their legacy header estimate until a
+ * user starts item authoring. */
+export const salesEnquiryLine = pgTable('sales_enquiry_line', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  enquiryId: bigint('enquiry_id', { mode: 'number' }).notNull()
+    .references(() => salesEnquiry.id),
+  lineNo: integer('line_no').notNull(),
+  lineType: text('line_type').notNull().default('stock'),
+  productId: bigint('product_id', { mode: 'number' }).references(() => product.id),
+  description: text('description').notNull(),
+  uom: text('uom').notNull().default('unit'),
+  qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
+  estimatedUnitPrice: numeric('estimated_unit_price', { precision: 18, scale: 4 })
+    .notNull().default('0'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_sales_enquiry_line').on(
+    t.masterFn, t.companyFn, t.enquiryId, t.lineNo,
+  ),
+  index('idx_sales_enquiry_line_product').on(
+    t.masterFn, t.companyFn, t.productId, t.enquiryId,
+  ),
+  check(
+    'ck_sales_enquiry_line_values',
+    sql`${t.qty} > 0 and ${t.estimatedUnitPrice} >= 0`,
+  ),
+  check('ck_sales_enquiry_line_type', sql`${t.lineType} in ('stock', 'non_stock')`),
+  check(
+    'ck_sales_enquiry_line_product',
+    sql`(${t.lineType} = 'stock' and ${t.productId} is not null) or (${t.lineType} = 'non_stock' and ${t.productId} is null)`,
+  ),
+  check('ck_sales_enquiry_line_description', sql`length(trim(${t.description})) > 0`),
 ]);
 
 export const salesQuotation = pgTable('sales_quotation', {
@@ -152,7 +200,10 @@ export const salesQuotationLine = pgTable('sales_quotation_line', {
   quotationId: bigint('quotation_id', { mode: 'number' }).notNull()
     .references(() => salesQuotation.id),
   lineNo: integer('line_no').notNull(),
-  productId: bigint('product_id', { mode: 'number' }).notNull().references(() => product.id),
+  lineType: text('line_type').notNull().default('stock'),
+  productId: bigint('product_id', { mode: 'number' }).references(() => product.id),
+  description: text('description').notNull(),
+  uom: text('uom').notNull().default('unit'),
   qty: numeric('qty', { precision: 18, scale: 4 }).notNull(),
   unitPrice: numeric('unit_price', { precision: 18, scale: 4 }).notNull(),
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
@@ -168,6 +219,12 @@ export const salesQuotationLine = pgTable('sales_quotation_line', {
     t.masterFn, t.companyFn, t.productId, t.quotationId,
   ),
   check('ck_sales_quotation_line_qty', sql`${t.qty} > 0 and ${t.unitPrice} >= 0`),
+  check('ck_sales_quotation_line_type', sql`${t.lineType} in ('stock', 'non_stock')`),
+  check(
+    'ck_sales_quotation_line_product',
+    sql`(${t.lineType} = 'stock' and ${t.productId} is not null) or (${t.lineType} = 'non_stock' and ${t.productId} is null)`,
+  ),
+  check('ck_sales_quotation_line_description', sql`length(trim(${t.description})) > 0`),
 ]);
 
 export const invoice = pgTable('invoice', {

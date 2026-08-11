@@ -5,6 +5,7 @@ import {
   product,
   warehouse,
   stockLevel,
+  stockMovement,
   customer,
   account,
   taxRule,
@@ -106,7 +107,10 @@ async function createDraftOrder(
     companyFn: SCOPE.companyFn,
     orderId: order.id,
     lineNo: index + 1,
+    lineType: 'stock' as const,
     productId: line.productId,
+    description: 'Test product',
+    uom: 'unit',
     qty: String(line.qty),
     unitPrice: String(line.unitPrice),
     netAmount: (line.qty * line.unitPrice).toFixed(2),
@@ -136,10 +140,10 @@ describe('confirmSalesOrder', () => {
     expect(res.movementIds).toHaveLength(2);
     expect(res.deliveryDocNo).toBe('DO-SO-T1');
     expect(await db.select().from(salesDelivery)
-      .where(eq(salesDelivery.id, res.deliveryId)))
+      .where(eq(salesDelivery.id, res.deliveryId!)))
       .toMatchObject([{ status: 'delivered', invoiceId: res.invoiceId, version: 2 }]);
     expect(await db.select().from(salesDeliveryLine)
-      .where(eq(salesDeliveryLine.deliveryId, res.deliveryId))).toHaveLength(2);
+      .where(eq(salesDeliveryLine.deliveryId, res.deliveryId!))).toHaveLength(2);
     expect(await getStockQty(db, SCOPE, fx.widgetId, fx.warehouseId)).toBe(95);
     expect(await getStockQty(db, SCOPE, fx.gadgetId, fx.warehouseId)).toBe(97);
 
@@ -158,6 +162,28 @@ describe('confirmSalesOrder', () => {
     }).from(invoice).where(eq(invoice.id, res.invoiceId));
     expect(order.salespersonUserId).toBe(fx.salespersonId);
     expect(postedInvoice.salespersonUserId).toBe(fx.salespersonId);
+  });
+
+  it('confirms a service-only order without creating a delivery or touching stock', async () => {
+    const db = await freshDb();
+    const fx = await seedSalesFixture(db);
+
+    const res = await confirmSalesOrder(db, SCOPE, {
+      docNo: 'SO-SERVICE-1', customerId: fx.customerId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{
+        lineType: 'non_stock', productId: null, description: 'On-site commissioning', uom: 'job',
+        warehouseId: fx.warehouseId, qty: 2, unitPrice: 75, taxCode: 'SR',
+      }],
+    });
+
+    expect(res.deliveryId).toBeNull();
+    expect(res.deliveryDocNo).toBeNull();
+    expect(res.movementIds).toEqual([]);
+    expect(await db.select().from(salesDelivery)).toHaveLength(0);
+    expect(await db.select().from(stockMovement)).toHaveLength(0);
+    expect(await db.select().from(invoice).where(eq(invoice.id, res.invoiceId))).toHaveLength(1);
+    expect(await db.select().from(salesOrderLine).where(eq(salesOrderLine.orderId, res.orderId)))
+      .toMatchObject([{ lineType: 'non_stock', productId: null, description: 'On-site commissioning', uom: 'job' }]);
   });
 
   it('rollback: insufficient stock on a later line undoes the WHOLE order, including the earlier valid line', async () => {

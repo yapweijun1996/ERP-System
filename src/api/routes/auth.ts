@@ -1,8 +1,8 @@
 import { Router, type Request } from 'express';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, or } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  appUser, company, companyOnboarding, employeeActivationSecret, master, role,
+  appUser, company, companyOnboarding, employee, employeeActivationSecret, master, role,
   userCompany, userCompanyRole,
 } from '../../data/schema';
 import { verifyPassword } from '../../auth/password';
@@ -16,9 +16,15 @@ import {
 import {
   CSRF_COOKIE,
   DEFAULT_ABSOLUTE_TTL_MS,
+  DEFAULT_IDLE_TTL_MS,
+  REMEMBERED_ABSOLUTE_TTL_MS,
+  REMEMBERED_IDLE_TTL_MS,
   SESSION_COOKIE,
   createSession,
   destroySession,
+  getSession,
+  impersonateSession,
+  returnFromImpersonation,
   parseCookies,
   switchSessionCompany,
 } from '../../auth/session';
@@ -28,8 +34,15 @@ import {
   loginIdentifierHash,
   recordLoginFailure,
 } from '../../auth/rateLimit';
-import { PERMISSIONS, effectiveCapabilities, hasPermission } from '../../auth/permissions';
+import {
+  PERMISSIONS,
+  effectiveCapabilities,
+  hasPermission,
+  isSuperadminSession,
+} from '../../auth/permissions';
 import { listCompanyModules } from '../../auth/moduleAccess';
+import { COMPANY_OWNER_ROLE_TEMPLATE_KEY } from '../../auth/accessCatalog';
+import { activeRoleAssignmentCondition } from '../../auth/roleAssignmentState';
 import {
   acceptInvitation,
   AuthLifecycleError,
@@ -64,6 +77,13 @@ function clearAuthCookies(res: import('express').Response, secure: boolean): voi
 
 export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   const router = Router();
+  router.use((_req, res, next) => {
+    /* Auth responses must never be replayed by a CDN, browser cache or an
+     * intermediary without considering the browser's session cookie. */
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Vary', 'Cookie');
+    next();
+  });
   const cookieCommon = {
     sameSite: 'strict' as const,
     secure: options.secureCookies,
@@ -89,11 +109,14 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       organizationCode,
       username,
       password,
+      rememberDevice,
     } = (req.body ?? {}) as {
       organizationCode?: unknown;
       username?: unknown;
       password?: unknown;
+      rememberDevice?: unknown;
     };
+    const keepDeviceSignedIn = rememberDevice === true;
     const normalizedOrganizationCode = typeof organizationCode === 'string'
       ? normalizeOrganizationCode(organizationCode)
       : '';
@@ -171,6 +194,7 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
         eq(userCompany.userId, user.userId),
         eq(company.masterFn, user.masterFn),
       ))
+      .orderBy(asc(userCompany.createdAt), asc(userCompany.companyFn))
       .limit(1);
     if (!assignment) {
       apiError(res, 403, 'no_company_access', 'This user has no company assignments.');
@@ -190,7 +214,8 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
           eq(userCompanyRole.companyFn, assignment.companyFn),
           eq(role.masterFn, user.masterFn),
           eq(role.companyFn, assignment.companyFn),
-          eq(role.isSuperadmin, true),
+          eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
+          activeRoleAssignmentCondition(),
         )).limit(1);
       if (!superadmin) {
         apiError(res, 403, 'company_setup_in_progress', 'This company is not live yet.');
@@ -237,16 +262,19 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       accountState: user.accountState as 'preactivated' | 'active' | 'offboarded',
       passwordChangeRequired: user.passwordChangeRequired,
       userAgent: req.header('user-agent'),
+      absoluteTtlMs: keepDeviceSignedIn ? REMEMBERED_ABSOLUTE_TTL_MS : DEFAULT_ABSOLUTE_TTL_MS,
+      idleTtlMs: keepDeviceSignedIn ? REMEMBERED_IDLE_TTL_MS : DEFAULT_IDLE_TTL_MS,
+      rememberedDevice: keepDeviceSignedIn,
     });
     res.cookie(SESSION_COOKIE, created.sessionId, {
       ...cookieCommon,
       httpOnly: true,
-      maxAge: DEFAULT_ABSOLUTE_TTL_MS,
+      maxAge: keepDeviceSignedIn ? REMEMBERED_ABSOLUTE_TTL_MS : DEFAULT_ABSOLUTE_TTL_MS,
     });
     res.cookie(CSRF_COOKIE, created.csrfToken, {
       ...cookieCommon,
       httpOnly: false,
-      maxAge: DEFAULT_ABSOLUTE_TTL_MS,
+      maxAge: keepDeviceSignedIn ? REMEMBERED_ABSOLUTE_TTL_MS : DEFAULT_ABSOLUTE_TTL_MS,
     });
     res.json({
       userId: user.userId,
@@ -268,6 +296,19 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       return;
     }
     const sessionId = parseCookies(req.headers.cookie)[SESSION_COOKIE];
+    const session = await getSession(db, sessionId, { touch: false });
+    if (session?.impersonatorUserId != null) {
+      await appendAudit(db, {
+        masterFn: session.masterFn,
+        companyFn: session.activeCompanyFn,
+        actorUserId: session.impersonatorUserId,
+        requestId: context(res).requestId,
+        entity: 'app_session',
+        entityId: session.userId,
+        action: 'impersonation_ended',
+        after: { targetUserId: session.userId, reason: 'Signed out while viewing employee workspace' },
+      });
+    }
     await destroySession(db, sessionId);
     clearAuthCookies(res, options.secureCookies);
     res.json({ data: { ok: true }, meta: {} });
@@ -294,7 +335,8 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
         .where(and(
           eq(userCompany.userId, session.userId),
           eq(company.masterFn, session.masterFn),
-        )),
+        ))
+        .orderBy(asc(userCompany.createdAt), asc(userCompany.companyFn)),
     ]);
     res.json({
       ...session,
@@ -305,9 +347,76 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
     });
   });
 
+  router.get('/session/employee-workspace-targets', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (session.impersonatorUserId != null) {
+      apiError(res, 409, 'impersonation_already_active', 'Return to Superadmin before choosing another employee workspace.');
+      return;
+    }
+    if (!await isSuperadminSession(db, session)) {
+      apiError(res, 403, 'superadmin_required', 'Only a Superadmin can choose an employee workspace.');
+      return;
+    }
+
+    const [targetRows, superadminRows] = await Promise.all([
+      db.select({
+        employeeId: employee.id,
+        userId: appUser.userId,
+        username: appUser.username,
+        fullName: employee.fullName,
+        employeeNo: employee.employeeNo,
+        department: employee.department,
+        jobTitle: employee.jobTitle,
+        accountState: appUser.accountState,
+      }).from(employee)
+        .innerJoin(appUser, eq(appUser.userId, employee.userId))
+        .innerJoin(userCompany, and(
+          eq(userCompany.userId, appUser.userId),
+          eq(userCompany.companyFn, session.activeCompanyFn),
+        ))
+        .where(and(
+          eq(employee.masterFn, session.masterFn),
+          eq(employee.companyFn, session.activeCompanyFn),
+          eq(employee.isActive, true),
+          eq(appUser.masterFn, session.masterFn),
+          eq(appUser.isActive, true),
+          or(eq(appUser.accountState, 'active'), eq(appUser.accountState, 'preactivated')),
+        )),
+      db.select({ userId: userCompanyRole.userId })
+        .from(userCompanyRole)
+        .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+        .where(and(
+          eq(userCompanyRole.companyFn, session.activeCompanyFn),
+          eq(role.masterFn, session.masterFn),
+          eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
+          activeRoleAssignmentCondition(),
+        )),
+    ]);
+    const superadminIds = new Set(superadminRows.map((row) => row.userId));
+    const data = targetRows
+      .filter((target) => !superadminIds.has(target.userId))
+      .sort((left, right) => left.fullName.localeCompare(right.fullName))
+      .map((target) => ({
+        employeeId: target.employeeId,
+        userId: target.userId,
+        username: target.username,
+        fullName: target.fullName,
+        employeeNo: target.employeeNo,
+        department: target.department,
+        jobTitle: target.jobTitle,
+        accountState: target.accountState,
+      }));
+    res.json({ data, meta: { count: data.length } });
+  });
+
   router.post('/activation/actions/complete', async (req, res) => {
     const session = await requireSession(db, req, res, { allowActivationPending: true });
     if (!session) return;
+    if (session.impersonatorUserId != null) {
+      apiError(res, 403, 'impersonation_action_not_allowed', 'Complete employee activation from the employee sign-in flow.');
+      return;
+    }
     if (!session.passwordChangeRequired) {
       apiError(res, 409, 'activation_not_required', 'This account does not require activation.');
       return;
@@ -392,6 +501,156 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
     });
     ctx.session = changed;
     res.json({ data: changed, meta: {} });
+  });
+
+  router.post('/session/actions/impersonate', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (session.impersonatorUserId != null) {
+      apiError(res, 409, 'impersonation_already_active', 'Return to Superadmin before entering another employee workspace.');
+      return;
+    }
+    if (!await isSuperadminSession(db, session)) {
+      apiError(res, 403, 'superadmin_required', 'Only a Superadmin can enter an employee workspace.');
+      return;
+    }
+    const targetUserId = Number(req.body?.targetUserId);
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    if (!Number.isSafeInteger(targetUserId) || targetUserId <= 0) {
+      apiError(res, 400, 'invalid_request', 'A valid employee account is required.', {
+        targetUserId: 'Select an employee account.',
+      });
+      return;
+    }
+    if (reason.length > 240) {
+      apiError(res, 400, 'invalid_request', 'The audit reason is too long.', {
+        reason: 'Use 240 characters or fewer.',
+      });
+      return;
+    }
+    const [target] = await db.select({
+      userId: appUser.userId,
+      username: appUser.username,
+      fullName: appUser.fullName,
+      employeeId: employee.id,
+    }).from(appUser)
+      .innerJoin(userCompany, and(
+        eq(userCompany.userId, appUser.userId),
+        eq(userCompany.companyFn, session.activeCompanyFn),
+      ))
+      .innerJoin(employee, and(
+        eq(employee.userId, appUser.userId),
+        eq(employee.masterFn, session.masterFn),
+        eq(employee.companyFn, session.activeCompanyFn),
+      ))
+      .where(and(
+        eq(appUser.userId, targetUserId),
+        eq(appUser.masterFn, session.masterFn),
+        eq(appUser.isActive, true),
+        or(eq(appUser.accountState, 'active'), eq(appUser.accountState, 'preactivated')),
+        eq(employee.isActive, true),
+      )).limit(1);
+    if (!target) {
+      apiError(res, 404, 'employee_account_not_found', 'Only an active linked employee account can be opened.');
+      return;
+    }
+    const [superadminTarget] = await db.select({ roleId: userCompanyRole.roleId })
+      .from(userCompanyRole)
+      .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+      .where(and(
+        eq(userCompanyRole.userId, targetUserId),
+        eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        eq(role.masterFn, session.masterFn),
+        eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
+        activeRoleAssignmentCondition(),
+      )).limit(1);
+    if (superadminTarget) {
+      apiError(res, 409, 'target_superadmin_not_allowed', 'Superadmin accounts cannot be entered as employee workspaces.');
+      return;
+    }
+    const ctx = context(res);
+    const changed = await withTenantTransaction(db, {
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+    }, async (tx) => {
+      const entered = await impersonateSession(tx, ctx.sessionId!, targetUserId);
+      if (!entered) {
+        apiError(res, 409, 'impersonation_conflict', 'This session changed. Reload and try again.');
+        return null;
+      }
+      await appendAudit(tx, {
+        masterFn: session.masterFn,
+        companyFn: session.activeCompanyFn,
+        actorUserId: session.userId,
+        requestId: ctx.requestId,
+        entity: 'app_session',
+        entityId: targetUserId,
+        action: 'impersonation_started',
+        after: {
+          targetUserId,
+          targetEmployeeId: target.employeeId,
+          targetUsername: target.username,
+          reason: reason || 'Superadmin employee workspace review',
+        },
+      });
+      return entered;
+    });
+    if (!changed) return;
+    ctx.session = changed;
+    res.json({ data: changed, meta: { impersonating: true } });
+  });
+
+  router.post('/session/actions/return-to-superadmin', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!session.impersonatorUserId) {
+      apiError(res, 409, 'impersonation_not_active', 'This session is not viewing an employee workspace.');
+      return;
+    }
+    const ctx = context(res);
+    const originalUserId = session.impersonatorUserId;
+    const [original] = await db.select({
+      userId: appUser.userId,
+      username: appUser.username,
+      fullName: appUser.fullName,
+    }).from(appUser)
+      .innerJoin(userCompany, and(
+        eq(userCompany.userId, appUser.userId),
+        eq(userCompany.companyFn, session.activeCompanyFn),
+      ))
+      .where(and(
+        eq(appUser.userId, originalUserId),
+        eq(appUser.masterFn, session.masterFn),
+        eq(appUser.isActive, true),
+      )).limit(1);
+    if (!original) {
+      apiError(res, 409, 'original_superadmin_unavailable', 'The original Superadmin account is no longer available. Sign out and sign in again.');
+      return;
+    }
+    const restored = await withTenantTransaction(db, {
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+    }, async (tx) => {
+      const result = await returnFromImpersonation(tx, ctx.sessionId!);
+      if (!result) return null;
+      await appendAudit(tx, {
+        masterFn: session.masterFn,
+        companyFn: session.activeCompanyFn,
+        actorUserId: originalUserId,
+        requestId: ctx.requestId,
+        entity: 'app_session',
+        entityId: session.userId,
+        action: 'impersonation_ended',
+        after: { targetUserId: session.userId, reason: 'Returned to Superadmin' },
+      });
+      return result;
+    });
+    if (!restored) {
+      apiError(res, 409, 'impersonation_conflict', 'This session changed. Reload and try again.');
+      return;
+    }
+    ctx.session = restored;
+    res.json({ data: restored, meta: { impersonating: false } });
   });
 
   router.post('/invitations', async (req, res) => {

@@ -79,7 +79,7 @@ async function fixture(db: DB) {
   });
   const [deliveryLine] = await db.select({ id: salesDeliveryLine.id })
     .from(salesDeliveryLine)
-    .where(eq(salesDeliveryLine.deliveryId, posted.deliveryId));
+    .where(eq(salesDeliveryLine.deliveryId, posted.deliveryId!));
   return { item, location, posted, deliveryLine };
 }
 
@@ -89,7 +89,7 @@ describe('sales return and credit note', () => {
     const fx = await fixture(db);
     const created = await createSalesReturn(db, SCOPE, {
       docNo: 'RMA-1',
-      deliveryId: fx.posted.deliveryId,
+      deliveryId: fx.posted.deliveryId!,
       invoiceId: fx.posted.invoiceId,
       warehouseId: fx.location.id,
       returnDate: '2024-06-02',
@@ -127,7 +127,7 @@ describe('sales return and credit note', () => {
     const fx = await fixture(db);
     await createSalesReturn(db, SCOPE, {
       docNo: 'RMA-LIMIT-1',
-      deliveryId: fx.posted.deliveryId,
+        deliveryId: fx.posted.deliveryId!,
       invoiceId: fx.posted.invoiceId,
       warehouseId: fx.location.id,
       returnDate: '2024-06-02',
@@ -136,7 +136,7 @@ describe('sales return and credit note', () => {
     });
     await expect(createSalesReturn(db, SCOPE, {
       docNo: 'RMA-LIMIT-2',
-      deliveryId: fx.posted.deliveryId,
+        deliveryId: fx.posted.deliveryId!,
       invoiceId: fx.posted.invoiceId,
       warehouseId: fx.location.id,
       returnDate: '2024-06-03',
@@ -152,7 +152,7 @@ describe('sales return and credit note', () => {
     const fx = await fixture(db);
     await expect(createSalesReturn(db, SCOPE, {
       docNo: 'RMA-ZERO',
-      deliveryId: fx.posted.deliveryId,
+        deliveryId: fx.posted.deliveryId!,
       invoiceId: fx.posted.invoiceId,
       warehouseId: fx.location.id,
       returnDate: '2024-06-02',

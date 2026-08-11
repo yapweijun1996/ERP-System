@@ -2,26 +2,33 @@
 # One-command setup for the ERP System (production/Docker mode).
 # Usage: ./scripts/setup.sh                 (or: make setup)
 #        ./scripts/setup.sh --interactive   (or: make setup-interactive)
+#        ./scripts/setup.sh --production --interactive (or: make setup-production)
+#        ./scripts/setup.sh --demo-seed     (local/demo data only)
 #
 # Idempotent: safe to run repeatedly. Creates .env if missing, starts Docker
-# services, waits for the database to be ready, applies migrations, and seeds
-# the SG + MY demo companies.
+# services, waits for the database to be ready, and applies migrations. Demo
+# seed data is opt-in because loading sample rows into a client database is a
+# destructive/incorrect production default.
 #
 # --interactive/-i only changes step 1, and only when .env does not exist yet
 # (the never-overwrite contract below is unchanged). Instead of copying
-# .env.example verbatim (placeholder DB password, blank tokens), it prompts
-# for a bundled-vs-external database, auto-generates strong secrets on blank
-# answers, and checks host ports for collisions before anything starts.
+# .env.example verbatim (placeholder DB password), it prompts for a
+# bundled-vs-external database, auto-generates the encryption key on a blank
+# answer, and checks host ports for collisions before anything starts.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 INTERACTIVE=false
+DEMO_SEED=false
+PRODUCTION=false
 for arg in "$@"; do
   case "$arg" in
     --interactive|-i) INTERACTIVE=true ;;
+    --demo-seed) DEMO_SEED=true ;;
+    --production|-p) PRODUCTION=true ;;
     *)
-      echo "ERROR: unknown argument: $arg (expected --interactive/-i)" >&2
+      echo "ERROR: unknown argument: $arg (expected --interactive/-i, --production/-p, or --demo-seed)" >&2
       exit 1
       ;;
   esac
@@ -99,13 +106,7 @@ run_interactive_setup() {
     fi
   fi
 
-  local setup_token="" enc_key="" public_url
-  read -r -p "ERP_SETUP_TOKEN (blank = auto-generate): " setup_token || true
-  if [ -z "$setup_token" ]; then
-    setup_token="$(openssl rand -base64 32)"
-    echo "    generated ERP_SETUP_TOKEN"
-  fi
-
+  local enc_key="" public_url
   while true; do
     read -r -p "ERP_TOKEN_ENCRYPTION_KEY (blank = auto-generate): " enc_key || true
     if [ -z "$enc_key" ]; then
@@ -126,14 +127,16 @@ run_interactive_setup() {
   echo "==> Checking host ports..."
   local web_port api_port db_port=""
   web_port="$(find_free_port 8080 WEB_PORT)"
-  api_port="$(find_free_port 3000 API_PORT)"
-  if [ "$EXTERNAL_DB" = false ]; then
-    db_port="$(find_free_port 5432 DB_PORT)"
+  api_port=3000
+  if [ "$PRODUCTION" = false ]; then
+    api_port="$(find_free_port 3000 API_PORT)"
+    if [ "$EXTERNAL_DB" = false ]; then
+      db_port="$(find_free_port 5432 DB_PORT)"
+    fi
   fi
 
   cp .env.example .env
 
-  sed_replace "s|^ERP_SETUP_TOKEN=.*|ERP_SETUP_TOKEN=${setup_token}|"
   sed_replace "s|^ERP_TOKEN_ENCRYPTION_KEY=.*|ERP_TOKEN_ENCRYPTION_KEY=${enc_key}|"
   sed_replace "s|^ERP_PUBLIC_URL=.*|ERP_PUBLIC_URL=${public_url}|"
 
@@ -148,8 +151,8 @@ run_interactive_setup() {
   # comment above it also contains the literal text "API_PORT=3000," mid-
   # sentence, which a bare ".*" pattern would corrupt too.
   [ "$web_port" != "8080" ] && sed_replace "s|^# WEB_PORT=[0-9]*\$|WEB_PORT=${web_port}|"
-  [ "$api_port" != "3000" ] && sed_replace "s|^# API_PORT=[0-9]*\$|API_PORT=${api_port}|"
-  if [ "$EXTERNAL_DB" = false ] && [ "$db_port" != "5432" ]; then
+  [ "$PRODUCTION" = false ] && [ "$api_port" != "3000" ] && sed_replace "s|^# API_PORT=[0-9]*\$|API_PORT=${api_port}|"
+  if [ "$PRODUCTION" = false ] && [ "$EXTERNAL_DB" = false ] && [ "$db_port" != "5432" ]; then
     sed_replace "s|^# DB_PORT=[0-9]*\$|DB_PORT=${db_port}|"
   fi
 
@@ -168,12 +171,17 @@ else
   echo "    .env already present — leaving it untouched"
   if [ "$INTERACTIVE" = true ]; then
     echo "    (--interactive only writes a first-time .env — reusing the existing one)"
-    # Only inferred under --interactive, so the plain/default path below (the
-    # one required to stay byte-for-byte unchanged) never runs this check.
-    if grep -qE '^DATABASE_URL=.+' .env 2>/dev/null; then
-      EXTERNAL_DB=true
-    fi
   fi
+  # An existing external DATABASE_URL must be respected on every rerun, not
+  # only when --interactive is supplied.
+  if grep -qE '^DATABASE_URL=.+' .env 2>/dev/null; then
+    EXTERNAL_DB=true
+  fi
+fi
+
+if [ "$DEMO_SEED" = true ] && [ "$EXTERNAL_DB" = true ]; then
+  echo "ERROR: --demo-seed is only allowed with the bundled local database." >&2
+  exit 1
 fi
 
 # 2. Pre-flight: Docker must be available.
@@ -186,14 +194,24 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+COMPOSE_FILES=(-f docker-compose.yml)
+if [ "$PRODUCTION" = true ]; then
+  COMPOSE_FILES+=(-f docker-compose.production.yml)
+  echo "    using hardened production overlay (only web is published)"
+fi
+
+compose() {
+  docker compose "${COMPOSE_FILES[@]}" "$@"
+}
+
 # 3. Start services. An external database is never started or waited on
 #    locally — only api+web come up, talking to DATABASE_URL from .env.
 if [ "$EXTERNAL_DB" = true ]; then
-  echo "==> Starting services (api + web only — external database)..."
-  docker compose up -d api web --no-deps
+  echo "==> Starting services (api + web + calendar-worker — external database)..."
+  compose up -d api web calendar-worker --no-deps
 else
-  echo "==> Starting services (db + api + web)..."
-  docker compose up -d
+  echo "==> Starting services (db + api + web + calendar-worker)..."
+  compose up -d
 fi
 
 # 4. Wait for the database to accept connections (health gate, not a fixed
@@ -204,7 +222,7 @@ if [ "$EXTERNAL_DB" = true ]; then
   trap 'rm -f "$migrate_log"' EXIT
   ready=false
   for i in $(seq 1 30); do
-    if docker compose exec -T api npm run migrate >"$migrate_log" 2>&1; then
+    if compose exec -T api npm run migrate >"$migrate_log" 2>&1; then
       echo "    migrations applied — external database is reachable."
       ready=true
       break
@@ -220,7 +238,7 @@ else
   echo "==> Waiting for PostgreSQL to be ready..."
   DB_USER="$(grep -E '^DB_USER=' .env | cut -d= -f2- || echo erp)"
   for i in $(seq 1 60); do
-    if docker compose exec -T db pg_isready -U "${DB_USER:-erp}" -d erp >/dev/null 2>&1; then
+    if compose exec -T db pg_isready -U "${DB_USER:-erp}" -d erp >/dev/null 2>&1; then
       echo "    database is ready."
       break
     fi
@@ -233,12 +251,24 @@ else
 
   # 5. Apply migrations (external DB already migrated as its readiness proof above).
   echo "==> Applying database migrations..."
-  docker compose exec -T api npm run migrate
+  compose exec -T api npm run migrate
 fi
 
-# 6. Seed demo data (SG + MY companies under one master).
-echo "==> Seeding sample data..."
-docker compose exec -T api npm run seed || echo "    (seed skipped or already applied)"
+# 6. Demo seed is deliberately opt-in. Production/client databases should use
+# the in-app setup wizard and real client data, not Acme sample rows.
+if [ "$DEMO_SEED" = true ]; then
+  echo "==> Loading explicit demo seed data..."
+  compose exec -T -e ERP_ENV=demo -e ERP_DEMO_SEED=I_UNDERSTAND_DEMO_DATA api npm run seed
+else
+  echo "==> Skipping demo seed (use --demo-seed only for a disposable local database)."
+fi
+
+# If api was recreated while the database came up, nginx may still hold the
+# previous Compose IP for `api` in its resolver cache. Refreshing only web after
+# the API/migration gate makes the first request deterministic without touching
+# the database volume.
+echo "==> Refreshing web proxy after API readiness..."
+compose up -d --force-recreate --no-deps web
 
 WEB_PORT_ACTUAL="$(grep -E '^WEB_PORT=' .env | cut -d= -f2- || echo 8080)"
 API_PORT_ACTUAL="$(grep -E '^API_PORT=' .env | cut -d= -f2- || echo 3000)"
@@ -248,8 +278,12 @@ echo
 echo "==> Setup complete."
 echo
 echo "   Web app : http://localhost:${WEB_PORT_ACTUAL:-8080}"
-echo "   API     : http://localhost:${API_PORT_ACTUAL:-3000}"
-if [ "$EXTERNAL_DB" = false ]; then
+if [ "$PRODUCTION" = true ]; then
+  echo "   API/DB  : private Compose network (not published)"
+else
+  echo "   API     : http://localhost:${API_PORT_ACTUAL:-3000}"
+fi
+if [ "$EXTERNAL_DB" = false ] && [ "$PRODUCTION" = false ]; then
   echo "   Postgres: localhost:${DB_PORT_ACTUAL:-5432}  (db: erp)"
 fi
 echo

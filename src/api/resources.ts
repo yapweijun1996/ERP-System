@@ -57,6 +57,7 @@ import {
   salesCommissionLine,
   salesCommissionSource,
   salesEnquiry,
+  salesEnquiryLine,
   salesQuotation,
   salesQuotationLine,
   stockLevel,
@@ -127,6 +128,7 @@ import { listReportingAnalyticsWithin } from '../modules/reporting/analytics';
 import { listIntegrationEventsWithin } from '../modules/integration/eventLog';
 import { listCustomerImportJobsWithin } from '../modules/integration/customerImport';
 import { listNotificationsWithin } from '../modules/account/notification';
+import { updateDefinitionFor, type ResourceUpdateDefinition } from './updates';
 
 export interface ApiScope {
   masterFn: string;
@@ -162,6 +164,7 @@ export interface ResourceDefinition {
   allowedActions: readonly string[];
   versionColumn?: any;
   versionPolicy: 'none' | 'integer';
+  updateDefinition?: ResourceUpdateDefinition;
   idempotencyPolicy: 'none' | 'required_for_actions';
   auditPolicy: 'none' | 'writes';
   status?: any;
@@ -203,6 +206,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['update'],
     createPermission: 'inventory.write',
     updatePermission: 'inventory.write',
+    updateDefinition: updateDefinitionFor('inventory/products') ?? undefined,
   }),
   'inventory/warehouses': resource(warehouse, 'inventory.read'),
   'inventory/stock-levels': resource(stockLevel, 'inventory.read'),
@@ -293,6 +297,9 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     numericFilters: { jobId: importRowError.jobId },
   }),
   'sales/customers': resource(customer, 'sales.read', {
+    createPermission: 'sales.write',
+    updatePermission: 'sales.write',
+    updateDefinition: updateDefinitionFor('sales/customers') ?? undefined,
     scopeUserIdColumn: customer.ownerUserId,
   }),
   'sales/order-lines': resource(salesOrderLine, 'sales.read'),
@@ -359,8 +366,11 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   'sales/enquiries': resource(salesEnquiry, 'sales.read', {
     status: salesEnquiry.status,
     versionColumn: salesEnquiry.version,
-    allowedActions: ['convert-to-quotation'],
+    allowedActions: ['replace-lines', 'save-draft', 'convert-to-quotation'],
     createPermission: 'sales.write',
+  }),
+  'sales/enquiry-lines': resource(salesEnquiryLine, 'sales.read', {
+    numericFilters: { enquiryId: salesEnquiryLine.enquiryId },
   }),
   'sales/quotations': resource(salesQuotation, 'sales.read', {
     status: salesQuotation.status,
@@ -369,13 +379,19 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
     allowedActions: ['issue', 'accept', 'convert-to-order'],
     createPermission: 'sales.write',
   }),
-  'sales/quotation-lines': resource(salesQuotationLine, 'sales.read'),
+  'sales/quotation-lines': resource(salesQuotationLine, 'sales.read', {
+    numericFilters: { quotationId: salesQuotationLine.quotationId },
+  }),
   'sales/invoices': resource(invoice, 'sales.read', {
     status: invoice.status,
     customerId: invoice.customerId,
     versionColumn: invoice.version,
   }),
-  'crm/customers': resource(customer, 'crm.read'),
+  'crm/customers': resource(customer, 'crm.read', {
+    createPermission: 'crm.write',
+    updatePermission: 'crm.write',
+    updateDefinition: updateDefinitionFor('crm/customers') ?? undefined,
+  }),
   'crm/contacts': resource(contact, 'crm.read', {
     customerId: contact.customerId,
     createPermission: 'crm.write',
@@ -413,7 +429,10 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
   }),
   'finance/payment-vouchers': resource(paymentVoucher, 'finance.read', { createPermission: 'finance.write' }),
   'finance/payment-voucher-lines': resource(paymentVoucherLine, 'finance.read'),
-  'purchasing/suppliers': resource(supplier, 'purchasing.read'),
+  'purchasing/suppliers': resource(supplier, 'purchasing.read', {
+    updatePermission: 'purchasing.write',
+    updateDefinition: updateDefinitionFor('purchasing/suppliers') ?? undefined,
+  }),
   'purchasing/purchase-orders': resource(purchaseOrder, 'purchasing.read', {
     status: purchaseOrder.status,
     versionColumn: purchaseOrder.version,
@@ -653,6 +672,7 @@ function resource(
     allowedActions?: readonly string[];
     createPermission?: string;
     updatePermission?: string;
+    updateDefinition?: ResourceUpdateDefinition;
     numericFilters?: Record<string, any>;
     textFilters?: Record<string, any>;
   actorUserIdColumn?: any;
@@ -679,6 +699,7 @@ function resource(
     allowedActions: options.allowedActions ?? [],
     versionColumn: options.versionColumn,
     versionPolicy: options.versionColumn ? 'integer' : 'none',
+    updateDefinition: options.updateDefinition,
     idempotencyPolicy: options.allowedActions?.length ? 'required_for_actions' : 'none',
     auditPolicy: options.allowedActions?.length ? 'writes' : 'none',
     status: options.status,

@@ -44,3 +44,16 @@ export function withDocumentWorkerTransaction<T>(
     return command(tx);
   });
 }
+
+/** Calendar workers claim cross-tenant appointment/leave projections before a
+ * tenant is known. The production RLS policy grants this flag only to the
+ * calendar queue/source tables listed in deploy/sql/production-rls.sql. */
+export function withCalendarWorkerTransaction<T>(
+  db: DB,
+  command: (tx: DB) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.calendar_worker', 'on', true)`);
+    return command(tx);
+  });
+}

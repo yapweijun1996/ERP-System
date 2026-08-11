@@ -9,6 +9,12 @@ export const SESSION_COOKIE = 'erp_session';
 export const CSRF_COOKIE = 'erp_csrf';
 export const DEFAULT_ABSOLUTE_TTL_MS = 8 * 60 * 60 * 1000;
 export const DEFAULT_IDLE_TTL_MS = 30 * 60 * 1000;
+/** Opt-in trusted-device session: the browser still holds only an HttpOnly
+ * session cookie; the password and bearer token never enter browser storage. */
+export const REMEMBERED_ABSOLUTE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const REMEMBERED_IDLE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const NORMAL_SESSION_PREFIX = 's_';
+const REMEMBERED_SESSION_PREFIX = 'r_';
 
 export interface SessionData {
   userId: number;
@@ -24,12 +30,16 @@ export interface SessionData {
    * sessions source-compatible while they migrate to the richer identity. */
   accountState?: 'preactivated' | 'active' | 'offboarded';
   passwordChangeRequired?: boolean;
+  /** Set only while a Superadmin session is viewing a linked employee account. */
+  impersonatorUserId?: number;
+  impersonatedAt?: Date;
 }
 
 export interface NewSessionData extends SessionData {
   userAgent?: string;
   absoluteTtlMs?: number;
   idleTtlMs?: number;
+  rememberedDevice?: boolean;
 }
 
 export interface CreatedSession {
@@ -57,7 +67,12 @@ export async function createSession(db: DB, data: NewSessionData): Promise<Creat
   const absoluteTtlMs = data.absoluteTtlMs ?? DEFAULT_ABSOLUTE_TTL_MS;
   const idleTtlMs = Math.min(data.idleTtlMs ?? DEFAULT_IDLE_TTL_MS, absoluteTtlMs);
   const expiresAt = new Date(now.getTime() + absoluteTtlMs);
-  const sessionId = newToken();
+  /* Keep the remembered-device discriminator in the opaque bearer token
+   * rather than adding a database column. The prefix is not a credential and
+   * changing it invalidates the hash, so the client cannot upgrade a normal
+   * session; existing rows still use the expiry heuristic below during the
+   * rolling upgrade. */
+  const sessionId = `${data.rememberedDevice ? REMEMBERED_SESSION_PREFIX : NORMAL_SESSION_PREFIX}${newToken()}`;
   const csrfToken = newToken();
 
   const [assignment] = await db.select({ companyFn: userCompany.companyFn })
@@ -101,6 +116,8 @@ export async function getSession(
   const [row] = await db
     .select({
       userId: appSession.userId,
+      impersonatorUserId: appSession.impersonatorUserId,
+      impersonatedAt: appSession.impersonatedAt,
       masterFn: appSession.masterFn,
       activeCompanyFn: appSession.activeCompanyFn,
       username: appUser.username,
@@ -127,7 +144,10 @@ export async function getSession(
   if (!row) return null;
 
   if (options.touch !== false) {
-    const idleTtlMs = options.idleTtlMs ?? DEFAULT_IDLE_TTL_MS;
+    const remembered = sessionId.startsWith(REMEMBERED_SESSION_PREFIX)
+      || row.expiresAt.getTime() - now.getTime() > DEFAULT_ABSOLUTE_TTL_MS;
+    const idleTtlMs = options.idleTtlMs
+      ?? (remembered ? REMEMBERED_IDLE_TTL_MS : DEFAULT_IDLE_TTL_MS);
     const idleExpiresAt = new Date(Math.min(
       row.expiresAt.getTime(),
       now.getTime() + idleTtlMs,
@@ -139,7 +159,7 @@ export async function getSession(
     }).where(eq(appSession.tokenHash, tokenHash));
   }
 
-  return {
+  const identity: SessionData = {
     userId: row.userId,
     masterFn: row.masterFn,
     activeCompanyFn: row.activeCompanyFn,
@@ -150,6 +170,63 @@ export async function getSession(
     accountState: row.accountState as SessionData['accountState'],
     passwordChangeRequired: row.passwordChangeRequired,
   };
+  if (row.impersonatorUserId != null) {
+    identity.impersonatorUserId = row.impersonatorUserId;
+    if (row.impersonatedAt) identity.impersonatedAt = row.impersonatedAt;
+  }
+  return identity;
+}
+
+/**
+ * Change the effective user for one existing session while retaining the
+ * original administrator. Route-level authorization must validate the target
+ * before calling this function; the conditional update prevents nested or
+ * concurrent impersonation from silently replacing the original actor.
+ */
+export async function impersonateSession(
+  db: DB,
+  sessionId: string,
+  targetUserId: number,
+  now = new Date(),
+): Promise<SessionData | null> {
+  const current = await getSession(db, sessionId, { touch: false });
+  if (!current || current.impersonatorUserId != null || current.userId === targetUserId) return null;
+  const updated = await db.update(appSession).set({
+    userId: targetUserId,
+    impersonatorUserId: current.userId,
+    impersonatedAt: now,
+    updatedAt: now,
+  }).where(and(
+    eq(appSession.tokenHash, hashSecret(sessionId)),
+    eq(appSession.userId, current.userId),
+    isNull(appSession.impersonatorUserId),
+    isNull(appSession.revokedAt),
+  )).returning({ tokenHash: appSession.tokenHash });
+  if (!updated.length) return null;
+  return getSession(db, sessionId, { touch: false });
+}
+
+/** Restore the original Superadmin user for an impersonating session. */
+export async function returnFromImpersonation(
+  db: DB,
+  sessionId: string,
+  now = new Date(),
+): Promise<SessionData | null> {
+  const current = await getSession(db, sessionId, { touch: false });
+  if (!current?.impersonatorUserId) return null;
+  const updated = await db.update(appSession).set({
+    userId: current.impersonatorUserId,
+    impersonatorUserId: null,
+    impersonatedAt: null,
+    updatedAt: now,
+  }).where(and(
+    eq(appSession.tokenHash, hashSecret(sessionId)),
+    eq(appSession.userId, current.userId),
+    eq(appSession.impersonatorUserId, current.impersonatorUserId),
+    isNull(appSession.revokedAt),
+  )).returning({ tokenHash: appSession.tokenHash });
+  if (!updated.length) return null;
+  return getSession(db, sessionId, { touch: false });
 }
 
 export async function verifyCsrfToken(
@@ -184,6 +261,7 @@ export async function switchSessionCompany(
 ): Promise<SessionData | null> {
   const session = await getSession(db, sessionId, { touch: false });
   if (!session) return null;
+  if (session.impersonatorUserId != null) return null;
   const [assignment] = await db.select({ companyFn: userCompany.companyFn })
     .from(userCompany)
     .innerJoin(company, eq(company.companyFn, userCompany.companyFn))

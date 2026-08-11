@@ -111,7 +111,7 @@ describe('authorization explanation security boundary', () => {
     expect(body.meta).toEqual({ privileged: true, audited: true });
     expect(body.data).toMatchObject({
       allowed: true,
-      reasonCode: 'ALLOW_SUPERADMIN_COMPATIBILITY',
+      reasonCode: 'ALLOW_ROLE_PERMISSION',
       permissionKey: 'inventory.read',
       resourceKey: 'inventory/products',
     });

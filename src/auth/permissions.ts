@@ -5,9 +5,12 @@ import {
   userPermissionOverride,
 } from '../data/schema';
 import type { SessionData } from './session';
-import type { DataScope } from './accessCatalog';
+import {
+  COMPANY_OWNER_ROLE_TEMPLATE_KEY,
+  type DataScope,
+} from './accessCatalog';
 import { PERMISSIONS } from './permissionKeys';
-import { PERMISSION_REGISTRY, permissionCandidates } from './permissionRegistry';
+import { permissionCandidates } from './permissionRegistry';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
 import { authorize, principalFromSession } from './authorization';
 import { getAuthorizationVersionWithin } from './authorizationVersion';
@@ -49,6 +52,7 @@ const SCOPE_RANK: Record<DataScope, number> = {
 
 export interface EffectiveCapability {
   authorizationVersion: number;
+  isCompanyOwner: boolean;
   permissions: string[];
   scopes: Record<string, DataScope>;
   scopeGrants: Record<string, ScopeGrant[]>;
@@ -65,11 +69,13 @@ export async function effectiveCapabilities(
   session: SessionData,
   now = new Date(),
 ): Promise<EffectiveCapability> {
-  const authorizationVersion = await getAuthorizationVersionWithin(db, {
-    masterFn: session.masterFn,
-    companyFn: session.activeCompanyFn,
-  });
-  const superadmin = await isSuperadminSession(db, session, now);
+  const [authorizationVersion, isCompanyOwner] = await Promise.all([
+    getAuthorizationVersionWithin(db, {
+      masterFn: session.masterFn,
+      companyFn: session.activeCompanyFn,
+    }),
+    isCompanyOwnerSession(db, session, now),
+  ]);
   const overrides = await db.select().from(userPermissionOverride).where(and(
     eq(userPermissionOverride.masterFn, session.masterFn),
     eq(userPermissionOverride.companyFn, session.activeCompanyFn),
@@ -88,14 +94,6 @@ export async function effectiveCapabilities(
   const allowedKeys = new Set(overrides
     .filter((row) => row.effect === 'allow')
     .flatMap((row) => permissionCandidates(row.permissionKey)));
-  if (superadmin && !overrides.length) {
-    return {
-      authorizationVersion,
-      permissions: ['*'],
-      scopes: { '*': 'company' },
-      scopeGrants: {},
-    };
-  }
   const permissions = await db.select({ permissionKey: rolePermission.permissionKey })
     .from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
@@ -156,16 +154,12 @@ export async function effectiveCapabilities(
       targetId: '',
     })),
   ];
-  const capabilityPermissions = superadmin
-    ? PERMISSION_REGISTRY
-      .filter((definition) => definition.domain === 'tenant')
-      .map((definition) => definition.code)
-    : permissions.map((row) => row.permissionKey);
+  const capabilityPermissions = permissions.map((row) => row.permissionKey);
   const visiblePermissions = [...new Set([
     ...capabilityPermissions.filter((permissionKey) => permissionKey === '*' || !deniedKeys.has(permissionKey)),
     ...allowedKeys,
   ])].sort();
-  const scopes: Record<string, DataScope> = superadmin ? { '*': 'company' } : {};
+  const scopes: Record<string, DataScope> = {};
   const scopeGrants: Record<string, ScopeGrant[]> = {};
   for (const row of scopeRows) {
     const value = row.scope as DataScope;
@@ -204,6 +198,7 @@ export async function effectiveCapabilities(
   }
   return {
     authorizationVersion,
+    isCompanyOwner,
     permissions: visiblePermissions,
     scopes,
     scopeGrants,
@@ -242,13 +237,11 @@ export function scopeGrantsForResource(
   return [];
 }
 
-/**
- * True only if the session's role for its *current* company assignment is
- * Superadmin (same tenant-bounded lookup hasPermission uses, never a
- * cross-master bypass). Used by capabilities and administrative workflows
- * that need to distinguish the tenant's superadmin from ordinary role grants.
- */
-export async function isSuperadminSession(
+/** True only when the active company assignment is the explicit, immutable
+ * Company Owner role. The old function name remains as a compatibility export
+ * for callers that have not yet renamed their tenant-admin wording; it no
+ * longer recognizes the legacy `is_superadmin` bypass flag. */
+export async function isCompanyOwnerSession(
   db: DB,
   session: SessionData,
   now = new Date(),
@@ -256,7 +249,7 @@ export async function isSuperadminSession(
   const [assignment] = await db.select({
     roleMasterFn: role.masterFn,
     companyMasterFn: company.masterFn,
-    isSuperadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
   }).from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
     .innerJoin(company, eq(company.companyFn, userCompanyRole.companyFn))
@@ -266,7 +259,7 @@ export async function isSuperadminSession(
       eq(role.masterFn, session.masterFn),
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
       eq(company.masterFn, session.masterFn),
-      eq(role.isSuperadmin, true),
+      eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
       activeRoleAssignmentCondition(now),
     ))
     .limit(1);
@@ -275,5 +268,8 @@ export async function isSuperadminSession(
     assignment.roleMasterFn !== session.masterFn
     || assignment.companyMasterFn !== session.masterFn
   ) return false;
-  return assignment.isSuperadmin;
+  return assignment.sourceTemplateKey === COMPANY_OWNER_ROLE_TEMPLATE_KEY;
 }
+
+/** @deprecated Use isCompanyOwnerSession for tenant administration checks. */
+export const isSuperadminSession = isCompanyOwnerSession;

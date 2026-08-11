@@ -23,8 +23,8 @@
                           an authenticated session. DB.* is populated.
 
    Writes for stock/money (confirmOrder) still reject with a clear "not
-   available yet" error. One-time production setup is available through the
-   deployment-token-protected setup action. switchCompany DOES work through the
+   available yet" error. One-time production setup is available only while the
+   database is empty. switchCompany DOES work through the
    authenticated session action, authorized server-side against this user's user_company
    rows, and so does the TASK-024 auth flow (login/logout/needsSetup/
    isSignedIn) — real session cookies, not a local flag.
@@ -33,7 +33,15 @@
    a temporary compatibility alias while existing screens migrate.
    ============================================================ */
 (function erpSystemApiAdapter(){
-  if (typeof DB === 'undefined') return;
+  /* The API adapter is loaded beside the legacy data scripts. In some PWA
+     navigation paths the deferred/module scripts can reach this file before
+     the classic data-core script has created DB. Do not silently fall through
+     to the demo shell; defer initialization until the document lifecycle has
+     completed and the shared DB contract exists. */
+  if (typeof DB === 'undefined') {
+    window.addEventListener('DOMContentLoaded', erpSystemApiAdapter, { once: true });
+    return;
+  }
   if (typeof window.erpDataMode === 'function' && window.erpDataMode() !== 'api') return;
 
   var API_BASE = window.__ERP_API_BASE__ || '/api';
@@ -83,7 +91,7 @@
        /health when no real API exists), which would look "reachable". Require
        an actual JSON body too. */
     try {
-      var res = await fetch(HEALTH_URL, { method: 'GET' });
+      var res = await fetch(HEALTH_URL, { method: 'GET', cache: 'no-store' });
       if (!res || !res.ok) return false;
       var ct = res.headers.get('content-type') || '';
       if (ct.indexOf('json') === -1) return false;
@@ -171,8 +179,17 @@
   function get(resource,id){
     return apiRequest(resourcePath(resource)+'/'+encodeURIComponent(id));
   }
-  function create(resource,payload){
-    return apiRequest(resourcePath(resource),{method:'POST',body:payload});
+  function employeeHistory(id,query){
+    var suffix=queryString(query||{});
+    return apiRequest('hr/employees/'+encodeURIComponent(id)+'/history'+suffix);
+  }
+  function getSalesEnquiryAggregate(id){
+    return apiRequest('sales/enquiries/'+encodeURIComponent(id)+'/aggregate');
+  }
+  function create(resource,payload,idempotencyKey){
+    var headers={};
+    if(idempotencyKey) headers['Idempotency-Key']=idempotencyKey;
+    return apiRequest(resourcePath(resource),{method:'POST',headers:headers,body:payload});
   }
   function update(resource,id,payload,version){
     var headers={};
@@ -484,6 +501,81 @@
         body:{expectedVersion:Number(item.recordVersion),reason:String(reason||'')},
       });
     },
+    hrCalendarHolidays:function(query){
+      query=query||{};
+      var params=new URLSearchParams();
+      ['from','to'].forEach(function(key){
+        if(query[key]!=null&&query[key]!=='') params.set(key,String(query[key]));
+      });
+      return apiRequest('hr/calendar/holidays?'+params.toString());
+    },
+    staffCalendar:function(query){
+      query=query||{};
+      var params=new URLSearchParams();
+      ['from','to','employeeId','department','status'].forEach(function(key){
+        if(query[key]!=null&&query[key]!=='') params.set(key,String(query[key]));
+      });
+      return apiRequest('hr/calendar/staff?'+params.toString());
+    },
+    calendarConnections:function(){
+      return apiRequest('hr/calendar/connections');
+    },
+    createCalendarConnection:function(payload,idempotencyKey){
+      return apiRequest('hr/calendar/connections',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    updateCalendarConnection:function(id,payload,idempotencyKey){
+      return apiRequest('hr/calendar/connections/'+encodeURIComponent(id),{
+        method:'PATCH',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    createStaffAppointment:function(payload,idempotencyKey){
+      return apiRequest('hr/calendar/appointments',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    updateStaffAppointment:function(id,payload,idempotencyKey){
+      return apiRequest('hr/calendar/appointments/'+encodeURIComponent(id),{
+        method:'PUT',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    cancelStaffAppointment:function(id,payload,idempotencyKey){
+      return apiRequest('hr/calendar/appointments/'+encodeURIComponent(id)+'/actions/cancel',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    createHrCalendarHoliday:function(payload,idempotencyKey){
+      return apiRequest('hr/calendar/holidays',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    updateHrCalendarHoliday:function(id,payload,idempotencyKey){
+      return apiRequest('hr/calendar/holidays/'+encodeURIComponent(id),{
+        method:'PUT',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    hrCalendarHolidayAction:function(id,action,payload,idempotencyKey){
+      return apiRequest('hr/calendar/holidays/'+encodeURIComponent(id)+'/actions/'+encodeURIComponent(action),{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
     teamLeaveRequests:function(){ return apiRequest('my/team/leave-requests'); },
     teamCalendar:function(query){
       query=query||{};
@@ -492,6 +584,22 @@
         if(query[key]!=null&&query[key]!=='') params.set(key,String(query[key]));
       });
       return apiRequest('my/team/calendar?'+params.toString());
+    },
+    approvalQueue:function(){ return apiRequest('hr/leave-approval-queue'); },
+    leaveApprovalWorkflows:function(){ return apiRequest('hr/leave-workflows'); },
+    createLeaveApprovalWorkflow:function(payload,idempotencyKey){
+      return apiRequest('hr/leave-workflows',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
+    },
+    leaveApprovalWorkflowAction:function(id,name,payload,idempotencyKey){
+      return apiRequest('hr/leave-workflows/'+encodeURIComponent(id)+'/actions/'+encodeURIComponent(name),{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey||crypto.randomUUID()},
+        body:payload||{},
+      });
     },
     approvals:function(){ return apiRequest('my/approvals'); },
     approval:function(id){ return apiRequest('my/approvals/'+encodeURIComponent(id)); },
@@ -551,7 +659,9 @@
       dataMode: 'api',
       scope: payload.scope,
       companies: payload.companies,
-      /* Tenant UI receives only the effective module decision. */
+      /* /api/auth/session returns only the effective module decision for every
+         signed-in user. Master entitlement and Company allocation facts remain
+         in the separate Platform realm and are never probed from this adapter. */
       modules: Array.isArray(sessionUser && sessionUser.modules) ? sessionUser.modules : [],
     };
 
@@ -570,13 +680,27 @@
        computes company initials, for a consistent avatar convention. */
     var name = (sessionUser && sessionUser.fullName) || (sessionUser && sessionUser.email) || 'Signed-in user';
     var initials = name.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(function(w){ return w[0]; }).join('').toUpperCase() || 'U';
+    var permissionKeys = sessionUser && sessionUser.capabilities
+      ? (sessionUser.capabilities.permissions || []) : [];
+    var isCompanyOwner = Boolean(sessionUser && sessionUser.capabilities
+      && sessionUser.capabilities.isCompanyOwner);
     DB.user = {
-      name: name, email: (sessionUser && sessionUser.email) || '', initials: initials || 'U', role: 'Signed in',
-      permissionKeys: sessionUser && sessionUser.capabilities
-        ? (sessionUser.capabilities.permissions || []) : [],
+      name: name, email: (sessionUser && sessionUser.email) || '', initials: initials || 'U',
+      role: sessionUser && sessionUser.impersonatorUserId != null
+        ? 'Employee workspace' : (isCompanyOwner ? 'Company Owner' : 'Signed in'),
+      is_company_owner: isCompanyOwner,
+      impersonating: Boolean(sessionUser && sessionUser.impersonatorUserId != null),
+      impersonatorUserId: sessionUser && sessionUser.impersonatorUserId,
+      impersonatedAt: sessionUser && sessionUser.impersonatedAt,
+      permissionKeys: permissionKeys,
       companyFns: sessionUser && Array.isArray(sessionUser.companyFns)
         ? sessionUser.companyFns : [payload.scope.companyFn],
-      perms: { post: false, approve: false, salaryView: false, costView: false },
+      perms: {
+        post: permissionKeys.some(function(key){ return /\.post$/.test(key); }),
+        approve: permissionKeys.some(function(key){ return /\.approve$/.test(key); }),
+        salaryView: permissionKeys.includes('payroll.read'),
+        costView: permissionKeys.includes('finance.read'),
+      },
     };
 
     var currencySymbols = { SGD: 'S$', MYR: 'RM', USD: '$' };
@@ -628,7 +752,7 @@
   }
 
   async function fetchSession(){
-    var res = await fetch(API_BASE + '/auth/session', { method: 'GET', credentials: 'same-origin' });
+    var res = await fetch(API_BASE + '/auth/session', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
     if (!res.ok) return null;
     state.session=await jsonBody(res);
     return state.session;
@@ -681,6 +805,27 @@
       SCOPE.companyFn = previous; // don't leave SCOPE pointing at a company we failed to load
       throw e;
     }
+  }
+
+  async function impersonateUser(userId, reason){
+    var response=await apiRequest('auth/session/actions/impersonate',{
+      method:'POST',
+      body:{targetUserId:Number(userId),reason:String(reason||'')},
+    });
+    state.session=await fetchSession();
+    return response.data;
+  }
+
+  async function returnToAdmin(){
+    var response=await apiRequest('auth/session/actions/return-to-superadmin',{
+      method:'POST',body:{},
+    });
+    state.session=await fetchSession();
+    return response.data;
+  }
+
+  function employeeWorkspaceTargets(){
+    return apiRequest('auth/session/employee-workspace-targets');
   }
 
   async function createStaffAccount(input){
@@ -738,7 +883,7 @@
   async function needsSetup(){
     if (state.mode === 'api-unavailable') return false; // renderApiUnavailable() already covers this
     try {
-      var res = await fetch(API_BASE + '/setup/status', { method: 'GET', credentials: 'same-origin' });
+      var res = await fetch(API_BASE + '/setup/status', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
       if (!res.ok) return false;
       var body = await jsonBody(res);
       return !(body && body.hasAdmin);
@@ -755,7 +900,11 @@
     try {
       var session=await fetchSession();
       if(!session) return false;
-      if(session.passwordChangeRequired) return true;
+      /* A preactivated employee must see activation when signing in directly,
+         but Superadmin employee-workspace impersonation is already audited and
+         must still load the real employee shell. Returning early here leaves
+         DB populated with the static demo defaults. */
+      if(session.passwordChangeRequired && session.impersonatorUserId == null) return true;
       await loadAuthenticatedShell();
       return true;
     } catch {
@@ -763,14 +912,17 @@
     }
   }
 
-  async function login(organizationCode, username, password){
+  async function login(organizationCode, username, password, options){
+    options=options||{};
     var res = await fetch(API_BASE + '/auth/login', {
       method: 'POST', credentials: 'same-origin',
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         organizationCode: organizationCode,
         username: username,
         password: password,
+        rememberDevice: options.rememberDevice===true,
       }),
     });
     if (!res.ok){
@@ -781,7 +933,15 @@
       throw new Error(message);
     }
     state.session=await jsonBody(res);
-    return state.session;
+    /* A successful POST is not enough: some privacy browsers or proxy
+       configurations can accept the response but fail to retain its cookie.
+       Prove the new server session is reusable before reloading the app. */
+    var persisted=await fetchSession();
+    if(!persisted){
+      state.session=null;
+      throw new Error('Sign-in succeeded, but this browser did not retain the session cookie. Enable cookies for this ERP site and try again.');
+    }
+    return persisted;
   }
 
   async function completeActivation(input){
@@ -800,11 +960,8 @@
 
   async function completeSetup(input){
     input=input||{};
-    var setupToken=String(input.setupToken||'');
-    if(!setupToken) throw new Error('The deployment setup token is required.');
     var response=await apiRequest('setup/actions/complete',{
       method:'POST',
-      headers:{'X-ERP-Setup-Token':setupToken},
       body:{
         organizationName:input.masterName,
         organizationCode:input.organizationCode,
@@ -826,10 +983,13 @@
     refresh: refresh,
     list:list,
     get:get,
+    employeeHistory:employeeHistory,
+    getSalesEnquiryAggregate:getSalesEnquiryAggregate,
     create:create,
     update:update,
     action:action,
     session:fetchSession,
+    employeeWorkspaceTargets:employeeWorkspaceTargets,
     completeActivation:completeActivation,
     financeReports:financeReports,
     companyReceipts:function(query){
@@ -842,6 +1002,18 @@
       if(query.dateTo) params.set('dateTo',String(query.dateTo));
       var suffix=params.toString();
       return apiRequest('company-receipts'+(suffix?'?'+suffix:''));
+    },
+    companyReceiptConfirmation:function(documentVersionId){
+      return apiRequest('company-receipts/confirmations/'+encodeURIComponent(documentVersionId));
+    },
+    createCompanyReceipt:function(payload){
+      return apiRequest('company-receipts',{method:'POST',body:payload||{}});
+    },
+    updateCompanyReceipt:function(receiptId,payload){
+      return apiRequest('company-receipts/'+encodeURIComponent(receiptId),{method:'PATCH',body:payload||{}});
+    },
+    voidCompanyReceipt:function(receiptId,payload){
+      return apiRequest('company-receipts/'+encodeURIComponent(receiptId)+'/actions/void',{method:'POST',body:payload||{}});
     },
     companyReceiptPack:function(payload){
       return apiRequest('company-receipts/packs',{method:'POST',body:payload||{}});
@@ -876,12 +1048,14 @@
     commitOnboardingImport:commitOnboardingImport,
     goLiveCompany:goLiveCompany,
     switchCompany: switchCompany,
+    impersonateUser: impersonateUser,
+    returnToAdmin: returnToAdmin,
     /* TASK-024 additions — demo adapter implements the same names locally. */
     needsSetup: needsSetup,
     isSignedIn: isSignedIn,
     login: login,
     logout: logout,
-    switchUser: function(){ return Promise.reject(new Error('Switching user without signing in as them is not offered in production mode — sign out and sign in as the other user instead.')); },
+    switchUser: function(){ return Promise.reject(new Error('Switching user without signing in as them is not offered in production mode — use the audited employee workspace action instead.')); },
     auth: {
       needsSetup:needsSetup,
       isSignedIn:isSignedIn,
@@ -889,7 +1063,7 @@
       logout:logout,
       completeActivation:completeActivation,
     },
-    get activationRequired(){ return Boolean(state.session&&state.session.passwordChangeRequired); },
+    get activationRequired(){ return Boolean(state.session&&state.session.passwordChangeRequired&&!state.session.impersonatorUserId); },
     get mode(){ return state.mode; },
     get db(){ return null; },
   };

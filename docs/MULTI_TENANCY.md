@@ -224,8 +224,10 @@ document id/hash before bytes are composed. A platform support principal receive
 implicit Company Receipt access, and a disabled Expenses & Tax entitlement must deny
 the UI route and every direct API/background path. Own/company visibility is an
 authorization scope over the same aggregate—not a client filter—and is implemented for
-list/detail reads. TASK-182 owns the final canonical/module-entitlement cutover; the
-current Pack path is permission-gated but remains under the pre-cutover tenant MAC.
+list/detail reads. TASK-182 completes the canonical/module-entitlement cutover: the
+commercial `expenses_tax` route and `/api/company-receipts` first require Master enabled
+AND Company allocated, then apply explicit tenant permission/scope. The Pack continues to
+use its creator and read-scope guard; neither path reintroduces tenant MAC authority.
 
 ## Master entitlement and Company allocation foundation
 

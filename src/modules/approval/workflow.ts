@@ -434,6 +434,7 @@ async function notifyStep(
   scope: Scope,
   authority: ResolvedAuthority,
   input: {
+    domain: string;
     subject: string;
     detail: string;
     entityRef: string;
@@ -441,14 +442,26 @@ async function notifyStep(
   },
   now: Date,
 ) {
-  const recipients = await authorityRecipients(exec, scope, authority);
+  const recipients = await authorityRecipients(exec, scope, authority, now);
+  /* The destination is part of the approval contract. HR permission
+     authorities must open the HR queue; direct/named employee authorities use
+     the actor-owned My Approvals queue. Sending every approval to
+     `my-approvals` makes HR users hit /api/my/context with no employee-self
+     grant and produces a misleading 403 after a valid notification click. */
+  const route = input.domain === 'leave'
+    && authority.type === 'permission'
+    && String(authority.permissionKey || '').startsWith('hr.')
+    ? 'leave-approval'
+    : input.domain === 'leave' || input.domain === 'expense'
+      ? 'my-approvals'
+      : null;
   for (const recipient of recipients) {
     await deliverNotificationWithin(exec, scope, recipient, {
       kind: 'approval_required',
       severity: input.severity ?? 'info',
       subject: input.subject,
       detail: input.detail,
-      route: 'my-approvals',
+      ...(route ? { route } : {}),
       entityRef: input.entityRef,
     }, now);
   }
@@ -552,6 +565,7 @@ export async function startApprovalWithin(
     occurredAt: now,
   });
   await notifyStep(exec, scope, steps[0].authority, {
+    domain: input.domain,
     subject: `${input.domain} approval required`,
     detail: `${input.entityType} #${input.entityId} is awaiting ${steps[0].label}.`,
     entityRef: `${input.entityType}:${input.entityId}`,
@@ -728,6 +742,7 @@ async function activateStep(
   exec: DB,
   scope: Scope,
   instanceId: number,
+  domain: string,
   step: typeof approvalInstanceStep.$inferSelect,
   now: Date,
 ) {
@@ -757,6 +772,7 @@ async function activateStep(
     userId: step.currentAuthorityUserId,
     permissionKey: step.currentAuthorityPermissionKey,
   }, {
+    domain,
     subject: 'Approval step required',
     detail: `Approval #${instanceId} is awaiting ${step.label}.`,
     entityRef: `approval:${instanceId}`,
@@ -902,7 +918,7 @@ export async function decideApprovalWithin(
       currentStepNo: next.stepNo,
       updatedAt: now,
     }).where(eq(approvalInstance.id, instance.id));
-    await activateStep(exec, scope, instance.id, next, now);
+    await activateStep(exec, scope, instance.id, instance.domain, next, now);
     return {
       id: instance.id,
       decisionId: decision.id,
@@ -1182,6 +1198,7 @@ export async function processApprovalTimersWithin(
         userId: row.step.currentAuthorityUserId,
         permissionKey: row.step.currentAuthorityPermissionKey,
       }, {
+        domain: row.instance.domain,
         subject: 'Approval reminder',
         detail: `Approval #${row.instance.id} is still awaiting ${row.step.label}.`,
         entityRef: `approval:${row.instance.id}`,
@@ -1216,6 +1233,7 @@ export async function processApprovalTimersWithin(
         userId: row.step.escalationAuthorityUserId,
         permissionKey: row.step.escalationAuthorityPermissionKey,
       }, {
+        domain: row.instance.domain,
         subject: 'Approval escalated',
         detail: `Approval #${row.instance.id} escalated to you for ${row.step.label}.`,
         entityRef: `approval:${row.instance.id}`,
@@ -1278,6 +1296,10 @@ export async function listApprovalQueueWithin(
         stepActivatedAt: row.step.activatedAt,
         stepDueAt: row.step.escalationDueAt,
         escalatedAt: row.step.escalatedAt,
+        currentAuthorityType: row.step.currentAuthorityType,
+        currentAuthorityEmployeeId: row.step.currentAuthorityEmployeeId,
+        currentAuthorityUserId: row.step.currentAuthorityUserId,
+        currentAuthorityPermissionKey: row.step.currentAuthorityPermissionKey,
       });
     }
   }

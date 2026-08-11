@@ -784,7 +784,7 @@ describe('actor-owned My Work API', () => {
       data: { capabilities: { team: { available: boolean; employeeCount: number } } };
     };
     expect(contextBody.data.capabilities.team.available).toBe(true);
-    // Four seeded direct reports plus the explicit three-person tree.
-    expect(contextBody.data.capabilities.team.employeeCount).toBe(7);
+    // Nine seeded direct reports plus the explicit three-person tree.
+    expect(contextBody.data.capabilities.team.employeeCount).toBe(12);
   });
 });

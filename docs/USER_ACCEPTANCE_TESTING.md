@@ -189,18 +189,28 @@ screenshots are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
 - [ ] Physical-phone acceptance — Blocked by TASK-017; no emulator claim substitutes
       for a real device.
 
-## Expenses & Tax v1 — Company Receipts (in progress)
+## Expenses & Tax v1 — Company Receipts (implementation verification complete)
 
-Current TASK-179 evidence: explicit own/company list/detail authorization is covered in
+Current TASK-182 evidence: explicit own/company list/detail authorization is covered in
 domain/API tests; the Demo/API route uses bounded cursor reads; and a dedicated
 1440×900 / 390×844 browser test verifies the eight required desktop fields, labelled
-mobile cards, load-more pagination and no page overflow. The checklist remains open
-because module entitlement and full persisted journey/release proof belong to
-TASK-182–183. TASK-180 search/date/Missing Date browser proof and TASK-181's immutable
-Pack preview/download/Print E2E plus five-language desktop/mobile route audit now pass.
+mobile cards, load-more pagination and no page overflow. The checklist remains open for
+human UAT; its automated persisted-journey proof is completed by TASK-183. Its completed
+scripted evidence adds the confirmation entry: an API-shaped adapter proves form-to-create
+metadata hand-off, and a real PGlite run uploads a JPEG, simulates the external worker
+marking that exact document version clean, confirms it and finds it after register
+refresh. The latter is not a claim that static Demo provides a malware scanner; fresh
+Demo uploads remain fail-closed as `scanner unavailable`. TASK-182 completes the
+platform-owned module entitlement and canonical mutation permission checks. TASK-180
+search/date/Missing Date browser proof and TASK-181's immutable Pack preview/download/
+Print E2E plus five-language desktop/mobile route audit now pass. A separate authenticated
+same-origin API-mode browser harness passes confirmation through Print and 375px rendering
+against an isolated PGlite fixture. The same authenticated journey also passes a newly
+created empty disposable PostgreSQL 16 database. Neither fixture is production proof.
 
-- [ ] Open `Expenses & Tax → Company Receipts` only when module entitlement and an
-      effective receipt capability allow it; direct URL/API attempts otherwise deny.
+- [x] Open `Expenses & Tax → Company Receipts` only when platform Master entitlement,
+      Company allocation and an effective receipt capability allow it; direct URL/API
+      attempts otherwise deny with `module_not_enabled` before tenant authorization.
 - [ ] Capture or upload JPEG, PNG, HEIC/HEIF and PDF; verify 20 MB/20-page, MIME/magic,
       duplicate and quarantine failures preserve safe existing records.
 - [ ] Review OCR suggestions, manually correct merchant/number/date/amount/currency/
@@ -216,8 +226,9 @@ Pack preview/download/Print E2E plus five-language desktop/mobile route audit no
 - [x] Use one A4 PDF without application chrome for Preview, download and Print;
       invalid/empty creation and render failure do not mutate receipt records.
 
-This checklist is not evidence of implementation. TASK-183 may check these boxes only
-after final entitlement/canonical authorization and complete browser proof pass.
+This checklist is not evidence of implementation. TASK-183's automated proof is complete,
+including the disposable PostgreSQL 16 browser path; human UAT and any production
+deployment decision remain separate.
 
 ## Planned Platform Module Entitlement acceptance (EPIC-064)
 
@@ -248,10 +259,11 @@ all of the following pass:
 - [ ] Platform password session expires within one hour, cannot be remembered and is
       rate-limited. Absence of MFA remains a recorded release risk rather than a pass.
 
-This section remains final-cutover acceptance, not release evidence. TASK-185's focused
-suite proves the platform foundation; TASK-186 focused tests prove tenant authority
-removal, default application, dual-layer masking and mapped API denial. TASK-187 adds
-focused API coverage for independent password/cookie login, exact-user simulation,
-workspace mutation lockout and dual-actor audit, plus an API-mode browser login/workspace
-smoke. It is not yet TASK-188's complete browser, dual-mode, cross-engine or release
-proof.
+This section remains final-cutover human acceptance, not release evidence. TASK-185's
+focused suite proves the platform foundation; TASK-186 focused tests prove tenant
+authority removal, default application, dual-layer masking and mapped API denial.
+TASK-187 adds focused API coverage for independent password/cookie login, exact-user
+simulation, workspace mutation lockout and dual-actor audit, plus an API-mode browser
+login/workspace smoke. TASK-188 subsequently completed the recorded automated browser,
+dual-mode, cross-engine and release-gate proof. The unchecked items above remain human
+acceptance criteria and must not be inferred from that automated evidence.

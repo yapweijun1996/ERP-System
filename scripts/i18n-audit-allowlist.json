@@ -96,6 +96,13 @@
     "Account Executive",
     "Procurement Manager",
     "Superadmin"
+    ,"Company Owner"
+    ,"Avery Tan · Company Owner"
+    ,"Company Owner · Acme Singapore"
+    ,"Superadmin, Company Owner, Manager, Employee"
+    ,"Demo Operator"
+    ,"Superadmin, Company Owner, Manager, Demo Operator, Employee"
+    ,"company_owner"
     ,"Widget (SG)"
     ,"Gadget (SG)"
     ,"SR · 9%"
@@ -117,6 +124,22 @@
     ,"Demo replenishment"
     ,"Superadmin · Acme Singapore"
     ,"Avery Tan · Superadmin"
+    ,"National Day import"
+    ,"Company year-end holiday"
+    ,"Controlled demo leave case C-SG-11"
+    ,"TRAVEL, FUEL"
+    ,"https://openrouter.ai/api/v1"
+    ,"google/gemini-2.5-flash"
+    ,"Administration"
+    ,"Chen Wei"
+    ,"Mei Lin"
+    ,"Nur Aisyah"
+    ,"Ravi Kumar"
+    ,"Siti Aminah"
+    ,"Grace Lee"
+    ,"Linh Nguyen"
+    ,"Marcus Ong"
+    ,"Avery Tan"
   ],
   "businessTextPatterns": [
     "^[A-Z]{2,}(?:[-_/][A-Z0-9]+)+$",

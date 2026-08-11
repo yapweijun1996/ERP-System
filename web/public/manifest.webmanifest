@@ -1,8 +1,8 @@
 {
   "id": ".",
-  "name": "ERP System Demo",
-  "short_name": "ERP System",
-  "description": "Static ERP demo for Acme Singapore with offline-ready shell and update prompt.",
+  "name": "Aria ERP",
+  "short_name": "Aria ERP",
+  "description": "Aria ERP workspace with an offline-ready shell and update prompt.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
@@ -15,19 +15,19 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "icons/icon-192.png?v=20260809-aria-brand-v1",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/icon-512.png?v=20260809-aria-brand-v1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/maskable-512.png",
+      "src": "icons/maskable-512.png?v=20260809-aria-brand-v1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -39,21 +39,21 @@
       "short_name": "Dashboard",
       "description": "Open the ERP dashboard.",
       "url": ".#dashboard",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192.png?v=20260809-aria-brand-v1", "sizes": "192x192" }]
     },
     {
       "name": "Sales",
       "short_name": "Sales",
       "description": "Open sales workspace.",
       "url": ".#sales-home",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192.png?v=20260809-aria-brand-v1", "sizes": "192x192" }]
     },
     {
       "name": "Inventory",
       "short_name": "Inventory",
       "description": "Open stock on hand.",
       "url": ".#stock-on-hand",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192.png?v=20260809-aria-brand-v1", "sizes": "192x192" }]
     }
   ]
 }

@@ -5,6 +5,7 @@ import type { DB } from '../../src/data/db';
 import type { Scope } from '../../src/data/repo';
 import { seedDemo } from '../../src/data/seed';
 import { hasPermission } from '../../src/auth/permissions';
+import { appendAudit, listEntityAudit } from '../../src/api/audit';
 import { validateReceiptUpload } from '../../src/modules/documents/receiptValidation';
 import {
   activeEmployeeSecret,
@@ -27,6 +28,21 @@ import {
 } from '../../src/modules/hr/actorScope';
 import { listTeamCalendarWithin } from '../../src/modules/hr/teamCalendar';
 import {
+  cancelStaffAppointmentWithin,
+  createStaffAppointmentWithin,
+  listStaffAppointmentsWithin,
+  updateStaffAppointmentWithin,
+} from '../../src/modules/hr/appointment';
+import { enqueueStaffAppointmentCalendarSyncWithin } from '../../src/modules/hr/calendarSync';
+import { listStaffCalendarWithin } from '../../src/modules/hr/staffCalendar';
+import { listCalendarHolidaysWithin } from '../../src/modules/hr/holidayCalendar';
+import {
+  createCalendarHolidayDraftWithin,
+  decideCalendarHolidayWithin,
+  submitCalendarHolidayWithin,
+  updateCalendarHolidayDraftWithin,
+} from '../../src/modules/hr/holidayManagement';
+import {
   amendLeaveApplicationWithin,
   createLeaveDraftWithin,
   decideGovernedLeaveWithin,
@@ -42,6 +58,13 @@ import {
   listMyLeaveApprovalsWithin,
   readMyLeaveApprovalWithin,
 } from '../../src/modules/hr/leaveApproval';
+import {
+  confirmLeaveApprovalWorkflowWithin,
+  createLeaveApprovalWorkflowDraftWithin,
+  listLeaveApprovalWorkflowsWithin,
+  retireLeaveApprovalWorkflowWithin,
+  type LeaveApprovalWorkflowInput,
+} from '../../src/modules/hr/leaveApprovalWorkflow';
 import {
   listEmployeeExpenseClaimsWithin,
   readEmployeeExpenseClaimWithin,
@@ -67,6 +90,12 @@ import {
   renderCompanyReceiptPackPdf,
   type CompanyReceiptPackFacts,
 } from '../../src/modules/expenses/companyReceiptPackPdf';
+import {
+  createCompanyReceiptWithin,
+  readCompanyReceiptConfirmationWithin,
+  updateCompanyReceiptWithin,
+  voidCompanyReceiptWithin,
+} from '../../src/modules/expenses/companyReceipt';
 import type { EvidencePdfDocument } from '../../src/modules/documents/evidencePdf';
 import {
   accessReimbursementBankExportWithin,
@@ -97,6 +126,12 @@ import {
   createContactWithin,
   type CreateContactInput,
 } from '../../src/modules/crm/contact';
+import {
+  createCustomerWithin,
+  updateCustomerWithin,
+  type CreateCustomerInput,
+  type UpdateCustomerInput,
+} from '../../src/modules/crm/customer';
 import {
   createCustomerActivityWithin,
   type CreateCustomerActivityInput,
@@ -129,6 +164,10 @@ import {
   postSupplierDebitNoteWithin,
   type CreateSupplierDebitNoteInput,
 } from '../../src/modules/purchasing/supplierDebitNote';
+import {
+  updateSupplierWithin,
+  type UpdateSupplierInput,
+} from '../../src/modules/purchasing/supplier';
 import {
   allocateLandedCostWithin,
   createLandedCostWithin,
@@ -230,10 +269,15 @@ import {
   convertQuotationToOrderWithin,
   createSalesEnquiryWithin,
   createSalesQuotationWithin,
+  getSalesEnquiryAggregateWithin,
+  replaceSalesEnquiryLinesWithin,
+  saveSalesEnquiryDraftWithin,
   transitionQuotationWithin,
   type ConvertEnquiryInput,
   type CreateSalesEnquiryInput,
   type CreateSalesQuotationInput,
+  type ReplaceSalesEnquiryLinesInput,
+  type SaveSalesEnquiryDraftInput,
 } from '../../src/modules/sales/quotation';
 import {
   createSalesReturnWithin,
@@ -281,7 +325,9 @@ import {
 } from '../../src/modules/assets/depreciationRun';
 import {
   createEmployeeWithin,
+  updateEmployeeWithin,
   type CreateEmployeeInput,
+  type UpdateEmployeeInput,
 } from '../../src/modules/hr/employee';
 import { projectEmployeeAnnualLeaveWithin } from '../../src/modules/hr/leaveBalance';
 import {
@@ -366,7 +412,6 @@ import {
   listRoleScopes,
   listRoles,
 } from '../../src/api/admin';
-import { appendAudit } from '../../src/api/audit';
 import {
   createInvitationRecordWithin,
   cloneRoleTemplateWithin,
@@ -503,6 +548,27 @@ export const erpDemoRuntime = Object.freeze({
       documents: EvidencePdfDocument[],
     ) {
       return renderCompanyReceiptPackPdf(pack, documents);
+    },
+    createCompanyReceiptWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, input: Parameters<typeof createCompanyReceiptWithin>[3],
+    ) {
+      return createCompanyReceiptWithin(asDomainDb(db), scope, actorUserId, input);
+    },
+    readCompanyReceiptConfirmationWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, documentVersionId: number,
+    ) {
+      return readCompanyReceiptConfirmationWithin(asDomainDb(db), scope, actorUserId, documentVersionId);
+    },
+    updateCompanyReceiptWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, receiptId: number, expectedVersion: unknown,
+      input: Parameters<typeof updateCompanyReceiptWithin>[5],
+    ) {
+      return updateCompanyReceiptWithin(asDomainDb(db), scope, actorUserId, receiptId, expectedVersion, input);
+    },
+    voidCompanyReceiptWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, receiptId: number, expectedVersion: unknown, reason: unknown,
+    ) {
+      return voidCompanyReceiptWithin(asDomainDb(db), scope, actorUserId, receiptId, expectedVersion, reason);
     },
     hasPermissionWithin(
       db: DemoOrm,
@@ -766,8 +832,14 @@ export const erpDemoRuntime = Object.freeze({
       db: DemoOrm,
       scope: Scope,
       actorUserId: number,
+      now?: Date,
     ) {
-      return listMyLeaveApprovalsWithin(asDomainDb(db), scope, actorUserId);
+      return listMyLeaveApprovalsWithin(
+        asDomainDb(db),
+        scope,
+        actorUserId,
+        now,
+      );
     },
     readMyLeaveApprovalWithin(
       db: DemoOrm,
@@ -776,6 +848,27 @@ export const erpDemoRuntime = Object.freeze({
       requestId: number,
     ) {
       return readMyLeaveApprovalWithin(asDomainDb(db), scope, actorUserId, requestId);
+    },
+    listLeaveApprovalWorkflowsWithin(db: DemoOrm, scope: Scope) {
+      return listLeaveApprovalWorkflowsWithin(asDomainDb(db), scope);
+    },
+    createLeaveApprovalWorkflowDraftWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: LeaveApprovalWorkflowInput,
+    ) {
+      return createLeaveApprovalWorkflowDraftWithin(asDomainDb(db), scope, input);
+    },
+    confirmLeaveApprovalWorkflowWithin(
+      db: DemoOrm,
+      scope: Scope,
+      versionId: number,
+      actorUserId: number,
+    ) {
+      return confirmLeaveApprovalWorkflowWithin(asDomainDb(db), scope, versionId, actorUserId);
+    },
+    retireLeaveApprovalWorkflowWithin(db: DemoOrm, scope: Scope, versionId: number) {
+      return retireLeaveApprovalWorkflowWithin(asDomainDb(db), scope, versionId);
     },
     decideGovernedLeaveWithin(
       db: DemoOrm,
@@ -839,6 +932,110 @@ export const erpDemoRuntime = Object.freeze({
       query: Parameters<typeof listTeamCalendarWithin>[3],
     ) {
       return listTeamCalendarWithin(asDomainDb(db), scope, employeeIds, query);
+    },
+    listStaffCalendarWithin(
+      db: DemoOrm,
+      scope: Scope,
+      employeeIds: number[],
+      query: Parameters<typeof listStaffCalendarWithin>[3],
+    ) {
+      return listStaffCalendarWithin(asDomainDb(db), scope, employeeIds, query);
+    },
+    listStaffAppointmentsWithin(
+      db: DemoOrm,
+      scope: Scope,
+      employeeIds: number[],
+      query: Parameters<typeof listStaffAppointmentsWithin>[3],
+    ) {
+      return listStaffAppointmentsWithin(asDomainDb(db), scope, employeeIds, query);
+    },
+    createStaffAppointmentWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: Parameters<typeof createStaffAppointmentWithin>[2],
+      actorUserId: number,
+    ) {
+      return createStaffAppointmentWithin(asDomainDb(db), scope, input, actorUserId);
+    },
+    enqueueStaffAppointmentCalendarSyncWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: Parameters<typeof enqueueStaffAppointmentCalendarSyncWithin>[2],
+      now?: Date,
+    ) {
+      return enqueueStaffAppointmentCalendarSyncWithin(asDomainDb(db), scope, input, now);
+    },
+    updateStaffAppointmentWithin(
+      db: DemoOrm,
+      scope: Scope,
+      appointmentId: number,
+      expectedVersion: number,
+      input: Parameters<typeof updateStaffAppointmentWithin>[4],
+      actorUserId: number,
+    ) {
+      return updateStaffAppointmentWithin(
+        asDomainDb(db), scope, appointmentId, expectedVersion, input, actorUserId,
+      );
+    },
+    cancelStaffAppointmentWithin(
+      db: DemoOrm,
+      scope: Scope,
+      appointmentId: number,
+      expectedVersion: number,
+      actorUserId: number,
+    ) {
+      return cancelStaffAppointmentWithin(
+        asDomainDb(db), scope, appointmentId, expectedVersion, actorUserId,
+      );
+    },
+    listCalendarHolidaysWithin(
+      db: DemoOrm,
+      scope: Scope,
+      query: Parameters<typeof listCalendarHolidaysWithin>[2],
+    ) {
+      return listCalendarHolidaysWithin(asDomainDb(db), scope, query);
+    },
+    createCalendarHolidayDraftWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: Parameters<typeof createCalendarHolidayDraftWithin>[2],
+    ) {
+      return createCalendarHolidayDraftWithin(asDomainDb(db), scope, input);
+    },
+    updateCalendarHolidayDraftWithin(
+      db: DemoOrm,
+      scope: Scope,
+      holidayId: number,
+      expectedVersion: number,
+      input: Parameters<typeof updateCalendarHolidayDraftWithin>[4],
+    ) {
+      return updateCalendarHolidayDraftWithin(
+        asDomainDb(db), scope, holidayId, expectedVersion, input,
+      );
+    },
+    submitCalendarHolidayWithin(
+      db: DemoOrm,
+      scope: Scope,
+      holidayId: number,
+      expectedVersion: number,
+      actorUserId: number,
+    ) {
+      return submitCalendarHolidayWithin(
+        asDomainDb(db), scope, holidayId, expectedVersion, actorUserId,
+      );
+    },
+    decideCalendarHolidayWithin(
+      db: DemoOrm,
+      scope: Scope,
+      holidayId: number,
+      expectedVersion: number,
+      decision: 'approve' | 'reject',
+      actorUserId: number,
+      reason?: string,
+    ) {
+      return decideCalendarHolidayWithin(
+        asDomainDb(db), scope, holidayId, expectedVersion, decision, actorUserId, reason,
+      );
     },
     readEmployeeAccount(db: DemoOrm, scope: Scope, employeeId: number) {
       return readEmployeeAccount(asDomainDb(db), scope, employeeId);
@@ -1000,6 +1197,12 @@ export const erpDemoRuntime = Object.freeze({
     updateProductWithin(db: DemoOrm, scope: Scope, productId: number, input: UpdateProductInput) {
       return updateProductWithin(asDomainDb(db), scope, productId, input);
     },
+    updateCustomerWithin(db: DemoOrm, scope: Scope, customerId: number, input: UpdateCustomerInput) {
+      return updateCustomerWithin(asDomainDb(db), scope, customerId, input);
+    },
+    updateSupplierWithin(db: DemoOrm, scope: Scope, supplierId: number, input: UpdateSupplierInput) {
+      return updateSupplierWithin(asDomainDb(db), scope, supplierId, input);
+    },
     createWarehouseBinWithin(db: DemoOrm, scope: Scope, input: CreateWarehouseBinInput) {
       return createWarehouseBinWithin(asDomainDb(db), scope, input);
     },
@@ -1090,6 +1293,25 @@ export const erpDemoRuntime = Object.freeze({
       input: CreateSalesQuotationInput,
     ) {
       return createSalesQuotationWithin(asDomainDb(db), scope, input);
+    },
+    getSalesEnquiryAggregateWithin(db: DemoOrm, scope: Scope, enquiryId: number) {
+      return getSalesEnquiryAggregateWithin(asDomainDb(db), scope, enquiryId);
+    },
+    replaceSalesEnquiryLinesWithin(
+      db: DemoOrm,
+      scope: Scope,
+      enquiryId: number,
+      input: ReplaceSalesEnquiryLinesInput,
+    ) {
+      return replaceSalesEnquiryLinesWithin(asDomainDb(db), scope, enquiryId, input);
+    },
+    saveSalesEnquiryDraftWithin(
+      db: DemoOrm,
+      scope: Scope,
+      enquiryId: number,
+      input: SaveSalesEnquiryDraftInput,
+    ) {
+      return saveSalesEnquiryDraftWithin(asDomainDb(db), scope, enquiryId, input);
     },
     convertEnquiryToQuotationWithin(
       db: DemoOrm,
@@ -1214,6 +1436,14 @@ export const erpDemoRuntime = Object.freeze({
     ) {
       return createEmployeeWithin(asDomainDb(db), scope, input, actorUserId);
     },
+    updateEmployeeWithin(
+      db: DemoOrm,
+      scope: Scope,
+      employeeId: number,
+      input: UpdateEmployeeInput,
+    ) {
+      return updateEmployeeWithin(asDomainDb(db), scope, employeeId, input);
+    },
     projectEmployeeAnnualLeaveWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return projectEmployeeAnnualLeaveWithin(asDomainDb(db), scope, employeeId);
     },
@@ -1334,6 +1564,9 @@ export const erpDemoRuntime = Object.freeze({
     },
     listAuditLog(db: DemoOrm, scope: Scope, query: { limit?: number; cursor?: number } = {}) {
       return listAuditLog(asDomainDb(db), scope.masterFn, scope.companyFn, query);
+    },
+    listEntityAudit(db: DemoOrm, scope: Scope, entity: string, entityId: string | number, limit = 50) {
+      return listEntityAudit(asDomainDb(db), scope, entity, entityId, limit);
     },
     listPersonalActivityWithin(
       db: DemoOrm,
@@ -1508,6 +1741,8 @@ export const erpDemoRuntime = Object.freeze({
       entity: string,
       entityId: number | string | null,
       action: string,
+      before?: unknown,
+      after?: unknown,
     ) {
       return appendAudit(asDomainDb(db), {
         masterFn: scope.masterFn,
@@ -1517,6 +1752,8 @@ export const erpDemoRuntime = Object.freeze({
         entity,
         entityId,
         action,
+        before,
+        after,
       });
     },
     confirmSalesOrder(db: DemoOrm, scope: Scope, input: ConfirmOrderInput) {
@@ -1662,6 +1899,14 @@ export const erpDemoRuntime = Object.freeze({
     },
     createContactWithin(db: DemoOrm, scope: Scope, input: CreateContactInput) {
       return createContactWithin(asDomainDb(db), scope, input);
+    },
+    createCustomerWithin(
+      db: DemoOrm,
+      scope: Scope,
+      input: CreateCustomerInput,
+      ownerUserId?: number,
+    ) {
+      return createCustomerWithin(asDomainDb(db), scope, input, ownerUserId);
     },
     createCustomerActivityWithin(db: DemoOrm, scope: Scope, input: CreateCustomerActivityInput) {
       return createCustomerActivityWithin(asDomainDb(db), scope, input);

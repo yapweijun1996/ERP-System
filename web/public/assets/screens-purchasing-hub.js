@@ -186,6 +186,7 @@ async function prepareCanonicalPurchasingData(){
     id:row.id,
     code:row.code,
     name:row.name,
+    updatedAt:row.updatedAt,
     contact:'—',
     phone:'—',
     email:'—',

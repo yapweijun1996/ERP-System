@@ -128,7 +128,14 @@ SCREENS['notifications'] = async function(root){
     root.querySelectorAll('#notificationFilters .chip').forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;render();}));
     root.querySelectorAll('.notification-row').forEach(row=>row.addEventListener('click',async event=>{
       if(event.target.closest('[data-notification-action]'))return;
-      try{if(row.classList.contains('unread'))await markNotificationRead(row.dataset.id);refreshNotifs();if(row.dataset.route)navigate(row.dataset.route);else{rows=DB.notifications.slice();render();}}catch(error){toast((error&&error.message)||p.loadError,'danger');}
+      try{
+        if(row.classList.contains('unread')) await markNotificationRead(row.dataset.id);
+        refreshNotifs();
+        const destination=row.dataset.route
+          ?notificationDestination({route:row.dataset.route}) : '';
+        if(destination) navigate(destination);
+        else{ rows=DB.notifications.slice(); render(); }
+      }catch(error){toast((error&&error.message)||p.loadError,'danger');}
     }));
     root.querySelectorAll('[data-notification-action]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();run(button.dataset.notificationAction,button.closest('.notification-row').dataset.id);}));
     root.querySelector('[data-notification-bulk="read"]')?.addEventListener('click',()=>run('readall'));

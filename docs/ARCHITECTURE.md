@@ -193,8 +193,11 @@ TASK-177/178 deliver migrations 0090/0091, a tenant-scoped
 requires current clean managed-document evidence, uses optimistic concurrency and
 audits mutations and protects immutable extraction/hash provenance. TASK-179 adds
 migration 0092 plus registered own/company read permissions; list/detail authorization
-selects a tenant-predicated `own | company` domain query, while mutation/confirmation
-remain uploader-only under `employee.receipts.write` until TASK-182.
+selects a tenant-predicated `own | company` domain query. TASK-182 adds migration 0097
+and the canonical uploader-only mutation permissions:
+`expenses.company_receipts.create`, `.edit` and `.void`. The legacy
+`employee.receipts.write` key remains a My Receipts document-capture compatibility key;
+it no longer authorizes Company Receipt confirmation, creation, editing or voiding.
 
 Demo/API adapters and the responsive five-language Company Receipts list are now
 implemented with bounded cursor pagination, eight desktop fields and labelled mobile
@@ -202,11 +205,13 @@ cards. TASK-180 adds query-side search/date range. TASK-181 adds migration 0093,
 immutable complete-result snapshots and one audited/no-store PDF path for Preview,
 download and Print. The PDF starts with a landscape register and appends lossless PDF
 pages or embedded JPEG/PNG evidence; unsupported originals use an explicit identity
-placeholder. The sellable module is not yet implemented.
-Final registration must land together across the backend Module Catalog,
-resource/action authorization, route/access matrix, Demo/API adapters and PWA
-navigation so unknown or disabled access continues to fail closed. See
-[SPEC.md](SPEC.md) and [EPICS.md](EPICS.md) for the remaining boundary.
+placeholder. TASK-182 registers the sellable `expenses_tax` module across the backend
+Module Catalog, `/api/company-receipts` bespoke-API gate, canonical resource/action
+authorization, `accessMatrix`, Demo/PGlite adapter and PWA route/navigation guard.
+Effective availability is platform-owned `Master enabled AND Company allocated`; missing
+or disabled state fails closed with `module_not_enabled` without granting tenant MAC
+authority. See [SPEC.md](SPEC.md) and [EPICS.md](EPICS.md) for the current
+source/release-gate record.
 
 ## 10. Commercial Module Catalog foundation and platform realm
 
@@ -234,7 +239,8 @@ end-user simulation creates a default-15-minute linked session whose decisions r
 exactly as the active target user, whose platform mutations are blocked until return,
 and whose audit retains the real platform principal.
 
-TASK-185–187 are current code; full adversarial, PostgreSQL and release proof remains
-TASK-188. See
+TASK-185–187 are current code and TASK-188 completed the recorded full adversarial,
+PostgreSQL, browser and release-gate proof. This is implementation/release-gate evidence,
+not a claim that migrations 0090–0097 were deployed to production. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) and
 [SECURITY.md](SECURITY.md) for authority and residual-risk requirements.

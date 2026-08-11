@@ -1,5 +1,5 @@
 import {
-  and, eq, inArray, isNull, ne, notInArray, or,
+  and, eq, inArray, isNull, ne, notInArray,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
@@ -13,11 +13,15 @@ import {
   employeeActivationSecret,
   opportunity,
   role,
+  rolePermission,
+  roleResourceScope,
   userCompany,
   userCompanyRole,
 } from '../../data/schema';
 import type { EncryptedToken } from '../../auth/tokenCrypto';
-import { syncManagerRolesWithin } from './managerRole';
+import { isCompanyOwnerRole } from '../../auth/accessCatalog';
+import { PERMISSIONS } from '../../auth/permissions';
+import { ensureManagerRoleWithin, syncManagerRolesWithin } from './managerRole';
 
 export const EMPLOYEE_ACCOUNT_STATES = ['preactivated', 'active', 'offboarded'] as const;
 export type EmployeeAccountState = typeof EMPLOYEE_ACCOUNT_STATES[number];
@@ -99,6 +103,143 @@ export interface CreateEmployeeAccountInput {
   requestId?: string;
 }
 
+const EMPLOYEE_ROLE_PERMISSION_KEYS = [
+  PERMISSIONS.employeeSelfRead,
+  PERMISSIONS.employeeLeaveWrite,
+  PERMISSIONS.employeeReceiptsWrite,
+  PERMISSIONS.expensesCompanyReceiptsReadOwn,
+  PERMISSIONS.employeeClaimsWrite,
+  PERMISSIONS.employeePayoutManage,
+] as const;
+
+const EMPLOYEE_ROLE_NAME = 'Employee';
+
+async function assertCanonicalEmployeeRole(
+  exec: DB,
+  scope: EmployeeAccountScope,
+  employeeRole: { roleId: number; isSuperadmin: boolean; sourceTemplateKey: string | null },
+) {
+  if (employeeRole.isSuperadmin || isCompanyOwnerRole(employeeRole.sourceTemplateKey)) {
+    throw new EmployeeAccountError(
+      'employee_role_misconfigured',
+      'The Employee role is privileged and cannot be used for employee accounts.',
+      503,
+    );
+  }
+
+  const permissions = await exec.select({
+    permissionKey: rolePermission.permissionKey,
+    allowed: rolePermission.allowed,
+  }).from(rolePermission).where(eq(rolePermission.roleId, employeeRole.roleId));
+  const permissionContractValid = permissions.length === EMPLOYEE_ROLE_PERMISSION_KEYS.length
+    && permissions.every((row) => row.allowed)
+    && EMPLOYEE_ROLE_PERMISSION_KEYS.every((permissionKey) =>
+      permissions.some((row) => row.permissionKey === permissionKey));
+
+  const scopes = await exec.select({
+    resourceKey: roleResourceScope.resourceKey,
+    scope: roleResourceScope.scope,
+  }).from(roleResourceScope).where(and(
+    eq(roleResourceScope.masterFn, scope.masterFn),
+    eq(roleResourceScope.companyFn, scope.companyFn),
+    eq(roleResourceScope.roleId, employeeRole.roleId),
+  ));
+  const scopeContractValid = scopes.length === 1
+    && scopes[0].resourceKey === 'employee/*'
+    && scopes[0].scope === 'self';
+
+  if (!permissionContractValid || !scopeContractValid) {
+    throw new EmployeeAccountError(
+      'employee_role_misconfigured',
+      'The Employee role does not match the canonical employee access contract.',
+      503,
+    );
+  }
+}
+
+/**
+ * Employee is a system-managed base role, not a role-template choice for an
+ * administrator. Older production databases can still be missing it (or a
+ * company-scoped copy), so account provisioning repairs the exact prerequisite
+ * it needs inside the same transaction as the account link.
+ */
+export async function ensureEmployeeRoleWithin(
+  exec: DB,
+  scope: EmployeeAccountScope,
+  actorUserId: number,
+  requestId?: string,
+) {
+  let [employeeRole] = await exec.select({
+    roleId: role.roleId,
+    isSuperadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
+  }).from(role).where(and(
+    eq(role.masterFn, scope.masterFn),
+    eq(role.companyFn, scope.companyFn),
+    eq(role.name, EMPLOYEE_ROLE_NAME),
+  )).limit(1);
+
+  if (!employeeRole) {
+    const [createdRole] = await exec.insert(role).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      name: EMPLOYEE_ROLE_NAME,
+      isSuperadmin: false,
+      sourceTemplateKey: 'employee',
+    }).onConflictDoNothing({
+      target: [role.masterFn, role.companyFn, role.name],
+    }).returning({ roleId: role.roleId });
+
+    if (createdRole) {
+      await exec.insert(rolePermission).values(EMPLOYEE_ROLE_PERMISSION_KEYS.map((permissionKey) => ({
+        masterFn: scope.masterFn,
+        roleId: createdRole.roleId,
+        permissionKey,
+      })));
+      await exec.insert(roleResourceScope).values({
+        masterFn: scope.masterFn,
+        companyFn: scope.companyFn,
+        roleId: createdRole.roleId,
+        resourceKey: 'employee/*',
+        scope: 'self',
+      });
+      if (requestId) {
+        await exec.insert(auditLog).values({
+          ...scope,
+          actorUserId,
+          requestId,
+          entity: 'role',
+          entityId: String(createdRole.roleId),
+          action: 'created_system_employee_role',
+          after: {
+            name: EMPLOYEE_ROLE_NAME,
+            permissions: EMPLOYEE_ROLE_PERMISSION_KEYS,
+            scopes: { 'employee/*': 'self' },
+          },
+        });
+      }
+      return createdRole;
+    }
+
+    // A concurrent provision may have created the role after the first read.
+    [employeeRole] = await exec.select({
+      roleId: role.roleId,
+      isSuperadmin: role.isSuperadmin,
+      sourceTemplateKey: role.sourceTemplateKey,
+    }).from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      eq(role.companyFn, scope.companyFn),
+      eq(role.name, EMPLOYEE_ROLE_NAME),
+    )).limit(1);
+  }
+
+  if (!employeeRole) {
+    throw new EmployeeAccountError('employee_role_missing', 'The Employee role is not configured.', 503);
+  }
+  await assertCanonicalEmployeeRole(exec, scope, employeeRole);
+  return employeeRole;
+}
+
 export async function createEmployeeAccount(
   db: DB,
   scope: EmployeeAccountScope,
@@ -126,14 +267,12 @@ export async function createEmployeeAccount(
         username: 'Choose another username.',
       });
     }
-    const [employeeRole] = await tx.select({ roleId: role.roleId }).from(role).where(and(
-      eq(role.masterFn, scope.masterFn),
-      or(eq(role.companyFn, scope.companyFn), isNull(role.companyFn)),
-      eq(role.name, 'Employee'),
-    )).limit(1);
-    if (!employeeRole) {
-      throw new EmployeeAccountError('employee_role_missing', 'The Employee role is not configured.', 503);
-    }
+    const employeeRole = await ensureEmployeeRoleWithin(
+      tx,
+      scope,
+      input.actorUserId,
+      input.requestId,
+    );
     const [user] = await tx.insert(appUser).values({
       masterFn: scope.masterFn,
       username: input.username,
@@ -155,11 +294,23 @@ export async function createEmployeeAccount(
       userId: user.userId,
       companyFn: scope.companyFn,
       roleId: employeeRole.roleId,
+      managedBySystem: true,
+      assignedByUserId: input.actorUserId,
+      assignmentSource: 'system',
     });
     await tx.update(employee).set({
       userId: user.userId,
       updatedAt: new Date(),
     }).where(eq(employee.id, employeeRow.id));
+    const [directReport] = await tx.select({ id: employee.id }).from(employee).where(and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      eq(employee.managerId, employeeRow.id),
+      eq(employee.isActive, true),
+    )).limit(1);
+    if (directReport) {
+      await ensureManagerRoleWithin(tx, scope, input.actorUserId, input.requestId);
+    }
     await syncManagerRolesWithin(tx, scope, [employeeRow.id]);
     await tx.insert(employeeActivationSecret).values({
       ...scope,

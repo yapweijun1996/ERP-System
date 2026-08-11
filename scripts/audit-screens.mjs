@@ -489,6 +489,28 @@ async function auditRoutes(browser, viewport) {
   // more than the adapter's bounded 20s fallback watchdog.
   await page.waitForSelector('.dashgrid', { timeout: 45000, state: 'visible' });
 
+  /* The production-like Demo seed intentionally starts the optional
+     Expenses & Tax commercial module disabled.  This audit renders every
+     canonical route, including Company Receipts, so grant an in-memory
+     effective entitlement only for this browser fixture.  It neither calls a
+     tenant mutation endpoint nor persists a Company allocation. */
+  const applyExpensesTaxEntitlementFixture = () => page.evaluate(async () => {
+    const rows = DB.erpSystem?.modules;
+    const expensesTax = Array.isArray(rows)
+      ? rows.find((row) => String(row?.moduleKey || row?.module_key || '') === 'expenses_tax')
+      : null;
+    if (!expensesTax) return 'expenses_tax effective-module projection missing';
+    expensesTax.enabled = true;
+    expensesTax.configured = true;
+    await loadModuleControl();
+    renderSidebar();
+    return null;
+  });
+  const entitlementFixture = await applyExpensesTaxEntitlementFixture();
+  if (entitlementFixture) {
+    throw new Error(`Screen audit entitlement fixture failed: ${entitlementFixture}`);
+  }
+
   const asyncRenderIssues = await page.evaluate(async () => {
     const issues = [];
     const dashboardScreen = SCREENS.dashboard;
@@ -798,6 +820,22 @@ async function auditRoutes(browser, viewport) {
           && calendarRegions[5].scrollWidth > calendarRegions[5].clientWidth + 1) {
         layoutIssues.push(`calendar workspace actions overflow ${calendarRegions[5].scrollWidth}>${calendarRegions[5].clientWidth}`);
       }
+      const calendarListing = el.querySelector('[data-hr-calendar-listing]');
+      const calendarListingScroll = calendarListing?.querySelector('[data-table-listing-scroll]');
+      const calendarListingCells = calendarListing
+        ? [...calendarListing.querySelectorAll('[data-table-listing-table] .dt-c')]
+        : [];
+      const calendarListingSingleLine = calendarListingCells.length > 0
+        && calendarListingCells.every((cell) => getComputedStyle(cell).whiteSpace === 'nowrap');
+      const calendarListingContract = {
+        present: Boolean(calendarListing),
+        search: Boolean(calendarListing?.querySelector('[data-table-listing-search]')),
+        pageSize: Boolean(calendarListing?.querySelector('[data-table-listing-page-size]')),
+        pagination: Boolean(calendarListing?.querySelector('[data-table-listing-pagination]')),
+        scrollHost: Boolean(calendarListingScroll)
+          && getComputedStyle(calendarListingScroll).overflowX === 'auto',
+        singleLine: calendarListingSingleLine,
+      };
       const masterDetailEditorRoot = el.querySelector('[data-layout="master-detail-editor-v1"]');
       const masterDetailEditorRegions = masterDetailEditorRoot ? [
         masterDetailEditorRoot.querySelector('[data-master-detail-overview]'),
@@ -1166,6 +1204,7 @@ async function auditRoutes(browser, viewport) {
           pageheads: el.querySelectorAll('.pagehead').length,
           viewButtons: calendarRoot?.querySelectorAll('[data-calendar-view]').length || 0,
           privacy: calendarRoot?.getAttribute('data-my-work-privacy') || null,
+          listing: calendarListingContract,
         },
         masterDetailEditorLayout: {
           present: Boolean(masterDetailEditorRoot),
@@ -1335,6 +1374,7 @@ async function auditRoutes(browser, viewport) {
       calendarWorkspaceLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
         pageheads: 0, viewButtons: 0, privacy: null,
+        listing: {present:false,search:false,pageSize:false,pagination:false,scrollHost:false,singleLine:false},
       },
       masterDetailEditorLayout: {
         present: false, actualLayout: null, missingRegions: [], ordered: false,
@@ -1438,6 +1478,22 @@ async function auditRoutes(browser, viewport) {
         }
         if (rendered.calendarWorkspaceLayout.privacy !== 'reason_and_evidence_redacted') {
           rendered.layoutIssues.push('calendar-workspace-v1 privacy marker is missing');
+        }
+        if (route === 'hr-calendar') {
+          const listing = rendered.calendarWorkspaceLayout.listing;
+          if (!listing.present) {
+            rendered.layoutIssues.push('HR Calendar table-listing SSOT marker is missing');
+          } else {
+            if (!listing.search || !listing.pageSize || !listing.pagination) {
+              rendered.layoutIssues.push('HR Calendar table-listing is missing search, page-size or pagination controls');
+            }
+            if (!listing.scrollHost) {
+              rendered.layoutIssues.push('HR Calendar table-listing does not own a horizontal scroll host');
+            }
+            if (!listing.singleLine) {
+              rendered.layoutIssues.push('HR Calendar table-listing cells are not single-line');
+            }
+          }
         }
       }
     }
@@ -2106,7 +2162,7 @@ async function auditRoutes(browser, viewport) {
       && !rendered.layoutProfile.formSurface
       && !rendered.layoutProfile.splitSurface
       && !rendered.layoutProfile.dashboardSurface
-      && !['report','document-detail','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT].includes(meta?.layout);
+      && !['report','document-detail','master-detail','workspace',OPERATIONAL_WORKSPACE_LAYOUT,CALENDAR_WORKSPACE_LAYOUT,MASTER_DETAIL_EDITOR_LAYOUT,CASE_DETAIL_LAYOUT,LEDGER_DETAIL_LAYOUT,POSTING_DETAIL_LAYOUT,FINANCIAL_STATEMENT_LAYOUT].includes(meta?.layout);
     if (highConfidenceRegister && !LIST_LAYOUTS.has(meta?.layout)) {
       rendered.layoutIssues.push(`list-shaped route is classified as ${meta?.layout || 'none'}`);
     }
@@ -2185,6 +2241,13 @@ async function auditRoutes(browser, viewport) {
   }
 
   if (routes.includes('my-leave')) {
+    /* Some route-level smoke checks refresh the Demo session projection while
+       traversing the suite. Reapply the non-persistent commercial-module
+       fixture before asserting the My Work tabs that include Company Receipts. */
+    const myWorkEntitlementFixture = await applyExpensesTaxEntitlementFixture();
+    if (myWorkEntitlementFixture) {
+      throw new Error(`My Work entitlement fixture failed: ${myWorkEntitlementFixture}`);
+    }
     const myWorkIssues = await page.evaluate(async () => {
       const issues = [];
       const originalLanguage = getLang();
@@ -2327,8 +2390,8 @@ async function auditRoutes(browser, viewport) {
           }
         }
         const employeeTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
-        if (employeeTabs!==4) {
-          issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 4`);
+        if (employeeTabs!==5) {
+          issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 5`);
         }
 
         setContext(false,true);
@@ -2378,8 +2441,8 @@ async function auditRoutes(browser, viewport) {
         await navigate('team-calendar');
         const managerRoot=document.querySelector('#viewRoot [data-my-work-shell="true"]');
         const managerTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
-        if (managerTabs!==6) {
-          issues.push(`manager capability navigation exposed ${managerTabs} tabs instead of 6`);
+        if (managerTabs!==7) {
+          issues.push(`manager capability navigation exposed ${managerTabs} tabs instead of 7`);
         }
         if (managerRoot?.getAttribute('data-my-work-privacy')!=='reason_and_evidence_redacted') {
           issues.push('team route privacy marker missing');

@@ -7,6 +7,7 @@ import {
   lte,
   ne,
   or,
+  sql,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
@@ -283,6 +284,7 @@ export async function confirmOfficialHoliday(
       status: 'confirmed',
       confirmedByUserId: actorUserId,
       confirmedAt: now,
+      recordVersion: sql`${calendarHoliday.recordVersion} + 1`,
       updatedAt: now,
     }).where(eq(calendarHoliday.id, holiday.id));
     return { id: holiday.id, status: 'confirmed' as const };

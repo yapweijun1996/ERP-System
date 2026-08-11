@@ -45,6 +45,99 @@ export const employee = pgTable('employee', {
   check('ck_employee_base_salary', sql`${t.baseSalary} > 0`),
 ]);
 
+/** Canonical staff appointment facts. Leave requests remain their own governed
+ * aggregate; Staff Calendar projects both sources into one read model without
+ * copying either source into the other. Times are stored as UTC instants. */
+export const APPOINTMENT_TYPES = [
+  'meeting', 'training', 'interview', 'client_visit', 'medical', 'other',
+] as const;
+export const APPOINTMENT_STATUSES = ['scheduled', 'completed', 'cancelled'] as const;
+
+export const staffAppointment = pgTable('staff_appointment', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  employeeId: bigint('employee_id', { mode: 'number' }).notNull()
+    .references(() => employee.id),
+  appointmentType: text('appointment_type').notNull().default('meeting'),
+  title: text('title').notNull(),
+  description: text('description'),
+  startAt: timestamp('start_at', { withTimezone: true }).notNull(),
+  endAt: timestamp('end_at', { withTimezone: true }).notNull(),
+  // The instant remains authoritative in startAt/endAt. timeZone preserves the
+  // wall-clock context used to display and expand recurring appointments.
+  timeZone: text('time_zone').notNull().default('Asia/Singapore'),
+  // Bounded RFC5545-like rule, for example FREQ=WEEKLY;BYDAY=MO,WE;COUNT=8.
+  recurrenceRule: text('recurrence_rule'),
+  reminderMinutesBefore: integer('reminder_minutes_before'),
+  syncToExternal: boolean('sync_to_external').notNull().default(false),
+  allDay: boolean('all_day').notNull().default(false),
+  location: text('location'),
+  status: text('status').notNull().default('scheduled'),
+  recordVersion: integer('record_version').notNull().default(1),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  updatedByUserId: bigint('updated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  ...timestamps,
+}, (t) => [
+  index('idx_staff_appointment_employee_time')
+    .on(t.masterFn, t.companyFn, t.employeeId, t.startAt, t.endAt, t.id),
+  index('idx_staff_appointment_calendar')
+    .on(t.masterFn, t.companyFn, t.startAt, t.endAt, t.status, t.id),
+  check(
+    'ck_staff_appointment_type',
+    sql`${t.appointmentType} in ('meeting', 'training', 'interview', 'client_visit', 'medical', 'other')`,
+  ),
+  check(
+    'ck_staff_appointment_status',
+    sql`${t.status} in ('scheduled', 'completed', 'cancelled')`,
+  ),
+  check('ck_staff_appointment_title', sql`char_length(trim(${t.title})) between 1 and 200`),
+  check('ck_staff_appointment_description', sql`${t.description} is null or char_length(${t.description}) <= 2000`),
+  check('ck_staff_appointment_location', sql`${t.location} is null or char_length(${t.location}) <= 200`),
+  check('ck_staff_appointment_timezone', sql`char_length(trim(${t.timeZone})) between 1 and 64`),
+  check('ck_staff_appointment_recurrence', sql`${t.recurrenceRule} is null or char_length(trim(${t.recurrenceRule})) between 1 and 500`),
+  check(
+    'ck_staff_appointment_reminder',
+    sql`${t.reminderMinutesBefore} is null or ${t.reminderMinutesBefore} between 0 and 10080`,
+  ),
+  check('ck_staff_appointment_dates', sql`${t.endAt} > ${t.startAt}`),
+  check('ck_staff_appointment_record_version', sql`${t.recordVersion} > 0`),
+]);
+
+/** Durable in-app reminder jobs. Occurrences are materialised only inside a
+ * bounded look-ahead window by the calendar worker; the appointment master and
+ * recurrence rule remain the SSOT. */
+export const staffAppointmentReminder = pgTable('staff_appointment_reminder', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  appointmentId: bigint('appointment_id', { mode: 'number' }).notNull()
+    .references(() => staffAppointment.id),
+  occurrenceStartAt: timestamp('occurrence_start_at', { withTimezone: true }).notNull(),
+  reminderAt: timestamp('reminder_at', { withTimezone: true }).notNull(),
+  recipientUserId: bigint('recipient_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  status: text('status').notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedBy: text('locked_by'),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  supersededAt: timestamp('superseded_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_staff_appointment_reminder_occurrence')
+    .on(t.masterFn, t.companyFn, t.appointmentId, t.occurrenceStartAt),
+  index('idx_staff_appointment_reminder_pending')
+    .on(t.status, t.availableAt, t.reminderAt, t.id),
+  index('idx_staff_appointment_reminder_appointment')
+    .on(t.masterFn, t.companyFn, t.appointmentId, t.id),
+  check('ck_staff_appointment_reminder_status', sql`${t.status} in ('pending', 'sent', 'failed', 'superseded')`),
+  check('ck_staff_appointment_reminder_attempts', sql`${t.attempts} >= 0`),
+]);
+
 /** Recoverable only before first-login completion. The JSON value is an
  * AES-256-GCM envelope, never plaintext. Cleared rows are retained as evidence. */
 export const employeeActivationSecret = pgTable('employee_activation_secret', {
@@ -189,8 +282,8 @@ export const workingCalendarVersion = pgTable('working_calendar_version', {
   ),
 ]);
 
-/** Official imports remain draft until HR confirms them; company holidays are
- * explicit HR facts and are confirmed when created. */
+/** Holiday facts are tenant-scoped. Legacy import helpers may confirm company
+ * facts immediately; the HR Calendar management flow uses draft approval. */
 export const calendarHoliday = pgTable('calendar_holiday', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,
@@ -204,6 +297,14 @@ export const calendarHoliday = pgTable('calendar_holiday', {
   confirmedByUserId: bigint('confirmed_by_user_id', { mode: 'number' })
     .references(() => appUser.userId),
   confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  submittedByUserId: bigint('submitted_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  rejectedByUserId: bigint('rejected_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+  rejectionReason: text('rejection_reason'),
+  recordVersion: integer('record_version').notNull().default(1),
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_calendar_holiday')
@@ -211,12 +312,23 @@ export const calendarHoliday = pgTable('calendar_holiday', {
   index('idx_calendar_holiday_effective')
     .on(t.masterFn, t.companyFn, t.calendarVersionId, t.status, t.holidayDate),
   check('ck_calendar_holiday_source', sql`${t.source} in ('official', 'company')`),
-  check('ck_calendar_holiday_status', sql`${t.status} in ('draft', 'confirmed')`),
+  check('ck_calendar_holiday_status', sql`${t.status} in ('draft', 'pending_approval', 'confirmed', 'rejected')`),
   check(
     'ck_calendar_holiday_confirmation',
     sql`(${t.status} = 'confirmed' and ${t.confirmedAt} is not null and ${t.confirmedByUserId} is not null)
-      or (${t.status} = 'draft' and ${t.confirmedAt} is null and ${t.confirmedByUserId} is null)`,
+      or (${t.status} <> 'confirmed' and ${t.confirmedAt} is null and ${t.confirmedByUserId} is null)`,
   ),
+  check(
+    'ck_calendar_holiday_submission',
+    sql`(${t.submittedAt} is null and ${t.submittedByUserId} is null)
+      or (${t.submittedAt} is not null and ${t.submittedByUserId} is not null)`,
+  ),
+  check(
+    'ck_calendar_holiday_rejection',
+    sql`(${t.status} = 'rejected' and ${t.rejectedAt} is not null and ${t.rejectedByUserId} is not null and ${t.rejectionReason} is not null)
+      or (${t.status} <> 'rejected' and ${t.rejectedAt} is null and ${t.rejectedByUserId} is null and ${t.rejectionReason} is null)`,
+  ),
+  check('ck_calendar_holiday_record_version', sql`${t.recordVersion} > 0`),
 ]);
 
 /** Stable leave classification; calculation/governance rules live in versions. */

@@ -1012,12 +1012,13 @@ pack was regenerated from the current authoritative Manager template, and permis
 module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
 one expected skip and zero failures. Generic module collections use company scopes because
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
-actor-derived and team/direct-tree scoped. The current schema journal contains 90
-migration entries and generated Drizzle SQL contains 244 tables. TASK-170's platform-support
+actor-derived and team/direct-tree scoped. The current schema journal contains 98
+migration entries and generated Drizzle SQL contains 247 tables. TASK-170's platform-support
 migrations 0084/0085, TASK-172's assignment-scope migration 0086, TASK-173's
 authorization-override migration 0087 and TASK-174-B's authorization-version migration
 0088 are included, and migration 0089 now delivers the Company Owner cutover. The
-latest full regression passes 635 tests with 1 skipped across 156 files. The
+latest current-worktree full regression passes 663 tests with 1 skipped across 168
+files. The
 account-service module-gate omission was corrected, HR Calendar fixtures now use
 explicit approval permissions and targeted notification/access-matrix/module coverage
 passes 15/15. The 149-file/599-test result above is retained as TASK-168's historical
@@ -1100,27 +1101,38 @@ workflow coverage and physical-device verification remain separate follow-up gat
    ready-and-dated set, chronological document identities and separate currency totals.
    API and Demo/PGlite revalidate clean evidence and serve the same A4 register-plus-
    originals PDF for preview, download and browser Print.
-4. **Parity and release proof** (TASK-182–183): register module entitlement,
-   permissions, route/accessMatrix and five-language capability guards atomically,
-   prove Demo/PGlite and PostgreSQL/API parity, then run desktop/mobile and release
-   gates before updating final status and KB evidence.
+4. **Entitlement/canonical authorization** (TASK-182 complete): migration 0097
+   backfills canonical Company Receipt mutation grants from existing uploader-write
+   authority, invalidates affected authorization versions, and retires that compatibility
+   key for Company Receipt mutations. The commercial `expenses_tax` gate is Master
+   entitlement AND Company allocation across API, Demo/PGlite, route/accessMatrix and
+   five-language UI.
+5. **Journey proof** (TASK-183 complete): the register orchestrates an
+   uploader-owned evidence selection, immutable confirmation read and canonical create.
+   Browser evidence proves the API-shaped hand-off and actual PGlite upload → clean-worker
+   simulation → confirmation → persisted refresh, as well as query-side filters, Pack
+   actions, pagination and 1440×900/390×844 rendering. An authenticated same-origin
+   API-mode PGlite fixture covers the same journey at desktop and 375px. A newly created
+   empty disposable PostgreSQL 16 database passes the authenticated browser journey too.
+   Neither fixture is a production deployment.
 
-Phase status is **in progress**. TASK-177–181 delivered the canonical model/API,
+Phase status is **complete (implementation verification)**. TASK-177–181 delivered the canonical model/API,
 secure confirmation, permission-scoped register, responsive Demo/API UI and query-side
 search/date behavior plus immutable Receipt Pack, with no production deployment. TASK-182
-waits on the platform cutover in TASK-186; later tasks own entitlement, final canonical
-permission cutover and release proof.
+completed after TASK-186's platform cutover. TASK-183 completed the separate Demo/PGlite,
+API/PGlite and disposable PostgreSQL 16 browser proof; production deployment remains a
+separate authorization decision.
 
 Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`
 works end to end in both modes without `expense_claim`, cross-tenant access,
 cross-currency totals, hidden missing-date omissions or page-limited export results.
 
-## Phase 46 — Platform Module Entitlement & Superadmin Workspace 🟨
+## Phase 46 — Platform Module Entitlement & Superadmin Workspace ✅
 
-This phase is in progress. TASK-186 removed Company Owner MAC authority and switched
-tenant enforcement to the platform-owned Master entitlement plus Company allocation.
+This phase is implementation-verified. TASK-186 removed Company Owner MAC authority and
+switched tenant enforcement to the platform-owned Master entitlement plus Company allocation.
 TASK-187 delivered the independent visual Platform Superadmin workspace/login and
-exact-user simulation; final proof remains.
+exact-user simulation; TASK-188 completed the recorded automated proof.
 
 1. **Contract and tracking** (TASK-184 complete): record current tenant MAC separately
    from the approved platform-owned target, preserve EPIC-018 as historical evidence,
@@ -1138,9 +1150,10 @@ exact-user simulation; final proof remains.
    platform password/cookie realm; the shared API-mode entry exposes it, the workspace
    manages versioned Master/Company entitlement, and a visible default-15-minute
    simulation runs with exact target-user authority and dual actor audit.
-5. **Proof and closeout** (TASK-188): prove migration preservation, cross-tenant denial,
-   stale/direct bypass denial, dual-mode parity, platform login/simulation and full
-   browser/release gates before changing status or KB from planned to implemented.
+5. **Proof and closeout** (TASK-188 complete): source-verified migration preservation,
+   cross-tenant denial, stale/direct bypass denial, dual-mode parity, platform
+   login/simulation and full browser/release gates passed before status and KB were
+   changed from planned to implemented.
 
 Master entitlement is a mask, not a destructive rewrite: disabling it blocks every
 Company immediately while preserving Company allocation for later restoration. Only
@@ -1148,8 +1161,10 @@ business modules are sellable; Dashboard/Home, My Work, Admin, Settings and Acco
 Notifications are baseline services. TASK-182 depends on TASK-186, but TASK-177–181
 may proceed independently once their existing dependencies are met.
 
-Exit criteria: Company Owner cannot read or mutate commercial entitlement; only
+Automated exit criteria are met: Company Owner cannot read or mutate commercial entitlement; only
 `platform_superadmin` with `platform.modules.read/manage` can; missing state fails
 closed; existing client access is preserved; new Company defaults are platform-owned;
 and exact-user simulation is visible, revocable, one-hour maximum and never widens the
-target user's permission, scope or workflow authority.
+target user's permission, scope or workflow authority. This remains local/release-gate
+evidence, not authorization to deploy migrations to production; TASK-017 physical-device
+acceptance remains separate.

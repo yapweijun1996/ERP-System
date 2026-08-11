@@ -50,7 +50,8 @@ async function reportingFacts() {
     taxAmount: '9.00', totalAmount: '109.00',
   }).returning({ id: salesOrder.id });
   await db.insert(salesOrderLine).values({
-    ...SCOPE, orderId: order.id, lineNo: 1, productId: widget.id,
+    ...SCOPE, orderId: order.id, lineNo: 1, lineType: 'stock', productId: widget.id,
+    description: 'Widget', uom: 'unit',
     qty: '2.0000', unitPrice: '50.0000', netAmount: '100.00',
     taxCode: 'SR', taxRate: '9.000', taxAmount: '9.00',
   });

@@ -54,7 +54,7 @@ async function seedSalesFacts() {
   const [returnRow] = await db.insert(salesReturn).values({
     ...SCOPE,
     docNo: 'RMA-ANALYTICS-1',
-    deliveryId: posting.deliveryId,
+    deliveryId: posting.deliveryId!,
     invoiceId: posting.invoiceId,
     warehouseId: salesWarehouse.id,
     status: 'credited',

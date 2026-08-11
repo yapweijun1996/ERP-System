@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import Decimal from 'decimal.js';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
@@ -7,6 +7,7 @@ import {
   customer,
   product,
   salesEnquiry,
+  salesEnquiryLine,
   salesQuotation,
   salesQuotationLine,
 } from '../../data/schema';
@@ -23,6 +24,58 @@ function required(value: string | undefined, label: string): string {
   const normalized = value?.trim();
   if (!normalized) throw new SalesQuotationError(`${label} is required.`);
   return normalized;
+}
+
+type CommercialLineType = 'stock' | 'non_stock';
+
+interface CommercialLineIdentityInput {
+  lineType?: CommercialLineType;
+  productId?: number | null;
+  description?: string;
+  uom?: string;
+}
+
+async function prepareCommercialLineIdentities(
+  exec: DB,
+  scope: Scope,
+  lines: CommercialLineIdentityInput[],
+) {
+  const normalized = lines.map((line) => ({
+    lineType: line.lineType ?? (line.productId == null ? 'non_stock' : 'stock'),
+    productId: line.productId ?? null,
+    description: line.description,
+    uom: line.uom,
+  }));
+  if (normalized.some((line) => !['stock', 'non_stock'].includes(line.lineType))) {
+    throw new SalesQuotationError('Line type must be stock or non_stock.');
+  }
+  if (normalized.some((line) => line.lineType === 'stock'
+    ? !Number.isSafeInteger(line.productId) || Number(line.productId) <= 0
+    : line.productId != null)) {
+    throw new SalesQuotationError('Stock lines require a product; non-stock lines must not use one.');
+  }
+  const productIds = [...new Set(normalized
+    .filter((line) => line.lineType === 'stock')
+    .map((line) => Number(line.productId)))];
+  const products = productIds.length
+    ? await exec.select({ id: product.id, name: product.name, uom: product.uom }).from(product).where(and(
+      eq(product.masterFn, scope.masterFn),
+      eq(product.companyFn, scope.companyFn),
+      inArray(product.id, productIds),
+    ))
+    : [];
+  if (products.length !== productIds.length) {
+    throw new SalesQuotationError('One or more products are not available in this company.');
+  }
+  const byId = new Map(products.map((row) => [row.id, row]));
+  return normalized.map((line) => {
+    const item = line.lineType === 'stock' ? byId.get(Number(line.productId)) : null;
+    const description = required(line.description ?? item?.name, 'Line description');
+    const uom = required(line.uom ?? item?.uom ?? 'unit', 'Line unit of measure');
+    if (description.length > 500) throw new SalesQuotationError('Line description must be at most 500 characters.');
+    if (uom.length > 40) throw new SalesQuotationError('Line unit of measure must be at most 40 characters.');
+    return { lineType: line.lineType, productId: line.productId, description, uom };
+  });
 }
 
 function amount(value: string | number, label: string, allowZero = false): Decimal {
@@ -48,7 +101,9 @@ async function assertCustomer(exec: DB, scope: Scope, customerId: number) {
 }
 
 export interface CreateSalesEnquiryInput {
-  docNo: string;
+  /** Optional for Quick Create. When omitted, the server assigns the formal
+   * document number only after the row has been inserted successfully. */
+  docNo?: string;
   customerId: number;
   subject: string;
   channel: string;
@@ -63,7 +118,8 @@ export async function createSalesEnquiryWithin(
   scope: Scope,
   input: CreateSalesEnquiryInput,
 ) {
-  const docNo = required(input.docNo, 'Enquiry number');
+  const requestedDocNo = input.docNo?.trim();
+  const draftDocNo = requestedDocNo || `DRAFT-${globalThis.crypto.randomUUID()}`;
   const subject = required(input.subject, 'Subject');
   const channel = required(input.channel, 'Channel');
   const ownerName = required(input.ownerName, 'Owner');
@@ -81,7 +137,7 @@ export async function createSalesEnquiryWithin(
   const [enquiry] = await exec.insert(salesEnquiry).values({
     masterFn: scope.masterFn,
     companyFn: scope.companyFn,
-    docNo,
+    docNo: draftDocNo,
     customerId: input.customerId,
     subject,
     channel,
@@ -95,11 +151,245 @@ export async function createSalesEnquiryWithin(
     status: salesEnquiry.status,
     version: salesEnquiry.version,
   });
-  return enquiry;
+  if (requestedDocNo) return enquiry;
+
+  // Enquiries are non-statutory documents. Their stable identity-backed number
+  // is assigned in the same transaction after insert, so an unsuccessful create
+  // never exposes or reserves a formal document number in the UI.
+  const docNo = `ENQ-${String(enquiry.id).padStart(7, '0')}`;
+  const [numbered] = await exec.update(salesEnquiry).set({
+    docNo,
+    updatedAt: new Date(),
+  }).where(and(
+    eq(salesEnquiry.id, enquiry.id),
+    eq(salesEnquiry.masterFn, scope.masterFn),
+    eq(salesEnquiry.companyFn, scope.companyFn),
+  )).returning({
+    id: salesEnquiry.id,
+    docNo: salesEnquiry.docNo,
+    status: salesEnquiry.status,
+    version: salesEnquiry.version,
+  });
+  return numbered;
+}
+
+export interface SalesEnquiryLineInput {
+  lineType?: CommercialLineType;
+  productId?: number | null;
+  description?: string;
+  uom?: string;
+  qty: string | number;
+  estimatedUnitPrice: string | number;
+}
+
+export interface ReplaceSalesEnquiryLinesInput {
+  expectedVersion: number;
+  lines: SalesEnquiryLineInput[];
+}
+
+export interface SaveSalesEnquiryDraftHeaderInput {
+  customerId: number;
+  subject: string;
+  channel: string;
+  currency: string;
+  ownerName: string;
+  enquiryDate: string;
+}
+
+export interface SaveSalesEnquiryDraftInput {
+  expectedVersion: number;
+  header: SaveSalesEnquiryDraftHeaderInput;
+  lines: SalesEnquiryLineInput[];
+}
+
+export async function getSalesEnquiryAggregateWithin(
+  exec: DB,
+  scope: Scope,
+  enquiryId: number,
+) {
+  const [enquiry] = await exec.select().from(salesEnquiry).where(and(
+    eq(salesEnquiry.masterFn, scope.masterFn),
+    eq(salesEnquiry.companyFn, scope.companyFn),
+    eq(salesEnquiry.id, enquiryId),
+  )).limit(1);
+  if (!enquiry) return null;
+
+  const [customerRecord] = await exec.select().from(customer).where(and(
+    eq(customer.masterFn, scope.masterFn),
+    eq(customer.companyFn, scope.companyFn),
+    eq(customer.id, enquiry.customerId),
+  )).limit(1);
+  const lines = await exec.select().from(salesEnquiryLine).where(and(
+    eq(salesEnquiryLine.masterFn, scope.masterFn),
+    eq(salesEnquiryLine.companyFn, scope.companyFn),
+    eq(salesEnquiryLine.enquiryId, enquiry.id),
+  )).orderBy(asc(salesEnquiryLine.lineNo));
+  const quotations = await exec.select().from(salesQuotation).where(and(
+    eq(salesQuotation.masterFn, scope.masterFn),
+    eq(salesQuotation.companyFn, scope.companyFn),
+    eq(salesQuotation.enquiryId, enquiry.id),
+  )).orderBy(asc(salesQuotation.id));
+
+  return {
+    enquiry,
+    customer: customerRecord ?? null,
+    lines,
+    quotations,
+  };
+}
+
+function validateSalesEnquiryDraftHeader(input: SaveSalesEnquiryDraftHeaderInput) {
+  const subject = required(input.subject, 'Subject');
+  const channel = required(input.channel, 'Channel');
+  const ownerName = required(input.ownerName, 'Owner');
+  if (!Number.isSafeInteger(input.customerId) || input.customerId <= 0) {
+    throw new SalesQuotationError('customerId must be a positive integer.');
+  }
+  if (!/^[A-Z]{3}$/.test(input.currency)) {
+    throw new SalesQuotationError('currency must be a three-letter ISO code.');
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.enquiryDate)) {
+    throw new SalesQuotationError('enquiryDate must use YYYY-MM-DD.');
+  }
+  return { customerId: input.customerId, subject, channel, currency: input.currency, ownerName, enquiryDate: input.enquiryDate };
+}
+
+async function saveSalesEnquiryDraftLocked(
+  exec: DB,
+  scope: Scope,
+  enquiry: { id: number; status: string; version: number },
+  lines: SalesEnquiryLineInput[],
+  header?: SaveSalesEnquiryDraftHeaderInput,
+) {
+  if (enquiry.status !== 'new') {
+    throw new SalesQuotationError('Only a new enquiry can edit its draft.');
+  }
+  if (!Array.isArray(lines) || lines.length > 100) {
+    throw new SalesQuotationError('Enquiry lines must contain at most 100 rows.');
+  }
+  const normalizedHeader = header ? validateSalesEnquiryDraftHeader(header) : null;
+  if (normalizedHeader) await assertCustomer(exec, scope, normalizedHeader.customerId);
+  const identities = await prepareCommercialLineIdentities(exec, scope, lines);
+  const prepared = lines.map((line, index) => ({
+    ...identities[index],
+    qty: amount(line.qty, 'Line quantity'),
+    estimatedUnitPrice: amount(line.estimatedUnitPrice, 'Line estimated unit price', true),
+  }));
+
+  await exec.delete(salesEnquiryLine).where(and(
+    eq(salesEnquiryLine.masterFn, scope.masterFn),
+    eq(salesEnquiryLine.companyFn, scope.companyFn),
+    eq(salesEnquiryLine.enquiryId, enquiry.id),
+  ));
+  if (prepared.length) {
+    await exec.insert(salesEnquiryLine).values(prepared.map((line, index) => ({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      enquiryId: enquiry.id,
+      lineNo: index + 1,
+      lineType: line.lineType,
+      productId: line.productId,
+      description: line.description,
+      uom: line.uom,
+      qty: line.qty.toFixed(4),
+      estimatedUnitPrice: line.estimatedUnitPrice.toFixed(4),
+    })));
+  }
+  const estimatedValue = prepared.reduce(
+    (total, line) => total.plus(line.qty.mul(line.estimatedUnitPrice)),
+    new Decimal(0),
+  ).toDecimalPlaces(2);
+  const [updated] = await exec.update(salesEnquiry).set(normalizedHeader ? {
+    ...normalizedHeader,
+    estimatedValue: estimatedValue.toFixed(2),
+    version: sql`${salesEnquiry.version} + 1`,
+    updatedAt: sql`now()`,
+  } : {
+    estimatedValue: estimatedValue.toFixed(2),
+    version: sql`${salesEnquiry.version} + 1`,
+    updatedAt: sql`now()`,
+  }).where(and(
+    eq(salesEnquiry.masterFn, scope.masterFn),
+    eq(salesEnquiry.companyFn, scope.companyFn),
+    eq(salesEnquiry.id, enquiry.id),
+  )).returning();
+  return { enquiry: updated, lineCount: prepared.length };
+}
+
+/** Saves the whole editable enquiry aggregate in one transaction. Header and
+ * rows are intentionally one command so a failed line validation cannot leave
+ * a partially updated document or stale estimated value. */
+export async function saveSalesEnquiryDraftWithin(
+  exec: DB,
+  scope: Scope,
+  enquiryId: number,
+  input: SaveSalesEnquiryDraftInput,
+) {
+  if (!Number.isSafeInteger(input.expectedVersion) || input.expectedVersion <= 0) {
+    throw new SalesQuotationError('expectedVersion must be a positive integer.');
+  }
+  const [enquiry] = await exec.select({
+    id: salesEnquiry.id,
+    status: salesEnquiry.status,
+    version: salesEnquiry.version,
+  }).from(salesEnquiry).where(and(
+    eq(salesEnquiry.masterFn, scope.masterFn),
+    eq(salesEnquiry.companyFn, scope.companyFn),
+    eq(salesEnquiry.id, enquiryId),
+  )).for('update');
+  if (!enquiry) throw new SalesQuotationError('Enquiry does not exist in this company.');
+  if (enquiry.version !== input.expectedVersion) {
+    throw new SalesQuotationError(
+      `Enquiry version changed from ${input.expectedVersion} to ${enquiry.version}; reload before saving.`,
+    );
+  }
+  return saveSalesEnquiryDraftLocked(exec, scope, enquiry, input.lines, input.header);
+}
+
+/** Atomically replaces the editable enquiry item set. A document-level command is
+ * intentional here: row CRUD would expose half-saved totals and make line numbering
+ * race across devices. */
+export async function replaceSalesEnquiryLinesWithin(
+  exec: DB,
+  scope: Scope,
+  enquiryId: number,
+  input: ReplaceSalesEnquiryLinesInput,
+) {
+  if (!Number.isSafeInteger(input.expectedVersion) || input.expectedVersion <= 0) {
+    throw new SalesQuotationError('expectedVersion must be a positive integer.');
+  }
+  const [enquiry] = await exec.select({
+    id: salesEnquiry.id,
+    status: salesEnquiry.status,
+    version: salesEnquiry.version,
+  }).from(salesEnquiry).where(and(
+    eq(salesEnquiry.masterFn, scope.masterFn),
+    eq(salesEnquiry.companyFn, scope.companyFn),
+    eq(salesEnquiry.id, enquiryId),
+  )).for('update');
+  if (!enquiry) throw new SalesQuotationError('Enquiry does not exist in this company.');
+  if (enquiry.status !== 'new') {
+    throw new SalesQuotationError('Only a new enquiry can edit its items.');
+  }
+  if (enquiry.version !== input.expectedVersion) {
+    throw new SalesQuotationError(
+      `Enquiry version changed from ${input.expectedVersion} to ${enquiry.version}; reload before saving.`,
+    );
+  }
+  const result = await saveSalesEnquiryDraftLocked(exec, scope, enquiry, input.lines);
+  return {
+    id: result.enquiry.id,
+    version: result.enquiry.version,
+    estimatedValue: result.enquiry.estimatedValue,
+    lineCount: result.lineCount,
+  };
 }
 
 export interface SalesQuotationLineInput {
-  productId: number;
+  lineType?: CommercialLineType;
+  productId?: number | null;
+  description?: string;
+  uom?: string;
   qty: string | number;
   unitPrice: string | number;
   taxCode: string;
@@ -156,17 +446,7 @@ export async function createSalesQuotationWithin(
     }
   }
 
-  const productIds = [...new Set(input.lines.map((line) => line.productId))];
-  if (
-    productIds.some((id) => !Number.isSafeInteger(id) || id <= 0)
-    || (await exec.select({ id: product.id }).from(product).where(and(
-      eq(product.masterFn, scope.masterFn),
-      eq(product.companyFn, scope.companyFn),
-      inArray(product.id, productIds),
-    ))).length !== productIds.length
-  ) {
-    throw new SalesQuotationError('One or more products are not available in this company.');
-  }
+  const identities = await prepareCommercialLineIdentities(exec, scope, input.lines);
 
   const [quotation] = await exec.insert(salesQuotation).values({
     masterFn: scope.masterFn,
@@ -184,6 +464,7 @@ export async function createSalesQuotationWithin(
   let taxTotal = new Decimal(0);
   for (let index = 0; index < input.lines.length; index += 1) {
     const line = input.lines[index];
+    const identity = identities[index];
     const qty = amount(line.qty, 'Line quantity');
     const unitPrice = amount(line.unitPrice, 'Line unit price', true);
     const taxCode = required(line.taxCode, 'Tax code');
@@ -197,7 +478,10 @@ export async function createSalesQuotationWithin(
       companyFn: scope.companyFn,
       quotationId: quotation.id,
       lineNo: index + 1,
-      productId: line.productId,
+      lineType: identity.lineType,
+      productId: identity.productId,
+      description: identity.description,
+      uom: identity.uom,
       qty: qty.toFixed(4),
       unitPrice: unitPrice.toFixed(4),
       netAmount: net.toFixed(2),
@@ -245,8 +529,39 @@ export async function convertEnquiryToQuotationWithin(
   if (!enquiry || enquiry.status !== 'new') {
     throw new SalesQuotationError('Only a new enquiry can be converted to a quotation.');
   }
+  const canonicalLines = await exec.select({
+    lineType: salesEnquiryLine.lineType,
+    productId: salesEnquiryLine.productId,
+    description: salesEnquiryLine.description,
+    uom: salesEnquiryLine.uom,
+    qty: salesEnquiryLine.qty,
+    estimatedUnitPrice: salesEnquiryLine.estimatedUnitPrice,
+  }).from(salesEnquiryLine).where(and(
+    eq(salesEnquiryLine.masterFn, scope.masterFn),
+    eq(salesEnquiryLine.companyFn, scope.companyFn),
+    eq(salesEnquiryLine.enquiryId, enquiry.id),
+  )).orderBy(asc(salesEnquiryLine.lineNo));
+  if (canonicalLines.length && canonicalLines.length !== input.lines.length) {
+    throw new SalesQuotationError(
+      'Quotation lines must match the saved enquiry item count; reload before converting.',
+    );
+  }
+  const quotationLines = canonicalLines.length
+    ? canonicalLines.map((line, index) => ({
+      lineType: line.lineType as CommercialLineType,
+      productId: line.productId,
+      description: line.description,
+      uom: line.uom,
+      qty: line.qty,
+      // Quotation pricing and tax are commercial decisions, but the requested
+      // product and quantity always come from the locked enquiry rows.
+      unitPrice: input.lines[index]?.unitPrice ?? line.estimatedUnitPrice,
+      taxCode: input.lines[index]?.taxCode ?? '',
+    }))
+    : input.lines; // Backward compatibility for pre-0076 enquiries with no item rows.
   const quotation = await createSalesQuotationWithin(exec, scope, {
     ...input,
+    lines: quotationLines,
     customerId: enquiry.customerId,
     enquiryId: enquiry.id,
   });
@@ -334,7 +649,10 @@ export async function convertQuotationToOrderWithin(
     currency: quotation.currency,
     approvalReason: `Accepted quotation ${quotation.docNo} requires order approval.`,
     lines: lines.map((line) => ({
-      productId: line.productId,
+      lineType: line.lineType as 'stock' | 'non_stock',
+      productId: line.productId == null ? null : Number(line.productId),
+      description: line.description,
+      uom: line.uom,
       qty: line.qty,
       unitPrice: line.unitPrice,
       taxCode: line.taxCode,

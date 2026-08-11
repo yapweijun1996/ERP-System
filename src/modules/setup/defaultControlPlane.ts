@@ -17,6 +17,7 @@ export async function createDefaultControlPlane(
     negativeStockPolicy: 'block', approvalThreshold: '0.00', sessionTimeoutMinutes: 30,
   });
   await exec.insert(documentSequence).values([
+    { ...scope, documentType: 'employee', prefix: 'EMP', nextNumber: 1, padding: 4, resetPolicy: 'yearly' },
     { ...scope, documentType: 'sales_order', prefix: 'SO', nextNumber: 1, padding: 4, resetPolicy: 'yearly' },
     { ...scope, documentType: 'sales_invoice', prefix: 'INV', nextNumber: 1, padding: 4, resetPolicy: 'yearly' },
     { ...scope, documentType: 'purchase_order', prefix: 'PO', nextNumber: 1, padding: 4, resetPolicy: 'yearly' },

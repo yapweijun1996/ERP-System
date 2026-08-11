@@ -3,7 +3,10 @@ import {
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
-import { appNotification, appUser, userCompany } from '../../data/schema';
+import { hasAnyPermission, type PermissionKey } from '../../auth/permissions';
+import { isModuleEnabled } from '../../auth/moduleAccess';
+import type { SessionData } from '../../auth/session';
+import { appNotification, appUser, employee, userCompany } from '../../data/schema';
 
 export const NOTIFICATION_KINDS = [
   'approval_required',
@@ -54,6 +57,118 @@ export class NotificationError extends Error {
 
 const KIND_SET = new Set<string>(NOTIFICATION_KINDS);
 const SEVERITY_SET = new Set<string>(NOTIFICATION_SEVERITIES);
+
+/**
+ * Notification destinations are an application-owned contract, not arbitrary
+ * client navigation strings. Every destination must describe the permission
+ * and (where applicable) tenant module required by the API that the screen
+ * will call. Keep this registry small and add a route only when its drill-in
+ * API has a matching access contract.
+ */
+interface NotificationDestinationDefinition {
+  permissions: readonly PermissionKey[];
+  module?: string;
+  employeeSelf?: boolean;
+}
+
+const NOTIFICATION_DESTINATIONS: Record<string, NotificationDestinationDefinition> = {
+  dashboard: { permissions: ['dashboard.read'] },
+  'purchase-orders': { permissions: ['purchasing.read'], module: 'purchasing' },
+  'stock-on-hand': { permissions: ['inventory.read'], module: 'inventory' },
+  quotations: { permissions: ['sales.read'], module: 'sales' },
+  'data-import': { permissions: ['integration.read'], module: 'integration' },
+  'qc-inspection': { permissions: ['quality.read'], module: 'quality' },
+  'staff-calendar': { permissions: ['hr.read'], module: 'hr' },
+  'leave-approval': { permissions: ['hr.read'], module: 'hr' },
+  'my-approvals': { permissions: ['employee.self.read'], employeeSelf: true },
+} as const;
+
+export const NOTIFICATION_DESTINATION_ROUTES = Object.freeze(
+  Object.keys(NOTIFICATION_DESTINATIONS),
+);
+
+type NotificationDestinationRoute = keyof typeof NOTIFICATION_DESTINATIONS;
+
+function recipientSession(
+  recipientUserId: number,
+  scope: Scope,
+): SessionData {
+  return {
+    userId: recipientUserId,
+    masterFn: scope.masterFn,
+    activeCompanyFn: scope.companyFn,
+    username: '',
+    email: null,
+    fullName: null,
+  };
+}
+
+async function linkedEmployeeWithin(
+  exec: DB,
+  scope: Scope,
+  recipientUserId: number,
+): Promise<boolean> {
+  const [linked] = await exec.select({ id: employee.id }).from(employee).where(and(
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+    eq(employee.userId, recipientUserId),
+    eq(employee.isActive, true),
+  )).limit(1);
+  return Boolean(linked);
+}
+
+async function destinationAccessibleWithin(
+  exec: DB,
+  scope: Scope,
+  recipientUserId: number,
+  session: SessionData,
+  route: NotificationDestinationRoute,
+): Promise<boolean> {
+  const destination = NOTIFICATION_DESTINATIONS[route];
+  if (destination.module && !await isModuleEnabled(
+    exec,
+    scope.masterFn,
+    scope.companyFn,
+    destination.module,
+  )) return false;
+  if (!await hasAnyPermission(exec, session, destination.permissions)) return false;
+  if (destination.employeeSelf && !await linkedEmployeeWithin(exec, scope, recipientUserId)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Resolve a stored destination to the route this recipient can actually open.
+ * The two approval routes are intentionally compatible: older rows may have
+ * been stored as `my-approvals` for an HR authority or as `leave-approval` for
+ * a manager. We preserve the row but return the valid current destination.
+ */
+export async function resolveNotificationDestinationWithin(
+  exec: DB,
+  scope: Scope,
+  recipientUserId: number,
+  route: string | null,
+  session = recipientSession(recipientUserId, scope),
+): Promise<string | null> {
+  const raw = String(route ?? '').trim();
+  if (!raw || !(raw in NOTIFICATION_DESTINATIONS)) return null;
+
+  const canOpen = (candidate: NotificationDestinationRoute) =>
+    destinationAccessibleWithin(exec, scope, recipientUserId, session, candidate);
+
+  if (raw === 'my-approvals') {
+    if (await canOpen('my-approvals')) return 'my-approvals';
+    if (await canOpen('leave-approval')) return 'leave-approval';
+    return null;
+  }
+  if (raw === 'leave-approval') {
+    if (await canOpen('leave-approval')) return 'leave-approval';
+    if (await canOpen('my-approvals')) return 'my-approvals';
+    return null;
+  }
+  return await canOpen(raw as NotificationDestinationRoute) ? raw : null;
+}
 
 export function notificationCategory(kind: NotificationKind): NotificationCategory {
   if (kind === 'approval_required') return 'approval';
@@ -142,6 +257,9 @@ export async function deliverNotificationWithin(
   if (route && !/^[a-z][a-z0-9-]{0,63}$/.test(route)) {
     throw new NotificationError('route must be a registered-style route key.');
   }
+  if (route && !(route in NOTIFICATION_DESTINATIONS)) {
+    throw new NotificationError(`route '${route}' is not a registered notification destination.`);
+  }
   const entityRef = cleanOptionalText(input.entityRef, 'entityRef', 80);
 
   const [recipient] = await exec.select({ id: appUser.userId }).from(appUser)
@@ -182,22 +300,70 @@ export async function listNotificationsWithin(
     ? Number(input.cursor)
     : null;
   const limit = Math.min(100, Math.max(1, Number(input.limit) || 50));
-  const predicates = [
-    eq(appNotification.masterFn, scope.masterFn),
-    eq(appNotification.companyFn, scope.companyFn),
-    eq(appNotification.recipientUserId, recipientUserId),
-    isNull(appNotification.dismissedAt),
-  ];
-  if (cursor != null) predicates.push(lt(appNotification.id, cursor));
-  const rows = await exec.select(PUBLIC_COLUMNS).from(appNotification)
-    .where(and(...predicates))
-    .orderBy(desc(appNotification.id))
-    .limit(limit + 1);
-  const hasMore = rows.length > limit;
-  const page = hasMore ? rows.slice(0, limit) : rows;
+  const session = recipientSession(recipientUserId, scope);
+  const destinationCache = new Map<string, Promise<string | null>>();
+  const visible: NotificationRow[] = [];
+  let scanCursor = cursor;
+  let exhausted = false;
+  let lastScannedId: number | null = null;
+
+  /* Filter before returning a page. This prevents an inaccessible notification
+     from appearing in the bell/full feed and avoids a click that can only end
+     in a 403. Continue scanning when a page contains hidden rows so pagination
+     still returns the requested number of usable notifications. */
+  while (visible.length < limit && !exhausted) {
+    const predicates = [
+      eq(appNotification.masterFn, scope.masterFn),
+      eq(appNotification.companyFn, scope.companyFn),
+      eq(appNotification.recipientUserId, recipientUserId),
+      isNull(appNotification.dismissedAt),
+    ];
+    if (scanCursor != null) predicates.push(lt(appNotification.id, scanCursor));
+    const rows = await exec.select(PUBLIC_COLUMNS).from(appNotification)
+      .where(and(...predicates))
+      .orderBy(desc(appNotification.id))
+      .limit(limit + 1);
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    lastScannedId = page.at(-1)?.id ?? lastScannedId;
+    let returnedLimitAt: number | null = null;
+    let rowsAfterReturnedLimit = false;
+    for (const row of page) {
+      if (visible.length >= limit) {
+        rowsAfterReturnedLimit = true;
+        continue;
+      }
+      let resolvedRoute: string | null = row.route;
+      if (row.route) {
+        const key = row.route.trim();
+        let pending = destinationCache.get(key);
+        if (!pending) {
+          pending = resolveNotificationDestinationWithin(
+            exec,
+            scope,
+            recipientUserId,
+            key,
+            session,
+          );
+          destinationCache.set(key, pending);
+        }
+        resolvedRoute = await pending;
+        if (!resolvedRoute) continue;
+      }
+      visible.push(publicRow({ ...row, route: resolvedRoute }));
+      if (visible.length >= limit) returnedLimitAt = row.id;
+    }
+    if (returnedLimitAt != null) {
+      lastScannedId = returnedLimitAt;
+      exhausted = !rowsAfterReturnedLimit && !hasMore;
+      if (!exhausted) break;
+    }
+    exhausted = !hasMore;
+    scanCursor = lastScannedId;
+  }
   return {
-    data: page.map(publicRow),
-    nextCursor: hasMore ? page.at(-1)?.id ?? null : null,
+    data: visible,
+    nextCursor: exhausted ? null : lastScannedId,
   };
 }
 

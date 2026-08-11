@@ -11,6 +11,8 @@ import {
   leaveRequestRevision,
   leaveType,
   role,
+  rolePermission,
+  roleResourceScope,
   userCompany,
   userCompanyRole,
 } from '../../data/schema';
@@ -55,15 +57,43 @@ describe('team calendar workspace and outbound sync', () => {
     }).returning({ id: appUser.userId });
     const roles = await db.select().from(role).where(eq(role.masterFn, scope.masterFn));
     const managerRole = roles.find((item) => item.name === 'Manager')!;
-    const superadminRole = roles.find((item) => item.name === 'Superadmin')!;
+    const [hrApprovalRole] = await db.insert(role).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      name: 'HR Approval Test Role',
+      isSuperadmin: false,
+      sourceTemplateKey: 'hr',
+    }).returning({ roleId: role.roleId });
+    await db.insert(rolePermission).values({
+      masterFn: scope.masterFn,
+      roleId: hrApprovalRole.roleId,
+      permissionKey: 'hr.write',
+    });
+    await db.insert(roleResourceScope).values({
+      masterFn: scope.masterFn,
+      companyFn: scope.companyFn,
+      roleId: hrApprovalRole.roleId,
+      resourceKey: 'hr/*',
+      scope: 'company',
+    });
     await db.insert(userCompany).values({
       userId: managerUser.id,
       companyFn: scope.companyFn,
       roleId: managerRole.roleId,
     });
     await db.insert(userCompanyRole).values([
-      { userId: managerUser.id, companyFn: scope.companyFn, roleId: managerRole.roleId },
-      { userId: managerUser.id, companyFn: scope.companyFn, roleId: superadminRole.roleId },
+      {
+        userId: managerUser.id,
+        companyFn: scope.companyFn,
+        roleId: managerRole.roleId,
+        validFrom: new Date('2026-01-01T00:00:00Z'),
+      },
+      {
+        userId: managerUser.id,
+        companyFn: scope.companyFn,
+        roleId: hrApprovalRole.roleId,
+        validFrom: new Date('2026-01-01T00:00:00Z'),
+      },
     ]);
     await db.update(employee).set({ userId: managerUser.id }).where(eq(
       employee.id,
