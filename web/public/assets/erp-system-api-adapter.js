@@ -841,6 +841,28 @@
       var suffix=params.toString();
       return apiRequest('company-receipts'+(suffix?'?'+suffix:''));
     },
+    companyReceiptPack:function(payload){
+      return apiRequest('company-receipts/packs',{method:'POST',body:payload||{}});
+    },
+    companyReceiptPackPdf:async function(packId,action){
+      var response=await apiFetch(API_BASE+'/company-receipts/packs/'+
+        encodeURIComponent(packId)+'/pdf?action='+encodeURIComponent(action||'view'),{
+          method:'GET',credentials:'same-origin',
+        });
+      if(!response.ok){
+        var failure=await jsonBody(response);
+        throw new Error(
+          failure&&failure.error&&failure.error.message||
+          'Receipt Pack PDF failed (HTTP '+response.status+').');
+      }
+      return {data:{
+        content:await response.arrayBuffer(),
+        mimeType:response.headers.get('content-type')||'application/pdf',
+        sha256:response.headers.get('x-receipt-pack-sha256'),
+        sourceSha256:response.headers.get('x-receipt-pack-source-sha256'),
+        contentDisposition:response.headers.get('content-disposition'),
+      },meta:{immutableSnapshot:true,cacheControl:'no-store'}};
+    },
     my:my,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
     completeSetup: completeSetup,

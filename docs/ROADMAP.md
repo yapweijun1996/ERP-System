@@ -1096,18 +1096,20 @@ workflow coverage and physical-device verification remain separate follow-up gat
    adapters render the eight-field desktop register and labelled mobile cards with
    cursor pagination. TASK-180 adds query-side search, inclusive `transaction_date`
    filters and an actionable Missing Date state.
-3. **Receipt Pack** (TASK-181): preview the complete matching set, produce an A4
-   register followed by readable originals, preserve multi-page PDFs and group totals
-   by currency before offering browser Print.
+3. **Receipt Pack** (TASK-181 complete): migration 0093 freezes the complete matching
+   ready-and-dated set, chronological document identities and separate currency totals.
+   API and Demo/PGlite revalidate clean evidence and serve the same A4 register-plus-
+   originals PDF for preview, download and browser Print.
 4. **Parity and release proof** (TASK-182–183): register module entitlement,
    permissions, route/accessMatrix and five-language capability guards atomically,
    prove Demo/PGlite and PostgreSQL/API parity, then run desktop/mobile and release
    gates before updating final status and KB evidence.
 
-Phase status is **in progress**. TASK-177–180 delivered the canonical model/API,
+Phase status is **in progress**. TASK-177–181 delivered the canonical model/API,
 secure confirmation, permission-scoped register, responsive Demo/API UI and query-side
-search/date behavior with no production deployment. TASK-181 is now eligible; later
-tasks own Receipt Pack, entitlement, final canonical permission cutover and release proof.
+search/date behavior plus immutable Receipt Pack, with no production deployment. TASK-182
+waits on the platform cutover in TASK-186; later tasks own entitlement, final canonical
+permission cutover and release proof.
 
 Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`
 works end to end in both modes without `expense_claim`, cross-tenant access,

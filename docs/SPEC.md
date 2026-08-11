@@ -389,8 +389,9 @@ capture foundation and compatibility surface; it is not a company receipt regist
 TASK-177–179 implement migrations 0090–0092, the Company Receipt schema/commands,
 uploader-scoped mutations and confirmation, explicit own/company list/detail reads,
 exact-hash duplicate prevention, Demo/API adapters and a responsive five-language
-Company Receipts register. TASK-180 search/date-range behavior is current; Receipt Pack and the final
-platform-owned module entitlement/canonical permission cutover remain pending.
+Company Receipts register. TASK-180 search/date-range behavior and TASK-181's immutable
+Receipt Pack are current; the final platform-owned module entitlement/canonical
+permission cutover remains pending.
 
 The future implementation must satisfy these binding requirements:
 
@@ -415,10 +416,15 @@ The future implementation must satisfy these binding requirements:
 - Date filters are inclusive company-local business dates:
   `from <= transaction_date <= to`. Missing dates are visible and excluded from a
   date-range package until corrected.
-- Preview/export retrieves every matching receipt, not only the visible page. The
-  Receipt Pack contains a register followed by readable originals ordered by
-  transaction date. Totals are grouped by currency; currencies are never summed
-  together. Browser Print uses the same A4-oriented preview without application chrome.
+- Preview/export retrieves every ready, dated match, not only the visible page, and
+  rejects empty/invalid selections before writing a snapshot. Migration 0093 stores an
+  immutable creator-owned snapshot of filters, chronological rows, document identities,
+  source hash and exact per-currency totals, bounded to 5,000 receipts and 250 MB of
+  source evidence at render time. The same no-store PDF drives preview, download and
+  Print: an A4 landscape register precedes copied multi-page PDFs and embedded JPEG/PNG
+  originals; unsupported formats receive an explicit identity placeholder. Access and
+  render actions reapply receipt-read permission, tenant/creator scope, scan-clean
+  state, document-version identity and content hash. Currencies are never summed together.
 - Demo/PGlite and PostgreSQL/API modes implement one contract. Module entitlement,
   route guards, canonical resource/action permissions, `accessMatrix`, RLS, audit,
   five-language UI and mobile/desktop behavior must fail closed together.
@@ -426,7 +432,8 @@ The future implementation must satisfy these binding requirements:
 The current Tax Evidence generator cannot be relabelled as this feature: it selects
 posted `expense_claim` lines by posting date and its Demo adapter leaves package
 generation API-only. Its document-loading and PDF composition code may be reused after
-Company Receipts receives a standalone query/snapshot contract.
+Company Receipts now has that standalone query/snapshot contract; only the reusable
+document/PDF primitive is shared with Tax Evidence, not claim or tax semantics.
 
 ## 10. Platform Module Entitlement contract (approved, not implemented)
 

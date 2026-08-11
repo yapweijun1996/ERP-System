@@ -19,7 +19,14 @@
     vi:{search:'Tìm nhà cung cấp, số biên lai, ghi chú hoặc danh mục',period:'Kỳ',thisMonth:'Tháng này',lastMonth:'Tháng trước',thisQuarter:'Quý này',thisYear:'Năm nay',custom:'Tùy chỉnh',allDates:'Mọi ngày',from:'Từ ngày',to:'Đến ngày',apply:'Áp dụng',clear:'Xóa',invalid:'Từ ngày phải trước hoặc bằng Đến ngày.',missing:'Thiếu ngày',missingHelp:'Thêm ngày giao dịch trong Biên lai của tôi; khoảng ngày sẽ loại bản ghi này.'},
     ja:{search:'加盟店、領収書番号、メモ、カテゴリを検索',period:'期間',thisMonth:'今月',lastMonth:'先月',thisQuarter:'今四半期',thisYear:'今年',custom:'カスタム',allDates:'全期間',from:'開始日',to:'終了日',apply:'適用',clear:'クリア',invalid:'開始日は終了日以前にしてください。',missing:'日付なし',missingHelp:'自分の領収書で取引日を追加してください。日付範囲では除外されます。'},
   };
-  function copy(){const lang=typeof getLang==='function'?getLang():'en';return {...(COPY[lang]||COPY.en),...(FILTER_COPY[lang]||FILTER_COPY.en)};}
+  const PACK_COPY={
+    en:{preview:'Preview Pack',pdf:'PDF',print:'Print',packTitle:'Company Receipt Pack',packRange:'Choose both Date From and Date To before creating a Receipt Pack.',packBusy:'Building Receipt Pack…',packError:'Receipt Pack could not be created.',close:'Close'},
+    zh:{preview:'预览收据包',pdf:'PDF',print:'打印',packTitle:'公司收据包',packRange:'创建收据包前请选择开始日期和结束日期。',packBusy:'正在生成收据包…',packError:'无法生成收据包。',close:'关闭'},
+    ms:{preview:'Pratonton Pek',pdf:'PDF',print:'Cetak',packTitle:'Pek Resit Syarikat',packRange:'Pilih Tarikh Dari dan Tarikh Hingga sebelum mencipta Pek Resit.',packBusy:'Membina Pek Resit…',packError:'Pek Resit tidak dapat dicipta.',close:'Tutup'},
+    vi:{preview:'Xem trước gói',pdf:'PDF',print:'In',packTitle:'Gói biên lai công ty',packRange:'Chọn cả Từ ngày và Đến ngày trước khi tạo Gói biên lai.',packBusy:'Đang tạo Gói biên lai…',packError:'Không thể tạo Gói biên lai.',close:'Đóng'},
+    ja:{preview:'パックをプレビュー',pdf:'PDF',print:'印刷',packTitle:'会社領収書パック',packRange:'領収書パックを作成する前に開始日と終了日を選択してください。',packBusy:'領収書パックを作成中…',packError:'領収書パックを作成できませんでした。',close:'閉じる'},
+  };
+  function copy(){const lang=typeof getLang==='function'?getLang():'en';return {...(COPY[lang]||COPY.en),...(FILTER_COPY[lang]||FILTER_COPY.en),...(PACK_COPY[lang]||PACK_COPY.en)};}
   function statusTone(value){return value==='ready'?'ok':value==='voided'?'neutral':'info';}
   function statusLabel(value){
     const text=String(value||'—').replace(/_/g,' ');
@@ -48,11 +55,41 @@
     let meta=response&&response.meta||{};
     let loadingMore=false;
     let loadError='';
+    let currentPack=null;
     let page;
     async function reload(){
       response=await adapter.companyReceipts({limit:pageSize,search:filters.search,dateFrom:filters.dateFrom,dateTo:filters.dateTo});
       rows=Array.isArray(response&&response.data)?response.data:[];
       meta=response&&response.meta||{};
+      currentPack=null;
+    }
+    function captureFilters(form){
+      filters.search=form.querySelector('[data-receipt-search]').value.trim();
+      filters.dateFrom=form.querySelector('[data-receipt-from]').value||null;
+      filters.dateTo=form.querySelector('[data-receipt-to]').value||null;
+      if(filters.dateFrom&&filters.dateTo&&filters.dateFrom>filters.dateTo) throw new Error(c.invalid);
+    }
+    async function ensurePack(form){
+      captureFilters(form);
+      if(!filters.dateFrom||!filters.dateTo) throw new Error(c.packRange);
+      if(currentPack)return currentPack;
+      if(typeof adapter.companyReceiptPack!=='function') throw new Error(c.packError);
+      const response=await adapter.companyReceiptPack({
+        packKey:`company-receipt-pack:${crypto.randomUUID()}`,
+        search:filters.search,dateFrom:filters.dateFrom,dateTo:filters.dateTo,
+        locale:typeof getLang==='function'?getLang():'en',
+      });
+      currentPack=response.data&&response.data.pack;
+      if(!currentPack) throw new Error(c.packError);
+      return currentPack;
+    }
+    async function getPackPdf(form,action){
+      const pack=await ensurePack(form);
+      if(typeof adapter.companyReceiptPackPdf!=='function') throw new Error(c.packError);
+      const response=await adapter.companyReceiptPackPdf(pack.id,action);
+      const content=response.data&&response.data.content;
+      if(!content) throw new Error(c.packError);
+      return {pack,response,url:URL.createObjectURL(new Blob([content],{type:'application/pdf'}))};
     }
     const scopeLabel=()=>meta.scope==='company'?c.company:c.own;
     const pagination=()=>{
@@ -73,6 +110,9 @@
         <label><span>${esc(c.from)}</span><input type="date" data-receipt-from value="${esc(filters.dateFrom||'')}"></label>
         <label><span>${esc(c.to)}</span><input type="date" data-receipt-to value="${esc(filters.dateTo||'')}"></label>
         ${btn(c.apply,{icon:'search',cls:'primary',attrs:'type="submit"'})}${btn(c.clear,{cls:'soft',attrs:'type="button" data-receipt-clear'})}
+        ${btn(c.preview,{icon:'eye',cls:'soft',attrs:'type="button" data-receipt-pack-preview'})}
+        ${btn(c.pdf,{icon:'filepdf',cls:'soft',attrs:'type="button" data-receipt-pack-pdf'})}
+        ${btn(c.print,{icon:'print',cls:'soft',attrs:'type="button" data-receipt-pack-print'})}
       </form>`,
       columns:[
         {key:'transactionDate',label:c.date,render:row=>row.transactionDate?esc(dateValue(row.transactionDate)):`<button class="badge warn" data-missing-date-route title="${esc(c.missingHelp)}">${esc(c.missing)}</button>`},
@@ -118,15 +158,46 @@
         });
         screenRoot.querySelector('[data-company-receipt-filters]')?.addEventListener('submit',async event=>{
           event.preventDefault();
-          filters.search=event.currentTarget.querySelector('[data-receipt-search]').value.trim();
-          filters.dateFrom=event.currentTarget.querySelector('[data-receipt-from]').value||null;
-          filters.dateTo=event.currentTarget.querySelector('[data-receipt-to]').value||null;
-          if(filters.dateFrom&&filters.dateTo&&filters.dateFrom>filters.dateTo){loadError=c.invalid;page.render();return;}
+          try{captureFilters(event.currentTarget);}catch(error){loadError=String(error&&error.message||error);page.render();return;}
           loadError='';try{await reload();}catch(error){loadError=String(error&&error.message||error);}page.render();
         });
         screenRoot.querySelector('[data-receipt-clear]')?.addEventListener('click',async()=>{
           Object.assign(filters,{search:'',dateFrom:null,dateTo:null,preset:'allDates'});
           loadError='';await reload();page.render();
+        });
+        screenRoot.querySelector('[data-receipt-pack-preview]')?.addEventListener('click',async event=>{
+          const button=event.currentTarget,form=screenRoot.querySelector('[data-company-receipt-filters]');
+          button.disabled=true;loadError='';
+          try{
+            const result=await getPackPdf(form,'view');
+            appModal({icon:'filepdf',title:c.packTitle,
+              body:`<div class="company-receipt-pack-frame"><iframe src="${esc(result.url)}" title="${esc(c.packTitle)}"></iframe></div>`,
+              actions:btn(c.close,{attrs:'onclick="closeModal()"'})});
+            setTimeout(()=>URL.revokeObjectURL(result.url),300000);
+          }catch(error){loadError=String(error&&error.message||c.packError);page.render();}
+          finally{button.disabled=false;}
+        });
+        screenRoot.querySelector('[data-receipt-pack-pdf]')?.addEventListener('click',async event=>{
+          const button=event.currentTarget,form=screenRoot.querySelector('[data-company-receipt-filters]');
+          button.disabled=true;loadError='';
+          try{
+            const result=await getPackPdf(form,'download');
+            const link=document.createElement('a');link.href=result.url;
+            link.download=`company-receipt-pack-${result.pack.filters.dateFrom}-${result.pack.filters.dateTo}.pdf`;
+            link.click();setTimeout(()=>URL.revokeObjectURL(result.url),60000);
+          }catch(error){loadError=String(error&&error.message||c.packError);page.render();}
+          finally{button.disabled=false;}
+        });
+        screenRoot.querySelector('[data-receipt-pack-print]')?.addEventListener('click',async event=>{
+          const button=event.currentTarget,form=screenRoot.querySelector('[data-company-receipt-filters]');
+          button.disabled=true;loadError='';
+          try{
+            const result=await getPackPdf(form,'print');
+            const opened=window.open(result.url,'_blank','noopener');
+            if(!opened)throw new Error(c.packError);
+            setTimeout(()=>URL.revokeObjectURL(result.url),300000);
+          }catch(error){loadError=String(error&&error.message||c.packError);page.render();}
+          finally{button.disabled=false;}
         });
       },
     });

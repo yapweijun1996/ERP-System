@@ -217,13 +217,15 @@ retains exact Master/Company predicates. `company_receipt` is in the
 production company RLS policy set, and disposable non-superuser PostgreSQL proof covers
 same-tenant access plus cross-tenant denial.
 
-Receipt Pack selection, original-document reads and artifact access must reapply the
-same tenant/company and permission scope. A platform support principal receives no
+TASK-181 Receipt Pack selection, snapshot read and original-document rendering reapply
+the same tenant/company and permission scope. The immutable snapshot is creator-only;
+every source version is reread inside the active tenant and checked against the frozen
+document id/hash before bytes are composed. A platform support principal receives no
 implicit Company Receipt access, and a disabled Expenses & Tax entitlement must deny
 the UI route and every direct API/background path. Own/company visibility is an
 authorization scope over the same aggregate—not a client filter—and is implemented for
-list/detail reads. TASK-182 owns its final canonical/module-entitlement cutover; Receipt
-Pack scope remains TASK-181.
+list/detail reads. TASK-182 owns the final canonical/module-entitlement cutover; the
+current Pack path is permission-gated but remains under the pre-cutover tenant MAC.
 
 ## Planned Master entitlement and Company allocation
 

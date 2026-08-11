@@ -64,6 +64,11 @@ import {
   type ReimbursementBatchInput,
 } from '../../src/modules/expenses/reimbursementBatches';
 import {
+  renderCompanyReceiptPackPdf,
+  type CompanyReceiptPackFacts,
+} from '../../src/modules/expenses/companyReceiptPackPdf';
+import type { EvidencePdfDocument } from '../../src/modules/documents/evidencePdf';
+import {
   accessReimbursementBankExportWithin,
   configureReimbursementBankTemplateWithin,
   generateReimbursementBankExportWithin,
@@ -494,6 +499,12 @@ export const erpDemoRuntime = Object.freeze({
   sha256Hex,
   commands: Object.freeze({
     validateReceiptUpload,
+    renderCompanyReceiptPackPdf(
+      pack: CompanyReceiptPackFacts,
+      documents: EvidencePdfDocument[],
+    ) {
+      return renderCompanyReceiptPackPdf(pack, documents);
+    },
     hasPermissionWithin(
       db: DemoOrm,
       scope: Scope,

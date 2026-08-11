@@ -2381,8 +2381,9 @@ exist. TASK-177 delivers migration 0090 and the independent Company Receipt aggr
 TASK-178 adds migration 0091 exact-hash uniqueness plus an uploader-scoped confirmation
 context over immutable OCR provenance and safe manual fallback. TASK-179 adds migration
 0092, explicit own/company reads, bounded Demo/API adapters and the responsive
-five-language browser register. The final `Expenses & Tax` module entitlement,
-TASK-180 query-side search/date behavior is delivered; standalone Receipt Pack remains pending.
+five-language browser register. TASK-180 delivers query-side search/date behavior;
+TASK-181 adds migration 0093 and the standalone immutable Receipt Pack. The final
+`Expenses & Tax` module entitlement and canonical permission cutover remain pending.
 
 - [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
       current source, approved scope, architecture, backlog and KB without changing
@@ -2406,9 +2407,12 @@ TASK-180 query-side search/date behavior is delivered; standalone Receipt Pack r
       invalid-range rejection, same-day ranges and actionable Missing Date rows pass
       focused and browser proof; result retrieval remains independent of the visible
       page and Missing Date records stay outside active date ranges.
-- [ ] **TASK-181 — Build Receipt Pack preview, PDF and Print.** Produce an A4 register
-      plus readable originals in chronological order, preserve multi-page PDFs and
-      group totals by currency without cross-currency addition.
+- [x] **TASK-181 — Build Receipt Pack preview, PDF and Print.** Migration 0093 stores a
+      creator-owned immutable selection snapshot. API and Demo/PGlite retrieve every
+      ready, dated match independently of UI pagination, freeze chronological source
+      facts and per-currency totals, then revalidate clean evidence and render one
+      no-store PDF for preview/download/Print. Multi-page PDFs are copied losslessly;
+      JPEG/PNG are embedded and unsupported originals receive an identity placeholder.
 - [ ] **TASK-182 — Complete dual-mode, entitlement, authorization and i18n parity.**
       Register the module/resource/actions and accessMatrix together; prove Demo/PGlite
       and PostgreSQL/API behavior with five-language fail-closed UI capability guards.
@@ -2417,8 +2421,8 @@ TASK-180 query-side search/date behavior is delivered; standalone Receipt Pack r
       focused/full gates, then report the exact implemented boundary.
 
 Dependencies are deliberate. TASK-177 consumed TASK-174's authorization invalidation
-boundary and TASK-176's contract; TASK-181–183 now follow the export, parity
-and release-proof order. Existing EPIC-054–056 functionality is
+boundary and TASK-176's contract; TASK-181 is delivered, while TASK-182–183 follow the
+platform-entitlement cutover and release-proof order. Existing EPIC-054–056 functionality is
 preserved as reusable infrastructure or future/optional scope, not duplicated.
 
 Exit criteria: an authorised user can save safe company receipts without an Employee

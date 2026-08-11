@@ -4,6 +4,7 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { PDFDocument } from 'pdf-lib';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -50,7 +51,9 @@ async function main(){
     await page.waitForFunction(()=>window.ErpSystemData&&window.navigate,{timeout:TIMEOUT});
     await page.waitForFunction(()=>typeof DB!=='undefined'&&DB.user&&Array.isArray(DB.user.permissionKeys),
       null,{timeout:TIMEOUT});
-    await page.evaluate(async()=>{
+    const mockPdf=await PDFDocument.create();mockPdf.addPage([595,842]);
+    const mockPdfBase64=Buffer.from(await mockPdf.save({useObjectStreams:false})).toString('base64');
+    await page.evaluate(async mockPdfBase64=>{
       if(typeof setLang==='function') setLang('en');
       DB.user.permissionKeys=Array.from(new Set([
         ...DB.user.permissionKeys,'finance.read','employee.self.read',
@@ -64,6 +67,7 @@ async function main(){
         createdAt:'2026-08-11T08:00:00.000Z',updatedAt:'2026-08-11T08:00:00.000Z',
       });
       window.__receiptQueries=[];
+      window.__receiptPackPayloads=[];window.__receiptPackPdfActions=[];
       ErpSystemData.companyReceipts=async query=>{
         window.__receiptQueries.push({...query});
         if(query&&query.search) return {data:[{...makeRow(900),merchant:'Server Search Result'}],meta:{scope:'company',limit:25,nextCursor:null}};
@@ -72,8 +76,21 @@ async function main(){
           ?{data:[makeRow(1)],meta:{scope:'company',limit:25,nextCursor:null}}
           :{data:Array.from({length:25},(_,index)=>makeRow(50-index)),meta:{scope:'company',limit:25,nextCursor:26}};
       };
+      ErpSystemData.companyReceiptPack=async payload=>{
+        window.__receiptPackPayloads.push({...payload});
+        return {data:{pack:{id:77,filters:{search:payload.search||'',dateFrom:payload.dateFrom,dateTo:payload.dateTo},
+          rows:[makeRow(800)],totals:[{currency:'SGD',amount:'12.3400',receiptCount:1}],rowCount:1,documentCount:1,
+          sourceSha256:'a'.repeat(64),createdAt:'2026-08-11T08:00:00.000Z'}},meta:{immutableSnapshot:true}};
+      };
+      ErpSystemData.companyReceiptPackPdf=async(id,action)=>{
+        window.__receiptPackPdfActions.push({id,action});
+        const raw=atob(mockPdfBase64),bytes=new Uint8Array(raw.length);
+        for(let index=0;index<raw.length;index+=1)bytes[index]=raw.charCodeAt(index);
+        return {data:{content:bytes,mimeType:'application/pdf'},meta:{immutableSnapshot:true}};
+      };
+      window.open=()=>({});
       await navigate('company-receipts');
-    });
+    },mockPdfBase64);
     const register=page.locator('[data-company-receipt-register="canonical"]');
     try{await register.waitFor({timeout:TIMEOUT});}
     catch(error){
@@ -104,6 +121,17 @@ async function main(){
     await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.dateFrom==='2026-08-11');
     assert(await page.evaluate(()=>window.__receiptQueries.at(-1).dateTo)==='2026-08-11',
       'same-day inclusive range must be sent query-side');
+    await page.locator('[data-receipt-pack-preview]').click();
+    await page.waitForFunction(()=>window.__receiptPackPdfActions.at(-1)?.action==='view');
+    assert(await page.locator('.company-receipt-pack-frame iframe').count()===1,
+      'Receipt Pack preview must use the generated PDF without application chrome');
+    assert(await page.evaluate(()=>window.__receiptPackPayloads.at(-1).dateFrom)==='2026-08-11',
+      'Receipt Pack must use the complete active date selection');
+    await page.locator('#modalEl .modal-foot button').click();
+    await page.locator('[data-receipt-pack-pdf]').click();
+    await page.waitForFunction(()=>window.__receiptPackPdfActions.at(-1)?.action==='download');
+    await page.locator('[data-receipt-pack-print]').click();
+    await page.waitForFunction(()=>window.__receiptPackPdfActions.at(-1)?.action==='print');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'desktop page overflowed horizontally');
 
@@ -118,7 +146,7 @@ async function main(){
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'mobile page overflowed horizontally');
     assert(browserErrors.length===0,`browser errors: ${browserErrors.join(' | ')}`);
-    console.log('PASS Company Receipts E2E: query-side search/date filters, missing-date action, pagination and responsive facts');
+    console.log('PASS Company Receipts E2E: query-side filters, immutable PDF preview/download/print, pagination and responsive facts');
   }finally{
     await context?.close();
     await browser?.close();

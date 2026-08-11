@@ -188,14 +188,15 @@ screenshots are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
 - [ ] Physical-phone acceptance — Blocked by TASK-017; no emulator claim substitutes
       for a real device.
 
-## Expenses & Tax v1 — Company Receipts (planned)
+## Expenses & Tax v1 — Company Receipts (in progress)
 
 Current TASK-179 evidence: explicit own/company list/detail authorization is covered in
 domain/API tests; the Demo/API route uses bounded cursor reads; and a dedicated
 1440×900 / 390×844 browser test verifies the eight required desktop fields, labelled
 mobile cards, load-more pagination and no page overflow. The checklist remains open
-because module entitlement, Receipt Pack and full persisted journey proof belong to
-TASK-181–183. TASK-180 search/date/Missing Date browser proof now passes.
+because module entitlement and full persisted journey/release proof belong to
+TASK-182–183. TASK-180 search/date/Missing Date browser proof and TASK-181's immutable
+Pack preview/download/Print E2E plus five-language desktop/mobile route audit now pass.
 
 - [ ] Open `Expenses & Tax → Company Receipts` only when module entitlement and an
       effective receipt capability allow it; direct URL/API attempts otherwise deny.
@@ -209,13 +210,13 @@ TASK-181–183. TASK-180 search/date/Missing Date browser proof now passes.
       verify inclusive same-day boundaries and explicit From > To/empty states.
 - [ ] Confirm Missing Date receipts are actionable in the register but excluded with a
       warning from a date-range package.
-- [ ] Preview/export all matching pages in chronological order; verify image and
-      multi-page PDF readability and currency-separated totals.
-- [ ] Print A4 output without sidebar, controls or application chrome on desktop and
-      mobile; export/print failure must not mutate receipt records.
+- [x] Preview/export all matching pages in chronological order; focused tests verify
+      PNG and multi-page PDF composition plus exact currency-separated totals.
+- [x] Use one A4 PDF without application chrome for Preview, download and Print;
+      invalid/empty creation and render failure do not mutate receipt records.
 
 This checklist is not evidence of implementation. TASK-183 may check these boxes only
-after both adapters, authorization and browser proof pass.
+after final entitlement/canonical authorization and complete browser proof pass.
 
 ## Planned Platform Module Entitlement acceptance (EPIC-064)
 

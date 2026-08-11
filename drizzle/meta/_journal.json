@@ -652,6 +652,13 @@
       "when": 1786449528185,
       "tag": "0092_company_receipt_read_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1786455600000,
+      "tag": "0093_company_receipt_pack",
+      "breakpoints": true
     }
   ]
 }

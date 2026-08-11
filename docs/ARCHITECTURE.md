@@ -198,7 +198,11 @@ remain uploader-only under `employee.receipts.write` until TASK-182.
 
 Demo/API adapters and the responsive five-language Company Receipts list are now
 implemented with bounded cursor pagination, eight desktop fields and labelled mobile
-cards. TASK-180 adds query-side search/date range; Receipt Pack and the sellable module are not yet implemented.
+cards. TASK-180 adds query-side search/date range. TASK-181 adds migration 0093,
+immutable complete-result snapshots and one audited/no-store PDF path for Preview,
+download and Print. The PDF starts with a landscape register and appends lossless PDF
+pages or embedded JPEG/PNG evidence; unsupported originals use an explicit identity
+placeholder. The sellable module is not yet implemented.
 Final registration must land together across the backend Module Catalog,
 resource/action authorization, route/access matrix, Demo/API adapters and PWA
 navigation so unknown or disabled access continues to fail closed. See

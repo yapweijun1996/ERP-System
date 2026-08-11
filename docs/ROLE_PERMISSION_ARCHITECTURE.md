@@ -551,8 +551,10 @@ TASK-179 implements the read subset with registered
 Finance Preparer, Finance Checker, Receipt Manager and Company Owner receive stored
 company-read grants. Request authorization checks permission keys, never role names,
 and platform Superadmin/support receives no tenant business grant. Create/update/void
-still use the transitional `employee.receipts.write`; export/print and the final
-canonical/module/access-matrix cutover remain TASK-181/182.
+still use the transitional `employee.receipts.write`. TASK-181 Pack creation and
+Preview/download/Print reuse the resolved own/company read capability and creator-only
+snapshot scope; TASK-182 retains final export/action identifiers plus the canonical
+module/access-matrix cutover after TASK-186.
 
 ## 16. Planned platform-owned Module Access Control (EPIC-064)
 

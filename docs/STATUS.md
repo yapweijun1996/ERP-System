@@ -1754,11 +1754,12 @@ server-side module enforcement but does not define the approved future mutation 
 ## Expenses & Tax v1 implementation boundary (2026-08-11)
 
 The approved product boundary is **Expenses & Tax v1 = Company Receipts + inclusive
-transaction-date range + Preview + Receipt Pack PDF/Print**. TASK-177 now delivers the
+transaction-date range + Preview + Receipt Pack PDF/Print**. TASK-177 delivers the
 canonical backend/capture foundation: migration 0090, the `company_receipt` aggregate, its
 transactional command layer and `/api/company-receipts` list/detail/create/update/void
 API; TASK-178 adds migration 0091 exact-hash uniqueness and the read-only confirmation
-context. It is not yet a completed or deployed Expenses & Tax product.
+context. TASK-181 now delivers the standalone Pack slice, but this is not yet a completed
+or deployed Expenses & Tax product because TASK-182/183 remain pending.
 
 Current reusable implementation is substantial but narrower:
 
@@ -1791,15 +1792,25 @@ grants, permission-selected domain/API visibility, bounded Demo/API adapters and
 five-language responsive Company Receipts route. Desktop exposes date, merchant,
 receipt number, category, amount, currency, uploader and status; mobile renders the same
 facts as labelled cards, and cursor pagination never fetches unbounded Company history.
-Focused receipt/authorization/Demo proof passes 6 files / 22 tests; the full regression
-passes 159 files plus 1 skipped file (643 passed, 1 skipped test), and the dedicated
-desktop/mobile E2E, 50-route list-layout, route i18n and access-matrix audits pass.
-There is still no `Expenses & Tax` commercial entitlement or standalone Receipt Pack
-preview/export/print. Current Tax Evidence selects
-posted claim lines by posting date, so it cannot be renamed as Company Receipts.
-TASK-180 now delivers query-side search, inclusive date presets/ranges, validation and
-actionable Missing Date handling. TASK-182 owns final module/accessMatrix and
-compatibility-to-canonical permission cutover.
+TASK-180 delivers query-side search, inclusive date presets/ranges, validation and
+actionable Missing Date handling. TASK-181 adds migration 0093 and immutable,
+creator-owned Pack snapshots containing every permission-visible Ready/dated match up
+to 5,000 rows, not only the register page. Rows and document identities are frozen in
+chronological order; exact totals remain separate by currency. Rendering rechecks scan,
+version/hash/content and the 250 MB source bound, then produces one no-store/audited PDF
+for Preview, download and Print: an A4 landscape register followed by copied multi-page
+PDFs, embedded JPEG/PNG or an explicit unsupported-format identity placeholder. Demo/
+PGlite and PostgreSQL/API adapters share the contract. Current Tax Evidence remains a
+posted-claim flow and cannot be renamed as Company Receipts. There is still no
+`Expenses & Tax` commercial entitlement; TASK-182 owns final module/accessMatrix and
+compatibility-to-canonical permission cutover after TASK-186.
+
+TASK-181 verification passes: focused Pack/API/Tax Evidence 3 files / 7 tests; full
+Vitest 160 passed plus 1 skipped file (645 passed plus 1 skipped test); lint and both
+typechecks; schema v93 / 94 migrations / 246-table drift; Demo and API builds; dedicated
+Company Receipts E2E; five-language desktop/mobile route audit; 50-route desktop/mobile
+list-layout audit; and desktop/mobile smoke. This is implementation proof, not deployment
+proof and not evidence that EPIC-064 or TASK-182 is complete.
 
 EPIC-063 and TASK-177–183 register the implementation work. Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois are preserved
@@ -1807,9 +1818,9 @@ future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 180 tasks
+- Done: 181 tasks
 - In progress: 0
-- Todo: TASK-181–183 and TASK-185–188 (7)
+- Todo: TASK-182–183 and TASK-185–188 (6)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -1823,8 +1834,8 @@ future/optional phases rather than v1 defects.
 - EPIC-063 is in progress. TASK-176 completed the source-backed Expenses & Tax boundary;
   TASK-177–179 delivered the Company Receipt schema/domain/API, secure confirmation and
   permission-scoped responsive register; TASK-180 delivered query-side search/date
-  behavior. TASK-181–183 remain todo, so
-  Receipt Pack, final entitlement/canonical permission integration and release proof
+  behavior and TASK-181 delivered immutable Receipt Pack Preview/PDF/Print. TASK-182–183
+  remain todo, so final entitlement/canonical permission integration and release proof
   must not be represented as complete.
 - EPIC-064 is registered but not implemented. TASK-184 completed the source-backed MAC
   documentation/KB boundary; TASK-185–188 remain todo. Current tenant MAC remains
@@ -1842,11 +1853,11 @@ future/optional phases rather than v1 defects.
 
 ## Next implementation boundary
 
-The next dependency-ordered work is TASK-181, Company Receipt Pack preview/PDF/Print.
-TASK-177–180's canonical model/API, confirmation, permission-scoped register and
-query-side search/date boundary, TASK-175's production release
-verification and TASK-174's invalidation boundary are complete. EPIC-063 entitlement
-integration TASK-182 also waits for EPIC-064 TASK-186. EPIC-064 implementation begins with TASK-185
+The next dependency-ordered work is TASK-185, the platform Module Catalog, Master
+entitlement, Company allocation, platform API and Demo harness. TASK-177–181's Company
+Receipt model/API, confirmation, register, search/date and Pack boundary, TASK-175's
+production release verification and TASK-174's invalidation boundary are complete.
+EPIC-063 entitlement integration TASK-182 waits for EPIC-064 TASK-186. EPIC-064 begins with TASK-185
 and then proceeds through tenant cutover, platform workspace and proof in
 TASK-186–188. The current working tree contains additional uncommitted application changes;
 this status records behavior verified from the current files/tests and the deployed

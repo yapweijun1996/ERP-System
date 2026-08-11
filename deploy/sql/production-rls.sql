@@ -61,6 +61,7 @@ DECLARE
     'document_governance_event', 'document_correction',
     'document_purge_request', 'document_tombstone', 'document_access_event',
     'company_receipt',
+    'company_receipt_pack',
     'expense_category', 'expense_policy', 'expense_policy_version',
     'expense_line_policy_snapshot', 'expense_bank_charge_override',
     'expense_claim', 'expense_claim_line', 'expense_allocation',

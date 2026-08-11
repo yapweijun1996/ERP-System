@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 92;
+  var DEMO_SCHEMA_VERSION = 93;
   var DEMO_PACK_VERSION = '15';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
@@ -3238,6 +3238,149 @@
         filters:{search:search,dateFrom:dateFrom,dateTo:dateTo}}};
     });
   }
+  function scaledReceiptAmount(value){
+    var text=String(value||'0');
+    var parts=text.split('.');
+    return BigInt(parts[0]||'0')*10000n+BigInt(String(parts[1]||'').padEnd(4,'0').slice(0,4));
+  }
+  function receiptAmountText(value){
+    var negative=value<0n,absolute=negative?-value:value,text=absolute.toString().padStart(5,'0');
+    return (negative?'-':'')+text.slice(0,-4)+'.'+text.slice(-4);
+  }
+  async function companyReceiptPack(payload){
+    payload=payload||{};
+    var packKey=String(payload.packKey||'').trim();
+    if(!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(packKey)) throw new Error('A valid Receipt Pack key is required.');
+    var search=String(payload.search||'').trim();
+    var dateFrom=String(payload.dateFrom||''),dateTo=String(payload.dateTo||'');
+    var datePattern=/^\d{4}-\d{2}-\d{2}$/;
+    var validDate=function(value){
+      if(!datePattern.test(value)) return false;
+      var parsed=new Date(value+'T00:00:00.000Z');
+      return !Number.isNaN(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
+    };
+    if(search.length>200||!validDate(dateFrom)||!validDate(dateTo)||dateFrom>dateTo){
+      throw new Error('Select a valid inclusive Receipt Pack date range.');
+    }
+    var locale=['en','ms','zh','ja','vi'].includes(String(payload.locale))?String(payload.locale):'en';
+    var response=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var canReadCompany=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_company');
+      var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_own');
+      if(!canReadOwn) throw new Error('You cannot create a Company Receipt Pack.');
+      var visibility=canReadCompany?'company':'own';
+      var filters={search:search,dateFrom:dateFrom,dateTo:dateTo};
+      var existing=(await tx.query(
+        'select * from company_receipt_pack where master_fn=$1 and company_fn=$2 and pack_key=$3 limit 1',
+        [SCOPE.masterFn,SCOPE.companyFn,packKey])).rows[0];
+      if(existing){
+        var existingFilters=existing.filters||{};
+        if(Number(existing.created_by_user_id)!==actorId||existing.visibility!==visibility||
+          existing.locale!==locale||existingFilters.search!==filters.search||
+          existingFilters.dateFrom!==filters.dateFrom||existingFilters.dateTo!==filters.dateTo){
+          throw new Error('This Receipt Pack key was already used for different selection facts.');
+        }
+        return {data:{pack:{
+          id:Number(existing.id),packKey:existing.pack_key,visibility:existing.visibility,
+          locale:existing.locale,filters:existing.filters,rows:existing.rows,totals:existing.totals,
+          sourceSha256:existing.source_sha256,rowCount:Number(existing.row_count),
+          documentCount:Number(existing.document_count),createdByUserId:Number(existing.created_by_user_id),
+          createdAt:existing.created_at,
+        },replayed:true},meta:{immutableSnapshot:true,completeResult:true,missingDatesExcluded:true,currencyTotalsSeparated:true}};
+      }
+      var params=[SCOPE.masterFn,SCOPE.companyFn,dateFrom,dateTo];
+      var predicates=["r.master_fn=$1","r.company_fn=$2","r.status='ready'",'r.transaction_date>=$3','r.transaction_date<=$4'];
+      if(!canReadCompany){params.push(actorId);predicates.push('r.uploader_user_id=$'+params.length);}
+      if(search){params.push('%'+search+'%');predicates.push(`(r.merchant ilike $${params.length} or r.receipt_number ilike $${params.length} or r.notes ilike $${params.length} or r.category ilike $${params.length})`);}
+      var result=await tx.query(
+        `select r.id,r.version,r.transaction_date,r.merchant,r.receipt_number,r.category,
+                r.business_purpose,r.notes,r.amount,r.currency_code,r.uploader_user_id,
+                r.document_id,r.document_version_id,r.evidence_sha256,u.full_name as uploader_name,
+                d.original_file_name
+         from company_receipt r
+         join app_user u on u.master_fn=r.master_fn and u.user_id=r.uploader_user_id
+         join managed_document d on d.master_fn=r.master_fn and d.company_fn=r.company_fn and d.id=r.document_id
+         where ${predicates.join(' and ')} order by r.transaction_date asc,r.id asc limit 5001`,params);
+      if(!result.rows.length) throw new Error('No ready, dated Company Receipts match the selected range.');
+      if(result.rows.length>5000) throw new Error('A Receipt Pack may contain at most 5000 receipts. Narrow the filters.');
+      var rows=result.rows.map(function(row){return {
+        receiptId:Number(row.id),receiptVersion:Number(row.version),transactionDate:row.transaction_date,
+        merchant:row.merchant,receiptNumber:row.receipt_number,category:row.category,
+        businessPurpose:row.business_purpose,notes:row.notes,amount:String(row.amount),
+        currency:row.currency_code,uploaderUserId:Number(row.uploader_user_id),uploaderName:row.uploader_name,
+        documentId:Number(row.document_id),documentVersionId:Number(row.document_version_id),
+        documentSha256:row.evidence_sha256,originalFileName:row.original_file_name,
+      };});
+      var totalMap=new Map();
+      rows.forEach(function(row){var current=totalMap.get(row.currency)||{amount:0n,receiptCount:0};current.amount+=scaledReceiptAmount(row.amount);current.receiptCount+=1;totalMap.set(row.currency,current);});
+      var totals=Array.from(totalMap.entries()).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(entry){return {currency:entry[0],amount:receiptAmountText(entry[1].amount),receiptCount:entry[1].receiptCount};});
+      var sourceSha256=await state.runtime.sha256Hex(JSON.stringify({filters:filters,visibility:visibility,rows:rows,totals:totals}));
+      var inserted=(await tx.query(
+        `insert into company_receipt_pack(master_fn,company_fn,pack_key,visibility,locale,filters,rows,totals,source_sha256,row_count,document_count,created_by_user_id)
+         values($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$10,$11) returning *`,
+        [SCOPE.masterFn,SCOPE.companyFn,packKey,visibility,locale,JSON.stringify(filters),JSON.stringify(rows),JSON.stringify(totals),sourceSha256,rows.length,actorId])).rows[0];
+      var pack={id:Number(inserted.id),packKey:packKey,visibility:visibility,locale:locale,filters:filters,
+        rows:rows,totals:totals,sourceSha256:sourceSha256,rowCount:rows.length,documentCount:rows.length,
+        createdByUserId:actorId,createdAt:inserted.created_at};
+      return {data:{pack:pack,replayed:false},meta:{immutableSnapshot:true,completeResult:true,missingDatesExcluded:true,currencyTotalsSeparated:true}};
+    });
+    if(!response.data.replayed){
+      var createdPack=response.data.pack;
+      await recordDemoAudit('company_receipt_pack',createdPack.id,'created',null,{
+        filters:createdPack.filters,visibility:createdPack.visibility,
+        sourceSha256:createdPack.sourceSha256,rowCount:createdPack.rowCount,
+        documentCount:createdPack.documentCount,totals:createdPack.totals,
+      });
+    }
+    return response;
+  }
+  async function companyReceiptPackPdf(packId,action){
+    action=String(action||'view');
+    if(!['view','download','print'].includes(action)) throw new Error('Receipt Pack PDF action is invalid.');
+    var response=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var canReadCompany=await state.runtime.commands.hasPermissionWithin(orm,SCOPE,actorId,'expenses.company_receipts.read_company');
+      var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(orm,SCOPE,actorId,'expenses.company_receipts.read_own');
+      if(!canReadOwn) throw new Error('You cannot access a Company Receipt Pack.');
+      var stored=(await tx.query(
+        'select * from company_receipt_pack where master_fn=$1 and company_fn=$2 and id=$3 and created_by_user_id=$4 limit 1',
+        [SCOPE.masterFn,SCOPE.companyFn,Number(packId),actorId])).rows[0];
+      if(!stored) throw new Error('Receipt Pack is unavailable for the signed-in user and active Company.');
+      var pack={id:Number(stored.id),packKey:stored.pack_key,locale:stored.locale,filters:stored.filters,
+        rows:stored.rows,totals:stored.totals,sourceSha256:stored.source_sha256,rowCount:Number(stored.row_count),
+        documentCount:Number(stored.document_count),createdAt:stored.created_at};
+      var documents=[],totalSourceBytes=0,maxSourceBytes=250*1024*1024;
+      for(var row of pack.rows){
+        var version=(await tx.query(
+          `select v.*,b.content,(select status from document_scan_job j where j.master_fn=v.master_fn and j.company_fn=v.company_fn and j.version_id=v.id order by j.id desc limit 1) as scan_status
+           from document_version v join document_blob b on b.master_fn=v.master_fn and b.company_fn=v.company_fn and b.version_id=v.id
+           where v.master_fn=$1 and v.company_fn=$2 and v.id=$3 limit 1`,
+          [SCOPE.masterFn,SCOPE.companyFn,row.documentVersionId])).rows[0];
+        if(!version||Number(version.document_id)!==Number(row.documentId)||version.sha256!==row.documentSha256||version.scan_status!=='clean'){
+          throw new Error('Frozen Receipt Pack evidence is unavailable or not clean.');
+        }
+        var content=version.content instanceof Uint8Array?version.content:new Uint8Array(version.content||[]);
+        totalSourceBytes+=content.byteLength;
+        if(totalSourceBytes>maxSourceBytes) throw new Error('Receipt Pack source files exceed the 250 MB rendering limit.');
+        var digest=await crypto.subtle.digest('SHA-256',content);
+        var contentSha256=Array.from(new Uint8Array(digest)).map(function(byte){return byte.toString(16).padStart(2,'0');}).join('');
+        if(contentSha256!==row.documentSha256) throw new Error('Frozen Receipt Pack evidence failed integrity verification.');
+        documents.push({fileName:row.originalFileName,mimeType:version.mime_type,sha256:version.sha256,content:content});
+      }
+      var pdfContent=await state.runtime.commands.renderCompanyReceiptPackPdf(pack,documents);
+      return {data:{content:pdfContent,mimeType:'application/pdf',sourceSha256:pack.sourceSha256,
+        fileName:`company-receipt-pack-${pack.filters.dateFrom}-${pack.filters.dateTo}.pdf`,
+        packId:Number(packId),rowCount:pack.rowCount,documentCount:pack.documentCount},
+        meta:{immutableSnapshot:true,cacheControl:'no-store'}};
+    });
+    await recordDemoAudit('company_receipt_pack',Number(packId),'pdf_'+action,null,{
+      sourceSha256:response.data.sourceSha256,rowCount:response.data.rowCount,
+      documentCount:response.data.documentCount,
+    });
+    return response;
+  }
   var my={
     context:async function(){
       var data=await withMyActor(async function(orm,actor){
@@ -4162,6 +4305,8 @@
     session: session,
     financeReports:financeReports,
     companyReceipts:companyReceipts,
+    companyReceiptPack:companyReceiptPack,
+    companyReceiptPackPdf:companyReceiptPackPdf,
     my:my,
     confirmOrder: confirmOrder,
     createPurchaseOrder: createPurchaseOrder,

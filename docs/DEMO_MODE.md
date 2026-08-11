@@ -163,10 +163,14 @@ test prove the backend foundation in both database modes. Existing Demo My Recei
 provides camera/file IndexedDB drafts, crop/rotate/compress, retry and refresh persistence
 through the shared validation/storage contract. The Demo adapter now evaluates the
 same permission keys and performs the same bounded `afterId` Company Receipt query as
-API mode; both drive the five-language responsive register. Receipt Pack generation
-remains pending and current Tax Evidence package generation remains API-only.
+API mode; both drive the five-language responsive register. TASK-181 adds the same
+migration-0093 snapshot contract in PGlite and PostgreSQL/API modes: complete ready/
+dated selection, stable-key replay, creator scope, exact currency totals, governed
+document reads and one PDF renderer. Tax Evidence package generation remains a separate
+claim flow even though both now reuse the evidence-PDF primitive.
 
-TASK-180 now keeps search/date predicates query-side in both adapters; TASK-181–183 must continue using the shared schema/domain contract.
+TASK-180 keeps search/date predicates query-side in both adapters; TASK-182–183 must
+continue using the shared schema/domain contract.
 Browser PGlite proof
 must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence is real;
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,

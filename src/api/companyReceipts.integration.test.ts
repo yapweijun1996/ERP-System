@@ -1,12 +1,14 @@
 import type { Server } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
+import { PDFDocument } from 'pdf-lib';
 import type { DB } from '../data/db';
 import { seedDemo } from '../data/seed';
 import {
   appUser,
   auditLog,
   companyReceipt,
+  companyReceiptPack,
   documentScanJob,
   employee,
   role,
@@ -249,6 +251,54 @@ describe('Company Receipts API', () => {
     );
     expect(invalidRange.status).toBe(400);
     expect((await invalidRange.json()).error.code).toBe('company_receipt_query_invalid');
+    const invalidPack = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers: {
+        cookie: adminAuth.cookie,
+        'x-csrf-token': adminAuth.csrf,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        packKey: 'company-receipt-pack:api-invalid',
+        dateFrom: '2026-08-11',
+        dateTo: '2026-08-10',
+      }),
+    });
+    expect(invalidPack.status).toBe(422);
+    expect((await invalidPack.json()).error.code).toBe('company_receipt_pack_range_invalid');
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(0);
+    const packResponse = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers: {
+        cookie: adminAuth.cookie,
+        'x-csrf-token': adminAuth.csrf,
+        'content-type': 'application/json',
+        'x-request-id': 'company-receipt-pack-create-0001',
+      },
+      body: JSON.stringify({
+        packKey: 'company-receipt-pack:api-0001',
+        dateFrom: '2026-08-10',
+        dateTo: '2026-08-10',
+        locale: 'en',
+      }),
+    });
+    expect(packResponse.status).toBe(201);
+    const packBody = await packResponse.json() as {
+      data: { pack: { id: number; rowCount: number; rows: Array<{ id: number }> } };
+    };
+    expect(packBody.data.pack).toMatchObject({
+      rowCount: 1,
+      totals: [{ currency: 'SGD', amount: '42.5000', receiptCount: 1 }],
+    });
+    const packPdfResponse = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${packBody.data.pack.id}/pdf?action=download`,
+      { headers: { cookie: adminAuth.cookie, 'x-request-id': 'company-receipt-pack-pdf-0001' } },
+    );
+    expect(packPdfResponse.status).toBe(200);
+    expect(packPdfResponse.headers.get('content-type')).toBe('application/pdf');
+    expect(packPdfResponse.headers.get('x-receipt-pack-sha256')).toMatch(/^[0-9a-f]{64}$/);
+    expect((await PDFDocument.load(await packPdfResponse.arrayBuffer())).getPageCount())
+      .toBeGreaterThanOrEqual(2);
     const companyDetail = await fetch(
       `${baseUrl}/api/company-receipts/${createdBody.data.id}`,
       { headers: { cookie: adminAuth.cookie } },
@@ -345,6 +395,20 @@ describe('Company Receipts API', () => {
       { action: 'voided', requestId: 'company-receipt-void-0001' },
     ]));
     expect(await db.select().from(companyReceipt)).toHaveLength(3);
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(1);
+    const packAudits = await db.select({
+      action: auditLog.action,
+      requestId: auditLog.requestId,
+    }).from(auditLog).where(and(
+      eq(auditLog.masterFn, 'M1'),
+      eq(auditLog.companyFn, 'C-SG'),
+      eq(auditLog.entity, 'company_receipt_pack'),
+      eq(auditLog.entityId, String(packBody.data.pack.id)),
+    ));
+    expect(packAudits).toEqual(expect.arrayContaining([
+      { action: 'created', requestId: 'company-receipt-pack-create-0001' },
+      { action: 'pdf_download', requestId: 'company-receipt-pack-pdf-0001' },
+    ]));
   });
 
   it('denies register reads when only the legacy receipt mutation grant remains', async () => {

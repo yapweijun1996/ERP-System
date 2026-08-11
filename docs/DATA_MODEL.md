@@ -873,7 +873,7 @@ expand/backfill migration; legacy rows are retained during compatibility rollout
 All company-owned additions carry `master_fn` and `company_fn` and participate in
 production RLS.
 
-## 10. Company Receipt aggregate and read scope (EPIC-063 / TASK-177–179)
+## 10. Company Receipt aggregate, read scope and Pack snapshot (EPIC-063 / TASK-177–181)
 
 Migration 0090 adds `company_receipt` through the shared Drizzle schema used by
 PostgreSQL and PGlite. Each row carries `master_fn`, `company_fn`, an immutable unique
@@ -902,6 +902,16 @@ Employee/Manager receive `expenses.company_receipts.read_own`; Finance Preparer,
 Finance Checker, Receipt Manager and Company Owner receive
 `expenses.company_receipts.read_company`. Existing Company authorization versions are
 incremented so stale capability snapshots cannot retain the old read boundary.
+
+Migration 0093 adds `company_receipt_pack`. It is append-only business evidence for one
+creator-selected range, not a cache of the register page: `(master_fn, company_fn,
+pack_key)` is unique, and the row freezes visibility, locale, normalized filters,
+chronological receipt/document facts, exact per-currency totals, source SHA-256,
+row/document counts and creator/time. JSON shape, key/hash formats, visibility/locale
+and 1–5,000 counts are database-checked. The pack does not duplicate document bytes;
+rendering rereads the frozen `document_version` identities from governed storage and
+fails if tenant, creator, scan state, version/hash/content or the 250 MB source bound no
+longer matches. It is included in the production Company RLS policy set.
 
 ## 11. Planned platform module entitlement data changes (EPIC-064)
 

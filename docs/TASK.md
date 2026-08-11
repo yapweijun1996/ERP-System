@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **180**
+- Done: **181**
 - In progress: **0**
-- Todo: **7**
+- Todo: **6**
 - Blocked: **1**
 - Total: **188**
 
@@ -22,9 +22,11 @@ layout/behavior contracts. The full i18n matrix passes 1,533 canonical keys / 69
 five-language packs across 128 routes × 5 languages × 2 viewports. TASK-179 adds the
 129th registered route and 70th local five-language pack; its dedicated 1440×900 /
 390×844 browser proof and the current 50-route canonical list-layout audit pass. The
-2026-08-11 TASK-179 regression passes 159 files plus 1 skipped file (643 passed,
-1 skipped test); its focused receipt/authorization/Demo proof passes 6 files / 22 tests.
-`npm run smoke` passes at
+2026-08-11 TASK-181 regression passes 160 files plus 1 skipped file (645 passed,
+1 skipped test); its focused Pack/API/Tax Evidence proof passes 3 files / 7 tests.
+TASK-180 adds query-side range/search, and TASK-181 adds migration 0093 plus immutable
+Receipt Pack Preview/PDF/Print; its dedicated E2E and five-language dual-viewport route
+audit pass. `npm run smoke` passes at
 desktop/mobile after the visible-only navigation-badge contract was fixed. PWA update,
 access matrix, build, permission, schema and drift gates pass. TASK-017 remains the
 separate physical-device blocker and does not change the machine-readable totals. The
@@ -51,7 +53,7 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | TASK-178 | Done | Migration 0091 exact-hash uniqueness and immutable OCR-provenance confirmation/manual-fallback context |
 | TASK-179 | Done | Migration 0092, explicit own/company read grants, bounded Demo/API register and responsive five-language desktop/mobile UI |
 | TASK-180 | Done | Query-side search, inclusive date presets/ranges, validation and actionable Missing Date behavior |
-| TASK-181 | Todo | Receipt Pack preview, PDF, mixed-currency register and Print |
+| TASK-181 | Done | Migration 0093 immutable Receipt Pack snapshot, complete-set mixed-currency PDF preview/download/Print and audited Demo/API rendering |
 | TASK-182 | Todo | Demo/API parity, module entitlement, authorization, accessMatrix and i18n |
 | TASK-183 | Todo | Browser/release proof and final documentation/KB synchronization |
 
@@ -76,10 +78,10 @@ TASK-184 did not change code, schema, routes, permissions or production.
 TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
 bounded Demo/API reads and responsive desktop/mobile register UI. TASK-180 adds
-query-side search/date behavior. Receipt Pack, module entitlement and the final
-canonical permission cutover remain pending. TASK-181 is now the lowest-numbered
-dependency-eligible Expenses & Tax task;
-TASK-185 is independently eligible for the MAC programme.
+query-side search/date behavior; TASK-181 adds the immutable complete-result Receipt
+Pack and one PDF for preview, download and Print. Module entitlement and the final
+canonical permission cutover remain pending. TASK-182 waits for TASK-186, so TASK-185
+is now the next dependency-eligible implementation task.
 
 ## Latest implementation milestones
 

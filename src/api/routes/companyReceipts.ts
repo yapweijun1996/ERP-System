@@ -11,6 +11,15 @@ import {
   updateCompanyReceiptWithin,
   voidCompanyReceiptWithin,
 } from '../../modules/expenses/companyReceipt';
+import {
+  CompanyReceiptPackError,
+  createCompanyReceiptPackWithin,
+  readCompanyReceiptPackWithin,
+  renderCompanyReceiptPackWithin,
+  type CompanyReceiptPackAction,
+} from '../../modules/expenses/companyReceiptPack';
+import { DocumentQuarantineError } from '../../modules/documents/processing';
+import { DocumentStorageError } from '../../modules/documents/storage';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 
@@ -97,6 +106,21 @@ export function createCompanyReceiptsRouter(db: DB): Router {
       apiError(res, error.status, error.code, error.message, error.fieldErrors);
       return;
     }
+    if (error instanceof CompanyReceiptPackError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
+    if (error instanceof DocumentQuarantineError) {
+      apiError(res, 423, error.code, error.message, {
+        action: error.action,
+        scanStatus: error.scanStatus,
+      });
+      return;
+    }
+    if (error instanceof DocumentStorageError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
     throw error;
   }
 
@@ -175,6 +199,128 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           originalPreserved: true,
         },
       });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/packs', async (req, res) => {
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const { session, visibility } = access;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const result = await withTenantTransaction(db, scope, async (tx) => {
+        const created = await createCompanyReceiptPackWithin(
+          tx,
+          scope,
+          session.userId,
+          visibility,
+          req.body ?? {},
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'company_receipt_pack',
+          entityId: created.pack.id,
+          action: created.replayed ? 'create_replay' : 'created',
+          after: {
+            filters: created.pack.filters,
+            visibility: created.pack.visibility,
+            sourceSha256: created.pack.sourceSha256,
+            rowCount: created.pack.rowCount,
+            documentCount: created.pack.documentCount,
+            totals: created.pack.totals,
+          },
+        });
+        return created;
+      });
+      res.status(result.replayed ? 200 : 201).json({
+        data: result,
+        meta: {
+          immutableSnapshot: true,
+          completeResult: true,
+          missingDatesExcluded: true,
+          currencyTotalsSeparated: true,
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/packs/:packId', async (req, res) => {
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const packId = positiveId(req.params.packId);
+    if (!packId) {
+      apiError(res, 400, 'company_receipt_pack_id_invalid', 'packId must be positive.');
+      return;
+    }
+    const { session } = access;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        readCompanyReceiptPackWithin(tx, scope, session.userId, packId));
+      res.json({ data, meta: { immutableSnapshot: true, completeResult: true } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/packs/:packId/pdf', async (req, res) => {
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const packId = positiveId(req.params.packId);
+    const action = String(req.query.action ?? 'view') as CompanyReceiptPackAction;
+    if (!packId || !['view', 'download', 'print'].includes(action)) {
+      apiError(
+        res,
+        400,
+        'company_receipt_pack_access_invalid',
+        'Use a positive packId and action view, download or print.',
+      );
+      return;
+    }
+    const { session } = access;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const rendered = await withTenantTransaction(db, scope, async (tx) => {
+        const result = await renderCompanyReceiptPackWithin(
+          tx,
+          scope,
+          session.userId,
+          packId,
+          action,
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'company_receipt_pack',
+          entityId: packId,
+          action: `pdf_${action}`,
+          after: {
+            sourceSha256: result.pack.sourceSha256,
+            artifactSha256: result.sha256,
+            rowCount: result.pack.rowCount,
+            documentCount: result.pack.documentCount,
+          },
+        });
+        return result;
+      });
+      const encodedName = encodeURIComponent(rendered.fileName).replaceAll("'", '%27');
+      res.set({
+        'Content-Type': rendered.mimeType,
+        'Content-Length': String(rendered.content.byteLength),
+        'Content-Disposition': `${action === 'download' ? 'attachment' : 'inline'}; filename*=UTF-8''${encodedName}`,
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Receipt-Pack-SHA256': rendered.sha256,
+        'X-Receipt-Pack-Source-SHA256': rendered.pack.sourceSha256,
+      });
+      res.send(Buffer.from(rendered.content));
     } catch (error) {
       handleError(res, error);
     }

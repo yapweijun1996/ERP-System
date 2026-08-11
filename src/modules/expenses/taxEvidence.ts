@@ -44,6 +44,7 @@ import {
   type DocumentStorageRegistry,
   type StoredDocumentVersion,
 } from '../documents/storage';
+import { renderEvidencePdf } from '../documents/evidencePdf';
 
 export type TaxEvidenceCompleteness =
   | 'complete'
@@ -782,17 +783,6 @@ async function renderRegisterXlsx(
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
-function wrapText(value: string, width: number): string[] {
-  const result: string[] = [];
-  let remaining = value;
-  while (remaining.length > width) {
-    result.push(remaining.slice(0, width));
-    remaining = remaining.slice(width);
-  }
-  result.push(remaining);
-  return result;
-}
-
 async function renderRegisterPdf(
   snapshot: typeof taxEvidenceSnapshot.$inferSelect,
   lines: TaxEvidenceLineFacts[],
@@ -844,105 +834,6 @@ async function renderRegisterPdf(
       { x: 32, y, size: 7, font, color: rgb(0.35, 0.39, 0.45) },
     );
     y -= 14;
-  }
-  return Buffer.from(await pdf.save({ useObjectStreams: false }));
-}
-
-async function placeholderEvidencePage(
-  pdf: PDFDocument,
-  font: Awaited<ReturnType<PDFDocument['embedFont']>>,
-  name: string,
-  mimeType: string,
-  hash: string,
-) {
-  const page = pdf.addPage([595, 842]);
-  page.drawText('Original evidence is included in the ZIP package', {
-    x: 45, y: 785, size: 14, font,
-  });
-  let y = 750;
-  for (const line of wrapText(`File: ${name}`, 75)) {
-    page.drawText(line, { x: 45, y, size: 10, font });
-    y -= 15;
-  }
-  page.drawText(`MIME: ${mimeType}`, { x: 45, y, size: 10, font });
-  y -= 18;
-  for (const line of wrapText(`SHA-256: ${hash}`, 75)) {
-    page.drawText(line, { x: 45, y, size: 9, font });
-    y -= 14;
-  }
-}
-
-async function renderMergedPdf(
-  snapshot: typeof taxEvidenceSnapshot.$inferSelect,
-  documents: Array<{
-    fileName: string;
-    mimeType: string;
-    sha256: string;
-    content: Uint8Array;
-  }>,
-): Promise<Buffer> {
-  const pdf = await PDFDocument.create();
-  pdf.setTitle('Merged Tax Evidence');
-  pdf.setAuthor('Aria ERP');
-  pdf.setCreationDate(snapshot.createdAt);
-  pdf.setModificationDate(snapshot.createdAt);
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  for (const document of documents) {
-    try {
-      if (document.mimeType === 'application/pdf') {
-        const source = await PDFDocument.load(document.content, {
-          ignoreEncryption: false,
-          throwOnInvalidObject: true,
-        });
-        const pages = await pdf.copyPages(source, source.getPageIndices());
-        pages.forEach((page) => pdf.addPage(page));
-      } else if (document.mimeType === 'image/png') {
-        const image = await pdf.embedPng(document.content);
-        const size = image.scale(Math.min(1, 520 / image.width, 750 / image.height));
-        const page = pdf.addPage([595, 842]);
-        page.drawImage(image, {
-          x: (595 - size.width) / 2,
-          y: (842 - size.height) / 2,
-          width: size.width,
-          height: size.height,
-        });
-      } else if (document.mimeType === 'image/jpeg') {
-        const image = await pdf.embedJpg(document.content);
-        const size = image.scale(Math.min(1, 520 / image.width, 750 / image.height));
-        const page = pdf.addPage([595, 842]);
-        page.drawImage(image, {
-          x: (595 - size.width) / 2,
-          y: (842 - size.height) / 2,
-          width: size.width,
-          height: size.height,
-        });
-      } else {
-        await placeholderEvidencePage(
-          pdf,
-          font,
-          document.fileName,
-          document.mimeType,
-          document.sha256,
-        );
-      }
-    } catch {
-      await placeholderEvidencePage(
-        pdf,
-        font,
-        document.fileName,
-        document.mimeType,
-        document.sha256,
-      );
-    }
-  }
-  if (!documents.length) {
-    await placeholderEvidencePage(
-      pdf,
-      font,
-      'No original evidence matched this snapshot',
-      'application/octet-stream',
-      snapshot.sourceSha256,
-    );
   }
   return Buffer.from(await pdf.save({ useObjectStreams: false }));
 }
@@ -1111,7 +1002,11 @@ async function renderArtifactSet(
       artifactType: 'merged_pdf',
       fileName: `${stem}-evidence.pdf`,
       mimeType: 'application/pdf',
-      content: await renderMergedPdf(snapshot, documents),
+      content: Buffer.from(await renderEvidencePdf({
+        title: 'Merged Tax Evidence',
+        createdAt: snapshot.createdAt,
+        emptyMessage: 'No original evidence matched this snapshot.',
+      }, documents)),
     },
     {
       artifactType: 'register_xlsx',

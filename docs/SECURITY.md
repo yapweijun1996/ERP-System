@@ -213,8 +213,12 @@ own or company receipt-read capability. The resulting visibility is enforced aga
 the tenant-scoped query; Company Owner receives a stored company-read grant and
 platform support receives no tenant business grant. Mutations and confirmation remain
 uploader-only under `employee.receipts.write` until TASK-182's canonical cutover.
-Sellable module entitlement and Receipt Pack read/export audits remain required by
-TASK-181/182. Exact hash duplicates may warn/prevent accidental storage, but
+TASK-181 Pack creation and rendering reapply the same read capability and resolved
+own/company visibility; snapshots are creator-only, stable-key idempotent, bounded to
+5,000 rows and render only after scan, version/hash/content and 250 MB source checks.
+Preview/download/Print return one no-store artifact and append correlated audit without
+mutating Company Receipt state. Sellable module entitlement remains TASK-182/186.
+Exact hash duplicates may warn/prevent accidental storage, but
 merchant/date/amount similarity must never auto-delete or merge evidence.
 
 ## Planned platform-owned Module Access Control security boundary

@@ -95,6 +95,43 @@ export const companyReceipt = pgTable('company_receipt', {
         and ${t.voidedByUserId} is null)`),
 ]);
 
+/** Immutable, actor-created export snapshot over Company Receipt facts. The
+ * selected rows and source document-version identities are frozen as JSON so
+ * later receipt corrections never rewrite an already-previewed pack. */
+export const companyReceiptPack = pgTable('company_receipt_pack', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  packKey: text('pack_key').notNull(),
+  visibility: text('visibility').notNull(),
+  locale: text('locale').notNull().default('en'),
+  filters: jsonb('filters').notNull(),
+  rows: jsonb('rows').notNull(),
+  totals: jsonb('totals').notNull(),
+  sourceSha256: text('source_sha256').notNull(),
+  rowCount: integer('row_count').notNull(),
+  documentCount: integer('document_count').notNull(),
+  createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('uq_company_receipt_pack_key').on(t.masterFn, t.companyFn, t.packKey),
+  index('idx_company_receipt_pack_actor')
+    .on(t.masterFn, t.companyFn, t.createdByUserId, t.createdAt, t.id),
+  check('ck_company_receipt_pack_key',
+    sql`${t.packKey} ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'`),
+  check('ck_company_receipt_pack_visibility', sql`${t.visibility} in ('own','company')`),
+  check('ck_company_receipt_pack_locale', sql`${t.locale} in ('en','ms','zh','ja','vi')`),
+  check('ck_company_receipt_pack_json',
+    sql`jsonb_typeof(${t.filters}) = 'object'
+      and jsonb_typeof(${t.rows}) = 'array'
+      and jsonb_typeof(${t.totals}) = 'array'`),
+  check('ck_company_receipt_pack_hash',
+    sql`char_length(${t.sourceSha256}) = 64 and ${t.sourceSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_company_receipt_pack_counts',
+    sql`${t.rowCount} between 1 and 5000
+      and ${t.documentCount} between 1 and ${t.rowCount}`),
+]);
+
 export const expenseCategory = pgTable('expense_category', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,

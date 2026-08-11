@@ -389,9 +389,9 @@ domain-approved correction/void/tombstone path, never an ad-hoc physical delete.
 ## 6. Company Receipt logic (Expenses & Tax v1)
 
 TASK-177–179 implement the canonical aggregate, secure capture-to-confirmation
-foundation and permission-scoped browser register. It does not yet implement
-standalone Receipt Pack or final platform-owned module entitlement delivered by
-TASK-181–183. TASK-180 query-side search/date behavior is current.
+foundation and permission-scoped browser register. TASK-180 query-side search/date
+behavior and TASK-181's standalone immutable Receipt Pack are current. The final
+platform-owned module entitlement/canonical permission cutover remains TASK-182/186.
 
 ### 6.1 Ownership and evidence
 
@@ -431,20 +431,27 @@ is inclusive on company-local `transaction_date`;
 missing-date records stay visible in the current register with a My Receipts correction
 action but are excluded whenever a date range is active.
 
-Preview/export resolves the complete matching set independently of UI pagination,
-orders it chronologically and generates a register plus each original receipt. Totals
-are grouped by currency. The existing Tax Evidence PDF code is a reusable technical
-dependency only: its current source joins `expensePosting`, `expenseClaimLine` and
-`receiptInboxItem` and filters posting dates, so it is not the Company Receipt query or
-business contract.
+Migration 0093 and `companyReceiptPack.ts` resolve every permission-visible Ready receipt
+with a non-null date in the selected inclusive range, independently of UI pagination
+(maximum 5,000), then freeze the filters, chronological receipt/document facts, source
+SHA-256 and exact Decimal totals grouped by currency. A stable `packKey` gives
+fact-matched idempotent replay; the creator alone may read/render the snapshot. Rendering
+rechecks tenant scope, permission, document-version/hash identity, scan-clean state,
+content integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4
+landscape register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG
+or emits an explicit unsupported/corrupt evidence placeholder. Preview, download and
+Print use the same no-store artifact and are audited without changing receipt state.
+The shared PDF primitive is technical reuse only: Tax Evidence still joins
+`expensePosting`, `expenseClaimLine` and `receiptInboxItem` and is not this business query.
 
 Current source: `src/data/schema/expenses.ts`, migration
 `drizzle/0090_company_receipts.sql`, `drizzle/0091_sloppy_blackheart.sql`,
-`src/modules/expenses/companyReceipt.ts` and
+`drizzle/0093_company_receipt_pack.sql`, `src/modules/expenses/companyReceipt.ts`,
+`src/modules/expenses/companyReceiptPack.ts`, `src/modules/expenses/companyReceiptPackPdf.ts` and
 `src/api/routes/companyReceipts.ts`. Evidence/upload dependencies remain
 `src/data/schema/documents.ts`, `src/modules/documents/upload.ts`,
-`src/modules/documents/processing.ts` and `src/api/routes/my.ts`; Receipt Pack may reuse
-`src/modules/expenses/taxEvidence.ts` readers without adopting its claim business model.
+`src/modules/documents/processing.ts`, `src/modules/documents/evidencePdf.ts` and
+`src/api/routes/my.ts`.
 
 ## 7. Cross-cutting safety rules
 
@@ -471,6 +478,7 @@ Current source: `src/data/schema/expenses.ts`, migration
 | Staff Calendar | `src/modules/hr/appointment.ts`, `calendarSync.ts`, `teamCalendar.ts` | `src/modules/hr/appointment.test.ts`, `teamCalendar.test.ts`, `src/api/hrCalendar.integration.test.ts` |
 | Expense Claim | `src/modules/expenses/claims.ts`, `controls.ts`, `postings.ts` | `src/modules/expenses/claims.test.ts`, `controls.test.ts`, `postings.test.ts` |
 | Company Receipt foundation | `src/data/schema/expenses.ts`, `src/modules/expenses/companyReceipt.ts`, `src/api/routes/companyReceipts.ts` | `src/modules/expenses/companyReceipt.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/api/postgresSecurity.integration.test.ts` |
+| Company Receipt Pack | `src/modules/expenses/companyReceiptPack.ts`, `companyReceiptPackPdf.ts`, `src/modules/documents/evidencePdf.ts` | `src/modules/expenses/companyReceiptPack.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/modules/expenses/taxEvidence.test.ts`, `tests/e2e/company-receipts.spec.mjs` |
 | Claim downstream | `src/modules/expenses/reimbursementBatches.ts`, `reimbursementPayments.ts` | matching module tests |
 | Project Progress Claim | `src/modules/project/progressClaim.ts` | project module/API tests where registered |
 
