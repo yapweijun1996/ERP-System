@@ -893,8 +893,8 @@ integrity/deduplication projection of the immutable document version. It has
 no Employee, Expense Claim, reimbursement, GL or tax-treatment foreign key. Current
 commands create `ready` rows (transaction date may remain null), permit
 versioned metadata correction, and transition to `voided` without physical deletion.
-The wider Draft/Processing/Needs Attention workflow remains target state vocabulary for
-TASK-180. `company_receipt` is included in production tenant RLS and has PGlite plus
+The wider Draft/Processing/Needs Attention workflow remains target vocabulary rather
+than stored aggregate state. `company_receipt` is included in production tenant RLS and has PGlite plus
 non-superuser PostgreSQL isolation proof.
 
 Migration 0092 changes no receipt columns. It adds registered role-permission rows:

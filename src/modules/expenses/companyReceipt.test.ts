@@ -46,6 +46,7 @@ describe('Company Receipt aggregate', () => {
     actorUserId = viewerId,
     draftId = `receipt_${actorUserId}_0001`,
     clean = true,
+    contentSuffix = '',
   ) {
     const uploaded = await uploadReceiptDocument(db, sg, { userId: actorUserId }, {
       clientDraftId: draftId,
@@ -53,6 +54,7 @@ describe('Company Receipt aggregate', () => {
       declaredMimeType: 'image/jpeg',
       content: Uint8Array.from([
         0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+        ...new TextEncoder().encode(contentSuffix),
       ]),
     });
     if (clean) {
@@ -120,6 +122,25 @@ describe('Company Receipt aggregate', () => {
       readCompanyReceiptWithin(tx, sg, viewerId, created.id))).toEqual(created);
     expect(await withTenantTransaction(db, sg, (tx) =>
       readCompanyReceiptWithin(tx, sg, adminId, created.id, 'company'))).toEqual(created);
+
+    const missingDateEvidence = await evidence(viewerId, 'receipt_missing_date_0001', true, 'missing-date');
+    const missingDate = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptWithin(tx, sg, viewerId, {
+        ...input(missingDateEvidence.document.id, missingDateEvidence.version.id),
+        transactionDate: undefined,
+        merchant: 'Missing Date Café',
+        category: 'Meals',
+      }));
+    expect(await withTenantTransaction(db, sg, (tx) =>
+      listCompanyReceiptsWithin(tx, sg, viewerId, { search: 'office supplies' })))
+      .toEqual([created]);
+    expect(await withTenantTransaction(db, sg, (tx) =>
+      listCompanyReceiptsWithin(tx, sg, viewerId, {
+        dateFrom: '2026-08-10', dateTo: '2026-08-10',
+      }))).toEqual([created]);
+    expect(await withTenantTransaction(db, sg, (tx) =>
+      listCompanyReceiptsWithin(tx, sg, viewerId, { search: 'missing date' })))
+      .toEqual([missingDate]);
 
     const changed = await withTenantTransaction(db, sg, (tx) =>
       updateCompanyReceiptWithin(tx, sg, viewerId, created.id, 1, {

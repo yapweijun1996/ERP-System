@@ -2382,7 +2382,7 @@ TASK-178 adds migration 0091 exact-hash uniqueness plus an uploader-scoped confi
 context over immutable OCR provenance and safe manual fallback. TASK-179 adds migration
 0092, explicit own/company reads, bounded Demo/API adapters and the responsive
 five-language browser register. The final `Expenses & Tax` module entitlement,
-search/date behavior and standalone Receipt Pack remain pending.
+TASK-180 query-side search/date behavior is delivered; standalone Receipt Pack remains pending.
 
 - [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
       current source, approved scope, architecture, backlog and KB without changing
@@ -2400,9 +2400,12 @@ search/date behavior and standalone Receipt Pack remain pending.
       0092 and registered own/company read grants now drive bounded list/detail queries,
       Demo/API adapters, eight-column desktop register and labelled mobile cards without
       request-time role-name authorization. TASK-182 retains the final canonical/module cutover.
-- [ ] **TASK-180 — Add transaction-date search and range behavior.** Implement
-      inclusive company-local date boundaries, search/filter presets, Missing Date
-      visibility and complete result retrieval independent of the visible page.
+- [x] **TASK-180 — Add transaction-date search and range behavior.** Domain/API/Demo
+      queries now apply merchant/receipt-number/notes/category search and inclusive
+      transaction-date predicates before cursor pagination. Five-language presets,
+      invalid-range rejection, same-day ranges and actionable Missing Date rows pass
+      focused and browser proof; result retrieval remains independent of the visible
+      page and Missing Date records stay outside active date ranges.
 - [ ] **TASK-181 — Build Receipt Pack preview, PDF and Print.** Produce an A4 register
       plus readable originals in chronological order, preserve multi-page PDFs and
       group totals by currency without cross-currency addition.
@@ -2414,7 +2417,7 @@ search/date behavior and standalone Receipt Pack remain pending.
       focused/full gates, then report the exact implemented boundary.
 
 Dependencies are deliberate. TASK-177 consumed TASK-174's authorization invalidation
-boundary and TASK-176's contract; TASK-180–183 now follow the range, export, parity
+boundary and TASK-176's contract; TASK-181–183 now follow the export, parity
 and release-proof order. Existing EPIC-054–056 functionality is
 preserved as reusable infrastructure or future/optional scope, not duplicated.
 

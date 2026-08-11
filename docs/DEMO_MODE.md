@@ -166,7 +166,7 @@ same permission keys and performs the same bounded `afterId` Company Receipt que
 API mode; both drive the five-language responsive register. Receipt Pack generation
 remains pending and current Tax Evidence package generation remains API-only.
 
-TASK-180–183 must continue using the shared schema/domain contract in both adapters.
+TASK-180 now keeps search/date predicates query-side in both adapters; TASK-181–183 must continue using the shared schema/domain contract.
 Browser PGlite proof
 must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence is real;
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,

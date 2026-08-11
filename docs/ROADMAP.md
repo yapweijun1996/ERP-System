@@ -1087,15 +1087,15 @@ workflow coverage and physical-device verification remain separate follow-up gat
    `/api/company-receipts` now wrap clean current managed-document evidence with
    optimistic versions, uploader audit and retained void state, without Employee Claim,
    reimbursement, GL or Tax Treatment dependencies.
-2. **Capture and register** (TASK-178/179 complete; TASK-180 pending): the existing
+2. **Capture and register** (TASK-178–180 complete): the existing
    20 MB/20-page validation, IndexedDB editing/persistence, scan/OCR and lifecycle
    pipeline now feeds an immutable-provenance confirmation context. Migration 0091
    prevents an exact evidence hash from becoming two Company Receipts, while safe OCR
    failure still permits manual confirmation. Migration 0092 and the application
    permission registry now enforce bounded own/company list/detail reads; Demo/API
    adapters render the eight-field desktop register and labelled mobile cards with
-   cursor pagination. Query-side search, inclusive `transaction_date` filters and
-   Missing Date remain pending.
+   cursor pagination. TASK-180 adds query-side search, inclusive `transaction_date`
+   filters and an actionable Missing Date state.
 3. **Receipt Pack** (TASK-181): preview the complete matching set, produce an A4
    register followed by readable originals, preserve multi-page PDFs and group totals
    by currency before offering browser Print.
@@ -1104,10 +1104,10 @@ workflow coverage and physical-device verification remain separate follow-up gat
    prove Demo/PGlite and PostgreSQL/API parity, then run desktop/mobile and release
    gates before updating final status and KB evidence.
 
-Phase status is **in progress**. TASK-177–179 delivered the canonical model/API,
-secure confirmation, permission-scoped register and responsive Demo/API list UI with no
-production deployment. TASK-180 is now eligible; later tasks still own search/date
-range, Receipt Pack, entitlement, final canonical permission cutover and release proof.
+Phase status is **in progress**. TASK-177–180 delivered the canonical model/API,
+secure confirmation, permission-scoped register, responsive Demo/API UI and query-side
+search/date behavior with no production deployment. TASK-181 is now eligible; later
+tasks own Receipt Pack, entitlement, final canonical permission cutover and release proof.
 
 Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`
 works end to end in both modes without `expense_claim`, cross-tenant access,

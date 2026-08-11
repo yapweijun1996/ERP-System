@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import Decimal from 'decimal.js';
-import { and, asc, desc, eq, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, lt, lte, or } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
@@ -47,6 +47,9 @@ export interface ListCompanyReceiptsOptions {
   limit?: number;
   afterId?: number | null;
   visibility?: CompanyReceiptReadVisibility;
+  search?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
 }
 
 export type CompanyReceiptReadVisibility = 'own' | 'company';
@@ -400,6 +403,18 @@ export async function listCompanyReceiptsWithin(
   if ((options.visibility ?? 'own') === 'own') {
     predicates.push(eq(companyReceipt.uploaderUserId, actorUserId));
   }
+  const search = options.search?.trim();
+  if (search) {
+    const pattern = `%${search}%`;
+    predicates.push(or(
+      ilike(companyReceipt.merchant, pattern),
+      ilike(companyReceipt.receiptNumber, pattern),
+      ilike(companyReceipt.notes, pattern),
+      ilike(companyReceipt.category, pattern),
+    )!);
+  }
+  if (options.dateFrom) predicates.push(gte(companyReceipt.transactionDate, options.dateFrom));
+  if (options.dateTo) predicates.push(lte(companyReceipt.transactionDate, options.dateTo));
   if (options.afterId != null) predicates.push(lt(companyReceipt.id, options.afterId));
   return receiptJoins(exec)
     .where(and(...predicates))

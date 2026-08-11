@@ -390,8 +390,8 @@ domain-approved correction/void/tombstone path, never an ad-hoc physical delete.
 
 TASK-177–179 implement the canonical aggregate, secure capture-to-confirmation
 foundation and permission-scoped browser register. It does not yet implement
-query-side search/date behavior, the standalone Receipt Pack or final platform-owned
-module entitlement delivered by TASK-180–183.
+standalone Receipt Pack or final platform-owned module entitlement delivered by
+TASK-181–183. TASK-180 query-side search/date behavior is current.
 
 ### 6.1 Ownership and evidence
 
@@ -406,7 +406,7 @@ uniquely prevents another receipt with the same exact bytes inside the Company.
 ### 6.2 State and confirmation
 
 The schema vocabulary is Draft, Processing, Ready, Needs Attention and Voided. Current
-creation stores Ready even when transaction date is absent; TASK-180 owns the later
+creation stores Ready even when transaction date is absent; TASK-180 adds the later
 Missing Date workflow. Upload/scan/OCR state remains in the
 document services; confirmed merchant, receipt/invoice number, transaction date,
 amount, currency, category, business purpose and notes belong to the Company Receipt.
@@ -426,10 +426,10 @@ to tenant-scoped domain predicates and paginates by bounded `afterId`; mutation 
 confirmation paths remain uploader-scoped under `employee.receipts.write` until
 TASK-182. Migration 0092 gives Employee/Manager own scope and Finance/Receipt Manager/
 Company Owner explicit company scope without role-name authorization at request time.
-TASK-180 adds query-side merchant, receipt-number, notes and category search. Date range
+TASK-180 implements query-side merchant, receipt-number, notes and category search. Date range
 is inclusive on company-local `transaction_date`;
-missing-date records stay visible in the future register but are excluded from a package
-with an actionable warning.
+missing-date records stay visible in the current register with a My Receipts correction
+action but are excluded whenever a date range is active.
 
 Preview/export resolves the complete matching set independently of UI pagination,
 orders it chronologically and generates a register plus each original receipt. Totals

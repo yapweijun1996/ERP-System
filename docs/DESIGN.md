@@ -502,14 +502,14 @@ stores/backfills the evidence SHA-256 and enforces one exact hash per Company Re
 inside a Company; no similarity-based merge exists. Migration 0092 backfills own reads
 for Employee/Manager and company reads for Finance, Receipt Manager and Company Owner,
 with no platform-support grant. Search, inclusive transaction-date selection and
-immutable Receipt Pack snapshots remain TASK-180–181 work.
+immutable Receipt Pack snapshots remain TASK-181 work; TASK-180 search/date reads are current.
 
 The product entry remains `Expenses & Tax → Company Receipts`. TASK-179 adds a temporary
 permission-aware Company Receipts route under the existing Finance/My Work shells with
 Demo/API list parity, five-language copy, eight desktop columns and labelled mobile
 cards. Mutations still reuse `employee.receipts.write`; final module/resource/action
 identifiers must be registered atomically with the backend Module Catalog, route metadata
-and `accessMatrix` under TASK-182. Until TASK-180–183 land, neither
+and `accessMatrix` under TASK-182. Until TASK-181–183 land, neither
 `my-receipts`, `/api/company-receipts` nor `receipt-tax-evidence` may be presented as
 the completed v1.
 

@@ -35,6 +35,14 @@ function positiveId(value: unknown): number | null {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function queryDate(value: unknown): string | null {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+    ? value : null;
+}
+
 export function createCompanyReceiptsRouter(db: DB): Router {
   const router = Router();
 
@@ -98,20 +106,29 @@ export function createCompanyReceiptsRouter(db: DB): Router {
     const { session, visibility } = access;
     const limit = req.query.limit == null ? 50 : Number(req.query.limit);
     const afterId = req.query.afterId == null ? null : positiveId(req.query.afterId);
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const dateFrom = queryDate(req.query.dateFrom);
+    const dateTo = queryDate(req.query.dateTo);
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100
-      || (req.query.afterId != null && afterId == null)) {
+      || (req.query.afterId != null && afterId == null)
+      || search.length > 200
+      || (req.query.dateFrom != null && dateFrom == null)
+      || (req.query.dateTo != null && dateTo == null)
+      || (dateFrom != null && dateTo != null && dateFrom > dateTo)) {
       apiError(
         res,
         400,
         'company_receipt_query_invalid',
-        'limit must be 1-100 and afterId must be a positive integer.',
+        'Use limit 1-100, a positive afterId, search up to 200 characters and a valid inclusive date range.',
       );
       return;
     }
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
       const rows = await withTenantTransaction(db, scope, (tx) =>
-        listCompanyReceiptsWithin(tx, scope, session.userId, { limit, afterId, visibility }));
+        listCompanyReceiptsWithin(tx, scope, session.userId, {
+          limit, afterId, visibility, search, dateFrom, dateTo,
+        }));
       const hasMore = rows.length > limit;
       const data = rows.slice(0, limit);
       res.json({
@@ -120,6 +137,7 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           scope: visibility,
           limit,
           nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
+          filters: { search, dateFrom, dateTo },
         },
       });
     } catch (error) {

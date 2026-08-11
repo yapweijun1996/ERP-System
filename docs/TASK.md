@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **179**
+- Done: **180**
 - In progress: **0**
-- Todo: **8**
+- Todo: **7**
 - Blocked: **1**
 - Total: **188**
 
@@ -50,7 +50,7 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | TASK-177 | Done | Migration 0090, Company Receipt aggregate/domain/API, optimistic concurrency, audit and PGlite/PostgreSQL RLS proof |
 | TASK-178 | Done | Migration 0091 exact-hash uniqueness and immutable OCR-provenance confirmation/manual-fallback context |
 | TASK-179 | Done | Migration 0092, explicit own/company read grants, bounded Demo/API register and responsive five-language desktop/mobile UI |
-| TASK-180 | Todo | Inclusive transaction-date range, search, pagination and Missing Date behavior |
+| TASK-180 | Done | Query-side search, inclusive date presets/ranges, validation and actionable Missing Date behavior |
 | TASK-181 | Todo | Receipt Pack preview, PDF, mixed-currency register and Print |
 | TASK-182 | Todo | Demo/API parity, module entitlement, authorization, accessMatrix and i18n |
 | TASK-183 | Todo | Browser/release proof and final documentation/KB synchronization |
@@ -75,9 +75,10 @@ TASK-184 did not change code, schema, routes, permissions or production.
 
 TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
 aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
-bounded Demo/API reads and responsive desktop/mobile register UI. Search/date range,
-Receipt Pack, module entitlement and the final canonical permission cutover remain
-pending. TASK-180 is now the lowest-numbered dependency-eligible Expenses & Tax task;
+bounded Demo/API reads and responsive desktop/mobile register UI. TASK-180 adds
+query-side search/date behavior. Receipt Pack, module entitlement and the final
+canonical permission cutover remain pending. TASK-181 is now the lowest-numbered
+dependency-eligible Expenses & Tax task;
 TASK-185 is independently eligible for the MAC programme.
 
 ## Latest implementation milestones

@@ -1794,10 +1794,11 @@ facts as labelled cards, and cursor pagination never fetches unbounded Company h
 Focused receipt/authorization/Demo proof passes 6 files / 22 tests; the full regression
 passes 159 files plus 1 skipped file (643 passed, 1 skipped test), and the dedicated
 desktop/mobile E2E, 50-route list-layout, route i18n and access-matrix audits pass.
-There is still no `Expenses & Tax` commercial entitlement, query-side search/date
-workflow or standalone Receipt Pack preview/export/print. Current Tax Evidence selects
+There is still no `Expenses & Tax` commercial entitlement or standalone Receipt Pack
+preview/export/print. Current Tax Evidence selects
 posted claim lines by posting date, so it cannot be renamed as Company Receipts.
-TASK-180 owns search/date behavior; TASK-182 owns final module/accessMatrix and
+TASK-180 now delivers query-side search, inclusive date presets/ranges, validation and
+actionable Missing Date handling. TASK-182 owns final module/accessMatrix and
 compatibility-to-canonical permission cutover.
 
 EPIC-063 and TASK-177–183 register the implementation work. Expense accounting, Tax
@@ -1806,9 +1807,9 @@ future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 179 tasks
+- Done: 180 tasks
 - In progress: 0
-- Todo: TASK-180–183 and TASK-185–188 (8)
+- Todo: TASK-181–183 and TASK-185–188 (7)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -1821,7 +1822,8 @@ future/optional phases rather than v1 defects.
   public health/session verification all passed.
 - EPIC-063 is in progress. TASK-176 completed the source-backed Expenses & Tax boundary;
   TASK-177–179 delivered the Company Receipt schema/domain/API, secure confirmation and
-  permission-scoped responsive register. TASK-180–183 remain todo, so search/date,
+  permission-scoped responsive register; TASK-180 delivered query-side search/date
+  behavior. TASK-181–183 remain todo, so
   Receipt Pack, final entitlement/canonical permission integration and release proof
   must not be represented as complete.
 - EPIC-064 is registered but not implemented. TASK-184 completed the source-backed MAC
@@ -1840,9 +1842,9 @@ future/optional phases rather than v1 defects.
 
 ## Next implementation boundary
 
-The next dependency-ordered work is TASK-180, Company Receipt search and inclusive
-transaction-date behavior. TASK-177–179's canonical model/API, confirmation and
-permission-scoped register boundary, TASK-175's production release
+The next dependency-ordered work is TASK-181, Company Receipt Pack preview/PDF/Print.
+TASK-177–180's canonical model/API, confirmation, permission-scoped register and
+query-side search/date boundary, TASK-175's production release
 verification and TASK-174's invalidation boundary are complete. EPIC-063 entitlement
 integration TASK-182 also waits for EPIC-064 TASK-186. EPIC-064 implementation begins with TASK-185
 and then proceeds through tenant cutover, platform workspace and proof in

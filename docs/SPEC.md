@@ -389,7 +389,7 @@ capture foundation and compatibility surface; it is not a company receipt regist
 TASK-177–179 implement migrations 0090–0092, the Company Receipt schema/commands,
 uploader-scoped mutations and confirmation, explicit own/company list/detail reads,
 exact-hash duplicate prevention, Demo/API adapters and a responsive five-language
-Company Receipts register. Search/date-range behavior, Receipt Pack and the final
+Company Receipts register. TASK-180 search/date-range behavior is current; Receipt Pack and the final
 platform-owned module entitlement/canonical permission cutover remain pending.
 
 The future implementation must satisfy these binding requirements:
@@ -410,7 +410,7 @@ The future implementation must satisfy these binding requirements:
 - Register list/detail reads require explicit `expenses.company_receipts.read_own` or
   `expenses.company_receipts.read_company`; the API resolves that permission before
   passing `own | company` visibility to tenant-scoped domain queries. Reads are bounded
-  to 1–100 rows and cursor-paginated. Search/date predicates remain TASK-180, and
+  to 1–100 rows and cursor-paginated. TASK-180 applies search/date predicates before pagination, and
   TASK-182 owns the final compatibility-to-canonical permission and entitlement cutover.
 - Date filters are inclusive company-local business dates:
   `from <= transaction_date <= to`. Missing dates are visible and excluded from a

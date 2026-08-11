@@ -191,7 +191,11 @@ describe('Company Receipts API', () => {
         tx,
         sg,
         adminId,
-        { ...payload(adminEvidence.document.id, adminEvidence.version.id), merchant: 'Admin Merchant' },
+        {
+          ...payload(adminEvidence.document.id, adminEvidence.version.id),
+          transactionDate: undefined,
+          merchant: 'Admin Merchant',
+        },
       ));
 
     const list = await fetch(`${baseUrl}/api/company-receipts?limit=1`, {
@@ -224,6 +228,27 @@ describe('Company Receipts API', () => {
       ]),
       meta: { scope: 'company', limit: 10, nextCursor: null },
     });
+    const searched = await fetch(`${baseUrl}/api/company-receipts?search=Admin%20Merchant`, {
+      headers: { cookie: adminAuth.cookie },
+    });
+    expect(await searched.json()).toMatchObject({
+      data: [expect.objectContaining({ id: adminReceipt.id })],
+      meta: { filters: { search: 'Admin Merchant', dateFrom: null, dateTo: null } },
+    });
+    const sameDay = await fetch(
+      `${baseUrl}/api/company-receipts?dateFrom=2026-08-10&dateTo=2026-08-10`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(await sameDay.json()).toMatchObject({
+      data: [expect.objectContaining({ id: createdBody.data.id })],
+      meta: { filters: { dateFrom: '2026-08-10', dateTo: '2026-08-10' } },
+    });
+    const invalidRange = await fetch(
+      `${baseUrl}/api/company-receipts?dateFrom=2026-08-11&dateTo=2026-08-10`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(invalidRange.status).toBe(400);
+    expect((await invalidRange.json()).error.code).toBe('company_receipt_query_invalid');
     const companyDetail = await fetch(
       `${baseUrl}/api/company-receipts/${createdBody.data.id}`,
       { headers: { cookie: adminAuth.cookie } },

@@ -835,6 +835,9 @@
       var params=new URLSearchParams();
       if(query.limit!=null) params.set('limit',String(query.limit));
       if(query.afterId!=null) params.set('afterId',String(query.afterId));
+      if(query.search) params.set('search',String(query.search));
+      if(query.dateFrom) params.set('dateFrom',String(query.dateFrom));
+      if(query.dateTo) params.set('dateTo',String(query.dateTo));
       var suffix=params.toString();
       return apiRequest('company-receipts'+(suffix?'?'+suffix:''));
     },

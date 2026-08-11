@@ -3196,6 +3196,25 @@
         params.push(afterId);
         predicates.push('r.id<$'+params.length);
       }
+      var search=String(query.search||'').trim();
+      if(search.length>200) throw new Error('Search must be 200 characters or fewer.');
+      if(search){
+        params.push('%'+search+'%');
+        predicates.push(`(r.merchant ilike $${params.length} or r.receipt_number ilike $${params.length} or r.notes ilike $${params.length} or r.category ilike $${params.length})`);
+      }
+      var datePattern=/^\d{4}-\d{2}-\d{2}$/;
+      var dateFrom=query.dateFrom?String(query.dateFrom):null;
+      var dateTo=query.dateTo?String(query.dateTo):null;
+      var validDate=function(value){
+        if(!datePattern.test(value)) return false;
+        var parsed=new Date(value+'T00:00:00.000Z');
+        return !Number.isNaN(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
+      };
+      if((dateFrom&&!validDate(dateFrom))||(dateTo&&!validDate(dateTo))||(dateFrom&&dateTo&&dateFrom>dateTo)){
+        throw new Error('Select a valid inclusive date range.');
+      }
+      if(dateFrom){params.push(dateFrom);predicates.push('r.transaction_date>=$'+params.length);}
+      if(dateTo){params.push(dateTo);predicates.push('r.transaction_date<=$'+params.length);}
       params.push(limit+1);
       var result=await tx.query(
         `select r.id,r.receipt_key,r.transaction_date,r.merchant,r.receipt_number,
@@ -3215,7 +3234,8 @@
         status:row.status,version:Number(row.version),createdAt:row.created_at,updatedAt:row.updated_at,
       };});
       return {data:rows,meta:{scope:canReadCompany?'company':'own',limit:limit,
-        nextCursor:hasMore&&rows.length?rows[rows.length-1].id:null}};
+        nextCursor:hasMore&&rows.length?rows[rows.length-1].id:null,
+        filters:{search:search,dateFrom:dateFrom,dateTo:dateTo}}};
     });
   }
   var my={

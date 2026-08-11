@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-/* TASK-179 Company Receipts register contract: permission-visible route,
-   bounded cursor pagination, required desktop columns and mobile cards. */
+/* TASK-179/180 Company Receipts register contract: permission-visible route,
+   query-side filters, bounded cursor pagination and responsive required facts. */
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -58,15 +58,20 @@ async function main(){
       ]));
       if(DB.erpSystem) DB.erpSystem.selfServiceOnly=false;
       const makeRow=id=>({
-        id,transactionDate:'2026-08-11',merchant:`Merchant ${id}`,
+        id,transactionDate:id===50?null:'2026-08-11',merchant:`Merchant ${id}`,
         receiptNumber:`R-${id}`,category:'Travel',amount:'12.3400',currency:'SGD',
         uploaderUserId:1,uploaderName:'Finance User',status:'ready',version:1,
         createdAt:'2026-08-11T08:00:00.000Z',updatedAt:'2026-08-11T08:00:00.000Z',
       });
-      ErpSystemData.companyReceipts=async query=>query&&query.afterId
-        ?{data:[makeRow(1)],meta:{scope:'company',limit:25,nextCursor:null}}
-        :{data:Array.from({length:25},(_,index)=>makeRow(50-index)),
-          meta:{scope:'company',limit:25,nextCursor:26}};
+      window.__receiptQueries=[];
+      ErpSystemData.companyReceipts=async query=>{
+        window.__receiptQueries.push({...query});
+        if(query&&query.search) return {data:[{...makeRow(900),merchant:'Server Search Result'}],meta:{scope:'company',limit:25,nextCursor:null}};
+        if(query&&(query.dateFrom||query.dateTo)) return {data:[makeRow(800)],meta:{scope:'company',limit:25,nextCursor:null}};
+        return query&&query.afterId
+          ?{data:[makeRow(1)],meta:{scope:'company',limit:25,nextCursor:null}}
+          :{data:Array.from({length:25},(_,index)=>makeRow(50-index)),meta:{scope:'company',limit:25,nextCursor:26}};
+      };
       await navigate('company-receipts');
     });
     const register=page.locator('[data-company-receipt-register="canonical"]');
@@ -79,10 +84,26 @@ async function main(){
       'Date','Merchant','Receipt no.','Category','Amount','Currency','Uploader','Status',
     ]),`unexpected desktop columns: ${labels.join(', ')}`);
     assert(await page.locator('.dt-body .dt-r').count()===25,'first page must contain 25 rows');
+    assert(await page.locator('[data-missing-date-route]').count()===1,
+      'undated receipts must remain visible with an explicit correction action');
     await page.locator('[data-company-receipts-more]').click();
     await page.waitForFunction(()=>document.querySelectorAll('.dt-body .dt-r').length===26);
     assert(await page.locator('[data-company-receipts-more]').count()===0,
       'next-page action must disappear at the end of the cursor');
+    await page.locator('[data-receipt-search]').fill('server needle');
+    await page.locator('[data-company-receipt-filters] button.primary').click();
+    await page.waitForFunction(()=>document.querySelectorAll('.dt-body .dt-r').length===1);
+    assert((await page.locator('.dt-body .dt-r').first().innerText()).includes('Server Search Result'),
+      'search must render the server result rather than filter the loaded page');
+    assert(await page.evaluate(()=>window.__receiptQueries.at(-1).search)==='server needle',
+      'search must be sent to the adapter');
+    await page.locator('[data-receipt-preset]').selectOption('custom');
+    await page.locator('[data-receipt-from]').fill('2026-08-11');
+    await page.locator('[data-receipt-to]').fill('2026-08-11');
+    await page.locator('[data-company-receipt-filters] button.primary').click();
+    await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.dateFrom==='2026-08-11');
+    assert(await page.evaluate(()=>window.__receiptQueries.at(-1).dateTo)==='2026-08-11',
+      'same-day inclusive range must be sent query-side');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'desktop page overflowed horizontally');
 
@@ -97,7 +118,7 @@ async function main(){
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'mobile page overflowed horizontally');
     assert(browserErrors.length===0,`browser errors: ${browserErrors.join(' | ')}`);
-    console.log('PASS Company Receipts E2E: company scope, cursor pagination, desktop columns and mobile cards');
+    console.log('PASS Company Receipts E2E: query-side search/date filters, missing-date action, pagination and responsive facts');
   }finally{
     await context?.close();
     await browser?.close();

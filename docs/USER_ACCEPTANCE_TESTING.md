@@ -194,8 +194,8 @@ Current TASK-179 evidence: explicit own/company list/detail authorization is cov
 domain/API tests; the Demo/API route uses bounded cursor reads; and a dedicated
 1440×900 / 390×844 browser test verifies the eight required desktop fields, labelled
 mobile cards, load-more pagination and no page overflow. The checklist remains open
-because module entitlement, search/date, Receipt Pack and full persisted journey proof
-belong to TASK-180–183.
+because module entitlement, Receipt Pack and full persisted journey proof belong to
+TASK-181–183. TASK-180 search/date/Missing Date browser proof now passes.
 
 - [ ] Open `Expenses & Tax → Company Receipts` only when module entitlement and an
       effective receipt capability allow it; direct URL/API attempts otherwise deny.
