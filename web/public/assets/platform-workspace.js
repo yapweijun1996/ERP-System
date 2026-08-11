@@ -9,6 +9,18 @@
   var cachedSession=null;
   var state={session:null,tenants:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[]};
 
+  /* The platform workspace has dense entitlement tables. Keep their horizontal
+   * scroll local to the table wrapper so the shared login shell never makes a
+   * 375px viewport horizontally scrollable. This is intentionally scoped here
+   * instead of the tenant shell's global CSS. */
+  function ensureResponsiveStyles(){
+    if(document.getElementById('platformWorkspaceResponsiveStyles')) return;
+    var style=document.createElement('style');
+    style.id='platformWorkspaceResponsiveStyles';
+    style.textContent='.platform-workspace-view{overflow-x:hidden}.platform-workspace-view .auth-panel{box-sizing:border-box}.platform-workspace-controls,.platform-simulation-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.platform-workspace-grid{display:grid;gap:16px}.platform-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.platform-table-wrap table{min-width:620px}.platform-simulation-controls .btn{align-self:end}@media(max-width:600px){.platform-workspace-view .auth-panel{width:calc(100vw - 24px)!important;margin:12px auto!important}.platform-workspace-view .auth-brand{flex-wrap:wrap;gap:10px}.platform-workspace-controls,.platform-simulation-controls{grid-template-columns:minmax(0,1fr)}.platform-simulation-controls .btn{justify-self:stretch}.platform-table-wrap{border-radius:10px}}';
+    document.head.appendChild(style);
+  }
+
   function esc(value){
     return String(value==null?'':value).replace(/[&<>"']/g,function(char){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];
@@ -183,6 +195,7 @@
       <div class="platform-simulation-controls"><label class="fld"><span>Active tenant user</span><select id="platformSimulationTarget">${options(state.targets,'','userId','username')}</select></label><button class="btn primary" id="platformStartSimulation" type="button">Enter tenant simulation</button></div></section>`;
   }
   async function renderWorkspace(session){
+    ensureResponsiveStyles();
     state.session=session||await getSession();
     authShell(true);
     var view=authView();
