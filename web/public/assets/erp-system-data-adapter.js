@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 75;
+  var DEMO_SCHEMA_VERSION = 92;
   var DEMO_PACK_VERSION = '15';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
@@ -179,6 +179,11 @@
     await db.exec(sqlText);
     state.demoPack = Object.assign({}, manifest, { loadMs: Math.round(performance.now()-started) });
     return true;
+  }
+
+  async function ensureCompanyReceiptReadFixture(db){
+    var sqlText = await fetchSql('erp-system-demo-company-receipts.sql');
+    await db.exec(sqlText);
   }
 
   async function ensureSeeded(db){
@@ -1128,6 +1133,7 @@
       var freshlySeeded = await ensureSeeded(db);
       await ensureSchemaUpToDate(db);
       var showcaseLoaded = await ensureShowcasePack(db, freshlySeeded);
+      await ensureCompanyReceiptReadFixture(db);
       await ensureWarehousePickFixture(db);
       await ensureManufacturingFixture(db);
       await ensureQualityFixture(db);
@@ -3164,6 +3170,54 @@
     });
     return data;
   }
+  async function companyReceipts(query){
+    query=query||{};
+    var requestedLimit=Number(query.limit==null?25:query.limit);
+    var limit=Number.isSafeInteger(requestedLimit)
+      ?Math.max(1,Math.min(100,requestedLimit)):25;
+    var afterId=query.afterId==null||query.afterId===''?null:Number(query.afterId);
+    if(afterId!=null&&(!Number.isSafeInteger(afterId)||afterId<=0)){
+      throw new Error('Company Receipt cursor must be a positive integer.');
+    }
+    return requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx);
+      var canReadCompany=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,myActorUserId(),'expenses.company_receipts.read_company');
+      var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,myActorUserId(),'expenses.company_receipts.read_own');
+      if(!canReadOwn) throw new Error('You cannot read Company Receipts.');
+      var params=[SCOPE.masterFn,SCOPE.companyFn];
+      var predicates=['r.master_fn=$1','r.company_fn=$2'];
+      if(!canReadCompany){
+        params.push(myActorUserId());
+        predicates.push('r.uploader_user_id=$'+params.length);
+      }
+      if(afterId!=null){
+        params.push(afterId);
+        predicates.push('r.id<$'+params.length);
+      }
+      params.push(limit+1);
+      var result=await tx.query(
+        `select r.id,r.receipt_key,r.transaction_date,r.merchant,r.receipt_number,
+                r.category,r.amount,r.currency_code,r.uploader_user_id,r.status,
+                r.version,r.created_at,r.updated_at,u.full_name as uploader_name
+         from company_receipt r
+         join app_user u on u.master_fn=r.master_fn and u.user_id=r.uploader_user_id
+         where ${predicates.join(' and ')}
+         order by r.id desc limit $${params.length}`,
+        params);
+      var hasMore=result.rows.length>limit;
+      var rows=result.rows.slice(0,limit).map(function(row){return {
+        id:Number(row.id),receiptKey:row.receipt_key,transactionDate:row.transaction_date,
+        merchant:row.merchant,receiptNumber:row.receipt_number,category:row.category,
+        amount:String(row.amount),currency:row.currency_code,
+        uploaderUserId:Number(row.uploader_user_id),uploaderName:row.uploader_name,
+        status:row.status,version:Number(row.version),createdAt:row.created_at,updatedAt:row.updated_at,
+      };});
+      return {data:rows,meta:{scope:canReadCompany?'company':'own',limit:limit,
+        nextCursor:hasMore&&rows.length?rows[rows.length-1].id:null}};
+    });
+  }
   var my={
     context:async function(){
       var data=await withMyActor(async function(orm,actor){
@@ -4087,6 +4141,7 @@
     action: action,
     session: session,
     financeReports:financeReports,
+    companyReceipts:companyReceipts,
     my:my,
     confirmOrder: confirmOrder,
     createPurchaseOrder: createPurchaseOrder,

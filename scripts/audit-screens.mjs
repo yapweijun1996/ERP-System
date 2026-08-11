@@ -2327,8 +2327,8 @@ async function auditRoutes(browser, viewport) {
           }
         }
         const employeeTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
-        if (employeeTabs!==3) {
-          issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 3`);
+        if (employeeTabs!==4) {
+          issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 4`);
         }
 
         setContext(false,true);
@@ -2378,8 +2378,8 @@ async function auditRoutes(browser, viewport) {
         await navigate('team-calendar');
         const managerRoot=document.querySelector('#viewRoot [data-my-work-shell="true"]');
         const managerTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
-        if (managerTabs!==5) {
-          issues.push(`manager capability navigation exposed ${managerTabs} tabs instead of 5`);
+        if (managerTabs!==6) {
+          issues.push(`manager capability navigation exposed ${managerTabs} tabs instead of 6`);
         }
         if (managerRoot?.getAttribute('data-my-work-privacy')!=='reason_and_evidence_redacted') {
           issues.push('team route privacy marker missing');

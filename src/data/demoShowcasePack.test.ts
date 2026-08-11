@@ -11,9 +11,10 @@ import { ROLE_TEMPLATES } from '../auth/accessCatalog';
 
 describe('deterministic enterprise Demo pack', () => {
   it('verifies SHA-256, fixed counts, references and balanced journals', async () => {
-    const [schemaSql, packSql, manifestText] = await Promise.all([
+    const [schemaSql, packSql, receiptFixtureSql, manifestText] = await Promise.all([
       readFile('web/public/db/erp-system-schema.sql', 'utf8'),
       readFile('web/public/db/erp-system-showcase-v1.sql', 'utf8'),
+      readFile('web/public/db/erp-system-demo-company-receipts.sql', 'utf8'),
       readFile('web/public/db/erp-system-showcase-v1.json', 'utf8'),
     ]);
     const manifest = JSON.parse(manifestText) as {
@@ -38,6 +39,7 @@ describe('deterministic enterprise Demo pack', () => {
     const db = drizzle(client, { schema });
     await seedDemo(db);
     await client.exec(packSql);
+    await client.exec(receiptFixtureSql);
     const counts = (await client.query<{
       activities: number; movements: number; gl_entries: number;
       leave_requests: number; leave_balance_entries: number;

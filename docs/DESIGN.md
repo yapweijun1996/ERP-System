@@ -345,12 +345,13 @@ Current runtime facts:
   metadata; migration `0089_company_owner_cutover` sets it inert and the central
   evaluator no longer treats it as an authorization grant;
 - active tenant administration uses an immutable, company-scoped `Company Owner`
-  role with 112 explicit registered permission rows and an explicit company scope;
+  role with 113 current explicit registered permission rows (112 at TASK-175 cutover,
+  plus TASK-179 Company Receipt company-read) and an explicit company scope;
   the bundle does not imply platform support, business approval/payment, payroll or
   sensitive tax-evidence authority;
 - permission storage remains compatibility-first, but TASK-171 now supplies an
-  application-owned registry with 299 static definitions (157 compatibility and 142
-  canonical, including a separate platform domain). Resource/action projections are
+  application-owned registry with 303 static definitions (159 compatibility and 144
+  canonical after TASK-179, including a separate platform domain). Resource/action projections are
   registered for 116 resources, 62 actions and 5 update contracts; ordinary role
   checks resolve explicit compatibility candidates and deny unknown keys, while
   platform-domain keys are rejected before tenant role evaluation;
@@ -487,22 +488,28 @@ Company Receipt (masterFn + companyFn)
         └── Draft | Processing | Ready | Needs Attention | Voided
 ```
 
-The TASK-177/178 API requires the uploader's current, clean, non-void governed document
+The TASK-177/178 mutation and confirmation API requires the uploader's current, clean, non-void governed document
 version, derives tenant/uploader from Session, and persists confirmed receipt facts
-without an Employee, claim, reimbursement, GL or tax dependency. Its read surface is
-bounded, cursor-based and deliberately uploader-only; metadata writes are versioned,
+without an Employee, claim, reimbursement, GL or tax dependency. TASK-179 changes
+list/detail reads to explicit `expenses.company_receipts.read_own` or
+`expenses.company_receipts.read_company` evaluation. The domain receives only the
+resulting `own | company` visibility, and every query remains tenant-predicated,
+bounded and `afterId` cursor-based. Metadata writes are still uploader-scoped and versioned,
 evidence identity is immutable, and void preserves an audited tombstone. A separate
 confirmation read projects immutable OCR candidate provenance and safe suggestions;
 clean evidence remains manually confirmable if OCR fails/unavailable. Migration 0091
 stores/backfills the evidence SHA-256 and enforces one exact hash per Company Receipt
-inside a Company; no similarity-based merge exists. Search,
-own/company visibility, inclusive transaction-date selection and immutable Receipt Pack
-snapshots remain TASK-179–181 work.
+inside a Company; no similarity-based merge exists. Migration 0092 backfills own reads
+for Employee/Manager and company reads for Finance, Receipt Manager and Company Owner,
+with no platform-support grant. Search, inclusive transaction-date selection and
+immutable Receipt Pack snapshots remain TASK-180–181 work.
 
-The product entry remains `Expenses & Tax → Company Receipts`. TASK-177 temporarily
-reuses `employee.receipts.write`; exact module/resource/action identifiers must be
-registered atomically with the backend module catalog, permission registry, route
-metadata and `accessMatrix` under TASK-182. Until TASK-179–183 land, neither
+The product entry remains `Expenses & Tax → Company Receipts`. TASK-179 adds a temporary
+permission-aware Company Receipts route under the existing Finance/My Work shells with
+Demo/API list parity, five-language copy, eight desktop columns and labelled mobile
+cards. Mutations still reuse `employee.receipts.write`; final module/resource/action
+identifiers must be registered atomically with the backend Module Catalog, route metadata
+and `accessMatrix` under TASK-182. Until TASK-180–183 land, neither
 `my-receipts`, `/api/company-receipts` nor `receipt-tax-evidence` may be presented as
 the completed v1.
 

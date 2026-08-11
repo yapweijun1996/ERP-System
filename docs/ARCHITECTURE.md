@@ -187,16 +187,19 @@ reference the existing managed-document/version boundary for bytes, scan, OCR, h
 retention and audit. The existing Employee Claim and Tax Evidence aggregates remain
 separate consumers/flows; Company Receipts must work without either one.
 
-TASK-177 delivers the first backend slice: migration 0090, a tenant-scoped
+TASK-177/178 deliver migrations 0090/0091, a tenant-scoped
 `company_receipt` table, transactional create/read/list/update/void commands and
 `/api/company-receipts`. The route derives tenant/uploader identity from Session,
 requires current clean managed-document evidence, uses optimistic concurrency and
-audits mutations. Its current visibility is intentionally uploader-only and uses the
-existing `employee.receipts.write` capability until TASK-179/182 add canonical
-own/company scopes and module permissions.
+audits mutations and protects immutable extraction/hash provenance. TASK-179 adds
+migration 0092 plus registered own/company read permissions; list/detail authorization
+selects a tenant-predicated `own | company` domain query, while mutation/confirmation
+remain uploader-only under `employee.receipts.write` until TASK-182.
 
-The browser adapter/UI, range register, Receipt Pack and sellable module are not yet
-implemented. Registration must land together across the backend module catalog,
+Demo/API adapters and the responsive five-language Company Receipts list are now
+implemented with bounded cursor pagination, eight desktop fields and labelled mobile
+cards. Search/date range, Receipt Pack and the sellable module are not yet implemented.
+Final registration must land together across the backend Module Catalog,
 resource/action authorization, route/access matrix, Demo/API adapters and PWA
 navigation so unknown or disabled access continues to fail closed. See
 [SPEC.md](SPEC.md) and [EPICS.md](EPICS.md) for the remaining boundary.

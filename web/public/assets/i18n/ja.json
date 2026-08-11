@@ -1117,6 +1117,7 @@
   "route.my-claims": "自分の経費申請",
   "route.my-leave": "自分の休暇",
   "route.my-receipts": "自分の領収書",
+  "route.company-receipts": "会社領収書",
   "route.receipt-tax-evidence": "領収書・税務証憑",
   "route.new-stock-adjustment": "新規在庫調整",
   "route.team-calendar": "チームカレンダー",

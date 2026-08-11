@@ -18,8 +18,9 @@ target. Present behavior is tenant `master -> company`, active-company multi-rol
 Allow union and tenant-bounded explicit role/assignment permissions. The legacy
 `is_superadmin` column is retained for migration/audit compatibility only; migration
 0089 makes it inert and central authorization no longer treats it as a bypass. The
-immutable, company-scoped Company Owner role carries 112 explicit registered tenant
-permissions plus `* / company` scope, but no automatic platform support, business
+immutable, company-scoped Company Owner role initially carried 112 explicit registered
+tenant permissions; migration 0092 adds the explicit company-receipt company-read grant,
+bringing the current bundle to 113 permissions plus `* / company` scope, but no automatic platform support, business
 approval/payment, payroll or sensitive tax-evidence authority. TASK-172 now adds a stable
 assignment primary key, `[valid_from, valid_until)` validity, revocation/provenance and
 assignment-owned `self/team/department/company` scope rows with validated
@@ -30,8 +31,8 @@ session/role and reasoned support-grant control plane: grants are bounded to a m
 and optional company, expire within 24 hours, default-deny sensitive fields, audit
 allow/deny/revoke events and never proxy customer data by themselves. Principal/session
 issuance remains an out-of-band deployment/SSO bootstrap boundary. TASK-171 now adds
-an application-owned tenant permission registry with 299 static definitions (157
-compatibility and 142 canonical), explicit alias metadata, canonical projections for
+an application-owned tenant permission registry with 303 static definitions (159
+compatibility and 144 canonical after TASK-179), explicit alias metadata, canonical projections for
 116 resources and 62 actions, tenant/platform-domain separation and a CI gate. Ordinary
 role checks fail closed for unknown permission candidates, while platform-domain keys
 are rejected before tenant role evaluation. Migration 0087 now adds
@@ -1773,9 +1774,10 @@ The TASK-177 aggregate is Company-owned and stores confirmed metadata plus an im
 reference to the uploader's clean, current governed document version. It requires no
 Employee, Expense Claim, reimbursement, GL posting or tax decision. Tenant scope and
 uploader attribution come only from Session, reads are bounded by an `afterId` cursor,
-writes use optimistic `version`, and void is a retained audited tombstone. For this
-foundation slice the API is deliberately uploader-only and temporarily reuses
-`employee.receipts.write`.
+writes use optimistic `version`, and void is a retained audited tombstone. TASK-179
+changes list/detail reads to explicit `expenses.company_receipts.read_own` and
+`expenses.company_receipts.read_company`; mutations and confirmation remain
+uploader-only and temporarily reuse `employee.receipts.write`.
 
 TASK-178 reuses the existing magic-byte/size/page validation, managed-document custody,
 IndexedDB draft/edit/retry path and fail-closed scan/OCR pipeline. The confirmation
@@ -1784,12 +1786,19 @@ suggestions; user-confirmed facts remain separate. A clean original is manually
 confirmable when OCR fails or is unavailable, and one exact SHA-256 cannot form two
 Company Receipts in the same Company. Similar merchant/date/amount never auto-merge.
 
-The remaining v1 vertical slice is explicit: there is still no `Expenses & Tax` module
-entitlement, browser route/adapter/UI, canonical own/company receipt permission set,
-company-wide search/date register, missing-date workflow or standalone Receipt Pack
-preview/export/print. Current Tax Evidence selects posted claim lines by posting date,
-so it cannot be renamed or treated as Company Receipts. TASK-179 owns company visibility
-and register queries; TASK-182 owns atomic permission/module/access-matrix registration.
+TASK-179 adds migration 0092, explicit Receipt Manager-compatible grants, stored own/company
+grants, permission-selected domain/API visibility, bounded Demo/API adapters and a
+five-language responsive Company Receipts route. Desktop exposes date, merchant,
+receipt number, category, amount, currency, uploader and status; mobile renders the same
+facts as labelled cards, and cursor pagination never fetches unbounded Company history.
+Focused receipt/authorization/Demo proof passes 6 files / 22 tests; the full regression
+passes 159 files plus 1 skipped file (643 passed, 1 skipped test), and the dedicated
+desktop/mobile E2E, 50-route list-layout, route i18n and access-matrix audits pass.
+There is still no `Expenses & Tax` commercial entitlement, query-side search/date
+workflow or standalone Receipt Pack preview/export/print. Current Tax Evidence selects
+posted claim lines by posting date, so it cannot be renamed as Company Receipts.
+TASK-180 owns search/date behavior; TASK-182 owns final module/accessMatrix and
+compatibility-to-canonical permission cutover.
 
 EPIC-063 and TASK-177–183 register the implementation work. Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois are preserved
@@ -1797,9 +1806,9 @@ future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 178 tasks
+- Done: 179 tasks
 - In progress: 0
-- Todo: TASK-179–183 and TASK-185–188 (9)
+- Todo: TASK-180–183 and TASK-185–188 (8)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -1811,9 +1820,10 @@ future/optional phases rather than v1 defects.
   production backup, target migration, RLS re-application, application release and
   public health/session verification all passed.
 - EPIC-063 is in progress. TASK-176 completed the source-backed Expenses & Tax boundary;
-  TASK-177/178 delivered the Company Receipt schema/domain/API and secure confirmation
-  foundation with PGlite and PostgreSQL RLS proof. TASK-179–183 remain todo and the unfinished module must not be
-  represented as completed Canonical browser functionality.
+  TASK-177–179 delivered the Company Receipt schema/domain/API, secure confirmation and
+  permission-scoped responsive register. TASK-180–183 remain todo, so search/date,
+  Receipt Pack, final entitlement/canonical permission integration and release proof
+  must not be represented as complete.
 - EPIC-064 is registered but not implemented. TASK-184 completed the source-backed MAC
   documentation/KB boundary; TASK-185–188 remain todo. Current tenant MAC remains
   Canonical until TASK-185/186 deliver and verify the platform-owned cutover.
@@ -1830,8 +1840,9 @@ future/optional phases rather than v1 defects.
 
 ## Next implementation boundary
 
-The next dependency-ordered work is TASK-179, the permission-scoped Company Receipts
-register. TASK-177/178's canonical model/API and confirmation boundary, TASK-175's production release
+The next dependency-ordered work is TASK-180, Company Receipt search and inclusive
+transaction-date behavior. TASK-177–179's canonical model/API, confirmation and
+permission-scoped register boundary, TASK-175's production release
 verification and TASK-174's invalidation boundary are complete. EPIC-063 entitlement
 integration TASK-182 also waits for EPIC-064 TASK-186. EPIC-064 implementation begins with TASK-185
 and then proceeds through tenant cutover, platform workspace and proof in

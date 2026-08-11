@@ -114,7 +114,12 @@ describe('Company Receipt aggregate', () => {
       listCompanyReceiptsWithin(tx, sg, viewerId));
     expect(listed).toEqual([created]);
     expect(await withTenantTransaction(db, sg, (tx) =>
+      listCompanyReceiptsWithin(tx, sg, adminId, { visibility: 'company' })))
+      .toEqual([created]);
+    expect(await withTenantTransaction(db, sg, (tx) =>
       readCompanyReceiptWithin(tx, sg, viewerId, created.id))).toEqual(created);
+    expect(await withTenantTransaction(db, sg, (tx) =>
+      readCompanyReceiptWithin(tx, sg, adminId, created.id, 'company'))).toEqual(created);
 
     const changed = await withTenantTransaction(db, sg, (tx) =>
       updateCompanyReceiptWithin(tx, sg, viewerId, created.id, 1, {

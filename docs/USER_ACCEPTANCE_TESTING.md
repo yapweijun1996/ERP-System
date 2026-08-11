@@ -190,6 +190,13 @@ screenshots are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
 
 ## Expenses & Tax v1 — Company Receipts (planned)
 
+Current TASK-179 evidence: explicit own/company list/detail authorization is covered in
+domain/API tests; the Demo/API route uses bounded cursor reads; and a dedicated
+1440×900 / 390×844 browser test verifies the eight required desktop fields, labelled
+mobile cards, load-more pagination and no page overflow. The checklist remains open
+because module entitlement, search/date, Receipt Pack and full persisted journey proof
+belong to TASK-180–183.
+
 - [ ] Open `Expenses & Tax → Company Receipts` only when module entitlement and an
       effective receipt capability allow it; direct URL/API attempts otherwise deny.
 - [ ] Capture or upload JPEG, PNG, HEIC/HEIF and PDF; verify 20 MB/20-page, MIME/magic,

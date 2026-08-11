@@ -1117,6 +1117,7 @@
   "route.my-claims": "我的报销",
   "route.my-leave": "我的请假",
   "route.my-receipts": "我的收据",
+  "route.company-receipts": "公司收据",
   "route.receipt-tax-evidence": "收据与税务证据",
   "route.new-stock-adjustment": "新建库存调整",
   "route.team-calendar": "团队日历",

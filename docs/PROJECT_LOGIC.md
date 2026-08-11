@@ -388,10 +388,10 @@ domain-approved correction/void/tombstone path, never an ad-hoc physical delete.
 
 ## 6. Company Receipt logic (Expenses & Tax v1)
 
-TASK-177/178 implement the canonical aggregate, uploader-only API and secure
-capture-to-confirmation foundation. It does
-not yet implement the company-wide register, browser product surface or standalone
-date-range Receipt Pack delivered by TASK-179–183.
+TASK-177–179 implement the canonical aggregate, secure capture-to-confirmation
+foundation and permission-scoped browser register. It does not yet implement
+query-side search/date behavior, the standalone Receipt Pack or final platform-owned
+module entitlement delivered by TASK-180–183.
 
 ### 6.1 Ownership and evidence
 
@@ -419,11 +419,15 @@ Void requires a reason and retains who/when rather than physically deleting the 
 
 ### 6.3 Register, date range and Receipt Pack
 
-Current reads derive `masterFn`, `companyFn` and actor from Session, require the existing
-`employee.receipts.write` capability, restrict rows to that uploader and paginate by
-bounded `afterId`. TASK-179 replaces that transitional scope with canonical own/company
-permissions and adds server-side search matching merchant, receipt/invoice number,
-notes and category. Date range is inclusive on company-local `transaction_date`;
+Current list/detail reads derive `masterFn`, `companyFn` and actor from Session, then
+require explicit `expenses.company_receipts.read_own` or
+`expenses.company_receipts.read_company`. The API passes only `own | company` visibility
+to tenant-scoped domain predicates and paginates by bounded `afterId`; mutation and
+confirmation paths remain uploader-scoped under `employee.receipts.write` until
+TASK-182. Migration 0092 gives Employee/Manager own scope and Finance/Receipt Manager/
+Company Owner explicit company scope without role-name authorization at request time.
+TASK-180 adds query-side merchant, receipt-number, notes and category search. Date range
+is inclusive on company-local `transaction_date`;
 missing-date records stay visible in the future register but are excluded from a package
 with an actionable warning.
 

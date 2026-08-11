@@ -400,6 +400,9 @@ async function dismissAllNotifications(){
 function routeModuleId(route){
   if(route==='settings') return 'settings';
   if(route==='notifications'||route==='my-activity') return 'account';
+  if(route==='company-receipts'){
+    return userHasAnyPermission('expenses.company_receipts.read_company')?'finance':'mywork';
+  }
   return ROUTE_MODULE[route];
 }
 function userHasAnyPermission(required){
@@ -432,6 +435,7 @@ const ROUTE_ACTION_PERMISSION={
   'new-payment-voucher':'finance.create','new-stock-adjustment':'inventory.create',
   'new-item':'inventory.create','new-quotation':'sales.create','new-opportunity':'crm.create',
   'new-employee':'hr.create',
+  'company-receipts':['expenses.company_receipts.read_company','expenses.company_receipts.read_own'],
   'user-mgmt':'admin.users.read','role-permission':'admin.roles.read',
   'audit-log':'admin.audit.read','master-control':'admin.master.read',
   'sys-settings':'settings.read','module-activation-control':'admin.modules.manage',
@@ -448,7 +452,7 @@ function routeAllowed(route){
   const mod=routeModuleId(route);
   if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
   if(!mod) return true;
-  if(!canReadModule(mod)) return false;
+  if(route!=='company-receipts'&&!canReadModule(mod)) return false;
   if(!routeCapabilityAllowed(route)) return false;
   const st=moduleState(mod);
   return st.visible&&st.active;
@@ -456,13 +460,15 @@ function routeAllowed(route){
 function routeDeniedByPermission(route){
   const mod=routeModuleId(route);
   if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return true;
-  return Boolean(mod&&(!canReadModule(mod)||!routeCapabilityAllowed(route)));
+  return Boolean(mod&&(
+    (route!=='company-receipts'&&!canReadModule(mod))||!routeCapabilityAllowed(route)
+  ));
 }
 function routeShownInCommands(route){
   const mod=routeModuleId(route);
   if(isSelfServiceOnly()&&!['mywork','settings'].includes(mod)) return false;
   if(!mod) return true;
-  if(!canReadModule(mod)) return false;
+  if(route!=='company-receipts'&&!canReadModule(mod)) return false;
   if(!routeCapabilityAllowed(route)) return false;
   const st=moduleState(mod);
   return st.visible&&st.active;
@@ -583,8 +589,8 @@ const SUBROUTES = {
   asset:['asset-register','asset-detail','depreciation'],
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
-  finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
-  mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
+  finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging','company-receipts'], hr:['leave-approval','hr-directory','employee','new-employee','payroll-run','payslip'],
+  mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
   workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','module-activation-control','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
@@ -618,7 +624,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'user-mgmt','audit-log','role-permission','module-activation-control',
   'hr-directory','employee','new-employee','leave-approval','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
-  'my-leave','leave-application','my-claims','expense-claim','my-receipts','receipt-tax-evidence','team-calendar','my-approvals',
+  'my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals',
   'integration-logs','data-import',
   'service-ticket','service-order','service-contracts','service-contract',
   'purchase-requisitions','purchase-request',
@@ -679,7 +685,7 @@ const API_SCREEN_ROUTES = new Set([
   'my-activity',
   'notifications',
   'integration','master-control','sys-settings',
-  'my-leave','leave-application','my-claims','expense-claim','my-receipts','receipt-tax-evidence','team-calendar','my-approvals',
+  'my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
   quotation:'quotations','delivery-order':'delivery-orders','sales-invoice':'sales-invoices',
@@ -721,7 +727,7 @@ const MODULE_DEFS = {
     ['gl','General Ledger','book'],['account-ledger','Account Ledger','list'],
     ['journal-entry','Journal Entries','receipt'],['payment-voucher','Payment Vouchers','coins'],
     ['bank-rec','Bank Reconciliation','refresh'],['pnl','Profit & Loss','chart'],
-    ['ar-aging','AR Aging','clock'],
+    ['ar-aging','AR Aging','clock'],['company-receipts','Company Receipts','receipt','route.company-receipts'],
   ]},
   crm:{ labelKey:'nav.crm', home:'crm-pipeline', items:[
     ['crm-pipeline','Pipeline','flow'],['crm-customer','Customer 360','user'],
@@ -743,6 +749,7 @@ const MODULE_DEFS = {
     {route:'my-leave',labelKey:'myWork.nav.leave',icon:'calendar'},
     {route:'my-claims',labelKey:'myWork.nav.claims',icon:'receipt'},
     {route:'my-receipts',labelKey:'myWork.nav.receipts',icon:'upload'},
+    {route:'company-receipts',labelKey:'route.company-receipts',icon:'receipt'},
     {route:'receipt-tax-evidence',labelKey:'myWork.nav.taxEvidence',icon:'filepdf'},
     {route:'team-calendar',labelKey:'myWork.nav.teamCalendar',icon:'people',capability:'team'},
     {route:'my-approvals',labelKey:'myWork.nav.approvals',icon:'check',capability:'team'},
@@ -795,7 +802,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
     'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
     'service-contracts','asset-register','user-mgmt',
-    'my-leave','my-claims','my-receipts','approval-inbox',
+    'my-leave','my-claims','my-receipts','company-receipts','approval-inbox',
   ],
   'master-detail-register-v1':[
     'item-master','stock-on-hand','leave-approval','payroll-run','depreciation',

@@ -830,6 +830,14 @@
     session:fetchSession,
     completeActivation:completeActivation,
     financeReports:financeReports,
+    companyReceipts:function(query){
+      query=query||{};
+      var params=new URLSearchParams();
+      if(query.limit!=null) params.set('limit',String(query.limit));
+      if(query.afterId!=null) params.set('afterId',String(query.afterId));
+      var suffix=params.toString();
+      return apiRequest('company-receipts'+(suffix?'?'+suffix:''));
+    },
     my:my,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
     completeSetup: completeSetup,

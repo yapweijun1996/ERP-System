@@ -10,6 +10,7 @@ import {
   documentScanJob,
   employee,
   role,
+  rolePermission,
   userCompanyRole,
 } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
@@ -68,11 +69,11 @@ describe('Company Receipts API', () => {
     });
   });
 
-  async function login() {
+  async function login(username = 'viewer', password = 'viewer1234') {
     const response = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ organizationCode: 'ACME', username: 'viewer', password: 'viewer1234' }),
+      body: JSON.stringify({ organizationCode: 'ACME', username, password }),
     });
     expect(response.status).toBe(200);
     const cookie = cookies(response);
@@ -93,6 +94,7 @@ describe('Company Receipts API', () => {
       declaredMimeType: 'image/jpeg',
       content: Uint8Array.from([
         0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+        ...new TextEncoder().encode(draftId),
       ]),
     });
     await withTenantTransaction(db, scope, (tx) => tx.update(documentScanJob).set({
@@ -183,13 +185,53 @@ describe('Company Receipts API', () => {
       meta: { scope: 'uploader', evidenceImmutable: true },
     });
 
+    const adminEvidence = await evidence(sg, adminId, 'receipt_api_admin_0001');
+    const adminReceipt = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptWithin(
+        tx,
+        sg,
+        adminId,
+        { ...payload(adminEvidence.document.id, adminEvidence.version.id), merchant: 'Admin Merchant' },
+      ));
+
     const list = await fetch(`${baseUrl}/api/company-receipts?limit=1`, {
       headers: { cookie: auth.cookie },
     });
     expect(list.status).toBe(200);
     expect(await list.json()).toMatchObject({
       data: [{ id: createdBody.data.id, merchant: 'API Merchant' }],
-      meta: { scope: 'uploader', limit: 1, nextCursor: null },
+      meta: { scope: 'own', limit: 1, nextCursor: null },
+    });
+    const adminAuth = await login('admin', 'demo1234');
+    const switchResponse = await fetch(`${baseUrl}/api/auth/session/actions/switch-company`, {
+      method: 'POST',
+      headers: {
+        cookie: adminAuth.cookie,
+        'x-csrf-token': adminAuth.csrf,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ companyFn: 'C-SG' }),
+    });
+    expect(switchResponse.status).toBe(200);
+    const companyList = await fetch(`${baseUrl}/api/company-receipts?limit=10`, {
+      headers: { cookie: adminAuth.cookie },
+    });
+    expect(companyList.status).toBe(200);
+    expect(await companyList.json()).toMatchObject({
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: createdBody.data.id, uploaderUserId: viewerId }),
+        expect.objectContaining({ id: adminReceipt.id, uploaderUserId: adminId }),
+      ]),
+      meta: { scope: 'company', limit: 10, nextCursor: null },
+    });
+    const companyDetail = await fetch(
+      `${baseUrl}/api/company-receipts/${createdBody.data.id}`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(companyDetail.status).toBe(200);
+    expect(await companyDetail.json()).toMatchObject({
+      data: { id: createdBody.data.id, uploaderUserId: viewerId },
+      meta: { scope: 'company' },
     });
     const detail = await fetch(
       `${baseUrl}/api/company-receipts/${createdBody.data.id}`,
@@ -277,6 +319,64 @@ describe('Company Receipts API', () => {
       { action: 'updated', requestId: 'company-receipt-update-0001' },
       { action: 'voided', requestId: 'company-receipt-void-0001' },
     ]));
-    expect(await db.select().from(companyReceipt)).toHaveLength(2);
+    expect(await db.select().from(companyReceipt)).toHaveLength(3);
+  });
+
+  it('denies register reads when only the legacy receipt mutation grant remains', async () => {
+    const [employeeRole] = await db.select().from(role).where(and(
+      eq(role.masterFn, 'M1'),
+      eq(role.name, 'Employee'),
+    ));
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, employeeRole.roleId),
+      eq(rolePermission.permissionKey, 'expenses.company_receipts.read_own'),
+    ));
+    const auth = await login();
+    const response = await fetch(`${baseUrl}/api/company-receipts`, {
+      headers: { cookie: auth.cookie },
+    });
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe('permission_denied');
+  });
+
+  it('uses an explicit company-read grant for a custom Receipt Manager role', async () => {
+    const [receiptManager] = await db.insert(role).values({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      name: 'Custom Receipt Reader',
+      isSuperadmin: false,
+    }).returning();
+    await db.insert(rolePermission).values({
+      masterFn: 'M1',
+      roleId: receiptManager.roleId,
+      permissionKey: 'expenses.company_receipts.read_company',
+    });
+    await db.insert(userCompanyRole).values({
+      userId: viewerId,
+      companyFn: 'C-SG',
+      roleId: receiptManager.roleId,
+      assignmentSource: 'manual',
+    });
+    const uploaded = await evidence(
+      { masterFn: 'M1', companyFn: 'C-SG' },
+      adminId,
+      'receipt_api_custom_reader_0001',
+    );
+    const created = await withTenantTransaction(db, { masterFn: 'M1', companyFn: 'C-SG' },
+      (tx) => createCompanyReceiptWithin(
+        tx,
+        { masterFn: 'M1', companyFn: 'C-SG' },
+        adminId,
+        payload(uploaded.document.id, uploaded.version.id),
+      ));
+    const auth = await login();
+    const response = await fetch(`${baseUrl}/api/company-receipts?limit=25`, {
+      headers: { cookie: auth.cookie },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      data: [expect.objectContaining({ id: created.id, uploaderUserId: adminId })],
+      meta: { scope: 'company', limit: 25, nextCursor: null },
+    });
   });
 });

@@ -2379,9 +2379,10 @@ Current boundary (source-verified 2026-08-11): managed-document upload, scan, OC
 IndexedDB drafts, version/hash governance and posted-claim Tax Evidence PDF utilities
 exist. TASK-177 delivers migration 0090 and the independent Company Receipt aggregate/API;
 TASK-178 adds migration 0091 exact-hash uniqueness plus an uploader-scoped confirmation
-context over immutable OCR provenance and safe manual fallback. The `Expenses & Tax`
-module entitlement, browser Company Receipts adapter/register and standalone Receipt
-Pack remain pending.
+context over immutable OCR provenance and safe manual fallback. TASK-179 adds migration
+0092, explicit own/company reads, bounded Demo/API adapters and the responsive
+five-language browser register. The final `Expenses & Tax` module entitlement,
+search/date behavior and standalone Receipt Pack remain pending.
 
 - [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
       current source, approved scope, architecture, backlog and KB without changing
@@ -2395,9 +2396,10 @@ Pack remain pending.
       file/IndexedDB upload through existing validation, storage, scan and OCR; expose
       immutable candidate provenance and safe manual correction, and prevent a second
       Company Receipt from the same exact evidence hash.
-- [ ] **TASK-179 — Build the permission-scoped Company Receipts register.** Support own
-      and company views through canonical capabilities, bounded query/pagination and
-      responsive register/card layouts without role-name authorization.
+- [x] **TASK-179 — Build the permission-scoped Company Receipts register.** Migration
+      0092 and registered own/company read grants now drive bounded list/detail queries,
+      Demo/API adapters, eight-column desktop register and labelled mobile cards without
+      request-time role-name authorization. TASK-182 retains the final canonical/module cutover.
 - [ ] **TASK-180 — Add transaction-date search and range behavior.** Implement
       inclusive company-local date boundaries, search/filter presets, Missing Date
       visibility and complete result retrieval independent of the visible page.
@@ -2412,8 +2414,8 @@ Pack remain pending.
       focused/full gates, then report the exact implemented boundary.
 
 Dependencies are deliberate. TASK-177 consumed TASK-174's authorization invalidation
-boundary and TASK-176's contract; TASK-179–183 now follow the register,
-range, export, parity and release-proof order. Existing EPIC-054–056 functionality is
+boundary and TASK-176's contract; TASK-180–183 now follow the range, export, parity
+and release-proof order. Existing EPIC-054–056 functionality is
 preserved as reusable infrastructure or future/optional scope, not duplicated.
 
 Exit criteria: an authorised user can save safe company receipts without an Employee

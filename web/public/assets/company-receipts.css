@@ -1,0 +1,31 @@
+/* TASK-179 responsive Company Receipts register. Desktop keeps the shared
+   transaction grid; narrow screens turn each row into a labelled card. */
+[data-company-receipt-register] .transaction-list-pagination{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 12px;border-top:1px solid var(--hairline);color:var(--muted);
+  font-size:calc(12px * var(--fs,1));
+}
+[data-company-receipt-register] .transaction-list-pagination[hidden]{display:none;}
+
+@media(max-width:700px){
+  [data-company-receipt-register] .sales-tablewrap{overflow:visible;border:0;background:transparent;}
+  [data-company-receipt-register] .dt-page,
+  [data-company-receipt-register] .dt{width:100%;min-width:0;}
+  [data-company-receipt-register] .dt-head{display:none;}
+  [data-company-receipt-register] .dt-body{display:flex;flex-direction:column;gap:10px;}
+  [data-company-receipt-register] .dt-body .dt-r{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:11px 12px;min-width:0;padding:13px;border:1px solid var(--hairline);
+    border-radius:var(--r-m);background:var(--surface);box-shadow:var(--shadow-xs);
+  }
+  [data-company-receipt-register] .dt-body .dt-c{
+    display:flex;min-width:0;flex-direction:column;gap:4px;padding:0;
+    overflow:visible;text-align:left;white-space:normal;overflow-wrap:anywhere;
+  }
+  [data-company-receipt-register] .dt-body .dt-c::before{
+    content:attr(data-label);color:var(--muted);font-size:calc(9.5px * var(--fs,1));
+    font-weight:650;letter-spacing:.04em;text-transform:uppercase;
+  }
+  [data-company-receipt-register] .dt-body .dt-c:nth-child(2){grid-column:1/-1;}
+  [data-company-receipt-register] .transaction-list-pagination{flex-wrap:wrap;padding:10px 0;}
+}

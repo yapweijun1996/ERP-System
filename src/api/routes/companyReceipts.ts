@@ -54,19 +54,34 @@ export function createCompanyReceiptsRouter(db: DB): Router {
     next();
   });
 
-  async function requireReceiptAccess(
+  async function requireReceiptMutationAccess(
     req: import('express').Request,
     res: import('express').Response,
   ) {
     const session = await requireSession(db, req, res);
     if (!session) return null;
-    /* TASK-177 intentionally reuses the existing receipt capability. TASK-182
-       replaces it atomically with canonical own/company receipt actions. */
+    /* TASK-182 replaces this compatibility mutation permission atomically. */
     if (!await hasPermission(db, session, PERMISSIONS.employeeReceiptsWrite)) {
       apiError(res, 403, 'permission_denied', 'You cannot access Company Receipts.');
       return null;
     }
     return session;
+  }
+
+  async function requireReceiptReadAccess(
+    req: import('express').Request,
+    res: import('express').Response,
+  ) {
+    const session = await requireSession(db, req, res);
+    if (!session) return null;
+    if (await hasPermission(db, session, PERMISSIONS.expensesCompanyReceiptsReadCompany)) {
+      return { session, visibility: 'company' as const };
+    }
+    if (await hasPermission(db, session, PERMISSIONS.expensesCompanyReceiptsReadOwn)) {
+      return { session, visibility: 'own' as const };
+    }
+    apiError(res, 403, 'permission_denied', 'You cannot read Company Receipts.');
+    return null;
   }
 
   function handleError(res: import('express').Response, error: unknown): void {
@@ -78,8 +93,9 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   }
 
   router.get('/', async (req, res) => {
-    const session = await requireReceiptAccess(req, res);
-    if (!session) return;
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const { session, visibility } = access;
     const limit = req.query.limit == null ? 50 : Number(req.query.limit);
     const afterId = req.query.afterId == null ? null : positiveId(req.query.afterId);
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100
@@ -95,13 +111,13 @@ export function createCompanyReceiptsRouter(db: DB): Router {
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
       const rows = await withTenantTransaction(db, scope, (tx) =>
-        listCompanyReceiptsWithin(tx, scope, session.userId, { limit, afterId }));
+        listCompanyReceiptsWithin(tx, scope, session.userId, { limit, afterId, visibility }));
       const hasMore = rows.length > limit;
       const data = rows.slice(0, limit);
       res.json({
         data,
         meta: {
-          scope: 'uploader',
+          scope: visibility,
           limit,
           nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
         },
@@ -112,7 +128,7 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.get('/confirmations/:documentVersionId', async (req, res) => {
-    const session = await requireReceiptAccess(req, res);
+    const session = await requireReceiptMutationAccess(req, res);
     if (!session) return;
     const documentVersionId = positiveId(req.params.documentVersionId);
     if (!documentVersionId) {
@@ -147,8 +163,9 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.get('/:receiptId', async (req, res) => {
-    const session = await requireReceiptAccess(req, res);
-    if (!session) return;
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const { session, visibility } = access;
     const receiptId = positiveId(req.params.receiptId);
     if (!receiptId) {
       apiError(res, 400, 'company_receipt_id_invalid', 'receiptId must be a positive integer.');
@@ -157,15 +174,15 @@ export function createCompanyReceiptsRouter(db: DB): Router {
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
       const data = await withTenantTransaction(db, scope, (tx) =>
-        readCompanyReceiptWithin(tx, scope, session.userId, receiptId));
-      res.json({ data, meta: { scope: 'uploader' } });
+        readCompanyReceiptWithin(tx, scope, session.userId, receiptId, visibility));
+      res.json({ data, meta: { scope: visibility } });
     } catch (error) {
       handleError(res, error);
     }
   });
 
   router.post('/', async (req, res) => {
-    const session = await requireReceiptAccess(req, res);
+    const session = await requireReceiptMutationAccess(req, res);
     if (!session) return;
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
@@ -194,7 +211,7 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.patch('/:receiptId', async (req, res) => {
-    const session = await requireReceiptAccess(req, res);
+    const session = await requireReceiptMutationAccess(req, res);
     if (!session) return;
     const receiptId = positiveId(req.params.receiptId);
     if (!receiptId) {
@@ -231,7 +248,7 @@ export function createCompanyReceiptsRouter(db: DB): Router {
   });
 
   router.post('/:receiptId/actions/void', async (req, res) => {
-    const session = await requireReceiptAccess(req, res);
+    const session = await requireReceiptMutationAccess(req, res);
     if (!session) return;
     const receiptId = positiveId(req.params.receiptId);
     if (!receiptId) {

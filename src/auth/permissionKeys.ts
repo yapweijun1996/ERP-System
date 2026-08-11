@@ -64,6 +64,8 @@ export const PERMISSIONS = {
   expensesTaxEvidenceGenerate: 'expenses.tax_evidence.generate',
   expensesTaxEvidenceAccess: 'expenses.tax_evidence.access',
   expensesTaxEvidenceGovernance: 'expenses.tax_evidence.governance',
+  expensesCompanyReceiptsReadOwn: 'expenses.company_receipts.read_own',
+  expensesCompanyReceiptsReadCompany: 'expenses.company_receipts.read_company',
   employeeTeamRead: 'employee.team.read',
   projectRead: 'project.read',
   projectWrite: 'project.write',

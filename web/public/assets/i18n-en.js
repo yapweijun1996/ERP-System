@@ -1118,6 +1118,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "route.my-claims": "My Claims",
   "route.my-leave": "My Leave",
   "route.my-receipts": "My Receipts",
+  "route.company-receipts": "Company Receipts",
   "route.receipt-tax-evidence": "Receipt & Tax Evidence",
   "route.new-stock-adjustment": "New Stock Adjustment",
   "route.team-calendar": "Team Calendar",

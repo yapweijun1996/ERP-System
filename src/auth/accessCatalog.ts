@@ -49,6 +49,7 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
     permissions: [
       PERMISSIONS.dashboardRead, PERMISSIONS.employeeSelfRead, PERMISSIONS.employeeTeamRead,
       PERMISSIONS.employeeLeaveWrite, PERMISSIONS.employeeReceiptsWrite,
+      PERMISSIONS.expensesCompanyReceiptsReadOwn,
       PERMISSIONS.employeeClaimsWrite, PERMISSIONS.expensesManagerApprove,
       ...read('sales', 'crm', 'inventory', 'project', 'service'),
       ...actions('sales', 'approve'), ...actions('purchasing', 'approve'),
@@ -99,6 +100,7 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
     permissions: [PERMISSIONS.dashboardRead, ...read('finance'), PERMISSIONS.financeWrite,
       PERMISSIONS.expensesFinanceVerify, PERMISSIONS.expensesPaymentBatchPrepare,
       PERMISSIONS.expensesPaymentExport, PERMISSIONS.financeReportExport,
+      PERMISSIONS.expensesCompanyReceiptsReadCompany,
       ...actions('finance', 'create', 'edit', 'post', 'export')],
     scopes: companyScopes('finance/*', 'expenses/*'),
   },
@@ -107,6 +109,7 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
     permissions: [PERMISSIONS.dashboardRead, ...read('finance'),
       PERMISSIONS.expensesFinanceApprove, PERMISSIONS.expensesPaymentBatchRelease,
       PERMISSIONS.expensesPaymentResultImport, PERMISSIONS.expensesTaxEvidenceAccess,
+      PERMISSIONS.expensesCompanyReceiptsReadCompany,
       PERMISSIONS.financeBudgetApprove, ...actions('finance', 'approve', 'pay', 'export')],
     scopes: companyScopes('finance/*', 'expenses/*'),
   },

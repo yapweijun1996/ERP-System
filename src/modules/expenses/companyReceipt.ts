@@ -46,7 +46,10 @@ export interface CreateCompanyReceiptInput extends CompanyReceiptMetadataInput {
 export interface ListCompanyReceiptsOptions {
   limit?: number;
   afterId?: number | null;
+  visibility?: CompanyReceiptReadVisibility;
 }
+
+export type CompanyReceiptReadVisibility = 'own' | 'company';
 
 type StoredMetadata = {
   transactionDate: string | null;
@@ -381,8 +384,8 @@ function receiptJoins(exec: DB) {
     ));
 }
 
-/** Current TASK-177 API is uploader-only. TASK-179 will widen reads through
- * canonical own/company scope grants without changing aggregate ownership. */
+/** Read scope is selected only after API permission evaluation. Aggregate
+ * ownership and every mutation remain uploader-scoped. */
 export async function listCompanyReceiptsWithin(
   exec: DB,
   scope: Scope,
@@ -393,8 +396,10 @@ export async function listCompanyReceiptsWithin(
   const predicates = [
     eq(companyReceipt.masterFn, scope.masterFn),
     eq(companyReceipt.companyFn, scope.companyFn),
-    eq(companyReceipt.uploaderUserId, actorUserId),
   ];
+  if ((options.visibility ?? 'own') === 'own') {
+    predicates.push(eq(companyReceipt.uploaderUserId, actorUserId));
+  }
   if (options.afterId != null) predicates.push(lt(companyReceipt.id, options.afterId));
   return receiptJoins(exec)
     .where(and(...predicates))
@@ -407,13 +412,15 @@ export async function readCompanyReceiptWithin(
   scope: Scope,
   actorUserId: number,
   receiptId: number,
+  visibility: CompanyReceiptReadVisibility = 'own',
 ) {
-  const [row] = await receiptJoins(exec).where(and(
+  const predicates = [
     eq(companyReceipt.id, receiptId),
     eq(companyReceipt.masterFn, scope.masterFn),
     eq(companyReceipt.companyFn, scope.companyFn),
-    eq(companyReceipt.uploaderUserId, actorUserId),
-  )).limit(1);
+  ];
+  if (visibility === 'own') predicates.push(eq(companyReceipt.uploaderUserId, actorUserId));
+  const [row] = await receiptJoins(exec).where(and(...predicates)).limit(1);
   if (!row) {
     invalid(
       'company_receipt_not_found',

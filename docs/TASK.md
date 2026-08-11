@@ -8,19 +8,22 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **178**
+- Done: **179**
 - In progress: **0**
-- Todo: **9**
+- Todo: **8**
 - Blocked: **1**
 - Total: **188**
 
 ## Current release-quality note
 
-The 2026-08-10 release follow-up is complete: `npm run audit:screens` renders all 128
-routes at desktop/mobile and passes the 128 Canonical / 0 Preview maturity plus
+The 2026-08-10 release follow-up is complete: `npm run audit:screens` rendered all 128
+routes at desktop/mobile and passed the 128 Canonical / 0 Preview maturity plus
 layout/behavior contracts. The full i18n matrix passes 1,533 canonical keys / 69 local
-five-language packs across 128 routes × 5 languages × 2 viewports. The 2026-08-11
-TASK-178 regression passes 159 files plus 1 skipped file (641 passed, 1 skipped tests);
+five-language packs across 128 routes × 5 languages × 2 viewports. TASK-179 adds the
+129th registered route and 70th local five-language pack; its dedicated 1440×900 /
+390×844 browser proof and the current 50-route canonical list-layout audit pass. The
+2026-08-11 TASK-179 regression passes 159 files plus 1 skipped file (643 passed,
+1 skipped test); its focused receipt/authorization/Demo proof passes 6 files / 22 tests.
 `npm run smoke` passes at
 desktop/mobile after the visible-only navigation-badge contract was fixed. PWA update,
 access matrix, build, permission, schema and drift gates pass. TASK-017 remains the
@@ -46,7 +49,7 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | TASK-176 | Done | Source-audit and document the approved Company Receipts-only v1 boundary; synchronize KB without code or deployment |
 | TASK-177 | Done | Migration 0090, Company Receipt aggregate/domain/API, optimistic concurrency, audit and PGlite/PostgreSQL RLS proof |
 | TASK-178 | Done | Migration 0091 exact-hash uniqueness and immutable OCR-provenance confirmation/manual-fallback context |
-| TASK-179 | Todo | Permission-scoped own/company register and responsive UI |
+| TASK-179 | Done | Migration 0092, explicit own/company read grants, bounded Demo/API register and responsive five-language desktop/mobile UI |
 | TASK-180 | Todo | Inclusive transaction-date range, search, pagination and Missing Date behavior |
 | TASK-181 | Todo | Receipt Pack preview, PDF, mixed-currency register and Print |
 | TASK-182 | Todo | Demo/API parity, module entitlement, authorization, accessMatrix and i18n |
@@ -70,12 +73,12 @@ TASK-174 has closed the cache/direct-URL dependency, so TASK-185 is now eligible
 current application remains tenant-controlled until TASK-185 and TASK-186 are delivered;
 TASK-184 did not change code, schema, routes, permissions or production.
 
-TASK-177/178 implement the Expenses & Tax backend/capture foundation: aggregate,
-uploader-only API, exact-hash protection and confirmation context over the existing
-secure offline/upload/OCR pipeline. The customer-facing Company Receipts register,
-date range, Receipt Pack, module entitlement and final canonical permission set remain
-pending. TASK-179 is now the lowest-numbered dependency-eligible code task; TASK-185 is independently
-eligible for the MAC programme.
+TASK-177–179 implement the Expenses & Tax backend/capture/register foundation:
+aggregate, exact-hash confirmation, explicit own/company list/detail permissions,
+bounded Demo/API reads and responsive desktop/mobile register UI. Search/date range,
+Receipt Pack, module entitlement and the final canonical permission cutover remain
+pending. TASK-180 is now the lowest-numbered dependency-eligible Expenses & Tax task;
+TASK-185 is independently eligible for the MAC programme.
 
 ## Latest implementation milestones
 

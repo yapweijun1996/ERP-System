@@ -303,7 +303,7 @@ the central tenant decision boundary, explicit user-level overrides, safe/audite
 explanations and strict current-step approval context:
 
 - route/resource/action declarations are now checked against an application-owned
-  registry of 299 static definitions, with canonical projections for 116 resources,
+  registry of 303 static definitions after TASK-179, with canonical projections for 116 resources,
   62 actions and 5 updates; existing broad keys remain explicit compatibility aliases
   until a later data migration and cutover;
 - `authorize`, `authorizeWithin` and `hasAnyAuthorization` are the central decision
@@ -386,10 +386,11 @@ deeper delegation binding and separation-of-duties rules remain later target wor
 The official v1 product name is **Expenses & Tax** and its only primary workflow is
 **Company Receipts**. The current `my-receipts` route remains an actor-owned secure
 capture foundation and compatibility surface; it is not a company receipt register.
-TASK-177/178 implement migrations 0090/0091, the Company Receipt schema/commands, an
-uploader-only `/api/company-receipts` API and an immutable-provenance confirmation
-context with exact-hash duplicate prevention and safe manual OCR fallback. The v1 permission set, module-entitlement
-key, browser route/adapter/UI, company register and Receipt Pack remain pending.
+TASK-177–179 implement migrations 0090–0092, the Company Receipt schema/commands,
+uploader-scoped mutations and confirmation, explicit own/company list/detail reads,
+exact-hash duplicate prevention, Demo/API adapters and a responsive five-language
+Company Receipts register. Search/date-range behavior, Receipt Pack and the final
+platform-owned module entitlement/canonical permission cutover remain pending.
 
 The future implementation must satisfy these binding requirements:
 
@@ -406,9 +407,11 @@ The future implementation must satisfy these binding requirements:
   extraction failure cannot block manual completion after the document is safe. OCR
   candidates retain source, model, confidence and review state and are never rewritten
   by confirmed metadata.
-- TASK-177 register reads are bounded and cursor-paginated but uploader-only under the
-  temporary existing `employee.receipts.write` capability. TASK-179/182 must add search
-  and canonical own/company scopes without role-name checks before product completion.
+- Register list/detail reads require explicit `expenses.company_receipts.read_own` or
+  `expenses.company_receipts.read_company`; the API resolves that permission before
+  passing `own | company` visibility to tenant-scoped domain queries. Reads are bounded
+  to 1–100 rows and cursor-paginated. Search/date predicates remain TASK-180, and
+  TASK-182 owns the final compatibility-to-canonical permission and entitlement cutover.
 - Date filters are inclusive company-local business dates:
   `from <= transaction_date <= to`. Missing dates are visible and excluded from a
   date-range package until corrected.

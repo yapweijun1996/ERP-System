@@ -645,6 +645,13 @@
       "when": 1786447918845,
       "tag": "0091_sloppy_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1786449528185,
+      "tag": "0092_company_receipt_read_scope",
+      "breakpoints": true
     }
   ]
 }

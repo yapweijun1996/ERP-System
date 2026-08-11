@@ -88,8 +88,8 @@ The current code already implements:
 - master/optional-company support targets, 24-hour maximum grants, read-only or explicit
   restricted-write/break-glass modes, default sensitive-field denial, and audited grant
   lifecycle/decision events.
-- an application-owned permission registry (TASK-171) with 299 static definitions:
-  157 tenant compatibility entries and 142 canonical entries, including a distinct
+- an application-owned permission registry (TASK-171, extended by TASK-179) with 303
+  static definitions: 159 tenant compatibility entries and 144 canonical entries, including a distinct
   platform permission domain;
 - exact canonical route projections registered for 116 resources, 62 actions and 5
   update contracts. Ordinary role evaluation and approval authority resolution use
@@ -275,7 +275,7 @@ The current application registry is split into two layers:
   so existing broad grants continue to work during expand without accepting arbitrary
   strings. Unknown candidates return no grant.
 
-`npm run check:permissions` currently verifies 299 static registry definitions, 116
+`npm run check:permissions` currently verifies 303 static registry definitions, 116
 resource contracts, 62 action contracts and 5 update contracts. TASK-172 added the
 assignment migration, dual-read scope path, active-assignment predicate and assignment
 API. TASK-173 now adds the central decision service, user-level explicit overrides,
@@ -545,11 +545,14 @@ canonical identifiers must follow the application registry and be added atomical
 with the module key, backend resource/actions, route metadata and `ACCESS_MATRIX`;
 hardcoded checks such as `role === 'Company Owner'` are forbidden.
 
-Contributor access defaults to create/read-own/update-own-draft. Finance or an
-explicit Receipt Manager may receive company read/update/export/print. Company Owner
-has only its registered assigned capabilities, and platform Superadmin/support remains
-outside tenant business authority. TASK-177 cannot start until TASK-174 closes the
-remaining stale-authorization boundary; none of these receipt capabilities exists yet.
+TASK-179 implements the read subset with registered
+`expenses.company_receipts.read_own` and
+`expenses.company_receipts.read_company` keys. Employee/Manager receive own read;
+Finance Preparer, Finance Checker, Receipt Manager and Company Owner receive stored
+company-read grants. Request authorization checks permission keys, never role names,
+and platform Superadmin/support receives no tenant business grant. Create/update/void
+still use the transitional `employee.receipts.write`; export/print and the final
+canonical/module/access-matrix cutover remain TASK-181/182.
 
 ## 16. Planned platform-owned Module Access Control (EPIC-064)
 

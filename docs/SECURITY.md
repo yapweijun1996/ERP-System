@@ -208,10 +208,13 @@ confirmation writes separate business metadata. Migration 0091 uniquely constrai
 `master_fn + company_fn + evidence_sha256`, so concurrent upload keys cannot confirm
 the same exact file twice. Only exact hashes block; similarity never auto-merges.
 
-The current API is uploader-only and temporarily guarded by
-`employee.receipts.write`; canonical own/company capabilities, sellable module
-entitlement, browser/worker gates and Receipt Pack read/export audits remain required
-by TASK-179–182. Exact hash duplicates may warn/prevent accidental storage, but
+TASK-179 list/detail reads fail closed unless the tenant identity holds the explicit
+own or company receipt-read capability. The resulting visibility is enforced again in
+the tenant-scoped query; Company Owner receives a stored company-read grant and
+platform support receives no tenant business grant. Mutations and confirmation remain
+uploader-only under `employee.receipts.write` until TASK-182's canonical cutover.
+Sellable module entitlement and Receipt Pack read/export audits remain required by
+TASK-181/182. Exact hash duplicates may warn/prevent accidental storage, but
 merchant/date/amount similarity must never auto-delete or merge evidence.
 
 ## Planned platform-owned Module Access Control security boundary

@@ -1035,7 +1035,8 @@ separately blocked under TASK-017.
    and the target in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 2. **Principal and permission foundation** (TASK-170–171): TASK-170 is complete with a
    separate platform/support control plane, bounded grants and audit. TASK-171 is also
-   complete: the application-owned registry has 299 static definitions, explicit
+   complete: the application-owned registry has 303 current static definitions after
+   TASK-179, explicit
    compatibility mappings/removal metadata, canonical projections for 116 resources
    and 62 actions, and the `check:permissions` CI gate.
 3. **Assignment and decision model** (TASK-172–173): TASK-172 moves validity, provenance
@@ -1055,7 +1056,8 @@ separately blocked under TASK-017.
    revocation without replaying rejected writes.
 5. **Owner cutover** (TASK-175) is complete: migration 0089 replaces
    the tenant Superadmin bypass with 112 explicit, explainable Company Owner
-   permissions, company scope and idempotent legacy-assignment backfill while keeping
+   permissions at cutover; TASK-179 adds the current receipt company-read grant for 113,
+   with company scope and idempotent legacy-assignment backfill while keeping
    platform authority separate. Disposable PostgreSQL 16 parity, true concurrency and
    non-superuser RLS proof are green. The production database was backed up, migrations
    0084–0089 were applied, production RLS was re-applied, `deploy/release.sh` completed
@@ -1085,12 +1087,15 @@ workflow coverage and physical-device verification remain separate follow-up gat
    `/api/company-receipts` now wrap clean current managed-document evidence with
    optimistic versions, uploader audit and retained void state, without Employee Claim,
    reimbursement, GL or Tax Treatment dependencies.
-2. **Capture and register** (TASK-178 complete; TASK-179/180 pending): the existing
+2. **Capture and register** (TASK-178/179 complete; TASK-180 pending): the existing
    20 MB/20-page validation, IndexedDB editing/persistence, scan/OCR and lifecycle
    pipeline now feeds an immutable-provenance confirmation context. Migration 0091
    prevents an exact evidence hash from becoming two Company Receipts, while safe OCR
-   failure still permits manual confirmation. Bounded own/company register, search,
-   pagination, inclusive `transaction_date` filters and Missing Date remain pending.
+   failure still permits manual confirmation. Migration 0092 and the application
+   permission registry now enforce bounded own/company list/detail reads; Demo/API
+   adapters render the eight-field desktop register and labelled mobile cards with
+   cursor pagination. Query-side search, inclusive `transaction_date` filters and
+   Missing Date remain pending.
 3. **Receipt Pack** (TASK-181): preview the complete matching set, produce an A4
    register followed by readable originals, preserve multi-page PDFs and group totals
    by currency before offering browser Print.
@@ -1099,10 +1104,10 @@ workflow coverage and physical-device verification remain separate follow-up gat
    prove Demo/PGlite and PostgreSQL/API parity, then run desktop/mobile and release
    gates before updating final status and KB evidence.
 
-Phase status is **in progress**. TASK-177/178 delivered the canonical model/API and
-secure capture-to-confirmation integration with PGlite/PostgreSQL RLS proof and no
-production deployment. TASK-179 is now eligible; later tasks still own the register,
-date range, Receipt Pack, entitlement, canonical permissions, UI and release proof.
+Phase status is **in progress**. TASK-177–179 delivered the canonical model/API,
+secure confirmation, permission-scoped register and responsive Demo/API list UI with no
+production deployment. TASK-180 is now eligible; later tasks still own search/date
+range, Receipt Pack, entitlement, final canonical permission cutover and release proof.
 
 Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`
 works end to end in both modes without `expense_claim`, cross-tenant access,
