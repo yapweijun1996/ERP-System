@@ -74,7 +74,7 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
 For production, `POST /api/setup/actions/complete` now writes the tenant foundation to
 PostgreSQL in one transaction. It is available only while the tenant foundation tables
 are empty; no deployment token is required. The API creates the master, first company,
-Superadmin, permissions, effective-dated tax rule and base chart of accounts, then
+Company Owner, explicit permissions, effective-dated tax rule and base chart of accounts, then
 permanently marks setup complete. After the first setup, the endpoint returns
 `409 setup_not_empty`/`409 already_initialized` and normal sign-in is used. The public
 demo continues to write to PGlite/IndexedDB and can be reset for visitors. Because its
@@ -107,3 +107,19 @@ failed setup remains a clean retry rather than exposing a database constraint er
 Trying to make Phase A a web wizard is impossible (no server to serve it). Trying to make
 Phase B a shell script throws away the friendly GUI that the demo needs. Keep them
 separate.
+
+## Planned platform-owned module provisioning (EPIC-064)
+
+Current in-app onboarding may configure Company modules through tenant
+`admin.modules.manage`; that remains source truth until TASK-186. The approved target
+removes module purchase/allocation from Phase B tenant setup.
+
+Before a new Company reaches module-dependent onboarding, Platform Superadmin defines
+the Master purchased entitlement and one default Company allocation set. Company
+creation applies that set automatically and records platform/system audit. The tenant
+wizard may display readiness/error state needed to continue, but offers no module
+selector, Enable/Disable action or entitlement API. Missing Master entitlement/default
+allocation fails closed rather than assuming all modules are purchased.
+
+Platform password login, Master/Company workspace and exact-user simulation are planned
+under TASK-187 and remain separate from the tenant setup session.

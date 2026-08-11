@@ -1,8 +1,8 @@
 # ERP Role & Permission Architecture
 
-Status: **Current implementation plus remaining target architecture; TASK-170–173
-foundations are delivered, TASK-174 is in progress, and TASK-175 remains pending**
-Reviewed: **2026-08-10**
+Status: **Current implementation plus remaining target architecture; TASK-170–175 are
+delivered and target production migration/release verification is complete**
+Reviewed: **2026-08-11**
 Scope: platform authorization, tenant/company roles, permissions, data scope,
 approval authority, support access and audit
 Target scale: one-person company to 10,000+ employees
@@ -94,7 +94,7 @@ The current code already implements:
 - exact canonical route projections registered for 116 resources, 62 actions and 5
   update contracts. Ordinary role evaluation and approval authority resolution use
   explicit compatibility candidates and reject unknown requests; platform-domain
-  tenant requests are rejected before the current tenant Superadmin bypass;
+  tenant requests are rejected before tenant-role evaluation;
 - role editing/template cloning, leave approval configuration and expense extra-approval
   configuration reject unregistered tenant permission codes, and
   `npm run check:permissions` audits source literals, templates, routes and actions.
@@ -105,10 +105,10 @@ The current code already implements:
 - assignment-owned scope rows in `user_company_role_scope`, with validated current
   target types (`none`, `company`, `department`, `team`, `employee`). A reusable role
   can therefore be attached to multiple independent assignments and target rows.
-- the first centralized tenant decision service in `src/auth/authorization.ts`:
+- the centralized tenant decision service in `src/auth/authorization.ts`:
   `authorize`, `authorizeWithin` and `hasAnyAuthorization` validate active membership,
-  registered tenant permissions, active assignments, explicit overrides and the
-  tenant-local Superadmin compatibility path before returning ALLOW/DENY;
+  registered tenant permissions, active assignments, explicit overrides and explicit
+  role-permission rows before returning ALLOW/DENY;
 - migration 0087 adds reasoned, time-bounded `user_permission_override` rows. Explicit
   `deny` wins over every matching allow, explicit `allow` is evaluated before role
   grants, revoked/expired rows are ignored, and resource/department targets do not
@@ -122,10 +122,19 @@ The current code already implements:
   checks now use the centralized evaluator. Effective-capability snapshots include
   active override effects conservatively for UX, while the backend decision remains
   authoritative.
+- On 2026-08-10 the target Compose database was backed up before migration 0089;
+  migrations 0084–0089 were applied, production RLS was re-applied and
+  `deploy/release.sh` completed through the existing Cloudflare tunnel. Verification
+  found 90 migration entries, 219 forced-RLS tenant tables/policies, one company-scoped
+  Company Owner role, zero active legacy Superadmin flags/assignments, healthy services,
+  public `/health` 200 and unauthenticated session 401.
 
-The following current behaviors are compatibility facts, not the final architecture:
+The following current behaviors are compatibility facts, not new authorization grants:
 
-- A tenant-local role with `role.is_superadmin=true` bypasses `role_permission`.
+- Migration `0089_company_owner_cutover.sql` converts legacy `is_superadmin` assignments
+  to company-scoped `Company Owner` assignments, seeds 112 registered tenant
+  permissions plus `* -> company` scope, and makes the old role flag inert. A database
+  that has not applied 0089 must not receive the cutover application release.
 - `role_resource_scope` remains a compatibility fallback only for assignments whose
   `scope_backfilled_at` is null; assignment-owned scope rows are preferred once the
   assignment is marked backfilled.
@@ -273,9 +282,12 @@ API. TASK-173 now adds the central decision service, user-level explicit overrid
 safe/audited explanations and strict current-step approval context for the generic leave
 and expense domains. The access matrix and authenticated/browser checks are a partial
 cross-layer regression contract. Unknown business-module keys now fail closed;
-authenticated `account/*` service routes are explicitly non-module-gated but remain
-tenant/session and permission guarded. Authorization-version invalidation, deeper
-delegation binding and Company Owner cutover remain TASK-174–175.
+ authenticated `account/*` service routes are explicitly non-module-gated but remain
+ tenant/session and permission guarded. Authorization-version invalidation and deeper
+delegation binding remain TASK-174 work; the Company Owner cutover is delivered by
+migration 0089. Disposable PostgreSQL 16 parity, true concurrency and non-superuser
+RLS/security proof are green; target-database migration, production RLS re-application
+and application release verification are complete.
 
 ## 6. Scope and resource ownership
 
@@ -322,8 +334,8 @@ The current centralized evaluator implements this subset in this order:
 2. Reject platform-domain keys and unregistered permission keys.
 3. Load active user overrides; matching explicit `deny` wins over matching `allow`.
 4. Resolve active role assignments and registered role-permission candidates.
-5. Preserve the tenant-local Superadmin compatibility grant for registered tenant
-   permissions only, after explicit denies.
+5. Treat the legacy `is_superadmin` flag as inert; no implicit Superadmin grant is
+   evaluated. Company Owner access is resolved through its explicit role rows.
 6. When requested, match assignment-owned scope rows and the legacy dual-read scope.
 7. Direct Sales/Purchasing order decisions additionally require their dedicated
    registered approval permission; the domain command then locks and validates the
@@ -367,13 +379,27 @@ access, if enabled, requires a dedicated grant with:
 - customer approval when policy requires it;
 - explicit revocation and complete audit.
 
-The existing Superadmin employee-workspace entry does not satisfy this contract and
+The existing Company Owner employee-workspace entry does not satisfy this contract and
 must not be advertised as platform support access.
 
 ## 9. Company Owner and separation of duties
 
 `COMPANY_OWNER` is a tenant/company role with an explicit permission bundle. It is not
 a platform principal and must not become a hidden `bypassAuthorization` path.
+
+The current cutover is implemented by `source_template_key = 'company_owner'` and
+`is_superadmin = false`. Migration `0089_company_owner_cutover.sql` creates one
+company-scoped Owner role per existing company, backfills its 112 registered tenant
+permissions and `* -> company` scope, moves legacy assignments while preserving their
+validity/provenance, and leaves historical Superadmin rows inert for audit/rollback
+inspection. `src/auth/authorization.ts` has no Superadmin bypass branch; an Owner
+decision is explainable as an ordinary role-permission match. The Owner template is
+immutable through role administration and cannot receive platform permission codes.
+
+The default Owner bundle intentionally excludes approval/pay/payment, payroll, payout
+and sensitive tax-evidence permissions. A one-person company can add a separate,
+audited business role or temporary exception when it genuinely needs that authority;
+Company Owner status alone is not an approval policy.
 
 System/security administration does not automatically grant payment approval, payroll
 view, self-expense approval or audit deletion. Business authority does not automatically
@@ -417,12 +443,14 @@ access, impersonation, approval-policy changes, sensitive reads/exports and brea
 use. Audit retention, read/export permission and database write restrictions must be
 documented per deployment.
 
-Authorization caches require the tenant/company `authorization_version` introduced by
-migration 0088. The current implementation advances it for core role, assignment,
-scope, module, override and invitation mutations and exposes it in session/capability
-projections. It must also change on organization hierarchy, every policy domain,
-master-wide support grant and sensitive restriction changes before a centralized cache
-can be enabled; a stale cache or session must never preserve revoked authority.
+Authorization snapshots use the tenant/company `authorization_version` introduced by
+migration 0088. Core role, assignment, scope, module, override and invitation mutations
+advance it, and Master-wide support grant changes advance every Company under the
+Master. Session/capability projections expose the current value. The API adapter sends
+its last value on every authenticated request; mismatch returns fail-closed 409, permits
+recovery only through `/api/auth/session` and reloads without replaying a rejected write.
+Server permission, organization-scope and workflow-policy decisions are deliberately
+uncached and query current rows, so they do not depend on a version bump for revocation.
 
 Role deletion, template upgrade, last-owner recovery, assignment expiry and user
 offboarding must have deterministic lifecycle behavior and tests.
@@ -438,8 +466,8 @@ offboarding must have deterministic lifecycle behavior and tests.
 - Company module activation
 - Backend checks, audit and production RLS
 - Versioned approval governance
-- Company authorization-version source and first atomic role/assignment/scope/module/
-  override/invitation bump paths; complete cache invalidation remains pending
+- Company authorization-version source, atomic authorization-graph bump paths,
+  Master-wide support invalidation and stale browser snapshot recovery
 
 ### EPIC-062 — required authorization migration
 
@@ -455,12 +483,14 @@ offboarding must have deterministic lifecycle behavior and tests.
   audited diagnostic endpoint and strict current-step/resource/module/policy context are
   implemented for the generic leave/expense approval domains
 - TASK-174: fail-closed module/resource registration and authorization-version invalidation
-  — in progress; unknown business-module keys fail closed, payroll is registered and
-  authenticated `account/*` services are explicitly non-module-gated. Migration 0088
-  supplies the company version source and first atomic bump paths; centralized cache,
-  organization/policy/master-wide support coverage and stale-session/direct-URL tests
-  remain.
-- TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions
+  — done; unknown module/resource/action/ownership state denies, the access-matrix gate
+  covers registered routes, Master-wide support changes bump every Company marker and
+  stale browser snapshots fail closed before refreshed direct-URL authorization.
+- TASK-175: migrate tenant Superadmin bypass to explicit Company Owner permissions —
+  done in `0089_company_owner_cutover.sql`; disposable PostgreSQL 16
+  parity/concurrency and non-superuser RLS proof are green. The production backup,
+  target migration, RLS re-application, application release and public health/session
+  verification are complete.
 
 Branch/business-unit/region target validation, enterprise access reviews, SSO/
 provisioning and advanced SoD follow only after TASK-173–175.
@@ -471,16 +501,17 @@ The target architecture is implemented only when:
 
 - one-person onboarding works without manual permission configuration;
 - platform and tenant principals cannot cross authority domains;
-- Company Owner has explicit, testable permissions rather than a bypass;
+- Company Owner has explicit, testable permissions rather than a bypass; the local
+  cutover suite covers explanation, scope, platform/approval denial, legacy-role
+  inertness, immutable role configuration and migration idempotence;
 - multiple roles and assignment-specific scopes/expiry work together;
 - every backend operation maps to a registered canonical permission;
 - unknown, missing, cross-tenant and stale authorization state fails closed;
 - approval permission cannot bypass active workflow authority or SoD;
 - support access is reasoned, time-bounded, restricted, revocable and audited;
 - effective decisions can be safely explained;
-- backend immediate revocation is proven through current-state evaluation; the
-  authorization-version source/first bump paths are delivered, but centralized cache
-  invalidation is not yet proven;
+- backend immediate revocation is proven through current-state evaluation, and stale
+  browser capability snapshots fail closed and recover without replay;
 - adversarial tests cover cross-tenant IDs, disabled modules, conflicting grants,
   expiry boundaries, stale sessions, self-approval and support access.
 
@@ -505,3 +536,51 @@ checks all canonical screen metadata, evaluates every route against the role
 templates, and fails closed on unmapped or accidentally public routes. The browser
 audit does not write application data; records without demo seed data are checked
 for drill-in consistency when a row exists.
+
+## 14. Planned Expenses & Tax authorization contract
+
+EPIC-063 requires capabilities equivalent to create, read own, read company, update
+own draft, update company, export/print and void/manage Company Receipts. Exact
+canonical identifiers must follow the application registry and be added atomically
+with the module key, backend resource/actions, route metadata and `ACCESS_MATRIX`;
+hardcoded checks such as `role === 'Company Owner'` are forbidden.
+
+Contributor access defaults to create/read-own/update-own-draft. Finance or an
+explicit Receipt Manager may receive company read/update/export/print. Company Owner
+has only its registered assigned capabilities, and platform Superadmin/support remains
+outside tenant business authority. TASK-177 cannot start until TASK-174 closes the
+remaining stale-authorization boundary; none of these receipt capabilities exists yet.
+
+## 16. Planned platform-owned Module Access Control (EPIC-064)
+
+Current Company Owner authority is explicit rather than a hidden bypass, but its
+`admin.modules.manage` grant still lets the tenant change `company_module`. That is
+current source truth and will remain until TASK-185/186; it is not the approved product
+ownership model.
+
+Target evaluation order:
+
+1. authenticate either a tenant target user or an independent platform principal;
+2. derive/validate Master and Company from server-owned context;
+3. require Master commercial entitlement;
+4. require Company allocation;
+5. require registered tenant permission;
+6. enforce assignment scope/ownership;
+7. enforce locked workflow/business authority.
+
+The commercial Module Catalog is application-owned. Tenant roles cannot create,
+assign or evaluate `platform.modules.*`. `admin.modules.manage` is removed from Company
+Owner, Company Admin, custom role grants and the assignable registry. Only the
+application-owned `platform_superadmin` receives `platform.modules.read/manage`; current
+support roles remain separate.
+
+Platform user simulation is not a role assignment or permission union. It binds an
+independent platform session to one active tenant user and exact Master/Company for at
+most one hour. Every tenant decision uses the target user's roles, overrides, scopes,
+module availability and workflow authority. Both identities are audited, and the
+platform-only MAC API remains unreachable from the simulated tenant context.
+
+TASK-174 has closed cache/direct-URL coverage, so TASK-185 is eligible. TASK-186 removes tenant
+surfaces and becomes TASK-182's entitlement dependency; TASK-187 adds platform login,
+workspace and simulation; TASK-188 owns final adversarial proof. Until then EPIC-018's
+tenant API/UI remains current, while EPIC-064 remains approved target only.

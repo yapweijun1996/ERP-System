@@ -7,8 +7,13 @@ compatibility facts and the EPIC-062 migration target are in
 current assignment-owned scopes, validity and revocation are implemented by TASK-172,
 with role-level scope retained only as a dual-read fallback for unbackfilled assignments;
 TASK-173 now centralizes tenant decisions and adds reasoned user-level explicit
-overrides, while the current tenant Superadmin remains a compatibility bypass until
-TASK-175. TASK-170 now provides a separate platform support control plane;
+overrides. Migration 0089 now makes the legacy tenant Superadmin flag inert and uses an
+immutable, company-scoped Company Owner role with explicit permissions. Disposable
+PostgreSQL 16 parity, true concurrency and non-superuser RLS/security proof are green;
+the target database was backed up, migrations 0084–0089 applied, production RLS
+re-applied and the application release verified with public health/root/session probes
+returning 200/200/401. TASK-170 now provides a
+separate platform support control plane;
 the employee-workspace convenience below remains tenant-scoped and is not platform
 support access.
 
@@ -19,7 +24,7 @@ customer Go Live boundary. The Chinese summary is
 
 ## 1. Access model
 
-The immutable system templates are Superadmin, Company Admin, Manager, Sales,
+The immutable system templates are Company Owner, Company Admin, Manager, Sales,
 Buyer, Warehouse, Production, Finance Preparer, Finance Checker, HR, Service and
 Viewer. An administrator copies a template into an editable role owned by the
 active company; a role assigned in one legal entity grants nothing in another.
@@ -60,9 +65,9 @@ use or after seven days, and force a password change. Reset revokes active sessi
 offboarding disables the identity while preserving historical ownership. Setup-stage
 employees cannot establish a session before the company is live.
 
-Production provides a Superadmin-only employee-workspace entry point. It lists only
+Production provides a Company-Owner-only employee-workspace entry point. It lists only
 active employee accounts linked to the current company, never exposes passwords, and
-records the reason and target in the audit log. The session can return to Superadmin
+records the reason and target in the audit log. The session can return to Company Owner
 without signing in again. Demo-only persona switching remains available for the
 seeded personas and exercises the same company, role, scope and module checks as an
 ordinary login.
@@ -83,9 +88,10 @@ payroll records. Stock movements are paired, journals balance by company and ref
 and HR data includes reporting lines plus controlled approval and payroll states.
 Cross-company Finance and HR assignments demonstrate legal-entity separation. The
 enterprise-pack manifest is currently version 15; it owns all 12 identities directly
-instead of relying on the compact regression seed. Its Superadmin belongs to both
-companies, bypasses module disablement for administration, and retains every setup
-capability. The Demo switcher presents the true assigned role for every persona, and
+instead of relying on the compact regression seed. Its Company Owner belongs to both
+companies, has explicit tenant administration permissions, and retains no implicit
+approval/payment/payroll/platform-support authority. The Demo switcher presents the true
+assigned role for every persona, and
 the linked employee profile uses the same human identity. Every showcase employee has
 a deterministic annual-leave opening; pending annual requests create matching holds.
 Historical Demo databases are repaired idempotently with missing SG/MY work calendars,
@@ -100,7 +106,7 @@ a non-empty database.
 
 ## 4. Production onboarding and import
 
-The first-run setup creates only the organization, first company and Superadmin. The
+The first-run setup creates only the organization, first company and Company Owner. The
 authenticated company onboarding state advances sequentially through:
 
 1. company and tax;
@@ -157,8 +163,8 @@ TASK-017.
 - At the EPIC-059 release boundary, migration 0073 and the ordered PGlite v73/v74
   compatibility path passed fresh install, persistent upgrade and obsolete-index repair;
   PostgreSQL and generated Demo schemas agreed on 232 tables. This is historical evidence,
-  not the current schema count; see `STATUS.md` for the live 89-migration/244-table
-  baseline through migration 0088.
+  not the current schema count; see `STATUS.md` for the live 90-entry/244-table
+  baseline through migration 0089.
 - `npm test` passes 134 files plus one expected skip: 518 tests pass, one skips and none
   fail. Lint, root/Web typechecks, generated-schema/pack/i18n checks and both builds pass.
 - Demo/PGlite and the retained isolated PostgreSQL proof database
@@ -185,3 +191,21 @@ TASK-017.
 No customer credentials, production URL or secret is included in the generated pack or
 documentation. SMTP, live bank/tax integrations and multi-year historical migration are
 outside this Epic. A 375px emulator is not a physical phone; TASK-017 remains blocked.
+
+## EPIC-064 planned module-entitlement onboarding replacement
+
+This document's earlier company-owned module controls describe current EPIC-059 code:
+Company Owner can use `admin.modules.manage`, onboarding includes a modules stage and
+`company_module` is the active Company switch. TASK-184 does not change that behavior.
+
+The approved replacement is platform-owned. Platform Superadmin defines the Master
+entitlement and one default Company allocation set. New Companies receive that default
+automatically; Company Owner onboarding no longer selects, enables or disables modules.
+Tenant users and roles may be configured only inside effective modules, where effective
+means Master entitlement AND Company allocation.
+
+Demo remains deterministic: fixtures represent the platform-selected entitlement and
+allocation, while a test-only Demo platform harness changes them for authorization
+coverage. No Company Owner switch is exposed. TASK-185/186 own this cutover and must
+preserve current effective access before the earlier onboarding instructions are
+rewritten as delivered behavior.

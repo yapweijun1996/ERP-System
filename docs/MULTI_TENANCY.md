@@ -118,12 +118,15 @@ role                (role_id, master_fn, name, is_superadmin)
   backfills exactly one role assignment from every existing membership.
 - On login the user picks an **active company**; the session carries
   `(master_fn, active company_fn)` and scopes all queries.
-- `is_superadmin` is currently a tenant/company-role permission bypass for the active
-  company. It is not a platform principal and cannot cross masters.
+- `is_superadmin` is now a legacy migration/audit flag only. Migration 0089 makes it
+  inert for authorization and the explicit immutable Company Owner role is the tenant
+  administration path. Company Owner is company-scoped, cannot cross masters and does
+  not imply platform support, business approval/payment, payroll or sensitive
+  tax-evidence authority.
 - Migration 0087 adds `user_permission_override`, which is always filtered by the
   active master/company membership. Its explicit `deny` effect is evaluated before
-  explicit allow, role grants and the current Superadmin compatibility path; validity
-  and revocation are checked on every central authorization decision.
+  explicit allow and role grants; validity and revocation are checked on every central
+  authorization decision. The legacy Superadmin flag is not an authorization source.
 - Migration 0088 adds `company.authorization_version`, defaulting to `1`. Core tenant
   authorization lifecycle writers bump it in the same transaction as role, assignment,
   scope, module, override and invitation changes; it is a freshness marker for session
@@ -171,7 +174,7 @@ tenant API or proxy customer data. Platform identity/session issuance remains ou
 the tenant API.
 
 Current roles, multiple-role union, assignment-owned scopes with legacy role-scope
-fallback, and tenant Superadmin behavior are
+fallback, and explicit Company Owner tenant-administration behavior are
 documented as compatibility facts in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). TASK-171 now adds
 the application-owned tenant permission registry, explicit compatibility mappings and
@@ -195,7 +198,49 @@ resource/module/scope/policy context into the central evaluator. A manager-owned
 cannot be covered by a broad HR permission; existing in-flight instances retain their
 snapshot without an implicit migration. Unknown business-module keys fail closed;
 authenticated `account/*` services are explicitly non-module-gated but still
-permission-protected. Authorization-version invalidation,
-instance/step/resource/policy-bound delegation and explicit Company Owner permissions
-remain target work.
-Those target capabilities must not be inferred from the current `is_superadmin` column.
+permission-protected. Migration 0088 supplies the authorization-version marker and
+migration 0089 delivers explicit Company Owner permissions. TASK-174 adds Master-wide
+support invalidation plus fail-closed browser snapshot/session recovery and direct-URL
+proof. Server organization and workflow-policy decisions query current tenant rows and
+are not cached. Instance/step/resource/policy-bound delegation remains target work;
+none of those capabilities may be inferred from the legacy `is_superadmin` column.
+
+## Planned Company Receipt scope
+
+A Company Receipt belongs to exactly one active `master_fn + company_fn`; those keys
+come from Session/transaction context and are never accepted from upload, filter or
+export payloads. The uploader is audit attribution, not the primary tenant owner and
+need not have a linked Employee identity. Own/company visibility is an authorization
+scope decision over the same company aggregate, not a client-side filter.
+
+Receipt Pack selection, original-document reads and artifact access must reapply the
+same tenant/company and permission scope. A platform support principal receives no
+implicit Company Receipt access, and a disabled Expenses & Tax entitlement must deny
+the UI route and every direct API/background path. This target is planned under
+TASK-177–183 and is not current behavior.
+
+## Planned Master entitlement and Company allocation
+
+Current `company_module` is an active-Company setting mutable by tenant Company Owner.
+EPIC-064 will replace only that mutation authority and layer model; no text here should
+be read as current implementation before TASK-186.
+
+- Master/client is the commercial purchaser. `master_module` stores the platform-owned
+  purchased-module ceiling.
+- Company/legal entity receives a platform-owned `company_module` allocation inside the
+  same Master. Its `(master_fn, company_fn)` pair remains validated and tenant-scoped.
+- Effective availability is `master_module.enabled AND company_module.allocated`.
+  Missing Master, Company, module, entitlement or allocation state denies.
+- Master disable masks all Companies but preserves their allocation rows. Re-enable
+  restores the previous Company distribution.
+- Migration enables a Master module if any of its current Companies has that module
+  enabled, then preserves every Company row, so effective access does not change.
+- Each Master stores one default Company allocation set selected by Platform
+  Superadmin. New Company onboarding applies it automatically and exposes no tenant
+  module selector.
+
+Platform Superadmin may list all Masters/Companies only through the separate platform
+realm. When explicitly simulating an active tenant user, the trusted target
+`masterFn/companyFn` and user membership are fixed server-side; authorization is exactly
+the target user's and audit retains the platform principal. Simulation never converts
+the platform principal into a tenant user or grants cross-target access.

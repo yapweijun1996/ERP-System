@@ -1,6 +1,6 @@
 # Task Index
 
-Reviewed: **2026-08-10**
+Reviewed: **2026-08-11**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -8,26 +8,23 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **171**
-- In progress: **1**
-- Todo: **2**
+- Done: **176**
+- In progress: **0**
+- Todo: **11**
 - Blocked: **1**
-- Total: **175**
+- Total: **188**
 
 ## Current release-quality note
 
-The 2026-08-10 screen follow-up is complete: `npm run audit:screens` renders all 128
+The 2026-08-10 release follow-up is complete: `npm run audit:screens` renders all 128
 routes at desktop/mobile and passes the 128 Canonical / 0 Preview maturity plus
-layout/behavior contracts. The i18n release gate is also complete: the static audit
-passes 1,531 canonical keys / 69 local five-language packs and the full
-`npm run audit:i18n` matrix passes 128 routes × 5 languages × 2 viewports with zero
-blocking findings. TASK-017 remains the separate physical-device blocker; it does not
-change the machine-readable task totals. The current post-build `npm run smoke` still
-fails its navigation contract because 18 unexplained numeric `0` badges are visible in
-both desktop and mobile runs. The purchase-requisition Web adapter has since been
-aligned with the actor-input command shape; serial `build:demo` and
-`audit:access-matrix` pass. The first parallel build attempt was a shared-output race,
-not a source failure.
+layout/behavior contracts. The full i18n matrix passes 1,533 canonical keys / 69 local
+five-language packs across 128 routes × 5 languages × 2 viewports. Full Vitest passes
+156 files plus 1 skipped file (635 passed, 1 skipped tests); `npm run smoke` passes at
+desktop/mobile after the visible-only navigation-badge contract was fixed. PWA update,
+access matrix, build, permission, schema and drift gates pass. TASK-017 remains the
+separate physical-device blocker and does not change the machine-readable totals. The
+purchase-requisition Web adapter uses the actor-input command shape.
 
 ## Current authorization programme
 
@@ -38,11 +35,61 @@ not a source failure.
 | TASK-171 | Done | Canonical permission registry and compatibility-key migration |
 | TASK-172 | Done | Assignment-scoped grants, targets and expiry |
 | TASK-173 | Done | Central authorization decision, explicit deny and safe explanation |
-| TASK-174 | In progress | Fail-closed module/resource registry and authorization versioning |
-| TASK-175 | Todo | Replace tenant Superadmin bypass with explicit Company Owner permissions |
+| TASK-174 | Done | Fail-closed module/resource registry and authorization versioning |
+| TASK-175 | Done | Company Owner cutover, target migration 0089, production RLS re-application and application release verified |
 
-## Latest completed task
+## Planned Expenses & Tax programme
 
+| Task | Status | Purpose |
+| --- | --- | --- |
+| TASK-176 | Done | Source-audit and document the approved Company Receipts-only v1 boundary; synchronize KB without code or deployment |
+| TASK-177 | Todo | Company Receipt canonical model and API; depends on TASK-174 and TASK-176 |
+| TASK-178 | Todo | Reuse managed-document capture/scan/OCR and add manual confirmation/correction |
+| TASK-179 | Todo | Permission-scoped own/company register and responsive UI |
+| TASK-180 | Todo | Inclusive transaction-date range, search, pagination and Missing Date behavior |
+| TASK-181 | Todo | Receipt Pack preview, PDF, mixed-currency register and Print |
+| TASK-182 | Todo | Demo/API parity, module entitlement, authorization, accessMatrix and i18n |
+| TASK-183 | Todo | Browser/release proof and final documentation/KB synchronization |
+
+TASK-182 additionally depends on TASK-186 so Expenses & Tax adopts the platform-owned
+entitlement model rather than extending the current tenant MAC authority. TASK-177–181
+retain their existing dependency order and are not blocked by EPIC-064.
+
+## Planned Platform Module Entitlement programme
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| TASK-184 | Done | Source-audit current tenant MAC, record the approved target and synchronize docs/KB |
+| TASK-185 | Todo | Module Catalog, Master entitlement, Company allocation, platform API and Demo harness |
+| TASK-186 | Todo | Remove tenant MAC permission/UI/API/onboarding authority and cut over enforcement |
+| TASK-187 | Todo | Independent Platform Superadmin login/workspace and audited exact-user simulation |
+| TASK-188 | Todo | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
+
+TASK-174 has closed the cache/direct-URL dependency, so TASK-185 is now eligible. The
+current application remains tenant-controlled until TASK-185 and TASK-186 are delivered;
+TASK-184 did not change code, schema, routes, permissions or production.
+
+TASK-176 changes documentation, planning and knowledge only. The implementation tasks
+remain todo; no existing My Receipts or Tax Evidence route is reclassified as the
+finished Expenses & Tax v1. TASK-177 is now the lowest-numbered dependency-eligible
+code task; TASK-185 is independently eligible for the MAC programme.
+
+## Latest implementation milestones
+
+- **TASK-175 — Done:** migration
+  `0089_company_owner_cutover.sql` creates or normalizes one immutable company-scoped
+  Company Owner role per company, backfills 112 explicit registered permission rows and
+  `* / company` scope, moves legacy Superadmin assignments idempotently, makes the
+  legacy `is_superadmin` flag inert and preserves last-owner recovery compatibility.
+  Central authorization now evaluates role permissions and scopes only; a legacy
+  Superadmin-only assignment is denied. Focused cutover, authorization, lifecycle and
+  setup tests pass. A disposable PostgreSQL 16 container passed Demo parity/true
+  concurrency and the non-superuser RLS security suite. The target production database
+  was backed up to `output/production-backup-20260810/erp-before-0089.dump`, migrations
+  0084–0089 were applied, production RLS was re-applied and `deploy/release.sh`
+  completed. Post-release checks confirmed 90 migration entries, 219 forced-RLS
+  tenant tables/policies, zero active Superadmin flags/assignments, healthy services,
+  public `/health` 200 and unauthenticated session 401.
 - **TASK-173 — Done:** migration `0087_pink_shadowcat.sql` and
   `src/auth/authorization.ts` provide the central tenant decision boundary, safe public
   reason codes, explicit user-level override precedence and audited explanations. All
@@ -53,12 +100,10 @@ not a source failure.
   taken over by an HR permission. Existing in-flight instances continue under their
   snapshotted authority with no implicit migration. Focused authorization, approval and
   API regressions pass 18/18 for the current strict-step slice; root typecheck passes.
-  The latest full Vitest run completed with 622 passed, 8 failed and 1 skipped across
-  155 files. The account-service module-gate omission is fixed and targeted
-  notification/access-matrix/module coverage passes 15/15; two Team Calendar tests
-  still use a Manager actor against the current seed's HR-permission leave policy and
-  need fixture alignment. Instance/step/resource/policy-bound delegation remains a
-  follow-up hardening item.
+  The latest full Vitest run passes 635 tests with 1 intentional skip across 156 test
+  files; the prior Team Calendar fixture failures were aligned to explicit HR approval
+  permissions. Instance/step/resource/policy-bound delegation remains a follow-up
+  hardening item.
 - **TASK-172 — Done:** migration `0086_youthful_mac_gargan.sql` adds the stable
   `user_company_role.assignment_id` primary key, `[valid_from, valid_until)` validity,
   assignment/revocation provenance and `user_company_role_scope`. The role-assignment
@@ -67,23 +112,22 @@ not a source failure.
   impersonation checks share the active-assignment predicate. Existing
   `role_resource_scope` rows remain a dual-read fallback for assignments whose
   `scope_backfilled_at` is null. Expired and revoked assignments are denied immediately;
-  TASK-173 is complete in migration 0087. Migration 0088 now provides the company
-  authorization-version source and first atomic bump paths; centralized cache
-  invalidation and Company Owner cutover remain TASK-174–175.
+  TASK-173 is complete in migration 0087. Migration 0088 provides the Company
+  authorization-version source; TASK-174 completes browser snapshot invalidation,
+  Master-wide support bumps and stale-session/direct-URL proof.
 
-## Current in-progress task
+## Latest completed authorization task
 
-- **TASK-174 — In progress:** TASK-174-A treats unknown business-module keys as
+- **TASK-174 — Done:** TASK-174-A treats unknown business-module keys as
   disabled at the backend gate, registers payroll and explicitly keeps authenticated
   `account/*` service routes outside business-module switching while retaining their
   route permissions. TASK-174-B now has migration 0088's company-scoped
   `authorization_version`; core role, assignment, scope, module, override and
-  invitation mutations bump it atomically, and session/effective-capability
-  projections expose it. The remaining slice is centralized cache invalidation,
-  organization/policy/master-wide support coverage and stale-session/direct-URL
-  regression tests. TASK-175 remains blocked on this boundary and will replace the
-  tenant Superadmin compatibility bypass with an explicit Company Owner permission
-  bundle.
+  invitation mutations bump it atomically, Master-wide support grant changes advance
+  every Company marker, and session/effective-capability projections expose it. API
+  requests carry the marker; stale state receives 409, recovers through the session
+  endpoint and reloads without replay. Current server decisions query live permission,
+  organization and workflow-policy rows. Focused TASK-174 coverage passes 19/19.
 
 - **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
   registry. It contains 299 static definitions (157 compatibility entries and 142
@@ -91,20 +135,20 @@ not a source failure.
   registry projects exact canonical permissions for 116 resources and 62 actions,
   including 5 update contracts. Ordinary role evaluation and approval authority
   resolution use explicit registry candidates and fail closed for unknown keys;
-  platform-domain keys are rejected before the current tenant Superadmin bypass.
+  platform-domain keys are rejected before tenant role evaluation; the legacy
+  Superadmin compatibility role is deprecated and no longer bypasses permissions.
   Role editing/template cloning, leave approval configuration and expense extra-
   approval configuration reject unregistered tenant permissions. Existing broad
   `role_permission` text keys remain compatible through explicit mapping metadata;
   TASK-172 owns the assignment migration; TASK-173 now owns the central decision and
-  explicit-override boundary, while authorization-versioning is partially delivered by
-  migration 0088 and Company Owner cutover remain pending.
+  explicit-override boundary; migration 0088's source/marker and TASK-174 invalidation
+  are implemented, while Company Owner cutover is delivered in migration 0089. The disposable
+  PostgreSQL 16 parity, concurrency and RLS proof for TASK-175 are green, and target
+  production migration and release verification are complete.
   `npm run check:permissions` is the CI gate for source literals, role templates,
-  resource/action contracts and compatibility metadata. The complete 152-file Vitest
-  regression baseline passes in three resource-safe shards: 610 tests passed, one
-  intentional skip and zero failures before TASK-172 added its four assignment/seed
-  regression cases. The latest full attempt reached 153 passed files + 1 skipped file
-  and one stale Demo showcase-pack permission assertion; the corrected Manager fixture
-  now passes its showcase test 1/1, while a clean full rerun remains pending.
+  resource/action contracts and compatibility metadata. The latest full Vitest run
+  passes 156 files plus 1 skipped file (635 passed, 1 skipped tests); the prior HR
+  fixture failures were corrected without widening the production role templates.
 
 - **TASK-170 — Done:** migration 0084/0085 adds platform principals, platform roles,
   hash-backed bearer/CSRF sessions, auditable support grants and exact master/company
@@ -144,32 +188,33 @@ statuses above and keep each change independently testable:
    passes resolved resource/module/scope/policy context into the central evaluator; no
    implicit in-flight migration or takeover is allowed. Focused strict-step coverage
    passes 18/18.
-3. **TASK-174-A — In progress:** unknown business-module keys now fail closed, payroll
+3. **TASK-174-A — Done:** unknown business-module keys now fail closed, payroll
    is part of the registered module set, and authenticated `account/*` services are
-   explicitly non-module-gated while retaining permission checks. Resource/action
-   coverage and startup/CI assertions are still required for every new module prefix.
-4. **TASK-174-B — Authorization versioning:** migration 0088 and the first core bump
-   paths are implemented; finish cached/session capability invalidation on organization,
-   policy and master-wide support-grant changes, then add stale-version/direct-URL
-   revocation tests.
-5. **TASK-175 — Company Owner cutover:** replace the tenant `is_superadmin` bypass with
-   explicit registered permissions, retaining last-owner recovery and platform isolation.
-6. **RELEASE-I18N-001 — localization gate closure: Done in the current worktree.**
+   explicitly non-module-gated while retaining permission checks. Resource/action/
+   ownership denial and the access-matrix CI/browser assertions are verified.
+4. **TASK-174-B — Done:** migration 0088 and atomic bump paths are implemented;
+   Master-wide support changes advance all Company markers, stale browser snapshots
+   fail closed and direct-URL revocation is proven after session refresh.
+5. **TASK-175 — Done:** migration 0089 replaces
+   the tenant `is_superadmin` bypass with an immutable Company Owner role, 112 explicit
+   tenant permission rows and company scope. Legacy flags/assignments are made inert or
+   backfilled idempotently; last-owner recovery and platform isolation remain covered.
+  Disposable PostgreSQL 16 parity, true concurrency and RLS proof are green. The
+  production backup, migration, RLS re-application, application release and public
+  health/session verification completed on 2026-08-10. No physical-device acceptance
+  is implied.
+6. **RELEASE-I18N-001 — Done.**
    Missing local-pack keys and hardcoded/dynamic system-authored UI text were resolved;
-   `node scripts/audit-i18n.mjs` passes 1,531 canonical keys / 69 local packs and the
-   full 128-route × 5-language × 2-viewport `npm run audit:i18n` matrix passes with
-   zero blocking findings. This remains an execution slice, not a new machine-readable
-   task record, and is independent of TASK-173–175.
-7. **RELEASE-SMOKE-001 — navigation badge contract: Pending.** The 2026-08-10
-   `npm run smoke` run renders the dashboard at desktop/mobile but fails on 18
-   unexplained numeric `0` badges in each viewport. Either hide non-semantic zero
-   badges or define their accessible/business meaning and update the smoke contract.
+   `node scripts/audit-i18n.mjs` passes 1,533 canonical keys / 69 local packs; the
+   full matrix now passes 128 routes × 5 languages × 2 viewports. This remains an
+   execution slice, not a new machine-readable task record, and is independent of
+   TASK-173–175.
+7. **RELEASE-SMOKE-001 — Done.** `npm run smoke` passes at desktop and mobile after
+   the assertion was scoped to visible semantic badges; hidden zero-count badges remain
+   in the DOM for stable accessibility behavior.
 
 ## Blocker
 
-- **RELEASE-SMOKE-001:** current desktop/mobile smoke gate fails on unexplained numeric
-  `0` navigation badges; the dashboard and transaction proof do not reach a clean
-  release result until this contract is resolved.
 - **TASK-017:** physical-phone PWA verification. Automated desktop and emulated 375 px
   checks do not satisfy the real-device acceptance criterion.
 

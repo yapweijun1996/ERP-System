@@ -112,12 +112,10 @@ schema, resource/command, permission, tests and localization are complete.
 
 Current verification boundary (2026-08-10): `npm run audit:screens` passes all 128
 routes at desktop and 375 px with 128 Canonical / 0 Preview and no layout/behavior
-contract failures. The i18n requirement is also verified: the static audit passes 1,531
-canonical keys / 69 local five-language packs, and `npm run audit:i18n` passes the
-complete 128-route × 5-language × 2-viewport matrix with zero blocking findings.
-Business-record values remain outside system-authored UI copy. The current smoke gate
-still reports unexplained numeric `0` navigation badges at both supported viewports;
-this is a release verification issue, not an i18n resource failure.
+contract failures. The full i18n audit passes 1,533 canonical keys / 69 local
+five-language packs across 128 routes × 5 languages × 2 viewports with zero blocking
+findings. Desktop/mobile smoke, PWA update and access-matrix gates also pass.
+Business-record values remain outside system-authored UI copy.
 
 Module depth that is not yet represented by a route or command remains future scope;
 it must not be simulated with fabricated data or silently treated as implemented.
@@ -243,9 +241,9 @@ controls exist.
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
   for compatibility and is not currently wired. The 2026-08-10 static audit passes
-  1,531 canonical keys / 69 local packs, and the full 128-route × 5-language ×
-  2-viewport browser matrix passes with zero blocking findings. Business-record values
-  remain outside system-authored UI copy. ([I18N.md](I18N.md))
+  1,533 canonical keys / 69 local packs across the full 128-route × 5-language ×
+  2-viewport browser matrix.
+  Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))
 
@@ -263,15 +261,17 @@ controls exist.
 | Schema parity | `npm run check:demo-schema` + `npm run check:drift` | every migration/release |
 | Five-language route audit | `npm run audit:i18n` | every Canonical route/localization change and before release |
 
-Current working-tree note (2026-08-10): the purchase-requisition Web adapter now uses
-the actor-input command shape. Serial `npm run build:demo` and
-`npm run audit:access-matrix` pass; the first parallel build attempt raced on the
-shared `web/dist` output. The full Vitest run completed with 622 passed, 8 failed and
-1 skipped across 155 files; the account-service module-gate omission was fixed and its
-15-test notification/matrix/module regression now passes. Two HR Team Calendar tests
-still use a Manager actor against the current seed's HR-permission approval policy and
-remain a fixture-alignment blocker. PostgreSQL parity and API-mode browser proof remain
-pending.
+Current release evidence (2026-08-10): the purchase-requisition Web adapter uses the
+actor-input command shape. Typecheck, lint, serial `npm run build:demo`,
+`npm run audit:access-matrix`, permission/schema/drift checks, `npm run smoke` at
+desktop/mobile and `npm run audit:pwa-update` pass. The full Vitest run is green at
+156 passed files plus 1 skipped file (635 passed, 1 skipped tests). The full i18n
+browser matrix is green at 128 routes × 5 languages × 2 viewports over 1,533 canonical
+keys and 69 local packs. Disposable PostgreSQL 16 parity, true concurrency and
+RLS/security proof passed; the target database was backed up, migrations 0084–0089
+were applied, production RLS was re-applied, and the application release completed.
+Public verification returned `/health` 200, root 200 and unauthenticated session 401.
+Physical-device PWA acceptance remains a separate human gate.
 
 ## EPIC-059 employee access and customer onboarding
 
@@ -287,8 +287,9 @@ The binding current/target contract is
 
 Implemented behavior remains `master -> company`, multiple company roles, Allow-union
 permissions, assignment validity/revocation and assignment-owned
-`self/team/department/company` scopes, company module state, tenant-bounded Superadmin
-bypass and backend enforcement. `role_resource_scope` is retained as a dual-read
+`self/team/department/company` scopes, company module state, explicit company-scoped
+Company Owner permissions and backend enforcement. `role_resource_scope` is retained as
+a dual-read
 fallback for assignments with a null `scope_backfilled_at`. TASK-170 now implements the
 separate platform-principal/support-grant control plane: platform operators use
 dedicated hash-backed bearer/CSRF sessions and application-owned platform roles; grants
@@ -309,8 +310,8 @@ explanations and strict current-step approval context:
   entry points used by boolean permission wrappers, action/resource gates and approval
   permission checks;
 - `user_permission_override` supports reasoned, valid and revocable explicit `allow`
-  and `deny` rows. A matching deny wins before an allow, role grant or tenant-local
-  Superadmin compatibility grant;
+  and `deny` rows. A matching deny wins before an allow or role grant; the legacy
+  tenant-local Superadmin flag is not an authorization source;
 - public decision callers receive only a safe `{ allowed, reasonCode }` result, while
   the audit-read administrator explanation endpoint returns full assignment/role/
   override details and records an audit event.
@@ -346,17 +347,18 @@ explanations and strict current-step approval context:
   tenant/domain/authority/delegate/time/revocation and is not yet instance/step/
   resource/policy-bound.
 
-The following approved requirements remain pending under TASK-174–175:
+The following approved requirements remain pending as later hardening:
 
 - instance/step/resource/policy-bound delegation and any additional approval domain
   mappings not yet registered in the central workflow context;
-- missing or unknown module/resource/action/policy/ownership state fails closed;
+- additional approval-domain mappings and deeper delegation bindings must continue to
+  fail closed when resource/action/policy/ownership context is missing;
 - migration 0088 adds a company-scoped authorization version. Core role, assignment,
   scope, module, override and invitation writers bump it atomically, and session/
-  effective-capability projections expose it. Full stale-state invalidation remains
-  pending for centralized caches, organization changes, additional policy domains,
-  master-wide support grants and direct-URL/session regression coverage;
-- Company Owner uses explicit permissions instead of `is_superadmin` bypass;
+  effective-capability projections expose it. TASK-174 adds Master-wide support bumps,
+  a fail-closed client marker on every authenticated API request, session-only recovery
+  and direct-URL revocation proof. Server organization and workflow-policy decisions
+  remain uncached current-row evaluations;
 
 Approval authorization must preserve the existing immutable version/instance/decision
 model. The shared workflow locks the active instance/step, checks current permission
@@ -378,3 +380,82 @@ deeper delegation binding and separation-of-duties rules remain later target wor
 - Staff appointments are versioned retained facts combined with leave in bounded
   calendar reads. Recurrence is time-zone-aware and bounded; reminder/outbound jobs are
   durable, idempotent and revision-aware.
+
+## 9. Expenses & Tax v1 contract (approved, not implemented)
+
+The official v1 product name is **Expenses & Tax** and its only primary workflow is
+**Company Receipts**. The current `my-receipts` route remains an actor-owned secure
+capture foundation and compatibility surface; it is not a company receipt register.
+No route, API, schema aggregate, permission set or module-entitlement key for this v1
+is implemented as of the 2026-08-11 source audit.
+
+The future implementation must satisfy these binding requirements:
+
+- A Company Receipt belongs to the active `masterFn` and `companyFn`. The Session
+  supplies both values; client-supplied tenant identifiers are never trusted.
+- The receipt references the preserved managed-document version/hash and records the
+  uploader for audit, but saving must not require an Employee identity, Expense Claim,
+  reimbursement, approval, bank account, GL posting or tax decision.
+- JPEG, PNG, HEIC/HEIF and PDF use the existing magic-byte/MIME/extension validation,
+  20 MB limit, 20-page PDF limit, fail-closed scan, extraction provenance, duplicate
+  hash and governed document lifecycle.
+- Users confirm or correct merchant, receipt/invoice number, `transaction_date`,
+  amount, currency, category, business purpose and notes. OCR remains a suggestion;
+  extraction failure cannot block manual completion after the document is safe.
+- Register reads are bounded and query-side, support search and pagination, and enforce
+  own/company scope through canonical permissions rather than role-name checks.
+- Date filters are inclusive company-local business dates:
+  `from <= transaction_date <= to`. Missing dates are visible and excluded from a
+  date-range package until corrected.
+- Preview/export retrieves every matching receipt, not only the visible page. The
+  Receipt Pack contains a register followed by readable originals ordered by
+  transaction date. Totals are grouped by currency; currencies are never summed
+  together. Browser Print uses the same A4-oriented preview without application chrome.
+- Demo/PGlite and PostgreSQL/API modes implement one contract. Module entitlement,
+  route guards, canonical resource/action permissions, `accessMatrix`, RLS, audit,
+  five-language UI and mobile/desktop behavior must fail closed together.
+
+The current Tax Evidence generator cannot be relabelled as this feature: it selects
+posted `expense_claim` lines by posting date and its Demo adapter leaves package
+generation API-only. Its document-loading and PDF composition code may be reused after
+Company Receipts receives a standalone query/snapshot contract.
+
+## 10. Platform Module Entitlement contract (approved, not implemented)
+
+Current implementation remains tenant-controlled: Company Owner holds
+`admin.modules.manage`, `/api/admin/modules` mutates active-Company `company_module`,
+and the tenant Module Activation screen exposes that API. Current server-side disabled-
+module enforcement is Canonical and must be preserved, but this mutation owner is not
+the approved commercial model.
+
+EPIC-064 requires:
+
+- effective access = authenticated target user AND correct Master/Company boundary AND
+  Master entitlement enabled AND Company allocation enabled AND registered permission
+  AND data scope AND workflow/business authority;
+- `master_module` is the Master purchased-module entitlement and `company_module` is
+  the platform-owned Company allocation. Missing or unknown state fails with 403
+  `module_not_enabled`; Master disable masks without rewriting Company allocation;
+- migration initializes Master entitlement from the union of current Company-enabled
+  state and retains each Company row so no existing effective access changes;
+- each Master defines one default allocation set for new Companies. Tenant onboarding
+  does not choose modules;
+- only business modules are sellable. Dashboard/Home, My Work, Admin, Settings and
+  Account/Notifications are baseline services;
+- only the independent `platform_superadmin` role with
+  `platform.modules.read/manage` may read or mutate commercial entitlement.
+  `admin.modules.manage` becomes deprecated/non-assignable and no tenant API consumes it;
+- platform mutations require the separate platform session, CSRF, expected version,
+  correlation and before/after audit. v1 applies immediately without reason/ticket or
+  maker-checker;
+- the shared visual login offers a separate platform realm using independent password
+  credentials and a non-remembered session of at most one hour. It does not create an
+  `app_user` or tenant session;
+- explicit user simulation may target any active user in the selected Master/Company.
+  It may perform exactly the target user's allowed writes, never unions platform power,
+  remains visibly marked/revocable/expiring, and audits `actorUserId` plus
+  `platformPrincipalId`. MAC writes remain platform-workspace-only.
+
+TASK-184 records this contract. TASK-185–188 own implementation and proof; TASK-174 is
+the prerequisite stale-authorization boundary. No current status or test may describe
+this target as delivered before TASK-188.

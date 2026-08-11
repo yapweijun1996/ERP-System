@@ -142,15 +142,18 @@ after target validation; assignments with a null `scope_backfilled_at` also dual
 the legacy `role_resource_scope` rows. The assignment service records source, actor,
 reason and revocation metadata. The stable assignment key allows multiple independent
 assignments of the same reusable role.
-`is_superadmin` is a tenant/company-bounded permission bypass in the current runtime,
-not a platform role and not the target Company Owner model. `role_permission.permission_key`
-remains a text compatibility store: TASK-171 adds the application-owned registry in
-`src/auth/permissionRegistry.ts`, explicit canonical aliases and tenant/platform-domain
-separation without adding a permission database table or foreign key. Migration 0086
-adds the assignment lifecycle and scope table; migration 0087 adds reasoned, valid and
-revocable user-level explicit allow/deny overrides. Deny overrides are evaluated before
-role grants and the current Superadmin compatibility path. Authorization versioning and
-Company Owner cutover remain later migrations.
+`is_superadmin` is retained as a legacy migration/audit flag only. Migration 0089 makes
+it inert for authorization and establishes the immutable, company-scoped Company Owner
+role with 112 explicit registered tenant permissions and `* / company` scope. It is not
+a platform role and does not imply approval, payment, payroll, sensitive tax-evidence or
+platform-support authority. `role_permission.permission_key` remains a text compatibility
+store: TASK-171 adds the application-owned registry in `src/auth/permissionRegistry.ts`,
+explicit canonical aliases and tenant/platform-domain separation without adding a
+permission database table or foreign key. Migration 0086 adds the assignment lifecycle
+and scope table; migration 0087 adds reasoned, valid and revocable user-level explicit
+allow/deny overrides. Deny overrides are evaluated before role grants. Migration 0088
+adds the authorization-version marker; migration 0089 performs the Company Owner
+expand/backfill/cutover.
 Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
@@ -235,9 +238,10 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > generic approval-instance/step table. Budget approval uses the existing
 > `budget_version.status`/`is_active`/`version` state plus imported `budget_line` rows;
 > it also adds no generic approval-instance/step table.
-> The current boundary is migration 0088: **89 journaled migrations and 244 generated
+> The current boundary is migration 0089: **90 journal entries and 244 generated
 > tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
-> the tenant authorization freshness source. Each subsequent schema capability must still
+> the tenant authorization freshness source. Migration 0089 adds the Company Owner
+> role/permission/scope expand-backfill cutover. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
@@ -260,6 +264,7 @@ user_company_role_scope          assignment-owned scope grants and validated tar
 user_company_role                 stable assignment identity, validity and provenance (0086)
 user_permission_override          reasoned user-level explicit allow/deny exception (0087)
 company.authorization_version     monotonic tenant authorization freshness marker (0088)
+role.source_template_key          immutable Company Owner template identity (0089)
 audit_log.platform_principal_id platform actor correlation for platform events (0084)
 ```
 
@@ -867,3 +872,53 @@ Migration 0073 adds `role_resource_scope`, `company_module`,
 expand/backfill migration; legacy rows are retained during compatibility rollout.
 All company-owned additions carry `master_fn` and `company_fn` and participate in
 production RLS.
+
+## 10. Planned Company Receipt aggregate (EPIC-063)
+
+No Company Receipt table exists in the current schema. The existing
+`managed_document`, `document_version`, scan/extraction tables and
+`receipt_inbox_item` provide governed actor-owned evidence, while current transaction
+date, merchant and amount facts become authoritative only inside an Expense Claim line.
+
+TASK-177 will add the minimum company-scoped aggregate required to confirm basic
+receipt metadata without a claim. The logical record carries `master_fn`, `company_fn`,
+a managed-document/version reference, transaction date, merchant, receipt/invoice
+number, currency, amount, category, business purpose, notes, uploader audit fields,
+state and optimistic version. It must not duplicate document bytes/OCR provenance or
+add GL, reimbursement or tax-treatment fields. Every new company-owned table requires
+the shared Drizzle/PGlite schema path and production RLS coverage.
+
+## 11. Planned platform module entitlement data changes (EPIC-064)
+
+Current rows remain authoritative until TASK-185/186: `master_module` is legacy history
+and `company_module` is the active tenant-mutable Company switch. The planned migration
+reuses rather than duplicates those tables:
+
+```text
+master_module
+  master_fn, module_key, enabled, default_company_allocated, version, timestamps
+
+company_module
+  master_fn, company_fn, module_key, allocated, configured, version, timestamps
+
+effective_enabled = master_module.enabled AND company_module.allocated
+```
+
+Before switching reads, migration upserts one Master row per business module with
+`enabled=true` when any current Company row is enabled, and preserves each current
+Company state as its allocation. Master disable never rewrites Company rows. Missing
+rows deny. Baseline Dashboard/Home, My Work, Admin, Settings and Account/Notifications
+do not receive commercial rows.
+
+Platform mutations use optimistic versions and audit before/after with
+`platform_principal_id`. The independent `platform_superadmin` role gains
+`platform.modules.read/manage`; `admin.modules.manage` tenant grants are removed and
+retained only as deprecated compatibility metadata where historical explanation needs
+them.
+
+TASK-187 additionally needs independent platform password credentials and a bounded
+platform-to-tenant simulation session linking the platform principal/session, target
+active `app_user`, exact Master/Company, issue/expiry/revoke facts and audit correlation.
+It must not turn the platform principal into an `app_user`, persist platform permission
+inside tenant roles or union platform authority into target-user decisions. Exact schema
+and migration files do not exist yet; this section is approved target only.

@@ -58,17 +58,15 @@ docs/                    This documentation suite
 
 Current release verification (2026-08-10): `npm run audit:screens` is green for all
 128 registered routes at desktop and 375 px (128 Canonical / 0 Preview, no console/page
-errors, and no active-tab, layout, action-bar or declared-contract failures). The two
-i18n gates are green as well: `node scripts/audit-i18n.mjs` passes 1,531 canonical
-keys across 69 local five-language packs, and `npm run audit:i18n` passes the complete
-128 × 5 × 2 browser matrix. Business-record values are not treated as UI copy; the
-remaining smoke/navigation-badge, authorization, API-mode and physical-device gates
-are tracked separately. The current uncommitted worktree also has a Web integration
-blocker: `npm run typecheck:web` fails at
-`web/src/erp-demo-runtime-impl.ts:1481` because its Demo wrapper still passes the old
-positional arguments to `decidePurchaseRequisitionWithin`, whose current domain
-signature requires an actor input object. Until that user-owned overlay is reconciled,
-`build:demo` and `npm run audit:access-matrix` are not release-green.
+errors, and no active-tab, layout, action-bar or declared-contract failures). The full
+i18n matrix is green: 1,533 canonical keys across 69 local five-language packs and
+128 routes × 5 languages × 2 viewports. `npm run smoke` passes at desktop and mobile;
+the visible-only navigation-badge contract is explicit, so hidden zero-count badges do
+not fail the dashboard assertion. `npm run audit:pwa-update`,
+`npm run audit:access-matrix` and the permission/schema/drift gates also pass. The full
+Vitest baseline is 156 passed files plus 1 skipped file (635 passed, 1 skipped tests).
+Business-record values are not treated as UI copy. Physical-device acceptance remains
+separate from the automated 375 px browser gate.
 
 ## 3. Data layer design
 
@@ -343,21 +341,28 @@ Current runtime facts:
   `self/team/department/company` grants and target `none/company/department/team/
   employee`. Assignments with `scope_backfilled_at is null` dual-read the legacy
   `role_resource_scope` rows;
-- `is_superadmin` is a tenant/company-bounded full-permission bypass;
+- the legacy `is_superadmin` column is retained only as migration/audit compatibility
+  metadata; migration `0089_company_owner_cutover` sets it inert and the central
+  evaluator no longer treats it as an authorization grant;
+- active tenant administration uses an immutable, company-scoped `Company Owner`
+  role with 112 explicit registered permission rows and an explicit company scope;
+  the bundle does not imply platform support, business approval/payment, payroll or
+  sensitive tax-evidence authority;
 - permission storage remains compatibility-first, but TASK-171 now supplies an
   application-owned registry with 299 static definitions (157 compatibility and 142
   canonical, including a separate platform domain). Resource/action projections are
   registered for 116 resources, 62 actions and 5 update contracts; ordinary role
   checks resolve explicit compatibility candidates and deny unknown keys, while
-  platform-domain keys are rejected before the current tenant Superadmin bypass;
+  platform-domain keys are rejected before tenant role evaluation;
 - module activation, tenant scope, permission, ownership and workflow authority are
   enforced by the backend for current Canonical operations;
 - versioned approval policy/instance/decision/delegation tables remain the approval
   SSOT and must not be simplified during authorization refactoring.
 - migration 0087 adds `user_permission_override`; `src/auth/authorization.ts` is now
   the central tenant decision service. It validates active membership, registered
-  permission candidates, active assignments and override precedence, while retaining
-  the current registered-permission Superadmin compatibility path until TASK-175.
+  permission candidates, active assignments and override precedence. Migration 0089
+  replaces the tenant Superadmin bypass with explicit Company Owner role permissions;
+  legacy Superadmin rows remain inert for audit/backfill compatibility.
 - Direct Sales Order and Purchase Order approve/reject action definitions now require
   `sales.approve` or `purchasing.approve`; their domain commands call
   `authorizeWithin` and then lock/validate the still-pending order and approval rows
@@ -411,18 +416,25 @@ read-only/restricted-write/break-glass modes, expire within 24 hours, deny sensi
 fields by default and can be revoked immediately. `/api/platform` never accepts the
 tenant cookie; platform principal/session issuance is out-of-band, and evaluating a
 grant does not automatically expose or proxy business records. The employee workspace
-continues to be a tenant Superadmin convenience and is a separate authority path.
+continues to be a tenant Company Owner convenience and is a separate authority path
+from platform support access.
 
 TASK-172 now delivers assignment-scoped validity, revocation/provenance and validated
 scope targets through migration 0086, with a stable assignment primary key, assignment-
 owned scope rows and a dual-read fallback for unbackfilled legacy scope rows. TASK-173
 is complete: migration 0087 and the central evaluator govern explicit user-level
 overrides, safe explanations and strict current-step approval decisions with resolved
-resource/module/scope/policy context. Code behavior above is authoritative. Remaining
-EPIC-062 target work is complete authorization-version invalidation, broader delegation binding
-and explicit Company Owner permissions under TASK-174–175. Broad
-`role_permission` rows remain a text compatibility store; registry telemetry,
-centralized decision caching and the Company Owner cutover are not yet delivered.
+resource/module/scope/policy context. TASK-175 is complete: migration 0089 delivers the
+Company Owner cutover, including idempotent legacy-assignment backfill, explicit
+permissions, company scope, immutable template/role handling and last-owner recovery
+compatibility. On 2026-08-10 production was backed up, migrations 0084–0089 were
+applied, RLS was re-applied and `deploy/release.sh` completed through the existing
+Cloudflare tunnel. Verification found 90 migration entries, 219 forced-RLS tenant
+tables/policies, zero active legacy Superadmin flags/assignments, healthy services,
+public `/health` 200 and unauthenticated session 401. Code behavior above is
+authoritative. TASK-174's centralized cache invalidation, broader delegation binding
+and organization/policy/support coverage remain open. Broad `role_permission` rows
+remain a text compatibility store.
 
 ## 10. August 2026 implementation additions
 
@@ -447,6 +459,74 @@ centralized decision caching and the Company Owner cutover are not yet delivered
 - Migration 0088 adds `company.authorization_version` with default `1`. The central
   marker is read on every durable session/effective-capability projection, and the
   current lifecycle writers bump it after successful role, assignment, scope, module,
-  override and invitation changes. It is a freshness signal, not an authorization
-  bypass or a replacement for the backend evaluator; cache invalidation and remaining
-  organization/policy/support coverage are still pending under TASK-174.
+  override and invitation changes; Master-wide support changes bump every Company.
+  Browser API requests carry the marker, stale snapshots fail closed and recover only
+  through the session endpoint before reload. It is a freshness signal, not an
+  authorization bypass or a replacement for the uncached current-state evaluator.
+
+## 11. Planned Expenses & Tax v1 architecture
+
+The 2026-08-11 source audit confirms useful foundations but no completed Company
+Receipts vertical slice. `managed_document`/`document_version` preserve tenant-scoped
+identity, bytes, hash, version and retention; `receipt_inbox_item` projects the
+actor-owned extraction state; My Receipts provides mobile/IndexedDB capture; and the
+Tax Evidence worker can compose PDF/image evidence. Today, however, My Receipts
+requires a linked Employee, lists only the current uploader (bounded to 100), exposes
+no metadata correction command or transaction-date query, and Tax Evidence starts
+from posted Expense Claim lines rather than standalone receipts.
+
+The target adds the minimum company-scoped receipt aggregate around the existing
+managed document instead of another blob/OCR engine:
+
+```text
+Company Receipt (masterFn + companyFn)
+        ├── current managed-document/version reference
+        ├── confirmed receipt metadata + optimistic version
+        ├── uploader/audit attribution
+        └── Draft | Processing | Ready | Needs Attention | Voided
+```
+
+Upload continues through the existing security and extraction pipeline. A safe
+document may be completed manually when OCR fails; OCR fields remain immutable
+provenance while user-confirmed receipt facts belong to the Company Receipt aggregate.
+The register queries that aggregate by active-company scope, capabilities, search,
+status and inclusive `transaction_date`. Preview creates a bounded immutable selection
+of all matching rows and invokes reusable PDF/document readers without importing tax,
+claim, reimbursement or GL semantics.
+
+The product entry is planned as `Expenses & Tax → Company Receipts`; exact technical
+module/resource/action identifiers must be registered atomically with the backend
+module catalog, permission registry, route metadata and `accessMatrix` under
+TASK-177–182. Until those tasks land, neither `my-receipts` nor
+`receipt-tax-evidence` may be presented as the completed v1.
+
+## 12. Planned platform-owned Module Access Control architecture
+
+EPIC-018's current `company_module` gate and backend checks remain implementation truth:
+Company Owner can currently mutate the active Company through `admin.modules.manage`,
+`/api/admin/modules` and `module-activation-control`. EPIC-064 changes authority and
+entitlement layering; it is not implemented by this documentation update.
+
+The target introduces an application-owned commercial Module Catalog used by route
+metadata, resource/API registration, Demo fixtures and frontend navigation. Catalog
+entries distinguish sellable business modules from baseline Dashboard/Home, My Work,
+Admin, Settings and Account/Notifications services. Unknown references fail CI/startup
+and runtime access fails closed.
+
+`master_module` becomes a versioned Master entitlement with the new-Company default
+allocation flag. `company_module` becomes a versioned Company allocation. Reads return
+both stored layers plus `effectiveEnabled = master.enabled && company.allocated`;
+Master disable never rewrites allocation. Migration rebuilds Master entitlement from
+the union of current enabled Company rows before switching reads.
+
+Platform APIs live only under the independent platform session/CSRF boundary and expose
+Master/Company listing, entitlement summaries, versioned Master writes and versioned
+Company allocation writes. Tenant `/api/admin/modules`, onboarding selection and Module
+Activation UI are retired under TASK-186. Platform login uses the shared visual entry
+but an independent realm/password/session, at most one hour with no remember option.
+
+User simulation is a separate, explicit platform support session linked to the real
+platform principal, target active user and exact Master/Company. Tenant authorization
+runs as the target user without a platform bypass; writes audit both identities. The
+platform workspace remains the only MAC mutation surface. Password-only platform login
+without MFA is an accepted v1 risk and must remain prominent in security/release review.

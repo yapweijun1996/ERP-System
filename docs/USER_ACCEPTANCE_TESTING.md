@@ -12,7 +12,8 @@ checks supplement the journey but do not replace it.
   Compose project or a developer's default IndexedDB origin.
 - Provision ordinary users through the product UI first. If that is impossible, record
   the capability gap before using an official seed or API fixture.
-- Do not use Superadmin as evidence for an ordinary role.
+- Do not use Company Owner as evidence for an ordinary role; its explicit tenant-wide
+  administration bundle is intentionally not representative of ordinary roles.
 - For each failure capture the request ID, console/network result and the ERP invariant
   that was violated. P0–P2 findings require a screenshot.
 - External SMTP, bank and tax submissions remain Blocked unless a real approved test
@@ -20,11 +21,11 @@ checks supplement the journey but do not replace it.
 
 Current release note (2026-08-10): the live screen registry contains 128 Canonical /
 0 Preview routes. `npm run audit:screens` renders every route at desktop and mobile
-without console/page errors and passes the layout/behavior contracts. The separate
-`npm run audit:i18n` browser matrix passes all 128 × 5 languages × 2 viewports, and
-the static audit passes 1,531 canonical keys / 69 local packs with zero blocking
-findings. The current smoke gate still fails on 18 unexplained numeric `0` navigation
-badges in both desktop and mobile runs. TASK-017 remains the physical-device blocker.
+without console/page errors and passes the layout/behavior contracts. The full i18n
+audit passes 1,533 canonical keys / 69 local packs across 128 routes × 5 languages ×
+2 viewports; desktop/mobile smoke and the PWA update audit pass. Production migration,
+RLS re-application and application release were verified through the existing Compose /
+Cloudflare target. TASK-017 remains the physical-device blocker.
 
 ## Baseline and environment checklist
 
@@ -46,7 +47,7 @@ outside version control and do not remove its volumes until the report owner con
 For every role verify visible navigation, a permitted read, a permitted write, a direct
 URL, a direct API denial and sensitive-data minimisation.
 
-- [ ] Superadmin/Admin: tenant control, users, roles, modules, audit and company switch.
+- [ ] Company Owner/Admin: tenant control, users, roles, modules, audit and company switch.
 - [ ] Viewer: permitted read-only modules; write controls absent; write APIs return 403.
 - [ ] Pure Employee: only My Work and allowed settings; identity derives from the linked
       employee, never from a client-selected employee ID.
@@ -180,9 +181,62 @@ screenshots are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
       all 29 declared details pass desktop and 375px page-contract checks.
 - [x] Lint, dual typecheck/build, schema/pack/drift checks, smoke, 531 tests, 124-route
       desktop/375px audit and 124 × five-language × two-viewport audit.
-- [x] Team Calendar: Superadmin company scope, manager hierarchy scope, privacy-redacted
+- [x] Team Calendar: Company Owner company scope, manager hierarchy scope, privacy-redacted
       detail, July/August Demo v15 cases and desktop/375px month/list layouts.
 - [x] PWA v210 update lifecycle: first install is silent, Later suppresses only the
       same worker version, a newer worker still prompts, and Update now reloads once.
 - [ ] Physical-phone acceptance — Blocked by TASK-017; no emulator claim substitutes
       for a real device.
+
+## Expenses & Tax v1 — Company Receipts (planned)
+
+- [ ] Open `Expenses & Tax → Company Receipts` only when module entitlement and an
+      effective receipt capability allow it; direct URL/API attempts otherwise deny.
+- [ ] Capture or upload JPEG, PNG, HEIC/HEIF and PDF; verify 20 MB/20-page, MIME/magic,
+      duplicate and quarantine failures preserve safe existing records.
+- [ ] Review OCR suggestions, manually correct merchant/number/date/amount/currency/
+      category/purpose/notes and save even when safe OCR fails.
+- [ ] Refresh or re-login and find the receipt in the authorised own/company register;
+      another company and an own-only user cannot read it.
+- [ ] Search and filter with This Month, Last Month, This Quarter, This Year and Custom;
+      verify inclusive same-day boundaries and explicit From > To/empty states.
+- [ ] Confirm Missing Date receipts are actionable in the register but excluded with a
+      warning from a date-range package.
+- [ ] Preview/export all matching pages in chronological order; verify image and
+      multi-page PDF readability and currency-separated totals.
+- [ ] Print A4 output without sidebar, controls or application chrome on desktop and
+      mobile; export/print failure must not mutate receipt records.
+
+This checklist is not evidence of implementation. TASK-183 may check these boxes only
+after both adapters, authorization and browser proof pass.
+
+## Planned Platform Module Entitlement acceptance (EPIC-064)
+
+The earlier Company Owner module-control checks remain a current-regression checklist,
+not the approved future authority. TASK-188 may replace them only after TASK-185–187
+land and the following pass:
+
+- [ ] Platform Superadmin signs in through the separate platform realm, sees all
+      authorised Masters/Companies and previews Master, Company and effective module state.
+- [ ] Platform Superadmin enables/disables Master entitlement and Company allocation;
+      expected-version conflict, CSRF, cross-Master target and audit assertions pass.
+- [ ] Company Owner, Company Admin, normal user and stale `admin.modules.manage` grants
+      cannot list or mutate entitlement; the tenant MAC screen/onboarding selector is absent.
+- [ ] Master OFF + Company allocated denies; Master ON + Company not allocated denies;
+      both ON + permission/scope/workflow allowed succeeds. Missing/unknown state denies.
+- [ ] Master disable does not overwrite Company allocation, and re-enable restores the
+      previous distribution. Migration preserves every Company's effective state.
+- [ ] New Company setup receives the platform-defined Master default allocation without
+      a tenant choice.
+- [ ] Disabled modules are absent from sidebar/mobile/search/quick actions and reject
+      direct route, list/detail/create/update/action, notification and worker paths.
+- [ ] Platform Superadmin explicitly simulates any active user only inside the selected
+      Master/Company. Navigation and writes exactly match that user, platform permissions
+      do not widen access, a persistent banner appears, and return/revoke/expiry works.
+- [ ] Every simulated write records target `actorUserId` and real
+      `platformPrincipalId`; simulated tenant context cannot mutate MAC.
+- [ ] Platform password session expires within one hour, cannot be remembered and is
+      rate-limited. Absence of MFA remains a recorded release risk rather than a pass.
+
+This section is planned acceptance, not evidence. The current 4-file/15-test focused
+suite proves only the pre-cutover Company module/platform support behavior.

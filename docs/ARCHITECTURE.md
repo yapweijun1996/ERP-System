@@ -14,9 +14,14 @@ overrides, safe/audited explanations and strict current-step context for mapped 
 approvals; the current access matrix adds a shared route/module/permission regression
 contract. Unknown business-module keys now fail closed; authenticated `account/*`
 service routes are explicitly non-module-gated but still permission-protected. Migration
-0088 now supplies the company authorization-version marker and first atomic bump paths;
-centralized invalidation, deeper delegation binding and Company Owner cutover remain
-open under TASK-174–175.
+0088 supplies the company authorization-version marker and first atomic bump paths;
+0089 now delivers the explicit, immutable company-scoped Company Owner cutover and
+removes the legacy Superadmin authorization bypass. Centralized invalidation, deeper
+delegation binding and broader organization/policy/support coverage remain open under
+TASK-174. Disposable PostgreSQL 16 parity, true concurrency and non-superuser RLS proof
+are green. The target database was backed up, migrations 0084–0089 applied, production
+RLS re-applied and the application released; public health/root/session probes returned
+200/200/401. Physical-device acceptance remains separate.
 
 ## 1. Goal
 
@@ -173,3 +178,39 @@ The only difference baked into the bundle is which data adapter is wired in.
 This architecture is designed for a **production database of 100 GB to 800 GB**. That
 assumption drives schema, indexing, pagination, and deployment choices throughout — it is
 not an afterthought. See [SCALABILITY.md](SCALABILITY.md).
+
+## 9. Planned Expenses & Tax vertical slice
+
+Expenses & Tax v1 will be a normal registered ERP module, not a disconnected receipt
+mini-app. Its Company Receipt aggregate will own confirmed company-scoped metadata and
+reference the existing managed-document/version boundary for bytes, scan, OCR, hash,
+retention and audit. The existing Employee Claim and Tax Evidence aggregates remain
+separate consumers/flows; Company Receipts must work without either one.
+
+The module is not implemented as of 2026-08-11. Registration must land together across
+the backend module catalog, resource/action authorization, route/access matrix,
+Demo/API adapters and PWA navigation so unknown or disabled access continues to fail
+closed. See [SPEC.md](SPEC.md) and [EPICS.md](EPICS.md) for the approved boundary.
+
+## 10. Planned commercial Module Catalog and platform realm
+
+EPIC-064 introduces a commercial Module Catalog beside, not instead of, the existing
+route access matrix and resource registry. Routes/resources reference catalog keys;
+the catalog defines sellable business modules, hard dependencies and baseline services.
+CI/startup rejects unmapped business contracts, and runtime missing state denies.
+
+The data path becomes Platform → Master entitlement (`master_module`) → Company
+allocation (`company_module`) → tenant permission/scope/workflow. Existing disabled-
+module backend checks are retained. Current tenant `/api/admin/modules`, onboarding
+module selection and Module Activation UI are removed only after the platform API and
+migration preservation proof exist.
+
+The web entry may reuse the visual login component, but platform authentication is a
+separate realm, credential store, session and CSRF boundary. Its minimal workspace lists
+Masters/Companies and MAC; it is not a Company Owner shell. Explicit end-user simulation
+creates a bounded linked support session whose decisions run exactly as the active
+target user and whose audit retains the real platform principal.
+
+This is TASK-185–188 target architecture, not current code. See
+[ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) and
+[SECURITY.md](SECURITY.md) for authority and residual-risk requirements.

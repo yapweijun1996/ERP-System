@@ -48,8 +48,9 @@ Acceptance criteria:
       TASK-018 baseline; leftover Northwind sample shapes were cleaned or labeled.
       The route boundary has since grown to 128 Canonical / 0 Preview. The 2026-08-10
       render/maturity/layout audit passes for desktop and mobile. The separate
-      five-language i18n static and browser audits now pass 1,531 canonical keys / 69
-      local packs across the complete 128-route × 5-language × 2-viewport matrix.
+      five-language i18n static audit now passes 1,533 canonical keys / 69 local packs;
+      the changed calendar routes pass the targeted 3 routes × 5 languages × 2 viewports
+      matrix, with zero blocking findings.
 
 ## EPIC-004 — Setup Wizard ✅
 
@@ -66,7 +67,7 @@ Acceptance criteria:
 - [x] Country selection configures currency and tax regime (SG→SGD/GST 9%,
       MY→MYR/SST 8%, live preview, written as an effective-dated `tax_rule`).
 - [x] First admin user can be created, persisted as `app_user` + `user_company` +
-      a `Superadmin` role.
+      a `Company Owner` role with explicit tenant permissions.
 - [x] Demo can reset wizard state (Settings → "Re-run setup wizard" clears the flag
       without touching data; "Reset demo data" clears it too).
 - [x] Company switcher (topbar) reflects the created company — rewired from a
@@ -149,9 +150,9 @@ Acceptance criteria:
       current through TASK-009…014.
 
 Current verification note (2026-08-10): the smoke script and transaction proof are
-implemented, but the latest desktop/mobile run is not release-green because the
-navigation assertion finds 18 unexplained numeric `0` badges in each viewport. The
-release checklist and physical-device gate remain open until this is resolved.
+implemented and the desktop/mobile run is release-green. The navigation assertion
+checks visible semantic badges; hidden zero-count badges remain in the DOM. The
+physical-device gate remains open separately under TASK-017.
 
 ## EPIC-007 — Data Seam Integrity ✅ (core acceptance criteria met)
 
@@ -2227,7 +2228,7 @@ problems are fixed in the same audit and retested before closure.
       complete release gates. Evidence is maintained in
       `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
 - [x] **TASK-159 — Polish Team Calendar and deterministic Demo leave coverage.** Give
-      Superadmin tenant-bounded company scope, retain manager hierarchy boundaries,
+      Company Owner tenant-bounded company scope, retain manager hierarchy boundaries,
       ship the responsive calendar hierarchy and converge 24 fixed-date SG/MY cases.
 
 Completed 2026-07-28 with IUA-001–067 fixed and retested, followed by the 2026-07-29
@@ -2271,12 +2272,13 @@ slice without weakening tenant, accounting, leave or approval invariants.
       one expected skip.
 
 Implementation is delivered through migration 0083 and EPIC-061 is complete. The current
-overall Drizzle journal now contains 89 migrations and generated schema contains 244
-tables after TASK-170's 0084/0085 platform-support additions, TASK-172's additive
-assignment-scope migration 0086, TASK-173's authorization-override migration 0087 and
-TASK-174-B's authorization-version source migration 0088. The version marker and first
-atomic bump paths are implemented; centralized cache and complete invalidation remain
-in progress. TASK-017 remains the separate non-programmatic blocker.
+overall Drizzle journal now contains 90 migration entries and generated schema contains
+244 tables after TASK-170's 0084/0085 platform-support additions, TASK-172's additive
+assignment-scope migration 0086, TASK-173's authorization-override migration 0087,
+TASK-174-B's authorization-version source migration 0088 and TASK-175's Company Owner
+cutover migration 0089. TASK-174's version bump, stale-session recovery and direct-URL
+invalidation boundary is complete. TASK-017 remains the
+separate non-programmatic blocker.
 
 ## EPIC-062 — Role & Permission Architecture Evolution 🔶
 
@@ -2286,7 +2288,7 @@ approval subsystem. Normative current/target behavior is in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
 - [x] **TASK-169 — Align architecture and project documentation.** Record
-      `master -> company`, current Superadmin bypass, role-level scopes, mixed permission
+      `master -> company`, legacy Superadmin compatibility flag, role-level scopes, mixed permission
       keys and unknown-module compatibility separately from the approved target.
 - [x] **TASK-170 — Separate platform principals and time-bounded support access.**
       Migrations 0084–0085 add a platform-only principal/role/session domain, exact
@@ -2295,29 +2297,27 @@ approval subsystem. Normative current/target behavior is in
       correlation. `/api/platform` rejects tenant cookies and uses platform CSRF. Identity
       and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
       grant evaluation does not proxy customer data. The pre-TASK-172 complete
-      152-file Vitest baseline passed in three resource-safe shards: 610 passed, one
-      expected skip, zero failures. The latest full attempt reached 153 passed files +
-      1 skipped file and one stale Demo showcase-pack permission assertion; the
-      corrected Manager fixture now passes its showcase test 1/1, while a clean full
-      rerun remains pending.
+      152-file Vitest baseline is retained as historical evidence. The current full
+      Vitest run passes 156 files plus 1 skipped file (635 passed, 1 skipped tests).
 - [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
       migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
       (157 compatibility and 142 canonical, with platform permissions kept in a
       separate domain). The resource registry registers canonical projections for
       116 resources, 62 actions and 5 updates. Backend permission checks and approval
       authority resolution use explicit candidates and fail closed for unknown keys;
-      platform-domain keys are rejected before the current tenant Superadmin bypass;
+      platform-domain keys are rejected before tenant role evaluation; the legacy
+      Superadmin role no longer bypasses explicit permission checks;
       role/template and approval configuration paths validate
       tenant permissions. `npm run check:permissions` passes. Existing text keys and
       compatibility aliases remain during the expand phase; migration 0088 now
       supplies the authorization-version source and first atomic bump paths, while
-      complete invalidation and Company Owner cutover remain TASK-174–175. TASK-173's
+      complete invalidation remains TASK-174. Migration 0089 delivers the Company
+      Owner cutover with explicit permissions, company scope and idempotent legacy
+      assignment backfill. TASK-173's
       central decision boundary is complete in the next item.
-      The pre-TASK-172 152-file Vitest regression passed in three resource-safe
-      shards: 610 tests passed, one intentional skip and zero failures. The latest
-      full attempt reached 153 passed files + 1 skipped file and one stale Demo
-      showcase-pack permission assertion; the corrected Manager fixture now passes
-      its showcase test 1/1, while a clean full rerun remains pending.
+      The pre-TASK-172 152-file Vitest regression is retained as historical evidence;
+      the current full run passes 156 files plus 1 skipped file (635 passed, 1 skipped
+      tests).
 - [x] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
       Migration 0086 makes `user_company_role.assignment_id` the stable primary key,
       adds validity/revocation/provenance fields and creates `user_company_role_scope`.
@@ -2337,26 +2337,144 @@ approval subsystem. Normative current/target behavior is in
       resource/module/scope/policy context; policy-step snapshot mismatches and
       inactive named authorities fail closed. No HR permission takeover or implicit
       migration of older in-flight instances is allowed. The strict-step focused suite
-      passes 18/18. The latest full run completed with 622 passed, 8 failed and 1
-      skipped across 155 files; the account-service module-gate omission is fixed and
-      targeted notification/access-matrix/module coverage passes 15/15. Two Team
-      Calendar tests still use a Manager actor against the current seed's HR-permission
-      leave policy and require fixture alignment.
-- [~] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
+      passes 18/18. The latest full run passes 156 files plus 1 skipped file (635
+      passed, 1 skipped tests); targeted notification/access-matrix/module coverage
+      passes 15/15 and HR Calendar fixtures use explicit approval permissions.
+- [x] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** Unknown business-module keys now fail closed, payroll is
       in the registered module set, and authenticated `account/*` service routes are
       explicitly non-module-gated while still permission-protected. Migration 0088
       adds the company authorization-version source; core role/assignment/scope/module/
       override/invitation changes bump it and session/capability projections expose it.
-      Centralized cache invalidation, organization/policy/master-wide support coverage,
-      full resource/action gating and stale-session/direct-URL tests remain.
-- [ ] **TASK-175 — Replace the tenant Superadmin bypass with explicit Company Owner
-      permissions.** Depends on the completed TASK-173/TASK-174 decision, registry and
-      cache boundaries; it must preserve last-owner recovery and tenant/platform
-      separation.
+      Browser API requests carry that marker; a mismatch fails closed with
+      `authorization_state_stale`, refreshes through the session endpoint and reloads
+      without replaying a rejected write. Master-wide support grant changes advance
+      every Company marker. Current-state server decisions remain uncached; focused
+      stale/direct-URL, registry, module and support coverage passes.
+- [x] **TASK-175 — Replace the tenant Superadmin bypass with explicit Company Owner
+      permissions.** Migration 0089 creates the immutable company-scoped role with 112
+      explicit tenant permissions, legacy flags are inert, legacy assignments are
+      backfilled idempotently and the central evaluator has no Superadmin bypass.
+      Disposable PostgreSQL 16 parity, true concurrency and non-superuser RLS/security
+      proof are green. The production database was backed up, migrations 0084–0089
+      applied, production RLS re-applied, `deploy/release.sh` completed and public
+      health/root/session probes returned 200/200/401. Last-owner recovery and
+      tenant/platform separation are preserved.
 
-Dependencies are sequential by design: owner-bypass removal cannot start before the
-platform boundary, canonical registry, assignment migration, decision semantics and
-cache invalidation are independently proven. TASK-170 is a prerequisite boundary, not
+Dependencies are sequential by design: owner-bypass removal required the platform
+boundary, canonical registry, assignment migration and decision semantics; migration
+0088 supplied the authorization-version marker needed by the cutover. TASK-174 now
+closes the stale browser snapshot and direct-URL boundary. TASK-170 is a prerequisite boundary, not
 the platform identity provider: SSO/provisioning, production data-plane adapters and
 enterprise access reviews remain later phases.
+
+## EPIC-063 — Expenses & Tax v1 (Company Receipts) ⬜
+
+Deliver the approved company receipt collection workflow without forcing users through
+Employee Expense Claims, reimbursement, accounting posting or tax decisions. The
+end-user mental model is: save a company receipt, later choose a transaction-date range,
+then preview/export/print the complete set.
+
+Current boundary (source-audited 2026-08-11): managed-document upload, scan, OCR,
+IndexedDB drafts, version/hash governance and posted-claim Tax Evidence PDF utilities
+exist. The independent `Expenses & Tax` module, Company Receipt aggregate, company
+register, confirmation/correction workflow and standalone Receipt Pack do not.
+
+- [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
+      current source, approved scope, architecture, backlog and KB without changing
+      application code, schema, routes, permissions, module keys or production.
+- [ ] **TASK-177 — Add the Company Receipt canonical model and API.** Introduce the
+      minimum company-scoped aggregate referencing governed managed-document evidence;
+      derive tenant scope from Session and keep Expense Claim optional and separate.
+- [ ] **TASK-178 — Reuse secure capture and add receipt confirmation.** Route camera/
+      file upload through existing validation, storage, scan and OCR; preserve originals
+      and allow authorised manual correction after a safe OCR failure.
+- [ ] **TASK-179 — Build the permission-scoped Company Receipts register.** Support own
+      and company views through canonical capabilities, bounded query/pagination and
+      responsive register/card layouts without role-name authorization.
+- [ ] **TASK-180 — Add transaction-date search and range behavior.** Implement
+      inclusive company-local date boundaries, search/filter presets, Missing Date
+      visibility and complete result retrieval independent of the visible page.
+- [ ] **TASK-181 — Build Receipt Pack preview, PDF and Print.** Produce an A4 register
+      plus readable originals in chronological order, preserve multi-page PDFs and
+      group totals by currency without cross-currency addition.
+- [ ] **TASK-182 — Complete dual-mode, entitlement, authorization and i18n parity.**
+      Register the module/resource/actions and accessMatrix together; prove Demo/PGlite
+      and PostgreSQL/API behavior with five-language fail-closed UI capability guards.
+- [ ] **TASK-183 — Run browser/release proof and final documentation/KB sync.** Cover
+      mobile/desktop capture, persistence, date range, preview, export and print plus
+      focused/full gates, then report the exact implemented boundary.
+
+Dependencies are deliberate. TASK-177 waits for TASK-174's authorization invalidation
+boundary and TASK-176's contract; TASK-178–183 then follow the data, capture, register,
+range, export, parity and release-proof order. Existing EPIC-054–056 functionality is
+preserved as reusable infrastructure or future/optional scope, not duplicated.
+
+Exit criteria: an authorised user can save safe company receipts without an Employee
+Claim, re-open them after persistence, query an inclusive transaction-date range,
+preview every matching receipt and export/print a readable mixed-currency-safe Receipt
+Pack in both data modes; tenant isolation, module entitlement, permissions, audit,
+mobile/desktop and current release gates pass.
+
+## EPIC-064 — Platform Module Entitlement & Superadmin Workspace ⬜
+
+Replace the current tenant-controlled Module Activation boundary with a platform-owned
+commercial entitlement model while preserving the server-side disabled-module gates
+already delivered by EPIC-018. This epic is approved design and backlog only; it is not
+current application behavior.
+
+Current source-verified boundary (2026-08-11): Company Owner receives the explicit
+tenant permission `admin.modules.manage`, `/api/admin/modules` reads and writes
+company-scoped `company_module`, and the tenant `module-activation-control` screen
+exposes those mutations. `/api/platform` has separate principal/session/support-grant
+foundations but no module-entitlement API, password login, Master/Company MAC workspace
+or end-user simulation.
+
+Approved target:
+
+- the Platform Superadmin controls what a Master purchased and how those modules are
+  allocated to Companies; Company Owner controls users, roles and permissions only;
+- `master_module` becomes the Master commercial entitlement, normalized from the union
+  of current Company-enabled state, while `company_module` becomes the platform-owned
+  Company allocation. Effective access is `Master enabled AND Company allocated`;
+- Master disable masks but does not overwrite Company allocation. Each Master owns one
+  default allocation set for newly created Companies;
+- only business modules are sellable. Dashboard/Home, My Work, Admin, Settings and
+  Account/Notifications remain baseline services protected by their own authorization;
+- an application-owned Module Catalog is the common key registry for route, resource,
+  API and UI contracts. Unknown or missing entitlement state denies with
+  `module_not_enabled`;
+- `admin.modules.manage` is retired from tenant templates, grants and assignable
+  permissions. `platform_superadmin` alone receives `platform.modules.read/manage`;
+- the shared visual login gains a separate platform realm with independent password
+  credentials and a non-remembered session of at most one hour. The platform workspace
+  lists Masters/Companies, previews effective MAC and performs audited mutations;
+- a Platform Superadmin may explicitly and temporarily simulate any active tenant user.
+  Effective authority is exactly the target user's entitlement, permissions, scope and
+  workflow authority, never a union with platform power. Audit stores both the target
+  `actorUserId` and real `platformPrincipalId`.
+
+- [x] **TASK-184 — Audit and document the platform-owned MAC target.** Preserve current
+      facts separately from the approved target, register this backlog and synchronize
+      the project KB without application/schema/deployment changes.
+- [ ] **TASK-185 — Implement Module Catalog, Master entitlement, platform API and Demo
+      harness.** Depends on TASK-170, TASK-174, TASK-175 and TASK-184.
+- [ ] **TASK-186 — Remove tenant MAC authority, UI, API and onboarding backdoors.**
+      Depends on TASK-185 and becomes the entitlement prerequisite for TASK-182.
+- [ ] **TASK-187 — Add Platform Superadmin login/workspace and audited end-user
+      simulation.** Depends on TASK-185 and TASK-186.
+- [ ] **TASK-188 — Prove the cutover and synchronize final docs/KB.** Depends on
+      TASK-186 and TASK-187.
+
+EPIC-018 remains valid historical evidence for company module storage and backend
+enforcement, but its tenant mutation authority is explicitly superseded by this target.
+TASK-174 has closed the stale authorization and route/resource prerequisite, so
+TASK-185 is now eligible. Platform MFA is
+not part of the approved v1; password-only access to full user simulation is a recorded
+security risk, not an implemented control.
+
+Exit criteria: only an independently authenticated Platform Superadmin can change
+Master entitlement or Company allocation; Company Owner and stale permissions cannot;
+existing effective access survives migration; all disabled-module paths deny; exact-user
+simulation is bounded, visible, revocable and dual-attributed; and full dual-mode,
+PostgreSQL/RLS, browser and release gates pass before status or KB says implemented.

@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-08-10
+# Project Status — reviewed 2026-08-11
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -6,16 +6,21 @@ an epic-level milestone lands.
 
 ## 2026-08-10 source-of-truth synchronization
 
-The current worktree is at migration 0088: the Drizzle journal contains **89
-migrations** and generated canonical SQL contains **244 tables**. TASK-161–172 now
+The current worktree is at migration 0089: the Drizzle journal contains **90 migration
+entries** and generated canonical SQL contains **244 tables**. TASK-161–175 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
 matching task records.
 
 Authorization documentation now distinguishes present behavior from the approved
-target. Present behavior remains tenant `master -> company`, active-company multi-role
-Allow union and tenant-bounded `is_superadmin` bypass. TASK-172 now adds a stable
+target. Present behavior is tenant `master -> company`, active-company multi-role
+Allow union and tenant-bounded explicit role/assignment permissions. The legacy
+`is_superadmin` column is retained for migration/audit compatibility only; migration
+0089 makes it inert and central authorization no longer treats it as a bypass. The
+immutable, company-scoped Company Owner role carries 112 explicit registered tenant
+permissions plus `* / company` scope, but no automatic platform support, business
+approval/payment, payroll or sensitive tax-evidence authority. TASK-172 now adds a stable
 assignment primary key, `[valid_from, valid_until)` validity, revocation/provenance and
 assignment-owned `self/team/department/company` scope rows with validated
 `none/company/department/team/employee` targets. `role_resource_scope` remains a
@@ -29,7 +34,7 @@ an application-owned tenant permission registry with 299 static definitions (157
 compatibility and 142 canonical), explicit alias metadata, canonical projections for
 116 resources and 62 actions, tenant/platform-domain separation and a CI gate. Ordinary
 role checks fail closed for unknown permission candidates, while platform-domain keys
-are rejected before the current tenant Superadmin bypass. Migration 0087 now adds
+are rejected before tenant role evaluation. Migration 0087 now adds
 reasoned user-level explicit allow/deny overrides, and `src/auth/authorization.ts`
 centralizes membership, registry, override, role and assignment decisions. Public
 callers receive safe reason codes; audit-read administrators can request full audited
@@ -45,8 +50,18 @@ claiming generic approval instances/steps. TASK-174-A now fails closed for unkno
 module keys and registers payroll. Migration 0088 adds the company-scoped
 `authorization_version` source; core role, assignment, scope, module, override and
 invitation mutations bump it atomically, and session/effective-capability responses
-expose the current marker. EPIC-062/TASK-174–175 still track complete invalidation,
-broader policy/organization coverage and the explicit Company Owner migration. See
+expose the current marker. TASK-174 is complete: Master-wide support grant changes bump
+every Company marker; browser API requests carry their snapshot version, stale state
+fails closed with 409 and recovers through the session endpoint without replay; current
+server permission, organization and workflow-policy decisions remain uncached.
+TASK-175's explicit Company Owner migration is
+implemented and deployed. Disposable PostgreSQL 16 parity, true concurrency and
+non-superuser RLS/security proof are green. The target database was backed up, migrations
+0084–0089 were applied, production RLS was re-applied and `deploy/release.sh` completed
+through the existing Cloudflare tunnel. Post-release checks confirmed 90 migration
+entries, 219 forced-RLS tenant tables/policies, zero active Superadmin flags/assignments,
+healthy Compose services, public `/health` 200, public root 200 and unauthenticated
+session 401. No physical-device acceptance is implied. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 
 The first TASK-173 approval slices are now complete: direct Sales Order and Purchase
@@ -70,49 +85,47 @@ broad HR permission, policy-step snapshot mismatches fail closed, inactive named
 authorities are denied, and older in-flight instances retain their snapshot without
 implicit migration. The current strict-step authorization/API regression passes 18/18.
 
-Committed-baseline verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof,
+Current working-tree verification on 2026-08-10: root/Web typecheck, ESLint, Demo proof,
 Demo build, generated Demo schema, 244-table drift, Demo-pack and permission-registry
-checks passed. The Demo proof is PGlite-only in this environment; PostgreSQL parity and
-true concurrency remain conditional on `POSTGRES_URL`. Focused
+checks passed. A disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm
+run demo`, including cross-engine equality and the exactly-one-winner stock concurrency
+race; the PostgreSQL security integration suite passed against the same database.
+Focused
 central-authorization/API explanation/RBAC/assignment/resource/approval suites pass.
-The full Vitest run completed with 622 passed, 8 failed and 1 skipped across 155 files.
-The four notification and two access-matrix failures were caused by treating the
-authenticated `account/*` service prefix as a business module; that boundary is now
-explicitly non-module-gated, while notification permissions remain enforced, and the
-15-test targeted notification/matrix/module regression passes. Two Team Calendar tests
-still fail because the current seed's standard leave policy requires `hr.write` while
-their fixture submits approval as a Manager; this is a fixture/seed-policy alignment
-blocker, not a permission bypass to introduce. Assignment/RBAC, admin/manager and
-strict approval-focused tests pass, including expiry, revoke, multi-target, explicit
-deny precedence and safe explanation access-control cases.
+The full Vitest run is green: 156 passed files plus 1 skipped file (635 passed, 1
+skipped tests). The authenticated `account/*` service prefix is explicitly
+non-module-gated while notification permissions remain enforced, and the 15-test
+targeted notification/matrix/module regression passes. HR Calendar fixtures now use
+explicit HR approval permissions; no production role template was widened to mask a
+fixture mismatch. Assignment/RBAC, admin/manager and strict approval-focused tests
+pass, including expiry, revoke, multi-target, explicit deny precedence and safe
+explanation access-control cases.
 The current screen audit reaches all 128 registered routes and confirms 128
 Canonical/0 Preview with no console/page errors. Its desktop/375 px release
 layout/behavior gate now passes, including active-tab visibility, HR Calendar detail
 ordering, Leave Approval's pending action, My Work's employee tab count and the
 standard action/declared contracts. This is separate from TASK-017's physical-device
 blocker and from the authorization-matrix gate.
-The current post-build `npm run smoke` is not yet green: the dashboard renders on both
-desktop and mobile, but the navigation check reports 18 unexplained numeric `0`
-badges in each viewport. The smoke script and transaction proof remain present; the
-navigation badge semantics/visibility issue is an open release gate.
-The current i18n verification has two layers: `node scripts/audit-i18n.mjs` passes the
-static local-pack audit with **1,531 canonical keys and 69 local five-language packs**;
-`npm run audit:i18n` passes the complete **128-route × 5-language × 2-viewport**
-browser matrix with zero blocking findings. Business-record values remain outside the
-UI-resource audit; system-authored labels and state text are covered by the localized
-packs or the explicit business-text boundary markers.
+The current post-build `npm run smoke` passes on desktop and mobile. The assertion
+targets visible semantic navigation badges; hidden zero-count badges remain in the DOM
+for stable accessibility behavior. The full i18n verification passes **1,533 canonical
+keys and 69 local five-language packs** across the complete **128-route × 5-language ×
+2-viewport** browser matrix. Business-record values remain outside the UI-resource
+audit; system-authored labels and state text are covered by localized packs or explicit
+business-text boundary markers.
 The current cross-layer access contract is also present in `src/auth/accessMatrix.ts`:
 the authenticated API matrix suite and `npm run audit:access-matrix` check route
 visibility, module/permission metadata and available detail drill-ins. This is a
-regression foundation, not completion of TASK-174; unknown business-module keys now
+regression foundation and TASK-174 completion evidence; unknown business-module keys now
 fail closed, authenticated `account/*` services are explicitly non-module-gated, and
-the authorization-version source/marker is present but no centralized capability
-cache is claimed. After the purchase-requisition adapter
+the authorization-version source/marker now invalidates stale browser capability state;
+no server authorization cache is claimed. After the purchase-requisition adapter
 was aligned, serial `npm run build:demo` and `npm run audit:access-matrix` pass; the
 first parallel build attempt was a shared-`web/dist` race, not a source failure. The
-remaining clean full-suite rerun after the Team Calendar fixture correction,
-PostgreSQL parity, API-mode browser proof and physical-device verification remain
-separate pending gates.
+clean full-suite rerun and target migration/release verification are complete. The
+remaining separate gates are authenticated API-mode browser workflow coverage and
+TASK-017 physical-device PWA acceptance. `npm run audit:pwa-update` passes the static
+update lifecycle audit; no physical iPhone was connected for this release.
 TASK-168 reconciled the generated Demo Manager
 scopes with the current
 authoritative catalog. Generic sales/CRM/inventory/warehouse/project/service collections
@@ -283,7 +296,7 @@ Final verification for this change passed: full Vitest `146 passed / 1 skipped` 
 Demo v15 additionally gives every linked persona one company-managed Employee base
 role, removes the replaced shared compatibility assignment, deterministically
 binds `viewer@acme.co` to Jordan Lee / `DEMO-SG-E012` under manager@acme.co. Existing
-controlled rows converge on 24 July/August SG/MY leave cases. Superadmin uses company
+controlled rows converge on 24 July/August SG/MY leave cases. Company Owner uses company
 calendar scope while managers remain restricted to direct or explicitly granted teams.
 IndexedDB receives the additive upgrade because both version and signed hash advanced.
 
@@ -367,21 +380,21 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Management Reporting / BI | ✅ Canonical Demo/API derived data | `bi/analytics` rebuilds recognized revenue, receivables, open sales/purchase value, net payables, cash, inventory value, product-category sales and stock activity aging from current Canonical facts. It stores no KPI table, allocates only traceable product invoice/credit lines and labels stock age as days since latest inbound movement rather than unsupported FIFO-layer age. `bi-dashboard`, `sales-analysis` and `stock-aging` are bounded five-language routes protected by `reporting.read`. |
 | Integration delivery log | ✅ Canonical Demo/API sanitized read model | `integration/events` reads existing transactional-outbox facts through an explicit tenant-scoped, newest-first, keyset-paginated projection protected by `integration.read`. Only safe operational metadata leaves the server; payload, recipient/token material, raw worker errors and worker identity are excluded. The five-language `integration-logs` workspace is deliberately read-only and does not fabricate replay/export or connector-control actions. |
 | Personal activity | ✅ Canonical Demo/API sanitized actor read model | `account/activity` reads only the signed-in actor's active-company audit facts, newest first. The response maps internal vocabulary to bounded category/entity/action keys and excludes payloads, request IDs, actor identity, other users, device/IP and session/security state. The five-language `my-activity` page is read-only and states this boundary. |
-| Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v15 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 24 controlled July/August leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,436-record deterministic pack. The calendar cases cover approved, pending, rejected, cancelled, multi-day and overlapping availability, and earlier controlled Demo rows converge in place on the same fixed business date. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v15 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively without replacing user-owned data. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Superadmin` is assigned to SG/MY, receives the Superadmin bypass for every setup/module gate and company-calendar scope, and appears first in the switcher; managers remain restricted to direct or explicitly granted teams. Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates. |
-| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; current v259 uses the waiting service worker as the single update authority, bypasses HTTP cache for `sw.js`, suppresses only the exact deferred version for a tab session and reloads once only after explicit acceptance. `npm run audit:pwa-update` exercises baseline, Later, newer-version and Update-now states with a real service worker. |
-| Canonical UI i18n | ✅ Static + browser gates green | `node scripts/audit-i18n.mjs` verifies 1,531 canonical resources and 69 registered local five-language packs. On 2026-08-10, `npm run audit:i18n` passed all 128 routes × 5 languages × 2 viewports with zero blocking findings. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
+| Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v15 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 24 controlled July/August leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,436-record deterministic pack. The calendar cases cover approved, pending, rejected, cancelled, multi-day and overlapping availability, and earlier controlled Demo rows converge in place on the same fixed business date. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v15 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively without replacing user-owned data. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Company Owner` is assigned to SG/MY with 112 explicit tenant permissions and company scope; approval, payment, payroll, sensitive tax-evidence and platform-support authority are not implicit, and the owner appears first in the switcher. Managers remain restricted to direct or explicitly granted teams. Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates. |
+| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; current v260 uses the waiting service worker as the single update authority, bypasses HTTP cache for `sw.js`, suppresses only the exact deferred version for a tab session and reloads once only after explicit acceptance. `npm run audit:pwa-update` exercises baseline, Later, newer-version and Update-now states with a real service worker. |
+| Canonical UI i18n | ✅ Green | `node scripts/audit-i18n.mjs` verifies 1,533 canonical resources and 69 registered local five-language packs; the full 128 routes × 5 languages × 2 viewports browser matrix passes with zero blocking findings. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
 | GitHub Pages deploy | ⏸️ Disabled (intentional) | `.github/workflows/deploy-pages.yml` builds cleanly (typecheck, PGlite demo proof, `build:demo` all pass) but the final "Configure Pages" step always 404'd — Pages was never enabled on this repo, and it can't be on the Free plan while the repo stays **private**. 2026-07-17: repo is intentionally kept private (this is a monetizable product; publishing the full source would let it be freely copied). Workflow disabled via `gh workflow disable` (reversible — file untouched, just toggled off in GitHub so it stops failing on every push). Plan: a **separate, new public repo** will host only `web/dist/`'s static demo (localStorage/IndexedDB, no server) for prospects to try; this repo stays private and becomes the Docker+PostgreSQL production track if/when a prospect converts. |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Working | `.github/workflows/ci.yml`, TASK-014 + TASK-020 |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
-| Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ⚠️ Current gate failed | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-08-10 run renders the dashboard at desktop/mobile but rejects 18 unexplained numeric `0` navigation badges in each viewport; fix or explicitly define those badge semantics before release. |
+| Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-08-10 run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
 | Route production metadata and Preview contract | ✅ Working | `SCREEN_META` covers all 128 routes with module, Canonical/Preview maturity, data source, supported modes, active section, permission and fixture. Current baseline: **128 Canonical / 0 Preview**. Preview pages, if reintroduced by a future task, distinguish Sample Data from Canonical Data and lock write-like actions. |
-| Cross-layer authorization matrix | ✅ Regression foundation | `src/auth/accessMatrix.ts` is shared by `src/api/permissionMatrix.integration.test.ts` and `scripts/audit-access-matrix.ts`; the API/browser checks cover authenticated role fixtures, 401/403 boundaries, route metadata, list/detail probes and fail-closed UI visibility. Unknown business-module keys now fail closed; authenticated `account/*` services are explicitly non-module-gated but still permission-protected. Authorization-version invalidation is not implemented yet. |
+| Cross-layer authorization matrix | ✅ Regression foundation | `src/auth/accessMatrix.ts` is shared by `src/api/permissionMatrix.integration.test.ts` and `scripts/audit-access-matrix.ts`; the API/browser checks cover authenticated role fixtures, 401/403 boundaries, route metadata, list/detail probes and fail-closed UI visibility. Unknown business-module keys now fail closed; authenticated `account/*` services are explicitly non-module-gated but still permission-protected. TASK-174 now supplies authorization-version invalidation, session recovery and direct-URL revocation coverage. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; both `item-master` and the separate five-language `new-item` composer write through that audited Demo/API command. `new-item` now stores only real product fields, accepts a company-unique SKU and removes the sample form's fabricated USD/GST, accounting, costing, shelf-life and negative-stock controls. New items start at 0 on hand with no stock projection or movement — initial quantity must use Purchase Receipt or Stock Adjustment. Duplicate SKU is an atomic 409; delete remains honestly unsupported rather than mutating local sample data. |
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
-| Admin: users, roles & audit log | ✅ Canonical Demo/API data and writes | `app_user`/`role`/`role_permission`/`audit_log` remain the original Admin tables. Migration 0087 adds tenant-scoped `user_permission_override`; `/api/admin/users/:userId/permission-overrides` creates reasoned allow/deny exceptions, `/actions/revoke` revokes them, and `/api/admin/authorization/explain` exposes full decision details only to audit-read users while appending an audit event. Migration 0088 adds the company authorization-version marker used by current session/capability freshness projections. These Admin tables and routes remain bespoke rather than generic resources because of composite/non-standard keys and security boundaries. Existing `user-mgmt`, `role-permission` and `audit-log` contracts remain real and backend-enforced; the central evaluator is the authorization source of truth. |
+| Admin: users, roles & audit log | ✅ Canonical Demo/API data and writes | `app_user`/`role`/`role_permission`/`audit_log` remain the original Admin tables. Migration 0087 adds tenant-scoped `user_permission_override`; `/api/admin/users/:userId/permission-overrides` creates reasoned allow/deny exceptions, `/actions/revoke` revokes them, and `/api/admin/authorization/explain` exposes full decision details only to audit-read users while appending an audit event. Migration 0088 adds the company authorization-version marker used by current session/capability freshness projections. Migration 0089 replaces the tenant Superadmin bypass with an immutable, company-scoped Company Owner role containing 112 explicit permission rows; legacy flags are inert and legacy assignments are backfilled idempotently. These Admin tables and routes remain bespoke rather than generic resources because of composite/non-standard keys and security boundaries. Existing `user-mgmt`, `role-permission` and `audit-log` contracts remain real and backend-enforced; the central evaluator is the authorization source of truth. |
 | Platform support control plane | ✅ Control-plane foundation (TASK-170) | `platform_principal`, application-owned platform roles, hash-backed bearer/CSRF sessions and `support_access_grant` are separate from tenant `app_user`/roles. Grants enforce exact master/optional company targets, reason/ticket, 24-hour maximum, read-only/restricted-write/break-glass modes, default sensitive-field denial, immediate revoke and platform-correlated audit. `/api/platform` rejects tenant cookies; identity/session issuance is out-of-band and the evaluator does not proxy customer data. |
-| Company module access control | ✅ Canonical Demo/API data and writes, incl. server-side enforcement | The current authority is company-scoped `company_module` (`master_fn` + `company_fn` + `module_key` + `enabled`); missing known-module rows are disabled. The older tenant-scoped `master_module` design is retained only as migration history. `src/auth/moduleAccess.ts` supplies company-aware reads/writes and generic resource handlers enforce disabled modules server-side. The authenticated session carries company module state so the shell and command search can hide disabled modules without requiring a separate admin read. The Admin module remains protected so an authorized administrator can re-enable business modules. Unknown business-module keys now fail closed, payroll is registered as a gateable module, and `account/*` authenticated service routes are explicitly outside business-module switching while retaining route permissions. Migration 0088 adds the company authorization version marker; the module writer bumps it, but centralized cache invalidation and broader mutation coverage remain TASK-174 work. |
+| Company module access control | ✅ Current Canonical enforcement; ⚠️ tenant mutation authority is approved for replacement | The current authority is company-scoped `company_module` (`master_fn` + `company_fn` + `module_key` + `enabled`); missing known-module rows are disabled. Company Owner currently receives `admin.modules.manage`, `/api/admin/modules` reads/writes the active Company, and the tenant `module-activation-control` screen exposes those writes. `src/auth/moduleAccess.ts` and generic resource handlers enforce disabled modules server-side; session state lets shell/search hide them. Unknown business keys fail closed, payroll is gateable and `account/*` remains outside business switching. This is current implementation truth, not the approved commercial model. EPIC-064/TASK-185–188 will make `master_module` the Platform Superadmin-owned Master entitlement, reinterpret `company_module` as platform allocation, retire tenant MAC and use `Master enabled AND Company allocated`. TASK-174 has closed the cache/direct-URL prerequisite. |
 | HR-lite: employee master + leave request/approval | ✅ Canonical Demo/API data and writes | First Phase 7 module opened after Phase 8. `employee` (self-referencing `manager_id`, no link to `app_user`) and `leave_request` tables, `src/modules/hr/` (`createEmployee`, `createLeaveRequest`/`decideLeaveRequest`), registered as standard generic resources gated on new `hr.read`/`hr.write` permissions. `hr-directory` and `employee` read real data (per-employee detail, not always the same hardcoded record); `new-employee` is a single real form replacing the mock's 3-step compensation/provisioning wizard (no schema backed those steps); `leave-approval` reads real requests and its approve/reject actions are real, including a required-reason reject flow. That initial task deliberately excluded Payroll and compensation; later Payroll and Full Leave tasks supersede that historical boundary. Verified live: created a real employee, approved one leave request, rejected another with a reason, confirmed the employee detail's leave balance and history reflected both decisions. |
 | Staff Calendar appointments | ✅ Canonical Demo/API data and writes | Migration 0082 adds tenant-scoped `staff_appointment` facts with employee, type, title, time range, location, status and optimistic version. `staffCalendar` combines appointments with canonical leave rows; HR write users can create, edit and cancel without deleting history. API/domain tests cover tenant isolation, idempotent replay, version conflicts and invalid ranges; the browser contract covers mixed leave/appointment rendering, create, filter and shared searchable listing. |
 | Leave-to-Payroll integration | ✅ Canonical Demo/API data and writes | Migration 0055 adds append-only unpaid-leave, approved-cancellation and encashment sources plus unique run mappings. Payroll lines snapshot base gross and leave earnings/deductions; the 26-day Decimal formula rounds half-up to cents and every source can be consumed once only. Legacy Policy rows retain original days. Five-language Payroll Run/Payslip surfaces and authenticated API/domain proofs cover balance, trace and overlapping-run replay. |
@@ -399,9 +412,9 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Supplier Debit Note & net AP settlement | ✅ Canonical Demo/API data and writes | Migration 0031 adds the versioned, invoice-linked `supplier_debit_note`; migration 0032 idempotently backfills Cash & Bank account `1000` for existing companies created before TASK-058. Drafts snapshot effective Decimal tax. Idempotent posting is capped by the shared invoice outstanding value, posts balanced Dr AP / Cr Purchase Variance / Cr Input Tax and never writes `stock_movement`. Purchase-return crediting and Payment Voucher use the same outstanding calculation, so the live S$130.80 invoice less S$13.08 credit and S$10.90 debit settled for exactly S$106.82 and left AP at zero. `supplier-debit-notes` is five-language Canonical in Demo/API with audited create/post/detail flows. |
 | Landed Cost allocation & moving-average revaluation | ✅ Canonical Demo/API data and writes | Migration 0033 adds versioned receipt-linked `landed_cost` headers, immutable allocation snapshots, `product.average_cost` and upgrade-safe account `2300`. Shared Decimal commands allocate by received value or quantity with deterministic whole-cent residuals. Allocation locks the draft/products/current balances, requires positive on-hand, revalues moving-average cost and posts balanced Dr Inventory / Cr Landed Cost Accrual without a `stock_movement`. Demo/API create and idempotent audited allocate actions, production RLS, five-language UI and inventory/GL trace links are live. Browser proof allocated S$14.00 against GR-1: Widget cost S$6.50→S$6.64, Dr/Cr S$14.00 and unchanged quantity. |
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
-| Shared ERP module shell | ⚠️ Current smoke gate failed | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. The 2026-08-10 smoke run still exposes 18 numeric `0` navigation badges in each viewport; actionable counts must remain in canonical module KPIs and approval queues, or the badge semantics must be explicitly defined. |
+| Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — every route in `SCREENS` (128), desktop + 375px | ✅ Green | 2026-08-10: all 128 routes render at desktop and mobile with no console/page errors; 128 Canonical / 0 Preview, active-tab visibility, layout, action-bar and declared-contract checks all pass. Permission-aware navigation and the separate access-matrix API/browser checks remain green. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ⚠️ Focused green; full rerun pending | 2026-08-10: the full run completed with 622 passed, 8 failed and 1 skipped across 155 files. The account-service module-gate omission is fixed; targeted notification/access-matrix/module coverage passes 15/15. Two Team Calendar tests still use a Manager actor against the seed's HR-permission leave policy and require fixture alignment. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Green | 2026-08-10: full Vitest passes 156 files plus 1 skipped file (635 passed, 1 skipped tests). HR Calendar fixtures use explicit approval permissions; targeted notification/access-matrix/module coverage passes 15/15. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -413,10 +426,10 @@ non-secret organization/username hint is retained locally when the user opts in.
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, no demo seed) on an isolated stack; `make seed` remains an explicit demo-only action. The source-only `make release` path and production overlay preserve the database volume, while `make migrate` is guarded by explicit confirmation. |
 | `make setup-interactive` (`scripts/setup.sh --interactive`) | ✅ Working | Prompts for bundled-vs-external database, auto-generates strong secrets on a blank answer (validated: e.g. a manually-typed `ERP_TOKEN_ENCRYPTION_KEY` must satisfy `tokenCrypto.ts`'s exact 32-byte contract or the script re-prompts, instead of letting `api` crash at boot), and checks WEB_PORT/API_PORT/DB_PORT for real collisions. `docker-compose.yml`'s `api`/`worker` `DATABASE_URL` now genuinely honors an external override instead of silently ignoring it. Historical TASK-060 proof exercised plain, bundled-interactive and external-PostgreSQL paths and confirmed the bundled `db` service was omitted for the external run; the current setup contract stops after migration and does not seed business data. **Also fixed along the way**: the `web` service's Docker build had been silently broken since 2026-07-18 (build context couldn't reach `erp-demo-runtime-impl.ts`'s cross-workspace imports into `src/`) — nobody caught it because local dev/typecheck/`build:demo` all run from the repo root, where the paths resolve fine regardless of the Docker isolation bug. Fixed by widening `web`'s build context to the repo root, matching `Dockerfile.api`'s established pattern. |
 | PostgreSQL concurrency/parity proof | ✅ Working on dedicated empty proof DB | PGlite/PostgreSQL business results match and one of two stock races wins; forced RLS passes. The production seed CLI fails closed without explicit Demo flags or on non-empty data, and `POSTGRES_URL npm run demo` now independently rejects every non-empty target before writes. |
-| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Contract-backed; full current API browser proof pending | The API adapter and current resource/action contracts support the 128-route Canonical boundary with no client-side sample writes. The executed 128-route audit is the Demo/PGlite audit; the access matrix covers API/browser permission boundaries, while a dedicated full API layout run remains a release-proof follow-up. |
+| `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Contract-backed; authenticated full-route proof follow-up | The API adapter and current resource/action contracts support the 128-route Canonical boundary with no client-side sample writes. The access matrix and production health/session checks pass; a dedicated authenticated API-mode full-route layout run remains follow-up evidence rather than a deployment blocker. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production one-time setup | ✅ Working | The API-mode wizard calls `POST /api/setup/actions/complete` without a token. The endpoint is available only for an empty tenant foundation; a database singleton locks concurrent attempts and the command atomically creates tenant/company/admin/role/permissions/tax/accounts. |
-| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v259) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
+| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v260) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
 
 ## Canonical and Preview route boundary
 
@@ -627,8 +640,8 @@ cost-layer semantics the schema cannot support.
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Contract implemented for the present Canonical boundary; full current API browser proof pending.** The current 128-route screen audit is the Demo/PGlite run and is green; the access matrix covers API/browser permission boundaries. Run a dedicated API-mode layout audit before release. |
-| Every Canonical route has five-language coverage | **Verified by the current gates.** The 2026-08-10 static audit passes 1,531 canonical keys across 69 local five-language packs, and `npm run audit:i18n` passes 128 routes × 5 languages × 2 viewports with zero blocking findings. |
+| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Contract implemented for the present Canonical boundary; authenticated full-route browser proof follow-up.** The current 128-route screen audit is green and the access matrix covers API/browser permission boundaries. Production health/root/session probes pass; a dedicated authenticated API-mode layout audit remains follow-up evidence. |
+| Every Canonical route has five-language coverage | **Complete for the current matrix.** The 2026-08-10 audit passes 1,533 canonical keys across 69 local five-language packs and 128 routes × 5 languages × 2 viewports with zero blocking findings. |
 | API server has all business **write** endpoints | **Complete for the present Canonical boundary.** Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, service-capable order lines, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and any new finance/commercial actions remain separate future scope. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` | Implemented with ESLint and part of the local/CI gate. |
@@ -1701,22 +1714,92 @@ complete. Five browser-local languages use English default/fallback, lazy valida
 non-English packs, safe variables/plurals, locale-aware UI formatting and atomic
 in-place switching without form, route, scroll or focus loss. Business records and
 generated/exported/statutory documents remain outside UI i18n. The 2026-08-10 static
-and browser gates now pass 1,531 canonical keys / 69 local packs across 128 routes ×
-5 languages × 2 viewports. Current PWA cache version is v259.
+audit passes 1,533 canonical keys / 69 local packs and the full 128-route × 5-language
+× 2-viewport browser matrix. Current PWA cache version is v259 and the PWA update audit
+passes.
+
+## Platform Module Entitlement source audit and approved target (2026-08-11)
+
+TASK-184 is documentation/knowledge work only. No application code, schema, migration,
+permission, route or production deployment changed. The following target is approved
+but not implemented:
+
+- Platform Superadmin owns the Master commercial entitlement and Company allocation;
+  Company Owner owns tenant users/roles/permissions only.
+- Existing `master_module` will be normalized from the union of current Company-enabled
+  states so no effective access is lost. `company_module` will retain per-Company
+  allocation. Effective access is `Master enabled AND Company allocated`; Master disable
+  masks rather than overwrites allocation.
+- One platform-defined default allocation set per Master initializes new Companies.
+  Tenant onboarding will no longer offer module selection.
+- A shared Module Catalog will enumerate business modules and validate route/resource/
+  API contracts. Dashboard/Home, My Work, Admin, Settings and Account/Notifications are
+  baseline services, not sellable entitlement switches.
+- `admin.modules.manage` will be deprecated and removed from tenant grants. The
+  application-owned `platform_superadmin` role will own `platform.modules.read/manage`.
+- The existing visual login will gain a separate platform realm backed by independent
+  password credentials and a non-remembered session of at most one hour. No MFA is
+  planned for v1, which remains an explicit high-risk limitation.
+- Platform Superadmin may enter a bounded, visible simulation of any active user in the
+  selected Master/Company. Authority is exactly the target user's entitlement,
+  permissions, scope and workflow authority; audit attributes both the target user and
+  real platform principal. MAC writes remain unavailable from the simulated tenant
+  session.
+
+EPIC-064 owns TASK-184–188. TASK-174 is complete and TASK-185 is eligible; TASK-186 is the entitlement
+prerequisite added to Expenses & Tax TASK-182. EPIC-018 remains historical proof of
+server-side module enforcement but does not define the approved future mutation owner.
+
+## Expenses & Tax v1 source audit and planning boundary (2026-08-11)
+
+The approved product boundary is **Expenses & Tax v1 = Company Receipts + inclusive
+transaction-date range + Preview + Receipt Pack PDF/Print**. This is planned scope,
+not current Canonical functionality. No application code, schema, migration, route,
+permission, module key or production deployment changed in TASK-176.
+
+Current reusable implementation is substantial but narrower:
+
+- My Receipts accepts magic-validated JPEG/PNG/HEIC/HEIF/PDF, enforces 20 MB and
+  20-page PDF limits, stores originals through managed-document versions/hashes,
+  supports IndexedDB camera/file drafts and runs fail-closed scan plus OCR/Vision.
+- Receipt inbox extraction retains field provenance, confidence, duplicate signals and
+  governed document state. Existing Void/correction/retention/legal-hold controls remain.
+- Tax Evidence can render registers and merged evidence PDFs from posted Expense Claim
+  lines in API mode, including original PDF/JPEG/PNG content where supported.
+
+The missing v1 vertical slice is explicit: no `Expenses & Tax` module entitlement,
+`company-receipts` route, company-owned receipt aggregate, user-confirmed metadata
+command, company-wide permission-scoped register, transaction-date query, missing-date
+workflow or standalone Receipt Pack preview/export/print exists. Current My Receipts
+requires a linked Employee, returns only the signed-in uploader's latest 100 documents,
+and does not expose company search/date pagination. Current Tax Evidence selects posted
+claim lines by posting date, so it cannot be renamed or treated as Company Receipts.
+
+EPIC-063 and TASK-177–183 register the implementation work. Expense accounting, Tax
+Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois are preserved
+future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 172 tasks
-- In progress: TASK-174 (1)
-- Todo: TASK-175 (1)
+- Done: 176 tasks
+- In progress: 0
+- Todo: TASK-177–183 and TASK-185–188 (11)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
   complete documentation baseline, TASK-170's platform-support foundation,
   TASK-171's canonical permission registry, TASK-172's assignment migration and
-  TASK-173's completed central decision/override boundary. TASK-174 is in progress:
-  migration 0088 and the first atomic version bump paths are delivered, while full
-  cache/direct-URL invalidation coverage is not. TASK-175 remains pending.
+  TASK-173's completed central decision/override boundary. TASK-174 is done: migration
+  0088, atomic graph and Master-wide support version bumps, stale browser recovery and
+  direct-URL revocation coverage are delivered. TASK-175 is done: migration 0089,
+  production backup, target migration, RLS re-application, application release and
+  public health/session verification all passed.
+- EPIC-063 is registered but not started. TASK-176 completed the source-backed
+  Expenses & Tax documentation/KB boundary; TASK-177–183 remain todo and cannot be
+  represented as current Canonical functionality.
+- EPIC-064 is registered but not implemented. TASK-184 completed the source-backed MAC
+  documentation/KB boundary; TASK-185–188 remain todo. Current tenant MAC remains
+  Canonical until TASK-185/186 deliver and verify the platform-owned cutover.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -1730,11 +1813,14 @@ and browser gates now pass 1,531 canonical keys / 69 local packs across 128 rout
 
 ## Next implementation boundary
 
-The dependency order is TASK-174 authorization-version invalidation and broader
-resource/ownership coverage, then TASK-175 explicit Company Owner permissions. The current
-working tree contains additional uncommitted application changes; this status records
-only behavior verified from the current files/tests and does not imply that those
-changes have been committed or deployed.
+The next dependency-ordered work is TASK-177, the Company Receipt canonical model and
+API. TASK-175's production release verification and TASK-174 invalidation boundary are
+complete. EPIC-063 begins with TASK-177; its entitlement integration
+TASK-182 also waits for EPIC-064 TASK-186. EPIC-064 implementation begins with TASK-185
+and then proceeds through tenant cutover, platform workspace and proof in
+TASK-186–188. The current working tree contains additional uncommitted application changes;
+this status records behavior verified from the current files/tests and the deployed
+Compose target, but does not imply that the changes have been committed.
 
 ## Where to go next
 

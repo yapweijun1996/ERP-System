@@ -306,10 +306,11 @@ Historical exit criteria were met by the Phase 8 implementation: `npm run audit:
 passed after each mechanical change and the module-access-control toggle hid a module
 from both the sidebar and API for a restricted non-superadmin tenant. The 2026-08-10
 screen follow-up now passes the current 128-route desktop/mobile layout and behavior
-gate, and the static plus browser i18n gates pass 1,531 canonical keys / 69 local packs
-across 128 routes × 5 languages × 2 viewports. API-mode full-browser proof and
-physical-device verification remain separate pending gates; the current smoke gate also
-needs the unexplained numeric `0` navigation badges resolved.
+gate, and the static i18n audit passes 1,533 canonical keys / 69 local packs; the
+changed calendar routes pass the targeted 3-route × 5-language × 2-viewport matrix.
+The full 128-route matrix now passes. Authenticated API-mode full-browser proof and
+physical-device verification remain separate follow-up gates; desktop/mobile smoke is
+green with visible semantic navigation-badge assertions.
 
 ## Phase 9 — Deployment Ergonomics ✅ (interactive host bootstrap done; desktop installer deliberately deferred, not phase-scoped)
 
@@ -1011,21 +1012,21 @@ pack was regenerated from the current authoritative Manager template, and permis
 module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
 one expected skip and zero failures. Generic module collections use company scopes because
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
-actor-derived and team/direct-tree scoped. The current schema journal contains 89
-migrations and generated Drizzle SQL contains 244 tables. TASK-170's platform-support
+actor-derived and team/direct-tree scoped. The current schema journal contains 90
+migration entries and generated Drizzle SQL contains 244 tables. TASK-170's platform-support
 migrations 0084/0085, TASK-172's assignment-scope migration 0086, TASK-173's
 authorization-override migration 0087 and TASK-174-B's authorization-version migration
-0088 are included. The latest full regression attempt completed with
-622 passed, 8 failed and 1 skipped across 155 files. The account-service module-gate
-omission was corrected and targeted notification/access-matrix/module coverage now
-passes 15/15; two Team Calendar tests still use a Manager actor against the current
-seed's HR-permission leave policy and need fixture alignment. The 149-file/599-test
-result above is retained as TASK-168's historical shard evidence. `src/auth/accessMatrix.ts`,
+0088 are included, and migration 0089 now delivers the Company Owner cutover. The
+latest full regression passes 635 tests with 1 skipped across 156 files. The
+account-service module-gate omission was corrected, HR Calendar fixtures now use
+explicit approval permissions and targeted notification/access-matrix/module coverage
+passes 15/15. The 149-file/599-test result above is retained as TASK-168's historical
+shard evidence. `src/auth/accessMatrix.ts`,
 its authenticated API matrix suite and `npm run audit:access-matrix` now provide a
 cross-layer route/permission regression foundation. Migration 0088 now supplies the
-company authorization-version marker and first atomic bump paths for role,
-assignment, scope, module, override and invitation changes; centralized cache and
-complete invalidation remain open under TASK-174. Physical-phone verification remains
+company authorization-version marker and atomic bump paths for role, assignment,
+scope, module, override and invitation changes. TASK-174 now adds Master-wide support
+invalidation plus stale browser-session/direct-URL proof. Physical-phone verification remains
 separately blocked under TASK-017.
 
 ## Phase 44 — Authorization Architecture Evolution 🔶
@@ -1045,31 +1046,96 @@ separately blocked under TASK-017.
    the locked current step and resolved resource/module/scope/policy context, reject
    inactive named authorities and keep older in-flight instances on their snapshot
    without implicit takeover. Focused strict-step coverage passes 18/18.
-4. **Fail-closed registry and cache invalidation** (TASK-174) is in progress: unknown
+4. **Fail-closed registry and cache invalidation** (TASK-174) is complete: unknown
    business-module keys now fail closed, payroll is registered and authenticated
-   `account/*` services are explicitly non-module-gated; finish the
-   unknown module/resource/ownership checks, make route metadata coverage a release gate,
-   and add prompt authorization-version invalidation for organization, policy,
-   master-wide support-grant and cached capability changes, plus stale-session/direct-
-   URL regressions. Migration 0088 is the delivered source/marker foundation; the
-   access matrix is a partial precursor, not task completion.
-5. **Owner cutover** (TASK-175) replaces the tenant Superadmin bypass with explicit,
-   explainable Company Owner permissions after TASK-173 and TASK-174 pass their gates.
+   `account/*` services are explicitly non-module-gated. Unknown module/resource/action/
+   ownership checks and route metadata are release gates. Migration 0088 provides the
+   marker; Master-wide support changes advance every Company marker, and stale browser
+   snapshots fail closed, recover through the session endpoint and prove direct-URL
+   revocation without replaying rejected writes.
+5. **Owner cutover** (TASK-175) is complete: migration 0089 replaces
+   the tenant Superadmin bypass with 112 explicit, explainable Company Owner
+   permissions, company scope and idempotent legacy-assignment backfill while keeping
+   platform authority separate. Disposable PostgreSQL 16 parity, true concurrency and
+   non-superuser RLS proof are green. The production database was backed up, migrations
+   0084–0089 were applied, production RLS was re-applied, `deploy/release.sh` completed
+   and the public health/root/session probes passed. Physical-device acceptance remains
+   a separate human gate.
 
 Exit criteria: all TASK-170–175 adversarial migration and compatibility tests pass;
 existing tenants retain access without a hidden bypass; platform operators obtain no
 implicit customer-data authority; and the current task index, code, migrations and
 release/runbook documents agree on the same implementation boundary.
 
-Current release evidence (2026-08-10): the screen audit is green for all 128
-Canonical routes at desktop and mobile. The static i18n audit passes 1,531 canonical
-keys / 69 local packs, and the complete browser matrix passes 128 routes × 5 languages
-× 2 viewports with zero blocking findings. API-mode full-browser proof and
-physical-device verification remain separate pending gates, independent of the
-TASK-173 → TASK-175 authorization dependency chain. The current desktop/mobile smoke
-gate remains pending because it reports 18 unexplained numeric `0` navigation badges in
-each viewport. After the purchase-requisition adapter was aligned, serial
-`npm run build:demo` and `npm run audit:access-matrix` pass; the first parallel build
-attempt was a shared-`web/dist` race, not a source failure. API-mode full-browser proof,
-physical-device verification and the clean full Vitest rerun remain separate pending
-gates.
+Current release evidence (2026-08-10): the screen audit is green for all 128 Canonical
+routes at desktop and mobile. The full i18n audit passes 1,533 canonical keys / 69 local
+packs across 128 routes × 5 languages × 2 viewports, and desktop/mobile smoke passes.
+PWA update, access matrix, typecheck, lint, build, permission, schema and drift gates
+pass; full Vitest passes 635 tests with 1 skipped across 156 files. Disposable
+PostgreSQL 16 Demo parity/true-concurrency and non-superuser RLS/security proof are
+green. The target production database was backed up, migrations 0084–0089 applied,
+production RLS re-applied and application containers released; public health/root/
+unauthenticated-session probes returned 200/200/401. Authenticated API-mode full-route
+workflow coverage and physical-device verification remain separate follow-up gates.
+
+## Phase 45 — Expenses & Tax v1: Company Receipts ⬜
+
+1. **Contract and model** (TASK-176 complete; TASK-177 planned): keep the official
+   product boundary at Company Receipts, add the minimum company-scoped aggregate and
+   API around existing managed-document evidence, and keep Employee Claim,
+   reimbursement, GL and Tax Treatment optional/future.
+2. **Capture and register** (TASK-178–180): reuse 20 MB/20-page validation, IndexedDB,
+   scan/OCR, hashes and lifecycle governance; add user confirmation plus bounded own/
+   company register, search, pagination, inclusive `transaction_date` filters and an
+   actionable Missing Date state.
+3. **Receipt Pack** (TASK-181): preview the complete matching set, produce an A4
+   register followed by readable originals, preserve multi-page PDFs and group totals
+   by currency before offering browser Print.
+4. **Parity and release proof** (TASK-182–183): register module entitlement,
+   permissions, route/accessMatrix and five-language capability guards atomically,
+   prove Demo/PGlite and PostgreSQL/API parity, then run desktop/mobile and release
+   gates before updating final status and KB evidence.
+
+Phase status is **not started**. TASK-176 completed documentation and KB planning only;
+no Company Receipts code, schema, route, permission or deployment was delivered.
+TASK-174 has completed the authorization invalidation boundary; TASK-177 is now eligible.
+
+Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`
+works end to end in both modes without `expense_claim`, cross-tenant access,
+cross-currency totals, hidden missing-date omissions or page-limited export results.
+
+## Phase 46 — Platform Module Entitlement & Superadmin Workspace ⬜
+
+This phase is approved backlog, not current behavior. The source-verified application
+still lets Company Owner use `admin.modules.manage`, `/api/admin/modules` and the
+tenant Module Activation screen to mutate company-scoped `company_module`. Existing
+server-side route/resource/API module denial remains valuable and will be retained.
+
+1. **Contract and tracking** (TASK-184 complete): record current tenant MAC separately
+   from the approved platform-owned target, preserve EPIC-018 as historical evidence,
+   register TASK-185–188 and synchronize the project KB.
+2. **Entitlement foundation** (TASK-185, now eligible): create the commercial
+   Module Catalog; normalize `master_module` from the union of current Company-enabled
+   states; treat `company_module` as platform allocation; add versioned platform API,
+   audit and deterministic Demo fixture/harness behavior.
+3. **Tenant cutover** (TASK-186): retire `admin.modules.manage`, remove tenant MAC UI,
+   endpoints and onboarding selection, apply each Master's default allocation to new
+   Companies, and enforce `Master enabled AND Company allocated` everywhere.
+4. **Platform workspace** (TASK-187): add a separate Platform Superadmin login realm,
+   Master/Company entitlement workspace and time-bounded simulation of any active
+   tenant user with exact target-user authority and dual actor audit.
+5. **Proof and closeout** (TASK-188): prove migration preservation, cross-tenant denial,
+   stale/direct bypass denial, dual-mode parity, platform login/simulation and full
+   browser/release gates before changing status or KB from planned to implemented.
+
+Master entitlement is a mask, not a destructive rewrite: disabling it blocks every
+Company immediately while preserving Company allocation for later restoration. Only
+business modules are sellable; Dashboard/Home, My Work, Admin, Settings and Account/
+Notifications are baseline services. TASK-182 depends on TASK-186, but TASK-177–181
+may proceed independently once their existing dependencies are met.
+
+Exit criteria: Company Owner cannot read or mutate commercial entitlement; only
+`platform_superadmin` with `platform.modules.read/manage` can; missing state fails
+closed; existing client access is preserved; new Company defaults are platform-owned;
+and exact-user simulation is visible, revocable, one-hour maximum and never widens the
+target user's permission, scope or workflow authority.

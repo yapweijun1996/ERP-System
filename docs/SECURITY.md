@@ -69,7 +69,7 @@ unioned and scopes use the widest of self/team/department/company; a restricted 
 without enforceable ownership fails closed. UI hiding is defence in depth: the API
 rechecks action permission, module state, tenant, scope and resource visibility.
 Initial Staff passwords are hash-only, force change and expire at first use or seven
-days. Setup-stage employees cannot log in. Production provides a Superadmin-only
+ days. Setup-stage employees cannot log in. Production provides a Company-Owner-only
 employee-workspace entry point limited to active, company-linked employee accounts;
 passwords and activation secrets are never exposed. Entry and return are audited,
 while Demo seed remains guarded by explicit Demo-only environment flags plus an
@@ -97,15 +97,18 @@ current/target record. The following are implemented compatibility facts:
   `scope_backfilled_at` dual-read legacy `role_resource_scope` rows;
 - role assignments are active only inside `[valid_from, valid_until)` and while
   `revoked_at` is null; creation/revocation provenance is audited;
-- tenant-local `is_superadmin` bypasses role-permission checks inside the active company;
+- migration `0089_company_owner_cutover` makes tenant-local `is_superadmin` a legacy
+  migration/audit flag. The immutable, company-scoped Company Owner role uses 112
+  explicit tenant permissions and does not bypass role-permission checks;
 - permission storage still contains broad compatibility keys, but TASK-171 now adds an
   application-owned registry with explicit canonical mappings; route/resource/action
   projections are registered and unknown or platform-domain keys cannot be used as
   tenant role or approval permissions;
 - an `allowed=false` role-permission row is not an explicit deny override. TASK-173's
   migration 0087 adds reasoned user-level `user_permission_override` rows; matching
-  deny rows are evaluated before explicit allows, role grants and the tenant-local
-  Superadmin compatibility grant, with validity/revocation enforced;
+  deny rows are evaluated before explicit allows and role grants, with
+  validity/revocation enforced; the legacy Superadmin flag is not an authorization
+  source;
 - `src/auth/authorization.ts` is the central evaluator used by permission wrappers,
   action/resource gates and approval permission checks. Public callers receive safe
   reason codes; audit-read administrators can request full explanation details through
@@ -127,11 +130,13 @@ current/target record. The following are implemented compatibility facts:
   `account/*` service routes are an explicit non-module prefix: they remain protected
   by tenant/session and route permissions, but are not disabled with business-module
   switches. Resource registration remains a runtime application allowlist; no database
-  FK or centralized authorization-version cache is claimed yet. Migration 0088 now
-  supplies the company-scoped freshness marker and core role/assignment/scope/module/
-  override/invitation writers bump it atomically; the marker is not itself an access
-  grant and remaining cache, organization, policy and master-wide support invalidation
-  is still open under TASK-174.
+  FK is claimed. Migration 0088 supplies the company-scoped freshness marker and core
+  role/assignment/scope/module/override/invitation writers bump it atomically;
+  Master-wide support grant changes bump every Company under that Master. Browser API
+  requests carry their capability version, stale snapshots fail closed with 409 and
+  recover only through `/api/auth/session` before a non-replaying reload. The marker is
+  not an access grant; server permission, organization and workflow-policy decisions
+  remain current-row evaluations rather than cached authority.
 
 TASK-170 now separates platform/support authority. `platform_principal`, platform roles,
 hash-backed bearer/CSRF sessions and `support_access_grant` are outside tenant role
@@ -155,10 +160,12 @@ takeover. Delegation remains tenant/domain/authority/delegate/time/revocation bo
 instance/step/resource/policy-bound delegation is still a later hardening slice.
 TASK-174-A now fails closed for unknown business-module keys, registers payroll as a
 gateable module and keeps authenticated `account/*` service routes explicitly outside
-business-module switching while retaining route permissions. Migration 0088 now
-provides the company authorization-version source and first atomic bump paths; complete
-cache invalidation, broader organization/policy/support coverage and TASK-175's explicit
-Company Owner cutover remain pending. TASK-170's implemented platform boundary grants
+  business-module switching while retaining route permissions. Migration 0088 now
+  provides the company authorization-version source and first atomic bump paths; migration
+0089 delivers the explicit Company Owner cutover. Complete cache invalidation, broader
+  organization/policy/support coverage remain pending; target migration, production RLS
+  re-application and application release verification are complete. Disposable PostgreSQL
+  16 parity, true concurrency and non-superuser RLS/security proof are green. TASK-170's implemented platform boundary grants
 no platform operator permanent implicit customer-data authority.
 
 The shared access matrix (`src/auth/accessMatrix.ts`) and its API/browser checks are
@@ -170,7 +177,7 @@ backend authorization still re-evaluates current database state on every protect
 request.
 
 The current employee-workspace impersonation endpoint is restricted to an active-company
-Superadmin and active linked non-Superadmin employee, records entry/return and blocks
+Company Owner and active linked non-Owner employee, records entry/return and blocks
 sensitive activation operations. It is not time-bounded platform support access and
 must not be represented as such.
 
@@ -181,3 +188,47 @@ employee, appointment, reminder, appointment-outbound and notification rows requ
 for delivery. It does not receive general tenant bypass. Jobs revalidate current
 appointment revision, recipient and connection state; stale work is superseded, and an
 external calendar remains a one-way projection rather than a source of ERP truth.
+
+## Planned Company Receipt security invariants
+
+Expenses & Tax v1 must reuse existing document validation and custody: declared MIME,
+extension and magic bytes agree; 20 MB/20-page limits apply; unknown/infected scan
+states fail closed; originals, hashes and versions remain preserved; and sensitive
+view/download/print/export operations are audited with no-store delivery.
+
+Company Receipt and Receipt Pack operations derive tenant scope from Session, enforce
+registered capabilities and module entitlement on UI/API/worker paths, and never trust
+client `masterFn`, `companyFn`, uploader or company-read scope. Exact hash duplicates
+may warn/prevent accidental storage, but merchant/date/amount similarity must not
+auto-delete or merge evidence. Governed evidence is voided/corrected rather than
+silently hard-deleted. These are planned requirements, not current v1 proof.
+
+## Planned platform-owned Module Access Control security boundary
+
+The current tenant mutation route is a recorded security/product gap, not a hidden
+claim: Company Owner currently holds `admin.modules.manage` and may call
+`/api/admin/modules`. EPIC-064 will retire that permission and surface; existing backend
+module denial remains required throughout migration.
+
+Only a separately authenticated `platform_superadmin` may receive
+`platform.modules.read/manage`. Platform credentials/sessions remain outside
+`app_user`/`erp_session`; platform CSRF, expected-version checks, request correlation
+and append-only before/after audit protect every immediate entitlement mutation.
+Support roles do not inherit commercial authority.
+
+Module authorization fails closed in this order: authenticated target identity,
+trusted Master/Company context, Master entitlement, Company allocation, permission,
+scope, then workflow authority. A stale role permission or simulated user cannot bypass
+either entitlement layer. Direct routes, bespoke/generic APIs, notifications, workers
+and writes must return a bounded 403 `module_not_enabled` without revealing another
+tenant's entitlement facts.
+
+Platform end-user simulation may target any active user in the selected Master/Company
+and may perform that user's legitimate writes. It therefore requires a visible banner,
+one-hour maximum, no remember option, immediate revoke/return, expiry, rate limiting,
+CSRF and dual `actorUserId`/`platformPrincipalId` audit. Platform permissions are never
+unioned into the target session and MAC writes remain platform-workspace-only.
+
+Approved v1 uses password-only platform login and no MFA. Because that principal can
+alter commercial access and fully simulate active users, this is a high-severity
+residual risk that must remain in TASK-187/188 acceptance and release reporting.
