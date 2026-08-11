@@ -873,24 +873,28 @@ expand/backfill migration; legacy rows are retained during compatibility rollout
 All company-owned additions carry `master_fn` and `company_fn` and participate in
 production RLS.
 
-## 10. Company Receipt aggregate (EPIC-063 / TASK-177)
+## 10. Company Receipt aggregate (EPIC-063 / TASK-177–178)
 
 Migration 0090 adds `company_receipt` through the shared Drizzle schema used by
 PostgreSQL and PGlite. Each row carries `master_fn`, `company_fn`, an immutable unique
 receipt key, a governed `managed_document`/`document_version` reference, uploader,
 confirmed transaction date/merchant/receipt number/amount/currency/category/business
 purpose/notes, state, optimistic `version`, timestamps and retained void attribution.
+Migration 0091 backfills `evidence_sha256` from the referenced document version and
+adds a unique `(master_fn, company_fn, evidence_sha256)` constraint plus hash format
+check. This is exact-byte deduplication only; no similarity identity is stored.
 The row and evidence records each carry tenant columns; application commands join and
 predicate every reference by the active tenant and additionally require the referenced
 version to be current, uploader-owned, non-void and clean. Production RLS supplies the
 database tenant boundary around those commands.
 
-The aggregate does not duplicate bytes, scan/OCR provenance or document hashes and has
+The aggregate does not duplicate bytes or scan/OCR provenance; its stored SHA-256 is an
+integrity/deduplication projection of the immutable document version. It has
 no Employee, Expense Claim, reimbursement, GL or tax-treatment foreign key. Current
-TASK-177 commands create `ready` rows (transaction date may remain null), permit
+commands create `ready` rows (transaction date may remain null), permit
 versioned metadata correction, and transition to `voided` without physical deletion.
 The wider Draft/Processing/Needs Attention workflow remains target state vocabulary for
-TASK-178–180. `company_receipt` is included in production tenant RLS and has PGlite plus
+TASK-180. `company_receipt` is included in production tenant RLS and has PGlite plus
 non-superuser PostgreSQL isolation proof.
 
 ## 11. Planned platform module entitlement data changes (EPIC-064)

@@ -487,18 +487,22 @@ Company Receipt (masterFn + companyFn)
         └── Draft | Processing | Ready | Needs Attention | Voided
 ```
 
-The TASK-177 API requires the uploader's current, clean, non-void governed document
+The TASK-177/178 API requires the uploader's current, clean, non-void governed document
 version, derives tenant/uploader from Session, and persists confirmed receipt facts
 without an Employee, claim, reimbursement, GL or tax dependency. Its read surface is
 bounded, cursor-based and deliberately uploader-only; metadata writes are versioned,
-evidence identity is immutable, and void preserves an audited tombstone. Search,
+evidence identity is immutable, and void preserves an audited tombstone. A separate
+confirmation read projects immutable OCR candidate provenance and safe suggestions;
+clean evidence remains manually confirmable if OCR fails/unavailable. Migration 0091
+stores/backfills the evidence SHA-256 and enforces one exact hash per Company Receipt
+inside a Company; no similarity-based merge exists. Search,
 own/company visibility, inclusive transaction-date selection and immutable Receipt Pack
 snapshots remain TASK-179–181 work.
 
 The product entry remains `Expenses & Tax → Company Receipts`. TASK-177 temporarily
 reuses `employee.receipts.write`; exact module/resource/action identifiers must be
 registered atomically with the backend module catalog, permission registry, route
-metadata and `accessMatrix` under TASK-182. Until TASK-178–183 land, neither
+metadata and `accessMatrix` under TASK-182. Until TASK-179–183 land, neither
 `my-receipts`, `/api/company-receipts` nor `receipt-tax-evidence` may be presented as
 the completed v1.
 

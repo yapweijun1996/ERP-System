@@ -145,6 +145,29 @@ describe('Company Receipts API', () => {
     expect(tampered.status).toBe(400);
     expect((await tampered.json()).error.code).toBe('tenant_scope_is_session_derived');
 
+    const confirmation = await fetch(
+      `${baseUrl}/api/company-receipts/confirmations/${uploaded.version.id}`,
+      { headers: { cookie: auth.cookie } },
+    );
+    expect(confirmation.status).toBe(200);
+    expect(await confirmation.json()).toMatchObject({
+      data: {
+        evidence: {
+          documentId: uploaded.document.id,
+          documentVersionId: uploaded.version.id,
+          scanStatus: 'clean',
+        },
+        extraction: { status: 'not_started', candidates: [] },
+        manualConfirmationAllowed: true,
+        provenanceImmutable: true,
+      },
+      meta: {
+        scope: 'uploader',
+        ocrIsSuggestionOnly: true,
+        originalPreserved: true,
+      },
+    });
+
     const createdResponse = await fetch(`${baseUrl}/api/company-receipts`, {
       method: 'POST',
       headers: { ...mutationHeaders, 'x-request-id': 'company-receipt-create-0001' },
@@ -205,6 +228,13 @@ describe('Company Receipts API', () => {
     expect((await stale.json()).error.code).toBe('company_receipt_version_conflict');
 
     const crossEvidence = await evidence(my, adminId, 'receipt_api_my_0001');
+    const hiddenConfirmation = await fetch(
+      `${baseUrl}/api/company-receipts/confirmations/${crossEvidence.version.id}`,
+      { headers: { cookie: auth.cookie } },
+    );
+    expect(hiddenConfirmation.status).toBe(404);
+    expect((await hiddenConfirmation.json()).error.code)
+      .toBe('company_receipt_evidence_not_found');
     const crossReceipt = await withTenantTransaction(db, my, (tx) =>
       createCompanyReceiptWithin(
         tx,

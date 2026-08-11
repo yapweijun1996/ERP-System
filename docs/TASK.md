@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **177**
+- Done: **178**
 - In progress: **0**
-- Todo: **10**
+- Todo: **9**
 - Blocked: **1**
 - Total: **188**
 
@@ -19,8 +19,9 @@ not a second task registry.
 The 2026-08-10 release follow-up is complete: `npm run audit:screens` renders all 128
 routes at desktop/mobile and passes the 128 Canonical / 0 Preview maturity plus
 layout/behavior contracts. The full i18n matrix passes 1,533 canonical keys / 69 local
-five-language packs across 128 routes × 5 languages × 2 viewports. Full Vitest passes
-156 files plus 1 skipped file (635 passed, 1 skipped tests); `npm run smoke` passes at
+five-language packs across 128 routes × 5 languages × 2 viewports. The 2026-08-11
+TASK-178 regression passes 159 files plus 1 skipped file (641 passed, 1 skipped tests);
+`npm run smoke` passes at
 desktop/mobile after the visible-only navigation-badge contract was fixed. PWA update,
 access matrix, build, permission, schema and drift gates pass. TASK-017 remains the
 separate physical-device blocker and does not change the machine-readable totals. The
@@ -44,7 +45,7 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | --- | --- | --- |
 | TASK-176 | Done | Source-audit and document the approved Company Receipts-only v1 boundary; synchronize KB without code or deployment |
 | TASK-177 | Done | Migration 0090, Company Receipt aggregate/domain/API, optimistic concurrency, audit and PGlite/PostgreSQL RLS proof |
-| TASK-178 | Todo | Reuse managed-document capture/scan/OCR and add manual confirmation/correction |
+| TASK-178 | Done | Migration 0091 exact-hash uniqueness and immutable OCR-provenance confirmation/manual-fallback context |
 | TASK-179 | Todo | Permission-scoped own/company register and responsive UI |
 | TASK-180 | Todo | Inclusive transaction-date range, search, pagination and Missing Date behavior |
 | TASK-181 | Todo | Receipt Pack preview, PDF, mixed-currency register and Print |
@@ -69,10 +70,11 @@ TASK-174 has closed the cache/direct-URL dependency, so TASK-185 is now eligible
 current application remains tenant-controlled until TASK-185 and TASK-186 are delivered;
 TASK-184 did not change code, schema, routes, permissions or production.
 
-TASK-177 is the first implemented Expenses & Tax slice. It adds the aggregate and
-uploader-only API but not the customer-facing register, capture/confirmation adapter,
-date range, Receipt Pack, module entitlement or final canonical permission set. TASK-178
-is now the lowest-numbered dependency-eligible code task; TASK-185 is independently
+TASK-177/178 implement the Expenses & Tax backend/capture foundation: aggregate,
+uploader-only API, exact-hash protection and confirmation context over the existing
+secure offline/upload/OCR pipeline. The customer-facing Company Receipts register,
+date range, Receipt Pack, module entitlement and final canonical permission set remain
+pending. TASK-179 is now the lowest-numbered dependency-eligible code task; TASK-185 is independently
 eligible for the MAC programme.
 
 ## Latest implementation milestones

@@ -202,6 +202,12 @@ enforce optimistic versions and audit create/update/void with request correlatio
 Cross-tenant reads/writes fail closed at both command predicates and production RLS.
 Evidence identity is immutable and void is retained instead of hard deletion.
 
+TASK-178 exposes only uploader-scoped extraction candidates and omits raw OCR text.
+Candidate value/source/model/confidence/review facts remain immutable suggestions;
+confirmation writes separate business metadata. Migration 0091 uniquely constrains
+`master_fn + company_fn + evidence_sha256`, so concurrent upload keys cannot confirm
+the same exact file twice. Only exact hashes block; similarity never auto-merges.
+
 The current API is uploader-only and temporarily guarded by
 `employee.receipts.write`; canonical own/company capabilities, sellable module
 entitlement, browser/worker gates and Receipt Pack read/export audits remain required

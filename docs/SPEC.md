@@ -386,8 +386,9 @@ deeper delegation binding and separation-of-duties rules remain later target wor
 The official v1 product name is **Expenses & Tax** and its only primary workflow is
 **Company Receipts**. The current `my-receipts` route remains an actor-owned secure
 capture foundation and compatibility surface; it is not a company receipt register.
-TASK-177 implements migration 0090, the Company Receipt schema/commands and an
-uploader-only `/api/company-receipts` API. The v1 permission set, module-entitlement
+TASK-177/178 implement migrations 0090/0091, the Company Receipt schema/commands, an
+uploader-only `/api/company-receipts` API and an immutable-provenance confirmation
+context with exact-hash duplicate prevention and safe manual OCR fallback. The v1 permission set, module-entitlement
 key, browser route/adapter/UI, company register and Receipt Pack remain pending.
 
 The future implementation must satisfy these binding requirements:
@@ -402,7 +403,9 @@ The future implementation must satisfy these binding requirements:
   hash and governed document lifecycle.
 - Users confirm or correct merchant, receipt/invoice number, `transaction_date`,
   amount, currency, category, business purpose and notes. OCR remains a suggestion;
-  extraction failure cannot block manual completion after the document is safe.
+  extraction failure cannot block manual completion after the document is safe. OCR
+  candidates retain source, model, confidence and review state and are never rewritten
+  by confirmed metadata.
 - TASK-177 register reads are bounded and cursor-paginated but uploader-only under the
   temporary existing `employee.receipts.write` capability. TASK-179/182 must add search
   and canonical own/company scopes without role-name checks before product completion.

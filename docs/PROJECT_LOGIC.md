@@ -388,25 +388,32 @@ domain-approved correction/void/tombstone path, never an ad-hoc physical delete.
 
 ## 6. Company Receipt logic (Expenses & Tax v1)
 
-TASK-177 implements the canonical aggregate and uploader-only API foundation. It does
+TASK-177/178 implement the canonical aggregate, uploader-only API and secure
+capture-to-confirmation foundation. It does
 not yet implement the company-wide register, browser product surface or standalone
-date-range Receipt Pack delivered by TASK-178–183.
+date-range Receipt Pack delivered by TASK-179–183.
 
 ### 6.1 Ownership and evidence
 
 A Company Receipt is a `masterFn + companyFn` business record. It references one
 governed managed-document/version and keeps `uploaderUserId` as audit and current
-TASK-177 visibility attribution. Creation requires the signed-in uploader's current,
+visibility attribution. Creation requires the signed-in uploader's current,
 clean, non-void `purpose='receipt'` document version. It does not require an Employee
 record, `expense_claim`, reimbursement, approval, bank data, GL posting or tax decision.
+Migration 0091 stores the document SHA-256 on the aggregate, backfills existing rows and
+uniquely prevents another receipt with the same exact bytes inside the Company.
 
 ### 6.2 State and confirmation
 
 The schema vocabulary is Draft, Processing, Ready, Needs Attention and Voided. Current
-TASK-177 creation stores Ready even when transaction date is absent; TASK-178–180 own
-the capture/extraction-derived state workflow. Upload/scan/OCR state remains in the
+creation stores Ready even when transaction date is absent; TASK-180 owns the later
+Missing Date workflow. Upload/scan/OCR state remains in the
 document services; confirmed merchant, receipt/invoice number, transaction date,
 amount, currency, category, business purpose and notes belong to the Company Receipt.
+The confirmation context reads candidate value, normalized value, source, model,
+confidence, critical/review state and duplicate warnings without changing extraction
+facts. Clean evidence permits manual entry when extraction is failed, unavailable or
+not started; quarantined/void/stale evidence remains blocked.
 Metadata correction requires `expectedVersion`; evidence/uploader identity is immutable.
 Void requires a reason and retains who/when rather than physically deleting the row.
 
@@ -428,7 +435,8 @@ dependency only: its current source joins `expensePosting`, `expenseClaimLine` a
 business contract.
 
 Current source: `src/data/schema/expenses.ts`, migration
-`drizzle/0090_company_receipts.sql`, `src/modules/expenses/companyReceipt.ts` and
+`drizzle/0090_company_receipts.sql`, `drizzle/0091_sloppy_blackheart.sql`,
+`src/modules/expenses/companyReceipt.ts` and
 `src/api/routes/companyReceipts.ts`. Evidence/upload dependencies remain
 `src/data/schema/documents.ts`, `src/modules/documents/upload.ts`,
 `src/modules/documents/processing.ts` and `src/api/routes/my.ts`; Receipt Pack may reuse

@@ -36,6 +36,7 @@ export const companyReceipt = pgTable('company_receipt', {
     .references(() => managedDocument.id),
   documentVersionId: bigint('document_version_id', { mode: 'number' }).notNull()
     .references(() => documentVersion.id),
+  evidenceSha256: text('evidence_sha256').notNull(),
   uploaderUserId: bigint('uploader_user_id', { mode: 'number' }).notNull()
     .references(() => appUser.userId),
   transactionDate: date('transaction_date'),
@@ -58,6 +59,8 @@ export const companyReceipt = pgTable('company_receipt', {
   uniqueIndex('uq_company_receipt_document').on(t.masterFn, t.companyFn, t.documentId),
   uniqueIndex('uq_company_receipt_document_version')
     .on(t.masterFn, t.companyFn, t.documentVersionId),
+  uniqueIndex('uq_company_receipt_evidence_hash')
+    .on(t.masterFn, t.companyFn, t.evidenceSha256),
   index('idx_company_receipt_uploader')
     .on(t.masterFn, t.companyFn, t.uploaderUserId, t.status, t.id),
   index('idx_company_receipt_transaction_date')
@@ -69,6 +72,8 @@ export const companyReceipt = pgTable('company_receipt', {
   check('ck_company_receipt_number',
     sql`${t.receiptNumber} is null or char_length(${t.receiptNumber}) between 1 and 120`),
   check('ck_company_receipt_amount', sql`${t.amount} > 0`),
+  check('ck_company_receipt_evidence_hash',
+    sql`char_length(${t.evidenceSha256}) = 64 and ${t.evidenceSha256} ~ '^[0-9a-f]{64}$'`),
   check('ck_company_receipt_currency', sql`${t.currencyCode} ~ '^[A-Z]{3}$'`),
   check('ck_company_receipt_category',
     sql`char_length(${t.category}) between 1 and 120`),

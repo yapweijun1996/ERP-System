@@ -1085,10 +1085,12 @@ workflow coverage and physical-device verification remain separate follow-up gat
    `/api/company-receipts` now wrap clean current managed-document evidence with
    optimistic versions, uploader audit and retained void state, without Employee Claim,
    reimbursement, GL or Tax Treatment dependencies.
-2. **Capture and register** (TASK-178–180): reuse 20 MB/20-page validation, IndexedDB,
-   scan/OCR, hashes and lifecycle governance; add user confirmation plus bounded own/
-   company register, search, pagination, inclusive `transaction_date` filters and an
-   actionable Missing Date state.
+2. **Capture and register** (TASK-178 complete; TASK-179/180 pending): the existing
+   20 MB/20-page validation, IndexedDB editing/persistence, scan/OCR and lifecycle
+   pipeline now feeds an immutable-provenance confirmation context. Migration 0091
+   prevents an exact evidence hash from becoming two Company Receipts, while safe OCR
+   failure still permits manual confirmation. Bounded own/company register, search,
+   pagination, inclusive `transaction_date` filters and Missing Date remain pending.
 3. **Receipt Pack** (TASK-181): preview the complete matching set, produce an A4
    register followed by readable originals, preserve multi-page PDFs and group totals
    by currency before offering browser Print.
@@ -1097,9 +1099,9 @@ workflow coverage and physical-device verification remain separate follow-up gat
    prove Demo/PGlite and PostgreSQL/API parity, then run desktop/mobile and release
    gates before updating final status and KB evidence.
 
-Phase status is **in progress**. TASK-177 delivered the canonical model/API and
-PGlite/PostgreSQL RLS proof without production deployment. TASK-178 is now eligible and
-owns secure capture-to-confirmation integration; later tasks still own the register,
+Phase status is **in progress**. TASK-177/178 delivered the canonical model/API and
+secure capture-to-confirmation integration with PGlite/PostgreSQL RLS proof and no
+production deployment. TASK-179 is now eligible; later tasks still own the register,
 date range, Receipt Pack, entitlement, canonical permissions, UI and release proof.
 
 Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`

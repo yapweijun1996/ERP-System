@@ -155,15 +155,16 @@ restricted to direct reports or an explicitly granted reporting tree.
 
 ## Expenses & Tax v1 parity
 
-TASK-177 adds `company_receipt` to the shared Drizzle/PGlite and PostgreSQL schema and
+TASK-177/178 add `company_receipt` plus exact-hash confirmation rules to the shared Drizzle/PGlite and PostgreSQL schema and
 implements the same transactional domain commands behind `/api/company-receipts`.
-Focused PGlite domain/API tests and a disposable non-superuser PostgreSQL RLS lifecycle
+Focused PGlite domain/API/capture tests and a disposable non-superuser PostgreSQL RLS lifecycle
 test prove the backend foundation in both database modes. Existing Demo My Receipts
-still provides IndexedDB drafts and shared document-processing state, while the Demo
+provides camera/file IndexedDB drafts, crop/rotate/compress, retry and refresh persistence
+through the shared validation/storage contract, while the Demo
 adapter has no Company Receipt browser register/export and Tax Evidence package
 generation remains API-only.
 
-TASK-178–183 must continue using the shared schema/domain contract in both adapters.
+TASK-179–183 must continue using the shared schema/domain contract in both adapters.
 Browser PGlite proof
 must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence is real;
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,

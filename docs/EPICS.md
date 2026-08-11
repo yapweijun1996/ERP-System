@@ -2377,10 +2377,11 @@ then preview/export/print the complete set.
 
 Current boundary (source-verified 2026-08-11): managed-document upload, scan, OCR,
 IndexedDB drafts, version/hash governance and posted-claim Tax Evidence PDF utilities
-exist. TASK-177 additionally delivers migration 0090, the independent Company Receipt
-aggregate and `/api/company-receipts` uploader-scoped CRUD/void boundary. The
-`Expenses & Tax` module entitlement, browser/Demo adapter, company register,
-confirmation/correction workflow and standalone Receipt Pack remain pending.
+exist. TASK-177 delivers migration 0090 and the independent Company Receipt aggregate/API;
+TASK-178 adds migration 0091 exact-hash uniqueness plus an uploader-scoped confirmation
+context over immutable OCR provenance and safe manual fallback. The `Expenses & Tax`
+module entitlement, browser Company Receipts adapter/register and standalone Receipt
+Pack remain pending.
 
 - [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
       current source, approved scope, architecture, backlog and KB without changing
@@ -2390,9 +2391,10 @@ confirmation/correction workflow and standalone Receipt Pack remain pending.
       derive tenant scope from Session and keep Expense Claim optional and separate.
       Delivered with optimistic versioning, retained void state, audit, clean-evidence
       enforcement and PGlite/PostgreSQL RLS proof.
-- [ ] **TASK-178 — Reuse secure capture and add receipt confirmation.** Route camera/
-      file upload through existing validation, storage, scan and OCR; preserve originals
-      and allow authorised manual correction after a safe OCR failure.
+- [x] **TASK-178 — Reuse secure capture and add receipt confirmation.** Reuse camera/
+      file/IndexedDB upload through existing validation, storage, scan and OCR; expose
+      immutable candidate provenance and safe manual correction, and prevent a second
+      Company Receipt from the same exact evidence hash.
 - [ ] **TASK-179 — Build the permission-scoped Company Receipts register.** Support own
       and company views through canonical capabilities, bounded query/pagination and
       responsive register/card layouts without role-name authorization.
@@ -2410,7 +2412,7 @@ confirmation/correction workflow and standalone Receipt Pack remain pending.
       focused/full gates, then report the exact implemented boundary.
 
 Dependencies are deliberate. TASK-177 consumed TASK-174's authorization invalidation
-boundary and TASK-176's contract; TASK-178–183 now follow the data, capture, register,
+boundary and TASK-176's contract; TASK-179–183 now follow the register,
 range, export, parity and release-proof order. Existing EPIC-054–056 functionality is
 preserved as reusable infrastructure or future/optional scope, not duplicated.
 

@@ -6,6 +6,7 @@ import {
   CompanyReceiptError,
   createCompanyReceiptWithin,
   listCompanyReceiptsWithin,
+  readCompanyReceiptConfirmationWithin,
   readCompanyReceiptWithin,
   updateCompanyReceiptWithin,
   voidCompanyReceiptWithin,
@@ -103,6 +104,41 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           scope: 'uploader',
           limit,
           nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/confirmations/:documentVersionId', async (req, res) => {
+    const session = await requireReceiptAccess(req, res);
+    if (!session) return;
+    const documentVersionId = positiveId(req.params.documentVersionId);
+    if (!documentVersionId) {
+      apiError(
+        res,
+        400,
+        'company_receipt_document_version_invalid',
+        'documentVersionId must be a positive integer.',
+      );
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, (tx) =>
+        readCompanyReceiptConfirmationWithin(
+          tx,
+          scope,
+          session.userId,
+          documentVersionId,
+        ));
+      res.json({
+        data,
+        meta: {
+          scope: 'uploader',
+          ocrIsSuggestionOnly: true,
+          originalPreserved: true,
         },
       });
     } catch (error) {

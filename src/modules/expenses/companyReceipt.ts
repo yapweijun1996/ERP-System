@@ -1,15 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import Decimal from 'decimal.js';
-import { and, desc, eq, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, lt } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
   appUser,
   companyReceipt,
   currency as currencyTable,
+  documentExtraction,
+  documentExtractionField,
   documentScanJob,
   documentVersion,
   managedDocument,
+  receiptInboxItem,
 } from '../../data/schema';
 
 export class CompanyReceiptError extends Error {
@@ -268,13 +271,14 @@ async function assertGovernedEvidence(
   actorUserId: number,
   documentId: number,
   documentVersionId: number,
-): Promise<void> {
+): Promise<string> {
   const [evidence] = await exec.select({
     documentId: managedDocument.id,
     ownerUserId: managedDocument.ownerUserId,
     recordStatus: managedDocument.recordStatus,
     currentVersionNo: managedDocument.currentVersionNo,
     versionNo: documentVersion.versionNo,
+    sha256: documentVersion.sha256,
   }).from(managedDocument)
     .innerJoin(documentVersion, and(
       eq(documentVersion.masterFn, managedDocument.masterFn),
@@ -327,6 +331,7 @@ async function assertGovernedEvidence(
       409,
     );
   }
+  return evidence.sha256;
 }
 
 const receiptProjection = {
@@ -336,6 +341,7 @@ const receiptProjection = {
   documentVersionId: companyReceipt.documentVersionId,
   documentVersionNo: documentVersion.versionNo,
   documentSha256: documentVersion.sha256,
+  evidenceSha256: companyReceipt.evidenceSha256,
   originalFileName: managedDocument.originalFileName,
   uploaderUserId: companyReceipt.uploaderUserId,
   uploaderName: appUser.fullName,
@@ -418,6 +424,163 @@ export async function readCompanyReceiptWithin(
   return row;
 }
 
+/** Read-only bridge from governed extraction provenance to user-confirmed receipt
+ * facts. OCR candidates are suggestions only and are never rewritten here. */
+export async function readCompanyReceiptConfirmationWithin(
+  exec: DB,
+  scope: Scope,
+  actorUserId: number,
+  documentVersionId: number,
+) {
+  const [evidence] = await exec.select({
+    documentId: managedDocument.id,
+    documentVersionId: documentVersion.id,
+    originalFileName: managedDocument.originalFileName,
+    recordStatus: managedDocument.recordStatus,
+    currentVersionNo: managedDocument.currentVersionNo,
+    versionNo: documentVersion.versionNo,
+    sha256: documentVersion.sha256,
+    scanStatus: documentScanJob.status,
+    extractionId: documentExtraction.id,
+    extractionStatus: documentExtraction.status,
+    extractionProvider: documentExtraction.provider,
+    extractionModel: documentExtraction.model,
+    inboxStatus: receiptInboxItem.status,
+    reviewReasons: receiptInboxItem.reviewReasons,
+    duplicateOfVersionId: receiptInboxItem.duplicateOfVersionId,
+  }).from(managedDocument)
+    .innerJoin(documentVersion, and(
+      eq(documentVersion.masterFn, managedDocument.masterFn),
+      eq(documentVersion.companyFn, managedDocument.companyFn),
+      eq(documentVersion.documentId, managedDocument.id),
+      eq(documentVersion.id, documentVersionId),
+    ))
+    .leftJoin(documentScanJob, and(
+      eq(documentScanJob.masterFn, documentVersion.masterFn),
+      eq(documentScanJob.companyFn, documentVersion.companyFn),
+      eq(documentScanJob.versionId, documentVersion.id),
+    ))
+    .leftJoin(documentExtraction, and(
+      eq(documentExtraction.masterFn, documentVersion.masterFn),
+      eq(documentExtraction.companyFn, documentVersion.companyFn),
+      eq(documentExtraction.versionId, documentVersion.id),
+      eq(documentExtraction.extractionVersion, 1),
+    ))
+    .leftJoin(receiptInboxItem, and(
+      eq(receiptInboxItem.masterFn, documentVersion.masterFn),
+      eq(receiptInboxItem.companyFn, documentVersion.companyFn),
+      eq(receiptInboxItem.versionId, documentVersion.id),
+    ))
+    .where(and(
+      eq(managedDocument.masterFn, scope.masterFn),
+      eq(managedDocument.companyFn, scope.companyFn),
+      eq(managedDocument.ownerUserId, actorUserId),
+      eq(managedDocument.purpose, 'receipt'),
+    ))
+    .limit(1);
+  if (!evidence) {
+    invalid(
+      'company_receipt_evidence_not_found',
+      'Receipt evidence was not found in the active company.',
+      404,
+    );
+  }
+
+  const candidates = evidence.extractionId == null ? [] : await exec.select({
+    fieldKey: documentExtractionField.fieldKey,
+    candidateNo: documentExtractionField.candidateNo,
+    valueText: documentExtractionField.valueText,
+    normalizedValue: documentExtractionField.normalizedValue,
+    sourceType: documentExtractionField.sourceType,
+    sourceRef: documentExtractionField.sourceRef,
+    model: documentExtractionField.model,
+    confidence: documentExtractionField.confidence,
+    critical: documentExtractionField.critical,
+    reviewState: documentExtractionField.reviewState,
+  }).from(documentExtractionField).where(and(
+    eq(documentExtractionField.masterFn, scope.masterFn),
+    eq(documentExtractionField.companyFn, scope.companyFn),
+    eq(documentExtractionField.extractionId, evidence.extractionId),
+  )).orderBy(
+    asc(documentExtractionField.fieldKey),
+    asc(documentExtractionField.candidateNo),
+  );
+
+  const [existingReceipt] = await exec.select({
+    id: companyReceipt.id,
+    status: companyReceipt.status,
+    version: companyReceipt.version,
+    documentVersionId: companyReceipt.documentVersionId,
+  }).from(companyReceipt).where(and(
+    eq(companyReceipt.masterFn, scope.masterFn),
+    eq(companyReceipt.companyFn, scope.companyFn),
+    eq(companyReceipt.evidenceSha256, evidence.sha256),
+  )).limit(1);
+
+  const byKey = new Map<string, typeof candidates[number]>();
+  for (const candidate of candidates) {
+    if (candidate.reviewState === 'conflict') continue;
+    const selected = byKey.get(candidate.fieldKey);
+    if (!selected || Number(candidate.confidence) > Number(selected.confidence)) {
+      byKey.set(candidate.fieldKey, candidate);
+    }
+  }
+  const suggestion = (fieldKey: string, normalized = false) => {
+    const candidate = byKey.get(fieldKey);
+    if (!candidate) return null;
+    return normalized ? candidate.normalizedValue : candidate.valueText;
+  };
+  const reviewReasons = evidence.reviewReasons ?? [];
+  const warnings = Array.from(new Set([
+    ...reviewReasons,
+    ...(evidence.extractionStatus === 'failed' ? ['ocr_failed'] : []),
+    ...(evidence.extractionStatus === 'unavailable' ? ['ocr_unavailable'] : []),
+    ...(!evidence.extractionStatus || ['queued', 'extracting'].includes(evidence.extractionStatus)
+      ? ['ocr_pending'] : []),
+    ...(existingReceipt && existingReceipt.documentVersionId !== evidence.documentVersionId
+      ? ['exact_duplicate_confirmed'] : []),
+    ...(existingReceipt && existingReceipt.documentVersionId === evidence.documentVersionId
+      ? ['already_confirmed'] : []),
+  ]));
+  const evidenceCurrent = evidence.recordStatus !== 'voided'
+    && evidence.currentVersionNo === evidence.versionNo;
+  const manualConfirmationAllowed = evidence.scanStatus === 'clean'
+    && evidenceCurrent
+    && !existingReceipt;
+
+  return {
+    evidence: {
+      documentId: evidence.documentId,
+      documentVersionId: evidence.documentVersionId,
+      originalFileName: evidence.originalFileName,
+      sha256: evidence.sha256,
+      scanStatus: evidence.scanStatus ?? 'missing',
+      recordStatus: evidence.recordStatus,
+      current: evidence.currentVersionNo === evidence.versionNo,
+    },
+    extraction: {
+      status: evidence.extractionStatus ?? 'not_started',
+      provider: evidence.extractionProvider ?? null,
+      model: evidence.extractionModel ?? null,
+      inboxStatus: evidence.inboxStatus ?? null,
+      reviewReasons,
+      duplicateOfVersionId: evidence.duplicateOfVersionId ?? null,
+      candidates,
+    },
+    suggestedMetadata: {
+      transactionDate: suggestion('transaction_date', true),
+      merchant: suggestion('merchant_name'),
+      receiptNumber: suggestion('receipt_number'),
+      amount: suggestion('total_amount', true),
+      currency: suggestion('currency', true),
+    },
+    existingReceipt: existingReceipt ?? null,
+    warnings,
+    manualConfirmationAllowed,
+    provenanceImmutable: true,
+  };
+}
+
 export async function createCompanyReceiptWithin(
   exec: DB,
   scope: Scope,
@@ -428,23 +591,54 @@ export async function createCompanyReceiptWithin(
   const documentVersionId = positiveId(input.documentVersionId, 'documentVersionId');
   const fields = metadata(input);
   await assertCurrency(exec, fields.currencyCode);
-  await assertGovernedEvidence(
+  const evidenceSha256 = await assertGovernedEvidence(
     exec,
     scope,
     actorUserId,
     documentId,
     documentVersionId,
   );
+  const [exactDuplicate] = await exec.select({ id: companyReceipt.id })
+    .from(companyReceipt)
+    .where(and(
+      eq(companyReceipt.masterFn, scope.masterFn),
+      eq(companyReceipt.companyFn, scope.companyFn),
+      eq(companyReceipt.evidenceSha256, evidenceSha256),
+    )).limit(1);
+  if (exactDuplicate) {
+    invalid(
+      'company_receipt_exact_duplicate',
+      'This exact receipt evidence is already confirmed in the active company.',
+      409,
+      { documentVersionId: `Existing Company Receipt ${exactDuplicate.id} uses the same file hash.` },
+    );
+  }
   const [inserted] = await exec.insert(companyReceipt).values({
     ...scope,
     receiptKey: `company-receipt:${randomUUID()}`,
     documentId,
     documentVersionId,
+    evidenceSha256,
     uploaderUserId: actorUserId,
     ...fields,
     status: 'ready',
   }).onConflictDoNothing().returning({ id: companyReceipt.id });
   if (!inserted) {
+    const [duplicate] = await exec.select({ id: companyReceipt.id })
+      .from(companyReceipt)
+      .where(and(
+        eq(companyReceipt.masterFn, scope.masterFn),
+        eq(companyReceipt.companyFn, scope.companyFn),
+        eq(companyReceipt.evidenceSha256, evidenceSha256),
+      )).limit(1);
+    if (duplicate) {
+      invalid(
+        'company_receipt_exact_duplicate',
+        'This exact receipt evidence is already confirmed in the active company.',
+        409,
+        { documentVersionId: `Existing Company Receipt ${duplicate.id} uses the same file hash.` },
+      );
+    }
     invalid(
       'company_receipt_evidence_conflict',
       'This governed document is already linked to a Company Receipt.',
