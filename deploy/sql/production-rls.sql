@@ -60,6 +60,7 @@ DECLARE
     'document_extraction_field', 'receipt_upload_authorization', 'receipt_inbox_item',
     'document_governance_event', 'document_correction',
     'document_purge_request', 'document_tombstone', 'document_access_event',
+    'company_receipt',
     'expense_category', 'expense_policy', 'expense_policy_version',
     'expense_line_policy_snapshot', 'expense_bank_charge_override',
     'expense_claim', 'expense_claim_line', 'expense_allocation',

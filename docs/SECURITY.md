@@ -189,19 +189,24 @@ for delivery. It does not receive general tenant bypass. Jobs revalidate current
 appointment revision, recipient and connection state; stale work is superseded, and an
 external calendar remains a one-way projection rather than a source of ERP truth.
 
-## Planned Company Receipt security invariants
+## Company Receipt security invariants
 
-Expenses & Tax v1 must reuse existing document validation and custody: declared MIME,
+Expenses & Tax v1 reuses existing document validation and custody: declared MIME,
 extension and magic bytes agree; 20 MB/20-page limits apply; unknown/infected scan
 states fail closed; originals, hashes and versions remain preserved; and sensitive
 view/download/print/export operations are audited with no-store delivery.
 
-Company Receipt and Receipt Pack operations derive tenant scope from Session, enforce
-registered capabilities and module entitlement on UI/API/worker paths, and never trust
-client `masterFn`, `companyFn`, uploader or company-read scope. Exact hash duplicates
-may warn/prevent accidental storage, but merchant/date/amount similarity must not
-auto-delete or merge evidence. Governed evidence is voided/corrected rather than
-silently hard-deleted. These are planned requirements, not current v1 proof.
+TASK-177 Company Receipt operations derive tenant/uploader scope from Session, reject
+nested client `masterFn`/`companyFn`, require current uploader-owned clean evidence,
+enforce optimistic versions and audit create/update/void with request correlation.
+Cross-tenant reads/writes fail closed at both command predicates and production RLS.
+Evidence identity is immutable and void is retained instead of hard deletion.
+
+The current API is uploader-only and temporarily guarded by
+`employee.receipts.write`; canonical own/company capabilities, sellable module
+entitlement, browser/worker gates and Receipt Pack read/export audits remain required
+by TASK-179–182. Exact hash duplicates may warn/prevent accidental storage, but
+merchant/date/amount similarity must never auto-delete or merge evidence.
 
 ## Planned platform-owned Module Access Control security boundary
 

@@ -179,18 +179,27 @@ This architecture is designed for a **production database of 100 GB to 800 GB**.
 assumption drives schema, indexing, pagination, and deployment choices throughout — it is
 not an afterthought. See [SCALABILITY.md](SCALABILITY.md).
 
-## 9. Planned Expenses & Tax vertical slice
+## 9. Expenses & Tax vertical slice
 
-Expenses & Tax v1 will be a normal registered ERP module, not a disconnected receipt
-mini-app. Its Company Receipt aggregate will own confirmed company-scoped metadata and
+Expenses & Tax v1 is being built as a normal registered ERP module, not a disconnected
+receipt mini-app. Its Company Receipt aggregate owns confirmed company-scoped metadata and
 reference the existing managed-document/version boundary for bytes, scan, OCR, hash,
 retention and audit. The existing Employee Claim and Tax Evidence aggregates remain
 separate consumers/flows; Company Receipts must work without either one.
 
-The module is not implemented as of 2026-08-11. Registration must land together across
-the backend module catalog, resource/action authorization, route/access matrix,
-Demo/API adapters and PWA navigation so unknown or disabled access continues to fail
-closed. See [SPEC.md](SPEC.md) and [EPICS.md](EPICS.md) for the approved boundary.
+TASK-177 delivers the first backend slice: migration 0090, a tenant-scoped
+`company_receipt` table, transactional create/read/list/update/void commands and
+`/api/company-receipts`. The route derives tenant/uploader identity from Session,
+requires current clean managed-document evidence, uses optimistic concurrency and
+audits mutations. Its current visibility is intentionally uploader-only and uses the
+existing `employee.receipts.write` capability until TASK-179/182 add canonical
+own/company scopes and module permissions.
+
+The browser adapter/UI, range register, Receipt Pack and sellable module are not yet
+implemented. Registration must land together across the backend module catalog,
+resource/action authorization, route/access matrix, Demo/API adapters and PWA
+navigation so unknown or disabled access continues to fail closed. See
+[SPEC.md](SPEC.md) and [EPICS.md](EPICS.md) for the remaining boundary.
 
 ## 10. Planned commercial Module Catalog and platform realm
 

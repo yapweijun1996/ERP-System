@@ -153,14 +153,18 @@ IndexedDB converges on the same fixed business-date calendar as a fresh installa
 Company Owner receives company-wide privacy-redacted calendar scope; managers remain
 restricted to direct reports or an explicitly granted reporting tree.
 
-## Planned Expenses & Tax v1 parity
+## Expenses & Tax v1 parity
 
-Company Receipts is not implemented in Demo or API mode as of 2026-08-11. Existing
-Demo My Receipts proves PGlite-backed upload metadata, IndexedDB drafts and shared
-document-processing state, but the Demo adapter intentionally reports Tax Evidence
-package generation as API-only and has no standalone Company Receipt register/export.
+TASK-177 adds `company_receipt` to the shared Drizzle/PGlite and PostgreSQL schema and
+implements the same transactional domain commands behind `/api/company-receipts`.
+Focused PGlite domain/API tests and a disposable non-superuser PostgreSQL RLS lifecycle
+test prove the backend foundation in both database modes. Existing Demo My Receipts
+still provides IndexedDB drafts and shared document-processing state, while the Demo
+adapter has no Company Receipt browser register/export and Tax Evidence package
+generation remains API-only.
 
-TASK-177–183 must use the shared schema/domain contract in both adapters. PGlite proof
+TASK-178–183 must continue using the shared schema/domain contract in both adapters.
+Browser PGlite proof
 must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence is real;
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,
 preview or export acceptance.

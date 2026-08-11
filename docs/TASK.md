@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **176**
+- Done: **177**
 - In progress: **0**
-- Todo: **11**
+- Todo: **10**
 - Blocked: **1**
 - Total: **188**
 
@@ -43,7 +43,7 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | Task | Status | Purpose |
 | --- | --- | --- |
 | TASK-176 | Done | Source-audit and document the approved Company Receipts-only v1 boundary; synchronize KB without code or deployment |
-| TASK-177 | Todo | Company Receipt canonical model and API; depends on TASK-174 and TASK-176 |
+| TASK-177 | Done | Migration 0090, Company Receipt aggregate/domain/API, optimistic concurrency, audit and PGlite/PostgreSQL RLS proof |
 | TASK-178 | Todo | Reuse managed-document capture/scan/OCR and add manual confirmation/correction |
 | TASK-179 | Todo | Permission-scoped own/company register and responsive UI |
 | TASK-180 | Todo | Inclusive transaction-date range, search, pagination and Missing Date behavior |
@@ -69,10 +69,11 @@ TASK-174 has closed the cache/direct-URL dependency, so TASK-185 is now eligible
 current application remains tenant-controlled until TASK-185 and TASK-186 are delivered;
 TASK-184 did not change code, schema, routes, permissions or production.
 
-TASK-176 changes documentation, planning and knowledge only. The implementation tasks
-remain todo; no existing My Receipts or Tax Evidence route is reclassified as the
-finished Expenses & Tax v1. TASK-177 is now the lowest-numbered dependency-eligible
-code task; TASK-185 is independently eligible for the MAC programme.
+TASK-177 is the first implemented Expenses & Tax slice. It adds the aggregate and
+uploader-only API but not the customer-facing register, capture/confirmation adapter,
+date range, Receipt Pack, module entitlement or final canonical permission set. TASK-178
+is now the lowest-numbered dependency-eligible code task; TASK-185 is independently
+eligible for the MAC programme.
 
 ## Latest implementation milestones
 

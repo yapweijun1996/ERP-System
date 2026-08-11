@@ -624,6 +624,20 @@
       "when": 1786318264341,
       "tag": "0088_early_marvel_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1786321800000,
+      "tag": "0089_company_owner_cutover",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1786445646188,
+      "tag": "0090_company_receipts",
+      "breakpoints": true
     }
   ]
 }

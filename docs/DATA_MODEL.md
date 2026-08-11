@@ -873,20 +873,25 @@ expand/backfill migration; legacy rows are retained during compatibility rollout
 All company-owned additions carry `master_fn` and `company_fn` and participate in
 production RLS.
 
-## 10. Planned Company Receipt aggregate (EPIC-063)
+## 10. Company Receipt aggregate (EPIC-063 / TASK-177)
 
-No Company Receipt table exists in the current schema. The existing
-`managed_document`, `document_version`, scan/extraction tables and
-`receipt_inbox_item` provide governed actor-owned evidence, while current transaction
-date, merchant and amount facts become authoritative only inside an Expense Claim line.
+Migration 0090 adds `company_receipt` through the shared Drizzle schema used by
+PostgreSQL and PGlite. Each row carries `master_fn`, `company_fn`, an immutable unique
+receipt key, a governed `managed_document`/`document_version` reference, uploader,
+confirmed transaction date/merchant/receipt number/amount/currency/category/business
+purpose/notes, state, optimistic `version`, timestamps and retained void attribution.
+The row and evidence records each carry tenant columns; application commands join and
+predicate every reference by the active tenant and additionally require the referenced
+version to be current, uploader-owned, non-void and clean. Production RLS supplies the
+database tenant boundary around those commands.
 
-TASK-177 will add the minimum company-scoped aggregate required to confirm basic
-receipt metadata without a claim. The logical record carries `master_fn`, `company_fn`,
-a managed-document/version reference, transaction date, merchant, receipt/invoice
-number, currency, amount, category, business purpose, notes, uploader audit fields,
-state and optimistic version. It must not duplicate document bytes/OCR provenance or
-add GL, reimbursement or tax-treatment fields. Every new company-owned table requires
-the shared Drizzle/PGlite schema path and production RLS coverage.
+The aggregate does not duplicate bytes, scan/OCR provenance or document hashes and has
+no Employee, Expense Claim, reimbursement, GL or tax-treatment foreign key. Current
+TASK-177 commands create `ready` rows (transaction date may remain null), permit
+versioned metadata correction, and transition to `voided` without physical deletion.
+The wider Draft/Processing/Needs Attention workflow remains target state vocabulary for
+TASK-178–180. `company_receipt` is included in production tenant RLS and has PGlite plus
+non-superuser PostgreSQL isolation proof.
 
 ## 11. Planned platform module entitlement data changes (EPIC-064)
 

@@ -386,34 +386,39 @@ every enum value has a public transition without checking the current route/acti
 registry. Submitted facts are revisioned and hashed; a “remove” operation must be a
 domain-approved correction/void/tombstone path, never an ad-hoc physical delete.
 
-## 6. Planned Company Receipt logic (Expenses & Tax v1)
+## 6. Company Receipt logic (Expenses & Tax v1)
 
-This section records an approved target, not current behavior. The current source has
-an actor-owned receipt upload/list path and a posted-claim Tax Evidence path; it has no
-company-wide Company Receipt aggregate or standalone date-range Receipt Pack.
+TASK-177 implements the canonical aggregate and uploader-only API foundation. It does
+not yet implement the company-wide register, browser product surface or standalone
+date-range Receipt Pack delivered by TASK-178–183.
 
 ### 6.1 Ownership and evidence
 
-A Company Receipt is primarily a `masterFn + companyFn` business record. It references
-one governed managed-document/version and keeps `uploadedByUser` only as audit
-attribution. It must be creatable by an authorised Company Owner, Finance user or
-contributor without requiring an Employee record, `expense_claim`, reimbursement,
-approval, bank data, GL posting or a tax decision.
+A Company Receipt is a `masterFn + companyFn` business record. It references one
+governed managed-document/version and keeps `uploaderUserId` as audit and current
+TASK-177 visibility attribution. Creation requires the signed-in uploader's current,
+clean, non-void `purpose='receipt'` document version. It does not require an Employee
+record, `expense_claim`, reimbursement, approval, bank data, GL posting or tax decision.
 
 ### 6.2 State and confirmation
 
-The minimal user-facing states are Draft, Processing, Ready, Needs Attention and
-Voided. Upload/scan/OCR state remains in the document services; confirmed merchant,
-receipt/invoice number, transaction date, amount, currency, category, business purpose
-and notes belong to the Company Receipt. OCR failure leaves the safe original intact
-and permits manual confirmation. Missing transaction date produces Needs Attention.
+The schema vocabulary is Draft, Processing, Ready, Needs Attention and Voided. Current
+TASK-177 creation stores Ready even when transaction date is absent; TASK-178–180 own
+the capture/extraction-derived state workflow. Upload/scan/OCR state remains in the
+document services; confirmed merchant, receipt/invoice number, transaction date,
+amount, currency, category, business purpose and notes belong to the Company Receipt.
+Metadata correction requires `expectedVersion`; evidence/uploader identity is immutable.
+Void requires a reason and retains who/when rather than physically deleting the row.
 
 ### 6.3 Register, date range and Receipt Pack
 
-Company reads are permission- and tenant-scoped, bounded and server/query-side. Search
-matches merchant, receipt/invoice number, notes and category. Date range is inclusive
-on company-local `transaction_date`; missing-date records stay visible in the register
-but are excluded from a package with an actionable warning.
+Current reads derive `masterFn`, `companyFn` and actor from Session, require the existing
+`employee.receipts.write` capability, restrict rows to that uploader and paginate by
+bounded `afterId`. TASK-179 replaces that transitional scope with canonical own/company
+permissions and adds server-side search matching merchant, receipt/invoice number,
+notes and category. Date range is inclusive on company-local `transaction_date`;
+missing-date records stay visible in the future register but are excluded from a package
+with an actionable warning.
 
 Preview/export resolves the complete matching set independently of UI pagination,
 orders it chronologically and generates a register plus each original receipt. Totals
@@ -422,11 +427,12 @@ dependency only: its current source joins `expensePosting`, `expenseClaimLine` a
 `receiptInboxItem` and filters posting dates, so it is not the Company Receipt query or
 business contract.
 
-Sources audited 2026-08-11: `src/data/schema/documents.ts`,
-`src/modules/documents/upload.ts`, `src/modules/documents/processing.ts`,
-`src/api/routes/my.ts`, `web/public/assets/screens-hr.js`,
-`src/modules/expenses/taxEvidence.ts`, `src/auth/moduleAccess.ts` and
-`src/auth/accessMatrix.ts`.
+Current source: `src/data/schema/expenses.ts`, migration
+`drizzle/0090_company_receipts.sql`, `src/modules/expenses/companyReceipt.ts` and
+`src/api/routes/companyReceipts.ts`. Evidence/upload dependencies remain
+`src/data/schema/documents.ts`, `src/modules/documents/upload.ts`,
+`src/modules/documents/processing.ts` and `src/api/routes/my.ts`; Receipt Pack may reuse
+`src/modules/expenses/taxEvidence.ts` readers without adopting its claim business model.
 
 ## 7. Cross-cutting safety rules
 
@@ -452,7 +458,7 @@ Sources audited 2026-08-11: `src/data/schema/documents.ts`,
 | Leave balance/policy | `src/modules/hr/leaveBalance.ts`, `leavePolicy.ts` | `src/modules/hr/leaveBalance.test.ts`, `leavePolicy.test.ts` |
 | Staff Calendar | `src/modules/hr/appointment.ts`, `calendarSync.ts`, `teamCalendar.ts` | `src/modules/hr/appointment.test.ts`, `teamCalendar.test.ts`, `src/api/hrCalendar.integration.test.ts` |
 | Expense Claim | `src/modules/expenses/claims.ts`, `controls.ts`, `postings.ts` | `src/modules/expenses/claims.test.ts`, `controls.test.ts`, `postings.test.ts` |
-| Company Receipts v1 target | managed-document and expense PDF sources listed in section 6 | TASK-177–183 (planned; no implementation tests yet) |
+| Company Receipt foundation | `src/data/schema/expenses.ts`, `src/modules/expenses/companyReceipt.ts`, `src/api/routes/companyReceipts.ts` | `src/modules/expenses/companyReceipt.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/api/postgresSecurity.integration.test.ts` |
 | Claim downstream | `src/modules/expenses/reimbursementBatches.ts`, `reimbursementPayments.ts` | matching module tests |
 | Project Progress Claim | `src/modules/project/progressClaim.ts` | project module/API tests where registered |
 

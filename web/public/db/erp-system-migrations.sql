@@ -11602,3 +11602,570 @@ DO $$ BEGIN
  ALTER TABLE "support_access_grant" ADD CONSTRAINT "fk_support_access_grant_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN null;
 END $$;
+
+-- 0086_youthful_mac_gargan
+CREATE TABLE IF NOT EXISTS "user_company_role_scope" (
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"assignment_id" bigint NOT NULL,
+	"resource_key" text NOT NULL,
+	"scope" text NOT NULL,
+	"target_type" text DEFAULT 'none' NOT NULL,
+	"target_id" text DEFAULT '' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "user_company_role_scope_assignment_id_resource_key_target_type_target_id_pk" PRIMARY KEY("assignment_id","resource_key","target_type","target_id"),
+	CONSTRAINT "ck_user_company_role_scope_value" CHECK ("user_company_role_scope"."scope" in ('self', 'team', 'department', 'company')),
+	CONSTRAINT "ck_user_company_role_scope_target" CHECK (("user_company_role_scope"."target_type" = 'none' and "user_company_role_scope"."target_id" = '') or ("user_company_role_scope"."target_type" <> 'none' and char_length("user_company_role_scope"."target_id") > 0))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "assignment_id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY (sequence name "user_company_role_assignment_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1);
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "valid_from" timestamp with time zone DEFAULT now() NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "valid_until" timestamp with time zone;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "assigned_by_user_id" bigint;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "assignment_source" text DEFAULT 'legacy_backfill' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "assignment_reason" text;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "revoked_at" timestamp with time zone;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "revoked_by_user_id" bigint;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "revocation_reason" text;
+--> statement-breakpoint
+
+ALTER TABLE "user_company_role" ADD COLUMN IF NOT EXISTS "scope_backfilled_at" timestamp with time zone;
+--> statement-breakpoint
+
+-- The surrogate assignment id is now authoritative. Existing composite-key
+-- lookup code remains valid, but it no longer prevents multiple independent
+-- assignments for the same principal/role.
+ALTER TABLE "user_company_role" DROP CONSTRAINT IF EXISTS "user_company_role_user_id_company_fn_role_id_pk";
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_company_role" ADD CONSTRAINT "user_company_role_assignment_id_pk" PRIMARY KEY ("assignment_id");
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_user_company_role_assignment_id" ON "user_company_role" USING btree ("assignment_id");
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_company_role_scope" ADD CONSTRAINT "user_company_role_scope_assignment_id_user_company_role_assignment_id_fk" FOREIGN KEY ("assignment_id") REFERENCES "public"."user_company_role"("assignment_id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_user_company_role_scope_tenant" ON "user_company_role_scope" USING btree ("master_fn","company_fn","resource_key","scope","target_type","target_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_user_company_role_scope_assignment" ON "user_company_role_scope" USING btree ("assignment_id","resource_key");
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_company_role" ADD CONSTRAINT "user_company_role_assigned_by_user_id_app_user_user_id_fk" FOREIGN KEY ("assigned_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_company_role" ADD CONSTRAINT "user_company_role_revoked_by_user_id_app_user_user_id_fk" FOREIGN KEY ("revoked_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_user_company_role_active" ON "user_company_role" USING btree ("company_fn","user_id","valid_from","valid_until","revoked_at");
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_company_role" ADD CONSTRAINT "ck_user_company_role_valid_window" CHECK ("user_company_role"."valid_until" is null or "user_company_role"."valid_until" > "user_company_role"."valid_from");
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_company_role" ADD CONSTRAINT "ck_user_company_role_assignment_source" CHECK ("user_company_role"."assignment_source" in ('manual', 'system', 'invitation', 'onboarding', 'legacy_backfill'));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+-- Preserve the original effective start for legacy assignments; newly
+-- inserted assignments continue to use the default current timestamp.
+UPDATE "user_company_role"
+SET "valid_from" = "created_at"
+WHERE "valid_from" > "created_at";
+--> statement-breakpoint
+
+-- Expand/backfill: copy every existing role-level scope to each stable
+-- assignment before the application reads assignment-owned scopes. The
+-- `none` target preserves the legacy actor-relative semantics; a future
+-- target row can be added without duplicating the reusable role.
+INSERT INTO "user_company_role_scope" (
+  "master_fn", "company_fn", "assignment_id", "resource_key", "scope",
+  "target_type", "target_id", "created_at", "updated_at"
+)
+SELECT
+  role."master_fn", assignment."company_fn", assignment."assignment_id",
+  legacy_scope."resource_key", legacy_scope."scope", 'none', '', now(), now()
+FROM "user_company_role" assignment
+JOIN "role" role
+  ON role."role_id" = assignment."role_id"
+JOIN "role_resource_scope" legacy_scope
+  ON legacy_scope."role_id" = assignment."role_id"
+ AND legacy_scope."master_fn" = role."master_fn"
+ AND legacy_scope."company_fn" = assignment."company_fn"
+ON CONFLICT ("assignment_id", "resource_key", "target_type", "target_id") DO NOTHING;
+--> statement-breakpoint
+
+UPDATE "user_company_role"
+SET "scope_backfilled_at" = now(), "updated_at" = now()
+WHERE "scope_backfilled_at" IS NULL;
+
+-- 0087_pink_shadowcat
+CREATE TABLE IF NOT EXISTS "user_permission_override" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "user_permission_override_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"user_id" bigint NOT NULL,
+	"permission_key" text NOT NULL,
+	"resource_key" text,
+	"effect" text NOT NULL,
+	"scope" text DEFAULT 'company' NOT NULL,
+	"target_type" text DEFAULT 'none' NOT NULL,
+	"target_id" text DEFAULT '' NOT NULL,
+	"reason" text NOT NULL,
+	"valid_from" timestamp with time zone DEFAULT now() NOT NULL,
+	"valid_until" timestamp with time zone,
+	"assigned_by_user_id" bigint NOT NULL,
+	"revoked_at" timestamp with time zone,
+	"revoked_by_user_id" bigint,
+	"revocation_reason" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_user_permission_override_effect" CHECK ("user_permission_override"."effect" in ('allow', 'deny')),
+	CONSTRAINT "ck_user_permission_override_scope" CHECK ("user_permission_override"."scope" in ('self', 'team', 'department', 'company')),
+	CONSTRAINT "ck_user_permission_override_target_type" CHECK ("user_permission_override"."target_type" in ('none', 'company', 'branch', 'department', 'team', 'employee', 'region', 'business_unit', 'legal_entity', 'cost_center')),
+	CONSTRAINT "ck_user_permission_override_target" CHECK (("user_permission_override"."target_type" = 'none' and "user_permission_override"."target_id" = '') or ("user_permission_override"."target_type" <> 'none' and char_length("user_permission_override"."target_id") > 0)),
+	CONSTRAINT "ck_user_permission_override_window" CHECK ("user_permission_override"."valid_until" is null or "user_permission_override"."valid_until" > "user_permission_override"."valid_from"),
+	CONSTRAINT "ck_user_permission_override_revocation" CHECK (("user_permission_override"."revoked_at" is null and "user_permission_override"."revoked_by_user_id" is null and "user_permission_override"."revocation_reason" is null)
+      or ("user_permission_override"."revoked_at" is not null and "user_permission_override"."revoked_by_user_id" is not null and "user_permission_override"."revocation_reason" is not null))
+);
+
+--> statement-breakpoint
+
+/*
+    Unfortunately in current drizzle-kit version we can't automatically get name for primary key.
+    We are working on making it available!
+
+    Meanwhile you can:
+        1. Check pk name in your database, by running
+            SELECT constraint_name FROM information_schema.table_constraints
+            WHERE table_schema = 'public'
+                AND table_name = 'user_company_role'
+                AND constraint_type = 'PRIMARY KEY';
+        2. Uncomment code below and paste pk name manually
+
+    Hope to release this update as soon as possible
+*/
+
+-- ALTER TABLE "user_company_role" DROP CONSTRAINT "<constraint_name>";
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_permission_override" ADD CONSTRAINT "user_permission_override_user_id_app_user_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_permission_override" ADD CONSTRAINT "user_permission_override_assigned_by_user_id_app_user_user_id_fk" FOREIGN KEY ("assigned_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_permission_override" ADD CONSTRAINT "user_permission_override_revoked_by_user_id_app_user_user_id_fk" FOREIGN KEY ("revoked_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_permission_override" ADD CONSTRAINT "fk_user_permission_override_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_permission_override" ADD CONSTRAINT "fk_user_permission_override_membership" FOREIGN KEY ("user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_user_permission_override_lookup" ON "user_permission_override" USING btree ("master_fn","company_fn","user_id","permission_key","effect","valid_from","valid_until");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_user_permission_override_resource" ON "user_permission_override" USING btree ("master_fn","company_fn","resource_key","scope","target_type","target_id");
+
+-- 0088_early_marvel_boy
+ALTER TABLE "company" ADD COLUMN IF NOT EXISTS "authorization_version" bigint DEFAULT 1 NOT NULL;
+
+-- 0089_company_owner_cutover
+-- TASK-175: replace the tenant-local Superadmin bypass with an explicit Company Owner role.
+-- Registered permission rows and company scope are backfilled before legacy
+-- assignments are moved. The legacy role column remains for audit history but
+-- is no longer interpreted by the application authorization evaluator.
+
+-- Normalize a pre-existing company-scoped role with the canonical owner name.
+UPDATE "role"
+SET "name" = 'Company Owner',
+    "is_superadmin" = false,
+    "source_template_key" = 'company_owner',
+    "updated_at" = now()
+WHERE "company_fn" IS NOT NULL
+  AND lower("name") = 'company owner'
+  AND "source_template_key" IS DISTINCT FROM 'company_owner';
+
+--> statement-breakpoint
+
+
+-- Every tenant gets one immutable, company-scoped owner role before any
+-- legacy assignment is moved. Existing custom roles are not overwritten.
+INSERT INTO "role" (
+  "master_fn", "company_fn", "name", "is_superadmin", "source_template_key",
+  "created_at", "updated_at"
+)
+SELECT
+  company."master_fn", company."company_fn", 'Company Owner', false, 'company_owner', now(), now()
+FROM "company" company
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM "role" owner_role
+  WHERE owner_role."master_fn" = company."master_fn"
+    AND owner_role."company_fn" = company."company_fn"
+    AND owner_role."source_template_key" = 'company_owner'
+)
+AND NOT EXISTS (
+  SELECT 1
+  FROM "role" same_name
+  WHERE same_name."master_fn" = company."master_fn"
+    AND same_name."company_fn" = company."company_fn"
+    AND same_name."name" = 'Company Owner'
+);
+
+--> statement-breakpoint
+
+
+-- The bundle is explicit and contains no platform key or automatic approval,
+-- payment, payroll, payout, or sensitive tax-evidence authority.
+WITH owner_roles AS (
+  SELECT "master_fn", "company_fn", "role_id"
+  FROM "role"
+  WHERE "source_template_key" = 'company_owner'
+    AND "company_fn" IS NOT NULL
+), owner_permissions(permission_key) AS (
+  VALUES
+    ('dashboard.read'),
+    ('inventory.read'),
+    ('inventory.write'),
+    ('inventory.adjust'),
+    ('inventory.transfer'),
+    ('inventory.track'),
+    ('warehouse.read'),
+    ('sales.read'),
+    ('sales.write'),
+    ('finance.read'),
+    ('finance.write'),
+    ('finance.budget.manage'),
+    ('finance.report.export'),
+    ('purchasing.read'),
+    ('purchasing.write'),
+    ('crm.read'),
+    ('crm.write'),
+    ('manufacturing.read'),
+    ('manufacturing.write'),
+    ('quality.read'),
+    ('quality.write'),
+    ('asset.read'),
+    ('asset.write'),
+    ('hr.read'),
+    ('hr.write'),
+    ('employee.self.read'),
+    ('employee.leave.write'),
+    ('employee.receipts.write'),
+    ('employee.claims.write'),
+    ('documents.governance.manage'),
+    ('documents.records.manage'),
+    ('documents.finance.review'),
+    ('expenses.policy.manage'),
+    ('expenses.duplicate.override'),
+    ('expenses.card.manage'),
+    ('expenses.allowance.manage'),
+    ('expenses.advance.manage'),
+    ('expenses.payment.prepare'),
+    ('expenses.payment.template.manage'),
+    ('expenses.payment.export'),
+    ('expenses.payment.artifact.download'),
+    ('expenses.tax_evidence.generate'),
+    ('employee.team.read'),
+    ('project.read'),
+    ('project.write'),
+    ('service.read'),
+    ('service.write'),
+    ('reporting.read'),
+    ('integration.read'),
+    ('integration.import'),
+    ('integration.manage'),
+    ('notifications.read'),
+    ('notifications.manage'),
+    ('session.switch_company'),
+    ('admin.audit.read'),
+    ('admin.users.invite'),
+    ('admin.users.read'),
+    ('admin.users.manage'),
+    ('admin.roles.read'),
+    ('admin.roles.write'),
+    ('admin.modules.manage'),
+    ('admin.master.read'),
+    ('settings.read'),
+    ('settings.manage'),
+    ('sales.create'),
+    ('sales.edit'),
+    ('sales.post'),
+    ('sales.export'),
+    ('purchasing.create'),
+    ('purchasing.edit'),
+    ('purchasing.post'),
+    ('purchasing.export'),
+    ('crm.create'),
+    ('crm.edit'),
+    ('crm.post'),
+    ('crm.export'),
+    ('inventory.create'),
+    ('inventory.edit'),
+    ('inventory.post'),
+    ('inventory.export'),
+    ('warehouse.create'),
+    ('warehouse.edit'),
+    ('warehouse.post'),
+    ('warehouse.export'),
+    ('manufacturing.create'),
+    ('manufacturing.edit'),
+    ('manufacturing.post'),
+    ('manufacturing.export'),
+    ('quality.create'),
+    ('quality.edit'),
+    ('quality.post'),
+    ('quality.export'),
+    ('finance.create'),
+    ('finance.edit'),
+    ('finance.post'),
+    ('finance.export'),
+    ('hr.create'),
+    ('hr.edit'),
+    ('hr.post'),
+    ('hr.export'),
+    ('project.create'),
+    ('project.edit'),
+    ('project.post'),
+    ('project.export'),
+    ('service.create'),
+    ('service.edit'),
+    ('service.post'),
+    ('service.export'),
+    ('asset.create'),
+    ('asset.edit'),
+    ('asset.post'),
+    ('asset.export')
+)
+INSERT INTO "role_permission" ("master_fn", "role_id", "permission_key", "allowed", "created_at", "updated_at")
+SELECT owner_roles."master_fn", owner_roles."role_id", owner_permissions.permission_key, true, now(), now()
+FROM owner_roles
+CROSS JOIN owner_permissions
+ON CONFLICT ("role_id", "permission_key") DO UPDATE
+SET "allowed" = true, "updated_at" = now();
+
+--> statement-breakpoint
+
+
+INSERT INTO "role_resource_scope" (
+  "master_fn", "company_fn", "role_id", "resource_key", "scope", "created_at", "updated_at"
+)
+SELECT "master_fn", "company_fn", "role_id", '*', 'company', now(), now()
+FROM "role"
+WHERE "source_template_key" = 'company_owner'
+  AND "company_fn" IS NOT NULL
+ON CONFLICT ("role_id", "resource_key") DO UPDATE
+SET "scope" = 'company', "updated_at" = now();
+
+--> statement-breakpoint
+
+
+-- Move every historical assignment that pointed at a legacy Superadmin role
+-- onto the same-company Owner role. Assignment identity and validity windows
+-- are preserved; only the reusable role reference changes.
+UPDATE "user_company_role" assignment
+SET "role_id" = owner_role."role_id",
+    "assignment_source" = 'legacy_backfill',
+    "assignment_reason" = COALESCE(assignment."assignment_reason", 'Migrated legacy Superadmin assignment to Company Owner'),
+    "updated_at" = now()
+FROM "role" legacy_role
+     , "role" owner_role
+WHERE assignment."role_id" = legacy_role."role_id"
+  AND legacy_role."is_superadmin" = true
+  AND owner_role."master_fn" = legacy_role."master_fn"
+  AND owner_role."company_fn" = assignment."company_fn"
+  AND owner_role."source_template_key" = 'company_owner'
+  AND (legacy_role."company_fn" IS NULL OR legacy_role."company_fn" = assignment."company_fn");
+
+--> statement-breakpoint
+
+
+-- Keep the compatibility/default membership role aligned with the migrated
+-- assignment so older integrations cannot silently select the old role.
+UPDATE "user_company" membership
+SET "role_id" = owner_role."role_id", "updated_at" = now()
+FROM "role" legacy_role
+     , "role" owner_role
+WHERE membership."role_id" = legacy_role."role_id"
+  AND legacy_role."is_superadmin" = true
+  AND owner_role."master_fn" = legacy_role."master_fn"
+  AND owner_role."company_fn" = membership."company_fn"
+  AND owner_role."source_template_key" = 'company_owner'
+  AND (legacy_role."company_fn" IS NULL OR legacy_role."company_fn" = membership."company_fn");
+
+--> statement-breakpoint
+
+
+-- Give migrated assignments an explicit company scope. Since TASK-172's
+-- assignment rows are already marked backfilled, this row is authoritative.
+INSERT INTO "user_company_role_scope" (
+  "master_fn", "company_fn", "assignment_id", "resource_key", "scope",
+  "target_type", "target_id", "created_at", "updated_at"
+)
+SELECT owner_role."master_fn", assignment."company_fn", assignment."assignment_id", '*', 'company', 'none', '', now(), now()
+FROM "user_company_role" assignment
+JOIN "role" owner_role ON owner_role."role_id" = assignment."role_id"
+WHERE owner_role."source_template_key" = 'company_owner'
+ON CONFLICT ("assignment_id", "resource_key", "target_type", "target_id") DO UPDATE
+SET "scope" = 'company', "updated_at" = now();
+
+--> statement-breakpoint
+
+
+-- Invalidate old effective-capability snapshots for tenants that had the
+-- legacy grant. This predicate is evaluated before the flag is removed.
+UPDATE "company" company
+SET "authorization_version" = "authorization_version" + 1,
+    "updated_at" = now()
+WHERE EXISTS (
+  SELECT 1
+  FROM "role" legacy_role
+  WHERE legacy_role."master_fn" = company."master_fn"
+    AND legacy_role."is_superadmin" = true
+    AND (legacy_role."company_fn" IS NULL OR legacy_role."company_fn" = company."company_fn")
+);
+
+--> statement-breakpoint
+
+
+-- Retain old role rows for audit/rollback history, but make them inert to
+-- authorization and prevent new code from treating them as administrators.
+UPDATE "role"
+SET "is_superadmin" = false,
+    "source_template_key" = CASE
+      WHEN "source_template_key" = 'superadmin' OR "source_template_key" IS NULL
+        THEN 'legacy_superadmin'
+      ELSE "source_template_key"
+    END,
+    "updated_at" = now()
+WHERE "is_superadmin" = true;
+
+-- 0090_company_receipts
+CREATE TABLE IF NOT EXISTS "company_receipt" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "company_receipt_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"receipt_key" text NOT NULL,
+	"document_id" bigint NOT NULL,
+	"document_version_id" bigint NOT NULL,
+	"uploader_user_id" bigint NOT NULL,
+	"transaction_date" date,
+	"merchant" text NOT NULL,
+	"receipt_number" text,
+	"amount" numeric(18, 4) NOT NULL,
+	"currency_code" text NOT NULL,
+	"category" text NOT NULL,
+	"business_purpose" text NOT NULL,
+	"notes" text,
+	"status" text DEFAULT 'ready' NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	"void_reason" text,
+	"voided_at" timestamp with time zone,
+	"voided_by_user_id" bigint,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_company_receipt_key" CHECK ("company_receipt"."receipt_key" ~ '^company-receipt:[0-9a-f-]{36}$'),
+	CONSTRAINT "ck_company_receipt_merchant" CHECK (char_length("company_receipt"."merchant") between 1 and 200),
+	CONSTRAINT "ck_company_receipt_number" CHECK ("company_receipt"."receipt_number" is null or char_length("company_receipt"."receipt_number") between 1 and 120),
+	CONSTRAINT "ck_company_receipt_amount" CHECK ("company_receipt"."amount" > 0),
+	CONSTRAINT "ck_company_receipt_currency" CHECK ("company_receipt"."currency_code" ~ '^[A-Z]{3}$'),
+	CONSTRAINT "ck_company_receipt_category" CHECK (char_length("company_receipt"."category") between 1 and 120),
+	CONSTRAINT "ck_company_receipt_business_purpose" CHECK (char_length("company_receipt"."business_purpose") between 1 and 500),
+	CONSTRAINT "ck_company_receipt_notes" CHECK ("company_receipt"."notes" is null or char_length("company_receipt"."notes") between 1 and 2000),
+	CONSTRAINT "ck_company_receipt_status" CHECK ("company_receipt"."status" in ('draft','processing','ready','needs_attention','voided')),
+	CONSTRAINT "ck_company_receipt_version" CHECK ("company_receipt"."version" > 0),
+	CONSTRAINT "ck_company_receipt_void" CHECK (("company_receipt"."status" = 'voided'
+      and char_length("company_receipt"."void_reason") between 3 and 1000
+      and "company_receipt"."voided_at" is not null
+      and "company_receipt"."voided_by_user_id" is not null)
+      or ("company_receipt"."status" <> 'voided'
+        and "company_receipt"."void_reason" is null
+        and "company_receipt"."voided_at" is null
+        and "company_receipt"."voided_by_user_id" is null))
+);
+
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "company_receipt" ADD CONSTRAINT "company_receipt_document_id_managed_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."managed_document"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "company_receipt" ADD CONSTRAINT "company_receipt_document_version_id_document_version_id_fk" FOREIGN KEY ("document_version_id") REFERENCES "public"."document_version"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "company_receipt" ADD CONSTRAINT "company_receipt_uploader_user_id_app_user_user_id_fk" FOREIGN KEY ("uploader_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "company_receipt" ADD CONSTRAINT "company_receipt_currency_code_currency_code_fk" FOREIGN KEY ("currency_code") REFERENCES "public"."currency"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "company_receipt" ADD CONSTRAINT "company_receipt_voided_by_user_id_app_user_user_id_fk" FOREIGN KEY ("voided_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_company_receipt_key" ON "company_receipt" USING btree ("master_fn","company_fn","receipt_key");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_company_receipt_document" ON "company_receipt" USING btree ("master_fn","company_fn","document_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_company_receipt_document_version" ON "company_receipt" USING btree ("master_fn","company_fn","document_version_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_company_receipt_uploader" ON "company_receipt" USING btree ("master_fn","company_fn","uploader_user_id","status","id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_company_receipt_transaction_date" ON "company_receipt" USING btree ("master_fn","company_fn","transaction_date","id");

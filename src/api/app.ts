@@ -35,6 +35,7 @@ import { createReimbursementPaymentsRouter } from './routes/reimbursementPayment
 import { createTaxEvidenceRouter } from './routes/taxEvidence';
 import { createOnboardingRouter } from './routes/onboarding';
 import { createPlatformRouter } from './routes/platform';
+import { createCompanyReceiptsRouter } from './routes/companyReceipts';
 
 export interface AppOptions {
   secureCookies?: boolean;
@@ -137,6 +138,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     encryptionKey: lifecycle?.tokenEncryptionKey,
   }));
   app.use('/api/tax-evidence', createTaxEvidenceRouter(db));
+  app.use('/api/company-receipts', createCompanyReceiptsRouter(db));
   app.use('/api/finance', createFinanceReportsRouter(db));
   app.use('/api/reporting', createReportingRouter(db));
   app.use('/api/onboarding', createOnboardingRouter(db));

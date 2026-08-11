@@ -12,6 +12,7 @@ import {
   withTenantTransaction,
 } from '../data/tenantTransaction';
 import { completeProductionSetup } from '../modules/setup/completeSetup';
+import { roleTemplate } from '../auth/accessCatalog';
 import { createInvitation, acceptInvitation, requestPasswordReset, confirmPasswordReset } from '../auth/lifecycle';
 import { decryptToken, encryptToken, type EncryptedToken } from '../auth/tokenCrypto';
 import { processOutboxBatch } from '../worker/outbox';
@@ -85,6 +86,7 @@ import {
   recordTaxEvidencePackLegalHoldWithin,
   sealTaxEvidencePackWithin,
 } from '../modules/expenses/taxEvidenceGovernance';
+import { createCompanyReceiptWithin } from '../modules/expenses/companyReceipt';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -174,6 +176,48 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       .where(eq(schema.appUser.userId, setup.userId));
     const [adminRole] = await db.select().from(schema.role)
       .where(eq(schema.role.masterFn, setup.masterFn));
+    // Company Owner is intentionally not an approval/payment/payroll bypass.
+    // Give this security proof an explicit, auditable test role for the sensitive
+    // expense lifecycle it exercises instead of relying on the retired flag.
+    const explicitSecurityPermissions = [...new Set([
+      ...(roleTemplate('manager')?.permissions ?? []),
+      ...(roleTemplate('finance_checker')?.permissions ?? []),
+      'employee.payout.manage',
+      'expenses.payout.verify',
+      'expenses.payout.reveal',
+      'expenses.tax_evidence.governance',
+    ])];
+    const [securityRole] = await db.insert(schema.role).values({
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+      name: 'PostgreSQL Security Approver',
+      sourceTemplateKey: 'custom',
+    }).returning();
+    await db.insert(schema.rolePermission).values(explicitSecurityPermissions.map((permissionKey) => ({
+      masterFn: setup.masterFn,
+      roleId: securityRole.roleId,
+      permissionKey,
+    })));
+    await withTenantTransaction(db, {
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+    }, async (tx) => {
+      await tx.insert(schema.roleResourceScope).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        roleId: securityRole.roleId,
+        resourceKey: '*',
+        scope: 'company',
+      });
+      await tx.insert(schema.userCompanyRole).values({
+        userId: admin.userId,
+        companyFn: setup.companyFn,
+        roleId: securityRole.roleId,
+        assignedByUserId: admin.userId,
+        assignmentSource: 'system',
+        assignmentReason: 'PostgreSQL security proof explicit approval fixture',
+      });
+    });
     const [queuedReport] = await withTenantTransaction(db, {
       masterFn: setup.masterFn,
       companyFn: setup.companyFn,
@@ -243,6 +287,16 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
     const employeePayable = visibleAccounts.find((row) => row.code === '2100')!;
     const companyClearing = visibleAccounts.find((row) => row.code === '1100')!;
     const expenseScope = { masterFn: setup.masterFn, companyFn: setup.companyFn };
+    const [openPeriod] = await withTenantTransaction(db, expenseScope, (tx) =>
+      tx.select({
+        startDate: schema.accountingPeriod.startDate,
+        endDate: schema.accountingPeriod.endDate,
+      })
+        .from(schema.accountingPeriod)
+        .where(eq(schema.accountingPeriod.status, 'open'))
+        .limit(1));
+    expect(openPeriod).toBeTruthy();
+    const proofPaymentDate = String(openPeriod.startDate);
     await withTenantTransaction(db, expenseScope, async (tx) => {
       await tx.insert(schema.employee).values({
         ...expenseScope,
@@ -614,7 +668,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
           exportKey: 'pg-bank-export-0001',
           batchId: releasedPayment.batch.id,
           templateKey: 'pg.generic',
-          exportDate: '2026-07-26',
+          exportDate: proofPaymentDate,
         },
         paymentCrypto,
       ));
@@ -638,7 +692,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
           importKey: 'pg-bank-result-0001',
           exportId: pgBankExport.export.id,
           bankReference: 'PG-BANK-REF-0001',
-          paymentDate: '2026-07-26',
+          paymentDate: proofPaymentDate,
           results: [{
             exportLineNo: 1,
             outcome: 'success',
@@ -668,8 +722,8 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         admin.userId,
         'pg-tax-snapshot-0001',
         {
-          startDate: '2026-07-01',
-          endDate: '2026-07-31',
+          startDate: String(openPeriod.startDate),
+          endDate: String(openPeriod.endDate),
           completeness: ['missing_receipt'],
         },
       ));
@@ -1024,6 +1078,40 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       accessAction: 'download',
       accessPurpose: 'PostgreSQL tenant-scoped evidence proof.',
     })]);
+
+    const postgresCompanyReceipt = await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => createCompanyReceiptWithin(tx, documentScope, accepted.userId, {
+        documentId: createdDocument.document.id,
+        documentVersionId: appendedDocument.version.id,
+        transactionDate: '2026-07-26',
+        merchant: 'PostgreSQL Proof Merchant',
+        receiptNumber: 'PG-RECEIPT-1',
+        amount: '25.5000',
+        currency: 'SGD',
+        category: 'Operations',
+        businessPurpose: 'PostgreSQL RLS proof',
+        notes: null,
+      }),
+    );
+    expect(postgresCompanyReceipt).toMatchObject({
+      uploaderUserId: accepted.userId,
+      documentVersionId: appendedDocument.version.id,
+      status: 'ready',
+      version: 1,
+    });
+    expect(await db.select().from(schema.companyReceipt)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.companyReceipt),
+    )).toEqual([expect.objectContaining({ id: postgresCompanyReceipt.id })]);
+    expect(await withTenantTransaction(
+      db,
+      { masterFn: documentScope.masterFn, companyFn: 'CROSS-TENANT' },
+      (tx) => tx.select().from(schema.companyReceipt),
+    )).toHaveLength(0);
 
     await requestPasswordReset(
       db,

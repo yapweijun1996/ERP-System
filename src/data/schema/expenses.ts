@@ -18,10 +18,77 @@ import { appUser } from './tenancy';
 import { account, glEntry } from './finance';
 import { accountingPeriod } from './controlPlane';
 import { currency } from './localization';
-import { documentVersion, receiptInboxItem } from './documents';
+import { documentVersion, managedDocument, receiptInboxItem } from './documents';
 import { budgetLine, budgetVersion } from './reporting';
 import { approvalInstance } from './approval';
 import { employee } from './hr';
+
+/**
+ * Company-owned receipt facts confirmed from one governed document version.
+ * Evidence bytes/OCR provenance remain in the managed-document aggregate; this
+ * table deliberately carries no claim, reimbursement, GL or tax decision.
+ */
+export const companyReceipt = pgTable('company_receipt', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  receiptKey: text('receipt_key').notNull(),
+  documentId: bigint('document_id', { mode: 'number' }).notNull()
+    .references(() => managedDocument.id),
+  documentVersionId: bigint('document_version_id', { mode: 'number' }).notNull()
+    .references(() => documentVersion.id),
+  uploaderUserId: bigint('uploader_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  transactionDate: date('transaction_date'),
+  merchant: text('merchant').notNull(),
+  receiptNumber: text('receipt_number'),
+  amount: numeric('amount', { precision: 18, scale: 4 }).notNull(),
+  currencyCode: text('currency_code').notNull().references(() => currency.code),
+  category: text('category').notNull(),
+  businessPurpose: text('business_purpose').notNull(),
+  notes: text('notes'),
+  status: text('status').notNull().default('ready'),
+  version: integer('version').notNull().default(1),
+  voidReason: text('void_reason'),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+  voidedByUserId: bigint('voided_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_company_receipt_key').on(t.masterFn, t.companyFn, t.receiptKey),
+  uniqueIndex('uq_company_receipt_document').on(t.masterFn, t.companyFn, t.documentId),
+  uniqueIndex('uq_company_receipt_document_version')
+    .on(t.masterFn, t.companyFn, t.documentVersionId),
+  index('idx_company_receipt_uploader')
+    .on(t.masterFn, t.companyFn, t.uploaderUserId, t.status, t.id),
+  index('idx_company_receipt_transaction_date')
+    .on(t.masterFn, t.companyFn, t.transactionDate, t.id),
+  check('ck_company_receipt_key',
+    sql`${t.receiptKey} ~ '^company-receipt:[0-9a-f-]{36}$'`),
+  check('ck_company_receipt_merchant',
+    sql`char_length(${t.merchant}) between 1 and 200`),
+  check('ck_company_receipt_number',
+    sql`${t.receiptNumber} is null or char_length(${t.receiptNumber}) between 1 and 120`),
+  check('ck_company_receipt_amount', sql`${t.amount} > 0`),
+  check('ck_company_receipt_currency', sql`${t.currencyCode} ~ '^[A-Z]{3}$'`),
+  check('ck_company_receipt_category',
+    sql`char_length(${t.category}) between 1 and 120`),
+  check('ck_company_receipt_business_purpose',
+    sql`char_length(${t.businessPurpose}) between 1 and 500`),
+  check('ck_company_receipt_notes',
+    sql`${t.notes} is null or char_length(${t.notes}) between 1 and 2000`),
+  check('ck_company_receipt_status',
+    sql`${t.status} in ('draft','processing','ready','needs_attention','voided')`),
+  check('ck_company_receipt_version', sql`${t.version} > 0`),
+  check('ck_company_receipt_void',
+    sql`(${t.status} = 'voided'
+      and char_length(${t.voidReason}) between 3 and 1000
+      and ${t.voidedAt} is not null
+      and ${t.voidedByUserId} is not null)
+      or (${t.status} <> 'voided'
+        and ${t.voidReason} is null
+        and ${t.voidedAt} is null
+        and ${t.voidedByUserId} is null)`),
+]);
 
 export const expenseCategory = pgTable('expense_category', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),

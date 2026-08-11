@@ -1078,12 +1078,13 @@ production RLS re-applied and application containers released; public health/roo
 unauthenticated-session probes returned 200/200/401. Authenticated API-mode full-route
 workflow coverage and physical-device verification remain separate follow-up gates.
 
-## Phase 45 — Expenses & Tax v1: Company Receipts ⬜
+## Phase 45 — Expenses & Tax v1: Company Receipts 🔶
 
-1. **Contract and model** (TASK-176 complete; TASK-177 planned): keep the official
-   product boundary at Company Receipts, add the minimum company-scoped aggregate and
-   API around existing managed-document evidence, and keep Employee Claim,
-   reimbursement, GL and Tax Treatment optional/future.
+1. **Contract and model** (TASK-176/177 complete): the official product boundary remains
+   Company Receipts. Migration 0090, the shared aggregate/domain commands and
+   `/api/company-receipts` now wrap clean current managed-document evidence with
+   optimistic versions, uploader audit and retained void state, without Employee Claim,
+   reimbursement, GL or Tax Treatment dependencies.
 2. **Capture and register** (TASK-178–180): reuse 20 MB/20-page validation, IndexedDB,
    scan/OCR, hashes and lifecycle governance; add user confirmation plus bounded own/
    company register, search, pagination, inclusive `transaction_date` filters and an
@@ -1096,9 +1097,10 @@ workflow coverage and physical-device verification remain separate follow-up gat
    prove Demo/PGlite and PostgreSQL/API parity, then run desktop/mobile and release
    gates before updating final status and KB evidence.
 
-Phase status is **not started**. TASK-176 completed documentation and KB planning only;
-no Company Receipts code, schema, route, permission or deployment was delivered.
-TASK-174 has completed the authorization invalidation boundary; TASK-177 is now eligible.
+Phase status is **in progress**. TASK-177 delivered the canonical model/API and
+PGlite/PostgreSQL RLS proof without production deployment. TASK-178 is now eligible and
+owns secure capture-to-confirmation integration; later tasks still own the register,
+date range, Receipt Pack, entitlement, canonical permissions, UI and release proof.
 
 Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`
 works end to end in both modes without `expense_claim`, cross-tenant access,

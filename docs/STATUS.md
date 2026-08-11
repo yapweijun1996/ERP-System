@@ -1750,12 +1750,13 @@ EPIC-064 owns TASK-184–188. TASK-174 is complete and TASK-185 is eligible; TAS
 prerequisite added to Expenses & Tax TASK-182. EPIC-018 remains historical proof of
 server-side module enforcement but does not define the approved future mutation owner.
 
-## Expenses & Tax v1 source audit and planning boundary (2026-08-11)
+## Expenses & Tax v1 implementation boundary (2026-08-11)
 
 The approved product boundary is **Expenses & Tax v1 = Company Receipts + inclusive
-transaction-date range + Preview + Receipt Pack PDF/Print**. This is planned scope,
-not current Canonical functionality. No application code, schema, migration, route,
-permission, module key or production deployment changed in TASK-176.
+transaction-date range + Preview + Receipt Pack PDF/Print**. TASK-177 now delivers the
+first canonical backend slice: migration 0090, the `company_receipt` aggregate, its
+transactional command layer and `/api/company-receipts` list/detail/create/update/void
+API. It is not yet a completed or deployed Expenses & Tax product.
 
 Current reusable implementation is substantial but narrower:
 
@@ -1767,13 +1768,20 @@ Current reusable implementation is substantial but narrower:
 - Tax Evidence can render registers and merged evidence PDFs from posted Expense Claim
   lines in API mode, including original PDF/JPEG/PNG content where supported.
 
-The missing v1 vertical slice is explicit: no `Expenses & Tax` module entitlement,
-`company-receipts` route, company-owned receipt aggregate, user-confirmed metadata
-command, company-wide permission-scoped register, transaction-date query, missing-date
-workflow or standalone Receipt Pack preview/export/print exists. Current My Receipts
-requires a linked Employee, returns only the signed-in uploader's latest 100 documents,
-and does not expose company search/date pagination. Current Tax Evidence selects posted
-claim lines by posting date, so it cannot be renamed or treated as Company Receipts.
+The TASK-177 aggregate is Company-owned and stores confirmed metadata plus an immutable
+reference to the uploader's clean, current governed document version. It requires no
+Employee, Expense Claim, reimbursement, GL posting or tax decision. Tenant scope and
+uploader attribution come only from Session, reads are bounded by an `afterId` cursor,
+writes use optimistic `version`, and void is a retained audited tombstone. For this
+foundation slice the API is deliberately uploader-only and temporarily reuses
+`employee.receipts.write`.
+
+The remaining v1 vertical slice is explicit: there is still no `Expenses & Tax` module
+entitlement, browser route/adapter/UI, canonical own/company receipt permission set,
+company-wide search/date register, missing-date workflow or standalone Receipt Pack
+preview/export/print. Current Tax Evidence selects posted claim lines by posting date,
+so it cannot be renamed or treated as Company Receipts. TASK-179 owns company visibility
+and register queries; TASK-182 owns atomic permission/module/access-matrix registration.
 
 EPIC-063 and TASK-177–183 register the implementation work. Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois are preserved
@@ -1781,9 +1789,9 @@ future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 176 tasks
+- Done: 177 tasks
 - In progress: 0
-- Todo: TASK-177–183 and TASK-185–188 (11)
+- Todo: TASK-178–183 and TASK-185–188 (10)
 - Blocked: TASK-017 (1)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -1794,9 +1802,10 @@ future/optional phases rather than v1 defects.
   direct-URL revocation coverage are delivered. TASK-175 is done: migration 0089,
   production backup, target migration, RLS re-application, application release and
   public health/session verification all passed.
-- EPIC-063 is registered but not started. TASK-176 completed the source-backed
-  Expenses & Tax documentation/KB boundary; TASK-177–183 remain todo and cannot be
-  represented as current Canonical functionality.
+- EPIC-063 is in progress. TASK-176 completed the source-backed Expenses & Tax boundary;
+  TASK-177 delivered the Company Receipt schema/domain/API foundation with PGlite and
+  PostgreSQL RLS proof. TASK-178–183 remain todo and the unfinished module must not be
+  represented as completed Canonical browser functionality.
 - EPIC-064 is registered but not implemented. TASK-184 completed the source-backed MAC
   documentation/KB boundary; TASK-185–188 remain todo. Current tenant MAC remains
   Canonical until TASK-185/186 deliver and verify the platform-owned cutover.
@@ -1813,10 +1822,10 @@ future/optional phases rather than v1 defects.
 
 ## Next implementation boundary
 
-The next dependency-ordered work is TASK-177, the Company Receipt canonical model and
-API. TASK-175's production release verification and TASK-174 invalidation boundary are
-complete. EPIC-063 begins with TASK-177; its entitlement integration
-TASK-182 also waits for EPIC-064 TASK-186. EPIC-064 implementation begins with TASK-185
+The next dependency-ordered work is TASK-178, secure capture-to-receipt creation and
+metadata confirmation. TASK-177's canonical model/API, TASK-175's production release
+verification and TASK-174's invalidation boundary are complete. EPIC-063 entitlement
+integration TASK-182 also waits for EPIC-064 TASK-186. EPIC-064 implementation begins with TASK-185
 and then proceeds through tenant cutover, platform workspace and proof in
 TASK-186–188. The current working tree contains additional uncommitted application changes;
 this status records behavior verified from the current files/tests and the deployed

@@ -464,10 +464,10 @@ remain a text compatibility store.
   through the session endpoint before reload. It is a freshness signal, not an
   authorization bypass or a replacement for the uncached current-state evaluator.
 
-## 11. Planned Expenses & Tax v1 architecture
+## 11. Expenses & Tax v1 architecture
 
-The 2026-08-11 source audit confirms useful foundations but no completed Company
-Receipts vertical slice. `managed_document`/`document_version` preserve tenant-scoped
+The 2026-08-11 source audit confirmed useful foundations. TASK-177 now adds the first
+Company Receipts backend slice. `managed_document`/`document_version` preserve tenant-scoped
 identity, bytes, hash, version and retention; `receipt_inbox_item` projects the
 actor-owned extraction state; My Receipts provides mobile/IndexedDB capture; and the
 Tax Evidence worker can compose PDF/image evidence. Today, however, My Receipts
@@ -475,8 +475,9 @@ requires a linked Employee, lists only the current uploader (bounded to 100), ex
 no metadata correction command or transaction-date query, and Tax Evidence starts
 from posted Expense Claim lines rather than standalone receipts.
 
-The target adds the minimum company-scoped receipt aggregate around the existing
-managed document instead of another blob/OCR engine:
+Migration 0090 and `src/modules/expenses/companyReceipt.ts` add the minimum
+company-scoped receipt aggregate around the existing managed document instead of
+another blob/OCR engine:
 
 ```text
 Company Receipt (masterFn + companyFn)
@@ -486,19 +487,20 @@ Company Receipt (masterFn + companyFn)
         └── Draft | Processing | Ready | Needs Attention | Voided
 ```
 
-Upload continues through the existing security and extraction pipeline. A safe
-document may be completed manually when OCR fails; OCR fields remain immutable
-provenance while user-confirmed receipt facts belong to the Company Receipt aggregate.
-The register queries that aggregate by active-company scope, capabilities, search,
-status and inclusive `transaction_date`. Preview creates a bounded immutable selection
-of all matching rows and invokes reusable PDF/document readers without importing tax,
-claim, reimbursement or GL semantics.
+The TASK-177 API requires the uploader's current, clean, non-void governed document
+version, derives tenant/uploader from Session, and persists confirmed receipt facts
+without an Employee, claim, reimbursement, GL or tax dependency. Its read surface is
+bounded, cursor-based and deliberately uploader-only; metadata writes are versioned,
+evidence identity is immutable, and void preserves an audited tombstone. Search,
+own/company visibility, inclusive transaction-date selection and immutable Receipt Pack
+snapshots remain TASK-179–181 work.
 
-The product entry is planned as `Expenses & Tax → Company Receipts`; exact technical
-module/resource/action identifiers must be registered atomically with the backend
-module catalog, permission registry, route metadata and `accessMatrix` under
-TASK-177–182. Until those tasks land, neither `my-receipts` nor
-`receipt-tax-evidence` may be presented as the completed v1.
+The product entry remains `Expenses & Tax → Company Receipts`. TASK-177 temporarily
+reuses `employee.receipts.write`; exact module/resource/action identifiers must be
+registered atomically with the backend module catalog, permission registry, route
+metadata and `accessMatrix` under TASK-182. Until TASK-178–183 land, neither
+`my-receipts`, `/api/company-receipts` nor `receipt-tax-evidence` may be presented as
+the completed v1.
 
 ## 12. Planned platform-owned Module Access Control architecture
 

@@ -381,13 +381,14 @@ deeper delegation binding and separation-of-duties rules remain later target wor
   calendar reads. Recurrence is time-zone-aware and bounded; reminder/outbound jobs are
   durable, idempotent and revision-aware.
 
-## 9. Expenses & Tax v1 contract (approved, not implemented)
+## 9. Expenses & Tax v1 contract (approved; backend foundation implemented)
 
 The official v1 product name is **Expenses & Tax** and its only primary workflow is
 **Company Receipts**. The current `my-receipts` route remains an actor-owned secure
 capture foundation and compatibility surface; it is not a company receipt register.
-No route, API, schema aggregate, permission set or module-entitlement key for this v1
-is implemented as of the 2026-08-11 source audit.
+TASK-177 implements migration 0090, the Company Receipt schema/commands and an
+uploader-only `/api/company-receipts` API. The v1 permission set, module-entitlement
+key, browser route/adapter/UI, company register and Receipt Pack remain pending.
 
 The future implementation must satisfy these binding requirements:
 
@@ -402,8 +403,9 @@ The future implementation must satisfy these binding requirements:
 - Users confirm or correct merchant, receipt/invoice number, `transaction_date`,
   amount, currency, category, business purpose and notes. OCR remains a suggestion;
   extraction failure cannot block manual completion after the document is safe.
-- Register reads are bounded and query-side, support search and pagination, and enforce
-  own/company scope through canonical permissions rather than role-name checks.
+- TASK-177 register reads are bounded and cursor-paginated but uploader-only under the
+  temporary existing `employee.receipts.write` capability. TASK-179/182 must add search
+  and canonical own/company scopes without role-name checks before product completion.
 - Date filters are inclusive company-local business dates:
   `from <= transaction_date <= to`. Missing dates are visible and excluded from a
   date-range package until corrected.

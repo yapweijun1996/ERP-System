@@ -2368,24 +2368,28 @@ closes the stale browser snapshot and direct-URL boundary. TASK-170 is a prerequ
 the platform identity provider: SSO/provisioning, production data-plane adapters and
 enterprise access reviews remain later phases.
 
-## EPIC-063 — Expenses & Tax v1 (Company Receipts) ⬜
+## EPIC-063 — Expenses & Tax v1 (Company Receipts) 🔶
 
 Deliver the approved company receipt collection workflow without forcing users through
 Employee Expense Claims, reimbursement, accounting posting or tax decisions. The
 end-user mental model is: save a company receipt, later choose a transaction-date range,
 then preview/export/print the complete set.
 
-Current boundary (source-audited 2026-08-11): managed-document upload, scan, OCR,
+Current boundary (source-verified 2026-08-11): managed-document upload, scan, OCR,
 IndexedDB drafts, version/hash governance and posted-claim Tax Evidence PDF utilities
-exist. The independent `Expenses & Tax` module, Company Receipt aggregate, company
-register, confirmation/correction workflow and standalone Receipt Pack do not.
+exist. TASK-177 additionally delivers migration 0090, the independent Company Receipt
+aggregate and `/api/company-receipts` uploader-scoped CRUD/void boundary. The
+`Expenses & Tax` module entitlement, browser/Demo adapter, company register,
+confirmation/correction workflow and standalone Receipt Pack remain pending.
 
 - [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
       current source, approved scope, architecture, backlog and KB without changing
       application code, schema, routes, permissions, module keys or production.
-- [ ] **TASK-177 — Add the Company Receipt canonical model and API.** Introduce the
+- [x] **TASK-177 — Add the Company Receipt canonical model and API.** Introduce the
       minimum company-scoped aggregate referencing governed managed-document evidence;
       derive tenant scope from Session and keep Expense Claim optional and separate.
+      Delivered with optimistic versioning, retained void state, audit, clean-evidence
+      enforcement and PGlite/PostgreSQL RLS proof.
 - [ ] **TASK-178 — Reuse secure capture and add receipt confirmation.** Route camera/
       file upload through existing validation, storage, scan and OCR; preserve originals
       and allow authorised manual correction after a safe OCR failure.
@@ -2405,8 +2409,8 @@ register, confirmation/correction workflow and standalone Receipt Pack do not.
       mobile/desktop capture, persistence, date range, preview, export and print plus
       focused/full gates, then report the exact implemented boundary.
 
-Dependencies are deliberate. TASK-177 waits for TASK-174's authorization invalidation
-boundary and TASK-176's contract; TASK-178–183 then follow the data, capture, register,
+Dependencies are deliberate. TASK-177 consumed TASK-174's authorization invalidation
+boundary and TASK-176's contract; TASK-178–183 now follow the data, capture, register,
 range, export, parity and release-proof order. Existing EPIC-054–056 functionality is
 preserved as reusable infrastructure or future/optional scope, not duplicated.
 

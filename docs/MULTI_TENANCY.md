@@ -205,19 +205,22 @@ proof. Server organization and workflow-policy decisions query current tenant ro
 are not cached. Instance/step/resource/policy-bound delegation remains target work;
 none of those capabilities may be inferred from the legacy `is_superadmin` column.
 
-## Planned Company Receipt scope
+## Company Receipt scope
 
-A Company Receipt belongs to exactly one active `master_fn + company_fn`; those keys
-come from Session/transaction context and are never accepted from upload, filter or
-export payloads. The uploader is audit attribution, not the primary tenant owner and
-need not have a linked Employee identity. Own/company visibility is an authorization
-scope decision over the same company aggregate, not a client-side filter.
+A Company Receipt belongs to exactly one active `master_fn + company_fn`; TASK-177
+derives those keys and `uploader_user_id` from Session/transaction context and rejects
+tenant keys anywhere in API query/body input. It needs no linked Employee identity.
+Current list/detail/mutation commands also filter by uploader, so they cannot expose or
+mutate another uploader's row even within the same Company. `company_receipt` is in the
+production company RLS policy set, and disposable non-superuser PostgreSQL proof covers
+same-tenant access plus cross-tenant denial.
 
 Receipt Pack selection, original-document reads and artifact access must reapply the
 same tenant/company and permission scope. A platform support principal receives no
 implicit Company Receipt access, and a disabled Expenses & Tax entitlement must deny
-the UI route and every direct API/background path. This target is planned under
-TASK-177–183 and is not current behavior.
+the UI route and every direct API/background path. Canonical own/company visibility is
+an authorization scope over the same aggregate—not a client filter—and remains
+TASK-179/182 work; Receipt Pack scope remains TASK-181.
 
 ## Planned Master entitlement and Company allocation
 
