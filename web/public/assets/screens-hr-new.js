@@ -5,6 +5,10 @@ SCREENS['new-employee'] = async function(root){
   let roles=[];
   try{ roles=(await window.ErpSystemData.list('admin/roles')).data||[]; }catch{}
   roles=roles.filter(role=>!role.isSuperadmin&&role.name!=='Employee');
+  const roleDisplayName=role=>role&&role.sourceTemplateKey==='master_admin'?t('role.masterAdmin')
+    :role&&role.sourceTemplateKey==='company_owner'?t('role.companyOwner'):(role&&role.name)||'';
+  const roleDisplayKey=role=>role&&role.sourceTemplateKey==='master_admin'?t('role.masterAdmin')
+    :role&&role.sourceTemplateKey==='company_owner'?t('role.companyOwner'):(role&&role.sourceTemplateKey)||t('staff.customRole');
   let step=1;
   const EMPLOYMENT_TYPES=[
     ['Full-time',t('hr.emp.fulltime')],['Part-time',s('typeParttime')],
@@ -45,7 +49,7 @@ SCREENS['new-employee'] = async function(root){
         </div></div>
         <div class="panel" ${step===3?'':'hidden'}><div class="panel-h">${ic('shield')}<h3>${esc(t('staff.companyRoles'))}</h3></div><div class="panel-body">
           <div class="callout info">${esc(t('staff.roleHint',{company:DB.company.name}))}</div>
-          <div class="check-grid">${roles.length?roles.map(role=>`<label class="check-row"><input type="checkbox" name="neRole" value="${role.roleId}"><span><b>${esc(role.name)}</b><small>${esc(role.sourceTemplateKey||t('staff.customRole'))}</small></span></label>`).join(''):`<div class="empty-state">${esc(t('staff.noRoles'))}</div>`}</div>
+          <div class="check-grid">${roles.length?roles.map(role=>`<label class="check-row"><input type="checkbox" name="neRole" value="${role.roleId}"><span><b>${esc(roleDisplayName(role))}</b><small>${esc(roleDisplayKey(role))}</small></span></label>`).join(''):`<div class="empty-state">${esc(t('staff.noRoles'))}</div>`}</div>
           <div class="fldrow c2" style="margin-top:12px"><div class="fld"><span>${esc(s('fieldAnnualDays'))}</span><input type="number" id="neLeave" min="0" max="40" value="14"></div></div>
         </div></div>
       </div></div></div></div>

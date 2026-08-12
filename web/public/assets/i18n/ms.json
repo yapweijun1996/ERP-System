@@ -1540,5 +1540,7 @@
   "access.moduleHidden": "tersembunyi untuk klien ini",
   "access.modulePlatformControlled": "Akses komersial dikawal oleh platform untuk syarikat ini.",
   "access.moduleNotAvailable": "Modul tidak tersedia",
-  "access.modulePlatformHelp": "Minta Platform Superadmin anda menyemak entitlement Master dan peruntukan Syarikat."
+  "access.modulePlatformHelp": "Minta Platform Superadmin anda menyemak entitlement Master dan peruntukan Syarikat.",
+  "role.masterAdmin": "Pentadbir Induk",
+  "role.companyOwner": "Pemilik Syarikat"
 }

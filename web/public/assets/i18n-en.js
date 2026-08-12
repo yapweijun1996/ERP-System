@@ -1541,5 +1541,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "access.moduleHidden": "hidden for this client",
   "access.modulePlatformControlled": "Commercial access is controlled by the platform for this company.",
   "access.moduleNotAvailable": "Module is not available",
-  "access.modulePlatformHelp": "Ask your Platform Superadmin to review the Master entitlement and Company allocation."
+  "access.modulePlatformHelp": "Ask your Platform Superadmin to review the Master entitlement and Company allocation.",
+  "role.masterAdmin": "Master Admin",
+  "role.companyOwner": "Company Owner"
 });

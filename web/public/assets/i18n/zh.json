@@ -1540,5 +1540,7 @@
   "access.moduleHidden": "对该客户端隐藏",
   "access.modulePlatformControlled": "此公司的商业访问由平台控制。",
   "access.moduleNotAvailable": "模块不可用",
-  "access.modulePlatformHelp": "请联系您的平台超级管理员检查主实体授权和公司分配。"
+  "access.modulePlatformHelp": "请联系您的平台超级管理员检查主实体授权和公司分配。",
+  "role.masterAdmin": "主管理员",
+  "role.companyOwner": "公司所有者"
 }

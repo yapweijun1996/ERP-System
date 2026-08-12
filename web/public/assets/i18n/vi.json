@@ -1540,5 +1540,7 @@
   "access.moduleHidden": "bị ẩn cho máy khách này",
   "access.modulePlatformControlled": "Quyền truy cập thương mại của công ty này do nền tảng kiểm soát.",
   "access.moduleNotAvailable": "Mô-đun không khả dụng",
-  "access.modulePlatformHelp": "Hãy yêu cầu Platform Superadmin xem lại entitlement Master và phân bổ Công ty."
+  "access.modulePlatformHelp": "Hãy yêu cầu Platform Superadmin xem lại entitlement Master và phân bổ Công ty.",
+  "role.masterAdmin": "Quản trị viên Master",
+  "role.companyOwner": "Chủ sở hữu công ty"
 }

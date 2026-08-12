@@ -269,6 +269,12 @@ const ADMIN_PERMISSION_KEYS=[
   .flatMap(moduleKey=>['create','edit','approve','post','pay','export'].map(action=>`${moduleKey}.${action}`)));
 const ADMIN_SCOPE_RESOURCES=['*','sales/*','purchasing/*','crm/*','inventory/*','warehouse/*','manufacturing/*','quality/*','finance/*','hr/*','payroll/*','project/*','service/*','asset/*'];
 
+function tenantRoleDisplayName(role){
+  if(role&&role.sourceTemplateKey==='master_admin') return t('role.masterAdmin');
+  if(role&&role.sourceTemplateKey==='company_owner') return t('role.companyOwner');
+  return role&&role.name||'';
+}
+
 SCREENS['role-permission'] = async function(root){
   const s=adminCopy();
   let roles=(await listPage('admin/roles')).data;
@@ -294,7 +300,7 @@ SCREENS['role-permission'] = async function(root){
     const gm=grantMap();
     const tpl=`minmax(210px,1.6fr) repeat(${roles.length},minmax(110px,1fr))`;
     let h=`<div class="dt-page"><div class="permgrid" role="table" style="--ptpl:${tpl}">
-      <div class="pg-r pg-head"><div class="pg-c modcell">${esc(t('hr.col.role'))}</div>${roles.map(r=>`<div class="pg-c c">${esc(r.name)}</div>`).join('')}</div>`;
+      <div class="pg-r pg-head"><div class="pg-c modcell">${esc(t('hr.col.role'))}</div>${roles.map(r=>`<div class="pg-c c">${esc(tenantRoleDisplayName(r))}</div>`).join('')}</div>`;
     let lastGroup=null;
     ADMIN_PERMISSION_KEYS.forEach(permissionKey=>{
       const groupKey=permissionGroupKey(permissionKey);
@@ -310,7 +316,7 @@ SCREENS['role-permission'] = async function(root){
     const tpl=`minmax(210px,1.6fr) repeat(${editable.length},minmax(130px,1fr))`;
     return `<div class="pagehead" style="padding-top:18px"><div class="h1row"><h2>${esc(t('access.dataScope'))}</h2></div><div class="h1sub">${esc(t('access.dataScopeHint'))}</div></div>
       <div class="dt-page"><div class="permgrid" role="table" style="--ptpl:${tpl}">
-      <div class="pg-r pg-head"><div class="pg-c modcell">${esc(t('access.resource'))}</div>${editable.map(r=>`<div class="pg-c c">${esc(r.name)}</div>`).join('')}</div>
+      <div class="pg-r pg-head"><div class="pg-c modcell">${esc(t('access.resource'))}</div>${editable.map(r=>`<div class="pg-c c">${esc(tenantRoleDisplayName(r))}</div>`).join('')}</div>
       ${ADMIN_SCOPE_RESOURCES.map(resource=>`<div class="pg-r"><div class="pg-c modcell sub mono">${esc(resource)}</div>${editable.map(role=>{
         const value=map.get(`${role.roleId}:${resource}`)||'';
         return `<div class="pg-c c"><select class="role-scope" data-role="${role.roleId}" data-resource="${esc(resource)}"><option value="" ${value?'':'selected'}>${esc(t('access.denied'))}</option>${['self','team','department','company'].map(scope=>`<option value="${scope}" ${value===scope?'selected':''}>${esc(t('access.scope.'+scope))}</option>`).join('')}</select></div>`;
@@ -364,7 +370,7 @@ SCREENS['role-permission'] = async function(root){
     }));
   }
   function openCloneRoleModal(){
-    appModal({icon:'copy',title:t('access.copyTitle'),body:`<div class="fld"><span>${esc(t('access.template'))} *</span><select id="rtTemplate">${templates.filter(item=>!item.isSuperadmin).map(item=>`<option value="${esc(item.key)}">${esc(item.name)}</option>`).join('')}</select></div><div class="fld" style="margin-top:12px"><span>${esc(t('access.customName'))} *</span><input id="rtName" placeholder="${esc(t('access.customPlaceholder'))}"></div><p class="hint">${esc(t('access.copyHint',{company:DB.company.name}))}</p>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('access.copyTemplate'),{icon:'copy',cls:'primary',attrs:'data-save="1"'})}`});
+    appModal({icon:'copy',title:t('access.copyTitle'),body:`<div class="fld"><span>${esc(t('access.template'))} *</span><select id="rtTemplate">${templates.filter(item=>!item.isSuperadmin).map(item=>`<option value="${esc(item.key)}">${esc(item.key==='master_admin'?t('role.masterAdmin'):item.key==='company_owner'?t('role.companyOwner'):item.name)}</option>`).join('')}</select></div><div class="fld" style="margin-top:12px"><span>${esc(t('access.customName'))} *</span><input id="rtName" placeholder="${esc(t('access.customPlaceholder'))}"></div><p class="hint">${esc(t('access.copyHint',{company:DB.company.name}))}</p>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(t('access.copyTemplate'),{icon:'copy',cls:'primary',attrs:'data-save="1"'})}`});
     const save=$('#modalEl').querySelector('[data-save]');
     save.addEventListener('click',async()=>{
       const name=$('#rtName').value.trim(); if(!name){ toast(t('access.nameRequired'),'danger'); return; }

@@ -1540,5 +1540,7 @@
   "access.moduleHidden": "このクライアントでは非表示です",
   "access.modulePlatformControlled": "この会社の商用アクセスはプラットフォームによって管理されています。",
   "access.moduleNotAvailable": "モジュールは利用できません",
-  "access.modulePlatformHelp": "Platform Superadmin に、Master のエンタイトルメントと会社割り当ての確認を依頼してください。"
+  "access.modulePlatformHelp": "Platform Superadmin に、Master のエンタイトルメントと会社割り当ての確認を依頼してください。",
+  "role.masterAdmin": "マスター管理者",
+  "role.companyOwner": "会社所有者"
 }
