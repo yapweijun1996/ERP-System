@@ -69,6 +69,14 @@ async function main(): Promise<void> {
     const listening = await listen(host);
     server = listening.server;
 
+    browser = await chromium.launch({ headless: true });
+    const bootstrapContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const bootstrapPage = await bootstrapContext.newPage();
+    await bootstrapPage.goto(listening.baseUrl, { waitUntil: 'networkidle' });
+    await bootstrapPage.locator('#platformBootstrapForm').waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(await bootstrapPage.locator('.platform-shell').count() === 0, 'bootstrap registration unexpectedly uses the authenticated platform shell');
+    await bootstrapContext.close();
+
     const bootstrap = await fetch(`${listening.baseUrl}/api/setup/platform-superadmin/actions/complete`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -87,7 +95,6 @@ async function main(): Promise<void> {
       ...(idempotencyKey ? { 'idempotency-key': idempotencyKey } : {}),
     });
 
-    browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     await context.addCookies(platform.values.map((cookie) => ({
       name: cookie.name,
@@ -113,10 +120,12 @@ async function main(): Promise<void> {
         const shell = document.querySelector<HTMLElement>('.platform-shell');
         const body = document.querySelector<HTMLElement>('.platform-shell-body');
         const header = document.querySelector<HTMLElement>('.platform-shell-header');
-        const action = document.querySelector<HTMLElement>('.platform-form-actions');
+        const action = document.querySelector<HTMLElement>('.platform-shell-actionbar');
+        const actionButton = document.querySelector<HTMLButtonElement>('#platformCreateMasterAction, #platformCreateCompanyAction');
+        const form = document.querySelector<HTMLFormElement>('#platformCreateMasterForm, #platformCreateCompanyForm');
         const moduleGrid = document.querySelector<HTMLElement>('.platform-provision-module-grid');
         const formGrid = document.querySelector<HTMLElement>('.platform-master-identity');
-        if (!shell || !body || !header || !action || !moduleGrid || !formGrid) return null;
+        if (!shell || !body || !header || !action || !actionButton || !form || !moduleGrid || !formGrid) return null;
         const shellRect = shell.getBoundingClientRect();
         const actionRect = action.getBoundingClientRect();
         return {
@@ -127,8 +136,13 @@ async function main(): Promise<void> {
           overflowHeight: document.documentElement.scrollHeight - document.documentElement.clientHeight,
           bodyOverflowY: getComputedStyle(body).overflowY,
           bodyMinHeight: getComputedStyle(body).minHeight,
+          bodyScrollHeight: body.scrollHeight,
+          bodyClientHeight: body.clientHeight,
           headerPosition: getComputedStyle(header).position,
           actionPosition: getComputedStyle(action).position,
+          actionForm: actionButton.form?.id || '',
+          formContainsAction: form.contains(actionButton),
+          headingFocused: document.activeElement?.matches('.platform-shell-intro h1') || false,
           moduleColumns: getComputedStyle(moduleGrid).gridTemplateColumns.split(' ').length,
           formColumns: getComputedStyle(formGrid).gridTemplateColumns.split(' ').length,
         };
@@ -146,6 +160,10 @@ async function main(): Promise<void> {
       assert(metrics.headerPosition === 'sticky', `workspace header is not sticky at ${width}x${height}`);
       assert(metrics.actionPosition === 'sticky', `workspace action bar is not sticky at ${width}x${height}`);
       assert(metrics.actionBottom <= metrics.shellBottom + 1, `primary action is outside the shell at ${width}x${height}`);
+      assert(metrics.bodyScrollHeight >= metrics.bodyClientHeight, `workspace body metrics are invalid at ${width}x${height}`);
+      assert(metrics.actionForm === 'platformCreateMasterForm', `master action is not associated with the form at ${width}x${height}`);
+      assert(!metrics.formContainsAction, `master action unexpectedly remains inside the form at ${width}x${height}`);
+      assert(metrics.headingFocused, `workspace heading did not receive focus at ${width}x${height}`);
       assert(metrics.moduleColumns === expectedModuleColumns, `module grid has ${metrics.moduleColumns} columns at ${width}x${height}`);
       assert(metrics.formColumns === expectedFormColumns, `identity form has ${metrics.formColumns} columns at ${width}x${height}`);
     }
@@ -153,12 +171,14 @@ async function main(): Promise<void> {
     await assertShell(1440, 900, 3, 2);
     await assertShell(1280, 800, 3, 2);
     await assertShell(1024, 768, 3, 2);
+    await assertShell(768, 1024, 2, 2);
+    await assertShell(430, 932, 1, 1);
     await assertShell(390, 844, 1, 1);
     await assertShell(375, 812, 1, 1);
 
     const alert = page.locator('#platformCreateMasterError');
     assert(await alert.getAttribute('role') === 'alert', 'master form error is missing role=alert');
-    const tabOrder = await page.locator('form#platformCreateMasterForm input, form#platformCreateMasterForm button').count();
+    const tabOrder = await page.locator('form#platformCreateMasterForm input, form#platformCreateMasterForm button, #platformCreateMasterAction').count();
     assert(tabOrder >= 8, `master form keyboard surface is unexpectedly short (${tabOrder} controls)`);
 
     const masterResponse = await fetch(`${listening.baseUrl}/api/platform/masters`, {
@@ -197,14 +217,18 @@ async function main(): Promise<void> {
       const shell = document.querySelector<HTMLElement>('.platform-shell');
       const simulation = document.querySelector<HTMLElement>('.platform-simulation-panel');
       const toolbar = document.querySelector<HTMLElement>('.platform-shell-toolbar');
+      const action = document.querySelector<HTMLElement>('.platform-shell-actionbar');
       const wrappers = Array.from(document.querySelectorAll<HTMLElement>('.platform-table-wrap'));
-      if (!shell || !simulation || !toolbar) return null;
+      if (!shell || !simulation || !toolbar || !action) return null;
       return {
         shellHeight: shell.getBoundingClientRect().height,
+        shellBottom: shell.getBoundingClientRect().bottom,
         simulationWidth: simulation.getBoundingClientRect().width,
         shellWidth: shell.getBoundingClientRect().width,
         toolbarDisplay: getComputedStyle(toolbar).display,
         toolbarColumns: getComputedStyle(toolbar).gridTemplateColumns.split(' ').length,
+        actionBottom: action.getBoundingClientRect().bottom,
+        actionHeight: action.getBoundingClientRect().height,
         wrapperOverflow: wrappers.map((node) => getComputedStyle(node).overflowX),
         outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       };
@@ -213,6 +237,8 @@ async function main(): Promise<void> {
     assert(completedMetrics.shellHeight <= 845 && completedMetrics.shellHeight > 600, 'completed mobile shell did not fit the viewport');
     assert(completedMetrics.simulationWidth <= completedMetrics.shellWidth + 1, 'simulation card exceeded the workspace width');
     assert(completedMetrics.toolbarDisplay === 'grid' && completedMetrics.toolbarColumns === 1, 'mobile tenant selectors did not collapse into a single-column toolbar');
+    assert(completedMetrics.actionBottom <= completedMetrics.shellBottom + 1, 'completed mobile action bar is outside the workspace shell');
+    assert(completedMetrics.actionHeight >= 46, 'completed mobile action bar is too small for touch input');
     assert(completedMetrics.wrapperOverflow.every((value) => value === 'auto' || value === 'scroll'), 'entitlement tables lost local horizontal scrolling');
     assert(completedMetrics.outerWidth <= 1, 'completed mobile workspace overflowed horizontally');
     assert(browserErrors.length === 0, `platform workspace browser errors: ${browserErrors.join(' | ')}`);

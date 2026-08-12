@@ -112,7 +112,7 @@ async function main(): Promise<void> {
     assert(/2\s*Master/.test(await page.locator('.platform-step.current').innerText()), 'master stepper is not on step 2');
     assert(await page.locator('#provisionMasterName').inputValue() === 'Acme Group', 'master name autofill is incorrect');
     assert(await page.locator('#provisionMasterLoginCode').inputValue() === 'ACME', 'master login-code autofill is incorrect');
-    assert(await page.locator('#platformCreateMasterForm button[type="submit"]').innerText() === 'Next: Create Master', 'master button copy is incorrect');
+    assert(await page.locator('#platformCreateMasterAction').innerText() === 'Next: Create Master', 'master button copy is incorrect');
     assert(await page.locator('[data-provision-module]:checked').count() > 0, 'commercial module defaults were not checked');
     assert(await page.locator('[data-provision-module="expenses_tax"]').isChecked() === false, 'expenses_tax default unexpectedly enabled');
 
@@ -132,7 +132,7 @@ async function main(): Promise<void> {
       }
     };
     page.on('request', masterRequestListener);
-    await page.locator('#platformCreateMasterForm button[type="submit"]').click();
+    await page.locator('#platformCreateMasterAction').click();
     await waitFor(page, '#platformCreateCompanyForm');
     page.off('request', masterRequestListener);
     assert(masterRequest?.key.startsWith('platform-master-') === true, 'master idempotency key is not stable client format');
@@ -144,7 +144,7 @@ async function main(): Promise<void> {
     assert(await page.locator('#provisionMasterAdminPassword').inputValue() === 'demo1234', 'Master Admin password autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === 'owner', 'Company Owner username autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerPassword').inputValue() === 'demo1234', 'Company Owner password autofill is incorrect');
-    assert(await page.locator('#platformCreateCompanyForm button[type="submit"]').innerText() === 'Finish: Create Company', 'company button copy is incorrect');
+    assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Finish: Create Company', 'company button copy is incorrect');
 
     await page.locator('#provisionCompanyName').fill('Edited Acme Singapore');
     await page.evaluate(() => {
@@ -162,7 +162,7 @@ async function main(): Promise<void> {
       }
     };
     page.on('request', companyRequestListener);
-    await page.locator('#platformCreateCompanyForm button[type="submit"]').click();
+    await page.locator('#platformCreateCompanyAction').click();
     await waitFor(page, '.platform-entitlement-grid');
     page.off('request', companyRequestListener);
     assert(companyRequest?.key.startsWith('platform-company-') === true, 'company idempotency key is not stable client format');

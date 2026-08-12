@@ -37,8 +37,9 @@
   }
   function stepperMarkup(current){
     var labels=['Platform Superadmin','Master','Company & administrators'];
+    var shortLabels=['Platform','Master','Company'];
     var complete=current>labels.length;
-    return `<ol class="platform-stepper" aria-label="Provisioning progress">${labels.map(function(label,index){ var number=index+1; var isComplete=complete||number<current; var isCurrent=!complete&&number===current; return `<li class="platform-step ${isComplete?'complete':''} ${isCurrent?'current':''}" ${isCurrent?'aria-current="step"':''}><span>${isComplete?'✓':number}</span><b>${label}</b></li>`; }).join('')}</ol>`;
+    return `<ol class="platform-stepper" aria-label="Provisioning progress">${labels.map(function(label,index){ var number=index+1; var isComplete=complete||number<current; var isCurrent=!complete&&number===current; return `<li class="platform-step ${isComplete?'complete':''} ${isCurrent?'current':''}" aria-label="${esc(label)}" ${isCurrent?'aria-current="step"':''}><span>${isComplete?'✓':number}</span><b><span class="platform-step-label-full">${esc(label)}</span><span class="platform-step-label-short" aria-hidden="true">${esc(shortLabels[index])}</span></b></li>`; }).join('')}</ol>`;
   }
   function setFieldValue(root,id,value){
     var field=root&&root.querySelector('#'+id);
@@ -325,7 +326,6 @@
     return `<section class="platform-provision-panel"><div class="platform-panel-heading"><div><h2>Create Master</h2><p>Define the tenant group first. Commercial modules are independent from baseline Home, My Work, Admin, Settings and Account services.</p></div></div><form id="platformCreateMasterForm" class="auth-form">
       <div class="platform-form-grid platform-master-identity">${provisioningInput('provisionMasterName','Master name')}${provisioningInput('provisionMasterLoginCode','Master login code')}</div>
       <fieldset class="platform-module-selection"><legend>Commercial modules</legend><div class="platform-provision-module-grid">${rows}</div></fieldset>
-      <div class="platform-form-actions"><div class="auth-error" id="platformCreateMasterError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Next: Create Master</button></div>
     </form></section>`;
   }
   function companyProvisioningMarkup(master){
@@ -334,12 +334,19 @@
       <section class="platform-form-section"><h3>Company details</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyName','Company name')}<div class="fld"><span>Country</span><select id="provisionCompanyCountry"><option value="SG">Singapore (SG)</option><option value="MY">Malaysia (MY)</option></select></div></div></section>
       ${needsMasterAdmin?`<section class="platform-form-section"><h3>Master Admin <small>(first Company only)</small></h3><div class="platform-form-grid">${provisioningInput('provisionMasterAdminName','Master Admin name')}${provisioningInput('provisionMasterAdminUsername','Master Admin username')}${provisioningInput('provisionMasterAdminEmail','Master Admin email','email')}${provisioningInput('provisionMasterAdminPassword','Master Admin password','password','new-password')}</div></section>`:''}
       <section class="platform-form-section"><h3>Company Owner</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyOwnerName','Company Owner name')}${provisioningInput('provisionCompanyOwnerUsername','Company Owner username')}${provisioningInput('provisionCompanyOwnerEmail','Company Owner email','email')}${provisioningInput('provisionCompanyOwnerPassword','Company Owner password','password','new-password')}</div></section>
-      <div class="platform-form-actions"><div class="auth-error" id="platformCreateCompanyError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Finish: Create Company</button></div>
     </form></section>`;
   }
   function provisioningMarkup(){
     if(!state.masterFn) return masterProvisioningMarkup();
     return companyProvisioningMarkup(currentMaster());
+  }
+  function provisioningActionMarkup(){
+    var masterStage=!state.masterFn;
+    var formId=masterStage?'platformCreateMasterForm':'platformCreateCompanyForm';
+    var errorId=masterStage?'platformCreateMasterError':'platformCreateCompanyError';
+    var actionId=masterStage?'platformCreateMasterAction':'platformCreateCompanyAction';
+    var label=masterStage?'Next: Create Master':'Finish: Create Company';
+    return `<footer class="platform-shell-actionbar" id="platformProvisionActionbar" aria-label="Provisioning action"><div class="auth-error" id="${errorId}" role="alert" aria-live="assertive" tabindex="-1"></div><button class="btn primary" id="${actionId}" form="${formId}" type="submit">${label}</button></footer>`;
   }
   function switchMarkup(){
     return `<div class="platform-workspace-controls platform-shell-toolbar">
@@ -372,7 +379,7 @@
     snapshotDraft(view,state.masterFn?'company':'master');
     view.classList.add('platform-workspace-view');
     view.setAttribute('aria-label','Platform Superadmin workspace');
-    view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1>Loading platform workspace…</h1></div></div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div></div></section>`;
+    view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1 tabindex="-1">Loading platform workspace…</h1></div></div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div></div></section>`;
     try{
       state.tenants=await request('entitlements');
       state.catalog=await request('module-catalog');
@@ -380,10 +387,14 @@
       await loadDetails();
       var hasCompany=Boolean(state.companyFn);
       var stage=state.masterFn?(hasCompany?4:3):2;
-      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1>${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p>${stepperMarkup(stage)}${demoBannerMarkup()}</div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div></section>`;
+      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1 tabindex="-1">${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p>${stepperMarkup(stage)}${demoBannerMarkup()}</div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup()}</section>`;
       if(!hasCompany) applyDemoDefaults(view,state.masterFn?'company':'master',state.masterFn?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
       restoreDraft(view,state.masterFn?'company':'master');
       wireWorkspace(view);
+      var body=view.querySelector('.platform-shell-body');
+      if(body) body.scrollTop=0;
+      var heading=view.querySelector('.platform-shell-intro h1');
+      if(heading&&typeof heading.focus==='function') requestAnimationFrame(function(){ heading.focus({preventScroll:true}); });
     }catch(error){ view.querySelector('.auth-copy').innerHTML=`<h1>Platform workspace unavailable</h1><p>${esc(error&&error.message||'Unable to load platform entitlement data.')}</p>`; }
   }
   function wireWorkspace(view){
@@ -395,7 +406,7 @@
     if(companySelect) companySelect.addEventListener('change',async function(event){ state.companyFn=event.target.value; await renderWorkspace(state.session); });
     var createMaster=view.querySelector('#platformCreateMasterForm');
     if(createMaster) createMaster.addEventListener('submit',async function(event){
-      event.preventDefault(); var error=view.querySelector('#platformCreateMasterError'); var button=createMaster.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
+      event.preventDefault(); var error=view.querySelector('#platformCreateMasterError'); var button=view.querySelector('#platformCreateMasterAction')||createMaster.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
       try{
         var modules=Array.from(createMaster.querySelectorAll('[data-provision-module]')).map(function(input){ return {moduleKey:input.dataset.provisionModule,enabled:input.checked,defaultCompanyAllocated:input.checked}; });
         await request('masters',{method:'POST',headers:{'Idempotency-Key':stableIdempotencyKey('master','',createMaster)},body:{name:createMaster.querySelector('#provisionMasterName').value.trim(),loginCode:createMaster.querySelector('#provisionMasterLoginCode').value.trim(),modules:modules}});
@@ -405,7 +416,7 @@
     });
     var createCompany=view.querySelector('#platformCreateCompanyForm');
     if(createCompany) createCompany.addEventListener('submit',async function(event){
-      event.preventDefault(); var error=view.querySelector('#platformCreateCompanyError'); var button=createCompany.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
+      event.preventDefault(); var error=view.querySelector('#platformCreateCompanyError'); var button=view.querySelector('#platformCreateCompanyAction')||createCompany.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
       try{
         var body={name:createCompany.querySelector('#provisionCompanyName').value.trim(),country:createCompany.querySelector('#provisionCompanyCountry').value,companyOwner:{name:createCompany.querySelector('#provisionCompanyOwnerName').value.trim(),username:createCompany.querySelector('#provisionCompanyOwnerUsername').value.trim(),email:createCompany.querySelector('#provisionCompanyOwnerEmail').value.trim(),password:createCompany.querySelector('#provisionCompanyOwnerPassword').value}};
         var masterAdminName=createCompany.querySelector('#provisionMasterAdminName');
