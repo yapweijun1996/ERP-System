@@ -591,3 +591,11 @@ non-migration rows and empty document storage; health/root are 200 and setup sta
 no real account was created. TASK-193 remains blocked on missing SMTP; source CI run
 `31570902479` passed all four Vitest shards, while docs-only push run `31573438483` was
 blocked before any job started by GitHub Actions account billing.
+
+The user authorized a repeat first-run reset at 2026-08-12T094234Z UTC. A new custom dump
+and document archive were validated before deletion, including an isolated PostgreSQL 16
+restore rehearsal. The recreated stack again applied migration 0098 and production RLS
+without seed; source-verified live status is now `requiresPlatformBootstrap:true` with
+`hasPlatformAdmin:false`, `hasMaster:false`, `hasCompany:false` and
+`hasTenantAdmin:false`. Health/root are 200, the retired anonymous setup endpoint is 410,
+and the browser shows Create Platform Superadmin. No account was created by the reset.

@@ -301,6 +301,28 @@ quick-setup assets. The live setup status is source-verified as
 continuation stage. The public sample credentials remain Demo-only and must be disabled
 (`VITE_PLATFORM_DEMO_AUTOFILL=false`) before any real customer release.
 
+### Second authorized reset and first-run handoff (2026-08-12T094234Z UTC)
+
+The user requested a second complete reset after the Demo quick-setup release. Before
+deletion, `output/pre-reset-20260812T094234Z/erp-before-reset.dump` was created in
+PostgreSQL custom format and validated with a 2,867-entry `pg_restore --list`; an
+isolated PostgreSQL 16 restore passed with Master 1 / Company 0 / Platform principal 1 /
+app users 0 / audit rows 2 / migration rows 99. The accompanying
+`document-storage-before-reset.tar.gz` was readable and contained no document files.
+
+The Compose stack was stopped, project labels and mount points were rechecked, and only
+`erp-system_pgdata` and `erp-system_document_storage` were removed. The stack was
+recreated without seed, migrations through 0098 were applied with the guarded migration
+script, and `deploy/sql/production-rls.sql` was reapplied. Final proof is recorded under
+`output/post-reset-20260812T094234Z/`: 249 public tables, 221 forced-RLS tables, zero
+public rows, migration journal 99, Master/Company/Platform principal/app user/audit all
+zero, and zero document-storage files. Local and public health/root return 200; the old
+anonymous setup endpoint returns 410; and `/api/setup/status` returns
+`requiresPlatformBootstrap:true` with all foundation counts false. After a reload, the
+public browser visibly shows Create Platform Superadmin with the Demo-only sample values.
+No account was created by this reset. The hosted Demo flag remains enabled for this
+handoff and must be set to `false` before any real customer deployment.
+
 ### Auto-creating the database
 
 PostgreSQL's official image auto-creates the database named by `POSTGRES_DB` on first

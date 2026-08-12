@@ -450,7 +450,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Contract-backed; authenticated full-route proof follow-up | The API adapter and current resource/action contracts support the 128-route Canonical boundary with no client-side sample writes. The access matrix and production health/session checks pass; a dedicated authenticated API-mode full-route layout run remains follow-up evidence rather than a deployment blocker. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production first-run Platform bootstrap | ✅ Deployed and reset-verified | The old anonymous `POST /api/setup/actions/complete` returns `410 legacy_setup_disabled`. The reset production database exposes `POST /api/setup/platform-superadmin/actions/complete` only while empty; `GET /api/setup/status` returns `requiresPlatformBootstrap:true`, `hasPlatformAdmin:false`, `hasMaster:false`, `hasCompany:false` and `hasTenantAdmin:false`. Health/root and public browser checks are 200 and show Create Platform Superadmin. |
-| Platform Superadmin Demo quick setup | ✅ Deployed 2026-08-12 | `VITE_PLATFORM_DEMO_AUTOFILL` defaults to `false` and is enabled only for the hosted API demo. Isolated Playwright/PGlite proof covers flag-off behavior, bootstrap/Master/Company defaults, editable rerenders, dismissible public-credentials warning, `Next`/`Finish` flow, stable idempotency replay and existing-Company non-overwrite; the existing 80vh/mobile layout proof remains green. The live non-empty database currently reports Platform Admin + Master, no Company and no tenant admin, so the hosted workspace opens at the Company continuation stage. |
+| Platform Superadmin Demo quick setup | ✅ Deployed 2026-08-12 | `VITE_PLATFORM_DEMO_AUTOFILL` defaults to `false` and is enabled only for the hosted API demo. Isolated Playwright/PGlite proof covers flag-off behavior, bootstrap/Master/Company defaults, editable rerenders, dismissible public-credentials warning, `Next`/`Finish` flow, stable idempotency replay and existing-Company non-overwrite; the existing 80vh/mobile layout proof remains green. After the repeat reset at `output/post-reset-20260812T094234Z`, the live database is fresh (`requiresPlatformBootstrap:true`, no Platform Admin/Master/Company/tenant admin), so the hosted page opens at Create Platform Superadmin. |
 | Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v260) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
 
 ## Canonical and Preview route boundary
@@ -1828,6 +1828,15 @@ non-migration rows and zero document-storage entries. TASK-193 is **Blocked** be
 `SMTP_HOST` is empty; no administrator email reset is claimed. The no-MFA/password-only
 Platform Superadmin and first-caller bootstrap window remain accepted, documented risks.
 
+On 2026-08-12T094234Z UTC the user authorized a repeat reset for another first-run
+attempt. A new custom dump/archive and isolated restore rehearsal were verified before
+deletion; only `erp-system_pgdata` and `erp-system_document_storage` were removed,
+migrations/RLS were reapplied without seed, and the final public proof is 249 tables,
+221 forced-RLS tables, zero non-migration rows and empty document storage. Health/root
+are 200, the legacy setup endpoint is 410, setup status is
+`requiresPlatformBootstrap:true` with all foundation counts false, and the browser now
+shows Create Platform Superadmin. No account was created on the user's behalf.
+
 ## Expenses & Tax v1 implementation boundary (2026-08-12)
 
 The approved product boundary is **Expenses & Tax v1 = Company Receipts + inclusive
@@ -1969,9 +1978,9 @@ future/optional phases rather than v1 defects.
 ## Next implementation boundary
 
 The next boundary is TASK-193 and the separately human-owned TASK-017 physical-device
-acceptance. EPIC-065/TASK-192 remains the historical bootstrap/reset boundary; the current
-hosted site is a non-empty continuation with Platform Admin + Master and no Company, and
-the Demo quick-setup presentation flag is enabled only for this clearly marked Demo host.
+acceptance. EPIC-065/TASK-192 remains the bootstrap/reset boundary; the current hosted
+site is a fresh database waiting for its first Platform Superadmin registration, and the
+Demo quick-setup presentation flag is enabled only for this clearly marked Demo host.
 TASK-193 remains blocked until SMTP is configured and an explicit reset-delivery decision is
 made.
 
