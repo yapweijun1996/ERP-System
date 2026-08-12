@@ -8,9 +8,11 @@ A modular, full-stack ERP (Enterprise Resource Planning) system designed to run 
 | **Demo** | Static `web/dist/` (GitHub Pages) | **PGlite → IndexedDB** + mock data | Public, zero-backend showcase |
 | **Production** | Docker (`web` + `api` + `db`) | **PostgreSQL (100 GB – 800 GB+)** | Real multi-user deployment |
 
-The two modes share the **same SQL schema, the same migrations, and the same business
-logic**. The only thing that changes is *where the database lives* — switched by one
-environment variable (`VITE_DATA_MODE`).
+The two modes replay the same **ordered Drizzle schema migrations** and reuse shared
+transactional domain commands where the browser can provide the required guarantees.
+The transport and trust boundary change with `VITE_DATA_MODE`: Demo runs a single-user
+PGlite adapter, while API mode adds server sessions, workers, PostgreSQL concurrency and
+the production-only RLS overlay.
 
 > **Why this matters:** the demo you deploy to GitHub Pages and the system your client
 > runs on an 800 GB database are not two products. They are one product with a
@@ -25,9 +27,10 @@ environment variable (`VITE_DATA_MODE`).
 2. **Modular** — each business area (sales, inventory, purchasing, finance) is an
    independent module that extends the core without editing it. (Lesson borrowed from
    [Odoo](docs/ARCHITECTURE.md#reference-systems).)
-3. **Isomorphic data layer** — [PGlite](https://pglite.dev) is real PostgreSQL compiled
-   to WASM, so demo SQL and production SQL are *identical*. No second dialect to
-   maintain.
+3. **Isomorphic data layer** — [PGlite](https://pglite.dev) is PostgreSQL compiled to
+   WASM, so both modes replay one Drizzle migration chain and most repositories/commands
+   need no second query dialect. Production-only RLS and concurrency controls remain
+   deliberate overlays.
 4. **Scale-ready from day one** — the schema, indexing, and pagination strategy assume
    a **100 GB – 800 GB** production database. See [SCALABILITY.md](docs/SCALABILITY.md).
 
@@ -78,8 +81,10 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for production tuning at 100 GB – 800 
 ### Multi-tenant, multi-country
 
 Three-level tenancy — **`master_fn` → `company_fn` → `user_id`** — where a company is one
-legal entity per country. Ships ready for **Singapore (GST 9%)** and **Malaysia (SST)**
-from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
+legal entity per country. The current baseline seeds **Singapore (GST)** and
+**Malaysia (SST)** country/currency plus effective-dated tax rules from one codebase;
+full regime engines and statutory filing integrations remain target scope. See
+[MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 [LOCALIZATION.md](docs/LOCALIZATION.md).
 
 ### Also built in
@@ -88,9 +93,10 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
   Vietnamese. Language is stored in the current browser, defaults to English and is
   independent of company country/tax and document locale
   ([I18N.md](docs/I18N.md)).
-- **Pluggable LLM providers (BYOK)** — OpenAI, Gemini, DeepSeek, LM Studio behind two
-  adapters; **Bring Your Own Key** — each user supplies their own key, the system never
-  holds one ([AI_PROVIDERS.md](docs/AI_PROVIDERS.md)).
+- **Governed OCR / BYOK Vision** — local OCR is default; optional OpenAI, Google or
+  OpenAI-compatible document extraction uses an encrypted connector and server worker.
+  The setup-wizard AI selector is preview-only and a general ERP chat assistant is not
+  implemented ([AI_PROVIDERS.md](docs/AI_PROVIDERS.md)).
 - **Guided setup** — one-command host bootstrap + an in-app first-run wizard
   ([SETUP_WIZARD.md](docs/SETUP_WIZARD.md)).
 
@@ -100,7 +106,7 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 | Doc | What's inside |
 | --- | --- |
-| [docs/STATUS.md](docs/STATUS.md) | **Start here** — what is built vs mock vs documented-only (reviewed 2026-08-09) |
+| [docs/STATUS.md](docs/STATUS.md) | **Start here** — what is implemented, tested, deployed, blocked or planned (reviewed 2026-08-12) |
 | [docs/MVP.md](docs/MVP.md) | MVP-1 (browser demo) and MVP-2 (Docker production) scope + exit criteria |
 | [docs/SPEC.md](docs/SPEC.md) | Contract of record: invariants, data model, functional requirements, gates |
 | [docs/DESIGN.md](docs/DESIGN.md) | Working design: repo map, golden paths, transaction design, landmines |
@@ -112,13 +118,13 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 | [docs/TASK.md](docs/TASK.md) | Human-readable current task index; `tasks/tasks.jsonl` remains canonical |
 | [docs/ROLE_PERMISSION_ARCHITECTURE.md](docs/ROLE_PERMISSION_ARCHITECTURE.md) | Current authorization behavior, approved target and migration backlog |
 | [docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md) | **`master_fn`/`company_fn`/`user_id`** hierarchy, app-level scoping vs prod RLS, M:N user↔company |
-| [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | **Singapore + Malaysia**: GST vs SST pluggable effective-dated tax, currency |
+| [docs/LOCALIZATION.md](docs/LOCALIZATION.md) | **Singapore + Malaysia**: current effective-dated rates/currency vs target GST/SST engines and statutory outputs |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Modules, core tables, multi-tenant scoping, indexing conventions |
-| [docs/SCALABILITY.md](docs/SCALABILITY.md) | **100 GB – 800 GB readiness**: partitioning, keyset pagination, indexes, pooling, archiving |
+| [docs/SCALABILITY.md](docs/SCALABILITY.md) | **100 GB – 800 GB target rulebook**; current large-scale/partition/DR proof is TASK-201 |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | One-command `make setup`, Docker Compose (prod) + GitHub Pages (demo) + CI/CD |
 | [docs/SETUP_WIZARD.md](docs/SETUP_WIZARD.md) | Two-phase setup: host bootstrap (script) + in-app first-run wizard (GUI) |
 | [docs/I18N.md](docs/I18N.md) | UI in **en / ms / zh / ja / vi**; i18n (language) vs L10n (tax) separation |
-| [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Pluggable **OpenAI / Gemini / DeepSeek / LM Studio**; never leak keys into the demo |
+| [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Implemented governed OCR/BYOK Vision boundary; setup preview and unimplemented general assistant |
 | [docs/DEMO_MODE.md](docs/DEMO_MODE.md) | PGlite + IndexedDB + mock data, limits, build flags |
 | [docs/PWA.md](docs/PWA.md) | PWA manifest, service worker, update prompt, mobile safe-area rules |
 | [docs/IMPORT_EXPORT.md](docs/IMPORT_EXPORT.md) | User-level CSV/Excel vs admin-level backup/restore at scale |
@@ -140,14 +146,17 @@ from the same codebase. See [MULTI_TENANCY.md](docs/MULTI_TENANCY.md) and
 
 ## Status
 
-The browser demo uses PGlite/IndexedDB with the canonical 244-table schema and working
+The browser demo uses PGlite/IndexedDB with the canonical 249-table schema and working
 Sales, Purchasing, CRM, inventory, warehouse-picking and manufacturing work-order
 transaction chains. Route-level
-`SCREEN_META` currently classifies 128 routes as Canonical and 0 as Preview; Preview
-writes remain disabled if a future Preview route is introduced. The production
-Docker/PostgreSQL stack, authentication and every current Canonical route support API
-mode. Remaining feature depth is tracked explicitly in [docs/STATUS.md](docs/STATUS.md)
-and `tasks/tasks.jsonl`.
+`SCREEN_META` currently classifies 129 routes as Canonical and 0 as Preview; Preview
+writes remain disabled if a future Preview route is introduced. Exactly 128 routes
+declare API mode: `staff-calendar` is the one metadata exception tracked by TASK-200.
+Production deployment exists, but current public probes returned 502 and Platform
+provisioning still needs least-privilege PostgreSQL/RLS proof. See
+[docs/STATUS.md](docs/STATUS.md),
+[docs/ERP_EXCELLENCE_REVIEW.md](docs/ERP_EXCELLENCE_REVIEW.md) and
+`tasks/tasks.jsonl` for the exact implemented/tested/deployed/planned boundary.
 
 ## License
 

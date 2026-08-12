@@ -77,7 +77,7 @@ The current code already implements:
 - multiple roles per user/company through `user_company_role`;
 - allow-union role permissions;
 - `self`, `team`, `department` and `company` resource scopes;
-- company-level module activation;
+- platform-owned Master entitlement plus Company allocation for sellable modules;
 - backend permission, scope and tenant checks on current Canonical APIs;
 - production tenant transactions and forced-RLS coverage for registered business tables;
 - append-only API audit events;
@@ -88,8 +88,7 @@ The current code already implements:
 - master/optional-company support targets, 24-hour maximum grants, read-only or explicit
   restricted-write/break-glass modes, default sensitive-field denial, and audited grant
   lifecycle/decision events.
-- an application-owned permission registry (TASK-171, extended by TASK-179) with 303
-  static definitions: 159 tenant compatibility entries and 144 canonical entries, including a distinct
+- an application-owned permission registry with 314 definitions, including a distinct
   platform permission domain;
 - exact canonical route projections registered for 116 resources, 62 actions and 5
   update contracts. Ordinary role evaluation and approval authority resolution use
@@ -385,6 +384,12 @@ access, if enabled, requires a dedicated grant with:
 The existing Company Owner employee-workspace entry does not satisfy this contract and
 must not be advertised as platform support access.
 
+Current exception/gap: `evaluateSupportAccess` is not wired into tenant data routes,
+while `platform_superadmin` exact-user simulation can access the target user's ordinary
+tenant APIs without an active support grant, reason or ticket. TASK-198 must either bind
+simulation to a grant or document/implement a narrow Superadmin exception, with MFA,
+recent step-up and matching schema comments/tests.
+
 ## 9. Company Owner and separation of duties
 
 `COMPANY_OWNER` is a tenant/company role with an explicit permission bundle. It is not
@@ -392,10 +397,11 @@ a platform principal and must not become a hidden `bypassAuthorization` path.
 
 The current cutover is implemented by `source_template_key = 'company_owner'` and
 `is_superadmin = false`. Migration `0089_company_owner_cutover.sql` creates one
-company-scoped Owner role per existing company, backfills its 112 registered tenant
+company-scoped Owner role per existing company and initially backfilled 112 registered tenant
 permissions and `* -> company` scope, moves legacy assignments while preserving their
 validity/provenance, and leaves historical Superadmin rows inert for audit/rollback
-inspection. `src/auth/authorization.ts` has no Superadmin bypass branch; an Owner
+inspection. The current template contains 115 permissions. `src/auth/authorization.ts`
+has no Superadmin bypass branch; an Owner
 decision is explainable as an ordinary role-permission match. The Owner template is
 immutable through role administration and cannot receive platform permission codes.
 
@@ -620,3 +626,10 @@ membership. `platform_idempotency` is scoped to principal/operation/key and stor
 request hash and non-secret response facts. These records are created by migration 0098;
 the migration also backfills tenant-provisioning permissions for existing Platform
 Superadmins without granting anything to support roles.
+
+This authority model is not yet a complete production database-role proof. Current
+Platform Company provisioning writes RLS-protected tenant rows inside
+`runPlatformMutation` without setting transaction-local `app.master_fn`/`app.company_fn`.
+Bundled Compose may use the PostgreSQL bootstrap superuser, which bypasses FORCE RLS.
+TASK-195 must deploy explicit non-superuser/non-BYPASSRLS runtime roles and prove the
+current Platform path under PostgreSQL before this boundary is production-ready.

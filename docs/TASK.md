@@ -8,29 +8,25 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **191**
+- Done: **192**
 - In progress: **0**
-- Todo: **0**
-- Blocked: **2**
-- Total: **193**
+- Todo: **10**
+- Blocked: **3**
+- Total: **205**
 
 ## Current release-quality note
 
-The 2026-08-10 release follow-up is complete: `npm run audit:screens` rendered all 128
-routes at desktop/mobile and passed the 128 Canonical / 0 Preview maturity plus
-layout/behavior contracts. The full i18n matrix passes 1,545 canonical keys / 72 local
-five-language packs across 129 routes × 5 languages × 2 viewports. TASK-182 registers
-the commercial Expenses & Tax gate and its translated unavailable state; the browser
-matrix verifies the same 129 registered routes at desktop and mobile. The
-2026-08-11 TASK-181 regression passes 160 files plus 1 skipped file (645 passed,
-1 skipped test); its focused Pack/API/Tax Evidence proof passes 3 files / 7 tests.
-TASK-180 adds query-side range/search, and TASK-181 adds migration 0093 plus immutable
-Receipt Pack Preview/PDF/Print; its dedicated E2E and five-language dual-viewport route
-audit pass. `npm run smoke` passes at
-desktop/mobile after the visible-only navigation-badge contract was fixed. PWA update,
-access matrix, build, permission, schema and drift gates pass. TASK-017 remains the
-separate physical-device blocker and does not change the machine-readable totals. The
-purchase-requisition Web adapter uses the actor-input command shape.
+TASK-194 audited HEAD `00e2533`. Final review also observed and preserved user-owned,
+uncommitted Platform workspace transition-state/E2E edits; they are source-present but
+were not included in the focused pass or any deployment claim. Current inventory is 99 migrations through 0098,
+schema v98/249 tables, 129 Canonical / 0 Preview routes, 128 routes declaring API mode,
+1,545 English i18n keys/72 local packs, 314 permission codes and PWA v261. The sole
+Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
+tests; this is not a pass result. Dated TASK-183 129-route browser evidence and earlier
+168-file/663-test evidence remain historical checkpoints. This review passed static
+schema/drift/pack/i18n/permission/build gates and 7 focused files / 22 tests; it could
+not rerun the browser matrix because local Playwright Chromium is absent. Public probes
+returned 502, and HEAD CI started no jobs because GitHub billing/spending blocked it.
 
 ## Current authorization programme
 
@@ -44,7 +40,7 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | TASK-174 | Done | Fail-closed module/resource registry and authorization versioning |
 | TASK-175 | Done | Company Owner cutover, target migration 0089, production RLS re-application and application release verified |
 
-## Planned Expenses & Tax programme
+## Completed Expenses & Tax core programme
 
 | Task | Status | Purpose |
 | --- | --- | --- |
@@ -52,16 +48,16 @@ purchase-requisition Web adapter uses the actor-input command shape.
 | TASK-177 | Done | Migration 0090, Company Receipt aggregate/domain/API, optimistic concurrency, audit and PGlite/PostgreSQL RLS proof |
 | TASK-178 | Done | Migration 0091 exact-hash uniqueness and immutable OCR-provenance confirmation/manual-fallback context |
 | TASK-179 | Done | Migration 0092, explicit own/company read grants, bounded Demo/API register and responsive five-language desktop/mobile UI |
-| TASK-180 | Done | Query-side search, inclusive date presets/ranges, validation and actionable Missing Date behavior |
+| TASK-180 | Done | Query-side search and inclusive range behavior; source audit records Missing Date correction as pending TASK-197 |
 | TASK-181 | Done | Migration 0093 immutable Receipt Pack snapshot, complete-set mixed-currency PDF preview/download/Print and audited Demo/API rendering |
 | TASK-182 | Done | Migration 0097 canonical Company Receipt mutation grants, platform entitlement, Demo/API/UI fail-closed guards, accessMatrix and five-language parity |
-| TASK-183 | Done | Demo/PGlite, authenticated API/PGlite and disposable PostgreSQL 16 browser proof pass; final documentation and KB synchronization completed without a production deployment |
+| TASK-183 | Done | Dated Demo/API/PostgreSQL fixture proof; later audit corrects UI/Pack evidence gaps and TASK-192 is the later deployment checkpoint |
 
 TASK-182 additionally depends on TASK-186 so Expenses & Tax adopts the platform-owned
 entitlement model rather than extending the current tenant MAC authority. TASK-177–181
 retain their existing dependency order and are not blocked by EPIC-064.
 
-## Planned Platform Module Entitlement programme
+## Completed Platform Module Entitlement core programme
 
 | Task | Status | Purpose |
 | --- | --- | --- |
@@ -81,20 +77,36 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | TASK-192 | Done | Production deployment, verified backups, complete PostgreSQL/document-storage reset and final proof |
 | TASK-193 | Blocked | Administrator email self-service reset; SMTP is not configured in production |
 
-TASK-189–192 are complete. TASK-192 deployed migration 0098/RLS, preserved and restore-tested
-the pre-reset production data, removed only the two named ERP volumes, recreated without seed,
-and left the public site at the first Platform Superadmin registration page. The final empty
-database has 249 public tables, 221 forced-RLS tables, zero non-migration rows and zero document
-storage entries; `/health` and the public root are 200 and `/api/setup/status` reports
-`requiresPlatformBootstrap=true`. Source CI run `31570902479` passed all four Vitest shards;
-the later docs-only push run `31573438483` was blocked before any job started by GitHub Actions
-account billing, so that infrastructure limitation is retained as an explicit release caveat.
+TASK-189–192 are complete. At its dated checkpoint, TASK-192 deployed migration 0098/RLS,
+preserved and restore-tested pre-reset data, removed only the two named ERP volumes,
+recreated without seed, and left the site at first Platform registration. That checkpoint
+had 249 public tables, 221 forced-RLS tables, zero non-migration rows/document entries and
+healthy public probes. It is not current-live proof: TASK-194 probes returned 502 and the
+exact deployed HEAD is unverified. Source CI run `31570902479` passed all four shards;
+HEAD run `31603746668` was blocked before job start by GitHub Actions billing.
 TASK-193 is intentionally blocked rather than claiming email
 delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 
-The registry therefore has **191 Done / 0 In progress / 0 Todo / 2 Blocked / 193 Total**.
-This is the source-derived count for the existing 188 records plus TASK-189–193; it
-supersedes the earlier planning estimate of 179/1/11/2.
+## Production Trust & ERP Excellence hardening programme
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| TASK-194 | Done | Audit HEAD, correct all source-of-truth layers and register verified hardening work |
+| TASK-195 | Todo | Least-privilege runtime roles and RLS-compatible Platform provisioning proof |
+| TASK-196 | Todo | Receipt Pack visibility downgrade repair and export governance |
+| TASK-197 | Todo | Permission-aware Company Receipts correction/edit/void and capture UX |
+| TASK-198 | Todo | Reconcile Support Grant/Simulation and add Platform MFA/step-up |
+| TASK-199 | Todo | Restore public availability and prove exact deployed revision |
+| TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |
+| TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
+| TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
+| TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
+| TASK-204 | Todo | Correct SG GST/MY SST validity, classification and posting semantics |
+| TASK-205 | Todo | Prove Vision provider failures and production-configuration boundaries |
+
+The registry therefore has **192 Done / 0 In progress / 10 Todo / 3 Blocked / 205 Total**.
+The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-203 (CI
+billing). Dependencies and epic references are valid.
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master
@@ -108,9 +120,9 @@ replay, disposable PostgreSQL 16 non-superuser RLS proof, access-matrix, browser
 desktop/375px smoke all pass. A same-origin 375px browser check covers Platform Superadmin
 realm login, workspace rendering, exact-user simulation, explicit return and document-width
 containment. The original TASK-188 single-worker proof passed 167 files and 660 tests
-with one expected skip in 976.88 seconds. The later 2026-08-12 current-worktree
-`npm test -- --reporter=dot` run passes 168 files and 663 tests with one expected skip
-in 1304.96 seconds.
+with one expected skip in 976.88 seconds. A later 2026-08-12 checkpoint
+`npm test -- --reporter=dot` run passed 168 files and 663 tests with one expected skip
+in 1304.96 seconds; it predates the current 170-file/666-test collection.
 TASK-186's recorded focused authorization proof remains 8 files / 45 tests. TASK-187's
 isolated proof passes 3 files / 12 tests, root/Web typechecks, API build and schema v96
 drift; its browser check covers API-mode realm login and workspace only. No production
@@ -125,8 +137,10 @@ uses the platform-owned Master entitlement plus Company allocation in API, Demo 
 Company Receipt create/edit/void now use registered canonical permissions rather than the
 compatibility key. TASK-183 is complete: the confirmation entry, PGlite clean-evidence
 browser persistence, isolated same-origin API/PGlite journey and a new disposable
-PostgreSQL 16 browser journey have passed. Full serial Vitest passes 168 files / 663 tests
-with one expected skip in 959.19 seconds. No production deployment was authorized.
+PostgreSQL 16 browser journey passed at that checkpoint. The 168-file/663-test result is
+dated TASK-183 evidence, not a HEAD rerun. TASK-192 later deployed migrations through
+0098 and reset the target to first-run state; no authenticated production receipt UAT is
+claimed. TASK-196/197/202 own the audit-discovered Pack and UX gaps.
 
 ## Latest implementation milestones
 
@@ -153,9 +167,10 @@ with one expected skip in 959.19 seconds. No production deployment was authorize
   snapshot; inactive named authorities are denied, and manager-owned steps cannot be
   taken over by an HR permission. Existing in-flight instances continue under their
   snapshotted authority with no implicit migration. Focused authorization, approval and
-  API regressions pass 18/18 for the current strict-step slice; root typecheck passes.
-  The latest current-worktree full Vitest run passes 663 tests with 1 intentional skip
-  across 168 test files; the prior Team Calendar fixture failures were aligned to explicit HR approval
+  API regressions passed 18/18 for that strict-step slice; root typecheck passed.
+  The recorded 2026-08-12 full Vitest run passed 663 tests with 1 intentional skip
+  across 168 test files; current HEAD instead collects 170/666 and was not run in full
+  by TASK-194. The prior Team Calendar fixture failures were aligned to explicit HR approval
   permissions. Instance/step/resource/policy-bound delegation remains a follow-up
   hardening item.
 - **TASK-172 — Done:** migration `0086_youthful_mac_gargan.sql` adds the stable
@@ -183,8 +198,8 @@ with one expected skip in 959.19 seconds. No production deployment was authorize
   endpoint and reloads without replay. Current server decisions query live permission,
   organization and workflow-policy rows. Focused TASK-174 coverage passes 19/19.
 
-- **TASK-171 — Done:** `src/auth/permissionRegistry.ts` is now the application-owned
-  registry. It contains 299 static definitions (157 compatibility entries and 142
+- **TASK-171 — Done:** `src/auth/permissionRegistry.ts` became the application-owned
+  registry. At that task checkpoint it contained 299 static definitions (157 compatibility entries and 142
   canonical entries, including a separate platform-support domain); the resource
   registry projects exact canonical permissions for 116 resources and 62 actions,
   including 5 update contracts. Ordinary role evaluation and approval authority
@@ -200,8 +215,9 @@ with one expected skip in 959.19 seconds. No production deployment was authorize
   PostgreSQL 16 parity, concurrency and RLS proof for TASK-175 are green, and target
   production migration and release verification are complete.
   `npm run check:permissions` is the CI gate for source literals, role templates,
-  resource/action contracts and compatibility metadata. The latest current-worktree
-  full Vitest run passes 168 files plus 1 skipped file (663 passed, 1 skipped tests);
+  resource/action contracts and compatibility metadata. Current HEAD contains 314
+  definitions. The recorded pre-HEAD full run passed 168 files plus 1 skipped file
+  (663 passed, 1 skipped tests);
   the prior HR
   fixture failures were corrected without widening the production role templates.
 
@@ -210,8 +226,9 @@ with one expected skip in 959.19 seconds. No production deployment was authorize
   boundaries without making platform principals tenant users. Read-only, restricted-
   write and approval-referenced break-glass modes are bounded to 24 hours, default-deny
   sensitive fields, and revocable. `/api/platform` accepts only the separate platform
-  session contract; principal/session issuance is intentionally out-of-band and the
-  support evaluator is a fail-closed decision/audit boundary, not an automatic customer
+  session contract. Issuance was out of band at TASK-170; EPIC-064/065 later added
+  interactive login and controlled empty-database bootstrap. The support evaluator
+  remains a fail-closed decision/audit boundary, not an automatic customer
   data proxy. Domain/API tests cover tenant-cookie rejection, CSRF, expiry, revoke,
   cross-tenant and sensitive-field denial. The complete 151-file Vitest set passes in
   three resource-safe shards: 606 passed, one expected skip, zero failures.
@@ -268,10 +285,14 @@ statuses above and keep each change independently testable:
    the assertion was scoped to visible semantic badges; hidden zero-count badges remain
    in the DOM for stable accessibility behavior.
 
-## Blocker
+## Blockers
 
 - **TASK-017:** physical-phone PWA verification. Automated desktop and emulated 375 px
   checks do not satisfy the real-device acceptance criterion.
+- **TASK-193:** administrator email recovery. Production SMTP and Platform recovery are
+  not configured/proven.
+- **TASK-203:** GitHub Actions billing/spending. The HEAD workflow starts zero jobs; no
+  code failure or green CI result may be inferred.
 
 See [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) for the current
 implementation boundary and migration dependencies, and [EPICS.md](EPICS.md) for epic

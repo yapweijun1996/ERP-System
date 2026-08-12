@@ -125,8 +125,9 @@ current/target record. The following are implemented compatibility facts:
 - role assignments are active only inside `[valid_from, valid_until)` and while
   `revoked_at` is null; creation/revocation provenance is audited;
 - migration `0089_company_owner_cutover` makes tenant-local `is_superadmin` a legacy
-  migration/audit flag. The immutable, company-scoped Company Owner role uses 112
-  explicit tenant permissions and does not bypass role-permission checks;
+  migration/audit flag. It initially backfilled 112 permissions; the current immutable,
+  company-scoped Company Owner template uses 115 explicit tenant permissions and does
+  not bypass role-permission checks;
 - permission storage still contains broad compatibility keys, but TASK-171 now adds an
   application-owned registry with explicit canonical mappings; route/resource/action
   projections are registered and unknown or platform-domain keys cannot be used as
@@ -171,7 +172,8 @@ administration. A grant requires a target master, optional matching company, rea
 ticket, validity window and mode; read-only, restricted-write and break-glass checks
 default-deny sensitive fields and write operations unless explicitly allowed. Platform
 API routes reject tenant cookies, require platform CSRF for mutations and audit grant
-creation, decisions and revocation. Principal/session issuance is out-of-band, and the
+creation, decisions and revocation. Interactive Superadmin login and locked first-run
+bootstrap are implemented; other principal/SSO bootstrap remains operational. The
 evaluator is a decision/audit boundary rather than an automatic customer-data proxy.
 
 TASK-172 has delivered assignment scopes, validity, revocation and provenance. TASK-173
@@ -222,8 +224,9 @@ external calendar remains a one-way projection rather than a source of ERP truth
 
 Expenses & Tax v1 reuses existing document validation and custody: declared MIME,
 extension and magic bytes agree; 20 MB/20-page limits apply; unknown/infected scan
-states fail closed; originals, hashes and versions remain preserved; and sensitive
-view/download/print/export operations are audited with no-store delivery.
+states fail closed; originals, hashes and versions remain preserved. Pack PDF
+view/download/print actions are audited and no-store; ordinary list/detail/confirmation
+and Pack metadata reads do not currently append a dedicated sensitive-access event.
 
 TASK-177 Company Receipt operations derive tenant/uploader scope from Session, reject
 nested client `masterFn`/`companyFn`, require current uploader-owned clean evidence,
@@ -243,9 +246,11 @@ the tenant-scoped query; Company Owner receives a stored company-read grant and
 platform support receives no tenant business grant. TASK-182 keeps mutations and
 confirmation uploader-only but requires the canonical `.create`, `.edit` or `.void`
 Company Receipt permission; `employee.receipts.write` cannot authorize those paths.
-TASK-181 Pack creation and rendering reapply the same read capability and resolved
-own/company visibility; snapshots are creator-only, stable-key idempotent, bounded to
-5,000 rows and render only after scan, version/hash/content and 250 MB source checks.
+TASK-181 Pack creation resolves own/company visibility, but current later read/render
+checks only any receipt-read permission plus creator/tenant. A creator downgraded from
+`read_company` to `read_own` can retain a frozen company-wide Pack and original evidence;
+TASK-196 is the P0 repair. Snapshots are creator-only, stable-key sequentially replayed,
+bounded to 5,000 rows and render only after scan, version/hash/content and 250 MB source checks.
 Preview/download/Print return one no-store artifact and append correlated audit without
 mutating Company Receipt state. `expenses_tax` availability is already platform-owned:
 both Master entitlement and Company allocation must be enabled before the API, Demo or
@@ -286,7 +291,19 @@ Remember Me, immediate durable revoke/return, login rate limiting, platform CSRF
 the target session and MAC writes reject until the operator returns to the platform
 workspace.
 
+`evaluateSupportAccess` is not consumed by tenant data routes. Superadmin simulation
+currently requires no active grant, reason or ticket, despite the schema comment saying
+Platform principals need an expiring grant for customer data. TASK-198 must bind the two
+or formalize a narrow exception and align code comments, policy and tests.
+
 Approved v1 uses password-only platform login and no MFA. Because that principal can
 alter commercial access and fully simulate active users, this is a high-severity
 residual risk that must remain in future human acceptance and production-release
 reporting despite TASK-187/188 source verification.
+
+Current production RLS is also not a completed runtime-role claim: Platform Company
+provisioning does not set transaction-local tenant context before RLS-protected writes,
+and bundled Compose may use a PostgreSQL superuser. TASK-195 must deploy explicit
+non-superuser/non-BYPASSRLS API/worker roles and prove the current path. Public probes
+returned 502 and HEAD CI was billing-blocked, so current availability/release health is
+not green evidence.

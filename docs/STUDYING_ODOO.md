@@ -87,7 +87,7 @@ git clone --depth 1 -b 17.0 https://github.com/odoo/odoo.git odoo-study
 
 | Odoo concept | What we take | What we write ourselves |
 | --- | --- | --- |
-| Modular app registry | The *idea* of pluggable modules | Our own `core/module-registry` |
+| Modular app registry | The *idea* of pluggable modules | `src/auth/moduleCatalog.ts` plus explicit API, permission, entitlement and `SCREENS` registration |
 | ORM data layer | The *pattern* (objects → SQL) | We use Drizzle |
 | Chart of accounts / tax chaining | How the pieces relate | Our own schema + tax engine |
 | Sales→delivery→invoice flow | The business sequence | Our own transactional code |

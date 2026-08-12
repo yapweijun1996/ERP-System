@@ -1,8 +1,9 @@
 // Password hashing (TASK-024). PBKDF2-HMAC-SHA256 via Node's built-in crypto — no
 // new dependency, matches this project's zero-unnecessary-dependency ethos. This is
-// a MINIMAL real-auth scaffold, not a hardened auth system: no rate limiting, no
-// password-reset flow, no MFA. Good enough to stop storing plaintext; not a
-// substitute for a real identity provider before this ever handles real user data.
+// one verifier inside the real-auth boundary. Login/reset routes add rate limits and
+// single-use reset tokens, but Platform MFA/step-up is still absent (TASK-198). PBKDF2
+// parameters and credential migration remain security-review concerns; never treat
+// hashing alone as a complete identity system.
 //
 // Stored format: "pbkdf2$<iterations>$<saltHex>$<hashHex>". Never store, log, or
 // compare plaintext passwords.

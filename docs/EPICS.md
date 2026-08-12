@@ -46,9 +46,10 @@ Acceptance criteria:
 - [x] Finance screen shows chart of accounts and GL entries.
 - [x] Every routed screen opened error-free under canonical data at the 2026-07-17
       TASK-018 baseline; leftover Northwind sample shapes were cleaned or labeled.
-      The route boundary has since grown to 128 Canonical / 0 Preview. The 2026-08-10
-      render/maturity/layout audit passes for desktop and mobile. The separate
-      five-language i18n static audit now passes 1,533 canonical keys / 69 local packs;
+      The route boundary has since grown again to 129 Canonical / 0 Preview at HEAD;
+      API-screen metadata covers 128. The 2026-08-10 128-route render/maturity/layout
+      audit passed for desktop and mobile. The separate five-language i18n static audit
+      at that checkpoint passed 1,533 canonical keys / 69 local packs;
       the changed calendar routes pass the targeted 3 routes × 5 languages × 2 viewports
       matrix, with zero blocking findings.
 
@@ -183,9 +184,9 @@ Acceptance criteria:
 - [x] `confirmOrder`/`completeSetup`/`switchCompany` exist in exactly one place per
       runtime (demo adapter vs. api adapter), never both active at once.
 - [x] `VITE_DATA_MODE=api` renders current Canonical routes with real data once a
-      server is reachable, including a working company switcher. The current route
-      baseline is 128 Canonical / 0 Preview; any deeper future action remains a
-      separate schema/resource/command task.
+      server is reachable, including a working company switcher. Current HEAD registers
+      129 Canonical / 0 Preview routes and 128 API-screen metadata entries; resolving
+      the `staff-calendar` exception and rerunning the authenticated matrix is TASK-200.
 
 ## EPIC-008 — Purchasing Module ✅ (current Canonical purchasing; depth explicitly bounded)
 
@@ -2282,7 +2283,7 @@ cutover migration 0089. TASK-174's version bump, stale-session recovery and dire
 invalidation boundary is complete. TASK-017 remains the
 separate non-programmatic blocker.
 
-## EPIC-062 — Role & Permission Architecture Evolution 🔶
+## EPIC-062 — Role & Permission Architecture Evolution ✅
 
 Evolve the current tenant RBAC compatibility model into a platform-separated,
 assignment-scoped and explainable authorization system without replacing the mature
@@ -2296,14 +2297,15 @@ approval subsystem. Normative current/target behavior is in
       Migrations 0084–0085 add a platform-only principal/role/session domain, exact
       master/company support targets, bounded read-only/restricted-write/break-glass
       grants, default sensitive-field denial, immediate revoke and platform audit
-      correlation. `/api/platform` rejects tenant cookies and uses platform CSRF. Identity
-      and session issuance remains an out-of-band deployment/SSO bootstrap boundary;
-      grant evaluation does not proxy customer data. The pre-TASK-172 complete
-      152-file Vitest baseline is retained as historical evidence. The latest
-      current-worktree full Vitest run passes 168 files plus 1 skipped file (663 passed,
-      1 skipped tests).
+      correlation. `/api/platform` rejects tenant cookies and uses platform CSRF. At
+      the TASK-170 checkpoint identity/session issuance was out of band; EPIC-064/065
+      later added interactive Platform login and controlled empty-database bootstrap.
+      Grant evaluation still does not proxy customer data. The pre-TASK-172 152-file
+      Vitest baseline and the later 168-file/663-test run are dated historical evidence,
+      not current HEAD execution.
 - [x] **TASK-171 — Introduce the canonical permission registry and compatibility-key
-      migration.** `src/auth/permissionRegistry.ts` owns 299 static definitions
+      migration.** At the TASK-171 checkpoint `src/auth/permissionRegistry.ts` owned
+      299 static definitions
       (157 compatibility and 142 canonical, with platform permissions kept in a
       separate domain). The resource registry registers canonical projections for
       116 resources, 62 actions and 5 updates. Backend permission checks and approval
@@ -2319,9 +2321,9 @@ approval subsystem. Normative current/target behavior is in
       explicit permissions, company scope and idempotent legacy assignment backfill.
       TASK-173's
       central decision boundary is complete in the next item.
-      The pre-TASK-172 152-file Vitest regression is retained as historical evidence;
-      the latest current-worktree full run passes 168 files plus 1 skipped file (663
-      passed, 1 skipped tests).
+      The pre-TASK-172 152-file Vitest regression and later 168-file/663-test run are
+      retained as historical evidence. Current HEAD contains 314 definitions and
+      collects 170 files/666 tests; TASK-194 did not run that full collection.
 - [x] **TASK-172 — Move scope targets, validity and provenance to role assignments.**
       Migration 0086 makes `user_company_role.assignment_id` the stable primary key,
       adds validity/revocation/provenance fields and creates `user_company_role_scope`.
@@ -2341,9 +2343,9 @@ approval subsystem. Normative current/target behavior is in
       resource/module/scope/policy context; policy-step snapshot mismatches and
       inactive named authorities fail closed. No HR permission takeover or implicit
       migration of older in-flight instances is allowed. The strict-step focused suite
-      passes 18/18. The latest current-worktree full run passes 168 files plus 1 skipped
-      file (663 passed, 1 skipped tests); targeted notification/access-matrix/module coverage
-      passes 15/15 and HR Calendar fixtures use explicit approval permissions.
+      passed 18/18. The recorded 2026-08-12 full run passed 168 files/663 tests with one
+      skip; targeted notification/access-matrix/module coverage passed 15/15 and HR
+      Calendar fixtures use explicit approval permissions. Those are dated checkpoints.
 - [x] **TASK-174 — Fail closed for unknown modules/resources and invalidate stale
       authorization caches.** Unknown business-module keys now fail closed, payroll is
       in the registered module set, and authenticated `account/*` service routes are
@@ -2372,7 +2374,7 @@ closes the stale browser snapshot and direct-URL boundary. TASK-170 is a prerequ
 the platform identity provider: SSO/provisioning, production data-plane adapters and
 enterprise access reviews remain later phases.
 
-## EPIC-063 — Expenses & Tax v1 (Company Receipts) 🔶
+## EPIC-063 — Expenses & Tax v1 (Company Receipts) ✅
 
 Deliver the approved company receipt collection workflow without forcing users through
 Employee Expense Claims, reimbursement, accounting posting or tax decisions. The
@@ -2388,11 +2390,12 @@ context over immutable OCR provenance and safe manual fallback. TASK-179 adds mi
 five-language browser register. TASK-180 delivers query-side search/date behavior;
 TASK-181 adds migration 0093 and the standalone immutable Receipt Pack. TASK-182 adds
 migration 0097, the platform-owned `expenses_tax` entitlement gate and canonical
-Company Receipt mutation permission cutover. TASK-183 is complete: browser evidence
+Company Receipt mutation permission cutover. TASK-183 is complete: its dated browser evidence
 covers the confirmation hand-off, actual PGlite clean-evidence persistence, an
 authenticated same-origin API-mode PGlite journey at desktop and 375px, and the same
 authenticated journey against a newly created disposable PostgreSQL 16 database. None
-of these fixtures is a production deployment.
+of those fixtures was a production deployment; TASK-192 later deployed the application
+and migrations through 0098 before resetting production to an empty first-run state.
 
 - [x] **TASK-176 — Audit and document the Expenses & Tax v1 boundary.** Reconcile
       current source, approved scope, architecture, backlog and KB without changing
@@ -2413,9 +2416,10 @@ of these fixtures is a production deployment.
 - [x] **TASK-180 — Add transaction-date search and range behavior.** Domain/API/Demo
       queries now apply merchant/receipt-number/notes/category search and inclusive
       transaction-date predicates before cursor pagination. Five-language presets,
-      invalid-range rejection, same-day ranges and actionable Missing Date rows pass
-      focused and browser proof; result retrieval remains independent of the visible
-      page and Missing Date records stay outside active date ranges.
+      invalid-range rejection and same-day ranges passed focused/browser proof; result
+      retrieval remains independent of the visible page and Missing Date records stay
+      visible but outside active date ranges. The current CTA is only a navigation
+      placeholder; real metadata/date correction is TASK-197.
 - [x] **TASK-181 — Build Receipt Pack preview, PDF and Print.** Migration 0093 stores a
       creator-owned immutable selection snapshot. API and Demo/PGlite retrieve every
       ready, dated match independently of UI pagination, freeze chronological source
@@ -2434,22 +2438,25 @@ of these fixtures is a production deployment.
       1440×900/390×844 checks. A separate authenticated same-origin API-mode PGlite
       harness passes the journey at desktop and 375px. A newly created disposable
       PostgreSQL 16 database also passes the same authenticated journey. Full serial
-      Vitest passes 168 files / 663 tests with one expected skip in 959.19 seconds;
-      documentation and KB are synchronized, while production deployment remains
-      separately unauthorized.
+      Vitest passed 168 files / 663 tests with one expected skip in 959.19 seconds;
+      documentation and KB were synchronized. At that checkpoint production deployment
+      was separate and unauthorized; TASK-192 later supplied the deployment/reset
+      checkpoint, while authenticated production receipt UAT remains absent.
 
 Dependencies are deliberate. TASK-177 consumed TASK-174's authorization invalidation
 boundary and TASK-176's contract; TASK-181–183 are delivered after the platform-
 entitlement cutover. Existing EPIC-054–056 functionality is
 preserved as reusable infrastructure or future/optional scope, not duplicated.
 
-Exit criteria: an authorised user can save safe company receipts without an Employee
-Claim, re-open them after persistence, query an inclusive transaction-date range,
-preview every matching receipt and export/print a readable mixed-currency-safe Receipt
-Pack in both data modes; tenant isolation, module entitlement, permissions, audit,
-mobile/desktop and current release gates pass.
+Core-v1 exit criteria were met at the recorded task checkpoints: an authorised user can
+save safe Company Receipts through the fixture workflow, refresh/find them after
+persistence, query an inclusive transaction-date range and preview/export a complete
+mixed-currency-safe Receipt Pack in both data modes. The current UI's Employee
+dependency, missing detail/edit/void/date correction, Pack permission downgrade and
+operational production UAT are explicitly owned by EPIC-066; EPIC-063 completion does
+not waive them.
 
-## EPIC-064 — Platform Module Entitlement & Superadmin Workspace 🟨
+## EPIC-064 — Platform Module Entitlement & Superadmin Workspace ✅
 
 Replace the former tenant-controlled Module Activation boundary with a platform-owned
 commercial entitlement model while preserving the server-side disabled-module gates
@@ -2504,7 +2511,7 @@ Approved target:
       simulation.** Migration 0096, separate credentials/cookies, realm chooser,
       workspace, visible return and exact-target dual audit completed 2026-08-12.
 - [x] **TASK-188 — Prove the cutover and synchronize final docs/KB.** Focused platform
-      tests, followed by the 2026-08-12 current-worktree 168-file/663-test full Vitest
+      tests, followed by the 2026-08-12 checkpoint 168-file/663-test full Vitest
       run (one expected skip), lint/typechecks/schema drift,
       API/Demo builds, access-matrix, browser i18n, desktop/375px smoke, same-origin 375px
       platform simulation/browser, direct PGlite/PostgreSQL 16 migration-preservation replay
@@ -2523,7 +2530,7 @@ existing effective access survives migration; all disabled-module paths deny; ex
 simulation is bounded, visible, revocable and dual-attributed; and full dual-mode,
 PostgreSQL/RLS, browser and release gates pass before status or KB says implemented.
 
-## EPIC-065 — Platform Bootstrap & Tenant Provisioning 🔶
+## EPIC-065 — Platform Bootstrap & Tenant Provisioning 🔶 (core complete; recovery blocked)
 
 Move first-run production identity and tenant creation into the independent Platform
 Superadmin realm. This epic is the successor to the retired anonymous tenant setup
@@ -2534,9 +2541,10 @@ Company can exist.
 Current implementation boundary (2026-08-12): TASK-189–192 are complete. Migration 0098,
 production RLS and application release were verified against the old data, restore-tested
 backups were retained, and the authorized exact-volume reset was completed without seed.
-`GET /api/setup/status` now reports `requiresPlatformBootstrap:true`,
-`hasPlatformAdmin:false`, `hasMaster:false`, `hasCompany:false`, `hasTenantAdmin:false`
-and `isFreshDatabase:true` in production. The public bootstrap creates only a
+The reset checkpoint reported `requiresPlatformBootstrap:true` and all foundation counts
+false. Later source adds Platform Demo quick login, password visibility, responsive
+workspace containment and safe existing-Company resume; those HEAD changes are not
+claimed deployed. Public probes during TASK-194 returned 502. The public bootstrap creates only a
 `platform_principal`, independent password/session cookies and an append-only
 `__platform__` audit event. It never creates an `app_user` or `erp_session`.
 
@@ -2567,12 +2575,59 @@ Approved flow:
 | TASK-190 | Done | Master/Company provisioning, Master Admin RBAC, migration 0098 and defaults |
 | TASK-191 | Done | Workspace UX, API/idempotency, browser/security/negative tests |
 | TASK-192 | Done | Deploy, backup/restore rehearsal, exact-volume reset and final production evidence |
-| TASK-193 | Blocked | Three administrator email self-service reset; SMTP is not configured |
+| TASK-193 | Blocked | Administrator email self-service reset; SMTP is not configured |
 
-Exit criteria for EPIC-065 are met: TASK-192 proves migration 0098 and production RLS on
+Core exit criteria for EPIC-065 were met at the TASK-192 checkpoint: it proved migration 0098 and production RLS on
 the deployed release, preserves old data before the reset, validates custom dumps and an
 isolated restore, clears only `erp-system_pgdata` and `erp-system_document_storage`,
 recreates without seed, and leaves the public site on the first Platform Superadmin
 registration page without creating a real account. TASK-193 remains blocked while SMTP is
-unset; source CI run `31570902479` passed all four Vitest shards, while docs-only push run
-`31573438483` was blocked before any job started by account billing.
+unset. Source CI run `31570902479` passed all four Vitest shards; HEAD run `31603746668`
+was blocked before any job started by account billing. EPIC-066 owns the newly verified
+RLS/runtime-role, deployment-health and privileged-access hardening requirements.
+
+## EPIC-066 — Production Trust & ERP Excellence Hardening 🔶
+
+Convert broad ERP feature coverage into a defensible production system. This epic was
+created from the HEAD source audit in
+[ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md). It does not erase the historical
+completion of EPIC-063–065; it owns defects and evidence gaps discovered afterward.
+
+Current truth:
+
+- Platform Company provisioning is implemented and PGlite-tested, but its current
+  transaction does not establish tenant context before RLS-protected writes. Bundled
+  Compose may instead run as the PostgreSQL bootstrap superuser and bypass FORCE RLS.
+- Receipt Pack read/render does not compare current visibility with frozen visibility;
+  a creator downgraded from company to own read can retain a company-wide snapshot.
+- Company Receipts has real create/update/void commands, but read-only UI gating,
+  detail/edit/void, Missing Date correction and Employee-independent picker UX are not
+  complete.
+- Support Grant is not a tenant-data proxy, while exact-user Superadmin simulation does
+  not require a grant/reason/ticket. Platform MFA/step-up is absent.
+- Public health/setup probes returned 502 and the exact deployed HEAD revision is not
+  proven. Current CI is externally blocked by billing. Source inventory is 129 Canonical
+  routes but only 128 API-mode metadata routes.
+- Tax validity intervals disagree at `valid_to`, and current supplier-invoice posting
+  can apply GST-style recoverable Input Tax to a Malaysia SST Company. Governed Vision
+  has no direct failing-provider proof or production gateway evidence.
+
+| Task | Status | Scope |
+| --- | --- | --- |
+| TASK-194 | Done | Audit HEAD, correct source-of-truth docs and register hardening work |
+| TASK-195 | Todo | Least-privilege runtime roles and RLS-compatible Platform provisioning |
+| TASK-196 | Todo | Receipt Pack visibility downgrade repair and export governance |
+| TASK-197 | Todo | Permission-aware Company Receipts capture/correction/edit/void UX |
+| TASK-198 | Todo | Support/Simulation policy, Platform MFA and sensitive-action step-up |
+| TASK-199 | Todo | Restore public availability and prove the deployed revision |
+| TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |
+| TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
+| TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
+| TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
+| TASK-204 | Todo | Correct SG GST/MY SST validity, classification and posting semantics |
+| TASK-205 | Todo | Prove Vision gateway/provider failure and production-configuration boundaries |
+
+Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, browser and operational
+acceptance criteria; current CI executes rather than failing before startup; public
+health and deployed revision are independently verified; TASK-017 and TASK-193 remain
+separately truthful until physical-device and email-recovery evidence exists.

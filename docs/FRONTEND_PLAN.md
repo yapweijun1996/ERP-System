@@ -1,131 +1,81 @@
-# Frontend Plan
+# Frontend Maintenance Plan
 
-This project will build its ERP frontend incrementally using the user's Aria ERP design
-as the **visual baseline**. The pasted Aria ERP prototype now lives in
-`references/ui/aria-erp/`.
+> **Status (2026-08-12):** the original frontend build-out plan is complete and this
+> file now describes the maintained architecture and next quality boundary. Current
+> truth lives in [DESIGN.md](DESIGN.md), [STATUS.md](STATUS.md) and
+> [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
 
-## 1. Source-of-truth rule
+## 1. Product and source boundary
 
-Clone the Aria ERP shell, navigation, spacing, and component look so the product does not
-waste time on redesign.
+The Aria ERP prototype in `references/ui/aria-erp/` remains the visual baseline for
+shell density, tables, forms, drawers and responsive behavior. It is not a data,
+authorization or workflow source of truth.
 
-Use it for:
+Current canonical boundaries are:
 
-- sidebar and topbar layout reference
-- module navigation patterns
-- dashboard density and page structure
-- table, form, filter, drawer, and detail-page patterns
-- responsive behavior on mobile and desktop
+- Drizzle schema and migrations under `src/data/schema/` and `drizzle/`;
+- transactional domain commands under `src/modules/`;
+- tenant derivation and authorization under `src/api/` and `src/auth/`;
+- a vanilla-JavaScript shell under `web/public/assets/`, registered through the global
+  `SCREENS` map in the fixed `web/index.html` script order;
+- a bundled TypeScript Demo/report runtime under `web/src/`;
+- parallel Demo/PGlite and authenticated API/PostgreSQL adapters.
 
-Do not carry over unrelated prototype implementation details long term:
+Do not create a browser-only domain rule, duplicate a server-side money/stock command
+in raw SQL, or treat prototype literals as implemented ERP data.
 
-- mock business data
-- unrelated modules
-- global script registry patterns, except as a short-lived bridge while the cloned Aria
-  shell is still a classic-script app
-- static screen files that are not part of the current milestone
-- duplicate SQL schema that conflicts with `src/data/schema/`
+## 2. Current runtime modes
 
-The canonical data model remains Drizzle in `src/data/schema/`. The canonical business
-flows remain TypeScript modules under `src/modules/`.
-
-Current bridge: `web/public/assets/erp-system-data-adapter.js` loads after the cloned
-Aria sample data and before the UI/screen files. It maps the canonical Acme SG demo seed
-and the `SO-1 -> INV-SO-1 -> GL` transaction proof into Aria's existing `DB` object so the
-layout can keep running while the real PGlite/API adapter is built.
-
-## 1.1 Repository boundary
-
-Keep these folders separate:
-
-| Folder | Purpose |
-| --- | --- |
-| `web/` | Real frontend app source and build config |
-| `references/ui/aria-erp/` | User-owned Aria ERP visual baseline and prototype assets |
-| `src/data/` | Shared schema, adapters, seed, repository helpers |
-| `src/modules/` | Business modules and transactions |
-| `api/` | Production API server, once added |
-| `infra/` | Docker, deployment, and environment assets, once added |
-
-## 2. Target frontend shape
-
-The frontend lives in `web/`.
-
-Recommended target:
-
-```
-web/
-  package.json
-  index.html
-  vite.config.ts
-  src/
-    app/
-    components/
-    layouts/
-    pages/
-    data/
-    styles/
-```
-
-The first milestone may be plain HTML/CSS/JavaScript if that gets the demo moving faster,
-but the long-term frontend should stay modular enough to support:
-
-- GitHub Pages static demo
-- PGlite browser data adapter
-- API/PostgreSQL production adapter
-- first-run setup wizard
-- mobile and desktop ERP workflows
-
-## 3. Two runtime modes
-
-The same UI must support two data modes:
-
-| Mode | Deploy target | Data path | Purpose |
+| Mode | Build | Data path | What it proves |
 | --- | --- | --- | --- |
-| Demo | GitHub Pages static `dist/` | Browser UI -> PGlite -> IndexedDB | Public showcase with mock/demo data |
-| Production | Docker (`web` + `api` + `db`) | Browser UI -> Node API -> PostgreSQL | Real multi-user ERP deployment |
+| Static Demo | `npm run build:demo` | Browser -> shared runtime -> PGlite -> IndexedDB | Installable, resettable showcase using sample data |
+| API | `npm run build` | Browser -> authenticated Node API -> PostgreSQL | Server-enforced authorization and transactional behavior |
 
-Build-time flag:
+The static Demo has local persona access and entitlement fixtures but no real Platform
+credential realm. The hosted API Demo may explicitly enable editable sample Platform
+autofill and one-click login. That flag is presentation-only, defaults off for customer
+builds and is not deployment or security proof.
 
-```text
-VITE_DATA_MODE=demo   # browser PGlite
-VITE_DATA_MODE=api    # production API
-```
+## 3. Current inventory and honest parity boundary
 
-In production, writes that affect stock or money must go through the API. The browser is
-not allowed to bypass server-side transaction enforcement.
+Source registers 129 Canonical routes and no Preview routes. Static API-screen metadata
+covers 128; `staff-calendar` is the sole exception. The five-language static resource
+audit covers 1,545 keys and 72 local packs. Those are source/static facts at HEAD, not a
+fresh 129-route hosted browser result.
 
-## 4. Incremental build order
+The current full Vitest collection is 170 files/666 tests; that number is collection,
+not a pass claim. Historical browser and full-test results remain dated in STATUS.
 
-Build one ERP slice at a time:
+## 4. Next frontend priorities
 
-1. App shell: sidebar, topbar, company switcher, language switcher, responsive layout.
-2. Dashboard: mock KPIs first, then real summary queries.
-3. Inventory: products, warehouses, stock on hand, stock movement history.
-4. Sales: customers, sales orders, order confirmation, invoice output.
-5. Finance: chart of accounts, GL entries, AR summary.
-6. Settings: company, user, language, fiscal period, tax rules.
-7. Setup wizard: first-run flow shared by demo and production.
+1. **Close security-visible UI gaps.** Hide Company Receipt create actions from
+   read-only users, recheck Receipt Pack visibility after permission changes and keep
+   originals export purpose-bound and audited.
+2. **Finish the Company Receipt operator journey.** Add real detail/reopen,
+   metadata/date correction and void actions; make the evidence picker eligible-only,
+   searchable and paginated; decide how non-Employee finance users capture evidence.
+3. **Restore and prove route parity.** Decide the `staff-calendar` API metadata
+   contract and rerun all 129 routes in authenticated API mode at desktop/mobile.
+4. **Preserve financial and locale accuracy.** Keep Decimal values as strings/Decimal
+   objects until formatting, use Company calendar/timezone presets and render exported
+   PDFs with locale resources and Unicode fonts.
+5. **Maintain recoverable workflows.** Existing-Company provisioning must resume
+   idempotently, a new Company form must start blank, and unsaved tenant forms must not
+   leak into the independent Platform realm.
 
-Each page should start with mock data only when needed for layout, then be wired to the
-shared data layer or API adapter before it is considered complete.
+## 5. Acceptance gates for a frontend change
 
-For the cloned Aria baseline, the migration path is:
+- both `npm run build:demo` and `npm run build` pass;
+- `npm run typecheck:web`, affected unit/integration tests and relevant static audits
+  pass;
+- changed workflows are exercised in the correct mode at desktop and 375px, with no
+  console errors, overflow, inaccessible action or false-success state;
+- authorization is enforced at API/domain boundaries and reflected honestly in the UI;
+- money, date-only fields and immutable evidence are not coerced through lossy browser
+  types;
+- PGlite and API adapters preserve the same business contract;
+- documentation distinguishes source-present, tested-now, deployed and live-verified.
 
-1. Keep the Aria shell and screens stable.
-2. Replace old Northwind sample objects through `erp-system-data-adapter.js`.
-3. Move adapter source data from hardcoded canonical mirror to browser PGlite queries.
-4. Swap the demo adapter for the production API adapter when `VITE_DATA_MODE=api`.
-5. Remove old Aria data files once every used screen reads from the project adapter.
-
-## 5. Acceptance checks
-
-Before a frontend milestone is considered done:
-
-- `npm run build:demo` produces a static bundle suitable for GitHub Pages.
-- Demo mode works without `DATABASE_URL` or any backend server.
-- Demo data persists in IndexedDB and can be reset.
-- Production build points to the API adapter, not PGlite.
-- Docker Compose can run `web`, `api`, and `db`.
-- The setup wizard appears on first run when no master/company exists.
-- Desktop and mobile layouts are checked for sidebar/topbar/table/form usability.
+Production release still requires the independent RLS/runtime-role, recovery, current
+revision and operational UAT gates in EPIC-066; a successful frontend build cannot
+satisfy them.

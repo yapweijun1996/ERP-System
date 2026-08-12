@@ -27,6 +27,28 @@ and production RLS was re-applied before the authorized reset. Production RLS in
 override/company tables; the application central evaluator remains authoritative for
 decision semantics.
 
+### Current evidence warning (TASK-194, 2026-08-12)
+
+The 0098 reset/release paragraphs below are immutable historical checkpoints. They are
+not proof that HEAD `00e2533` is deployed or that the service is currently healthy.
+Public `/health` and `/api/setup/status` probes returned HTTP 502 during TASK-194. The
+latest HEAD workflow run `31603746668` started zero jobs because GitHub reported failed
+account payment or an exhausted spending limit. Later source adds Platform Demo quick
+login, password visibility, responsive containment and safe existing-Company resume,
+but no current deployed revision/asset hash was independently proven. TASK-199 owns
+availability and revision proof; TASK-203 owns the external CI blocker.
+
+Final-review user-owned worktree edits further refactor that resume behavior into an
+explicit presentation state machine and extend its E2E assertions. They are uncommitted,
+were not executed in the late review window and have no deployment evidence.
+
+There is also a P0 database-role gap. `production-rls.sql` requires a non-superuser,
+non-BYPASSRLS API role with transaction-local tenant settings. Current Platform Company
+provisioning does not set those settings before RLS-protected writes, while bundled
+Compose may use the PostgreSQL bootstrap superuser. TASK-195 must supply explicit
+least-privilege API/worker roles and current-path PostgreSQL proof before another
+production-ready claim.
+
 Current TASK-175 evidence (2026-08-10): a disposable PostgreSQL 16 database passed
 `POSTGRES_URL=... npm run demo` (cross-engine parity and exactly-one-winner stock
 concurrency) and `npm run test:postgres` (non-superuser RLS/security integration). The
@@ -47,6 +69,8 @@ npm run check:drift
 npm run typecheck && npm run typecheck:web && npm run lint
 npx vitest run src/api/permissionMatrix.integration.test.ts
 npm run audit:access-matrix
+npm run test:e2e:platform-workspace-layout
+npm run test:e2e:platform-workspace-demo-autofill
 ```
 
 The access-matrix checks are regression evidence for the current route/module/permission
@@ -348,8 +372,8 @@ Apply it as a **production-only** step after the shared migrations:
 psql "$DATABASE_URL" -f deploy/sql/production-rls.sql   # enables + FORCEs RLS policies
 ```
 
-This keeps tenant isolation enforced at the database level in production without breaking
-the "identical shared schema both modes" invariant.
+This keeps tenant isolation enforced at the database level in production while the
+ordered Drizzle migration chain remains portable to PGlite.
 
 ### Optional single-node document filesystem
 
@@ -539,6 +563,10 @@ Production is ready when:
   setup endpoint returns 410.
 - stock and finance writes run through the API, not directly from the browser.
 - PostgreSQL transaction/concurrency tests pass, including no stock over-sell.
+- API and workers use explicit non-superuser/non-BYPASSRLS runtime roles, and current
+  Platform bootstrap/Master/Company provisioning passes under FORCE RLS.
+- the deployed commit and web asset hashes are recorded; public probes and CI are current
+  rather than historical or zero-step infrastructure failures.
 
 ## Staff Calendar worker deployment
 

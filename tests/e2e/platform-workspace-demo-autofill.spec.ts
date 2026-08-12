@@ -156,16 +156,28 @@ async function main(): Promise<void> {
     await page.locator('#provisionCompanyName').fill('Acme Singapore');
 
     let companyRequest: { url: string; key: string; body: unknown } | undefined;
+    let companyMutationCount = 0;
     const companyRequestListener = (request: import('playwright').Request) => {
       if (request.method() === 'POST' && /\/api\/platform\/masters\/[^/]+\/companies$/.test(request.url())) {
+        companyMutationCount += 1;
         companyRequest = { url: request.url(), key: request.headers()['idempotency-key'] ?? '', body: request.postDataJSON() };
       }
     };
     page.on('request', companyRequestListener);
     await page.locator('#platformCreateCompanyAction').click();
     await waitFor(page, '.platform-entitlement-grid');
-    page.off('request', companyRequestListener);
+    assert(companyMutationCount === 1, 'one Company submit triggered more than one mutation');
     assert(companyRequest?.key.startsWith('platform-company-') === true, 'company idempotency key is not stable client format');
+
+    // The successful transition must clear the completed form immediately. A
+    // reload is deliberately not allowed to hide a stale in-memory draft.
+    assert(await page.locator('#provisionCompanyName').inputValue() === '', 'successful Company transition restored the submitted Company name');
+    assert(await page.locator('#provisionCompanyOwnerName').inputValue() === '', 'successful Company transition restored the submitted owner name');
+    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === '', 'successful Company transition restored the submitted owner username');
+    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === '', 'successful Company transition restored the submitted owner email');
+    assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'successful Company transition rendered a duplicate-provisioning error');
+    assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create another Company', 'successful Company transition did not enter tenant control');
+    page.off('request', companyRequestListener);
 
     // Replaying the exact captured mutations must return the existing result,
     // proving that the stable key is safe across a refresh/double click.
@@ -176,8 +188,7 @@ async function main(): Promise<void> {
     }, companyRequest as { url: string; key: string; body: unknown });
     assert(replay.status === 200 && replay.body?.meta?.idempotentReplay === true, 'company idempotency replay did not return the existing result');
 
-    // A database that already has a Company must not inject sample values into
-    // the subsequent “create another company” form.
+    // A reload must preserve the same completed-state contract.
     await page.reload({ waitUntil: 'networkidle' });
     await waitFor(page, '.platform-entitlement-grid');
     const companyForm = page.locator('#platformCreateCompanyForm');

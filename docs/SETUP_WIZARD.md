@@ -9,8 +9,8 @@ Phase A — Host bootstrap      (NO app running yet → cannot be a web GUI)
    install Docker → write .env → bring the stack up
         │
         ▼
-Phase B — In-app first-run wizard   (app is up → GUI, shared by demo & prod)
-   create master/company → country+tax → language → admin user → LLM provider
+Phase B — In-app first run   (app is up → mode-specific GUI)
+   static Demo local setup | API Platform bootstrap → Master → Company
 ```
 
 ---
@@ -46,17 +46,18 @@ experience lives.
 
 ---
 
-## Phase B — In-app first-run wizard (shared by demo & production)
+## Phase B — In-app first run (separate visible flows)
 
-Once the stack is up (or the demo loads), the app detects **first run** and launches a
-guided wizard. Production uses the server's zero-user setup state; the browser demo uses
-its local completion flag and a seeded reference master. The same visible wizard is used
-in both modes — the demo simply has no Phase A.
+Once the stack is up (or the demo loads), the app detects first run. Static Demo uses its
+local PGlite wizard and completion flag. Production and the hosted API Demo use the
+independent Platform flow: claim Platform Superadmin, create Master, then create Company
+and tenant administrators. They share design language and data contracts, not one visible
+wizard or one identity plane.
 
 The wizard is part of the real frontend, not a separate prototype. It must work with the
 same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND_PLAN.md).
 
-### Steps
+### Static Demo local-wizard steps
 1. **Welcome / language** — pick UI language (en/ms/zh/ja/vi) up front so the rest of the
    wizard is localized. See [I18N.md](I18N.md).
 2. **Create master** — the top tenant (group/holding name) → `master_fn`.
@@ -66,9 +67,10 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
    - repeatable: add the MY company after the SG one (or vice-versa).
 4. **Admin user** — create the first user, assign to the company/companies (M:N) →
    [MULTI_TENANCY.md](MULTI_TENANCY.md#4-user--company-is-many-to-many).
-5. **AI provider (optional)** — choose OpenAI / Gemini / DeepSeek / LM Studio and enter a
-   key. **BYOK: the key is the user's own, kept user-side, in both demo and production —
-   the system never stores a provider key.** → [AI_PROVIDERS.md](AI_PROVIDERS.md#2-how-byok-works-same-in-both-modes).
+5. **AI provider preview (optional)** — choose OpenAI / Gemini / DeepSeek / LM Studio.
+   This local-wizard field configures no runtime adapter; its key stays only in form
+   memory and is discarded. Governed document Vision is configured later through an
+   encrypted server connector and worker → [AI_PROVIDERS.md](AI_PROVIDERS.md).
 6. **Finish** — seed optional sample data; land on the dashboard.
 
 For production, the former anonymous `POST /api/setup/actions/complete` tenant foundation
@@ -92,8 +94,8 @@ continuation point in the platform workspace.
   `hasTenantAdmin` and `isFreshDatabase`. The static demo uses
   `aria-setup-wizard-complete`; reset clears the browser database and returns to the
   local wizard.
-- The wizard writes through the **same data layer** as everything else, so it works
-  against PGlite (demo) and the API/PostgreSQL (prod) without special-casing.
+- Each flow writes through its formal adapter/domain boundary. Static Demo uses PGlite;
+  API mode uses Platform bootstrap/provisioning commands against PostgreSQL.
 - Production setup is a one-time empty-database bootstrap. After the first admin exists
   the command returns `409 already_initialized`, and a database with any tenant
   foundation rows is rejected before setup begins.
@@ -106,7 +108,7 @@ continuation point in the platform workspace.
 | --- | --- | --- |
 | Runs when | nothing is up yet | app is running |
 | Form factor | shell script / installer | web GUI |
-| Audience | engineer (now); end-user installer (future) | every user, both modes |
+| Audience | engineer (now); end-user installer (future) | Demo visitor or first Platform operator |
 | Configures | Docker, `.env`, DB, migrations | tenants, country/tax, language, users, AI |
 
 Trying to make Phase A a web wizard is impossible (no server to serve it). Trying to make
@@ -156,8 +158,9 @@ Master Admin is limited to dashboard, company switching, user/role/audit/setting
 administration. It cannot use commercial modules, workflows, payments, payroll, MAC,
 support, simulation or any `platform.*` permission. TASK-193 (email reset) remains
 blocked while production SMTP is unset. TASK-192 completed the 2026-08-12 deployment and
-exact-volume reset; production is intentionally waiting on the first Platform Superadmin
-registration and no real account was created.
+exact-volume reset; its checkpoint waited on first Platform registration and created no
+real account. Current public probes returned 502, so that checkpoint is not current-live
+state.
 
 ### Demo quick-setup presentation flag
 
@@ -168,3 +171,16 @@ setup · sample accounts” notice. The source default and all real-customer bui
 stable form-fingerprint Idempotency-Key values, and still require the same server-side CSRF,
 permission, uniqueness, audit and transaction checks. A visitor may edit every prefilled
 field; an existing Company is never overwritten. Do not enable the flag for customer data.
+
+HEAD additionally provides one-click sample Platform login only when the Demo flag is on,
+password Show/Hide controls, tenant-only Remember, responsive containment, and safe
+existing-Company resume with explicit `Create another Company`. Existing Company state
+never backfills sample values into a new-Company form. These source/test facts are not a
+claim that the exact HEAD is deployed.
+
+### Production RLS provisioning gate
+
+The current Platform Company transaction writes RLS-protected tenant tables without
+setting the generated transaction-local tenant context; bundled Compose may instead use
+the PostgreSQL bootstrap superuser. TASK-195 must deploy least-privilege runtime roles and
+prove the current flow under FORCE RLS before this setup path is production-ready.

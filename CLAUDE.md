@@ -45,13 +45,12 @@ verified in browser at desktop AND 375 px with zero console errors.
 
 ## Landmines (violating these breaks the product)
 
-1. **Dual-copy sync:** `web/public/db/erp-system-schema.sql`/`erp-system-migrations.sql`
-   are generated from `drizzle/*.sql` by `npm run generate:demo-schema` (verify with
-   `npm run check:demo-schema`) — run it after every `npm run generate`, don't hand-edit
-   these files. The adapter's raw-SQL `confirmOrder` in
-   `web/public/assets/erp-system-data-adapter.js` is still hand-mirrored from
-   `src/modules/sales/confirmOrder.ts`; business-logic changes there still go in **both
-   places** in the same commit.
+1. **Generated Demo artifacts:** `web/public/db/erp-system-schema.sql` and
+   `erp-system-migrations.sql` are generated from `drizzle/*.sql` by
+   `npm run generate:demo-schema` (verify with `npm run check:demo-schema`) — run it
+   after every `npm run generate` and never hand-edit the artifacts. Canonical commands
+   such as sales confirmation now use the bundled TypeScript runtime under `web/src/`;
+   do not reintroduce a second raw-SQL implementation of a shared domain command.
 2. **Stock/money writes are one transaction** with full rollback; in production they
    are server-side only. Never post an unbalanced GL entry.
 3. **Tenant scoping:** every business query filters `master_fn` (+ `company_fn`);
@@ -59,18 +58,23 @@ verified in browser at desktop AND 375 px with zero console errors.
 4. Frontend is **vanilla JS with a global `SCREENS` registry** — do not introduce a
    framework, module bundler for `public/assets`, or TypeScript there piecemeal.
 5. Script tag order in `web/index.html` matters: data → adapter → screens → app.
-6. No secrets or provider API keys in the repo or bundle; AI keys are BYOK at runtime,
-   never `VITE_`-prefixed.
+6. No secrets or provider API keys in the repo or bundle. Runtime document-Vision BYOK
+   credentials use the encrypted server connector, never a `VITE_` variable; the setup
+   wizard's AI field is a non-persisted preview.
 7. Odoo is studied concept-only (LGPLv3) — never port its code.
 8. Demo-only shortcuts (fake auth, mock modules) must be visibly labeled as demo.
 
 ## Repo map (short)
 
-- `src/` — canonical core: Drizzle schema (`src/data/schema/`), seed, dual DB factory,
-  business modules (`confirmOrder.ts`, `stock.ts`), proof script `demo.ts`.
-- `drizzle/` — generated migrations (`0000_init.sql` = current 18-table schema).
+- `src/` — canonical core: API/routes (`src/api/`), authorization (`src/auth/`),
+  Drizzle schema (`src/data/schema/`), domain commands (`src/modules/`), workers and
+  the PGlite/PostgreSQL proof script `demo.ts`.
+- `drizzle/` — append-only generated migrations; `0000_init.sql` is the historical
+  initial baseline, while the journal and later migrations define the current schema.
 - `web/public/assets/` — vanilla-JS frontend (hash router `app.js`, `SCREENS` registry,
-  PGlite adapter `erp-system-data-adapter.js`, `screens-*.js`, mock `data-*.js`).
-- `web/public/db/` — hand-copied SQL for the browser demo (see landmine #1).
+  PGlite/API adapters, `platform-workspace.js`, `screens-*.js` and compatibility data).
+- `web/src/` — the bundled browser runtime that exposes shared TypeScript domain and
+  reporting commands to the classic-script shell.
+- `web/public/db/` — generated schema/migration artifacts and deterministic Demo pack.
 - `tasks/tasks.jsonl` — backlog. `docs/` — full documentation suite.
-- `deploy/erp-server.mjs` — placeholder page, NOT the production API.
+- `src/server.ts` — production API entry point; `deploy/` contains release/RLS helpers.

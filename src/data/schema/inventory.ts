@@ -1,8 +1,8 @@
 // Inventory module: products, warehouses, stock levels, stock movements.
 // Every table is tenant-scoped (master_fn + company_fn). See docs/DATA_MODEL.md.
-// NOTE: stock_movement is a high-volume table — in PRODUCTION it is range-partitioned by
-// moved_at via a separate raw-SQL migration (drizzle-kit does not emit PARTITION BY). The
-// PGlite demo uses it as a plain table. See docs/SCALABILITY.md §3.
+// NOTE: stock_movement is a high-volume table. Current migrations create an indexed
+// ordinary table in both modes; measured production partitioning is TASK-201 target
+// work. See docs/SCALABILITY.md §3.
 import {
   pgTable, text, bigint, integer, numeric, date, timestamp, boolean,
   index, uniqueIndex, check,

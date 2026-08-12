@@ -7,7 +7,9 @@
   var API_BASE=(window.__ERP_API_BASE__||'/api').replace(/\/$/,'');
   var PLATFORM_BASE=API_BASE+'/platform';
   var cachedSession=null;
-  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[],drafts:{bootstrap:null,master:null,company:null}};
+  var WORKSPACE_STAGE=Object.freeze({MASTER:'master',COMPANY:'company',CONTROL:'control'});
+  var WORKSPACE_EVENT=Object.freeze({RENDER:'render',MASTER_CREATED:'master-created',COMPANY_CREATED:'company-created',MASTER_SELECTED:'master-selected',COMPANY_SELECTED:'company-selected'});
+  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[],workspaceStage:null,drafts:{bootstrap:null,master:null,company:null}};
   var DEMO_BANNER_STORAGE_KEY='aria-platform-demo-banner-dismissed';
   var DEMO_DEFAULTS={
     bootstrap:{principalKey:'platform-admin',displayName:'Platform Admin',email:'platform-admin@acme.co',password:'demo-platform-1234'},
@@ -109,6 +111,50 @@
     });
   }
   function clearDraft(stage){ state.drafts[stage]=null; }
+  function visibleWorkspaceDraftStage(root){
+    if(root&&root.querySelector('#platformCreateMasterForm')) return WORKSPACE_STAGE.MASTER;
+    if(root&&root.querySelector('#platformCreateCompanyForm')) return WORKSPACE_STAGE.COMPANY;
+    return null;
+  }
+  function transitionWorkspace(event,root,value){
+    var transition=event||WORKSPACE_EVENT.RENDER;
+    var visibleStage=visibleWorkspaceDraftStage(root);
+    if(transition===WORKSPACE_EVENT.RENDER){
+      if(visibleStage) snapshotDraft(root,visibleStage);
+      return;
+    }
+    if(transition===WORKSPACE_EVENT.MASTER_SELECTED){
+      if(visibleStage) snapshotDraft(root,visibleStage);
+      state.masterFn=String(value||'');
+      state.companyFn='';
+      return;
+    }
+    if(transition===WORKSPACE_EVENT.COMPANY_SELECTED){
+      if(visibleStage) snapshotDraft(root,visibleStage);
+      state.companyFn=String(value||'');
+      return;
+    }
+    if(transition===WORKSPACE_EVENT.MASTER_CREATED){
+      clearDraft(WORKSPACE_STAGE.MASTER);
+      clearDraft(WORKSPACE_STAGE.COMPANY);
+      state.masterFn='';
+      state.companyFn='';
+      return;
+    }
+    if(transition===WORKSPACE_EVENT.COMPANY_CREATED){
+      clearDraft(WORKSPACE_STAGE.COMPANY);
+      state.companyFn='';
+      return;
+    }
+    throw new Error('Unsupported Platform workspace transition: '+transition);
+  }
+  function resolveWorkspaceStage(hasExistingCompany){
+    if(!state.masterFn) return WORKSPACE_STAGE.MASTER;
+    return hasExistingCompany?WORKSPACE_STAGE.CONTROL:WORKSPACE_STAGE.COMPANY;
+  }
+  function draftStageForWorkspaceStage(stage){
+    return stage===WORKSPACE_STAGE.MASTER?WORKSPACE_STAGE.MASTER:WORKSPACE_STAGE.COMPANY;
+  }
   function hashString(value){
     var hash=2166136261;
     for(var index=0;index<value.length;index++){ hash^=value.charCodeAt(index); hash=Math.imul(hash,16777619); }
@@ -401,11 +447,11 @@
     return `<section class="platform-simulation-panel"><h2>Tenant user simulation</h2><p>Enter one active user's exact tenant authority for up to 15 minutes. Platform permissions are never added to the target user.</p>
       <div class="platform-simulation-controls"><label class="fld"><span>Active tenant user</span><select id="platformSimulationTarget">${options(state.targets,'','userId','username')}</select></label><button class="btn primary" id="platformStartSimulation" type="button">Enter tenant simulation</button></div></section>`;
   }
-  async function renderWorkspace(session){
+  async function renderWorkspace(session,event,value){
     state.session=session||await getSession();
     authShell(true);
     var view=authView();
-    snapshotDraft(view,state.masterFn?'company':'master');
+    transitionWorkspace(event||WORKSPACE_EVENT.RENDER,view,value);
     view.classList.add('platform-workspace-view');
     view.setAttribute('aria-label','Platform Superadmin workspace');
     view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1 tabindex="-1">Loading platform workspace…</h1></div></div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div></div></section>`;
@@ -423,10 +469,12 @@
       var hasExistingCompany=Boolean(selectedMaster&&(selectedMaster.companies||[]).length);
       if(hasExistingCompany&&!state.companyFn) state.companyFn=selectedMaster.companies[0].companyFn;
       var hasCompany=Boolean(state.companyFn||hasExistingCompany);
+      state.workspaceStage=resolveWorkspaceStage(hasExistingCompany);
+      var draftStage=draftStageForWorkspaceStage(state.workspaceStage);
       var stage=state.masterFn?(hasCompany?4:3):2;
       view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1 tabindex="-1">${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p>${stepperMarkup(stage)}${demoBannerMarkup()}</div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup(hasExistingCompany)}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup(hasExistingCompany)}</section>`;
-      if(!hasCompany&&!hasExistingCompany) applyDemoDefaults(view,state.masterFn?'company':'master',state.masterFn?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
-      restoreDraft(view,state.masterFn?'company':'master');
+      if(state.workspaceStage!==WORKSPACE_STAGE.CONTROL) applyDemoDefaults(view,draftStage,state.workspaceStage===WORKSPACE_STAGE.COMPANY?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
+      restoreDraft(view,draftStage);
       wireWorkspace(view);
       var body=view.querySelector('.platform-shell-body');
       if(body) body.scrollTop=0;
@@ -438,17 +486,16 @@
     wireDemoBanner(view);
     view.querySelector('#platformLogoutBtn').addEventListener('click',async function(){ try{ await request('logout',{method:'POST',body:{}}); }finally{ cachedSession=null; location.reload(); } });
     var masterSelect=view.querySelector('#platformMasterSelect');
-    if(masterSelect) masterSelect.addEventListener('change',async function(event){ state.masterFn=event.target.value; state.companyFn=''; await renderWorkspace(state.session); });
+    if(masterSelect) masterSelect.addEventListener('change',async function(event){ await renderWorkspace(state.session,WORKSPACE_EVENT.MASTER_SELECTED,event.target.value); });
     var companySelect=view.querySelector('#platformCompanySelect');
-    if(companySelect) companySelect.addEventListener('change',async function(event){ state.companyFn=event.target.value; await renderWorkspace(state.session); });
+    if(companySelect) companySelect.addEventListener('change',async function(event){ await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_SELECTED,event.target.value); });
     var createMaster=view.querySelector('#platformCreateMasterForm');
     if(createMaster) createMaster.addEventListener('submit',async function(event){
       event.preventDefault(); var error=view.querySelector('#platformCreateMasterError'); var button=view.querySelector('#platformCreateMasterAction')||createMaster.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
       try{
         var modules=Array.from(createMaster.querySelectorAll('[data-provision-module]')).map(function(input){ return {moduleKey:input.dataset.provisionModule,enabled:input.checked,defaultCompanyAllocated:input.checked}; });
         await request('masters',{method:'POST',headers:{'Idempotency-Key':stableIdempotencyKey('master','',createMaster)},body:{name:createMaster.querySelector('#provisionMasterName').value.trim(),loginCode:createMaster.querySelector('#provisionMasterLoginCode').value.trim(),modules:modules}});
-        clearDraft('master');
-        state.masterFn=''; state.companyFn=''; await renderWorkspace(state.session);
+        await renderWorkspace(state.session,WORKSPACE_EVENT.MASTER_CREATED);
       }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Master creation failed.'; button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }
     });
     var createCompany=view.querySelector('#platformCreateCompanyForm');
@@ -459,8 +506,7 @@
         var masterAdminName=createCompany.querySelector('#provisionMasterAdminName');
         if(masterAdminName) body.masterAdmin={name:masterAdminName.value.trim(),username:createCompany.querySelector('#provisionMasterAdminUsername').value.trim(),email:createCompany.querySelector('#provisionMasterAdminEmail').value.trim(),password:createCompany.querySelector('#provisionMasterAdminPassword').value};
         await request('masters/'+encodeURIComponent(state.masterFn)+'/companies',{method:'POST',headers:{'Idempotency-Key':stableIdempotencyKey('company',state.masterFn,createCompany)},body:body});
-        clearDraft('company');
-        state.companyFn=''; await renderWorkspace(state.session);
+        await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_CREATED);
       }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Company creation failed.'; button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }
     });
     view.querySelectorAll('.platform-save-master').forEach(function(button){ button.addEventListener('click',async function(){

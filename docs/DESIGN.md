@@ -56,16 +56,14 @@ docs/                    This documentation suite
   5. Add five-language copy, set the route Canonical only after Demo/API parity, then
      run the type/test/schema/build/current-route gates and live desktop + 375 px checks.
 
-Release verification recorded through 2026-08-12: `npm run audit:screens` is green for all
-128 registered routes at desktop and 375 px (128 Canonical / 0 Preview, no console/page
-errors, and no active-tab, layout, action-bar or declared-contract failures). The full
-i18n matrix is green: 1,533 canonical keys across 69 local five-language packs and
-128 routes × 5 languages × 2 viewports. `npm run smoke` passes at desktop and mobile;
-the visible-only navigation-badge contract is explicit, so hidden zero-count badges do
-not fail the dashboard assertion. `npm run audit:pwa-update`,
-`npm run audit:access-matrix` and the permission/schema/drift gates also pass. The latest
-current-worktree full Vitest run passes 168 files plus 1 skipped file (663 passed, 1
-skipped tests).
+Current source inventory on 2026-08-12 is **129 Canonical / 0 Preview** routes. Exactly
+128 routes declare API support; `staff-calendar` is the single Canonical route omitted
+from `API_SCREEN_ROUTES`, and TASK-200 owns the decision/fix. Dated TASK-183 evidence
+records the 129-route desktop/mobile and five-language browser matrices, but this review
+reran only the static audit: **1,545 English keys across 72 local five-language packs**.
+The current HEAD collects 170 files / 666 tests; collection is not a pass result. The
+earlier 168-file/663-test execution remains a dated checkpoint, while this review passed
+7 focused Company Receipts/Platform files and 22 tests.
 Business-record values are not treated as UI copy. Physical-device acceptance remains
 separate from the automated 375 px browser gate.
 
@@ -93,10 +91,12 @@ The formula for a business module request remains:
 `authenticated target user AND Master entitlement AND Company allocation AND permission AND scope AND workflow authority`
 
 Platform Superadmin is never merged into a simulated tenant user's authority. MAC writes
-are workspace-only, while tenant onboarding and `admin.modules.manage` are retired. Demo
-uses the same schema/generated PGlite artifacts but keeps platform bootstrap as a
-deterministic harness, not a public credential realm. Migration 0098 is generated from
-the Drizzle schema and must be replayed before production RLS is reapplied.
+are workspace-only, while tenant onboarding and `admin.modules.manage` are retired.
+Static Demo uses the same schema/generated PGlite artifacts and a deterministic local
+harness. The hosted API Demo uses the real Platform realm and may enable an explicitly
+labelled sample-login shortcut; the flag changes no server permission/session rule.
+Migration 0098 is generated from the Drizzle schema and must be replayed before
+production RLS is reapplied.
 
 ## 3. Data layer design
 
@@ -207,7 +207,7 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 | Vanilla JS + SCREENS registry (no framework) | Prototype velocity; framework migration deferred until module set stabilizes | FRONTEND_PLAN.md |
 | `master_fn` → `company_fn` → `user_id` tenancy, app-level scoping + optional RLS | Shared schema multi-tenant, SG+MY from one deploy | MULTI_TENANCY.md |
 | Tax as effective-dated rules table | SG GST vs MY SST divergence without code branches | LOCALIZATION.md |
-| BYOK AI keys, never build-time vars | Demo is a public static bundle — any bundled key leaks | AI_PROVIDERS.md |
+| AI/Vision credentials never become build-time vars; governed worker credentials use encrypted server envelopes | Demo bundles are public, while background document extraction needs a revocable non-disclosed connector | AI_PROVIDERS.md |
 | `web/dist/` gitignored, built by CI | Reproducible from source; no drift between repo and deploy | STATUS.md debt #3 |
 | Vendor performance is a rebuildable read model, not a scored table | Supplier ratings must reconcile to real orders, receipts, invoices, returns and active contracts; no disconnected KPI can become a sourcing decision | EPIC-034 |
 | Purchasing dashboards/reports use bounded derived resources, not KPI tables | Operational totals, approved-buyer spend and document-state reports must change immediately with canonical procure-to-pay facts; supplier-invoice variance stays at honest immutable header level until invoice lines become a domain table | EPIC-035 |
@@ -375,13 +375,13 @@ Current runtime facts:
   metadata; migration `0089_company_owner_cutover` sets it inert and the central
   evaluator no longer treats it as an authorization grant;
 - active tenant administration uses an immutable, company-scoped `Company Owner`
-  role with 113 current explicit registered permission rows (112 at TASK-175 cutover,
-  plus TASK-179 Company Receipt company-read) and an explicit company scope;
+  role with 115 current explicit registered permission rows (112 at TASK-175 cutover)
+  and an explicit company scope;
   the bundle does not imply platform support, business approval/payment, payroll or
   sensitive tax-evidence authority;
 - permission storage remains compatibility-first, but TASK-171 now supplies an
-  application-owned registry with 303 static definitions (159 compatibility and 144
-  canonical after TASK-179, including a separate platform domain). Resource/action projections are
+  application-owned registry with 314 definitions, including a separate platform
+  domain. Resource/action projections are
   registered for 116 resources, 62 actions and 5 update contracts; ordinary role
   checks resolve explicit compatibility candidates and deny unknown keys, while
   platform-domain keys are rejected before tenant role evaluation;
@@ -435,18 +435,19 @@ Current runtime facts:
   non-module-gated but still require their own permissions. Migration 0088 adds the
   company-scoped `authorization_version`; core role, assignment, scope, module,
   override and invitation writes bump it atomically, while session and effective-
-  capability responses expose the current marker. There is still no centralized
-  capability cache, and organization changes, some policy domains, master-wide
-  support grants and stale-session/direct-URL regression coverage remain open, so
-  the matrix is a regression foundation rather than proof that TASK-174 is complete.
+  capability responses expose the current marker. Master-wide support changes also
+  advance Company markers, and stale snapshots fail closed then refresh through the
+  session endpoint. There is deliberately no centralized server capability cache.
+  TASK-174 is complete; broader ABAC/delegation depth remains future work.
 
 TASK-170 now adds a separate platform control-plane domain: platform principals, static
 application-owned support roles, hash-backed bearer/CSRF sessions and auditable support
 grants. Grants target an existing `master_fn` and optional matching `company_fn`, use
 read-only/restricted-write/break-glass modes, expire within 24 hours, deny sensitive
 fields by default and can be revoked immediately. `/api/platform` never accepts the
-tenant cookie; platform principal/session issuance is out-of-band, and evaluating a
-grant does not automatically expose or proxy business records. The employee workspace
+tenant cookie. Interactive Platform Superadmin password login and locked first-run
+bootstrap are implemented; other principal bootstrap/SSO remains operational.
+Evaluating a grant does not automatically expose or proxy business records. The employee workspace
 continues to be a tenant Company Owner convenience and is a separate authority path
 from platform support access.
 
@@ -463,9 +464,9 @@ applied, RLS was re-applied and `deploy/release.sh` completed through the existi
 Cloudflare tunnel. Verification found 90 migration entries, 219 forced-RLS tenant
 tables/policies, zero active legacy Superadmin flags/assignments, healthy services,
 public `/health` 200 and unauthenticated session 401. Code behavior above is
-authoritative. TASK-174's centralized cache invalidation, broader delegation binding
-and organization/policy/support coverage remain open. Broad `role_permission` rows
-remain a text compatibility store.
+authoritative. TASK-174's authorization-version invalidation and stale-session coverage
+are complete. Broader delegation/ABAC depth remains separate future scope, and broad
+`role_permission` rows remain a text compatibility store.
 
 ## 10. August 2026 implementation additions
 
@@ -515,10 +516,12 @@ Company Receipt (masterFn + companyFn)
         ├── current managed-document/version reference
         ├── confirmed receipt metadata + optimistic version
         ├── uploader/audit attribution
-        └── Draft | Processing | Ready | Needs Attention | Voided
+        └── current commands produce Ready or retained Voided
 ```
 
-The TASK-177/178 mutation and confirmation API requires the uploader's current, clean, non-void governed document
+`Draft`, `Processing` and `Needs Attention` remain reserved schema vocabulary; scan/OCR
+state belongs to governed document services rather than the current Company Receipt
+command lifecycle. The TASK-177/178 mutation and confirmation API requires the uploader's current, clean, non-void governed document
 version, derives tenant/uploader from Session, and persists confirmed receipt facts
 without an Employee, claim, reimbursement, GL or tax dependency. TASK-179 changes
 list/detail reads to explicit `expenses.company_receipts.read_own` or
@@ -546,14 +549,20 @@ cards. TASK-182 atomically registers `expenses_tax` in the backend entitlement g
 route metadata and `accessMatrix`, and moves confirmation/create, edit and void to
 `expenses.company_receipts.create`, `.edit` and `.void` respectively. The old
 `employee.receipts.write` key remains My Receipts-only. TASK-181 provides Preview/PDF/
-Print in both adapters. TASK-183 now adds the permission-gated UI hand-off from an
+Print in both adapters. TASK-183 added the UI hand-off from an
 uploader-owned My Receipts document version to the immutable confirmation read and
 canonical create action; Demo runtime delegates these operations to the shared
 `companyReceipt` commands rather than duplicating SQL. The static Demo still leaves new
 uploads quarantined without a malware scanner. TASK-183 passes the authenticated API-mode
 browser journey through both an isolated same-origin PGlite fixture and a newly created,
 empty disposable PostgreSQL 16 database. The fixtures prove separate adapter/database
-paths; they do not constitute a production deployment claim.
+paths. The backend permission-gates create, but the current button is not capability-
+hidden; My Receipts limits the picker to the first 100 actor records and requires
+Employee Self Service. Update/void adapters exist without a corresponding detail/editor,
+and Missing Date currently navigates rather than correcting metadata. TASK-192 later
+deployed migrations through 0098 and reset production to first-run state; no authenticated
+production Company Receipt UAT is claimed. TASK-196/197/202 own the discovered security,
+workflow and artifact-governance gaps.
 
 ## 12. Platform Module Entitlement and tenant cutover
 
@@ -595,3 +604,28 @@ platform workspace remains the only MAC mutation surface, and platform mutations
 while a simulation is active. Simulations default to 15 minutes and cannot outlive their
 one-hour parent session. Password-only platform login without MFA is an accepted v1 risk
 and must remain prominent in security/release review.
+
+## 13. Production Trust & ERP Excellence hardening
+
+The current architecture has broad business coverage, but EPIC-066 treats production
+trust as the next release boundary. The complete review and evidence matrix are in
+[ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
+
+- **RLS/runtime role:** `runPlatformMutation` does not establish tenant context before
+  Company provisioning writes RLS-protected rows, while bundled Compose may run the API
+  as the PostgreSQL bootstrap superuser. A least-privilege role and real PostgreSQL
+  provisioning proof are required (TASK-195).
+- **Receipt Pack:** later reads/renders validate tenant plus creator and any read grant,
+  not whether a frozen company-visible Pack remains allowed after downgrade. Current
+  visibility must dominate snapshot visibility (TASK-196).
+- **Platform privilege:** Support Grant is a decision service, not a tenant-data proxy;
+  exact-user Superadmin simulation currently needs no grant/reason/ticket. The intended
+  exception or required binding, plus MFA/step-up, must be explicit (TASK-198).
+- **Release truth:** HEAD source, dated tests, deployed revision and live availability
+  are separate facts. Public probes returned 502 and HEAD CI was blocked before job
+  start by account billing (TASK-199/TASK-203).
+- **Operational quality:** after P0 isolation/privilege fixes, SLO/RPO/RTO, worker
+  telemetry, scale budgets and Pack lifecycle/i18n become binding gates (TASK-201/202).
+- **Tax and AI evidence:** unify tax validity/posting behavior before MY SST may be
+  called compliant (TASK-204), and directly test Vision provider failure without
+  treating an encrypted connector as deployed provider proof (TASK-205).

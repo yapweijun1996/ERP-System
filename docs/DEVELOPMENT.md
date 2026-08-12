@@ -21,6 +21,8 @@ npm install
 | `npm run build` | `VITE_DATA_MODE=api` → `web/dist/` for the Docker `web` image |
 | `npm run test:e2e:company-receipts-api` | Builds API mode, then serves it with an isolated same-origin PGlite API fixture and drives authenticated Company Receipts confirmation, refresh/search/range, Preview/PDF/Print and responsive checks. It passed at 1440×900 and 375px on 2026-08-12. This fixture never contacts PostgreSQL or production. |
 | `npm run test:e2e:company-receipts-postgres` | Uses the same authenticated browser journey against an explicitly supplied `TASK183_POSTGRES_URL`. It rejects a non-empty database before migrations/seed; the 2026-08-12 proof passed against a new disposable local PostgreSQL 16 database. It does not deploy or use production data. |
+| `npm run test:e2e:platform-workspace-layout` | Builds API mode and checks Platform workspace desktop/mobile containment. |
+| `npm run test:e2e:platform-workspace-demo-autofill` | Builds the explicitly flagged hosted-Demo presentation and checks sample login/defaults, password controls, resume and new-Company safety. |
 | `npm run preview` | Serve the built `web/dist/` locally |
 | `npm run migrate` | Apply Drizzle migrations to PostgreSQL (production mode) |
 | `npm run generate` | Generate a Drizzle migration from schema changes |
@@ -29,17 +31,15 @@ npm install
 | `npm run demo` | **Dual-adapter proof** — same repo code on PGlite (and PostgreSQL if `POSTGRES_URL` set) |
 | `npm run check:drift` | **Schema drift check** — compares every ordered Drizzle migration with the generated `web/public/db/erp-system-schema.sql`; fails with a readable diff on any mismatch. Demo SQL is generated, not copied by hand. Runs in CI on every PR. |
 | `npm run smoke` | **Browser smoke test** — requires `npm run build:demo` first. Launches headless Chromium (Playwright) at desktop (1280×800) and mobile (375×812), bypasses the first-run wizard/login, asserts the dashboard renders with zero console/page errors, and executes the core Demo ESM transaction proof. That proof also opens the freshly-created goods receipt and supplier invoice and asserts their stock/GL traces. Runs in CI on every PR. |
-| `npm run audit:screens` | **Screen audit** — requires `npm run build:demo` first. Boots the demo at desktop (1280×800) and mobile (375×812), reads the live `SCREENS` and route-level `SCREEN_META` registries, applies stateful fixtures for detail routes, and drives all current 128 routes through the router. It fails on console/page errors, synchronous throws, prototype identity on Canonical routes, missing Preview banners, enabled Preview write actions, missing shared module navigation, whole-page overflow, hidden active tabs, or overflowing standard action bars. Runs in CI on every PR. |
-| `npm test` | **Unit tests** (`vitest run`) — `confirmSalesOrder` (success + GL-balance, whole-chain rollback on insufficient stock, `PostingError` when no tax rule covers the date), `issueStock` (deduct, insufficient, boundary at exactly available qty), `getEffectiveTaxRate` (dated-boundary cases: inclusive `validFrom`, exclusive `validTo`, open-ended, no-match). Each test gets its own fresh in-memory PGlite instance (`src/test/helpers.ts`). Runs in CI on every PR. |
+| `npm run audit:screens` | **Screen audit** — requires `npm run build:demo` first. Boots desktop/mobile, reads live `SCREENS`/`SCREEN_META`, applies detail fixtures and drives every registered route (129 at HEAD). It fails on console/page errors, maturity/contract errors, overflow and hidden active navigation. |
+| `npm test` | **Vitest unit/integration suite** — domain transactions, API/auth, migrations, PGlite parity and conditional PostgreSQL security coverage. Current HEAD collects 170 files/666 tests; collection is not a pass result. Most isolated tests use fresh PGlite state; the PostgreSQL suite requires its explicit URL/environment and otherwise records one conditional skip. |
 | `npm run lint` | ESLint over the current root/Web source set |
 
-Release note (2026-08-10): `npm run audit:screens` passes all 128 routes at desktop and
-375 px, with 128 Canonical / 0 Preview, no console/page errors, and no active-tab,
-layout, action-bar or declared-contract failures. The i18n static audit passes 1,533
-canonical keys / 69 local five-language packs across the full 128-route × 5-language ×
-2-viewport browser matrix. The access-matrix and PWA-update audits pass, and the
-post-build `npm run smoke` passes at desktop/mobile; hidden zero-count badges are
-excluded from the visible semantic-badge assertion.
+Current source note (2026-08-12): 129 Canonical / 0 Preview routes exist; 128 declare API
+mode, with `staff-calendar` the sole exception. Static i18n passes 1,545 keys/72 packs.
+TASK-183 retains dated 129 × 5 × 2 browser evidence. TASK-194 did not rerun browser gates
+because Chromium is absent, so install the pinned browser before claiming current HEAD
+screen/i18n/smoke success.
 
 ### Browser smoke test
 
@@ -64,7 +64,7 @@ npm run audit:screens
 
 Same Chromium requirement as the smoke test. Unlike the smoke test (which only checks the
 dashboard shell), this drives every route in the live `SCREENS` registry — currently
-128 — through the router directly, so new screens are covered automatically without
+129 — through the router directly, so new screens are covered automatically without
 updating a route list here. Route maturity is declared in `SCREEN_META`, not inferred from
 a module-level mock allowlist: partially migrated modules such as Purchasing and CRM can
 therefore promote one route at a time. Detail routes use explicit fixtures so `txn-view`
@@ -111,21 +111,17 @@ docker compose exec api npm run migrate
 
 ```
 src/
-  core/            # shell, routing, auth, module registry
-  data/
-    schema/        # Drizzle schema (shared by both modes)
-    adapters/      # pglite adapter (demo) · api adapter (production)
-    seed/          # mock data for demo
-  shared/          # isomorphic business logic (cross-module flows)
-  modules/
-    inventory/  sales/  purchasing/  finance/  settings/
+  api/             # Express routes, resource/action dispatcher and audit
+  auth/            # tenant/Platform sessions, permissions and entitlement
+  data/schema/     # Drizzle schema shared by both modes
+  modules/         # shared transactional domain commands by ERP area
+  worker/          # dedicated worker entry points
 drizzle/           # generated migrations
+deploy/             # migration, RLS and release scripts
 docs/              # this documentation
-web/               # real frontend app source
+web/               # classic-script frontend + bundled Demo/PGlite runtime
 references/ui/     # reference prototypes and design studies
-api/               # planned: Node + Express server (production mode only)
-infra/             # planned: Docker/deployment assets
-db/init/           # planned: Postgres init scripts (run once on first boot)
+docker-compose*.yml # development and production container definitions
 ```
 
 See [FRONTEND_PLAN.md](FRONTEND_PLAN.md) before adding frontend code. The current
@@ -137,15 +133,22 @@ screens outside the current milestone.
 
 1. Add the module's tables to `src/data/schema/<module>.ts`.
 2. `npm run generate` → review the migration in `drizzle/`.
-3. Write repository functions in `src/modules/<module>/repo.ts` — **always** tenant-scoped,
-   keyset-paginated, explicit columns (see [SCALABILITY.md](SCALABILITY.md)).
-4. Put cross-module logic in `src/shared/` so it runs in both demo and API.
-5. Register the module in `src/core/module-registry`.
-6. Add seed rows in `src/data/seed/` so the demo shows the module.
-7. Verify in **both** modes before opening a PR.
+3. Add tenant-scoped, bounded repository/domain commands under
+   `src/modules/<module>/`; select explicit columns and use keyset pagination where
+   ordering is pageable (see [SCALABILITY.md](SCALABILITY.md)).
+4. Keep the authoritative cross-module transaction in `src/modules/` and reuse another
+   module's public command rather than duplicating its stock, ledger or workflow rules.
+5. Register commercial entitlement in `src/auth/moduleCatalog.ts`, API/resource and
+   permission mappings in `src/api/`/`src/auth/`, and the route/adapters in the global
+   `SCREENS` frontend.
+6. Add compact seed rows through `src/data/seed.ts` or the existing showcase generator;
+   do not invent a second hand-written business schema.
+7. Verify shared commands in PGlite and PostgreSQL, then verify the Demo/API UI paths
+   before opening a PR.
 
-> **Architecture rule:** adding a module must not require editing another module. If it
-> does, the boundary is wrong.
+> **Architecture rule:** a new module may integrate with another module only through a
+> stable public command/read contract. It must not edit or reimplement the other
+> module's governed facts.
 
 ## 7. Verification expectations
 

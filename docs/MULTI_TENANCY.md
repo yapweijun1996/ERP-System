@@ -67,8 +67,8 @@ tenants.
 > - PGlite (demo) runs as a single owner connection; Postgres **bypasses RLS for the
 >   table owner** unless `FORCE ROW LEVEL SECURITY` is set, so an RLS policy would be
 >   silently bypassed in the demo and the demo would behave differently from prod.
-> - Putting RLS in the shared schema would violate the "identical schema both modes"
->   invariant ([ARCHITECTURE.md](ARCHITECTURE.md#1-goal)).
+> - RLS is a production trust overlay rather than part of the shared migration chain
+>   ([ARCHITECTURE.md](ARCHITECTURE.md#1-goal)).
 >
 > **Gating check before adopting RLS:** verify in PGlite whether an RLS policy actually
 > *blocks* a cross-tenant `SELECT` or is bypassed by the single owner connection. If
@@ -170,8 +170,9 @@ entity inside it. A platform principal is neither a master user nor a company em
 Migration 0084/0085 implements separate `platform_principal`, `platform_role`,
 `platform_session` and `support_access_grant` tables. A support grant is master-scoped,
 optionally company-scoped, time-bounded and audited; it does not by itself bypass the
-tenant API or proxy customer data. Platform identity/session issuance remains outside
-the tenant API.
+tenant API or proxy customer data. Interactive Platform login and the locked first-run
+bootstrap are implemented outside tenant identity; other Platform principal/SSO
+bootstrap remains operational.
 
 Current roles, multiple-role union, assignment-owned scopes with legacy role-scope
 fallback, and explicit Company Owner tenant-administration behavior are
@@ -274,3 +275,11 @@ their authority from the independent platform session and require `platform.tena
 or `platform.tenants.manage`; support roles and simulated tenant sessions cannot create
 or mutate a Master/Company. `platform_idempotency` stores only hashed request/replay
 metadata and response facts, never initial passwords.
+
+Production-RLS gap: the current Platform Company provisioning transaction does not set
+the newly generated `app.master_fn`/`app.company_fn` before writing FORCE-RLS tenant
+tables. Conversely, bundled Compose may connect the API as the PostgreSQL bootstrap
+superuser and bypass RLS. TASK-195 must provide least-privilege runtime roles and a real
+PostgreSQL bootstrap/Master/Company isolation proof. Until then, application tenant
+predicates remain implemented but the current provisioning/runtime-role combination is
+not a complete production isolation claim.

@@ -522,8 +522,8 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
     }
   });
 
-  // This endpoint is intentionally not a public login/provisioning flow. Platform
-  // principal and session issuance belongs to deployment/SSO bootstrap code.
+  // Direct session issuance is intentionally disabled. Interactive Platform sessions
+  // are created only by the dedicated login or locked empty-database bootstrap routes.
   router.post('/session', (_req, res) => {
     apiError(res, 405, 'platform_session_provisioning_only', 'Platform sessions are provisioned outside the tenant API.');
   });

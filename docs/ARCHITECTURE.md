@@ -16,16 +16,15 @@ contract. Unknown business-module keys now fail closed; authenticated `account/*
 service routes are explicitly non-module-gated but still permission-protected. Migration
 0088 supplies the company authorization-version marker and first atomic bump paths;
 0089 now delivers the explicit, immutable company-scoped Company Owner cutover and
-removes the legacy Superadmin authorization bypass. Centralized invalidation, deeper
-delegation binding and broader organization/policy/support coverage remain open under
-TASK-174. Disposable PostgreSQL 16 parity, true concurrency and non-superuser RLS proof
-are green. The target database was backed up, migrations 0084–0089 applied, production
-RLS re-applied and the application released; public health/root/session probes returned
-200/200/401. Physical-device acceptance remains separate.
+removes the legacy Superadmin authorization bypass. TASK-174's authorization-version
+invalidation and stale-session recovery are complete; deeper delegation/ABAC remains
+separate future scope. Dated PostgreSQL parity/RLS and deployment evidence remains in
+STATUS. TASK-194 current public probes returned 502, so historical 200/200/401 responses
+are not current availability proof. Physical-device acceptance remains separate.
 
 ## 1. Goal
 
-One codebase, two runtime modes, identical behavior:
+One codebase, two runtime modes, one business contract with mode-appropriate guarantees:
 
 ```
                        ┌───────────────────────────────────────┐
@@ -48,7 +47,9 @@ One codebase, two runtime modes, identical behavior:
               └────────────────────────┘  └─────────────────────────┘
 ```
 
-The seam is the **data access layer**. Everything above it is written once.
+The primary seam is the **data/transport adapter**. Shared Drizzle repositories and
+domain commands are written once where possible; authentication, RLS, workers,
+multi-user locking and other server guarantees remain API/PostgreSQL responsibilities.
 
 ## 2. The three-tier model
 
@@ -78,7 +79,7 @@ database. Two options:
 | Option | Consequence |
 | --- | --- |
 | Dexie (IndexedDB wrapper) | Demo uses IndexedDB query API; production uses SQL → **every query written twice**, repository forced to lowest common denominator |
-| **PGlite** (Postgres in WASM, persists to IndexedDB) | Demo and production run the **same SQL, schema, and migrations** → near-zero duplication |
+| **PGlite** (Postgres in WASM, persists to IndexedDB) | Demo and production replay the **same ordered Drizzle migration chain**; production adds RLS and server-only guarantees |
 
 [PGlite](https://github.com/electric-sql/pglite) is ~3 MB gzipped, is *actual* PostgreSQL
 (not an emulation), and persists to IndexedDB in the browser. It satisfies the
@@ -116,20 +117,21 @@ Each module is self-contained and registered into the core:
 
 ```
 src/
-  core/            # app shell, routing, auth, module registry
-  data/            # Drizzle schema + adapters (pglite | api)
-  shared/          # isomorphic business logic (cross-module flows)
-  modules/
-    inventory/     # products, stock, warehouses
-    sales/         # quotes, orders, deliveries
-    purchasing/    # suppliers, purchase orders
-    finance/       # invoices, payments, ledger
-    settings/      # users, roles (superadmin), companies
+  api/             # Express routes, resource/action registry, tenant/audit boundaries
+  auth/            # tenant and Platform sessions, permission/entitlement evaluation
+  data/schema/     # Drizzle schema; one Demo/production contract
+  modules/         # shared transactional domain commands by ERP area
+  worker/          # calendar and other dedicated worker entry points
+web/
+  public/assets/   # classic-script shell, SCREENS and Demo/API adapters
+  src/             # bundled PGlite runtime that calls shared commands
 ```
 
-A module owns: its schema slice, its repository functions, its UI, its business rules.
-Adding a module must not require editing another module — only registering it in
-`core/module-registry`.
+A module owns its schema slice, domain commands, API/resource registration, permissions,
+module-entitlement mapping, UI route and adapters. Commercial modules are registered in
+`src/auth/moduleCatalog.ts`; screens use the global `SCREENS` registry. Cross-module
+posting may import another module's public command, but it must not duplicate that
+module's accounting, stock or workflow rules.
 
 ### Frontend implementation rule
 
@@ -239,9 +241,9 @@ end-user simulation creates a default-15-minute linked session whose decisions r
 exactly as the active target user, whose platform mutations are blocked until return,
 and whose audit retains the real platform principal.
 
-TASK-185–187 are current code and TASK-188 completed the recorded full adversarial,
-PostgreSQL, browser and release-gate proof. This is implementation/release-gate evidence,
-not a claim that migrations 0090–0097 were deployed to production. See
+TASK-185–187 are current code and TASK-188 completed its recorded adversarial,
+PostgreSQL, browser and release-gate proof. TASK-192 later deployed through 0098 and
+reset the target to first-run state; this still does not imply current HEAD health. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) and
 [SECURITY.md](SECURITY.md) for authority and residual-risk requirements.
 
@@ -271,5 +273,17 @@ from the Platform workspace and can simulate a target tenant user only for that 
 exact permissions/scope/workflow authority. The tenant formula remains:
 `authenticated target user AND Master entitlement AND Company allocation AND permission
 AND scope AND workflow authority`. No platform role is merged into a simulated tenant
-request. TASK-192 is complete: only the two named ERP volumes were reset without seed, and
-production now ends at the empty-database Platform Superadmin registration page.
+request. TASK-192 is complete: only the two named ERP volumes were reset without seed,
+and its checkpoint ended at empty-database Platform registration. Current probes returned
+502 and exact deployed HEAD is unproven.
+
+## 11. Production trust boundary (EPIC-066)
+
+The next architecture gate is not a new module. Current Platform Company provisioning
+does not establish transaction-local tenant settings before RLS-protected writes; bundled
+Compose may instead use a superuser runtime that bypasses FORCE RLS. Receipt Pack access
+also does not re-require frozen company visibility after permission downgrade. Platform
+Simulation is an undocumented exception to the Support Grant schema invariant and has no
+MFA/step-up. TASK-195–205 own these isolation, privilege, tax/AI correctness,
+release-evidence and operations
+gaps; see [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).

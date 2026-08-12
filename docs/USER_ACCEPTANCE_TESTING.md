@@ -19,13 +19,11 @@ checks supplement the journey but do not replace it.
 - External SMTP, bank and tax submissions remain Blocked unless a real approved test
   endpoint is in scope. A simulated or local export is not an external-service pass.
 
-Current release note (2026-08-10): the live screen registry contains 128 Canonical /
-0 Preview routes. `npm run audit:screens` renders every route at desktop and mobile
-without console/page errors and passes the layout/behavior contracts. The full i18n
-audit passes 1,533 canonical keys / 69 local packs across 128 routes × 5 languages ×
-2 viewports; desktop/mobile smoke and the PWA update audit pass. Production migration,
-RLS re-application and application release were verified through the existing Compose /
-Cloudflare target. TASK-017 remains the physical-device blocker.
+Current source note (2026-08-12): 129 Canonical / 0 Preview routes exist; 128 declare API
+mode. Static i18n passes 1,545 keys/72 packs. TASK-183 records dated 129-route browser
+evidence, while TASK-194 did not rerun browsers. TASK-192 records a dated deployment/
+reset checkpoint; current public probes returned 502 and HEAD CI was billing-blocked.
+TASK-017 remains the physical-device blocker.
 
 ## Baseline and environment checklist
 
@@ -189,7 +187,7 @@ screenshots are in `docs/audits/INTERACTIVE_END_USER_AUDIT_2026-07-28.md`.
 - [ ] Physical-phone acceptance — Blocked by TASK-017; no emulator claim substitutes
       for a real device.
 
-## Expenses & Tax v1 — Company Receipts (implementation verification complete)
+## Expenses & Tax v1 — Company Receipts (core checkpoint complete; hardening open)
 
 Current TASK-182 evidence: explicit own/company list/detail authorization is covered in
 domain/API tests; the Demo/API route uses bounded cursor reads; and a dedicated
@@ -202,11 +200,12 @@ marking that exact document version clean, confirms it and finds it after regist
 refresh. The latter is not a claim that static Demo provides a malware scanner; fresh
 Demo uploads remain fail-closed as `scanner unavailable`. TASK-182 completes the
 platform-owned module entitlement and canonical mutation permission checks. TASK-180
-search/date/Missing Date browser proof and TASK-181's immutable Pack preview/download/
+search/date/visible-Missing-Date browser proof and TASK-181's immutable Pack preview/download/
 Print E2E plus five-language desktop/mobile route audit now pass. A separate authenticated
 same-origin API-mode browser harness passes confirmation through Print and 375px rendering
 against an isolated PGlite fixture. The same authenticated journey also passes a newly
-created empty disposable PostgreSQL 16 database. Neither fixture is production proof.
+created empty disposable PostgreSQL 16 database. TASK-192 later deployed through 0098
+and reset production; neither fixture is authenticated production UAT.
 
 - [x] Open `Expenses & Tax → Company Receipts` only when platform Master entitlement,
       Company allocation and an effective receipt capability allow it; direct URL/API
@@ -215,22 +214,28 @@ created empty disposable PostgreSQL 16 database. Neither fixture is production p
       duplicate and quarantine failures preserve safe existing records.
 - [ ] Review OCR suggestions, manually correct merchant/number/date/amount/currency/
       category/purpose/notes and save even when safe OCR fails.
+- [ ] A non-Employee user with the intended Company Receipt capability can use the normal
+      capture/picker flow, or the product explicitly rejects that persona; current My
+      Receipts picker requires Employee Self Service.
 - [ ] Refresh or re-login and find the receipt in the authorised own/company register;
       another company and an own-only user cannot read it.
 - [ ] Search and filter with This Month, Last Month, This Quarter, This Year and Custom;
       verify inclusive same-day boundaries and explicit From > To/empty states.
-- [ ] Confirm Missing Date receipts are actionable in the register but excluded with a
-      warning from a date-range package.
+- [ ] Confirm Missing Date receipts remain visible/excluded, then actually open a
+      versioned metadata editor and save a date; current navigation-only behavior fails.
 - [x] Preview/export all matching pages in chronological order; focused tests verify
       PNG and multi-page PDF composition plus exact currency-separated totals.
 - [x] Use one A4 PDF without application chrome for Preview, download and Print;
       invalid/empty creation and render failure do not mutate receipt records.
+- [ ] Localized PDF preserves Unicode, browser amounts remain Decimal-safe, Company date
+      presets use Company calendar, and concurrent identical Pack creation converges.
 
 This checklist is not evidence of implementation. TASK-183's automated proof is complete,
-including the disposable PostgreSQL 16 browser path; human UAT and any production
-deployment decision remain separate.
+including the disposable PostgreSQL 16 browser path; human/production UAT remains
+separate. Also verify a read-only user cannot see Confirm and a creator downgraded from
+`read_company` cannot read/render an old company Pack (TASK-196/197).
 
-## Planned Platform Module Entitlement acceptance (EPIC-064)
+## Platform Module Entitlement acceptance (EPIC-064 core implemented)
 
 Any earlier Company Owner module-control checks are historical regression evidence, not
 approved authority. TASK-185 automates the platform foundation and TASK-186 removes the
@@ -270,9 +275,10 @@ criteria and must not be inferred from that automated evidence.
 
 ## Platform bootstrap and provisioning acceptance (EPIC-065)
 
-The following is the current release checklist. Source/API/browser checks marked complete
-are evidence for TASK-189–192. Production deployment, restore-tested backups and the exact
-destructive reset were completed on 2026-08-12; no real Platform Superadmin account was created.
+The following retains TASK-189–192 checkpoint evidence. Production deployment,
+restore-tested backups and the exact reset completed on 2026-08-12; no real Platform
+Superadmin account was created by that reset. Checked historical items are not current
+health or exact-HEAD deployment proof.
 
 - [x] Fresh empty database shows Create Platform Superadmin; first registration creates
       only an independent platform principal/session and auto-enters Platform workspace.
@@ -294,10 +300,20 @@ destructive reset were completed on 2026-08-12; no real Platform Superadmin acco
       first Platform Superadmin registration page without creating a real account.
 - [x] Keep administrator email reset explicitly deferred while `SMTP_HOST` is empty;
       password-only/no-MFA and first-caller bootstrap risks remain documented.
+- [ ] Head UI: password Show/Hide, tenant-only Remember, Demo-only one-click Platform
+      login, responsive shell and existing-Company/Create-another flow pass without
+      reusing sample values for a new Company.
+- [ ] Current Platform bootstrap → Master → Company passes as the deployed
+      non-superuser/non-BYPASSRLS runtime role with FORCE RLS (TASK-195).
+- [ ] Platform provisioning, MAC and simulation require MFA/recent step-up and conform to
+      the chosen Support Grant/Simulation policy (TASK-198).
+- [ ] Current public health/root/setup and exact deployed commit/asset hashes are recorded
+      after TASK-199; the TASK-192 200 responses are historical.
 
 The final reset proof found 249 public tables, 221 forced-RLS tables, zero non-migration
 rows and zero document-storage entries. Local/public health and root returned 200; the
 public desktop and 375px browser checks showed Create Platform Superadmin with no console
 errors or horizontal overflow. Source CI run `31570902479` passed all four Vitest shards;
 docs-only push run `31573438483` was not started because GitHub Actions account billing
-blocked every job.
+blocked every job. HEAD run `31603746668` is likewise zero-step/billing-blocked; current
+public probes returned 502.

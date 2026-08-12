@@ -102,9 +102,12 @@ output tax). `npm run demo` proves on **both** engines:
   concurrency is a PostgreSQL-only guarantee — correct, since the demo/browser is
   single-user.
 
-## 5. Big tables (partitioned — see SCALABILITY.md)
+## 5. Big tables (partition candidates — see SCALABILITY.md)
 
-These are expected to dominate the 800 GB footprint and are **range-partitioned by date**:
+These are expected to dominate a 100–800 GB footprint and are **candidates for measured
+range partitioning by date**. Current checked-in migrations create ordinary indexed
+tables; TASK-201 owns representative plans/load evidence and any production partition
+migrations:
 
 - `gl_entry` (ledger)
 - `stock_movement`
@@ -113,8 +116,9 @@ These are expected to dominate the 800 GB footprint and are **range-partitioned 
 
 ## 6. Audit log
 
-`audit_log` records who changed what, when. Append-only, partitioned by month, never
-updated. Columns: `master_fn, company_fn, actor_user_id, entity, entity_id, action, diff jsonb, at`.
+`audit_log` records who changed what, when. Application code treats it as append-only;
+the current table is not physically month-partitioned. Its key columns include
+`master_fn, company_fn, actor_user_id, entity, entity_id, action, diff jsonb, at`.
 
 ## 7. Tenancy, roles & permissions
 
@@ -239,11 +243,13 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > generic approval-instance/step table. Budget approval uses the existing
 > `budget_version.status`/`is_active`/`version` state plus imported `budget_line` rows;
 > it also adds no generic approval-instance/step table.
-> The current boundary is migration 0095: **96 journal entries and 246 generated
-> tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
+> The current boundary is migration 0098: **99 journal entries, schema version 98 and
+> 249 generated tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
 > the tenant authorization freshness source. Migration 0089 adds the Company Owner
 > role/permission/scope expand-backfill cutover; migrations 0090–0095 add Company
-> Receipt evidence, platform entitlement and tenant-MAC retirement. Each subsequent schema capability must still
+> Receipt evidence, platform entitlement and tenant-MAC retirement; migrations 0096–0098
+> add Platform login/simulation, canonical Company Receipt permissions and Platform
+> provisioning/idempotency/Master Admin identity. Each subsequent schema capability must still
 > add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
@@ -628,13 +634,14 @@ authoritative.
 
 ## 9. Migrations
 
-Drizzle migrations live in `drizzle/` and run identically in both modes:
+Ordered Drizzle migrations live in `drizzle/` and are replayed in both modes:
 
 - Demo: applied into PGlite on first load.
 - Production: `npm run migrate` against PostgreSQL.
 
 Never hand-edit the live schema — change the Drizzle schema, generate a migration, apply
-it. This keeps demo and production schemas in lockstep.
+it. This keeps the shared schema in lockstep; production then applies its separately
+reviewed RLS/role overlay.
 
 ## 10. ER diagram — implemented schema
 

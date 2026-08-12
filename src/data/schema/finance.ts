@@ -1,8 +1,8 @@
 // Finance module: chart of accounts + general ledger, plus Treasury documents
 // (bank_receipt, payment_voucher) that post into the GL. gl_entry is double-entry:
 // each posting writes balanced legs (sum debit = sum credit), tied by journal_ref.
-// High-volume → range-partitioned by posted_at in production (raw-SQL migration;
-// drizzle-kit does not emit PARTITION BY). See docs/SCALABILITY.md.
+// High-volume → indexed today; measured range partitioning by posted_at is a
+// production target under TASK-201. See docs/SCALABILITY.md.
 //
 // bank_receipt/payment_voucher live here (Treasury is Finance's function) even though
 // they reference progress_claim (Project) and supplier/supplier_invoice (Purchasing) by

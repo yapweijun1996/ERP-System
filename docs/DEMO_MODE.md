@@ -14,8 +14,11 @@ Frontend UI → shared business logic → Drizzle → PGlite (Postgres WASM) →
 - On first load, the app **seeds mock data** (sample products, customers, orders) so the
   ERP looks alive immediately.
 
-Because PGlite *is* Postgres, the demo runs the **same SQL, schema, and migrations** as
-production. No second query dialect.
+Because PGlite is PostgreSQL-compatible, a fresh Demo replays the same **ordered Drizzle
+migration chain** as production and uses the same repository/domain SQL wherever the
+browser can support it. Production separately applies FORCE RLS and owns real
+multi-user locks, server sessions and workers; those guarantees are not simulated by a
+single-user browser database.
 
 The demo frontend must be static-hosting friendly. It cannot rely on a Node server,
 server rewrites, cookies from a backend, or production-only secrets. It should use mock
@@ -28,7 +31,7 @@ now boots the CANONICAL demo database in PGlite (persisted to IndexedDB at
 `idb://erp-system-demo`) and reads all screen data back with async SQL:
 
 ```
-web/public/db/erp-system-schema.sql    (byte copy of drizzle/0000_init.sql)
+web/public/db/erp-system-schema.sql    (generated replay of all ordered Drizzle migrations)
 src/data/seed.ts's seedDemo() runs directly (no SQL mirror — TASK-034)
 web/public/db/erp-system-demo-txn.sql  (SQL form of the src/demo.ts SO-1 chain)
         │  exec on first boot (or after reset)
@@ -179,11 +182,20 @@ worker recording a clean scan before testing confirmation. TASK-183 also drives 
 API bundle through authenticated confirmation, persistence, query, Pack and 375px checks
 with an isolated same-origin PGlite API fixture. It also passes the same authenticated
 browser journey against a newly created disposable local PostgreSQL 16 database. PGlite
-evidence remains distinct from PostgreSQL evidence; neither is a production deployment.
+evidence remains distinct from PostgreSQL evidence; neither fixture is deployment proof.
+TASK-192 later deployed the application and migrations through 0098, then reset the
+target to first-run state; no authenticated production Company Receipt UAT is claimed.
 Browser PGlite proof
 must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence is real;
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,
 preview or export acceptance.
+
+Current gaps are deliberately outside TASK-183's Done claim: the confirmation button is
+not capability-hidden, the picker is bounded to the first 100 My Receipts rows and still
+requires Employee Self Service, and there is no Company Receipt detail/edit/void or real
+Missing Date correction UI. Pack read/render also fails to re-require `read_company`
+after a company-wide snapshot creator is downgraded to `read_own`. TASK-196/197/202 own
+the authorization, workflow, lifecycle, Decimal/timezone and Unicode-PDF repairs.
 
 ## Demo platform entitlement foundation
 
@@ -240,3 +252,29 @@ must be disabled before any real customer deployment. Existing Masters are taken
 continuation point; an existing Company is never overwritten or used to inject values into
 the next-company form. The static PGlite/GitHub Pages demo does not gain a Platform login or
 tokenless bootstrap from this flag.
+
+### Current source/worktree presentation and resume behavior
+
+The current source also provides a Demo-only one-click Platform login, password
+Show/Hide controls and responsive workspace containment. `Remember me` is intentionally
+available only for tenant login; the independent Platform realm always uses its bounded
+session contract. Provisioning resumes from an existing Company without duplicating it,
+and `Create another Company` opens a genuinely blank next-Company form instead of
+reusing the previous Company's values.
+
+The final review also observed user-owned uncommitted worktree edits that express these
+rules through an explicit Master/Company/control transition state and assert immediate
+form clearing plus a single Company mutation. They are preserved source, but the late
+E2E delta was not run and is not a live/deployed claim.
+
+The committed behaviors are present in source and automated E2E definitions at HEAD. They were
+committed after the last recorded hosted release evidence, so this document does not
+claim that the current HEAD assets are live. The 2026-08-12 public probe returned HTTP
+502 and the current GitHub Actions run started no jobs because of the account billing/
+spending-limit block; recovery and deployed-revision proof are tracked by TASK-199 and
+TASK-203.
+
+The hosted API Demo remains distinct from the static PGlite Demo. Public sample
+credentials and autofill must be disabled for a customer deployment, and neither mode
+is evidence that production PostgreSQL provisioning works under the required
+non-superuser, non-BYPASSRLS runtime role; TASK-195 owns that P0 proof and repair.

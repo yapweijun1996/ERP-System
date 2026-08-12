@@ -4,6 +4,15 @@
 > 800 GB**. Every decision below assumes that scale. A query pattern that is fine on
 > 1 GB can take down an 800 GB table. This document is the rulebook.
 
+> **Implementation boundary (2026-08-12):** canonical resource-registry lists use
+> tenant predicates, a maximum 100-row bound and ID cursors, and PostgreSQL uses
+> `pg.Pool`. Projection discipline, explicit pool sizing and non-registry/internal
+> queries have not received a complete scale audit. The
+> repository does **not** yet contain production table-partition migrations, PgBouncer,
+> read-replica routing, automated materialized-view refresh, WAL/PITR/pgBackRest
+> operations or a representative 100–800 GB load/plan report. Sections 3–8 are target
+> architecture, not deployed facts. TASK-201 owns measured scale, SLO and recovery proof.
+
 This applies **only to production PostgreSQL**. The demo (PGlite/IndexedDB) holds a few
 thousand mock rows and never approaches this scale — do not conflate the two.
 
@@ -13,7 +22,7 @@ thousand mock rows and never approaches this scale — do not conflate the two.
 
 | Rule | Why |
 | --- | --- |
-| **No `SELECT *`** | At 800 GB, fetching unused columns wastes I/O and breaks index-only scans. Select explicit columns. |
+| **No `SELECT *` for large-table production paths** | At 800 GB, fetching unused columns wastes I/O and breaks index-only scans. Current generic resource reads still need projection audit under TASK-201. |
 | **No `OFFSET` pagination** | `OFFSET 1000000` scans and discards a million rows every page. Use **keyset (cursor) pagination**. |
 | **No unbounded queries** | Every list endpoint has a hard `LIMIT`. No "fetch all orders". |
 | **Index before you ship** | Any column used in `WHERE`, `JOIN`, or `ORDER BY` on a large table must be indexed. Verify with `EXPLAIN (ANALYZE, BUFFERS)`. |
@@ -53,9 +62,11 @@ viable approach at 800 GB.
 
 ## 3. Partitioning the big tables
 
-A few tables dominate ERP volume: transaction lines, ledger entries, audit log, stock
-movements. At 100 GB+ these are partitioned, usually by **range on date** (monthly or
-yearly), sometimes sub-partitioned by `company_fn`.
+A few tables dominate ERP volume: transaction lines, ledger entries, audit log and stock
+movements. Before operating them at 100 GB+, the production design must evaluate and,
+where measured plans require it, implement **range partitioning by date** (monthly or
+yearly), sometimes sub-partitioned by `company_fn`. Current Drizzle tables are not
+partitioned by the checked-in migrations.
 
 ```sql
 CREATE TABLE gl_entry (
@@ -101,7 +112,8 @@ prune unused indexes (`pg_stat_user_indexes`).
 
 Node + PostgreSQL must **never** open one connection per request. At scale:
 
-- App-level pool (`pg.Pool`) with a sane `max`.
+- App-level pool (`pg.Pool`) with a measured `max`; current source creates a Pool but
+  does not set an explicit capacity.
 - **PgBouncer** in front of PostgreSQL in transaction-pooling mode for high concurrency.
 - Keep transactions short — a long-held transaction at 800 GB blocks autovacuum and
   bloats the table.

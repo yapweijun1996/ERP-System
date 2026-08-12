@@ -10,7 +10,7 @@ A modular, multi-tenant ERP that runs in two modes from one codebase:
 
 | Mode | Runtime | Data store | Users |
 | --- | --- | --- | --- |
-| **demo** | Static site (GitHub Pages / any static host) | PGlite (Postgres-WASM) persisted to IndexedDB; UI prefs in localStorage | Single browser, no accounts |
+| **demo** | Static site (GitHub Pages / any static host) | PGlite (Postgres-WASM) persisted to IndexedDB; UI prefs in localStorage | Local personas/wizard identities in one browser; no server-auth or multi-user guarantee |
 | **api** (production) | Docker: `web` (static) + `api` (Node) + `db` (PostgreSQL) | PostgreSQL, target 100–800 GB | Multi-user, authenticated |
 
 Mode is selected at build time by `VITE_DATA_MODE=demo|api`. The adapter seam is
@@ -32,11 +32,17 @@ without silently falling back to sample data.
    client input. See [MULTI_TENANCY.md](MULTI_TENANCY.md).
 5. **GL must balance.** Sum(debit) = Sum(credit) per journal document, enforced by the
    posting code and asserted in `src/demo.ts`.
-6. **Tax is effective-dated and pluggable** (SG GST vs MY SST). Rate comes from
-   `getEffectiveTaxRate(country, date)`, never hardcoded in screens.
-   See [LOCALIZATION.md](LOCALIZATION.md).
-7. **BYOK for AI.** The system never ships or stores a provider API key server-side;
-   keys are user-supplied at runtime, never `VITE_`-prefixed. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
+6. **Tax lookup is effective-dated.** Current commands resolve the tenant tax code/rate
+   with `getEffectiveTaxRate(scope, taxCode, onDate)`, never a screen constant. Full SG
+   GST versus MY SST engine mechanics and statutory outputs remain target design. All
+   lookups must use a single `[valid_from, valid_to)` interval. Until TASK-204 closes the
+   current boundary mismatch and regime-aware posting, MY SST must not be described as
+   a compliant recoverable-input-tax engine. See [LOCALIZATION.md](LOCALIZATION.md).
+7. **Governed AI/Vision secrets.** No provider key is shipped in source/build or placed
+   in a `VITE_*` variable. The setup-wizard AI preview discards its key. Background
+   document Vision may persist a tenant connector only as an encrypted server envelope;
+   plaintext is never returned and is decrypted only at the worker call boundary. A
+   general ERP chat assistant is not implemented. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
 8. **No secrets in the demo bundle.** `build:demo` output must contain no production
    URLs, credentials, or customer data.
 
@@ -104,7 +110,9 @@ and [SCALABILITY.md](SCALABILITY.md).
 
 ### 4.3 Preview and deferred depth
 
-The current route baseline is **128 Canonical / 0 Preview**. The old Mock-screen
+The current route baseline is **129 Canonical / 0 Preview**. Of those routes, 128
+declare API support; `staff-calendar` is the one current metadata exception tracked by
+TASK-200. The old Mock-screen
 statement from the early MVP is historical and no longer describes the shipped route
 set: CRM, Manufacturing, Quality, HR, Payroll, Projects, Service, Fixed Assets, BI,
 Integration and Admin now use Canonical data/contracts at the route boundary. A future
@@ -112,11 +120,11 @@ incomplete feature may be introduced only as an explicitly labelled `Preview · 
 Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
 schema, resource/command, permission, tests and localization are complete.
 
-Current verification boundary (2026-08-10): `npm run audit:screens` passes all 128
-routes at desktop and 375 px with 128 Canonical / 0 Preview and no layout/behavior
-contract failures. The full i18n audit passes 1,533 canonical keys / 69 local
-five-language packs across 128 routes × 5 languages × 2 viewports with zero blocking
-findings. Desktop/mobile smoke, PWA update and access-matrix gates also pass.
+Current source inventory (2026-08-12) is 129/0 routes, 1,545 English keys and 72 local
+five-language packs. TASK-183 records the complete 129-route desktop/375px and
+five-language browser proof; this review reran static audits only because local
+Playwright Chromium is absent. Dated browser and current static evidence must not be
+collapsed into a fresh full-matrix claim.
 Business-record values remain outside system-authored UI copy.
 
 Module depth that is not yet represented by a route or command remains future scope;
@@ -242,9 +250,9 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. The 2026-08-10 static audit passes
-  1,533 canonical keys / 69 local packs across the full 128-route × 5-language ×
-  2-viewport browser matrix.
+  for compatibility and is not currently wired. Current static inventory is 1,545
+  English keys / 72 local packs; TASK-183 retains the dated 129-route × 5-language ×
+  2-viewport browser evidence.
   Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))
@@ -263,17 +271,12 @@ controls exist.
 | Schema parity | `npm run check:demo-schema` + `npm run check:drift` | every migration/release |
 | Five-language route audit | `npm run audit:i18n` | every Canonical route/localization change and before release |
 
-Current release evidence (2026-08-10): the purchase-requisition Web adapter uses the
-actor-input command shape. Typecheck, lint, serial `npm run build:demo`,
-`npm run audit:access-matrix`, permission/schema/drift checks, `npm run smoke` at
-desktop/mobile and `npm run audit:pwa-update` pass. The latest current-worktree full
-Vitest run (2026-08-12) is green at 168 passed files plus 1 skipped file (663 passed,
-1 skipped tests). The full i18n
-browser matrix is green at 128 routes × 5 languages × 2 viewports over 1,533 canonical
-keys and 69 local packs. Disposable PostgreSQL 16 parity, true concurrency and
-RLS/security proof passed; the target database was backed up, migrations 0084–0089
-were applied, production RLS was re-applied, and the application release completed.
-Public verification returned `/health` 200, root 200 and unauthenticated session 401.
+Current review evidence (2026-08-12): schema v98/99 migrations/249-table parity,
+Demo-pack, permission, static i18n and Demo build gates pass; 7 focused files / 22 tests
+pass. HEAD collects 170 files / 666 tests but the full collection was not executed in
+this review. Earlier 168-file/663-test, browser-matrix, PostgreSQL and deployment results
+remain dated checkpoints. Current public `/health` and setup probes returned 502, and
+the HEAD GitHub Actions run started no jobs because billing/spending blocked it.
 Physical-device PWA acceptance remains a separate human gate.
 
 ## EPIC-059 employee access and customer onboarding
@@ -297,16 +300,17 @@ fallback for assignments with a null `scope_backfilled_at`. TASK-170 now impleme
 separate platform-principal/support-grant control plane: platform operators use
 dedicated hash-backed bearer/CSRF sessions and application-owned platform roles; grants
 target an exact master and optional company, require reason and ticket, are
-time-bounded/revocable, default-deny sensitive fields and audit every create/use/deny/
-revoke event. Principal/session issuance remains an out-of-band deployment/SSO bootstrap
-responsibility, and grant evaluation only returns a decision; it does not automatically
+  time-bounded/revocable, default-deny sensitive fields and audit every create/use/deny/
+  revoke event. Interactive Platform Superadmin login and the locked empty-database
+  bootstrap are implemented; other principal creation/SSO remains an operational
+  responsibility. Grant evaluation only returns a decision; it does not automatically
 proxy tenant business data. TASK-171 now supplies the first approved registry slice and
 TASK-172 supplies the assignment migration/service. TASK-173 is complete and supplies
 the central tenant decision boundary, explicit user-level overrides, safe/audited
 explanations and strict current-step approval context:
 
 - route/resource/action declarations are now checked against an application-owned
-  registry of 303 static definitions after TASK-179, with canonical projections for 116 resources,
+  registry of 314 definitions, with canonical projections for 116 resources,
   62 actions and 5 updates; existing broad keys remain explicit compatibility aliases
   until a later data migration and cutover;
 - `authorize`, `authorizeWithin` and `hasAnyAuthorization` are the central decision
@@ -384,7 +388,7 @@ deeper delegation binding and separation-of-duties rules remain later target wor
   calendar reads. Recurrence is time-zone-aware and bounded; reminder/outbound jobs are
   durable, idempotent and revision-aware.
 
-## 9. Expenses & Tax v1 contract (implemented; release proof pending)
+## 9. Expenses & Tax v1 contract (core implemented; hardening pending)
 
 The official v1 product name is **Expenses & Tax** and its only primary workflow is
 **Company Receipts**. The current `my-receipts` route remains an actor-owned secure
@@ -395,20 +399,25 @@ exact-hash duplicate prevention, Demo/API adapters and a responsive five-languag
 Company Receipts register. TASK-180 search/date-range behavior and TASK-181's immutable
 Receipt Pack are current. TASK-182 now applies the platform-owned module
 entitlement/canonical permission cutover. TASK-183 is complete: the register now
-offers a canonical permission-gated confirmation entry that selects uploader-owned
+offers a canonical confirmation entry that selects uploader-owned
 My Receipts evidence, reads immutable confirmation facts and submits only the user's
 confirmed metadata through the shared Demo/API adapter contract. An authenticated
 same-origin API-mode browser journey passes against an isolated PGlite fixture at desktop
 and 375px, and against a newly created disposable PostgreSQL 16 database. These are
-release-verification fixtures, not a production deployment.
+release-verification fixtures. TASK-192 later deployed migrations through 0098 and then
+reset production to first-run state; no authenticated production Company Receipt UAT or
+data is claimed.
 
-The future implementation must satisfy these binding requirements:
+The current and future implementation must satisfy these binding requirements:
 
 - A Company Receipt belongs to the active `masterFn` and `companyFn`. The Session
   supplies both values; client-supplied tenant identifiers are never trusted.
 - The receipt references the preserved managed-document version/hash and records the
-  uploader for audit, but saving must not require an Employee identity, Expense Claim,
-  reimbursement, approval, bank account, GL posting or tax decision.
+  uploader for audit. Direct domain/API saving must not require an Employee identity,
+  Expense Claim, reimbursement, approval, bank account, GL posting or tax decision.
+  The current normal browser picker nevertheless depends on `/api/my/receipts`,
+  `employee.self.read` and a linked Employee; TASK-197 must remove that dependency or
+  make the narrower supported product boundary explicit.
 - JPEG, PNG, HEIC/HEIF and PDF use the existing magic-byte/MIME/extension validation,
   20 MB limit, 20-page PDF limit, fail-closed scan, extraction provenance, duplicate
   hash and governed document lifecycle.
@@ -429,9 +438,11 @@ The future implementation must satisfy these binding requirements:
   pagination. Confirmation/create require `expenses.company_receipts.create`, update
   requires `.edit`, and void requires `.void`; `employee.receipts.write` cannot authorize
   those Company Receipt operations.
-- Date filters are inclusive company-local business dates:
+- Date filters are inclusive business dates:
   `from <= transaction_date <= to`. Missing dates are visible and excluded from a
-  date-range package until corrected.
+  date-range package. The current badge only navigates to My Receipts and is not a
+  metadata-correction workflow; TASK-197 owns that requirement. Browser presets
+  currently use browser-local time rather than a configured Company calendar.
 - Preview/export retrieves every ready, dated match, not only the visible page, and
   rejects empty/invalid selections before writing a snapshot. Migration 0093 stores an
   immutable creator-owned snapshot of filters, chronological rows, document identities,
@@ -439,8 +450,11 @@ The future implementation must satisfy these binding requirements:
   source evidence at render time. The same no-store PDF drives preview, download and
   Print: an A4 landscape register precedes copied multi-page PDFs and embedded JPEG/PNG
   originals; unsupported formats receive an explicit identity placeholder. Access and
-  render actions reapply receipt-read permission, tenant/creator scope, scan-clean
-  state, document-version identity and content hash. Currencies are never summed together.
+  render actions must reapply the exact current visibility required by the snapshot,
+  tenant/creator scope, scan-clean state, document-version identity and content hash.
+  Current code checks only any receipt-read permission plus creator, so a
+  `read_company` → `read_own` downgrade can retain a company-wide Pack; TASK-196 is P0.
+  Currencies are never summed together.
 - Demo/PGlite and PostgreSQL/API modes implement one contract. `expenses_tax` availability
   is platform-owned `Master enabled AND Company allocated`; missing or disabled state
   returns `module_not_enabled` before the canonical resource/action permission,
@@ -533,3 +547,45 @@ explicit tenant model and cannot mutate MAC. Platform mutations require independ
 session, Platform CSRF, request ID, `Idempotency-Key`, duplicate conflict detection and
 append-only audit; response replays never store plaintext passwords. Password reset email
 is deferred while SMTP is unset (TASK-193 blocked).
+
+The implementation is not yet production-RLS complete. `runPlatformMutation` does not
+set `app.master_fn`/`app.company_fn` before current Company provisioning writes
+RLS-protected tenant tables, while bundled Compose may use the PostgreSQL bootstrap
+superuser and bypass FORCE RLS. Before this path may be called production-ready,
+TASK-195 must provide explicit non-superuser/non-BYPASSRLS runtime roles and execute the
+current Platform bootstrap → Master → Company journey against PostgreSQL RLS.
+
+## 12. Production Trust & ERP Excellence requirements (EPIC-066)
+
+The source-backed priority review is
+[ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md). The following are binding release
+requirements, not optional polish:
+
+- **Isolation:** production API/worker credentials are least-privilege, non-superuser,
+  non-BYPASSRLS; every tenant read/write, including Platform provisioning, establishes
+  exact server-owned context; cross-tenant PostgreSQL tests exercise current routes.
+- **Snapshot authorization:** access to an immutable artifact requires current authority
+  at least as strong as the frozen visibility. Losing `read_company` invalidates access
+  to company-wide Receipt Packs even when the creator retains `read_own`.
+- **Privileged access:** Support Grant versus Superadmin Simulation is one explicit
+  policy; no undocumented exception may expose tenant data. Platform provisioning, MAC
+  and simulation require MFA, recent step-up, bounded sessions and dual attribution.
+- **Truthful UI:** actions are capability-hidden or disabled with an accessible reason;
+  every advertised correction/edit/void control reaches a real versioned command in
+  both data modes.
+- **Release evidence:** source-present, tests-collected, tests-passed, deployed revision
+  and currently healthy are separate states. A zero-step CI run or historical probe is
+  never a green current gate.
+- **Operations:** declare and prove availability/error/latency SLOs, RPO/RTO, backup and
+  document restore, worker backlog/dead-letter alerts, scale budgets and incident/rollback
+  ownership before production expansion.
+- **Business correctness:** browser money stays Decimal-safe; date presets use the
+  Company calendar; exported Unicode/localized documents and retention/legal-hold rules
+  are tested as domain requirements.
+- **Tax mechanics:** validity intervals are identical across repositories/policies, and
+  GL posting dispatches by Company regime plus governed classification. Malaysia SST
+  cannot reuse Singapore GST recoverable-input-tax behavior by default; official-source
+  configuration and tax-owner approval are release evidence (TASK-204).
+- **Governed Vision:** direct gateway/provider failure, retry and selected manual/local
+  fallback semantics are tested; encrypted connector capability is never presented as
+  proof of a configured third-party production account or region (TASK-205).

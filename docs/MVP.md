@@ -1,8 +1,8 @@
 # MVP Definition
 
-Reviewed: **2026-08-10**. MVP-1/MVP-2 below are the original release gates; the
+Reviewed: **2026-08-12**. MVP-1/MVP-2 below are the original release gates; the
 implementation has progressed beyond them. Current code/status truth is in
-[STATUS.md](STATUS.md), with the current 128 Canonical / 0 Preview boundary.
+[STATUS.md](STATUS.md), with the current 129 Canonical / 0 Preview boundary.
 
 Two MVP gates, in order. Do not start MVP-2 items while MVP-1 exit criteria are open,
 except where a task is explicitly cross-cutting (CI, tests).
@@ -26,7 +26,7 @@ in localStorage).
 | 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
 | 8 | Static demo bundle suitable for Pages or another public host | ✅ build verified; Pages workflow disabled for this private repo |
 | 9 | First-run **setup wizard** (language → company → country/tax → admin) | ✅ done (TASK-009, TASK-010) |
-| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ 128 routes render at desktop/mobile, 128 Canonical / 0 Preview, screen layout/behavior gate passes, and the five-language static/browser i18n gates are green |
+| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ Dated browser gates cover the route set through 129 Canonical / 0 Preview; current static inventory is 129 and TASK-200 owns a fresh HEAD rerun/API metadata exception |
 | 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 (permanently blocked — needs a physical phone) |
 
 ### Explicitly OUT of MVP-1
@@ -60,8 +60,8 @@ proven in the demo.
 | 4 | Drizzle migrations + seed run against PostgreSQL | ✅ done (TASK-011/012) — verified both on the host and inside the `api` container |
 | 5 | `Makefile` / `scripts/setup.sh` aligned with the real compose assets (`make setup` works end-to-end) | ✅ done (TASK-021, 2026-07-17) — `scripts/setup.sh` run for real end-to-end plus every individual `make` target against a live, isolated stack |
 | 6 | PostgreSQL parity + concurrency proof (`POSTGRES_URL npm run demo`; FOR UPDATE over-sell test: exactly one winner) | ✅ done (TASK-013) — proven against real Postgres twice |
-| 7 | Minimal real auth: login validates against `app_user`, session scopes `master_fn`/`company_fn` server-side | TASK-024 |
-| 8 | CI validates typecheck (root+web), demo build, and demo proof on every PR | TASK-014 |
+| 7 | Minimal real auth: login validates against `app_user`, session scopes `master_fn`/`company_fn` server-side | ✅ done (TASK-024; later auth epics deepen the contract) |
+| 8 | CI workflow validates typecheck/build/test gates | ✅ source implemented (TASK-014); current execution is blocked by TASK-203 billing |
 
 ### Explicitly OUT of MVP-2
 
@@ -85,7 +85,7 @@ Demo (localStorage/IndexedDB via PGlite) and production (PostgreSQL) are **one p
 with a swappable data backend** — every feature must state which mode(s) it targets,
 and schema changes ship as one Drizzle migration used by both.
 
-## Approved Expenses & Tax v1 extension (planned)
+## Expenses & Tax v1 extension (core implemented)
 
 The approved next product slice is deliberately smaller than the existing expense,
 reimbursement and tax-evidence programme:
@@ -102,17 +102,20 @@ For this slice, done means an authorised company user can capture or upload a sa
 receipt, confirm basic merchant/date/amount/currency/category facts, save it without an
 Employee Claim, browse/search company receipts, select an inclusive transaction-date
 range, preview the complete matching set and generate an A4-readable Receipt Pack.
-Receipts without `transaction_date` may remain actionable drafts but must be visibly
-marked and excluded from date-range packages. Mixed currencies must be totalled by
+Receipts without `transaction_date` are currently Ready records, must be visibly marked
+and excluded from date-range packages, and still need a real correction UI. Mixed currencies must be totalled by
 currency or not totalled at all.
 
-This extension is **partially implemented, not released** as of 2026-08-12. TASK-177–181
+This extension's core is **implemented and fixture-tested** as of 2026-08-12. TASK-177–181
 deliver the Company Receipt model, confirmation, permission-scoped register, query-side
 date/search and immutable Receipt Pack preview/PDF/Print in Demo and API paths. TASK-182
 delivers platform entitlement/canonical authorization integration. TASK-183 is complete:
 the register confirmation hand-off, actual PGlite clean-evidence persistence, authenticated
 same-origin API/PGlite browser journey and the same journey against a newly created
-disposable PostgreSQL 16 database are browser-proven. Neither fixture is production.
+disposable PostgreSQL 16 database are browser-proven. TASK-192 later deployed migrations
+through 0098 and reset production to first-run state; no authenticated production receipt
+UAT is claimed. TASK-196/197/202 own Pack authorization, complete correction/edit/void
+UX and artifact-governance gaps.
 Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois remain future
 or optional phases and are not v1 exit criteria.

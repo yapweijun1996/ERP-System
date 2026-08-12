@@ -64,7 +64,8 @@ export const appUser = pgTable('app_user', {
   ),
 ]);
 
-/** A role within a master. `is_superadmin` sees all companies under its master. */
+/** A Company-owned role within a Master. `is_superadmin` is retained only as inert
+ * legacy metadata; current authorization grants no bypass from it. */
 export const role = pgTable('role', {
   roleId: bigint('role_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   masterFn: text('master_fn').notNull().references(() => master.masterFn),

@@ -1,77 +1,78 @@
-# web/ — Frontend workspace
+# `web/` — Current frontend workspace
 
-This folder is the home for the ERP frontend.
+The production frontend is a Vite-built, classic-script ERP shell. It intentionally
+uses vanilla JavaScript under `public/assets/`, a global `SCREENS` registry and a fixed
+script order in `index.html`; it is no longer a placeholder for a future frontend.
 
-The pasted Aria ERP prototype lives in `../references/ui/aria-erp/` and is the
-user-owned **visual baseline**. The real app should clone its shell, navigation, spacing,
-tables, forms, cards, responsive behavior, and page density so we do not waste time
-redesigning.
+The original Aria prototype under `../references/ui/aria-erp/` remains a visual
+reference only. Current behavior, authorization and data contracts come from this
+repository's source and tests, not from prototype mock data.
 
-Keep the implementation clean: do not copy unrelated mock data, duplicate SQL schemas,
-or static screens that are outside the current milestone.
-
-The backend/data core already lives in `../src` and remains independent:
-
-- schema: `../src/data/schema/`
-- migrations: `../drizzle/`
-- business flows: `../src/modules/`
-- production server/API: to be added for Docker mode
-
-## Target structure
-
-The real frontend should become:
-
-```
-web/
-  package.json
-  index.html
-  vite.config.ts
-  src/
-    app/
-    components/
-    layouts/
-    pages/
-    data/
-    styles/
-```
-
-See `../docs/FRONTEND_PLAN.md` for the implementation contract.
-
-## Runtime modes
-
-The frontend must support both modes:
-
-- **Demo build** (`dist/` → GitHub Pages): the UI talks to **PGlite** (Postgres in the
-  browser) via the data layer in `../src/data`.
-- **Production**: the same UI talks to the Node API → PostgreSQL.
-
-Use:
+## Runtime shape
 
 ```text
-VITE_DATA_MODE=demo   # PGlite / IndexedDB
-VITE_DATA_MODE=api    # API / PostgreSQL
+web/index.html
+  -> compatibility data
+  -> Demo or API adapter
+  -> i18n and shared UI
+  -> screen registrations
+  -> Platform workspace
+  -> app router/shell
+  -> PWA registration
 ```
 
-## Build order
+The order of the script tags in `index.html` is part of the runtime contract. Do not
+move one classic script to an isolated module or framework without migrating all of
+its globals and consumers together.
 
-Build one page group at a time:
+Key locations:
 
-1. app shell: sidebar, topbar, company switcher, language switcher
-2. dashboard
-3. inventory
-4. sales order and invoice
-5. finance / GL
-6. settings
-7. setup wizard
+| Location | Current responsibility |
+| --- | --- |
+| `public/assets/app.js` | Hash router, shell, session-aware navigation and the Canonical route registry |
+| `public/assets/screens-*.js` | Route registration and UI workflows |
+| `public/assets/erp-system-data-adapter.js` | Demo/PGlite adapter |
+| `public/assets/erp-system-api-adapter.js` | Authenticated API/PostgreSQL adapter |
+| `public/assets/platform-workspace.js` | Independent Platform login, bootstrap and provisioning workspace |
+| `src/erp-demo-runtime*.ts` | Bundled PGlite, Drizzle and shared TypeScript domain-command runtime |
+| `src/erp-report-runtime.ts` | Bundled governed report/PDF runtime |
+| `public/db/` | Generated schema/migrations and the deterministic Demo showcase pack |
 
-Things the layout will need slots for (already built on the backend):
-- **Company switcher** — multi-tenant: `master_fn` → `company_fn`
-  ([../docs/MULTI_TENANCY.md](../docs/MULTI_TENANCY.md))
-- **Language switcher** — en / ms / zh / ja / vi ([../docs/I18N.md](../docs/I18N.md))
-- **Modules** — Inventory, Sales, Purchasing, Finance, Settings
-  ([../docs/DATA_MODEL.md](../docs/DATA_MODEL.md))
+At the 2026-08-12 source review boundary the UI registers 129 Canonical routes and no
+Preview routes. API screen metadata covers 128; `staff-calendar` is the one documented
+exception that TASK-200 must either wire or formalize. Do not claim universal API-route
+parity until that decision and a fresh authenticated browser matrix pass.
 
-## Git / build hygiene
+## Two build modes
 
-`node_modules/` and `dist/` are already git-ignored at any depth, so `web/node_modules`
-and `web/dist` won't be committed. Don't paste your `node_modules` (run install fresh).
+Both modes share the shell, screen registry, schema and business invariants:
+
+| Mode | Command | Data path | Boundary |
+| --- | --- | --- | --- |
+| Static Demo | `npm run build:demo` | UI -> shared runtime -> PGlite -> IndexedDB | Local sample data; no backend or production concurrency claim |
+| API | `npm run build` | UI -> authenticated Node API -> PostgreSQL | Server authorization and transactional writes |
+
+`VITE_DATA_MODE` is set by the package scripts. `VITE_PLATFORM_DEMO_AUTOFILL=true`
+is an explicit hosted-Demo presentation option only; customer builds default it to
+false. Public sample credentials, one-click Platform login and autofill must never be
+treated as a production authentication configuration.
+
+## Development and verification
+
+From the repository root:
+
+```bash
+npm run typecheck:web
+npm run build:demo
+npm run build
+npm run audit:screens
+npm run audit:i18n
+```
+
+Run the focused workflow/browser commands that correspond to a change. Counts in
+documentation are evidence only when the named command was executed at the stated
+revision; source presence, collected tests and hosted deployment are separate claims.
+
+For current architecture, release state and known P0 gaps, read
+[`DESIGN.md`](../docs/DESIGN.md), [`STATUS.md`](../docs/STATUS.md) and
+[`ERP_EXCELLENCE_REVIEW.md`](../docs/ERP_EXCELLENCE_REVIEW.md).

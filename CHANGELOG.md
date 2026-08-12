@@ -5,6 +5,55 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Reviewed (2026-08-12 — TASK-194 / EPIC-066)
+
+- Reconciled current code, tests, migrations, route/i18n/permission registries,
+  deployment evidence and the task/epic backlog. The current source baseline is 99
+  migrations through 0098, schema version 98, 249 tables, 129 Canonical / 0 Preview
+  routes, 128 API-screen metadata entries, 1,545 i18n keys / 72 local packs and 314
+  permission definitions. The current Vitest collection is 170 files / 666 tests; that
+  is a collection count, not a current full-suite pass claim.
+- Added [ERP Excellence Review](docs/ERP_EXCELLENCE_REVIEW.md) and EPIC-066. The task
+  registry is now 205 total: 192 Done, 10 Todo and 3 Blocked. Existing completed epics
+  retain their dated evidence; newly discovered defects and proof gaps are new work,
+  not retroactive status rewriting.
+- Recorded two P0 source findings: Platform Company provisioning does not establish
+  tenant context before FORCE-RLS-protected writes, while the bundled Compose database
+  role may bypass RLS as bootstrap superuser; and Receipt Pack reads/renders fail to
+  recheck a frozen company-wide snapshot after its creator is downgraded to own-only
+  visibility.
+- Recorded a third financial-correctness P0: tax lookups disagree on the `valid_to`
+  boundary and current supplier-invoice posting can apply GST-style recoverable Input
+  Tax to Malaysia SST. TASK-204 owns regime/classification-safe posting and governed
+  current-rate approval; TASK-205 owns missing Vision-provider failure proof.
+- Recorded current operational truth: public health/setup probes returned HTTP 502,
+  the exact HEAD deployment is unproven and GitHub Actions run `31603746668` started no
+  jobs because of the account billing/spending-limit block.
+- Preserved concurrently appearing, user-owned uncommitted Platform workspace state-
+  transition and E2E changes. Documentation records them as source-present only; the
+  late E2E delta was not executed and is not a deployment claim.
+
+### Added since the previous changelog boundary (EPIC-061–065)
+
+- Delivered operational editing, sales authoring and governed Staff Calendar depth;
+  centralized authorization decisions, assignment scope/provenance, stale-session
+  invalidation and explicit Company Owner permissions; and moved commercial module
+  entitlement to the Platform-owned Master plus Company allocation intersection.
+- Delivered Company Receipts v1 core as an aggregate separate from Expense Claims,
+  Tax Evidence and project Progress Claims: governed evidence confirmation, own/company
+  register, query-side range/search, immutable Receipt Pack snapshot and PDF, canonical
+  permissions and `expenses_tax` entitlement. Direct commands do not require Employee,
+  but the current My Receipts picker still does; edit/void/date-correction UX and Pack
+  lifecycle/localization remain EPIC-066 work.
+- Delivered the independent Platform credential/session realm, module workspace,
+  exact-user simulation, empty-database bootstrap and Master/Company provisioning UI.
+  Later source adds Demo-only quick login, password visibility, responsive containment
+  and safe existing-Company resume/Create-another-Company behavior. These later HEAD UI
+  changes are source/test-present, not claimed live.
+- TASK-192 recorded the deployment-through-0098, backup/restore rehearsal and exact
+  production reset checkpoint. The environment is now treated as operationally
+  unavailable until TASK-199 re-establishes health and proves the deployed revision.
+
 ### Verified (2026-07-26 — TASK-139 five-language Canonical release)
 - Added `npm run audit:i18n`: resource, placeholder, unsafe-markup and hardcoded-copy
   gates plus an explicit business-data allowlist. Final browser proof passes 122
@@ -628,9 +677,10 @@ All notable changes to this project are documented here. Format loosely follows
 - `docs/MULTI_TENANCY.md` — three-level **`master_fn` → `company_fn` → `user_id`**
   hierarchy; app-level scoping in both modes with PostgreSQL RLS as production-only
   defense-in-depth; many-to-many user↔company; shared-schema rationale.
-- `docs/LOCALIZATION.md` — **Singapore + Malaysia** from one codebase; tax as a pluggable,
-  effective-dated **model** (SG GST 9% input/output credit vs MY SST 5/10% + 6/8%, no
-  credit), per-company currency/country.
+- `docs/LOCALIZATION.md` — documented the **Singapore + Malaysia** target: per-company
+  currency/country, implemented effective-dated rate lookup and a proposed pluggable
+  regime model. The later source audit confirms `GstEngine`/`SstEngine` classes and
+  statutory filing outputs are still target scope.
 - `docs/STUDYING_ODOO.md` — study Odoo **Community (LGPLv3) only**, clean-room/concept
   level; porting Python→TS is still a derivative work; keep the clone outside the repo.
 - `Makefile` + `scripts/setup.sh` — **one-command** `make setup` (env → up → wait-for-db →
@@ -650,12 +700,11 @@ All notable changes to this project are documented here. Format loosely follows
 - `docs/I18N.md` — UI in **en / ms / zh / ja / vi**, lazy-loaded; current Web language
   is browser-local (`aria-lang`) and orthogonal to company country/tax/currency.
   `app_user.language` remains compatibility-only and is not read or written by Web.
-- `docs/AI_PROVIDERS.md` — pluggable **OpenAI / Gemini / DeepSeek / LM Studio** as **two
-  adapters** (OpenAI-compatible + Gemini). **BYOK (Bring Your Own Key) everywhere** — the
-  system never ships, stores, or manages a provider key; each user supplies their own at
-  runtime, kept user-side, in both demo and production. No server-side key vault. Keys are
-  never `VITE_`-prefixed (BYOK keeps them as runtime input, never build vars). Notes CORS +
-  LM Studio mixed-content limits, which apply wherever calls are client-side.
+- Historical design note: `docs/AI_PROVIDERS.md` originally proposed OpenAI / Gemini /
+  DeepSeek / LM Studio chat adapters and entirely user-side BYOK. That assistant was not
+  implemented. Later document-processing work superseded the credential claim with an
+  encrypted server connector and worker-mediated `openai|google|openai_compatible`
+  Vision boundary; the current document now records that distinction.
 
 ### Changed
 - `docs/STUDYING_ODOO.md` — clarified that a **private** project still has two distribution

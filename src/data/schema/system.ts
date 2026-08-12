@@ -43,8 +43,9 @@ export const rolePermission = pgTable('role_permission', {
 
 /**
  * Platform operators are deliberately not app_user rows. They do not belong to
- * a customer master, cannot be assigned a tenant role, and receive no customer
- * data access unless a separate, expiring support_access_grant authorizes it.
+ * a customer master and cannot be assigned a tenant role. Support-role decisions
+ * require a separate expiring grant; exact-user Superadmin simulation is currently
+ * an independent audited overlay whose grant/exception policy is tracked by TASK-198.
  */
 export const platformPrincipal = pgTable('platform_principal', {
   principalId: bigint('principal_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
@@ -63,8 +64,8 @@ export const platformPrincipal = pgTable('platform_principal', {
 ]);
 
 /** Application-owned platform role catalogue; tenant role administration never
- * reads or writes this table. TASK-171 may later move these keys to the global
- * permission registry without changing the authority boundary. */
+ * reads or writes this table. Its keys are registered in the global application-owned
+ * permission registry without changing the separate authority boundary. */
 export const platformRole = pgTable('platform_role', {
   platformRoleId: bigint('platform_role_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   code: text('code').notNull(),
@@ -212,11 +213,9 @@ export const supportAccessGrant = pgTable('support_access_grant', {
   ),
 ]);
 
-/** Superadmin-controlled per-tenant module gate. Absence of a row for a
- *  (masterFn, moduleKey) pair means "enabled" (the default) -- only rows
- *  disabling a module need to exist. moduleKey matches web/public/assets/
- *  app.js's MODULE_DEFS keys (plus 'sales'/'purchasing'/'inventory', which
- *  today live outside MODULE_DEFS -- see TASK-045). */
+/** Platform-controlled per-Master commercial entitlement. Every registered
+ *  commercial module needs an explicit row; absence fails closed. Effective Company
+ *  availability is master_module.enabled AND company_module.enabled. */
 export const masterModule = pgTable('master_module', {
   masterFn: text('master_fn').notNull(),
   moduleKey: text('module_key').notNull(),

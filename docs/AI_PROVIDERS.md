@@ -1,102 +1,87 @@
-# AI / LLM Providers
+# AI and Vision Provider Boundary
 
-The ERP supports multiple LLM providers — **OpenAI, Google Gemini, DeepSeek, and
-LM Studio** (local) — behind a pluggable adapter. This powers AI features (reporting
-assistant, natural-language queries, document extraction) without locking to one vendor.
+Reviewed: **2026-08-12**. This document separates the implemented governed document
+Vision path from the still-unimplemented general ERP assistant.
 
----
+## 1. Current implementation truth
 
-## 0. This ERP is BYOK — the system never owns a provider key
-
-> **Bring Your Own Key.** Every user / tenant supplies **their own** LLM API key at
-> runtime, in **both demo and production**. The system **never ships, stores in build, or
-> manages a master provider key.** There is no server-side key vault to secure, no
-> per-tenant secret for us to be custodian of.
-
-What this removes (the "no worry" part):
-- No master API key to provision, rotate, or leak.
-- No server-side secret management / secrets manager dependency.
-- No billing on our side — each user pays their own provider.
-
-What still holds (small, but real):
-- A user's key is **entered at runtime and kept on the user's side** (browser
-  storage / their own config) — never compiled into the app.
-- 🔴 **No key is ever `VITE_`-prefixed.** Vite inlines `VITE_*` vars into the static
-  `dist/`; a `VITE_OPENAI_KEY` would be published to the world. `VITE_DATA_MODE` is a safe
-  *mode switch*, not a secret. (This is the only hard rule left, and BYOK already keeps us
-  clear of it because keys are runtime input, not build vars.)
-
----
-
-## 1. Two adapters, not four
-
-Three of the four providers speak the **OpenAI-compatible** API — same request shape,
-different `base_url` + key. So the abstraction is really two adapters:
-
-| Adapter | Providers | How it varies |
+| Capability | Status | Current boundary |
 | --- | --- | --- |
-| **OpenAI-compatible** | OpenAI, DeepSeek, LM Studio | just `base_url` + `api_key` (+ model) |
-| **Gemini** | Google Gemini | different request/response schema |
+| Setup-wizard AI choice | Preview only | The static local wizard lists OpenAI, Gemini, DeepSeek and LM Studio, but the provider/key stay in in-memory form state and are discarded on Finish/Back. They do not configure an adapter. |
+| Local document OCR | Implemented worker boundary | Local OCR is the default document-processing policy. The worker calls the deployment-owned `DOCUMENT_LOCAL_OCR_URL`; unavailable/indeterminate extraction never makes an unsafe document clean. |
+| BYOK document Vision | Implemented governed boundary | A Company may select `openai`, `google` or `openai_compatible` plus region and 0–365-day provider retention. The worker sends the document to the deployment-owned `DOCUMENT_VISION_GATEWAY_URL`. |
+| General chat/reporting/NL-query assistant | Not implemented | No shared `LLMProvider.chat()` adapter, conversational route, browser direct-call runtime or permission-safe ERP tool layer exists in current source. |
 
-```
-LLMProvider (interface: chat(), embed?())
-  ├── OpenAICompatibleProvider   base_url: api.openai.com | api.deepseek.com | localhost:1234/v1
-  └── GeminiProvider             Google GenAI schema
+Do not describe the setup-wizard preview as a working OpenAI/Gemini/DeepSeek/LM Studio
+assistant. Do not describe PGlite or API builds as sending a wizard-entered key to a
+provider.
+
+## 2. Governed document Vision flow
+
+```text
+Company processing policy
+  -> local_ocr (default)
+  -> byok_vision
+       -> provider: openai | google | openai_compatible
+       -> explicit region + retention days
+       -> encrypted document-vision connector when a credential is required
+       -> server worker -> configured Vision gateway
+       -> versioned extraction provenance and confidence
 ```
 
-Adding another OpenAI-compatible vendor = a config row (base_url + key), not new code.
+The current contract is intentionally server/worker mediated:
 
-## 2. How BYOK works (same in both modes)
+- `src/modules/documents/processingPolicy.ts` validates provider, region, retention,
+  absolute credential-free base URL and model metadata;
+- the `document-vision` integration connector stores a credential only as an encrypted
+  envelope, requires server token-encryption configuration and never returns plaintext;
+- `src/modules/documents/processing.ts` decrypts only inside the worker call boundary;
+- `src/modules/documents/processingDrivers.ts` calls the deployment-owned gateway with
+  bounded timeouts and provider policy headers;
+- scan-clean state, immutable version/hash identity, extraction provenance and manual
+  review remain authoritative even when a provider fails;
+- OpenAI-compatible may be configured without a credential for a deliberately local or
+  otherwise credential-free endpoint. That does not make an HTTPS browser origin able
+  to call a local HTTP service directly; the configured server/gateway topology owns the
+  network path.
 
-The flow is identical in demo and production — that is the point of BYOK:
+Tests cover encrypted connector storage, credential non-disclosure, policy validation,
+credential-required and credential-free OpenAI-compatible paths, fail-closed scanner/OCR
+unavailability, retry and manual confirmation fallback. They do not directly prove a
+Vision-gateway/provider failure path, automatic Vision-to-local-OCR fallback, a
+particular third-party account, a region promise or a configured production gateway.
 
-1. The user enters their provider, model, `base_url` (for OpenAI-compatible), and **their
-   own key** in the AI settings / first-run wizard.
-2. The key is stored **on the user's side** (browser storage, scoped to that user). It is
-   never sent to our build, never required as a server secret.
-3. AI calls go **directly from the browser to the chosen provider** using that key.
-4. No key → AI features are simply disabled. Nothing breaks.
+## 3. Secret and privacy rules
 
-Because the call is client→provider, there is **no master key on any server** to protect.
+- No provider credential may be committed, seeded, logged, included in audit before/after
+  payloads or exposed through a public read API.
+- Provider keys must never use a `VITE_*` variable; Vite would publish them in the web
+  bundle.
+- The setup-wizard preview key is memory-only and discarded. The governed document
+  Vision credential is different: it is deliberately persisted **server-side in
+  encrypted form** so a background worker can process documents. The older blanket claim
+  that this ERP never stores any provider credential is therefore false.
+- BYOK does not remove data-governance duties. Provider, endpoint, region, retention,
+  credential requirement, purpose, actor and extraction provenance must remain explicit.
+- No AI/Vision result may silently post stock, money, tax, payroll, payment or approval
+  decisions. OCR/Vision output is a suggestion until the governed workflow confirms it.
 
-> Optional hardening (only if a provider's CORS blocks direct browser calls — see §3): the
-> request may be relayed through the Node API, passing the user's key **per-request without
-> persisting it**. Even then we never *store* a key — we forward the user's. Default is
-> direct client→provider.
+## 4. General ERP assistant target (not current functionality)
 
-## 3. Browser-call caveats (apply wherever calls are client-side — verify per provider)
+A future reporting or natural-language assistant must be a separate epic/task. Before it
+is called Canonical it needs:
 
-Since BYOK calls go browser→provider, these constraints apply in **both** modes:
+- a registered provider interface and server-side tenant authorization boundary;
+- explicit read-only tools first, with bounded queries and field-level redaction;
+- prompt-injection and document-content isolation, output validation and audit;
+- per-tenant model/region/retention/cost policy, quotas and cancellation/timeouts;
+- no direct business write unless the ordinary domain command, permission, scope,
+  workflow approval, optimistic version and idempotency checks all run unchanged;
+- Demo/API parity that does not put production/customer secrets into the static bundle;
+- provider-specific integration and failure tests plus an honest production configuration
+  check.
 
-- **CORS:** not every provider allows direct browser calls. OpenAI requires an explicit
-  "allow browser" acknowledgement; some providers block cross-origin entirely. Verify per
-  provider; if blocked, use the optional per-request relay in §2.
-- **Mixed content:** **LM Studio is `http://localhost:1234`.** A page served over **HTTPS**
-  (the public Pages demo, or a TLS production deploy) calling `http://localhost` is
-  **blocked by the browser**. So **LM Studio works when the app itself is served over
-  http/local** (a local engineer or an on-prem http deployment), **not from an HTTPS
-  origin.**
-
-## 4. Configuration surface
-
-| Setting | Where it lives | Secret? |
-| --- | --- | --- |
-| Active provider | user/session settings | no |
-| Model name | user/session settings | no |
-| `base_url` (OpenAI-compatible) | user/session settings | no |
-| **API key** | **user's own, entered at runtime, stored user-side (BYOK)** | yes — but it's the *user's*, never ours, never in build |
-
-There are **no provider keys in `.env`** — BYOK means the system doesn't hold one. Only
-non-secret defaults (a suggested provider/model) may be configured; the key always comes
-from the user.
-
-## 5. Why pluggable matters
-
-- **Cost/sovereignty:** a client may require a local model (LM Studio) for data that
-  cannot leave premises, or DeepSeek for cost — switch by config.
-- **Resilience:** provider outage → flip provider without code change.
-- **The abstraction is small** (two adapters) because most providers converged on the
-  OpenAI API shape.
-
-> Architecture rule: a provider key reaching the client bundle is a release blocker. The
-> `VITE_` check in §0 is enforced in review.
+Until that work is registered and implemented, the supported AI surface is governed
+document extraction only. See [SECURITY.md](SECURITY.md),
+[PROJECT_LOGIC.md](PROJECT_LOGIC.md) and [STATUS.md](STATUS.md) for the surrounding
+document, credential and release boundaries.

@@ -396,24 +396,29 @@ permission cutover. TASK-183 is complete: `screens-company-receipts.js` now sele
 the uploader's evidence from `my.receipts()`, reads the immutable confirmation context
 and creates the receipt through the same adapter contract in both modes. The authenticated
 API-mode browser harness passes against an isolated same-origin PGlite fixture and a
-newly created disposable PostgreSQL 16 database. The two fixture types remain distinct
-from production deployment evidence.
+newly created disposable PostgreSQL 16 database. TASK-192 later deployed through 0098
+and reset production to first-run state; the fixtures remain distinct from authenticated
+production receipt UAT.
 
 ### 6.1 Ownership and evidence
 
 A Company Receipt is a `masterFn + companyFn` business record. It references one
 governed managed-document/version and keeps `uploaderUserId` as audit and current
 visibility attribution. Creation requires the signed-in uploader's current,
-clean, non-void `purpose='receipt'` document version. It does not require an Employee
-record, `expense_claim`, reimbursement, approval, bank data, GL posting or tax decision.
+clean, non-void `purpose='receipt'` document version. The direct command does not require
+an Employee record, `expense_claim`, reimbursement, approval, bank data, GL posting or
+tax decision. The current browser picker uses `/api/my/receipts`, which requires Employee
+Self Service and a linked Employee; TASK-197 must remove or explicitly retain that
+narrower UI boundary.
 Migration 0091 stores the document SHA-256 on the aggregate, backfills existing rows and
 uniquely prevents another receipt with the same exact bytes inside the Company.
 
 ### 6.2 State and confirmation
 
-The schema vocabulary is Draft, Processing, Ready, Needs Attention and Voided. Current
-creation stores Ready even when transaction date is absent; TASK-180 adds the later
-Missing Date workflow. Upload/scan/OCR state remains in the
+The schema vocabulary reserves Draft, Processing, Ready, Needs Attention and Voided, but
+current commands produce only Ready and retained Voided. Creation stores Ready even when
+transaction date is absent; current Missing Date UI is a navigation placeholder, not a
+correction workflow. Upload/scan/OCR state remains in the
 document services; confirmed merchant, receipt/invoice number, transaction date,
 amount, currency, category, business purpose and notes belong to the Company Receipt.
 The confirmation context reads candidate value, normalized value, source, model,
@@ -443,16 +448,18 @@ Migration 0092 gives Employee/Manager own scope and Finance/Receipt Manager/Comp
 explicit company scope without role-name authorization at request time.
 TASK-180 implements query-side merchant, receipt-number, notes and category search. Date range
 is inclusive on company-local `transaction_date`;
-missing-date records stay visible in the current register with a My Receipts correction
-action but are excluded whenever a date range is active.
+missing-date records stay visible but are excluded whenever a date range is active. The
+badge only navigates to My Receipts and does not edit Company Receipt metadata.
 
 Migration 0093 and `companyReceiptPack.ts` resolve every permission-visible Ready receipt
 with a non-null date in the selected inclusive range, independently of UI pagination
 (maximum 5,000), then freeze the filters, chronological receipt/document facts, source
 SHA-256 and exact Decimal totals grouped by currency. A stable `packKey` gives
-fact-matched idempotent replay; the creator alone may read/render the snapshot. Rendering
-rechecks tenant scope, permission, document-version/hash identity, scan-clean state,
-content integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4
+fact-matched sequential replay; the creator alone may read/render the snapshot. Current
+routes recheck only any receipt-read grant and the domain rechecks tenant plus creator;
+they do not require current `read_company` for a frozen company Pack after a downgrade.
+TASK-196 owns that P0. Rendering otherwise rechecks document-version/hash identity,
+scan-clean state, content integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4
 landscape register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG
 or emits an explicit unsupported/corrupt evidence placeholder. Preview, download and
 Print use the same no-store artifact and are audited without changing receipt state.
@@ -542,9 +549,18 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
 For the API-mode hosted Demo only, the web build may set `VITE_PLATFORM_DEMO_AUTOFILL=true`.
 The Platform bootstrap, Master and first Company forms then show editable public sample
 values, a dismissible warning and `Next`/`Finish` progression; the source/customer default
-is `false`. This flag changes no API contract, permission, transaction or audit rule. The
-Master and Company mutations still use separate stable form-fingerprint Idempotency-Key
-values, and an existing Company is never overwritten or used to inject sample data.
+is `false`. HEAD also adds one-click Demo Platform login, password Show/Hide, tenant-only
+Remember, responsive containment and explicit `Create another Company`; an existing
+Company resumes without sample injection and a next-Company form stays blank. The flag
+changes no API contract, permission, transaction or audit rule. Master and Company
+mutations retain separate stable form-fingerprint Idempotency-Key values.
+
+The final reviewed worktree also contains a user-owned explicit
+`master → company → control` presentation state machine. It clears successful Company
+drafts immediately, resets tenant selection through named transitions and adds E2E
+assertions that one submit emits one mutation and no completed form values reappear.
+Those uncommitted changes were preserved but their late E2E delta was not executed or
+treated as deployed proof.
 
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |
@@ -582,12 +598,21 @@ AND permission AND scope AND workflow authority`; Platform Superadmin privileges
 enter a simulation target. Migration 0098 adds the provisioning tables and backfills
 `platform.tenants.read/manage` for existing Superadmins.
 
-TASK-189–192 are complete. On 2026-08-12 migration 0098/RLS and the application release
-were verified against the existing data, restore-tested backups were retained, and only
+Current production-RLS caveat: the Platform route's `runPlatformMutation` opens a
+transaction but does not set `app.master_fn`/`app.company_fn` before Company creation
+writes `tax_rule`, control-plane, allocation, onboarding and account rows protected by
+FORCE RLS. The existing PostgreSQL security test exercises the retired
+`completeProductionSetup` path, while bundled Compose may run as the PostgreSQL bootstrap
+superuser and bypass RLS. TASK-195 must close and prove this boundary before provisioning
+is called production-ready. The inserted onboarding `completedSteps` also still contains
+the retired `modules` stage and must be normalized.
+
+TASK-189–192 are complete. At the 2026-08-12 checkpoint, migration 0098/RLS and the application release
+were verified against existing data, restore-tested backups were retained, and only
 `erp-system_pgdata` plus `erp-system_document_storage` were removed before recreating the
-stack without seed. The final database has 249 public tables, 221 forced-RLS tables, zero
-non-migration rows and empty document storage; health/root are 200 and setup status is
-`requiresPlatformBootstrap:true`. The public browser shows Create Platform Superadmin and
+stack without seed. That database had 249 public tables, 221 forced-RLS tables, zero
+non-migration rows and empty document storage; health/root were 200 and setup status was
+`requiresPlatformBootstrap:true`. The public browser showed Create Platform Superadmin and
 no real account was created. TASK-193 remains blocked on missing SMTP; source CI run
 `31570902479` passed all four Vitest shards, while docs-only push run `31573438483` was
 blocked before any job started by GitHub Actions account billing.
@@ -595,7 +620,30 @@ blocked before any job started by GitHub Actions account billing.
 The user authorized a repeat first-run reset at 2026-08-12T094234Z UTC. A new custom dump
 and document archive were validated before deletion, including an isolated PostgreSQL 16
 restore rehearsal. The recreated stack again applied migration 0098 and production RLS
-without seed; source-verified live status is now `requiresPlatformBootstrap:true` with
+without seed; the checkpoint status was `requiresPlatformBootstrap:true` with
 `hasPlatformAdmin:false`, `hasMaster:false`, `hasCompany:false` and
 `hasTenantAdmin:false`. Health/root are 200, the retired anonymous setup endpoint is 410,
-and the browser shows Create Platform Superadmin. No account was created by the reset.
+and the browser showed Create Platform Superadmin. No account was created by the reset.
+Later HEAD source is not immutable deployment proof. TASK-194 public health/setup probes
+returned 502 and HEAD CI was blocked before job start by billing; TASK-199/203 own those
+current-state gaps.
+
+## 11. Production Trust & ERP Excellence logic boundary
+
+EPIC-066 does not add a new business aggregate. It applies cross-cutting invariants found
+by the source audit in [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md):
+
+1. current authority must dominate frozen artifact visibility;
+2. every production tenant write, including Platform provisioning, runs under a
+   least-privilege runtime role with exact server-owned RLS context;
+3. Support Grant and exact-user Simulation form one explicit privileged-access policy,
+   with MFA/step-up and no undocumented tenant-data exception;
+4. UI availability derives from effective capabilities and every advertised correction
+   reaches a real versioned command;
+5. source, collected tests, passed tests, deployed revision and current health remain
+   separate evidence states;
+6. SLO/RPO/RTO, worker backlog and scale/retention/i18n behavior are part of ERP domain
+   quality rather than release-note polish;
+7. tax-rule ranges use one `[valid_from, valid_to)` contract and GL tax posting must
+   dispatch by governed SG GST/MY SST classification, while AI/Vision source capability
+   remains separate from provider-failure and production-configuration proof.

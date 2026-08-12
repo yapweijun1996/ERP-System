@@ -195,8 +195,9 @@ Order of attack:
    events, verified live including the fix making every module's writes show up in
    the demo's own audit trail — see docs/STATUS.md) are both done. At this historical
    phase boundary, `master-control`, `sys-settings` and `module-activation-control`
-   still remained Preview; later epics promoted every route, and the current baseline
-   is 128 Canonical / 0 Preview.
+   still remained Preview; later epics promoted every route. Current HEAD registers
+   129 Canonical / 0 Preview routes, with 128 entries in API-screen metadata and
+   `staff-calendar` as the sole open parity decision.
 6. **HR-lite: Employee Master & Leave Management** (EPIC-020 ✅, TASK-049/050,
    2026-07-19) — the original slice deliberately scoped itself to employee master +
    leave request/approval only. Payroll was later delivered by EPIC-026/TASK-061/062;
@@ -308,10 +309,10 @@ confirmation rather than silently altering a well-tested design.
 Historical exit criteria were met by the Phase 8 implementation: `npm run audit:screens`
 passed after each mechanical change and the module-access-control toggle hid a module
 from both the sidebar and API for a restricted non-superadmin tenant. The 2026-08-10
-screen follow-up now passes the current 128-route desktop/mobile layout and behavior
-gate, and the static i18n audit passes 1,533 canonical keys / 69 local packs; the
+screen follow-up passed that checkpoint's 128-route desktop/mobile layout and behavior
+gate, and the static i18n audit passed 1,533 canonical keys / 69 local packs; the
 changed calendar routes pass the targeted 3-route × 5-language × 2-viewport matrix.
-The full 128-route matrix now passes. Authenticated API-mode full-browser proof and
+The full 128-route matrix passed at that checkpoint. Authenticated API-mode full-browser proof and
 physical-device verification remain separate follow-up gates; desktop/mobile smoke is
 green with visible semantic navigation-badge assertions.
 
@@ -409,7 +410,8 @@ only through registered commands, and passes domain/API/browser/audit verificati
    `supplier-quotations` became Canonical in Demo/API with five-language workflows,
    moving that phase's route boundary from 70/44 to **72/42**. At this historical
    boundary, `pur-txn-view` remained Preview because it was shared by still-sample
-   purchasing document types; later work promoted the current route set to 128/0.
+   purchasing document types; later work promoted that checkpoint's route set to 128/0,
+   and current HEAD is 129/0 with 128 API-screen metadata entries.
 
 Exit criteria: met when the domain/API/browser and 114-route gates below pass.
 
@@ -1015,13 +1017,15 @@ pack was regenerated from the current authoritative Manager template, and permis
 module, integration and complete 149-file Vitest shard gates pass with 599 tests passed,
 one expected skip and zero failures. Generic module collections use company scopes because
 their rows have no actor owner; My Work and Team Calendar hierarchy boundaries remain
-actor-derived and team/direct-tree scoped. The current schema journal contains 98
-migration entries and generated Drizzle SQL contains 247 tables. TASK-170's platform-support
+actor-derived and team/direct-tree scoped. Current HEAD contains 99 migration entries
+through 0098 and 249 generated Drizzle tables; migrations 0090–0098 are described in
+later phases. TASK-170's platform-support
 migrations 0084/0085, TASK-172's assignment-scope migration 0086, TASK-173's
 authorization-override migration 0087 and TASK-174-B's authorization-version migration
 0088 are included, and migration 0089 now delivers the Company Owner cutover. The
-latest current-worktree full regression passes 663 tests with 1 skipped across 168
-files. The
+recorded pre-HEAD 2026-08-12 full regression passed 663 tests with 1 skipped across
+168 files. Current HEAD instead collects 170 files/666 tests; the complete collection
+was not rerun during TASK-194. The
 account-service module-gate omission was corrected, HR Calendar fixtures now use
 explicit approval permissions and targeted notification/access-matrix/module coverage
 passes 15/15. The 149-file/599-test result above is retained as TASK-168's historical
@@ -1033,14 +1037,13 @@ scope, module, override and invitation changes. TASK-174 now adds Master-wide su
 invalidation plus stale browser-session/direct-URL proof. Physical-phone verification remains
 separately blocked under TASK-017.
 
-## Phase 44 — Authorization Architecture Evolution 🔶
+## Phase 44 — Authorization Architecture Evolution ✅
 
 1. **Architecture alignment** (TASK-169 complete) records current compatibility facts
    and the target in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md).
 2. **Principal and permission foundation** (TASK-170–171): TASK-170 is complete with a
    separate platform/support control plane, bounded grants and audit. TASK-171 is also
-   complete: the application-owned registry has 303 current static definitions after
-   TASK-179, explicit
+   complete: the application-owned registry has 314 current definitions, explicit
    compatibility mappings/removal metadata, canonical projections for 116 resources
    and 62 actions, and the `check:permissions` CI gate.
 3. **Assignment and decision model** (TASK-172–173): TASK-172 moves validity, provenance
@@ -1060,7 +1063,7 @@ separately blocked under TASK-017.
    revocation without replaying rejected writes.
 5. **Owner cutover** (TASK-175) is complete: migration 0089 replaces
    the tenant Superadmin bypass with 112 explicit, explainable Company Owner
-   permissions at cutover; TASK-179 adds the current receipt company-read grant for 113,
+   permissions at cutover; the current template has 115,
    with company scope and idempotent legacy-assignment backfill while keeping
    platform authority separate. Disposable PostgreSQL 16 parity, true concurrency and
    non-superuser RLS proof are green. The production database was backed up, migrations
@@ -1084,7 +1087,7 @@ production RLS re-applied and application containers released; public health/roo
 unauthenticated-session probes returned 200/200/401. Authenticated API-mode full-route
 workflow coverage and physical-device verification remain separate follow-up gates.
 
-## Phase 45 — Expenses & Tax v1: Company Receipts 🔶
+## Phase 45 — Expenses & Tax v1: Company Receipts ✅
 
 1. **Contract and model** (TASK-176/177 complete): the official product boundary remains
    Company Receipts. Migration 0090, the shared aggregate/domain commands and
@@ -1099,7 +1102,8 @@ workflow coverage and physical-device verification remain separate follow-up gat
    permission registry now enforce bounded own/company list/detail reads; Demo/API
    adapters render the eight-field desktop register and labelled mobile cards with
    cursor pagination. TASK-180 adds query-side search, inclusive `transaction_date`
-   filters and an actionable Missing Date state.
+   filters and a visible Missing Date state. The current badge is only a navigation
+   placeholder; TASK-197 owns the actual metadata-correction flow.
 3. **Receipt Pack** (TASK-181 complete): migration 0093 freezes the complete matching
    ready-and-dated set, chronological document identities and separate currency totals.
    API and Demo/PGlite revalidate clean evidence and serve the same A4 register-plus-
@@ -1117,14 +1121,15 @@ workflow coverage and physical-device verification remain separate follow-up gat
    actions, pagination and 1440×900/390×844 rendering. An authenticated same-origin
    API-mode PGlite fixture covers the same journey at desktop and 375px. A newly created
    empty disposable PostgreSQL 16 database passes the authenticated browser journey too.
-   Neither fixture is a production deployment.
+   Neither fixture was production deployment proof for TASK-183.
 
 Phase status is **complete (implementation verification)**. TASK-177–181 delivered the canonical model/API,
 secure confirmation, permission-scoped register, responsive Demo/API UI and query-side
-search/date behavior plus immutable Receipt Pack, with no production deployment. TASK-182
+search/date behavior plus immutable Receipt Pack. TASK-182
 completed after TASK-186's platform cutover. TASK-183 completed the separate Demo/PGlite,
-API/PGlite and disposable PostgreSQL 16 browser proof; production deployment remains a
-separate authorization decision.
+API/PGlite and disposable PostgreSQL 16 browser proof. TASK-192 later deployed through
+0098 and reset production to first-run state; authenticated production receipt UAT is
+not claimed. EPIC-066 owns the subsequently discovered Pack-authorization and UX gaps.
 
 Exit criteria: the twelve-step Company Receipts journey in `SPEC.md` and `MVP.md`
 works end to end in both modes without `expense_claim`, cross-tenant access,
@@ -1174,10 +1179,13 @@ acceptance remains separate.
 
 ## Phase 47 — Platform Bootstrap & Tenant Provisioning 🔶
 
-This phase is complete through the first-run Platform workspace and the explicitly
+The core phase is complete through the first-run Platform workspace and the explicitly
 authorized production reset. The old anonymous production tenant setup endpoint is retired
-with a 410; Demo/PGlite keeps its local wizard compatibility. Production now ends at the
-empty-database Platform Superadmin registration page, with no real account created.
+with a 410; Demo/PGlite keeps its local wizard compatibility. TASK-192's reset checkpoint
+ended at first Platform Superadmin registration with no real account. Later HEAD source
+adds Demo quick login, password visibility, responsive containment and safe existing-
+Company resume, but the exact deployed HEAD revision is unproven and current probes
+returned 502.
 
 1. **First identity claim** (TASK-189 done): `GET /api/setup/status` exposes staged
    bootstrap facts. A locked empty-database transaction permits one public
@@ -1200,8 +1208,9 @@ empty-database Platform Superadmin registration page, with no real account creat
 4. **Deploy and reset** (TASK-192 done): migration 0098/RLS and application release
    preserved the existing data; custom dump/list/archive and isolated restore rehearsal
    passed; only `erp-system_pgdata` and `erp-system_document_storage` were deleted;
-   migrations/RLS were reapplied without seed; and the public site now shows first-run
-   Platform Superadmin registration. No real account was created. Source CI run
+   migrations/RLS were reapplied without seed; and the public site showed first-run
+   Platform Superadmin registration at that checkpoint. No real account was created.
+   Current probes return 502, so this is not present availability evidence. Source CI run
    `31570902479` passed all four Vitest shards; docs-only push run `31573438483` was
    blocked before startup by account billing.
 5. **Recovery gap** (TASK-193 blocked): administrator email self-service reset remains
@@ -1212,3 +1221,36 @@ The accepted risks are explicit: the empty-database tokenless bootstrap has a
 first-caller takeover window; Platform Superadmin is password-only with a one-hour
 session and no MFA; and the final reset permanently removes online PostgreSQL and
 document-storage data except for the verified backups.
+
+## Phase 48 — Production Trust & ERP Excellence Hardening 🔶
+
+Goal: make the broad Canonical ERP safe, operable and evidentially current before adding
+more module breadth. The source-backed review is
+[ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
+
+1. **Truth sync** (TASK-194 done): current inventory is 99 migrations/schema v98/249
+   tables, 129 Canonical routes with 128 API metadata routes, 1,545 i18n keys/72 packs,
+   314 permission codes and PWA v261. Historical test/deploy checkpoints remain dated.
+2. **Isolation first** (TASK-195 todo): deploy explicit non-superuser/non-BYPASSRLS
+   runtime roles and prove current Platform bootstrap → Master → Company provisioning
+   under FORCE RLS with exact transaction-local tenant context.
+3. **Receipt security and workflow** (TASK-196/197 todo): close company-Pack visibility
+   downgrade, define original-evidence export authority/audit, capability-gate UI actions,
+   and deliver real detail/edit/void/Missing Date plus bounded evidence selection.
+4. **Privileged assurance** (TASK-198 todo): reconcile Support Grant and Superadmin
+   simulation policy; add MFA and recent step-up for provisioning, MAC and simulation.
+5. **Current release proof** (TASK-199/200/203): restore public availability, identify
+   the exact deployed revision, resolve `staff-calendar` API metadata, rerun all 129
+   routes/current tests, and unblock zero-step GitHub Actions billing failure.
+6. **Operational/artifact quality** (TASK-201/202): establish SLO/RPO/RTO, timed restore
+   and scale/worker monitoring; then add Pack lifecycle, concurrency-safe idempotency,
+   Unicode localization, Decimal-safe amounts and Company-calendar presets.
+7. **Tax and governed AI correctness** (TASK-204/205): unify exclusive `valid_to`,
+   dispatch SG GST/MY SST posting by governed classification, prohibit default
+   recoverable MY input tax, and prove Vision gateway/provider failure behavior without
+   overstating production configuration.
+
+Exit criteria: every P0 passes its PostgreSQL/API/browser/security proof; public health
+and revision evidence are current; CI actually executes; operational objectives are
+measured; no document calls a collected test, old probe or source-present commit a live
+production pass. TASK-017 and TASK-193 remain independent blockers.
