@@ -1542,5 +1542,6 @@
   "access.moduleNotAvailable": "模块不可用",
   "access.modulePlatformHelp": "请联系您的平台超级管理员检查主实体授权和公司分配。",
   "role.masterAdmin": "主管理员",
-  "role.companyOwner": "公司所有者"
+  "role.companyOwner": "公司所有者",
+  "timesheet.sub": "{week} 的个人项目工时审计记录。作废记录仍会保留显示。"
 }

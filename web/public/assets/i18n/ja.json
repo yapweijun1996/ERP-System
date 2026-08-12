@@ -1542,5 +1542,6 @@
   "access.moduleNotAvailable": "モジュールは利用できません",
   "access.modulePlatformHelp": "Platform Superadmin に、Master のエンタイトルメントと会社割り当ての確認を依頼してください。",
   "role.masterAdmin": "マスター管理者",
-  "role.companyOwner": "会社所有者"
+  "role.companyOwner": "会社所有者",
+  "timesheet.sub": "{week} の監査可能なプロジェクト工数です。無効化した記録も表示されます。"
 }

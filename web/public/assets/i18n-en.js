@@ -1543,5 +1543,6 @@ window.__ERP_I18N_EN__=Object.freeze({
   "access.moduleNotAvailable": "Module is not available",
   "access.modulePlatformHelp": "Ask your Platform Superadmin to review the Master entitlement and Company allocation.",
   "role.masterAdmin": "Master Admin",
-  "role.companyOwner": "Company Owner"
+  "role.companyOwner": "Company Owner",
+  "timesheet.sub": "Your audited project time facts for {week}. Voided entries remain visible."
 });

@@ -1542,5 +1542,6 @@
   "access.moduleNotAvailable": "Modul tidak tersedia",
   "access.modulePlatformHelp": "Minta Platform Superadmin anda menyemak entitlement Master dan peruntukan Syarikat.",
   "role.masterAdmin": "Pentadbir Induk",
-  "role.companyOwner": "Pemilik Syarikat"
+  "role.companyOwner": "Pemilik Syarikat",
+  "timesheet.sub": "Fakta masa projek anda yang diaudit untuk {week}. Entri dibatalkan kekal kelihatan."
 }

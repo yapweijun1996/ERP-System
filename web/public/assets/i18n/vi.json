@@ -1542,5 +1542,6 @@
   "access.moduleNotAvailable": "Mô-đun không khả dụng",
   "access.modulePlatformHelp": "Hãy yêu cầu Platform Superadmin xem lại entitlement Master và phân bổ Công ty.",
   "role.masterAdmin": "Quản trị viên Master",
-  "role.companyOwner": "Chủ sở hữu công ty"
+  "role.companyOwner": "Chủ sở hữu công ty",
+  "timesheet.sub": "Dữ liệu thời gian dự án có kiểm toán của bạn cho {week}. Mục hủy vẫn được hiển thị."
 }

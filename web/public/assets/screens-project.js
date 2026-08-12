@@ -838,7 +838,7 @@ SCREENS['timesheet'] = function(root,params){
 
     transactionListPage(root,{
       module:'project',route:'timesheet',active:'timesheet',title:s('title'),
-      description:s('sub').replace('{week}',weekLabel),
+      description:t('timesheet.sub',{week:weekLabel}),
       rows,rowId:entry=>entry.id,count:ready?activeEntries.length:0,
       rowAction:null,
       kpis:ready?[
