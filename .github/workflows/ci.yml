@@ -131,6 +131,7 @@ jobs:
           I18N_LANGUAGES: en,ms,zh,ja,vi
           I18N_REQUIRE_PGLITE: 1
           I18N_BOOT_TIMEOUT_MS: 60000
+          I18N_PAGE_BOOT_TIMEOUT_MS: 120000
           I18N_ROUTE_TIMEOUT_MS: 20000
         run: |
           mkdir -p output

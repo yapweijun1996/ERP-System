@@ -46,6 +46,10 @@ const BOOT_TIMEOUT_MS = Number(process.env.I18N_BOOT_TIMEOUT_MS || 60000);
 if (!Number.isFinite(BOOT_TIMEOUT_MS) || BOOT_TIMEOUT_MS < 1000) {
   throw new Error('I18N_BOOT_TIMEOUT_MS must be a number >= 1000.');
 }
+const PAGE_BOOT_TIMEOUT_MS = Number(process.env.I18N_PAGE_BOOT_TIMEOUT_MS || 45000);
+if (!Number.isFinite(PAGE_BOOT_TIMEOUT_MS) || PAGE_BOOT_TIMEOUT_MS < 1000) {
+  throw new Error('I18N_PAGE_BOOT_TIMEOUT_MS must be a number >= 1000.');
+}
 const REQUIRE_PGLITE = process.env.I18N_REQUIRE_PGLITE === '1';
 const REPORT_ONLY = process.env.I18N_REPORT_ONLY === '1';
 const PORT = process.env.I18N_AUDIT_PORT || '4312';
@@ -217,7 +221,7 @@ async function auditBrowser() {
         });
         nextPage.on('pageerror', (error) => runtimeErrors.push(error.message));
         await nextPage.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 20000 });
-        await nextPage.waitForSelector('.dashgrid', { timeout: 45000, state: 'visible' });
+        await nextPage.waitForSelector('.dashgrid', { timeout: PAGE_BOOT_TIMEOUT_MS, state: 'visible' });
         await evaluateWithTimeout(nextPage, async ({ requirePglite }) => {
           const runtimeReady = window.ErpDemoRuntimeReady;
           if (runtimeReady && typeof runtimeReady.then === 'function') await runtimeReady;
