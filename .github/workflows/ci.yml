@@ -14,7 +14,11 @@ jobs:
   validate:
     name: Typecheck, transaction proof, and demo build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The repository-wide Vitest suite includes PGlite-backed integration
+    # coverage and takes more than 30 minutes on the hosted runner. Keep a
+    # bounded timeout while allowing the full source-of-truth test gate to
+    # finish instead of cancelling it mid-run.
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
