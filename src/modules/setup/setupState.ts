@@ -9,6 +9,11 @@ import type { DB } from '../../data/db';
  */
 export interface ProductionSetupStatus {
   hasAdmin: boolean;
+  hasPlatformAdmin: boolean;
+  requiresPlatformBootstrap: boolean;
+  hasMaster: boolean;
+  hasCompany: boolean;
+  hasTenantAdmin: boolean;
   isFreshDatabase: boolean;
 }
 
@@ -18,6 +23,7 @@ export async function getProductionSetupStatus(db: DB): Promise<ProductionSetupS
       (select count(*)::int from "master") as masters,
       (select count(*)::int from "company") as companies,
       (select count(*)::int from "app_user") as users,
+      (select count(*)::int from "platform_principal") as platform_principals,
       (select count(*)::int from "role") as roles,
       (select count(*)::int from "user_company") as memberships,
       (select count(*)::int from "user_company_role") as role_assignments,
@@ -28,6 +34,7 @@ export async function getProductionSetupStatus(db: DB): Promise<ProductionSetupS
   const masters = count(row?.masters);
   const companies = count(row?.companies);
   const users = count(row?.users);
+  const platformPrincipals = count(row?.platform_principals);
   const roles = count(row?.roles);
   const memberships = count(row?.memberships);
   const roleAssignments = count(row?.role_assignments);
@@ -43,6 +50,20 @@ export async function getProductionSetupStatus(db: DB): Promise<ProductionSetupS
       memberships,
       roleAssignments,
       setupStates,
+      platformPrincipals,
     ].every((value) => value === 0),
+    hasPlatformAdmin: platformPrincipals > 0,
+    requiresPlatformBootstrap: platformPrincipals === 0 && [
+      masters,
+      companies,
+      users,
+      roles,
+      memberships,
+      roleAssignments,
+      setupStates,
+    ].every((value) => value === 0),
+    hasMaster: masters > 0,
+    hasCompany: companies > 0,
+    hasTenantAdmin: users > 0,
   };
 }

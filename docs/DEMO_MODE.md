@@ -207,3 +207,18 @@ the tenant mutation surface:
 The fixture/API and TASK-186 tenant cutover are implementation evidence. TASK-188 adds
 recorded dual-mode browser, security and release-gate evidence; neither statement
 authorizes a production migration or deployment.
+
+## EPIC-065 parity boundary: Platform bootstrap and provisioning
+
+The static Demo intentionally does **not** expose a real Platform Superadmin login or
+tokenless public bootstrap. Its PGlite fixture/harness can represent platform entitlement
+and provisioning facts for deterministic tests, while API mode owns the production
+`platform_principal` password/session, empty-database first claim, Master/Company wizards
+and audit/idempotency behavior. Demo setup remains local and resettable; production
+setup-state rows and independent platform cookies never enter the Demo bundle.
+
+The shared contract still applies: commercial modules are selected by the Platform layer,
+new Companies inherit Master defaults, tenant onboarding cannot select MAC, and Master
+Admin/Company Owner authority is tested against the same permission templates. The
+generated PGlite schema is version 98 and must remain in lockstep with Drizzle migration
+0098; this is build/schema parity, not production deployment proof.

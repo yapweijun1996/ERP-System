@@ -106,13 +106,16 @@ a non-empty database.
 
 ## 4. Production onboarding and import
 
-The first-run setup creates only the organization, first company and Company Owner. The
-authenticated company onboarding state advances sequentially through:
+Production first-run no longer creates a tenant anonymously. An empty database first
+requires the independent Platform Superadmin bootstrap, then the Platform workspace
+creates the Master and first Company Owner/Master Admin pair. The authenticated Company
+onboarding state advances sequentially through:
 
 1. company and tax;
 2. fiscal year and chart of accounts;
 3. warehouses;
-4. modules;
+4. (historical only) modules — production Company onboarding cannot select or mutate
+   commercial modules; Platform defaults are applied during Company provisioning;
 5. roles;
 6. Staff accounts;
 7. import;
@@ -163,8 +166,8 @@ TASK-017.
 - At the EPIC-059 release boundary, migration 0073 and the ordered PGlite v73/v74
   compatibility path passed fresh install, persistent upgrade and obsolete-index repair;
   PostgreSQL and generated Demo schemas agreed on 232 tables. This is historical evidence,
-  not the current schema count; see `STATUS.md` for the live 98-entry/247-table
-  baseline through migration 0097.
+  not the current schema count; see `STATUS.md` for the live 99-entry/249-table
+  baseline through migration 0098.
 - `npm test` passes 134 files plus one expected skip: 518 tests pass, one skips and none
   fail. Lint, root/Web typechecks, generated-schema/pack/i18n checks and both builds pass.
 - Demo/PGlite and the retained isolated PostgreSQL proof database
@@ -212,3 +215,22 @@ simulation; static Demo remains fixture-driven rather than exposing platform
 credentials. TASK-188 completed the recorded final browser/security and release-gate
 proof without making static Demo a platform credential realm or authorizing production
 deployment.
+
+## EPIC-065 provisioning boundary
+
+The production first-run path is now explicitly two-stage: (1) a one-time empty-database
+Platform Superadmin registration, then (2) Platform-only Master and Company provisioning.
+The first Company transaction creates its Master Admin and Company Owner accounts with
+hash-only initial passwords, applies the Master default Company allocation and marks the
+Company onboarding state live so both administrators can sign in immediately. A later
+Company gets a new Owner account and a system-managed membership for the existing Master
+Admin identity. Tenant Staff onboarding may invite/configure users only inside an active
+Company; it cannot create a Master, choose commercial modules or mutate `company_module`.
+
+Master Admin is an immutable system role with only dashboard, company switch, user/role,
+audit and settings permissions. It is not a business administrator, approver, payer,
+payroll operator, support operator, simulator or Platform Superadmin. Company Owner keeps
+the current explicit tenant bundle and remains unable to read or mutate MAC. TASK-193
+email reset is blocked while SMTP is unset; TASK-192 owns deployment and the final data
+reset, so this document records the implementation contract rather than claiming that
+production is already empty.

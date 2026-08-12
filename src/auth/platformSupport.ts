@@ -31,6 +31,8 @@ export const PLATFORM_ROLE_TEMPLATES = {
     permissions: [
       PLATFORM_PERMISSIONS.modulesRead,
       PLATFORM_PERMISSIONS.modulesManage,
+      PLATFORM_PERMISSIONS.tenantsRead,
+      PLATFORM_PERMISSIONS.tenantsManage,
       PLATFORM_PERMISSIONS.simulationManage,
     ],
   },
@@ -210,7 +212,7 @@ function normalizeRestrictions(
   };
 }
 
-async function ensurePlatformRoles(exec: DB): Promise<Map<string, number>> {
+export async function ensurePlatformRoles(exec: DB): Promise<Map<string, number>> {
   const roleIds = new Map<string, number>();
   for (const template of ROLE_TEMPLATES_BY_CODE.values()) {
     let [row] = await exec.select({ platformRoleId: platformRole.platformRoleId })

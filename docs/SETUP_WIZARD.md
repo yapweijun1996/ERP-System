@@ -71,22 +71,27 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
    the system never stores a provider key.** → [AI_PROVIDERS.md](AI_PROVIDERS.md#2-how-byok-works-same-in-both-modes).
 6. **Finish** — seed optional sample data; land on the dashboard.
 
-For production, `POST /api/setup/actions/complete` now writes the tenant foundation to
-PostgreSQL in one transaction. It is available only while the tenant foundation tables
-are empty; no deployment token is required. The API creates the master, first company,
-Company Owner, explicit permissions, effective-dated tax rule and base chart of accounts, then
-permanently marks setup complete. After the first setup, the endpoint returns
-`409 setup_not_empty`/`409 already_initialized` and normal sign-in is used. The public
-demo continues to write to PGlite/IndexedDB and can be reset for visitors. Because its
-reference master already contains demo identities, the wizard proposes an
-organisation-derived username such as `admin.acme` instead of the seeded `admin`.
-Username and email collisions are rejected before any company or master change, so a
-failed setup remains a clean retry rather than exposing a database constraint error.
+For production, the former anonymous `POST /api/setup/actions/complete` tenant foundation
+flow is retired and returns `410 legacy_setup_disabled`. A truly empty database first
+offers `POST /api/setup/platform-superadmin/actions/complete`: one locked transaction
+creates an independent `platform_principal`, one-hour platform session and
+`__platform__` audit event, then the Platform Superadmin workspace creates the Master and
+Company in separate idempotent steps. The first Company transaction creates SG/MY
+localization/tax/control-plane/chart facts, inherited Company allocation, an immutable
+Master Admin and a separate Company Owner. Tenant onboarding cannot choose modules.
+Non-empty, partially initialized or concurrently claimed databases return `409
+already_initialized`; the public registration never creates `app_user` or `erp_session`.
+The public demo continues to write to PGlite/IndexedDB and can be reset for visitors.
+Username/email/login-code collisions and dependency conflicts are rejected before a
+partial Master/Company mutation, while a Master-without-Company state is a supported
+continuation point in the platform workspace.
 
 ### First-run detection
-- Production checks the one-time setup state on the server. The static demo uses
+- Production checks the staged setup state on the server. `GET /api/setup/status` reports
+  `requiresPlatformBootstrap`, `hasPlatformAdmin`, `hasMaster`, `hasCompany`,
+  `hasTenantAdmin` and `isFreshDatabase`. The static demo uses
   `aria-setup-wizard-complete`; reset clears the browser database and returns to the
-  wizard.
+  local wizard.
 - The wizard writes through the **same data layer** as everything else, so it works
   against PGlite (demo) and the API/PostgreSQL (prod) without special-casing.
 - Production setup is a one-time empty-database bootstrap. After the first admin exists
@@ -127,3 +132,28 @@ TASK-187 now provides a separate one-hour, no-Remember-Me Platform Superadmin pa
 realm, Master/Company workspace and exact-user simulation. It remains outside the
 tenant setup session: a Platform Superadmin returns to the platform workspace before
 switching Company or signing out of a simulated tenant view.
+
+## First production identity and provisioning (EPIC-065)
+
+This is an independent platform realm, not a renamed tenant admin. Public registration
+is intentionally available only while all `platform_principal`, Master, Company, tenant
+user, membership/role and setup-state counts are zero. The first successful caller claims
+the database; the accepted residual risk is a first-caller takeover window before the
+operator completes registration. The Platform Superadmin password is hash-only, the
+session is capped at one hour and Remember Me/MFA are not part of v1.
+
+After registration:
+
+1. Create a Master and select only commercial Module Catalog entitlements/default
+   Company allocation (baseline services are not sellable).
+2. Continue from the Master empty state to create the first Company, enter distinct
+   Master Admin and Company Owner credentials, and let the transaction create
+   localization, tax, control-plane, chart and live onboarding facts.
+3. Create later Companies with only a Company Owner; the system reuses the Master Admin
+   identity and adds an immutable system-managed membership/assignment.
+
+Master Admin is limited to dashboard, company switching, user/role/audit/settings
+administration. It cannot use commercial modules, workflows, payments, payroll, MAC,
+support, simulation or any `platform.*` permission. TASK-193 (email reset) remains
+blocked while production SMTP is unset. TASK-192 owns deployment and the final reset;
+this document must not be read as proof that production has already been cleared.

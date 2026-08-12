@@ -276,7 +276,7 @@ The current application registry is split into two layers:
   so existing broad grants continue to work during expand without accepting arbitrary
   strings. Unknown candidates return no grant.
 
-`npm run check:permissions` currently verifies 309 static registry definitions, 116
+`npm run check:permissions` currently verifies 314 static registry definitions, 116
 resource contracts, 62 action contracts and 5 update contracts. TASK-172 added the
 assignment migration, dual-read scope path, active-assignment predicate and assignment
 API. TASK-173 now adds the central decision service, user-level explicit overrides,
@@ -597,3 +597,26 @@ separate `platform.simulation.manage` authority; TASK-188 completed the recorded
 adversarial, cross-engine, browser and release-gate proof without a production migration.
 EPIC-018 remains historical implementation evidence, but its tenant
 mutation authority is superseded by EPIC-064.
+
+## 17. Platform Bootstrap & Tenant Provisioning authority (EPIC-065)
+
+`platform_superadmin` now also receives the independent `platform.tenants.read` and
+`platform.tenants.manage` permissions. They are platform-domain keys and cannot be
+assigned through tenant role administration; support roles do not inherit them.
+`POST /api/platform/masters` and `/masters/:masterFn/companies` require the platform
+session, Platform CSRF, idempotency key, request correlation and platform audit. A
+simulated tenant session is explicitly rejected from these mutations.
+
+The immutable `master_admin` tenant role is provisioned only by Platform Superadmin.
+Its exact allowlist is `dashboard.read`, `session.switch_company`,
+`admin.users.invite/read/manage`, `admin.roles.read/write`, `admin.audit.read` and
+`settings.read/manage`. It is bound through ordinary active `user_company` membership
+and system-managed `user_company_role` assignments; it has no business-module,
+approval/workflow, payment, payroll, MAC, support, simulation or `platform.*` permission.
+Company Owner remains immutable and tenant-scoped, and cannot operate MAC.
+
+`master_admin_account` records one durable identity per Master for later Company
+membership. `platform_idempotency` is scoped to principal/operation/key and stores only a
+request hash and non-secret response facts. These records are created by migration 0098;
+the migration also backfills tenant-provisioning permissions for existing Platform
+Superadmins without granting anything to support roles.

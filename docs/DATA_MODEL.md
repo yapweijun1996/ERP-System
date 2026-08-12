@@ -17,7 +17,8 @@ sales/       customer, sales_order, sales_order_line, delivery, invoice, payment
 purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt,
              purchase_order_approval, landed_cost(+line)
 finance/     account (chart of accounts), gl_entry
-system/      audit_log, user_permission_override, company_module
+system/      audit_log, user_permission_override, company_module,
+             master_admin_account, platform_idempotency
 platform/    platform_principal, platform_role, platform_principal_role,
              platform_role_permission, platform_session, support_access_grant
 integration/ import_job, import_job_row, import_row_error, outbox_event
@@ -953,3 +954,22 @@ does not turn the platform principal into an `app_user`, persist platform permis
 inside tenant roles or union platform authority into target-user decisions. Those
 TASK-187 session/linkage facts are current schema; TASK-188 completed the recorded
 cross-engine migration and release-gate proof without authorizing a production migration.
+
+## Platform bootstrap and provisioning tables (migration 0098)
+
+`master_admin_account(master_fn, user_id)` is a durable one-row-per-Master pointer to
+the Platform-provisioned Master Admin `app_user`. It does not grant authority by itself:
+the user still needs an active `user_company` membership and immutable `master_admin`
+role assignment in each Company. A unique Master index prevents two identities from being
+auto-assigned to later Companies.
+
+`platform_idempotency(platform_principal_id, operation, idempotency_key)` stores a
+SHA-256 request hash, response status/body, completion timestamp and expiry. It is scoped
+to the independent platform principal, never uses the tenant `api_idempotency` actor
+foreign key and never stores submitted passwords. Reusing a key with a different hash
+returns a conflict; a completed identical request replays its non-secret response.
+
+Migration 0098 also backfills `platform.tenants.read` and `platform.tenants.manage` onto
+existing `platform_superadmin` role rows. Support roles receive no commercial tenant
+provisioning permissions. The generated PGlite schema and migration bundle are version
+98/99 ordered entries and must pass `check:demo-schema` and `check:drift` before release.

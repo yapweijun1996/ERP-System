@@ -75,11 +75,13 @@ and [SCALABILITY.md](SCALABILITY.md).
 
 ### 4.2 Implemented foundation and remaining coverage
 
-- **Setup wizard** (TASK-009/010/024/059): first run on an empty database walks
-  through language → master/company → country (sets currency + tax regime) → first
-  admin → optional sample seed. Demo can re-run via reset; production locks after
-  the first admin. Production setup is a one-time empty-database command and does
-  not require a deployment setup token. Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
+- **Setup and provisioning** (TASK-009/010/024/059, EPIC-065): Demo can re-run its
+  local wizard via reset. Production first run is Platform Superadmin registration only
+  on a truly empty database; the retired anonymous tenant endpoint returns 410. The
+  independent platform workspace then creates Master → Company → Master Admin and
+  Company Owner with localized tax/control-plane/chart facts and inherited module
+  allocation. `GET /api/setup/status` exposes staged state and public bootstrap closes
+  after the first claim. Contract → [SETUP_WIZARD.md](SETUP_WIZARD.md).
 - **Auth** (TASK-024/TASK-106–110/TASK-172/TASK-173): production login resolves
   `master.login_code` before the organisation-scoped `app_user.username`; the server-side
   session carries `master_fn`/`company_fn`, authorization unions only live
@@ -502,3 +504,32 @@ is immediately revocable and all existing tenant `appendAudit` calls inherit the
 platform principal while retaining the target actor. TASK-188 completed the recorded
 automated release-gate proof. Implementation tests and fixtures remain distinct from
 human UAT and do not authorize a production release or migration.
+
+## 11. Platform Bootstrap & Tenant Provisioning contract (EPIC-065)
+
+Production first run is permitted only when `platform_principal`, Master, Company,
+`app_user`, memberships/role assignments and the production setup-state row are all
+empty. A locked transaction accepts one tokenless
+`POST /api/setup/platform-superadmin/actions/complete`; it creates an independent
+Platform Superadmin password/session and `__platform__` audit evidence, then closes the
+public path. Concurrent, replay, partial and non-empty requests return `409
+already_initialized`. The retired anonymous tenant endpoint returns `410
+legacy_setup_disabled`. `GET /api/setup/status` reports staged bootstrap facts.
+
+The Platform Superadmin then:
+
+1. creates a server-generated Master from a unique login code and commercial Module
+   Catalog entitlement/default allocation;
+2. creates the first SG/MY Company in one transaction with localization/tax,
+   control-plane, chart-of-accounts, inherited allocation and live onboarding facts;
+3. supplies distinct initial credentials for an immutable Master Admin and Company Owner.
+
+Later Companies receive a new Owner and a system-managed membership/role assignment for
+the durable Master Admin identity. Master Admin permissions are exactly dashboard read,
+company switch, user invite/read/manage, role read/write, audit read and settings
+read/manage. They do not include business modules, workflow/approval, payment, payroll,
+MAC, support, simulation or any `platform.*` permission. Company Owner retains the
+explicit tenant model and cannot mutate MAC. Platform mutations require independent
+session, Platform CSRF, request ID, `Idempotency-Key`, duplicate conflict detection and
+append-only audit; response replays never store plaintext passwords. Password reset email
+is deferred while SMTP is unset (TASK-193 blocked).

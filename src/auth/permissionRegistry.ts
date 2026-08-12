@@ -43,6 +43,11 @@ const PLATFORM_PERMISSION_KEYS = [
   'platform.support.use',
   'platform.support.grant',
   'platform.support.revoke',
+  'platform.modules.read',
+  'platform.modules.manage',
+  'platform.tenants.read',
+  'platform.tenants.manage',
+  'platform.simulation.manage',
 ] as const;
 
 const MODULE_ALIASES: Record<string, string> = {

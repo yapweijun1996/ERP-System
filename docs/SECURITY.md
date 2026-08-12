@@ -53,6 +53,33 @@ unverified. Production deployments with stronger assurance requirements should m
 MFA, verified contact channels and step-up authentication mandatory before enabling
 employee self-service broadly.
 
+## Platform bootstrap and provisioning boundary (EPIC-065)
+
+The first production identity is deliberately outside `app_user`: a tokenless bootstrap
+is accepted only while every platform and tenant foundation count is zero. A locked
+`system_state.production_setup` row serializes first claims, so exactly one request can
+create the independent `platform_principal`; the loser and every later/non-empty request
+receive `409 already_initialized`. The bootstrap audit uses `masterFn = "__platform__"`,
+the real platform principal, request correlation and a SHA-256 source-IP digest. The
+old anonymous tenant setup endpoint is permanently retired with `410`.
+
+Platform Superadmin sessions use separate password verification and
+`erp_platform_session`/CSRF cookies with a one-hour maximum and no Remember Me. Platform
+mutations additionally require Platform CSRF, an idempotency key, request ID, duplicate
+checks, optimistic versions where defined and append-only before/after audit. A
+`platform_superadmin` role receives `platform.tenants.read/manage`; support roles do not.
+Master Admin is a tenant membership with a narrow immutable role, not an implicit
+master-scope bypass. Company Owner cannot read or mutate MAC. Simulated tenant requests
+use only the target SessionData; Platform authority is never unioned into the target, and
+MAC mutation is workspace-only.
+
+Accepted high-risk limits: tokenless first-run registration has a first-caller takeover
+window before the operator completes it; Platform Superadmin has password-only access to
+tenant creation/MAC/simulation and v1 has no MFA; and administrator email self-reset is
+blocked while `SMTP_HOST` is empty. A completed reset must be backed by a verified
+PostgreSQL dump/restore rehearsal and document-storage archive; only the exact named
+production volumes may be removed.
+
 ### Automated proof
 
 The test suite covers organisation-local identifier uniqueness, cross-organisation

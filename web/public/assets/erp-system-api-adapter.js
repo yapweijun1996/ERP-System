@@ -882,14 +882,10 @@
    *  would let every new device re-offer "first-run" setup forever). */
   async function needsSetup(){
     if (state.mode === 'api-unavailable') return false; // renderApiUnavailable() already covers this
-    try {
-      var res = await fetch(API_BASE + '/setup/status', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
-      if (!res.ok) return false;
-      var body = await jsonBody(res);
-      return !(body && body.hasAdmin);
-    } catch {
-      return false;
-    }
+    // Production first-run now belongs to the independent Platform realm. app.js
+    // consumes setup/status and renders either the Platform bootstrap or realm
+    // login; never fall back to the retired tenant all-in-one wizard here.
+    return false;
   }
 
   /* Confirming a session exists AND loading the dashboard are combined here so

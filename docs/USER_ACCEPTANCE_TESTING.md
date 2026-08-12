@@ -264,6 +264,33 @@ focused suite proves the platform foundation; TASK-186 focused tests prove tenan
 authority removal, default application, dual-layer masking and mapped API denial.
 TASK-187 adds focused API coverage for independent password/cookie login, exact-user
 simulation, workspace mutation lockout and dual-actor audit, plus an API-mode browser
-login/workspace smoke. TASK-188 subsequently completed the recorded automated browser,
-dual-mode, cross-engine and release-gate proof. The unchecked items above remain human
-acceptance criteria and must not be inferred from that automated evidence.
+login/workspace smoke. TASK-188 completed the recorded automated browser, dual-mode,
+cross-engine and release-gate proof. The unchecked items above remain human acceptance
+criteria and must not be inferred from that automated evidence.
+
+## Platform bootstrap and provisioning acceptance (EPIC-065)
+
+The following is the current release checklist. Source/API/browser checks marked complete
+are evidence for TASK-189–191; production and destructive reset checks remain pending in
+TASK-192 and must be executed only after the deploy/backup gate.
+
+- [x] Fresh empty database shows Create Platform Superadmin; first registration creates
+      only an independent platform principal/session and auto-enters Platform workspace.
+- [x] Concurrent registration has one winner; non-empty, partial and replay requests
+      return `409 already_initialized`; anonymous tenant setup returns `410`.
+- [x] Platform Superadmin creates Master then first Company with distinct Master Admin
+      and Company Owner, default allocation, localization/tax/control-plane/chart facts
+      and live onboarding; later Company reuses Master Admin identity.
+- [x] Master Admin negative API checks deny business, workflow, payment, payroll, MAC,
+      support, simulation and `platform.*`; Company Owner MAC mutation is denied.
+- [x] Idempotency, duplicate code/email/username, dependency conflict, CSRF, request ID,
+      audit and generated migration/schema checks pass.
+- [ ] Deploy migration 0098/RLS to the existing production stack and verify old data,
+      public bootstrap rejection and application health.
+- [ ] Make a timestamped custom PostgreSQL dump plus `pg_restore --list` and isolated
+      restore rehearsal; archive document storage and retain the earlier backup.
+- [ ] Delete only `erp-system_pgdata` and `erp-system_document_storage`, recreate without
+      seed, verify empty data/storage and intact schema/RLS, and leave the site on the
+      first Platform Superadmin registration page without creating a real account.
+- [ ] Keep administrator email reset explicitly deferred while `SMTP_HOST` is empty;
+      password-only/no-MFA and first-caller bootstrap risks remain documented.

@@ -4,6 +4,8 @@
 export const PLATFORM_PERMISSIONS = {
   modulesRead: 'platform.modules.read',
   modulesManage: 'platform.modules.manage',
+  tenantsRead: 'platform.tenants.read',
+  tenantsManage: 'platform.tenants.manage',
   simulationManage: 'platform.simulation.manage',
   supportRead: 'platform.support.read',
   supportUse: 'platform.support.use',

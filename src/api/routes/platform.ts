@@ -4,7 +4,10 @@
 // and API integration tests.
 import { Router } from 'express';
 import type express from 'express';
+import { createHash } from 'node:crypto';
+import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
+import { platformIdempotency } from '../../data/schema';
 import {
   authenticatePlatformPrincipal,
   createPlatformSession,
@@ -19,6 +22,8 @@ import {
   revokePlatformSession,
   revokeSupportAccessGrant,
   verifyPlatformCsrfToken,
+  PLATFORM_PERMISSIONS,
+  requirePlatformPermission,
   type SupportAccessMode,
 } from '../../auth/platformSupport';
 import {
@@ -31,7 +36,6 @@ import {
 import {
   listCompanyAllocations,
   listMasterEntitlements,
-  listPlatformTenants,
   setCompanyAllocation,
   setMasterEntitlement,
 } from '../../auth/platformEntitlement';
@@ -42,6 +46,16 @@ import {
   loginIdentifierHash,
   recordLoginFailure,
 } from '../../auth/rateLimit';
+import {
+  COMMERCIAL_MODULE_CATALOG,
+} from '../../auth/moduleCatalog';
+import {
+  createCompanyWithin,
+  createMasterWithin,
+  listProvisioningMasters,
+  type CompanyProvisioningInput,
+  type MasterProvisioningInput,
+} from '../../modules/setup/platformProvisioning';
 import { apiError, context } from '../http';
 
 function bearerToken(req: express.Request): string | undefined {
@@ -57,6 +71,65 @@ function platformToken(req: express.Request): string | undefined {
 
 function clientIp(req: express.Request): string {
   return req.ip || req.socket.remoteAddress || 'unknown';
+}
+
+function requestHash(value: unknown): string {
+  return createHash('sha256').update(JSON.stringify(value ?? null)).digest('hex');
+}
+
+function requireIdempotencyKey(req: express.Request): string {
+  const key = req.header('idempotency-key')?.trim() ?? '';
+  if (!key || key.length > 200) {
+    throw new PlatformAccessError(400, 'idempotency_key_required', 'A valid Idempotency-Key header is required.');
+  }
+  return key;
+}
+
+async function runPlatformMutation<T>(
+  db: DB,
+  principalId: number,
+  operation: string,
+  key: string,
+  body: unknown,
+  action: (exec: DB) => Promise<T>,
+): Promise<{ replay: boolean; data: T }> {
+  const hash = requestHash(body);
+  return db.transaction(async (transaction) => {
+    const exec = transaction as unknown as DB;
+    const [existing] = await exec.select().from(platformIdempotency).where(and(
+      eq(platformIdempotency.platformPrincipalId, principalId),
+      eq(platformIdempotency.operation, operation),
+      eq(platformIdempotency.idempotencyKey, key),
+    )).limit(1).for('update');
+    if (existing) {
+      if (existing.requestHash !== hash) {
+        throw new PlatformAccessError(409, 'idempotency_key_reused', 'The Idempotency-Key was already used for another request.');
+      }
+      if (existing.completedAt && existing.responseBody != null) {
+        return { replay: true, data: existing.responseBody as T };
+      }
+      throw new PlatformAccessError(409, 'idempotency_request_incomplete', 'The previous platform request did not complete. Retry with a new key.');
+    }
+    await exec.insert(platformIdempotency).values({
+      platformPrincipalId: principalId,
+      operation,
+      idempotencyKey: key,
+      requestHash: hash,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+    const data = await action(exec);
+    await exec.update(platformIdempotency).set({
+      responseStatus: 201,
+      responseBody: data,
+      completedAt: new Date(),
+      updatedAt: new Date(),
+    }).where(and(
+      eq(platformIdempotency.platformPrincipalId, principalId),
+      eq(platformIdempotency.operation, operation),
+      eq(platformIdempotency.idempotencyKey, key),
+    ));
+    return { replay: false, data };
+  });
 }
 
 async function requirePlatformSession(
@@ -195,7 +268,52 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
     const auth = await requirePlatformSession(db, req, res);
     if (!auth) return;
     try {
-      res.json({ data: await listPlatformTenants(db, auth.session), meta: { realm: 'platform' } });
+      requirePlatformPermission(auth.session, PLATFORM_PERMISSIONS.tenantsRead);
+      const data = await listProvisioningMasters(db);
+      res.json({ data, meta: { realm: 'platform' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.get('/module-catalog', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res);
+    if (!auth) return;
+    try {
+      requirePlatformPermission(auth.session, PLATFORM_PERMISSIONS.tenantsRead);
+      res.json({ data: COMMERCIAL_MODULE_CATALOG, meta: { realm: 'platform' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.post('/masters', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true, workspaceOnly: true });
+    if (!auth) return;
+    try {
+      const key = requireIdempotencyKey(req);
+      const body = (req.body ?? {}) as MasterProvisioningInput;
+      const result = await runPlatformMutation(
+        db, auth.session.principalId, 'create_master', key, body,
+        (exec) => createMasterWithin(exec, auth.session, body, context(res).requestId),
+      );
+      res.status(result.replay ? 200 : 201).json({ data: result.data, meta: { realm: 'platform', idempotentReplay: result.replay } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.post('/masters/:masterFn/companies', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true, workspaceOnly: true });
+    if (!auth) return;
+    try {
+      const key = requireIdempotencyKey(req);
+      const body = { ...(req.body ?? {}), masterFn: String(req.params.masterFn) } as CompanyProvisioningInput;
+      const result = await runPlatformMutation(
+        db, auth.session.principalId, 'create_company', key, body,
+        (exec) => createCompanyWithin(exec, auth.session, body, context(res).requestId),
+      );
+      res.status(result.replay ? 200 : 201).json({ data: result.data, meta: { realm: 'platform', idempotentReplay: result.replay } });
     } catch (error) {
       handlePlatformError(res, error);
     }

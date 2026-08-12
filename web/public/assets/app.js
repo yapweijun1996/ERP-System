@@ -2192,7 +2192,15 @@ async function boot(){
      side effect (see erp-system-api-adapter.js), so DB.* is ready by the time
      we reach the shell below. */
   const ed=window.ErpSystemDemo;
-  const platformSession=(typeof window.erpDataMode==='function' && window.erpDataMode()==='api'
+  const apiMode=typeof window.erpDataMode==='function' && window.erpDataMode()==='api';
+  const setupStatus=(apiMode && window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.getSetupStatus==='function')
+    ?await window.ErpPlatformWorkspace.getSetupStatus():null;
+  if(apiMode&&setupStatus&&setupStatus.requiresPlatformBootstrap
+    &&window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.renderBootstrap==='function'){
+    window.ErpPlatformWorkspace.renderBootstrap();
+    return;
+  }
+  const platformSession=(apiMode
     && window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.getSession==='function')
     ?await window.ErpPlatformWorkspace.getSession():null;
   if(platformSession&&!platformSession.simulation){
@@ -2209,7 +2217,7 @@ async function boot(){
   if(!signedIn){
     if(typeof window.erpDataMode==='function' && window.erpDataMode()==='api'
       && window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.renderLogin==='function'){
-      window.ErpPlatformWorkspace.renderLogin();
+      window.ErpPlatformWorkspace.renderLogin(setupStatus&&setupStatus.hasPlatformAdmin&&!setupStatus.hasTenantAdmin?'platform':'tenant');
       return;
     }
     renderLogin();

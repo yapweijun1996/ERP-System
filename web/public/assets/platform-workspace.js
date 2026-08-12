@@ -7,7 +7,7 @@
   var API_BASE=(window.__ERP_API_BASE__||'/api').replace(/\/$/,'');
   var PLATFORM_BASE=API_BASE+'/platform';
   var cachedSession=null;
-  var state={session:null,tenants:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[]};
+  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[]};
 
   /* The platform workspace has dense entitlement tables. Keep their horizontal
    * scroll local to the table wrapper so the shared login shell never makes a
@@ -86,7 +86,54 @@
     var target=document.getElementById('platformWorkspaceError')||document.getElementById('loginError');
     if(target) target.textContent=message||'';
   }
-  function renderLogin(){
+  async function getSetupStatus(){
+    try{
+      var response=await fetch(API_BASE+'/setup/status',{method:'GET',credentials:'same-origin',cache:'no-store'});
+      if(!response.ok) return null;
+      return await response.json();
+    }catch{return null;}
+  }
+  function renderBootstrap(){
+    authShell(true);
+    var view=authView();
+    view.className='platform-workspace-view';
+    view.setAttribute('aria-label','Create Platform Superadmin');
+    view.innerHTML=`<section class="auth-panel" style="max-width:620px;width:min(620px,calc(100vw - 24px));margin:20px auto;">
+      <div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>First-run Platform setup</small></span></div>
+      <div class="auth-copy"><h1>Create Platform Superadmin</h1><p>This one-time registration is available only while the production database is empty. The account is independent from tenant users.</p></div>
+      <form class="auth-form" id="platformBootstrapForm" autocomplete="off">
+        <div class="fld"><span>Platform principal key</span><input id="bootstrapPrincipalKey" autocomplete="username" autocapitalize="none" required placeholder="e.g. platform-admin"></div>
+        <div class="fld"><span>Display name</span><input id="bootstrapDisplayName" autocomplete="name" required></div>
+        <div class="fld"><span>Email</span><input id="bootstrapEmail" type="email" autocomplete="email" required></div>
+        <div class="fld"><span>Password (12+ characters)</span><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" required></div>
+        <div class="fld"><span>Confirm password</span><input id="bootstrapPasswordConfirm" type="password" autocomplete="new-password" minlength="12" required></div>
+        <div class="auth-error" id="platformBootstrapError" role="alert"></div>
+        <button class="btn primary lg" type="submit">Create Platform Superadmin</button>
+      </form>
+      <div class="auth-foot"><span class="cap ok"><span class="dot"></span>Empty database only</span><span>After creation, you will enter the Platform workspace.</span></div>
+    </section>`;
+    view.querySelector('#platformBootstrapForm').addEventListener('submit',async function(event){
+      event.preventDefault();
+      var error=view.querySelector('#platformBootstrapError');
+      var submit=view.querySelector('button[type="submit"]');
+      error.textContent='';
+      var password=view.querySelector('#bootstrapPassword').value;
+      if(password!==view.querySelector('#bootstrapPasswordConfirm').value){ error.textContent='Passwords do not match.'; return; }
+      submit.disabled=true;
+      try{
+        var response=await fetch(API_BASE+'/setup/platform-superadmin/actions/complete',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({
+          principalKey:view.querySelector('#bootstrapPrincipalKey').value.trim(),
+          displayName:view.querySelector('#bootstrapDisplayName').value.trim(),
+          email:view.querySelector('#bootstrapEmail').value.trim(),
+          password:password,
+        })});
+        var body=null; try{body=await response.json();}catch{}
+        if(!response.ok){ var detail=body&&body.error; throw new Error((detail&&detail.message)||('Platform bootstrap failed (HTTP '+response.status+').')); }
+        location.reload();
+      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Platform bootstrap failed.'; submit.disabled=false; }
+    });
+  }
+  function renderLogin(initialRealm){
     authShell(true);
     var view=authView();
     view.setAttribute('aria-label','Sign in');
@@ -113,7 +160,7 @@
       </form>
       <div class="auth-foot"><span class="cap ok"><span class="dot"></span>Production</span><span>Credentials and sessions are isolated by realm.</span></div>
     </section>`;
-    var realm='tenant';
+    var realm=initialRealm==='platform'?'platform':'tenant';
     function toggle(next){
       realm=next;
       view.querySelector('#tenantCredentials').hidden=realm!=='tenant';
@@ -149,7 +196,7 @@
         location.reload();
       }catch(error){ setError(error&&error.message||'Sign in failed.'); submit.disabled=false; }
     });
-    toggle('tenant');
+    toggle(realm);
   }
   function currentMaster(){ return state.tenants.find(function(item){ return item.masterFn===state.masterFn; })||null; }
   function currentCompany(){
@@ -169,6 +216,32 @@
       state.companyFn?request('simulation-targets?masterFn='+encodeURIComponent(state.masterFn)+'&companyFn='+encodeURIComponent(state.companyFn)):Promise.resolve([]),
     ]);
     state.masterModules=all[0]||[]; state.companyModules=all[1]||[]; state.targets=all[2]||[];
+  }
+  function provisioningInput(id,label,type,autocomplete){
+    return `<div class="fld"><span>${label}</span><input id="${id}" type="${type||'text'}" autocomplete="${autocomplete||'off'}" required></div>`;
+  }
+  function masterProvisioningMarkup(){
+    var rows=(state.catalog||[]).map(function(item){
+      var enabled=item.key!=='expenses_tax';
+      return `<label class="cap" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-provision-module="${esc(item.key)}" ${enabled?'checked':''}><span>${esc(item.name)}</span></label>`;
+    }).join('');
+    return `<section class="platform-provision-panel"><h2>Create Master</h2><p>Define the tenant group first. Commercial modules are independent from baseline Home, My Work, Admin, Settings and Account services.</p><form id="platformCreateMasterForm" class="auth-form">
+      ${provisioningInput('provisionMasterName','Master name')}${provisioningInput('provisionMasterLoginCode','Master login code')}
+      <div class="platform-provision-module-grid">${rows}</div><div class="auth-error" id="platformCreateMasterError" role="alert"></div><button class="btn primary" type="submit">Create Master</button>
+    </form></section>`;
+  }
+  function companyProvisioningMarkup(master){
+    var needsMasterAdmin=!(master&&master.hasMasterAdmin);
+    return `<section class="platform-provision-panel"><h2>Create Company</h2><p>Company allocation is copied from the Master defaults. Tenant onboarding cannot choose commercial modules.</p><form id="platformCreateCompanyForm" class="auth-form">
+      ${provisioningInput('provisionCompanyName','Company name')}<div class="fld"><span>Country</span><select id="provisionCompanyCountry"><option value="SG">Singapore (SG)</option><option value="MY">Malaysia (MY)</option></select></div>
+      ${needsMasterAdmin?`<h3>Master Admin (first Company only)</h3>${provisioningInput('provisionMasterAdminName','Master Admin name')}${provisioningInput('provisionMasterAdminUsername','Master Admin username')}${provisioningInput('provisionMasterAdminEmail','Master Admin email','email')}${provisioningInput('provisionMasterAdminPassword','Master Admin password','password','new-password')}`:''}
+      <h3>Company Owner</h3>${provisioningInput('provisionCompanyOwnerName','Company Owner name')}${provisioningInput('provisionCompanyOwnerUsername','Company Owner username')}${provisioningInput('provisionCompanyOwnerEmail','Company Owner email','email')}${provisioningInput('provisionCompanyOwnerPassword','Company Owner password','password','new-password')}
+      <div class="auth-error" id="platformCreateCompanyError" role="alert"></div><button class="btn primary" type="submit">Create Company</button>
+    </form></section>`;
+  }
+  function provisioningMarkup(){
+    if(!state.masterFn) return masterProvisioningMarkup();
+    return companyProvisioningMarkup(currentMaster());
   }
   function switchMarkup(){
     return `<div class="platform-workspace-controls">
@@ -204,16 +277,40 @@
     view.innerHTML=`<section class="auth-panel" style="max-width:1180px;width:min(1180px,calc(100vw - 32px));margin:20px auto;"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace</small></span><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></div><div class="auth-copy"><h1>Loading platform workspace…</h1></div></section>`;
     try{
       state.tenants=await request('entitlements');
+      state.catalog=await request('module-catalog');
       state.masterFn=state.masterFn&&state.tenants.some(function(item){ return item.masterFn===state.masterFn; })?state.masterFn:(state.tenants[0]||{}).masterFn||'';
       await loadDetails();
-      view.innerHTML=`<section class="auth-panel" style="max-width:1180px;width:min(1180px,calc(100vw - 32px));margin:20px auto;"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></div><div class="auth-copy"><h1>Module entitlement control</h1><p>Immediate platform-only controls with optimistic version checks and audit evidence.</p></div>${switchMarkup()}<div class="auth-error" id="platformWorkspaceError" role="alert"></div>${modulesMarkup()}${simulationMarkup()}</section>`;
+      var hasCompany=Boolean(state.companyFn);
+      view.innerHTML=`<section class="auth-panel" style="max-width:1180px;width:min(1180px,calc(100vw - 32px));margin:20px auto;"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></div><div class="auth-copy"><h1>${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p></div>${state.masterFn?switchMarkup():''}<div class="auth-error" id="platformWorkspaceError" role="alert"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</section>`;
       wireWorkspace(view);
     }catch(error){ view.querySelector('.auth-copy').innerHTML=`<h1>Platform workspace unavailable</h1><p>${esc(error&&error.message||'Unable to load platform entitlement data.')}</p>`; }
   }
   function wireWorkspace(view){
     view.querySelector('#platformLogoutBtn').addEventListener('click',async function(){ try{ await request('logout',{method:'POST',body:{}}); }finally{ cachedSession=null; location.reload(); } });
-    view.querySelector('#platformMasterSelect').addEventListener('change',async function(event){ state.masterFn=event.target.value; state.companyFn=''; await renderWorkspace(state.session); });
-    view.querySelector('#platformCompanySelect').addEventListener('change',async function(event){ state.companyFn=event.target.value; await renderWorkspace(state.session); });
+    var masterSelect=view.querySelector('#platformMasterSelect');
+    if(masterSelect) masterSelect.addEventListener('change',async function(event){ state.masterFn=event.target.value; state.companyFn=''; await renderWorkspace(state.session); });
+    var companySelect=view.querySelector('#platformCompanySelect');
+    if(companySelect) companySelect.addEventListener('change',async function(event){ state.companyFn=event.target.value; await renderWorkspace(state.session); });
+    var createMaster=view.querySelector('#platformCreateMasterForm');
+    if(createMaster) createMaster.addEventListener('submit',async function(event){
+      event.preventDefault(); var error=view.querySelector('#platformCreateMasterError'); var button=createMaster.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
+      try{
+        var modules=Array.from(createMaster.querySelectorAll('[data-provision-module]')).map(function(input){ return {moduleKey:input.dataset.provisionModule,enabled:input.checked,defaultCompanyAllocated:input.checked}; });
+        await request('masters',{method:'POST',headers:{'Idempotency-Key':'master-'+(crypto.randomUUID?crypto.randomUUID():Date.now())},body:{name:createMaster.querySelector('#provisionMasterName').value.trim(),loginCode:createMaster.querySelector('#provisionMasterLoginCode').value.trim(),modules:modules}});
+        state.masterFn=''; state.companyFn=''; await renderWorkspace(state.session);
+      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Master creation failed.'; button.disabled=false; }
+    });
+    var createCompany=view.querySelector('#platformCreateCompanyForm');
+    if(createCompany) createCompany.addEventListener('submit',async function(event){
+      event.preventDefault(); var error=view.querySelector('#platformCreateCompanyError'); var button=createCompany.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
+      try{
+        var body={name:createCompany.querySelector('#provisionCompanyName').value.trim(),country:createCompany.querySelector('#provisionCompanyCountry').value,companyOwner:{name:createCompany.querySelector('#provisionCompanyOwnerName').value.trim(),username:createCompany.querySelector('#provisionCompanyOwnerUsername').value.trim(),email:createCompany.querySelector('#provisionCompanyOwnerEmail').value.trim(),password:createCompany.querySelector('#provisionCompanyOwnerPassword').value}};
+        var masterAdminName=createCompany.querySelector('#provisionMasterAdminName');
+        if(masterAdminName) body.masterAdmin={name:masterAdminName.value.trim(),username:createCompany.querySelector('#provisionMasterAdminUsername').value.trim(),email:createCompany.querySelector('#provisionMasterAdminEmail').value.trim(),password:createCompany.querySelector('#provisionMasterAdminPassword').value};
+        await request('masters/'+encodeURIComponent(state.masterFn)+'/companies',{method:'POST',headers:{'Idempotency-Key':'company-'+(crypto.randomUUID?crypto.randomUUID():Date.now())},body:body});
+        state.companyFn=''; await renderWorkspace(state.session);
+      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Company creation failed.'; button.disabled=false; }
+    });
     view.querySelectorAll('.platform-save-master').forEach(function(button){ button.addEventListener('click',async function(){
       var row=button.closest('tr'); button.disabled=true; setError('');
       try{ await request('masters/'+encodeURIComponent(state.masterFn)+'/modules/'+encodeURIComponent(row.dataset.module),{method:'PATCH',body:{enabled:row.querySelector('.platform-master-enabled').checked,defaultCompanyAllocated:row.querySelector('.platform-master-default').checked,expectedVersion:Number(row.dataset.version)}}); await renderWorkspace(state.session); }
@@ -224,7 +321,8 @@
       try{ await request('masters/'+encodeURIComponent(state.masterFn)+'/companies/'+encodeURIComponent(state.companyFn)+'/modules/'+encodeURIComponent(row.dataset.module),{method:'PATCH',body:{allocated:row.querySelector('.platform-company-allocated').checked,expectedVersion:Number(row.dataset.version)}}); await renderWorkspace(state.session); }
       catch(error){ setError(error&&error.message||'Company allocation update failed.'); button.disabled=false; }
     }); });
-    view.querySelector('#platformStartSimulation').addEventListener('click',async function(event){
+    var simulationButton=view.querySelector('#platformStartSimulation');
+    if(simulationButton) simulationButton.addEventListener('click',async function(event){
       var target=Number(view.querySelector('#platformSimulationTarget').value); var button=event.currentTarget;
       if(!Number.isSafeInteger(target)||target<=0){ setError('Select an active tenant user.'); return; }
       button.disabled=true; setError('');
@@ -255,5 +353,5 @@
     request('logout',{method:'POST',body:{}}).finally(function(){ cachedSession=null; location.reload(); });
   },true);
 
-  window.ErpPlatformWorkspace={getSession:getSession,renderLogin:renderLogin,renderWorkspace:renderWorkspace,syncSimulationBanner:syncSimulationBanner,returnFromSimulation:returnFromSimulation};
+  window.ErpPlatformWorkspace={getSession:getSession,getSetupStatus:getSetupStatus,renderBootstrap:renderBootstrap,renderLogin:renderLogin,renderWorkspace:renderWorkspace,syncSimulationBanner:syncSimulationBanner,returnFromSimulation:returnFromSimulation};
 })();

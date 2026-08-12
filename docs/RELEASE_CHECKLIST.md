@@ -35,13 +35,14 @@ section for the path you are releasing. Deployment mechanics live in
 - [x] `npm run audit:i18n` — the full 2026-08-10 matrix passes 1,533 canonical keys /
       69 local five-language packs across 128 routes × 5 languages × 2 viewports.
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — the permission
-      registry check passes (299 codes; 116 resources; 62 actions; 5 updates), and the
+      registry check passes (314 codes; 116 resources; 62 actions; 5 updates), and the
       serial access-matrix audit passes (58 canonical route contracts × 12 role
       templates; 128 registered screens fail closed). The first parallel build attempt
       raced on shared `web/dist`; serial execution is the release evidence.
-- [x] `tasks/tasks.jsonl` statuses current: TASK-174–188 are done and TASK-017 is the
-      sole blocked physical-device acceptance item. The task index plus `docs/STATUS.md`
-      record the source/release evidence without treating that blocker as passed.
+- [x] `tasks/tasks.jsonl` statuses current: TASK-189–191 are source/test-complete,
+      TASK-192 is in progress and TASK-017/TASK-193 are blocked. The task index plus
+      `docs/STATUS.md` record the source/release evidence without treating deployment,
+      reset or missing SMTP as passed.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.
@@ -78,14 +79,17 @@ producing and verifying a distributable `web/dist/`.
       running deployment — this is the rollback point
 - [x] Build + start: `./deploy/release.sh` rebuilt and replaced only the application
       containers; PostgreSQL was preserved.
-- [x] Migrations: `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` applied migrations
-      0084–0089; no production seed was run.
+- [ ] Migrations: `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` applies all
+      committed migrations through 0098; production RLS is re-applied and no production
+      seed is run.
 - [x] TASK-175 cutover: backup first, migration 0089, Owner/legacy-assignment
       invariants and application-only release were verified on the target Compose DB.
 - [x] Health: Compose services are healthy; local and public `/health` return 200, the
       public root returns 200 and unauthenticated `/api/auth/session` returns 401.
-- [ ] Auth sanity: login works against `app_user`; setup wizard stays locked
-      (`GET /api/setup/status` → `hasAdmin: true`); company switcher scopes data
+- [ ] Auth sanity: existing `app_user` login remains usable before reset and public
+      bootstrap is rejected on the non-empty database; after reset
+      `GET /api/setup/status` → `requiresPlatformBootstrap: true` and the Platform
+      registration page is visible.
 - [ ] One write-path probe in api mode (e.g. confirm a draft sales order) succeeds
       and posts balanced GL — stock/money writes never execute client-side
 - [ ] Rollback plan confirmed before you walk away: previous image tags still
@@ -121,3 +125,22 @@ authorize production deployment.
       unexpected console errors or page overflow.
 - [ ] Deployment is reported separately and occurs only after explicit authorization;
       completion of TASK-176 documentation is not a production release.
+
+## 5. EPIC-065 Platform Bootstrap and reset gate
+
+- [x] Source/API focused proof: empty bootstrap, concurrent winner, setup status stages,
+      independent platform cookies, Master/Company idempotency, Master Admin negative
+      permissions and Company Owner MAC denial.
+- [x] Migration/generated-artifact proof: migration 0098, PGlite schema version 98,
+      `check:demo-schema`, `check:drift`, permission registry, root/Web typecheck, lint
+      and API/Demo builds pass.
+- [ ] Push the scoped first commit and wait for CI before touching production.
+- [ ] Apply 0098/RLS and verify existing data remains usable, health is 200 and public
+      bootstrap rejects non-empty data.
+- [ ] Create a new UTC PostgreSQL custom dump, validate `pg_restore --list`, perform an
+      isolated restore rehearsal, archive document storage and retain the prior backup.
+- [ ] Stop Compose, delete only `erp-system_pgdata` and `erp-system_document_storage`,
+      recreate/migrate/RLS with no seed, verify empty tables/storage/schema/RLS and leave
+      the site on Create Platform Superadmin without creating a real account.
+- [ ] Record final reset evidence in TASK-192/STATUS/DEPLOYMENT/PROJECT_LOGIC and the
+      existing KB item; leave TASK-193 blocked while SMTP is unset.

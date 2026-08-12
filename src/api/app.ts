@@ -70,6 +70,7 @@ const CSRF_EXEMPT_PATHS = new Set([
   '/api/auth/password-reset/actions/request',
   '/api/auth/password-reset/actions/confirm',
   '/api/setup/actions/complete',
+  '/api/setup/platform-superadmin/actions/complete',
 ]);
 
 function platformSessionToken(req: express.Request): string | undefined {
@@ -164,7 +165,9 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.get('/api/setup/status', async (_req, res) => {
     res.json(await getProductionSetupStatus(db));
   });
-  app.use('/api/setup', createSetupRouter(db));
+  app.use('/api/setup', createSetupRouter(db, {
+    secureCookies: options.secureCookies ?? false,
+  }));
 
   const lifecycle = options.tokenEncryptionKey ? {
     tokenEncryptionKey: parseTokenEncryptionKey(options.tokenEncryptionKey),

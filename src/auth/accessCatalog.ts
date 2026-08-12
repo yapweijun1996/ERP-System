@@ -9,6 +9,7 @@ export { ACTION_PERMISSION_KEYS, PERMISSION_CATALOG } from './permissionRegistry
 
 export type DataScope = 'self' | 'team' | 'department' | 'company';
 export const COMPANY_OWNER_ROLE_TEMPLATE_KEY = 'company_owner' as const;
+export const MASTER_ADMIN_ROLE_TEMPLATE_KEY = 'master_admin' as const;
 
 /**
  * Company Owner is a tenant administrator, not a business-approval bypass.
@@ -44,8 +45,25 @@ export const COMPANY_OWNER_PERMISSION_KEYS = Object.freeze(
     !COMPANY_OWNER_RESTRICTED_PERMISSION_KEYS.has(permissionKey)),
 );
 
+/** Master Admin manages tenant configuration and identities across the
+ * Master, but never receives business-module, workflow, payment, payroll or
+ * commercial entitlement authority. Its effective scope remains the active
+ * Company membership supplied by provisioning. */
+export const MASTER_ADMIN_PERMISSION_KEYS = Object.freeze([
+  PERMISSIONS.dashboardRead,
+  PERMISSIONS.companySwitch,
+  PERMISSIONS.usersInvite,
+  PERMISSIONS.usersRead,
+  PERMISSIONS.usersManage,
+  PERMISSIONS.rolesRead,
+  PERMISSIONS.rolesWrite,
+  PERMISSIONS.auditRead,
+  PERMISSIONS.settingsRead,
+  PERMISSIONS.settingsManage,
+]);
+
 export type RoleTemplateKey =
-  | 'superadmin' | 'company_owner' | 'company_admin' | 'manager' | 'sales' | 'buyer'
+  | 'superadmin' | 'company_owner' | 'master_admin' | 'company_admin' | 'manager' | 'sales' | 'buyer'
   | 'warehouse' | 'production' | 'finance_preparer' | 'finance_checker'
   | 'hr' | 'service' | 'viewer';
 
@@ -75,6 +93,11 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
     key: COMPANY_OWNER_ROLE_TEMPLATE_KEY, name: 'Company Owner', immutable: true,
     permissions: COMPANY_OWNER_PERMISSION_KEYS,
     scopes: companyScopes('*'),
+  },
+  {
+    key: MASTER_ADMIN_ROLE_TEMPLATE_KEY, name: 'Master Admin', immutable: true,
+    permissions: MASTER_ADMIN_PERMISSION_KEYS,
+    scopes: companyScopes('admin/*', 'settings/*'),
   },
   {
     key: 'company_admin', name: 'Company Admin',
@@ -189,6 +212,14 @@ export function roleTemplate(key: string): RoleTemplate | undefined {
 
 export function isCompanyOwnerRole(sourceTemplateKey: string | null | undefined): boolean {
   return sourceTemplateKey === COMPANY_OWNER_ROLE_TEMPLATE_KEY;
+}
+
+export function isMasterAdminRole(sourceTemplateKey: string | null | undefined): boolean {
+  return sourceTemplateKey === MASTER_ADMIN_ROLE_TEMPLATE_KEY;
+}
+
+export function isSystemManagedTenantRole(sourceTemplateKey: string | null | undefined): boolean {
+  return isCompanyOwnerRole(sourceTemplateKey) || isMasterAdminRole(sourceTemplateKey);
 }
 
 export function fineGrainedActionPermission(

@@ -6,8 +6,8 @@ an epic-level milestone lands.
 
 ## Source-of-truth synchronization
 
-The current worktree is at migration 0097: the Drizzle journal contains **98 migration
-entries** and generated canonical SQL contains **247 tables**. TASK-161–188 now
+The current worktree is at migration 0098: the Drizzle journal contains **99 migration
+entries** and generated canonical SQL contains **249 tables**. TASK-161–193 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
@@ -16,9 +16,12 @@ matching task records.
 The 2026-08-12 status-document correction aligns deployment, security, architecture,
 role-permission, Demo and UAT material to that current boundary: TASK-174's
 authorization-version invalidation and TASK-188's automated cross-engine/browser
-release-gate proof are complete; TASK-017 remains the sole human physical-device blocker.
-This is documentation synchronization only and does not imply a production migration or
-deployment after 0089.
+release-gate proof are complete; TASK-017 remains the physical-device blocker and
+TASK-193 is separately blocked by missing production SMTP.
+The current worktree includes the Platform Bootstrap & Tenant Provisioning implementation
+and migration 0098, but production has not yet been reset. Deployment and destructive
+reset evidence are tracked separately under TASK-192; do not read local source/tests as
+proof that production has been cleared.
 
 Authorization documentation distinguishes the implemented platform-owned module
 boundary from the historical tenant-controlled design. Tenant authorization still uses
@@ -41,7 +44,7 @@ session/role and reasoned support-grant control plane: grants are bounded to a m
 and optional company, expire within 24 hours, default-deny sensitive fields, audit
 allow/deny/revoke events and never proxy customer data by themselves. Principal/session
 issuance remains an out-of-band deployment/SSO bootstrap boundary. TASK-171 now adds
-an application-owned tenant permission registry with 309 registered codes after TASK-182,
+an application-owned permission registry with 314 registered codes after EPIC-065,
 explicit alias metadata, canonical projections for
 116 resources and 62 actions, tenant/platform-domain separation and a CI gate. Ordinary
 role checks fail closed for unknown permission candidates, while platform-domain keys
@@ -364,7 +367,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (247 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 98 ordered migrations through schema version 97; `drizzle/`, `src/data/schema/` |
+| Canonical schema (249 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 99 ordered migrations through schema version 98; `drizzle/`, `src/data/schema/`; migration 0098 adds platform provisioning records and existing-Superadmin permission backfill |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -407,7 +410,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
 | Admin: users, roles & audit log | ✅ Canonical Demo/API data and writes | `app_user`/`role`/`role_permission`/`audit_log` remain the original Admin tables. Migration 0087 adds tenant-scoped `user_permission_override`; `/api/admin/users/:userId/permission-overrides` creates reasoned allow/deny exceptions, `/actions/revoke` revokes them, and `/api/admin/authorization/explain` exposes full decision details only to audit-read users while appending an audit event. Migration 0088 adds the company authorization-version marker used by current session/capability freshness projections. Migration 0089 replaces the tenant Superadmin bypass with an immutable, company-scoped Company Owner role containing 112 explicit permission rows; legacy flags are inert and legacy assignments are backfilled idempotently. These Admin tables and routes remain bespoke rather than generic resources because of composite/non-standard keys and security boundaries. Existing `user-mgmt`, `role-permission` and `audit-log` contracts remain real and backend-enforced; the central evaluator is the authorization source of truth. |
 | Platform support control plane | ✅ Control-plane foundation (TASK-170) | `platform_principal`, application-owned platform roles, hash-backed bearer/CSRF sessions and `support_access_grant` are separate from tenant `app_user`/roles. Grants enforce exact master/optional company targets, reason/ticket, 24-hour maximum, read-only/restricted-write/break-glass modes, default sensitive-field denial, immediate revoke and platform-correlated audit. `/api/platform` rejects tenant cookies; TASK-187 additionally provides a password login only for the separate `platform_superadmin` realm, while support evaluation still does not proxy customer data. |
-| Company module access control | ✅ Platform-owned tenant cutover, platform realm and exact-user simulation verified | TASK-185–187 provide the commercial catalog, migrations 0094–0096, versioned Master entitlement/default and Company allocation, independent password/cookie platform login, visual workspace, default-15-minute exact-user simulation and tenant enforcement whose effective decision is `Master enabled AND Company allocated`. `admin.modules.manage` is deprecated/non-assignable and existing grants/overrides are retired; legacy tenant endpoints deny with `platform_authority_required`; Module Activation and the onboarding module selector are absent. Support roles receive no entitlement or simulation authority. TASK-188 passed focused platform tests (3 files / 12 tests), full Vitest (167 files / 660 tests, one expected skip), lint/typechecks, schema drift, API/Demo build, access-matrix, browser i18n, PGlite browser boot, desktop/mobile E2E, same-origin 375px Platform Superadmin login/workspace/simulation/return, direct PGlite/PostgreSQL 16 migration-preservation replay and disposable PostgreSQL 16 non-superuser RLS proof. No production deployment was performed. |
+| Company module access control | ✅ Platform-owned tenant cutover, platform realm and exact-user simulation verified | TASK-185–187 provide the commercial catalog, migrations 0094–0096, versioned Master entitlement/default and Company allocation, independent password/cookie platform login, visual workspace, default-15-minute exact-user simulation and tenant enforcement whose effective decision is `Master enabled AND Company allocated`. `admin.modules.manage` is deprecated/non-assignable and existing grants/overrides are retired; legacy tenant endpoints deny with `platform_authority_required`; Module Activation and the onboarding module selector are absent. Support roles receive no entitlement or simulation authority. TASK-188 passed its recorded cross-engine/browser/release gates. TASK-189–191 now add the empty-database bootstrap, Master/Company provisioning, Master Admin negative authorization and migration 0098 (`master_admin_account`, `platform_idempotency`, backfilled `platform.tenants.read/manage`). Production deployment/reset remains TASK-192 and has not been performed. |
 | HR-lite: employee master + leave request/approval | ✅ Canonical Demo/API data and writes | First Phase 7 module opened after Phase 8. `employee` (self-referencing `manager_id`, no link to `app_user`) and `leave_request` tables, `src/modules/hr/` (`createEmployee`, `createLeaveRequest`/`decideLeaveRequest`), registered as standard generic resources gated on new `hr.read`/`hr.write` permissions. `hr-directory` and `employee` read real data (per-employee detail, not always the same hardcoded record); `new-employee` is a single real form replacing the mock's 3-step compensation/provisioning wizard (no schema backed those steps); `leave-approval` reads real requests and its approve/reject actions are real, including a required-reason reject flow. That initial task deliberately excluded Payroll and compensation; later Payroll and Full Leave tasks supersede that historical boundary. Verified live: created a real employee, approved one leave request, rejected another with a reason, confirmed the employee detail's leave balance and history reflected both decisions. |
 | Staff Calendar appointments | ✅ Canonical Demo/API data and writes | Migration 0082 adds tenant-scoped `staff_appointment` facts with employee, type, title, time range, location, status and optimistic version. `staffCalendar` combines appointments with canonical leave rows; HR write users can create, edit and cancel without deleting history. API/domain tests cover tenant isolation, idempotent replay, version conflicts and invalid ranges; the browser contract covers mixed leave/appointment rendering, create, filter and shared searchable listing. |
 | Leave-to-Payroll integration | ✅ Canonical Demo/API data and writes | Migration 0055 adds append-only unpaid-leave, approved-cancellation and encashment sources plus unique run mappings. Payroll lines snapshot base gross and leave earnings/deductions; the 26-day Decimal formula rounds half-up to cents and every source can be consumed once only. Legacy Policy rows retain original days. Five-language Payroll Run/Payslip surfaces and authenticated API/domain proofs cover balance, trace and overlapping-run replay. |
@@ -441,7 +444,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | PostgreSQL concurrency/parity proof | ✅ Working on dedicated empty proof DB | PGlite/PostgreSQL business results match and one of two stock races wins; forced RLS passes. The production seed CLI fails closed without explicit Demo flags or on non-empty data, and `POSTGRES_URL npm run demo` now independently rejects every non-empty target before writes. |
 | `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Contract-backed; authenticated full-route proof follow-up | The API adapter and current resource/action contracts support the 128-route Canonical boundary with no client-side sample writes. The access matrix and production health/session checks pass; a dedicated authenticated API-mode full-route layout run remains follow-up evidence rather than a deployment blocker. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
-| Production one-time setup | ✅ Working | The API-mode wizard calls `POST /api/setup/actions/complete` without a token. The endpoint is available only for an empty tenant foundation; a database singleton locks concurrent attempts and the command atomically creates tenant/company/admin/role/permissions/tax/accounts. |
+| Production first-run Platform bootstrap | ✅ Source/test-complete; deployment pending | The old anonymous `POST /api/setup/actions/complete` returns `410 legacy_setup_disabled`. A truly empty database exposes `POST /api/setup/platform-superadmin/actions/complete`, which locks setup state, creates only an independent `platform_principal`/one-hour session and then hands off to Platform-only Master/Company provisioning. `GET /api/setup/status` exposes staged facts. TASK-189–191 are verified; migration 0098, existing-data release and destructive reset remain TASK-192. |
 | Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v260) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
 
 ## Canonical and Preview route boundary
@@ -1782,6 +1785,41 @@ EPIC-064 owns TASK-184–188. TASK-185–188 are complete, as are TASK-177–183
 EPIC-063. EPIC-018 remains historical proof of server-side module enforcement but does
 not define the approved future mutation owner.
 
+## Platform Bootstrap & Tenant Provisioning boundary (2026-08-12)
+
+TASK-189–191 are implementation-verified in the current source and focused tests.
+Production first-run now has an independent, tokenless bootstrap only when all setup
+foundation counts are zero. The transaction locks `system_state.production_setup`, creates
+one `platform_principal` with a password hash and one-hour platform session, and records
+an append-only `__platform__` audit event with request correlation and hashed source IP.
+The retired anonymous tenant setup endpoint returns `410 legacy_setup_disabled`.
+
+TASK-190 adds migration 0098 and the platform provisioning commands/routes. A
+Platform Superadmin can create a server-generated Master, choose commercial Catalog
+entitlements/default Company allocation, then create a Company in one transaction with
+SG/MY localization/tax/control-plane/chart facts, inherited allocation, an immutable
+Master Admin and a separate Company Owner. Subsequent Companies reuse the durable Master
+Admin identity and receive system-managed membership/role assignments. Master Admin's
+allowlist is limited to dashboard/company switch, user/role/audit/settings; it has no
+business, workflow, payment, payroll, MAC, support, simulation or `platform.*` authority.
+Platform mutations require independent session, Platform CSRF, idempotency key, duplicate
+checks, request ID and audit. Existing Master/Company/entitlement APIs remain platform
+only; tenant Company Owner access remains denied for MAC.
+
+TASK-191 adds the shared API login realm selector, empty-state Create Master/Company
+workspace, entitlement/default UI, idempotent mutation handling and focused negative
+tests. Current evidence includes root/Web typecheck, lint, API/Demo builds,
+`check:permissions`, `check:demo-schema`, `check:drift`, six focused files / 28 tests,
+and the seven-file auth lifecycle slice including concurrent bootstrap (7/7).
+
+TASK-192 is **In progress**: migration 0098 and RLS must be deployed to the existing
+production stack and old data verified before a new backup/restore rehearsal and exact
+volume reset. Only `erp-system_pgdata` and `erp-system_document_storage` may be removed;
+the recreated stack must not run seed and must end at `requiresPlatformBootstrap: true`.
+TASK-193 is **Blocked** because `SMTP_HOST` is empty; no administrator email reset is
+claimed. The no-MFA/password-only Platform Superadmin and first-caller bootstrap window
+remain accepted, documented risks.
+
 ## Expenses & Tax v1 implementation boundary (2026-08-12)
 
 The approved product boundary is **Expenses & Tax v1 = Company Receipts + inclusive
@@ -1880,10 +1918,10 @@ future/optional phases rather than v1 defects.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 187 tasks
-- In progress: 0
+- Done: 190 tasks
+- In progress: 1
 - Todo: 0
-- Blocked: TASK-017 (1)
+- Blocked: TASK-017 and TASK-193 (2)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 128 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
   complete documentation baseline, TASK-170's platform-support foundation,
@@ -1904,8 +1942,11 @@ future/optional phases rather than v1 defects.
 - EPIC-064 is complete. TASK-184 completed the source-backed boundary, TASK-185
   delivered the platform entitlement foundation, TASK-186 delivered the tenant cutover
   and TASK-187 delivered platform login/workspace/exact-user simulation. TASK-188 completed
-  the full source, migration, authorization, browser and release-gate evidence; no production
-  deployment was authorized or performed.
+  the recorded source, migration, authorization, browser and release-gate evidence.
+- EPIC-065 is in progress. TASK-189–191 are source/test-complete for independent Platform
+  bootstrap, Master/Company provisioning, Master Admin RBAC, migration 0098 and the
+  Platform workspace. TASK-192 remains open for deployment, backup/restore rehearsal and
+  the authorized complete reset; TASK-193 is blocked on missing production SMTP.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -1919,15 +1960,14 @@ future/optional phases rather than v1 defects.
 
 ## Next implementation boundary
 
-The next dependency-ordered choice is TASK-182 (Expenses & Tax entitlement/canonical
-integration). TASK-185–188's catalog,
-migrations, platform API, Demo harness, tenant cutover, independent platform realm,
-workspace and exact-user simulation, plus TASK-177–181's Company
-Receipt model/API, confirmation, register, search/date and Pack boundary, TASK-175's
-production release verification and TASK-174's invalidation boundary are complete.
-EPIC-064 is complete. The current working tree contains additional uncommitted application changes;
-this status records behavior verified from the current files/tests and the deployed
-Compose target, but does not imply that the changes have been committed.
+The dependency-ordered next boundary is TASK-192: commit and push only the scoped
+implementation, wait for CI, deploy migration 0098/RLS to the existing stack, verify old
+data and bootstrap rejection, then create a fresh restore-tested backup and clear only the
+two named production volumes. After the reset, verify empty tables/schema/RLS/storage,
+health 200 and the public Platform Superadmin registration page without creating the
+first account. TASK-193 remains blocked until SMTP is configured and an explicit reset
+delivery decision is made. This status is source/test evidence and does not yet imply
+production reset completion.
 
 ## Where to go next
 

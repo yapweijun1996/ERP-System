@@ -46,6 +46,21 @@ function responseCookies(response: Response): { header: string; csrf: string } {
   };
 }
 
+function platformCookies(response: Response): { header: string; csrf: string } {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+  const values = headers.getSetCookie?.() ?? [headers.get('set-cookie') ?? ''];
+  const pairs = values.flatMap((value) => Array.from(
+    value.matchAll(/(?:^|,\s*)(erp_platform_(?:session|csrf))=([^;,\s]+)/g),
+    (match) => `${match[1]}=${match[2]}`,
+  ));
+  const csrfPair = pairs.find((pair) => pair.startsWith('erp_platform_csrf='));
+  if (!csrfPair) throw new Error('Missing platform CSRF cookie');
+  return {
+    header: pairs.join('; '),
+    csrf: decodeURIComponent(csrfPair.slice('erp_platform_csrf='.length)),
+  };
+}
+
 async function login(baseUrl: string, email = 'admin@acme.co', password = 'demo1234') {
   const response = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
@@ -210,53 +225,100 @@ describe('auth lifecycle API', () => {
     expect((await beta.json()).masterFn).toBe('M-BETA');
   });
 
-  it('allows tokenless production setup only for a fresh database', async () => {
+  it('bootstraps the independent Platform Superadmin only for a fresh database', async () => {
     const db = await freshDb();
     const running = await startApi(db);
     server = running.server;
     const before = await fetch(`${running.baseUrl}/api/setup/status`);
     expect(before.status).toBe(200);
-    expect(await before.json()).toMatchObject({ hasAdmin: false, isFreshDatabase: true });
-    const payload = JSON.stringify({
-      organizationName: 'Example Group',
-      organizationCode: 'EXAMPLE',
-      companyName: 'Example Malaysia',
-      country: 'MY',
-      adminName: 'System Admin',
-      adminUsername: 'admin',
-      adminEmail: 'admin@example.test',
-      adminPassword: 'safe-password',
-      language: 'vi',
+    expect(await before.json()).toMatchObject({
+      hasAdmin: false,
+      hasPlatformAdmin: false,
+      requiresPlatformBootstrap: true,
+      isFreshDatabase: true,
     });
-    const created = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
+    const payload = JSON.stringify({
+      principalKey: 'platform-admin',
+      displayName: 'Platform Admin',
+      email: 'platform@example.test',
+      password: 'safe-platform-password',
+    });
+    const created = await fetch(`${running.baseUrl}/api/setup/platform-superadmin/actions/complete`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: payload,
     });
     expect(created.status).toBe(201);
+    const cookies = platformCookies(created);
+    expect(cookies.header).not.toContain('erp_session=');
+    const session = await fetch(`${running.baseUrl}/api/platform/session`, { headers: { cookie: cookies.header } });
+    expect(session.status).toBe(200);
+    expect((await session.json()).data).toMatchObject({ realm: 'platform', principalKey: 'platform-admin' });
     const after = await fetch(`${running.baseUrl}/api/setup/status`);
     expect(after.status).toBe(200);
-    expect(await after.json()).toMatchObject({ hasAdmin: true, isFreshDatabase: false });
-    const replay = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
+    expect(await after.json()).toMatchObject({
+      hasAdmin: false,
+      hasPlatformAdmin: true,
+      requiresPlatformBootstrap: false,
+      isFreshDatabase: false,
+    });
+    const replay = await fetch(`${running.baseUrl}/api/setup/platform-superadmin/actions/complete`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: payload,
     });
     expect(replay.status).toBe(409);
-    expect((await replay.json()).error.code).toBe('setup_not_empty');
+    expect((await replay.json()).error.code).toBe('already_initialized');
   });
 
-  it('does not expose production setup once the database contains tenant data', async () => {
+  it('retires the old anonymous tenant setup endpoint', async () => {
+    const db = await freshDb();
+    const running = await startApi(db);
+    server = running.server;
+    const fresh = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(fresh.status).toBe(410);
+    expect((await fresh.json()).error.code).toBe('legacy_setup_disabled');
+  });
+
+  it('serializes concurrent first-run Platform bootstrap claims', async () => {
+    const db = await freshDb();
+    const running = await startApi(db);
+    server = running.server;
+    const submit = (principalKey: string) => fetch(
+      `${running.baseUrl}/api/setup/platform-superadmin/actions/complete`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          principalKey,
+          displayName: `Platform ${principalKey}`,
+          email: `${principalKey}@example.test`,
+          password: 'safe-platform-password',
+        }),
+      },
+    );
+    const responses = await Promise.all([submit('platform-one'), submit('platform-two')]);
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+    const failed = responses.find((response) => response.status === 409);
+    expect(failed).toBeTruthy();
+    expect((await failed!.json()).error.code).toBe('already_initialized');
+  });
+
+  it('does not expose Platform bootstrap once the database contains tenant data', async () => {
     const db = await freshDb();
     await seedDemo(db);
     const running = await startApi(db);
     server = running.server;
-    const response = await fetch(`${running.baseUrl}/api/setup/actions/complete`, {
+    const response = await fetch(`${running.baseUrl}/api/setup/platform-superadmin/actions/complete`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({}),
     });
     expect(response.status).toBe(409);
-    expect((await response.json()).error.code).toBe('setup_not_empty');
+    expect((await response.json()).error.code).toBe('already_initialized');
   });
 });

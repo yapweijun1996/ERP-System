@@ -257,3 +257,20 @@ realm. When explicitly simulating an active assigned tenant user, the trusted ta
 `masterFn/companyFn` and user membership are fixed server-side; authorization is exactly
 the target user's and audit retains the platform principal. Simulation never converts
 the platform principal into a tenant user or grants cross-target access.
+
+## Platform provisioning hierarchy (EPIC-065)
+
+Platform Superadmin is the only authority allowed to create a Master or Company. A
+truly empty production database is claimed once through the independent platform realm;
+the first caller creates `platform_principal` only, then creates tenant rows through
+platform APIs. The first Company transaction creates a distinct Master Admin identity
+and Company Owner, while each later Company receives its own Owner plus a
+system-managed membership for the durable Master Admin account (`master_admin_account`).
+
+Master Admin is still constrained by ordinary `user_company` membership and the active
+Company session; it has no implicit Master-wide bypass. Tenant identifiers supplied by a
+client are never trusted for business access. Platform list/provisioning endpoints derive
+their authority from the independent platform session and require `platform.tenants.read`
+or `platform.tenants.manage`; support roles and simulated tenant sessions cannot create
+or mutate a Master/Company. `platform_idempotency` stores only hashed request/replay
+metadata and response facts, never initial passwords.

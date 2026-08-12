@@ -111,6 +111,39 @@ export const platformSession = pgTable('platform_session', {
   index('idx_platform_session_expiry').on(t.expiresAt, t.revokedAt),
 ]);
 
+/** Exactly one platform-provisioned Master Admin identity per Master. The
+ * runtime authority is still the company-scoped master_admin role assignment;
+ * this row only records the durable cross-Company identity that receives that
+ * assignment when a new Company is created. */
+export const masterAdminAccount = pgTable('master_admin_account', {
+  masterFn: text('master_fn').notNull().references(() => master.masterFn),
+  userId: bigint('user_id', { mode: 'number' }).notNull().references(() => appUser.userId),
+  ...timestamps,
+}, (t) => [
+  primaryKey({ columns: [t.masterFn, t.userId] }),
+  uniqueIndex('uq_master_admin_account_master').on(t.masterFn),
+  index('idx_master_admin_account_user').on(t.userId),
+]);
+
+/** Platform mutation idempotency is separate from tenant api_idempotency:
+ * platform principals are not app_user rows and therefore cannot use the
+ * tenant actor foreign key. */
+export const platformIdempotency = pgTable('platform_idempotency', {
+  platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  operation: text('operation').notNull(),
+  idempotencyKey: text('idempotency_key').notNull(),
+  requestHash: text('request_hash').notNull(),
+  responseStatus: integer('response_status'),
+  responseBody: jsonb('response_body'),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  ...timestamps,
+}, (t) => [
+  primaryKey({ columns: [t.platformPrincipalId, t.operation, t.idempotencyKey] }),
+  index('idx_platform_idempotency_expiry').on(t.expiresAt),
+]);
+
 /** A short-lived platform-superadmin view of one exact tenant user. The
  * platform session remains distinct; this row never creates or mutates an
  * app_session and is revoked immediately when the operator returns. */

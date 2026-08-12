@@ -73,10 +73,12 @@ Acceptance criteria:
 - [x] Company switcher (topbar) reflects the created company — rewired from a
       disconnected mock array to `DB.erpSystem.companies`, with a real
       `switchCompany()` scope switch.
-- [x] Production locks setup after first admin — `GET /api/setup/status` (TASK-024)
-      exposes `hasAdmin`, no auth required; the api adapter's `needsSetup()` calls
-      it and `app.js`'s `boot()` gates on the real answer. Verified against a
-      seeded Docker stack: the wizard correctly stayed hidden.
+- [x] Production locks setup after first admin — the historical `hasAdmin` check is
+      retained for compatibility, while EPIC-065 now exposes staged
+      `requiresPlatformBootstrap/hasPlatformAdmin/hasMaster/hasCompany/hasTenantAdmin`
+      state and the API-mode boot routes a truly empty database to independent Platform
+      Superadmin registration. Verified source/test behavior; production reset proof is
+      tracked by TASK-192.
 
 ## EPIC-005 — Production API And Docker ✅
 
@@ -89,10 +91,10 @@ Acceptance criteria:
 
 - [x] API exposes a dashboard read endpoint (`GET /api/dashboard`) — and the
       once-"scaffolded only" write endpoints are now implemented server-side:
-      confirm order (`sales/orders/confirm`), complete setup
-      (`POST /api/setup/actions/complete`, zero-user locked and intentionally not
-      protected by a separate setup token) and the
-      audited session company switch all run through the production API.
+      confirm order (`sales/orders/confirm`) and the
+      audited session company switch all run through the production API. The old
+      anonymous setup endpoint is retired by EPIC-065; production bootstrap now uses
+      the independent Platform realm.
 - [x] API connects to PostgreSQL through configured `DATABASE_URL`
       (`src/server.ts`, `npm run server`).
 - [x] Docker Compose starts `web`, `api`, and `db` — `docker-compose.yml`,
@@ -2520,3 +2522,53 @@ Master entitlement or Company allocation; Company Owner and stale permissions ca
 existing effective access survives migration; all disabled-module paths deny; exact-user
 simulation is bounded, visible, revocable and dual-attributed; and full dual-mode,
 PostgreSQL/RLS, browser and release gates pass before status or KB says implemented.
+
+## EPIC-065 — Platform Bootstrap & Tenant Provisioning 🔶
+
+Move first-run production identity and tenant creation into the independent Platform
+Superadmin realm. This epic is the successor to the retired anonymous tenant setup
+endpoint: Demo/PGlite keeps its local setup compatibility, while production requires an
+empty database to be claimed by exactly one Platform Superadmin before a Master or
+Company can exist.
+
+Current implementation boundary (2026-08-12): TASK-189–191 are source/test-complete in
+the worktree; TASK-192 is still in progress because deployment, restore-tested backup and
+the destructive production reset have not yet been performed. `GET /api/setup/status`
+reports `requiresPlatformBootstrap`, `hasPlatformAdmin`, `hasMaster`, `hasCompany`,
+`hasTenantAdmin` and `isFreshDatabase`. The public bootstrap creates only a
+`platform_principal`, independent password/session cookies and an append-only
+`__platform__` audit event. It never creates an `app_user` or `erp_session`.
+
+Approved flow:
+
+- only a truly empty production database may accept the tokenless first registration;
+  a setup-state row is locked so concurrent claims produce one success and `409
+  already_initialized` for the loser; any tenant rows or an existing Platform principal
+  permanently close the public path;
+- Platform Superadmin creates a server-generated Master and chooses commercial Module
+  Catalog entitlement/default Company allocation; baseline Home/Dashboard, My Work,
+  Admin, Settings and Account/Notifications services are not sellable;
+- the first Company transaction creates localization/tax/control-plane facts, chart of
+  accounts, inherited Company allocation, one immutable Master Admin identity/role and a
+  separate Company Owner account; later Companies reuse the Master Admin identity and
+  add a system-managed membership; tenant onboarding cannot choose modules;
+- Master Admin has only dashboard/company-switch, user/role/audit/settings authority and
+  no business, workflow, payment, payroll, MAC, support, simulation or `platform.*`
+  permission. Company Owner remains tenant-scoped and cannot mutate MAC;
+- platform mutations require the independent session, Platform CSRF, request ID,
+  `Idempotency-Key`, duplicate-value checks, optimistic versions where applicable and
+  append-only audit. Password reset email is explicitly deferred because production SMTP
+  is unset (TASK-193 blocked).
+
+| Task | Status | Scope |
+| --- | --- | --- |
+| TASK-189 | Done | First Platform Superadmin registration and setup-state cutover |
+| TASK-190 | Done | Master/Company provisioning, Master Admin RBAC, migration 0098 and defaults |
+| TASK-191 | Done | Workspace UX, API/idempotency, browser/security/negative tests |
+| TASK-192 | In progress | Deploy, backup/restore rehearsal, exact-volume reset and final production evidence |
+| TASK-193 | Blocked | Three administrator email self-service reset; SMTP is not configured |
+
+Exit criteria for EPIC-065 are not yet met until TASK-192 proves migration 0098 and
+production RLS on the deployed release, verifies health and setup status after clearing
+only `erp-system_pgdata` and `erp-system_document_storage`, and leaves the public site
+on the first Platform Superadmin registration page without creating a real account.

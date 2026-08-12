@@ -2,8 +2,8 @@
 
 > Main project knowledge base: `KBID: erp-system-project-logic`
 > KB UUID: `ef47bf4b-83e1-42b2-a412-66912d04ea24`
-> Source review: 2026-08-11
-> Scope: Employee, Leave Application, Staff Calendar and Claim Record behavior
+> Source review: 2026-08-12
+> Scope: Platform bootstrap/provisioning, Module Entitlement, Employee, Leave Application, Staff Calendar and Claim Record behavior
 
 This document is the source-backed project-logic mirror for future agents and
 maintainers. The KB is the primary continuity layer, while the current source and
@@ -547,3 +547,34 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
 | Platform login and simulation | `platformSupport.ts`, `platformSimulation.ts`, `routes/platform.ts`, `platformSuperadmin.integration.test.ts` | TASK-187 done |
 | Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
 | Full adversarial/release proof | Focused platform/tenant evidence plus recorded cross-engine, browser and release gates; no production deployment implied | TASK-188 done |
+
+## 10. Platform Bootstrap & Tenant Provisioning — current source contract
+
+`GET /api/setup/status` is the staged setup source: it reports platform-admin, Master,
+Company and tenant-admin facts independently. Public bootstrap is open only when
+`isFreshDatabase` is true. `completePlatformBootstrap` locks
+`system_state.production_setup`, counts platform and tenant foundation rows, creates one
+`platform_principal`/Superadmin role with a hash-only password and records a
+`__platform__` audit event with request correlation and hashed source IP. It never writes
+`app_user` or `erp_session`; concurrent or later attempts fail `already_initialized`.
+
+`createMasterWithin` requires `platform.tenants.manage`, generates `masterFn`, validates
+the commercial catalog/dependencies and stores Master entitlement/default Company
+allocation. `createCompanyWithin` is one transaction for SG/MY localization/tax,
+control-plane, accounts, live onboarding, inherited `company_module` rows, immutable
+Master Admin and Company Owner roles/users/memberships. `master_admin_account` lets later
+Companies add a system-managed membership for the same Master Admin identity. The
+Platform API wraps both mutations in `platform_idempotency` keyed by principal/operation/
+request hash and requires Platform CSRF, request ID and append-only audit.
+
+The Master Admin role is not a master-scope bypass. Its exact permissions are dashboard
+read, company switch, users invite/read/manage, roles read/write, audit read and settings
+read/manage. Company Owner remains tenant-scoped and cannot mutate MAC. Business access
+still requires `authenticated target user AND Master entitlement AND Company allocation
+AND permission AND scope AND workflow authority`; Platform Superadmin privileges never
+enter a simulation target. Migration 0098 adds the provisioning tables and backfills
+`platform.tenants.read/manage` for existing Superadmins.
+
+TASK-189–191 are source/test-complete. TASK-192 remains operationally open until deployment
+and the authorized exact-volume production reset are proven; TASK-193 is blocked on
+missing SMTP. This current logic is not a claim that production has already been cleared.

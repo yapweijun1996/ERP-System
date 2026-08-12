@@ -9,7 +9,7 @@ const check = process.argv.includes('--check');
 
 const demoPasswordHash = 'pbkdf2$100000$e154d2b848d8c3d5d3d5f494b7fd446c$a299c39883dd29e1d800946af0be615e603f907ba0f4156ebdd2b287ccd4fc48';
 const roleSpecs = [
-  ['Company Admin', 'company_admin'], ['Manager', 'manager'], ['Sales', 'sales'],
+  ['Master Admin', 'master_admin'], ['Company Admin', 'company_admin'], ['Manager', 'manager'], ['Sales', 'sales'],
   ['Buyer', 'buyer'], ['Warehouse', 'warehouse'], ['Production', 'production'],
   ['Finance Preparer', 'finance_preparer'], ['Finance Checker', 'finance_checker'],
   ['HR', 'hr'], ['Service', 'service'], ['Viewer', 'viewer'],
@@ -163,6 +163,11 @@ const personaEmployeeSpecs = [
   ['C-MY','DEMO-MY-E003','Linh Nguyen','hr@acme.co','HR','HR Executive'],
 ];
 const rolePermissions = {
+  'Master Admin': [
+    'dashboard.read','session.switch_company','admin.users.invite','admin.users.read',
+    'admin.users.manage','admin.roles.read','admin.roles.write','admin.audit.read',
+    'settings.read','settings.manage',
+  ],
   'Company Owner': companyOwnerPermissions,
   Employee: [
     'employee.self.read','employee.leave.write','employee.receipts.write',
@@ -190,6 +195,7 @@ const rolePermissions = {
   Viewer: ['dashboard.read','sales.read','purchasing.read','crm.read','inventory.read','manufacturing.read','quality.read','finance.read','hr.read','project.read','service.read','asset.read','reporting.read','integration.read'],
 };
 const roleScopes = {
+  'Master Admin': [['admin/*','company'],['settings/*','company']],
   'Company Owner': [['*','company']],
   Employee: [['employee/*','self']],
   'Company Admin': [['admin/*','company'],['hr/*','company']],

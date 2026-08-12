@@ -56,10 +56,12 @@ setup lock after first admin. (TASK-009 ✅ + TASK-010 ✅, both done 2026-07-16
 shell gated on boot, writes company/tax/CoA/admin-user to PGlite in one transaction,
 topbar company switcher rewired to the canonical company list.)
 
-Exit criteria: empty demo opens wizard first (✅ met); production API can persist wizard
-results to PostgreSQL (✅ — `POST /api/setup/actions/complete` runs
-`completeProductionSetup` server-side and is available only for an empty
-tenant-foundation/zero-user database; a database singleton locks concurrent attempts).
+Exit criteria: empty demo opens wizard first (✅ met). The historical production
+anonymous wizard path is superseded by EPIC-065: `POST /api/setup/actions/complete`
+returns `410 legacy_setup_disabled`; a truly empty database first accepts the independent
+Platform Superadmin bootstrap, after which the Platform workspace provisions Master,
+Company and administrators. See Phase 47/TASK-189–192 for current setup and deployment
+proof.
 
 ## Phase 5 — Production Runtime ✅
 
@@ -90,9 +92,10 @@ resource/dispatcher work and was confirmed closed by the TASK-040 audit
 (2026-07-19): the unified transactional dispatcher registers 24 create resources
 and 28 actions including `sales/orders/confirm`, purchasing receipt/invoice
 posting, CRM conversion, inventory adjustments/transfers and depreciation
-posting; production `completeSetup` runs server-side via
-`POST /api/setup/actions/complete` (empty-foundation/zero-user locked; no deployment
-setup token).
+posting; the historical production `completeSetup` endpoint is now retired by EPIC-065
+(`POST /api/setup/actions/complete` returns `410 legacy_setup_disabled`). Production
+first run is an independent Platform Superadmin bootstrap followed by Platform
+workspace provisioning.
 
 Exit criteria: `docker compose up -d` starts all services (✅); production
 transaction + concurrency tests pass against PostgreSQL (✅ TASK-013, and in CI on
@@ -1168,3 +1171,44 @@ and exact-user simulation is visible, revocable, one-hour maximum and never wide
 target user's permission, scope or workflow authority. This remains local/release-gate
 evidence, not authorization to deploy migrations to production; TASK-017 physical-device
 acceptance remains separate.
+
+## Phase 47 — Platform Bootstrap & Tenant Provisioning 🔶
+
+This phase is source/test-complete through the first-run Platform workspace, but remains
+operationally open until the release is deployed and the explicitly authorized production
+reset is proven. The old anonymous production tenant setup endpoint is retired with a 410;
+Demo/PGlite keeps its local wizard compatibility.
+
+1. **First identity claim** (TASK-189 done): `GET /api/setup/status` exposes staged
+   bootstrap facts. A locked empty-database transaction permits one public
+   `POST /api/setup/platform-superadmin/actions/complete`, creates an independent
+   `platform_principal`/one-hour session and appends a `__platform__` audit event. Any
+   non-empty or concurrently claimed database returns `409 already_initialized`.
+2. **Tenant provisioning** (TASK-190 done): migration 0098 adds the Master Admin durable
+   identity and platform idempotency records, backfills tenant-provisioning permissions,
+   and exposes atomic Platform Superadmin Master/Company creation. Company creation
+   applies Master defaults, creates localization/tax/control-plane/chart facts, an
+   immutable Master Admin assignment and a Company Owner account; later Companies reuse
+   the Master Admin identity.
+3. **Workspace and proof** (TASK-191 done): the shared API login selects the independent
+   Platform realm, the workspace runs the Master/Company wizards and entitlement tables,
+   and focused tests prove idempotency, cookie/session separation, Master Admin negative
+   permissions, Company Owner MAC denial, dependency validation and concurrent bootstrap.
+   Root/Web typechecks, lint, API/Demo builds, permission/schema/drift checks and focused
+   Vitest are green; full release/browser gates remain part of TASK-192.
+4. **Deploy and reset** (TASK-192 in progress): commit only this implementation scope,
+   push and wait for CI; apply migration 0098/RLS to the existing production database and
+   verify old data plus bootstrap rejection; then make a new UTC-timestamped PostgreSQL
+   custom dump with `pg_restore --list` and isolated restore rehearsal, archive document
+   storage, stop the stack, delete only `erp-system_pgdata` and
+   `erp-system_document_storage`, recreate without seed, reapply all migrations/RLS and
+   leave the public site at first Platform Superadmin registration. Do not create the
+   real account on the user's behalf.
+5. **Recovery gap** (TASK-193 blocked): administrator email self-service reset remains
+   deferred because `SMTP_HOST` is empty. Existing reset backend facts must not be
+   documented as delivered email functionality; operational recovery remains required.
+
+The accepted risks are explicit: the empty-database tokenless bootstrap has a
+first-caller takeover window; Platform Superadmin is password-only with a one-hour
+session and no MFA; and the final reset permanently removes online PostgreSQL and
+document-storage data except for the verified backups.

@@ -8,11 +8,11 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **187**
-- In progress: **0**
+- Done: **190**
+- In progress: **1**
 - Todo: **0**
-- Blocked: **1**
-- Total: **188**
+- Blocked: **2**
+- Total: **193**
 
 ## Current release-quality note
 
@@ -70,6 +70,26 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | TASK-186 | Done | Removed tenant MAC permission/UI/onboarding authority; legacy API denies and dual-layer enforcement/defaults are live |
 | TASK-187 | Done | Independent Platform Superadmin login/workspace and audited exact-user simulation (migration 0096) |
 | TASK-188 | Done | Migration, authorization, dual-mode, browser and release proof plus final docs/KB |
+
+## Platform bootstrap and tenant provisioning programme
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| TASK-189 | Done | Empty-database Platform Superadmin registration, setup-state cutover and independent session |
+| TASK-190 | Done | Platform Master/Company provisioning, Master Admin RBAC, defaults, idempotency and migration 0098 |
+| TASK-191 | Done | Platform workspace UX plus API, browser, isolation and negative authorization tests |
+| TASK-192 | In progress | Production deployment, verified backups, complete PostgreSQL/document-storage reset and final proof |
+| TASK-193 | Blocked | Administrator email self-service reset; SMTP is not configured in production |
+
+TASK-189–191 are source/test-complete in the current worktree. TASK-192 remains open until
+the first release is deployed, a new restore-tested backup is made, the exact production
+volumes are reset without seed data, and `/api/setup/status` proves the public bootstrap
+state. TASK-193 is intentionally blocked rather than claiming email delivery: `SMTP_HOST`
+is empty and no password-reset mail path is being enabled in this release.
+
+The registry therefore has **190 Done / 1 In progress / 0 Todo / 2 Blocked / 193 Total**.
+This is the source-derived count for the existing 188 records plus TASK-189–193; it
+supersedes the earlier planning estimate of 179/1/11/2.
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master

@@ -244,3 +244,32 @@ PostgreSQL, browser and release-gate proof. This is implementation/release-gate 
 not a claim that migrations 0090–0097 were deployed to production. See
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) and
 [SECURITY.md](SECURITY.md) for authority and residual-risk requirements.
+
+## Platform bootstrap and provisioning plane (EPIC-065)
+
+The platform control plane is deliberately outside the tenant session/data plane:
+
+```text
+empty PostgreSQL
+   │ one locked anonymous claim
+   ▼
+platform_principal + platform_session
+   │ platform.tenants.manage + CSRF + Idempotency-Key
+   ├── create Master + commercial entitlement/default allocation
+   └── create Company + tax/control/chart + Master Admin + Company Owner
+```
+
+The first request creates no `app_user` and no `erp_session`; setup-state counts close
+the public route permanently after the claim. `master_admin_account` is the cross-Company
+identity pointer, but each runtime authorization check still uses ordinary Company
+membership and active Company scope. `platform_idempotency` prevents duplicate Master/
+Company effects without storing credentials. Migration 0098 is shared with PGlite and
+must be applied before production RLS is re-applied.
+
+The shared login has tenant and Platform realms. Platform Superadmin can manage MAC only
+from the Platform workspace and can simulate a target tenant user only for that user's
+exact permissions/scope/workflow authority. The tenant formula remains:
+`authenticated target user AND Master entitlement AND Company allocation AND permission
+AND scope AND workflow authority`. No platform role is merged into a simulated tenant
+request. TASK-192 remains the operational boundary: current code/tests are not proof that
+the production database has been reset.

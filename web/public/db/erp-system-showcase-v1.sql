@@ -19,7 +19,8 @@ DO UPDATE SET is_superadmin=false, source_template_key='company_owner';
 INSERT INTO role (master_fn, company_fn, name, is_superadmin, source_template_key)
 SELECT 'M1', company_fn, name, false, template_key
 FROM (VALUES ('C-SG'),('C-MY')) company(company_fn)
-CROSS JOIN (VALUES ('Company Admin','company_admin'),
+CROSS JOIN (VALUES ('Master Admin','master_admin'),
+  ('Company Admin','company_admin'),
   ('Manager','manager'),
   ('Sales','sales'),
   ('Buyer','buyer'),
@@ -61,7 +62,17 @@ ON CONFLICT (master_fn, username) DO UPDATE SET
 INSERT INTO role_permission (master_fn, role_id, permission_key, allowed)
 SELECT 'M1', role.role_id, permission.permission_key, true
 FROM role
-JOIN (VALUES ('Company Owner','dashboard.read'),
+JOIN (VALUES ('Master Admin','dashboard.read'),
+  ('Master Admin','session.switch_company'),
+  ('Master Admin','admin.users.invite'),
+  ('Master Admin','admin.users.read'),
+  ('Master Admin','admin.users.manage'),
+  ('Master Admin','admin.roles.read'),
+  ('Master Admin','admin.roles.write'),
+  ('Master Admin','admin.audit.read'),
+  ('Master Admin','settings.read'),
+  ('Master Admin','settings.manage'),
+  ('Company Owner','dashboard.read'),
   ('Company Owner','inventory.read'),
   ('Company Owner','inventory.write'),
   ('Company Owner','inventory.adjust'),
@@ -334,7 +345,9 @@ WHERE permission.role_id=role.role_id
 INSERT INTO role_resource_scope (master_fn, company_fn, role_id, resource_key, scope)
 SELECT 'M1', role.company_fn, role.role_id, scoped.resource_key, scoped.scope
 FROM role
-JOIN (VALUES ('Company Owner','*','company'),
+JOIN (VALUES ('Master Admin','admin/*','company'),
+  ('Master Admin','settings/*','company'),
+  ('Company Owner','*','company'),
   ('Employee','employee/*','self'),
   ('Company Admin','admin/*','company'),
   ('Company Admin','hr/*','company'),

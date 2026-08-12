@@ -69,6 +69,35 @@ skipped tests).
 Business-record values are not treated as UI copy. Physical-device acceptance remains
 separate from the automated 375 px browser gate.
 
+## Platform bootstrap and provisioning (EPIC-065)
+
+Production setup has two separate authority planes. A truly empty database may be claimed
+once by `POST /api/setup/platform-superadmin/actions/complete`; the transaction locks
+`system_state.production_setup`, counts platform and tenant foundation rows, creates only
+`platform_principal` plus the independent one-hour session, and appends a `__platform__`
+audit event. The old anonymous tenant setup endpoint is retired with `410
+legacy_setup_disabled`. A non-empty/partial database is not repaired by public setup.
+
+After bootstrap, `src/modules/setup/platformProvisioning.ts` owns Platform-only Master and
+Company commands. Master creation seeds the commercial `COMMERCIAL_MODULE_CATALOG`,
+validates dependencies and stores entitlement/default allocation. Company creation is one
+transaction: country-localized currency/tax, control plane, chart of accounts, inherited
+allocation, live onboarding, immutable Master Admin role/identity and separate Company
+Owner are created together. `master_admin_account` gives later Companies a durable
+identity to receive system-managed memberships; tenant role administration cannot edit or
+remove the system role. `platform_idempotency` scopes replay/hash protection to the
+Platform principal and operation.
+
+The formula for a business module request remains:
+
+`authenticated target user AND Master entitlement AND Company allocation AND permission AND scope AND workflow authority`
+
+Platform Superadmin is never merged into a simulated tenant user's authority. MAC writes
+are workspace-only, while tenant onboarding and `admin.modules.manage` are retired. Demo
+uses the same schema/generated PGlite artifacts but keeps platform bootstrap as a
+deterministic harness, not a public credential realm. Migration 0098 is generated from
+the Drizzle schema and must be replayed before production RLS is reapplied.
+
 ## 3. Data layer design
 
 - **Two runtimes, one schema.** `src/data/db.ts` returns a Drizzle instance backed by

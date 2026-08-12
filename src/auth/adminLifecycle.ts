@@ -25,7 +25,8 @@ import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import {
-  COMPANY_OWNER_ROLE_TEMPLATE_KEY, ROLE_TEMPLATES, isCompanyOwnerRole, roleTemplate, type DataScope,
+  COMPANY_OWNER_ROLE_TEMPLATE_KEY, ROLE_TEMPLATES, isCompanyOwnerRole, isMasterAdminRole,
+  isSystemManagedTenantRole, roleTemplate, type DataScope,
 } from './accessCatalog';
 import { isAssignableTenantPermission } from './permissionRegistry';
 import type { SessionData } from './session';
@@ -394,14 +395,14 @@ export async function setRolePermissionWithin(
   if (!targetRole) {
     throw new AuthLifecycleError(404, 'role_not_found', 'Role not found.');
   }
-  if (targetRole.isSuperadmin || isCompanyOwnerRole(targetRole.sourceTemplateKey)) {
+  if (targetRole.isSuperadmin || isSystemManagedTenantRole(targetRole.sourceTemplateKey)) {
     throw new AuthLifecycleError(
       400,
-      isCompanyOwnerRole(targetRole.sourceTemplateKey)
-        ? 'company_owner_immutable'
+      isSystemManagedTenantRole(targetRole.sourceTemplateKey)
+        ? (isMasterAdminRole(targetRole.sourceTemplateKey) ? 'master_admin_immutable' : 'company_owner_immutable')
         : 'superadmin_immutable',
-      isCompanyOwnerRole(targetRole.sourceTemplateKey)
-        ? 'The Company Owner role is system-managed and cannot be edited.'
+      isSystemManagedTenantRole(targetRole.sourceTemplateKey)
+        ? `The ${isMasterAdminRole(targetRole.sourceTemplateKey) ? 'Master Admin' : 'Company Owner'} role is system-managed and cannot be edited.`
         : 'The legacy superadmin role is immutable during migration.',
     );
   }
@@ -475,11 +476,11 @@ export async function cloneRoleTemplateWithin(
       'The legacy Superadmin template cannot be assigned to a new role.',
     );
   }
-  if (template.key === COMPANY_OWNER_ROLE_TEMPLATE_KEY) {
+  if (template.key === COMPANY_OWNER_ROLE_TEMPLATE_KEY || template.key === 'master_admin') {
     throw new AuthLifecycleError(
       400,
       'immutable_role_template',
-      'Company Owner is created by tenant setup and cannot be cloned.',
+      `${template.name} is created by platform provisioning and cannot be cloned.`,
     );
   }
   const invalidPermission = template.permissions.find((permissionKey) => !isAssignableTenantPermission(permissionKey));
@@ -577,14 +578,14 @@ export async function setRoleResourceScopeWithin(
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
     )).limit(1);
   if (!targetRole) throw new AuthLifecycleError(404, 'role_not_found', 'Role not found.');
-  if (targetRole.superadmin || isCompanyOwnerRole(targetRole.sourceTemplateKey)) {
+  if (targetRole.superadmin || isSystemManagedTenantRole(targetRole.sourceTemplateKey)) {
     throw new AuthLifecycleError(
       400,
-      isCompanyOwnerRole(targetRole.sourceTemplateKey)
-        ? 'company_owner_immutable'
+      isSystemManagedTenantRole(targetRole.sourceTemplateKey)
+        ? (isMasterAdminRole(targetRole.sourceTemplateKey) ? 'master_admin_immutable' : 'company_owner_immutable')
         : 'superadmin_immutable',
-      isCompanyOwnerRole(targetRole.sourceTemplateKey)
-        ? 'Company Owner scope is system-managed.'
+      isSystemManagedTenantRole(targetRole.sourceTemplateKey)
+        ? `${isMasterAdminRole(targetRole.sourceTemplateKey) ? 'Master Admin' : 'Company Owner'} scope is system-managed.`
         : 'Legacy Superadmin scope cannot be edited.',
     );
   }
