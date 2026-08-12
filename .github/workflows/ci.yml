@@ -144,15 +144,20 @@ jobs:
               I18N_REPORT_PATH="output/i18n-browser-report-${viewport}.json" \
               npm run audit:i18n >"output/i18n-browser-${viewport}.log" 2>&1
           }
-          run_i18n desktop 4312 & desktop_pid=$!
-          run_i18n mobile 4313 & mobile_pid=$!
-          desktop_status=0
-          mobile_status=0
-          wait "$desktop_pid" || desktop_status=$?
-          wait "$mobile_pid" || mobile_status=$?
-          if [[ "$desktop_status" -ne 0 || "$mobile_status" -ne 0 ]]; then
-            cat output/i18n-browser-desktop.log output/i18n-browser-mobile.log
-            exit 1
+          # PGlite uses a browser-local persistent store during boot. Keep the
+          # two independent audits sequential on the shared CI runner so their
+          # first IndexedDB/WASM initialisation cannot race and force fallback.
+          run_i18n desktop 4312 || desktop_status=$?
+          desktop_status=${desktop_status:-0}
+          if [[ "$desktop_status" -ne 0 ]]; then
+            cat output/i18n-browser-desktop.log
+            exit "$desktop_status"
+          fi
+          run_i18n mobile 4313 || mobile_status=$?
+          mobile_status=${mobile_status:-0}
+          if [[ "$mobile_status" -ne 0 ]]; then
+            cat output/i18n-browser-mobile.log
+            exit "$mobile_status"
           fi
 
       - name: Upload i18n browser matrix report
