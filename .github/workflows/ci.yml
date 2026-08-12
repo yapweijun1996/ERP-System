@@ -129,21 +129,37 @@ jobs:
       - name: i18n browser matrix (en/ms/zh/ja/vi × desktop/mobile)
         env:
           I18N_LANGUAGES: en,ms,zh,ja,vi
-          I18N_VIEWPORTS: desktop,mobile
           I18N_REQUIRE_PGLITE: 1
           I18N_BOOT_TIMEOUT_MS: 60000
           I18N_ROUTE_TIMEOUT_MS: 20000
-          I18N_REPORT_PATH: output/i18n-browser-report.json
         run: |
           mkdir -p output
-          npm run audit:i18n
+          set -euo pipefail
+          run_i18n() {
+            local viewport="$1"
+            local port="$2"
+            I18N_VIEWPORTS="$viewport" \
+              I18N_AUDIT_PORT="$port" \
+              I18N_REPORT_PATH="output/i18n-browser-report-${viewport}.json" \
+              npm run audit:i18n >"output/i18n-browser-${viewport}.log" 2>&1
+          }
+          run_i18n desktop 4312 & desktop_pid=$!
+          run_i18n mobile 4313 & mobile_pid=$!
+          desktop_status=0
+          mobile_status=0
+          wait "$desktop_pid" || desktop_status=$?
+          wait "$mobile_pid" || mobile_status=$?
+          if [[ "$desktop_status" -ne 0 || "$mobile_status" -ne 0 ]]; then
+            cat output/i18n-browser-desktop.log output/i18n-browser-mobile.log
+            exit 1
+          fi
 
       - name: Upload i18n browser matrix report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: i18n-browser-matrix
-          path: output/i18n-browser-report.json
+          path: output/i18n-browser-report-*.json
           if-no-files-found: ignore
 
       - name: Browser smoke test (desktop + mobile, zero console/page errors)
