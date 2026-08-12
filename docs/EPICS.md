@@ -2574,4 +2574,5 @@ the deployed release, preserves old data before the reset, validates custom dump
 isolated restore, clears only `erp-system_pgdata` and `erp-system_document_storage`,
 recreates without seed, and leaves the public site on the first Platform Superadmin
 registration page without creating a real account. TASK-193 remains blocked while SMTP is
-unset; GitHub Actions validate could not start because account billing blocked the job.
+unset; source CI run `31570902479` passed all four Vitest shards, while docs-only push run
+`31573438483` was blocked before any job started by account billing.

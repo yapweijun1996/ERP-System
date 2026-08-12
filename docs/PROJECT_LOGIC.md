@@ -581,5 +581,6 @@ were verified against the existing data, restore-tested backups were retained, a
 stack without seed. The final database has 249 public tables, 221 forced-RLS tables, zero
 non-migration rows and empty document storage; health/root are 200 and setup status is
 `requiresPlatformBootstrap:true`. The public browser shows Create Platform Superadmin and
-no real account was created. TASK-193 remains blocked on missing SMTP; CI Vitest shards
-passed 4/4 but the validate job was prevented from starting by GitHub Actions billing.
+no real account was created. TASK-193 remains blocked on missing SMTP; source CI run
+`31570902479` passed all four Vitest shards, while docs-only push run `31573438483` was
+blocked before any job started by GitHub Actions account billing.

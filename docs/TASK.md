@@ -86,9 +86,10 @@ the pre-reset production data, removed only the two named ERP volumes, recreated
 and left the public site at the first Platform Superadmin registration page. The final empty
 database has 249 public tables, 221 forced-RLS tables, zero non-migration rows and zero document
 storage entries; `/health` and the public root are 200 and `/api/setup/status` reports
-`requiresPlatformBootstrap=true`. CI Vitest shards passed 4/4; the validate job was blocked
-before startup by GitHub Actions account billing, so that infrastructure limitation is retained
-as an explicit release caveat. TASK-193 is intentionally blocked rather than claiming email
+`requiresPlatformBootstrap=true`. Source CI run `31570902479` passed all four Vitest shards;
+the later docs-only push run `31573438483` was blocked before any job started by GitHub Actions
+account billing, so that infrastructure limitation is retained as an explicit release caveat.
+TASK-193 is intentionally blocked rather than claiming email
 delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 
 The registry therefore has **191 Done / 0 In progress / 0 Todo / 2 Blocked / 193 Total**.

@@ -298,5 +298,6 @@ destructive reset were completed on 2026-08-12; no real Platform Superadmin acco
 The final reset proof found 249 public tables, 221 forced-RLS tables, zero non-migration
 rows and zero document-storage entries. Local/public health and root returned 200; the
 public desktop and 375px browser checks showed Create Platform Superadmin with no console
-errors or horizontal overflow. All four Vitest shards passed; the CI validate job was not
-started because GitHub Actions account billing blocked it.
+errors or horizontal overflow. Source CI run `31570902479` passed all four Vitest shards;
+docs-only push run `31573438483` was not started because GitHub Actions account billing
+blocked every job.

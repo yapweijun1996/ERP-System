@@ -23,9 +23,10 @@ and migration 0098. On 2026-08-12 the existing Compose production database was r
 backed up and verified, then the exact `erp-system_pgdata` and
 `erp-system_document_storage` volumes were reset without seed. The new database is empty
 while schema/RLS remain intact; public bootstrap evidence is now production evidence, not
-only a local source/test claim. The validate CI job could not start because GitHub Actions
-account billing blocked it; all four Vitest shards passed and the local release gates used
-for deployment passed.
+only a local source/test claim. Source CI run `31570902479` passed all four Vitest shards
+and the local release gates used for deployment passed. The later docs-only push run
+`31573438483` could not start any job because GitHub Actions account billing blocked it;
+neither run is treated as a full CI gate pass.
 
 Authorization documentation distinguishes the implemented platform-owned module
 boundary from the historical tenant-controlled design. Tenant authorization still uses

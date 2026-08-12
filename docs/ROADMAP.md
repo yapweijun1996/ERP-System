@@ -1195,13 +1195,15 @@ empty-database Platform Superadmin registration page, with no real account creat
    and focused tests prove idempotency, cookie/session separation, Master Admin negative
    permissions, Company Owner MAC denial, dependency validation and concurrent bootstrap.
    Root/Web typechecks, lint, API/Demo builds, permission/schema/drift checks, focused
-   browser audits and Vitest are green; the CI validate job was blocked by account billing.
+   browser audits and the source CI Vitest shards are green; the later docs-only CI run
+   was blocked before any job started by account billing.
 4. **Deploy and reset** (TASK-192 done): migration 0098/RLS and application release
    preserved the existing data; custom dump/list/archive and isolated restore rehearsal
    passed; only `erp-system_pgdata` and `erp-system_document_storage` were deleted;
    migrations/RLS were reapplied without seed; and the public site now shows first-run
-   Platform Superadmin registration. No real account was created. All four Vitest shards
-   passed; the CI validate job was blocked before startup by account billing.
+   Platform Superadmin registration. No real account was created. Source CI run
+   `31570902479` passed all four Vitest shards; docs-only push run `31573438483` was
+   blocked before startup by account billing.
 5. **Recovery gap** (TASK-193 blocked): administrator email self-service reset remains
    deferred because `SMTP_HOST` is empty. Existing reset backend facts must not be
    documented as delivered email functionality; operational recovery remains required.

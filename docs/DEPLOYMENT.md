@@ -284,8 +284,9 @@ health and root 200, and setup status
 `requiresPlatformBootstrap:true, hasPlatformAdmin:false, hasMaster:false,
 hasCompany:false, hasTenantAdmin:false`. Desktop and 375px public browser checks had no
 console errors or overflow and showed Create Platform Superadmin. No real account was
-created. GitHub Actions Vitest shards passed 4/4; the validate job was blocked before
-startup by account billing, so that CI infrastructure limitation remains explicit.
+created. Source CI run `31570902479` passed all four Vitest shards; the later docs-only
+push run `31573438483` was blocked before any job started by the same GitHub Actions
+account-billing limitation, so neither run is represented as a full CI gate pass.
 
 ### Auto-creating the database
 

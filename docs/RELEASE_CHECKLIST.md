@@ -34,7 +34,8 @@ section for the path you are releasing. Deployment mechanics live in
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
 - [x] `npm run audit:i18n` — the current canonical resources contain 1,545 keys / 72
       local five-language packs; the full desktop matrix and targeted desktop/mobile
-      post-fix route checks pass. The latest CI validate job could not start because of
+      post-fix route checks pass. Source CI run `31570902479` passed all four Vitest
+      shards; docs-only push run `31573438483` was blocked before any job started by
       GitHub Actions account billing.
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — the permission
       registry check passes (314 codes; 116 resources; 62 actions; 5 updates), and the
@@ -135,9 +136,9 @@ authorize production deployment.
 - [x] Migration/generated-artifact proof: migration 0098, PGlite schema version 98,
       `check:demo-schema`, `check:drift`, permission registry, root/Web typecheck, lint
       and API/Demo builds pass.
-- [x] Push the scoped commits; all four Vitest CI shards passed. The validate job was
-      blocked before startup by GitHub Actions account billing, which is recorded rather
-      than treated as a test pass.
+- [x] Push the scoped commits; source CI run `31570902479` passed all four Vitest shards.
+      The docs-only push run `31573438483` was blocked before startup by GitHub Actions
+      account billing, which is recorded rather than treated as a test pass.
 - [x] Apply 0098/RLS and verify existing data remains usable, health is 200 and public
       bootstrap rejects non-empty data.
 - [x] Create UTC PostgreSQL custom dumps, validate `pg_restore --list`, perform an
