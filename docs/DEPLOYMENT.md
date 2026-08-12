@@ -95,6 +95,7 @@ services:
       context: .
       args:
         VITE_DATA_MODE: api
+        VITE_PLATFORM_DEMO_AUTOFILL: ${VITE_PLATFORM_DEMO_AUTOFILL:-false}
     ports: ["8080:80"]
     depends_on: [api]
 
@@ -475,6 +476,7 @@ jobs:
 | Variable | Mode | Purpose |
 | --- | --- | --- |
 | `VITE_DATA_MODE` | both | `demo` (PGlite) or `api` (Node+Postgres) |
+| `VITE_PLATFORM_DEMO_AUTOFILL` | web build | `true` only for the explicitly hosted API demo; keep `false` for real customers |
 | `DATABASE_URL` | production | Postgres connection string |
 | `DB_USER` / `DB_PASSWORD` | production | Compose DB credentials |
 | `COMPOSE_PROJECT_NAME` | production | Stable namespace for named volumes |

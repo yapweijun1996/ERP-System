@@ -222,3 +222,21 @@ new Companies inherit Master defaults, tenant onboarding cannot select MAC, and 
 Admin/Company Owner authority is tested against the same permission templates. The
 generated PGlite schema is version 98 and must remain in lockstep with Drizzle migration
 0098; this is build/schema parity, not production deployment proof.
+
+## API demo quick setup (2026-08-12)
+
+The hosted API demo may opt into the editable Platform Superadmin quick-setup form with
+the non-sensitive build flag `VITE_PLATFORM_DEMO_AUTOFILL=true`. Source and customer
+deployments default to `false`; the current hosted demo is the explicit exception. When
+enabled, the bootstrap, Master and first Company forms show public sample values and the
+buttons read `Next: ...` / `Finish: ...`, so a visitor can advance without typing. Every
+field remains editable, the dismissible banner warns that the credentials are public, and
+the API continues to own validation, authorization, audit, transactions and idempotency.
+
+The sample values are `platform-admin` / `demo-platform-1234` for the Platform principal,
+`Acme Group` / `ACME` for the Master, and `Acme Singapore` / `SG` with `demo1234` for the
+first Master Admin and Company Owner accounts. They are demonstration credentials only and
+must be disabled before any real customer deployment. Existing Masters are taken as the
+continuation point; an existing Company is never overwritten or used to inject values into
+the next-company form. The static PGlite/GitHub Pages demo does not gain a Platform login or
+tokenless bootstrap from this flag.

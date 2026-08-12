@@ -38,6 +38,7 @@
     "test:e2e:company-receipts-api": "npm run build && tsx tests/e2e/company-receipts-api.spec.ts",
     "test:e2e:company-receipts-postgres": "npm run build && test -n \"$TASK183_POSTGRES_URL\" && tsx tests/e2e/company-receipts-api.spec.ts",
     "test:e2e:platform-workspace-layout": "npm run build && tsx tests/e2e/platform-workspace-layout.spec.ts",
+    "test:e2e:platform-workspace-demo-autofill": "VITE_PLATFORM_DEMO_AUTOFILL=true npm run build && tsx tests/e2e/platform-workspace-demo-autofill.spec.ts",
     "audit:access-matrix": "npm run build:demo && tsx scripts/audit-access-matrix.ts",
     "audit:screens": "node scripts/audit-screens.mjs",
     "audit:i18n": "node scripts/audit-i18n.mjs --browser",

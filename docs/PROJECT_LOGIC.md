@@ -539,6 +539,13 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
    outlive the platform session, runs with exactly the target authority, remains visibly
    marked/revocable and records both identities; it never provides a MAC bypass.
 
+For the API-mode hosted Demo only, the web build may set `VITE_PLATFORM_DEMO_AUTOFILL=true`.
+The Platform bootstrap, Master and first Company forms then show editable public sample
+values, a dismissible warning and `Next`/`Finish` progression; the source/customer default
+is `false`. This flag changes no API contract, permission, transaction or audit rule. The
+Master and Company mutations still use separate stable form-fingerprint Idempotency-Key
+values, and an existing Company is never overwritten or used to inject sample data.
+
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |
 | Platform entitlement foundation | `moduleCatalog.ts`, `platformEntitlement.ts`, migration 0094 and focused tests | TASK-185 done |

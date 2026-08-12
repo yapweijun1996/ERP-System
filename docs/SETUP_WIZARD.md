@@ -158,3 +158,13 @@ support, simulation or any `platform.*` permission. TASK-193 (email reset) remai
 blocked while production SMTP is unset. TASK-192 completed the 2026-08-12 deployment and
 exact-volume reset; production is intentionally waiting on the first Platform Superadmin
 registration and no real account was created.
+
+### Demo quick-setup presentation flag
+
+The API-mode demo build can set `VITE_PLATFORM_DEMO_AUTOFILL=true` to prefill the three
+Platform provisioning stages with public sample values and expose a dismissible “Demo quick
+setup · sample accounts” notice. The source default and all real-customer builds remain
+`false`. This is presentation-only: the two Master/Company mutations stay separate, use
+stable form-fingerprint Idempotency-Key values, and still require the same server-side CSRF,
+permission, uniqueness, audit and transaction checks. A visitor may edit every prefilled
+field; an existing Company is never overwritten. Do not enable the flag for customer data.

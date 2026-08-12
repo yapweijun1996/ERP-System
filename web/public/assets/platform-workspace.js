@@ -7,11 +7,114 @@
   var API_BASE=(window.__ERP_API_BASE__||'/api').replace(/\/$/,'');
   var PLATFORM_BASE=API_BASE+'/platform';
   var cachedSession=null;
-  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[]};
+  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[],drafts:{bootstrap:null,master:null,company:null}};
+  var DEMO_BANNER_STORAGE_KEY='aria-platform-demo-banner-dismissed';
+  var DEMO_DEFAULTS={
+    bootstrap:{principalKey:'platform-admin',displayName:'Platform Admin',email:'platform-admin@acme.co',password:'demo-platform-1234'},
+    master:{name:'Acme Group',loginCode:'ACME'},
+    company:{name:'Acme Singapore',country:'SG',masterAdmin:{name:'Master Admin',username:'masteradmin',email:'masteradmin@acme.co',password:'demo1234'},companyOwner:{name:'Company Owner',username:'owner',email:'owner@acme.co',password:'demo1234'}},
+  };
 
   function esc(value){
     return String(value==null?'':value).replace(/[&<>"']/g,function(char){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];
+    });
+  }
+  function demoAutofillEnabled(){
+    if(typeof window.__ERP_PLATFORM_DEMO_AUTOFILL_OVERRIDE__==='boolean') return window.__ERP_PLATFORM_DEMO_AUTOFILL_OVERRIDE__;
+    return String(window.__ERP_PLATFORM_DEMO_AUTOFILL__||'').toLowerCase()==='true';
+  }
+  function browserStorage(kind){
+    try{ return kind==='session'?window.sessionStorage:window.localStorage; }catch{return null;}
+  }
+  function demoBannerDismissed(){
+    var storage=browserStorage('local');
+    return !!(storage&&storage.getItem(DEMO_BANNER_STORAGE_KEY)==='1');
+  }
+  function demoBannerMarkup(){
+    if(!demoAutofillEnabled()||demoBannerDismissed()) return '';
+    return `<aside class="platform-demo-banner" id="platformDemoBanner" role="status"><div><strong>Demo quick setup · sample accounts</strong><span>Sample accounts and passwords are public demo credentials. Do not use them for real business data.</span></div><button type="button" class="btn soft platform-demo-banner-close" id="platformDemoBannerDismiss">Dismiss</button></aside>`;
+  }
+  function stepperMarkup(current){
+    var labels=['Platform Superadmin','Master','Company & administrators'];
+    var complete=current>labels.length;
+    return `<ol class="platform-stepper" aria-label="Provisioning progress">${labels.map(function(label,index){ var number=index+1; var isComplete=complete||number<current; var isCurrent=!complete&&number===current; return `<li class="platform-step ${isComplete?'complete':''} ${isCurrent?'current':''}" ${isCurrent?'aria-current="step"':''}><span>${isComplete?'✓':number}</span><b>${label}</b></li>`; }).join('')}</ol>`;
+  }
+  function setFieldValue(root,id,value){
+    var field=root&&root.querySelector('#'+id);
+    if(!field||field.value) return;
+    field.value=String(value);
+  }
+  function applyDemoDefaults(root,stage,needsMasterAdmin){
+    if(!demoAutofillEnabled()) return;
+    if(stage==='bootstrap'){
+      setFieldValue(root,'bootstrapPrincipalKey',DEMO_DEFAULTS.bootstrap.principalKey);
+      setFieldValue(root,'bootstrapDisplayName',DEMO_DEFAULTS.bootstrap.displayName);
+      setFieldValue(root,'bootstrapEmail',DEMO_DEFAULTS.bootstrap.email);
+      setFieldValue(root,'bootstrapPassword',DEMO_DEFAULTS.bootstrap.password);
+      setFieldValue(root,'bootstrapPasswordConfirm',DEMO_DEFAULTS.bootstrap.password);
+      return;
+    }
+    if(stage==='master'){
+      setFieldValue(root,'provisionMasterName',DEMO_DEFAULTS.master.name);
+      setFieldValue(root,'provisionMasterLoginCode',DEMO_DEFAULTS.master.loginCode);
+      return;
+    }
+    setFieldValue(root,'provisionCompanyName',DEMO_DEFAULTS.company.name);
+    var country=root&&root.querySelector('#provisionCompanyCountry');
+    if(country&&!country.value) country.value=DEMO_DEFAULTS.company.country;
+    if(needsMasterAdmin){
+      setFieldValue(root,'provisionMasterAdminName',DEMO_DEFAULTS.company.masterAdmin.name);
+      setFieldValue(root,'provisionMasterAdminUsername',DEMO_DEFAULTS.company.masterAdmin.username);
+      setFieldValue(root,'provisionMasterAdminEmail',DEMO_DEFAULTS.company.masterAdmin.email);
+      setFieldValue(root,'provisionMasterAdminPassword',DEMO_DEFAULTS.company.masterAdmin.password);
+    }
+    setFieldValue(root,'provisionCompanyOwnerName',DEMO_DEFAULTS.company.companyOwner.name);
+    setFieldValue(root,'provisionCompanyOwnerUsername',DEMO_DEFAULTS.company.companyOwner.username);
+    setFieldValue(root,'provisionCompanyOwnerEmail',DEMO_DEFAULTS.company.companyOwner.email);
+    setFieldValue(root,'provisionCompanyOwnerPassword',DEMO_DEFAULTS.company.companyOwner.password);
+  }
+  function snapshotDraft(root,stage){
+    var form=root&&root.querySelector(stage==='bootstrap'?'#platformBootstrapForm':stage==='master'?'#platformCreateMasterForm':'#platformCreateCompanyForm');
+    if(!form) return;
+    var draft={};
+    Array.from(form.elements||[]).forEach(function(field){
+      if(!field.id) return;
+      draft[field.id]=field.type==='checkbox'?field.checked:field.value;
+    });
+    state.drafts[stage]=draft;
+  }
+  function restoreDraft(root,stage){
+    var draft=state.drafts[stage];
+    if(!draft) return;
+    Object.keys(draft).forEach(function(id){
+      var field=root&&root.querySelector('#'+id);
+      if(!field) return;
+      if(field.type==='checkbox') field.checked=!!draft[id];
+      else field.value=String(draft[id]??'');
+    });
+  }
+  function clearDraft(stage){ state.drafts[stage]=null; }
+  function hashString(value){
+    var hash=2166136261;
+    for(var index=0;index<value.length;index++){ hash^=value.charCodeAt(index); hash=Math.imul(hash,16777619); }
+    return (hash>>>0).toString(16).padStart(8,'0');
+  }
+  function formFingerprint(form){
+    var values=Array.from(form.elements||[]).filter(function(field){ return field.id; }).map(function(field){ return [field.id,field.type==='checkbox'?field.checked:field.value]; });
+    return hashString(JSON.stringify(values));
+  }
+  function stableIdempotencyKey(stage,masterFn,form){
+    return 'platform-'+stage+'-'+hashString(String(masterFn||'none')+'|'+formFingerprint(form));
+  }
+  function wireDemoBanner(root){
+    var button=root&&root.querySelector('#platformDemoBannerDismiss');
+    if(!button) return;
+    button.addEventListener('click',function(){
+      var storage=browserStorage('local');
+      if(storage) storage.setItem(DEMO_BANNER_STORAGE_KEY,'1');
+      var banner=root.querySelector('#platformDemoBanner');
+      if(banner) banner.remove();
     });
   }
   function cookieValue(name){
@@ -84,13 +187,14 @@
   function renderBootstrap(){
     authShell(true);
     var view=authView();
+    snapshotDraft(view,'bootstrap');
     /* Bootstrap registration is intentionally the regular auth panel. The
      * fixed-height shell below is only for an authenticated Platform session. */
     view.className='auth-view';
     view.setAttribute('aria-label','Create Platform Superadmin');
     view.innerHTML=`<section class="auth-panel" style="max-width:620px;width:min(620px,calc(100vw - 24px));margin:20px auto;">
       <div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>First-run Platform setup</small></span></div>
-      <div class="auth-copy"><h1>Create Platform Superadmin</h1><p>This one-time registration is available only while the production database is empty. The account is independent from tenant users.</p></div>
+      <div class="auth-copy"><h1>Create Platform Superadmin</h1><p>This one-time registration is available only while the production database is empty. The account is independent from tenant users.</p>${stepperMarkup(1)}${demoBannerMarkup()}</div>
       <form class="auth-form" id="platformBootstrapForm" autocomplete="off">
         <div class="fld"><span>Platform principal key</span><input id="bootstrapPrincipalKey" autocomplete="username" autocapitalize="none" required placeholder="e.g. platform-admin"></div>
         <div class="fld"><span>Display name</span><input id="bootstrapDisplayName" autocomplete="name" required></div>
@@ -98,17 +202,20 @@
         <div class="fld"><span>Password (12+ characters)</span><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" required></div>
         <div class="fld"><span>Confirm password</span><input id="bootstrapPasswordConfirm" type="password" autocomplete="new-password" minlength="12" required></div>
         <div class="auth-error" id="platformBootstrapError" role="alert"></div>
-        <button class="btn primary lg" type="submit">Create Platform Superadmin</button>
+        <button class="btn primary lg" type="submit">Next: Create Platform Superadmin</button>
       </form>
       <div class="auth-foot"><span class="cap ok"><span class="dot"></span>Empty database only</span><span>After creation, you will enter the Platform workspace.</span></div>
     </section>`;
+    applyDemoDefaults(view,'bootstrap');
+    restoreDraft(view,'bootstrap');
+    wireDemoBanner(view);
     view.querySelector('#platformBootstrapForm').addEventListener('submit',async function(event){
       event.preventDefault();
       var error=view.querySelector('#platformBootstrapError');
       var submit=view.querySelector('button[type="submit"]');
       error.textContent='';
       var password=view.querySelector('#bootstrapPassword').value;
-      if(password!==view.querySelector('#bootstrapPasswordConfirm').value){ error.textContent='Passwords do not match.'; return; }
+      if(password!==view.querySelector('#bootstrapPasswordConfirm').value){ error.textContent='Passwords do not match.'; error.focus(); return; }
       submit.disabled=true;
       try{
         var response=await fetch(API_BASE+'/setup/platform-superadmin/actions/complete',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({
@@ -120,7 +227,7 @@
         var body=null; try{body=await response.json();}catch{}
         if(!response.ok){ var detail=body&&body.error; throw new Error((detail&&detail.message)||('Platform bootstrap failed (HTTP '+response.status+').')); }
         location.reload();
-      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Platform bootstrap failed.'; submit.disabled=false; }
+      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Platform bootstrap failed.'; submit.disabled=false; error.focus({preventScroll:true}); }
     });
   }
   function renderLogin(initialRealm){
@@ -218,7 +325,7 @@
     return `<section class="platform-provision-panel"><div class="platform-panel-heading"><div><h2>Create Master</h2><p>Define the tenant group first. Commercial modules are independent from baseline Home, My Work, Admin, Settings and Account services.</p></div></div><form id="platformCreateMasterForm" class="auth-form">
       <div class="platform-form-grid platform-master-identity">${provisioningInput('provisionMasterName','Master name')}${provisioningInput('provisionMasterLoginCode','Master login code')}</div>
       <fieldset class="platform-module-selection"><legend>Commercial modules</legend><div class="platform-provision-module-grid">${rows}</div></fieldset>
-      <div class="platform-form-actions"><div class="auth-error" id="platformCreateMasterError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Create Master</button></div>
+      <div class="platform-form-actions"><div class="auth-error" id="platformCreateMasterError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Next: Create Master</button></div>
     </form></section>`;
   }
   function companyProvisioningMarkup(master){
@@ -227,7 +334,7 @@
       <section class="platform-form-section"><h3>Company details</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyName','Company name')}<div class="fld"><span>Country</span><select id="provisionCompanyCountry"><option value="SG">Singapore (SG)</option><option value="MY">Malaysia (MY)</option></select></div></div></section>
       ${needsMasterAdmin?`<section class="platform-form-section"><h3>Master Admin <small>(first Company only)</small></h3><div class="platform-form-grid">${provisioningInput('provisionMasterAdminName','Master Admin name')}${provisioningInput('provisionMasterAdminUsername','Master Admin username')}${provisioningInput('provisionMasterAdminEmail','Master Admin email','email')}${provisioningInput('provisionMasterAdminPassword','Master Admin password','password','new-password')}</div></section>`:''}
       <section class="platform-form-section"><h3>Company Owner</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyOwnerName','Company Owner name')}${provisioningInput('provisionCompanyOwnerUsername','Company Owner username')}${provisioningInput('provisionCompanyOwnerEmail','Company Owner email','email')}${provisioningInput('provisionCompanyOwnerPassword','Company Owner password','password','new-password')}</div></section>
-      <div class="platform-form-actions"><div class="auth-error" id="platformCreateCompanyError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Create Company</button></div>
+      <div class="platform-form-actions"><div class="auth-error" id="platformCreateCompanyError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Finish: Create Company</button></div>
     </form></section>`;
   }
   function provisioningMarkup(){
@@ -262,6 +369,7 @@
     state.session=session||await getSession();
     authShell(true);
     var view=authView();
+    snapshotDraft(view,state.masterFn?'company':'master');
     view.classList.add('platform-workspace-view');
     view.setAttribute('aria-label','Platform Superadmin workspace');
     view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1>Loading platform workspace…</h1></div></div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div></div></section>`;
@@ -271,11 +379,15 @@
       state.masterFn=state.masterFn&&state.tenants.some(function(item){ return item.masterFn===state.masterFn; })?state.masterFn:(state.tenants[0]||{}).masterFn||'';
       await loadDetails();
       var hasCompany=Boolean(state.companyFn);
-      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1>${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p></div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div></section>`;
+      var stage=state.masterFn?(hasCompany?4:3):2;
+      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1>${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p>${stepperMarkup(stage)}${demoBannerMarkup()}</div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div></section>`;
+      if(!hasCompany) applyDemoDefaults(view,state.masterFn?'company':'master',state.masterFn?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
+      restoreDraft(view,state.masterFn?'company':'master');
       wireWorkspace(view);
     }catch(error){ view.querySelector('.auth-copy').innerHTML=`<h1>Platform workspace unavailable</h1><p>${esc(error&&error.message||'Unable to load platform entitlement data.')}</p>`; }
   }
   function wireWorkspace(view){
+    wireDemoBanner(view);
     view.querySelector('#platformLogoutBtn').addEventListener('click',async function(){ try{ await request('logout',{method:'POST',body:{}}); }finally{ cachedSession=null; location.reload(); } });
     var masterSelect=view.querySelector('#platformMasterSelect');
     if(masterSelect) masterSelect.addEventListener('change',async function(event){ state.masterFn=event.target.value; state.companyFn=''; await renderWorkspace(state.session); });
@@ -286,7 +398,8 @@
       event.preventDefault(); var error=view.querySelector('#platformCreateMasterError'); var button=createMaster.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
       try{
         var modules=Array.from(createMaster.querySelectorAll('[data-provision-module]')).map(function(input){ return {moduleKey:input.dataset.provisionModule,enabled:input.checked,defaultCompanyAllocated:input.checked}; });
-        await request('masters',{method:'POST',headers:{'Idempotency-Key':'master-'+(crypto.randomUUID?crypto.randomUUID():Date.now())},body:{name:createMaster.querySelector('#provisionMasterName').value.trim(),loginCode:createMaster.querySelector('#provisionMasterLoginCode').value.trim(),modules:modules}});
+        await request('masters',{method:'POST',headers:{'Idempotency-Key':stableIdempotencyKey('master','',createMaster)},body:{name:createMaster.querySelector('#provisionMasterName').value.trim(),loginCode:createMaster.querySelector('#provisionMasterLoginCode').value.trim(),modules:modules}});
+        clearDraft('master');
         state.masterFn=''; state.companyFn=''; await renderWorkspace(state.session);
       }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Master creation failed.'; button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }
     });
@@ -297,7 +410,8 @@
         var body={name:createCompany.querySelector('#provisionCompanyName').value.trim(),country:createCompany.querySelector('#provisionCompanyCountry').value,companyOwner:{name:createCompany.querySelector('#provisionCompanyOwnerName').value.trim(),username:createCompany.querySelector('#provisionCompanyOwnerUsername').value.trim(),email:createCompany.querySelector('#provisionCompanyOwnerEmail').value.trim(),password:createCompany.querySelector('#provisionCompanyOwnerPassword').value}};
         var masterAdminName=createCompany.querySelector('#provisionMasterAdminName');
         if(masterAdminName) body.masterAdmin={name:masterAdminName.value.trim(),username:createCompany.querySelector('#provisionMasterAdminUsername').value.trim(),email:createCompany.querySelector('#provisionMasterAdminEmail').value.trim(),password:createCompany.querySelector('#provisionMasterAdminPassword').value};
-        await request('masters/'+encodeURIComponent(state.masterFn)+'/companies',{method:'POST',headers:{'Idempotency-Key':'company-'+(crypto.randomUUID?crypto.randomUUID():Date.now())},body:body});
+        await request('masters/'+encodeURIComponent(state.masterFn)+'/companies',{method:'POST',headers:{'Idempotency-Key':stableIdempotencyKey('company',state.masterFn,createCompany)},body:body});
+        clearDraft('company');
         state.companyFn=''; await renderWorkspace(state.session);
       }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Company creation failed.'; button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }
     });

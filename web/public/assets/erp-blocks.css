@@ -1497,6 +1497,18 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 }
 .platform-shell-intro .auth-copy{min-width:0;}
 .platform-shell-intro .auth-copy h1{font-size:calc(29px * var(--fs,1));}
+.platform-stepper{display:flex;flex-wrap:wrap;gap:8px 18px;margin:14px 0 0;padding:0;list-style:none;min-width:0;}
+.platform-step{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:calc(11px * var(--fs,1));font-weight:600;line-height:1.35;}
+.platform-step>span{display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;flex:none;}
+.platform-step.current{color:var(--text);}
+.platform-step.current>span{border-color:var(--accent);background:var(--accent);color:#fff;}
+.platform-step.complete{color:var(--text);}
+.platform-step.complete>span{border-color:var(--ok,#1d9b65);background:var(--ok,#1d9b65);color:#fff;}
+.platform-demo-banner{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:14px 0 0;padding:11px 12px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));border-radius:var(--r-s);background:color-mix(in srgb,var(--accent-tint) 82%,var(--surface));color:var(--text);}
+.platform-demo-banner>div{display:grid;gap:3px;min-width:0;}
+.platform-demo-banner strong{font-size:calc(12px * var(--fs,1));}
+.platform-demo-banner span{color:var(--muted);font-size:calc(11px * var(--fs,1));line-height:1.4;}
+.platform-demo-banner-close{width:auto;min-width:0;flex:none;padding:6px 9px;font-size:11px;}
 .platform-shell-toolbar{
   flex:0 1 520px;
   min-width:320px;
@@ -1616,6 +1628,9 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .platform-shell-header .btn{padding-inline:11px;}
   .platform-shell-intro{display:block;padding:12px 16px 13px;}
   .platform-shell-intro .auth-copy h1{font-size:calc(25px * var(--fs,1));}
+  .platform-stepper{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin-top:12px;}
+  .platform-demo-banner{align-items:stretch;flex-direction:column;gap:8px;}
+  .platform-demo-banner-close{align-self:flex-start;}
   .platform-shell-toolbar{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;margin-top:14px;}
   .platform-shell-body{gap:12px;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));}
   .platform-provision-panel,.platform-entitlement-card,.platform-simulation-panel{padding:16px;}
