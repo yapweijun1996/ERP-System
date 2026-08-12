@@ -289,6 +289,18 @@ created. Source CI run `31570902479` passed all four Vitest shards; the later do
 push run `31573438483` was blocked before any job started by the same GitHub Actions
 account-billing limitation, so neither run is represented as a full CI gate pass.
 
+### Platform Demo quick-setup application release (2026-08-12 UTC)
+
+Commit `4d1b7d7` was pushed to `main` and released with `./deploy/release.sh`. The release
+rebuilt/restarted only `api`, `web` and `calendar-worker`; it did not migrate, seed, clear
+PostgreSQL or touch document storage. Compose/local and public checks returned health 200,
+and the served HTML contains `__ERP_PLATFORM_DEMO_AUTOFILL__='true'` plus the versioned
+quick-setup assets. The live setup status is source-verified as
+`hasPlatformAdmin:true`, `hasMaster:true`, `hasCompany:false`, `hasTenantAdmin:false` and
+`requiresPlatformBootstrap:false`, so the demo opens in the existing-Master/no-Company
+continuation stage. The public sample credentials remain Demo-only and must be disabled
+(`VITE_PLATFORM_DEMO_AUTOFILL=false`) before any real customer release.
+
 ### Auto-creating the database
 
 PostgreSQL's official image auto-creates the database named by `POSTGRES_DB` on first

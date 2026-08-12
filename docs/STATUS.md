@@ -450,7 +450,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | `VITE_DATA_MODE=api` renders every current Canonical route | ✅ Contract-backed; authenticated full-route proof follow-up | The API adapter and current resource/action contracts support the 128-route Canonical boundary with no client-side sample writes. The access matrix and production health/session checks pass; a dedicated authenticated API-mode full-route layout run remains follow-up evidence rather than a deployment blocker. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production first-run Platform bootstrap | ✅ Deployed and reset-verified | The old anonymous `POST /api/setup/actions/complete` returns `410 legacy_setup_disabled`. The reset production database exposes `POST /api/setup/platform-superadmin/actions/complete` only while empty; `GET /api/setup/status` returns `requiresPlatformBootstrap:true`, `hasPlatformAdmin:false`, `hasMaster:false`, `hasCompany:false` and `hasTenantAdmin:false`. Health/root and public browser checks are 200 and show Create Platform Superadmin. |
-| Platform Superadmin Demo quick setup | ✅ Implemented; application release pending | `VITE_PLATFORM_DEMO_AUTOFILL` defaults to `false` and is enabled only for the hosted API demo. Isolated Playwright/PGlite proof covers flag-off behavior, bootstrap/Master/Company defaults, editable rerenders, dismissible public-credentials warning, `Next`/`Finish` flow, stable idempotency replay and existing-Company non-overwrite; the existing 80vh/mobile layout proof remains green. |
+| Platform Superadmin Demo quick setup | ✅ Deployed 2026-08-12 | `VITE_PLATFORM_DEMO_AUTOFILL` defaults to `false` and is enabled only for the hosted API demo. Isolated Playwright/PGlite proof covers flag-off behavior, bootstrap/Master/Company defaults, editable rerenders, dismissible public-credentials warning, `Next`/`Finish` flow, stable idempotency replay and existing-Company non-overwrite; the existing 80vh/mobile layout proof remains green. The live non-empty database currently reports Platform Admin + Master, no Company and no tenant admin, so the hosted workspace opens at the Company continuation stage. |
 | Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v260) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
 
 ## Canonical and Preview route boundary
@@ -1969,9 +1969,11 @@ future/optional phases rather than v1 defects.
 ## Next implementation boundary
 
 The next boundary is TASK-193 and the separately human-owned TASK-017 physical-device
-acceptance. EPIC-065/TASK-192 is complete; the public site is intentionally stopped at
-the first Platform Superadmin registration page and no real account was created. TASK-193
-remains blocked until SMTP is configured and an explicit reset-delivery decision is made.
+acceptance. EPIC-065/TASK-192 remains the historical bootstrap/reset boundary; the current
+hosted site is a non-empty continuation with Platform Admin + Master and no Company, and
+the Demo quick-setup presentation flag is enabled only for this clearly marked Demo host.
+TASK-193 remains blocked until SMTP is configured and an explicit reset-delivery decision is
+made.
 
 ## Where to go next
 
