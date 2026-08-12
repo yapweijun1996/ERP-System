@@ -37,6 +37,7 @@
   "test:e2e:staff-calendar": "npm run build:demo && node tests/e2e/staff-calendar.spec.mjs",
     "test:e2e:company-receipts-api": "npm run build && tsx tests/e2e/company-receipts-api.spec.ts",
     "test:e2e:company-receipts-postgres": "npm run build && test -n \"$TASK183_POSTGRES_URL\" && tsx tests/e2e/company-receipts-api.spec.ts",
+    "test:e2e:platform-workspace-layout": "npm run build && tsx tests/e2e/platform-workspace-layout.spec.ts",
     "audit:access-matrix": "npm run build:demo && tsx scripts/audit-access-matrix.ts",
     "audit:screens": "node scripts/audit-screens.mjs",
     "audit:i18n": "node scripts/audit-i18n.mjs --browser",

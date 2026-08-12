@@ -9,18 +9,6 @@
   var cachedSession=null;
   var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[]};
 
-  /* The platform workspace has dense entitlement tables. Keep their horizontal
-   * scroll local to the table wrapper so the shared login shell never makes a
-   * 375px viewport horizontally scrollable. This is intentionally scoped here
-   * instead of the tenant shell's global CSS. */
-  function ensureResponsiveStyles(){
-    if(document.getElementById('platformWorkspaceResponsiveStyles')) return;
-    var style=document.createElement('style');
-    style.id='platformWorkspaceResponsiveStyles';
-    style.textContent='.platform-workspace-view{overflow-x:hidden}.platform-workspace-view .auth-panel{box-sizing:border-box}.platform-workspace-controls,.platform-simulation-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.platform-workspace-grid{display:grid;gap:16px}.platform-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.platform-table-wrap table{min-width:620px}.platform-simulation-controls .btn{align-self:end}@media(max-width:600px){.platform-workspace-view .auth-panel{width:calc(100vw - 24px)!important;margin:12px auto!important}.platform-workspace-view .auth-brand{flex-wrap:wrap;gap:10px}.platform-workspace-controls,.platform-simulation-controls{grid-template-columns:minmax(0,1fr)}.platform-simulation-controls .btn{justify-self:stretch}.platform-table-wrap{border-radius:10px}}';
-    document.head.appendChild(style);
-  }
-
   function esc(value){
     return String(value==null?'':value).replace(/[&<>"']/g,function(char){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];
@@ -96,7 +84,9 @@
   function renderBootstrap(){
     authShell(true);
     var view=authView();
-    view.className='platform-workspace-view';
+    /* Bootstrap registration is intentionally the regular auth panel. The
+     * fixed-height shell below is only for an authenticated Platform session. */
+    view.className='auth-view';
     view.setAttribute('aria-label','Create Platform Superadmin');
     view.innerHTML=`<section class="auth-panel" style="max-width:620px;width:min(620px,calc(100vw - 24px));margin:20px auto;">
       <div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>First-run Platform setup</small></span></div>
@@ -223,20 +213,21 @@
   function masterProvisioningMarkup(){
     var rows=(state.catalog||[]).map(function(item){
       var enabled=item.key!=='expenses_tax';
-      return `<label class="cap" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-provision-module="${esc(item.key)}" ${enabled?'checked':''}><span>${esc(item.name)}</span></label>`;
+      return `<label class="platform-module-option"><input type="checkbox" data-provision-module="${esc(item.key)}" ${enabled?'checked':''}><span>${esc(item.name)}</span></label>`;
     }).join('');
-    return `<section class="platform-provision-panel"><h2>Create Master</h2><p>Define the tenant group first. Commercial modules are independent from baseline Home, My Work, Admin, Settings and Account services.</p><form id="platformCreateMasterForm" class="auth-form">
-      ${provisioningInput('provisionMasterName','Master name')}${provisioningInput('provisionMasterLoginCode','Master login code')}
-      <div class="platform-provision-module-grid">${rows}</div><div class="auth-error" id="platformCreateMasterError" role="alert"></div><button class="btn primary" type="submit">Create Master</button>
+    return `<section class="platform-provision-panel"><div class="platform-panel-heading"><div><h2>Create Master</h2><p>Define the tenant group first. Commercial modules are independent from baseline Home, My Work, Admin, Settings and Account services.</p></div></div><form id="platformCreateMasterForm" class="auth-form">
+      <div class="platform-form-grid platform-master-identity">${provisioningInput('provisionMasterName','Master name')}${provisioningInput('provisionMasterLoginCode','Master login code')}</div>
+      <fieldset class="platform-module-selection"><legend>Commercial modules</legend><div class="platform-provision-module-grid">${rows}</div></fieldset>
+      <div class="platform-form-actions"><div class="auth-error" id="platformCreateMasterError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Create Master</button></div>
     </form></section>`;
   }
   function companyProvisioningMarkup(master){
     var needsMasterAdmin=!(master&&master.hasMasterAdmin);
-    return `<section class="platform-provision-panel"><h2>Create Company</h2><p>Company allocation is copied from the Master defaults. Tenant onboarding cannot choose commercial modules.</p><form id="platformCreateCompanyForm" class="auth-form">
-      ${provisioningInput('provisionCompanyName','Company name')}<div class="fld"><span>Country</span><select id="provisionCompanyCountry"><option value="SG">Singapore (SG)</option><option value="MY">Malaysia (MY)</option></select></div>
-      ${needsMasterAdmin?`<h3>Master Admin (first Company only)</h3>${provisioningInput('provisionMasterAdminName','Master Admin name')}${provisioningInput('provisionMasterAdminUsername','Master Admin username')}${provisioningInput('provisionMasterAdminEmail','Master Admin email','email')}${provisioningInput('provisionMasterAdminPassword','Master Admin password','password','new-password')}`:''}
-      <h3>Company Owner</h3>${provisioningInput('provisionCompanyOwnerName','Company Owner name')}${provisioningInput('provisionCompanyOwnerUsername','Company Owner username')}${provisioningInput('provisionCompanyOwnerEmail','Company Owner email','email')}${provisioningInput('provisionCompanyOwnerPassword','Company Owner password','password','new-password')}
-      <div class="auth-error" id="platformCreateCompanyError" role="alert"></div><button class="btn primary" type="submit">Create Company</button>
+    return `<section class="platform-provision-panel"><div class="platform-panel-heading"><div><h2>Create Company</h2><p>Company allocation is copied from the Master defaults. Tenant onboarding cannot choose commercial modules.</p></div></div><form id="platformCreateCompanyForm" class="auth-form">
+      <section class="platform-form-section"><h3>Company details</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyName','Company name')}<div class="fld"><span>Country</span><select id="provisionCompanyCountry"><option value="SG">Singapore (SG)</option><option value="MY">Malaysia (MY)</option></select></div></div></section>
+      ${needsMasterAdmin?`<section class="platform-form-section"><h3>Master Admin <small>(first Company only)</small></h3><div class="platform-form-grid">${provisioningInput('provisionMasterAdminName','Master Admin name')}${provisioningInput('provisionMasterAdminUsername','Master Admin username')}${provisioningInput('provisionMasterAdminEmail','Master Admin email','email')}${provisioningInput('provisionMasterAdminPassword','Master Admin password','password','new-password')}</div></section>`:''}
+      <section class="platform-form-section"><h3>Company Owner</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyOwnerName','Company Owner name')}${provisioningInput('provisionCompanyOwnerUsername','Company Owner username')}${provisioningInput('provisionCompanyOwnerEmail','Company Owner email','email')}${provisioningInput('provisionCompanyOwnerPassword','Company Owner password','password','new-password')}</div></section>
+      <div class="platform-form-actions"><div class="auth-error" id="platformCreateCompanyError" role="alert" tabindex="-1"></div><button class="btn primary" type="submit">Create Company</button></div>
     </form></section>`;
   }
   function provisioningMarkup(){
@@ -244,7 +235,7 @@
     return companyProvisioningMarkup(currentMaster());
   }
   function switchMarkup(){
-    return `<div class="platform-workspace-controls">
+    return `<div class="platform-workspace-controls platform-shell-toolbar">
       <label class="fld"><span>Master</span><select id="platformMasterSelect">${options(state.tenants,state.masterFn,'masterFn','name')}</select></label>
       <label class="fld"><span>Company</span><select id="platformCompanySelect">${options((currentMaster()||{}).companies||[],state.companyFn,'companyFn','name')}</select></label>
     </div>`;
@@ -258,9 +249,9 @@
       var row=allocation.get(item.moduleKey)||{};
       return `<tr data-module="${esc(item.moduleKey)}" data-version="${Number(row.version)||0}"><td><b>${esc(item.name)}</b></td><td>${item.masterEnabled?'Enabled':'Disabled'}</td><td><input class="platform-company-allocated" type="checkbox" ${row.companyAllocated?'checked':''}></td><td>${row.effectiveEnabled?'Enabled':'Disabled'}</td><td><button type="button" class="btn soft platform-save-company">Save</button></td></tr>`;
     }).join('');
-    return `<div class="platform-workspace-grid">
-      <section><h2>Master commercial entitlements</h2><p>Master state masks Company allocation; allocation is preserved while a Master module is disabled.</p><div class="platform-table-wrap"><table><thead><tr><th>Module</th><th>Enabled</th><th>Default new Company allocation</th><th></th></tr></thead><tbody>${masterRows}</tbody></table></div></section>
-      <section><h2>Company allocation</h2><p>${esc((currentCompany()||{}).name||state.companyFn)}. Effective access requires Master enabled and Company allocated.</p><div class="platform-table-wrap"><table><thead><tr><th>Module</th><th>Master</th><th>Allocated</th><th>Effective</th><th></th></tr></thead><tbody>${companyRows}</tbody></table></div></section>
+    return `<div class="platform-entitlement-grid">
+      <section class="platform-entitlement-card"><h2>Master commercial entitlements</h2><p>Master state masks Company allocation; allocation is preserved while a Master module is disabled.</p><div class="platform-table-wrap" tabindex="0"><table><thead><tr><th>Module</th><th>Enabled</th><th>Default new Company allocation</th><th></th></tr></thead><tbody>${masterRows}</tbody></table></div></section>
+      <section class="platform-entitlement-card"><h2>Company allocation</h2><p>${esc((currentCompany()||{}).name||state.companyFn)}. Effective access requires Master enabled and Company allocated.</p><div class="platform-table-wrap" tabindex="0"><table><thead><tr><th>Module</th><th>Master</th><th>Allocated</th><th>Effective</th><th></th></tr></thead><tbody>${companyRows}</tbody></table></div></section>
     </div>`;
   }
   function simulationMarkup(){
@@ -268,20 +259,19 @@
       <div class="platform-simulation-controls"><label class="fld"><span>Active tenant user</span><select id="platformSimulationTarget">${options(state.targets,'','userId','username')}</select></label><button class="btn primary" id="platformStartSimulation" type="button">Enter tenant simulation</button></div></section>`;
   }
   async function renderWorkspace(session){
-    ensureResponsiveStyles();
     state.session=session||await getSession();
     authShell(true);
     var view=authView();
     view.classList.add('platform-workspace-view');
     view.setAttribute('aria-label','Platform Superadmin workspace');
-    view.innerHTML=`<section class="auth-panel" style="max-width:1180px;width:min(1180px,calc(100vw - 32px));margin:20px auto;"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace</small></span><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></div><div class="auth-copy"><h1>Loading platform workspace…</h1></div></section>`;
+    view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1>Loading platform workspace…</h1></div></div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div></div></section>`;
     try{
       state.tenants=await request('entitlements');
       state.catalog=await request('module-catalog');
       state.masterFn=state.masterFn&&state.tenants.some(function(item){ return item.masterFn===state.masterFn; })?state.masterFn:(state.tenants[0]||{}).masterFn||'';
       await loadDetails();
       var hasCompany=Boolean(state.companyFn);
-      view.innerHTML=`<section class="auth-panel" style="max-width:1180px;width:min(1180px,calc(100vw - 32px));margin:20px auto;"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></div><div class="auth-copy"><h1>${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p></div>${state.masterFn?switchMarkup():''}<div class="auth-error" id="platformWorkspaceError" role="alert"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</section>`;
+      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1>${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p></div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div></section>`;
       wireWorkspace(view);
     }catch(error){ view.querySelector('.auth-copy').innerHTML=`<h1>Platform workspace unavailable</h1><p>${esc(error&&error.message||'Unable to load platform entitlement data.')}</p>`; }
   }
@@ -298,7 +288,7 @@
         var modules=Array.from(createMaster.querySelectorAll('[data-provision-module]')).map(function(input){ return {moduleKey:input.dataset.provisionModule,enabled:input.checked,defaultCompanyAllocated:input.checked}; });
         await request('masters',{method:'POST',headers:{'Idempotency-Key':'master-'+(crypto.randomUUID?crypto.randomUUID():Date.now())},body:{name:createMaster.querySelector('#provisionMasterName').value.trim(),loginCode:createMaster.querySelector('#provisionMasterLoginCode').value.trim(),modules:modules}});
         state.masterFn=''; state.companyFn=''; await renderWorkspace(state.session);
-      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Master creation failed.'; button.disabled=false; }
+      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Master creation failed.'; button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }
     });
     var createCompany=view.querySelector('#platformCreateCompanyForm');
     if(createCompany) createCompany.addEventListener('submit',async function(event){
@@ -309,7 +299,7 @@
         if(masterAdminName) body.masterAdmin={name:masterAdminName.value.trim(),username:createCompany.querySelector('#provisionMasterAdminUsername').value.trim(),email:createCompany.querySelector('#provisionMasterAdminEmail').value.trim(),password:createCompany.querySelector('#provisionMasterAdminPassword').value};
         await request('masters/'+encodeURIComponent(state.masterFn)+'/companies',{method:'POST',headers:{'Idempotency-Key':'company-'+(crypto.randomUUID?crypto.randomUUID():Date.now())},body:body});
         state.companyFn=''; await renderWorkspace(state.session);
-      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Company creation failed.'; button.disabled=false; }
+      }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Company creation failed.'; button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }
     });
     view.querySelectorAll('.platform-save-master').forEach(function(button){ button.addEventListener('click',async function(){
       var row=button.closest('tr'); button.disabled=true; setError('');
