@@ -1445,6 +1445,10 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
    tables from pushing actions below the viewport or making the auth page
    horizontally scrollable. Bootstrap registration deliberately remains a
    normal auth panel and is not covered by this scope. */
+.platform-demo-login{display:grid;gap:7px;margin:0 0 2px;padding:10px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));border-radius:var(--r-s);background:color-mix(in srgb,var(--accent-tint) 82%,var(--surface));}
+.platform-demo-login .btn{width:100%;justify-content:center;min-height:44px;}
+.platform-demo-login small{color:var(--muted);font-size:calc(11px * var(--fs,1));line-height:1.4;}
+.platform-demo-login code{font-size:.95em;}
 .platform-workspace-view{
   min-height:100dvh;
   display:grid;

@@ -112,6 +112,13 @@ body.auth-locked #scrim{display:none !important;}
 .auth-copy p{margin:8px 0 0;color:var(--muted);font-size:calc(13.5px * var(--fs,1));line-height:1.55;}
 .auth-form{display:flex;flex-direction:column;gap:13px;}
 .auth-form .btn{width:100%;justify-content:center;}
+.auth-password-control{display:flex;align-items:stretch;min-width:0;}
+.auth-password-control input{min-width:0;flex:1;border-radius:10px 0 0 10px;}
+.auth-password-toggle{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:70px;padding:0 10px;border:1px solid var(--border);border-left:0;border-radius:0 10px 10px 0;background:var(--surface-3);color:var(--muted);font-size:calc(12px * var(--fs,1));font-weight:600;line-height:1;transition:background .12s,color .12s,border-color .12s;}
+.auth-password-toggle:hover{background:var(--accent-tint);color:var(--accent);}
+.auth-password-toggle:focus-visible{position:relative;z-index:1;outline-offset:1px;}
+.auth-password-toggle-icon{display:inline-grid;place-items:center;}
+.auth-password-toggle-icon .ico{width:16px;height:16px;}
 .auth-remember{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:calc(12.5px * var(--fs,1));line-height:1.35;cursor:pointer;user-select:none;}
 .auth-remember input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--accent);}
 .auth-error{min-height:18px;color:var(--danger);font-size:calc(12.5px * var(--fs,1));font-weight:500;}

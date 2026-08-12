@@ -35,6 +35,19 @@
     if(!demoAutofillEnabled()||demoBannerDismissed()) return '';
     return `<aside class="platform-demo-banner" id="platformDemoBanner" role="status"><div><strong>Demo quick setup · sample accounts</strong><span>Sample accounts and passwords are public demo credentials. Do not use them for real business data.</span></div><button type="button" class="btn soft platform-demo-banner-close" id="platformDemoBannerDismiss">Dismiss</button></aside>`;
   }
+  function wirePasswordToggle(root,inputId,toggleId){
+    var input=root&&root.querySelector('#'+inputId);
+    var toggle=root&&root.querySelector('#'+toggleId);
+    if(!input||!toggle) return;
+    function update(visible){
+      input.type=visible?'text':'password';
+      toggle.setAttribute('aria-pressed',String(visible));
+      toggle.setAttribute('aria-label',visible?'Hide password':'Show password');
+      toggle.innerHTML=visible?'<span class="auth-password-toggle-icon">'+ic('eyeoff')+'</span><span>Hide</span>':'<span class="auth-password-toggle-icon">'+ic('eye')+'</span><span>Show</span>';
+    }
+    toggle.addEventListener('click',function(){ update(input.type!=='text'); });
+    update(false);
+  }
   function stepperMarkup(current){
     var labels=['Platform Superadmin','Master','Company & administrators'];
     var shortLabels=['Platform','Master','Company'];
@@ -231,9 +244,10 @@
       }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Platform bootstrap failed.'; submit.disabled=false; error.focus({preventScroll:true}); }
     });
   }
-  function renderLogin(initialRealm){
+  function renderLogin(initialRealm,setupStatus){
     authShell(true);
     var view=authView();
+    var demoPlatformLoginAvailable=demoAutofillEnabled()&&Boolean(setupStatus&&setupStatus.hasPlatformAdmin);
     view.setAttribute('aria-label','Sign in');
     view.innerHTML=`<section class="auth-panel">
       <div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Secure workspace</small></span></div>
@@ -246,13 +260,14 @@
         <div id="tenantCredentials">
           <div class="fld"><span>Organization code</span><input id="tenantOrganizationCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. ACME"></div>
           <div class="fld"><span>Username</span><input id="tenantUsername" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="e.g. admin"></div>
-          <label class="auth-remember"><input id="tenantRememberDevice" type="checkbox"><span>Remember this device (up to 30 days)</span></label>
         </div>
         <div id="platformCredentials" hidden>
+          ${demoPlatformLoginAvailable?`<div class="platform-demo-login"><button type="button" class="btn primary" id="platformDemoLoginButton">Log in as Platform Admin (Demo)</button><small>Uses the public <code>platform-admin</code> sample account. Demo only.</small></div>`:''}
           <div class="fld"><span>Platform principal key</span><input id="platformPrincipalKey" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="e.g. platform-admin"></div>
           <p class="auth-help">Platform sessions are limited to one hour. Remember Me is not available.</p>
         </div>
-        <div class="fld"><span>Password</span><input id="realmPassword" type="password" autocomplete="current-password"></div>
+        <div class="fld"><span>Password</span><div class="auth-password-control"><input id="realmPassword" type="password" autocomplete="current-password"><button type="button" class="auth-password-toggle" id="realmPasswordToggle" aria-controls="realmPassword" aria-label="Show password" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>Show</span></button></div></div>
+        <label class="auth-remember" id="tenantRememberDeviceRow" hidden><input id="tenantRememberDevice" type="checkbox"><span>Remember this device (up to 30 days)</span></label>
         <div class="auth-error" id="loginError" role="alert"></div>
         <button class="btn primary lg" type="submit">Sign in</button>
       </form>
@@ -263,6 +278,7 @@
       realm=next;
       view.querySelector('#tenantCredentials').hidden=realm!=='tenant';
       view.querySelector('#platformCredentials').hidden=realm!=='platform';
+      view.querySelector('#tenantRememberDeviceRow').hidden=realm!=='tenant';
       view.querySelectorAll('[data-realm]').forEach(function(button){
         var active=button.dataset.realm===realm;
         button.classList.toggle('active',active); button.setAttribute('aria-selected',String(active));
@@ -294,6 +310,16 @@
         location.reload();
       }catch(error){ setError(error&&error.message||'Sign in failed.'); submit.disabled=false; }
     });
+    var demoLogin=view.querySelector('#platformDemoLoginButton');
+    if(demoLogin) demoLogin.addEventListener('click',async function(){
+      setError('');
+      demoLogin.disabled=true;
+      try{
+        await request('login',{method:'POST',body:{principalKey:DEMO_DEFAULTS.bootstrap.principalKey,password:DEMO_DEFAULTS.bootstrap.password,rememberDevice:false}});
+        location.reload();
+      }catch(error){ setError(error&&error.message||'Demo Platform login failed.'); demoLogin.disabled=false; }
+    });
+    wirePasswordToggle(view,'realmPassword','realmPasswordToggle');
     toggle(realm);
   }
   function currentMaster(){ return state.tenants.find(function(item){ return item.masterFn===state.masterFn; })||null; }
@@ -307,7 +333,8 @@
   async function loadDetails(){
     if(!state.masterFn) return;
     var master=currentMaster();
-    if(master&&!(master.companies||[]).some(function(item){ return item.companyFn===state.companyFn; })) state.companyFn=(master.companies||[])[0]?.companyFn||'';
+    var companies=(master&&master.companies)||[];
+    if(master&&!companies.some(function(item){ return item.companyFn===state.companyFn; })) state.companyFn=companies[0]?.companyFn||'';
     var all=await Promise.all([
       request('masters/'+encodeURIComponent(state.masterFn)+'/modules'),
       state.companyFn?request('masters/'+encodeURIComponent(state.masterFn)+'/companies/'+encodeURIComponent(state.companyFn)+'/modules'):Promise.resolve([]),
@@ -328,24 +355,26 @@
       <fieldset class="platform-module-selection"><legend>Commercial modules</legend><div class="platform-provision-module-grid">${rows}</div></fieldset>
     </form></section>`;
   }
-  function companyProvisioningMarkup(master){
+  function companyProvisioningMarkup(master,hasExistingCompany){
     var needsMasterAdmin=!(master&&master.hasMasterAdmin);
-    return `<section class="platform-provision-panel"><div class="platform-panel-heading"><div><h2>Create Company</h2><p>Company allocation is copied from the Master defaults. Tenant onboarding cannot choose commercial modules.</p></div></div><form id="platformCreateCompanyForm" class="auth-form">
+    var title=hasExistingCompany?'Create another Company':'Create Company';
+    var intro=hasExistingCompany?'A Company already exists for this Master. Enter new unique Company and Owner details only if you want to create another one.':'Company allocation is copied from the Master defaults. Tenant onboarding cannot choose commercial modules.';
+    return `<section class="platform-provision-panel"><div class="platform-panel-heading"><div><h2>${title}</h2><p>${intro}</p></div></div><form id="platformCreateCompanyForm" class="auth-form">
       <section class="platform-form-section"><h3>Company details</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyName','Company name')}<div class="fld"><span>Country</span><select id="provisionCompanyCountry"><option value="SG">Singapore (SG)</option><option value="MY">Malaysia (MY)</option></select></div></div></section>
       ${needsMasterAdmin?`<section class="platform-form-section"><h3>Master Admin <small>(first Company only)</small></h3><div class="platform-form-grid">${provisioningInput('provisionMasterAdminName','Master Admin name')}${provisioningInput('provisionMasterAdminUsername','Master Admin username')}${provisioningInput('provisionMasterAdminEmail','Master Admin email','email')}${provisioningInput('provisionMasterAdminPassword','Master Admin password','password','new-password')}</div></section>`:''}
       <section class="platform-form-section"><h3>Company Owner</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyOwnerName','Company Owner name')}${provisioningInput('provisionCompanyOwnerUsername','Company Owner username')}${provisioningInput('provisionCompanyOwnerEmail','Company Owner email','email')}${provisioningInput('provisionCompanyOwnerPassword','Company Owner password','password','new-password')}</div></section>
     </form></section>`;
   }
-  function provisioningMarkup(){
+  function provisioningMarkup(hasExistingCompany){
     if(!state.masterFn) return masterProvisioningMarkup();
-    return companyProvisioningMarkup(currentMaster());
+    return companyProvisioningMarkup(currentMaster(),hasExistingCompany);
   }
-  function provisioningActionMarkup(){
+  function provisioningActionMarkup(hasExistingCompany){
     var masterStage=!state.masterFn;
     var formId=masterStage?'platformCreateMasterForm':'platformCreateCompanyForm';
     var errorId=masterStage?'platformCreateMasterError':'platformCreateCompanyError';
     var actionId=masterStage?'platformCreateMasterAction':'platformCreateCompanyAction';
-    var label=masterStage?'Next: Create Master':'Finish: Create Company';
+    var label=masterStage?'Next: Create Master':(hasExistingCompany?'Create another Company':'Finish: Create Company');
     return `<footer class="platform-shell-actionbar" id="platformProvisionActionbar" aria-label="Provisioning action"><div class="auth-error" id="${errorId}" role="alert" aria-live="assertive" tabindex="-1"></div><button class="btn primary" id="${actionId}" form="${formId}" type="submit">${label}</button></footer>`;
   }
   function switchMarkup(){
@@ -385,10 +414,18 @@
       state.catalog=await request('module-catalog');
       state.masterFn=state.masterFn&&state.tenants.some(function(item){ return item.masterFn===state.masterFn; })?state.masterFn:(state.tenants[0]||{}).masterFn||'';
       await loadDetails();
-      var hasCompany=Boolean(state.companyFn);
+      // Treat any Company returned for the selected Master as an existing
+      // continuation point, even if an older session restored an empty or
+      // stale companyFn. This keeps Demo autofill from repopulating a form
+      // with the same owner identity and turning a resume click into a
+      // duplicate-user error.
+      var selectedMaster=currentMaster();
+      var hasExistingCompany=Boolean(selectedMaster&&(selectedMaster.companies||[]).length);
+      if(hasExistingCompany&&!state.companyFn) state.companyFn=selectedMaster.companies[0].companyFn;
+      var hasCompany=Boolean(state.companyFn||hasExistingCompany);
       var stage=state.masterFn?(hasCompany?4:3):2;
-      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1 tabindex="-1">${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p>${stepperMarkup(stage)}${demoBannerMarkup()}</div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup()}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup()}</section>`;
-      if(!hasCompany) applyDemoDefaults(view,state.masterFn?'company':'master',state.masterFn?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
+      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1 tabindex="-1">${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p>${stepperMarkup(stage)}${demoBannerMarkup()}</div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup(hasExistingCompany)}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup(hasExistingCompany)}</section>`;
+      if(!hasCompany&&!hasExistingCompany) applyDemoDefaults(view,state.masterFn?'company':'master',state.masterFn?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
       restoreDraft(view,state.masterFn?'company':'master');
       wireWorkspace(view);
       var body=view.querySelector('.platform-shell-body');

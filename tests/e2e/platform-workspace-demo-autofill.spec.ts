@@ -182,8 +182,55 @@ async function main(): Promise<void> {
     await waitFor(page, '.platform-entitlement-grid');
     const companyForm = page.locator('#platformCreateCompanyForm');
     assert(await companyForm.count() === 1, 'existing-master company creation form disappeared');
-    assert(await page.locator('#provisionCompanyName').inputValue() === '', 'existing Company caused demo data to overwrite a new form');
+    assert(await page.locator('#provisionCompanyName').inputValue() === '', 'existing Company caused demo name to be injected into the next-company form');
+    assert(await page.locator('#provisionCompanyOwnerName').inputValue() === '', 'existing Company caused demo owner name to be injected into the next-company form');
+    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === '', 'existing Company caused demo owner username to be injected into the next-company form');
+    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === '', 'existing Company caused demo owner email to be injected into the next-company form');
+    assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'existing Company left a duplicate-provisioning error on reload');
+    assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create another Company', 'existing Company did not switch to the explicit create-another action');
     assert(await page.locator('.platform-step.complete').count() === 3, 'completed provisioning stepper did not mark all steps complete');
+
+    // Once a Platform principal exists, the Demo build offers a one-click
+    // Platform login. It still uses the normal password endpoint and session
+    // cookies; the shortcut only supplies the public sample credentials.
+    await page.locator('#platformLogoutBtn').click();
+    await waitFor(page, '#platformAwareLoginForm');
+    assert(await page.locator('#tenantRememberDeviceRow').isVisible(), 'tenant Remember Me row is not visible in tenant realm');
+    const rememberAfterPassword = await page.evaluate(() => {
+      const password = document.querySelector('#realmPassword');
+      const remember = document.querySelector('#tenantRememberDeviceRow');
+      return Boolean(password && remember && (password.compareDocumentPosition(remember) & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    assert(rememberAfterPassword, 'tenant Remember Me row is not below the password field');
+    await page.locator('#realmPasswordToggle').click();
+    assert(await page.locator('#realmPassword').getAttribute('type') === 'text', 'tenant password did not become visible');
+    assert(await page.locator('#realmPasswordToggle').getAttribute('aria-pressed') === 'true', 'tenant password toggle did not announce visible state');
+    await page.locator('#realmPasswordToggle').click();
+    assert(await page.locator('#realmPassword').getAttribute('type') === 'password', 'tenant password did not become hidden');
+    await page.locator('[data-realm="platform"]').click();
+    await waitFor(page, '#platformDemoLoginButton');
+    assert(await page.locator('#tenantRememberDeviceRow').isHidden(), 'Remember Me row is visible in Platform realm');
+    await page.locator('#realmPasswordToggle').click();
+    assert(await page.locator('#realmPassword').getAttribute('type') === 'text', 'Platform password did not become visible');
+    await page.locator('#realmPasswordToggle').click();
+    assert(await page.locator('#platformDemoLoginButton').innerText() === 'Log in as Platform Admin (Demo)', 'demo Platform login button copy is incorrect');
+    await page.locator('#platformDemoLoginButton').click();
+    await waitFor(page, '.platform-shell');
+
+    // A production-like build (or a Demo build with the flag overridden off)
+    // must not expose the shortcut, even when the database has a principal.
+    await page.locator('#platformLogoutBtn').click();
+    await waitFor(page, '#platformAwareLoginForm');
+    const productionContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await productionContext.addInitScript(() => {
+      (window as unknown as Record<string, unknown>).__ERP_PLATFORM_DEMO_AUTOFILL_OVERRIDE__ = false;
+    });
+    const productionPage = await productionContext.newPage();
+    await productionPage.goto(listening.baseUrl, { waitUntil: 'domcontentloaded' });
+    await waitFor(productionPage, '#platformAwareLoginForm');
+    await productionPage.locator('[data-realm="platform"]').click();
+    assert(await productionPage.locator('#platformDemoLoginButton').count() === 0, 'demo Platform login button rendered while autofill was disabled');
+    await productionContext.close();
     assert(browserErrors.length === 0, `platform demo autofill browser errors: ${browserErrors.join(' | ')}`);
 
     await context.close();

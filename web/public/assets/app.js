@@ -55,6 +55,19 @@ function isDemoSignedIn(){
   const s=demoAuthSession();
   return !!(s&&s.signedIn);
 }
+function wireAuthPasswordToggle(root,inputId,toggleId){
+  const input=root?.querySelector(`#${inputId}`);
+  const toggle=root?.querySelector(`#${toggleId}`);
+  if(!input||!toggle) return;
+  const update=(visible)=>{
+    input.type=visible?'text':'password';
+    toggle.setAttribute('aria-pressed',String(visible));
+    toggle.setAttribute('aria-label',visible?'Hide password':'Show password');
+    toggle.innerHTML=visible?`<span class="auth-password-toggle-icon">${ic('eyeoff')}</span><span>Hide</span>`:`<span class="auth-password-toggle-icon">${ic('eye')}</span><span>Show</span>`;
+  };
+  toggle.addEventListener('click',()=>update(input.type!=='text'));
+  update(false);
+}
 function setAuthShell(onLogin){
   const bootLoading=$('#bootLoadingView');
   if(bootLoading) bootLoading.remove();
@@ -217,8 +230,8 @@ function renderLogin(){
         ? `<div class="fld"><span>Organization code</span><input id="loginOrganizationCode" name="organizationCode" value="${esc(loginHint.organizationCode)}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. ACME"></div>
            <div class="fld"><span>Username</span><input id="loginUsername" name="username" value="${esc(loginHint.username)}" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="e.g. admin"></div>`
         : `<div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${esc(u.email)}"></div>`}
-      <div class="fld"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Account password'}"></div>
-      ${apiMode?`<label class="auth-remember"><input id="loginRememberDevice" type="checkbox" name="rememberDevice" ${rememberedLogin?'checked':''}><span>Remember this device (up to 30 days)</span></label>`:''}
+      <div class="fld"><span>Password</span><div class="auth-password-control"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Account password'}"><button type="button" class="auth-password-toggle" id="loginPasswordToggle" aria-controls="loginPassword" aria-label="Show password" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>Show</span></button></div></div>
+      ${apiMode?`<label class="auth-remember" id="loginRememberDeviceRow"><input id="loginRememberDevice" type="checkbox" name="rememberDevice" ${rememberedLogin?'checked':''}><span>Remember this device (up to 30 days)</span></label>`:''}
       <div class="auth-error" id="loginError" role="alert"></div>
       ${apiMode?'<p class="auth-help">Use the credentials created during first-run setup. The password is never stored in this browser.</p>':''}
       <button class="btn primary lg" type="submit">${ic('signout')}<span>Sign in</span></button>
@@ -308,6 +321,7 @@ function renderLogin(){
     }
     startDemoDatabaseReset();
   });
+  wireAuthPasswordToggle(auth,'loginPassword','loginPasswordToggle');
   setTimeout(()=>$(apiMode?'#loginOrganizationCode':'#loginPassword').focus(),60);
 }
 function renderEmployeeActivation(){
@@ -2217,7 +2231,7 @@ async function boot(){
   if(!signedIn){
     if(typeof window.erpDataMode==='function' && window.erpDataMode()==='api'
       && window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.renderLogin==='function'){
-      window.ErpPlatformWorkspace.renderLogin(setupStatus&&setupStatus.hasPlatformAdmin&&!setupStatus.hasTenantAdmin?'platform':'tenant');
+      window.ErpPlatformWorkspace.renderLogin(setupStatus&&setupStatus.hasPlatformAdmin&&!setupStatus.hasTenantAdmin?'platform':'tenant',setupStatus);
       return;
     }
     renderLogin();
