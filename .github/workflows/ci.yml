@@ -11,14 +11,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  unit-tests:
+    name: Vitest shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/4", "2/4", "3/4", "4/4"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run Vitest shard
+        run: npm test -- --shard=${{ matrix.shard }} --reporter=dot
+
   validate:
     name: Typecheck, transaction proof, and demo build
     runs-on: ubuntu-latest
-    # The repository-wide Vitest suite includes PGlite-backed integration
-    # coverage and takes more than 30 minutes on the hosted runner. Keep a
-    # bounded timeout while allowing the full source-of-truth test gate to
-    # finish instead of cancelling it mid-run.
-    timeout-minutes: 45
+    needs: unit-tests
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -69,9 +91,6 @@ jobs:
 
       - name: Check application permission registry and route contracts
         run: npm run check:permissions
-
-      - name: Run unit tests (confirmOrder, issueStock, effective-dated tax)
-        run: npm test
 
       - name: PostgreSQL 16 non-superuser security lifecycle proof
         env:
