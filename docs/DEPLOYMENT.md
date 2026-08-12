@@ -22,10 +22,10 @@ module entitlement, tenant-MAC retirement and the independent Platform Superadmi
 migration 0097 adds canonical Company Receipt mutation grants; migration 0098 adds the
 durable Master Admin identity, platform idempotency and existing-Superadmin tenant
 provisioning permission backfill. Application-only release does not apply migrations
-automatically. The target production deployment is currently verified through 0089 only;
-TASK-192 must apply 0090–0098 and re-apply production RLS before the reset. Production RLS
-includes the override/company tables; the application central evaluator remains
-authoritative for decision semantics.
+automatically. The target production deployment was advanced through 0098 on 2026-08-12
+and production RLS was re-applied before the authorized reset. Production RLS includes the
+override/company tables; the application central evaluator remains authoritative for
+decision semantics.
 
 Current TASK-175 evidence (2026-08-10): a disposable PostgreSQL 16 database passed
 `POSTGRES_URL=... npm run demo` (cross-engine parity and exactly-one-winner stock
@@ -264,6 +264,28 @@ The reset is destructive and recoverable only through the validated backups. The
 bootstrap's first-caller takeover window is accepted until the operator completes the
 first registration. Platform Superadmin remains password-only/no-MFA for v1; TASK-193
 email reset is blocked while `SMTP_HOST` is empty.
+
+### TASK-192 completion evidence (2026-08-12 UTC)
+
+The existing stack was migrated/released first and verified with migration journal 99,
+Master 1, Company 1, app users 3, employees 18, audit rows 207, health/root 200,
+legacy setup `410 legacy_setup_disabled` and non-empty public bootstrap
+`409 already_initialized`. Restore points are
+`output/pre-deploy-20260812T064439Z` and `output/post-deploy-20260812T065602Z`;
+the latter has a PostgreSQL custom dump, 2,867-line `pg_restore --list`, document-storage
+archive and isolated PostgreSQL restore counts Master 1 / Company 1 / app users 3. The
+earlier `output/pre-reset-20260812T000401Z` recovery point remains retained.
+
+Compose was stopped, labels were rechecked, and only `erp-system_pgdata` and
+`erp-system_document_storage` were removed. The recreated stack ran migrations and
+production RLS without seed. Final proof: 249 public tables, 221 forced-RLS tables,
+zero non-migration rows, zero document-storage entries, healthy services, local/public
+health and root 200, and setup status
+`requiresPlatformBootstrap:true, hasPlatformAdmin:false, hasMaster:false,
+hasCompany:false, hasTenantAdmin:false`. Desktop and 375px public browser checks had no
+console errors or overflow and showed Create Platform Superadmin. No real account was
+created. GitHub Actions Vitest shards passed 4/4; the validate job was blocked before
+startup by account billing, so that CI infrastructure limitation remains explicit.
 
 ### Auto-creating the database
 

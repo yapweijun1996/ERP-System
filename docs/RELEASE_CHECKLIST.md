@@ -32,17 +32,18 @@ section for the path you are releasing. Deployment mechanics live in
       layout or action contract failures in the 2026-08-10 run.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
-- [x] `npm run audit:i18n` — the full 2026-08-10 matrix passes 1,533 canonical keys /
-      69 local five-language packs across 128 routes × 5 languages × 2 viewports.
+- [x] `npm run audit:i18n` — the current canonical resources contain 1,545 keys / 72
+      local five-language packs; the full desktop matrix and targeted desktop/mobile
+      post-fix route checks pass. The latest CI validate job could not start because of
+      GitHub Actions account billing.
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — the permission
       registry check passes (314 codes; 116 resources; 62 actions; 5 updates), and the
       serial access-matrix audit passes (58 canonical route contracts × 12 role
       templates; 128 registered screens fail closed). The first parallel build attempt
       raced on shared `web/dist`; serial execution is the release evidence.
-- [x] `tasks/tasks.jsonl` statuses current: TASK-189–191 are source/test-complete,
-      TASK-192 is in progress and TASK-017/TASK-193 are blocked. The task index plus
-      `docs/STATUS.md` record the source/release evidence without treating deployment,
-      reset or missing SMTP as passed.
+- [x] `tasks/tasks.jsonl` statuses current: TASK-189–192 are done and TASK-017/TASK-193
+      are blocked. The task index plus `docs/STATUS.md` record the deployment, backup,
+      reset and missing-SMTP evidence; the CI billing limitation is explicit.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.
@@ -75,21 +76,21 @@ producing and verifying a distributable `web/dist/`.
 
 - [ ] `.env` prepared from `.env.example` on the target host (never committed);
       DB credentials are not defaults
-- [ ] **Backup first**: snapshot the `pgdata` volume / `pg_dump` before touching a
-      running deployment — this is the rollback point
+- [x] **Backup first**: snapshot the `pgdata` volume / `pg_dump` before touching a
+      running deployment — the pre-deploy and post-deploy dumps are the rollback points
 - [x] Build + start: `./deploy/release.sh` rebuilt and replaced only the application
-      containers; PostgreSQL was preserved.
-- [ ] Migrations: `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` applies all
-      committed migrations through 0098; production RLS is re-applied and no production
-      seed is run.
+      containers; PostgreSQL was preserved for the pre-reset verification.
+- [x] Migrations: `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh` applied all committed
+      migrations through 0098; production RLS was re-applied and no production seed was
+      run.
 - [x] TASK-175 cutover: backup first, migration 0089, Owner/legacy-assignment
       invariants and application-only release were verified on the target Compose DB.
-- [x] Health: Compose services are healthy; local and public `/health` return 200, the
-      public root returns 200 and unauthenticated `/api/auth/session` returns 401.
-- [ ] Auth sanity: existing `app_user` login remains usable before reset and public
-      bootstrap is rejected on the non-empty database; after reset
-      `GET /api/setup/status` → `requiresPlatformBootstrap: true` and the Platform
-      registration page is visible.
+- [x] Health: Compose services are healthy; local and public `/health` return 200 and the
+      public root returns 200.
+- [x] Auth/setup sanity: pre-reset counts remained usable, legacy setup returned 410 and
+      non-empty public bootstrap returned 409; after reset `GET /api/setup/status` returns
+      `requiresPlatformBootstrap: true` with no Master/Company/tenant admin and the
+      Platform registration page is visible.
 - [ ] One write-path probe in api mode (e.g. confirm a draft sales order) succeeds
       and posts balanced GL — stock/money writes never execute client-side
 - [ ] Rollback plan confirmed before you walk away: previous image tags still
@@ -134,13 +135,15 @@ authorize production deployment.
 - [x] Migration/generated-artifact proof: migration 0098, PGlite schema version 98,
       `check:demo-schema`, `check:drift`, permission registry, root/Web typecheck, lint
       and API/Demo builds pass.
-- [ ] Push the scoped first commit and wait for CI before touching production.
-- [ ] Apply 0098/RLS and verify existing data remains usable, health is 200 and public
+- [x] Push the scoped commits; all four Vitest CI shards passed. The validate job was
+      blocked before startup by GitHub Actions account billing, which is recorded rather
+      than treated as a test pass.
+- [x] Apply 0098/RLS and verify existing data remains usable, health is 200 and public
       bootstrap rejects non-empty data.
-- [ ] Create a new UTC PostgreSQL custom dump, validate `pg_restore --list`, perform an
+- [x] Create UTC PostgreSQL custom dumps, validate `pg_restore --list`, perform an
       isolated restore rehearsal, archive document storage and retain the prior backup.
-- [ ] Stop Compose, delete only `erp-system_pgdata` and `erp-system_document_storage`,
+- [x] Stop Compose, delete only `erp-system_pgdata` and `erp-system_document_storage`,
       recreate/migrate/RLS with no seed, verify empty tables/storage/schema/RLS and leave
       the site on Create Platform Superadmin without creating a real account.
-- [ ] Record final reset evidence in TASK-192/STATUS/DEPLOYMENT/PROJECT_LOGIC and the
+- [x] Record final reset evidence in TASK-192/STATUS/DEPLOYMENT/PROJECT_LOGIC and the
       existing KB item; leave TASK-193 blocked while SMTP is unset.

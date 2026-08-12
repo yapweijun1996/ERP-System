@@ -575,6 +575,11 @@ AND permission AND scope AND workflow authority`; Platform Superadmin privileges
 enter a simulation target. Migration 0098 adds the provisioning tables and backfills
 `platform.tenants.read/manage` for existing Superadmins.
 
-TASK-189–191 are source/test-complete. TASK-192 remains operationally open until deployment
-and the authorized exact-volume production reset are proven; TASK-193 is blocked on
-missing SMTP. This current logic is not a claim that production has already been cleared.
+TASK-189–192 are complete. On 2026-08-12 migration 0098/RLS and the application release
+were verified against the existing data, restore-tested backups were retained, and only
+`erp-system_pgdata` plus `erp-system_document_storage` were removed before recreating the
+stack without seed. The final database has 249 public tables, 221 forced-RLS tables, zero
+non-migration rows and empty document storage; health/root are 200 and setup status is
+`requiresPlatformBootstrap:true`. The public browser shows Create Platform Superadmin and
+no real account was created. TASK-193 remains blocked on missing SMTP; CI Vitest shards
+passed 4/4 but the validate job was prevented from starting by GitHub Actions billing.

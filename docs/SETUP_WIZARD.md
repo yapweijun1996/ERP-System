@@ -155,5 +155,6 @@ After registration:
 Master Admin is limited to dashboard, company switching, user/role/audit/settings
 administration. It cannot use commercial modules, workflows, payments, payroll, MAC,
 support, simulation or any `platform.*` permission. TASK-193 (email reset) remains
-blocked while production SMTP is unset. TASK-192 owns deployment and the final reset;
-this document must not be read as proof that production has already been cleared.
+blocked while production SMTP is unset. TASK-192 completed the 2026-08-12 deployment and
+exact-volume reset; production is intentionally waiting on the first Platform Superadmin
+registration and no real account was created.

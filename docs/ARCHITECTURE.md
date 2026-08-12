@@ -263,13 +263,13 @@ The first request creates no `app_user` and no `erp_session`; setup-state counts
 the public route permanently after the claim. `master_admin_account` is the cross-Company
 identity pointer, but each runtime authorization check still uses ordinary Company
 membership and active Company scope. `platform_idempotency` prevents duplicate Master/
-Company effects without storing credentials. Migration 0098 is shared with PGlite and
-must be applied before production RLS is re-applied.
+Company effects without storing credentials. Migration 0098 is shared with PGlite and was
+applied before production RLS was re-applied in the 2026-08-12 deployment/reset.
 
 The shared login has tenant and Platform realms. Platform Superadmin can manage MAC only
 from the Platform workspace and can simulate a target tenant user only for that user's
 exact permissions/scope/workflow authority. The tenant formula remains:
 `authenticated target user AND Master entitlement AND Company allocation AND permission
 AND scope AND workflow authority`. No platform role is merged into a simulated tenant
-request. TASK-192 remains the operational boundary: current code/tests are not proof that
-the production database has been reset.
+request. TASK-192 is complete: only the two named ERP volumes were reset without seed, and
+production now ends at the empty-database Platform Superadmin registration page.

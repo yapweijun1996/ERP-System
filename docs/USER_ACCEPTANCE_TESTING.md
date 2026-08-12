@@ -271,8 +271,8 @@ criteria and must not be inferred from that automated evidence.
 ## Platform bootstrap and provisioning acceptance (EPIC-065)
 
 The following is the current release checklist. Source/API/browser checks marked complete
-are evidence for TASK-189–191; production and destructive reset checks remain pending in
-TASK-192 and must be executed only after the deploy/backup gate.
+are evidence for TASK-189–192. Production deployment, restore-tested backups and the exact
+destructive reset were completed on 2026-08-12; no real Platform Superadmin account was created.
 
 - [x] Fresh empty database shows Create Platform Superadmin; first registration creates
       only an independent platform principal/session and auto-enters Platform workspace.
@@ -285,12 +285,18 @@ TASK-192 and must be executed only after the deploy/backup gate.
       support, simulation and `platform.*`; Company Owner MAC mutation is denied.
 - [x] Idempotency, duplicate code/email/username, dependency conflict, CSRF, request ID,
       audit and generated migration/schema checks pass.
-- [ ] Deploy migration 0098/RLS to the existing production stack and verify old data,
-      public bootstrap rejection and application health.
-- [ ] Make a timestamped custom PostgreSQL dump plus `pg_restore --list` and isolated
+- [x] Deploy migration 0098/RLS to the existing production stack and verify old data,
+      legacy/public bootstrap rejection and application health.
+- [x] Make timestamped custom PostgreSQL dumps plus `pg_restore --list` and isolated
       restore rehearsal; archive document storage and retain the earlier backup.
-- [ ] Delete only `erp-system_pgdata` and `erp-system_document_storage`, recreate without
+- [x] Delete only `erp-system_pgdata` and `erp-system_document_storage`, recreate without
       seed, verify empty data/storage and intact schema/RLS, and leave the site on the
       first Platform Superadmin registration page without creating a real account.
-- [ ] Keep administrator email reset explicitly deferred while `SMTP_HOST` is empty;
+- [x] Keep administrator email reset explicitly deferred while `SMTP_HOST` is empty;
       password-only/no-MFA and first-caller bootstrap risks remain documented.
+
+The final reset proof found 249 public tables, 221 forced-RLS tables, zero non-migration
+rows and zero document-storage entries. Local/public health and root returned 200; the
+public desktop and 375px browser checks showed Create Platform Superadmin with no console
+errors or horizontal overflow. All four Vitest shards passed; the CI validate job was not
+started because GitHub Actions account billing blocked it.

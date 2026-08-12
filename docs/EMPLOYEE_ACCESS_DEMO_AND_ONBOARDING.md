@@ -231,6 +231,6 @@ Master Admin is an immutable system role with only dashboard, company switch, us
 audit and settings permissions. It is not a business administrator, approver, payer,
 payroll operator, support operator, simulator or Platform Superadmin. Company Owner keeps
 the current explicit tenant bundle and remains unable to read or mutate MAC. TASK-193
-email reset is blocked while SMTP is unset; TASK-192 owns deployment and the final data
-reset, so this document records the implementation contract rather than claiming that
-production is already empty.
+email reset is blocked while SMTP is unset; TASK-192 completed the deployment and exact
+volume reset on 2026-08-12. Production is now empty with schema/RLS intact and waits at
+the first Platform Superadmin registration page; no real account was created.

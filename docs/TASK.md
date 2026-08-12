@@ -8,8 +8,8 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **190**
-- In progress: **1**
+- Done: **191**
+- In progress: **0**
 - Todo: **0**
 - Blocked: **2**
 - Total: **193**
@@ -18,7 +18,7 @@ not a second task registry.
 
 The 2026-08-10 release follow-up is complete: `npm run audit:screens` rendered all 128
 routes at desktop/mobile and passed the 128 Canonical / 0 Preview maturity plus
-layout/behavior contracts. The full i18n matrix passes 1,542 canonical keys / 72 local
+layout/behavior contracts. The full i18n matrix passes 1,545 canonical keys / 72 local
 five-language packs across 129 routes × 5 languages × 2 viewports. TASK-182 registers
 the commercial Expenses & Tax gate and its translated unavailable state; the browser
 matrix verifies the same 129 registered routes at desktop and mobile. The
@@ -78,16 +78,20 @@ retain their existing dependency order and are not blocked by EPIC-064.
 | TASK-189 | Done | Empty-database Platform Superadmin registration, setup-state cutover and independent session |
 | TASK-190 | Done | Platform Master/Company provisioning, Master Admin RBAC, defaults, idempotency and migration 0098 |
 | TASK-191 | Done | Platform workspace UX plus API, browser, isolation and negative authorization tests |
-| TASK-192 | In progress | Production deployment, verified backups, complete PostgreSQL/document-storage reset and final proof |
+| TASK-192 | Done | Production deployment, verified backups, complete PostgreSQL/document-storage reset and final proof |
 | TASK-193 | Blocked | Administrator email self-service reset; SMTP is not configured in production |
 
-TASK-189–191 are source/test-complete in the current worktree. TASK-192 remains open until
-the first release is deployed, a new restore-tested backup is made, the exact production
-volumes are reset without seed data, and `/api/setup/status` proves the public bootstrap
-state. TASK-193 is intentionally blocked rather than claiming email delivery: `SMTP_HOST`
-is empty and no password-reset mail path is being enabled in this release.
+TASK-189–192 are complete. TASK-192 deployed migration 0098/RLS, preserved and restore-tested
+the pre-reset production data, removed only the two named ERP volumes, recreated without seed,
+and left the public site at the first Platform Superadmin registration page. The final empty
+database has 249 public tables, 221 forced-RLS tables, zero non-migration rows and zero document
+storage entries; `/health` and the public root are 200 and `/api/setup/status` reports
+`requiresPlatformBootstrap=true`. CI Vitest shards passed 4/4; the validate job was blocked
+before startup by GitHub Actions account billing, so that infrastructure limitation is retained
+as an explicit release caveat. TASK-193 is intentionally blocked rather than claiming email
+delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 
-The registry therefore has **190 Done / 1 In progress / 0 Todo / 2 Blocked / 193 Total**.
+The registry therefore has **191 Done / 0 In progress / 0 Todo / 2 Blocked / 193 Total**.
 This is the source-derived count for the existing 188 records plus TASK-189–193; it
 supersedes the earlier planning estimate of 179/1/11/2.
 

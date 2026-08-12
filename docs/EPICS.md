@@ -77,8 +77,8 @@ Acceptance criteria:
       retained for compatibility, while EPIC-065 now exposes staged
       `requiresPlatformBootstrap/hasPlatformAdmin/hasMaster/hasCompany/hasTenantAdmin`
       state and the API-mode boot routes a truly empty database to independent Platform
-      Superadmin registration. Verified source/test behavior; production reset proof is
-      tracked by TASK-192.
+      Superadmin registration. Verified source/test behavior and the 2026-08-12
+      production reset proof is recorded by TASK-192.
 
 ## EPIC-005 — Production API And Docker ✅
 
@@ -2531,11 +2531,12 @@ endpoint: Demo/PGlite keeps its local setup compatibility, while production requ
 empty database to be claimed by exactly one Platform Superadmin before a Master or
 Company can exist.
 
-Current implementation boundary (2026-08-12): TASK-189–191 are source/test-complete in
-the worktree; TASK-192 is still in progress because deployment, restore-tested backup and
-the destructive production reset have not yet been performed. `GET /api/setup/status`
-reports `requiresPlatformBootstrap`, `hasPlatformAdmin`, `hasMaster`, `hasCompany`,
-`hasTenantAdmin` and `isFreshDatabase`. The public bootstrap creates only a
+Current implementation boundary (2026-08-12): TASK-189–192 are complete. Migration 0098,
+production RLS and application release were verified against the old data, restore-tested
+backups were retained, and the authorized exact-volume reset was completed without seed.
+`GET /api/setup/status` now reports `requiresPlatformBootstrap:true`,
+`hasPlatformAdmin:false`, `hasMaster:false`, `hasCompany:false`, `hasTenantAdmin:false`
+and `isFreshDatabase:true` in production. The public bootstrap creates only a
 `platform_principal`, independent password/session cookies and an append-only
 `__platform__` audit event. It never creates an `app_user` or `erp_session`.
 
@@ -2565,10 +2566,12 @@ Approved flow:
 | TASK-189 | Done | First Platform Superadmin registration and setup-state cutover |
 | TASK-190 | Done | Master/Company provisioning, Master Admin RBAC, migration 0098 and defaults |
 | TASK-191 | Done | Workspace UX, API/idempotency, browser/security/negative tests |
-| TASK-192 | In progress | Deploy, backup/restore rehearsal, exact-volume reset and final production evidence |
+| TASK-192 | Done | Deploy, backup/restore rehearsal, exact-volume reset and final production evidence |
 | TASK-193 | Blocked | Three administrator email self-service reset; SMTP is not configured |
 
-Exit criteria for EPIC-065 are not yet met until TASK-192 proves migration 0098 and
-production RLS on the deployed release, verifies health and setup status after clearing
-only `erp-system_pgdata` and `erp-system_document_storage`, and leaves the public site
-on the first Platform Superadmin registration page without creating a real account.
+Exit criteria for EPIC-065 are met: TASK-192 proves migration 0098 and production RLS on
+the deployed release, preserves old data before the reset, validates custom dumps and an
+isolated restore, clears only `erp-system_pgdata` and `erp-system_document_storage`,
+recreates without seed, and leaves the public site on the first Platform Superadmin
+registration page without creating a real account. TASK-193 remains blocked while SMTP is
+unset; GitHub Actions validate could not start because account billing blocked the job.
