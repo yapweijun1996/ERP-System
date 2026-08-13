@@ -51,7 +51,7 @@ This avoids surprise reloads in the middle of an ERP workflow.
 Service worker file: `web/public/sw.js`.
 
 The source-of-truth cache identifier at this review boundary is
-`erp-system-pwa-v261` in both `web/public/sw.js` and
+`erp-system-pwa-v262` in both `web/public/sw.js` and
 `web/public/assets/pwa.js`. A cache number proves source consistency only; it does not
 prove that the same revision has reached a hosted environment.
 

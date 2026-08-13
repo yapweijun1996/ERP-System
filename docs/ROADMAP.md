@@ -1230,7 +1230,7 @@ more module breadth. The source-backed review is
 
 1. **Truth sync** (TASK-194 done): current inventory is 99 migrations/schema v98/249
    tables, 129 Canonical routes with 128 API metadata routes, 1,545 i18n keys/72 packs,
-   314 permission codes and PWA v261. Historical test/deploy checkpoints remain dated.
+   314 permission codes and PWA v262. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 todo): deploy explicit non-superuser/non-BYPASSRLS
    runtime roles and prove current Platform bootstrap → Master → Company provisioning
    under FORCE RLS with exact transaction-local tenant context.

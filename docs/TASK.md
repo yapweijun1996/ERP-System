@@ -20,7 +20,7 @@ TASK-194 audited HEAD `00e2533`. Final review also observed and preserved user-o
 uncommitted Platform workspace transition-state/E2E edits; they are source-present but
 were not included in the focused pass or any deployment claim. Current inventory is 99 migrations through 0098,
 schema v98/249 tables, 129 Canonical / 0 Preview routes, 128 routes declaring API mode,
-1,545 English i18n keys/72 local packs, 314 permission codes and PWA v261. The sole
+1,545 English i18n keys/72 local packs, 314 permission codes and PWA v262. The sole
 Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
 tests; this is not a pass result. Dated TASK-183 129-route browser evidence and earlier
 168-file/663-test evidence remain historical checkpoints. This review passed static
