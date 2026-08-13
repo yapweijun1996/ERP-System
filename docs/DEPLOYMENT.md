@@ -347,6 +347,29 @@ public browser visibly shows Create Platform Superadmin with the Demo-only sampl
 No account was created by this reset. The hosted Demo flag remains enabled for this
 handoff and must be set to `false` before any real customer deployment.
 
+### Platform provisioning-progress application release (2026-08-13)
+
+Commit `a5f1a3b` was pushed to `main` and released with `./deploy/release.sh`. This was an
+application-only release: only `api`, `web` and `calendar-worker` were rebuilt/replaced;
+no migration, seed, database reset or volume operation ran. Read-only PostgreSQL counts
+were identical before and after release: migration journal 99, Platform principal 1,
+Master 1, Company 2 and tenant users 3. Public `/health` and `/` returned 200 and the
+served HTML referenced `platform-progress-v1` assets.
+
+The authenticated live browser at 1255×872 showed `Platform tenant control` with no
+completed provisioning-progress DOM, no automatic Company form/action bar, a visible
+Master/Company toolbar and `+ Create Company`; the shell measured 80vh with zero document
+overflow. At 390×844, the shell used the available mobile viewport, the toolbar collapsed
+to one column, the Company trigger retained a 44px touch target, the body remained the
+internal scroll region and there was no horizontal overflow or console error. The
+production counts and existing Companies were not changed by smoke testing.
+
+GitHub Actions run `31672873423` is not test evidence: all four Vitest shards failed with
+zero steps because recent account payments failed or the spending limit must be raised,
+and the aggregate job was skipped. Local gates for this commit passed both typechecks,
+lint, permission registry, API and Demo builds, isolated Platform layout/autofill E2E,
+the full 129-route desktop/mobile screen audit and the workspace audit.
+
 ### Auto-creating the database
 
 PostgreSQL's official image auto-creates the database named by `POSTGRES_DB` on first
