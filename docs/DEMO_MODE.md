@@ -269,7 +269,11 @@ selected Master and next Company ordinal, so user edits survive ordinary rerende
 and Master switches without leaking into another tenant group. Successful creation selects
 the API-returned `companyFn`, closes the panel and does not expose the next draft until a new
 explicit open. The focused PGlite E2E proves those transitions, disabled-flag behavior and
-single-request idempotency; hosted deployment evidence remains an explicit release-time check.
+single-request idempotency. The 2026-08-13 application-only release at `dff72c3` preserved
+the production counts (99 migrations, 1 Platform principal, 1 Master, 2 Companies and 3
+tenant users); public health returned 200. Live read-only smoke confirmed closed control,
+explicit Company 3 autofill, editable fields, Cancel focus return and zero horizontal
+overflow without sending the final Company mutation.
 
 The hosted API Demo remains distinct from the static PGlite Demo. Public sample
 credentials and autofill must be disabled for a customer deployment, and neither mode

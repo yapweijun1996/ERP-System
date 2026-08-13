@@ -180,7 +180,9 @@ the inline panel derives a new editable identity set: Company 2 uses the Malaysi
 later Companies use ordinal names and Owner identities. Cancel is mutation-free and retains
 the Master-plus-ordinal in-memory draft; success closes the panel and selects the returned
 `companyFn`. Builds with the Demo flag off keep the explicitly opened form manual. These
-source/test facts are not by themselves a claim that the exact HEAD is deployed.
+source/test facts were deployed application-only at `dff72c3` on 2026-08-13. Pre/post
+production counts remained 99 migrations, 1 Platform principal, 1 Master, 2 Companies and
+3 tenant users; live smoke opened and cancelled the Company 3 draft without a mutation.
 
 ### Production RLS provisioning gate
 

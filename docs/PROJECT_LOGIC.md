@@ -560,6 +560,15 @@ closes the panel without opening the next one. The flag changes no API contract,
 transaction or audit rule, and disabled builds keep explicitly opened forms blank. Master
 and Company mutations retain separate stable form-fingerprint Idempotency-Key values.
 
+Deployment proof (2026-08-13): application commit `dff72c3` was released with
+`./deploy/release.sh` only. Migrations, Platform principal, Master, Company and tenant-user
+counts remained `99 / 1 / 1 / 2 / 3`; local and public health returned 200 and the hosted
+HTML referenced the opt-in asset version. Live read-only smoke confirmed the closed CONTROL
+DOM, editable Company 3 defaults, heading/opener focus transfer, Cancel cleanup and zero
+horizontal overflow. No Company create request was submitted. GitHub Actions run
+`31670650565` ran zero test steps because account billing/spending blocked every shard, so
+the passing local gates—not that run—are the test evidence.
+
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |
 | Platform entitlement foundation | `moduleCatalog.ts`, `platformEntitlement.ts`, migration 0094 and focused tests | TASK-185 done |
