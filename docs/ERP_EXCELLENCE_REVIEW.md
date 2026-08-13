@@ -18,7 +18,7 @@ current built/tested/deployed status; [SPEC.md](SPEC.md) owns binding requiremen
 | Access model | 59 route contracts; 13 active role templates; Company Owner 115 permissions; Master Admin 10 | Current source inventory |
 | Automated tests | 170 files / 666 tests collected | Collection count only; do not describe it as passed |
 | Focused review proof | 7 files / 22 tests passed | Company Receipts, Receipt Pack, Platform support/provisioning/simulation |
-| PWA | cache version v261 | Current service-worker source |
+| PWA | cache version v262 | Current service-worker source |
 | Tasks after this review | 205 total: 192 Done / 0 In progress / 10 Todo / 3 Blocked | TASK-017, TASK-193 and TASK-203 are blocked |
 
 Historical checkpoints such as 128 routes, 1,533 keys, 69 packs, 168 files/663 tests,

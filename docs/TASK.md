@@ -18,7 +18,7 @@ not a second task registry.
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 100 migrations
 through 0099, schema v99/252 tables, 129 Canonical / 0 Preview routes, 128 routes declaring
-API mode, 1,545 English i18n keys/72 local packs, 315 permission codes and PWA v261. The sole
+API mode, 1,545 English i18n keys/72 local packs, 315 permission codes and PWA v262. The sole
 Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
 Vitest run at 169 files / 672 tests with one intentional file/test skip. Current source
