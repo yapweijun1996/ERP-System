@@ -106,10 +106,14 @@ async function main(): Promise<void> {
     })));
     const page = await context.newPage();
     const browserErrors: string[] = [];
+    let entitlementPatchCount = 0;
     page.on('console', (message) => {
-      if (message.type() === 'error' && !/status of 401 \(Unauthorized\)/.test(message.text())) browserErrors.push(message.text());
+      if (message.type() === 'error' && !/status of (401 \(Unauthorized\)|409 \(Conflict\))/.test(message.text())) browserErrors.push(message.text());
     });
     page.on('pageerror', (error) => browserErrors.push(error.message));
+    page.on('request', (request) => {
+      if (request.method() === 'PATCH' && /\/api\/platform\/masters\/.*\/modules\//.test(request.url())) entitlementPatchCount += 1;
+    });
 
     await page.goto(listening.baseUrl, { waitUntil: 'networkidle' });
     await page.locator('#platformCreateMasterForm').waitFor({ state: 'visible', timeout: TIMEOUT });
@@ -225,16 +229,138 @@ async function main(): Promise<void> {
       }),
     });
     assert(companyResponse.status === 201, `layout company creation failed with HTTP ${companyResponse.status}`);
+    const company = (await companyResponse.json()).data as { companyFn: string };
 
     await page.reload({ waitUntil: 'networkidle' });
-    await page.locator('.platform-entitlement-grid').waitFor({ state: 'visible', timeout: TIMEOUT });
+    await page.locator('.platform-entitlement-workspace').waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(await page.locator('.platform-entitlement-workspace').count() === 1, 'completed workspace did not render one full-width entitlement workspace');
+    assert(await page.locator('#platformMasterTab').getAttribute('aria-selected') === 'true', 'Master controls is not the default entitlement tab');
+    assert(await page.locator('#platformCompanyPanel').isHidden(), 'inactive Company allocation panel is not hidden');
+
+    for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768]] as const) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(40);
+      const metrics = await page.evaluate(() => {
+        const workspace = document.querySelector<HTMLElement>('.platform-entitlement-workspace');
+        const body = document.querySelector<HTMLElement>('.platform-shell-body');
+        const wrapper = document.querySelector<HTMLElement>('#platformMasterPanel .platform-table-wrap');
+        const row = document.querySelector<HTMLElement>('#platformMasterPanel tbody tr');
+        const action = row?.querySelector<HTMLElement>('td:last-child');
+        if (!workspace || !body || !wrapper || !row || !action) return null;
+        return {
+          workspaceWidth: workspace.getBoundingClientRect().width,
+          bodyWidth: body.getBoundingClientRect().width,
+          wrapperOverflow: wrapper.scrollWidth - wrapper.clientWidth,
+          rowDisplay: getComputedStyle(row).display,
+          actionRight: action.getBoundingClientRect().right,
+          workspaceRight: workspace.getBoundingClientRect().right,
+          outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        };
+      });
+      assert(metrics, `desktop entitlement metrics missing at ${width}x${height}`);
+      assert(metrics.workspaceWidth <= metrics.bodyWidth + 1, `entitlement workspace exceeded body width at ${width}x${height}`);
+      assert(metrics.wrapperOverflow <= 1, `desktop entitlement table overflowed horizontally at ${width}x${height}`);
+      assert(metrics.rowDisplay === 'table-row', `desktop entitlement rows are not table rows at ${width}x${height}`);
+      assert(metrics.actionRight <= metrics.workspaceRight + 1, `desktop entitlement action column is clipped at ${width}x${height}`);
+      assert(metrics.outerWidth <= 1, `desktop entitlement workspace overflowed the document at ${width}x${height}`);
+    }
+
+    const masterSearch = page.locator('#platformMasterPanel .platform-module-search');
+    await masterSearch.fill('expenses_tax');
+    assert(await page.locator('#platformMasterPanel tbody tr:not([hidden])').count() === 1, 'Master module search did not filter client-side');
+    await masterSearch.fill('');
+    await page.locator('#platformMasterPanel .platform-module-filter').selectOption('enabled');
+    assert(await page.locator('#platformMasterPanel tbody tr:not([hidden])').count() > 0, 'Master status filter returned no enabled modules');
+    await page.locator('#platformMasterPanel .platform-module-filter').selectOption('all');
+
+    const masterRow = page.locator('#platformMasterPanel tbody tr[data-module="expenses_tax"]');
+    const masterSave = masterRow.locator('.platform-save-master');
+    const initialMasterVersion = Number(await masterRow.getAttribute('data-version'));
+    await masterRow.locator('label.platform-switch').first().click();
+    assert(entitlementPatchCount === 0, 'changing a Master switch sent a mutation before Save');
+    assert(await masterRow.getAttribute('class') === 'is-dirty', 'changed Master row is not marked dirty');
+    assert(await masterSave.isEnabled(), 'changed Master row did not enable Save');
+    await page.locator('.platform-shell').evaluate((node) => { (node as HTMLElement).dataset.testIdentity = 'preserved'; });
+    await masterSave.click();
+    await masterRow.locator('.platform-row-feedback').filter({ hasText: 'Saved' }).waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(entitlementPatchCount === 1, 'Master Save did not send exactly one PATCH');
+    assert(Number(await masterRow.getAttribute('data-version')) === initialMasterVersion + 1, 'Master Save did not update the row version');
+    assert(await page.locator('.platform-shell').getAttribute('data-test-identity') === 'preserved', 'Master Save re-rendered the workspace shell');
+    assert(await masterRow.locator('.platform-row-feedback').evaluate((node) => node === document.activeElement), 'Master Save did not move focus to the saved row status');
+    assert(await masterSave.isDisabled(), 'saved Master row is still dirty');
+
+    await masterRow.locator('label.platform-switch').first().click();
+    const patchCountBeforeReset = entitlementPatchCount;
+    await masterRow.locator('.platform-reset-master').click();
+    assert(entitlementPatchCount === patchCountBeforeReset, 'Master Reset sent an API mutation');
+    assert(await masterSave.isDisabled(), 'Master Reset did not restore the saved baseline');
+
+    await masterRow.locator('label.platform-switch').first().click();
+    page.once('dialog', async (dialog) => { assert(dialog.message() === 'You have unsaved module changes. Discard them?', 'unexpected dirty-navigation prompt'); await dialog.dismiss(); });
+    await page.locator('#platformCompanyTab').click();
+    assert(await page.locator('#platformMasterTab').getAttribute('aria-selected') === 'true', 'dismissed dirty-navigation prompt changed tabs');
+    assert(await masterRow.getAttribute('class') === 'is-dirty', 'dismissed dirty-navigation prompt discarded the row');
+    page.once('dialog', async (dialog) => { await dialog.accept(); });
+    await page.locator('#platformCompanyTab').click();
+    assert(await page.locator('#platformCompanyTab').getAttribute('aria-selected') === 'true', 'accepted dirty-navigation prompt did not change tabs');
+    assert(await page.locator('#platformMasterPanel').isHidden(), 'inactive Master panel remains visible');
+    await page.locator('#platformCompanyTab').press('ArrowLeft');
+    assert(await page.locator('#platformMasterTab').getAttribute('aria-selected') === 'true', 'tab keyboard navigation did not return to Master controls');
+    assert(await page.locator('#platformMasterTab').evaluate((node) => node === document.activeElement), 'tab keyboard navigation did not move focus');
+    await page.locator('#platformCompanyTab').click();
+
+    const companyRow = page.locator('#platformCompanyPanel tbody tr[data-module="expenses_tax"]');
+    const companyAllocated = companyRow.locator('.platform-company-allocated');
+    const staleVersion = Number(await companyRow.getAttribute('data-version'));
+    const concurrent = await fetch(`${listening.baseUrl}/api/platform/masters/${master.masterFn}/companies/${company.companyFn}/modules/expenses_tax`, {
+      method: 'PATCH',
+      headers: platformHeaders(true),
+      body: JSON.stringify({ allocated: false, expectedVersion: staleVersion }),
+    });
+    assert(concurrent.status === 200, `concurrent allocation update failed with HTTP ${concurrent.status}`);
+    await companyRow.locator('label.platform-switch').click();
+    assert(await companyRow.getAttribute('class') === 'is-dirty', 'changed Company row is not marked dirty');
+    await companyRow.locator('.platform-save-company').click();
+    await companyRow.locator('.platform-row-error').filter({ hasText: 'changed elsewhere' }).waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(entitlementPatchCount === 2, 'stale Company Save did not send exactly one PATCH');
+    assert(await companyRow.locator('.platform-reload-company').isVisible(), '409 conflict did not expose Reload row');
+    assert(await companyRow.getAttribute('class') === 'is-dirty', '409 conflict discarded the user allocation');
+    await companyRow.locator('.platform-reload-company').click();
+    await companyRow.locator('.platform-row-feedback').filter({ hasText: 'Current server values loaded.' }).waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(!(await companyAllocated.isChecked()), 'Reload row did not load the current Company allocation');
+    assert(await companyRow.locator('.platform-save-company').isDisabled(), 'Reload row did not clear dirty state');
+
+    for (const [width, height] of [[768, 1024], [430, 932], [390, 844], [375, 812]] as const) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(40);
+      const metrics = await page.evaluate(() => {
+        const workspace = document.querySelector<HTMLElement>('.platform-entitlement-workspace');
+        const panel = document.querySelector<HTMLElement>('#platformCompanyPanel');
+        const wrapper = panel?.querySelector<HTMLElement>('.platform-table-wrap');
+        const row = panel?.querySelector<HTMLElement>('tbody tr');
+        const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button,.platform-switch') ?? []).filter((node) => node.getBoundingClientRect().height > 0);
+        if (!workspace || !wrapper || !row) return null;
+        return {
+          rowDisplay: getComputedStyle(row).display,
+          wrapperOverflow: wrapper.scrollWidth - wrapper.clientWidth,
+          controlHeights: controls.map((node) => ({ label: node.className, height: node.getBoundingClientRect().height })),
+          outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        };
+      });
+      assert(metrics, `mobile entitlement metrics missing at ${width}x${height}`);
+      assert(metrics.rowDisplay === 'grid', `entitlement rows did not become cards at ${width}x${height}`);
+      assert(metrics.wrapperOverflow <= 1, `mobile entitlement cards overflowed horizontally at ${width}x${height}`);
+      const minControl = metrics.controlHeights.reduce((min, item) => item.height < min.height ? item : min);
+      assert(minControl.height >= 44, `mobile entitlement control ${minControl.label} is ${minControl.height}px at ${width}x${height}`);
+      assert(metrics.outerWidth <= 1, `mobile entitlement workspace overflowed the document at ${width}x${height}`);
+    }
+
     await page.setViewportSize({ width: 390, height: 844 });
     const completedMetrics = await page.evaluate(() => {
       const shell = document.querySelector<HTMLElement>('.platform-shell');
       const simulation = document.querySelector<HTMLElement>('.platform-simulation-panel');
       const toolbar = document.querySelector<HTMLElement>('.platform-shell-toolbar');
       const opener = document.querySelector<HTMLElement>('#platformOpenCompanyCreate');
-      const wrappers = Array.from(document.querySelectorAll<HTMLElement>('.platform-table-wrap'));
       if (!shell || !simulation || !toolbar || !opener) return null;
       return {
         shellHeight: shell.getBoundingClientRect().height,
@@ -247,7 +373,6 @@ async function main(): Promise<void> {
         actionCount: document.querySelectorAll('.platform-shell-actionbar').length,
         demoPasswordCount: document.querySelectorAll('#provisionCompanyOwnerPassword').length,
         progressCount: document.querySelectorAll('.platform-stepper').length,
-        wrapperOverflow: wrappers.map((node) => getComputedStyle(node).overflowX),
         outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       };
     });
@@ -259,7 +384,6 @@ async function main(): Promise<void> {
     assert(completedMetrics.createFormCount === 0 && completedMetrics.actionCount === 0, 'completed workspace rendered optional Company creation by default');
     assert(completedMetrics.demoPasswordCount === 0, 'closed completed workspace exposed a Demo owner password');
     assert(completedMetrics.progressCount === 0, 'completed tenant control still rendered provisioning progress');
-    assert(completedMetrics.wrapperOverflow.every((value) => value === 'auto' || value === 'scroll'), 'entitlement tables lost local horizontal scrolling');
     assert(completedMetrics.outerWidth <= 1, 'completed mobile workspace overflowed horizontally');
 
     await page.locator('#platformOpenCompanyCreate').click();

@@ -9,7 +9,7 @@
   var cachedSession=null;
   var WORKSPACE_STAGE=Object.freeze({MASTER:'master',COMPANY:'company',CONTROL:'control'});
   var WORKSPACE_EVENT=Object.freeze({RENDER:'render',MASTER_CREATED:'master-created',COMPANY_CREATED:'company-created',MASTER_SELECTED:'master-selected',COMPANY_SELECTED:'company-selected',COMPANY_CREATE_OPENED:'company-create-opened',COMPANY_CREATE_CANCELLED:'company-create-cancelled'});
-  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[],workspaceStage:null,companyCreateOpen:false,pendingFocus:'',notice:'',drafts:{bootstrap:null,master:null,company:{}}};
+  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[],workspaceStage:null,companyCreateOpen:false,pendingFocus:'',notice:'',entitlementTab:'master',entitlementSearch:{master:'',company:''},entitlementFilter:{master:'all',company:'all'},drafts:{bootstrap:null,master:null,company:{}}};
   var DEMO_BANNER_STORAGE_KEY='aria-platform-demo-banner-dismissed';
   var DEMO_DEFAULTS={
     bootstrap:{principalKey:'platform-admin',displayName:'Platform Admin',email:'platform-admin@acme.co',password:'demo-platform-1234'},
@@ -480,19 +480,213 @@
       ${hasExistingCompany?`<button type="button" class="btn soft platform-create-company-trigger" id="platformOpenCompanyCreate" aria-expanded="${state.companyCreateOpen?'true':'false'}" aria-controls="platformCompanyCreatePanel">+ Create Company</button>`:''}
     </div>`;
   }
+  function entitlementBadge(kind,label){ return `<span class="platform-status-badge ${esc(kind)}">${esc(label)}</span>`; }
+  function dependencyMarkup(dependencies){
+    if(!dependencies||!dependencies.length) return '<span class="platform-dependency-empty">—</span>';
+    return `<span class="platform-dependency-list">${dependencies.map(function(item){ return `<span>${esc(item)}</span>`; }).join('')}</span>`;
+  }
+  function switchControl(className,checked,label){
+    return `<label class="platform-switch"><input class="${className}" role="switch" type="checkbox" aria-label="${esc(label)}" ${checked?'checked':''}><span class="platform-switch-track" aria-hidden="true"><span></span></span><span class="platform-switch-label">${checked?'Enabled':'Disabled'}</span></label>`;
+  }
+  function rowActions(type){
+    return `<div class="platform-row-actions"><span class="platform-row-unsaved" hidden>Unsaved</span><button type="button" class="btn soft platform-reset-${type}" hidden>Reset</button><button type="button" class="btn soft platform-save-${type}" disabled>Save</button></div><div class="platform-row-feedback" role="status" aria-live="polite" tabindex="-1"></div><div class="platform-row-error" role="alert" aria-live="assertive" tabindex="-1"></div><button type="button" class="btn soft platform-reload-${type}" hidden>Reload row</button>`;
+  }
+  function masterSummaryMarkup(){
+    var enabled=(state.masterModules||[]).filter(function(item){ return item.masterEnabled; }).length;
+    var defaults=(state.masterModules||[]).filter(function(item){ return item.defaultCompanyAllocated; }).length;
+    return `${enabled} enabled · ${defaults} default`;
+  }
+  function companySummaryMarkup(){
+    var allocated=(state.companyModules||[]).filter(function(item){ return item.companyAllocated; }).length;
+    var effective=(state.companyModules||[]).filter(function(item){ return item.effectiveEnabled; }).length;
+    return `${allocated} allocated · ${effective} effective`;
+  }
+  function entitlementTools(tab){
+    var filter=state.entitlementFilter[tab]||'all';
+    var options=tab==='master'?[['all','All modules'],['enabled','Enabled'],['disabled','Disabled']]:[['all','All modules'],['effective','Effective'],['blocked','Blocked']];
+    return `<div class="platform-entitlement-tools"><label class="fld"><span>Search modules</span><input type="search" class="platform-module-search" data-entitlement-tab="${tab}" value="${esc(state.entitlementSearch[tab]||'')}" placeholder="Name, key or dependency"></label><label class="fld"><span>Status</span><select class="platform-module-filter" data-entitlement-tab="${tab}">${options.map(function(option){ return `<option value="${option[0]}" ${option[0]===filter?'selected':''}>${option[1]}</option>`; }).join('')}</select></label></div>`;
+  }
   function modulesMarkup(){
     var allocation=new Map((state.companyModules||[]).map(function(item){ return [item.moduleKey,item]; }));
     var masterRows=(state.masterModules||[]).map(function(item){
-      return `<tr data-module="${esc(item.moduleKey)}" data-version="${Number(item.version)||0}"><td><b>${esc(item.name)}</b><small>${esc((item.dependencies||[]).join(', ')||'No dependencies')}</small></td><td><input class="platform-master-enabled" type="checkbox" ${item.masterEnabled?'checked':''}></td><td><input class="platform-master-default" type="checkbox" ${item.defaultCompanyAllocated?'checked':''}></td><td><button type="button" class="btn soft platform-save-master">Save</button></td></tr>`;
+      var search=[item.name,item.moduleKey].concat(item.dependencies||[]).join(' ').toLowerCase();
+      return `<tr data-module="${esc(item.moduleKey)}" data-version="${Number(item.version)||0}" data-master-enabled="${item.masterEnabled?'true':'false'}" data-master-default="${item.defaultCompanyAllocated?'true':'false'}" data-search="${esc(search)}"><th scope="row" data-label="Module"><b>${esc(item.name)}</b><small>${esc(item.moduleKey)}</small></th><td data-label="Dependencies">${dependencyMarkup(item.dependencies)}</td><td data-label="Master entitlement">${switchControl('platform-master-enabled',item.masterEnabled,'Master entitlement for '+item.name)}</td><td data-label="Default for new Companies">${switchControl('platform-master-default',item.defaultCompanyAllocated,'Default Company allocation for '+item.name)}</td><td data-label="Action">${rowActions('master')}</td></tr>`;
     }).join('');
     var companyRows=(state.masterModules||[]).map(function(item){
       var row=allocation.get(item.moduleKey)||{};
-      return `<tr data-module="${esc(item.moduleKey)}" data-version="${Number(row.version)||0}"><td><b>${esc(item.name)}</b></td><td>${item.masterEnabled?'Enabled':'Disabled'}</td><td><input class="platform-company-allocated" type="checkbox" ${row.companyAllocated?'checked':''}></td><td>${row.effectiveEnabled?'Enabled':'Disabled'}</td><td><button type="button" class="btn soft platform-save-company">Save</button></td></tr>`;
+      var effectiveLabel=!item.masterEnabled?'Blocked by Master':row.companyAllocated?'Effective':'Not allocated';
+      var effectiveKind=row.effectiveEnabled?'effective':'blocked';
+      return `<tr data-module="${esc(item.moduleKey)}" data-version="${Number(row.version)||0}" data-master-enabled="${item.masterEnabled?'true':'false'}" data-company-allocated="${row.companyAllocated?'true':'false'}" data-search="${esc([item.name,item.moduleKey].join(' ').toLowerCase())}"><th scope="row" data-label="Module"><b>${esc(item.name)}</b><small>${esc(item.moduleKey)}</small></th><td data-label="Master status" class="platform-company-master-status">${entitlementBadge(item.masterEnabled?'enabled':'disabled',item.masterEnabled?'Enabled':'Disabled')}</td><td data-label="Company allocation">${switchControl('platform-company-allocated',row.companyAllocated,'Company allocation for '+item.name)}</td><td data-label="Effective access" class="platform-company-effective">${entitlementBadge(effectiveKind,effectiveLabel)}</td><td data-label="Action">${rowActions('company')}</td></tr>`;
     }).join('');
-    return `<div class="platform-entitlement-grid">
-      <section class="platform-entitlement-card"><h2>Master commercial entitlements</h2><p>Master state masks Company allocation; allocation is preserved while a Master module is disabled.</p><div class="platform-table-wrap" tabindex="0"><table><thead><tr><th>Module</th><th>Enabled</th><th>Default new Company allocation</th><th></th></tr></thead><tbody>${masterRows}</tbody></table></div></section>
-      <section class="platform-entitlement-card"><h2>Company allocation</h2><p>${esc((currentCompany()||{}).name||state.companyFn)}. Effective access requires Master enabled and Company allocated.</p><div class="platform-table-wrap" tabindex="0"><table><thead><tr><th>Module</th><th>Master</th><th>Allocated</th><th>Effective</th><th></th></tr></thead><tbody>${companyRows}</tbody></table></div></section>
-    </div>`;
+    var masterSelected=state.entitlementTab!=='company';
+    return `<section class="platform-entitlement-card platform-entitlement-workspace platform-entitlement-grid" aria-labelledby="platformEntitlementHeading"><div class="platform-entitlement-heading"><div><h2 id="platformEntitlementHeading">Module access</h2><p>Master entitlement masks Company allocation without overwriting the saved allocation.</p></div></div><div class="platform-entitlement-tabs" role="tablist" aria-label="Module access scope"><button type="button" class="platform-entitlement-tab" id="platformMasterTab" role="tab" aria-selected="${masterSelected?'true':'false'}" aria-controls="platformMasterPanel" tabindex="${masterSelected?'0':'-1'}" data-tab="master"><span>Master controls</span><small id="platformMasterSummary">${esc(masterSummaryMarkup())}</small></button><button type="button" class="platform-entitlement-tab" id="platformCompanyTab" role="tab" aria-selected="${masterSelected?'false':'true'}" aria-controls="platformCompanyPanel" tabindex="${masterSelected?'-1':'0'}" data-tab="company"><span>Company allocation</span><small id="platformCompanySummary">${esc(companySummaryMarkup())}</small></button></div>
+      <section class="platform-entitlement-panel" id="platformMasterPanel" role="tabpanel" aria-labelledby="platformMasterTab" ${masterSelected?'':'hidden'}>${entitlementTools('master')}<div class="platform-table-wrap"><table><thead><tr><th>Module</th><th>Dependencies</th><th>Master entitlement</th><th>Default for new Companies</th><th>Action</th></tr></thead><tbody>${masterRows}</tbody></table><p class="platform-entitlement-empty" hidden>No modules match this filter.</p></div></section>
+      <section class="platform-entitlement-panel" id="platformCompanyPanel" role="tabpanel" aria-labelledby="platformCompanyTab" ${masterSelected?'hidden':''}><div class="platform-entitlement-context"><strong>${esc((currentCompany()||{}).name||state.companyFn)}</strong><span>Effective access requires both Master entitlement and Company allocation.</span></div>${entitlementTools('company')}<div class="platform-table-wrap"><table><thead><tr><th>Module</th><th>Master status</th><th>Company allocation</th><th>Effective access</th><th>Action</th></tr></thead><tbody>${companyRows}</tbody></table><p class="platform-entitlement-empty" hidden>No modules match this filter.</p></div></section>
+    </section>`;
+  }
+  function boolData(value){ return String(value)==='true'; }
+  function moduleRow(panelId,moduleKey){
+    return Array.from(document.querySelectorAll('#'+panelId+' tbody tr')).find(function(row){ return row.dataset.module===moduleKey; })||null;
+  }
+  function updateSwitchLabel(input){
+    var label=input&&input.closest('.platform-switch')&&input.closest('.platform-switch').querySelector('.platform-switch-label');
+    if(label) label.textContent=input.checked?'Enabled':'Disabled';
+  }
+  function companyEffectiveState(row){
+    var masterEnabled=boolData(row.dataset.masterEnabled);
+    var allocated=row.querySelector('.platform-company-allocated').checked;
+    return masterEnabled&&allocated?{kind:'effective',label:'Effective'}:masterEnabled?{kind:'blocked',label:'Not allocated'}:{kind:'blocked',label:'Blocked by Master'};
+  }
+  function updateCompanyEffective(row){
+    var target=row.querySelector('.platform-company-effective');
+    var status=companyEffectiveState(row);
+    if(target) target.innerHTML=entitlementBadge(status.kind,status.label);
+  }
+  function syncEntitlementRow(row,type,clearFeedback){
+    var dirty;
+    if(type==='master'){
+      var enabled=row.querySelector('.platform-master-enabled');
+      var defaults=row.querySelector('.platform-master-default');
+      updateSwitchLabel(enabled); updateSwitchLabel(defaults);
+      dirty=enabled.checked!==boolData(row.dataset.masterEnabled)||defaults.checked!==boolData(row.dataset.masterDefault);
+    }else{
+      var allocated=row.querySelector('.platform-company-allocated');
+      updateSwitchLabel(allocated); updateCompanyEffective(row);
+      dirty=allocated.checked!==boolData(row.dataset.companyAllocated);
+    }
+    row.classList.toggle('is-dirty',dirty);
+    var unsaved=row.querySelector('.platform-row-unsaved');
+    var reset=row.querySelector('.platform-reset-'+type);
+    var save=row.querySelector('.platform-save-'+type);
+    if(unsaved) unsaved.hidden=!dirty;
+    if(reset) reset.hidden=!dirty;
+    if(save) save.disabled=!dirty;
+    if(clearFeedback&&dirty){
+      var feedback=row.querySelector('.platform-row-feedback');
+      var error=row.querySelector('.platform-row-error');
+      var reload=row.querySelector('.platform-reload-'+type);
+      if(feedback) feedback.textContent='';
+      if(error) error.textContent='';
+      if(reload) reload.hidden=true;
+    }
+    return dirty;
+  }
+  function updateEntitlementSummaries(view){
+    var masterRows=Array.from(view.querySelectorAll('#platformMasterPanel tbody tr'));
+    var companyRows=Array.from(view.querySelectorAll('#platformCompanyPanel tbody tr'));
+    var master=view.querySelector('#platformMasterSummary');
+    var company=view.querySelector('#platformCompanySummary');
+    if(master){
+      var enabled=masterRows.filter(function(row){ return row.querySelector('.platform-master-enabled').checked; }).length;
+      var defaults=masterRows.filter(function(row){ return row.querySelector('.platform-master-default').checked; }).length;
+      var dirty=masterRows.filter(function(row){ return row.classList.contains('is-dirty'); }).length;
+      master.textContent=enabled+' enabled · '+defaults+' default'+(dirty?' · '+dirty+' unsaved':'');
+    }
+    if(company){
+      var allocated=companyRows.filter(function(row){ return row.querySelector('.platform-company-allocated').checked; }).length;
+      var effective=companyRows.filter(function(row){ var status=companyEffectiveState(row); return status.kind==='effective'; }).length;
+      var changed=companyRows.filter(function(row){ return row.classList.contains('is-dirty'); }).length;
+      company.textContent=allocated+' allocated · '+effective+' effective'+(changed?' · '+changed+' unsaved':'');
+    }
+  }
+  function filterEntitlementPanel(view,tab){
+    var panel=view.querySelector(tab==='master'?'#platformMasterPanel':'#platformCompanyPanel');
+    if(!panel) return;
+    var query=String(state.entitlementSearch[tab]||'').trim().toLowerCase();
+    var filter=state.entitlementFilter[tab]||'all';
+    var visible=0;
+    panel.querySelectorAll('tbody tr').forEach(function(row){
+      var matchesText=!query||String(row.dataset.search||'').includes(query);
+      var matchesStatus=true;
+      if(!row.classList.contains('is-dirty')&&tab==='master'&&filter!=='all') matchesStatus=row.querySelector('.platform-master-enabled').checked===(filter==='enabled');
+      if(!row.classList.contains('is-dirty')&&tab==='company'&&filter!=='all') matchesStatus=(companyEffectiveState(row).kind==='effective')===(filter==='effective');
+      row.hidden=!(matchesText&&matchesStatus);
+      if(!row.hidden) visible++;
+    });
+    var empty=panel.querySelector('.platform-entitlement-empty');
+    if(empty) empty.hidden=visible!==0;
+  }
+  function resetEntitlementRow(row,type){
+    if(type==='master'){
+      row.querySelector('.platform-master-enabled').checked=boolData(row.dataset.masterEnabled);
+      row.querySelector('.platform-master-default').checked=boolData(row.dataset.masterDefault);
+    }else row.querySelector('.platform-company-allocated').checked=boolData(row.dataset.companyAllocated);
+    syncEntitlementRow(row,type,true);
+  }
+  function dirtyEntitlementRows(view){ return Array.from(view.querySelectorAll('.platform-entitlement-panel tbody tr.is-dirty')); }
+  function discardEntitlementChanges(view){
+    dirtyEntitlementRows(view).forEach(function(row){ resetEntitlementRow(row,row.closest('#platformMasterPanel')?'master':'company'); });
+    updateEntitlementSummaries(view);
+    filterEntitlementPanel(view,'master'); filterEntitlementPanel(view,'company');
+  }
+  function confirmDiscardEntitlements(view){
+    if(!dirtyEntitlementRows(view).length) return true;
+    if(!window.confirm('You have unsaved module changes. Discard them?')) return false;
+    discardEntitlementChanges(view);
+    return true;
+  }
+  function activateEntitlementTab(view,tab,focus){
+    if(tab===state.entitlementTab) return true;
+    if(!confirmDiscardEntitlements(view)) return false;
+    state.entitlementTab=tab;
+    view.querySelectorAll('.platform-entitlement-tab').forEach(function(button){
+      var selected=button.dataset.tab===tab;
+      button.setAttribute('aria-selected',String(selected)); button.tabIndex=selected?0:-1;
+    });
+    var master=view.querySelector('#platformMasterPanel');
+    var company=view.querySelector('#platformCompanyPanel');
+    if(master) master.hidden=tab!=='master';
+    if(company) company.hidden=tab!=='company';
+    filterEntitlementPanel(view,tab);
+    if(focus){ var target=view.querySelector('.platform-entitlement-tab[data-tab="'+tab+'"]'); if(target) target.focus(); }
+    return true;
+  }
+  function updateCompanyMasterState(moduleKey,masterEnabled){
+    var companyModule=(state.companyModules||[]).find(function(item){ return item.moduleKey===moduleKey; });
+    if(companyModule){ companyModule.masterEnabled=masterEnabled; companyModule.effectiveEnabled=masterEnabled&&!!companyModule.companyAllocated; }
+    var row=moduleRow('platformCompanyPanel',moduleKey);
+    if(!row) return;
+    row.dataset.masterEnabled=String(masterEnabled);
+    var status=row.querySelector('.platform-company-master-status');
+    if(status) status.innerHTML=entitlementBadge(masterEnabled?'enabled':'disabled',masterEnabled?'Enabled':'Disabled');
+    updateCompanyEffective(row);
+  }
+  function applyMasterServerRow(row,result){
+    var item=(state.masterModules||[]).find(function(entry){ return entry.moduleKey===row.dataset.module; });
+    var enabled=typeof result.masterEnabled==='boolean'?result.masterEnabled:row.querySelector('.platform-master-enabled').checked;
+    var defaults=typeof result.defaultCompanyAllocated==='boolean'?result.defaultCompanyAllocated:row.querySelector('.platform-master-default').checked;
+    if(item) Object.assign(item,result,{masterEnabled:enabled,defaultCompanyAllocated:defaults});
+    row.dataset.version=String(Number(result.version)||Number(row.dataset.version));
+    row.dataset.masterEnabled=String(enabled); row.dataset.masterDefault=String(defaults);
+    row.querySelector('.platform-master-enabled').checked=enabled;
+    row.querySelector('.platform-master-default').checked=defaults;
+    updateCompanyMasterState(row.dataset.module,enabled);
+    syncEntitlementRow(row,'master',false);
+  }
+  function applyCompanyServerRow(row,result){
+    var item=(state.companyModules||[]).find(function(entry){ return entry.moduleKey===row.dataset.module; });
+    var allocated=typeof result.companyAllocated==='boolean'?result.companyAllocated:row.querySelector('.platform-company-allocated').checked;
+    if(item) Object.assign(item,result,{companyAllocated:allocated});
+    row.dataset.version=String(Number(result.version)||Number(row.dataset.version));
+    row.dataset.companyAllocated=String(allocated);
+    if(typeof result.masterEnabled==='boolean') row.dataset.masterEnabled=String(result.masterEnabled);
+    row.querySelector('.platform-company-allocated').checked=allocated;
+    syncEntitlementRow(row,'company',false);
+  }
+  async function reloadEntitlementRow(view,row,type){
+    var path=type==='master'?'masters/'+encodeURIComponent(state.masterFn)+'/modules':'masters/'+encodeURIComponent(state.masterFn)+'/companies/'+encodeURIComponent(state.companyFn)+'/modules';
+    var list=await request(path);
+    var result=(list||[]).find(function(item){ return item.moduleKey===row.dataset.module; });
+    if(!result) throw new Error('The selected module is no longer available.');
+    if(type==='master') applyMasterServerRow(row,result); else applyCompanyServerRow(row,result);
+    var error=row.querySelector('.platform-row-error'); var reload=row.querySelector('.platform-reload-'+type);
+    if(error) error.textContent=''; if(reload) reload.hidden=true;
+    updateEntitlementSummaries(view); filterEntitlementPanel(view,type);
+  }
+  function guardEntitlementUnload(event){
+    var view=authView();
+    if(!dirtyEntitlementRows(view).length) return;
+    event.preventDefault(); event.returnValue='';
   }
   function simulationMarkup(){
     return `<section class="platform-simulation-panel"><h2>Tenant user simulation</h2><p>Enter one active user's exact tenant authority for up to 15 minutes. Platform permissions are never added to the target user.</p>
@@ -542,13 +736,15 @@
   }
   function wireWorkspace(view){
     wireDemoBanner(view);
-    view.querySelector('#platformLogoutBtn').addEventListener('click',async function(){ try{ await request('logout',{method:'POST',body:{}}); }finally{ cachedSession=null; location.reload(); } });
+    window.removeEventListener('beforeunload',guardEntitlementUnload);
+    window.addEventListener('beforeunload',guardEntitlementUnload);
+    view.querySelector('#platformLogoutBtn').addEventListener('click',async function(){ if(!confirmDiscardEntitlements(view)) return; try{ await request('logout',{method:'POST',body:{}}); }finally{ cachedSession=null; location.reload(); } });
     var masterSelect=view.querySelector('#platformMasterSelect');
-    if(masterSelect) masterSelect.addEventListener('change',async function(event){ await renderWorkspace(state.session,WORKSPACE_EVENT.MASTER_SELECTED,event.target.value); });
+    if(masterSelect) masterSelect.addEventListener('change',async function(event){ if(!confirmDiscardEntitlements(view)){ event.target.value=state.masterFn; return; } await renderWorkspace(state.session,WORKSPACE_EVENT.MASTER_SELECTED,event.target.value); });
     var companySelect=view.querySelector('#platformCompanySelect');
-    if(companySelect) companySelect.addEventListener('change',async function(event){ await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_SELECTED,event.target.value); });
+    if(companySelect) companySelect.addEventListener('change',async function(event){ if(!confirmDiscardEntitlements(view)){ event.target.value=state.companyFn; return; } await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_SELECTED,event.target.value); });
     var openCompanyCreate=view.querySelector('#platformOpenCompanyCreate');
-    if(openCompanyCreate) openCompanyCreate.addEventListener('click',async function(){ await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_CREATE_OPENED); });
+    if(openCompanyCreate) openCompanyCreate.addEventListener('click',async function(){ if(!confirmDiscardEntitlements(view)) return; await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_CREATE_OPENED); });
     var cancelCompanyCreate=view.querySelector('#platformCancelCompanyCreate');
     if(cancelCompanyCreate) cancelCompanyCreate.addEventListener('click',async function(){ await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_CREATE_CANCELLED); });
     var createMaster=view.querySelector('#platformCreateMasterForm');
@@ -571,18 +767,51 @@
         await renderWorkspace(state.session,WORKSPACE_EVENT.COMPANY_CREATED,createdCompany);
       }catch(errorValue){ error.textContent=errorValue&&errorValue.message||'Company creation failed.'; button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }
     });
+    view.querySelectorAll('.platform-entitlement-tab').forEach(function(button){
+      button.addEventListener('click',function(){ activateEntitlementTab(view,button.dataset.tab,true); });
+      button.addEventListener('keydown',function(event){
+        var tabs=Array.from(view.querySelectorAll('.platform-entitlement-tab'));
+        var index=tabs.indexOf(button); var next;
+        if(event.key==='ArrowRight') next=(index+1)%tabs.length;
+        else if(event.key==='ArrowLeft') next=(index-1+tabs.length)%tabs.length;
+        else if(event.key==='Home') next=0;
+        else if(event.key==='End') next=tabs.length-1;
+        else return;
+        event.preventDefault(); activateEntitlementTab(view,tabs[next].dataset.tab,true);
+      });
+    });
+    view.querySelectorAll('.platform-module-search').forEach(function(input){ input.addEventListener('input',function(){ state.entitlementSearch[input.dataset.entitlementTab]=input.value; filterEntitlementPanel(view,input.dataset.entitlementTab); }); });
+    view.querySelectorAll('.platform-module-filter').forEach(function(select){ select.addEventListener('change',function(){ state.entitlementFilter[select.dataset.entitlementTab]=select.value; filterEntitlementPanel(view,select.dataset.entitlementTab); }); });
+    view.querySelectorAll('.platform-master-enabled,.platform-master-default').forEach(function(input){ input.addEventListener('change',function(){ var row=input.closest('tr'); syncEntitlementRow(row,'master',true); updateEntitlementSummaries(view); filterEntitlementPanel(view,'master'); }); });
+    view.querySelectorAll('.platform-company-allocated').forEach(function(input){ input.addEventListener('change',function(){ var row=input.closest('tr'); syncEntitlementRow(row,'company',true); updateEntitlementSummaries(view); filterEntitlementPanel(view,'company'); }); });
+    view.querySelectorAll('.platform-reset-master,.platform-reset-company').forEach(function(button){ button.addEventListener('click',function(){ var type=button.classList.contains('platform-reset-master')?'master':'company'; resetEntitlementRow(button.closest('tr'),type); updateEntitlementSummaries(view); filterEntitlementPanel(view,type); }); });
     view.querySelectorAll('.platform-save-master').forEach(function(button){ button.addEventListener('click',async function(){
-      var row=button.closest('tr'); button.disabled=true; setError('');
-      try{ await request('masters/'+encodeURIComponent(state.masterFn)+'/modules/'+encodeURIComponent(row.dataset.module),{method:'PATCH',body:{enabled:row.querySelector('.platform-master-enabled').checked,defaultCompanyAllocated:row.querySelector('.platform-master-default').checked,expectedVersion:Number(row.dataset.version)}}); await renderWorkspace(state.session); }
-      catch(error){ setError(error&&error.message||'Module update failed.'); button.disabled=false; }
+      var row=button.closest('tr'); var errorTarget=row.querySelector('.platform-row-error'); var feedback=row.querySelector('.platform-row-feedback'); var reload=row.querySelector('.platform-reload-master');
+      button.disabled=true; errorTarget.textContent=''; feedback.textContent='Saving…'; reload.hidden=true;
+      try{
+        var result=await request('masters/'+encodeURIComponent(state.masterFn)+'/modules/'+encodeURIComponent(row.dataset.module),{method:'PATCH',body:{enabled:row.querySelector('.platform-master-enabled').checked,defaultCompanyAllocated:row.querySelector('.platform-master-default').checked,expectedVersion:Number(row.dataset.version)}});
+        applyMasterServerRow(row,result||{}); feedback.textContent='Saved'; updateEntitlementSummaries(view); filterEntitlementPanel(view,'master'); feedback.focus({preventScroll:true});
+      }catch(error){ feedback.textContent=''; errorTarget.textContent=Number(error&&error.status)===409?'This module changed elsewhere. Review your values or reload the row.':error&&error.message||'Module update failed.'; reload.hidden=Number(error&&error.status)!==409; syncEntitlementRow(row,'master',false); errorTarget.focus({preventScroll:true}); }
     }); });
     view.querySelectorAll('.platform-save-company').forEach(function(button){ button.addEventListener('click',async function(){
-      var row=button.closest('tr'); button.disabled=true; setError('');
-      try{ await request('masters/'+encodeURIComponent(state.masterFn)+'/companies/'+encodeURIComponent(state.companyFn)+'/modules/'+encodeURIComponent(row.dataset.module),{method:'PATCH',body:{allocated:row.querySelector('.platform-company-allocated').checked,expectedVersion:Number(row.dataset.version)}}); await renderWorkspace(state.session); }
-      catch(error){ setError(error&&error.message||'Company allocation update failed.'); button.disabled=false; }
+      var row=button.closest('tr'); var errorTarget=row.querySelector('.platform-row-error'); var feedback=row.querySelector('.platform-row-feedback'); var reload=row.querySelector('.platform-reload-company');
+      button.disabled=true; errorTarget.textContent=''; feedback.textContent='Saving…'; reload.hidden=true;
+      try{
+        var result=await request('masters/'+encodeURIComponent(state.masterFn)+'/companies/'+encodeURIComponent(state.companyFn)+'/modules/'+encodeURIComponent(row.dataset.module),{method:'PATCH',body:{allocated:row.querySelector('.platform-company-allocated').checked,expectedVersion:Number(row.dataset.version)}});
+        applyCompanyServerRow(row,result||{}); feedback.textContent='Saved'; updateEntitlementSummaries(view); filterEntitlementPanel(view,'company'); feedback.focus({preventScroll:true});
+      }catch(error){ feedback.textContent=''; errorTarget.textContent=Number(error&&error.status)===409?'This allocation changed elsewhere. Review your value or reload the row.':error&&error.message||'Company allocation update failed.'; reload.hidden=Number(error&&error.status)!==409; syncEntitlementRow(row,'company',false); errorTarget.focus({preventScroll:true}); }
     }); });
+    view.querySelectorAll('.platform-reload-master,.platform-reload-company').forEach(function(button){ button.addEventListener('click',async function(){
+      var type=button.classList.contains('platform-reload-master')?'master':'company'; var row=button.closest('tr'); var errorTarget=row.querySelector('.platform-row-error');
+      button.disabled=true;
+      try{ await reloadEntitlementRow(view,row,type); row.querySelector('.platform-row-feedback').textContent='Current server values loaded.'; }
+      catch(error){ errorTarget.textContent=error&&error.message||'Unable to reload this module.'; errorTarget.focus({preventScroll:true}); }
+      finally{ button.disabled=false; }
+    }); });
+    filterEntitlementPanel(view,'master'); filterEntitlementPanel(view,'company'); updateEntitlementSummaries(view);
     var simulationButton=view.querySelector('#platformStartSimulation');
     if(simulationButton) simulationButton.addEventListener('click',async function(event){
+      if(!confirmDiscardEntitlements(view)) return;
       var target=Number(view.querySelector('#platformSimulationTarget').value); var button=event.currentTarget;
       if(!Number.isSafeInteger(target)||target<=0){ setError('Select an active tenant user.'); return; }
       button.disabled=true; setError('');
