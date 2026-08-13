@@ -1,6 +1,6 @@
 # Epic Index
 
-Reviewed: **2026-08-12**
+Reviewed: **2026-08-13**
 
 The canonical epic registry is [EPICS.md](EPICS.md). This singular filename exists as
 a compatibility entry point for tools and requests that refer to `EPIC.md`; do not
@@ -12,6 +12,7 @@ authorization boundary and production-trust backlog are in
 [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). Expenses & Tax v1
 is registered canonically as EPIC-063, the platform-owned Module Access Control
 replacement as EPIC-064, Platform Bootstrap & Tenant Provisioning as EPIC-065, and
-Production Trust & ERP Excellence hardening as EPIC-066. The review behind EPIC-066 is
+Production Trust & ERP Excellence hardening as EPIC-066, and Platform Tenant
+Administration as EPIC-067. The review behind EPIC-066 is
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md). All live in `EPICS.md`; this file
 remains a compatibility pointer and deliberately duplicates no status counters.

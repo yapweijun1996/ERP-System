@@ -14,6 +14,10 @@ import {
   verifyPlatformCsrfToken,
 } from '../auth/platformSupport';
 import { getPlatformSimulation } from '../auth/platformSimulation';
+import {
+  getPlatformTenantAccess,
+  isSensitivePlatformMutation,
+} from '../auth/platformTenantAccess';
 import { PERMISSIONS, hasPermission } from '../auth/permissions';
 import { buildDashboard } from './dashboard';
 import { apiError, context, requireSession } from './http';
@@ -95,23 +99,28 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   });
   app.use(express.json({ limit: '1mb' }));
 
-  // A valid platform session gains tenant access only through an explicit,
-  // active simulation. The target SessionData replaces rather than augments
-  // tenant identity, while AsyncLocalStorage preserves the real platform actor
-  // for every existing appendAudit call reached by the request.
+  // A valid platform session gains tenant access only through one explicit,
+  // active exact-user simulation or elevated tenant-access window. In both
+  // cases target SessionData replaces rather than augments tenant identity,
+  // while AsyncLocalStorage preserves the real Platform principal for every
+  // existing appendAudit call reached by the request.
   app.use(async (req, res, next) => {
     if (!req.path.startsWith('/api/') || req.path === '/api/platform' || req.path.startsWith('/api/platform/')) {
       next();
       return;
     }
     try {
-      const simulation = await getPlatformSimulation(db, platformSessionToken(req), { touch: false });
-      if (!simulation) {
-        next();
+      const token = platformSessionToken(req);
+      const simulation = await getPlatformSimulation(db, token, { touch: false });
+      if (simulation) {
+        context(res).platformSimulation = simulation;
+        runWithAuditAttribution({ platformPrincipalId: simulation.platformPrincipalId }, () => next());
         return;
       }
-      context(res).platformSimulation = simulation;
-      runWithAuditAttribution({ platformPrincipalId: simulation.platformPrincipalId }, () => next());
+      const tenantAccess = await getPlatformTenantAccess(db, token, { touch: false });
+      if (!tenantAccess) { next(); return; }
+      context(res).platformTenantAccess = tenantAccess;
+      runWithAuditAttribution({ platformPrincipalId: tenantAccess.platformPrincipalId }, () => next());
     } catch (error) {
       next(error);
     }
@@ -134,8 +143,9 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
       return;
     }
     const simulation = context(res).platformSimulation;
+    const tenantAccess = context(res).platformTenantAccess;
     const cookies = parseCookies(req.headers.cookie);
-    const valid = simulation
+    const valid = simulation || tenantAccess
       ? await verifyPlatformCsrfToken(
         db,
         platformSessionToken(req),
@@ -148,6 +158,27 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
       );
     if (!valid) {
       apiError(res, 403, 'csrf_invalid', 'A valid CSRF token is required.');
+      return;
+    }
+    next();
+  });
+
+  // Elevated Platform Admin uses ordinary tenant authorization for every
+  // command. This extra gate protects only the centrally classified sensitive
+  // mutation surface; it never replaces downstream workflow/business checks.
+  app.use((req, res, next) => {
+    const access = context(res).platformTenantAccess;
+    if (!access || !isSensitivePlatformMutation(req.method, req.path)) {
+      next();
+      return;
+    }
+    if (!access.breakGlass) {
+      apiError(
+        res,
+        403,
+        'platform_break_glass_required',
+        'Unlock sensitive Platform Admin mutations for this Company before continuing.',
+      );
       return;
     }
     next();

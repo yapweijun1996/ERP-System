@@ -276,7 +276,42 @@ async function main(): Promise<void> {
     const masterRow = page.locator('#platformMasterPanel tbody tr[data-module="expenses_tax"]');
     const masterSave = masterRow.locator('.platform-save-master');
     const initialMasterVersion = Number(await masterRow.getAttribute('data-version'));
+    const switchScrollBefore = await page.evaluate(() => {
+      const body = document.querySelector<HTMLElement>('.platform-shell-body');
+      const shell = document.querySelector<HTMLElement>('.platform-shell');
+      if (!body || !shell) return null;
+      window.scrollTo(0, 0);
+      body.scrollTop = body.scrollHeight;
+      return {
+        rootScrollY: window.scrollY,
+        rootOverflow: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        bodyScrollTop: body.scrollTop,
+        shellTop: shell.getBoundingClientRect().top,
+      };
+    });
+    assert(switchScrollBefore, 'switch scroll metrics are unavailable before interaction');
+    assert(switchScrollBefore.rootScrollY === 0 && switchScrollBefore.rootOverflow <= 1, 'completed workspace root already scrolls before switch interaction');
     await masterRow.locator('label.platform-switch').first().click();
+    const switchScrollAfter = await page.evaluate(() => {
+      const body = document.querySelector<HTMLElement>('.platform-shell-body');
+      const shell = document.querySelector<HTMLElement>('.platform-shell');
+      const input = document.querySelector<HTMLInputElement>('tr[data-module="expenses_tax"] .platform-master-enabled');
+      if (!body || !shell || !input) return null;
+      const inputRect = input.getBoundingClientRect();
+      const switchRect = input.closest<HTMLElement>('.platform-switch')?.getBoundingClientRect();
+      return {
+        rootScrollY: window.scrollY,
+        rootOverflow: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        bodyScrollTop: body.scrollTop,
+        shellTop: shell.getBoundingClientRect().top,
+        inputInsideSwitch: Boolean(switchRect && inputRect.top >= switchRect.top - 1 && inputRect.bottom <= switchRect.bottom + 1),
+      };
+    });
+    assert(switchScrollAfter, 'switch scroll metrics are unavailable after interaction');
+    assert(switchScrollAfter.rootScrollY === switchScrollBefore.rootScrollY, 'clicking a module switch scrolled the root document');
+    assert(switchScrollAfter.rootOverflow <= 1, 'the hidden switch input created root document overflow');
+    assert(Math.abs(switchScrollAfter.shellTop - switchScrollBefore.shellTop) <= 1, 'clicking a module switch moved the workspace shell');
+    assert(switchScrollAfter.inputInsideSwitch, 'the hidden switch input is not anchored inside its visible control');
     assert(entitlementPatchCount === 0, 'changing a Master switch sent a mutation before Save');
     assert(await masterRow.getAttribute('class') === 'is-dirty', 'changed Master row is not marked dirty');
     assert(await masterSave.isEnabled(), 'changed Master row did not enable Save');
@@ -421,10 +456,31 @@ async function main(): Promise<void> {
     assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'Cancel did not close the optional Company panel');
     await page.waitForFunction(() => document.activeElement?.id === 'platformOpenCompanyCreate');
     assert(await page.locator('#platformOpenCompanyCreate').evaluate((node) => node === document.activeElement), 'Cancel did not restore opener focus');
+
+    await page.locator('#platformTenantAccessReason').fill('Verify audited tenant administration');
+    await page.locator('#platformTenantAccessTicket').fill('E2E-ADMIN-1');
+    await page.locator('#platformStartTenantAccess').click();
+    await page.locator('#impersonationBanner.platform-admin-active').waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(await page.locator('#impersonationBanner').getByText(/Platform Admin active · P-/).count() === 1, 'Admin tenant banner does not identify the real Platform principal');
+    assert(await page.locator('#platformTenantMasterSwitch').isVisible(), 'Admin tenant banner is missing the audited Master selector');
+    assert(await page.locator('#platformTenantCompanySwitch').isVisible(), 'Admin tenant banner is missing the audited Company selector');
+    assert(await page.locator('#platformBreakGlassBtn').isVisible(), 'Admin tenant banner is missing the sensitive-operation unlock');
+    assert(await page.locator('#ctxCompany').isDisabled(), 'ordinary tenant Company selector is not locked in Platform Admin mode');
+    await page.locator('#returnToPlatformWorkspaceBtn').click();
+    await page.locator('.platform-entitlement-workspace').waitFor({ state: 'visible', timeout: TIMEOUT });
+
+    const employeeTarget = page.locator('#platformSimulationTarget');
+    assert(await employeeTarget.locator('option').count() > 0, 'Employee simulation has no active tenant targets');
+    await page.locator('#platformStartSimulation').click();
+    await page.locator('#impersonationBanner').getByText('Employee simulation active').waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(await page.locator('#ctxCompany').isDisabled(), 'ordinary tenant Company selector is not locked in Employee mode');
+    assert(await page.locator('#platformTenantMasterSwitch').count() === 0, 'Employee mode exposed an Admin scope selector');
+    await page.locator('#returnToPlatformWorkspaceBtn').click();
+    await page.locator('.platform-entitlement-workspace').waitFor({ state: 'visible', timeout: TIMEOUT });
     assert(browserErrors.length === 0, `platform workspace browser errors: ${browserErrors.join(' | ')}`);
 
     await context.close();
-    console.log('PASS Platform workspace layout E2E (isolated PGlite): stage progress, completed control, desktop 80vh, mobile adaptive shell, sticky actions and entitlement layouts');
+    console.log('PASS Platform workspace layout E2E (isolated PGlite): responsive provisioning/control, elevated Admin and exact Employee tenant modes');
   } finally {
     await browser?.close();
     await closeServer(server);

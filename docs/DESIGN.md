@@ -619,8 +619,11 @@ trust as the next release boundary. The complete review and evidence matrix are 
   not whether a frozen company-visible Pack remains allowed after downgrade. Current
   visibility must dominate snapshot visibility (TASK-196).
 - **Platform privilege:** Support Grant is a decision service, not a tenant-data proxy;
-  exact-user Superadmin simulation currently needs no grant/reason/ticket. The intended
-  exception or required binding, plus MFA/step-up, must be explicit (TASK-198).
+  exact-user Superadmin simulation needs no grant/reason/ticket under the approved
+  TASK-198 exception. Elevated Platform Admin access is separate, reason/ticket-bound,
+  time-limited and requires Company-bound break-glass for sensitive mutation. MFA and
+  recent step-up are explicitly absent high-severity residual risks.
+
 - **Release truth:** HEAD source, dated tests, deployed revision and live availability
   are separate facts. Public probes returned 502 and HEAD CI was blocked before job
   start by account billing (TASK-199/TASK-203).
@@ -629,3 +632,11 @@ trust as the next release boundary. The complete review and evidence matrix are 
 - **Tax and AI evidence:** unify tax validity/posting behavior before MY SST may be
   called compliant (TASK-204), and directly test Vision provider failure without
   treating an encrypted connector as deployed provider proof (TASK-205).
+
+EPIC-067 source adds an authenticated tenant-admin presentation using a hidden non-login
+bridge actor. Platform workspace exposes separate `Open as Platform Admin` and `Login as
+employee` actions. The Admin tenant shell persistently shows the real Platform principal,
+scope, expiry, audited selectors, break-glass state and Return; navigation contains
+baseline services plus only MAC-effective modules. Employee mode remains fixed-scope and
+permission-trimmed. These surfaces must never expose the bridge identity as the operator
+or permit tenant-side MAC mutation. TASK-206–209 remain incomplete/release-blocked.

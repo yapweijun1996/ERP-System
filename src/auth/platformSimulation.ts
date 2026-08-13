@@ -8,6 +8,7 @@ import {
   appUser,
   company,
   platformSimulationSession,
+  platformTenantAccessSession,
   userCompany,
 } from '../data/schema';
 import { appendAudit } from '../api/audit';
@@ -70,6 +71,8 @@ async function activeTarget(
       eq(company.masterFn, scope.masterFn),
       eq(appUser.isActive, true),
       eq(appUser.accountState, 'active'),
+      eq(appUser.identityKind, 'human'),
+      eq(appUser.loginEnabled, true),
     ))
     .limit(1);
   return target ?? null;
@@ -113,6 +116,8 @@ export async function listPlatformSimulationTargets(
       eq(company.masterFn, scope.masterFn),
       eq(appUser.isActive, true),
       eq(appUser.accountState, 'active'),
+      eq(appUser.identityKind, 'human'),
+      eq(appUser.loginEnabled, true),
     ))
     .orderBy(asc(appUser.fullName), asc(appUser.username));
 }
@@ -152,6 +157,8 @@ export async function getPlatformSimulation(
       gt(platformSimulationSession.expiresAt, now),
       eq(appUser.isActive, true),
       eq(appUser.accountState, 'active'),
+      eq(appUser.identityKind, 'human'),
+      eq(appUser.loginEnabled, true),
       eq(appUser.masterFn, platformSimulationSession.masterFn),
       eq(company.masterFn, platformSimulationSession.masterFn),
     ))
@@ -210,6 +217,21 @@ export async function startPlatformSimulation(
         409,
         'platform_simulation_active',
         'Return to the Platform workspace before simulating another user.',
+      );
+    }
+    const [activeTenantAccess] = await exec.select({ accessId: platformTenantAccessSession.accessId })
+      .from(platformTenantAccessSession)
+      .where(and(
+        eq(platformTenantAccessSession.platformSessionHash, platformSessionHash),
+        isNull(platformTenantAccessSession.revokedAt),
+        gt(platformTenantAccessSession.expiresAt, now),
+      ))
+      .limit(1);
+    if (activeTenantAccess) {
+      throw new PlatformAccessError(
+        409,
+        'platform_tenant_access_active',
+        'Return to the Platform workspace before simulating a tenant user.',
       );
     }
     // Expired rows must be closed before the partial unique index can admit a

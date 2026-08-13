@@ -305,8 +305,15 @@ health or exact-HEAD deployment proof.
       reusing sample values for a new Company.
 - [ ] Current Platform bootstrap → Master → Company passes as the deployed
       non-superuser/non-BYPASSRLS runtime role with FORCE RLS (TASK-195).
-- [ ] Platform provisioning, MAC and simulation require MFA/recent step-up and conform to
-      the chosen Support Grant/Simulation policy (TASK-198).
+- [x] TASK-198 policy decision is explicit: exact Employee simulation is fixed-scope and
+      needs no reason/ticket; elevated Platform Admin access requires reason/ticket and
+      Company-bound break-glass for sensitive mutation. Support roles inherit neither.
+      MFA/recent step-up remain explicitly absent high-severity risks, not acceptance passes.
+- [ ] EPIC-067 elevated access passes non-superuser PostgreSQL/FORCE-RLS, dual-attribution,
+      expiry/revoke, cross-scope denial and sensitive-operation break-glass tests.
+- [ ] Desktop/mobile UAT proves separate Admin/Employee entry actions, persistent real-
+      principal banners, Admin MAC-effective navigation, Employee permission trimming,
+      audited scope switching, unlock and Return without exposing the hidden bridge actor.
 - [ ] Current public health/root/setup and exact deployed commit/asset hashes are recorded
       after TASK-199; the TASK-192 200 responses are historical.
 

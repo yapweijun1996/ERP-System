@@ -177,6 +177,84 @@ export const platformSimulationSession = pgTable('platform_simulation_session', 
   ),
 ]);
 
+/** Hidden tenant FK bridge for one Platform principal inside one Master. It is
+ * never a tenant login identity and is not a user-facing operator name. */
+export const platformPrincipalTenantActor = pgTable('platform_principal_tenant_actor', {
+  platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  masterFn: text('master_fn').notNull().references(() => master.masterFn),
+  actorUserId: bigint('actor_user_id', { mode: 'number' })
+    .notNull().references(() => appUser.userId),
+  ...timestamps,
+}, (t) => [
+  primaryKey({ columns: [t.platformPrincipalId, t.masterFn] }),
+  uniqueIndex('uq_platform_principal_tenant_actor_user').on(t.actorUserId),
+  index('idx_platform_principal_tenant_actor_master').on(t.masterFn, t.platformPrincipalId),
+]);
+
+/** Short-lived elevated tenant workspace. The platform session remains the
+ * authenticating realm; actorUserId only satisfies existing tenant FKs/RBAC. */
+export const platformTenantAccessSession = pgTable('platform_tenant_access_session', {
+  accessId: bigint('access_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  platformSessionHash: text('platform_session_hash').notNull()
+    .references(() => platformSession.tokenHash),
+  platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  actorUserId: bigint('actor_user_id', { mode: 'number' })
+    .notNull().references(() => appUser.userId),
+  masterFn: text('master_fn').notNull().references(() => master.masterFn),
+  companyFn: text('company_fn').notNull().references(() => company.companyFn),
+  mode: text('mode').notNull().default('platform_admin'),
+  reason: text('reason').notNull(),
+  ticketReference: text('ticket_reference').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  foreignKey({
+    columns: [t.masterFn, t.companyFn],
+    foreignColumns: [company.masterFn, company.companyFn],
+    name: 'fk_platform_tenant_access_company_master',
+  }),
+  check('ck_platform_tenant_access_mode', sql`${t.mode} = 'platform_admin'`),
+  uniqueIndex('uq_platform_tenant_access_active_session').on(t.platformSessionHash)
+    .where(sql`${t.revokedAt} is null`),
+  index('idx_platform_tenant_access_principal_window').on(
+    t.platformPrincipalId, t.expiresAt, t.revokedAt,
+  ),
+  index('idx_platform_tenant_access_scope_window').on(
+    t.masterFn, t.companyFn, t.expiresAt, t.revokedAt,
+  ),
+]);
+
+/** Company-bound sensitive-mutation permission window. Scope switches revoke
+ * it; it never bypasses workflow, maker-checker, state or business rules. */
+export const platformBreakGlassWindow = pgTable('platform_break_glass_window', {
+  windowId: bigint('window_id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  accessId: bigint('access_id', { mode: 'number' }).notNull()
+    .references(() => platformTenantAccessSession.accessId),
+  platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
+    .notNull().references(() => platformPrincipal.principalId),
+  masterFn: text('master_fn').notNull().references(() => master.masterFn),
+  companyFn: text('company_fn').notNull().references(() => company.companyFn),
+  reason: text('reason').notNull(),
+  ticketReference: text('ticket_reference').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  foreignKey({
+    columns: [t.masterFn, t.companyFn],
+    foreignColumns: [company.masterFn, company.companyFn],
+    name: 'fk_platform_break_glass_company_master',
+  }),
+  uniqueIndex('uq_platform_break_glass_active_access').on(t.accessId)
+    .where(sql`${t.revokedAt} is null`),
+  index('idx_platform_break_glass_scope_window').on(
+    t.masterFn, t.companyFn, t.expiresAt, t.revokedAt,
+  ),
+]);
+
 export const supportAccessGrant = pgTable('support_access_grant', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })

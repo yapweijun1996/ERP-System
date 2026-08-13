@@ -283,3 +283,17 @@ superuser and bypass RLS. TASK-195 must provide least-privilege runtime roles an
 PostgreSQL bootstrap/Master/Company isolation proof. Until then, application tenant
 predicates remain implemented but the current provisioning/runtime-role combination is
 not a complete production isolation claim.
+# Platform tenant administration boundary (migration 0099 source)
+
+Elevated Platform tenant access does not create a login-capable tenant Superadmin and
+does not relax tenant predicates. One hidden, non-login `platform_actor` bridge exists
+per Platform principal and Master; each accessed Company receives an immutable
+system-managed membership/role assignment. Every tenant query/write still uses the
+server-owned `masterFn + companyFn` bound to the active platform tenant-access session.
+
+Admin-mode scope switching is a Platform API mutation, not `session.switch_company`:
+the server verifies the new Company belongs to the requested Master, revokes the old
+Company break-glass window, refreshes authorization/module projection and audits both
+scopes. Exact Employee simulation remains Company-locked and must return before selecting
+another scope. Missing or unresolved Master/Company entitlement fails closed. TASK-195
+must prove these paths under non-superuser/non-BYPASSRLS PostgreSQL before release.

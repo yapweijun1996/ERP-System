@@ -83,6 +83,8 @@ export async function createSession(db: DB, data: NewSessionData): Promise<Creat
       eq(userCompany.userId, data.userId),
       eq(userCompany.companyFn, data.activeCompanyFn),
       eq(appUser.masterFn, data.masterFn),
+      eq(appUser.identityKind, 'human'),
+      eq(appUser.loginEnabled, true),
       eq(company.masterFn, data.masterFn),
     ))
     .limit(1);
@@ -135,6 +137,8 @@ export async function getSession(
       eq(appSession.tokenHash, tokenHash),
       isNull(appSession.revokedAt),
       eq(appUser.isActive, true),
+      eq(appUser.identityKind, 'human'),
+      eq(appUser.loginEnabled, true),
       eq(appUser.masterFn, appSession.masterFn),
       eq(company.masterFn, appSession.masterFn),
       gt(appSession.expiresAt, now),

@@ -1228,17 +1228,20 @@ Goal: make the broad Canonical ERP safe, operable and evidentially current befor
 more module breadth. The source-backed review is
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
 
-1. **Truth sync** (TASK-194 done): current inventory is 99 migrations/schema v98/249
+1. **Truth sync** (TASK-194 done; EPIC-067 source newer): current inventory is 100
+   migrations/schema v99/252
    tables, 129 Canonical routes with 128 API metadata routes, 1,545 i18n keys/72 packs,
-   314 permission codes and PWA v261. Historical test/deploy checkpoints remain dated.
+   315 permission codes and PWA v261. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 todo): deploy explicit non-superuser/non-BYPASSRLS
    runtime roles and prove current Platform bootstrap → Master → Company provisioning
    under FORCE RLS with exact transaction-local tenant context.
 3. **Receipt security and workflow** (TASK-196/197 todo): close company-Pack visibility
    downgrade, define original-evidence export authority/audit, capability-gate UI actions,
    and deliver real detail/edit/void/Missing Date plus bounded evidence selection.
-4. **Privileged assurance** (TASK-198 todo): reconcile Support Grant and Superadmin
-   simulation policy; add MFA and recent step-up for provisioning, MAC and simulation.
+4. **Privileged assurance** (TASK-198 done): the approved narrow exception separates
+   reason/ticket-bound Platform Admin tenant access from fixed-scope exact Employee
+   simulation. The owner explicitly accepted password-only access with no MFA or recent
+   step-up as a high-severity residual risk.
 5. **Current release proof** (TASK-199/200/203): restore public availability, identify
    the exact deployed revision, resolve `staff-calendar` API metadata, rerun all 129
    routes/current tests, and unblock zero-step GitHub Actions billing failure.
@@ -1254,3 +1257,24 @@ Exit criteria: every P0 passes its PostgreSQL/API/browser/security proof; public
 and revision evidence are current; CI actually executes; operational objectives are
 measured; no document calls a collected test, old probe or source-present commit a live
 production pass. TASK-017 and TASK-193 remain independent blockers.
+
+## Phase 49 — Platform Tenant Administration 🔶
+
+1. **Session foundation** (TASK-206 in progress): migration 0099 and source add the
+   hidden non-login bridge identity, system-managed Platform Tenant Admin membership,
+   15-minute elevated access and Company-bound break-glass records. Completion depends
+   on TASK-195's real PostgreSQL/FORCE-RLS proof.
+2. **Authorization** (TASK-207 todo): prove MAC-effective navigation, ordinary tenant
+   writes, sensitive-operation denial/unlock, workflow and maker-checker preservation,
+   scope isolation, expiry, revoke and dual attribution adversarially.
+3. **Workspace UX** (TASK-208 todo): finish desktop/mobile/accessibility/i18n proof for
+   separate `Open as Platform Admin` and exact `Login as employee` actions, persistent
+   banners, audited scope switching, unlock and return.
+4. **Release** (TASK-209 blocked): after TASK-195 and executable CI in TASK-203, apply
+   migration 0099, reapply RLS and release the application without reset or seed. The
+   production smoke is read-only and must not exercise sensitive business mutation.
+
+Exit criteria: no hidden actor is login-capable or tenant-manageable; Admin mode exposes
+only MAC-effective modules and cannot bypass workflow/business authority; Employee mode
+never gains Platform power; PostgreSQL/FORCE-RLS, browser, access-matrix and CI evidence
+all pass; docs and the existing MAC KB item distinguish source-present from deployed.

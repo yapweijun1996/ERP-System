@@ -502,7 +502,19 @@ EPIC-064 requires:
 - explicit user simulation may target any active user in the selected Master/Company.
   It may perform exactly the target user's allowed writes, never unions platform power,
   remains visibly marked/revocable/expiring, and audits `actorUserId` plus
-  `platformPrincipalId`. MAC writes remain platform-workspace-only.
+  `platformPrincipalId`. MAC writes remain platform-workspace-only;
+- the separate `platform.tenant_access.manage` authority may open elevated Admin tenant
+  access only with reason/ticket and an expiry no later than 15 minutes or the parent
+  Platform session. A hidden non-login bridge actor receives an immutable Company system
+  role but is never a tenant identity surface or displayed operator. Admin module access
+  is baseline services plus `Master enabled AND Company allocated`;
+- ordinary Admin-mode writes still require tenant permission, scope and workflow/business
+  authority. Sensitive mutations additionally require an unexpired break-glass window
+  for the current Company; scope switching revokes that window. Break-glass never
+  overrides maker-checker, workflow actor, record state/version, posting or balance rules;
+- elevated Admin mode and exact Employee simulation are mutually exclusive. The former
+  may switch scope through the audited Platform API; the latter is Company-locked until
+  return. Support roles inherit neither.
 
 TASK-185 implements the Module Catalog, migration 0094, versioned Master/default and
 Company allocation rows, hard-dependency validation, independent platform read/manage
@@ -518,6 +530,11 @@ is immediately revocable and all existing tenant `appendAudit` calls inherit the
 platform principal while retaining the target actor. TASK-188 completed the recorded
 automated release-gate proof. Implementation tests and fixtures remain distinct from
 human UAT and do not authorize a production release or migration.
+
+EPIC-067/TASK-206–209 add the elevated mode and migration 0099 source. TASK-206 remains
+In progress pending TASK-195's non-superuser/FORCE-RLS PostgreSQL proof; TASK-207/208
+remain Todo for adversarial and browser/accessibility/i18n closure, and TASK-209 is
+Blocked by TASK-195/TASK-203. No migration 0099 production deployment is claimed.
 
 ## 11. Platform Bootstrap & Tenant Provisioning contract (EPIC-065)
 
@@ -567,9 +584,12 @@ requirements, not optional polish:
 - **Snapshot authorization:** access to an immutable artifact requires current authority
   at least as strong as the frozen visibility. Losing `read_company` invalidates access
   to company-wide Receipt Packs even when the creator retains `read_own`.
-- **Privileged access:** Support Grant versus Superadmin Simulation is one explicit
-  policy; no undocumented exception may expose tenant data. Platform provisioning, MAC
-  and simulation require MFA, recent step-up, bounded sessions and dual attribution.
+- **Privileged access:** TASK-198 approves two mutually exclusive Superadmin modes.
+  Elevated Platform Admin access requires reason/ticket, a bounded tenant window, true
+  principal attribution and Company-bound break-glass for sensitive mutation. Exact
+  Employee simulation is fixed-scope, uses only target authority and requires no
+  reason/ticket. Support roles inherit neither. MFA and recent step-up are explicitly not
+  implemented and remain a high-severity accepted risk rather than a control.
 - **Truthful UI:** actions are capability-hidden or disabled with an accessible reason;
   every advertised correction/edit/void control reaches a real versioned command in
   both data modes.

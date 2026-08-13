@@ -49,6 +49,7 @@ export async function setUserActiveWithin(
     .where(and(
       eq(appUser.userId, userId),
       eq(appUser.masterFn, session.masterFn),
+      eq(appUser.identityKind, 'human'),
     ))
     .limit(1);
   if (!target) {
@@ -181,6 +182,7 @@ export async function setUserRolesWithin(
       eq(userCompany.userId, userId),
       eq(userCompany.companyFn, session.activeCompanyFn),
       eq(appUser.masterFn, session.masterFn),
+      eq(appUser.identityKind, 'human'),
     ))
     .limit(1)
     .for('update');
@@ -196,6 +198,7 @@ export async function setUserRolesWithin(
   }).from(role).where(and(
     eq(role.masterFn, session.masterFn),
     or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+    or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
     inArray(role.roleId, roleIds),
   )).orderBy(role.roleId);
   if (selectedRoles.length !== roleIds.length) {
@@ -331,6 +334,7 @@ export async function createRoleWithin(
     .where(and(
       eq(role.masterFn, session.masterFn),
       or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+      or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
       eq(role.name, trimmed),
     ))
     .limit(1);
@@ -689,6 +693,7 @@ export async function createInvitationRecordWithin(
     .where(and(
       eq(appUser.masterFn, session.masterFn),
       eq(appUser.email, email),
+      eq(appUser.identityKind, 'human'),
     ))
     .limit(1);
   if (existingUser) {

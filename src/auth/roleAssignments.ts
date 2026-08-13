@@ -1,4 +1,4 @@
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { and, eq, isNull, ne, or } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
@@ -147,6 +147,7 @@ export async function createRoleAssignmentWithin(
       eq(userCompany.companyFn, session.activeCompanyFn),
       eq(appUser.masterFn, session.masterFn),
       eq(appUser.isActive, true),
+      eq(appUser.identityKind, 'human'),
     )).limit(1);
   if (!target) throw new AuthLifecycleError(404, 'user_not_found', 'User not found in this company.');
 
@@ -154,6 +155,7 @@ export async function createRoleAssignmentWithin(
     eq(role.roleId, input.roleId),
     eq(role.masterFn, session.masterFn),
     or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+    or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
   )).limit(1);
   if (!availableRole) throw new AuthLifecycleError(400, 'invalid_role', 'The selected role is unavailable.');
 

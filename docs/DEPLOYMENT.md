@@ -290,6 +290,19 @@ bootstrap's first-caller takeover window is accepted until the operator complete
 first registration. Platform Superadmin remains password-only/no-MFA for v1; TASK-193
 email reset is blocked while `SMTP_HOST` is empty.
 
+## Migration 0099 / EPIC-067 release hold
+
+Migration 0099 and application source for Platform tenant administration are generated
+but **not approved for production release**. Do not apply 0099 until TASK-195 proves
+hidden-actor provisioning, tenant access, switching and revocation with explicit
+NOSUPERUSER/NOBYPASSRLS runtime roles under FORCE RLS, and TASK-203 permits CI to execute.
+
+The eventual release is backup + migration 0099 + production RLS reapplication +
+application rollout only: no reset, seed or volume deletion. Pre/post counts and exact
+revision must be recorded. Production smoke is read-only: verify separate Admin/Employee
+entry, MAC-effective session projection, persistent banner/scope/expiry and Return; do
+not unlock or perform sensitive business mutation. TASK-209 owns the final evidence.
+
 ### TASK-192 completion evidence (2026-08-12 UTC)
 
 The existing stack was migrated/released first and verified with migration journal 99,

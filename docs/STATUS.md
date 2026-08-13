@@ -6,26 +6,29 @@ an epic-level milestone lands.
 
 ## Source-of-truth synchronization
 
-The current worktree is based on `00e2533` and is at migration 0098: the Drizzle journal contains
-**99 migration entries**, generated canonical SQL contains **249 tables**, and the task
-registry contains **192 Done / 0 In progress / 10 Todo / 3 Blocked / 205 Total**.
-TASK-161–205 now
+The current worktree adds migration 0099: the Drizzle journal contains **100 migration
+entries**, generated canonical SQL contains **252 tables**, and the task registry contains
+**193 Done / 1 In progress / 11 Todo / 4 Blocked / 209 Total**.
+TASK-161–209 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
 matching task records.
 
-During the final review, user-owned uncommitted changes appeared in
-`platform-workspace.js`, its asset revision and focused Demo-autofill E2E. They introduce
-an explicit Master/Company/control transition state, clear a completed Company form
-without relying on reload and assert one mutation per submit. They are preserved as
-source-present worktree changes; the late E2E delta was not run and is not deployment
-evidence. Inventory/task counts above are unchanged.
+EPIC-067 source now adds the separate elevated Platform Admin tenant mode, migration
+0099, hidden non-login bridge actor, audited switching/break-glass API and dual-mode
+workspace UX. Focused Platform API/PGlite tests pass 3 files / 12 tests; isolated layout
+E2E enters both Admin and Employee modes and verifies the locked ordinary Company
+switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 129-screen
+desktop/mobile audit and 129-route × 5-language × 2-viewport audit pass. This is source
+evidence only. The final local full Vitest run passes 169 files / 672 tests with one
+intentional file/test skip. PostgreSQL/FORCE-RLS, executable CI and production release
+remain TASK-206–209 work.
 
 The 2026-08-12 TASK-194 correction aligns deployment, security, architecture,
 role-permission, Demo and UAT material to that boundary: current inventory is 129
 Canonical / 0 Preview routes, 128 API-mode metadata routes, 1,545 English keys/72 local
-packs, 314 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v261.
+packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v261.
 HEAD collects 170 files / 666 tests; collection is not a pass result. TASK-017 remains
 the physical-device blocker, TASK-193 is blocked by missing production SMTP/recovery,
 and TASK-203 is blocked because GitHub Actions billing prevents every job from starting.
@@ -421,7 +424,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
 | Fixed Assets module (register, depreciation run, GL posting) | ✅ Canonical Demo/API data and writes | Migration 0021 adds tenant-scoped `asset` (running `accumulated_depreciation` aggregate, mirroring Inventory's `stock_level`), `depreciation_run` and `depreciation_run_line` (a real append-only posting ledger, mirroring `stock_movement` — no fabricated future schedule is stored, only what has actually been posted). `src/modules/assets/` provides `createAssetWithin`/`createDepreciationRunWithin`/`postDepreciationRunWithin`; posting a run inserts one balanced `gl_entry` pair (Dr `6200` Depreciation Expense / Cr `1510` Accumulated Depreciation) via the same `accountIdByCode` lookup pattern `postSupplierInvoice.ts` uses. `asset-register` gained a real "New Asset" create modal (the mock's was a toast stub) and per-asset row-open (the mock always opened the same hardcoded record); `asset-detail` shows real acquisition fields and real posted depreciation history instead of a fabricated 5-year schedule; `depreciation` computes and posts a real run instead of re-announcing a hardcoded total, with a "View General Ledger" link to the real `gl` screen (not the mock's paramless `journal-entry` navigate — that screen's per-doc lookup was found to be a pre-existing dead reference, `DB.journalDocs` is never populated). Five-language `assetCopy()` translation pack, matching TASK-033's convention. |
 | Admin: users, roles & audit log | ✅ Canonical Demo/API data and writes | `app_user`/`role`/`role_permission`/`audit_log` remain the original Admin tables. Migration 0087 adds tenant-scoped `user_permission_override`; `/api/admin/users/:userId/permission-overrides` creates reasoned allow/deny exceptions, `/actions/revoke` revokes them, and `/api/admin/authorization/explain` exposes full decision details only to audit-read users while appending an audit event. Migration 0088 adds the company authorization-version marker used by current session/capability freshness projections. Migration 0089 replaces the tenant Superadmin bypass with an immutable, company-scoped Company Owner role containing 112 explicit permission rows; legacy flags are inert and legacy assignments are backfilled idempotently. These Admin tables and routes remain bespoke rather than generic resources because of composite/non-standard keys and security boundaries. Existing `user-mgmt`, `role-permission` and `audit-log` contracts remain real and backend-enforced; the central evaluator is the authorization source of truth. |
-| Platform support control plane | ⚠️ Decision foundation; no data proxy | `platform_principal`, roles, sessions and `support_access_grant` are separate from tenant identities. Grants have exact targets, reason/ticket, expiry, modes, field restrictions and audit, but `evaluateSupportAccess` is not consumed by tenant data routes. Platform Superadmin simulation currently needs no grant/reason/ticket; TASK-198 must make that exception or binding explicit and add MFA/step-up. |
+| Platform support control plane | ⚠️ Dual-mode source present; release blocked | TASK-198 approves a narrow exception: exact Employee simulation remains fixed-scope and needs no reason/ticket, while elevated Platform Admin access requires reason/ticket, 15-minute expiry, dual attribution and Company-bound break-glass for sensitive mutation. Support roles inherit neither. No MFA/step-up is an explicit high-severity risk. TASK-206–209 own implementation proof and release. |
 | Company module access control | ⚠️ Core cutover implemented; PostgreSQL RLS provisioning gap | TASK-185–192 provide catalog, dual-layer entitlement, independent Platform realm, simulation, bootstrap/provisioning and dated deployment/reset evidence. Tenant MAC is retired. However current Company provisioning does not establish transaction-local tenant context before RLS-protected writes, while bundled Compose may use a superuser runtime. TASK-195 owns the least-privilege runtime role and current-path PostgreSQL proof. |
 | HR-lite: employee master + leave request/approval | ✅ Canonical Demo/API data and writes | First Phase 7 module opened after Phase 8. `employee` (self-referencing `manager_id`, no link to `app_user`) and `leave_request` tables, `src/modules/hr/` (`createEmployee`, `createLeaveRequest`/`decideLeaveRequest`), registered as standard generic resources gated on new `hr.read`/`hr.write` permissions. `hr-directory` and `employee` read real data (per-employee detail, not always the same hardcoded record); `new-employee` is a single real form replacing the mock's 3-step compensation/provisioning wizard (no schema backed those steps); `leave-approval` reads real requests and its approve/reject actions are real, including a required-reason reject flow. That initial task deliberately excluded Payroll and compensation; later Payroll and Full Leave tasks supersede that historical boundary. Verified live: created a real employee, approved one leave request, rejected another with a reason, confirmed the employee detail's leave balance and history reflected both decisions. |
 | Staff Calendar appointments | ✅ Canonical Demo/API data and writes | Migration 0082 adds tenant-scoped `staff_appointment` facts with employee, type, title, time range, location, status and optimistic version. `staffCalendar` combines appointments with canonical leave rows; HR write users can create, edit and cancel without deleting history. API/domain tests cover tenant isolation, idempotent replay, version conflicts and invalid ranges; the browser contract covers mixed leave/appointment rendering, create, filter and shared searchable listing. |
@@ -472,7 +475,7 @@ are not more module screens:
   original-evidence export authority/audit;
 - TASK-197: finish capability-aware Company Receipt detail/correction/void and remove or
   explicitly accept the normal picker's Employee dependency;
-- TASK-198: reconcile Support Grant versus Superadmin Simulation and add MFA/step-up;
+- TASK-198: done — approved the narrow dual-mode exception and explicit no-MFA/no-step-up risk;
 - TASK-199/203: restore public availability and CI execution before any current release
   is described as healthy;
 - TASK-200–202: rerun all 129 routes/current tests, then prove SLO/RPO/RTO, scale, worker
@@ -1972,10 +1975,10 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 192 tasks
-- In progress: 0
-- Todo: 10
-- Blocked: TASK-017, TASK-193 and TASK-203 (3)
+- Done: 193 tasks
+- In progress: TASK-206 (1)
+- Todo: 11
+- Blocked: TASK-017, TASK-193, TASK-203 and TASK-209 (4)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 129 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
   complete documentation baseline, TASK-170's platform-support foundation,
@@ -2000,8 +2003,10 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 - EPIC-065 core is complete. TASK-189–192 are verified for independent Platform bootstrap,
   Master/Company provisioning, Master Admin RBAC, migration 0098, deployment,
   restore-tested backups and the authorized exact-volume reset. TASK-193 is blocked on
-  missing production SMTP. EPIC-066 is in progress: TASK-194 completed the audit;
-  TASK-195–202 and TASK-204–205 are Todo; TASK-203 is blocked by CI billing.
+  missing production SMTP. EPIC-066 is in progress: TASK-194 and TASK-198 are done;
+  TASK-195–197, TASK-199–202 and TASK-204–205 are Todo; TASK-203 is blocked by CI
+  billing. EPIC-067 source is present: TASK-206 is in progress, TASK-207/208 are Todo and
+  TASK-209 is blocked pending TASK-195/TASK-203.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
   requires a physical phone — no agent can complete this task alone.
   TASK-021 (verify `scripts/setup.sh`) turned out **not** to be permanently
@@ -2015,9 +2020,10 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 
 ## Next implementation boundary
 
-The next boundary is EPIC-066: TASK-195 RLS-compatible provisioning, TASK-196 Receipt
-Pack authorization, TASK-197 Company Receipts workflow, TASK-198 privileged assurance,
-and TASK-199 public availability are P0. TASK-204 tax posting correctness is also P0.
+The next boundary is TASK-195 RLS-compatible provisioning. It gates EPIC-067's hidden
+bridge actor and elevated Platform tenant administration completion. TASK-196 Receipt
+Pack authorization, TASK-197 Company Receipts workflow and TASK-199 public availability
+remain P0; TASK-198's dual-mode decision is done. TASK-204 tax posting correctness is also P0.
 TASK-200–202 and TASK-205 own current release/operational/provider depth. TASK-017 and
 TASK-193 remain independently truthful blockers, while TASK-203 is
 blocked by GitHub billing. The hosted application was healthy and browser-verified on

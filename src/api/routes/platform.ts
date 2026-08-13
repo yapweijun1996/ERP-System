@@ -34,6 +34,13 @@ import {
   startPlatformSimulation,
 } from '../../auth/platformSimulation';
 import {
+  endPlatformTenantAccess,
+  getPlatformTenantAccess,
+  startPlatformBreakGlass,
+  startPlatformTenantAccess,
+  switchPlatformTenantScope,
+} from '../../auth/platformTenantAccess';
+import {
   listCompanyAllocations,
   listMasterEntitlements,
   setCompanyAllocation,
@@ -157,6 +164,15 @@ async function requirePlatformSession(
     );
     return null;
   }
+  if (options.workspaceOnly && await getPlatformTenantAccess(db, token, { touch: false })) {
+    apiError(
+      res,
+      409,
+      'platform_tenant_access_active',
+      'Return to the Platform workspace before changing platform state.',
+    );
+    return null;
+  }
   return { session, token: token! };
 }
 
@@ -238,6 +254,8 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
     const auth = await requirePlatformSession(db, req, res);
     if (!auth) return;
     const simulation = await getPlatformSimulation(db, auth.token, { touch: false });
+    const tenantAccess = simulation ? null : await getPlatformTenantAccess(db, auth.token, { touch: false });
+    const availableScopes = tenantAccess ? await listProvisioningMasters(db) : undefined;
     res.json({
       data: {
         realm: 'platform',
@@ -251,6 +269,19 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
           expiresAt: simulation.expiresAt,
           target: simulation.target,
         } : null,
+        tenantAccess: tenantAccess ? {
+          accessId: tenantAccess.accessId,
+          mode: tenantAccess.mode,
+          masterFn: tenantAccess.masterFn,
+          companyFn: tenantAccess.companyFn,
+          actorUserId: tenantAccess.actorUserId,
+          reason: tenantAccess.reason,
+          ticketReference: tenantAccess.ticketReference,
+          expiresAt: tenantAccess.expiresAt,
+          actingPrincipal: tenantAccess.actingPrincipal,
+          breakGlass: tenantAccess.breakGlass,
+        } : null,
+        ...(availableScopes ? { availableScopes } : {}),
       },
       meta: {},
     });
@@ -259,9 +290,71 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
   router.post('/logout', async (req, res) => {
     const auth = await requirePlatformSession(db, req, res, { mutate: true });
     if (!auth) return;
+    await endPlatformSimulation(db, auth.session, auth.token, context(res).requestId);
+    await endPlatformTenantAccess(db, auth.session, auth.token, context(res).requestId, 'platform_logout');
     await revokePlatformSession(db, auth.token);
     clearPlatformCookies(res);
     res.json({ data: { ok: true }, meta: {} });
+  });
+
+  router.post('/tenant-access', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true, workspaceOnly: true });
+    if (!auth) return;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    try {
+      const access = await startPlatformTenantAccess(db, auth.session, auth.token, {
+        masterFn: typeof body.masterFn === 'string' ? body.masterFn : '',
+        companyFn: typeof body.companyFn === 'string' ? body.companyFn : '',
+        reason: typeof body.reason === 'string' ? body.reason : '',
+        ticketReference: typeof body.ticketReference === 'string' ? body.ticketReference : '',
+      }, context(res).requestId);
+      res.status(201).json({ data: access, meta: { realm: 'platform_tenant_admin' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.post('/tenant-access/actions/switch-scope', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true });
+    if (!auth) return;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    try {
+      const access = await switchPlatformTenantScope(db, auth.session, auth.token, {
+        masterFn: typeof body.masterFn === 'string' ? body.masterFn : '',
+        companyFn: typeof body.companyFn === 'string' ? body.companyFn : '',
+      }, context(res).requestId);
+      res.json({ data: access, meta: { realm: 'platform_tenant_admin' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.post('/tenant-access/actions/break-glass', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true });
+    if (!auth) return;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    try {
+      const window = await startPlatformBreakGlass(db, auth.session, auth.token, {
+        reason: typeof body.reason === 'string' ? body.reason : '',
+        ticketReference: typeof body.ticketReference === 'string' ? body.ticketReference : '',
+      }, context(res).requestId);
+      res.status(201).json({ data: window, meta: { realm: 'platform_tenant_admin' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
+  });
+
+  router.post('/tenant-access/actions/return', async (req, res) => {
+    const auth = await requirePlatformSession(db, req, res, { mutate: true });
+    if (!auth) return;
+    try {
+      const ended = await endPlatformTenantAccess(
+        db, auth.session, auth.token, context(res).requestId,
+      );
+      res.json({ data: { ended }, meta: { realm: 'platform' } });
+    } catch (error) {
+      handlePlatformError(res, error);
+    }
   });
 
   router.get('/entitlements', async (req, res) => {
@@ -469,6 +562,10 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
   router.post('/session/actions/revoke', async (req, res) => {
     const auth = await requirePlatformSession(db, req, res, { mutate: true });
     if (!auth) return;
+    await endPlatformSimulation(db, auth.session, auth.token, context(res).requestId);
+    await endPlatformTenantAccess(
+      db, auth.session, auth.token, context(res).requestId, 'platform_session_revoked',
+    );
     await revokePlatformSession(db, auth.token);
     res.json({ data: { revoked: true }, meta: {} });
   });

@@ -7,6 +7,7 @@ import {
   type SessionData,
 } from '../auth/session';
 import type { PlatformSimulationData } from '../auth/platformSimulation';
+import type { PlatformTenantAccessData } from '../auth/platformTenantAccess';
 
 export interface RequestContext {
   requestId: string;
@@ -15,6 +16,9 @@ export interface RequestContext {
   /** Set by the app middleware only when a valid platform session is actively
    * simulating an exact target tenant user. */
   platformSimulation?: PlatformSimulationData;
+  /** Elevated Platform Admin tenant mode. It is mutually exclusive with
+   * exact-user simulation and remains authenticated by the platform cookie. */
+  platformTenantAccess?: PlatformTenantAccessData;
 }
 
 export function context(res: express.Response): RequestContext {
@@ -77,6 +81,8 @@ export async function requireSession(
   const ctx = context(res);
   if (ctx.platformSimulation) {
     ctx.session = ctx.platformSimulation.target;
+  } else if (ctx.platformTenantAccess) {
+    ctx.session = ctx.platformTenantAccess.target;
   }
   if (ctx.session) {
     if (ctx.session.passwordChangeRequired

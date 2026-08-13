@@ -2217,7 +2217,7 @@ async function boot(){
   const platformSession=(apiMode
     && window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.getSession==='function')
     ?await window.ErpPlatformWorkspace.getSession():null;
-  if(platformSession&&!platformSession.simulation){
+  if(platformSession&&!platformSession.simulation&&!platformSession.tenantAccess){
     await window.ErpPlatformWorkspace.renderWorkspace(platformSession);
     return;
   }
@@ -2289,6 +2289,16 @@ async function boot(){
   quickCreateMenu.querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
   // company switcher
   wireCompanyMenu();
+  const platformTenantMode=window.ErpPlatformWorkspace&&typeof window.ErpPlatformWorkspace.tenantMode==='function'
+    ?window.ErpPlatformWorkspace.tenantMode():null;
+  if(platformTenantMode){
+    const companyContext=$('#ctxCompany');
+    companyContext.disabled=true;
+    companyContext.setAttribute('aria-disabled','true');
+    companyContext.title=platformTenantMode==='employee'
+      ?'Return to the Platform workspace before changing Company.'
+      :'Use the audited Master and Company selectors in the Platform Admin banner.';
+  }
   // language switcher
   $('#langBtn').innerHTML=ic('globe');
   $('#langBtn').setAttribute('aria-label',t('tip.language'));

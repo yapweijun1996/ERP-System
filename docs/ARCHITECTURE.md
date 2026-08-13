@@ -241,6 +241,15 @@ end-user simulation creates a default-15-minute linked session whose decisions r
 exactly as the active target user, whose platform mutations are blocked until return,
 and whose audit retains the real platform principal.
 
+Migration 0099 source adds a mutually exclusive elevated tenant-admin path. A hidden,
+non-login `platform_actor` bridge supplies existing tenant foreign keys and a
+system-managed Company membership; `platform_tenant_access_session` binds the real
+Platform session to exact Master/Company/reason/ticket/expiry, while
+`platform_break_glass_window` adds a current-Company sensitive-mutation gate. Scope
+switch revokes break-glass. Authorization still evaluates MAC, tenant permission, scope
+and workflow/business authority, and audit/UI retain the real Platform principal.
+TASK-206–209 distinguish this source-present architecture from PostgreSQL/browser/deploy proof.
+
 TASK-185–187 are current code and TASK-188 completed its recorded adversarial,
 PostgreSQL, browser and release-gate proof. TASK-192 later deployed through 0098 and
 reset the target to first-run state; this still does not imply current HEAD health. See

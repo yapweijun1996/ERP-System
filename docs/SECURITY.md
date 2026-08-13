@@ -291,15 +291,25 @@ Remember Me, immediate durable revoke/return, login rate limiting, platform CSRF
 the target session and MAC writes reject until the operator returns to the platform
 workspace.
 
-`evaluateSupportAccess` is not consumed by tenant data routes. Superadmin simulation
-currently requires no active grant, reason or ticket, despite the schema comment saying
-Platform principals need an expiring grant for customer data. TASK-198 must bind the two
-or formalize a narrow exception and align code comments, policy and tests.
+`evaluateSupportAccess` remains a separate support-grant decision service and is not a
+tenant-data proxy. TASK-198 formalizes the narrow exception: exact Employee simulation
+requires no grant/reason/ticket and never unions Platform permission; elevated Platform
+Admin tenant access is a separate reason/ticket-bound 15-minute state. Support roles
+inherit neither path.
 
 Approved v1 uses password-only platform login and no MFA. Because that principal can
 alter commercial access and fully simulate active users, this is a high-severity
 residual risk that must remain in future human acceptance and production-release
 reporting despite TASK-187/188 source verification.
+
+Migration 0099 source adds a hidden non-login bridge actor and Company-scoped immutable
+system role for elevated access. Admin mode sees only MAC-effective modules; ordinary
+writes retain permission/scope/workflow checks. Sensitive mutation additionally requires
+a current-Company break-glass window and returns `platform_break_glass_required` when
+absent. Break-glass never overrides maker-checker or business rules and is revoked on
+scope switch/return/logout/expiry. UI and audit must display the real Platform principal,
+not the bridge identity. TASK-206–209 remain incomplete/release-blocked pending TASK-195
+PostgreSQL/FORCE-RLS proof and executable CI.
 
 Current production RLS is also not a completed runtime-role claim: Platform Company
 provisioning does not set transaction-local tenant context before RLS-protected writes,

@@ -1,6 +1,6 @@
 # Task Index
 
-Reviewed: **2026-08-12**
+Reviewed: **2026-08-13**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -8,25 +8,25 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **192**
-- In progress: **0**
-- Todo: **10**
-- Blocked: **3**
-- Total: **205**
+- Done: **193**
+- In progress: **1**
+- Todo: **11**
+- Blocked: **4**
+- Total: **209**
 
 ## Current release-quality note
 
-TASK-194 audited HEAD `00e2533`. Final review also observed and preserved user-owned,
-uncommitted Platform workspace transition-state/E2E edits; they are source-present but
-were not included in the focused pass or any deployment claim. Current inventory is 99 migrations through 0098,
-schema v98/249 tables, 129 Canonical / 0 Preview routes, 128 routes declaring API mode,
-1,545 English i18n keys/72 local packs, 314 permission codes and PWA v261. The sole
+TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 100 migrations
+through 0099, schema v99/252 tables, 129 Canonical / 0 Preview routes, 128 routes declaring
+API mode, 1,545 English i18n keys/72 local packs, 315 permission codes and PWA v261. The sole
 Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
-tests; this is not a pass result. Dated TASK-183 129-route browser evidence and earlier
-168-file/663-test evidence remain historical checkpoints. This review passed static
-schema/drift/pack/i18n/permission/build gates and 7 focused files / 22 tests; it could
-not rerun the browser matrix because local Playwright Chromium is absent. Public probes
-returned 502, and HEAD CI started no jobs because GitHub billing/spending blocked it.
+tests at the prior audit. The final EPIC-067 worktree instead passes the full local
+Vitest run at 169 files / 672 tests with one intentional file/test skip. Current source
+also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
+3 focused files / 12 tests, Platform layout E2E with both tenant modes, Demo autofill
+E2E, the 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
+5-language × 2-viewport audit. PostgreSQL/FORCE-RLS and executable CI remain release
+blockers; public probes and older suite totals are historical evidence.
 
 ## Current authorization programme
 
@@ -95,7 +95,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-195 | Todo | Least-privilege runtime roles and RLS-compatible Platform provisioning proof |
 | TASK-196 | Todo | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Todo | Permission-aware Company Receipts correction/edit/void and capture UX |
-| TASK-198 | Todo | Reconcile Support Grant/Simulation and add Platform MFA/step-up |
+| TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
@@ -104,9 +104,19 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-204 | Todo | Correct SG GST/MY SST validity, classification and posting semantics |
 | TASK-205 | Todo | Prove Vision provider failures and production-configuration boundaries |
 
-The registry therefore has **192 Done / 0 In progress / 10 Todo / 3 Blocked / 205 Total**.
-The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-203 (CI
-billing). Dependencies and epic references are valid.
+## Platform tenant administration programme
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| TASK-206 | In progress | Migration 0099, hidden non-login bridge actor, immutable Platform Tenant Admin role/membership and bounded session foundation; PostgreSQL/RLS completion depends on TASK-195 |
+| TASK-207 | Todo | Elevated tenant authorization, audited scope switching, Company-bound break-glass and adversarial workflow proof |
+| TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
+| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-195 and TASK-203 |
+
+The registry therefore has **193 Done / 1 In progress / 11 Todo / 4 Blocked / 209 Total**.
+The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
+billing) and TASK-209 (release proof waiting for TASK-195/TASK-203). Dependencies and
+epic references are valid.
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master

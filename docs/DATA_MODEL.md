@@ -978,5 +978,24 @@ returns a conflict; a completed identical request replays its non-secret respons
 
 Migration 0098 also backfills `platform.tenants.read` and `platform.tenants.manage` onto
 existing `platform_superadmin` role rows. Support roles receive no commercial tenant
-provisioning permissions. The generated PGlite schema and migration bundle are version
-98/99 ordered entries and must pass `check:demo-schema` and `check:drift` before release.
+provisioning permissions.
+
+## Platform tenant administration tables (migration 0099 source)
+
+- `app_user.identity_kind` distinguishes `human` from hidden `platform_actor`; a bridge
+  must have `login_enabled=false`. Existing users default to human/login-enabled.
+- `platform_principal_tenant_actor` maps one Platform principal plus Master to one bridge
+  `actor_user_id`; the actor is technical FK/audit evidence and is never a displayed or
+  login identity.
+- `platform_tenant_access_session` binds one active Platform session to exact
+  Master/Company, reason/ticket, mode, expiry and revoke facts. Its 15-minute expiry is
+  capped by the parent Platform session.
+- `platform_break_glass_window` binds sensitive-mutation permission unlock to one active
+  tenant-access session and Company, with separate reason/ticket/expiry/revoke evidence.
+
+The bridge receives a normal Company membership and immutable system role so existing
+tenant foreign keys, RLS and permission checks stay explicit. No table grants it a
+master-scope bypass, Employee linkage, login credential, invitation or password-reset
+path. Migration 0099 is generated/source-present, not production-deployed.
+The generated PGlite schema and migration bundle are schema version 99 / 100 ordered
+entries and must pass `check:demo-schema` and `check:drift` before release.

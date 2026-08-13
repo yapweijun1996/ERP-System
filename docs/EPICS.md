@@ -2618,7 +2618,7 @@ Current truth:
 | TASK-195 | Todo | Least-privilege runtime roles and RLS-compatible Platform provisioning |
 | TASK-196 | Todo | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Todo | Permission-aware Company Receipts capture/correction/edit/void UX |
-| TASK-198 | Todo | Support/Simulation policy, Platform MFA and sensitive-action step-up |
+| TASK-198 | Done | Narrow dual-mode exception, reason/ticket Admin access and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |
 | TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
@@ -2631,3 +2631,34 @@ Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, 
 acceptance criteria; current CI executes rather than failing before startup; public
 health and deployed revision are independently verified; TASK-017 and TASK-193 remain
 separately truthful until physical-device and email-recovery evidence exists.
+
+## EPIC-067 — Platform Tenant Administration 🔶
+
+Provide two explicit, mutually exclusive Platform Superadmin tenant modes without
+reviving a login-capable tenant Superadmin or legacy authorization bypass:
+
+- **Open as Platform Admin** is a reason/ticket-bound, default-15-minute elevated tenant
+  session. A hidden, non-login bridge actor supplies existing tenant foreign keys and an
+  immutable system role, while audit and UI always identify the real Platform principal.
+  It sees baseline services plus all and only modules where Master entitlement and
+  Company allocation are effective. Ordinary writes retain tenant permission, scope and
+  business checks; centrally classified sensitive mutations additionally require a
+  Company-bound 15-minute break-glass window.
+- **Login as employee** remains exact-user simulation: it is fixed to the target
+  Master/Company and applies MAC plus the target user's permissions, scope and workflow
+  authority. It requires neither reason nor ticket and never unions Platform authority.
+- MAC mutation remains Platform-workspace-only. Support roles inherit neither mode,
+  scope switching revokes break-glass, and return/logout/expiry revoke access.
+
+| Task | Status | Scope |
+| --- | --- | --- |
+| TASK-206 | In progress | Migration 0099, hidden actor/system role and bounded session foundation; completion waits for TASK-195 PostgreSQL/RLS proof |
+| TASK-207 | Todo | Tenant authorization, switching, break-glass and dual-attribution/adversarial proof |
+| TASK-208 | Todo | Platform/Tenant workspace UX and Employee-mode integration |
+| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-195/TASK-203 |
+
+Source for TASK-206–208 is present and focused PGlite/API tests pass, but this is not a
+production-ready or deployed claim. Migration 0099 must not be released until TASK-195
+proves the current provisioning/access path under non-superuser, non-BYPASSRLS runtime
+roles and TASK-203 allows CI jobs to execute. Password-only Platform login, no step-up,
+and sensitive-data read without break-glass are explicitly accepted high-severity risks.

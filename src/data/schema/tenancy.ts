@@ -37,7 +37,8 @@ export const company = pgTable('company', {
   uniqueIndex('uq_company_master_company').on(t.masterFn, t.companyFn),
 ]);
 
-/** A person who logs in. Belongs to exactly ONE master. `language` = UI i18n preference.
+/** A tenant identity belonging to exactly one Master. Human rows may log in;
+ * hidden platform_actor rows are non-login FK/RBAC bridges only. `language` = UI i18n preference.
  *  `password_hash` format: "pbkdf2$<iterations>$<saltHex>$<hashHex>" — see src/auth/password.ts
  *  (TASK-024). Never store or compare plaintext passwords. */
 export const appUser = pgTable('app_user', {
@@ -47,6 +48,10 @@ export const appUser = pgTable('app_user', {
   email: text('email'),
   fullName: text('full_name'),
   passwordHash: text('password_hash').notNull(),
+  /** Human identities can authenticate in the tenant realm. Platform actors
+   * exist only as hidden FK bridges for audited Platform Admin tenant access. */
+  identityKind: text('identity_kind').notNull().default('human'),
+  loginEnabled: boolean('login_enabled').notNull().default(true),
   language: text('language').notNull().default('en'),   // en | ms | zh | ja | vi
   isActive: boolean('is_active').notNull().default(true),
   accountState: text('account_state').notNull().default('active'),
@@ -61,6 +66,14 @@ export const appUser = pgTable('app_user', {
   check(
     'ck_app_user_account_state',
     sql`${t.accountState} in ('preactivated', 'active', 'offboarded')`,
+  ),
+  check(
+    'ck_app_user_identity_kind',
+    sql`${t.identityKind} in ('human', 'platform_actor')`,
+  ),
+  check(
+    'ck_app_user_platform_actor_login',
+    sql`${t.identityKind} <> 'platform_actor' or ${t.loginEnabled} = false`,
   ),
 ]);
 

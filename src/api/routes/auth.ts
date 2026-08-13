@@ -168,6 +168,8 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
       .where(and(
         eq(master.loginCode, normalizedOrganizationCode),
         eq(appUser.username, normalizedUsername),
+        eq(appUser.identityKind, 'human'),
+        eq(appUser.loginEnabled, true),
       ))
       .limit(2);
     const user = users.length === 1 ? users[0] : null;
@@ -290,9 +292,9 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   });
 
   router.post('/logout', async (req, res) => {
-    if (context(res).platformSimulation) {
+    if (context(res).platformSimulation || context(res).platformTenantAccess) {
       apiError(res, 409, 'platform_simulation_return_required',
-        'Return to the Platform workspace before signing out of the simulated tenant session.');
+        'Return to the Platform workspace before signing out of the Platform tenant session.');
       return;
     }
     const sessionId = parseCookies(req.headers.cookie)[SESSION_COOKIE];
@@ -340,6 +342,17 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
     ]);
     res.json({
       ...session,
+      ...(context(res).platformTenantAccess ? {
+        actingPrincipal: context(res).platformTenantAccess!.actingPrincipal,
+        platformTenantAccess: {
+          accessId: context(res).platformTenantAccess!.accessId,
+          mode: context(res).platformTenantAccess!.mode,
+          masterFn: context(res).platformTenantAccess!.masterFn,
+          companyFn: context(res).platformTenantAccess!.companyFn,
+          expiresAt: context(res).platformTenantAccess!.expiresAt,
+          breakGlass: context(res).platformTenantAccess!.breakGlass,
+        },
+      } : {}),
       capabilities,
       modules,
       onboarding: onboarding[0] ?? null,
@@ -467,9 +480,9 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   router.post('/session/actions/switch-company', async (req, res) => {
     const session = await requireSession(db, req, res);
     if (!session) return;
-    if (context(res).platformSimulation) {
+    if (context(res).platformSimulation || context(res).platformTenantAccess) {
       apiError(res, 409, 'platform_simulation_company_locked',
-        'Return to the Platform workspace before switching company.');
+        'Use the audited Platform scope switch, or return to the Platform workspace.');
       return;
     }
     if (!await hasPermission(db, session, PERMISSIONS.companySwitch)) {

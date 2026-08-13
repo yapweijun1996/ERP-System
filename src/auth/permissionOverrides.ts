@@ -152,6 +152,7 @@ export async function createPermissionOverrideWithin(
       eq(userCompany.companyFn, session.activeCompanyFn),
       eq(appUser.masterFn, session.masterFn),
       eq(appUser.isActive, true),
+      eq(appUser.identityKind, 'human'),
     )).limit(1);
   if (!target) throw new AuthLifecycleError(404, 'user_not_found', 'User not found in this company.');
   await validateTarget(exec, session, normalized);

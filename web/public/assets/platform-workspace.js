@@ -293,6 +293,7 @@
   }
   function renderBootstrap(){
     authShell(true);
+    document.documentElement.classList.remove('platform-workspace-locked');
     var view=authView();
     snapshotDraft(view,'bootstrap');
     /* Bootstrap registration is intentionally the regular auth panel. The
@@ -339,6 +340,7 @@
   }
   function renderLogin(initialRealm,setupStatus){
     authShell(true);
+    document.documentElement.classList.remove('platform-workspace-locked');
     var view=authView();
     var demoPlatformLoginAvailable=demoAutofillEnabled()&&Boolean(setupStatus&&setupStatus.hasPlatformAdmin);
     view.setAttribute('aria-label','Sign in');
@@ -689,12 +691,14 @@
     event.preventDefault(); event.returnValue='';
   }
   function simulationMarkup(){
-    return `<section class="platform-simulation-panel"><h2>Tenant user simulation</h2><p>Enter one active user's exact tenant authority for up to 15 minutes. Platform permissions are never added to the target user.</p>
-      <div class="platform-simulation-controls"><label class="fld"><span>Active tenant user</span><select id="platformSimulationTarget">${options(state.targets,'','userId','username')}</select></label><button class="btn primary" id="platformStartSimulation" type="button">Enter tenant simulation</button></div></section>`;
+    return `<section class="platform-simulation-panel platform-tenant-entry-panel"><h2>Open tenant workspace</h2><p>Choose elevated Platform Admin access or an exact tenant user simulation. The two modes are isolated and fully audited.</p>
+      <div class="platform-tenant-entry-grid"><div class="platform-tenant-entry-card"><h3>Open as Platform Admin</h3><p>See all MAC-effective modules and use registered tenant permissions. Sensitive mutations require a separate 15-minute unlock.</p><label class="fld"><span>Access reason</span><input id="platformTenantAccessReason" maxlength="500" required placeholder="Why tenant access is needed"></label><label class="fld"><span>Ticket reference</span><input id="platformTenantAccessTicket" maxlength="128" required placeholder="e.g. DEMO-001"></label><button class="btn primary" id="platformStartTenantAccess" type="button">Open as Platform Admin</button></div>
+      <div class="platform-tenant-entry-card"><h3>Login as employee</h3><p>Use only the selected user's permissions, scope and workflow authority. Platform permissions are never added.</p><label class="fld"><span>Active tenant user</span><select id="platformSimulationTarget">${options(state.targets,'','userId','username')}</select></label><button class="btn soft" id="platformStartSimulation" type="button">Login as employee</button></div></div></section>`;
   }
   async function renderWorkspace(session,event,value){
     state.session=session||await getSession();
     authShell(true);
+    document.documentElement.classList.add('platform-workspace-locked');
     var view=authView();
     transitionWorkspace(event||WORKSPACE_EVENT.RENDER,view,value);
     view.classList.add('platform-workspace-view');
@@ -818,29 +822,75 @@
       try{ await request('simulations',{method:'POST',body:{masterFn:state.masterFn,companyFn:state.companyFn,targetUserId:target}}); location.reload(); }
       catch(error){ setError(error&&error.message||'Unable to enter tenant simulation.'); button.disabled=false; }
     });
+    var tenantAccessButton=view.querySelector('#platformStartTenantAccess');
+    if(tenantAccessButton) tenantAccessButton.addEventListener('click',async function(event){
+      if(!confirmDiscardEntitlements(view)) return;
+      var reason=view.querySelector('#platformTenantAccessReason').value.trim();
+      var ticketReference=view.querySelector('#platformTenantAccessTicket').value.trim();
+      var button=event.currentTarget;
+      if(!reason||!ticketReference){ setError('Access reason and ticket reference are required.'); return; }
+      button.disabled=true; setError('');
+      try{ await request('tenant-access',{method:'POST',body:{masterFn:state.masterFn,companyFn:state.companyFn,reason:reason,ticketReference:ticketReference}}); cachedSession=null; location.reload(); }
+      catch(error){ setError(error&&error.message||'Unable to open the Platform Admin tenant workspace.'); button.disabled=false; }
+    });
   }
-  async function returnFromSimulation(){ await request('simulations/actions/return',{method:'POST',body:{}}); cachedSession=null; location.reload(); }
+  async function returnFromSimulation(){
+    var session=await getSession();
+    var path=session&&session.tenantAccess?'tenant-access/actions/return':'simulations/actions/return';
+    await request(path,{method:'POST',body:{}}); cachedSession=null; location.reload();
+  }
   async function syncSimulationBanner(){
     var session=await getSession();
-    if(!session||!session.simulation) return;
+    if(!session||(!session.simulation&&!session.tenantAccess)) return;
     var banner=document.getElementById('impersonationBanner');
     if(!banner) return;
-    var target=session.simulation.target||{};
     banner.hidden=false;
-    banner.innerHTML=`<div class="impersonation-copy"><span><b>Platform simulation active</b><small>Viewing as ${esc(target.fullName||target.username||'tenant user')} · exact tenant permissions only · expires ${esc(new Date(session.simulation.expiresAt).toLocaleTimeString())}</small></span></div><button class="impersonation-return" id="returnToPlatformWorkspaceBtn" type="button">Return to Platform workspace</button>`;
+    if(session.simulation){
+      var target=session.simulation.target||{};
+      banner.classList.remove('platform-admin-active');
+      banner.innerHTML=`<div class="impersonation-copy"><span><b>Employee simulation active</b><small>Viewing as ${esc(target.fullName||target.username||'tenant user')} · real Platform principal P-${esc(session.principalId)} · exact tenant permissions only · expires ${esc(new Date(session.simulation.expiresAt).toLocaleTimeString())}</small></span></div><button class="impersonation-return" id="returnToPlatformWorkspaceBtn" type="button">Return to Platform workspace</button>`;
+    }else{
+      var access=session.tenantAccess; var scopes=session.availableScopes||[];
+      var masterOptions=scopes.map(function(item){ return `<option value="${esc(item.masterFn)}" ${item.masterFn===access.masterFn?'selected':''}>${esc(item.name)} (${esc(item.masterFn)})</option>`; }).join('');
+      var selectedMaster=scopes.find(function(item){ return item.masterFn===access.masterFn; });
+      var companyOptions=((selectedMaster&&selectedMaster.companies)||[]).map(function(item){ return `<option value="${esc(item.companyFn)}" ${item.companyFn===access.companyFn?'selected':''}>${esc(item.name)} (${esc(item.companyFn)})</option>`; }).join('');
+      var principal=access.actingPrincipal||{}; var unlocked=access.breakGlass&&new Date(access.breakGlass.expiresAt)>new Date();
+      banner.classList.add('platform-admin-active');
+      banner.innerHTML=`<div class="impersonation-copy"><span><b>Platform Admin active · P-${esc(principal.platformPrincipalId||session.principalId)}</b><small>${esc(principal.displayName||session.displayName||'Platform Admin')} · ${esc(access.masterFn)} / ${esc(access.companyFn)} · expires ${esc(new Date(access.expiresAt).toLocaleTimeString())}${unlocked?' · sensitive writes unlocked until '+esc(new Date(access.breakGlass.expiresAt).toLocaleTimeString()):''}</small></span><span class="platform-admin-banner-error" id="platformTenantAccessError" role="alert"></span></div><div class="platform-admin-scope"><label><span>Master</span><select id="platformTenantMasterSwitch">${masterOptions}</select></label><label><span>Company</span><select id="platformTenantCompanySwitch">${companyOptions}</select></label></div><button class="impersonation-return platform-break-glass-button" id="platformBreakGlassBtn" type="button">${unlocked?'Sensitive writes unlocked':'Unlock for 15 minutes'}</button><button class="impersonation-return" id="returnToPlatformWorkspaceBtn" type="button">Return</button>`;
+      var masterSwitch=banner.querySelector('#platformTenantMasterSwitch'); var companySwitch=banner.querySelector('#platformTenantCompanySwitch');
+      var bannerError=banner.querySelector('#platformTenantAccessError');
+      function showBannerError(error){ if(bannerError) bannerError.textContent=error&&error.message||String(error||'Unable to update Platform tenant access.'); }
+      async function switchScope(masterFn,companyFn){
+        if(masterSwitch) masterSwitch.disabled=true; if(companySwitch) companySwitch.disabled=true; showBannerError('');
+        try{ await request('tenant-access/actions/switch-scope',{method:'POST',body:{masterFn:masterFn,companyFn:companyFn}}); cachedSession=null; location.reload(); }
+        catch(error){ if(masterSwitch) masterSwitch.disabled=false; if(companySwitch) companySwitch.disabled=false; showBannerError(error); }
+      }
+      if(masterSwitch) masterSwitch.addEventListener('change',function(){ var targetMaster=scopes.find(function(item){ return item.masterFn===masterSwitch.value; }); var first=(targetMaster&&targetMaster.companies||[])[0]; if(first) switchScope(masterSwitch.value,first.companyFn); });
+      if(companySwitch) companySwitch.addEventListener('change',function(){ switchScope(access.masterFn,companySwitch.value); });
+      var unlock=banner.querySelector('#platformBreakGlassBtn');
+      if(unlock) unlock.addEventListener('click',async function(){
+        if(unlocked) return;
+        var reason=window.prompt('Reason for sensitive mutation access'); if(!reason) return;
+        var ticket=window.prompt('Ticket reference'); if(!ticket) return;
+        unlock.disabled=true;
+        try{ await request('tenant-access/actions/break-glass',{method:'POST',body:{reason:reason,ticketReference:ticket}}); cachedSession=null; location.reload(); }
+        catch(error){ unlock.disabled=false; showBannerError(error&&error.message||'Unable to unlock sensitive mutations.'); }
+      });
+    }
     banner.querySelector('#returnToPlatformWorkspaceBtn').addEventListener('click',async function(event){
       event.currentTarget.disabled=true;
-      try{ await returnFromSimulation(); }catch(error){ event.currentTarget.disabled=false; setError(error&&error.message||'Unable to return to the Platform workspace.'); }
+      try{ await returnFromSimulation(); }catch(error){ event.currentTarget.disabled=false; var alert=banner.querySelector('#platformTenantAccessError'); if(alert) alert.textContent=error&&error.message||'Unable to return to the Platform workspace.'; else setError(error&&error.message||'Unable to return to the Platform workspace.'); }
     });
   }
   // A tenant-shell sign-out while simulated must end the platform session, not
   // leave the browser silently inside the target user's workspace.
   document.addEventListener('click',function(event){
     var signout=event.target&&event.target.closest&&event.target.closest('[data-acct="signout"]');
-    if(!signout||!cachedSession||!cachedSession.simulation) return;
+    if(!signout||!cachedSession||(!cachedSession.simulation&&!cachedSession.tenantAccess)) return;
     event.preventDefault(); event.stopImmediatePropagation();
     request('logout',{method:'POST',body:{}}).finally(function(){ cachedSession=null; location.reload(); });
   },true);
 
-  window.ErpPlatformWorkspace={getSession:getSession,getSetupStatus:getSetupStatus,renderBootstrap:renderBootstrap,renderLogin:renderLogin,renderWorkspace:renderWorkspace,syncSimulationBanner:syncSimulationBanner,returnFromSimulation:returnFromSimulation};
+  function tenantMode(){ return cachedSession&&cachedSession.simulation?'employee':cachedSession&&cachedSession.tenantAccess?'platform_admin':null; }
+  window.ErpPlatformWorkspace={getSession:getSession,getSetupStatus:getSetupStatus,renderBootstrap:renderBootstrap,renderLogin:renderLogin,renderWorkspace:renderWorkspace,syncSimulationBanner:syncSimulationBanner,returnFromSimulation:returnFromSimulation,tenantMode:tenantMode};
 })();

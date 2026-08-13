@@ -578,6 +578,37 @@ the passing local gates—not that run—are the test evidence.
 | Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
 | Full adversarial/release proof | Focused platform/tenant evidence plus recorded cross-engine, browser and release gates; no production deployment implied | TASK-188 done |
 
+### Platform tenant administration source boundary (EPIC-067)
+
+Migration 0099 and current source introduce a second, elevated mode without changing the
+exact Employee simulation contract:
+
+- `Open as Platform Admin` requires `platform.tenant_access.manage`, reason/ticket and a
+  default-15-minute access window. A hidden `identity_kind=platform_actor`, non-login
+  `app_user` bridge and system-managed `Platform Tenant Admin` Company membership satisfy
+  existing tenant foreign keys. Tenant users cannot list, assign, edit, invite, reset,
+  employee-link or simulate that identity. Display and audit attribution use the true
+  `platformPrincipalId`; bridge `actorUserId` remains technical evidence only.
+- Admin-mode module visibility is baseline services plus
+  `Master enabled AND Company allocated`. Missing, unknown or disabled commercial state
+  fails closed with `module_not_enabled`. The bridge system role contains registered
+  tenant permissions but neither `platform.*` nor deprecated `admin.modules.manage`.
+- Ordinary mutations still require tenant permission, scope and business/workflow
+  authority. A central sensitive-operation gate adds a current-Company 15-minute
+  break-glass requirement; it does not bypass maker-checker, workflow actor, version,
+  state, amount, posting or balance rules. Master/Company switching is audited and
+  revokes break-glass.
+- `Login as employee` remains mutually exclusive, fixed-scope exact-user simulation and
+  applies `MAC effective AND target permission AND scope AND workflow authority`. It
+  requires no reason/ticket and never inherits bridge or Platform permission.
+- MAC mutation remains Platform-workspace-only. Return, logout, revoke, expiry or parent
+  session termination invalidates tenant access.
+
+Focused PGlite/API proof passes, but TASK-206 remains In progress until TASK-195 proves
+the path with non-superuser/non-BYPASSRLS PostgreSQL runtime roles. TASK-207/208 remain
+Todo for adversarial and browser/accessibility/i18n proof; TASK-209 is Blocked by
+TASK-195 and TASK-203. No migration 0099 production deployment is claimed.
+
 ## 10. Platform Bootstrap & Tenant Provisioning — current source contract
 
 `GET /api/setup/status` is the staged setup source: it reports platform-admin, Master,

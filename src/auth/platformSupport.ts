@@ -34,6 +34,7 @@ export const PLATFORM_ROLE_TEMPLATES = {
       PLATFORM_PERMISSIONS.tenantsRead,
       PLATFORM_PERMISSIONS.tenantsManage,
       PLATFORM_PERMISSIONS.simulationManage,
+      PLATFORM_PERMISSIONS.tenantAccessManage,
     ],
   },
   supportEngineer: {

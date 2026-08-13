@@ -1,6 +1,6 @@
 import type { DB } from '../data/db';
 import { and, desc, eq } from 'drizzle-orm';
-import { appUser, auditLog } from '../data/schema';
+import { appUser, auditLog, platformPrincipal } from '../data/schema';
 import { currentAuditAttribution } from './auditContext';
 
 export interface AuditEvent {
@@ -49,12 +49,16 @@ export async function listEntityAudit(
     action: auditLog.action,
     occurredAt: auditLog.occurredAt,
     actorUserId: auditLog.actorUserId,
+    platformPrincipalId: auditLog.platformPrincipalId,
     actorName: appUser.fullName,
     actorEmail: appUser.email,
+    platformPrincipalKey: platformPrincipal.principalKey,
+    platformDisplayName: platformPrincipal.displayName,
     before: auditLog.before,
     after: auditLog.after,
   }).from(auditLog)
     .leftJoin(appUser, eq(appUser.userId, auditLog.actorUserId))
+    .leftJoin(platformPrincipal, eq(platformPrincipal.principalId, auditLog.platformPrincipalId))
     .where(and(
       eq(auditLog.masterFn, scope.masterFn),
       eq(auditLog.companyFn, scope.companyFn),

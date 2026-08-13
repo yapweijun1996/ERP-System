@@ -48,6 +48,7 @@ const PLATFORM_PERMISSION_KEYS = [
   'platform.tenants.read',
   'platform.tenants.manage',
   'platform.simulation.manage',
+  'platform.tenant_access.manage',
 ] as const;
 
 const MODULE_ALIASES: Record<string, string> = {

@@ -7,6 +7,7 @@ export const PLATFORM_PERMISSIONS = {
   tenantsRead: 'platform.tenants.read',
   tenantsManage: 'platform.tenants.manage',
   simulationManage: 'platform.simulation.manage',
+  tenantAccessManage: 'platform.tenant_access.manage',
   supportRead: 'platform.support.read',
   supportUse: 'platform.support.use',
   supportGrant: 'platform.support.grant',

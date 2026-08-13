@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull, ne, or } from 'drizzle-orm';
 import Decimal from 'decimal.js';
 import type { DB } from '../../data/db';
 import {
@@ -42,7 +42,7 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
     userId: userCompany.userId,
   }).from(userCompany)
     .innerJoin(appUser, eq(appUser.userId, userCompany.userId))
-    .where(eq(appUser.masterFn, scope.masterFn));
+    .where(and(eq(appUser.masterFn, scope.masterFn), eq(appUser.identityKind, 'human')));
   const users = await exec.select({
     userId: appUser.userId,
     username: appUser.username,
@@ -52,7 +52,11 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
     companyFn: userCompany.companyFn,
   }).from(userCompany)
     .innerJoin(appUser, eq(appUser.userId, userCompany.userId))
-    .where(and(eq(appUser.masterFn, scope.masterFn), eq(userCompany.companyFn, scope.companyFn)))
+    .where(and(
+      eq(appUser.masterFn, scope.masterFn),
+      eq(appUser.identityKind, 'human'),
+      eq(userCompany.companyFn, scope.companyFn),
+    ))
     .orderBy(appUser.userId);
   const userRoleRows = await exec.select({
     userId: userCompanyRole.userId,
@@ -63,6 +67,7 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
     .where(and(
       eq(userCompanyRole.companyFn, scope.companyFn),
       eq(role.masterFn, scope.masterFn),
+      or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
     ))
     .orderBy(userCompanyRole.userId, role.roleId);
   const rolesByUser = new Map<number, Array<{ roleId: number; roleName: string }>>();
@@ -72,7 +77,10 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
     rolesByUser.set(row.userId, grants);
   }
   const roles = await exec.select({ roleId: role.roleId, name: role.name, isSuperadmin: role.isSuperadmin })
-    .from(role).where(eq(role.masterFn, scope.masterFn)).orderBy(role.roleId);
+    .from(role).where(and(
+      eq(role.masterFn, scope.masterFn),
+      or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
+    )).orderBy(role.roleId);
   const counts = new Map<string, Set<number>>();
   assignments.forEach((a) => {
     const set = counts.get(a.companyFn) ?? new Set<number>();

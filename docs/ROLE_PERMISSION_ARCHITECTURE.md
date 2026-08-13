@@ -384,11 +384,12 @@ access, if enabled, requires a dedicated grant with:
 The existing Company Owner employee-workspace entry does not satisfy this contract and
 must not be advertised as platform support access.
 
-Current exception/gap: `evaluateSupportAccess` is not wired into tenant data routes,
-while `platform_superadmin` exact-user simulation can access the target user's ordinary
-tenant APIs without an active support grant, reason or ticket. TASK-198 must either bind
-simulation to a grant or document/implement a narrow Superadmin exception, with MFA,
-recent step-up and matching schema comments/tests.
+Approved exception: `evaluateSupportAccess` is not a tenant-data proxy. Exact Employee
+simulation may access only the target user's ordinary tenant authority without an active
+support grant, reason or ticket. Elevated Platform Admin tenant access is a separate
+reason/ticket-bound, 15-minute mode with dual attribution and Company-bound break-glass
+for sensitive mutations. Support roles inherit neither. Password-only access with no MFA
+or recent step-up is explicitly accepted as a high-severity residual risk.
 
 ## 9. Company Owner and separation of duties
 

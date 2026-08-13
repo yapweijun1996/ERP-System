@@ -115,6 +115,16 @@
     }
     return '';
   }
+  function mutationCsrfHeaders(headers){
+    var result=Object.assign({},headers||{});
+    var platformCsrf=cookieValue('erp_platform_csrf');
+    if(platformCsrf) result['X-Platform-CSRF-Token']=platformCsrf;
+    else{
+      var tenantCsrf=cookieValue('erp_csrf');
+      if(tenantCsrf) result['X-CSRF-Token']=tenantCsrf;
+    }
+    return result;
+  }
 
   var RESOURCE_MODULES = {
     products:'inventory',warehouses:'inventory',
@@ -148,9 +158,9 @@
     var headers=Object.assign({},options.headers||{});
     var method=(options.method||'GET').toUpperCase();
     if(options.body!=null&&!headers['Content-Type']) headers['Content-Type']='application/json';
-    if(method!=='GET'&&method!=='HEAD'&&method!=='OPTIONS'&&!headers['X-CSRF-Token']){
-      var csrf=cookieValue('erp_csrf');
-      if(csrf) headers['X-CSRF-Token']=csrf;
+    if(method!=='GET'&&method!=='HEAD'&&method!=='OPTIONS'
+      &&!headers['X-CSRF-Token']&&!headers['X-Platform-CSRF-Token']){
+      headers=mutationCsrfHeaders(headers);
     }
     var res=await apiFetch(API_BASE+'/'+path.replace(/^\/+/,''),{
       method:method,
@@ -344,7 +354,7 @@
         encodeURIComponent(exportId)+'/actions/download',{
           method:'POST',
           credentials:'same-origin',
-          headers:{'Content-Type':'application/json','X-CSRF-Token':cookieValue('erp_csrf')},
+          headers:mutationCsrfHeaders({'Content-Type':'application/json'}),
           body:JSON.stringify({accessKey:accessKey,purpose:purpose}),
         });
       if(!response.ok){
@@ -433,7 +443,7 @@
         encodeURIComponent(artifactId)+'/actions/access',{
           method:'POST',
           credentials:'same-origin',
-          headers:{'Content-Type':'application/json','X-CSRF-Token':cookieValue('erp_csrf')},
+          headers:mutationCsrfHeaders({'Content-Type':'application/json'}),
           body:JSON.stringify(payload),
         });
       if(!response.ok){
@@ -464,18 +474,16 @@
     },
     receipts:function(){ return apiRequest('my/receipts'); },
     uploadReceipt:async function(draft){
-      var csrf=cookieValue('erp_csrf');
       var res=await apiFetch(API_BASE+'/my/receipts/actions/upload',{
         method:'POST',
         credentials:'same-origin',
-        headers:{
+        headers:mutationCsrfHeaders({
           'Content-Type':String(draft.type||'application/octet-stream'),
-          'X-CSRF-Token':csrf,
           'X-ERP-File-Name':encodeURIComponent(String(draft.name||'')),
           'X-ERP-Draft-Id':String(draft.id||''),
           'X-ERP-Auto-Submit-Authorized':draft.autoSubmitAuthorized?'true':'false',
           'Idempotency-Key':String(draft.id||''),
-        },
+        }),
         body:draft.blob,
       });
       var body=await jsonBody(res);
@@ -860,8 +868,8 @@
   async function preflightOnboardingImport(file,target){
     var response=await apiFetch(API_BASE+'/onboarding/imports/actions/preflight',{
       method:'POST',credentials:'same-origin',
-      headers:{'Content-Type':file.type||'application/octet-stream','X-CSRF-Token':cookieValue('erp_csrf'),
-        'X-Import-Target':target,'X-Import-Format':file.name.toLowerCase().endsWith('.xlsx')?'xlsx':'csv','X-File-Name':file.name},
+      headers:mutationCsrfHeaders({'Content-Type':file.type||'application/octet-stream',
+        'X-Import-Target':target,'X-Import-Format':file.name.toLowerCase().endsWith('.xlsx')?'xlsx':'csv','X-File-Name':file.name}),
       body:file,
     });
     var payload=await jsonBody(response);

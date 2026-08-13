@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne, or } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   appSession,
@@ -86,6 +86,7 @@ export async function createInvitation(
         eq(role.roleId, input.roleId),
         eq(role.masterFn, session.masterFn),
         or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+        or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
       ))
       .limit(1);
     if (!targetRole) {
@@ -263,7 +264,11 @@ export async function requestPasswordReset(
     userId: appUser.userId,
     masterFn: appUser.masterFn,
     isActive: appUser.isActive,
-  }).from(appUser).where(eq(appUser.email, email)).limit(2);
+  }).from(appUser).where(and(
+    eq(appUser.email, email),
+    eq(appUser.identityKind, 'human'),
+    eq(appUser.loginEnabled, true),
+  )).limit(2);
   const user = users.length === 1 && users[0].isActive ? users[0] : null;
   if (!user) return;
   // Employee-linked accounts are reset only by HR so the public email flow

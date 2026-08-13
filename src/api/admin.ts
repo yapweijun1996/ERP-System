@@ -3,11 +3,11 @@
 // excluded from the generic resource() framework -- see deploy/sql/production-rls.sql
 // and src/api/routes/admin.ts's header comment for why.
 import {
-  and, desc, eq, gt, isNull,
+  and, desc, eq, gt, isNull, ne, or,
 } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
-  appSession, appUser, auditLog, role, rolePermission, roleResourceScope, userCompany, userCompanyRole,
+  appSession, appUser, auditLog, platformPrincipal, role, rolePermission, roleResourceScope, userCompany, userCompanyRole,
   userInvitation,
 } from '../data/schema';
 
@@ -23,6 +23,7 @@ export async function listCompanyUsers(db: DB, masterFn: string, companyFn: stri
     .where(and(
       eq(userCompany.companyFn, companyFn),
       eq(appUser.masterFn, masterFn),
+      eq(appUser.identityKind, 'human'),
     ))
     .orderBy(appUser.userId);
   const userRoleRows = await db.select({
@@ -137,6 +138,7 @@ export async function listRoles(db: DB, masterFn: string, companyFn: string) {
   }).from(role).where(and(
     eq(role.masterFn, masterFn),
     eq(role.companyFn, companyFn),
+    or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
   )).orderBy(role.roleId);
 }
 
@@ -150,6 +152,7 @@ export async function listRolePermissions(db: DB, masterFn: string, companyFn: s
     .where(and(
       eq(rolePermission.masterFn, masterFn),
       eq(role.companyFn, companyFn),
+      or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
     ));
 }
 
@@ -164,6 +167,7 @@ export async function listRoleScopes(db: DB, masterFn: string, companyFn: string
       eq(roleResourceScope.masterFn, masterFn),
       eq(roleResourceScope.companyFn, companyFn),
       eq(role.companyFn, companyFn),
+      or(isNull(role.sourceTemplateKey), ne(role.sourceTemplateKey, 'platform_tenant_admin')),
     ));
 }
 
@@ -178,14 +182,18 @@ export async function listAuditLog(
   const rows = await db.select({
     id: auditLog.id,
     actorUserId: auditLog.actorUserId,
+    platformPrincipalId: auditLog.platformPrincipalId,
     actorName: appUser.fullName,
     actorEmail: appUser.email,
+    platformPrincipalKey: platformPrincipal.principalKey,
+    platformDisplayName: platformPrincipal.displayName,
     entity: auditLog.entity,
     entityId: auditLog.entityId,
     action: auditLog.action,
     occurredAt: auditLog.occurredAt,
   }).from(auditLog)
     .leftJoin(appUser, eq(appUser.userId, auditLog.actorUserId))
+    .leftJoin(platformPrincipal, eq(platformPrincipal.principalId, auditLog.platformPrincipalId))
     .where(and(
       eq(auditLog.masterFn, masterFn),
       eq(auditLog.companyFn, companyFn),
@@ -194,7 +202,13 @@ export async function listAuditLog(
     .orderBy(auditLog.id)
     .limit(limit + 1);
   const hasMore = rows.length > limit;
-  const data = hasMore ? rows.slice(0, limit) : rows;
+  const data = (hasMore ? rows.slice(0, limit) : rows).map((row) => ({
+    ...row,
+    actorType: row.platformPrincipalId != null ? 'platform_superadmin' as const : 'tenant_user' as const,
+    actorDisplay: row.platformPrincipalId != null
+      ? `Platform Admin · P-${row.platformPrincipalId}`
+      : row.actorName,
+  }));
   return {
     data,
     nextCursor: hasMore ? (data[data.length - 1]?.id ?? null) : null,
