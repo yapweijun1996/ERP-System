@@ -75,6 +75,7 @@ async function main(): Promise<void> {
     await bootstrapPage.goto(listening.baseUrl, { waitUntil: 'networkidle' });
     await bootstrapPage.locator('#platformBootstrapForm').waitFor({ state: 'visible', timeout: TIMEOUT });
     assert(await bootstrapPage.locator('.platform-shell').count() === 0, 'bootstrap registration unexpectedly uses the authenticated platform shell');
+    assert(await bootstrapPage.locator('.platform-step.current').getAttribute('aria-label') === 'Platform Superadmin', 'bootstrap progress is not on Platform Superadmin');
     await bootstrapContext.close();
 
     const bootstrap = await fetch(`${listening.baseUrl}/api/setup/platform-superadmin/actions/complete`, {
@@ -125,9 +126,14 @@ async function main(): Promise<void> {
         const form = document.querySelector<HTMLFormElement>('#platformCreateMasterForm, #platformCreateCompanyForm');
         const moduleGrid = document.querySelector<HTMLElement>('.platform-provision-module-grid');
         const formGrid = document.querySelector<HTMLElement>('.platform-master-identity');
-        if (!shell || !body || !header || !action || !actionButton || !form || !moduleGrid || !formGrid) return null;
+        const progress = document.querySelector<HTMLElement>('.platform-shell-progress');
+        const stepper = progress?.querySelector<HTMLElement>('.platform-stepper');
+        const steps = Array.from(progress?.querySelectorAll<HTMLElement>('.platform-step') ?? []);
+        if (!shell || !body || !header || !action || !actionButton || !form || !moduleGrid || !formGrid || !progress || !stepper) return null;
         const shellRect = shell.getBoundingClientRect();
         const actionRect = action.getBoundingClientRect();
+        const intro = progress.parentElement as HTMLElement;
+        const introStyle = getComputedStyle(intro);
         return {
           shellHeight: shellRect.height,
           shellBottom: shellRect.bottom,
@@ -145,6 +151,10 @@ async function main(): Promise<void> {
           headingFocused: document.activeElement?.matches('.platform-shell-intro h1') || false,
           moduleColumns: getComputedStyle(moduleGrid).gridTemplateColumns.split(' ').length,
           formColumns: getComputedStyle(formGrid).gridTemplateColumns.split(' ').length,
+          progressColumns: getComputedStyle(stepper).gridTemplateColumns.split(' ').length,
+          progressRows: new Set(steps.map((step) => Math.round(step.getBoundingClientRect().top))).size,
+          progressWidth: progress.getBoundingClientRect().width,
+          introContentWidth: intro.getBoundingClientRect().width - parseFloat(introStyle.paddingLeft) - parseFloat(introStyle.paddingRight),
         };
       });
       assert(metrics, `platform shell metrics missing at ${width}x${height}`);
@@ -166,6 +176,8 @@ async function main(): Promise<void> {
       assert(metrics.headingFocused, `workspace heading did not receive focus at ${width}x${height}`);
       assert(metrics.moduleColumns === expectedModuleColumns, `module grid has ${metrics.moduleColumns} columns at ${width}x${height}`);
       assert(metrics.formColumns === expectedFormColumns, `identity form has ${metrics.formColumns} columns at ${width}x${height}`);
+      assert(metrics.progressColumns === 3 && metrics.progressRows === 1, `provisioning progress did not remain in one three-column row at ${width}x${height}`);
+      assert(Math.abs(metrics.progressWidth - metrics.introContentWidth) <= 2, `provisioning progress did not span the intro content width at ${width}x${height}`);
     }
 
     await assertShell(1440, 900, 3, 2);
@@ -192,6 +204,10 @@ async function main(): Promise<void> {
     });
     assert(masterResponse.status === 201, `layout master creation failed with HTTP ${masterResponse.status}`);
     const master = (await masterResponse.json()).data as { masterFn: string };
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.locator('#platformCreateCompanyForm').waitFor({ state: 'visible', timeout: TIMEOUT });
+    assert(await page.locator('.platform-step.current').getAttribute('aria-label') === 'Company & administrators', 'Company provisioning progress is not on step 3');
+    assert(await page.locator('.platform-shell-progress .platform-step').count() === 3, 'Company provisioning progress is not rendered as a full-width three-step row');
     const companyResponse = await fetch(`${listening.baseUrl}/api/platform/masters/${master.masterFn}/companies`, {
       method: 'POST',
       headers: platformHeaders(true, 'layout-company-1'),
@@ -230,6 +246,7 @@ async function main(): Promise<void> {
         createFormCount: document.querySelectorAll('#platformCreateCompanyForm').length,
         actionCount: document.querySelectorAll('.platform-shell-actionbar').length,
         demoPasswordCount: document.querySelectorAll('#provisionCompanyOwnerPassword').length,
+        progressCount: document.querySelectorAll('.platform-stepper').length,
         wrapperOverflow: wrappers.map((node) => getComputedStyle(node).overflowX),
         outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       };
@@ -241,6 +258,7 @@ async function main(): Promise<void> {
     assert(completedMetrics.openerHeight >= 44, 'mobile Company opener is too small for touch input');
     assert(completedMetrics.createFormCount === 0 && completedMetrics.actionCount === 0, 'completed workspace rendered optional Company creation by default');
     assert(completedMetrics.demoPasswordCount === 0, 'closed completed workspace exposed a Demo owner password');
+    assert(completedMetrics.progressCount === 0, 'completed tenant control still rendered provisioning progress');
     assert(completedMetrics.wrapperOverflow.every((value) => value === 'auto' || value === 'scroll'), 'entitlement tables lost local horizontal scrolling');
     assert(completedMetrics.outerWidth <= 1, 'completed mobile workspace overflowed horizontally');
 
@@ -276,7 +294,7 @@ async function main(): Promise<void> {
     assert(browserErrors.length === 0, `platform workspace browser errors: ${browserErrors.join(' | ')}`);
 
     await context.close();
-    console.log('PASS Platform workspace layout E2E (isolated PGlite): desktop 80vh, mobile adaptive shell, opt-in Company panel, sticky actions and entitlement layouts');
+    console.log('PASS Platform workspace layout E2E (isolated PGlite): stage progress, completed control, desktop 80vh, mobile adaptive shell, sticky actions and entitlement layouts');
   } finally {
     await browser?.close();
     await closeServer(server);

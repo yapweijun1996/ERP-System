@@ -256,7 +256,7 @@ async function main(): Promise<void> {
     assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'myowner@acme.co', 'reload did not recreate the second Company owner email');
     assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'opened Company panel contained a stale error');
     assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create Company', 'optional Company action copy is incorrect');
-    assert(await page.locator('.platform-step.complete').count() === 3, 'completed provisioning stepper did not mark all steps complete');
+    assert(await page.locator('.platform-stepper').count() === 0, 'completed tenant control still rendered provisioning progress');
 
     // The second Company can be created without typing. Success closes the
     // panel and selects the exact companyFn returned by the API.
