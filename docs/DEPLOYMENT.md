@@ -370,6 +370,30 @@ and the aggregate job was skipped. Local gates for this commit passed both typec
 lint, permission registry, API and Demo builds, isolated Platform layout/autofill E2E,
 the full 129-route desktop/mobile screen audit and the workspace audit.
 
+### Platform entitlement-control application release (2026-08-13)
+
+Commits `21a5579` and `746fa52` were pushed to `main` and released with
+`./deploy/release.sh`. The release rebuilt/replaced only `api`, `web` and
+`calendar-worker`; no migration, seed, reset or volume operation ran. Read-only
+PostgreSQL counts remained migration journal 99, Platform principal 1, Master 1,
+Company 2 and tenant users 3. Local/public health and public root returned 200, and the
+served HTML references the `platform-entitlements-v2` assets.
+
+The authenticated desktop smoke measured a 1,112px full-width Module access workspace,
+zero table/document horizontal overflow and a visible Action column. At 390×844 the
+Company rows rendered as cards, switches retained 44px touch height, both tab labels
+used normal wrapping without clipping and document overflow remained zero. The smoke
+sent zero entitlement PATCH requests and signed out afterward; the only console network
+messages were expected unauthenticated 401 realm probes during initial login discovery,
+with no page exception. Local gates passed both typechecks, lint, API and Demo builds,
+the focused Platform authorization integration test, isolated autofill/layout E2E,
+permission registry, 129-route screen audit, workspace audit and `git diff --check`.
+
+GitHub Actions runs `31676576720` and `31677057551` are not test evidence. In the final
+run all four Vitest jobs failed before executing any step, and GitHub's annotation states
+that recent account payments failed or the spending limit must be increased; the
+aggregate job was skipped.
+
 ### Auto-creating the database
 
 PostgreSQL's official image auto-creates the database named by `POSTGRES_DB` on first
