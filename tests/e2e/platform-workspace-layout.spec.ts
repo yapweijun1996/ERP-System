@@ -276,7 +276,39 @@ async function main(): Promise<void> {
     const masterRow = page.locator('#platformMasterPanel tbody tr[data-module="expenses_tax"]');
     const masterSave = masterRow.locator('.platform-save-master');
     const initialMasterVersion = Number(await masterRow.getAttribute('data-version'));
+    const switchScrollBefore = await page.evaluate(() => {
+      const body = document.querySelector<HTMLElement>('.platform-shell-body');
+      const shell = document.querySelector<HTMLElement>('.platform-shell');
+      if (!body || !shell) return null;
+      window.scrollTo(0, 0);
+      body.scrollTop = body.scrollHeight;
+      return {
+        rootScrollY: window.scrollY,
+        rootOverflow: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        shellTop: shell.getBoundingClientRect().top,
+      };
+    });
+    assert(switchScrollBefore, 'switch scroll metrics are unavailable before interaction');
+    assert(switchScrollBefore.rootScrollY === 0 && switchScrollBefore.rootOverflow <= 1, 'completed workspace root already scrolls before switch interaction');
     await masterRow.locator('label.platform-switch').first().click();
+    const switchScrollAfter = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>('.platform-shell');
+      const input = document.querySelector<HTMLInputElement>('tr[data-module="expenses_tax"] .platform-master-enabled');
+      if (!shell || !input) return null;
+      const inputRect = input.getBoundingClientRect();
+      const switchRect = input.closest<HTMLElement>('.platform-switch')?.getBoundingClientRect();
+      return {
+        rootScrollY: window.scrollY,
+        rootOverflow: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        shellTop: shell.getBoundingClientRect().top,
+        inputInsideSwitch: Boolean(switchRect && inputRect.top >= switchRect.top - 1 && inputRect.bottom <= switchRect.bottom + 1),
+      };
+    });
+    assert(switchScrollAfter, 'switch scroll metrics are unavailable after interaction');
+    assert(switchScrollAfter.rootScrollY === switchScrollBefore.rootScrollY, 'clicking a module switch scrolled the root document');
+    assert(switchScrollAfter.rootOverflow <= 1, 'the hidden switch input created root document overflow');
+    assert(Math.abs(switchScrollAfter.shellTop - switchScrollBefore.shellTop) <= 1, 'clicking a module switch moved the workspace shell');
+    assert(switchScrollAfter.inputInsideSwitch, 'the hidden switch input is not anchored inside its visible control');
     assert(entitlementPatchCount === 0, 'changing a Master switch sent a mutation before Save');
     assert(await masterRow.getAttribute('class') === 'is-dirty', 'changed Master row is not marked dirty');
     assert(await masterSave.isEnabled(), 'changed Master row did not enable Save');

@@ -293,6 +293,7 @@
   }
   function renderBootstrap(){
     authShell(true);
+    document.documentElement.classList.remove('platform-workspace-locked');
     var view=authView();
     snapshotDraft(view,'bootstrap');
     /* Bootstrap registration is intentionally the regular auth panel. The
@@ -339,6 +340,7 @@
   }
   function renderLogin(initialRealm,setupStatus){
     authShell(true);
+    document.documentElement.classList.remove('platform-workspace-locked');
     var view=authView();
     var demoPlatformLoginAvailable=demoAutofillEnabled()&&Boolean(setupStatus&&setupStatus.hasPlatformAdmin);
     view.setAttribute('aria-label','Sign in');
@@ -695,6 +697,7 @@
   async function renderWorkspace(session,event,value){
     state.session=session||await getSession();
     authShell(true);
+    document.documentElement.classList.add('platform-workspace-locked');
     var view=authView();
     transitionWorkspace(event||WORKSPACE_EVENT.RENDER,view,value);
     view.classList.add('platform-workspace-view');
