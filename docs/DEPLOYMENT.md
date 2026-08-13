@@ -42,6 +42,23 @@ Final-review user-owned worktree edits further refactor that resume behavior int
 explicit presentation state machine and extend its E2E assertions. They are uncommitted,
 were not executed in the late review window and have no deployment evidence.
 
+### Platform switch-scroll hotfix evidence (2026-08-13)
+
+Commits `e411931` and `9bcdb50` were released through the application-only path. The
+hotfix anchors visually hidden entitlement inputs inside their switch labels, locks
+document-level scrolling only while the authenticated Platform workspace is active and
+advances the PWA cache/update contract to v262. No migration, seed, reset or volume
+operation ran. Before and after release the production counts remained 99 migration
+journal entries, one Platform principal, one Master, two Companies and three tenant
+users. Local and public health plus the public root returned HTTP 200, and all Compose
+application services were healthy.
+
+An authenticated production check scrolled the internal workspace body to the final
+`Expenses & Tax` row and toggled its Master switch without saving. Before and after the
+click, `window.scrollY` and root overflow remained zero and the 80vh shell top stayed at
+87.203125 px; Reset restored the unsaved value. The browser reported no console errors.
+This is UI containment evidence only: no entitlement PATCH was sent.
+
 There is also a P0 database-role gap. `production-rls.sql` requires a non-superuser,
 non-BYPASSRLS API role with transaction-local tenant settings. Current Platform Company
 provisioning does not set those settings before RLS-protected writes, while bundled
