@@ -9,7 +9,7 @@
   var cachedSession=null;
   var WORKSPACE_STAGE=Object.freeze({MASTER:'master',COMPANY:'company',CONTROL:'control'});
   var WORKSPACE_EVENT=Object.freeze({RENDER:'render',MASTER_CREATED:'master-created',COMPANY_CREATED:'company-created',MASTER_SELECTED:'master-selected',COMPANY_SELECTED:'company-selected'});
-  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[],workspaceStage:null,drafts:{bootstrap:null,master:null,company:null}};
+  var state={session:null,tenants:[],catalog:[],masterFn:'',companyFn:'',masterModules:[],companyModules:[],targets:[],workspaceStage:null,drafts:{bootstrap:null,master:null,company:{}}};
   var DEMO_BANNER_STORAGE_KEY='aria-platform-demo-banner-dismissed';
   var DEMO_DEFAULTS={
     bootstrap:{principalKey:'platform-admin',displayName:'Platform Admin',email:'platform-admin@acme.co',password:'demo-platform-1234'},
@@ -61,6 +61,21 @@
     if(!field||field.value) return;
     field.value=String(value);
   }
+  function nextCompanyOrdinal(){
+    var master=currentMaster();
+    return ((master&&master.companies)||[]).length+1;
+  }
+  function demoCompanyDefaults(ordinal){
+    if(ordinal<=1) return DEMO_DEFAULTS.company;
+    if(ordinal===2) return {
+      name:'Acme Malaysia',country:'MY',
+      companyOwner:{name:'Malaysia Owner',username:'myowner',email:'myowner@acme.co',password:'demo1234'},
+    };
+    return {
+      name:'Acme Company '+ordinal,country:'SG',
+      companyOwner:{name:'Company Owner '+ordinal,username:'owner'+ordinal,email:'owner'+ordinal+'@acme.co',password:'demo1234'},
+    };
+  }
   function applyDemoDefaults(root,stage,needsMasterAdmin){
     if(!demoAutofillEnabled()) return;
     if(stage==='bootstrap'){
@@ -76,19 +91,30 @@
       setFieldValue(root,'provisionMasterLoginCode',DEMO_DEFAULTS.master.loginCode);
       return;
     }
-    setFieldValue(root,'provisionCompanyName',DEMO_DEFAULTS.company.name);
+    var companyDefaults=demoCompanyDefaults(nextCompanyOrdinal());
+    setFieldValue(root,'provisionCompanyName',companyDefaults.name);
     var country=root&&root.querySelector('#provisionCompanyCountry');
-    if(country&&!country.value) country.value=DEMO_DEFAULTS.company.country;
+    if(country) country.value=companyDefaults.country;
     if(needsMasterAdmin){
       setFieldValue(root,'provisionMasterAdminName',DEMO_DEFAULTS.company.masterAdmin.name);
       setFieldValue(root,'provisionMasterAdminUsername',DEMO_DEFAULTS.company.masterAdmin.username);
       setFieldValue(root,'provisionMasterAdminEmail',DEMO_DEFAULTS.company.masterAdmin.email);
       setFieldValue(root,'provisionMasterAdminPassword',DEMO_DEFAULTS.company.masterAdmin.password);
     }
-    setFieldValue(root,'provisionCompanyOwnerName',DEMO_DEFAULTS.company.companyOwner.name);
-    setFieldValue(root,'provisionCompanyOwnerUsername',DEMO_DEFAULTS.company.companyOwner.username);
-    setFieldValue(root,'provisionCompanyOwnerEmail',DEMO_DEFAULTS.company.companyOwner.email);
-    setFieldValue(root,'provisionCompanyOwnerPassword',DEMO_DEFAULTS.company.companyOwner.password);
+    setFieldValue(root,'provisionCompanyOwnerName',companyDefaults.companyOwner.name);
+    setFieldValue(root,'provisionCompanyOwnerUsername',companyDefaults.companyOwner.username);
+    setFieldValue(root,'provisionCompanyOwnerEmail',companyDefaults.companyOwner.email);
+    setFieldValue(root,'provisionCompanyOwnerPassword',companyDefaults.companyOwner.password);
+  }
+  function companyDraftKey(){
+    return String(state.masterFn||'none')+'|'+nextCompanyOrdinal();
+  }
+  function readDraft(stage){
+    return stage===WORKSPACE_STAGE.COMPANY?state.drafts.company[companyDraftKey()]||null:state.drafts[stage];
+  }
+  function writeDraft(stage,draft){
+    if(stage===WORKSPACE_STAGE.COMPANY) state.drafts.company[companyDraftKey()]=draft;
+    else state.drafts[stage]=draft;
   }
   function snapshotDraft(root,stage){
     var form=root&&root.querySelector(stage==='bootstrap'?'#platformBootstrapForm':stage==='master'?'#platformCreateMasterForm':'#platformCreateCompanyForm');
@@ -98,10 +124,10 @@
       if(!field.id) return;
       draft[field.id]=field.type==='checkbox'?field.checked:field.value;
     });
-    state.drafts[stage]=draft;
+    writeDraft(stage,draft);
   }
   function restoreDraft(root,stage){
-    var draft=state.drafts[stage];
+    var draft=readDraft(stage);
     if(!draft) return;
     Object.keys(draft).forEach(function(id){
       var field=root&&root.querySelector('#'+id);
@@ -110,7 +136,11 @@
       else field.value=String(draft[id]??'');
     });
   }
-  function clearDraft(stage){ state.drafts[stage]=null; }
+  function clearDraft(stage){
+    if(stage===WORKSPACE_STAGE.COMPANY) delete state.drafts.company[companyDraftKey()];
+    else state.drafts[stage]=null;
+  }
+  function clearCompanyDrafts(){ state.drafts.company={}; }
   function visibleWorkspaceDraftStage(root){
     if(root&&root.querySelector('#platformCreateMasterForm')) return WORKSPACE_STAGE.MASTER;
     if(root&&root.querySelector('#platformCreateCompanyForm')) return WORKSPACE_STAGE.COMPANY;
@@ -136,7 +166,7 @@
     }
     if(transition===WORKSPACE_EVENT.MASTER_CREATED){
       clearDraft(WORKSPACE_STAGE.MASTER);
-      clearDraft(WORKSPACE_STAGE.COMPANY);
+      clearCompanyDrafts();
       state.masterFn='';
       state.companyFn='';
       return;
@@ -462,9 +492,9 @@
       await loadDetails();
       // Treat any Company returned for the selected Master as an existing
       // continuation point, even if an older session restored an empty or
-      // stale companyFn. This keeps Demo autofill from repopulating a form
-      // with the same owner identity and turning a resume click into a
-      // duplicate-user error.
+      // stale companyFn. Demo defaults use the next Company ordinal, while
+      // drafts are isolated by Master and ordinal so submitted identities are
+      // never restored into the following Company form.
       var selectedMaster=currentMaster();
       var hasExistingCompany=Boolean(selectedMaster&&(selectedMaster.companies||[]).length);
       if(hasExistingCompany&&!state.companyFn) state.companyFn=selectedMaster.companies[0].companyFn;
@@ -473,7 +503,7 @@
       var draftStage=draftStageForWorkspaceStage(state.workspaceStage);
       var stage=state.masterFn?(hasCompany?4:3):2;
       view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>Platform Superadmin workspace · ${esc(state.session&&state.session.displayName||'')}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">Sign out</button></header><div class="platform-shell-intro"><div class="auth-copy"><h1 tabindex="-1">${state.masterFn?(hasCompany?'Platform tenant control':'Finish tenant provisioning'):'Start tenant provisioning'}</h1><p>${state.masterFn?'Platform-only Master and Company controls with audited tenant identity provisioning.':'Create the first Master, configure its commercial defaults, then create its first Company and administrators.'}</p>${stepperMarkup(stage)}${demoBannerMarkup()}</div>${state.masterFn?switchMarkup():''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div><div class="platform-workspace-grid">${provisioningMarkup(hasExistingCompany)}</div>${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup(hasExistingCompany)}</section>`;
-      if(state.workspaceStage!==WORKSPACE_STAGE.CONTROL) applyDemoDefaults(view,draftStage,state.workspaceStage===WORKSPACE_STAGE.COMPANY?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
+      applyDemoDefaults(view,draftStage,state.workspaceStage===WORKSPACE_STAGE.COMPANY?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
       restoreDraft(view,draftStage);
       wireWorkspace(view);
       var body=view.querySelector('.platform-shell-body');

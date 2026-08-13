@@ -551,16 +551,12 @@ The Platform bootstrap, Master and first Company forms then show editable public
 values, a dismissible warning and `Next`/`Finish` progression; the source/customer default
 is `false`. HEAD also adds one-click Demo Platform login, password Show/Hide, tenant-only
 Remember, responsive containment and explicit `Create another Company`; an existing
-Company resumes without sample injection and a next-Company form stays blank. The flag
-changes no API contract, permission, transaction or audit rule. Master and Company
-mutations retain separate stable form-fingerprint Idempotency-Key values.
-
-The final reviewed worktree also contains a user-owned explicit
-`master → company → control` presentation state machine. It clears successful Company
-drafts immediately, resets tenant selection through named transitions and adds E2E
-assertions that one submit emits one mutation and no completed form values reappear.
-Those uncommitted changes were preserved but their late E2E delta was not executed or
-treated as deployed proof.
+Company resumes without reusing its submitted identity. Demo mode derives `Acme Malaysia`
+/ `myowner` for Company 2 and deterministic `Acme Company N` / `ownerN` identities later;
+all values remain editable and drafts are scoped by Master plus next ordinal. The flag
+changes no API contract, permission, transaction or audit rule, and disabled builds keep
+manual blank forms. Master and Company mutations retain separate stable form-fingerprint
+Idempotency-Key values.
 
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |

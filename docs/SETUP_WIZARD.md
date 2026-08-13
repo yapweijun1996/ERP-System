@@ -174,9 +174,11 @@ field; an existing Company is never overwritten. Do not enable the flag for cust
 
 HEAD additionally provides one-click sample Platform login only when the Demo flag is on,
 password Show/Hide controls, tenant-only Remember, responsive containment, and safe
-existing-Company resume with explicit `Create another Company`. Existing Company state
-never backfills sample values into a new-Company form. These source/test facts are not a
-claim that the exact HEAD is deployed.
+existing-Company resume with explicit `Create another Company`. Demo mode derives a new,
+editable identity set for each next Company: Company 2 uses the Malaysia preset and later
+Companies use ordinal names and Owner identities. Drafts are scoped by Master plus next
+ordinal, while builds with the Demo flag off keep the form manual. These source/test facts
+are not by themselves a claim that the exact HEAD is deployed.
 
 ### Production RLS provisioning gate
 

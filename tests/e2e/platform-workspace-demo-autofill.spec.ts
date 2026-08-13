@@ -169,15 +169,47 @@ async function main(): Promise<void> {
     assert(companyMutationCount === 1, 'one Company submit triggered more than one mutation');
     assert(companyRequest?.key.startsWith('platform-company-') === true, 'company idempotency key is not stable client format');
 
-    // The successful transition must clear the completed form immediately. A
-    // reload is deliberately not allowed to hide a stale in-memory draft.
-    assert(await page.locator('#provisionCompanyName').inputValue() === '', 'successful Company transition restored the submitted Company name');
-    assert(await page.locator('#provisionCompanyOwnerName').inputValue() === '', 'successful Company transition restored the submitted owner name');
-    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === '', 'successful Company transition restored the submitted owner username');
-    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === '', 'successful Company transition restored the submitted owner email');
+    // The submitted first-Company draft must be replaced immediately by a
+    // distinct, editable second-Company Demo draft. A reload must not be needed
+    // to leave the completed identity behind.
+    assert(await page.locator('#provisionCompanyName').inputValue() === 'Acme Malaysia', 'second Company name autofill is incorrect');
+    assert(await page.locator('#provisionCompanyCountry').inputValue() === 'MY', 'second Company country autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerName').inputValue() === 'Malaysia Owner', 'second Company owner name autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === 'myowner', 'second Company owner username autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'myowner@acme.co', 'second Company owner email autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerPassword').inputValue() === 'demo1234', 'second Company owner password autofill is incorrect');
+    assert(await page.locator('#provisionMasterAdminName').count() === 0, 'existing Master Admin fields rendered for a later Company');
     assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'successful Company transition rendered a duplicate-provisioning error');
     assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create another Company', 'successful Company transition did not enter tenant control');
     page.off('request', companyRequestListener);
+
+    // Company drafts are scoped by Master and next ordinal. Switching to a
+    // different Master must not carry the edited Malaysia draft across, and
+    // returning must restore the edit for the original Master.
+    const firstMasterFn = await page.locator('#platformMasterSelect').inputValue();
+    await page.locator('#provisionCompanyName').fill('Edited Acme Malaysia');
+    const isolationMasterFn = await page.evaluate(async () => {
+      const csrf = document.cookie.split(';').map((item) => item.trim()).find((item) => item.startsWith('erp_platform_csrf='))?.split('=').slice(1).join('=') ?? '';
+      const response = await fetch('/api/platform/masters', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'content-type': 'application/json', 'idempotency-key': 'demo-draft-isolation-master', 'x-platform-csrf-token': decodeURIComponent(csrf) },
+        body: JSON.stringify({ name: 'Draft Isolation Group', loginCode: 'DRAFTISO', modules: [] }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error?.message ?? `Draft isolation Master failed (${response.status}).`);
+      return body.data.masterFn as string;
+    });
+    await page.evaluate(() => {
+      const platform = (window as unknown as { ErpPlatformWorkspace?: { renderWorkspace?: () => Promise<void> } }).ErpPlatformWorkspace;
+      return platform?.renderWorkspace?.();
+    });
+    await page.locator('#platformMasterSelect').selectOption(isolationMasterFn);
+    await waitFor(page, '#provisionMasterAdminName');
+    assert(await page.locator('#provisionCompanyName').inputValue() === 'Acme Singapore', 'Company draft leaked into a different Master');
+    await page.locator('#platformMasterSelect').selectOption(firstMasterFn);
+    await page.locator('#provisionMasterAdminName').waitFor({ state: 'detached', timeout: TIMEOUT });
+    assert(await page.locator('#provisionCompanyName').inputValue() === 'Edited Acme Malaysia', 'Master-scoped Company edit was not restored');
+    await page.locator('#provisionCompanyName').fill('Acme Malaysia');
 
     // Replaying the exact captured mutations must return the existing result,
     // proving that the stable key is safe across a refresh/double click.
@@ -188,18 +220,53 @@ async function main(): Promise<void> {
     }, companyRequest as { url: string; key: string; body: unknown });
     assert(replay.status === 200 && replay.body?.meta?.idempotentReplay === true, 'company idempotency replay did not return the existing result');
 
-    // A reload must preserve the same completed-state contract.
+    // A reload must recreate the same second-Company defaults without
+    // restoring the first Company's submitted identity.
     await page.reload({ waitUntil: 'networkidle' });
     await waitFor(page, '.platform-entitlement-grid');
     const companyForm = page.locator('#platformCreateCompanyForm');
     assert(await companyForm.count() === 1, 'existing-master company creation form disappeared');
-    assert(await page.locator('#provisionCompanyName').inputValue() === '', 'existing Company caused demo name to be injected into the next-company form');
-    assert(await page.locator('#provisionCompanyOwnerName').inputValue() === '', 'existing Company caused demo owner name to be injected into the next-company form');
-    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === '', 'existing Company caused demo owner username to be injected into the next-company form');
-    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === '', 'existing Company caused demo owner email to be injected into the next-company form');
+    assert(await page.locator('#provisionCompanyName').inputValue() === 'Acme Malaysia', 'reload did not recreate the second Company name');
+    assert(await page.locator('#provisionCompanyCountry').inputValue() === 'MY', 'reload did not recreate the second Company country');
+    assert(await page.locator('#provisionCompanyOwnerName').inputValue() === 'Malaysia Owner', 'reload did not recreate the second Company owner name');
+    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === 'myowner', 'reload did not recreate the second Company owner username');
+    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'myowner@acme.co', 'reload did not recreate the second Company owner email');
     assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'existing Company left a duplicate-provisioning error on reload');
     assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create another Company', 'existing Company did not switch to the explicit create-another action');
     assert(await page.locator('.platform-step.complete').count() === 3, 'completed provisioning stepper did not mark all steps complete');
+
+    // The second Company can be created without typing. Its successful
+    // transition must advance to deterministic third-Company identities.
+    page.on('request', companyRequestListener);
+    await page.locator('#platformCreateCompanyAction').click();
+    await page.waitForFunction(() => (document.querySelector('#provisionCompanyName') as HTMLInputElement | null)?.value === 'Acme Company 3');
+    page.off('request', companyRequestListener);
+    assert(companyMutationCount === 2, 'second Company submit did not emit exactly one additional mutation');
+    assert(await page.locator('#platformCompanySelect option').count() === 2, 'second Company was not added to the selected Master');
+    assert(await page.locator('#provisionCompanyCountry').inputValue() === 'SG', 'third Company country autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerName').inputValue() === 'Company Owner 3', 'third Company owner name autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === 'owner3', 'third Company owner username autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'owner3@acme.co', 'third Company owner email autofill is incorrect');
+    assert(await page.locator('#provisionCompanyOwnerPassword').inputValue() === 'demo1234', 'third Company owner password autofill is incorrect');
+
+    // Reuse the authenticated Platform session in a fresh context to prove
+    // that a disabled Demo flag leaves the later-Company form manual. A fresh
+    // page also ensures no in-memory Demo draft can influence the assertion.
+    const flagOffContext = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      storageState: { cookies: await context.cookies(), origins: [] },
+    });
+    await flagOffContext.addInitScript(() => {
+      (window as unknown as Record<string, unknown>).__ERP_PLATFORM_DEMO_AUTOFILL_OVERRIDE__ = false;
+    });
+    const flagOffPage = await flagOffContext.newPage();
+    await flagOffPage.goto(listening.baseUrl, { waitUntil: 'domcontentloaded' });
+    await waitFor(flagOffPage, '#platformCreateCompanyForm');
+    assert(await flagOffPage.locator('#provisionCompanyName').inputValue() === '', 'later Company was autofilled while Demo flag was disabled');
+    assert(await flagOffPage.locator('#provisionCompanyOwnerName').inputValue() === '', 'later Company owner was autofilled while Demo flag was disabled');
+    assert(await flagOffPage.locator('#provisionCompanyOwnerUsername').inputValue() === '', 'later Company username was autofilled while Demo flag was disabled');
+    assert(await flagOffPage.locator('#provisionCompanyOwnerEmail').inputValue() === '', 'later Company email was autofilled while Demo flag was disabled');
+    await flagOffContext.close();
 
     // Once a Platform principal exists, the Demo build offers a one-click
     // Platform login. It still uses the normal password endpoint and session
@@ -245,7 +312,7 @@ async function main(): Promise<void> {
     assert(browserErrors.length === 0, `platform demo autofill browser errors: ${browserErrors.join(' | ')}`);
 
     await context.close();
-    console.log('PASS Platform workspace demo autofill E2E (isolated PGlite): flag off, bootstrap defaults, editable rerenders, Next flow, stable idempotency replay, and existing-company safety');
+    console.log('PASS Platform workspace demo autofill E2E (isolated PGlite): flag off, editable staged defaults, Master-scoped drafts, stable idempotency replay, and deterministic later-Company identities');
   } finally {
     await browser?.close();
     await closeServer(server);

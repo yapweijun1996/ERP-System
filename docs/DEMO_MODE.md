@@ -249,9 +249,10 @@ The sample values are `platform-admin` / `demo-platform-1234` for the Platform p
 `Acme Group` / `ACME` for the Master, and `Acme Singapore` / `SG` with `demo1234` for the
 first Master Admin and Company Owner accounts. They are demonstration credentials only and
 must be disabled before any real customer deployment. Existing Masters are taken as the
-continuation point; an existing Company is never overwritten or used to inject values into
-the next-company form. The static PGlite/GitHub Pages demo does not gain a Platform login or
-tokenless bootstrap from this flag.
+continuation point and an existing Company is never overwritten. The next-Company form uses
+new editable defaults instead: Company 2 is `Acme Malaysia` / `MY` with `myowner`, while
+Company 3 and later use `Acme Company N` / `ownerN` identities. The static PGlite/GitHub
+Pages demo does not gain a Platform login or tokenless bootstrap from this flag.
 
 ### Current source/worktree presentation and resume behavior
 
@@ -259,20 +260,12 @@ The current source also provides a Demo-only one-click Platform login, password
 Show/Hide controls and responsive workspace containment. `Remember me` is intentionally
 available only for tenant login; the independent Platform realm always uses its bounded
 session contract. Provisioning resumes from an existing Company without duplicating it,
-and `Create another Company` opens a genuinely blank next-Company form instead of
-reusing the previous Company's values.
-
-The final review also observed user-owned uncommitted worktree edits that express these
-rules through an explicit Master/Company/control transition state and assert immediate
-form clearing plus a single Company mutation. They are preserved source, but the late
-E2E delta was not run and is not a live/deployed claim.
-
-The committed behaviors are present in source and automated E2E definitions at HEAD. They were
-committed after the last recorded hosted release evidence, so this document does not
-claim that the current HEAD assets are live. The 2026-08-12 public probe returned HTTP
-502 and the current GitHub Actions run started no jobs because of the account billing/
-spending-limit block; recovery and deployed-revision proof are tracked by TASK-199 and
-TASK-203.
+and `Create another Company` opens a fresh ordinal-specific Demo draft instead of reusing
+the previous Company's values. Drafts are isolated by selected Master and next Company
+ordinal, so user edits survive ordinary rerenders and Master switches without leaking into
+another tenant group. The focused PGlite E2E proves first-to-second transition, refresh,
+second-Company submission, third-Company defaults, disabled-flag behavior and single-request
+idempotency; hosted deployment evidence remains an explicit release-time check.
 
 The hosted API Demo remains distinct from the static PGlite Demo. Public sample
 credentials and autofill must be disabled for a customer deployment, and neither mode
