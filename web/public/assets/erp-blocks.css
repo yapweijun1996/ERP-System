@@ -1685,6 +1685,8 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 }
 @media (max-width:768px){
   .platform-entitlement-tabs{grid-template-columns:minmax(0,1fr);}
+  .platform-entitlement-tab{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;}
+  .platform-entitlement-tab span{overflow:visible;text-overflow:clip;white-space:normal;}
   .platform-entitlement-tools{grid-template-columns:minmax(0,1fr);}
   .platform-entitlement-context{align-items:flex-start;flex-direction:column;gap:3px;}
   .platform-table-wrap table,.platform-table-wrap tbody,.platform-table-wrap tr,.platform-table-wrap th,.platform-table-wrap td{display:block;width:100%;}

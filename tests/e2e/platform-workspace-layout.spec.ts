@@ -339,17 +339,23 @@ async function main(): Promise<void> {
         const wrapper = panel?.querySelector<HTMLElement>('.platform-table-wrap');
         const row = panel?.querySelector<HTMLElement>('tbody tr');
         const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button,.platform-switch') ?? []).filter((node) => node.getBoundingClientRect().height > 0);
+        const tabLabels = Array.from(document.querySelectorAll<HTMLElement>('.platform-entitlement-tab > span'));
         if (!workspace || !wrapper || !row) return null;
         return {
           rowDisplay: getComputedStyle(row).display,
           wrapperOverflow: wrapper.scrollWidth - wrapper.clientWidth,
           controlHeights: controls.map((node) => ({ label: node.className, height: node.getBoundingClientRect().height })),
+          tabLabelsClipped: tabLabels.some((node) => {
+            const style = getComputedStyle(node);
+            return style.textOverflow === 'ellipsis' || style.whiteSpace === 'nowrap';
+          }),
           outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         };
       });
       assert(metrics, `mobile entitlement metrics missing at ${width}x${height}`);
       assert(metrics.rowDisplay === 'grid', `entitlement rows did not become cards at ${width}x${height}`);
       assert(metrics.wrapperOverflow <= 1, `mobile entitlement cards overflowed horizontally at ${width}x${height}`);
+      assert(!metrics.tabLabelsClipped, `mobile entitlement tab labels were clipped at ${width}x${height}`);
       const minControl = metrics.controlHeights.reduce((min, item) => item.height < min.height ? item : min);
       assert(minControl.height >= 44, `mobile entitlement control ${minControl.label} is ${minControl.height}px at ${width}x${height}`);
       assert(metrics.outerWidth <= 1, `mobile entitlement workspace overflowed the document at ${width}x${height}`);
