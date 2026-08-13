@@ -250,9 +250,11 @@ The sample values are `platform-admin` / `demo-platform-1234` for the Platform p
 first Master Admin and Company Owner accounts. They are demonstration credentials only and
 must be disabled before any real customer deployment. Existing Masters are taken as the
 continuation point and an existing Company is never overwritten. The next-Company form uses
-new editable defaults instead: Company 2 is `Acme Malaysia` / `MY` with `myowner`, while
-Company 3 and later use `Acme Company N` / `ownerN` identities. The static PGlite/GitHub
-Pages demo does not gain a Platform login or tokenless bootstrap from this flag.
+new editable defaults only after the operator selects `+ Create Company`: Company 2 is
+`Acme Malaysia` / `MY` with `myowner`, while Company 3 and later use `Acme Company N` /
+`ownerN` identities. Closed tenant control contains neither the optional form nor its Demo
+passwords. The static PGlite/GitHub Pages demo does not gain a Platform login or tokenless
+bootstrap from this flag.
 
 ### Current source/worktree presentation and resume behavior
 
@@ -260,12 +262,14 @@ The current source also provides a Demo-only one-click Platform login, password
 Show/Hide controls and responsive workspace containment. `Remember me` is intentionally
 available only for tenant login; the independent Platform realm always uses its bounded
 session contract. Provisioning resumes from an existing Company without duplicating it,
-and `Create another Company` opens a fresh ordinal-specific Demo draft instead of reusing
-the previous Company's values. Drafts are isolated by selected Master and next Company
-ordinal, so user edits survive ordinary rerenders and Master switches without leaking into
-another tenant group. The focused PGlite E2E proves first-to-second transition, refresh,
-second-Company submission, third-Company defaults, disabled-flag behavior and single-request
-idempotency; hosted deployment evidence remains an explicit release-time check.
+with the optional form and action bar closed. `+ Create Company` opens a fresh
+ordinal-specific Demo draft instead of reusing the previous Company's values; Cancel closes
+the inline panel without a mutation and returns focus to the opener. Drafts are isolated by
+selected Master and next Company ordinal, so user edits survive ordinary rerenders, Cancel
+and Master switches without leaking into another tenant group. Successful creation selects
+the API-returned `companyFn`, closes the panel and does not expose the next draft until a new
+explicit open. The focused PGlite E2E proves those transitions, disabled-flag behavior and
+single-request idempotency; hosted deployment evidence remains an explicit release-time check.
 
 The hosted API Demo remains distinct from the static PGlite Demo. Public sample
 credentials and autofill must be disabled for a customer deployment, and neither mode

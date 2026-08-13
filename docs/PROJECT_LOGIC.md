@@ -550,13 +550,15 @@ For the API-mode hosted Demo only, the web build may set `VITE_PLATFORM_DEMO_AUT
 The Platform bootstrap, Master and first Company forms then show editable public sample
 values, a dismissible warning and `Next`/`Finish` progression; the source/customer default
 is `false`. HEAD also adds one-click Demo Platform login, password Show/Hide, tenant-only
-Remember, responsive containment and explicit `Create another Company`; an existing
-Company resumes without reusing its submitted identity. Demo mode derives `Acme Malaysia`
-/ `myowner` for Company 2 and deterministic `Acme Company N` / `ownerN` identities later;
-all values remain editable and drafts are scoped by Master plus next ordinal. The flag
-changes no API contract, permission, transaction or audit rule, and disabled builds keep
-manual blank forms. Master and Company mutations retain separate stable form-fingerprint
-Idempotency-Key values.
+Remember and responsive containment. An existing Company resumes in tenant control without
+rendering another creation form, action bar or next Demo password. The operator must select
+`+ Create Company` to open the inline panel; only then does Demo mode derive `Acme Malaysia`
+/ `myowner` for Company 2 or deterministic `Acme Company N` / `ownerN` identities later.
+Cancel performs no mutation, returns focus to the opener and retains the Master-plus-ordinal
+in-memory draft. Success selects the API-returned `companyFn`, clears the submitted draft and
+closes the panel without opening the next one. The flag changes no API contract, permission,
+transaction or audit rule, and disabled builds keep explicitly opened forms blank. Master
+and Company mutations retain separate stable form-fingerprint Idempotency-Key values.
 
 | Boundary | Current sources/tests | Target owner |
 | --- | --- | --- |

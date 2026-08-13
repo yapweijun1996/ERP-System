@@ -174,11 +174,13 @@ field; an existing Company is never overwritten. Do not enable the flag for cust
 
 HEAD additionally provides one-click sample Platform login only when the Demo flag is on,
 password Show/Hide controls, tenant-only Remember, responsive containment, and safe
-existing-Company resume with explicit `Create another Company`. Demo mode derives a new,
-editable identity set for each next Company: Company 2 uses the Malaysia preset and later
-Companies use ordinal names and Owner identities. Drafts are scoped by Master plus next
-ordinal, while builds with the Demo flag off keep the form manual. These source/test facts
-are not by themselves a claim that the exact HEAD is deployed.
+existing-Company resume with an opt-in `+ Create Company` toolbar action. The completed
+control view does not render the optional form, action bar or next Demo password. Opening
+the inline panel derives a new editable identity set: Company 2 uses the Malaysia preset and
+later Companies use ordinal names and Owner identities. Cancel is mutation-free and retains
+the Master-plus-ordinal in-memory draft; success closes the panel and selects the returned
+`companyFn`. Builds with the Demo flag off keep the explicitly opened form manual. These
+source/test facts are not by themselves a claim that the exact HEAD is deployed.
 
 ### Production RLS provisioning gate
 

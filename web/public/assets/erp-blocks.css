@@ -1515,11 +1515,12 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .platform-demo-banner span{color:var(--muted);font-size:calc(11px * var(--fs,1));line-height:1.4;}
 .platform-demo-banner-close{width:auto;min-width:0;flex:none;padding:6px 9px;font-size:11px;}
 .platform-shell-toolbar{
-  flex:0 1 520px;
+  flex:0 1 680px;
   min-width:320px;
   align-items:end;
 }
-.platform-workspace-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0;}
+.platform-workspace-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:12px;min-width:0;}
+.platform-create-company-trigger{align-self:end;width:auto;min-width:0;min-height:44px;white-space:nowrap;}
 .platform-shell-body{
   min-height:0;
   min-width:0;
@@ -1535,6 +1536,8 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   padding:20px 28px 28px;
 }
 .platform-shell-body>.auth-error{flex:none;}
+.platform-workspace-status{flex:none;padding:11px 13px;border:1px solid color-mix(in srgb,var(--ok,#1d9b65) 30%,var(--line));border-radius:var(--r-s);background:color-mix(in srgb,var(--ok,#1d9b65) 9%,var(--surface));color:var(--text);font-size:calc(12.5px * var(--fs,1));line-height:1.45;}
+.platform-workspace-status:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .platform-shell-body>.platform-workspace-grid{display:grid;gap:16px;min-width:0;}
 .platform-provision-panel,
 .platform-entitlement-card,
@@ -1643,6 +1646,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .platform-demo-banner{align-items:center;gap:8px;margin-top:12px;padding:9px 10px;}
   .platform-demo-banner-close{align-self:center;padding:7px 8px;}
   .platform-shell-toolbar{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;margin-top:14px;}
+  .platform-create-company-trigger{width:100%;min-height:44px;}
   .platform-shell-body{gap:12px;padding:14px 16px 20px;scroll-padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));}
   .platform-provision-panel,.platform-entitlement-card,.platform-simulation-panel{padding:16px;}
   .platform-form-grid,.platform-entitlement-grid{grid-template-columns:minmax(0,1fr);}

@@ -217,18 +217,19 @@ async function main(): Promise<void> {
       const shell = document.querySelector<HTMLElement>('.platform-shell');
       const simulation = document.querySelector<HTMLElement>('.platform-simulation-panel');
       const toolbar = document.querySelector<HTMLElement>('.platform-shell-toolbar');
-      const action = document.querySelector<HTMLElement>('.platform-shell-actionbar');
+      const opener = document.querySelector<HTMLElement>('#platformOpenCompanyCreate');
       const wrappers = Array.from(document.querySelectorAll<HTMLElement>('.platform-table-wrap'));
-      if (!shell || !simulation || !toolbar || !action) return null;
+      if (!shell || !simulation || !toolbar || !opener) return null;
       return {
         shellHeight: shell.getBoundingClientRect().height,
-        shellBottom: shell.getBoundingClientRect().bottom,
         simulationWidth: simulation.getBoundingClientRect().width,
         shellWidth: shell.getBoundingClientRect().width,
         toolbarDisplay: getComputedStyle(toolbar).display,
         toolbarColumns: getComputedStyle(toolbar).gridTemplateColumns.split(' ').length,
-        actionBottom: action.getBoundingClientRect().bottom,
-        actionHeight: action.getBoundingClientRect().height,
+        openerHeight: opener.getBoundingClientRect().height,
+        createFormCount: document.querySelectorAll('#platformCreateCompanyForm').length,
+        actionCount: document.querySelectorAll('.platform-shell-actionbar').length,
+        demoPasswordCount: document.querySelectorAll('#provisionCompanyOwnerPassword').length,
         wrapperOverflow: wrappers.map((node) => getComputedStyle(node).overflowX),
         outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       };
@@ -237,14 +238,45 @@ async function main(): Promise<void> {
     assert(completedMetrics.shellHeight <= 845 && completedMetrics.shellHeight > 600, 'completed mobile shell did not fit the viewport');
     assert(completedMetrics.simulationWidth <= completedMetrics.shellWidth + 1, 'simulation card exceeded the workspace width');
     assert(completedMetrics.toolbarDisplay === 'grid' && completedMetrics.toolbarColumns === 1, 'mobile tenant selectors did not collapse into a single-column toolbar');
-    assert(completedMetrics.actionBottom <= completedMetrics.shellBottom + 1, 'completed mobile action bar is outside the workspace shell');
-    assert(completedMetrics.actionHeight >= 46, 'completed mobile action bar is too small for touch input');
+    assert(completedMetrics.openerHeight >= 44, 'mobile Company opener is too small for touch input');
+    assert(completedMetrics.createFormCount === 0 && completedMetrics.actionCount === 0, 'completed workspace rendered optional Company creation by default');
+    assert(completedMetrics.demoPasswordCount === 0, 'closed completed workspace exposed a Demo owner password');
     assert(completedMetrics.wrapperOverflow.every((value) => value === 'auto' || value === 'scroll'), 'entitlement tables lost local horizontal scrolling');
     assert(completedMetrics.outerWidth <= 1, 'completed mobile workspace overflowed horizontally');
+
+    await page.locator('#platformOpenCompanyCreate').click();
+    await page.locator('#platformCreateCompanyForm').waitFor({ state: 'visible', timeout: TIMEOUT });
+    const openMetrics = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>('.platform-shell');
+      const action = document.querySelector<HTMLElement>('.platform-shell-actionbar');
+      const cancel = document.querySelector<HTMLElement>('#platformCancelCompanyCreate');
+      const create = document.querySelector<HTMLButtonElement>('#platformCreateCompanyAction');
+      if (!shell || !action || !cancel || !create) return null;
+      return {
+        actionBottom: action.getBoundingClientRect().bottom,
+        shellBottom: shell.getBoundingClientRect().bottom,
+        actionPosition: getComputedStyle(action).position,
+        cancelHeight: cancel.getBoundingClientRect().height,
+        createHeight: create.getBoundingClientRect().height,
+        actionForm: create.form?.id || '',
+        headingFocused: document.activeElement?.id === 'platformCompanyCreateHeading',
+        outerWidth: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    assert(openMetrics, 'opened Company panel metrics missing');
+    assert(openMetrics.actionPosition === 'sticky' && openMetrics.actionBottom <= openMetrics.shellBottom + 1, 'optional Company action bar is not contained and sticky');
+    assert(openMetrics.cancelHeight >= 44 && openMetrics.createHeight >= 44, 'optional Company actions are too small for touch input');
+    assert(openMetrics.actionForm === 'platformCreateCompanyForm', 'optional Company action is not associated with its form');
+    assert(openMetrics.headingFocused, 'optional Company heading did not receive focus');
+    assert(openMetrics.outerWidth <= 1, 'opened Company panel overflowed horizontally');
+    await page.locator('#platformCancelCompanyCreate').click();
+    assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'Cancel did not close the optional Company panel');
+    await page.waitForFunction(() => document.activeElement?.id === 'platformOpenCompanyCreate');
+    assert(await page.locator('#platformOpenCompanyCreate').evaluate((node) => node === document.activeElement), 'Cancel did not restore opener focus');
     assert(browserErrors.length === 0, `platform workspace browser errors: ${browserErrors.join(' | ')}`);
 
     await context.close();
-    console.log('PASS Platform workspace layout E2E (isolated PGlite): desktop 80vh, mobile adaptive shell, sticky actions, provisioning and entitlement layouts');
+    console.log('PASS Platform workspace layout E2E (isolated PGlite): desktop 80vh, mobile adaptive shell, opt-in Company panel, sticky actions and entitlement layouts');
   } finally {
     await browser?.close();
     await closeServer(server);

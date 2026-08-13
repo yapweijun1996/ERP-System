@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     page.on('console', (message) => {
-      if (message.type() === 'error' && !/status of 401 \(Unauthorized\)/.test(message.text())) browserErrors.push(message.text());
+      if (message.type() === 'error' && !/status of (?:401 \(Unauthorized\)|409 \(Conflict\))/.test(message.text())) browserErrors.push(message.text());
     });
     page.on('pageerror', (error) => browserErrors.push(error.message));
 
@@ -169,9 +169,19 @@ async function main(): Promise<void> {
     assert(companyMutationCount === 1, 'one Company submit triggered more than one mutation');
     assert(companyRequest?.key.startsWith('platform-company-') === true, 'company idempotency key is not stable client format');
 
-    // The submitted first-Company draft must be replaced immediately by a
-    // distinct, editable second-Company Demo draft. A reload must not be needed
-    // to leave the completed identity behind.
+    // Completed tenant control is opt-in: no subsequent Company form, action
+    // bar or Demo credential is present until the operator explicitly opens it.
+    assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'completed tenant control rendered a Company form by default');
+    assert(await page.locator('#platformProvisionActionbar').count() === 0, 'completed tenant control rendered a provisioning action bar by default');
+    assert(await page.locator('#provisionCompanyOwnerPassword').count() === 0, 'next Company Demo credentials leaked into the closed control DOM');
+    assert(await page.locator('#platformOpenCompanyCreate').getAttribute('aria-expanded') === 'false', 'Company opener did not announce its closed state');
+    assert(await page.locator('#platformCompanyCreatedStatus').getAttribute('role') === 'status', 'Company success status was not announced');
+    page.off('request', companyRequestListener);
+
+    await page.locator('#platformOpenCompanyCreate').click();
+    await waitFor(page, '#platformCreateCompanyForm');
+    assert(await page.locator('#platformOpenCompanyCreate').getAttribute('aria-expanded') === 'true', 'Company opener did not announce its open state');
+    assert(await page.locator('#platformCompanyCreateHeading').evaluate((node) => node === document.activeElement), 'Company create heading did not receive focus');
     assert(await page.locator('#provisionCompanyName').inputValue() === 'Acme Malaysia', 'second Company name autofill is incorrect');
     assert(await page.locator('#provisionCompanyCountry').inputValue() === 'MY', 'second Company country autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerName').inputValue() === 'Malaysia Owner', 'second Company owner name autofill is incorrect');
@@ -179,15 +189,23 @@ async function main(): Promise<void> {
     assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'myowner@acme.co', 'second Company owner email autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerPassword').inputValue() === 'demo1234', 'second Company owner password autofill is incorrect');
     assert(await page.locator('#provisionMasterAdminName').count() === 0, 'existing Master Admin fields rendered for a later Company');
-    assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'successful Company transition rendered a duplicate-provisioning error');
-    assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create another Company', 'successful Company transition did not enter tenant control');
-    page.off('request', companyRequestListener);
+
+    // Cancel is mutation-free, preserves the scoped in-memory draft and returns
+    // keyboard focus to the opener.
+    await page.locator('#provisionCompanyName').fill('Edited Acme Malaysia');
+    await page.locator('#platformCancelCompanyCreate').click();
+    assert(companyMutationCount === 1, 'Cancel emitted a Company mutation');
+    assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'Cancel did not close the Company panel');
+    await page.waitForFunction(() => document.activeElement?.id === 'platformOpenCompanyCreate');
+    assert(await page.locator('#platformOpenCompanyCreate').evaluate((node) => node === document.activeElement), 'Cancel did not return focus to the Company opener');
+    await page.locator('#platformOpenCompanyCreate').click();
+    await waitFor(page, '#platformCreateCompanyForm');
+    assert(await page.locator('#provisionCompanyName').inputValue() === 'Edited Acme Malaysia', 'Cancel did not preserve the edited Company draft');
 
     // Company drafts are scoped by Master and next ordinal. Switching to a
     // different Master must not carry the edited Malaysia draft across, and
     // returning must restore the edit for the original Master.
     const firstMasterFn = await page.locator('#platformMasterSelect').inputValue();
-    await page.locator('#provisionCompanyName').fill('Edited Acme Malaysia');
     const isolationMasterFn = await page.evaluate(async () => {
       const csrf = document.cookie.split(';').map((item) => item.trim()).find((item) => item.startsWith('erp_platform_csrf='))?.split('=').slice(1).join('=') ?? '';
       const response = await fetch('/api/platform/masters', {
@@ -208,6 +226,9 @@ async function main(): Promise<void> {
     assert(await page.locator('#provisionCompanyName').inputValue() === 'Acme Singapore', 'Company draft leaked into a different Master');
     await page.locator('#platformMasterSelect').selectOption(firstMasterFn);
     await page.locator('#provisionMasterAdminName').waitFor({ state: 'detached', timeout: TIMEOUT });
+    assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'Master switch left the optional Company panel open');
+    await page.locator('#platformOpenCompanyCreate').click();
+    await waitFor(page, '#platformCreateCompanyForm');
     assert(await page.locator('#provisionCompanyName').inputValue() === 'Edited Acme Malaysia', 'Master-scoped Company edit was not restored');
     await page.locator('#provisionCompanyName').fill('Acme Malaysia');
 
@@ -220,34 +241,61 @@ async function main(): Promise<void> {
     }, companyRequest as { url: string; key: string; body: unknown });
     assert(replay.status === 200 && replay.body?.meta?.idempotentReplay === true, 'company idempotency replay did not return the existing result');
 
-    // A reload must recreate the same second-Company defaults without
-    // restoring the first Company's submitted identity.
+    // A reload returns to closed tenant control. Opening explicitly recreates
+    // the same second-Company defaults without restoring submitted identity.
     await page.reload({ waitUntil: 'networkidle' });
     await waitFor(page, '.platform-entitlement-grid');
-    const companyForm = page.locator('#platformCreateCompanyForm');
-    assert(await companyForm.count() === 1, 'existing-master company creation form disappeared');
+    assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'reload automatically reopened the optional Company form');
+    assert(await page.locator('#platformProvisionActionbar').count() === 0, 'reload restored the optional Company action bar');
+    await page.locator('#platformOpenCompanyCreate').click();
+    await waitFor(page, '#platformCreateCompanyForm');
     assert(await page.locator('#provisionCompanyName').inputValue() === 'Acme Malaysia', 'reload did not recreate the second Company name');
     assert(await page.locator('#provisionCompanyCountry').inputValue() === 'MY', 'reload did not recreate the second Company country');
     assert(await page.locator('#provisionCompanyOwnerName').inputValue() === 'Malaysia Owner', 'reload did not recreate the second Company owner name');
     assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === 'myowner', 'reload did not recreate the second Company owner username');
     assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'myowner@acme.co', 'reload did not recreate the second Company owner email');
-    assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'existing Company left a duplicate-provisioning error on reload');
-    assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create another Company', 'existing Company did not switch to the explicit create-another action');
+    assert(await page.locator('#platformCreateCompanyError').textContent() === '', 'opened Company panel contained a stale error');
+    assert(await page.locator('#platformCreateCompanyAction').innerText() === 'Create Company', 'optional Company action copy is incorrect');
     assert(await page.locator('.platform-step.complete').count() === 3, 'completed provisioning stepper did not mark all steps complete');
 
-    // The second Company can be created without typing. Its successful
-    // transition must advance to deterministic third-Company identities.
+    // The second Company can be created without typing. Success closes the
+    // panel and selects the exact companyFn returned by the API.
     page.on('request', companyRequestListener);
+    const secondCompanyResponse = page.waitForResponse((response) => response.request().method() === 'POST' && /\/api\/platform\/masters\/[^/]+\/companies$/.test(response.url()));
     await page.locator('#platformCreateCompanyAction').click();
-    await page.waitForFunction(() => (document.querySelector('#provisionCompanyName') as HTMLInputElement | null)?.value === 'Acme Company 3');
+    const secondCompanyBody = await (await secondCompanyResponse).json() as { data?: { companyFn?: string } };
+    await page.locator('#platformCompanyCreatedStatus').waitFor({ state: 'visible', timeout: TIMEOUT });
     page.off('request', companyRequestListener);
     assert(companyMutationCount === 2, 'second Company submit did not emit exactly one additional mutation');
     assert(await page.locator('#platformCompanySelect option').count() === 2, 'second Company was not added to the selected Master');
+    assert(await page.locator('#platformCompanySelect').inputValue() === secondCompanyBody.data?.companyFn, 'created Company was not selected by its returned companyFn');
+    assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'successful optional Company creation left the form open');
+    assert(await page.locator('#platformProvisionActionbar').count() === 0, 'successful optional Company creation left the action bar open');
+
+    // The third ordinal is generated only after the operator opens the panel.
+    await page.locator('#platformOpenCompanyCreate').click();
+    await waitFor(page, '#platformCreateCompanyForm');
+    assert(await page.locator('#provisionCompanyName').inputValue() === 'Acme Company 3', 'third Company name autofill is incorrect');
     assert(await page.locator('#provisionCompanyCountry').inputValue() === 'SG', 'third Company country autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerName').inputValue() === 'Company Owner 3', 'third Company owner name autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === 'owner3', 'third Company owner username autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'owner3@acme.co', 'third Company owner email autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerPassword').inputValue() === 'demo1234', 'third Company owner password autofill is incorrect');
+
+    // A backend uniqueness conflict must keep the panel and edited values so
+    // the operator can correct them; selecting a Company then closes it.
+    await page.locator('#provisionCompanyOwnerEmail').fill('owner@acme.co');
+    page.on('request', companyRequestListener);
+    await page.locator('#platformCreateCompanyAction').click();
+    await page.locator('#platformCreateCompanyError').waitFor({ state: 'visible', timeout: TIMEOUT });
+    page.off('request', companyRequestListener);
+    assert(/already exists/i.test(await page.locator('#platformCreateCompanyError').innerText()), 'duplicate owner conflict did not reach the inline alert');
+    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'owner@acme.co', 'conflict retry did not preserve the edited email');
+    assert(await page.locator('#platformCreateCompanyForm').count() === 1, 'conflict closed the Company panel');
+    assert(await page.locator('#platformCompanySelect option').count() === 2, 'conflict created an extra Company');
+    const firstCompanyFn = await page.locator('#platformCompanySelect option').first().getAttribute('value');
+    await page.locator('#platformCompanySelect').selectOption(firstCompanyFn || '');
+    assert(await page.locator('#platformCreateCompanyForm').count() === 0, 'Company selector change did not close the optional panel');
 
     // Reuse the authenticated Platform session in a fresh context to prove
     // that a disabled Demo flag leaves the later-Company form manual. A fresh
@@ -261,6 +309,9 @@ async function main(): Promise<void> {
     });
     const flagOffPage = await flagOffContext.newPage();
     await flagOffPage.goto(listening.baseUrl, { waitUntil: 'domcontentloaded' });
+    await waitFor(flagOffPage, '#platformOpenCompanyCreate');
+    assert(await flagOffPage.locator('#platformCreateCompanyForm').count() === 0, 'flag-off control rendered the optional Company form by default');
+    await flagOffPage.locator('#platformOpenCompanyCreate').click();
     await waitFor(flagOffPage, '#platformCreateCompanyForm');
     assert(await flagOffPage.locator('#provisionCompanyName').inputValue() === '', 'later Company was autofilled while Demo flag was disabled');
     assert(await flagOffPage.locator('#provisionCompanyOwnerName').inputValue() === '', 'later Company owner was autofilled while Demo flag was disabled');
@@ -312,7 +363,7 @@ async function main(): Promise<void> {
     assert(browserErrors.length === 0, `platform demo autofill browser errors: ${browserErrors.join(' | ')}`);
 
     await context.close();
-    console.log('PASS Platform workspace demo autofill E2E (isolated PGlite): flag off, editable staged defaults, Master-scoped drafts, stable idempotency replay, and deterministic later-Company identities');
+    console.log('PASS Platform workspace demo autofill E2E (isolated PGlite): opt-in Company panel, editable ordinal defaults, scoped drafts, conflicts, stable replay and flag-off behavior');
   } finally {
     await browser?.close();
     await closeServer(server);
