@@ -48,10 +48,10 @@ section for the path you are releasing. Deployment mechanics live in
 
 ## 1. Demo path (static bundle → public showcase)
 
-Current reality: this repo is **private** and `deploy-pages.yml` is intentionally
-disabled (see STATUS.md — the demo will ship from a separate public repo that
-contains only the built `web/dist/`). Until that repo exists, a "demo release" means
-producing and verifying a distributable `web/dist/`.
+Current reality: this public repo publishes the static Demo through `deploy-pages.yml`
+at `https://yapweijun1996.github.io/ERP-System/`. The workflow contains only the
+PGlite/IndexedDB Demo bundle; production remains the separate Docker/API/PostgreSQL
+track.
 
 - [ ] `web/public/sw.js` `CACHE_VERSION` bumped **if** any precached asset was
       added/removed/renamed this release (stale-SW symptom: reused tabs serve old JS)
@@ -64,8 +64,8 @@ producing and verifying a distributable `web/dist/`.
 - [ ] PWA update prompt appears on the reused profile and "Update now" reloads onto
       the new version
 - [ ] Spot-check at 375 px on at least dashboard + one Canonical write flow
-- [ ] If publishing to the public demo repo: copy `web/dist/` only — no source, no
-      `.env*`, no docs beyond what's intended to be public
+- [ ] Pages artifact contains `web/dist/` only — no `.env*`, production API endpoint,
+      database connection string or provider credential
 
 ## 2. Production path (Docker Compose)
 

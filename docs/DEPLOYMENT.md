@@ -1,10 +1,10 @@
 # Deployment
 
-Two release targets are defined from one repo; only the Docker path is currently
-an active production deployment:
+Two release targets are defined from one repo; GitHub Pages is the public static Demo
+deployment and Docker is the production deployment:
 
-1. **Demo artifact** → static `web/dist/` → GitHub Pages or another public static host
-   when the separate public-demo plan is enabled (no backend).
+1. **Demo artifact** → static `web/dist/` → GitHub Pages at
+   `https://yapweijun1996.github.io/ERP-System/` (no backend).
 2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), sized for 100–800 GB.
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
@@ -507,10 +507,9 @@ PostgreSQL, or any private environment variable.
 It also includes the PWA shell (`manifest.webmanifest`, `sw.js`, icons, safe-area CSS,
 and update prompt). See [PWA.md](PWA.md).
 
-The repository includes `.github/workflows/deploy-pages.yml` as a reproducible Pages
-workflow, but it is intentionally disabled for this private repository. The current
-release artifact is `web/dist/`; public showcase hosting is planned for a separate
-public demo repository.
+The repository includes `.github/workflows/deploy-pages.yml` as the reproducible Pages
+workflow. It builds the static PGlite Demo and publishes only the `web/dist/` artifact;
+it does not publish the Node API, PostgreSQL data, `.env` files or production secrets.
 
 ### Vite config requirements (Pages-specific)
 
@@ -529,7 +528,7 @@ export default defineConfig({
 - **SPA fallback file:** copy `web/dist/index.html` to `web/dist/404.html` in the build
   step.
 
-### CI/CD — Pages workflow (currently disabled)
+### CI/CD — Pages workflow
 
 For the normal same-repository Pages deploy, use the checked-in workflow:
 
@@ -547,15 +546,15 @@ It uses GitHub's official Pages actions:
 - `actions/upload-pages-artifact`
 - `actions/deploy-pages`
 
-If this repository is later made public or the public-demo plan changes, GitHub setup is:
+GitHub setup is:
 
 1. Push the workflow to `main`.
 2. Open repository **Settings → Pages**.
 3. Set **Build and deployment → Source** to **GitHub Actions**.
 4. Run the workflow or push to `main`.
 
-No PAT is required for same-repository Pages deployment. This is not a current release
-claim; verify Pages is enabled before reactivating the workflow.
+No PAT is required for same-repository Pages deployment. Verify the workflow run and
+the published URL after each release.
 
 ### Authorization registry CI gate (TASK-171)
 
