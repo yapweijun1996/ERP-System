@@ -8,11 +8,11 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **195**
+- Done: **196**
 - In progress: **1**
 - Todo: **11**
 - Blocked: **4**
-- Total: **211**
+- Total: **212**
 
 ## Current release-quality note
 
@@ -28,13 +28,16 @@ E2E, the 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129
 5-language × 2-viewport audit. PostgreSQL/FORCE-RLS and executable CI remain release
 blockers; public probes and older suite totals are historical evidence. TASK-211 is done:
 the generated business i18n allowlist is synchronized and its CI drift check is configured;
-remote workflow execution remains subject to TASK-203.
+remote workflow execution remains subject to TASK-203. TASK-212 is done: active-route
+locale switching now refreshes the shell and route in place while preserving recoverable
+filters, drafts, focus and scroll state; the dedicated desktop/mobile live-i18n E2E passes.
 
 ## CI and release maintenance
 
 | Task | Status | Purpose |
 | --- | --- | --- |
 | TASK-211 | Done | Regenerate the business i18n allowlist artifact and enforce its drift check in CI |
+| TASK-212 | Done | Restore active-route live i18n rendering and preserve recoverable view state |
 
 ## Current authorization programme
 

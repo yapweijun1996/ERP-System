@@ -2167,6 +2167,10 @@ statutory documents retain their own source/locale rules.
       placeholder, unsafe-markup and new-hardcoded-copy gates; audit all Canonical
       routes in five languages and verify representative desktop/phone interactions,
       offline cache and zero overflow/runtime errors.
+- [x] **TASK-212 — Restore active-route live i18n rendering and state preservation.**
+      Done 2026-09-05: repaired the event-to-screen refresh regression so changing
+      language updates the current route and dynamic shell in place without losing
+      recoverable view state; local desktop/mobile live-i18n E2E passes.
 
 ## EPIC-058 — End-User ERP Quality Audit & Remediation ✅
 

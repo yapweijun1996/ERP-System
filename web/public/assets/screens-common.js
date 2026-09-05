@@ -771,9 +771,16 @@ function transactionListPage(root, config){
   const value=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
   const layout=cfg.layout||'transaction-list-v1';
   const detailPane=cfg.detailPane||null;
-  let activeFilter=cfg.initialFilter||'all';
-  let searchTerm='';
-  let selectedId=null;
+  const localeState=typeof window.erpGetLocaleRefreshState==='function'
+    ?window.erpGetLocaleRefreshState(cfg.route):null;
+  const configuredFilters=value(cfg.filters)||[];
+  const filterKeys=configuredFilters.map(item=>Array.isArray(item)?item[0]:item.key);
+  const restoredFilter=localeState?.list?.filter;
+  let activeFilter=restoredFilter!=null
+    &&(restoredFilter==='all'||filterKeys.includes(restoredFilter))
+    ?restoredFilter:cfg.initialFilter||'all';
+  let searchTerm=typeof localeState?.list?.search==='string'?localeState.list.search:'';
+  let selectedId=localeState?.list?.selectedId??null;
 
   function allRows(){
     const rows=value(cfg.rows);
@@ -867,7 +874,7 @@ function transactionListPage(root, config){
     }).join('')}</div>`;
   }
   function renderFilters(){
-    const chips=value(cfg.filters)||[];
+    const chips=configuredFilters;
     if(!chips.length) return '<div class="filterchips" data-list-filters hidden></div>';
     return `<div class="filterchips" data-list-filters>${chips.map(item=>{
       const key=Array.isArray(item)?item[0]:item.key;
@@ -1138,7 +1145,8 @@ function tableListing(config){
       <h3>${esc(String(emptyTitle))}</h3>${emptyDescription?`<p>${esc(String(emptyDescription))}</p>`:''}</div>`;
   const showing=interpolate(labels.showing||'{from}–{to} of {total}',{from,to,total:filteredRows.length});
   const pageLabel=interpolate(labels.page||'Page {page} of {pages}',{page:currentPage,pages:pageCount});
-  const html=`<section class="table-listing" data-table-listing data-table-listing-view="${esc(String(cfg.view||'list'))}">
+  const html=`<section class="table-listing" data-table-listing data-table-listing-view="${esc(String(cfg.view||'list'))}"
+      data-table-listing-page="${currentPage}" data-table-listing-page-size="${selectedPageSize}">
     <div class="table-listing-toolbar" data-table-listing-toolbar>
       <label class="table-listing-search" data-table-listing-search-wrap>
         ${ic('search')}<input type="search" value="${esc(String(state.search||''))}"
@@ -1293,15 +1301,24 @@ window.reportListPage=reportListPage;
  */
 function calendarWorkspacePage(root,config){
   const cfg=config||{};
+  const localeState=typeof window.erpGetLocaleRefreshState==='function'
+    ?window.erpGetLocaleRefreshState(cfg.route):null;
   const scrollState=cfg.preserveScroll===false||typeof window.erpCaptureScrollState!=='function'
     ?null
     :window.erpCaptureScrollState(root,cfg.route);
   const rows=Array.isArray(cfg.rows)?cfg.rows:[];
-  const view=['month','week','list'].includes(cfg.view)?cfg.view:'month';
-  const listTable=view==='list'&&cfg.listTable
-    ?tableListing({...cfg.listTable,selectedId:cfg.selectedId,onRow:row=>cfg.onSelect?.(row.id),onChange:change=>cfg.onListChange?.(change)})
+  const view=['month','week','list'].includes(localeState?.calendar?.view)
+    ?localeState.calendar.view
+    :['month','week','list'].includes(cfg.view)?cfg.view:'month';
+  const selectedId=localeState?.list?.selectedId??cfg.selectedId;
+  const listConfig=cfg.listTable?{...cfg.listTable}:null;
+  if(listConfig&&localeState?.tableListing){
+    listConfig.state={...(listConfig.state||{}),...localeState.tableListing};
+  }
+  const listTable=view==='list'&&listConfig
+    ?tableListing({...listConfig,selectedId,onRow:row=>cfg.onSelect?.(row.id),onChange:change=>cfg.onListChange?.(change)})
     :null;
-  const selected=rows.find(row=>String(row.id)===String(cfg.selectedId))||null;
+  const selected=rows.find(row=>String(row.id)===String(selectedId))||null;
   const resolve=(candidate,...args)=>typeof candidate==='function'?candidate(...args):candidate;
   const iso=value=>{
     const date=value instanceof Date?value:new Date(`${String(value)}T00:00:00Z`);
@@ -1318,7 +1335,7 @@ function calendarWorkspacePage(root,config){
     valueDate.setUTCDate(valueDate.getUTCDate()-day);
     return iso(valueDate);
   };
-  const cursor=cfg.cursor||iso(new Date());
+  const cursor=localeState?.calendar?.cursor||cfg.cursor||iso(new Date());
   const businessDate=cfg.businessDate||iso(new Date());
   const eventLabel=row=>esc(String(resolve(cfg.eventLabel,row)||row.employeeName||row.employeeNo||'Unavailable'));
   const eventAriaLabel=row=>[
@@ -1330,9 +1347,9 @@ function calendarWorkspacePage(root,config){
   const eventTone=row=>typeof cfg.eventTone==='function'
     ?cfg.eventTone(row)
     :row.status==='approved'?'ok':row.status==='pending'?'warn':'neutral';
-  const eventButton=row=>`<button class="calendar-event ${eventTone(row)}${String(row.id)===String(cfg.selectedId)?' selected':''}"
+  const eventButton=row=>`<button class="calendar-event ${eventTone(row)}${String(row.id)===String(selectedId)?' selected':''}"
       data-calendar-event="${esc(String(row.id))}" aria-label="${esc(eventAriaLabel(row))}"
-      aria-pressed="${String(row.id)===String(cfg.selectedId)?'true':'false'}">
+      aria-pressed="${String(row.id)===String(selectedId)?'true':'false'}">
     <i class="calendar-event-dot" aria-hidden="true"></i>
     <span class="calendar-event-copy"><b>${eventLabel(row)}</b><small>${esc(String(resolve(cfg.eventSubtitle,row)||row.leaveType||cfg.statusLabel(row.status)))}</small></span>
     ${row.conflict?`<strong title="${esc(String(cfg.labels.conflict))}">!</strong>`:''}
@@ -1409,7 +1426,8 @@ function calendarWorkspacePage(root,config){
   const modalTitle=selected?String(resolve(cfg.detailModalTitle,selected)||selected.name||selected.employeeName||cfg.labels.select):'';
   const modalActions=selected?`${btn(String(cfg.labels.close||'Close'),{cls:'soft',attrs:'data-calendar-modal-close'})}${actionButtons(modalActionList,'data-calendar-modal-action')}`:'';
   const body=`<div class="calendar-workspace" data-layout="calendar-workspace-v1"
-      data-calendar-route="${esc(String(cfg.route||''))}" data-calendar-view="${esc(view)}">
+      data-calendar-route="${esc(String(cfg.route||''))}" data-calendar-view="${esc(view)}"
+      data-calendar-cursor="${esc(String(cursor))}">
     <div class="calendar-workspace-header" data-calendar-header>
       <div class="calendar-nav">
         ${btn(cfg.labels.previous,{icon:'chevL',cls:'soft',attrs:'data-calendar-nav="-1"'})}

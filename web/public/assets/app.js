@@ -6,9 +6,20 @@ const ROUTE_MODULE = {};       // route -> module id (for active state)
 let CURRENT_ROUTE = null;
 let CURRENT_ROUTE_PARAMS = {};
 let SCREEN_RENDER_SEQUENCE = 0;
+let LOCALE_REFRESH_SEQUENCE = 0;
+let LOCALE_REFRESH_CONTEXT = null;
 let MY_WORK_CONTEXT = null;
 const DEMO_AUTH_KEY = 'aria-demo-auth';
 const API_LOGIN_HINT_KEY = 'aria-api-login-hint';
+
+/* Shared screen helpers can read this only while the active route is being
+   rebuilt for a locale change. Keeping the bridge short-lived prevents normal
+   navigation from accidentally inheriting a previous screen's UI state. */
+function getLocaleRefreshState(route){
+  return LOCALE_REFRESH_CONTEXT&&LOCALE_REFRESH_CONTEXT.route===route
+    ?LOCALE_REFRESH_CONTEXT.viewState:null;
+}
+window.erpGetLocaleRefreshState=getLocaleRefreshState;
 
 function readApiLoginHint(){
   try{
@@ -1596,6 +1607,208 @@ function failScreenRender(root,route,sequence,error){
   root.scrollTop=0;
   return true;
 }
+
+function localeDomPath(root,element){
+  if(!root||!element||!root.contains(element)) return null;
+  const path=[];
+  let current=element;
+  while(current&&current!==root){
+    const parent=current.parentElement;
+    if(!parent) return null;
+    const index=Array.prototype.indexOf.call(parent.children,current);
+    if(index<0) return null;
+    path.unshift(index);
+    current=parent;
+  }
+  return current===root?path:null;
+}
+
+function localeElementAtPath(root,path){
+  if(!root||!Array.isArray(path)) return null;
+  let current=root;
+  for(const index of path){
+    current=current&&current.children?current.children[index]:null;
+    if(!current) return null;
+  }
+  return current;
+}
+
+function captureLocaleControlState(root,element){
+  if(!element||!localeDomPath(root,element)) return null;
+  if(element.tagName==='INPUT'&&element.type==='file') return null;
+  if(element.disabled||element.readOnly) return null;
+  const state={
+    path:localeDomPath(root,element),
+    tag:element.tagName,
+    type:element.type||'',
+  };
+  if(element.tagName==='SELECT'&&element.multiple){
+    state.values=[...element.selectedOptions].map(option=>option.value);
+  }else if('value' in element){
+    state.value=element.value;
+  }else if(element.isContentEditable){
+    state.text=element.textContent||'';
+  }
+  if('checked' in element) state.checked=Boolean(element.checked);
+  try{
+    if(typeof element.selectionStart==='number'){
+      state.selectionStart=element.selectionStart;
+      state.selectionEnd=element.selectionEnd;
+    }
+  }catch{}
+  return state;
+}
+
+function localeControlStateMatches(element,state){
+  if(!element||!state||element.tagName!==state.tag||((element.type||'')!==state.type)) return true;
+  if(Array.isArray(state.values)&&element.tagName==='SELECT'&&element.multiple){
+    return [...element.selectedOptions].map(option=>option.value).join('\u0000')
+      ===state.values.join('\u0000');
+  }
+  if(state.value!==undefined&&'value' in element&&element.value!==state.value) return false;
+  if(state.text!==undefined&&element.isContentEditable&&element.textContent!==state.text) return false;
+  if(state.checked!==undefined&&'checked' in element&&Boolean(element.checked)!==state.checked) return false;
+  return true;
+}
+
+function localeControlEventName(element){
+  if(element.tagName==='SELECT') return 'change';
+  if(element.tagName==='TEXTAREA'||element.isContentEditable) return 'input';
+  return ['date','datetime-local','month','number','range','time','week','checkbox','radio'].includes(element.type)
+    ?'change':'input';
+}
+
+function captureLocaleViewState(root,route,preferredFocus){
+  const active=document.activeElement;
+  const focusTarget=root.contains(active)
+    ?active
+    :preferredFocus&&root.contains(preferredFocus)?preferredFocus:null;
+  const table=root.querySelector('[data-table-listing]');
+  const listFilter=root.querySelector('[data-list-filter].on')
+    ||root.querySelector('[data-list-kpi-filter].active');
+  const selectedRow=root.querySelector('.dt-r.sel[data-row]');
+  const listSearch=root.querySelector('[data-list-search]');
+  const tableSearch=root.querySelector('[data-table-listing-search]');
+  const tablePageSize=root.querySelector('[data-table-listing-page-size]');
+  const calendar=root.querySelector('[data-calendar-workspace]');
+  const legacyFilter=root.querySelector('.chip.on[data-f]');
+  return {
+    scroll:window.erpCaptureScrollState?.(root,route)||null,
+    controls:[...root.querySelectorAll('input,textarea,select,[contenteditable="true"]')]
+      .map(element=>captureLocaleControlState(root,element)).filter(Boolean),
+    focus:focusTarget?{
+      path:localeDomPath(root,focusTarget),
+      tag:focusTarget?.tagName||'',
+    }:null,
+    list:{
+      filter:listFilter?.dataset.listFilter||listFilter?.dataset.listKpiFilter||null,
+      search:listSearch?listSearch.value:undefined,
+      selectedId:selectedRow?.dataset.row||null,
+    },
+    legacyFilter:legacyFilter?.dataset.f||null,
+    tableListing:table?{
+      search:tableSearch?tableSearch.value:'',
+      page:Number(table?.dataset.tableListingPage)||1,
+      pageSize:Number(tablePageSize?.value)||Number(table?.dataset.tableListingPageSize)||undefined,
+    }:null,
+    calendar:calendar?{
+      view:calendar.dataset.calendarView||null,
+      cursor:calendar.dataset.calendarCursor||null,
+    }:null,
+  };
+}
+
+function restoreLocaleControlState(root,state){
+  if(!root||!state) return;
+  const element=localeElementAtPath(root,state.path);
+  if(!element||element.tagName!==state.tag||((element.type||'')!==state.type)) return;
+  if(Array.isArray(state.values)&&element.tagName==='SELECT'&&element.multiple){
+    [...element.options].forEach(option=>{option.selected=state.values.includes(option.value);});
+  }else if(state.value!==undefined&&'value' in element){
+    element.value=state.value;
+  }else if(state.text!==undefined&&element.isContentEditable){
+    element.textContent=state.text;
+  }
+  if(state.checked!==undefined&&'checked' in element) element.checked=state.checked;
+  if(state.selectionStart!==undefined&&typeof element.setSelectionRange==='function'){
+    try{element.setSelectionRange(state.selectionStart,state.selectionEnd); }catch{}
+  }
+}
+
+function restoreLocaleViewState(root,state){
+  if(!root||!state) return;
+  const changedControls=[];
+  state.controls.forEach(control=>{
+    const element=localeElementAtPath(root,control.path);
+    if(!localeControlStateMatches(element,control)) changedControls.push(control);
+    restoreLocaleControlState(root,control);
+  });
+  /* A fresh screen instance cannot see a draft held in its old closure. Replay
+     change/input only for controls whose value differed, allowing the screen's
+     own handlers to rebuild their domain state without firing duplicate work. */
+  changedControls.forEach(control=>{
+    const element=localeElementAtPath(root,control.path);
+    if(!element||!element.isConnected) return;
+    element.dispatchEvent(new Event(localeControlEventName(element),{bubbles:true}));
+  });
+  state.controls.forEach(control=>restoreLocaleControlState(root,control));
+  const legacyFilter=state.legacyFilter
+    &&[...root.querySelectorAll('[data-f]')].find(button=>button.dataset.f===state.legacyFilter);
+  if(legacyFilter&&!legacyFilter.classList.contains('on')){
+    legacyFilter.click();
+    state.controls.forEach(control=>restoreLocaleControlState(root,control));
+  }
+  const focus=state.focus&&localeElementAtPath(root,state.focus.path);
+  if(focus&&focus.tagName===state.focus.tag&&typeof focus.focus==='function'){
+    try{focus.focus({preventScroll:true});}catch{focus.focus();}
+    const control=state.controls.find(item=>JSON.stringify(item.path)===JSON.stringify(state.focus.path));
+    if(control&&control.selectionStart!==undefined&&typeof focus.setSelectionRange==='function'){
+      try{focus.setSelectionRange(control.selectionStart,control.selectionEnd);}catch{}
+    }
+  }
+  if(state.scroll) window.erpRestoreScrollState?.(root,state.scroll);
+}
+
+function refreshLocaleShell(){
+  if($('#sidebar')) renderSidebar();
+  if($('#tabbar')) renderTabbar();
+  syncTeamCalendarEntry();
+  const languageButton=$('#langBtn');
+  if(languageButton){
+    languageButton.innerHTML=ic('globe');
+    languageButton.setAttribute('aria-label',t('tip.language'));
+    languageButton.setAttribute('data-tip',t('tip.language'));
+  }
+  const languageMenu=$('#langMenu');
+  if(languageMenu&&typeof buildLangMenu==='function'){
+    languageMenu.innerHTML=buildLangMenu();
+    if(typeof wireLangMenu==='function') wireLangMenu();
+  }
+}
+
+async function refreshActiveRouteForLocale(eventDetail={}){
+  const route=CURRENT_ROUTE;
+  const root=$('#viewRoot');
+  if(!route||!root||!SCREENS[route]||document.body.classList.contains('auth-locked')) return;
+  const sequence=++LOCALE_REFRESH_SEQUENCE;
+  const context={
+    route,
+    viewState:captureLocaleViewState(root,route,eventDetail.returnFocus),
+  };
+  LOCALE_REFRESH_CONTEXT=context;
+  refreshLocaleShell();
+  try{
+    await navigate(route,Object.assign({},CURRENT_ROUTE_PARAMS));
+    if(sequence===LOCALE_REFRESH_SEQUENCE&&CURRENT_ROUTE===route){
+      restoreLocaleViewState(root,context.viewState);
+    }
+  }finally{
+    if(LOCALE_REFRESH_CONTEXT===context) LOCALE_REFRESH_CONTEXT=null;
+  }
+}
+
+window.addEventListener('erp:localechange',event=>{void refreshActiveRouteForLocale(event.detail||{});});
+
 function retryCurrentScreen(){
   if(CURRENT_ROUTE) return navigate(CURRENT_ROUTE,CURRENT_ROUTE_PARAMS);
   return Promise.resolve(false);

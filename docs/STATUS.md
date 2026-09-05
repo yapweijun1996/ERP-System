@@ -8,7 +8,9 @@ an epic-level milestone lands.
 
 The current worktree adds migration 0099: the Drizzle journal contains **100 migration
 entries**, generated canonical SQL contains **252 tables**, and the task registry contains
-**195 Done / 1 In progress / 11 Todo / 4 Blocked / 211 Total**.
+**196 Done / 1 In progress / 11 Todo / 4 Blocked / 212 Total**. TASK-212 is done: the
+active route and dynamic shell now refresh in place on locale change while preserving
+recoverable view state; local desktop/mobile live-i18n E2E and the full i18n audit pass.
 TASK-161–211 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and

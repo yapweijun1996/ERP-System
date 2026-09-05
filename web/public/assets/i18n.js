@@ -323,7 +323,9 @@ async function setLang(code,options={}){
   if(options.persist!==false){try{localStorage.setItem('aria-lang',code);}catch{}}
   applyI18n(document);
   if(previous!==code){
-    window.dispatchEvent(new CustomEvent('erp:localechange',{detail:{language:code,locale:getLocale(),previousLanguage:previous}}));
+    window.dispatchEvent(new CustomEvent('erp:localechange',{detail:{
+      language:code,locale:getLocale(),previousLanguage:previous,returnFocus:I18N_RETURN_FOCUS,
+    }}));
   }
   return true;
 }
