@@ -8,11 +8,11 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **196**
+- Done: **197**
 - In progress: **1**
 - Todo: **11**
 - Blocked: **4**
-- Total: **212**
+- Total: **213**
 
 ## Current release-quality note
 
@@ -31,6 +31,10 @@ the generated business i18n allowlist is synchronized and its CI drift check is 
 remote workflow execution remains subject to TASK-203. TASK-212 is done: active-route
 locale switching now refreshes the shell and route in place while preserving recoverable
 filters, drafts, focus and scroll state; the dedicated desktop/mobile live-i18n E2E passes.
+TASK-213 is done: `sales_enquiry_line` is now covered by the production FORCE-RLS overlay,
+and `npm run check:production-rls` guards every generated table with both tenant keys
+against accidental policy-list omission. This is source/static coverage evidence only;
+least-privilege runtime-role and Platform provisioning proof remains TASK-195.
 
 ## CI and release maintenance
 
@@ -114,6 +118,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
 | TASK-204 | Todo | Correct SG GST/MY SST validity, classification and posting semantics |
 | TASK-205 | Todo | Prove Vision provider failures and production-configuration boundaries |
+| TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 
 ## Platform tenant administration programme
 
@@ -124,10 +129,15 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-195 and TASK-203 |
 
-The registry therefore has **195 Done / 1 In progress / 11 Todo / 4 Blocked / 211 Total**.
+The registry therefore has **197 Done / 1 In progress / 11 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-195/TASK-203). Dependencies and
 epic references are valid.
+
+TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
+adds a deterministic generated-schema coverage gate. It does not establish a
+non-superuser PostgreSQL deployment role, Platform provisioning context or current
+production availability; those boundaries remain explicitly owned by TASK-195/199/209.
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master

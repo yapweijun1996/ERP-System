@@ -24,7 +24,7 @@ DECLARE
     'quality_inspection', 'quality_inspection_result',
     'quality_ncr', 'quality_corrective_action',
     'customer', 'invoice', 'sales_order', 'sales_order_approval', 'sales_order_line',
-    'sales_enquiry', 'sales_quotation', 'sales_quotation_line',
+    'sales_enquiry', 'sales_enquiry_line', 'sales_quotation', 'sales_quotation_line',
     'sales_delivery', 'sales_delivery_line',
     'sales_return', 'sales_return_line', 'sales_credit_note', 'sales_credit_note_line',
     'sales_debit_note',
@@ -155,11 +155,14 @@ BEGIN
   END LOOP;
 END $$;
 
--- master, company, app_user, role, role_permission, app_session, user_company,
--- user_company_role, user_invitation, password_reset_token, auth_rate_limit, outbox_event and
--- audit_log are security/configuration/worker
--- infrastructure accessed before/around a tenant transaction. They are not
--- exposed through generic resources and require separately restricted grants on
--- the API database role. audit_log remains insert/select only to that role.
+-- The generic tenant_scope policy intentionally excludes these tenant-keyed
+-- security/configuration/control-plane tables. Keep every exemption explicit;
+-- the local coverage check fails if another tenant-keyed table is omitted.
+-- RLS_EXEMPT_TABLES: company role audit_log outbox_event user_invitation
+-- RLS_EXEMPT_TABLES: support_access_grant user_company_role_scope platform_simulation_session
+-- RLS_EXEMPT_TABLES: platform_break_glass_window platform_tenant_access_session
+-- The excluded tables are not exposed through generic business resources and
+-- require separately restricted grants on the API database role. audit_log
+-- remains insert/select only to that role.
 
 COMMIT;

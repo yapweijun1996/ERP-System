@@ -2610,6 +2610,10 @@ Current truth:
 - Platform Company provisioning is implemented and PGlite-tested, but its current
   transaction does not establish tenant context before RLS-protected writes. Bundled
   Compose may instead run as the PostgreSQL bootstrap superuser and bypass FORCE RLS.
+- The generic production overlay now includes `sales_enquiry_line`. `npm run
+  check:production-rls` verifies the generated 252-table schema has 222 policy tables
+  plus 10 explicit security/control-plane exemptions; this is static coverage evidence,
+  not runtime-role or Platform provisioning proof.
 - Receipt Pack read/render does not compare current visibility with frozen visibility;
   a creator downgraded from company to own read can retain a company-wide snapshot.
 - Company Receipts has real create/update/void commands, but read-only UI gating,
@@ -2638,6 +2642,7 @@ Current truth:
 | TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
 | TASK-204 | Todo | Correct SG GST/MY SST validity, classification and posting semantics |
 | TASK-205 | Todo | Prove Vision gateway/provider failure and production-configuration boundaries |
+| TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 
 Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, browser and operational
 acceptance criteria; current CI executes rather than failing before startup; public

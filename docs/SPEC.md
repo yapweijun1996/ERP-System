@@ -572,6 +572,12 @@ superuser and bypass FORCE RLS. Before this path may be called production-ready,
 TASK-195 must provide explicit non-superuser/non-BYPASSRLS runtime roles and execute the
 current Platform bootstrap → Master → Company journey against PostgreSQL RLS.
 
+TASK-213 closes the source-level table-list omission for `sales_enquiry_line` and adds a
+deterministic guard over the generated schema: 222 tenant-keyed tables are covered by the
+generic overlay and 10 reviewed security/control-plane tables are explicit exemptions.
+This is static coverage evidence and does not relax the runtime-role or Platform
+provisioning requirements above.
+
 ## 12. Production Trust & ERP Excellence requirements (EPIC-066)
 
 The source-backed priority review is

@@ -645,6 +645,11 @@ superuser and bypass RLS. TASK-195 must close and prove this boundary before pro
 is called production-ready. The inserted onboarding `completedSteps` also still contains
 the retired `modules` stage and must be normalized.
 
+TASK-213 separately closes the production overlay's omitted `sales_enquiry_line` table and
+adds a generated-schema coverage guard. It currently verifies 222 generic policy tables,
+232 tables carrying both tenant keys and 10 explicit security/control-plane exemptions;
+this source-level result does not change the Platform provisioning/runtime-role caveat.
+
 TASK-189–192 are complete. At the 2026-08-12 checkpoint, migration 0098/RLS and the application release
 were verified against existing data, restore-tested backups were retained, and only
 `erp-system_pgdata` plus `erp-system_document_storage` were removed before recreating the

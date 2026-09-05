@@ -86,6 +86,15 @@ CREATE POLICY tenant_isolation ON sales_order
 -- the API sets app.master_fn / app.company_fn per connection from the session
 ```
 
+The production overlay currently applies the generic `tenant_scope` policy to every
+generated table carrying both tenant keys, including `sales_enquiry_line`. The local
+`npm run check:production-rls` gate first verifies the generated Demo schema is current,
+then checks for missing, unknown, malformed or duplicate policy entries. The current
+schema has 232 tenant-keyed tables: 222 use the generic policy and 10 explicitly listed
+security/control-plane tables remain outside that generic loop. This guard proves table
+coverage only; it does not replace TASK-195's required non-superuser/non-BYPASSRLS role,
+Platform provisioning-context and deployed PostgreSQL proof.
+
 ## 4. User ↔ Company is many-to-many
 
 A user is **not** locked to a single company. An accountant may handle both the SG and MY

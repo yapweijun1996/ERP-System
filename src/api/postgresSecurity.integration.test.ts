@@ -1162,6 +1162,26 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         code: 'PG-CUSTOMER',
         name: 'PostgreSQL Customer',
       }).returning({ id: schema.customer.id });
+      const [enquiry] = await tx.insert(schema.salesEnquiry).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        docNo: 'PG-ENQ-1',
+        customerId: buyer.id,
+        subject: 'PostgreSQL enquiry line RLS proof',
+        currency: 'SGD',
+        ownerName: 'PostgreSQL Security Proof',
+        enquiryDate: '2026-07-18',
+      }).returning({ id: schema.salesEnquiry.id });
+      const [enquiryLine] = await tx.insert(schema.salesEnquiryLine).values({
+        masterFn: setup.masterFn,
+        companyFn: setup.companyFn,
+        enquiryId: enquiry.id,
+        lineNo: 1,
+        productId: item.id,
+        description: 'PostgreSQL enquiry line',
+        qty: '2',
+        estimatedUnitPrice: '10',
+      }).returning({ id: schema.salesEnquiryLine.id });
       const [deal] = await tx.insert(schema.opportunity).values({
         masterFn: setup.masterFn,
         companyFn: setup.companyFn,
@@ -1184,8 +1204,36 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         trackedItemId: trackedItem.id,
         warehouseId: location.id,
         opportunityId: deal.id,
+        enquiryId: enquiry.id,
+        enquiryLineId: enquiryLine.id,
       };
     });
+    expect(await db.select().from(schema.salesEnquiryLine)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      { masterFn: setup.masterFn, companyFn: setup.companyFn },
+      (tx) => tx.select().from(schema.salesEnquiryLine)
+        .where(eq(schema.salesEnquiryLine.id, fixture.enquiryLineId)),
+    )).toHaveLength(1);
+    expect(await withTenantTransaction(
+      db,
+      { masterFn: setup.masterFn, companyFn: 'CROSS-TENANT' },
+      (tx) => tx.select().from(schema.salesEnquiryLine),
+    )).toHaveLength(0);
+    await expect(withTenantTransaction(
+      db,
+      { masterFn: setup.masterFn, companyFn: setup.companyFn },
+      (tx) => tx.insert(schema.salesEnquiryLine).values({
+        masterFn: setup.masterFn,
+        companyFn: 'CROSS-TENANT',
+        enquiryId: fixture.enquiryId,
+        lineNo: 2,
+        productId: fixture.itemId,
+        description: 'Cross-tenant write must be rejected',
+        qty: '1',
+        estimatedUnitPrice: '1',
+      }),
+    )).rejects.toThrow(/row-level security policy/i);
     const action = actionDefinitionFor('crm/opportunities', 'convert');
     expect(action).not.toBeNull();
     const actionContext = {

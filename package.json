@@ -28,6 +28,7 @@
     "worker:calendar": "tsx src/worker/calendar.ts",
     "seed": "tsx src/seed.ts",
     "check:drift": "node scripts/check-drift.mjs",
+    "check:production-rls": "npm run check:demo-schema && tsx scripts/check-production-rls.ts",
     "check:permissions": "tsx scripts/check-permissions.ts",
     "smoke": "node scripts/smoke.mjs",
   "test:e2e:master-data": "npm run build:demo && node tests/e2e/master-data-editor.spec.mjs",
