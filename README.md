@@ -38,6 +38,21 @@ the production-only RLS overlay.
 
 ## Quick start
 
+### Try the public Demo
+
+[Open the Aria ERP Demo](https://yapweijun1996.github.io/ERP-System/)
+
+The public Demo is a static GitHub Pages build. It runs the shared ERP domain logic in
+PGlite/WASM and stores Demo data only in the current browser's IndexedDB; it does not
+connect to the production API or PostgreSQL database.
+
+On a fresh browser profile, continue through the first-run setup and then choose the
+showcase persona offered on the sign-in screen. To start over, use **Reset demo database**
+on the sign-in screen or the Demo data reset control in Settings.
+
+> **Demo only:** the sample accounts and records are public. Never enter real customer,
+> employee, payroll, bank, password, API key or other business data into this Demo.
+
 ### Demo mode (no backend, builds to `web/dist/`)
 
 ```bash
