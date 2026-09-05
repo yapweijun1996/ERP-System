@@ -124,6 +124,10 @@ try {
   await page.waitForSelector('#pwaToast.show [data-pwa-primary]', { state:'visible', timeout:15000 });
   const firstPromptCount = await page.locator('#pwaToast.show').count();
   if (firstPromptCount !== 1) throw new Error(`Expected one update prompt, found ${firstPromptCount}`);
+  const renderedVersion = await page.locator('#pwaToast [data-pwa-version]').textContent();
+  if (renderedVersion?.trim() !== versionB) {
+    throw new Error(`Expected update prompt to show ${versionB}, got ${renderedVersion || 'none'}`);
+  }
 
   await page.locator('#pwaToast [data-pwa-secondary]').click();
   await page.waitForSelector('#pwaToast.show', { state:'hidden' });

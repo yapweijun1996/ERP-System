@@ -127,8 +127,8 @@ Acceptance criteria:
 ## EPIC-006 — CI, Testing, And Release 🔶 (CI/unit-tests live; smoke/release checklist + device open)
 
 Add repeatable validation and deployment checks. (TASK-014, TASK-015, TASK-020,
-TASK-025 done; TASK-017 permanently blocked — needs a physical phone, no agent can
-complete it)
+TASK-025 and TASK-210 done; TASK-017 permanently blocked — needs a physical phone, no
+agent can complete it)
 
 Acceptance criteria:
 
@@ -152,8 +152,9 @@ Acceptance criteria:
 - [x] Docs stay aligned with package scripts and deployment assets — actively kept
       current through TASK-009…014.
 
-Current verification note (2026-08-10): the smoke script and transaction proof are
-implemented and the desktop/mobile run is release-green. The navigation assertion
+Current verification note (2026-09-05): TASK-210 is done. The versioned PWA update toast,
+content-driven mobile boot-loading layout, full 129-route × 5-language × 2-viewport i18n
+matrix, smoke script and transaction proof are release-green. The navigation assertion
 checks visible semantic badges; hidden zero-count badges remain in the DOM. The
 physical-device gate remains open separately under TASK-017.
 

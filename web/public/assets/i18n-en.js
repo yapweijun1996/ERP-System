@@ -1422,6 +1422,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "pwa.updateBody": "A new ERP System version is available.",
   "pwa.updateNow": "Update now",
   "pwa.updateReady": "Update ready",
+  "pwa.version": "Version",
   "staff.add": "Add Staff",
   "staff.subtitle": "Create the employee, login and company access together. Activation rolls back if any part fails.",
   "staff.progress": "Staff onboarding progress",

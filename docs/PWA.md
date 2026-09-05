@@ -31,7 +31,7 @@ ERP System uses one user-controlled update flow, owned exclusively by the servic
 2. The old app keeps running.
 3. `web/public/assets/pwa.js` detects `registration.waiting` and asks that worker for its
    exact cache version.
-4. The UI shows a small toast with **Update now** and **Later**.
+4. The UI shows a small toast with the waiting worker's version code plus **Update now** and **Later**.
 5. **Update now** posts `SKIP_WAITING` to the waiting worker.
 6. `controllerchange` reloads the page once.
 
@@ -51,7 +51,7 @@ This avoids surprise reloads in the middle of an ERP workflow.
 Service worker file: `web/public/sw.js`.
 
 The source-of-truth cache identifier at this review boundary is
-`erp-system-pwa-v262` in both `web/public/sw.js` and
+`erp-system-pwa-v263` in both `web/public/sw.js` and
 `web/public/assets/pwa.js`. A cache number proves source consistency only; it does not
 prove that the same revision has reached a hosted environment.
 

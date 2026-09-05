@@ -6,7 +6,7 @@
   let offeredUpdateKey = null;
   let applyingUpdate = false;
   const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
-  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v262';
+  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v263';
   const DISMISSED_UPDATE_KEY = 'erp-system-dismissed-pwa-update';
   const LEGACY_SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
   const copy = (key, fallback) => typeof window.t === 'function' ? window.t(key) : fallback;
@@ -93,10 +93,13 @@
     if (el) el.classList.remove('show');
   }
 
-  function showToast({ title, body, primary, secondary, onPrimary, onSecondary }){
+  function showToast({ title, body, version, versionLabel, primary, secondary, onPrimary, onSecondary }){
     const el = ensureToast();
+    const versionMarkup = version
+      ? `<small class="pwa-version">${escapeHtml(versionLabel || 'Version')}: <code data-pwa-version>${escapeHtml(version)}</code></small>`
+      : '';
     el.innerHTML = `
-      <div class="pwa-copy"><b>${escapeHtml(title)}</b><span>${escapeHtml(body)}</span></div>
+      <div class="pwa-copy"><b>${escapeHtml(title)}</b><span>${escapeHtml(body)}</span>${versionMarkup}</div>
       <div class="pwa-actions">
         ${secondary ? `<button class="pwa-secondary" type="button" data-pwa-secondary>${escapeHtml(secondary)}</button>` : ''}
         ${primary ? `<button class="pwa-primary" type="button" data-pwa-primary>${escapeHtml(primary)}</button>` : ''}
@@ -118,6 +121,8 @@
     showToast({
       title:copy('pwa.updateReady','Update ready'),
       body:copy('pwa.updateBody','A new ERP System version is available.'),
+      version:updateKey,
+      versionLabel:copy('pwa.version','Version'),
       primary:copy('pwa.updateNow','Update now'),
       secondary:copy('pwa.later','Later'),
       onPrimary(){

@@ -1,6 +1,6 @@
 # Task Index
 
-Reviewed: **2026-08-13**
+Reviewed: **2026-09-05**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -8,17 +8,17 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **193**
+- Done: **194**
 - In progress: **1**
 - Todo: **11**
 - Blocked: **4**
-- Total: **209**
+- Total: **210**
 
 ## Current release-quality note
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 100 migrations
 through 0099, schema v99/252 tables, 129 Canonical / 0 Preview routes, 128 routes declaring
-API mode, 1,545 English i18n keys/72 local packs, 315 permission codes and PWA v262. The sole
+API mode, 1,546 English i18n keys/72 local packs, 315 permission codes and PWA v263. The sole
 Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
 Vitest run at 169 files / 672 tests with one intentional file/test skip. Current source
@@ -113,7 +113,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-195 and TASK-203 |
 
-The registry therefore has **193 Done / 1 In progress / 11 Todo / 4 Blocked / 209 Total**.
+The registry therefore has **194 Done / 1 In progress / 11 Todo / 4 Blocked / 210 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-195/TASK-203). Dependencies and
 epic references are valid.
@@ -154,6 +154,13 @@ claimed. TASK-196/197/202 own the audit-discovered Pack and UX gaps.
 
 ## Latest implementation milestones
 
+- **TASK-210 — Done (2026-09-05):** the PWA update toast now renders the exact waiting
+  service-worker release code beside the localized **Update now** / **Later** actions;
+  cache, script and source version references are aligned at v263 and the lifecycle audit
+  asserts the displayed code. Narrow mobile boot loading is content-driven at 390px,
+  375px and 320px without horizontal overflow or clipping. Lint, both typechecks, Demo
+  transaction proof/build, PWA lifecycle audit, the full 129-route × 5-language ×
+  2-viewport i18n matrix and desktop/mobile smoke all pass.
 - **TASK-175 — Done:** migration
   `0089_company_owner_cutover.sql` creates or normalizes one immutable company-scoped
   Company Owner role per company, backfills 112 explicit registered permission rows and

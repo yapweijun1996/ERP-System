@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-08-13
+# Project Status — reviewed 2026-09-05
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -8,8 +8,8 @@ an epic-level milestone lands.
 
 The current worktree adds migration 0099: the Drizzle journal contains **100 migration
 entries**, generated canonical SQL contains **252 tables**, and the task registry contains
-**193 Done / 1 In progress / 11 Todo / 4 Blocked / 209 Total**.
-TASK-161–209 now
+**194 Done / 1 In progress / 11 Todo / 4 Blocked / 210 Total**.
+TASK-161–210 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
@@ -25,10 +25,10 @@ evidence only. The final local full Vitest run passes 169 files / 672 tests with
 intentional file/test skip. PostgreSQL/FORCE-RLS, executable CI and production release
 remain TASK-206–209 work.
 
-The 2026-08-12 TASK-194 correction aligns deployment, security, architecture,
-role-permission, Demo and UAT material to that boundary: current inventory is 129
-Canonical / 0 Preview routes, 128 API-mode metadata routes, 1,545 English keys/72 local
-packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v262.
+The TASK-194 correction aligns deployment, security, architecture, role-permission, Demo
+and UAT material to that boundary: current inventory is 129
+Canonical / 0 Preview routes, 128 API-mode metadata routes, 1,546 English keys/72 local
+packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v263.
 HEAD collects 170 files / 666 tests; collection is not a pass result. TASK-017 remains
 the physical-device blocker, TASK-193 is blocked by missing production SMTP/recovery,
 and TASK-203 is blocked because GitHub Actions billing prevents every job from starting.
@@ -138,9 +138,9 @@ pass, including expiry, revoke, multi-target, explicit deny precedence and safe
 explanation access-control cases.
 Current source registers **129 Canonical / 0 Preview** routes; exactly 128 declare API
 mode because `staff-calendar` is omitted from `API_SCREEN_ROUTES`. TASK-183 records the
-full 129-route desktop/375px browser and language matrices. TASK-194 did not rerun them
-because local Playwright Chromium is absent, so older browser results remain dated rather
-than “current HEAD passed” evidence. The static i18n audit passes **1,545 English keys and
+full 129-route desktop/375px browser and language matrices; TASK-210 reran the current
+129-route language matrix on both viewports. The broader screen audit remains dated rather
+than “current HEAD passed” evidence. The static i18n audit passes **1,546 English keys and
 72 local five-language packs**. Business-record values remain outside the UI-resource
 audit; system-authored labels and state text are covered by localized packs or explicit
 business-text boundary markers.
@@ -412,8 +412,8 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Integration delivery log | ✅ Canonical Demo/API sanitized read model | `integration/events` reads existing transactional-outbox facts through an explicit tenant-scoped, newest-first, keyset-paginated projection protected by `integration.read`. Only safe operational metadata leaves the server; payload, recipient/token material, raw worker errors and worker identity are excluded. The five-language `integration-logs` workspace is deliberately read-only and does not fabricate replay/export or connector-control actions. |
 | Personal activity | ✅ Canonical Demo/API sanitized actor read model | `account/activity` reads only the signed-in actor's active-company audit facts, newest first. The response maps internal vocabulary to bounded category/entity/action keys and excludes payloads, request IDs, actor identity, other users, device/IP and session/security state. The five-language `my-activity` page is read-only and states this boundary. |
 | Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v15 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 24 controlled July/August leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,436-record deterministic pack. The calendar cases cover approved, pending, rejected, cancelled, multi-day and overlapping availability, and earlier controlled Demo rows converge in place on the same fixed business date. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v15 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively without replacing user-owned data. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Company Owner` is assigned to SG/MY with the current 115-permission template and company scope; approval, payment, payroll, sensitive tax-evidence and platform-support authority are not implicit, and the owner appears first in the switcher. Managers remain restricted to direct or explicitly granted teams. Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates. |
-| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; current v262 refreshes the Platform switch-scroll hotfix while retaining the waiting service worker as the single update authority, HTTP-cache bypass for `sw.js`, exact-version session suppression and one reload only after explicit acceptance. `npm run audit:pwa-update` has dated lifecycle evidence. |
-| Canonical UI i18n | ✅ Static current; browser proof dated | `node scripts/audit-i18n.mjs` verifies 1,545 English resources and 72 registered local five-language packs. TASK-183 records the 129 routes × 5 languages × 2 viewports browser matrix; it was not rerun in TASK-194. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
+| PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; current v263 adds the waiting worker version code to the update toast while retaining the waiting service worker as the single update authority, HTTP-cache bypass for `sw.js`, exact-version session suppression and one reload only after explicit acceptance. `npm run audit:pwa-update` has dated lifecycle evidence. |
+| Canonical UI i18n | ✅ Current browser verified | `node scripts/audit-i18n.mjs` verifies 1,546 English resources and 72 registered local five-language packs. TASK-210 reran the 129 routes × 5 languages × 2 viewports browser matrix on 2026-09-05 with zero runtime errors, raw keys, hardcoded system copy or page-level horizontal overflow. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` builds the static PGlite/IndexedDB Demo and publishes only the `web/dist/` artifact; it does not publish the Node API, PostgreSQL data, `.env` files or production secrets. The repository is public and Pages is configured for workflow deployment at `https://yapweijun1996.github.io/ERP-System/`. On 2026-09-05, run `33940353016` passed both Build and Deploy; a fresh-browser smoke check reached the setup wizard, completed local demo setup, opened the dashboard and confirmed `window.ErpSystemData.mode === 'pglite'` with no `/api` requests. Production remains the separate Docker/API/PostgreSQL track. |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⛔ Workflow present; runner billing blocked | `.github/workflows/ci.yml` defines the gates, but HEAD run `31603746668` started zero jobs because GitHub reported failed payment or an exhausted spending limit. TASK-203 is blocked external infrastructure, not a source-test result. |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
@@ -461,7 +461,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production first-run Platform bootstrap | ⚠️ Implemented; fresh-run checkpoint dated | TASK-192 proved empty bootstrap/reset at its checkpoint. The non-empty hosted control plane was healthy and browser-verified at `a5f1a3b` on 2026-08-13, but a new destructive empty-database replay was intentionally not performed; TASK-199 owns broader availability and immutable operational evidence. |
 | Platform Superadmin Demo quick setup | ✅ Source/test/live application release | The flag-on hosted Demo path keeps editable defaults and one-click Demo Platform login while preserving realm isolation, password toggles and tenant-only Remember. The authenticated workspace uses the 80vh/100dvh internal-scroll shell; completed tenant control hides provisioning progress and exposes later Company creation only through `+ Create Company`. The `21a5579`/`746fa52` entitlement-control release replaces the paired tables with one full-width, keyboard-accessible Master/Company tab workspace, client search/filter, explicit row Save/Reset, row-local conflict recovery and responsive mobile cards. Focused isolated E2E verifies no PATCH before Save, one existing PATCH per Save, preserved dirty/conflict state and unclipped mobile tabs. The application-only 2026-08-13 release preserved migration/principal/Master/Company/user counts at 99/1/1/2/3; live desktop and 390×844 read-only checks sent zero PATCHes and had no document overflow. Commits `e411931`/`9bcdb50` then anchored hidden switches inside their labels, added authenticated root-scroll containment and advanced the PWA to v262. A production toggle-without-Save check kept root scroll/overflow at zero, preserved the 80vh shell position, restored via local Reset and produced no console error; counts remained 99/1/1/2/3. GitHub run `31677057551` is an infrastructure failure: all Vitest shards had zero steps because account payments failed or the spending limit must be raised. |
-| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v262) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
+| Service worker never caches `/api/*` or `/health` | ✅ Working | `web/public/sw.js` (`CACHE_VERSION` v263) keeps session-scoped API/health responses out of Cache API while caching static English i18n and successfully fetched non-English resource packs. |
 
 ## Production-trust blockers and next boundary
 
@@ -689,7 +689,7 @@ cost-layer semantics the schema cannot support.
 | Claim in docs | Reality |
 | --- | --- |
 | `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Not currently proven for all 129.** 128 routes declare API support; `staff-calendar` is the metadata exception. TASK-200 owns the decision and authenticated HEAD full-route proof. |
-| Every Canonical route has five-language coverage | **Static inventory is current; browser proof is dated.** Static audit passes 1,545 keys/72 packs. TASK-183 records 129 × 5 × 2 browser evidence; TASK-194 did not rerun it. |
+| Every Canonical route has five-language coverage | **Current browser evidence passes.** Static audit passes 1,546 keys/72 packs, and TASK-210 reran the 129 × 5 × 2 browser matrix on 2026-09-05 with no blocking findings. |
 | API server has all business **write** endpoints | **Complete for the present Canonical boundary.** Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, service-capable order lines, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and any new finance/commercial actions remain separate future scope. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` | Implemented with ESLint and part of the local/CI gate. |
@@ -1975,7 +1975,7 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 193 tasks
+- Done: 194 tasks
 - In progress: TASK-206 (1)
 - Todo: 11
 - Blocked: TASK-017, TASK-193, TASK-203 and TASK-209 (4)
@@ -2000,7 +2000,9 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
   delivered the platform entitlement foundation, TASK-186 delivered the tenant cutover
   and TASK-187 delivered platform login/workspace/exact-user simulation. TASK-188 completed
   the recorded source, migration, authorization, browser and release-gate evidence.
-- EPIC-065 core is complete. TASK-189–192 are verified for independent Platform bootstrap,
+- EPIC-006 TASK-210 is done: the waiting-worker PWA version is visible in the update toast,
+  narrow mobile boot loading is content-driven, and the full desktop/mobile/i18n release
+  gates pass. EPIC-065 core is complete. TASK-189–192 are verified for independent Platform bootstrap,
   Master/Company provisioning, Master Admin RBAC, migration 0098, deployment,
   restore-tested backups and the authorized exact-volume reset. TASK-193 is blocked on
   missing production SMTP. EPIC-066 is in progress: TASK-194 and TASK-198 are done;

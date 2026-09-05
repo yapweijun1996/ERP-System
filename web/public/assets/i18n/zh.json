@@ -1421,6 +1421,7 @@
   "pwa.updateBody": "已有新的 ERP 系统版本。",
   "pwa.updateNow": "立即更新",
   "pwa.updateReady": "更新已就绪",
+  "pwa.version": "版本",
   "staff.add": "新增员工",
   "staff.subtitle": "一次建立员工、登录账号及公司权限；任何步骤失败都会整体回滚。",
   "staff.progress": "员工开户进度",

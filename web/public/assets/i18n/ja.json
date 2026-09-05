@@ -1421,6 +1421,7 @@
   "pwa.updateBody": "新しいERPシステムのバージョンがあります。",
   "pwa.updateNow": "今すぐ更新",
   "pwa.updateReady": "更新の準備完了",
+  "pwa.version": "バージョン",
   "staff.add": "スタッフを追加",
   "staff.subtitle": "従業員、ログイン、会社アクセスを一括作成します。いずれかが失敗すると全体をロールバックします。",
   "staff.progress": "スタッフ登録の進捗",
