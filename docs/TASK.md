@@ -8,11 +8,11 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **194**
+- Done: **195**
 - In progress: **1**
 - Todo: **11**
 - Blocked: **4**
-- Total: **210**
+- Total: **211**
 
 ## Current release-quality note
 
@@ -26,7 +26,15 @@ also passes typechecks, lint, API/Demo builds, generated schema/drift/permission
 3 focused files / 12 tests, Platform layout E2E with both tenant modes, Demo autofill
 E2E, the 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
 5-language × 2-viewport audit. PostgreSQL/FORCE-RLS and executable CI remain release
-blockers; public probes and older suite totals are historical evidence.
+blockers; public probes and older suite totals are historical evidence. TASK-211 is done:
+the generated business i18n allowlist is synchronized and its CI drift check is configured;
+remote workflow execution remains subject to TASK-203.
+
+## CI and release maintenance
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| TASK-211 | Done | Regenerate the business i18n allowlist artifact and enforce its drift check in CI |
 
 ## Current authorization programme
 
@@ -113,7 +121,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-195 and TASK-203 |
 
-The registry therefore has **194 Done / 1 In progress / 11 Todo / 4 Blocked / 210 Total**.
+The registry therefore has **195 Done / 1 In progress / 11 Todo / 4 Blocked / 211 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-195/TASK-203). Dependencies and
 epic references are valid.

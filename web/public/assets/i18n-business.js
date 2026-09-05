@@ -75,6 +75,7 @@ window.__ERP_I18N_BUSINESS_TEXT__={
     "Tiếng Việt",
     "PGlite",
     "PGlite demo",
+    "Asia/Singapore",
     "Asia/Kuala_Lumpur",
     "Demo Viewer",
     "Viewer, Employee",

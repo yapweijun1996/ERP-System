@@ -127,8 +127,8 @@ Acceptance criteria:
 ## EPIC-006 — CI, Testing, And Release 🔶 (CI/unit-tests live; smoke/release checklist + device open)
 
 Add repeatable validation and deployment checks. (TASK-014, TASK-015, TASK-020,
-TASK-025 and TASK-210 done; TASK-017 permanently blocked — needs a physical phone, no
-agent can complete it)
+TASK-025, TASK-210 and TASK-211 done; TASK-017 permanently blocked — needs a physical
+phone, no agent can complete it)
 
 Acceptance criteria:
 
@@ -156,7 +156,14 @@ Current verification note (2026-09-05): TASK-210 is done. The versioned PWA upda
 content-driven mobile boot-loading layout, full 129-route × 5-language × 2-viewport i18n
 matrix, smoke script and transaction proof are release-green. The navigation assertion
 checks visible semantic badges; hidden zero-count badges remain in the DOM. The
-physical-device gate remains open separately under TASK-017.
+physical-device gate remains open separately under TASK-017. TASK-211 is done: the
+business allowlist artifact is regenerated and its drift check is configured in CI;
+remote workflow execution remains subject to the TASK-203 billing blocker.
+
+- [x] **TASK-211 — Enforce generated i18n business allowlist in CI.** Regenerated the
+      committed `web/public/assets/i18n-business.js` artifact from the source allowlist
+      and added `npm run check:i18n-business` to the required validation job. Local
+      check, lint, typechecks, Demo build and dashboard browser audit pass.
 
 ## EPIC-007 — Data Seam Integrity ✅ (core acceptance criteria met)
 

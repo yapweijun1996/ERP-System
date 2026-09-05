@@ -77,6 +77,9 @@ jobs:
       - name: Lint (src/, web/src/, web/public/assets/, scripts/)
         run: npm run lint
 
+      - name: Check generated business i18n artifact
+        run: npm run check:i18n-business
+
       - name: Typecheck root (src/, includes the API server and drizzle config)
         run: npm run typecheck
 

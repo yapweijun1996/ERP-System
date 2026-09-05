@@ -8,8 +8,8 @@ an epic-level milestone lands.
 
 The current worktree adds migration 0099: the Drizzle journal contains **100 migration
 entries**, generated canonical SQL contains **252 tables**, and the task registry contains
-**194 Done / 1 In progress / 11 Todo / 4 Blocked / 210 Total**.
-TASK-161–210 now
+**195 Done / 1 In progress / 11 Todo / 4 Blocked / 211 Total**.
+TASK-161–211 now
 track the production-operation, employee/master-data update, Sales authoring, bounded
 session/impersonation, HR holiday, Staff appointment, recurrence/reminder/sync and
 permission-matrix and platform-support boundary work that had landed in code without
@@ -40,6 +40,9 @@ while schema/RLS remain intact. That is dated TASK-192 production evidence, not 
 availability or exact-HEAD deployment proof. TASK-194 public `/health` and setup probes
 returned 502. Source CI run `31570902479` passed its four Vitest shards; HEAD run
 `31603746668` could not start any job because GitHub Actions reported billing/spending.
+TASK-211 is done: the source business i18n allowlist and generated artifact are
+synchronized, and the required CI workflow now runs the artifact drift check. Remote
+workflow execution remains subject to the TASK-203 billing blocker.
 
 Authorization documentation distinguishes the implemented platform-owned module
 boundary from the historical tenant-controlled design. Tenant authorization still uses
@@ -1975,7 +1978,7 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 194 tasks
+- Done: 195 tasks
 - In progress: TASK-206 (1)
 - Todo: 11
 - Blocked: TASK-017, TASK-193, TASK-203 and TASK-209 (4)
@@ -2000,9 +2003,10 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
   delivered the platform entitlement foundation, TASK-186 delivered the tenant cutover
   and TASK-187 delivered platform login/workspace/exact-user simulation. TASK-188 completed
   the recorded source, migration, authorization, browser and release-gate evidence.
-- EPIC-006 TASK-210 is done: the waiting-worker PWA version is visible in the update toast,
+- EPIC-006 TASK-210 and TASK-211 are done: the waiting-worker PWA version is visible in the update toast,
   narrow mobile boot loading is content-driven, and the full desktop/mobile/i18n release
-  gates pass. EPIC-065 core is complete. TASK-189–192 are verified for independent Platform bootstrap,
+  gates pass; the generated business i18n allowlist is synchronized and its CI drift check
+  is configured. EPIC-065 core is complete. TASK-189–192 are verified for independent Platform bootstrap,
   Master/Company provisioning, Master Admin RBAC, migration 0098, deployment,
   restore-tested backups and the authorized exact-volume reset. TASK-193 is blocked on
   missing production SMTP. EPIC-066 is in progress: TASK-194 and TASK-198 are done;
