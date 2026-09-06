@@ -1233,7 +1233,12 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         qty: '1',
         estimatedUnitPrice: '1',
       }),
-    )).rejects.toThrow(/row-level security policy/i);
+    )).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        code: '42501',
+        message: expect.stringMatching(/row-level security policy/i),
+      }),
+    });
     const action = actionDefinitionFor('crm/opportunities', 'convert');
     expect(action).not.toBeNull();
     const actionContext = {
