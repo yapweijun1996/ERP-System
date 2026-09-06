@@ -121,7 +121,7 @@ full regime engines and statutory filing integrations remain target scope. See
 
 | Doc | What's inside |
 | --- | --- |
-| [docs/STATUS.md](docs/STATUS.md) | **Start here** — what is implemented, tested, deployed, blocked or planned (reviewed 2026-08-12) |
+| [docs/STATUS.md](docs/STATUS.md) | **Start here** — what is implemented, tested, deployed, blocked or planned (reviewed 2026-09-07) |
 | [docs/MVP.md](docs/MVP.md) | MVP-1 (browser demo) and MVP-2 (Docker production) scope + exit criteria |
 | [docs/SPEC.md](docs/SPEC.md) | Contract of record: invariants, data model, functional requirements, gates |
 | [docs/DESIGN.md](docs/DESIGN.md) | Working design: repo map, golden paths, transaction design, landmines |
@@ -161,14 +161,15 @@ full regime engines and statutory filing integrations remain target scope. See
 
 ## Status
 
-The browser demo uses PGlite/IndexedDB with the canonical 249-table schema and working
+The browser demo uses PGlite/IndexedDB with the canonical 255-table schema and working
 Sales, Purchasing, CRM, inventory, warehouse-picking and manufacturing work-order
 transaction chains. Route-level
 `SCREEN_META` currently classifies 129 routes as Canonical and 0 as Preview; Preview
-writes remain disabled if a future Preview route is introduced. Exactly 128 routes
-declare API mode: `staff-calendar` is the one metadata exception tracked by TASK-200.
-Production deployment exists, but current public probes returned 502 and Platform
-provisioning still needs least-privilege PostgreSQL/RLS proof. See
+writes remain disabled if a future Preview route is introduced. All 129 Canonical routes
+declare API mode, including `staff-calendar`, which is backed by the authenticated
+`/api/hr/calendar/staff` contract. Production deployment exists, but the current public
+revision and health remain unverified; source-level runtime-role and FORCE-RLS proof is
+complete while target-host release evidence remains open. See
 [docs/STATUS.md](docs/STATUS.md),
 [docs/ERP_EXCELLENCE_REVIEW.md](docs/ERP_EXCELLENCE_REVIEW.md) and
 `tasks/tasks.jsonl` for the exact implemented/tested/deployed/planned boundary.

@@ -34,6 +34,10 @@ passes on a fresh PostgreSQL 16 database; production release evidence remains op
   classification/recoverability/source facts and the Expense snapshot; the generated
   Demo schema is now version `102` after the TASK-202 governance migration. Its external
   tax-owner production review remains open.
+- A read-only GitHub Pages root probe on 2026-09-07 returned HTTP 200, but the served
+  HTML referenced cache-busted assets tagged 2026-08-13 and exposed no verifiable commit
+  identity. This is static Demo availability evidence only; it does not prove current
+  HEAD, production API health or the deployed revision.
 - TASK-205 source failure hardening is now in progress: direct HTTP-driver tests cover
   provider status failures, malformed/empty output and transport timeout; processing
   tests cover paused/revoked connector denial, retry lease reuse and the explicit manual
@@ -112,9 +116,10 @@ passes on a fresh PostgreSQL 16 database; production release evidence remains op
     local source tests.
 
 - **TASK-199 + TASK-203 — Release evidence is incomplete even when local checks pass.**
-  - **Evidence:** the repository records historical public 502 probes and a GitHub
-    Actions run that started zero jobs because of account billing/spending limits. The
-    current source is not evidence of the deployed revision or current public health.
+  - **Evidence:** the repository records historical production public 502 probes and a
+    GitHub Actions run that started zero jobs because of account billing/spending limits.
+    A current static GitHub Pages probe returned 200, but its dated asset tags and missing
+    commit identity do not prove the current deployed revision or production API health.
   - **Action:** diagnose public `/health`, root and setup availability read-only first;
     restore service if needed; record immutable deployment revision/assets. Separately
     restore CI billing/runner execution and rerun required checks.

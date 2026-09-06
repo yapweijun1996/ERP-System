@@ -36,7 +36,7 @@ npm install
 | `npm test` | **Vitest unit/integration suite** — domain transactions, API/auth, migrations, PGlite parity and conditional PostgreSQL security coverage. Current HEAD passes 172 files/696 tests with two intentional file/test skips. Most isolated tests use fresh PGlite state; the PostgreSQL suite requires its explicit URL/environment and otherwise records one conditional skip. |
 | `npm run lint` | ESLint over the current root/Web source set |
 
-Current source note (2026-09-06): 129 Canonical / 0 Preview routes exist and all 129
+Current source note (2026-09-07): 129 Canonical / 0 Preview routes exist and all 129
 declare API mode, including `staff-calendar`. The current HEAD `audit:screens` passes
 all 129 routes at desktop and 375px; the full 129 × 5 × 2 i18n browser matrix, API Staff
 Calendar integration (6/6), Staff Calendar Demo E2E, authenticated API browser proof and

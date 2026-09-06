@@ -1,6 +1,6 @@
 # MVP Definition
 
-Reviewed: **2026-08-12**. MVP-1/MVP-2 below are the original release gates; the
+Reviewed: **2026-09-07**. MVP-1/MVP-2 below are the original release gates; the
 implementation has progressed beyond them. Current code/status truth is in
 [STATUS.md](STATUS.md), with the current 129 Canonical / 0 Preview boundary.
 

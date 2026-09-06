@@ -48,7 +48,7 @@ Acceptance criteria:
       TASK-018 baseline; leftover Northwind sample shapes were cleaned or labeled.
       The route boundary has since grown again to 129 Canonical / 0 Preview at HEAD;
       API-screen metadata now covers all 129. The 2026-08-10 128-route render/maturity/
-      layout audit remains a dated checkpoint; the current 2026-09-06 screen and full
+      layout audit remains a dated checkpoint; the current 2026-09-07 screen and full
       129-route × 5-language × 2-viewport i18n audits pass with zero blocking findings.
 
 ## EPIC-004 — Setup Wizard ✅

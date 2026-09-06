@@ -273,13 +273,16 @@ controls exist.
 | Schema parity | `npm run check:demo-schema` + `npm run check:drift` | every migration/release |
 | Five-language route audit | `npm run audit:i18n` | every Canonical route/localization change and before release |
 
-Current review evidence (2026-08-12): schema v98/99 migrations/249-table parity,
+Historical review evidence (2026-08-12): schema v98/99 migrations/249-table parity,
 Demo-pack, permission, static i18n and Demo build gates pass; 7 focused files / 22 tests
-pass. HEAD collects 170 files / 666 tests but the full collection was not executed in
-this review. Earlier 168-file/663-test, browser-matrix, PostgreSQL and deployment results
-remain dated checkpoints. Current public `/health` and setup probes returned 502, and
-the HEAD GitHub Actions run started no jobs because billing/spending blocked it.
-Physical-device PWA acceptance remains a separate human gate.
+pass. HEAD collected 170 files / 666 tests but the full collection was not executed in
+that review. Earlier 168-file/663-test, browser-matrix, PostgreSQL and deployment results
+remain dated checkpoints. Current HEAD evidence (2026-09-07) is recorded in `STATUS.md`:
+schema v102/103 migrations/255 tables and the full local Vitest collection passes 172
+files / 696 tests with two intentional skips. Current public `/health` and setup probes
+remain a separate production evidence boundary; the HEAD GitHub Actions run started no
+jobs because billing/spending blocked it. Physical-device PWA acceptance remains a
+separate human gate.
 
 ## EPIC-059 employee access and customer onboarding
 

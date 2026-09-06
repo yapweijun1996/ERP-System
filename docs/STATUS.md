@@ -12,10 +12,10 @@ baseline rather than current release evidence.
 
 ## Source-of-truth synchronization
 
-The source baseline before the current hardening change was `2188f56` (`New`), which
-contains the synchronized review/status documents. The current worktree adds the
-TASK-195 runtime-role, migration-owner and Platform FORCE-RLS proof changes; production
-deployment is still a separate release gate.
+The synchronized review/status baseline started at `2188f56` (`New`). The current
+repository history adds the TASK-195 runtime-role, migration-owner and Platform
+FORCE-RLS proof, TASK-202 Receipt Pack governance and the follow-up documentation sync;
+production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102: the Drizzle journal contains **103 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
@@ -484,7 +484,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Landed Cost allocation & moving-average revaluation | ✅ Canonical Demo/API data and writes | Migration 0033 adds versioned receipt-linked `landed_cost` headers, immutable allocation snapshots, `product.average_cost` and upgrade-safe account `2300`. Shared Decimal commands allocate by received value or quantity with deterministic whole-cent residuals. Allocation locks the draft/products/current balances, requires positive on-hand, revalues moving-average cost and posts balanced Dr Inventory / Cr Landed Cost Accrual without a `stock_movement`. Demo/API create and idempotent audited allocate actions, production RLS, five-language UI and inventory/GL trace links are live. Browser proof allocated S$14.00 against GR-1: Widget cost S$6.50→S$6.64, Dr/Cr S$14.00 and unchanged quantity. |
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
-| Full screen audit — current route checkpoint | ✅ 129 desktop/mobile routes | The current 2026-09-06 `npm run audit:screens` rendered all 129 Canonical / 0 Preview routes at desktop and mobile without console/page, document-layout, active-tab, action-bar or shared-shell failures. The dedicated workspace audit also passed. |
+| Full screen audit — current route checkpoint | ✅ 129 desktop/mobile routes | The current 2026-09-07 `npm run audit:screens` rendered all 129 Canonical / 0 Preview routes at desktop and mobile without console/page, document-layout, active-tab, action-bar or shared-shell failures. The dedicated workspace audit also passed. |
 | Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Local full suite | Current local Vitest run passes 172 files / 696 tests with two intentional file/test skips. PostgreSQL runtime, CI execution and production deployment remain separate evidence boundaries. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
@@ -523,7 +523,10 @@ are not more module screens:
   remains the explicit upstream upload/capture boundary;
 - TASK-198: done — approved the narrow dual-mode exception and explicit no-MFA/no-step-up risk;
 - TASK-199/203: restore public availability and CI execution before any current release
-  is described as healthy;
+  is described as healthy. A read-only GitHub Pages root probe on 2026-09-07 returned
+  HTTP 200, but the served HTML referenced cache-busted assets tagged 2026-08-13 and
+  exposed no verifiable commit identity. This proves static Demo availability only, not
+  current HEAD or production API health/revision;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
   local proof; the disposable PostgreSQL same-key race is verified, while production

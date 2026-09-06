@@ -243,14 +243,15 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > generic approval-instance/step table. Budget approval uses the existing
 > `budget_version.status`/`is_active`/`version` state plus imported `budget_line` rows;
 > it also adds no generic approval-instance/step table.
-> The current boundary is migration 0098: **99 journal entries, schema version 98 and
-> 249 generated tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
+> The current boundary is migration 0102: **103 journal entries, schema version 102 and
+> 255 generated tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
 > the tenant authorization freshness source. Migration 0089 adds the Company Owner
-> role/permission/scope expand-backfill cutover; migrations 0090–0095 add Company
-> Receipt evidence, platform entitlement and tenant-MAC retirement; migrations 0096–0098
-> add Platform login/simulation, canonical Company Receipt permissions and Platform
-> provisioning/idempotency/Master Admin identity. Each subsequent schema capability must still
-> add tenant indexes, API contracts and cross-engine proofs before becoming Canonical.
+> role/permission/scope expand-backfill cutover; migrations 0090–0098 add Company Receipt
+> evidence, platform entitlement, tenant-MAC retirement and Platform provisioning. Migration
+> 0099 adds the hidden Platform tenant actor/session foundation, 0100/0101 add governed tax
+> facts, and 0102 adds Receipt Pack governance and Company timezone facts. Each subsequent
+> schema capability must still add tenant indexes, API contracts and cross-engine proofs
+> before becoming Canonical.
 
 ### Current schema boundary — August 2026 Sales and Staff Calendar additions
 

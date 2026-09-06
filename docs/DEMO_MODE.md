@@ -237,8 +237,9 @@ setup-state rows and independent platform cookies never enter the Demo bundle.
 The shared contract still applies: commercial modules are selected by the Platform layer,
 new Companies inherit Master defaults, tenant onboarding cannot select MAC, and Master
 Admin/Company Owner authority is tested against the same permission templates. The
-generated PGlite schema is version 98 and must remain in lockstep with Drizzle migration
-0098; this is build/schema parity, not production deployment proof.
+generated PGlite schema is version 102 and must remain in lockstep with the 103 ordered
+Drizzle migrations through 0102; this is build/schema parity, not production deployment
+proof.
 
 ## API demo quick setup (2026-08-12)
 
