@@ -51,7 +51,8 @@ while `/release.json`, `/health` and `/api/setup/status` returned HTTP 404 HTML 
 responses; no API or release identity was exposed. TASK-199 owns availability/revision
 proof; TASK-203 owns current-HEAD CI proof. A separate read-only probe on the production
 Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` returned HTTP 502 on the same
-date; no tenant write, reset, reseed or deployment was attempted.
+date; the proxy classified it as a `Host Error` without exposing an origin health payload.
+No tenant write, reset, reseed or deployment was attempted.
 
 The final-review Platform workspace edits were later committed in `84a18b5`: they
 further refactor that resume behavior into an explicit presentation state machine and

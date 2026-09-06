@@ -43,8 +43,10 @@ HTML fallbacks. This is static-host availability only, not current revision or A
 
 2026-09-07 production probe addendum: the same read-only fetch returns HTTP 502 from the
 Cloudflare production origin `https://gmb01.xyz/erp` and `https://gmb01.xyz/erp/health`.
-No tenant write, reset, reseed or deployment was attempted; TASK-199 remains open for
-incident diagnosis, service restoration and deployed-revision evidence.
+The proxy response identifies a Cloudflare `Host Error` and exposes no origin health
+payload, so it does not establish the root cause. No tenant write, reset, reseed or
+deployment was attempted; TASK-199 remains open for incident diagnosis, service
+restoration and deployed-revision evidence.
 
 2026-09-07 PDF robustness addendum: Receipt Pack register text now normalizes ASCII control
 characters before Unicode PDF embedding, closing a source-level text-stream edge case. The
