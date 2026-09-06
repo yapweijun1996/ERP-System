@@ -55,9 +55,13 @@ async function tick(): Promise<void> {
     const result = await processOutboxBatch(db, transport, {
       tokenEncryptionKey,
       workerId,
+      maxAttempts: Number(process.env.OUTBOX_MAX_ATTEMPTS) || undefined,
     });
     if (result.claimed > 0) {
-      console.log(`[erp-worker] outbox claimed=${result.claimed} delivered=${result.delivered} failed=${result.failed}`);
+      console.log(
+        `[erp-worker] outbox claimed=${result.claimed} delivered=${result.delivered}`
+        + ` failed=${result.failed} deadLettered=${result.deadLettered}`,
+      );
     }
   }
   const reports = await processReportJobBatch(db, { workerId });

@@ -55,7 +55,9 @@ tests pass, while production tax-owner review remains open. TASK-205 source hard
 also in progress: gateway status/malformed/timeout, paused-connector, retry-lease and
 no-local-fallback evidence pass; migration 0103 now bounds document processing at five
 automatic attempts by default, records `dead_letter`/`dead_lettered_at` and supports an
-explicit same-chain manual requeue. Production Vision gateway/account/region/retention,
+explicit same-chain manual requeue. Authentication outbox delivery now has a five-attempt
+default cap, bounded `OUTBOX_MAX_ATTEMPTS` configuration and sanitized dead-letter visibility
+through the integration event log. Production Vision gateway/account/region/retention,
 secret rotation and live dead-letter alert/recovery evidence remain open.
 
 The TASK-194 correction aligns deployment, security, architecture, role-permission, Demo

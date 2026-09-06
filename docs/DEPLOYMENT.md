@@ -24,7 +24,10 @@ durable Master Admin identity, platform idempotency and existing-Superadmin tena
 provisioning permission backfill; migration 0099 adds the hidden Platform tenant
 actor/session foundation; migrations 0100/0101 add governed tax facts; and migration
 0102 adds Receipt Pack governance and Company timezone facts; migration 0103 adds
-bounded document-processing dead-letter state and outbox observability. Application-only release
+bounded document-processing dead-letter state and outbox observability. Authentication invitation
+and password-reset delivery also uses a five-attempt default cap, configurable through
+`OUTBOX_MAX_ATTEMPTS` and clamped by the worker to 1–20; terminal failures are visible as
+`dead_letter` in the integration event log. Application-only release
 does not apply migrations automatically. The target production deployment was historically
 advanced through 0098 on 2026-08-12 and production RLS was re-applied before the authorized
 reset; this is not proof that 0103 or the current HEAD is deployed. Production RLS includes
@@ -689,6 +692,7 @@ jobs:
 | `DATABASE_URL` | compatibility | Legacy external connection fallback for API/worker/migrator; prefer the explicit URLs |
 | `DB_USER` / `DB_PASSWORD` | bundled production | PostgreSQL bootstrap/migration-owner credentials, never runtime API/worker credentials |
 | `DB_API_*` / `DB_WORKER_*` | bundled production | Runtime role names/passwords provisioned by the database init script |
+| `OUTBOX_MAX_ATTEMPTS` | worker | Optional auth-email automatic retry cap; defaults to 5 and is clamped to 1–20 |
 | `COMPOSE_PROJECT_NAME` | production | Stable namespace for named volumes |
 | `DEPLOY_PAT` | CI | token to push demo to the public Pages repo |
 

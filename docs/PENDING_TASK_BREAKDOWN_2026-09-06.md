@@ -53,6 +53,12 @@ current-HEAD CI, deployment, scanner/storage UAT and authenticated release evide
 The current rerun also passes the Company Receipts API E2E and both Platform workspace E2E
 flows; these remain disposable/local evidence, not production release proof.
 
+2026-09-07 outbox addendum: authentication invitation/password-reset delivery now has the
+same bounded-failure shape as document processing: five automatic attempts by default,
+`OUTBOX_MAX_ATTEMPTS` clamped to 1–20, terminal `dead_lettered_at`, and a sanitized
+integration-event status. The focused outbox suite passes 3/3; production SMTP, alerting
+and operator recovery remain TASK-193/TASK-201 evidence rather than local claims.
+
 ## Recommended order
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the
@@ -181,6 +187,10 @@ flows; these remain disposable/local evidence, not production release proof.
 
 - **TASK-201 — Todo — production SLO, scale and disaster-recovery proof**
   - Depends on: `TASK-195`, `TASK-199`.
+  - Source-level worker boundary now caps authentication outbox retries at five by default,
+    exposes `dead_letter` through the sanitized integration-event read model and supports
+    the bounded configuration `OUTBOX_MAX_ATTEMPTS` (1–20). This is not production alert
+    or recovery evidence.
   - Define and exercise availability/error/latency SLOs, alert ownership, encrypted
     backup retention/integrity, timed restore RPO/RTO, worker/outbox/document/calendar/
     reporting backlog and dead-letter metrics, and representative 100–800 GB query/load

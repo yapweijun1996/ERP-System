@@ -43,8 +43,10 @@ TASK-206's PostgreSQL hidden-actor foundation, TASK-207's authorization/switchin
 break-glass proof and TASK-208's browser/accessibility/i18n proof are complete; the
   remaining Platform Admin chain is TASK-209. TASK-205 now has direct gateway failure,
   revoked-connector, retry-lease, bounded dead-letter and no-local-fallback source evidence;
-  production gateway/account/region/retention, secret rotation and live recovery operations
-  remain open.
+  authentication outbox delivery also caps automatic retries at five by default through the
+  bounded `OUTBOX_MAX_ATTEMPTS` setting and exposes sanitized terminal status. Production
+  gateway/account/region/retention, secret rotation, SMTP alerting and live recovery
+  operations remain open.
 
 See [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md) for the
 bullet-level action plan for every non-Done task, including dependencies, evidence and
@@ -127,7 +129,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
-| TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
+| TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof; source auth outbox cap added, production exercise remains |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | In progress | Remote CI now executes; fix the i18n failure and rerun the current pushed HEAD |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |

@@ -249,6 +249,17 @@ worker leases, retryable `pending/failed` states, `delivered` and `superseded` s
 and provider drivers (generic/Google/Microsoft). A failed external delivery must not
 change the internal Leave or appointment fact.
 
+Authentication invitation and password-reset messages use the leased `outbox_event`
+worker boundary as well. Automatic delivery is capped at five attempts by default;
+`OUTBOX_MAX_ATTEMPTS` may tune the cap within the worker's safe 1–20 range. A terminal
+failure records `dead_lettered_at` and is exposed as `dead_letter` through the sanitized
+integration event log. This bounds provider outages without exposing encrypted token
+payloads; production alerting and the operator recovery procedure remain TASK-201/
+TASK-193 release evidence.
+
+Sources: `src/worker/outbox.ts`, `src/worker.ts`, and
+`src/modules/integration/eventLog.ts`.
+
 Sources: `src/modules/hr/teamCalendar.ts`,
 `src/modules/hr/calendarSync.ts:1-235, 319-503`, and
 `src/data/schema/hr.ts` calendar/outbound tables.

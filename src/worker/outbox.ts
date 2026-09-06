@@ -42,11 +42,16 @@ const AUTH_MAIL_TOPICS = [
   'auth.password-reset.requested',
 ] as const;
 
+export const OUTBOX_MAX_ATTEMPTS = 5;
+const OUTBOX_MAX_ALLOWED_ATTEMPTS = 20;
+
 export interface OutboxWorkerOptions {
   tokenEncryptionKey: Buffer;
   workerId?: string;
   batchSize?: number;
   leaseMs?: number;
+  /** Maximum automatic attempts before an email requires a new request. */
+  maxAttempts?: number;
   now?: Date;
 }
 
@@ -74,6 +79,14 @@ function renderAuthMail(payload: AuthMailPayload, rawToken: string): MailMessage
     `<p>This link expires at ${payload.expiresAt}.</p>`,
   ].join('');
   return { to: payload.to, subject, text, html };
+}
+
+function maxAttemptsFor(value: number | undefined): number {
+  if (!Number.isFinite(value)) return OUTBOX_MAX_ATTEMPTS;
+  return Math.min(
+    OUTBOX_MAX_ALLOWED_ATTEMPTS,
+    Math.max(1, Math.floor(value as number)),
+  );
 }
 
 async function claimBatch(
@@ -116,9 +129,10 @@ export async function processOutboxBatch(
   db: DB,
   transport: MailTransport,
   options: OutboxWorkerOptions,
-): Promise<{ claimed: number; delivered: number; failed: number }> {
+): Promise<{ claimed: number; delivered: number; failed: number; deadLettered: number }> {
   const now = options.now ?? new Date();
   const workerId = options.workerId ?? `outbox-${randomUUID()}`;
+  const maxAttempts = maxAttemptsFor(options.maxAttempts);
   const rows = await claimBatch(
     db,
     workerId,
@@ -128,6 +142,7 @@ export async function processOutboxBatch(
   );
   let delivered = 0;
   let failed = 0;
+  let deadLettered = 0;
   for (const row of rows) {
     try {
       if (
@@ -159,11 +174,13 @@ export async function processOutboxBatch(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const attempt = row.attempts + 1;
+      const terminal = attempt >= maxAttempts;
       const delayMs = Math.min(60 * 60 * 1000, 2 ** Math.min(attempt, 10) * 1000);
       await db.update(outboxEvent).set({
         lockedAt: null,
         lockedBy: null,
-        availableAt: new Date(now.getTime() + delayMs),
+        availableAt: terminal ? now : new Date(now.getTime() + delayMs),
+        deadLetteredAt: terminal ? now : null,
         lastError: message.slice(0, 1000),
       }).where(and(
         eq(outboxEvent.id, row.id),
@@ -171,9 +188,10 @@ export async function processOutboxBatch(
         isNull(outboxEvent.deliveredAt),
       ));
       failed += 1;
+      if (terminal) deadLettered += 1;
     }
   }
-  return { claimed: rows.length, delivered, failed };
+  return { claimed: rows.length, delivered, failed, deadLettered };
 }
 
 export function createSmtpTransportFromEnv(env = process.env): MailTransport {
