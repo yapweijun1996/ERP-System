@@ -35,6 +35,12 @@ The application-only release now rejects an explicitly supplied revision that di
 the checkout HEAD. These local gates do not satisfy the still-pending remote CI, deployment,
 production or physical-device evidence boundaries.
 
+2026-09-07 deployment probe addendum: the latest GitHub Actions runs remain CI failure
+`34017037310` and Pages success `34017037276`, both on remote head
+`2188f56186e88e542351ec3a49e07d73057182bf`. A fresh read-only Node fetch returns the Pages
+root as HTTP 200 HTML, but `/release.json`, `/health` and `/api/setup/status` are HTTP 404
+HTML fallbacks. This is static-host availability only, not current revision or API health.
+
 ## Recommended order
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the

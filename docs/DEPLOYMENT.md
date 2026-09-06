@@ -43,7 +43,10 @@ i18n browser matrix on `timesheet: Projects`; the local `route.project-pl` fix p
 exact desktop/mobile matrices and needs a fresh current-HEAD remote run. Later source
 adds Platform Demo quick login, password visibility, responsive containment and safe
 existing-Company resume, but no current deployed revision/asset hash was independently
-proven. TASK-199 owns availability/revision proof; TASK-203 owns current-HEAD CI proof.
+proven. A fresh read-only probe on 2026-09-07 returned the Pages root as HTTP 200 HTML,
+while `/release.json`, `/health` and `/api/setup/status` returned HTTP 404 HTML fallback
+responses; no API or release identity was exposed. TASK-199 owns availability/revision
+proof; TASK-203 owns current-HEAD CI proof.
 
 Final-review user-owned worktree edits further refactor that resume behavior into an
 explicit presentation state machine and extend its E2E assertions. They are uncommitted,
