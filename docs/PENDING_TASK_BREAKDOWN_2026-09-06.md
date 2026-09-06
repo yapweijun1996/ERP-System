@@ -5,7 +5,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **202 Done / 1 In Progress / 6 Todo / 4 Blocked / 213 Total**.
+Current registry: **203 Done / 1 In Progress / 5 Todo / 4 Blocked / 213 Total**.
 
 ## Recommended order
 
@@ -13,8 +13,9 @@ Current registry: **202 Done / 1 In Progress / 6 Todo / 4 Blocked / 213 Total**.
   versioned SG/MY configuration after the source-level fix and targeted regression proof.
 - **2. Run TASK-199 and TASK-203 in parallel when external access is available:** restore
   public availability/deployment evidence and unblock GitHub Actions execution.
-- **3. Close the Platform chain in dependency order:** TASK-207 → TASK-208, then release
-  proof in TASK-209. TASK-206's hidden actor/session foundation is now done.
+- **3. Close the Platform chain in dependency order:** TASK-208, then release proof in
+  TASK-209. TASK-206's hidden actor/session foundation and TASK-207 authorization proof are
+  now done.
 - **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205).**
 - **5. Keep human-owned blockers separate:** TASK-017 needs a physical phone and TASK-193
   needs production SMTP/mail delivery.
@@ -58,16 +59,6 @@ Current registry: **202 Done / 1 In Progress / 6 Todo / 4 Blocked / 213 Total**.
     HEAD workflow, and records every required shard/typecheck/build result. A zero-step
     billing failure must remain a failed gate, never a green result.
 
-- **TASK-207 — Todo (P0) — Platform Admin authorization, switching and break-glass proof**
-  - Depends on: `TASK-206`.
-  - Steps: prove Master-enabled/Company-allocated module gating, ordinary tenant RBAC,
-    sensitive-operation denial until a valid Company window exists, maker-checker and
-    workflow invariants under break-glass, dual attribution, scope isolation and revoke/
-    expiry behavior.
-  - Evidence: API/PGlite plus adversarial PostgreSQL tests with safe reason codes and
-    append-only audit facts; no hidden actor or Platform permission may enter Employee
-    simulation.
-
 - **TASK-208 — Todo (P0) — Platform Admin and Employee workspace integration**
   - Depends on: `TASK-207`.
   - Steps: validate separate `Open as Platform Admin` and `Login as employee` actions,
@@ -95,6 +86,21 @@ Current registry: **202 Done / 1 In Progress / 6 Todo / 4 Blocked / 213 Total**.
     no app session, no tenant user/role/simulation/Employee-workspace exposure, both
     Company memberships, scope switch, Return and parent-session revoke. PGlite/API
     regression proof remains green.
+
+- **TASK-207 — Done 2026-09-06 — Platform Admin authorization, switching and break-glass proof**
+  - Master and Company entitlement gates now run inside the active tenant transaction, so
+    PostgreSQL FORCE RLS does not misclassify an enabled module as disabled. Missing,
+    unknown, Master-disabled and Company-unallocated states fail closed.
+  - The central sensitive-operation classifier now protects Expense Approval decision and
+    duplicate-override routes in addition to finance, payroll, payout, reimbursement and
+    tax-evidence families.
+  - PGlite/API proof uses the seeded purchase-order approval and approved budget to verify
+    pre-window denial, valid break-glass, tenant permission denial, required decision note,
+    invalid state/immutable budget, expiry, dual audit attribution and switched-Company
+    user/order isolation. Disposable PostgreSQL 16 `NOSUPERUSER NOBYPASSRLS` proof adds a
+    real Finance budget workflow and confirms the module gate works under FORCE RLS.
+  - TASK-208 still owns desktop/mobile/accessibility/i18n evidence; TASK-209 remains blocked
+    by CI billing and the remaining browser/release gates.
 
 - **TASK-200 — Done — Canonical/API route parity and current-head evidence**
   - `staff-calendar` is implemented in both adapters and backed by `/api/hr/calendar/staff`;

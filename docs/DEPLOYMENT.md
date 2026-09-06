@@ -64,7 +64,7 @@ explicit API and worker roles (`NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`
 profiled migration owner, and a current Platform Company context established before
 the first FORCE-RLS write. Disposable PostgreSQL HTTP integrations pass bootstrap →
 Master → Company, hidden actor/session lifecycle and cross-tenant denial. This is not
-production revision or CI evidence; TASK-199/TASK-203/TASK-207–209 remain release gates.
+production revision or CI evidence; TASK-199/TASK-203/TASK-208–209 remain release gates.
 
 Current TASK-175 evidence (2026-08-10): a disposable PostgreSQL 16 database passed
 `POSTGRES_URL=... npm run demo` (cross-engine parity and exactly-one-winner stock

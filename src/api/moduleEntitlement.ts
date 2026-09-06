@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import type { DB } from '../data/db';
 import type { CommercialModuleKey } from '../auth/moduleCatalog';
 import { isModuleEnabled } from '../auth/moduleAccess';
+import { withTenantTransaction } from '../data/tenantTransaction';
 import { apiError, requireSession } from './http';
 
 const BESPOKE_API_MODULES: readonly [prefix: string, moduleKey: CommercialModuleKey][] = [
@@ -39,12 +40,14 @@ export function createTenantModuleEntitlementGate(db: DB): RequestHandler {
     }
     const session = await requireSession(db, req, res);
     if (!session) return;
-    if (!await isModuleEnabled(
-      db,
-      session.masterFn,
-      session.activeCompanyFn,
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const enabled = await withTenantTransaction(db, scope, (tx) => isModuleEnabled(
+      tx,
+      scope.masterFn,
+      scope.companyFn,
       moduleKey,
-    )) {
+    ));
+    if (!enabled) {
       apiError(
         res,
         403,

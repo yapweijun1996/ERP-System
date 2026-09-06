@@ -5,9 +5,14 @@ import type { DB } from '../data/db';
 import {
   appUser,
   auditLog,
+  budgetVersion,
   platformPrincipalTenantActor,
+  platformBreakGlassWindow,
   platformSimulationSession,
   platformTenantAccessSession,
+  purchaseOrder,
+  role,
+  rolePermission,
 } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { provisionPlatformPrincipal } from '../auth/platformSupport';
@@ -141,6 +146,8 @@ describe('Platform Superadmin password realm, tenant administration and Employee
       '/api/employee-payout-profiles/1/actions/reveal',
       '/api/receipt-tax-evidence/packages/1/actions/generate',
       '/api/settings/bank-credentials',
+      '/api/expense-approvals/1/actions/decide',
+      '/api/expense-approvals/assessments/1/actions/override-duplicate',
     ]) expect(isSensitivePlatformMutation('POST', path)).toBe(true);
     expect(isSensitivePlatformMutation('GET', '/api/finance/gl-entries')).toBe(false);
     expect(isSensitivePlatformMutation('POST', '/api/admin/users/1/actions/toggle-active')).toBe(false);
@@ -280,6 +287,13 @@ describe('Platform Superadmin password realm, tenant administration and Employee
     const access = await startTenantAccess(auth);
     const viewer = (await targets(auth)).find((target) => target.username === 'viewer');
     if (!viewer) throw new Error('Missing viewer target');
+    const [pendingOrder] = await db.select({ id: purchaseOrder.id })
+      .from(purchaseOrder).where(and(
+        eq(purchaseOrder.masterFn, 'M1'),
+        eq(purchaseOrder.companyFn, 'C-SG'),
+        eq(purchaseOrder.docNo, 'PO-APP-2026-0001'),
+      ));
+    if (!pendingOrder) throw new Error('Missing seeded pending purchase order');
 
     const ordinary = await fetch(`${baseUrl}/api/admin/users/${viewer.userId}/actions/toggle-active`, {
       method: 'POST', headers: headers(auth, true), body: JSON.stringify({ isActive: false }),
@@ -292,26 +306,159 @@ describe('Platform Superadmin password realm, tenant administration and Employee
     ));
     expect(ordinaryAudit).toMatchObject({ actorUserId: access.actorUserId, platformPrincipalId: principalId });
 
-    const deniedSensitive = await fetch(`${baseUrl}/api/finance/anything`, {
-      method: 'POST', headers: headers(auth, true), body: JSON.stringify({}),
-    });
+    const deniedSensitive = await fetch(
+      `${baseUrl}/api/purchasing/purchase-orders/${pendingOrder.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers(auth, true),
+          'idempotency-key': 'platform-po-approve-before-break-glass',
+        },
+        body: JSON.stringify({ note: 'Must remain blocked before the Company window.' }),
+      },
+    );
     expect(deniedSensitive.status).toBe(403);
     expect((await deniedSensitive.json()).error.code).toBe('platform_break_glass_required');
 
     const unlock = await fetch(`${baseUrl}/api/platform/tenant-access/actions/break-glass`, {
-      method: 'POST', headers: headers(auth, true),
+      method: 'POST', headers: { ...headers(auth, true), 'x-request-id': 'platform-break-glass-1002' },
       body: JSON.stringify({ reason: 'Validate finance issue', ticketReference: 'SEC-1002' }),
     });
     expect(unlock.status).toBe(201);
-    const afterUnlock = await fetch(`${baseUrl}/api/finance/anything`, {
-      method: 'POST', headers: headers(auth, true), body: JSON.stringify({}),
+    const breakGlassAudits = await db.select().from(auditLog).where(and(
+      eq(auditLog.entity, 'platform/break-glass'),
+      eq(auditLog.action, 'platform_break_glass_started'),
+      eq(auditLog.requestId, 'platform-break-glass-1002'),
+    ));
+    expect(breakGlassAudits).toHaveLength(1);
+    expect(breakGlassAudits[0]).toMatchObject({
+      actorUserId: access.actorUserId,
+      platformPrincipalId: principalId,
+      masterFn: 'M1',
+      companyFn: 'C-SG',
     });
-    expect(afterUnlock.status).not.toBe(403);
+
+    const missingNote = await fetch(
+      `${baseUrl}/api/purchasing/purchase-orders/${pendingOrder.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: { ...headers(auth, true), 'idempotency-key': 'platform-po-approve-missing-note' },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(missingNote.status).toBe(400);
+    expect((await missingNote.json()).error.code).toBe('invalid_action_payload');
+
+    const [tenantAdminRole] = await db.select({ roleId: role.roleId }).from(role).where(and(
+      eq(role.masterFn, 'M1'),
+      eq(role.companyFn, 'C-SG'),
+      eq(role.sourceTemplateKey, 'platform_tenant_admin'),
+    ));
+    if (!tenantAdminRole) throw new Error('Missing Platform Tenant Admin role');
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.masterFn, 'M1'),
+      eq(rolePermission.roleId, tenantAdminRole.roleId),
+      eq(rolePermission.permissionKey, 'purchasing.approve'),
+    ));
+    const deniedWithoutWorkflowAuthority = await fetch(
+      `${baseUrl}/api/purchasing/purchase-orders/${pendingOrder.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: { ...headers(auth, true), 'idempotency-key': 'platform-po-approve-without-authority' },
+        body: JSON.stringify({ note: 'Break-glass must not grant tenant approval authority.' }),
+      },
+    );
+    expect(deniedWithoutWorkflowAuthority.status).toBe(403);
+    expect((await deniedWithoutWorkflowAuthority.json()).error.code).toBe('permission_denied');
+    await db.insert(rolePermission).values({
+      masterFn: 'M1', roleId: tenantAdminRole.roleId, permissionKey: 'purchasing.approve', allowed: true,
+    });
+
+    const approved = await fetch(
+      `${baseUrl}/api/purchasing/purchase-orders/${pendingOrder.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers(auth, true),
+          'idempotency-key': 'platform-po-approve-after-break-glass',
+          'x-request-id': 'platform-po-approve-after-break-glass',
+        },
+        body: JSON.stringify({ note: 'Approved after explicit Company break-glass and tenant RBAC.' }),
+      },
+    );
+    expect(approved.status).toBe(200);
+    expect((await approved.json()).data).toMatchObject({ status: 'open', approvalStatus: 'approved' });
+
+    const invalidState = await fetch(
+      `${baseUrl}/api/purchasing/purchase-orders/${pendingOrder.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: { ...headers(auth, true), 'idempotency-key': 'platform-po-approve-invalid-state' },
+        body: JSON.stringify({ note: 'A second approval must remain impossible.' }),
+      },
+    );
+    expect(invalidState.status).toBe(409);
+    expect((await invalidState.json()).error.code).toBe('invalid_state');
+
+    const [approvedAudit] = await db.select().from(auditLog).where(and(
+      eq(auditLog.entity, 'purchasing/purchase-orders'),
+      eq(auditLog.entityId, String(pendingOrder.id)),
+      eq(auditLog.action, 'approve'),
+      eq(auditLog.requestId, 'platform-po-approve-after-break-glass'),
+    ));
+    expect(approvedAudit).toMatchObject({
+      actorUserId: access.actorUserId,
+      platformPrincipalId: principalId,
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+    });
+
+    const [approvedBudget] = await db.select({ id: budgetVersion.id }).from(budgetVersion).where(and(
+      eq(budgetVersion.masterFn, 'M1'),
+      eq(budgetVersion.companyFn, 'C-SG'),
+      eq(budgetVersion.status, 'approved'),
+    ));
+    if (!approvedBudget) throw new Error('Missing seeded approved budget');
+    const immutableBudget = await fetch(`${baseUrl}/api/finance/budgets/${approvedBudget.id}/actions/approve`, {
+      method: 'POST',
+      headers: { ...headers(auth, true), 'idempotency-key': 'platform-budget-immutable' },
+      body: JSON.stringify({}),
+    });
+    expect(immutableBudget.status).toBe(409);
+    expect((await immutableBudget.json()).error.code).toBe('budget_immutable');
+
+    await db.update(platformBreakGlassWindow).set({ expiresAt: new Date(Date.now() - 1_000) })
+      .where(and(
+        eq(platformBreakGlassWindow.accessId, access.accessId),
+        eq(platformBreakGlassWindow.platformPrincipalId, principalId),
+      ));
+    const expiredSensitive = await fetch(
+      `${baseUrl}/api/purchasing/purchase-orders/${pendingOrder.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: { ...headers(auth, true), 'idempotency-key': 'platform-po-approve-expired-break-glass' },
+        body: JSON.stringify({ note: 'Expired Company windows must deny.' }),
+      },
+    );
+    expect(expiredSensitive.status).toBe(403);
+    expect((await expiredSensitive.json()).error.code).toBe('platform_break_glass_required');
   });
 
   it('switches audited scope, revokes break-glass, and keeps Employee mode mutually exclusive', async () => {
     const auth = await login();
     await startTenantAccess(auth);
+    const singaporeUsers = await fetch(`${baseUrl}/api/admin/users`, { headers: headers(auth) });
+    expect(singaporeUsers.status).toBe(200);
+    expect((await singaporeUsers.json()).data.users).toEqual(expect.arrayContaining([
+      expect.objectContaining({ username: 'viewer' }),
+    ]));
+    const singaporeOrders = await fetch(`${baseUrl}/api/purchasing/purchase-orders`, {
+      headers: headers(auth),
+    });
+    expect(singaporeOrders.status).toBe(200);
+    expect((await singaporeOrders.json()).data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ docNo: 'PO-APP-2026-0001' }),
+    ]));
     await fetch(`${baseUrl}/api/platform/tenant-access/actions/break-glass`, {
       method: 'POST', headers: headers(auth, true),
       body: JSON.stringify({ reason: 'Sensitive check', ticketReference: 'SEC-2001' }),
@@ -333,6 +480,19 @@ describe('Platform Superadmin password realm, tenant administration and Employee
     expect((await switched.json()).data).toMatchObject({ masterFn: 'M1', companyFn: 'C-MY', breakGlass: null });
     expect((await (await fetch(`${baseUrl}/api/auth/session`, { headers: headers(auth) })).json()).activeCompanyFn)
       .toBe('C-MY');
+
+    const malaysiaUsers = await fetch(`${baseUrl}/api/admin/users`, { headers: headers(auth) });
+    expect(malaysiaUsers.status).toBe(200);
+    expect((await malaysiaUsers.json()).data.users).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ username: 'viewer' }),
+    ]));
+    const malaysiaOrders = await fetch(`${baseUrl}/api/purchasing/purchase-orders`, {
+      headers: headers(auth),
+    });
+    expect(malaysiaOrders.status).toBe(200);
+    expect((await malaysiaOrders.json()).data).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ docNo: 'PO-APP-2026-0001' }),
+    ]));
 
     const deniedAfterSwitch = await fetch(`${baseUrl}/api/finance/anything`, {
       method: 'POST', headers: headers(auth, true), body: JSON.stringify({}),
@@ -386,6 +546,44 @@ describe('Platform Superadmin password realm, tenant administration and Employee
     const direct = await fetch(`${baseUrl}/api/company-receipts`, { headers: headers(auth) });
     expect(direct.status).toBe(403);
     expect((await direct.json()).error.code).toBe('module_not_enabled');
+    const returned = await fetch(`${baseUrl}/api/platform/tenant-access/actions/return`, {
+      method: 'POST', headers: headers(auth, true), body: JSON.stringify({}),
+    });
+    expect(returned.status).toBe(200);
+
+    const reenableMaster = await fetch(`${baseUrl}/api/platform/masters/M1/modules/expenses_tax`, {
+      method: 'PATCH', headers: headers(auth, true),
+      body: JSON.stringify({ enabled: true, defaultCompanyAllocated: true, expectedVersion: 2 }),
+    });
+    expect(reenableMaster.status).toBe(200);
+    const allocationRows = await fetch(
+      `${baseUrl}/api/platform/masters/M1/companies/C-SG/modules`,
+      { headers: headers(auth) },
+    );
+    expect(allocationRows.status).toBe(200);
+    const allocation = ((await allocationRows.json()).data as Array<{
+      moduleKey: string; enabled: boolean; version: number;
+    }>).find((row) => row.moduleKey === 'expenses_tax');
+    if (!allocation) throw new Error('Missing expenses_tax Company allocation');
+    const disableAllocation = await fetch(
+      `${baseUrl}/api/platform/masters/M1/companies/C-SG/modules/expenses_tax`,
+      {
+        method: 'PATCH', headers: headers(auth, true),
+        body: JSON.stringify({ allocated: false, expectedVersion: allocation.version }),
+      },
+    );
+    expect(disableAllocation.status).toBe(200);
+    await startTenantAccess(auth);
+    const allocationDisabledSession = await fetch(`${baseUrl}/api/auth/session`, { headers: headers(auth) });
+    expect((await allocationDisabledSession.json()).modules.find(
+      (module: { moduleKey: string }) => module.moduleKey === 'expenses_tax',
+    )?.enabled).toBe(false);
+    const allocationDisabledDirect = await fetch(`${baseUrl}/api/company-receipts`, { headers: headers(auth) });
+    expect(allocationDisabledDirect.status).toBe(403);
+    expect((await allocationDisabledDirect.json()).error.code).toBe('module_not_enabled');
+    expect((await fetch(`${baseUrl}/api/platform/tenant-access/actions/return`, {
+      method: 'POST', headers: headers(auth, true), body: JSON.stringify({}),
+    })).status).toBe(200);
 
     const supportPrincipal = await provisionPlatformPrincipal(db, {
       principalKey: 'support-test',

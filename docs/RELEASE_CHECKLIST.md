@@ -43,7 +43,7 @@ For the current source-backed action backlog and evidence boundaries, see
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
       the permission registry at 315/116/62/5 and the serial 59-route × 13-template
       browser access audit. This is local evidence, not production authorization proof.
-- [x] `tasks/tasks.jsonl` statuses current: 202 Done / 1 In progress / 6 Todo / 4
+- [x] `tasks/tasks.jsonl` statuses current: 203 Done / 1 In progress / 5 Todo / 4
       Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209;
       TASK-204 remains In progress until tax-owner production review.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs

@@ -1271,9 +1271,10 @@ production pass. TASK-017 and TASK-193 remain independent blockers.
    15-minute elevated access and Company-bound break-glass records. Disposable
    PostgreSQL non-superuser proof covers target-context RLS, hidden actor/session
    visibility, scope switching, Return and parent revoke.
-2. **Authorization** (TASK-207 todo): prove MAC-effective navigation, ordinary tenant
-   writes, sensitive-operation denial/unlock, workflow and maker-checker preservation,
-   scope isolation, expiry, revoke and dual attribution adversarially.
+2. **Authorization** (TASK-207 done): MAC-effective navigation, ordinary tenant writes,
+   sensitive-operation denial/unlock, workflow and maker-checker preservation, scope
+   isolation, expiry, revoke and dual attribution are covered by source/API and
+   disposable PostgreSQL evidence.
 3. **Workspace UX** (TASK-208 todo): finish desktop/mobile/accessibility/i18n proof for
    separate `Open as Platform Admin` and exact `Login as employee` actions, persistent
    banners, audited scope switching, unlock and return.

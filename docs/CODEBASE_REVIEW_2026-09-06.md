@@ -1,7 +1,7 @@
 # ERP-System Codebase Review — 2026-09-06
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
-TASK-195–197 and TASK-206 follow-up plus the source-level TASK-204 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
+TASK-195–197 and TASK-206–207 follow-up plus the source-level TASK-204 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
 [PROJECT_LOGIC.md](PROJECT_LOGIC.md) remain the binding domain references. The older
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
@@ -19,9 +19,9 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **202 Done / 1 In Progress / 6 Todo / 4
+- The task registry currently reports **203 Done / 1 In Progress / 5 Todo / 4
   Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
-  EPIC-067/TASK-207–209; the blocked items are external or operational, not silently
+  EPIC-067/TASK-208–209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
   classification/recoverability/source facts and the Expense snapshot; the generated
@@ -136,9 +136,9 @@ baseline.
     configuration absence and audit boundaries. Do not imply a Vision-to-local-OCR
     fallback until the code and user-facing state actually implement it.
 
-- **EPIC-067 / TASK-207–209 — Platform Admin work has a dependency chain.**
-  - **Action order:** complete authorization switching, break-glass and audit proof
-    (TASK-207), browser/access/i18n integration (TASK-208), and only then release
+- **EPIC-067 / TASK-208–209 — Platform Admin work has a dependency chain.**
+  - **Action order:** TASK-207 authorization, switching, break-glass and audit proof is
+    done; complete browser/access/i18n integration (TASK-208), and only then release
     TASK-209. TASK-203 remains an independent CI gate; TASK-206 is done.
 
 ### Blocked or human-owned follow-up
@@ -152,8 +152,8 @@ baseline.
 
 - **First:** complete the TASK-204 tax-owner review; its source-level fix is already in
   progress and the remaining risk is configuration/release evidence.
-- **Next:** TASK-199/TASK-203 for deployment/CI evidence, then TASK-207 → TASK-208
-  before TASK-209 release proof.
+- **Next:** TASK-199/TASK-203 for deployment/CI evidence, then TASK-208 before TASK-209
+  release proof. TASK-207 is source- and disposable-PostgreSQL-verified.
 - **Documentation rule:** this review found no approved domain-contract change by
   itself. Update `PROJECT_LOGIC.md`, `SPEC.md` and the relevant KB item in the same
   task whenever an implementation changes one of these contracts.
@@ -162,9 +162,10 @@ baseline.
 
 - Verified locally for this review: generated Demo schema, schema drift, permission and
   production-RLS coverage, lint, root/Web typechecks, Demo transaction proof, API/Demo
-  builds and the targeted TASK-204 tax/Expense/purchasing tests. TASK-195 also passed
-  the disposable PostgreSQL 16 `npm run test:postgres` run (2 files / 2 tests), including
-  the current Platform HTTP path and runtime-role verification.
+  builds and the targeted TASK-204 tax/Expense/purchasing tests. TASK-207 focused PGlite
+  proof passes 2 files / 15 tests; disposable PostgreSQL 16 `npm run test:postgres` passes
+  2 files / 2 tests, including the current Platform HTTP path, FORCE-RLS module gate,
+  sensitive Finance workflow and runtime-role verification.
 - TASK-196 focused proof passed: Company Receipt Pack domain tests (2), Company Receipts
   API integration tests (4), and PostgreSQL security tests (1) on disposable PostgreSQL
   16, including downgrade, revoked-read, active-tenant, cross-tenant, export-audit and

@@ -314,5 +314,6 @@ Company break-glass window, refreshes authorization/module projection and audits
 scopes. Exact Employee simulation remains Company-locked and must return before selecting
 another scope. Missing or unresolved Master/Company entitlement fails closed. TASK-195's
 non-superuser/non-BYPASSRLS current-path PostgreSQL proof and TASK-206's hidden
-actor/session proof are complete; the remaining Platform Admin release proof is
-TASK-207–209.
+actor/session proof are complete; TASK-207's authorization, switching, break-glass and
+cross-tenant proof is complete; the remaining Platform Admin release proof is
+TASK-208–209.

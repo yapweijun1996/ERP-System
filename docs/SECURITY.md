@@ -319,8 +319,9 @@ a current-Company break-glass window and returns `platform_break_glass_required`
 absent. Break-glass never overrides maker-checker or business rules and is revoked on
 scope switch/return/logout/expiry. UI and audit must display the real Platform principal,
 not the bridge identity. TASK-206's hidden actor/session boundary is complete through
-disposable PostgreSQL non-superuser proof; TASK-207–209 remain incomplete/release-blocked
-pending their own adversarial/browser proof and executable CI. TASK-195's
+disposable PostgreSQL non-superuser proof; TASK-207's adversarial authorization proof is
+complete, while TASK-208–209 remain incomplete/release-blocked pending browser proof,
+executable CI and deployment evidence. TASK-195's
 PostgreSQL/FORCE-RLS role boundary is complete.
 
 Current production RLS is source/runtime-role compatible: Platform Company provisioning

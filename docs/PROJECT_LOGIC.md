@@ -624,7 +624,7 @@ the passing local gates—not that run—are the test evidence.
 | Platform login and simulation | `platformSupport.ts`, `platformSimulation.ts`, `routes/platform.ts`, `platformSuperadmin.integration.test.ts` | TASK-187 done |
 | Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
 | Full adversarial/release proof | Focused platform/tenant evidence plus recorded cross-engine, browser and release gates; no production deployment implied | TASK-188 done |
-| Elevated Platform tenant access | `platformTenantAccess.ts`, `tenantTransaction.ts`, `platformProvisioning.postgres.integration.test.ts` | TASK-206 done; TASK-207–209 remaining |
+| Elevated Platform tenant access | `platformTenantAccess.ts`, `moduleEntitlement.ts`, `routes/resources.ts`, `tenantTransaction.ts`, `platformSuperadmin.integration.test.ts`, `platformProvisioning.postgres.integration.test.ts` | TASK-206–207 done; TASK-208–209 remaining |
 
 ### Platform tenant administration source boundary (EPIC-067)
 
@@ -653,13 +653,15 @@ exact Employee simulation contract:
   session termination invalidates tenant access.
 
 Focused PGlite/API proof passes. TASK-195 now supplies the current PostgreSQL
-non-superuser/non-BYPASSRLS runtime-role proof, and TASK-206 adds disposable PostgreSQL
-proof for hidden-actor/elevated-session behavior. The target Company context is set
-before `role_resource_scope` reconciliation, so production FORCE-RLS does not reject
-the system-managed bridge membership. TASK-207/208 remain Todo for adversarial
-authorization and browser/accessibility/i18n proof. TASK-209 is Blocked by TASK-203 and
-the remaining TASK-207–208 evidence. No migration 0099 production deployment is
-claimed.
+non-superuser/non-BYPASSRLS runtime-role proof, TASK-206 adds disposable PostgreSQL proof
+for hidden-actor/elevated-session behavior, and TASK-207 adds tenant-transaction module
+gates, complete sensitive-operation classification, real purchasing/finance workflow
+checks, dual attribution and switched-Company isolation. The target Company context is
+set before `role_resource_scope` reconciliation and entitlement/resource gates, so
+production FORCE-RLS does not reject the system-managed bridge membership or misclassify
+an enabled module. TASK-208 remains Todo for browser/accessibility/i18n proof. TASK-209
+is Blocked by TASK-203 and the remaining TASK-208 evidence. No migration 0099 production
+deployment is claimed.
 
 ## 11. Platform Bootstrap & Tenant Provisioning — current source contract
 

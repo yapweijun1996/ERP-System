@@ -303,6 +303,51 @@ suite('Platform provisioning PostgreSQL FORCE RLS proof', () => {
     expect(employeeWorkspaceTargets.status).toBe(403);
     expect((await employeeWorkspaceTargets.json()).error.code).toBe('superadmin_required');
 
+    // FORCE-RLS provisioning is not a substitute for the elevated mutation
+    // boundary: a real finance workflow is denied until the current Company
+    // break-glass window exists, then continues into its own business checks.
+    const deniedSensitive = await fetch(`${baseUrl}/api/finance/budgets/1/actions/approve`, {
+      method: 'POST',
+      headers: { ...headers, 'idempotency-key': 'pg-platform-budget-before-break-glass' },
+      body: JSON.stringify({}),
+    });
+    expect(deniedSensitive.status).toBe(403);
+    expect((await deniedSensitive.json()).error.code).toBe('platform_break_glass_required');
+
+    const breakGlass = await fetch(`${baseUrl}/api/platform/tenant-access/actions/break-glass`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        reason: 'PostgreSQL sensitive workflow proof',
+        ticketReference: 'SEC-PG-207',
+      }),
+    });
+    expect(breakGlass.status).toBe(201);
+
+    const createdBudget = await fetch(`${baseUrl}/api/finance/budgets`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        fiscalYear: 2027,
+        name: 'PostgreSQL Platform Admin workflow proof',
+        currency: 'SGD',
+      }),
+    });
+    expect(createdBudget.status).toBe(201);
+    const budget = (await createdBudget.json()).data as { id: number; status: string };
+    expect(budget.status).toBe('draft');
+
+    const emptyBudgetApproval = await fetch(
+      `${baseUrl}/api/finance/budgets/${budget.id}/actions/approve`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'idempotency-key': 'pg-platform-budget-empty-approve' },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(emptyBudgetApproval.status).toBe(422);
+    expect((await emptyBudgetApproval.json()).error.code).toBe('budget_empty');
+
     const switchedScope = await fetch(`${baseUrl}/api/platform/tenant-access/actions/switch-scope`, {
       method: 'POST',
       headers,

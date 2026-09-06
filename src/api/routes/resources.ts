@@ -167,12 +167,13 @@ export function createResourceRouter(db: DB): Router {
   async function moduleAccessDenied(session: SessionData, modulePrefix: string): Promise<boolean> {
     const moduleKey = moduleKeyForResourcePrefix(modulePrefix);
     if (moduleKey === null) return false;
-    return !await isModuleEnabled(
-      db,
-      session.masterFn,
-      session.activeCompanyFn,
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    return !await withTenantTransaction(db, scope, (tx) => isModuleEnabled(
+      tx,
+      scope.masterFn,
+      scope.companyFn,
       moduleKey,
-    );
+    ));
   }
 
   router.post('/:module/:resource', async (req, res) => {

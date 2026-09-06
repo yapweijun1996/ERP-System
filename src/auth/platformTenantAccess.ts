@@ -536,6 +536,6 @@ export function isSensitivePlatformMutation(method: string, path: string): boole
   if (['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) return false;
   const normalized = path.toLowerCase();
   return /\/(approve|reject|release|pay|post|commission|budget|verify|reveal|result-import)(?:\/|$)/.test(normalized)
-    || /^\/api\/(finance|payroll|payout-profiles|reimbursement-batches|reimbursement-payments|tax-evidence)(?:\/|$)/.test(normalized)
+    || /^\/api\/(expense-approvals|finance|payroll|payout-profiles|reimbursement-batches|reimbursement-payments|tax-evidence)(?:\/|$)/.test(normalized)
     || /payment-batch|payment-voucher|bank|credential|tax-evidence|payout/.test(normalized);
 }

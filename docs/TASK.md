@@ -23,7 +23,7 @@ collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
 Vitest run at 171 files / 683 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
-3 focused Platform files / 12 tests, Staff Calendar API integration 6/6, Staff Calendar
+2 focused Platform files / 15 tests, 2 disposable PostgreSQL files / 2 tests, Staff Calendar API integration 6/6, Staff Calendar
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
 5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
@@ -37,8 +37,8 @@ TASK-213 is done: `sales_enquiry_line` is now covered by the production FORCE-RL
 and `npm run check:production-rls` guards every generated table with both tenant keys
 against accidental policy-list omission. This is source/static coverage evidence only;
 least-privilege runtime-role and Platform provisioning proof is complete in TASK-195;
-the remaining Platform Admin chain is TASK-207–209; TASK-206's PostgreSQL hidden-actor
-foundation is complete.
+TASK-206's PostgreSQL hidden-actor foundation and TASK-207's authorization, switching and
+break-glass proof are complete; the remaining Platform Admin chain is TASK-208–209.
 
 See [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md) for the
 bullet-level action plan for every non-Done task, including dependencies, evidence and
@@ -133,13 +133,13 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | Task | Status | Purpose |
 | --- | --- | --- |
 | TASK-206 | Done | Migration 0099, hidden non-login bridge actor, immutable Platform Tenant Admin role/membership and bounded session foundation; disposable PostgreSQL proof covers target-context RLS, actor visibility and lifecycle |
-| TASK-207 | Todo | Elevated tenant authorization, audited scope switching, Company-bound break-glass and adversarial workflow proof |
+| TASK-207 | Done | Elevated tenant authorization, audited scope switching, Company-bound break-glass and adversarial workflow proof |
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
-| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-207–208 evidence |
+| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-208 evidence |
 
-The registry therefore has **202 Done / 1 In progress / 6 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **203 Done / 1 In progress / 5 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
-billing) and TASK-209 (release proof waiting for TASK-203/TASK-207–208). Dependencies and
+billing) and TASK-209 (release proof waiting for TASK-203/TASK-208). Dependencies and
 epic references are valid.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
