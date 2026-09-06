@@ -150,16 +150,19 @@ receipt UAT is claimed.
       void and bounded employee-independent eligible-evidence picker behavior pass
       (TASK-197). Governed binary upload/capture remains in My Receipts by explicit v1
       boundary.
-- [ ] JPEG/PNG/HEIC/PDF validation, quarantine/OCR failure and readable multi-page PDF
-      output pass without losing the original.
+- [x] Source/Demo/API evidence covers JPEG/PNG/HEIC/PDF validation, quarantine/OCR
+      failure handling and readable multi-page PDF output without losing original
+      evidence (`upload.test.ts`, document-processing tests, Pack/API tests and the
+      Company Receipts browser flow). This is not production scanner/storage UAT.
 - [x] Five languages, 1440 × 900, 390 × 844 and canonical 375 px audits pass with zero
       unexpected console errors or page overflow.
-- [ ] Pack retention/legal-hold/purge/tombstone lifecycle and Company-calendar presets are
+- [x] Pack retention/legal-hold/purge/tombstone lifecycle and Company-calendar presets are
       implemented with local unit/API/Demo and authenticated browser boundary proof. The
-      disposable PostgreSQL 16 same-key race is verified in a fresh database; the remaining
-      TASK-202 gate is production download/Print/release and authenticated P0 UAT evidence.
-      Source-level localized Unicode PDF/fonts, conflict convergence and Decimal-safe amount
-      formatting are implemented and unit-tested, but do not close this release gate alone.
+      disposable PostgreSQL 16 same-key race is verified in a fresh database. Source-level
+      localized Unicode PDF/fonts, conflict convergence and Decimal-safe amount formatting
+      are implemented and unit-tested.
+- [ ] TASK-202 production download/Print/release and authenticated P0 UAT evidence are
+      still required before this release gate is closed.
 - [ ] Authenticated production scanner/storage/receipt UAT is recorded separately from
       disposable fixtures and the reset checkpoint.
 
@@ -198,7 +201,9 @@ treating this gate as a current release approval.
       covers target-context RLS provisioning, non-login/no-session actor behavior, tenant
       user/role/simulation/Employee-workspace exclusion, scope switch, Return and parent
       revoke. This does not claim migration 0099 production deployment.
-- [ ] `npm run test:e2e:platform-workspace-layout` and
-      `npm run test:e2e:platform-workspace-demo-autofill` pass for the release commit.
+- [x] `npm run test:e2e:platform-workspace-layout` and
+      `npm run test:e2e:platform-workspace-demo-autofill` pass locally for the current
+      source commit (`d44dfb4`); current-HEAD remote CI and deployment evidence remain
+      separate release gates.
 - [ ] Support Grant/Simulation policy, Platform MFA and recent sensitive-action step-up
       satisfy TASK-198 before privileged production use.
