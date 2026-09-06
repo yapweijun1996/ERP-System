@@ -315,5 +315,5 @@ scopes. Exact Employee simulation remains Company-locked and must return before 
 another scope. Missing or unresolved Master/Company entitlement fails closed. TASK-195's
 non-superuser/non-BYPASSRLS current-path PostgreSQL proof and TASK-206's hidden
 actor/session proof are complete; TASK-207's authorization, switching, break-glass and
-cross-tenant proof is complete; the remaining Platform Admin release proof is
-TASK-208–209.
+cross-tenant proof plus TASK-208's browser/accessibility/i18n proof are complete; the
+remaining Platform Admin release proof is TASK-209.

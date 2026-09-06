@@ -646,6 +646,7 @@ employee` actions. The Admin tenant shell persistently shows the real Platform p
 scope, expiry, audited selectors, break-glass state and Return; navigation contains
 baseline services plus only MAC-effective modules. Employee mode remains fixed-scope and
 permission-trimmed. These surfaces must never expose the bridge identity as the operator
-or permit tenant-side MAC mutation. TASK-206's hidden actor/session foundation and
-TASK-207's source/API authorization proof are complete; TASK-208–209 remain
-incomplete/release-blocked for browser, CI and deployment evidence.
+or permit tenant-side MAC mutation. TASK-206's hidden actor/session foundation,
+TASK-207's source/API authorization proof and TASK-208's browser/accessibility/i18n
+proof are complete; TASK-209 remains release-blocked for CI, deployment and production
+evidence.

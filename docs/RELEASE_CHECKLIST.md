@@ -37,13 +37,16 @@ For the current source-backed action backlog and evidence boundaries, see
       allowance.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
-- [x] `npm run audit:i18n` — 2026-09-06 passed the full 129 × 5 language × 2 viewport
-      browser matrix with no blocking findings; static resources remain 1,546 keys / 72
+- [x] `npm run audit:i18n` — 2026-09-07 passed the full 129 × 5 language × 2 viewport
+      browser matrix with no blocking findings; static resources are 1,725 keys / 72
       packs.
+- [x] `npm run test:e2e:platform-workspace-layout` — 2026-09-07 passed isolated PGlite
+      desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
+      overflow checks plus the focused five-language Platform workspace matrix.
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
       the permission registry at 315/116/62/5 and the serial 59-route × 13-template
       browser access audit. This is local evidence, not production authorization proof.
-- [x] `tasks/tasks.jsonl` statuses current: 203 Done / 1 In progress / 5 Todo / 4
+- [x] `tasks/tasks.jsonl` statuses current: 204 Done / 1 In progress / 4 Todo / 4
       Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209;
       TASK-204 remains In progress until tax-owner production review.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs

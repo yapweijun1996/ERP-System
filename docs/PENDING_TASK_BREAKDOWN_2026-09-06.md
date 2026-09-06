@@ -5,7 +5,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **203 Done / 1 In Progress / 5 Todo / 4 Blocked / 213 Total**.
+Current registry: **204 Done / 1 In Progress / 4 Todo / 4 Blocked / 213 Total**.
 
 ## Recommended order
 
@@ -13,9 +13,9 @@ Current registry: **203 Done / 1 In Progress / 5 Todo / 4 Blocked / 213 Total**.
   versioned SG/MY configuration after the source-level fix and targeted regression proof.
 - **2. Run TASK-199 and TASK-203 in parallel when external access is available:** restore
   public availability/deployment evidence and unblock GitHub Actions execution.
-- **3. Close the Platform chain in dependency order:** TASK-208, then release proof in
-  TASK-209. TASK-206's hidden actor/session foundation and TASK-207 authorization proof are
-  now done.
+- **3. Close the Platform chain in dependency order:** TASK-209 remains the release proof
+  after TASK-203/external deployment evidence. TASK-206's hidden actor/session foundation,
+  TASK-207 authorization proof and TASK-208 browser/workspace proof are now done.
 - **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205).**
 - **5. Keep human-owned blockers separate:** TASK-017 needs a physical phone and TASK-193
   needs production SMTP/mail delivery.
@@ -59,17 +59,10 @@ Current registry: **203 Done / 1 In Progress / 5 Todo / 4 Blocked / 213 Total**.
     HEAD workflow, and records every required shard/typecheck/build result. A zero-step
     billing failure must remain a failed gate, never a green result.
 
-- **TASK-208 — Todo (P0) — Platform Admin and Employee workspace integration**
-  - Depends on: `TASK-207`.
-  - Steps: validate separate `Open as Platform Admin` and `Login as employee` actions,
-    persistent true-principal/scope banners, audited Company selectors, sensitive unlock,
-    Return/logout behavior, MAC-effective navigation and exact Employee permissions.
-  - Evidence: desktop and mobile browser journeys, accessibility, five-language copy,
-    access-matrix and API-mode parity; verify no credential/bridge/disabled-module leak.
-
 - **TASK-209 — Blocked (P0) — release Platform tenant administration**
   - Depends on: `TASK-195`, `TASK-203`, `TASK-206`, `TASK-207`, `TASK-208`.
-  - Blocked until the dependency chain and executable CI are complete.
+  - TASK-208 is complete; it remains blocked until executable CI, deployed revision and
+    production evidence are available.
   - Release steps: backup, apply migration/RLS without reset or seed, run non-superuser
     PostgreSQL adversarial proof, execute read-only production smoke, record exact
     revision, and synchronize STATUS, PROJECT_LOGIC, task registry and KB.
@@ -99,8 +92,18 @@ Current registry: **203 Done / 1 In Progress / 5 Todo / 4 Blocked / 213 Total**.
     invalid state/immutable budget, expiry, dual audit attribution and switched-Company
     user/order isolation. Disposable PostgreSQL 16 `NOSUPERUSER NOBYPASSRLS` proof adds a
     real Finance budget workflow and confirms the module gate works under FORCE RLS.
-  - TASK-208 still owns desktop/mobile/accessibility/i18n evidence; TASK-209 remains blocked
-    by CI billing and the remaining browser/release gates.
+  - TASK-208 browser/workspace proof is now complete; TASK-209 remains blocked by CI billing,
+    deployment and production release evidence.
+
+- **TASK-208 — Done 2026-09-07 — Platform Admin and exact Employee workspace integration**
+  - The isolated PGlite Playwright journey passes provisioning and entitlement controls at
+    desktop/tablet/mobile widths, focus/sticky action behavior, separate Platform Admin and
+    exact Employee modes, true-principal banners, locked Company scope and Return.
+  - Access Matrix passes 59 canonical route contracts × 13 roles and 129 registered screens.
+    The full i18n browser matrix passes 129 routes × 5 languages × desktop/mobile, and the
+    Platform workspace has canonical locale keys plus a focused five-language 375px check.
+    No credential bridge, disabled-module navigation leak, browser error or horizontal
+    overflow was observed.
 
 - **TASK-200 — Done — Canonical/API route parity and current-head evidence**
   - `staff-calendar` is implemented in both adapters and backed by `/api/hr/calendar/staff`;

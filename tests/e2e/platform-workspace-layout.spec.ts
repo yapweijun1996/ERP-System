@@ -479,8 +479,29 @@ async function main(): Promise<void> {
     await page.locator('.platform-entitlement-workspace').waitFor({ state: 'visible', timeout: TIMEOUT });
     assert(browserErrors.length === 0, `platform workspace browser errors: ${browserErrors.join(' | ')}`);
 
+    await page.setViewportSize({ width: 375, height: 812 });
+    const localizedHeadings = {
+      ms: { workspace: 'Kawalan tenant Platform', simulation: 'Buka ruang kerja tenant' },
+      zh: { workspace: '平台租户控制', simulation: '打开租户工作区' },
+      ja: { workspace: 'Platform テナント管理', simulation: 'テナントワークスペースを開く' },
+      vi: { workspace: 'Điều khiển tenant Platform', simulation: 'Mở không gian làm việc tenant' },
+    } as const;
+    for (const [language, expected] of Object.entries(localizedHeadings)) {
+      await page.evaluate((code) => localStorage.setItem('aria-lang', code), language);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('.platform-entitlement-workspace').waitFor({ state: 'visible', timeout: TIMEOUT });
+      const localized = await page.evaluate(() => ({
+        workspace: document.querySelector<HTMLElement>('.platform-shell-intro h1')?.textContent?.trim() || '',
+        simulation: document.querySelector<HTMLElement>('.platform-simulation-panel h2')?.textContent?.trim() || '',
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      }));
+      assert(localized.workspace === expected.workspace, `${language} Platform workspace heading was not translated: ${localized.workspace}`);
+      assert(localized.simulation === expected.simulation, `${language} Platform simulation heading was not translated: ${localized.simulation}`);
+      assert(localized.overflow <= 1, `${language} Platform workspace overflowed horizontally at mobile width`);
+    }
+
     await context.close();
-    console.log('PASS Platform workspace layout E2E (isolated PGlite): responsive provisioning/control, elevated Admin and exact Employee tenant modes');
+    console.log('PASS Platform workspace layout E2E (isolated PGlite): responsive provisioning/control, elevated Admin and exact Employee tenant modes, five-language Platform workspace matrix');
   } finally {
     await browser?.close();
     await closeServer(server);

@@ -123,7 +123,7 @@ incomplete feature may be introduced only as an explicitly labelled `Preview · 
 Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
 schema, resource/command, permission, tests and localization are complete.
 
-Current source inventory (2026-09-06) is 129/0 routes, 1,546 English keys and 72 local
+Current source inventory (2026-09-07) is 129/0 routes, 1,725 English keys and 72 local
 five-language packs. The current HEAD reran the complete 129-route desktop/375px and
 five-language browser matrix with no blocking findings; API-mode browser and physical-
 device evidence remain separate release gates.
@@ -252,7 +252,7 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. Current inventory is 1,546 English
+  for compatibility and is not currently wired. Current inventory is 1,725 English
   keys / 72 local packs; the current 129-route × 5-language × 2-viewport browser
   matrix passes.
   Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))
@@ -543,9 +543,9 @@ human UAT and do not authorize a production release or migration.
 EPIC-067/TASK-206–209 add the elevated mode and migration 0099 source. TASK-195's
 non-superuser/FORCE-RLS PostgreSQL proof and TASK-206's hidden actor/session proof are
 complete; TASK-207 is now complete through source/API and disposable PostgreSQL
-authorization proof, while TASK-208 remains Todo for browser/accessibility/i18n closure.
-TASK-209 is Blocked by TASK-203 and the remaining TASK-208 evidence. No
-migration 0099 production deployment is claimed.
+authorization proof, and TASK-208 is complete through browser/accessibility/i18n closure.
+TASK-209 is Blocked by TASK-203 and deployed/production evidence. No migration 0099
+production deployment is claimed.
 
 ## 11. Platform Bootstrap & Tenant Provisioning contract (EPIC-065)
 

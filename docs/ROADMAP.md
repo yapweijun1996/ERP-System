@@ -1231,7 +1231,7 @@ more module breadth. The source-backed review is
 
 1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 102
    migrations/schema v101/252
-   tables, 129 Canonical routes with 129 API metadata routes, 1,546 i18n keys/72 packs,
+   tables, 129 Canonical routes with 129 API metadata routes, 1,725 i18n keys/72 packs,
    315 permission codes and PWA v262. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the
@@ -1275,7 +1275,7 @@ production pass. TASK-017 and TASK-193 remain independent blockers.
    sensitive-operation denial/unlock, workflow and maker-checker preservation, scope
    isolation, expiry, revoke and dual attribution are covered by source/API and
    disposable PostgreSQL evidence.
-3. **Workspace UX** (TASK-208 todo): finish desktop/mobile/accessibility/i18n proof for
+3. **Workspace UX** (TASK-208 done): desktop/mobile/accessibility/i18n proof covers
    separate `Open as Platform Admin` and exact `Login as employee` actions, persistent
    banners, audited scope switching, unlock and return.
 4. **Release** (TASK-209 blocked): after TASK-195, TASK-207–208 and executable CI in TASK-203, apply

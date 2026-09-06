@@ -1,7 +1,7 @@
 # ERP-System Codebase Review — 2026-09-06
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
-TASK-195–197 and TASK-206–207 follow-up plus the source-level TASK-204 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
+TASK-195–197 and TASK-206–208 follow-up plus the source-level TASK-204 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
 [PROJECT_LOGIC.md](PROJECT_LOGIC.md) remain the binding domain references. The older
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
@@ -19,9 +19,9 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **203 Done / 1 In Progress / 5 Todo / 4
+- The task registry currently reports **204 Done / 1 In Progress / 4 Todo / 4
   Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
-  EPIC-067/TASK-208–209; the blocked items are external or operational, not silently
+  EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
   classification/recoverability/source facts and the Expense snapshot; the generated
@@ -32,7 +32,8 @@ baseline.
   `2339ad2`: `package.json`, `web/public/assets/pwa.css` and
   `tests/e2e/setup-wizard-layout.spec.mjs`. The new E2E passes at desktop, iPhone and
   small-mobile widths. `.playwright-cli/` remains present but is not part of the commit;
-  keep it out of release artifacts.
+  keep it out of release artifacts. The temporary `.playwright-cli/` capture directory
+  created during the follow-up browser smoke was removed after verification.
 
 - TASK-195 is now **Done**: Platform Company provisioning sets transaction-local tenant
   context after generating the exact Company key; Compose separates migration,
@@ -136,10 +137,10 @@ baseline.
     configuration absence and audit boundaries. Do not imply a Vision-to-local-OCR
     fallback until the code and user-facing state actually implement it.
 
-- **EPIC-067 / TASK-208–209 — Platform Admin work has a dependency chain.**
-  - **Action order:** TASK-207 authorization, switching, break-glass and audit proof is
-    done; complete browser/access/i18n integration (TASK-208), and only then release
-    TASK-209. TASK-203 remains an independent CI gate; TASK-206 is done.
+- **EPIC-067 / TASK-209 — Platform Admin release remains gated.**
+  - **Action order:** TASK-206 authorization foundation, TASK-207 authorization/switching/
+  break-glass proof and TASK-208 browser/access/i18n integration are done. TASK-203,
+  deployed revision and production evidence still gate TASK-209; TASK-206 is done.
 
 ### Blocked or human-owned follow-up
 
@@ -152,8 +153,8 @@ baseline.
 
 - **First:** complete the TASK-204 tax-owner review; its source-level fix is already in
   progress and the remaining risk is configuration/release evidence.
-- **Next:** TASK-199/TASK-203 for deployment/CI evidence, then TASK-208 before TASK-209
-  release proof. TASK-207 is source- and disposable-PostgreSQL-verified.
+- **Next:** TASK-199/TASK-203 for deployment/CI evidence, then TASK-209 release proof.
+  TASK-207 is source- and disposable-PostgreSQL-verified; TASK-208 is browser-verified.
 - **Documentation rule:** this review found no approved domain-contract change by
   itself. Update `PROJECT_LOGIC.md`, `SPEC.md` and the relevant KB item in the same
   task whenever an implementation changes one of these contracts.
@@ -175,6 +176,11 @@ baseline.
   classification and the exclusive Expense policy boundary. CI, current public health,
   exact deployed revision, production tax-owner approval, physical-device behavior and
   SMTP/Vision configuration remain unverified.
+- TASK-208 browser evidence passes the isolated PGlite Platform workspace E2E at
+  desktop/tablet/mobile widths, the 59-route × 13-role access matrix and the full
+  129-route × 5-language × 2-viewport i18n matrix. The focused Platform extension also
+  verifies four non-English Platform workspaces at 375px with no overflow or browser
+  errors.
 - Not claimed by this document: current public availability, exact deployed revision,
   GitHub Actions execution, a production database role rollout, physical-device behavior,
   or production SMTP/Vision configuration. The PostgreSQL proof used a disposable local

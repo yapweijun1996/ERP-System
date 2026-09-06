@@ -624,7 +624,7 @@ the passing local gates—not that run—are the test evidence.
 | Platform login and simulation | `platformSupport.ts`, `platformSimulation.ts`, `routes/platform.ts`, `platformSuperadmin.integration.test.ts` | TASK-187 done |
 | Migration preservation | migration 0094 and `platformEntitlementMigration.test.ts` | TASK-185 done |
 | Full adversarial/release proof | Focused platform/tenant evidence plus recorded cross-engine, browser and release gates; no production deployment implied | TASK-188 done |
-| Elevated Platform tenant access | `platformTenantAccess.ts`, `moduleEntitlement.ts`, `routes/resources.ts`, `tenantTransaction.ts`, `platformSuperadmin.integration.test.ts`, `platformProvisioning.postgres.integration.test.ts` | TASK-206–207 done; TASK-208–209 remaining |
+| Elevated Platform tenant access | `platformTenantAccess.ts`, `moduleEntitlement.ts`, `routes/resources.ts`, `tenantTransaction.ts`, `platformSuperadmin.integration.test.ts`, `platformProvisioning.postgres.integration.test.ts`, `tests/e2e/platform-workspace-layout.spec.ts` | TASK-206–208 done; TASK-209 release-blocked |
 
 ### Platform tenant administration source boundary (EPIC-067)
 
@@ -659,9 +659,10 @@ gates, complete sensitive-operation classification, real purchasing/finance work
 checks, dual attribution and switched-Company isolation. The target Company context is
 set before `role_resource_scope` reconciliation and entitlement/resource gates, so
 production FORCE-RLS does not reject the system-managed bridge membership or misclassify
-an enabled module. TASK-208 remains Todo for browser/accessibility/i18n proof. TASK-209
-is Blocked by TASK-203 and the remaining TASK-208 evidence. No migration 0099 production
-deployment is claimed.
+an enabled module. TASK-208 is complete through isolated Playwright workspace, access
+matrix and five-language desktop/mobile evidence. TASK-209 remains Blocked by TASK-203,
+deployed revision and production evidence. No migration 0099 production deployment is
+claimed.
 
 ## 11. Platform Bootstrap & Tenant Provisioning — current source contract
 

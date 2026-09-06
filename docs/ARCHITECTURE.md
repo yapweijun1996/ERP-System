@@ -248,8 +248,9 @@ Platform session to exact Master/Company/reason/ticket/expiry, while
 `platform_break_glass_window` adds a current-Company sensitive-mutation gate. Scope
 switch revokes break-glass. Authorization still evaluates MAC, tenant permission, scope
 and workflow/business authority, and audit/UI retain the real Platform principal.
-TASK-206 and TASK-207 are now source-plus-disposable-PostgreSQL verified; TASK-208–209
-distinguish the remaining browser, CI and deployment proof from this architecture.
+TASK-206 and TASK-207 are now source-plus-disposable-PostgreSQL verified; TASK-208 is
+browser/accessibility/i18n verified; TASK-209 distinguishes the remaining CI,
+deployment and production proof from this architecture.
 
 TASK-185–187 are current code and TASK-188 completed its recorded adversarial,
 PostgreSQL, browser and release-gate proof. TASK-192 later deployed through 0098 and
