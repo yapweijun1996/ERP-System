@@ -27,10 +27,11 @@ the Pack permission-downgrade path and Company Receipt correction/edit/void/date
 workflow remain P0 UAT follow-up until authenticated browser/production evidence reconciles
 the dated ERP excellence review. This follow-up does not create a second registry row.
 
-2026-09-07 documentation gate addendum: current local HEAD `9f28387` adds the deterministic
-`npm run docs:check` gate for README and `docs/` Markdown relative links. It passes 38
-Markdown files and 173 local links; `npm run lint` and `git diff --check` also pass. This
-docs-only commit does not satisfy the still-pending remote CI, deployment, production or
+2026-09-07 documentation gate addendum: current local HEAD `15bb0b2` adds the deterministic
+`npm run docs:check` gate for README and `docs/` Markdown relative links and invokes it in
+both the CI validation job and the Pages deploy workflow. It passes 38 Markdown files and
+173 local links; `npm run lint`, workflow YAML parsing and `git diff --check` also pass.
+This local gate does not satisfy the still-pending remote CI, deployment, production or
 physical-device evidence boundaries.
 
 ## Recommended order
