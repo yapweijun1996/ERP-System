@@ -102,8 +102,9 @@ For this slice, done means an authorised company user can capture or upload a sa
 receipt, confirm basic merchant/date/amount/currency/category facts, save it without an
 Employee Claim, browse/search company receipts, select an inclusive transaction-date
 range, preview the complete matching set and generate an A4-readable Receipt Pack.
-Receipts without `transaction_date` are currently Ready records, must be visibly marked
-and excluded from date-range packages, and still need a real correction UI. Mixed currencies must be totalled by
+Receipts without `transaction_date` are Ready records, remain visibly marked, are
+excluded from date-range packages and can now be corrected from the Company Receipt
+detail editor. Mixed currencies must be totalled by
 currency or not totalled at all.
 
 This extension's core is **implemented and fixture-tested** as of 2026-08-12. TASK-177–181
@@ -114,9 +115,9 @@ the register confirmation hand-off, actual PGlite clean-evidence persistence, au
 same-origin API/PGlite browser journey and the same journey against a newly created
 disposable PostgreSQL 16 database are browser-proven. TASK-192 later deployed migrations
 through 0098 and reset production to first-run state; no authenticated production receipt
-UAT is claimed. TASK-196 now closes the Pack authorization downgrade and export-purpose
-audit gap; TASK-197/202 own the remaining correction/edit/void UX and artifact-governance
-gaps.
+UAT is claimed. TASK-196 closes the Pack authorization downgrade and export-purpose
+audit gap; TASK-197 closes the correction/edit/void UX and eligible-evidence picker, while
+TASK-202 owns the remaining artifact-governance gaps.
 Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois remain future
 or optional phases and are not v1 exit criteria.

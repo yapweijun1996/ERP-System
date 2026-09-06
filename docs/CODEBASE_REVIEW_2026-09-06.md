@@ -19,8 +19,8 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **199 Done / 1 In progress / 9 Todo / 4
-  Blocked / 213 Total**. The actionable boundary is concentrated in TASK-197–205 and
+- The task registry currently reports **200 Done / 1 In progress / 8 Todo / 4
+  Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-206–209; the blocked items are external or operational, not silently
   treated as code failures.
 - During this review the user-owned PWA/setup-wizard changes were committed as
@@ -59,19 +59,19 @@ baseline.
     fields, a no-store response and current domain/API/PostgreSQL coverage, including
     cross-tenant Pack and source-evidence denial.
 
-- **TASK-197 — Company Receipts has backend commands but an incomplete normal workflow.**
-  - **Evidence:** `src/api/routes/companyReceipts.ts` already exposes detail, PATCH and
-    void operations, while `web/public/assets/screens-company-receipts.js` renders a
-    register with confirmation and Pack actions but no detail/reopen/void path. Create
-    is shown based on adapter availability rather than an effective capability. A
-    Missing Date button routes to My Receipts, and confirmation loads only one page of
-    employee evidence.
-  - **Action:** capability-gate create and Pack controls, add detail and correction/void
-    actions, make Missing Date open the exact record/editor, paginate or remove the
-    Employee-dependent evidence picker, and expose honest loading/denial states.
-  - **Acceptance:** Company Owner/read-only/uploader personas see only permitted
-    actions; API and Demo adapters behave the same; a missing-date record can be
-    corrected from Company Receipts; void and correction retain audit/evidence history.
+- **TASK-197 — Done 2026-09-06: Company Receipts normal workflow is now permission-aware.**
+  - **Evidence:** the list API and Demo adapter return canonical create/edit/void
+    capabilities; the UI hides unauthorized actions, opens a versioned detail editor,
+    corrects Missing Date in place and submits retained reasoned voids. The new
+    `/api/company-receipts/evidence` contract and Demo equivalent return only current,
+    clean, uploader-owned, unbound receipt evidence with bounded search/cursor paging.
+  - **Boundary:** direct Company Receipt confirmation remains Employee-independent;
+    governed binary capture/upload remains in My Receipts and therefore still requires
+    its existing Employee Self Service boundary. This is explicit v1 product behavior,
+    not an accidental picker dependency.
+  - **Verification:** domain/API integration, Demo/API browser journeys, responsive
+    desktop/mobile assertions, read-only UI denial and five-language copy all pass; API
+    mutation permission and optimistic-conflict coverage remains enforced server-side.
 
 - **TASK-204 — GST/SST validity and posting semantics are inconsistent.**
   - **Evidence:** `getEffectiveTaxRate()` treats `valid_to` as exclusive, while the
@@ -141,11 +141,9 @@ baseline.
 
 ## Recommended execution order
 
-- **First:** TASK-197, because it is the next security/evidence boundary after the
-  completed TASK-195 and TASK-196 gates.
-- **Next:** TASK-204, because it affects authorization-adjacent accounting correctness
+- **First:** TASK-204, because it affects authorization-adjacent accounting correctness
   evidence export and accounting correctness in already exposed ERP workflows.
-- **Then:** TASK-199/TASK-203 for deployment/CI evidence, followed by TASK-200 and the
+- **Next:** TASK-199/TASK-203 for deployment/CI evidence, followed by TASK-200 and the
   remaining P1 operational/lifecycle proof.
 - **Documentation rule:** this review found no approved domain-contract change by
   itself. Update `PROJECT_LOGIC.md`, `SPEC.md` and the relevant KB item in the same

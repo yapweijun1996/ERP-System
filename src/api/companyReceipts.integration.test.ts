@@ -183,6 +183,26 @@ describe('Company Receipts API', () => {
       },
     });
 
+    const evidenceList = await fetch(
+      `${baseUrl}/api/company-receipts/evidence?limit=10&search=receipt_api_sg`,
+      { headers: { cookie: auth.cookie } },
+    );
+    expect(evidenceList.status).toBe(200);
+    expect(await evidenceList.json()).toMatchObject({
+      data: [expect.objectContaining({
+        documentId: uploaded.document.id,
+        documentVersionId: uploaded.version.id,
+        scanStatus: 'clean',
+      })],
+      meta: {
+        scope: 'uploader',
+        employeeIndependent: true,
+        eligibleOnly: true,
+        limit: 10,
+        nextCursor: null,
+      },
+    });
+
     const createdResponse = await fetch(`${baseUrl}/api/company-receipts`, {
       method: 'POST',
       headers: { ...mutationHeaders, 'x-request-id': 'company-receipt-create-0001' },
@@ -197,6 +217,11 @@ describe('Company Receipts API', () => {
       data: { version: 1, uploaderUserId: viewerId, status: 'ready' },
       meta: { scope: 'uploader', evidenceImmutable: true },
     });
+    const boundEvidence = await fetch(`${baseUrl}/api/company-receipts/evidence?limit=10`, {
+      headers: { cookie: auth.cookie },
+    });
+    expect(boundEvidence.status).toBe(200);
+    expect((await boundEvidence.json()).data).toEqual([]);
 
     const adminEvidence = await evidence(sg, adminId, 'receipt_api_admin_0001');
     const adminReceipt = await withTenantTransaction(db, sg, (tx) =>
@@ -217,7 +242,10 @@ describe('Company Receipts API', () => {
     expect(list.status).toBe(200);
     expect(await list.json()).toMatchObject({
       data: [{ id: createdBody.data.id, merchant: 'API Merchant' }],
-      meta: { scope: 'own', limit: 1, nextCursor: null },
+      meta: {
+        scope: 'own', limit: 1, nextCursor: null,
+        actions: { create: true, edit: true, void: true },
+      },
     });
     const adminAuth = await login('admin', 'demo1234');
     const switchResponse = await fetch(`${baseUrl}/api/auth/session/actions/switch-company`, {
@@ -547,6 +575,10 @@ describe('Company Receipts API', () => {
       headers: { cookie: auth.cookie },
     });
     expect(confirmation.status).toBe(403);
+    const evidenceList = await fetch(`${baseUrl}/api/company-receipts/evidence`, {
+      headers: { cookie: auth.cookie },
+    });
+    expect(evidenceList.status).toBe(403);
     const create = await fetch(`${baseUrl}/api/company-receipts`, {
       method: 'POST', headers, body: JSON.stringify({}),
     });

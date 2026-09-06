@@ -39,7 +39,7 @@ For the current source-backed action backlog and evidence boundaries, see
 - [ ] `npm run check:permissions` and `npm run audit:access-matrix` — permission registry
       passes at 315/116/62/5. Current source inventory is 59 routes × 13 active templates;
       rerun the serial browser access audit before release.
-- [x] `tasks/tasks.jsonl` statuses current: 197 Done / 1 In progress / 11 Todo / 4
+- [x] `tasks/tasks.jsonl` statuses current: 200 Done / 1 In progress / 8 Todo / 4
       Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs
       due account billing/spending; TASK-203 is not a green CI result.
@@ -122,8 +122,10 @@ receipt UAT is claimed.
       company-wide Pack; active-tenant, cross-tenant and revoked-read cases return safe
       denial, preview/export purpose is audited, and the PDF remains private/no-store
       (TASK-196).
-- [ ] Read-only UI hides create/edit/void; real detail, Missing Date correction, update,
-      void and bounded Employee-independent-or-explicit picker behavior pass (TASK-197).
+- [x] Read-only UI hides create/edit/void; real detail, Missing Date correction, update,
+      void and bounded employee-independent eligible-evidence picker behavior pass
+      (TASK-197). Governed binary upload/capture remains in My Receipts by explicit v1
+      boundary.
 - [ ] JPEG/PNG/HEIC/PDF validation, quarantine/OCR failure and readable multi-page PDF
       output pass without losing the original.
 - [x] Five languages, 1440 × 900, 390 × 844 and canonical 375 px audits pass with zero

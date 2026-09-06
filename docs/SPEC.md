@@ -413,11 +413,12 @@ The current and future implementation must satisfy these binding requirements:
 - A Company Receipt belongs to the active `masterFn` and `companyFn`. The Session
   supplies both values; client-supplied tenant identifiers are never trusted.
 - The receipt references the preserved managed-document version/hash and records the
-  uploader for audit. Direct domain/API saving must not require an Employee identity,
-  Expense Claim, reimbursement, approval, bank account, GL posting or tax decision.
-  The current normal browser picker nevertheless depends on `/api/my/receipts`,
-  `employee.self.read` and a linked Employee; TASK-197 must remove that dependency or
-  make the narrower supported product boundary explicit.
+  uploader for audit. Direct domain/API saving and eligible-evidence selection must not
+  require an Employee identity, Expense Claim, reimbursement, approval, bank account,
+  GL posting or tax decision. The normal browser picker uses the employee-independent
+  `GET /api/company-receipts/evidence` contract and therefore does not require
+  `employee.self.read` or a linked Employee. Governed binary upload/capture remains in
+  `/api/my/receipts` as an explicit upstream Employee Self Service boundary.
 - JPEG, PNG, HEIC/HEIF and PDF use the existing magic-byte/MIME/extension validation,
   20 MB limit, 20-page PDF limit, fail-closed scan, extraction provenance, duplicate
   hash and governed document lifecycle.
@@ -426,11 +427,13 @@ The current and future implementation must satisfy these binding requirements:
   extraction failure cannot block manual completion after the document is safe. OCR
   candidates retain source, model, confidence and review state and are never rewritten
   by confirmed metadata.
-- The browser confirmation entry may list only the signed-in uploader's receipt evidence
-  and calls `GET /api/company-receipts/confirmations/:documentVersionId` followed by the
-  canonical create action. It does not accept an evidence owner, Master or Company from
-  the browser. A static Demo upload remains quarantined when no scanner exists; only a
-  clean scan result can enable confirmation.
+- The browser confirmation entry may list only the signed-in uploader's eligible receipt
+  evidence from `GET /api/company-receipts/evidence` (current version, clean scan,
+  non-voided and not already bound), using bounded search/cursor paging, then calls
+  `GET /api/company-receipts/confirmations/:documentVersionId` followed by the canonical
+  create action. It does not accept an evidence owner, Master or Company from the
+  browser. A static Demo upload remains quarantined when no scanner exists; only a clean
+  scan result can enable confirmation.
 - Register list/detail reads require explicit `expenses.company_receipts.read_own` or
   `expenses.company_receipts.read_company`; the API resolves that permission before
   passing `own | company` visibility to tenant-scoped domain queries. Reads are bounded
@@ -440,8 +443,8 @@ The current and future implementation must satisfy these binding requirements:
   those Company Receipt operations.
 - Date filters are inclusive business dates:
   `from <= transaction_date <= to`. Missing dates are visible and excluded from a
-  date-range package. The current badge only navigates to My Receipts and is not a
-  metadata-correction workflow; TASK-197 owns that requirement. Browser presets
+  date-range package. The Missing Date badge opens the exact receipt's versioned
+  metadata editor. Browser presets
   currently use browser-local time rather than a configured Company calendar.
 - Preview/export retrieves every ready, dated match, not only the visible page, and
   rejects empty/invalid selections before writing a snapshot. Migration 0093 stores an
@@ -456,7 +459,8 @@ The current and future implementation must satisfy these binding requirements:
   `read_own` or `read_company`. The API distinguishes preview from original-evidence
   download/Print in the access purpose and audit after-data, returns safe not-found for
   a frozen-visibility mismatch or wrong active tenant, and keeps the artifact private
-  and no-store. TASK-196 is done; TASK-197 owns the remaining capture/correction UX.
+  and no-store. TASK-196 and TASK-197 are done; TASK-202 owns the remaining Pack
+  lifecycle/localization hardening.
   Currencies are never summed together.
 - Demo/PGlite and PostgreSQL/API modes implement one contract. `expenses_tax` availability
   is platform-owned `Master enabled AND Company allocated`; missing or disabled state

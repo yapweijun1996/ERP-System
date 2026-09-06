@@ -3504,6 +3504,12 @@
       var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(
         orm,SCOPE,myActorUserId(),'expenses.company_receipts.read_own');
       if(!canReadOwn) throw new Error('You cannot read Company Receipts.');
+      var canCreate=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,myActorUserId(),'expenses.company_receipts.create');
+      var canEdit=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,myActorUserId(),'expenses.company_receipts.edit');
+      var canVoid=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,myActorUserId(),'expenses.company_receipts.void');
       var params=[SCOPE.masterFn,SCOPE.companyFn];
       var predicates=['r.master_fn=$1','r.company_fn=$2'];
       if(!canReadCompany){
@@ -3551,9 +3557,44 @@
         uploaderUserId:Number(row.uploader_user_id),uploaderName:row.uploader_name,
         status:row.status,version:Number(row.version),createdAt:row.created_at,updatedAt:row.updated_at,
       };});
-      return {data:rows,meta:{scope:canReadCompany?'company':'own',limit:limit,
+      return {data:rows,meta:{scope:canReadCompany?'company':'own',actorUserId:myActorUserId(),limit:limit,
         nextCursor:hasMore&&rows.length?rows[rows.length-1].id:null,
-        filters:{search:search,dateFrom:dateFrom,dateTo:dateTo}}};
+        filters:{search:search,dateFrom:dateFrom,dateTo:dateTo},
+        actions:{create:canCreate,edit:canEdit,void:canVoid}}};
+    });
+  }
+  async function companyReceiptEvidence(query){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    query=query||{};
+    var requestedLimit=Number(query.limit==null?25:query.limit);
+    var limit=Number.isSafeInteger(requestedLimit)
+      ?Math.max(1,Math.min(100,requestedLimit)):25;
+    var afterId=query.afterId==null||query.afterId===''?null:Number(query.afterId);
+    if(afterId!=null&&(!Number.isSafeInteger(afterId)||afterId<=0)){
+      throw new Error('Company Receipt evidence cursor must be a positive integer.');
+    }
+    var search=String(query.search||'').trim();
+    if(search.length>200) throw new Error('Search must be 200 characters or fewer.');
+    return requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var permitted=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.create');
+      if(!permitted) throw new Error('You cannot select Company Receipt evidence.');
+      var rows=await state.runtime.commands.listCompanyReceiptEvidenceWithin(
+        orm,SCOPE,actorId,{limit:limit,afterId:afterId,search:search});
+      var hasMore=rows.length>limit;
+      var data=rows.slice(0,limit).map(function(row){return {
+        id:Number(row.id),documentId:Number(row.documentId),
+        documentVersionId:Number(row.documentVersionId),documentKey:row.documentKey,
+        originalFileName:row.originalFileName,sha256:row.sha256,mimeType:row.mimeType,
+        sizeBytes:Number(row.sizeBytes),pageCount:Number(row.pageCount),
+        recordStatus:row.recordStatus,scanStatus:row.scanStatus,
+        extractionStatus:row.extractionStatus||null,inboxStatus:row.inboxStatus||null,
+        createdAt:row.createdAt,
+      };});
+      return {data:data,meta:{scope:'uploader',employeeIndependent:true,eligibleOnly:true,
+        limit:limit,nextCursor:hasMore&&data.length?data[data.length-1].id:null,
+        filters:{search:search}}};
     });
   }
   async function companyReceiptConfirmation(documentVersionId){
@@ -4866,6 +4907,7 @@
     session: session,
     financeReports:financeReports,
     companyReceipts:companyReceipts,
+    companyReceiptEvidence:companyReceiptEvidence,
     companyReceiptConfirmation:companyReceiptConfirmation,
     createCompanyReceipt:createCompanyReceipt,
     updateCompanyReceipt:updateCompanyReceipt,

@@ -214,15 +214,17 @@ and reset production; neither fixture is authenticated production UAT.
       duplicate and quarantine failures preserve safe existing records.
 - [ ] Review OCR suggestions, manually correct merchant/number/date/amount/currency/
       category/purpose/notes and save even when safe OCR fails.
-- [ ] A non-Employee user with the intended Company Receipt capability can use the normal
-      capture/picker flow, or the product explicitly rejects that persona; current My
-      Receipts picker requires Employee Self Service.
+- [x] A non-Employee user with the intended Company Receipt capability can use the normal
+      Company Receipt confirmation/picker flow through the employee-independent evidence
+      endpoint. Binary upload/capture remains explicitly scoped to My Receipts Employee
+      Self Service.
 - [ ] Refresh or re-login and find the receipt in the authorised own/company register;
       another company and an own-only user cannot read it.
 - [ ] Search and filter with This Month, Last Month, This Quarter, This Year and Custom;
       verify inclusive same-day boundaries and explicit From > To/empty states.
-- [ ] Confirm Missing Date receipts remain visible/excluded, then actually open a
-      versioned metadata editor and save a date; current navigation-only behavior fails.
+- [x] Confirm Missing Date receipts remain visible/excluded, then open the versioned
+      metadata editor from the register and save a date; stale expected versions are
+      rejected by the shared command/API contract.
 - [x] Preview/export all matching pages in chronological order; focused tests verify
       PNG and multi-page PDF composition plus exact currency-separated totals.
 - [x] Use one A4 PDF without application chrome for Preview, download and Print;

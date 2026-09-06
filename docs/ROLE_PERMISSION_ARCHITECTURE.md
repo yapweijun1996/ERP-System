@@ -566,7 +566,12 @@ creation and Preview/download/Print reuse the resolved own/company read capabili
 creator-only snapshot scope; TASK-196 additionally requires current visibility to
 dominate a frozen company snapshot and audits the preview/export purpose. `expenses_tax`
 entitlement is Master enabled AND Company allocated before this tenant authorization
-decision.
+decision. The Company Receipt list response also exposes effective create/edit/void
+capabilities for fail-closed UI gating; direct commands remain the authoritative denial
+boundary. Confirmation evidence is read through the employee-independent
+`/api/company-receipts/evidence` endpoint and remains uploader-owned, current, clean and
+unbound. Binary capture/upload remains the separate My Receipts Employee Self Service
+boundary.
 
 ## 16. Platform Module Entitlement authority (EPIC-064)
 

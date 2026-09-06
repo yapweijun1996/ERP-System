@@ -407,9 +407,11 @@ governed managed-document/version and keeps `uploaderUserId` as audit and curren
 visibility attribution. Creation requires the signed-in uploader's current,
 clean, non-void `purpose='receipt'` document version. The direct command does not require
 an Employee record, `expense_claim`, reimbursement, approval, bank data, GL posting or
-tax decision. The current browser picker uses `/api/my/receipts`, which requires Employee
-Self Service and a linked Employee; TASK-197 must remove or explicitly retain that
-narrower UI boundary.
+tax decision. The browser picker now uses the employee-independent
+`/api/company-receipts/evidence` contract, which returns only current, clean,
+uploader-owned and unbound evidence. Governed binary upload/capture remains in
+`/api/my/receipts`, so Employee Self Service is an explicit upstream capture boundary,
+not a Company Receipt confirmation dependency.
 Migration 0091 stores the document SHA-256 on the aggregate, backfills existing rows and
 uniquely prevents another receipt with the same exact bytes inside the Company.
 
@@ -417,17 +419,18 @@ uniquely prevents another receipt with the same exact bytes inside the Company.
 
 The schema vocabulary reserves Draft, Processing, Ready, Needs Attention and Voided, but
 current commands produce only Ready and retained Voided. Creation stores Ready even when
-transaction date is absent; current Missing Date UI is a navigation placeholder, not a
-correction workflow. Upload/scan/OCR state remains in the
+transaction date is absent; Missing Date now opens the same versioned metadata editor
+used for normal correction. Upload/scan/OCR state remains in the
 document services; confirmed merchant, receipt/invoice number, transaction date,
 amount, currency, category, business purpose and notes belong to the Company Receipt.
 The confirmation context reads candidate value, normalized value, source, model,
 confidence, critical/review state and duplicate warnings without changing extraction
 facts. Clean evidence permits manual entry when extraction is failed, unavailable or
 not started; quarantined/void/stale evidence remains blocked.
-The Company Receipts UI is an orchestration-only client: it can select only uploader-owned
-document versions returned by `my.receipts()`, then delegates the clean/current/duplicate
-decision to `readCompanyReceiptConfirmationWithin` and creation to
+The Company Receipts UI is an orchestration-only client: it can select only eligible
+uploader-owned document versions returned by `companyReceiptEvidence`, with bounded
+search/cursor paging, then delegates the clean/current/duplicate decision to
+`readCompanyReceiptConfirmationWithin` and creation to
 `createCompanyReceiptWithin`. It cannot elevate a My Receipts document into a receipt
 while the security scan remains unavailable.
 Metadata correction requires `expectedVersion`; evidence/uploader identity is immutable.

@@ -2430,8 +2430,8 @@ and migrations through 0098 before resetting production to an empty first-run st
       transaction-date predicates before cursor pagination. Five-language presets,
       invalid-range rejection and same-day ranges passed focused/browser proof; result
       retrieval remains independent of the visible page and Missing Date records stay
-      visible but outside active date ranges. The current CTA is only a navigation
-      placeholder; real metadata/date correction is TASK-197.
+      visible but outside active date ranges. TASK-197 now opens the versioned
+      metadata-correction editor from the Missing Date CTA.
 - [x] **TASK-181 — Build Receipt Pack preview, PDF and Print.** Migration 0093 stores a
       creator-owned immutable selection snapshot. API and Demo/PGlite retrieve every
       ready, dated match independently of UI pagination, freeze chronological source
@@ -2620,9 +2620,10 @@ Current truth:
   company snapshots require current company read, own snapshots allow own/company read,
   and preview versus original-evidence export is audited with a private no-store artifact
   (TASK-196 done).
-- Company Receipts has real create/update/void commands, but read-only UI gating,
-  detail/edit/void, Missing Date correction and Employee-independent picker UX are not
-  complete.
+- Company Receipts now has capability-aware create/update/void UI, versioned detail and
+  Missing Date correction, plus an employee-independent eligible-evidence picker. The
+  governed My Receipts upload/capture path remains the explicit upstream Employee Self
+  Service boundary; Pack lifecycle/localization and production UAT remain open.
 - Support Grant is not a tenant-data proxy, while exact-user Superadmin simulation does
   not require a grant/reason/ticket. Platform MFA/step-up is absent.
 - Public health/setup probes returned 502 and the exact deployed HEAD revision is not
@@ -2637,7 +2638,7 @@ Current truth:
 | TASK-194 | Done | Audit HEAD, correct source-of-truth docs and register hardening work |
 | TASK-195 | Done | Least-privilege runtime roles and RLS-compatible Platform provisioning |
 | TASK-196 | Done | Receipt Pack visibility downgrade repair and export governance |
-| TASK-197 | Todo | Permission-aware Company Receipts capture/correction/edit/void UX |
+| TASK-197 | Done | Permission-aware Company Receipts detail/correction/void UX and employee-independent eligible-evidence picker; upload boundary explicitly remains My Receipts |
 | TASK-198 | Done | Narrow dual-mode exception, reason/ticket Admin access and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |
 | TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |

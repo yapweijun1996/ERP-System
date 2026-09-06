@@ -261,6 +261,13 @@ route/command surface reaches tenant permission evaluation.
 Exact hash duplicates may warn/prevent accidental storage, but
 merchant/date/amount similarity must never auto-delete or merge evidence.
 
+TASK-197 adds fail-closed UI capability metadata for create/edit/void, but the API/domain
+commands remain authoritative. `GET /api/company-receipts/evidence` is create-gated and
+returns only the signed-in uploader's current, clean, non-voided and unbound receipt
+versions with bounded search/cursor paging; it does not require a linked Employee. The
+binary upload/capture path remains the separately governed My Receipts Employee Self
+Service boundary.
+
 ## Platform-owned Module Access Control security boundary
 
 TASK-186 closes the former tenant mutation gap. Company Owner and Company Admin no

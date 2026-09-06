@@ -17,7 +17,7 @@ deployment is still a separate release gate.
 
 The current worktree adds migration 0099: the Drizzle journal contains **100 migration
 entries**, generated canonical SQL contains **252 tables**, and the task registry contains
-**199 Done / 1 In progress / 9 Todo / 4 Blocked / 213 Total**. TASK-212 is done: the
+**200 Done / 1 In progress / 8 Todo / 4 Blocked / 213 Total**. TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
 recoverable view state; local desktop/mobile live-i18n E2E and the full i18n audit pass.
 TASK-213 is done: `sales_enquiry_line` is included in the production FORCE-RLS overlay,
@@ -498,8 +498,10 @@ are not more module screens:
 - TASK-196: **done 2026-09-06** — Pack reads/renders now require current visibility to
   dominate the frozen snapshot; company Packs deny `read_own` downgrade, own Packs retain
   own/company scope, and Preview versus original-evidence export purpose is audited;
-- TASK-197: finish capability-aware Company Receipt detail/correction/void and remove or
-  explicitly accept the normal picker's Employee dependency;
+- TASK-197: **done 2026-09-06** — Company Receipt actions are capability-gated, detail and
+  versioned metadata correction/void are available, Missing Date opens the editor, and
+  evidence selection is bounded, employee-independent and eligible-only. My Receipts
+  remains the explicit upstream upload/capture boundary;
 - TASK-198: done — approved the narrow dual-mode exception and explicit no-MFA/no-step-up risk;
 - TASK-199/203: restore public availability and CI execution before any current release
   is described as healthy;
@@ -1922,8 +1924,9 @@ Current reusable implementation is substantial but narrower:
 The TASK-177 aggregate is Company-owned and stores confirmed metadata plus an immutable
 reference to the uploader's clean, current governed document version. Its direct
 domain/API command requires no Employee, Expense Claim, reimbursement, GL posting or
-tax decision; the current browser evidence picker still uses Employee Self Service and
-a linked Employee. Tenant scope and
+tax decision; the browser evidence picker now uses the employee-independent
+`/api/company-receipts/evidence` endpoint and does not require a linked Employee.
+Governed binary upload/capture remains in My Receipts Employee Self Service. Tenant scope and
 uploader attribution come only from Session, reads are bounded by an `afterId` cursor,
 writes use optimistic `version`, and void is a retained audited tombstone. TASK-179
 changes list/detail reads to explicit `expenses.company_receipts.read_own` and
@@ -1938,13 +1941,14 @@ endpoint returns immutable candidate source/model/confidence/review provenance a
 suggestions; user-confirmed facts remain separate. A clean original is manually
 confirmable when OCR fails or is unavailable, and one exact SHA-256 cannot form two
 Company Receipts in the same Company. Similar merchant/date/amount never auto-merge.
-The current Company Receipts screen has a Confirm receipt action, but the button checks
-adapter functions rather than `.create` capability; the API is the permission gate. It
-lists only the first bounded `my.receipts()` result, reads its immutable confirmation context and
-submits the metadata through `createCompanyReceipt`. The API adapter uses the
-`/confirmations/:documentVersionId` and create endpoints; the PGlite adapter delegates
-to the same shared domain commands. New static Demo uploads remain `scanner unavailable`
-and cannot be confirmed until an external scan result marks the exact version clean.
+The current Company Receipts screen exposes Confirm only when the list response grants
+`.create`, and exposes detail correction/void only when `.edit`/`.void` are granted. It
+lists eligible current clean unbound evidence through `companyReceiptEvidence`, reads its
+immutable confirmation context and submits the metadata through `createCompanyReceipt`.
+The API adapter uses the `/evidence`, `/confirmations/:documentVersionId` and create
+endpoints; the PGlite adapter delegates to the same shared domain commands. New static
+Demo uploads remain `scanner unavailable` and cannot be confirmed until an external scan
+result marks the exact version clean.
 
 TASK-179 adds migration 0092, explicit Receipt Manager-compatible grants, stored own/company
 grants, permission-selected domain/API visibility, bounded Demo/API adapters and a
@@ -1952,8 +1956,8 @@ five-language responsive Company Receipts route. Desktop exposes date, merchant,
 receipt number, category, amount, currency, uploader and status; mobile renders the same
 facts as labelled cards, and cursor pagination never fetches unbounded Company history.
 TASK-180 delivers query-side search, inclusive date ranges and validation. Missing Date
-is visible and excluded from dated Packs, but its current badge only navigates to My
-Receipts; correction is TASK-197. TASK-181 adds migration 0093 and immutable,
+is visible and excluded from dated Packs; TASK-197 now opens the versioned correction
+editor from that badge. TASK-181 adds migration 0093 and immutable,
 creator-owned Pack snapshots containing every permission-visible Ready/dated match up
 to 5,000 rows, not only the register page. Rows and document identities are frozen in
 chronological order; exact totals remain separate by currency. TASK-196 now rechecks
@@ -1996,14 +2000,15 @@ deprecation; its harness fails if that warning returns before pg@9 turns it into
 EPIC-063 and TASK-177–183 register the implementation work. Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois are preserved
 future/optional phases rather than v1 defects. Receipt Pack authorization, complete
-correction/edit/void UX, picker scope, Pack lifecycle/localization and production UAT are
+Company Receipt correction/edit/void UX and the employee-independent eligible-evidence
+picker are now implemented; Pack lifecycle/localization and production UAT remain
 explicit EPIC-066 gaps, not hidden by the v1 Done status.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 199 tasks
+- Done: 200 tasks
 - In progress: TASK-206 (1)
-- Todo: 10
+- Todo: 8
 - Blocked: TASK-017, TASK-193, TASK-203 and TASK-209 (4)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 129 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -2032,8 +2037,8 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
   is configured. EPIC-065 core is complete. TASK-189–192 are verified for independent Platform bootstrap,
   Master/Company provisioning, Master Admin RBAC, migration 0098, deployment,
   restore-tested backups and the authorized exact-volume reset. TASK-193 is blocked on
-  missing production SMTP. EPIC-066 is in progress: TASK-194, TASK-195, TASK-196 and TASK-198 are done;
-  TASK-197, TASK-199–202 and TASK-204–205 are Todo; TASK-203 is blocked by CI
+  missing production SMTP. EPIC-066 is in progress: TASK-194–198 are done;
+  TASK-199–202 and TASK-204–205 are Todo; TASK-203 is blocked by CI
   billing. EPIC-067 source is present: TASK-206 is in progress, TASK-207/208 are Todo and
   TASK-209 is blocked pending TASK-203 and TASK-206–208.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
@@ -2050,9 +2055,9 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 ## Next implementation boundary
 
 The next boundary is TASK-206's hidden bridge actor completion. TASK-195's
-RLS-compatible provisioning and TASK-196 Receipt Pack authorization are now closed and
-gate no further task. TASK-197 Company Receipts workflow and TASK-199 public availability
-remain P0; TASK-198's dual-mode decision is done. TASK-204 tax posting correctness is also P0.
+RLS-compatible provisioning, TASK-196 Receipt Pack authorization and TASK-197 Company
+Receipts workflow are now closed and gate no further task. TASK-199 public availability
+and TASK-204 tax posting correctness remain P0; TASK-198's dual-mode decision is done.
 TASK-200–202 and TASK-205 own current release/operational/provider depth. TASK-017 and
 TASK-193 remain independently truthful blockers, while TASK-203 is
 blocked by GitHub billing. The hosted application was healthy and browser-verified on

@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **199**
+- Done: **200**
 - In progress: **1**
-- Todo: **10**
+- Todo: **8**
 - Blocked: **4**
 - Total: **213**
 
@@ -65,7 +65,7 @@ the remaining Platform Admin chain is TASK-206–209.
 | TASK-177 | Done | Migration 0090, Company Receipt aggregate/domain/API, optimistic concurrency, audit and PGlite/PostgreSQL RLS proof |
 | TASK-178 | Done | Migration 0091 exact-hash uniqueness and immutable OCR-provenance confirmation/manual-fallback context |
 | TASK-179 | Done | Migration 0092, explicit own/company read grants, bounded Demo/API register and responsive five-language desktop/mobile UI |
-| TASK-180 | Done | Query-side search and inclusive range behavior; source audit records Missing Date correction as pending TASK-197 |
+| TASK-180 | Done | Query-side search and inclusive range behavior; TASK-197 now provides the versioned Missing Date correction editor |
 | TASK-181 | Done | Migration 0093 immutable Receipt Pack snapshot, complete-set mixed-currency PDF preview/download/Print and audited Demo/API rendering |
 | TASK-182 | Done | Migration 0097 canonical Company Receipt mutation grants, platform entitlement, Demo/API/UI fail-closed guards, accessMatrix and five-language parity |
 | TASK-183 | Done | Dated Demo/API/PostgreSQL fixture proof; later audit corrects UI/Pack evidence gaps and TASK-192 is the later deployment checkpoint |
@@ -111,7 +111,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-194 | Done | Audit HEAD, correct all source-of-truth layers and register verified hardening work |
 | TASK-195 | Done | Least-privilege runtime roles and RLS-compatible Platform provisioning proof |
 | TASK-196 | Done | Receipt Pack visibility downgrade repair and export governance |
-| TASK-197 | Todo | Permission-aware Company Receipts correction/edit/void and capture UX |
+| TASK-197 | Done | Capability-aware Company Receipts detail/correction/void and employee-independent eligible-evidence picker; governed My Receipts upload remains the explicit upstream capture boundary |
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |
@@ -131,7 +131,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-206–208 evidence |
 
-The registry therefore has **199 Done / 1 In progress / 9 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **200 Done / 1 In progress / 8 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-203/TASK-206–208). Dependencies and
 epic references are valid.
@@ -176,7 +176,8 @@ dated TASK-183 evidence, not a HEAD rerun. TASK-192 later deployed migrations th
 0098 and reset the target to first-run state; no authenticated production receipt UAT is
 claimed. TASK-196 is now done: Pack reads/renders revalidate current visibility against
 the frozen snapshot, and Preview versus original-evidence export purpose is audited.
-TASK-197/202 own the remaining UX and lifecycle gaps.
+TASK-202 owns the remaining Pack lifecycle and localization gaps; TASK-197 is done with
+the upload/capture boundary explicitly retained in My Receipts.
 
 ## Latest implementation milestones
 

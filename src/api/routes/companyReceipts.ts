@@ -5,6 +5,7 @@ import { PERMISSIONS, hasPermission } from '../../auth/permissions';
 import {
   CompanyReceiptError,
   createCompanyReceiptWithin,
+  listCompanyReceiptEvidenceWithin,
   listCompanyReceiptsWithin,
   readCompanyReceiptConfirmationWithin,
   readCompanyReceiptWithin,
@@ -149,6 +150,15 @@ export function createCompanyReceiptsRouter(db: DB): Router {
     }
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
+      const canCreate = await hasPermission(
+        db, session, PERMISSIONS.expensesCompanyReceiptsCreate,
+      );
+      const canEdit = await hasPermission(
+        db, session, PERMISSIONS.expensesCompanyReceiptsEdit,
+      );
+      const canVoid = await hasPermission(
+        db, session, PERMISSIONS.expensesCompanyReceiptsVoid,
+      );
       const rows = await withTenantTransaction(db, scope, (tx) =>
         listCompanyReceiptsWithin(tx, scope, session.userId, {
           limit, afterId, visibility, search, dateFrom, dateTo,
@@ -159,9 +169,11 @@ export function createCompanyReceiptsRouter(db: DB): Router {
         data,
         meta: {
           scope: visibility,
+          actorUserId: session.userId,
           limit,
           nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
           filters: { search, dateFrom, dateTo },
+          actions: { create: canCreate, edit: canEdit, void: canVoid },
         },
       });
     } catch (error) {
@@ -199,6 +211,49 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           scope: 'uploader',
           ocrIsSuggestionOnly: true,
           originalPreserved: true,
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/evidence', async (req, res) => {
+    const session = await requireReceiptMutationAccess(
+      req, res, PERMISSIONS.expensesCompanyReceiptsCreate,
+    );
+    if (!session) return;
+    const limit = req.query.limit == null ? 50 : Number(req.query.limit);
+    const afterId = req.query.afterId == null ? null : positiveId(req.query.afterId);
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100
+      || (req.query.afterId != null && afterId == null)
+      || search.length > 200) {
+      apiError(
+        res,
+        400,
+        'company_receipt_evidence_query_invalid',
+        'Use limit 1-100, a positive afterId and search up to 200 characters.',
+      );
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const rows = await withTenantTransaction(db, scope, (tx) =>
+        listCompanyReceiptEvidenceWithin(tx, scope, session.userId, {
+          limit, afterId, search,
+        }));
+      const hasMore = rows.length > limit;
+      const data = rows.slice(0, limit);
+      res.json({
+        data,
+        meta: {
+          scope: 'uploader',
+          employeeIndependent: true,
+          eligibleOnly: true,
+          limit,
+          nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
+          filters: { search },
         },
       });
     } catch (error) {

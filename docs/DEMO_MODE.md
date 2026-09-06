@@ -190,13 +190,14 @@ must run through `npm run build:demo` plus preview so IndexedDB/WASM persistence
 static fallback rows or a dev-server fallback cannot satisfy capture, refresh, range,
 preview or export acceptance.
 
-Current gaps are deliberately outside TASK-183's Done claim: the confirmation button is
-not capability-hidden, the picker is bounded to the first 100 My Receipts rows and still
-requires Employee Self Service, and there is no Company Receipt detail/edit/void or real
-Missing Date correction UI. TASK-196 now re-requires current visibility for Pack
-metadata/rendering, denies a company Pack after downgrade to `read_own`, and audits the
-preview/export purpose. TASK-197/202 own the remaining workflow, lifecycle,
-Decimal/timezone and Unicode-PDF repairs.
+TASK-197 is now complete: Demo returns canonical create/edit/void capabilities, the
+register hides unauthorized actions, detail/edit/void and Missing Date correction use
+the shared versioned commands, and `companyReceiptEvidence` lists only current clean
+uploader-owned unbound evidence with bounded search/cursor paging. Binary upload/capture
+still belongs to the governed My Receipts Employee Self Service boundary. TASK-196 now
+re-requires current visibility for Pack metadata/rendering, denies a company Pack after
+downgrade to `read_own`, and audits the preview/export purpose. TASK-202 owns the
+remaining Pack lifecycle, Decimal/timezone and Unicode-PDF repairs.
 
 ## Demo platform entitlement foundation
 

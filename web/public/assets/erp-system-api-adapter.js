@@ -1007,6 +1007,15 @@
       var suffix=params.toString();
       return apiRequest('company-receipts'+(suffix?'?'+suffix:''));
     },
+    companyReceiptEvidence:function(query){
+      query=query||{};
+      var params=new URLSearchParams();
+      if(query.limit!=null) params.set('limit',String(query.limit));
+      if(query.afterId!=null) params.set('afterId',String(query.afterId));
+      if(query.search) params.set('search',String(query.search));
+      var suffix=params.toString();
+      return apiRequest('company-receipts/evidence'+(suffix?'?'+suffix:''));
+    },
     companyReceiptConfirmation:function(documentVersionId){
       return apiRequest('company-receipts/confirmations/'+encodeURIComponent(documentVersionId));
     },

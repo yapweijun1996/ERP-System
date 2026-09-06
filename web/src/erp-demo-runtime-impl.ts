@@ -92,6 +92,7 @@ import {
 } from '../../src/modules/expenses/companyReceiptPackPdf';
 import {
   createCompanyReceiptWithin,
+  listCompanyReceiptEvidenceWithin,
   readCompanyReceiptConfirmationWithin,
   updateCompanyReceiptWithin,
   voidCompanyReceiptWithin,
@@ -553,6 +554,14 @@ export const erpDemoRuntime = Object.freeze({
       db: DemoOrm, scope: Scope, actorUserId: number, input: Parameters<typeof createCompanyReceiptWithin>[3],
     ) {
       return createCompanyReceiptWithin(asDomainDb(db), scope, actorUserId, input);
+    },
+    listCompanyReceiptEvidenceWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      options: Parameters<typeof listCompanyReceiptEvidenceWithin>[3] = {},
+    ) {
+      return listCompanyReceiptEvidenceWithin(asDomainDb(db), scope, actorUserId, options);
     },
     readCompanyReceiptConfirmationWithin(
       db: DemoOrm, scope: Scope, actorUserId: number, documentVersionId: number,

@@ -16,6 +16,7 @@ import { uploadReceiptDocument } from '../documents/upload';
 import { processDocumentJobBatch } from '../documents/processing';
 import {
   createCompanyReceiptWithin,
+  listCompanyReceiptEvidenceWithin,
   listCompanyReceiptsWithin,
   readCompanyReceiptConfirmationWithin,
   readCompanyReceiptWithin,
@@ -91,6 +92,17 @@ describe('Company Receipt aggregate', () => {
     await db.update(employee).set({ userId: null }).where(eq(employee.userId, viewerId));
     const beforeClaims = await db.select({ id: expenseClaim.id }).from(expenseClaim);
     const uploaded = await evidence();
+    const eligible = await withTenantTransaction(db, sg, (tx) =>
+      listCompanyReceiptEvidenceWithin(tx, sg, viewerId, { limit: 10 }));
+    expect(eligible).toEqual([
+      expect.objectContaining({
+        documentId: uploaded.document.id,
+        documentVersionId: uploaded.version.id,
+        originalFileName: 'company-receipt.jpg',
+        scanStatus: 'clean',
+        recordStatus: 'draft',
+      }),
+    ]);
 
     const created = await withTenantTransaction(db, sg, (tx) =>
       createCompanyReceiptWithin(
@@ -99,6 +111,8 @@ describe('Company Receipt aggregate', () => {
         viewerId,
         input(uploaded.document.id, uploaded.version.id),
       ));
+    expect(await withTenantTransaction(db, sg, (tx) =>
+      listCompanyReceiptEvidenceWithin(tx, sg, viewerId, { limit: 10 }))).toEqual([]);
     expect(created).toMatchObject({
       documentId: uploaded.document.id,
       documentVersionId: uploaded.version.id,

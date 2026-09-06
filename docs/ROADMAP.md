@@ -1102,8 +1102,9 @@ workflow coverage and physical-device verification remain separate follow-up gat
    permission registry now enforce bounded own/company list/detail reads; Demo/API
    adapters render the eight-field desktop register and labelled mobile cards with
    cursor pagination. TASK-180 adds query-side search, inclusive `transaction_date`
-   filters and a visible Missing Date state. The current badge is only a navigation
-   placeholder; TASK-197 owns the actual metadata-correction flow.
+   filters and a visible Missing Date state. TASK-197 now opens the versioned
+   metadata-correction editor from the Missing Date state and uses the eligible evidence
+   picker shared by Demo/API.
 3. **Receipt Pack** (TASK-181 complete): migration 0093 freezes the complete matching
    ready-and-dated set, chronological document identities and separate currency totals.
    API and Demo/PGlite revalidate clean evidence and serve the same A4 register-plus-
@@ -1236,10 +1237,11 @@ more module breadth. The source-backed review is
    migration/bootstrap, API and worker roles; Platform provisioning establishes the
    generated Company context before its first FORCE-RLS write, and a PostgreSQL 16
    current-path integration proves bootstrap → Master → Company plus cross-tenant denial.
-3. **Receipt security and workflow** (TASK-196 done; TASK-197 todo): Receipt Pack
-   company/own visibility, active-tenant denial, original-evidence export purpose/audit
-   and no-store behavior are now enforced. TASK-197 remains for capability-gated UI
-   actions, real detail/edit/void/Missing Date correction and bounded evidence selection.
+3. **Receipt security and workflow** (TASK-196/197 done): Receipt Pack company/own
+   visibility, active-tenant denial, original-evidence export purpose/audit and no-store
+   behavior are enforced. TASK-197 also closes capability-gated UI actions, real
+   detail/edit/void/Missing Date correction and bounded eligible evidence selection;
+   governed binary capture remains in My Receipts by explicit v1 boundary.
 4. **Privileged assurance** (TASK-198 done): the approved narrow exception separates
    reason/ticket-bound Platform Admin tenant access from fixed-scope exact Employee
    simulation. The owner explicitly accepted password-only access with no MFA or recent

@@ -1,5 +1,5 @@
 import Decimal from 'decimal.js';
-import { and, asc, desc, eq, gte, ilike, lt, lte, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, lt, lte, notInArray, or } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
@@ -49,6 +49,12 @@ export interface ListCompanyReceiptsOptions {
   search?: string | null;
   dateFrom?: string | null;
   dateTo?: string | null;
+}
+
+export interface ListCompanyReceiptEvidenceOptions {
+  limit?: number;
+  afterId?: number | null;
+  search?: string | null;
 }
 
 export type CompanyReceiptReadVisibility = 'own' | 'company';
@@ -419,6 +425,93 @@ export async function listCompanyReceiptsWithin(
     .where(and(...predicates))
     .orderBy(desc(companyReceipt.id))
     .limit(limit + 1);
+}
+
+/** Return only evidence that can be confirmed into the Company Receipt
+ * aggregate. The uploader boundary is intentional: read permissions may
+ * expose the company register, but evidence selection must not expose another
+ * user's source document or an already-bound/obsolete document version. */
+export async function listCompanyReceiptEvidenceWithin(
+  exec: DB,
+  scope: Scope,
+  actorUserId: number,
+  options: ListCompanyReceiptEvidenceOptions = {},
+) {
+  const limit = Math.min(100, Math.max(1, Math.floor(options.limit ?? 50)));
+  const bound = await exec.select({ documentVersionId: companyReceipt.documentVersionId })
+    .from(companyReceipt)
+    .where(and(
+      eq(companyReceipt.masterFn, scope.masterFn),
+      eq(companyReceipt.companyFn, scope.companyFn),
+    ));
+  const predicates = [
+    eq(managedDocument.masterFn, scope.masterFn),
+    eq(managedDocument.companyFn, scope.companyFn),
+    eq(managedDocument.ownerUserId, actorUserId),
+    eq(managedDocument.purpose, 'receipt'),
+    notInArray(managedDocument.recordStatus, ['voided']),
+    eq(documentVersion.masterFn, scope.masterFn),
+    eq(documentVersion.companyFn, scope.companyFn),
+    eq(documentVersion.documentId, managedDocument.id),
+    eq(documentVersion.versionNo, managedDocument.currentVersionNo),
+    eq(documentScanJob.masterFn, scope.masterFn),
+    eq(documentScanJob.companyFn, scope.companyFn),
+    eq(documentScanJob.versionId, documentVersion.id),
+    eq(documentScanJob.status, 'clean'),
+  ];
+  if (bound.length) {
+    predicates.push(notInArray(
+      documentVersion.id,
+      bound.map((row) => row.documentVersionId),
+    ));
+  }
+  if (options.afterId != null) predicates.push(lt(managedDocument.id, options.afterId));
+  const search = options.search?.trim();
+  if (search) predicates.push(ilike(managedDocument.originalFileName, `%${search}%`));
+
+  const rows = await exec.select({
+    id: managedDocument.id,
+    documentId: managedDocument.id,
+    documentVersionId: documentVersion.id,
+    documentKey: managedDocument.documentKey,
+    originalFileName: managedDocument.originalFileName,
+    sha256: documentVersion.sha256,
+    mimeType: documentVersion.mimeType,
+    sizeBytes: documentVersion.sizeBytes,
+    pageCount: documentVersion.pageCount,
+    recordStatus: managedDocument.recordStatus,
+    scanStatus: documentScanJob.status,
+    extractionStatus: documentExtraction.status,
+    inboxStatus: receiptInboxItem.status,
+    createdAt: managedDocument.createdAt,
+  }).from(managedDocument)
+    .innerJoin(documentVersion, and(
+      eq(documentVersion.masterFn, managedDocument.masterFn),
+      eq(documentVersion.companyFn, managedDocument.companyFn),
+      eq(documentVersion.documentId, managedDocument.id),
+      eq(documentVersion.versionNo, managedDocument.currentVersionNo),
+    ))
+    .innerJoin(documentScanJob, and(
+      eq(documentScanJob.masterFn, documentVersion.masterFn),
+      eq(documentScanJob.companyFn, documentVersion.companyFn),
+      eq(documentScanJob.versionId, documentVersion.id),
+      eq(documentScanJob.status, 'clean'),
+    ))
+    .leftJoin(documentExtraction, and(
+      eq(documentExtraction.masterFn, documentVersion.masterFn),
+      eq(documentExtraction.companyFn, documentVersion.companyFn),
+      eq(documentExtraction.versionId, documentVersion.id),
+      eq(documentExtraction.extractionVersion, 1),
+    ))
+    .leftJoin(receiptInboxItem, and(
+      eq(receiptInboxItem.masterFn, documentVersion.masterFn),
+      eq(receiptInboxItem.companyFn, documentVersion.companyFn),
+      eq(receiptInboxItem.versionId, documentVersion.id),
+    ))
+    .where(and(...predicates))
+    .orderBy(desc(managedDocument.id))
+    .limit(limit + 1);
+  return rows;
 }
 
 export async function readCompanyReceiptWithin(

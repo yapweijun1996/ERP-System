@@ -556,14 +556,15 @@ canonical create action; Demo runtime delegates these operations to the shared
 uploads quarantined without a malware scanner. TASK-183 passes the authenticated API-mode
 browser journey through both an isolated same-origin PGlite fixture and a newly created,
 empty disposable PostgreSQL 16 database. The fixtures prove separate adapter/database
-paths. The backend permission-gates create, but the current button is not capability-
-hidden; My Receipts limits the picker to the first 100 actor records and requires
-Employee Self Service. Update/void adapters exist without a corresponding detail/editor,
-and Missing Date currently navigates rather than correcting metadata. TASK-192 later
-deployed migrations through 0098 and reset production to first-run state; no authenticated
-production Company Receipt UAT is claimed. TASK-197/202 own the remaining workflow and
-artifact-governance gaps; TASK-196 closed the Receipt Pack visibility and export-purpose
-security gap.
+paths. TASK-197 now completes the workflow boundary: list responses expose canonical
+create/edit/void capabilities, unauthorized controls are hidden, detail/edit/void and
+Missing Date correction submit the shared versioned commands, and both adapters use the
+bounded employee-independent eligible-evidence picker. Governed binary upload/capture
+continues through My Receipts and its Employee Self Service boundary by explicit v1
+decision. TASK-192 later deployed migrations through 0098 and reset production to
+first-run state; no authenticated Company Receipt UAT is claimed. TASK-202 owns the
+remaining artifact-governance gaps; TASK-196 closed the Receipt Pack visibility and
+export-purpose security gap.
 
 ## 12. Platform Module Entitlement and tenant cutover
 

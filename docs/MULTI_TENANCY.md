@@ -238,7 +238,11 @@ the frozen document id/hash before bytes are composed. Preview versus original-e
 download/Print has an explicit purpose in the audit boundary and uses a private
 no-store artifact. A platform support principal receives no implicit Company Receipt
 access, and a disabled Expenses & Tax entitlement must deny the UI route and every direct
-API/background path. Own/company visibility is an authorization scope over the same
+API/background path. The employee-independent `/api/company-receipts/evidence` picker
+derives the uploader and active tenant from Session, requires canonical create permission,
+and excludes stale, voided and already-bound evidence before bounded pagination.
+Governed binary capture remains in My Receipts by explicit product boundary. Own/company
+visibility is an authorization scope over the same
 aggregate—not a client filter—and is implemented for list/detail/Pack reads. TASK-182
 completes the canonical/module-entitlement cutover: the commercial `expenses_tax` route
 and `/api/company-receipts` first require Master enabled AND Company allocated, then apply
