@@ -47,6 +47,10 @@ focused Pack tests, Demo build, Company Receipts browser E2E, typecheck, lint an
 documentation/link checks pass. This does not change the open TASK-202 production
 download/Print, release or authenticated UAT evidence boundary.
 
+2026-09-07 release-checklist addendum: the release checklist now records the verified local
+Receipt Pack and Platform workspace gates as complete while keeping production download/Print,
+current-HEAD CI, deployment, scanner/storage UAT and authenticated release evidence open.
+
 ## Recommended order
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the
