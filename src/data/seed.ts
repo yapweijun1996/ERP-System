@@ -253,12 +253,31 @@ export async function seedDemo(db: DB): Promise<void> {
     },
   ]);
 
-  // SG GST standard-rated: 8% from 2023, 9% from 2024 (effective-dated).
+  // Rates are seeded as explicit, effective-dated classification snapshots. The
+  // source facts are review metadata; production release still requires a tax
+  // owner to re-check the applicable current order.
   await db.insert(taxRule).values([
-    { masterFn: 'M1', companyFn: 'C-SG', taxRegime: 'GST', taxCode: 'SR', rate: '8.000', validFrom: '2023-01-01', validTo: '2024-01-01' },
-    { masterFn: 'M1', companyFn: 'C-SG', taxRegime: 'GST', taxCode: 'SR', rate: '9.000', validFrom: '2024-01-01', validTo: null },
-    // MY SST service tax 8%.
-    { masterFn: 'M1', companyFn: 'C-MY', taxRegime: 'SST', taxCode: 'SV', rate: '8.000', validFrom: '2025-07-01', validTo: null },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', taxRegime: 'GST', taxCode: 'SR', rate: '8.000',
+      taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000',
+      validFrom: '2023-01-01', validTo: '2024-01-01',
+      sourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates',
+      sourceEffectiveDate: '2023-01-01', approvedByUserId: adminUser.id, reviewedAt: new Date('2026-09-06T00:00:00.000Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-SG', taxRegime: 'GST', taxCode: 'SR', rate: '9.000',
+      taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000',
+      validFrom: '2024-01-01', validTo: null,
+      sourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates',
+      sourceEffectiveDate: '2024-01-01', approvedByUserId: adminUser.id, reviewedAt: new Date('2026-09-06T00:00:00.000Z'),
+    },
+    {
+      masterFn: 'M1', companyFn: 'C-MY', taxRegime: 'SST', taxCode: 'SV', rate: '8.000',
+      taxClassification: 'sst_service', inputTaxRecoverablePct: '0.0000',
+      validFrom: '2025-07-01', validTo: null,
+      sourceUrl: 'https://mysst.customs.gov.my/sst-orders/',
+      sourceEffectiveDate: '2025-07-01', approvedByUserId: adminUser.id, reviewedAt: new Date('2026-09-06T00:00:00.000Z'),
+    },
   ]);
 
   // Canonical control-plane state. Demo connectors never contain a real secret:

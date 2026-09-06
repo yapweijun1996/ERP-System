@@ -485,7 +485,36 @@ Current source: `src/data/schema/expenses.ts`, migration
 `src/auth/accessMatrix.ts` and both data adapters apply the same commercial
 `expenses_tax` Master-entitlement-plus-Company-allocation gate before route or API use.
 
-## 7. Cross-cutting safety rules
+## 7. GST/SST effective-date and posting contract (TASK-204)
+
+`tax_rule` is an effective-dated Company fact. `getEffectiveTaxRate()` in
+`src/data/repo.ts` selects the Company regime and applies the single
+`[valid_from, valid_to)` interval: `valid_from` is inclusive and `valid_to` is exclusive.
+`expense_policy_version` follows the same interval and rejects zero-length ranges.
+
+Each configured rule now carries an explicit `tax_classification`,
+`input_tax_recoverable_pct`, official `source_url`/`source_effective_date`, and optional
+approver/review timestamp. `unclassified` is a migration-safe legacy value only; the
+posting boundary rejects it rather than guessing from `tax_code`.
+
+`src/modules/localization/tax.ts` resolves the Decimal posting profile. GST standard,
+zero-rated and exempt facts are distinguished. Malaysia SST service/sales/exempt facts
+are non-recoverable by default; positive SST recovery requires explicit
+`sst_deductible` classification. `createPurchaseOrder.ts` snapshots the classification
+and recoverability into each PO line. Supplier invoice, purchase return and supplier debit
+note commands use those snapshots to create balanced GL legs and omit the recoverable Input
+Tax leg for ordinary SST. Expense policy snapshots retain the resolved classification, and
+Expense posting fails closed when an old or malformed snapshot attempts generic recoverable
+Input Tax behavior.
+
+Source implementation is covered by `src/modules/localization/tax.test.ts`, the purchasing
+tax/GL tests, `src/modules/expenses/policy.test.ts` and `postings.test.ts`. Migrations
+`0100` and `0101` plus the generated Demo schema keep PostgreSQL and PGlite aligned. A
+qualified tax owner must still review production configuration against current IRAS and
+Royal Malaysian Customs/MOF sources before release; local evidence is not filing
+compliance evidence.
+
+## 8. Cross-cutting safety rules
 
 - Scope all reads/writes by `masterFn` and `companyFn` from session/context.
 - Use `expectedVersion`, `expectedUpdatedAt` or idempotency keys exactly where the
@@ -499,7 +528,7 @@ Current source: `src/data/schema/expenses.ts`, migration
 - If a UI or KB summary disagrees with `src/` and its tests, verify and update the
   summary. Do not implement a new rule from a stale KB hit alone.
 
-## 8. Source and verification index
+## 9. Source and verification index
 
 | Slice | Schema/source | Core tests |
 | --- | --- | --- |
@@ -518,7 +547,7 @@ For a code change, also check `docs/STATUS.md`, `docs/SPEC.md`, the API route an
 the Demo/API adapter path affected by the change. For this documentation-only sync,
 the minimum local checks are `git diff --check` and Markdown/link inspection.
 
-## 9. Module Access Control — current logic and approved replacement
+## 10. Module Access Control — current logic and approved replacement
 
 Current source truth (verified 2026-08-12):
 
@@ -618,7 +647,7 @@ adversarial and browser/accessibility/i18n proof. TASK-209 is Blocked by TASK-20
 the remaining TASK-206–208 evidence. No migration 0099 production deployment is
 claimed.
 
-## 10. Platform Bootstrap & Tenant Provisioning — current source contract
+## 11. Platform Bootstrap & Tenant Provisioning — current source contract
 
 `GET /api/setup/status` is the staged setup source: it reports platform-admin, Master,
 Company and tenant-admin facts independently. Public bootstrap is open only when
@@ -684,7 +713,7 @@ Later HEAD source is not immutable deployment proof. TASK-194 public health/setu
 returned 502 and HEAD CI was blocked before job start by billing; TASK-199/203 own those
 current-state gaps.
 
-## 11. Production Trust & ERP Excellence logic boundary
+## 12. Production Trust & ERP Excellence logic boundary
 
 EPIC-066 does not add a new business aggregate. It applies cross-cutting invariants found
 by the source audit in [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md):

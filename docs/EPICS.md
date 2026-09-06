@@ -2629,9 +2629,10 @@ Current truth:
 - Public health/setup probes returned 502 and the exact deployed HEAD revision is not
   proven. Current CI is externally blocked by billing. Source inventory is 129 Canonical
   routes but only 128 API-mode metadata routes.
-- Tax validity intervals disagree at `valid_to`, and current supplier-invoice posting
-  can apply GST-style recoverable Input Tax to a Malaysia SST Company. Governed Vision
-  has no direct failing-provider proof or production gateway evidence.
+- TASK-204 source hardening now aligns `valid_to` to one exclusive interval and makes
+  supplier/Expense posting fail closed on unclassified or regime-incompatible tax facts;
+  production tax-owner configuration review remains open. Governed Vision still has no
+  direct failing-provider proof or production gateway evidence.
 
 | Task | Status | Scope |
 | --- | --- | --- |
@@ -2645,7 +2646,7 @@ Current truth:
 | TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
 | TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
 | TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
-| TASK-204 | Todo | Correct SG GST/MY SST validity, classification and posting semantics |
+| TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | Todo | Prove Vision gateway/provider failure and production-configuration boundaries |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 

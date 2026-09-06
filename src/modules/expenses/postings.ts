@@ -12,6 +12,7 @@ import type { Scope } from '../../data/repo';
 import {
   account,
   accountingPeriod,
+  company,
   expenseBankChargeOverride,
   expenseClaim,
   expenseClaimLine,
@@ -21,6 +22,7 @@ import {
   expensePostingLeg,
   glEntry,
 } from '../../data/schema';
+import { resolveTaxPostingProfile } from '../localization/tax';
 
 export class ExpensePostingError extends Error {
   constructor(
@@ -116,6 +118,32 @@ export async function postApprovedExpenseLineWithin(
       'The approved line does not match the current immutable claim version.',
       422,
     );
+  }
+
+  const [companyRow] = await tx.select({ taxRegime: company.taxRegime }).from(company).where(and(
+    eq(company.masterFn, scope.masterFn),
+    eq(company.companyFn, scope.companyFn),
+  )).limit(1);
+  if (!companyRow) {
+    throw new ExpensePostingError(
+      'expense_posting_company_missing',
+      'The Company tax regime is unavailable.',
+      404,
+    );
+  }
+  if (source.snapshot.taxTreatment === 'input_tax') {
+    const taxProfile = resolveTaxPostingProfile({
+      taxRegime: companyRow.taxRegime,
+      taxClassification: source.snapshot.taxClassification,
+      inputTaxRecoverablePct: source.snapshot.inputTaxRecoverablePct,
+    }, source.snapshot.originalTax);
+    if (!taxProfile || taxProfile.taxRegime !== 'GST' || taxProfile.taxClassification === 'gst_exempt') {
+      throw new ExpensePostingError(
+        'expense_posting_tax_classification_invalid',
+        'Recoverable input-tax posting requires a governed GST classification; Malaysia SST and exempt tax fail closed.',
+        422,
+      );
+    }
   }
 
   const [override] = await tx.select().from(expenseBankChargeOverride).where(and(

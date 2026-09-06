@@ -21,7 +21,8 @@ async function seedOpenPurchaseOrder(db: DB, qty = 20) {
   }).returning({ id: supplier.id });
   await db.insert(taxRule).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, taxRegime: 'GST', taxCode: 'SR',
-    rate: '9.000', validFrom: '2024-01-01', validTo: null,
+    rate: '9.000', taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000',
+    validFrom: '2024-01-01', validTo: null,
   });
   const po = await createPurchaseOrder(db, SCOPE, {
     docNo: 'PO-T1', supplierId: sup.id, orderDate: '2024-06-01', currency: 'SGD',

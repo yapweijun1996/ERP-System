@@ -4,7 +4,9 @@ One-page truth about what is **built**, what is **mock**, and what is **document
 not implemented**. Read this first before picking any task. Update this file whenever
 an epic-level milestone lands.
 
-The current codebase action backlog is [CODEBASE_REVIEW_2026-09-06.md](CODEBASE_REVIEW_2026-09-06.md).
+The current codebase action backlog is [CODEBASE_REVIEW_2026-09-06.md](CODEBASE_REVIEW_2026-09-06.md);
+the bullet-level breakdown for every pending task is
+[PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md).
 The prior [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) remains a dated historical
 baseline rather than current release evidence.
 
@@ -15,9 +17,9 @@ contains the synchronized review/status documents. The current worktree adds the
 TASK-195 runtime-role, migration-owner and Platform FORCE-RLS proof changes; production
 deployment is still a separate release gate.
 
-The current worktree adds migration 0099: the Drizzle journal contains **100 migration
+The current worktree adds migrations 0100/0101: the Drizzle journal contains **102 migration
 entries**, generated canonical SQL contains **252 tables**, and the task registry contains
-**200 Done / 1 In progress / 8 Todo / 4 Blocked / 213 Total**. TASK-212 is done: the
+**200 Done / 2 In Progress / 7 Todo / 4 Blocked / 213 Total**. TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
 recoverable view state; local desktop/mobile live-i18n E2E and the full i18n audit pass.
 TASK-213 is done: `sales_enquiry_line` is included in the production FORCE-RLS overlay,
@@ -38,8 +40,10 @@ E2E enters both Admin and Employee modes and verifies the locked ordinary Compan
 switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 129-screen
 desktop/mobile audit and 129-route × 5-language × 2-viewport audit pass. TASK-195 now
 adds a current-path PostgreSQL/FORCE-RLS proof; executable CI and production release
-remain TASK-203 and TASK-206–209 work. The final local full Vitest run passes 170 files /
-674 tests with two intentional file/test skips.
+remain TASK-203 and TASK-206–209 work. The final local full Vitest run passes 171 files /
+683 tests with two intentional file/test skips. TASK-204 source-level tax interval,
+classification and posting hardening is now in progress; targeted tax/purchasing/Expense
+tests pass, while production tax-owner review remains open.
 
 The TASK-194 correction aligns deployment, security, architecture, role-permission, Demo
 and UAT material to that boundary: current inventory is 129
@@ -149,7 +153,7 @@ That full Vitest run was green: 156 passed files plus 1 skipped file (635 passed
 skipped tests). A later 2026-08-12 checkpoint was green at 168 passed files plus 1
 skipped file (663 passed, 1 skipped tests). TASK-194 subsequently recorded a
 170-file / 666-test collection checkpoint without executing the full collection. The
-2026-09-06 current run passes 170 files / 674 tests with two skips. The authenticated `account/*`
+2026-09-06 current run passes 171 files / 683 tests with two skips. The authenticated `account/*`
 service prefix is explicitly
 non-module-gated while notification permissions remain enforced, and the 15-test
 targeted notification/matrix/module regression passes. HR Calendar fixtures now use
@@ -403,7 +407,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (252 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 100 ordered migrations through schema version 99; `drizzle/`, `src/data/schema/`; migration 0099 adds the Platform tenant actor/elevated-session foundation |
+| Canonical schema (252 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 102 ordered migrations through schema version 101; `drizzle/`, `src/data/schema/`; migration 0099 adds the Platform tenant actor/elevated-session foundation and migrations 0100/0101 add governed tax facts and Expense tax classification |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -461,12 +465,12 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Supplier contracts and vendor performance | ✅ Canonical Demo/API controls and derived read model | Migration 0035 adds effective-dated supplier price-list headers and quantity tiers. Shared commands validate tenant/date/product/value rules, prevent overlapping active product coverage and activate through idempotent audit. Vendor scorecards are rebuilt from canonical purchase facts and expose honest unavailable states where quoted lead or invoice evidence does not yet exist. |
 | Purchase Order approval gate | ✅ Canonical Demo/API data and writes | Migration 0034 adds one versioned `purchase_order_approval` per PO. New and RFQ-awarded POs start `pending_approval`; an authorised approve/reject command requires a note, snapshots the active deciding user and changes only PO/approval state. Pending/rejected orders cannot be received, approval itself writes no stock movement or GL entry, and the queue/detail routes use bounded five-language Demo/API data. Live proof approved `PO-APP-2026-0001`, recorded Admin plus its note, opened the order for receipt, and passed Chinese/375px with zero console issues. |
 | Purchasing receipt & supplier-invoice detail | ✅ Canonical Demo/API read workspaces | `goods-receipt` renders the selected real receipt, its PO lines and linked stock movements; `supplier-invoice` renders the selected invoice, PO/GRN match, outstanding amount and named GL legs with an explicit debit/credit balance proof. Both are immutable five-language workspaces with no sample action. CI smoke creates a fresh approved PO, receipt and AP invoice and asserts the rendered one-movement/three-leg trace. |
-| Supplier Debit Note & net AP settlement | ✅ Canonical Demo/API data and writes | Migration 0031 adds the versioned, invoice-linked `supplier_debit_note`; migration 0032 idempotently backfills Cash & Bank account `1000` for existing companies created before TASK-058. Drafts snapshot effective Decimal tax. Idempotent posting is capped by the shared invoice outstanding value, posts balanced Dr AP / Cr Purchase Variance / Cr Input Tax and never writes `stock_movement`. Purchase-return crediting and Payment Voucher use the same outstanding calculation, so the live S$130.80 invoice less S$13.08 credit and S$10.90 debit settled for exactly S$106.82 and left AP at zero. `supplier-debit-notes` is five-language Canonical in Demo/API with audited create/post/detail flows. |
+| Supplier Debit Note & net AP settlement | ✅ Canonical Demo/API data and writes | Migration 0031 adds the versioned, invoice-linked `supplier_debit_note`; migration 0032 idempotently backfills Cash & Bank account `1000` for existing companies created before TASK-058. Drafts snapshot effective Decimal tax. Idempotent posting is capped by the shared invoice outstanding value, posts balanced Dr AP / Cr Purchase Variance plus a governed recoverable-tax reversal only for GST, and never writes `stock_movement`. Purchase-return crediting and Payment Voucher use the same outstanding calculation, so the live S$130.80 invoice less S$13.08 credit and S$10.90 debit settled for exactly S$106.82 and left AP at zero. `supplier-debit-notes` is five-language Canonical in Demo/API with audited create/post/detail flows. |
 | Landed Cost allocation & moving-average revaluation | ✅ Canonical Demo/API data and writes | Migration 0033 adds versioned receipt-linked `landed_cost` headers, immutable allocation snapshots, `product.average_cost` and upgrade-safe account `2300`. Shared Decimal commands allocate by received value or quantity with deterministic whole-cent residuals. Allocation locks the draft/products/current balances, requires positive on-hand, revalues moving-average cost and posts balanced Dr Inventory / Cr Landed Cost Accrual without a `stock_movement`. Demo/API create and idempotent audited allocate actions, production RLS, five-language UI and inventory/GL trace links are live. Browser proof allocated S$14.00 against GR-1: Widget cost S$6.50→S$6.64, Dr/Cr S$14.00 and unchanged quantity. |
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — current route checkpoint | ✅ 129 desktop/mobile routes | The 2026-08-13 `a5f1a3b` release gate rendered all 129 Canonical / 0 Preview routes at desktop and mobile without console/page, document-layout, active-tab, action-bar or shared-shell failures. The dedicated workspace audit also passed. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Local full suite | Current local Vitest run passes 170 files / 674 tests with two intentional file/test skips. PostgreSQL runtime, CI execution and production deployment remain separate evidence boundaries. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Local full suite | Current local Vitest run passes 171 files / 683 tests with two intentional file/test skips. PostgreSQL runtime, CI execution and production deployment remain separate evidence boundaries. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -2038,7 +2042,8 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
   Master/Company provisioning, Master Admin RBAC, migration 0098, deployment,
   restore-tested backups and the authorized exact-volume reset. TASK-193 is blocked on
   missing production SMTP. EPIC-066 is in progress: TASK-194–198 are done;
-  TASK-199–202 and TASK-204–205 are Todo; TASK-203 is blocked by CI
+  TASK-204 is in progress with source-level tax hardening and an open tax-owner review;
+  TASK-199–202 and TASK-205 are Todo; TASK-203 is blocked by CI
   billing. EPIC-067 source is present: TASK-206 is in progress, TASK-207/208 are Todo and
   TASK-209 is blocked pending TASK-203 and TASK-206–208.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
@@ -2054,7 +2059,8 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 
 ## Next implementation boundary
 
-The next boundary is TASK-206's hidden bridge actor completion. TASK-195's
+The next boundary is TASK-204's tax-owner review and TASK-206's hidden bridge actor
+completion. TASK-195's
 RLS-compatible provisioning, TASK-196 Receipt Pack authorization and TASK-197 Company
 Receipts workflow are now closed and gate no further task. TASK-199 public availability
 and TASK-204 tax posting correctness remain P0; TASK-198's dual-mode decision is done.

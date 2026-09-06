@@ -12730,3 +12730,87 @@ SELECT "platform_role_id", 'platform.tenant_access.manage', now(), now()
 FROM "platform_role"
 WHERE "code" = 'platform_superadmin'
 ON CONFLICT DO NOTHING;
+
+-- 0100_parallel_onslaught
+ALTER TABLE "tax_rule" ADD COLUMN IF NOT EXISTS "tax_classification" text DEFAULT 'unclassified' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "tax_rule" ADD COLUMN IF NOT EXISTS "input_tax_recoverable_pct" numeric(7, 4) DEFAULT '0' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "tax_rule" ADD COLUMN IF NOT EXISTS "source_url" text;
+--> statement-breakpoint
+
+ALTER TABLE "tax_rule" ADD COLUMN IF NOT EXISTS "source_effective_date" date;
+--> statement-breakpoint
+
+ALTER TABLE "tax_rule" ADD COLUMN IF NOT EXISTS "approved_by_user_id" bigint;
+--> statement-breakpoint
+
+ALTER TABLE "tax_rule" ADD COLUMN IF NOT EXISTS "reviewed_at" timestamp with time zone;
+--> statement-breakpoint
+
+ALTER TABLE "purchase_order_line" ADD COLUMN IF NOT EXISTS "tax_classification" text DEFAULT 'unclassified' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "purchase_order_line" ADD COLUMN IF NOT EXISTS "input_tax_recoverable_pct" numeric(7, 4) DEFAULT '0' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "purchase_return_line" ADD COLUMN IF NOT EXISTS "tax_classification" text DEFAULT 'unclassified' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "purchase_return_line" ADD COLUMN IF NOT EXISTS "input_tax_recoverable_pct" numeric(7, 4) DEFAULT '0' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "supplier_debit_note" ADD COLUMN IF NOT EXISTS "tax_classification" text DEFAULT 'unclassified' NOT NULL;
+--> statement-breakpoint
+
+ALTER TABLE "supplier_debit_note" ADD COLUMN IF NOT EXISTS "input_tax_recoverable_pct" numeric(7, 4) DEFAULT '0' NOT NULL;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "tax_rule" ADD CONSTRAINT "ck_tax_rule_rate" CHECK ("tax_rule"."rate" >= 0);
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "tax_rule" ADD CONSTRAINT "ck_tax_rule_dates" CHECK ("tax_rule"."valid_to" is null or "tax_rule"."valid_to" > "tax_rule"."valid_from");
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "tax_rule" ADD CONSTRAINT "ck_tax_rule_classification" CHECK ("tax_rule"."tax_classification" in (
+    'unclassified', 'gst_standard', 'gst_zero_rated', 'gst_exempt',
+    'sst_sales', 'sst_service', 'sst_deductible', 'sst_exempt'
+  ));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "tax_rule" ADD CONSTRAINT "ck_tax_rule_recoverable_pct" CHECK ("tax_rule"."input_tax_recoverable_pct" between 0.0000 and 100.0000);
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+-- 0101_clear_swordsman
+ALTER TABLE "expense_line_policy_snapshot" DROP CONSTRAINT "ck_expense_line_policy_snapshot_tax";
+--> statement-breakpoint
+
+ALTER TABLE "expense_policy_version" DROP CONSTRAINT "ck_expense_policy_dates";
+--> statement-breakpoint
+
+ALTER TABLE "expense_line_policy_snapshot" ADD COLUMN IF NOT EXISTS "tax_classification" text DEFAULT 'unclassified' NOT NULL;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "expense_line_policy_snapshot" ADD CONSTRAINT "ck_expense_line_policy_snapshot_tax" CHECK ("expense_line_policy_snapshot"."tax_treatment" in ('input_tax','non_deductible','exempt')
+      and "expense_line_policy_snapshot"."tax_rate" >= 0
+      and "expense_line_policy_snapshot"."input_tax_recoverable_pct" between 0.0000 and 100.0000
+      and "expense_line_policy_snapshot"."tax_classification" in (
+        'unclassified', 'gst_standard', 'gst_zero_rated', 'gst_exempt',
+        'sst_sales', 'sst_service', 'sst_deductible', 'sst_exempt'
+      ));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "expense_policy_version" ADD CONSTRAINT "ck_expense_policy_dates" CHECK ("expense_policy_version"."valid_to" is null or "expense_policy_version"."valid_to" > "expense_policy_version"."valid_from");
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;

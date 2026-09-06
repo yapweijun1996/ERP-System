@@ -32,12 +32,15 @@ without silently falling back to sample data.
    client input. See [MULTI_TENANCY.md](MULTI_TENANCY.md).
 5. **GL must balance.** Sum(debit) = Sum(credit) per journal document, enforced by the
    posting code and asserted in `src/demo.ts`.
-6. **Tax lookup is effective-dated.** Current commands resolve the tenant tax code/rate
-   with `getEffectiveTaxRate(scope, taxCode, onDate)`, never a screen constant. Full SG
-   GST versus MY SST engine mechanics and statutory outputs remain target design. All
-   lookups must use a single `[valid_from, valid_to)` interval. Until TASK-204 closes the
-   current boundary mismatch and regime-aware posting, MY SST must not be described as
-   a compliant recoverable-input-tax engine. See [LOCALIZATION.md](LOCALIZATION.md).
+6. **Tax lookup and posting are governed and effective-dated.** Current commands resolve
+   the tenant tax code/rate with `getEffectiveTaxRate(scope, taxCode, onDate)`, never a
+   screen constant. Tax rules carry explicit regime/classification, recoverability and
+   source/review facts; every tax-policy and transaction lookup uses one
+   `[valid_from, valid_to)` interval. Purchase/Expense posting fails closed on
+   unclassified or regime-incompatible facts, and MY SST is non-recoverable by default
+   rather than a Singapore-style recoverable Input Tax engine. Full statutory engine
+   classes/outputs remain target design; production tax-owner review is still a release
+   gate. See [LOCALIZATION.md](LOCALIZATION.md).
 7. **Governed AI/Vision secrets.** No provider key is shipped in source/build or placed
    in a `VITE_*` variable. The setup-wizard AI preview discards its key. Background
    document Vision may persist a tenant connector only as an encrypted server envelope;
@@ -618,10 +621,11 @@ requirements, not optional polish:
 - **Business correctness:** browser money stays Decimal-safe; date presets use the
   Company calendar; exported Unicode/localized documents and retention/legal-hold rules
   are tested as domain requirements.
-- **Tax mechanics:** validity intervals are identical across repositories/policies, and
-  GL posting dispatches by Company regime plus governed classification. Malaysia SST
-  cannot reuse Singapore GST recoverable-input-tax behavior by default; official-source
-  configuration and tax-owner approval are release evidence (TASK-204).
+- **Tax mechanics:** source code now uses identical exclusive validity intervals across
+  repositories/policies and GL posting dispatches by Company regime plus governed
+  classification. Malaysia SST cannot reuse Singapore GST recoverable-input-tax behavior
+  by default; official-source configuration and tax-owner approval remain release evidence
+  (TASK-204).
 - **Governed Vision:** direct gateway/provider failure, retry and selected manual/local
   fallback semantics are tested; encrypted connector capability is never presented as
   proof of a configured third-party production account or region (TASK-205).

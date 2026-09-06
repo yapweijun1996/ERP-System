@@ -1229,9 +1229,9 @@ Goal: make the broad Canonical ERP safe, operable and evidentially current befor
 more module breadth. The source-backed review is
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
 
-1. **Truth sync** (TASK-194 done; EPIC-067 source newer): current inventory is 100
-   migrations/schema v99/252
-   tables, 129 Canonical routes with 128 API metadata routes, 1,545 i18n keys/72 packs,
+1. **Truth sync** (TASK-194 done; EPIC-067 source newer): current inventory is 102
+   migrations/schema v101/252
+   tables, 129 Canonical routes with 128 API metadata routes, 1,546 i18n keys/72 packs,
    315 permission codes and PWA v262. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the
@@ -1252,10 +1252,11 @@ more module breadth. The source-backed review is
 6. **Operational/artifact quality** (TASK-201/202): establish SLO/RPO/RTO, timed restore
    and scale/worker monitoring; then add Pack lifecycle, concurrency-safe idempotency,
    Unicode localization, Decimal-safe amounts and Company-calendar presets.
-7. **Tax and governed AI correctness** (TASK-204/205): unify exclusive `valid_to`,
-   dispatch SG GST/MY SST posting by governed classification, prohibit default
-   recoverable MY input tax, and prove Vision gateway/provider failure behavior without
-   overstating production configuration.
+7. **Tax and governed AI correctness** (TASK-204/205): TASK-204 source hardening now
+   unifies exclusive `valid_to`, dispatches SG GST/MY SST posting by governed
+   classification and prohibits default recoverable MY input tax. Its production
+   tax-owner configuration review remains a release gate; TASK-205 still owns Vision
+   gateway/provider failure behavior without overstating production configuration.
 
 Exit criteria: every P0 passes its PostgreSQL/API/browser/security proof; public health
 and revision evidence are current; CI actually executes; operational objectives are
@@ -1276,7 +1277,7 @@ production pass. TASK-017 and TASK-193 remain independent blockers.
    separate `Open as Platform Admin` and exact `Login as employee` actions, persistent
    banners, audited scope switching, unlock and return.
 4. **Release** (TASK-209 blocked): after TASK-195 and executable CI in TASK-203, apply
-   migration 0099, reapply RLS and release the application without reset or seed. The
+   migrations 0099–0101, reapply RLS and release the application without reset or seed. The
    production smoke is read-only and must not exercise sensitive business mutation.
 
 Exit criteria: no hidden actor is login-capable or tenant-manageable; Admin mode exposes

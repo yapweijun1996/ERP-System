@@ -9,19 +9,19 @@ not a second task registry.
 ## Current totals
 
 - Done: **200**
-- In progress: **1**
-- Todo: **8**
+- In progress: **2**
+- Todo: **7**
 - Blocked: **4**
 - Total: **213**
 
 ## Current release-quality note
 
-TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 100 migrations
-through 0099, schema v99/252 tables, 129 Canonical / 0 Preview routes, 128 routes declaring
+TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 102 migrations
+through 0101, schema v101/252 tables, 129 Canonical / 0 Preview routes, 128 routes declaring
 API mode, 1,546 English i18n keys/72 local packs, 315 permission codes and PWA v263. The sole
 Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
-Vitest run at 170 files / 674 tests with two intentional skips. Current source
+Vitest run at 171 files / 683 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
 3 focused files / 12 tests, Platform layout E2E with both tenant modes, Demo autofill
 E2E, the 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
@@ -37,6 +37,10 @@ and `npm run check:production-rls` guards every generated table with both tenant
 against accidental policy-list omission. This is source/static coverage evidence only;
 least-privilege runtime-role and Platform provisioning proof is complete in TASK-195;
 the remaining Platform Admin chain is TASK-206–209.
+
+See [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md) for the
+bullet-level action plan for every non-Done task, including dependencies, evidence and
+human/external blockers.
 
 ## CI and release maintenance
 
@@ -118,7 +122,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
 | TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
 | TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
-| TASK-204 | Todo | Correct SG GST/MY SST validity, classification and posting semantics |
+| TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | Todo | Prove Vision provider failures and production-configuration boundaries |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 
@@ -131,7 +135,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-206–208 evidence |
 
-The registry therefore has **200 Done / 1 In progress / 8 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **200 Done / 2 In progress / 7 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-203/TASK-206–208). Dependencies and
 epic references are valid.

@@ -701,6 +701,20 @@
       "when": 1786610300734,
       "tag": "0099_sleepy_nuke",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1788686859022,
+      "tag": "0100_parallel_onslaught",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1788687206783,
+      "tag": "0101_clear_swordsman",
+      "breakpoints": true
     }
   ]
 }

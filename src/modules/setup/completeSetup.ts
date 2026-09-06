@@ -38,7 +38,11 @@ interface CountryDefaults {
   taxRegime: string;
   taxCode: string;
   taxRate: string;
+  taxClassification: 'gst_standard' | 'sst_service';
+  inputTaxRecoverablePct: string;
   taxValidFrom: string;
+  taxSourceUrl: string;
+  taxSourceEffectiveDate: string;
 }
 
 const COUNTRY_DEFAULTS: Record<string, CountryDefaults> = {
@@ -49,7 +53,11 @@ const COUNTRY_DEFAULTS: Record<string, CountryDefaults> = {
     taxRegime: 'GST',
     taxCode: 'SR',
     taxRate: '9.000',
+    taxClassification: 'gst_standard',
+    inputTaxRecoverablePct: '100.0000',
     taxValidFrom: '2024-01-01',
+    taxSourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates',
+    taxSourceEffectiveDate: '2024-01-01',
   },
   MY: {
     currency: 'MYR',
@@ -58,7 +66,11 @@ const COUNTRY_DEFAULTS: Record<string, CountryDefaults> = {
     taxRegime: 'SST',
     taxCode: 'SV',
     taxRate: '8.000',
+    taxClassification: 'sst_service',
+    inputTaxRecoverablePct: '0.0000',
     taxValidFrom: '2025-07-01',
+    taxSourceUrl: 'https://mysst.customs.gov.my/sst-orders/',
+    taxSourceEffectiveDate: '2025-07-01',
   },
 };
 
@@ -239,7 +251,13 @@ export async function completeProductionSetup(
       taxRegime: defaults.taxRegime,
       taxCode: defaults.taxCode,
       rate: defaults.taxRate,
+      taxClassification: defaults.taxClassification,
+      inputTaxRecoverablePct: defaults.inputTaxRecoverablePct,
       validFrom: defaults.taxValidFrom,
+      sourceUrl: defaults.taxSourceUrl,
+      sourceEffectiveDate: defaults.taxSourceEffectiveDate,
+      approvedByUserId: admin.userId,
+      reviewedAt: new Date(),
     });
     await createDefaultControlPlane(tx, { masterFn, companyFn }, country as 'SG' | 'MY');
     await applyMasterCompanyAllocationDefaultsWithin(tx, masterFn, companyFn);

@@ -4,6 +4,7 @@ import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import {
   account,
+  company,
   glEntry,
   goodsReceipt,
   purchaseOrder,
@@ -15,6 +16,7 @@ import {
   supplierInvoice,
 } from '../../data/schema';
 import { issueStockWithin } from '../inventory/stock';
+import { resolveTaxPostingProfile } from '../localization/tax';
 import { supplierInvoiceOutstandingWithin } from './supplierPayable';
 
 export class PurchaseReturnError extends Error {
@@ -157,6 +159,8 @@ export async function createPurchaseReturnWithin(
       unitCost: purchaseOrderLine.unitCost,
       taxCode: purchaseOrderLine.taxCode,
       taxRate: purchaseOrderLine.taxRate,
+      taxClassification: purchaseOrderLine.taxClassification,
+      inputTaxRecoverablePct: purchaseOrderLine.inputTaxRecoverablePct,
     }).from(purchaseOrderLine).where(and(
       eq(purchaseOrderLine.masterFn, scope.masterFn),
       eq(purchaseOrderLine.companyFn, scope.companyFn),
@@ -199,6 +203,8 @@ export async function createPurchaseReturnWithin(
       netAmount: net.toFixed(2),
       taxCode: source.taxCode,
       taxRate: rate.toFixed(3),
+      taxClassification: source.taxClassification,
+      inputTaxRecoverablePct: source.inputTaxRecoverablePct,
       taxAmount: tax.toFixed(2),
     });
     netTotal = netTotal.plus(net);
@@ -267,6 +273,24 @@ export async function shipAndCreditPurchaseReturnWithin(
   const net = lines.reduce((sum, line) => sum.plus(line.netAmount), new Decimal(0));
   const tax = lines.reduce((sum, line) => sum.plus(line.taxAmount), new Decimal(0));
   const total = net.plus(tax);
+  const [companyRow] = await exec.select({ taxRegime: company.taxRegime }).from(company).where(and(
+    eq(company.masterFn, scope.masterFn),
+    eq(company.companyFn, scope.companyFn),
+  )).limit(1);
+  let recoverableTax = new Decimal(0);
+  let nonRecoverableTax = new Decimal(0);
+  for (const line of lines) {
+    const profile = resolveTaxPostingProfile({
+      taxRegime: companyRow?.taxRegime ?? (line.taxClassification?.startsWith('gst_') ? 'GST' : 'SST'),
+      taxClassification: line.taxClassification,
+      inputTaxRecoverablePct: line.inputTaxRecoverablePct,
+    }, line.taxAmount);
+    if (!profile || (companyRow && profile.taxRegime !== companyRow.taxRegime)) {
+      throw new PurchaseReturnError('Purchase return tax classification is not governed for this Company.');
+    }
+    recoverableTax = recoverableTax.plus(profile.recoverableInputTax);
+    nonRecoverableTax = nonRecoverableTax.plus(profile.nonRecoverableTax);
+  }
   const outstanding = await supplierInvoiceOutstandingWithin(exec, scope, sourceInvoice.id);
   if (!outstanding || outstanding.lte(0) || total.gt(outstanding)) {
     throw new PurchaseReturnError(`Supplier credit exceeds the remaining payable for ${sourceInvoice.docNo}.`);
@@ -316,22 +340,26 @@ export async function shipAndCreditPurchaseReturnWithin(
   })));
 
   const inventoryId = await accountId(exec, scope, '1400');
-  const inputTaxId = await accountId(exec, scope, '1200');
   const payableId = await accountId(exec, scope, '2100');
-  await exec.insert(glEntry).values([
+  const legs = [
     {
       masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: creditDocNo,
       accountId: payableId, debit: total.toFixed(2), credit: '0', memo: 'Supplier credit',
     },
     {
       masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: creditDocNo,
-      accountId: inventoryId, debit: '0', credit: net.toFixed(2), memo: 'Inventory return',
+      accountId: inventoryId, debit: '0', credit: net.plus(nonRecoverableTax).toFixed(2),
+      memo: nonRecoverableTax.gt(0) ? 'Inventory return including non-recoverable tax' : 'Inventory return',
     },
-    {
+  ];
+  if (recoverableTax.gt(0)) {
+    const inputTaxId = await accountId(exec, scope, '1200');
+    legs.push({
       masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: creditDocNo,
-      accountId: inputTaxId, debit: '0', credit: tax.toFixed(2), memo: 'Input tax reversal',
-    },
-  ]);
+      accountId: inputTaxId, debit: '0', credit: recoverableTax.toFixed(2), memo: 'Recoverable input tax reversal',
+    });
+  }
+  await exec.insert(glEntry).values(legs);
   await exec.update(purchaseReturn).set({
     status: 'credited',
     version: sql`${purchaseReturn.version} + 1`,

@@ -18,8 +18,10 @@ import {
   purchaseRfq,
   supplier,
   supplierQuotation,
+  company,
 } from '../../data/schema';
 import { PostingError } from './errors';
+import { resolveTaxPostingProfile } from '../localization/tax';
 
 export interface PurchaseOrderLineInput {
   productId: number;
@@ -68,6 +70,10 @@ export async function createPurchaseOrderWithin(exec: DB, scope: Scope, input: C
     eq(supplier.id, input.supplierId),
   ));
   if (!supplierRow) throw new PostingError(`Supplier ${input.supplierId} is not available in this company`);
+  const [companyRow] = await exec.select({ taxRegime: company.taxRegime }).from(company).where(and(
+    eq(company.masterFn, scope.masterFn),
+    eq(company.companyFn, scope.companyFn),
+  )).limit(1);
   const productIds = [...new Set(input.lines.map((line) => line.productId))];
   const companyProducts = await exec.select({ id: product.id }).from(product).where(and(
     eq(product.masterFn, scope.masterFn),
@@ -179,12 +185,21 @@ export async function createPurchaseOrderWithin(exec: DB, scope: Scope, input: C
     const rate = new Decimal(taxRow.rate);
     const net = qty.mul(unitCost).toDecimalPlaces(2);
     const tax = net.mul(rate).div(100).toDecimalPlaces(2);
+    const taxProfile = resolveTaxPostingProfile(taxRow, tax);
+    if (!taxProfile || (companyRow && taxProfile.taxRegime !== companyRow.taxRegime)) {
+      throw new PostingError(
+        `Tax rule ${ln.taxCode} has no governed classification compatible with the Company tax regime`,
+      );
+    }
 
     await exec.insert(purchaseOrderLine).values({
       masterFn: scope.masterFn, companyFn: scope.companyFn,
       orderId: order.id, lineNo,
       productId: ln.productId, qty: qty.toFixed(4), unitCost: unitCost.toFixed(4),
-      netAmount: net.toFixed(2), taxCode: ln.taxCode, taxRate: rate.toFixed(3), taxAmount: tax.toFixed(2),
+      netAmount: net.toFixed(2), taxCode: ln.taxCode, taxRate: rate.toFixed(3),
+      taxClassification: taxProfile.taxClassification,
+      inputTaxRecoverablePct: taxProfile.inputTaxRecoverablePct.toFixed(4),
+      taxAmount: tax.toFixed(2),
     });
 
     netTotal = netTotal.plus(net);

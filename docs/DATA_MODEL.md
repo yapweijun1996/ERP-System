@@ -997,5 +997,7 @@ The bridge receives a normal Company membership and immutable system role so exi
 tenant foreign keys, RLS and permission checks stay explicit. No table grants it a
 master-scope bypass, Employee linkage, login credential, invitation or password-reset
 path. Migration 0099 is generated/source-present, not production-deployed.
-The generated PGlite schema and migration bundle are schema version 99 / 100 ordered
-entries and must pass `check:demo-schema` and `check:drift` before release.
+The generated PGlite schema and migration bundle are schema version 101 / 102 ordered
+entries. Migrations 0100/0101 add governed tax-rule facts, purchasing tax snapshots and
+Expense tax classification; they must pass `check:demo-schema` and `check:drift` before
+release.

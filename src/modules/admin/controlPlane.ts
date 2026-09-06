@@ -135,8 +135,14 @@ export async function getSystemSettingsWithin(exec: DB, scope: ControlScope) {
     taxRegime: taxRule.taxRegime,
     taxCode: taxRule.taxCode,
     rate: taxRule.rate,
+    taxClassification: taxRule.taxClassification,
+    inputTaxRecoverablePct: taxRule.inputTaxRecoverablePct,
     validFrom: taxRule.validFrom,
     validTo: taxRule.validTo,
+    sourceUrl: taxRule.sourceUrl,
+    sourceEffectiveDate: taxRule.sourceEffectiveDate,
+    approvedByUserId: taxRule.approvedByUserId,
+    reviewedAt: taxRule.reviewedAt,
   }).from(taxRule).where(and(
     eq(taxRule.masterFn, scope.masterFn), eq(taxRule.companyFn, scope.companyFn),
   )).orderBy(taxRule.taxCode, taxRule.validFrom);

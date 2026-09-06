@@ -50,8 +50,16 @@ import { createDefaultControlPlane } from './defaultControlPlane';
 
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
 const COUNTRY_DEFAULTS = {
-  SG: { currency: 'SGD', currencyName: 'Singapore Dollar', currencySymbol: 'S$', taxRegime: 'GST', taxCode: 'SR', taxRate: '9.000', taxValidFrom: '2024-01-01' },
-  MY: { currency: 'MYR', currencyName: 'Malaysian Ringgit', currencySymbol: 'RM', taxRegime: 'SST', taxCode: 'SV', taxRate: '8.000', taxValidFrom: '2025-07-01' },
+  SG: {
+    currency: 'SGD', currencyName: 'Singapore Dollar', currencySymbol: 'S$', taxRegime: 'GST', taxCode: 'SR', taxRate: '9.000',
+    taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000', taxValidFrom: '2024-01-01',
+    taxSourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates', taxSourceEffectiveDate: '2024-01-01',
+  },
+  MY: {
+    currency: 'MYR', currencyName: 'Malaysian Ringgit', currencySymbol: 'RM', taxRegime: 'SST', taxCode: 'SV', taxRate: '8.000',
+    taxClassification: 'sst_service', inputTaxRecoverablePct: '0.0000', taxValidFrom: '2025-07-01',
+    taxSourceUrl: 'https://mysst.customs.gov.my/sst-orders/', taxSourceEffectiveDate: '2025-07-01',
+  },
 } as const;
 
 export interface MasterProvisioningInput {
@@ -303,7 +311,11 @@ export async function createCompanyWithin(
 
   await exec.insert(taxRule).values({
     masterFn, companyFn, taxRegime: defaults.taxRegime, taxCode: defaults.taxCode,
-    rate: defaults.taxRate, validFrom: defaults.taxValidFrom,
+    rate: defaults.taxRate, taxClassification: defaults.taxClassification,
+    inputTaxRecoverablePct: defaults.inputTaxRecoverablePct,
+    validFrom: defaults.taxValidFrom, sourceUrl: defaults.taxSourceUrl,
+    sourceEffectiveDate: defaults.taxSourceEffectiveDate,
+    approvedByUserId: ownerUserId, reviewedAt: new Date(),
   });
   await createDefaultControlPlane(exec, { masterFn, companyFn }, country);
   await applyMasterCompanyAllocationDefaultsWithin(exec, masterFn, companyFn);

@@ -17,7 +17,8 @@ async function seedPurchasingFixture(db: DB) {
   }).returning({ id: supplier.id });
   await db.insert(taxRule).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, taxRegime: 'GST', taxCode: 'SR',
-    rate: '9.000', validFrom: '2024-01-01', validTo: null,
+    rate: '9.000', taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000',
+    validFrom: '2024-01-01', validTo: null,
   });
   return { widgetId: widget.id, supplierId: sup.id };
 }

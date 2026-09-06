@@ -46,14 +46,33 @@ export async function addProduct(db: DB, scope: Scope, sku: string, name: string
  * Proves the localization model: historical documents reproduce their historical rate.
  */
 export async function getEffectiveTaxRate(db: DB, scope: Scope, taxCode: string, onDate: string) {
+  const [companyRow] = await db
+    .select({ taxRegime: company.taxRegime })
+    .from(company)
+    .where(and(eq(company.masterFn, scope.masterFn), eq(company.companyFn, scope.companyFn)))
+    .limit(1);
+  const regimeCondition = companyRow ? eq(taxRule.taxRegime, companyRow.taxRegime) : undefined;
   const rows = await db
-    .select({ rate: taxRule.rate, code: taxRule.taxCode, validFrom: taxRule.validFrom })
+    .select({
+      rate: taxRule.rate,
+      code: taxRule.taxCode,
+      taxRegime: taxRule.taxRegime,
+      taxClassification: taxRule.taxClassification,
+      inputTaxRecoverablePct: taxRule.inputTaxRecoverablePct,
+      sourceUrl: taxRule.sourceUrl,
+      sourceEffectiveDate: taxRule.sourceEffectiveDate,
+      approvedByUserId: taxRule.approvedByUserId,
+      reviewedAt: taxRule.reviewedAt,
+      validFrom: taxRule.validFrom,
+      validTo: taxRule.validTo,
+    })
     .from(taxRule)
     .where(
       and(
         eq(taxRule.masterFn, scope.masterFn),
         eq(taxRule.companyFn, scope.companyFn),
         eq(taxRule.taxCode, taxCode),
+        ...(regimeCondition ? [regimeCondition] : []),
         lte(taxRule.validFrom, onDate),
         or(isNull(taxRule.validTo), gt(taxRule.validTo, onDate)),
       ),

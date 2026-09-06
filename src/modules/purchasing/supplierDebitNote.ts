@@ -3,8 +3,9 @@ import Decimal from 'decimal.js';
 import type { DB } from '../../data/db';
 import { getEffectiveTaxRate, type Scope } from '../../data/repo';
 import {
-  account, glEntry, supplierDebitNote, supplierInvoice,
+  account, company, glEntry, supplierDebitNote, supplierInvoice,
 } from '../../data/schema';
+import { resolveTaxPostingProfile } from '../localization/tax';
 import { supplierInvoiceOutstandingWithin } from './supplierPayable';
 
 export class SupplierDebitNoteError extends Error {
@@ -78,6 +79,12 @@ export async function createSupplierDebitNoteWithin(
   if (!taxRule) throw new SupplierDebitNoteError(`No tax rule for ${taxCode} on ${input.noteDate}.`);
   const rate = new Decimal(taxRule.rate);
   const tax = net.mul(rate).div(100).toDecimalPlaces(2);
+  const taxProfile = resolveTaxPostingProfile(taxRule, tax);
+  if (!taxProfile) {
+    throw new SupplierDebitNoteError(
+      'The tax rule has no governed classification compatible with supplier debit-note posting.',
+    );
+  }
   const total = net.plus(tax);
   const [created] = await exec.insert(supplierDebitNote).values({
     masterFn: scope.masterFn,
@@ -91,6 +98,8 @@ export async function createSupplierDebitNoteWithin(
     netAmount: net.toFixed(2),
     taxCode,
     taxRate: rate.toFixed(3),
+    taxClassification: taxProfile.taxClassification,
+    inputTaxRecoverablePct: taxProfile.inputTaxRecoverablePct.toFixed(4),
     taxAmount: tax.toFixed(2),
     totalAmount: total.toFixed(2),
   }).returning({
@@ -131,17 +140,33 @@ export async function postSupplierDebitNoteWithin(exec: DB, scope: Scope, debitN
 
   const payableId = await accountId(exec, scope, '2100');
   const varianceId = await accountId(exec, scope, '5800');
-  const inputTaxId = await accountId(exec, scope, '1200');
+  const [companyRow] = await exec.select({ taxRegime: company.taxRegime }).from(company).where(and(
+    eq(company.masterFn, scope.masterFn),
+    eq(company.companyFn, scope.companyFn),
+  )).limit(1);
+  const taxProfile = resolveTaxPostingProfile({
+    taxRegime: companyRow?.taxRegime ?? (note.taxClassification.startsWith('gst_') ? 'GST' : 'SST'),
+    taxClassification: note.taxClassification,
+    inputTaxRecoverablePct: note.inputTaxRecoverablePct,
+  }, note.taxAmount);
+  if (!taxProfile || (companyRow && taxProfile.taxRegime !== companyRow.taxRegime)) {
+    throw new SupplierDebitNoteError(
+      'The supplier debit note tax classification is not governed for this Company.',
+    );
+  }
   const legs = [
     { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: note.docNo,
       accountId: payableId, debit: note.totalAmount, credit: '0', memo: 'Supplier claim — AP reduction' },
     { masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: note.docNo,
-      accountId: varianceId, debit: '0', credit: note.netAmount, memo: 'Supplier claim recovery' },
+      accountId: varianceId, debit: '0', credit: new Decimal(note.netAmount).plus(taxProfile.nonRecoverableTax).toFixed(2), memo: 'Supplier claim recovery' },
   ];
-  if (new Decimal(note.taxAmount).gt(0)) legs.push({
-    masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: note.docNo,
-    accountId: inputTaxId, debit: '0', credit: note.taxAmount, memo: 'Input tax reversal',
-  });
+  if (taxProfile.recoverableInputTax.gt(0)) {
+    const inputTaxId = await accountId(exec, scope, '1200');
+    legs.push({
+      masterFn: scope.masterFn, companyFn: scope.companyFn, journalRef: note.docNo,
+      accountId: inputTaxId, debit: '0', credit: taxProfile.recoverableInputTax.toFixed(2), memo: 'Recoverable input tax reversal',
+    });
+  }
   await exec.insert(glEntry).values(legs);
   const [posted] = await exec.update(supplierDebitNote).set({
     status: 'posted',

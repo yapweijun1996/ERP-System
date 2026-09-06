@@ -5,17 +5,17 @@ of the company (`company_fn`)**, not a build flag. Today: **Singapore (SG)** and
 **Malaysia (MY)**. The design must let a third country be added without touching existing
 companies.
 
-Current implementation boundary (2026-08-12): Company country/currency and
-effective-dated tenant `tax_rule` rows are implemented, and several transaction commands
-resolve the matching tax code/rate for a document date. The separate `GstEngine`/`SstEngine`
-mechanics and statutory GST F5/SST-02/MyInvois/InvoiceNow outputs described below are
-target design, not current classes or completed filing integrations.
+Current implementation boundary (2026-09-06): Company country/currency and
+effective-dated tenant `tax_rule` rows are implemented. TASK-204 source hardening now
+uses one `[valid_from, valid_to)` interval, explicit tax classification and recoverability
+facts, and versioned source/review metadata. The separate `GstEngine`/`SstEngine` classes
+and statutory GST F5/SST-02/MyInvois/InvoiceNow outputs described below remain target
+design, not completed filing integrations.
 
-Two correctness gaps remain open under TASK-204: the canonical rate lookup treats
-`valid_to` as exclusive while the Expense policy includes the boundary day, and current
-supplier-invoice posting can route Malaysia tax to a recoverable Input Tax account even
-though SST mechanics differ from GST. Do not treat the seeded MY rate row as proof of an
-SST-compliant posting engine.
+The source-level TASK-204 boundary is implemented, but production release still requires
+a qualified tax owner to review configured rates, exemptions, thresholds and transitional
+rules against current official orders. Local tests and seeded source URLs are not filing
+compliance or production-approval evidence.
 
 ## 1. Per-company localization config
 
@@ -28,6 +28,11 @@ Each company carries:
 | `tax_regime` | `GST` | `SST` |
 | `locale` | `en` | `en` / `ms` |
 | `fiscal_year_start` | nullable configuration; required before go-live | nullable configuration; required before go-live |
+
+`tax_rule` also stores `tax_classification`, `input_tax_recoverable_pct`, `source_url`,
+`source_effective_date`, `approved_by_user_id` and `reviewed_at`. Legacy imported rows may
+remain `unclassified`, but transaction posting rejects that value instead of inferring
+mechanics from a tax-code string.
 
 Multi-currency is implemented per domain, not universally: Expense Claims snapshot
 original/functional currency and policy/actual FX facts, and consolidation has its own
@@ -43,11 +48,11 @@ its schema and command prove it.
 | --- | --- | --- |
 | Type | VAT-style, multi-stage | Single-stage |
 | Input tax credit | **Yes** (claim GST on purchases) | **No** credit mechanism |
-| Current rate model | **9% standard GST** (IRAS, verified 2026-08-12) | Classification- and effective-date-dependent; official MySST currently includes 6%, 8% and specific-rate cases |
+| Current rate model | **9% standard GST** (IRAS, reviewed 2026-09-06) | Classification- and effective-date-dependent; official MySST currently includes 6%, 8% and specific-rate cases |
 | Charged | On most sales of goods & services | Sales tax at manufacture/import; service tax on prescribed services |
 | Return | Output − input GST | Tax collected, no offset |
 
-Official sources reviewed 2026-08-12: [IRAS current GST rates](https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates),
+Official sources reviewed 2026-09-06: [IRAS current GST rates](https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates),
 [Royal Malaysian Customs MySST background](https://mysst.customs.gov.my/background/)
 and [Malaysia MOF 5 January 2026 policy update](https://mof.gov.my/portal/ms/berita/siaran-media/pemakluman-dasar-dikemaskini-berhubung-cukai-jualan-dan-cukai-perkhidmatan).
 Rates, exemptions and transitional rules are time-sensitive. Production configuration
@@ -64,8 +69,12 @@ TaxEngine
 
 In the target, each document line resolves tax through its Company's regime strategy.
 Adding a country means adding an engine plus configuration and conformance tests rather
-than editing every module. Current source performs tenant/tax-code/date lookup and does
-not dispatch to these engine classes.
+than editing every module. Current source performs tenant/tax-code/date lookup and
+dispatches posting treatment through `src/modules/localization/tax.ts`: GST
+standard/zero-rated/exempt and explicit SST classifications are validated; SST is
+non-recoverable by default, and positive SST recovery is accepted only for explicit
+`sst_deductible` configuration. The full strategy classes and statutory filing outputs
+remain future work.
 
 ## 3. Tax rules are effective-dated — never a constant
 
@@ -83,8 +92,10 @@ So a tax rule **must** carry validity dates, and a transaction uses the rate val
 tax_rule (
   id, company_fn, tax_regime, tax_code,
   rate numeric(6,3),
+  tax_classification, input_tax_recoverable_pct,
   valid_from date NOT NULL,
-  valid_to   date NULL          -- open-ended until superseded
+  valid_to   date NULL,         -- exclusive; open-ended until superseded
+  source_url, source_effective_date, approved_by_user_id, reviewed_at
 )
 -- pick: WHERE company_fn=$1 AND tax_code=$2
 --         AND doc_date >= valid_from AND (valid_to IS NULL OR doc_date < valid_to)
@@ -92,6 +103,11 @@ tax_rule (
 
 This makes historical documents reproducible (an invoice from 2023 keeps 8% GST) and
 future rate changes a data insert, not a code change.
+
+The same exclusive interval applies to `expense_policy_version`. Expense policy snapshots
+retain the resolved tax classification so a later posting cannot silently revive a legacy
+generic Input Tax mapping. `tax_rule` source facts are configuration evidence; they do not
+replace the required tax-owner review before production release.
 
 ## 4. Compliance artifacts (per country, later phases)
 

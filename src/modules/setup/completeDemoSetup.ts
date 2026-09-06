@@ -34,7 +34,11 @@ const COUNTRY_DEFAULTS = {
     taxRegime: 'GST',
     taxCode: 'SR',
     taxRate: '9.000',
+    taxClassification: 'gst_standard',
+    inputTaxRecoverablePct: '100.0000',
     taxValidFrom: '2024-01-01',
+    taxSourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates',
+    taxSourceEffectiveDate: '2024-01-01',
   },
   MY: {
     currency: 'MYR',
@@ -43,7 +47,11 @@ const COUNTRY_DEFAULTS = {
     taxRegime: 'SST',
     taxCode: 'SV',
     taxRate: '8.000',
+    taxClassification: 'sst_service',
+    inputTaxRecoverablePct: '0.0000',
     taxValidFrom: '2025-07-01',
+    taxSourceUrl: 'https://mysst.customs.gov.my/sst-orders/',
+    taxSourceEffectiveDate: '2025-07-01',
   },
 } as const;
 
@@ -158,14 +166,6 @@ export async function completeDemoSetupWithin(
     taxRegime: defaults.taxRegime,
     locale: language,
   });
-  await exec.insert(taxRule).values({
-    masterFn,
-    companyFn,
-    taxRegime: defaults.taxRegime,
-    taxCode: defaults.taxCode,
-    rate: defaults.taxRate,
-    validFrom: defaults.taxValidFrom,
-  });
   await createDefaultControlPlane(exec, { masterFn, companyFn }, input.country);
   await exec.insert(account).values([
     { masterFn, companyFn, code: '1100', name: 'Accounts Receivable', type: 'asset' },
@@ -245,6 +245,20 @@ export async function completeDemoSetupWithin(
       eq(appUser.userId, admin.userId),
     ));
   }
+  await exec.insert(taxRule).values({
+    masterFn,
+    companyFn,
+    taxRegime: defaults.taxRegime,
+    taxCode: defaults.taxCode,
+    rate: defaults.taxRate,
+    taxClassification: defaults.taxClassification,
+    inputTaxRecoverablePct: defaults.inputTaxRecoverablePct,
+    validFrom: defaults.taxValidFrom,
+    sourceUrl: defaults.taxSourceUrl,
+    sourceEffectiveDate: defaults.taxSourceEffectiveDate,
+    approvedByUserId: admin.userId,
+    reviewedAt: new Date(),
+  });
   await exec.insert(userCompany).values({
     userId: admin.userId,
     companyFn,

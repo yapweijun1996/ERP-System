@@ -53,6 +53,47 @@ async function setup() {
 }
 
 describe('effective-dated expense tax, FX and GL policy', () => {
+  it('treats an expense policy validTo boundary as exclusive', async () => {
+    const { db, admin, viewer, accountId } = await setup();
+    await configureExpensePolicyVersion(db, scope, admin.userId, {
+      categoryCode: 'BOUNDARY',
+      categoryName: 'Boundary policy',
+      policyKey: 'boundary-policy',
+      policyName: 'Boundary policy',
+      versionNo: 1,
+      validFrom: '2026-01-01',
+      validTo: '2026-06-01',
+      taxTreatment: 'exempt',
+      employeePaidAllowed: true,
+      companyPaidAllowed: true,
+      expenseAccountId: accountId('5800'),
+      employeePayableAccountId: accountId('2100'),
+      companyPaidClearingAccountId: accountId('1000'),
+      fxMethod: 'table_rate',
+    });
+
+    await expect(snapshotSubmittedExpenseLine(db, scope, viewer.userId, {
+      lineKey: 'expense-boundary-before',
+      categoryCode: 'BOUNDARY',
+      transactionDate: '2026-05-31',
+      paymentSource: 'company_paid',
+      originalCurrency: 'SGD',
+      originalNet: '100.00',
+      originalTax: '0.00',
+      originalGross: '100.00',
+    })).resolves.toMatchObject({ snapshot: { transactionDate: '2026-05-31' } });
+    await expect(snapshotSubmittedExpenseLine(db, scope, viewer.userId, {
+      lineKey: 'expense-boundary-on',
+      categoryCode: 'BOUNDARY',
+      transactionDate: '2026-06-01',
+      paymentSource: 'company_paid',
+      originalCurrency: 'SGD',
+      originalNet: '100.00',
+      originalTax: '0.00',
+      originalGross: '100.00',
+    })).rejects.toMatchObject({ code: 'expense_policy_not_effective' });
+  });
+
   it('snapshots the applicable version with Decimal-exact original/base and tax facts', async () => {
     const { db, admin, viewer, accountId } = await setup();
     const configured = await configureExpensePolicyVersion(

@@ -290,6 +290,11 @@ export const purchaseOrderLine = pgTable('purchase_order_line', {
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
   taxCode: text('tax_code').notNull(),
   taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),   // snapshot
+  taxClassification: text('tax_classification').notNull().default('unclassified'),
+  inputTaxRecoverablePct: numeric('input_tax_recoverable_pct', {
+    precision: 7,
+    scale: 4,
+  }).notNull().default('0'),
   taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
   ...timestamps,
 }, (t) => [
@@ -371,6 +376,11 @@ export const purchaseReturnLine = pgTable('purchase_return_line', {
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
   taxCode: text('tax_code').notNull(),
   taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),
+  taxClassification: text('tax_classification').notNull().default('unclassified'),
+  inputTaxRecoverablePct: numeric('input_tax_recoverable_pct', {
+    precision: 7,
+    scale: 4,
+  }).notNull().default('0'),
   taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
   ...timestamps,
 }, (t) => [
@@ -437,6 +447,11 @@ export const supplierDebitNote = pgTable('supplier_debit_note', {
   netAmount: numeric('net_amount', { precision: 18, scale: 2 }).notNull(),
   taxCode: text('tax_code').notNull(),
   taxRate: numeric('tax_rate', { precision: 6, scale: 3 }).notNull(),
+  taxClassification: text('tax_classification').notNull().default('unclassified'),
+  inputTaxRecoverablePct: numeric('input_tax_recoverable_pct', {
+    precision: 7,
+    scale: 4,
+  }).notNull().default('0'),
   taxAmount: numeric('tax_amount', { precision: 18, scale: 2 }).notNull(),
   totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
   ...timestamps,

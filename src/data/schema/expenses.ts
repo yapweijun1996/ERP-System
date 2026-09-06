@@ -200,7 +200,7 @@ export const expensePolicyVersion = pgTable('expense_policy_version', {
   index('idx_expense_policy_effective')
     .on(t.masterFn, t.companyFn, t.categoryId, t.status, t.validFrom, t.validTo),
   check('ck_expense_policy_version_no', sql`${t.versionNo} > 0`),
-  check('ck_expense_policy_dates', sql`${t.validTo} is null or ${t.validTo} >= ${t.validFrom}`),
+  check('ck_expense_policy_dates', sql`${t.validTo} is null or ${t.validTo} > ${t.validFrom}`),
   check('ck_expense_policy_status', sql`${t.status} = 'confirmed'`),
   check('ck_expense_policy_limit', sql`${t.maxGrossBase} is null or ${t.maxGrossBase} > 0`),
   check('ck_expense_policy_tax_treatment',
@@ -245,6 +245,7 @@ export const expenseLinePolicySnapshot = pgTable('expense_line_policy_snapshot',
   baseGross: numeric('base_gross', { precision: 18, scale: 4 }).notNull(),
   taxTreatment: text('tax_treatment').notNull(),
   taxCode: text('tax_code'),
+  taxClassification: text('tax_classification').notNull().default('unclassified'),
   taxRate: numeric('tax_rate', { precision: 7, scale: 4 }).notNull(),
   inputTaxRecoverablePct: numeric('input_tax_recoverable_pct', {
     precision: 7,
@@ -275,7 +276,11 @@ export const expenseLinePolicySnapshot = pgTable('expense_line_policy_snapshot',
   check('ck_expense_line_policy_snapshot_tax',
     sql`${t.taxTreatment} in ('input_tax','non_deductible','exempt')
       and ${t.taxRate} >= 0
-      and ${t.inputTaxRecoverablePct} between 0.0000 and 100.0000`),
+      and ${t.inputTaxRecoverablePct} between 0.0000 and 100.0000
+      and ${t.taxClassification} in (
+        'unclassified', 'gst_standard', 'gst_zero_rated', 'gst_exempt',
+        'sst_sales', 'sst_service', 'sst_deductible', 'sst_exempt'
+      )`),
   check('ck_expense_line_policy_snapshot_fx',
     sql`${t.fxMethod} in ('table_rate','actual_bank_allowed')`),
 ]);

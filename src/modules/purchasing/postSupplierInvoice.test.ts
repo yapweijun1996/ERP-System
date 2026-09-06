@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
-import { product, warehouse, supplier, taxRule, account, glEntry, supplierInvoice, project } from '../../data/schema';
+import {
+  account, company, currency, glEntry, master, product, project, supplier, supplierInvoice, taxRule, warehouse,
+} from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { markPurchaseOrderApprovedForFixture } from '../../test/purchasing';
 import { createPurchaseOrder } from './createPurchaseOrder';
@@ -21,7 +23,8 @@ async function seedPurchasingFixture(db: DB) {
   }).returning({ id: supplier.id });
   await db.insert(taxRule).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, taxRegime: 'GST', taxCode: 'SR',
-    rate: '9.000', validFrom: '2024-01-01', validTo: null,
+    rate: '9.000', taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000',
+    validFrom: '2024-01-01', validTo: null,
   });
   await db.insert(account).values([
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '1400', name: 'Inventory', type: 'asset' },
@@ -58,6 +61,52 @@ describe('postSupplierInvoice', () => {
     const totalCredit = legs.reduce((sum, l) => sum + Number(l.credit), 0);
     expect(totalDebit).toBeCloseTo(totalCredit, 2);
     expect(totalDebit).toBeCloseTo(130.8, 2);
+  });
+
+  it('success: posts Malaysian SST as non-recoverable without a recoverable Input Tax leg', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    await db.insert(master).values({ masterFn: SCOPE.masterFn, loginCode: 'TEST-MY', name: 'Test Malaysia Master' });
+    await db.insert(currency).values({ code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM' });
+    await db.insert(company).values({
+      companyFn: SCOPE.companyFn,
+      masterFn: SCOPE.masterFn,
+      name: 'Test Malaysia Company',
+      country: 'MY',
+      currency: 'MYR',
+      taxRegime: 'SST',
+    });
+    await db.insert(taxRule).values({
+      masterFn: SCOPE.masterFn,
+      companyFn: SCOPE.companyFn,
+      taxRegime: 'SST',
+      taxCode: 'SV',
+      rate: '8.000',
+      taxClassification: 'sst_service',
+      inputTaxRecoverablePct: '0.0000',
+      validFrom: '2025-07-01',
+    });
+
+    const po = await createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-MY-SST', supplierId: fx.supplierId, orderDate: '2026-06-01', currency: 'MYR',
+      lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SV' }],
+    });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
+    await receiveGoods(db, SCOPE, {
+      purchaseOrderId: po.orderId, warehouseId: fx.warehouseId, docNo: 'GR-MY-SST', receivedDate: '2026-06-05',
+    });
+    const res = await postSupplierInvoice(db, SCOPE, {
+      purchaseOrderId: po.orderId, docNo: 'SINV-MY-SST', invoiceDate: '2026-06-06',
+    });
+
+    expect(res.tax).toBe(9.6);
+    const legs = await db.select().from(glEntry).where(eq(glEntry.journalRef, 'SINV-MY-SST'));
+    expect(legs).toHaveLength(2);
+    expect(legs.some((leg) => Number(leg.debit) > 0 && leg.accountId !== undefined)).toBe(true);
+    expect(legs.reduce((sum, leg) => sum + Number(leg.debit), 0)).toBeCloseTo(129.6, 2);
+    expect(legs.reduce((sum, leg) => sum + Number(leg.credit), 0)).toBeCloseTo(129.6, 2);
+    expect(legs.find((leg) => Number(leg.credit) > 0)?.memo).toBe('AP');
+    expect(legs.some((leg) => leg.memo === 'Recoverable input tax')).toBe(false);
   });
 
   it('rollback: posting an invoice before the goods receipt throws and posts no GL legs', async () => {
@@ -120,7 +169,8 @@ describe('postSupplierInvoice', () => {
     }).returning({ id: supplier.id });
     await db.insert(taxRule).values({
       masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, taxRegime: 'GST', taxCode: 'SR',
-      rate: '9.000', validFrom: '2024-01-01', validTo: null,
+      rate: '9.000', taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000',
+      validFrom: '2024-01-01', validTo: null,
     });
     const po = await createPurchaseOrder(db, SCOPE, {
       docNo: 'PO-T3', supplierId: sup.id, orderDate: '2024-06-01', currency: 'SGD',

@@ -5,7 +5,8 @@ section for the path you are releasing. Deployment mechanics live in
 [DEPLOYMENT.md](DEPLOYMENT.md); this file is the go/no-go checklist.
 
 For the current source-backed action backlog and evidence boundaries, see
-[CODEBASE_REVIEW_2026-09-06.md](CODEBASE_REVIEW_2026-09-06.md).
+[CODEBASE_REVIEW_2026-09-06.md](CODEBASE_REVIEW_2026-09-06.md) and the
+[pending-task breakdown](PENDING_TASK_BREAKDOWN_2026-09-06.md).
 
 ## 0. Shared gate (every release, either path)
 
@@ -13,7 +14,7 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current local Vitest run passes 170 files / 674 tests with two
+- [x] `npm test` — current local Vitest run passes 171 files / 683 tests with two
       intentional file/test skips. This is local evidence; PostgreSQL runtime, CI and
       production deployment remain separate gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
@@ -39,8 +40,9 @@ For the current source-backed action backlog and evidence boundaries, see
 - [ ] `npm run check:permissions` and `npm run audit:access-matrix` — permission registry
       passes at 315/116/62/5. Current source inventory is 59 routes × 13 active templates;
       rerun the serial browser access audit before release.
-- [x] `tasks/tasks.jsonl` statuses current: 200 Done / 1 In progress / 8 Todo / 4
-      Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209.
+- [x] `tasks/tasks.jsonl` statuses current: 200 Done / 2 In progress / 7 Todo / 4
+      Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209;
+      TASK-204 remains In progress until tax-owner production review.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs
       due account billing/spending; TASK-203 is not a green CI result.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
@@ -138,7 +140,7 @@ receipt UAT is claimed.
 ## 5. EPIC-065 Platform Bootstrap and reset gate
 
 The checked items below are the dated TASK-192 deployment/reset checkpoint. Current
-source is migration 0099; use TASK-195 and TASK-206–209 before treating this gate as a
+source is migration 0101; use TASK-195 and TASK-204/206–209 before treating this gate as a
 current release approval.
 
 - [x] Source/API focused proof: empty bootstrap, concurrent winner, setup status stages,

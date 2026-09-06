@@ -3,14 +3,15 @@ import {
   and,
   desc,
   eq,
-  gte,
+  gt,
   inArray,
   isNull,
+  lt,
   lte,
   or,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
-import type { Scope } from '../../data/repo';
+import { getEffectiveTaxRate, type Scope } from '../../data/repo';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import {
   account,
@@ -23,9 +24,9 @@ import {
   expensePolicy,
   expensePolicyVersion,
   fxRate,
-  taxRule,
 } from '../../data/schema';
 import { assertDocumentScanClean } from '../documents/processing';
+import { resolveTaxPostingProfile } from '../localization/tax';
 
 export class ExpensePolicyError extends Error {
   constructor(
@@ -122,7 +123,7 @@ export async function configureExpensePolicyVersion(
   const policyName = input.policyName.trim();
   const validFrom = dateText(input.validFrom, 'Policy start');
   const validTo = input.validTo == null ? null : dateText(input.validTo, 'Policy end');
-  if (validTo && validTo < validFrom) {
+  if (validTo && validTo <= validFrom) {
     throw new ExpensePolicyError(
       'expense_policy_date_invalid',
       'Policy end cannot precede its start.',
@@ -160,12 +161,20 @@ export async function configureExpensePolicyVersion(
   return withTenantTransaction(db, scope, async (tx) => {
     const [companyRow] = await tx.select({
       currency: company.currency,
+      taxRegime: company.taxRegime,
     }).from(company).where(and(
       eq(company.masterFn, scope.masterFn),
       eq(company.companyFn, scope.companyFn),
     )).limit(1);
     if (!companyRow) {
       throw new ExpensePolicyError('expense_company_missing', 'Company is unavailable.', 404);
+    }
+    if (input.taxTreatment === 'input_tax' && companyRow.taxRegime !== 'GST') {
+      throw new ExpensePolicyError(
+        'expense_policy_tax_regime_unsupported',
+        'Recoverable input-tax expense policies require an explicit GST classification; Malaysia SST is non-recoverable by default.',
+        422,
+      );
     }
     const accountRows = await tx.select({
       id: account.id,
@@ -242,10 +251,10 @@ export async function configureExpensePolicyVersion(
         eq(expensePolicyVersion.companyFn, scope.companyFn),
         eq(expensePolicyVersion.categoryId, category.id),
         eq(expensePolicyVersion.status, 'confirmed'),
-        lte(expensePolicyVersion.validFrom, validTo ?? '9999-12-31'),
+        lt(expensePolicyVersion.validFrom, validTo ?? '9999-12-31'),
         or(
           isNull(expensePolicyVersion.validTo),
-          gte(expensePolicyVersion.validTo, validFrom),
+          gt(expensePolicyVersion.validTo, validFrom),
         ),
       )).limit(1);
     if (overlap) {
@@ -323,6 +332,7 @@ export async function snapshotSubmittedExpenseLineWithin(
   {
     const [companyRow] = await tx.select({
       currency: company.currency,
+      taxRegime: company.taxRegime,
     }).from(company).where(and(
       eq(company.masterFn, scope.masterFn),
       eq(company.companyFn, scope.companyFn),
@@ -358,7 +368,7 @@ export async function snapshotSubmittedExpenseLineWithin(
       lte(expensePolicyVersion.validFrom, transactionDate),
       or(
         isNull(expensePolicyVersion.validTo),
-        gte(expensePolicyVersion.validTo, transactionDate),
+        gt(expensePolicyVersion.validTo, transactionDate),
       ),
     )).orderBy(desc(expensePolicyVersion.validFrom)).limit(1);
     if (!policy) {
@@ -393,14 +403,9 @@ export async function snapshotSubmittedExpenseLineWithin(
       rate = decimal(rateRow.rate, 'Policy FX rate');
     }
     let taxRate = new Decimal(0);
+    let taxClassification = 'unclassified';
     if (policy.taxTreatment === 'input_tax') {
-      const [rule] = await tx.select().from(taxRule).where(and(
-        eq(taxRule.masterFn, scope.masterFn),
-        eq(taxRule.companyFn, scope.companyFn),
-        eq(taxRule.taxCode, policy.taxCode!),
-        lte(taxRule.validFrom, transactionDate),
-        or(isNull(taxRule.validTo), gte(taxRule.validTo, transactionDate)),
-      )).orderBy(desc(taxRule.validFrom)).limit(1);
+      const rule = await getEffectiveTaxRate(tx, scope, policy.taxCode!, transactionDate);
       if (!rule) {
         throw new ExpensePolicyError(
           'expense_tax_rule_missing',
@@ -408,6 +413,23 @@ export async function snapshotSubmittedExpenseLineWithin(
           422,
         );
       }
+      const taxProfile = resolveTaxPostingProfile(rule, originalTax);
+      if (!taxProfile || taxProfile.taxRegime !== companyRow.taxRegime) {
+        throw new ExpensePolicyError(
+          'expense_tax_classification_invalid',
+          'The effective tax rule has no governed classification compatible with the Company tax regime.',
+          422,
+        );
+      }
+      if (taxProfile.taxClassification === 'gst_exempt'
+        || new Decimal(policy.inputTaxRecoverablePct).gt(taxProfile.inputTaxRecoverablePct)) {
+        throw new ExpensePolicyError(
+          'expense_tax_classification_invalid',
+          'The expense policy recoverability exceeds the governed tax classification.',
+          422,
+        );
+      }
+      taxClassification = taxProfile.taxClassification;
       taxRate = decimal(rule.rate, 'Tax rate', { zero: true });
       const expectedTax = originalNet.mul(taxRate).div(100)
         .toDecimalPlaces(currencyRow.decimals, Decimal.ROUND_HALF_UP);
@@ -461,6 +483,7 @@ export async function snapshotSubmittedExpenseLineWithin(
       baseGross: fixed(baseGross, 4),
       taxTreatment: policy.taxTreatment,
       taxCode: policy.taxCode,
+      taxClassification,
       taxRate: fixed(taxRate, 4),
       inputTaxRecoverablePct: policy.inputTaxRecoverablePct,
       expenseAccountId: policy.expenseAccountId,

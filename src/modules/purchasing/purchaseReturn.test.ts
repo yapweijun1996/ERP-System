@@ -54,6 +54,8 @@ async function fixture(db: DB, suffix = '1') {
     taxRegime: 'GST',
     taxCode: 'SR',
     rate: '9.000',
+    taxClassification: 'gst_standard',
+    inputTaxRecoverablePct: '100.0000',
     validFrom: '2024-01-01',
   }).onConflictDoNothing();
   await db.insert(account).values([

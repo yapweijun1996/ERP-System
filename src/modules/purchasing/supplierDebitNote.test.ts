@@ -40,7 +40,8 @@ async function fixture(db: DB, total = '109.00') {
   });
   await db.insert(taxRule).values({
     masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn,
-    taxRegime: 'GST', taxCode: 'SR', rate: '9', validFrom: '2024-01-01',
+    taxRegime: 'GST', taxCode: 'SR', rate: '9', taxClassification: 'gst_standard',
+    inputTaxRecoverablePct: '100.0000', validFrom: '2024-01-01',
   });
   return { vendor, invoice };
 }
