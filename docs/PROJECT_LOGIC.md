@@ -540,8 +540,9 @@ Input Tax behavior.
 
 Source implementation is covered by `src/modules/localization/tax.test.ts`, the purchasing
 tax/GL tests, `src/modules/expenses/policy.test.ts` and `postings.test.ts`. Tax migrations
-`0100` and `0101` plus the generated Demo schema keep PostgreSQL and PGlite aligned. The
-current Demo schema is version `102` after the later Receipt Pack governance migration.
+`0100` and `0101`, followed by Receipt Pack/timezone migration `0102` and document-processing
+migration `0103`, plus the generated Demo schema keep PostgreSQL and PGlite aligned. The
+current Demo schema is version `103`.
 A qualified tax owner must still review production configuration against current IRAS and
 Royal Malaysian Customs/MOF sources before release; local evidence is not filing
 compliance evidence.
