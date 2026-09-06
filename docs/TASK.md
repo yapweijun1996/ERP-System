@@ -16,12 +16,12 @@ not a second task registry.
 
 ## Current release-quality note
 
-TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 103 migrations
-through 0102, schema v102/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
+TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 104 migrations
+through 0103, schema v103/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
 API mode, 1,726 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
 collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
-Vitest run at 172 files / 696 tests with two intentional skips. Current source
+Vitest run at 172 files / 697 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
 2 focused Platform files / 15 tests, 2 disposable PostgreSQL files / 2 tests, Staff Calendar API integration 6/6, Staff Calendar
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
@@ -41,9 +41,10 @@ against accidental policy-list omission. This is source/static coverage evidence
 least-privilege runtime-role and Platform provisioning proof is complete in TASK-195;
 TASK-206's PostgreSQL hidden-actor foundation, TASK-207's authorization/switching/
 break-glass proof and TASK-208's browser/accessibility/i18n proof are complete; the
-remaining Platform Admin chain is TASK-209. TASK-205 now has direct gateway failure,
-revoked-connector, retry-lease and no-local-fallback source evidence; production
-gateway/account/region/retention and dead-letter operations remain open.
+  remaining Platform Admin chain is TASK-209. TASK-205 now has direct gateway failure,
+  revoked-connector, retry-lease, bounded dead-letter and no-local-fallback source evidence;
+  production gateway/account/region/retention, secret rotation and live recovery operations
+  remain open.
 
 See [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md) for the
 bullet-level action plan for every non-Done task, including dependencies, evidence and
@@ -130,7 +131,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | In progress | Remote CI now executes; fix the i18n failure and rerun the current pushed HEAD |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
-| TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
+| TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 
 ## Platform tenant administration programme

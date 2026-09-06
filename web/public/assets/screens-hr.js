@@ -1987,11 +1987,11 @@ function receiptBytes(value){
 }
 function receiptProcessingState(item){
   const packs={
-    en:{queued:'Quarantined · scan queued',scanning:'Quarantined · scanning',unavailable:'Quarantined · scanner unavailable',indeterminate:'Quarantined · scan indeterminate',infected:'Blocked · malware detected',extracting:'Clean · extracting locally',extractionUnavailable:'Clean · extraction unavailable',extracted:'Clean · extracted'},
-    ms:{queued:'Kuarantin · imbasan menunggu',scanning:'Kuarantin · sedang diimbas',unavailable:'Kuarantin · pengimbas tiada',indeterminate:'Kuarantin · hasil tidak pasti',infected:'Disekat · perisian hasad dikesan',extracting:'Bersih · ekstrak setempat',extractionUnavailable:'Bersih · pengekstrakan tiada',extracted:'Bersih · telah diekstrak'},
-    zh:{queued:'已隔离 · 等待扫描',scanning:'已隔离 · 正在扫描',unavailable:'已隔离 · 扫描器不可用',indeterminate:'已隔离 · 扫描结果不确定',infected:'已阻止 · 检测到恶意文件',extracting:'扫描安全 · 本地提取中',extractionUnavailable:'扫描安全 · 提取服务不可用',extracted:'扫描安全 · 已提取'},
-    ja:{queued:'隔離中 · スキャン待ち',scanning:'隔離中 · スキャン中',unavailable:'隔離中 · スキャナー利用不可',indeterminate:'隔離中 · 判定不能',infected:'ブロック済み · マルウェア検出',extracting:'安全 · ローカル抽出中',extractionUnavailable:'安全 · 抽出利用不可',extracted:'安全 · 抽出済み'},
-    vi:{queued:'Cách ly · chờ quét',scanning:'Cách ly · đang quét',unavailable:'Cách ly · máy quét không sẵn sàng',indeterminate:'Cách ly · kết quả chưa xác định',infected:'Đã chặn · phát hiện mã độc',extracting:'An toàn · đang trích xuất cục bộ',extractionUnavailable:'An toàn · không thể trích xuất',extracted:'An toàn · đã trích xuất'},
+    en:{queued:'Quarantined · scan queued',scanning:'Quarantined · scanning',unavailable:'Quarantined · scanner unavailable',indeterminate:'Quarantined · scan indeterminate',deadLetter:'Quarantined · manual retry required',infected:'Blocked · malware detected',extracting:'Clean · extracting locally',extractionUnavailable:'Clean · extraction unavailable',extracted:'Clean · extracted'},
+    ms:{queued:'Kuarantin · imbasan menunggu',scanning:'Kuarantin · sedang diimbas',unavailable:'Kuarantin · pengimbas tiada',indeterminate:'Kuarantin · hasil tidak pasti',deadLetter:'Kuarantin · perlu cuba semula manual',infected:'Disekat · perisian hasad dikesan',extracting:'Bersih · ekstrak setempat',extractionUnavailable:'Bersih · pengekstrakan tiada',extracted:'Bersih · telah diekstrak'},
+    zh:{queued:'已隔离 · 等待扫描',scanning:'已隔离 · 正在扫描',unavailable:'已隔离 · 扫描器不可用',indeterminate:'已隔离 · 扫描结果不确定',deadLetter:'已隔离 · 需要手动重试',infected:'已阻止 · 检测到恶意文件',extracting:'扫描安全 · 本地提取中',extractionUnavailable:'扫描安全 · 提取服务不可用',extracted:'扫描安全 · 已提取'},
+    ja:{queued:'隔離中 · スキャン待ち',scanning:'隔離中 · スキャン中',unavailable:'隔離中 · スキャナー利用不可',indeterminate:'隔離中 · 判定不能',deadLetter:'隔離中 · 手動再試行が必要',infected:'ブロック済み · マルウェア検出',extracting:'安全 · ローカル抽出中',extractionUnavailable:'安全 · 抽出利用不可',extracted:'安全 · 抽出済み'},
+    vi:{queued:'Cách ly · chờ quét',scanning:'Cách ly · đang quét',unavailable:'Cách ly · máy quét không sẵn sàng',indeterminate:'Cách ly · kết quả chưa xác định',deadLetter:'Cách ly · cần thử lại thủ công',infected:'Đã chặn · phát hiện mã độc',extracting:'An toàn · đang trích xuất cục bộ',extractionUnavailable:'An toàn · không thể trích xuất',extracted:'An toàn · đã trích xuất'},
   };
   const p=i18nLegacy(packs);
   const s=receiptCaptureCopy();
@@ -2002,10 +2002,11 @@ function receiptProcessingState(item){
   if(item.scanStatus==='infected')return {label:p.infected,tone:'danger'};
   if(item.scanStatus==='unavailable')return {label:p.unavailable,tone:'warn'};
   if(item.scanStatus==='indeterminate')return {label:p.indeterminate,tone:'warn'};
+  if(item.scanStatus==='dead_letter')return {label:p.deadLetter,tone:'warn'};
   if(item.scanStatus==='scanning')return {label:p.scanning,tone:'warn'};
   if(item.scanStatus!=='clean')return {label:p.queued,tone:'warn'};
   if(item.extractionStatus==='succeeded')return {label:p.extracted,tone:'ok'};
-  if(['failed','unavailable'].includes(item.extractionStatus))return {label:p.extractionUnavailable,tone:'warn'};
+  if(['failed','unavailable','dead_letter'].includes(item.extractionStatus))return {label:item.extractionStatus==='dead_letter'?p.deadLetter:p.extractionUnavailable,tone:'warn'};
   return {label:p.extracting,tone:'info'};
 }
 async function openReceiptEditor(draft,onDone){

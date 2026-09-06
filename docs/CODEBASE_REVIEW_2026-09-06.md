@@ -19,7 +19,7 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
 
 ## Current verified baseline
 
-- The source contains **103 ordered migrations through schema version 102**, **255
+- The source contains **104 ordered migrations through schema version 103**, **255
   generated tables**, **315 permission codes**, **225 production-RLS policy tables** and
   **10 explicit infrastructure/control-plane exemptions**.
 - The source inventory is **129 Canonical routes / 0 Preview routes**. All **129 routes
@@ -36,7 +36,8 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
   classification/recoverability/source facts and the Expense snapshot; the generated
-  Demo schema is now version `102` after the TASK-202 governance migration. Its external
+  Demo schema is now version `103` after the TASK-202 governance and TASK-205 processing
+  dead-letter migration. Its external
   tax-owner production review remains open.
 - A read-only GitHub Pages root probe on 2026-09-07 returned HTTP 200, but the served
   HTML referenced cache-busted assets tagged 2026-08-13 and exposed no verifiable commit
@@ -48,8 +49,11 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
 - TASK-205 source failure hardening is now in progress: direct HTTP-driver tests cover
   provider status failures, malformed/empty output and transport timeout; processing
   tests cover paused/revoked connector denial, retry lease reuse and the explicit manual
-  retry/review policy without automatic Vision-to-local-OCR fallback. Production gateway,
-  account, region, retention and dead-letter operations remain unverified.
+  retry/review policy without automatic Vision-to-local-OCR fallback. The worker now bounds
+  automatic attempts at five by default, records `dead_letter` plus `dead_lettered_at` on
+  scan/extraction jobs and their document signal, and exposes an explicit same-version
+  `retryDocumentProcessing` requeue path. Production gateway, account, region, retention,
+  secret rotation and live dead-letter alert/restore operations remain unverified.
 - The complete pending-task breakdown, including dependencies, next actions and evidence
   boundaries, is [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md).
 - During this review the user-owned PWA/setup-wizard changes were committed as
@@ -172,9 +176,15 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
     empty provider output and timeout propagation. `processing.test.ts` proves paused/
     revoked connector denial and one extraction/version reused across explicit retry;
     local OCR is not called after Vision failure.
-  - **Remaining action:** define bounded retry/dead-letter operations, verify secret
-    rotation/revocation and record a configured production gateway/account/region/
-    retention check. Do not claim a third-party provider or automatic local-OCR fallback.
+  - **Source action completed:** automatic retry is bounded at five attempts by default;
+    terminal scan/extraction jobs enter `dead_letter`, the document outbox signal records
+    the same terminal state, and `retryDocumentProcessing` requeues the existing job without
+    creating a new document/version/extraction row. Focused tests prove the terminal state,
+    signal visibility and same-chain manual retry.
+  - **Remaining action:** verify secret rotation/revocation and record a configured
+    production gateway/account/region/retention check plus live dead-letter alert, operator
+    retry and recovery evidence. Do not claim a third-party provider or automatic local-OCR
+    fallback.
 
 - **EPIC-067 / TASK-209 — Platform Admin release remains gated.**
   - **Action order:** TASK-206 authorization foundation, TASK-207 authorization/switching/
@@ -215,11 +225,11 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   actor-scoped history; root/Web typecheck, lint, `build:demo`, `demo`, schema/RLS drift
   checks and the authenticated Company Receipts browser E2E pass.
 - The current full Vitest baseline completed with **172 passed files / 2 skipped files** and
-  **696 passed tests / 2 skipped tests**. The additional file/tests cover tax
-  classification and the exclusive Expense policy boundary. CI, current public health,
-  exact deployed revision, production tax-owner approval, physical-device behavior,
-  SMTP/Vision configuration and dead-letter operations remain unverified. The focused
-  TASK-205 run passes 2 files / 18 tests.
+  **697 passed tests / 2 skipped tests**. The current additions cover tax classification,
+  the exclusive Expense policy boundary and bounded document-processing dead-letter/requeue
+  behavior. CI, current public health, exact deployed revision, production tax-owner
+  approval, physical-device behavior, SMTP/Vision configuration and live dead-letter
+  operations remain unverified. The focused TASK-205 run passes 2 files / 19 tests.
 - TASK-208 browser evidence passes the isolated PGlite Platform workspace E2E at
   desktop/tablet/mobile widths, the 59-route × 13-role access matrix and the full
   129-route × 5-language × 2-viewport i18n matrix. The focused Platform extension also

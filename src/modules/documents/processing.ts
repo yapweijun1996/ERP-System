@@ -40,6 +40,8 @@ import { markDocumentSystemSubmittedWithin } from './governance';
 
 const DOCUMENT_SCAN_TOPIC = 'document.scan.requested';
 const DOCUMENT_EXTRACTION_TOPIC = 'document.extraction.requested';
+export const DOCUMENT_PROCESSING_MAX_ATTEMPTS = 5;
+const DOCUMENT_PROCESSING_MAX_ALLOWED_ATTEMPTS = 20;
 
 export interface MalwareScanResult {
   status: 'clean' | 'infected' | 'indeterminate';
@@ -96,6 +98,8 @@ export interface DocumentProcessingOptions {
   workerId?: string;
   batchSize?: number;
   leaseMs?: number;
+  /** Maximum automatic attempts before a job requires an explicit retry. */
+  maxAttempts?: number;
   now?: Date;
 }
 
@@ -130,6 +134,14 @@ function retryAt(now: Date, attempts: number): Date {
   // review. Local OCR is never an implicit fallback for a selected Vision policy.
   const delay = Math.min(60 * 60 * 1000, 2 ** Math.min(attempts, 10) * 1000);
   return new Date(now.getTime() + delay);
+}
+
+function maxAttemptsFor(value: number | undefined): number {
+  if (!Number.isFinite(value)) return DOCUMENT_PROCESSING_MAX_ATTEMPTS;
+  return Math.min(
+    DOCUMENT_PROCESSING_MAX_ALLOWED_ATTEMPTS,
+    Math.max(1, Math.floor(value as number)),
+  );
 }
 
 async function enqueueSignal(
@@ -183,6 +195,7 @@ async function markSignalDelivered(
     deliveredAt: now,
     lockedAt: null,
     lockedBy: null,
+    deadLetteredAt: null,
     lastError: null,
   }).where(and(
     eq(outboxEvent.masterFn, scope.masterFn),
@@ -202,12 +215,38 @@ async function markSignalFailed(
   message: string,
   availableAt: Date,
   now: Date,
+  deadLettered: boolean,
 ) {
   await db.update(outboxEvent).set({
     attempts: sql`${outboxEvent.attempts} + 1`,
     lastAttemptAt: now,
     availableAt,
+    lockedAt: null,
+    lockedBy: null,
+    deadLetteredAt: deadLettered ? now : null,
     lastError: message.slice(0, 1000),
+  }).where(and(
+    eq(outboxEvent.masterFn, scope.masterFn),
+    eq(outboxEvent.companyFn, scope.companyFn),
+    eq(outboxEvent.topic, topic),
+    eq(outboxEvent.aggregateType, 'document_version'),
+    eq(outboxEvent.aggregateId, String(versionId)),
+    isNull(outboxEvent.deliveredAt),
+  ));
+}
+
+async function requeueSignal(
+  db: DB,
+  scope: Scope,
+  topic: string,
+  versionId: number,
+  now: Date,
+) {
+  await db.update(outboxEvent).set({
+    availableAt: now,
+    lockedAt: null,
+    lockedBy: null,
+    deadLetteredAt: null,
   }).where(and(
     eq(outboxEvent.masterFn, scope.masterFn),
     eq(outboxEvent.companyFn, scope.companyFn),
@@ -252,6 +291,63 @@ export async function assertDocumentScanClean(
     throw new DocumentQuarantineError(action, scan?.status ?? 'missing');
   }
   return scan;
+}
+
+/**
+ * Requeue one terminal document job without creating a new extraction or
+ * document version. This is the explicit operator retry boundary after the
+ * bounded automatic retry policy has moved work to dead letter.
+ */
+export async function retryDocumentProcessing(
+  db: DB,
+  scope: Scope,
+  versionId: number,
+  now = new Date(),
+) {
+  return withTenantTransaction(db, scope, async (tx) => {
+    const [scan] = await tx.select().from(documentScanJob).where(and(
+      eq(documentScanJob.masterFn, scope.masterFn),
+      eq(documentScanJob.companyFn, scope.companyFn),
+      eq(documentScanJob.versionId, versionId),
+    )).limit(1).for('update');
+    const [extraction] = await tx.select().from(documentExtraction).where(and(
+      eq(documentExtraction.masterFn, scope.masterFn),
+      eq(documentExtraction.companyFn, scope.companyFn),
+      eq(documentExtraction.versionId, versionId),
+      eq(documentExtraction.extractionVersion, 1),
+    )).limit(1).for('update');
+    let scanRequeued = false;
+    let extractionRequeued = false;
+    if (scan?.status === 'dead_letter') {
+      await tx.update(documentScanJob).set({
+        status: 'queued',
+        attempts: 0,
+        availableAt: now,
+        lockedAt: null,
+        lockedBy: null,
+        deadLetteredAt: null,
+        updatedAt: now,
+      }).where(eq(documentScanJob.id, scan.id));
+      await requeueSignal(tx, scope, DOCUMENT_SCAN_TOPIC, versionId, now);
+      scanRequeued = true;
+    } else if (scan?.status === 'clean' && extraction?.status === 'dead_letter') {
+      await tx.update(documentExtraction).set({
+        status: 'queued',
+        attempts: 0,
+        availableAt: now,
+        lockedAt: null,
+        lockedBy: null,
+        deadLetteredAt: null,
+        updatedAt: now,
+      }).where(eq(documentExtraction.id, extraction.id));
+      await requeueSignal(tx, scope, DOCUMENT_EXTRACTION_TOPIC, versionId, now);
+      extractionRequeued = true;
+    }
+    if (!scan && !extraction) {
+      throw new Error('Document processing job is unavailable.');
+    }
+    return { scanRequeued, extractionRequeued };
+  });
 }
 
 function normalizeReceiptFieldValue(fieldKey: string, value: string): string {
@@ -438,6 +534,7 @@ async function completeReceiptExtractionWithin(
     outputSha256: sha256Text(rawText),
     visualFingerprint,
     completedAt: now,
+    deadLetteredAt: null,
     lockedAt: null,
     lockedBy: null,
     lastError: null,
@@ -545,6 +642,7 @@ async function createExtractionAfterClean(
       model,
       status,
       availableAt: now,
+      deadLetteredAt: null,
       lastError: error,
     }).onConflictDoNothing();
     await enqueueSignal(tx, scope, DOCUMENT_EXTRACTION_TOPIC, versionId);
@@ -632,11 +730,13 @@ export async function processDocumentJobBatch(
   const workerId = options.workerId ?? `document-${randomUUID()}`;
   const batchSize = Math.min(Math.max(options.batchSize ?? 10, 1), 50);
   const leaseMs = options.leaseMs ?? 5 * 60 * 1000;
+  const maxAttempts = maxAttemptsFor(options.maxAttempts);
   const registry = options.registry ?? createDocumentStorageRegistry();
   const scans = await claimScanJobs(db, workerId, now, batchSize, leaseMs);
   let clean = 0;
   let blocked = 0;
   let failed = 0;
+  let deadLettered = 0;
   for (const job of scans) {
     const scope = { masterFn: job.masterFn, companyFn: job.companyFn };
     try {
@@ -661,6 +761,7 @@ export async function processDocumentJobBatch(
           scanner: result.scanner,
           resultCode: result.resultCode ?? 'clean',
           completedAt: now,
+          deadLetteredAt: null,
           lockedAt: null,
           lockedBy: null,
           lastError: null,
@@ -675,6 +776,7 @@ export async function processDocumentJobBatch(
           scanner: result.scanner,
           resultCode: result.resultCode ?? 'infected',
           completedAt: now,
+          deadLetteredAt: null,
           lockedAt: null,
           lockedBy: null,
           lastError: null,
@@ -688,19 +790,23 @@ export async function processDocumentJobBatch(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const status = options.scanner ? 'indeterminate' : 'unavailable';
-      const availableAt = retryAt(now, job.attempts + 1);
+      const nextAttempts = job.attempts + 1;
+      const terminal = nextAttempts >= maxAttempts;
+      const availableAt = retryAt(now, nextAttempts);
       await withTenantTransaction(db, scope, (tx) => tx.update(documentScanJob).set({
-        status,
+        status: terminal ? 'dead_letter' : status,
         availableAt,
         lockedAt: null,
         lockedBy: null,
+        deadLetteredAt: terminal ? now : null,
         lastError: message.slice(0, 1000),
         updatedAt: now,
       }).where(and(eq(documentScanJob.id, job.id), eq(documentScanJob.lockedBy, workerId))));
       await markSignalFailed(
-        db, scope, DOCUMENT_SCAN_TOPIC, job.versionId, message, availableAt, now,
+        db, scope, DOCUMENT_SCAN_TOPIC, job.versionId, message, availableAt, now, terminal,
       );
       failed += 1;
+      if (terminal) deadLettered += 1;
     }
   }
 
@@ -784,6 +890,7 @@ export async function processDocumentJobBatch(
           rawText,
           outputSha256: sha256Text(rawText),
           completedAt: now,
+          deadLetteredAt: null,
           lockedAt: null,
           lockedBy: null,
           lastError: null,
@@ -799,9 +906,13 @@ export async function processDocumentJobBatch(
       extracted += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const availableAt = retryAt(now, job.attempts + 1);
+      const nextAttempts = job.attempts + 1;
+      const terminal = nextAttempts >= maxAttempts;
+      const availableAt = retryAt(now, nextAttempts);
       await withTenantTransaction(db, scope, (tx) => tx.update(documentExtraction).set({
-        status: error instanceof DocumentQuarantineError
+        status: terminal
+          ? 'dead_letter'
+          : error instanceof DocumentQuarantineError
           || message.toLowerCase().includes('unavailable')
           || message.toLowerCase().includes('requires')
           ? 'unavailable'
@@ -809,13 +920,15 @@ export async function processDocumentJobBatch(
         availableAt,
         lockedAt: null,
         lockedBy: null,
+        deadLetteredAt: terminal ? now : null,
         lastError: message.slice(0, 1000),
         updatedAt: now,
       }).where(and(eq(documentExtraction.id, job.id), eq(documentExtraction.lockedBy, workerId))));
       await markSignalFailed(
-        db, scope, DOCUMENT_EXTRACTION_TOPIC, job.versionId, message, availableAt, now,
+        db, scope, DOCUMENT_EXTRACTION_TOPIC, job.versionId, message, availableAt, now, terminal,
       );
       failed += 1;
+      if (terminal) deadLettered += 1;
     }
   }
   return {
@@ -825,5 +938,6 @@ export async function processDocumentJobBatch(
     extractionsClaimed: extractions.length,
     extracted,
     failed,
+    deadLettered,
   };
 }

@@ -41,7 +41,10 @@ The current contract is intentionally server/worker mediated:
 - scan-clean state, immutable version/hash identity, extraction provenance and manual
   review remain authoritative even when a provider fails;
 - provider HTTP failures, malformed/empty responses and transport timeouts remain a
-  failed or unavailable extraction and are retried explicitly by the worker lease;
+  failed or unavailable extraction and are retried explicitly by the worker lease. The
+  worker allows five automatic attempts by default, then records `dead_letter` on the
+  scan/extraction job and document signal; `retryDocumentProcessing` is the explicit
+  operator requeue boundary and preserves the same document/version/extraction identity;
 - the selected fallback policy is **manual retry/review**. A Vision failure never silently
   invokes local OCR, so a local OCR result cannot be mistaken for the requested provider's
   provenance or policy boundary;
@@ -54,8 +57,9 @@ Tests cover encrypted connector storage, credential non-disclosure, policy valid
 credential-required and credential-free OpenAI-compatible paths, direct gateway 4xx/5xx,
 malformed/empty output and transport timeout, paused/revoked connector denial, and
 retry/manual-review behavior that preserves one document/version extraction without
-automatic local-OCR fallback. They do not prove a particular third-party account, a
-region promise, dead-letter operations or a configured production gateway. Those remain
+automatic local-OCR fallback, including bounded dead-letter and same-chain manual requeue
+behavior. They do not prove a particular third-party account, a region promise, live
+dead-letter alert/recovery operations or a configured production gateway. Those remain
 TASK-205 production-readiness evidence.
 
 ## 3. Secret and privacy rules

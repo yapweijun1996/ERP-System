@@ -77,12 +77,14 @@ async function tick(): Promise<void> {
     localOcr,
     vision,
     credentialEncryptionKey: tokenEncryptionKey ?? undefined,
+    maxAttempts: Number(process.env.DOCUMENT_PROCESSING_MAX_ATTEMPTS) || undefined,
   });
   if (documents.scansClaimed > 0 || documents.extractionsClaimed > 0) {
     console.log(
       `[erp-worker] documents scans=${documents.scansClaimed} clean=${documents.clean}`
       + ` blocked=${documents.blocked} extractions=${documents.extractionsClaimed}`
-      + ` extracted=${documents.extracted} failed=${documents.failed}`,
+      + ` extracted=${documents.extracted} failed=${documents.failed}`
+      + ` deadLettered=${documents.deadLettered}`,
     );
   }
   const reminders = await withCalendarWorkerTransaction(db, tx => (

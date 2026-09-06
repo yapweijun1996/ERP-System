@@ -206,13 +206,14 @@ export const documentScanJob = pgTable('document_scan_job', {
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   lockedBy: text('locked_by'),
   completedAt: timestamp('completed_at', { withTimezone: true }),
+  deadLetteredAt: timestamp('dead_lettered_at', { withTimezone: true }),
   lastError: text('last_error'),
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_document_scan_job_version').on(t.masterFn, t.companyFn, t.versionId),
   index('idx_document_scan_job_queue').on(t.status, t.availableAt, t.lockedAt, t.id),
   check('ck_document_scan_job_status',
-    sql`${t.status} in ('queued','scanning','clean','infected','indeterminate','unavailable')`),
+    sql`${t.status} in ('queued','scanning','clean','infected','indeterminate','unavailable','dead_letter')`),
   check('ck_document_scan_job_attempts', sql`${t.attempts} >= 0`),
 ]);
 
@@ -234,6 +235,7 @@ export const documentExtraction = pgTable('document_extraction', {
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   lockedBy: text('locked_by'),
   completedAt: timestamp('completed_at', { withTimezone: true }),
+  deadLetteredAt: timestamp('dead_lettered_at', { withTimezone: true }),
   lastError: text('last_error'),
   ...timestamps,
 }, (t) => [
@@ -244,7 +246,7 @@ export const documentExtraction = pgTable('document_extraction', {
   check('ck_document_extraction_provider',
     sql`${t.provider} in ('local_ocr','byok_vision')`),
   check('ck_document_extraction_status',
-    sql`${t.status} in ('queued','extracting','succeeded','failed','unavailable')`),
+    sql`${t.status} in ('queued','extracting','succeeded','failed','unavailable','dead_letter')`),
   check('ck_document_extraction_attempts', sql`${t.attempts} >= 0`),
   check('ck_document_extraction_output_hash',
     sql`${t.outputSha256} is null or (

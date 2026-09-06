@@ -13070,3 +13070,40 @@ DROP TRIGGER IF EXISTS trg_company_receipt_pack_tombstone_immutable ON company_r
 CREATE TRIGGER trg_company_receipt_pack_tombstone_immutable
 BEFORE UPDATE OR DELETE ON company_receipt_pack_tombstone
 FOR EACH ROW EXECUTE FUNCTION prevent_tax_evidence_fact_change();
+
+-- 0103_grey_charles_xavier
+ALTER TABLE "document_extraction" DROP CONSTRAINT "ck_document_extraction_status";
+--> statement-breakpoint
+
+ALTER TABLE "document_scan_job" DROP CONSTRAINT "ck_document_scan_job_status";
+--> statement-breakpoint
+
+DROP INDEX IF EXISTS "idx_outbox_pending";
+--> statement-breakpoint
+
+DROP INDEX IF EXISTS "idx_outbox_lease";
+--> statement-breakpoint
+
+ALTER TABLE "outbox_event" ADD COLUMN IF NOT EXISTS "dead_lettered_at" timestamp with time zone;
+--> statement-breakpoint
+
+ALTER TABLE "document_extraction" ADD COLUMN IF NOT EXISTS "dead_lettered_at" timestamp with time zone;
+--> statement-breakpoint
+
+ALTER TABLE "document_scan_job" ADD COLUMN IF NOT EXISTS "dead_lettered_at" timestamp with time zone;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_outbox_pending" ON "outbox_event" USING btree ("delivered_at","dead_lettered_at","available_at","id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_outbox_lease" ON "outbox_event" USING btree ("delivered_at","dead_lettered_at","locked_at","available_at","id");
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "document_extraction" ADD CONSTRAINT "ck_document_extraction_status" CHECK ("document_extraction"."status" in ('queued','extracting','succeeded','failed','unavailable','dead_letter'));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "document_scan_job" ADD CONSTRAINT "ck_document_scan_job_status" CHECK ("document_scan_job"."status" in ('queued','scanning','clean','infected','indeterminate','unavailable','dead_letter'));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;

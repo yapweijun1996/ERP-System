@@ -649,6 +649,7 @@ export async function readCompanyReceiptConfirmationWithin(
     ...reviewReasons,
     ...(evidence.extractionStatus === 'failed' ? ['ocr_failed'] : []),
     ...(evidence.extractionStatus === 'unavailable' ? ['ocr_unavailable'] : []),
+    ...(evidence.extractionStatus === 'dead_letter' ? ['ocr_dead_letter'] : []),
     ...(!evidence.extractionStatus || ['queued', 'extracting'].includes(evidence.extractionStatus)
       ? ['ocr_pending'] : []),
     ...(existingReceipt && existingReceipt.documentVersionId !== evidence.documentVersionId

@@ -9,7 +9,7 @@ deployment and Docker is the production deployment:
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
 Current code schema boundary: migration
-`0102_great_mongu` (103 journal entries, schema version 102, 255 generated
+`0103_grey_charles_xavier` (104 journal entries, schema version 103, 255 generated
 tables). Migrations 0084–0085 add the separate platform support control plane and exact
 master/company boundary; migration 0086 adds assignment validity/provenance and
 assignment-owned scope rows with a compatibility backfill; migration 0087 adds
@@ -23,10 +23,11 @@ migration 0097 adds canonical Company Receipt mutation grants; migration 0098 ad
 durable Master Admin identity, platform idempotency and existing-Superadmin tenant
 provisioning permission backfill; migration 0099 adds the hidden Platform tenant
 actor/session foundation; migrations 0100/0101 add governed tax facts; and migration
-0102 adds Receipt Pack governance and Company timezone facts. Application-only release
+0102 adds Receipt Pack governance and Company timezone facts; migration 0103 adds
+bounded document-processing dead-letter state and outbox observability. Application-only release
 does not apply migrations automatically. The target production deployment was historically
 advanced through 0098 on 2026-08-12 and production RLS was re-applied before the authorized
-reset; this is not proof that 0102 or the current HEAD is deployed. Production RLS includes
+reset; this is not proof that 0103 or the current HEAD is deployed. Production RLS includes
 the override/company tables; the application central evaluator remains authoritative for
 decision semantics.
 
@@ -297,7 +298,7 @@ The order below is mandatory for the current release and is intentionally separa
 `make reset` (which is too broad for production):
 
 1. Build/test/commit the scoped implementation, push the branch and wait for CI.
-2. Create a fresh pre-deploy backup, apply migrations through 0102 with
+2. Create a fresh pre-deploy backup, apply migrations through 0103 with
    `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh`, re-apply
    `deploy/sql/production-rls.sql`, and run the application release. Verify existing
    records remain usable, `/health` is 200 and public Platform bootstrap is rejected on
@@ -611,11 +612,11 @@ resource/action metadata and canonical route projections. It currently checks 31
 static registry definitions, 116 resources, 62 actions and 5 update contracts. This
 gate complements, but does not replace, the completed database cutover and browser
 authorization-version invalidation paths or the operational platform-identity bootstrap.
-All committed migrations through 0102 must be applied before a release; migration 0088
+All committed migrations through 0103 must be applied before a release; migration 0088
 provides the freshness marker, 0089 makes the legacy Superadmin flag inert, and 0094–0098
 provide the platform-entitlement, canonical Company Receipt and Platform provisioning
-contracts; 0099–0102 provide the hidden Platform actor, governed tax and Receipt Pack
-governance contracts.
+contracts; 0099–0103 provide the hidden Platform actor, governed tax, Receipt Pack
+governance and bounded document-processing contracts.
 
 ### CI/CD — deploy to a *different* public repo
 
@@ -709,5 +710,5 @@ backup and staging proof, production deployment must:
 4. verify health and one idempotent reminder/outbound retry path;
 5. confirm the worker cannot read unrelated tenant business tables.
 
-Do not deploy only the application containers when committed migrations through 0102 have
+Do not deploy only the application containers when committed migrations through 0103 have
 not been applied; the source code cannot safely invent missing tables at runtime.

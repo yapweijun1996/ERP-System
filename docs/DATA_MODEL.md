@@ -243,13 +243,14 @@ Full current/target rules are in [MULTI_TENANCY.md](MULTI_TENANCY.md) and
 > generic approval-instance/step table. Budget approval uses the existing
 > `budget_version.status`/`is_active`/`version` state plus imported `budget_line` rows;
 > it also adds no generic approval-instance/step table.
-> The current boundary is migration 0102: **103 journal entries, schema version 102 and
+> The current boundary is migration 0103: **104 journal entries, schema version 103 and
 > 255 generated tables**. Migration 0088 adds `company.authorization_version`, defaulting to `1` as
 > the tenant authorization freshness source. Migration 0089 adds the Company Owner
 > role/permission/scope expand-backfill cutover; migrations 0090–0098 add Company Receipt
 > evidence, platform entitlement, tenant-MAC retirement and Platform provisioning. Migration
 > 0099 adds the hidden Platform tenant actor/session foundation, 0100/0101 add governed tax
-> facts, and 0102 adds Receipt Pack governance and Company timezone facts. Each subsequent
+> facts, 0102 adds Receipt Pack governance and Company timezone facts, and 0103 adds bounded
+> document-processing dead-letter state. Each subsequent
 > schema capability must still add tenant indexes, API contracts and cross-engine proofs
 > before becoming Canonical.
 
@@ -998,7 +999,8 @@ The bridge receives a normal Company membership and immutable system role so exi
 tenant foreign keys, RLS and permission checks stay explicit. No table grants it a
 master-scope bypass, Employee linkage, login credential, invitation or password-reset
 path. Migration 0099 is generated/source-present, not production-deployed.
-The generated PGlite schema and migration bundle are schema version 102 / 103 ordered
+The generated PGlite schema and migration bundle are schema version 103 / 104 ordered
 entries. Migrations 0100/0101 add governed tax-rule facts, purchasing tax snapshots and
 Expense tax classification; migration 0102 adds Receipt Pack retention/governance and
-Company timezone facts. They must pass `check:demo-schema` and `check:drift` before release.
+Company timezone facts; migration 0103 adds bounded document-processing dead-letter state.
+They must pass `check:demo-schema` and `check:drift` before release.

@@ -402,11 +402,12 @@ export const outboxEvent = pgTable('outbox_event', {
   lockedBy: text('locked_by'),
   lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  deadLetteredAt: timestamp('dead_lettered_at', { withTimezone: true }),
   lastError: text('last_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
-  index('idx_outbox_pending').on(t.deliveredAt, t.availableAt, t.id),
-  index('idx_outbox_lease').on(t.deliveredAt, t.lockedAt, t.availableAt, t.id),
+  index('idx_outbox_pending').on(t.deliveredAt, t.deadLetteredAt, t.availableAt, t.id),
+  index('idx_outbox_lease').on(t.deliveredAt, t.deadLetteredAt, t.lockedAt, t.availableAt, t.id),
   index('idx_outbox_tenant_aggregate').on(
     t.masterFn, t.companyFn, t.aggregateType, t.aggregateId, t.id,
   ),

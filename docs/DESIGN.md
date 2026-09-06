@@ -61,7 +61,7 @@ Current source inventory on 2026-09-07 is **129 Canonical / 0 Preview** routes. 
 `/api/hr/calendar/staff` contract. The current `audit:screens` run covers all
 129 routes at desktop/mobile; API integration, authenticated API browser, access-matrix
 and i18n evidence remain separately recorded. The current HEAD full Vitest run passes
-172 files / 696 tests with two intentional file/test skips; the Staff Calendar API
+172 files / 697 tests with two intentional file/test skips; the Staff Calendar API
 integration passes 6/6 and its Demo E2E covers mixed events, create, filtering and list
 search.
 Business-record values are not treated as UI copy. Physical-device acceptance remains
@@ -95,10 +95,10 @@ are workspace-only, while tenant onboarding and `admin.modules.manage` are retir
 Static Demo uses the same schema/generated PGlite artifacts and a deterministic local
 harness. The hosted API Demo uses the real Platform realm and may enable an explicitly
 labelled sample-login shortcut; the flag changes no server permission/session rule.
-Migrations through 0102 are generated from the Drizzle schema and must be replayed before
+Migrations through 0103 are generated from the Drizzle schema and must be replayed before
 production RLS is reapplied. Migration 0099 adds the hidden Platform tenant actor/session
-foundation, 0100/0101 add governed tax facts, and 0102 adds Receipt Pack governance and
-Company timezone facts.
+foundation, 0100/0101 add governed tax facts, 0102 adds Receipt Pack governance and
+Company timezone facts, and 0103 adds bounded document-processing dead-letter state.
 
 ## 3. Data layer design
 

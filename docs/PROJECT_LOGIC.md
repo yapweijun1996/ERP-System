@@ -2,7 +2,7 @@
 
 > Main project knowledge base: `KBID: erp-system-project-logic`
 > KB UUID: `ef47bf4b-83e1-42b2-a412-66912d04ea24`
-> Source review: 2026-09-06
+> Source review: 2026-09-07
 > Scope: Platform bootstrap/provisioning, Module Entitlement, Employee, Leave Application, Staff Calendar and Claim Record behavior
 
 This document is the source-backed project-logic mirror for future agents and
@@ -436,9 +436,11 @@ document services; confirmed merchant, receipt/invoice number, transaction date,
 amount, currency, category, business purpose and notes belong to the Company Receipt.
 The confirmation context reads candidate value, normalized value, source, model,
 confidence, critical/review state and duplicate warnings without changing extraction
-facts. A selected Vision gateway failure leaves extraction failed/unavailable for an
-explicit retry or human review; it never silently falls back to local OCR. Clean evidence
-permits manual entry when extraction is failed, unavailable or not started;
+facts. A selected Vision gateway failure leaves extraction failed/unavailable for bounded
+automatic retry, then `dead_letter` after five attempts by default; it never silently falls
+back to local OCR. `retryDocumentProcessing` explicitly requeues the existing
+document/version/extraction chain after a terminal failure. Clean evidence
+permits manual entry when extraction is failed, unavailable, dead-lettered or not started;
 quarantined/void/stale evidence remains blocked.
 The Company Receipts UI is an orchestration-only client: it can select only eligible
 uploader-owned document versions returned by `companyReceiptEvidence`, with bounded

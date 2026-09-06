@@ -3,7 +3,7 @@ import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
 import { outboxEvent } from '../../data/schema';
 
-export type IntegrationEventStatus = 'delivered' | 'processing' | 'retry' | 'pending';
+export type IntegrationEventStatus = 'delivered' | 'processing' | 'retry' | 'dead_letter' | 'pending';
 
 export interface IntegrationEventLogRow {
   id: number;
@@ -18,15 +18,18 @@ export interface IntegrationEventLogRow {
   availableAt: Date;
   lastAttemptAt: Date | null;
   deliveredAt: Date | null;
+  deadLetteredAt: Date | null;
   createdAt: Date;
 }
 
 function deliveryStatus(row: {
   deliveredAt: Date | null;
+  deadLetteredAt: Date | null;
   lockedAt: Date | null;
   lastError: string | null;
 }): IntegrationEventStatus {
   if (row.deliveredAt) return 'delivered';
+  if (row.deadLetteredAt) return 'dead_letter';
   if (row.lockedAt) return 'processing';
   if (row.lastError) return 'retry';
   return 'pending';
@@ -73,6 +76,7 @@ export async function listIntegrationEventsWithin(
     lockedAt: outboxEvent.lockedAt,
     lastAttemptAt: outboxEvent.lastAttemptAt,
     deliveredAt: outboxEvent.deliveredAt,
+    deadLetteredAt: outboxEvent.deadLetteredAt,
     lastError: outboxEvent.lastError,
     createdAt: outboxEvent.createdAt,
   }).from(outboxEvent)
@@ -95,6 +99,7 @@ export async function listIntegrationEventsWithin(
     availableAt: row.availableAt,
     lastAttemptAt: row.lastAttemptAt,
     deliveredAt: row.deliveredAt,
+    deadLetteredAt: row.deadLetteredAt,
     createdAt: row.createdAt,
   }));
   return {

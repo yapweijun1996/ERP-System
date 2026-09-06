@@ -19,6 +19,7 @@ import { uploadReceiptDocument } from './upload';
 import {
   assertDocumentScanClean,
   processDocumentJobBatch,
+  retryDocumentProcessing,
 } from './processing';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
@@ -539,5 +540,115 @@ describe('quarantined document processing', () => {
     expect(duplicateInbox?.duplicateOfVersionId).toBeTypeOf('number');
     expect((await db.select().from(outboxEvent))
       .filter((row) => row.topic === 'receipt.inbox.submitted')).toHaveLength(1);
+    });
   });
-});
+
+  it('dead-letters repeated provider failures and manually requeues the same extraction chain', async () => {
+    const { db, viewer } = await setup();
+    const encryptionKey = Buffer.alloc(32, 10);
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai',
+      visionRegion: 'sg',
+      visionRetentionDays: 0,
+      updatedByUserId: viewer.userId,
+    });
+    await db.update(integrationConnector).set({
+      status: 'connected',
+      health: 'healthy',
+      endpointHost: 'api.example.invalid',
+      credentialEnvelope: encryptToken('vision-dead-letter-secret', encryptionKey),
+      enabled: true,
+    }).where(eq(integrationConnector.connectorKey, 'document-vision'));
+    const stored = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_vision_dead_letter_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const vision = vi.fn(async () => {
+      throw new Error('Vision gateway timeout');
+    });
+    const first = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      vision: { extract: vision },
+      credentialEncryptionKey: encryptionKey,
+      maxAttempts: 2,
+      workerId: 'vision-dead-letter-worker-1',
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+    const [firstExtraction] = await db.select().from(documentExtraction);
+    expect(first).toMatchObject({ clean: 1, extracted: 0, failed: 1, deadLettered: 0 });
+    expect(firstExtraction).toMatchObject({
+      versionId: stored.version.id,
+      status: 'failed',
+      attempts: 1,
+      deadLetteredAt: null,
+    });
+
+    const second = await processDocumentJobBatch(db, {
+      vision: { extract: vision },
+      credentialEncryptionKey: encryptionKey,
+      maxAttempts: 2,
+      workerId: 'vision-dead-letter-worker-2',
+      now: new Date(firstExtraction.availableAt.getTime() + 1),
+    });
+    const [deadLetteredExtraction] = await db.select().from(documentExtraction);
+    const extractionSignal = (await db.select().from(outboxEvent))
+      .find((row) => row.topic === 'document.extraction.requested');
+    expect(second).toMatchObject({ scansClaimed: 0, extractionsClaimed: 1, failed: 1, deadLettered: 1 });
+    expect(deadLetteredExtraction).toMatchObject({
+      id: firstExtraction.id,
+      versionId: stored.version.id,
+      status: 'dead_letter',
+      attempts: 2,
+    });
+    expect(deadLetteredExtraction.deadLetteredAt).toBeInstanceOf(Date);
+    expect(extractionSignal).toMatchObject({ deliveredAt: null });
+    expect(extractionSignal?.deadLetteredAt).toBeInstanceOf(Date);
+    expect(vision).toHaveBeenCalledTimes(2);
+
+    const requeued = await retryDocumentProcessing(
+      db,
+      scope,
+      stored.version.id,
+      new Date('2026-07-26T12:05:00.000Z'),
+    );
+    expect(requeued).toEqual({ scanRequeued: false, extractionRequeued: true });
+    const [requeuedExtraction] = await db.select().from(documentExtraction);
+    expect(requeuedExtraction).toMatchObject({
+      id: firstExtraction.id,
+      versionId: stored.version.id,
+      status: 'queued',
+      attempts: 0,
+      deadLetteredAt: null,
+    });
+
+    const recovered = await processDocumentJobBatch(db, {
+      vision: {
+        extract: async () => ({ rawText: 'Manual retry response', model: 'vision-retry-test' }),
+      },
+      credentialEncryptionKey: encryptionKey,
+      maxAttempts: 2,
+      workerId: 'vision-dead-letter-worker-3',
+      now: new Date('2026-07-26T12:06:00.000Z'),
+    });
+    const [recoveredExtraction] = await db.select().from(documentExtraction);
+    const [recoveredSignal] = await db.select().from(outboxEvent).where(eq(
+      outboxEvent.topic,
+      'document.extraction.requested',
+    ));
+    expect(recovered).toMatchObject({ extractionsClaimed: 1, extracted: 1, failed: 0 });
+    expect(recoveredExtraction).toMatchObject({
+      id: firstExtraction.id,
+      versionId: stored.version.id,
+      status: 'succeeded',
+      attempts: 1,
+      rawText: 'Manual retry response',
+    });
+    expect(recoveredSignal).toMatchObject({ deliveredAt: expect.any(Date), deadLetteredAt: null });
+    expect(await db.select().from(documentExtraction)).toHaveLength(1);
+    expect(vision).toHaveBeenCalledTimes(2);
+  });

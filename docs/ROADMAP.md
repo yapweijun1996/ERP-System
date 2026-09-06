@@ -1229,8 +1229,8 @@ Goal: make the broad Canonical ERP safe, operable and evidentially current befor
 more module breadth. The source-backed review is
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
 
-1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 103
-   migrations/schema v102/255
+1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 104
+   migrations/schema v103/255
    tables, 129 Canonical routes with 129 API metadata routes, 1,726 i18n keys/72 packs,
    315 permission codes and PWA v263. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
@@ -1260,8 +1260,9 @@ more module breadth. The source-backed review is
    unifies exclusive `valid_to`, dispatches SG GST/MY SST posting by governed
    classification and prohibits default recoverable MY input tax. Its production
    tax-owner configuration review remains a release gate. TASK-205 now has source-level
-   Vision gateway/provider failure, retry/manual-review and no-automatic-fallback proof;
-   production gateway/dead-letter configuration remains a release gate.
+   Vision gateway/provider failure, bounded dead-letter/same-chain manual requeue and
+   no-automatic-fallback proof; production gateway/dead-letter configuration and live
+   recovery evidence remains a release gate.
 
 Exit criteria: every P0 passes its PostgreSQL/API/browser/security proof; public health
 and revision evidence are current; CI actually executes; operational objectives are

@@ -2637,8 +2637,9 @@ Current truth:
 - TASK-204 source hardening now aligns `valid_to` to one exclusive interval and makes
   supplier/Expense posting fail closed on unclassified or regime-incompatible tax facts;
   production tax-owner configuration review remains open. TASK-205 now directly tests
-  Vision status/malformed/timeout failures, paused connectors, retry/manual-review and
-  the no-automatic-local-OCR boundary; production gateway/dead-letter evidence remains.
+  Vision status/malformed/timeout failures, paused connectors, retry/manual-review, bounded
+  `dead_letter` state and the no-automatic-local-OCR boundary; production gateway,
+  configuration and live recovery evidence remains.
 
 | Task | Status | Scope |
 | --- | --- | --- |
@@ -2653,7 +2654,7 @@ Current truth:
 | TASK-202 | In progress | Receipt Pack lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | In Progress | Latest CI executes but the i18n matrix failed on `timesheet: Projects`; local fix passes, current-HEAD rerun pending |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
-| TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
+| TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 
 Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, browser and operational

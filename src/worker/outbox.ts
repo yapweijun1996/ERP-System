@@ -94,6 +94,7 @@ async function claimBatch(
       .where(and(
         inArray(outboxEvent.topic, [...AUTH_MAIL_TOPICS]),
         isNull(outboxEvent.deliveredAt),
+        isNull(outboxEvent.deadLetteredAt),
         lte(outboxEvent.availableAt, now),
         or(isNull(outboxEvent.lockedAt), lt(outboxEvent.lockedAt, expiredLease)),
       ))
@@ -139,6 +140,7 @@ export async function processOutboxBatch(
       await transport.send(renderAuthMail(row.payload, rawToken));
       await db.update(outboxEvent).set({
         deliveredAt: now,
+        deadLetteredAt: null,
         lockedAt: null,
         lockedBy: null,
         lastError: null,

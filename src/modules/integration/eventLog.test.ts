@@ -42,6 +42,16 @@ describe('canonical integration event log', () => {
         lockedBy: 'private-hostname',
       },
       {
+        ...SG,
+        topic: 'document.extraction.requested',
+        aggregateType: 'document_version',
+        aggregateId: '104',
+        payload: { versionId: 104 },
+        attempts: 5,
+        lastError: 'Vision gateway timeout',
+        deadLetteredAt: base,
+      },
+      {
         ...MY,
         topic: 'auth.invitation.created',
         aggregateType: 'user_invitation',
@@ -53,10 +63,10 @@ describe('canonical integration event log', () => {
 
     const page = await listIntegrationEventsWithin(db, SG, { limit: 100 });
     expect(page.nextCursor).toBeNull();
-    expect(page.data).toHaveLength(3);
-    expect(page.data.map((row) => row.aggregateId)).toEqual(['103', '102', '101']);
-    expect(page.data.map((row) => row.status)).toEqual(['processing', 'retry', 'delivered']);
-    expect(page.data[1]).toMatchObject({
+    expect(page.data).toHaveLength(4);
+    expect(page.data.map((row) => row.aggregateId)).toEqual(['104', '103', '102', '101']);
+    expect(page.data.map((row) => row.status)).toEqual(['dead_letter', 'processing', 'retry', 'delivered']);
+    expect(page.data[2]).toMatchObject({
       channel: 'email', direction: 'outbound', errorCode: 'transport_unavailable', attempts: 2,
     });
     const serialized = JSON.stringify(page.data);

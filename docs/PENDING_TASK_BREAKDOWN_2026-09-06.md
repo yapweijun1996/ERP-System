@@ -15,6 +15,13 @@ the hardcoded `timesheet: Projects` navigation label. The repository now supplie
 desktop and mobile matrices pass locally. A fresh remote run for the current local
 HEAD is still required; no remote green result is claimed.
 
+2026-09-07 processing addendum: migration `0103` adds bounded document scan/extraction
+retry state. Five automatic attempts are allowed by default; terminal jobs and their
+document signal enter `dead_letter`, while `retryDocumentProcessing` explicitly requeues
+the existing document/version extraction chain without creating a replacement row. Local
+focused tests pass this source boundary; production gateway/account/region/retention,
+secret rotation and live dead-letter alert/recovery evidence remain open.
+
 Release evidence boundary: TASK-196/TASK-197 source and UI implementation is present, but
 the Pack permission-downgrade path and Company Receipt correction/edit/void/date-correction
 workflow remain P0 UAT follow-up until authenticated browser/production evidence reconciles
@@ -53,7 +60,7 @@ the dated ERP excellence review. This follow-up does not create a second registr
   - Evidence added: Decimal resolver tests for standard/zero/exempt GST and SST service/
     deductible classifications, exclusive Expense policy boundary test, SG balanced GL,
     MY SST balanced GL without an Input Tax leg, generated tax migrations `0100`/`0101`
-    and current Demo schema version `102`.
+    and current Demo schema version `103`.
   - Remaining action: a qualified tax owner must review production configuration against
     the current IRAS and Royal Malaysian Customs/MOF sources, approve effective dates,
     exemptions, thresholds and transitional rules, and record the review evidence.
@@ -171,9 +178,14 @@ the dated ERP excellence review. This follow-up does not create a second registr
   - Processing tests cover paused/revoked connector fail-closed behavior, one extraction
     row reused across a gateway failure/retry lease, and the selected **manual retry/review**
     policy. Vision failure never silently calls local OCR.
-  - Remaining action: add/verify operational dead-letter or bounded retry evidence, secret
-    rotation/revocation evidence and a configured production gateway/account/region/retention
-    check. Encrypted connector capability remains source evidence, not production proof.
+  - Source action completed: migration `0103` and `processing.ts` bound automatic retry at
+    five attempts by default, record `dead_letter`/`dead_lettered_at` on scan and extraction
+    jobs plus the document signal, and provide `retryDocumentProcessing` for an explicit
+    same-chain manual retry. Focused tests cover the terminal state and recovery without
+    creating a second extraction row.
+  - Remaining action: verify operational alert/recovery behavior, secret rotation/revocation
+    and a configured production gateway/account/region/retention check. Encrypted connector
+    capability remains source evidence, not production proof.
 
 ## Human or external blockers
 

@@ -14,7 +14,7 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current local Vitest run passes 172 files / 696 tests with two
+- [x] `npm test` — current local Vitest run passes 172 files / 697 tests with two
       intentional file/test skips. This is local evidence; PostgreSQL runtime, CI and
       production deployment remain separate gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
@@ -44,15 +44,17 @@ For the current source-backed action backlog and evidence boundaries, see
       desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
       overflow checks plus the focused five-language Platform workspace matrix.
 - [x] `npm test -- --run src/modules/documents/processing.test.ts src/modules/documents/processingDrivers.test.ts`
-      — 2026-09-07 passed 2 files / 18 tests for Vision gateway failures, revoked
-      connectors, retry/manual-review and the no-automatic-local-OCR fallback boundary.
+      — 2026-09-07 passed 2 files / 19 tests for Vision gateway failures, revoked
+      connectors, bounded dead-letter/same-chain manual retry and the no-automatic-local-OCR
+      fallback boundary.
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
       the permission registry at 315/116/62/5 and the serial 59-route × 13-template
       browser access audit. This is local evidence, not production authorization proof.
 - [x] `tasks/tasks.jsonl` statuses current: 204 Done / 4 In progress / 2 Todo / 3
       Blocked / 213 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
-      In progress until production Vision/dead-letter evidence is recorded.
+      In progress until production Vision configuration and live dead-letter alert/recovery
+      evidence is recorded.
 - [ ] GitHub Actions actually executes current HEAD with every required gate green. Run
       `34017037310` executed its jobs but failed the i18n matrix on `timesheet: Projects`;
       the `route.project-pl` locale fix passes exact desktop/mobile locally, and TASK-203
