@@ -156,8 +156,11 @@ current release approval.
       the site on Create Platform Superadmin without creating a real account.
 - [x] Record final reset evidence in TASK-192/STATUS/DEPLOYMENT/PROJECT_LOGIC and the
       existing KB item; leave TASK-193 blocked while SMTP is unset.
-- [ ] Runtime API/worker roles are explicit non-superuser/non-BYPASSRLS, and current
-      Platform bootstrap → Master → Company succeeds under FORCE RLS (TASK-195).
+- [x] TASK-195 source/deployment boundary: API and worker services use explicit
+      non-superuser/non-BYPASSRLS roles, the profiled migrator uses the bootstrap owner,
+      and current Platform bootstrap → Master → Company plus cross-tenant denial passes
+      under PostgreSQL 16 FORCE RLS. Run `deploy/verify-runtime-roles.sh` on the target;
+      this does not claim a current production revision.
 - [ ] `npm run test:e2e:platform-workspace-layout` and
       `npm run test:e2e:platform-workspace-demo-autofill` pass for the release commit.
 - [ ] Support Grant/Simulation policy, Platform MFA and recent sensitive-action step-up

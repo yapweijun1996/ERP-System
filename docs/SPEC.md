@@ -531,10 +531,11 @@ platform principal while retaining the target actor. TASK-188 completed the reco
 automated release-gate proof. Implementation tests and fixtures remain distinct from
 human UAT and do not authorize a production release or migration.
 
-EPIC-067/TASK-206–209 add the elevated mode and migration 0099 source. TASK-206 remains
-In progress pending TASK-195's non-superuser/FORCE-RLS PostgreSQL proof; TASK-207/208
-remain Todo for adversarial and browser/accessibility/i18n closure, and TASK-209 is
-Blocked by TASK-195/TASK-203. No migration 0099 production deployment is claimed.
+EPIC-067/TASK-206–209 add the elevated mode and migration 0099 source. TASK-195's
+non-superuser/FORCE-RLS PostgreSQL proof is complete; TASK-206 remains In progress and
+TASK-207/208 remain Todo for adversarial and browser/accessibility/i18n closure. TASK-209
+is Blocked by TASK-203 and the remaining TASK-206–208 evidence. No migration 0099
+production deployment is claimed.
 
 ## 11. Platform Bootstrap & Tenant Provisioning contract (EPIC-065)
 
@@ -565,12 +566,14 @@ session, Platform CSRF, request ID, `Idempotency-Key`, duplicate conflict detect
 append-only audit; response replays never store plaintext passwords. Password reset email
 is deferred while SMTP is unset (TASK-193 blocked).
 
-The implementation is not yet production-RLS complete. `runPlatformMutation` does not
-set `app.master_fn`/`app.company_fn` before current Company provisioning writes
-RLS-protected tenant tables, while bundled Compose may use the PostgreSQL bootstrap
-superuser and bypass FORCE RLS. Before this path may be called production-ready,
-TASK-195 must provide explicit non-superuser/non-BYPASSRLS runtime roles and execute the
-current Platform bootstrap → Master → Company journey against PostgreSQL RLS.
+The implementation is production-RLS compatible for the current provisioning path.
+`createCompanyWithin` generates `companyFn` server-side and establishes transaction-local
+`app.master_fn`/`app.company_fn` before its first RLS-protected write. Bundled Compose
+uses separate migration/bootstrap, API and worker roles; API/worker roles are explicit
+non-superuser/non-BYPASSRLS roles without DDL or role-management privileges. TASK-195's
+PostgreSQL 16 integration executes the current Platform bootstrap → Master → Company
+journey and proves cross-tenant denial. This closes the source/test boundary, not the
+later production revision/CI/release evidence.
 
 TASK-213 closes the source-level table-list omission for `sales_enquiry_line` and adds a
 deterministic guard over the generated schema: 222 tenant-keyed tables are covered by the

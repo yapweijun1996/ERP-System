@@ -172,9 +172,10 @@ else
   if [ "$INTERACTIVE" = true ]; then
     echo "    (--interactive only writes a first-time .env — reusing the existing one)"
   fi
-  # An existing external DATABASE_URL must be respected on every rerun, not
-  # only when --interactive is supplied.
-  if grep -qE '^DATABASE_URL=.+' .env 2>/dev/null; then
+  # An existing external connection configuration must be respected on every
+  # rerun, not only when --interactive is supplied. The split URLs are the
+  # preferred production contract; DATABASE_URL remains a compatibility path.
+  if grep -qE '^(DATABASE_URL|API_DATABASE_URL|WORKER_DATABASE_URL|MIGRATION_DATABASE_URL)=.+' .env 2>/dev/null; then
     EXTERNAL_DB=true
   fi
 fi
@@ -205,7 +206,7 @@ compose() {
 }
 
 # 3. Start services. An external database is never started or waited on
-#    locally — only api+web come up, talking to DATABASE_URL from .env.
+#    locally — only api+web come up, talking to the configured runtime URL.
 if [ "$EXTERNAL_DB" = true ]; then
   echo "==> Starting services (api + web + calendar-worker — external database)..."
   compose up -d api web calendar-worker --no-deps
@@ -222,7 +223,7 @@ if [ "$EXTERNAL_DB" = true ]; then
   trap 'rm -f "$migrate_log"' EXIT
   ready=false
   for i in $(seq 1 30); do
-    if compose exec -T api npm run migrate >"$migrate_log" 2>&1; then
+    if compose --profile migration run --rm --no-deps migrator npm run migrate >"$migrate_log" 2>&1; then
       echo "    migrations applied — external database is reachable."
       ready=true
       break
@@ -249,9 +250,12 @@ else
     sleep 2
   done
 
-  # 5. Apply migrations (external DB already migrated as its readiness proof above).
+  echo "==> Reconciling non-superuser runtime roles..."
+  compose exec -T db sh /docker-entrypoint-initdb.d/00-runtime-roles.sh
+
+  # 5. Apply migrations with the bootstrap/migration owner, never the API role.
   echo "==> Applying database migrations..."
-  compose exec -T api npm run migrate
+  compose --profile migration run --rm --no-deps migrator npm run migrate
 fi
 
 # 6. Demo seed is deliberately opt-in. Production/client databases should use

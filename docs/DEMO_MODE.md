@@ -277,5 +277,6 @@ overflow without sending the final Company mutation.
 
 The hosted API Demo remains distinct from the static PGlite Demo. Public sample
 credentials and autofill must be disabled for a customer deployment, and neither mode
-is evidence that production PostgreSQL provisioning works under the required
-non-superuser, non-BYPASSRLS runtime role; TASK-195 owns that P0 proof and repair.
+is production deployment evidence. TASK-195 records the separate disposable PostgreSQL
+proof under the required non-superuser/non-BYPASSRLS runtime role; target-host role
+verification remains part of release operations.

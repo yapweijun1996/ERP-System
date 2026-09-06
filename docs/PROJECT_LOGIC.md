@@ -604,10 +604,12 @@ exact Employee simulation contract:
 - MAC mutation remains Platform-workspace-only. Return, logout, revoke, expiry or parent
   session termination invalidates tenant access.
 
-Focused PGlite/API proof passes, but TASK-206 remains In progress until TASK-195 proves
-the path with non-superuser/non-BYPASSRLS PostgreSQL runtime roles. TASK-207/208 remain
-Todo for adversarial and browser/accessibility/i18n proof; TASK-209 is Blocked by
-TASK-195 and TASK-203. No migration 0099 production deployment is claimed.
+Focused PGlite/API proof passes. TASK-195 now supplies the current PostgreSQL
+non-superuser/non-BYPASSRLS runtime-role proof; TASK-206 remains In progress for its
+own hidden-actor/elevated-session completion, while TASK-207/208 remain Todo for
+adversarial and browser/accessibility/i18n proof. TASK-209 is Blocked by TASK-203 and
+the remaining TASK-206–208 evidence. No migration 0099 production deployment is
+claimed.
 
 ## 10. Platform Bootstrap & Tenant Provisioning — current source contract
 
@@ -636,19 +638,23 @@ AND permission AND scope AND workflow authority`; Platform Superadmin privileges
 enter a simulation target. Migration 0098 adds the provisioning tables and backfills
 `platform.tenants.read/manage` for existing Superadmins.
 
-Current production-RLS caveat: the Platform route's `runPlatformMutation` opens a
-transaction but does not set `app.master_fn`/`app.company_fn` before Company creation
-writes `tax_rule`, control-plane, allocation, onboarding and account rows protected by
-FORCE RLS. The existing PostgreSQL security test exercises the retired
-`completeProductionSetup` path, while bundled Compose may run as the PostgreSQL bootstrap
-superuser and bypass RLS. TASK-195 must close and prove this boundary before provisioning
-is called production-ready. The inserted onboarding `completedSteps` also still contains
-the retired `modules` stage and must be normalized.
+Current production-RLS contract: `createCompanyWithin` generates the exact server-side
+`companyFn` and calls `setTenantContext` before its first `role_resource_scope` write;
+the surrounding Platform idempotency transaction therefore runs Company provisioning
+with transaction-local `app.master_fn`/`app.company_fn` and never needs a broad RLS
+bypass. Bundled Compose creates separate migration/bootstrap, API and worker roles;
+the API/worker roles are `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`, and the
+migration owner is used only by the profiled migrator. The current PostgreSQL 16
+integration executes bootstrap → Master → Company through the HTTP routes and proves
+RLS-filtered reads plus `42501` cross-tenant write denial. New Platform Companies now
+record only the active onboarding stages; the retired `modules` value remains accepted
+by the database check only for compatibility with older rows.
 
 TASK-213 separately closes the production overlay's omitted `sales_enquiry_line` table and
 adds a generated-schema coverage guard. It currently verifies 222 generic policy tables,
 232 tables carrying both tenant keys and 10 explicit security/control-plane exemptions;
-this source-level result does not change the Platform provisioning/runtime-role caveat.
+this source-level result complements TASK-195's runtime-role and provisioning-context
+proof but does not replace target-host deployment evidence.
 
 TASK-189–192 are complete. At the 2026-08-12 checkpoint, migration 0098/RLS and the application release
 were verified against existing data, restore-tested backups were retained, and only

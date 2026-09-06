@@ -308,12 +308,12 @@ writes retain permission/scope/workflow checks. Sensitive mutation additionally 
 a current-Company break-glass window and returns `platform_break_glass_required` when
 absent. Break-glass never overrides maker-checker or business rules and is revoked on
 scope switch/return/logout/expiry. UI and audit must display the real Platform principal,
-not the bridge identity. TASK-206–209 remain incomplete/release-blocked pending TASK-195
-PostgreSQL/FORCE-RLS proof and executable CI.
+not the bridge identity. TASK-206–209 remain incomplete/release-blocked pending their
+own adversarial/browser proof and executable CI; TASK-195's PostgreSQL/FORCE-RLS role
+boundary is complete.
 
-Current production RLS is also not a completed runtime-role claim: Platform Company
-provisioning does not set transaction-local tenant context before RLS-protected writes,
-and bundled Compose may use a PostgreSQL superuser. TASK-195 must deploy explicit
-non-superuser/non-BYPASSRLS API/worker roles and prove the current path. Public probes
-returned 502 and HEAD CI was billing-blocked, so current availability/release health is
-not green evidence.
+Current production RLS is source/runtime-role compatible: Platform Company provisioning
+sets generated tenant context before RLS-protected writes, and bundled Compose uses
+explicit non-superuser/non-BYPASSRLS API/worker roles with a separate migration owner.
+The disposable PostgreSQL 16 current-path proof passes. Public probes returned 502 and
+HEAD CI was billing-blocked, so current availability/release health is not green evidence.

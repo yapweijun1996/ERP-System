@@ -12,7 +12,8 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 Usage:
   CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh
 
-This runs the committed Drizzle migrations against DATABASE_URL. Before using
+This runs the committed Drizzle migrations with the migration owner from
+MIGRATION_DATABASE_URL (or the bundled DB_USER/DB_PASSWORD owner URL). Before using
 it on a client database, verify a restorable backup and test the release against
 a copy/staging database. The script does not create a backup for you.
 USAGE
@@ -39,9 +40,9 @@ fi
 compose=(docker compose -f docker-compose.yml -f docker-compose.production.yml)
 "${compose[@]}" config --quiet
 
-echo "==> Applying committed Drizzle migrations to DATABASE_URL"
+echo "==> Applying committed Drizzle migrations with the migration owner"
 echo "    This is the only deployment command in this workflow that changes database schema."
 # Build the migration runner from the current checkout. Without --build,
 # `docker compose run` may reuse the previously released API image and report
 # success while never seeing a newly committed migration file.
-"${compose[@]}" run --rm --no-deps --build api npm run migrate
+"${compose[@]}" --profile migration run --rm --no-deps --build migrator npm run migrate

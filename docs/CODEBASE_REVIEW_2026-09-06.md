@@ -1,7 +1,7 @@
 # ERP-System Codebase Review — 2026-09-06
 
-This review is the current action list for `main` at `2339ad2` (`test: cover setup
-wizard mobile layout`). Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
+This review began from `main` at `2188f56` (`New`) and now records the completed
+TASK-195 follow-up. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
 [PROJECT_LOGIC.md](PROJECT_LOGIC.md) remain the binding domain references. The older
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
@@ -19,8 +19,8 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **197 Done / 1 In progress / 11 Todo / 4
-  Blocked / 213 Total**. The actionable boundary is concentrated in TASK-195–205 and
+- The task registry currently reports **198 Done / 1 In progress / 10 Todo / 4
+  Blocked / 213 Total**. The actionable boundary is concentrated in TASK-196–205 and
   EPIC-067/TASK-206–209; the blocked items are external or operational, not silently
   treated as code failures.
 - During this review the user-owned PWA/setup-wizard changes were committed as
@@ -29,24 +29,27 @@ baseline.
   small-mobile widths. `.playwright-cli/` remains present but is not part of the commit;
   keep it out of release artifacts.
 
+- TASK-195 is now **Done**: Platform Company provisioning sets transaction-local tenant
+  context after generating the exact Company key; Compose separates migration,
+  API and worker roles; the current HTTP bootstrap → Master → Company route passes
+  PostgreSQL 16 FORCE-RLS with cross-tenant denial. Production revision, CI and
+  elevated Platform Admin evidence remain separate gates.
+
 ## Action backlog
 
 ### P0 — close before calling the Platform/Expenses release production-ready
 
-- **TASK-195 — Platform provisioning is not proven compatible with enforced PostgreSQL
-  RLS.**
-  - **Evidence:** `runPlatformMutation()` in `src/api/routes/platform.ts` opens the
-    idempotency transaction but does not establish `app.master_fn`/`app.company_fn`;
-    `createCompanyWithin()` in `src/modules/setup/platformProvisioning.ts` then writes
-    RLS-protected tenant tables. `withTenantTransaction()` does set those settings, but
-    the Platform mutation path does not use it.
-  - **Action:** establish a safe context strategy for the bootstrap → Master → Company
-    sequence, provision explicit non-superuser/non-`BYPASSRLS` API and worker roles, and
-    remove reliance on the Compose bootstrap superuser default.
-  - **Acceptance:** the current Platform route passes under PostgreSQL `FORCE ROW
-    LEVEL SECURITY` with the least-privilege roles; cross-tenant writes fail closed;
-    `test:postgres` covers the current `createMasterWithin()` and
-    `createCompanyWithin()` path rather than only the retired setup helper.
+- **TASK-195 — Done 2026-09-06: Platform provisioning/RLS boundary closed.**
+  - `setTenantContext()` is called immediately after server-side `companyFn`
+    generation, before the first `role_resource_scope` write.
+  - Compose provisions separate migration/bootstrap, API and worker roles; the
+    profiled migrator is the only path using the owner connection. Role provisioning
+    and verification scripts do not print passwords.
+  - `src/api/platformProvisioning.postgres.integration.test.ts` exercises the current
+    HTTP bootstrap → Master → Company path as a `NOSUPERUSER NOBYPASSRLS` role and
+    proves RLS-filtered reads plus `42501` cross-tenant write denial. The existing
+    full security suite remains for broader lifecycle coverage rather than being the
+    only Platform proof.
 
 - **TASK-196 — Receipt Pack authorization is weaker than the frozen visibility.**
   - **Evidence:** `requireReceiptReadAccess()` chooses current `company` or `own`
@@ -128,8 +131,8 @@ baseline.
     fallback until the code and user-facing state actually implement it.
 
 - **EPIC-067 / TASK-206–209 — Platform Admin work has a dependency chain.**
-  - **Action order:** finish PostgreSQL/RLS proof for TASK-195 and the hidden actor /
-    elevated-session foundation in TASK-206; then complete authorization switching,
+  - **Action order:** complete the hidden actor / elevated-session foundation in
+    TASK-206; then complete authorization switching,
     break-glass and audit proof (TASK-207), browser/access/i18n integration (TASK-208),
     and only then release TASK-209. TASK-203 remains an independent CI gate.
 
@@ -142,9 +145,9 @@ baseline.
 
 ## Recommended execution order
 
-- **First:** TASK-195, because it is a security boundary and blocks the Platform Admin
-  release chain.
-- **Next:** TASK-196, TASK-197 and TASK-204, because they affect authorization,
+- **First:** TASK-196, because it is the next security/evidence boundary after the
+  completed TASK-195 RLS/runtime-role gate.
+- **Next:** TASK-197 and TASK-204, because they affect authorization,
   evidence export and accounting correctness in already exposed ERP workflows.
 - **Then:** TASK-199/TASK-203 for deployment/CI evidence, followed by TASK-200 and the
   remaining P1 operational/lifecycle proof.
@@ -155,10 +158,13 @@ baseline.
 ## Verification boundary
 
 - Verified locally for this review: generated schema/drift, permissions, production-RLS
-  coverage, i18n artifacts, Demo pack, lint and root/Web typecheck.
+  coverage, i18n artifacts, Demo pack, lint and root/Web typecheck. TASK-195 also passed
+  the disposable PostgreSQL 16 `npm run test:postgres` run (2 files / 2 tests), including
+  the current Platform HTTP path and runtime-role verification.
 - The current full Vitest run completed with **170 passed files / 1 skipped file** and
   **674 passed tests / 1 skipped test**. The intentional stderr cases exercised
   malformed JSON and locale-load/markup failures; they did not fail the suite.
 - Not claimed by this document: current public availability, exact deployed revision,
-  GitHub Actions execution, production PostgreSQL Platform provisioning, physical-device
-  behavior, or production SMTP/Vision configuration.
+  GitHub Actions execution, a production database role rollout, physical-device behavior,
+  or production SMTP/Vision configuration. The PostgreSQL proof used a disposable local
+  instance and was removed after verification.

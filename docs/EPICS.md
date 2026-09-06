@@ -2607,9 +2607,11 @@ completion of EPIC-063–065; it owns defects and evidence gaps discovered after
 
 Current truth:
 
-- Platform Company provisioning is implemented and PGlite-tested, but its current
-  transaction does not establish tenant context before RLS-protected writes. Bundled
-  Compose may instead run as the PostgreSQL bootstrap superuser and bypass FORCE RLS.
+- Platform Company provisioning now establishes the generated transaction-local tenant
+  context before its first RLS-protected write. Bundled Compose separates the
+  migration/bootstrap owner from explicit API and worker `NOSUPERUSER NOBYPASSRLS`
+  roles; TASK-195's disposable PostgreSQL 16 current-path proof passes cross-tenant
+  denial. Target-host role verification and production revision evidence remain open.
 - The generic production overlay now includes `sales_enquiry_line`. `npm run
   check:production-rls` verifies the generated 252-table schema has 222 policy tables
   plus 10 explicit security/control-plane exemptions; this is static coverage evidence,
@@ -2631,7 +2633,7 @@ Current truth:
 | Task | Status | Scope |
 | --- | --- | --- |
 | TASK-194 | Done | Audit HEAD, correct source-of-truth docs and register hardening work |
-| TASK-195 | Todo | Least-privilege runtime roles and RLS-compatible Platform provisioning |
+| TASK-195 | Done | Least-privilege runtime roles and RLS-compatible Platform provisioning |
 | TASK-196 | Todo | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Todo | Permission-aware Company Receipts capture/correction/edit/void UX |
 | TASK-198 | Done | Narrow dual-mode exception, reason/ticket Admin access and explicit no-MFA/no-step-up risk acceptance |
@@ -2669,13 +2671,13 @@ reviving a login-capable tenant Superadmin or legacy authorization bypass:
 
 | Task | Status | Scope |
 | --- | --- | --- |
-| TASK-206 | In progress | Migration 0099, hidden actor/system role and bounded session foundation; completion waits for TASK-195 PostgreSQL/RLS proof |
+| TASK-206 | In progress | Migration 0099, hidden actor/system role and bounded session foundation; TASK-195 PostgreSQL/RLS proof is complete, while actor/session evidence remains |
 | TASK-207 | Todo | Tenant authorization, switching, break-glass and dual-attribution/adversarial proof |
 | TASK-208 | Todo | Platform/Tenant workspace UX and Employee-mode integration |
-| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-195/TASK-203 |
+| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and remaining TASK-206–208 evidence |
 
 Source for TASK-206–208 is present and focused PGlite/API tests pass, but this is not a
-production-ready or deployed claim. Migration 0099 must not be released until TASK-195
-proves the current provisioning/access path under non-superuser, non-BYPASSRLS runtime
-roles and TASK-203 allows CI jobs to execute. Password-only Platform login, no step-up,
+production-ready or deployed claim. TASK-195's current provisioning/access role proof
+is complete; migration 0099 still requires TASK-206–208 evidence and TASK-203 to allow
+CI jobs to execute before release. Password-only Platform login, no step-up,
 and sensitive-data read without break-glass are explicitly accepted high-severity risks.

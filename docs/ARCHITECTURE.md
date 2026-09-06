@@ -288,11 +288,11 @@ and its checkpoint ended at empty-database Platform registration. Current probes
 
 ## 11. Production trust boundary (EPIC-066)
 
-The next architecture gate is not a new module. Current Platform Company provisioning
-does not establish transaction-local tenant settings before RLS-protected writes; bundled
-Compose may instead use a superuser runtime that bypasses FORCE RLS. Receipt Pack access
-also does not re-require frozen company visibility after permission downgrade. Platform
-Simulation is an undocumented exception to the Support Grant schema invariant and has no
-MFA/step-up. TASK-195–205 own these isolation, privilege, tax/AI correctness,
-release-evidence and operations
-gaps; see [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
+The next architecture gate is not a new module. TASK-195 now establishes transaction-local
+tenant settings before the first RLS-protected Platform write and separates migration,
+API and worker database roles; its disposable PostgreSQL proof does not replace target-host
+release evidence. Receipt Pack access also does not re-require frozen company visibility
+after permission downgrade. Platform Simulation is an undocumented exception to the
+Support Grant schema invariant and has no MFA/step-up. TASK-196–205 own the remaining
+isolation, privilege, tax/AI correctness, release-evidence and operations gaps; see
+[ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).

@@ -611,10 +611,13 @@ The current architecture has broad business coverage, but EPIC-066 treats produc
 trust as the next release boundary. The complete review and evidence matrix are in
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
 
-- **RLS/runtime role:** `runPlatformMutation` does not establish tenant context before
-  Company provisioning writes RLS-protected rows, while bundled Compose may run the API
-  as the PostgreSQL bootstrap superuser. A least-privilege role and real PostgreSQL
-  provisioning proof are required (TASK-195).
+- **RLS/runtime role:** TASK-195 closes the Platform provisioning boundary. After the
+  server generates `companyFn`, `createCompanyWithin` sets transaction-local tenant
+  context before its first FORCE-RLS write. Bundled Compose now provisions separate
+  migration/bootstrap, API and worker roles; the runtime roles are explicit
+  `NOSUPERUSER NOBYPASSRLS` roles with no DDL/role-management privileges. A disposable
+  PostgreSQL 16 HTTP integration proves the current bootstrap → Master → Company path
+  and cross-tenant denial. Production deployment/revision evidence remains a later gate.
 - **Receipt Pack:** later reads/renders validate tenant plus creator and any read grant,
   not whether a frozen company-visible Pack remains allowed after downgrade. Current
   visibility must dominate snapshot visibility (TASK-196).

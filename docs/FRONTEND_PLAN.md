@@ -76,6 +76,6 @@ not a pass claim. Historical browser and full-test results remain dated in STATU
 - PGlite and API adapters preserve the same business contract;
 - documentation distinguishes source-present, tested-now, deployed and live-verified.
 
-Production release still requires the independent RLS/runtime-role, recovery, current
-revision and operational UAT gates in EPIC-066; a successful frontend build cannot
-satisfy them.
+Production release still requires the independent target-host role verification,
+recovery, current revision and operational UAT gates in EPIC-066; a successful
+frontend build cannot satisfy them.

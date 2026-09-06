@@ -45,6 +45,7 @@ import {
   requirePlatformPermission,
   type PlatformSessionData,
 } from '../../auth/platformSupport';
+import { setTenantContext } from '../../data/tenantTransaction';
 import { createDefaultControlPlane } from './defaultControlPlane';
 
 const SUPPORTED_LANGUAGES = new Set(['en', 'ms', 'zh', 'ja', 'vi']);
@@ -262,6 +263,10 @@ export async function createCompanyWithin(
   }
 
   const companyFn = `C-${country}-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
+  // The generated Company key is not available to the route before this
+  // command starts. Establish it immediately so the first tenant-protected
+  // write (role_resource_scope) cannot rely on a superuser or BYPASSRLS.
+  await setTenantContext(exec, { masterFn, companyFn });
   await exec.insert(currency).values({
     code: defaults.currency, name: defaults.currencyName, symbol: defaults.currencySymbol,
   }).onConflictDoNothing();
@@ -307,7 +312,7 @@ export async function createCompanyWithin(
     companyFn,
     status: 'live',
     currentStage: 'live',
-    completedSteps: ['company', 'fiscal', 'warehouse', 'modules', 'roles', 'staff', 'import', 'opening_balance', 'uat'],
+    completedSteps: ['company', 'fiscal', 'warehouse', 'roles', 'staff', 'import', 'opening_balance', 'uat'],
     goLiveAt: new Date(),
   });
   await exec.insert(account).values([

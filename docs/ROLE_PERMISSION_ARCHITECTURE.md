@@ -628,9 +628,11 @@ request hash and non-secret response facts. These records are created by migrati
 the migration also backfills tenant-provisioning permissions for existing Platform
 Superadmins without granting anything to support roles.
 
-This authority model is not yet a complete production database-role proof. Current
-Platform Company provisioning writes RLS-protected tenant rows inside
-`runPlatformMutation` without setting transaction-local `app.master_fn`/`app.company_fn`.
-Bundled Compose may use the PostgreSQL bootstrap superuser, which bypasses FORCE RLS.
-TASK-195 must deploy explicit non-superuser/non-BYPASSRLS runtime roles and prove the
-current Platform path under PostgreSQL before this boundary is production-ready.
+This authority model now has a source/disposable production-role proof. Platform
+Company provisioning sets transaction-local `app.master_fn`/`app.company_fn` after
+generating the exact Company key and before the first protected write. Bundled Compose
+provisions separate migration/bootstrap, API and worker roles; runtime roles are
+explicit non-superuser/non-BYPASSRLS accounts, while the profiled migrator uses the
+owner connection. TASK-195's PostgreSQL 16 proof covers the current Platform path and
+cross-tenant denial. Target-host verification and production revision evidence remain
+separate release gates.

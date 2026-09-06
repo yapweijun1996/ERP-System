@@ -58,7 +58,7 @@ boundaries, not screen count alone.
 | --- | --- | --- | --- |
 | Core ERP domains | Yes, at the Canonical depth recorded in STATUS | Broad unit/API/Demo/browser history | Production path exists; current public availability is not healthy-proven |
 | Company Receipts v1 core | Aggregate, confirmation, own/company register, search/date, Pack, Demo/API adapters | PGlite/PostgreSQL fixtures and browser journeys; focused 22-test review subset passes | Migrations through 0098 were deployed under TASK-192, then production was reset; no authenticated production receipt UAT/data is claimed |
-| Platform MAC/bootstrap/provisioning | Source and PGlite/API tests exist | Focused tests pass | Exact deployed HEAD is unproven; production RLS/runtime-role compatibility is unresolved |
+| Platform MAC/bootstrap/provisioning | Source and PGlite/API tests plus explicit runtime-role deployment config | Focused tests and disposable PostgreSQL 16 current-path proof pass | Exact deployed HEAD is unproven; production revision/CI/release evidence remains open |
 | Latest Platform UX | Password visibility, tenant-only Remember, Demo quick login and responsive shell; existing-Company control is opt-in, with `+ Create Company` opening an inline ordinal Demo draft and Cancel/success closing it | Focused PGlite E2E covers closed DOM, open/Cancel focus, scoped drafts, conflict retention, returned-`companyFn` selection and responsive containment | `dff72c3` deployed application-only 2026-08-13; health 200, counts unchanged and live open/edit/Cancel smoke passed without a create mutation |
 | Current public service | N/A | Review probes attempted | `/health` and `/api/setup/status` returned HTTP 502 during this review |
 | Current CI | Workflow exists | Older source run evidence exists | HEAD run `31603746668` started zero jobs because GitHub billing/spending blocked it |
@@ -71,19 +71,13 @@ Never collapse these columns into a single “done” claim.
 
 [`production-rls.sql`](../deploy/sql/production-rls.sql) requires a non-superuser,
 non-BYPASSRLS runtime role and transaction-local `app.master_fn`/`app.company_fn`.
-Normal tenant commands use `withTenantTransaction`; the retired setup path also set both
-values. The current Platform mutation wrapper in
-[`routes/platform.ts`](../src/api/routes/platform.ts) opens a transaction but does not set
-the generated Company context before
-[`platformProvisioning.ts`](../src/modules/setup/platformProvisioning.ts) writes
-RLS-protected tax, control-plane, module, onboarding and account rows.
-
-The bundled Compose URL also defaults to the PostgreSQL bootstrap user, which can be a
-superuser and therefore bypass FORCE RLS. The present result is an unsafe fork: compliant
-runtime roles may break provisioning, while a superuser runtime makes provisioning work
-by bypassing tenant defense-in-depth. Existing PostgreSQL security proof exercises the
-retired setup command, not the current Platform bootstrap → Master → Company path.
-TASK-195 owns the fix and real PostgreSQL proof.
+TASK-195 closes this source boundary: `createCompanyWithin` generates the exact
+Company key and calls `setTenantContext` before its first protected write;
+`docker-compose.yml` uses separate migration/bootstrap, API and worker roles, and the
+profiled migrator is the only service using the owner connection. The new PostgreSQL 16
+integration exercises the current HTTP bootstrap → Master → Company path as a runtime
+role and proves RLS-filtered reads plus cross-tenant write denial. Production rollout,
+exact deployed HEAD and CI execution remain separate gaps.
 
 ### 4.2 Receipt Pack authorization downgrade
 
@@ -184,7 +178,8 @@ Not passed or not run during this review:
 - the browser route/i18n matrix, because the local Playwright Chromium executable is not
   installed;
 - the current 170-file/666-test collection as a full execution;
-- current Platform provisioning with a non-superuser PostgreSQL runtime role;
+- production role rollout and exact deployed Platform revision (the disposable
+  PostgreSQL 16 current-path proof now passes locally);
 - physical-phone PWA acceptance;
 - authenticated production Company Receipts UAT;
 - current public health, which returned 502 rather than 200;

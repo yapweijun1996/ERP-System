@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { DB } from '../data/db';
 import {
   appUser,
+  companyOnboarding,
   masterAdminAccount,
   role,
   rolePermission,
@@ -131,6 +132,10 @@ describe('Platform Superadmin tenant provisioning', () => {
     expect(firstCompany.status).toBe(201);
     const company = (await firstCompany.json()).data as { companyFn: string; masterAdmin: { userId: number } };
     expect(company.masterAdmin.userId).toBeGreaterThan(0);
+    const [firstOnboarding] = await db.select().from(companyOnboarding);
+    expect(firstOnboarding.completedSteps).toEqual([
+      'company', 'fiscal', 'warehouse', 'roles', 'staff', 'import', 'opening_balance', 'uat',
+    ]);
 
     const secondCompany = await fetch(`${running.baseUrl}/api/platform/masters/${master.masterFn}/companies`, {
       method: 'POST',

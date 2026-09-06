@@ -186,7 +186,8 @@ production counts remained 99 migrations, 1 Platform principal, 1 Master, 2 Comp
 
 ### Production RLS provisioning gate
 
-The current Platform Company transaction writes RLS-protected tenant tables without
-setting the generated transaction-local tenant context; bundled Compose may instead use
-the PostgreSQL bootstrap superuser. TASK-195 must deploy least-privilege runtime roles and
-prove the current flow under FORCE RLS before this setup path is production-ready.
+The current Platform Company transaction sets the generated transaction-local tenant
+context before its first RLS-protected write; bundled Compose uses separate
+migration/bootstrap, API and worker roles. TASK-195's disposable PostgreSQL 16 proof
+covers the current flow under FORCE RLS. Target-host verification and production
+revision evidence remain separate release gates.

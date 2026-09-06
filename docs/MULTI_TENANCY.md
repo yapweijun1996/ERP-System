@@ -92,8 +92,9 @@ generated table carrying both tenant keys, including `sales_enquiry_line`. The l
 then checks for missing, unknown, malformed or duplicate policy entries. The current
 schema has 232 tenant-keyed tables: 222 use the generic policy and 10 explicitly listed
 security/control-plane tables remain outside that generic loop. This guard proves table
-coverage only; it does not replace TASK-195's required non-superuser/non-BYPASSRLS role,
-Platform provisioning-context and deployed PostgreSQL proof.
+coverage only; TASK-195 now supplies the non-superuser/non-BYPASSRLS runtime roles,
+generated Platform provisioning context and disposable PostgreSQL 16 current-path proof.
+Target-host role verification and deployed revision evidence remain release gates.
 
 ## 4. User ↔ Company is many-to-many
 
@@ -285,13 +286,12 @@ or `platform.tenants.manage`; support roles and simulated tenant sessions cannot
 or mutate a Master/Company. `platform_idempotency` stores only hashed request/replay
 metadata and response facts, never initial passwords.
 
-Production-RLS gap: the current Platform Company provisioning transaction does not set
-the newly generated `app.master_fn`/`app.company_fn` before writing FORCE-RLS tenant
-tables. Conversely, bundled Compose may connect the API as the PostgreSQL bootstrap
-superuser and bypass RLS. TASK-195 must provide least-privilege runtime roles and a real
-PostgreSQL bootstrap/Master/Company isolation proof. Until then, application tenant
-predicates remain implemented but the current provisioning/runtime-role combination is
-not a complete production isolation claim.
+TASK-195 closes the Platform provisioning/runtime-role gap: `createCompanyWithin`
+generates the exact Company key and sets transaction-local
+`app.master_fn`/`app.company_fn` before its first FORCE-RLS write, while bundled Compose
+uses separate migration/bootstrap, API and worker roles. The PostgreSQL 16 HTTP proof
+passes bootstrap → Master → Company and cross-tenant denial. Application predicates and
+target-host role verification remain required release evidence.
 # Platform tenant administration boundary (migration 0099 source)
 
 Elevated Platform tenant access does not create a login-capable tenant Superadmin and
@@ -304,5 +304,6 @@ Admin-mode scope switching is a Platform API mutation, not `session.switch_compa
 the server verifies the new Company belongs to the requested Master, revokes the old
 Company break-glass window, refreshes authorization/module projection and audits both
 scopes. Exact Employee simulation remains Company-locked and must return before selecting
-another scope. Missing or unresolved Master/Company entitlement fails closed. TASK-195
-must prove these paths under non-superuser/non-BYPASSRLS PostgreSQL before release.
+another scope. Missing or unresolved Master/Company entitlement fails closed. TASK-195's
+non-superuser/non-BYPASSRLS current-path PostgreSQL proof is complete; the remaining
+Platform Admin release proof is TASK-206–209.

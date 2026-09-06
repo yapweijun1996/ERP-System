@@ -1232,9 +1232,10 @@ more module breadth. The source-backed review is
    migrations/schema v99/252
    tables, 129 Canonical routes with 128 API metadata routes, 1,545 i18n keys/72 packs,
    315 permission codes and PWA v262. Historical test/deploy checkpoints remain dated.
-2. **Isolation first** (TASK-195 todo): deploy explicit non-superuser/non-BYPASSRLS
-   runtime roles and prove current Platform bootstrap → Master → Company provisioning
-   under FORCE RLS with exact transaction-local tenant context.
+2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
+   migration/bootstrap, API and worker roles; Platform provisioning establishes the
+   generated Company context before its first FORCE-RLS write, and a PostgreSQL 16
+   current-path integration proves bootstrap → Master → Company plus cross-tenant denial.
 3. **Receipt security and workflow** (TASK-196/197 todo): close company-Pack visibility
    downgrade, define original-evidence export authority/audit, capability-gate UI actions,
    and deliver real detail/edit/void/Missing Date plus bounded evidence selection.
@@ -1262,8 +1263,9 @@ production pass. TASK-017 and TASK-193 remain independent blockers.
 
 1. **Session foundation** (TASK-206 in progress): migration 0099 and source add the
    hidden non-login bridge identity, system-managed Platform Tenant Admin membership,
-   15-minute elevated access and Company-bound break-glass records. Completion depends
-   on TASK-195's real PostgreSQL/FORCE-RLS proof.
+   15-minute elevated access and Company-bound break-glass records. Completion can use
+   TASK-195's completed PostgreSQL/FORCE-RLS proof; hidden actor and elevated-session
+   evidence is still required.
 2. **Authorization** (TASK-207 todo): prove MAC-effective navigation, ordinary tenant
    writes, sensitive-operation denial/unlock, workflow and maker-checker preservation,
    scope isolation, expiry, revoke and dual attribution adversarially.

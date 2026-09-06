@@ -59,12 +59,12 @@ click, `window.scrollY` and root overflow remained zero and the 80vh shell top s
 87.203125 px; Reset restored the unsaved value. The browser reported no console errors.
 This is UI containment evidence only: no entitlement PATCH was sent.
 
-There is also a P0 database-role gap. `production-rls.sql` requires a non-superuser,
-non-BYPASSRLS API role with transaction-local tenant settings. Current Platform Company
-provisioning does not set those settings before RLS-protected writes, while bundled
-Compose may use the PostgreSQL bootstrap superuser. TASK-195 must supply explicit
-least-privilege API/worker roles and current-path PostgreSQL proof before another
-production-ready claim.
+TASK-195 closes the source/deployment role gap. `production-rls.sql` is now paired with
+explicit API and worker roles (`NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`), a
+profiled migration owner, and a current Platform Company context established before
+the first FORCE-RLS write. A disposable PostgreSQL 16 HTTP integration passes
+bootstrap → Master → Company and cross-tenant denial. This is not production revision
+or CI evidence; TASK-199/TASK-203/TASK-206–209 remain release gates.
 
 Current TASK-175 evidence (2026-08-10): a disposable PostgreSQL 16 database passed
 `POSTGRES_URL=... npm run demo` (cross-engine parity and exactly-one-winner stock
@@ -118,16 +118,20 @@ services:
       POSTGRES_DB: erp
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      DB_API_USER: ${DB_API_USER}
+      DB_API_PASSWORD: ${DB_API_PASSWORD}
+      DB_WORKER_USER: ${DB_WORKER_USER}
+      DB_WORKER_PASSWORD: ${DB_WORKER_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d   # runs ONCE on empty volume
+      - ./deploy/db-init:/docker-entrypoint-initdb.d   # runs on empty volume
     ports: ["5432:5432"]
     shm_size: "1gb"                              # large joins/sorts need shared memory
 
   api:
     build: ./api
     environment:
-      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/erp
+      DATABASE_URL: ${API_DATABASE_URL}
     depends_on: [db]
     ports: ["3000:3000"]
 
@@ -207,9 +211,9 @@ convenient local/base-Compose variant:
    `ERP_PUBLIC_URL`, same as the bundled path. The first-run web setup is tokenless
    when the database has no tenant data.
 3. The script never starts or waits on the bundled `db` service
-   (`docker compose up -d api web --no-deps`) and proves readiness by retrying
-   `docker compose exec -T api npm run migrate` directly against your database instead
-   of `pg_isready` against a container that was never started.
+   (`docker compose up -d api web calendar-worker --no-deps`) and proves readiness by
+   retrying the profiled `migrator` service against your configured migration URL
+   instead of running migrations through the API runtime role.
 
 This first-install path intentionally applies the committed migrations to the selected
 database. Take a backup and use a staging copy first when the external database already
@@ -217,9 +221,11 @@ contains client data. It is not the command to use for routine source-code relea
 
 This only takes effect the first time — once `.env` exists, `make setup`,
 `make setup-interactive`, and `make setup-production` leave it untouched. To switch an
-*existing* deployment onto an external database later, edit `.env`'s `DATABASE_URL` by
-hand (see the comment above it in `.env.example`) and use the production overlay when
-starting the application containers.
+*existing* deployment onto an external database later, set the explicit
+`API_DATABASE_URL`, `WORKER_DATABASE_URL` and `MIGRATION_DATABASE_URL` values in `.env`
+(or the legacy `DATABASE_URL` fallback), provision the two runtime roles with
+`deploy/provision-runtime-roles.sh`, and use the production overlay when starting the
+application containers.
 
 ### Updating source code without replacing the database
 
@@ -310,9 +316,9 @@ email reset is blocked while `SMTP_HOST` is empty.
 ## Migration 0099 / EPIC-067 release hold
 
 Migration 0099 and application source for Platform tenant administration are generated
-but **not approved for production release**. Do not apply 0099 until TASK-195 proves
-hidden-actor provisioning, tenant access, switching and revocation with explicit
-NOSUPERUSER/NOBYPASSRLS runtime roles under FORCE RLS, and TASK-203 permits CI to execute.
+but **not approved for production release**. Do not apply 0099 until TASK-195's
+explicit NOSUPERUSER/NOBYPASSRLS runtime-role and FORCE RLS proof, TASK-206's hidden-
+actor/session evidence, and TASK-203's CI execution gate are complete.
 
 The eventual release is backup + migration 0099 + production RLS reapplication +
 application rollout only: no reset, seed or volume deletion. Pre/post counts and exact
@@ -439,6 +445,40 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 Schema itself is applied by Drizzle migrations (`npm run migrate`), not the init script,
 so demo and production stay in lockstep.
 
+### Runtime database roles (TASK-195)
+
+`DB_USER`/`DB_PASSWORD` identify the bundled PostgreSQL bootstrap and migration owner;
+they are not the credentials used by the running API or workers. Compose creates
+`DB_API_USER`/`DB_API_PASSWORD` and `DB_WORKER_USER`/`DB_WORKER_PASSWORD` through
+`deploy/sql/runtime-roles.sql`. The API receives `API_DATABASE_URL` (or its generated
+runtime URL), while the email/report/document/calendar workers receive
+`WORKER_DATABASE_URL`. The profiled `migrator` service alone receives
+`MIGRATION_DATABASE_URL` (or the bundled owner URL).
+
+The runtime roles have table DML needed by the application, no schema/role/database
+administration, and `NOBYPASSRLS`; worker deletion is limited to maintenance and queue
+tables. `production-rls.sql` remains the tenant boundary. A fresh database runs the
+role script during PostgreSQL initialization; `scripts/setup.sh` reruns it for an
+existing bundled volume. For an external database, provision roles as the database
+owner before starting services:
+
+```bash
+DATABASE_ADMIN_URL='postgresql://<migration-owner>@<host>:5432/<db>' \
+DB_API_PASSWORD='<api-secret>' \
+DB_WORKER_PASSWORD='<worker-secret>' \
+./deploy/provision-runtime-roles.sh
+DATABASE_ADMIN_URL='postgresql://<migration-owner>@<host>:5432/<db>' \
+./deploy/verify-runtime-roles.sh
+```
+
+The commands print role names and flags only; do not put credentials in tracked files.
+The migration path remains guarded by `CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh`.
+Rollback is the existing release procedure: stop application containers, restore the
+previous image/configuration or database backup as appropriate, and rerun the role
+verification. Runtime-role provisioning is idempotent and does not alter tenant data;
+schema rollback still requires the reviewed backup/restore procedure and is never
+performed with `make reset` on a client database.
+
 ### Production-only RLS migration
 
 Row Level Security is **not** part of the shared schema (it would be bypassed in the
@@ -446,7 +486,7 @@ PGlite demo — see [MULTI_TENANCY.md](MULTI_TENANCY.md#3-isolation-model--app-l
 Apply it as a **production-only** step after the shared migrations:
 
 ```bash
-psql "$DATABASE_URL" -f deploy/sql/production-rls.sql   # enables + FORCEs RLS policies
+psql "$MIGRATION_DATABASE_URL" -f deploy/sql/production-rls.sql   # enables + FORCEs RLS policies
 ```
 
 This keeps tenant isolation enforced at the database level in production while the
@@ -611,8 +651,12 @@ jobs:
 | --- | --- | --- |
 | `VITE_DATA_MODE` | both | `demo` (PGlite) or `api` (Node+Postgres) |
 | `VITE_PLATFORM_DEMO_AUTOFILL` | web build | `true` only for the explicitly hosted API demo; keep `false` for real customers |
-| `DATABASE_URL` | production | Postgres connection string |
-| `DB_USER` / `DB_PASSWORD` | production | Compose DB credentials |
+| `API_DATABASE_URL` | production | Non-superuser/non-BYPASSRLS API connection string |
+| `WORKER_DATABASE_URL` | production | Non-superuser/non-BYPASSRLS worker connection string |
+| `MIGRATION_DATABASE_URL` | migration | Database-owner connection used only by the profiled migrator |
+| `DATABASE_URL` | compatibility | Legacy external connection fallback for API/worker/migrator; prefer the explicit URLs |
+| `DB_USER` / `DB_PASSWORD` | bundled production | PostgreSQL bootstrap/migration-owner credentials, never runtime API/worker credentials |
+| `DB_API_*` / `DB_WORKER_*` | bundled production | Runtime role names/passwords provisioned by the database init script |
 | `COMPOSE_PROJECT_NAME` | production | Stable namespace for named volumes |
 | `DEPLOY_PAT` | CI | token to push demo to the public Pages repo |
 
@@ -640,7 +684,8 @@ Production is ready when:
 - stock and finance writes run through the API, not directly from the browser.
 - PostgreSQL transaction/concurrency tests pass, including no stock over-sell.
 - API and workers use explicit non-superuser/non-BYPASSRLS runtime roles, and current
-  Platform bootstrap/Master/Company provisioning passes under FORCE RLS.
+  Platform bootstrap/Master/Company provisioning passes under FORCE RLS (TASK-195
+  source/disposable proof complete; run `deploy/verify-runtime-roles.sh` on the target).
 - the deployed commit and web asset hashes are recorded; public probes and CI are current
   rather than historical or zero-step infrastructure failures.
 
