@@ -48,9 +48,10 @@ while `/release.json`, `/health` and `/api/setup/status` returned HTTP 404 HTML 
 responses; no API or release identity was exposed. TASK-199 owns availability/revision
 proof; TASK-203 owns current-HEAD CI proof.
 
-Final-review user-owned worktree edits further refactor that resume behavior into an
-explicit presentation state machine and extend its E2E assertions. They are uncommitted,
-were not executed in the late review window and have no deployment evidence.
+The final-review Platform workspace edits were later committed in `84a18b5`: they
+further refactor that resume behavior into an explicit presentation state machine and
+extend its E2E assertions. They are source-present only, have no current deployment
+evidence, and must not be treated as live until the deployed revision is identified.
 
 ### Release identity evidence
 
