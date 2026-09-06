@@ -41,6 +41,7 @@ services:
       PORT: 3000
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      ERP_RELEASE_COMMIT: ${ERP_RELEASE_COMMIT:-unknown}
       ERP_TOKEN_ENCRYPTION_KEY: ${ERP_TOKEN_ENCRYPTION_KEY:-}
       ERP_PUBLIC_URL: ${ERP_PUBLIC_URL:-http://localhost:8080}
       DOCUMENT_STORAGE_FS_ROOT: ${DOCUMENT_STORAGE_FS_ROOT:-}
@@ -119,6 +120,8 @@ services:
       args:
         VITE_DATA_MODE: api
         VITE_PLATFORM_DEMO_AUTOFILL: ${VITE_PLATFORM_DEMO_AUTOFILL:-false}
+        ERP_RELEASE_COMMIT: ${ERP_RELEASE_COMMIT:-unknown}
+        ERP_RELEASE_DATA_MODE: api
     ports:
       - "${WEB_PORT:-8080}:80"
     depends_on:

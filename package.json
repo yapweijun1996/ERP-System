@@ -31,6 +31,7 @@
     "check:production-rls": "npm run check:demo-schema && tsx scripts/check-production-rls.ts",
     "check:permissions": "tsx scripts/check-permissions.ts",
     "docs:check": "node scripts/check-docs.mjs",
+    "write:release-manifest": "node scripts/write-release-manifest.mjs",
     "smoke": "node scripts/smoke.mjs",
   "test:e2e:master-data": "npm run build:demo && node tests/e2e/master-data-editor.spec.mjs",
   "test:e2e:leave": "npm run build:demo && node tests/e2e/my-leave-validation.spec.mjs",

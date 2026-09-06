@@ -48,15 +48,15 @@ import {
   DEFAULT_ABSOLUTE_TTL_MS,
   REMEMBERED_ABSOLUTE_TTL_MS,
 } from '../auth/session';
-import { createApp } from './app';
+import { createApp, type AppOptions } from './app';
 
 interface RunningApi {
   baseUrl: string;
   server: Server;
 }
 
-async function startApi(db: DB): Promise<RunningApi> {
-  const server = createApp(db).listen(0, '127.0.0.1');
+async function startApi(db: DB, options: AppOptions = {}): Promise<RunningApi> {
+  const server = createApp(db, options).listen(0, '127.0.0.1');
   await new Promise<void>((resolve) => server.once('listening', resolve));
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('HTTP test server has no TCP address');
@@ -117,6 +117,18 @@ describe('production API security contract', () => {
 
   afterEach(async () => {
     await stopApi(running.server);
+  });
+
+  it('reports the configured release revision from the health endpoint', async () => {
+    await stopApi(running.server);
+    running = await startApi(db, { revision: 'test-release-revision' });
+    const response = await fetch(`${running.baseUrl}/health`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      status: 'ok',
+      service: 'erp-system-api',
+      revision: 'test-release-revision',
+    });
   });
 
   it('persists sessions across application restarts', async () => {

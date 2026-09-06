@@ -88,6 +88,8 @@ track.
 - [ ] Spot-check at 375 px on at least dashboard + one Canonical write flow
 - [ ] Pages artifact contains `web/dist/` only — no `.env*`, production API endpoint,
       database connection string or provider credential
+- [ ] Public `release.json` revision matches the intended Pages workflow commit and its
+      listed asset SHA-256 values match the fetched files; this is read-only evidence.
 
 ## 2. Production path (Docker Compose)
 
@@ -104,6 +106,8 @@ track.
       invariants and application-only release were verified on the target Compose DB.
 - [ ] Current health: TASK-192 recorded healthy Compose/public probes, but TASK-194 public
       `/health` and setup probes returned 502. TASK-199 must restore and reverify.
+- [ ] Public `/health` returns `status: ok` with the intended `revision`, and public
+      `/release.json` reports the same revision before production availability is claimed.
 - [x] Auth/setup sanity at the TASK-192 checkpoint: pre-reset counts remained usable,
       legacy setup returned 410 and non-empty public bootstrap returned 409; after reset
       `GET /api/setup/status` returned `requiresPlatformBootstrap: true` with no
@@ -118,6 +122,8 @@ track.
 ## 3. After either release
 
 - [ ] Tag or record the released commit hash
+- [ ] Preserve the fetched `/health` and `/release.json` responses with the release
+      record; the two revisions must agree with the intended source commit.
 - [x] Note the release (and manual backup/migration/RLS steps) in the task done-note,
       `STATUS.md` and `DEPLOYMENT.md` so the next session inherits the context
 

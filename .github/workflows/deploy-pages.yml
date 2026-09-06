@@ -53,6 +53,14 @@ jobs:
           VITE_DATA_MODE: demo
         run: npm run build:demo
 
+      - name: Write release manifest
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          RELEASE_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          RELEASE_DATA_MODE: demo
+        run: npm run write:release-manifest -- web/dist
+
       - name: Add GitHub Pages fallback files
         run: |
           cp web/dist/index.html web/dist/404.html

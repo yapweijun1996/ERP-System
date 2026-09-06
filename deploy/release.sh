@@ -34,6 +34,12 @@ if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>
 fi
 
 compose=(docker compose -f docker-compose.yml -f docker-compose.production.yml)
+release_commit="$(git rev-parse HEAD 2>/dev/null || true)"
+if [[ -z "$release_commit" ]]; then
+  echo "ERROR: release must run from a Git checkout so the deployed revision is traceable." >&2
+  exit 1
+fi
+export ERP_RELEASE_COMMIT="${ERP_RELEASE_COMMIT:-$release_commit}"
 "${compose[@]}" config --quiet
 
 echo "==> Releasing application containers only (database is preserved)"

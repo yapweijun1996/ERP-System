@@ -17,8 +17,13 @@ ARG VITE_DATA_MODE=api
 ENV VITE_DATA_MODE=$VITE_DATA_MODE
 ARG VITE_PLATFORM_DEMO_AUTOFILL=false
 ENV VITE_PLATFORM_DEMO_AUTOFILL=$VITE_PLATFORM_DEMO_AUTOFILL
+ARG ERP_RELEASE_COMMIT=unknown
+ENV RELEASE_COMMIT=$ERP_RELEASE_COMMIT
+ARG ERP_RELEASE_DATA_MODE=api
+ENV RELEASE_DATA_MODE=$ERP_RELEASE_DATA_MODE
+COPY scripts/write-release-manifest.mjs /app/scripts/write-release-manifest.mjs
 WORKDIR /app/web
-RUN npm run build
+RUN npm run build && node /app/scripts/write-release-manifest.mjs /app/web/dist
 
 FROM nginx:alpine
 COPY --from=build /app/web/dist /usr/share/nginx/html

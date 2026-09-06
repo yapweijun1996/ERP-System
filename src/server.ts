@@ -19,6 +19,7 @@ const app = createApp(db, {
   trustProxy: process.env.TRUST_PROXY === 'true',
   tokenEncryptionKey: process.env.ERP_TOKEN_ENCRYPTION_KEY,
   publicUrl: process.env.ERP_PUBLIC_URL,
+  revision: process.env.ERP_RELEASE_COMMIT,
 });
 
 app.listen(port, () => {

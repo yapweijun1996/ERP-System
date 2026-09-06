@@ -49,6 +49,23 @@ Final-review user-owned worktree edits further refactor that resume behavior int
 explicit presentation state machine and extend its E2E assertions. They are uncommitted,
 were not executed in the late review window and have no deployment evidence.
 
+### Release identity evidence
+
+The application now emits two non-secret release identity surfaces:
+
+- API `GET /health` includes `revision`, sourced from `ERP_RELEASE_COMMIT`. The
+  application-only `deploy/release.sh` derives this value from the checkout's Git HEAD
+  and passes it through Compose.
+- Static `web/dist/release.json` records the revision, optional workflow/run identity,
+  data mode and SHA-256/byte size for every emitted file except the manifest itself.
+  The Pages workflow writes it from `github.sha`; the Docker web image receives the
+  same revision through its build argument.
+
+These surfaces make a deployed revision auditable but do not prove availability by
+themselves. After release, fetch `/health` and `/release.json` from the same public
+origin and require their revision to match the intended commit before recording TASK-199
+as complete. A local build or a stale cached asset is not deployment evidence.
+
 ### Platform switch-scroll hotfix evidence (2026-08-13)
 
 Commits `e411931` and `9bcdb50` were released through the application-only path. The

@@ -66,6 +66,7 @@ export interface AppOptions {
   trustProxy?: boolean;
   tokenEncryptionKey?: string;
   publicUrl?: string;
+  revision?: string;
 }
 
 const CSRF_EXEMPT_PATHS = new Set([
@@ -89,6 +90,7 @@ function platformSessionToken(req: express.Request): string | undefined {
 export function createApp(db: DB, options: AppOptions = {}): Express {
   ensureAuditAttributionStorage();
   const app = express();
+  const releaseRevision = options.revision?.trim() || 'unknown';
   if (options.trustProxy) app.set('trust proxy', 1);
   app.use((req, res, next) => {
     const incoming = req.header('x-request-id');
@@ -187,9 +189,18 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.get('/health', async (_req, res) => {
     try {
       await db.execute(sql`select 1`);
-      res.json({ status: 'ok', service: 'erp-system-api', time: new Date().toISOString() });
+      res.json({
+        status: 'ok',
+        service: 'erp-system-api',
+        revision: releaseRevision,
+        time: new Date().toISOString(),
+      });
     } catch {
-      res.status(503).json({ status: 'unavailable', service: 'erp-system-api' });
+      res.status(503).json({
+        status: 'unavailable',
+        service: 'erp-system-api',
+        revision: releaseRevision,
+      });
     }
   });
 

@@ -25,6 +25,9 @@ COPY tsconfig.json drizzle.config.ts ./
 COPY src ./src
 COPY drizzle ./drizzle
 
+ARG ERP_RELEASE_COMMIT=unknown
+ENV ERP_RELEASE_COMMIT=$ERP_RELEASE_COMMIT
+
 EXPOSE 3000
 
 CMD ["npm", "run", "server"]
