@@ -166,8 +166,8 @@ receipt UAT is claimed.
 ## 5. EPIC-065 Platform Bootstrap and reset gate
 
 The checked items below are the dated TASK-192 deployment/reset checkpoint. Current
-source is migration 0101; use TASK-195 and TASK-204/206–209 before treating this gate as a
-current release approval.
+source is migration 0103/schema version 103; use TASK-195 and TASK-204/206–209 before
+treating this gate as a current release approval.
 
 - [x] Source/API focused proof: empty bootstrap, concurrent winner, setup status stages,
       independent platform cookies, Master/Company idempotency, Master Admin negative
