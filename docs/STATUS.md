@@ -537,7 +537,10 @@ are not more module screens:
   `/health.revision` and static `release.json` SHA-256 evidence, but these are not
   deployed proof until the public endpoints return the intended current revision. A fresh
   2026-09-07 Node fetch confirms root HTTP 200 HTML, but `/release.json`, `/health` and
-  `/api/setup/status` are HTTP 404 HTML fallbacks on the hosted Pages origin;
+  `/api/setup/status` are HTTP 404 HTML fallbacks on the hosted Pages origin. The
+  application-only release now checks `/health` from inside the web container through the
+  Compose network because production keeps DB/API ports private; this is source-level
+  release hardening, not live deployment proof;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
   local proof; the disposable PostgreSQL same-key race is verified, while production
