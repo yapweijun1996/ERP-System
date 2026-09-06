@@ -52,7 +52,7 @@ echo "==> Releasing application containers only (database is preserved)"
 ready=false
 attempt=1
 while (( attempt <= 30 )); do
-  # The production overlay intentionally removes host port publishing. Probe from
+  # The production overlay intentionally removes DB/API host port publishing. Probe from
   # inside nginx instead, so the check exercises the same web -> api proxy path in
   # both the private production network and the local base Compose configuration.
   if "${compose[@]}" exec -T web wget --spider --quiet http://127.0.0.1/health >/dev/null 2>&1; then
