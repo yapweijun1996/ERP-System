@@ -41,6 +41,11 @@ production or physical-device evidence boundaries.
 root as HTTP 200 HTML, but `/release.json`, `/health` and `/api/setup/status` are HTTP 404
 HTML fallbacks. This is static-host availability only, not current revision or API health.
 
+2026-09-07 production probe addendum: the same read-only fetch returns HTTP 502 from the
+Cloudflare production origin `https://gmb01.xyz/erp` and `https://gmb01.xyz/erp/health`.
+No tenant write, reset, reseed or deployment was attempted; TASK-199 remains open for
+incident diagnosis, service restoration and deployed-revision evidence.
+
 2026-09-07 PDF robustness addendum: Receipt Pack register text now normalizes ASCII control
 characters before Unicode PDF embedding, closing a source-level text-stream edge case. The
 focused Pack tests, Demo build, Company Receipts browser E2E, typecheck, lint and
