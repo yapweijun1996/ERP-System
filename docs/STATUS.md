@@ -526,8 +526,8 @@ are not more module screens:
   is described as healthy;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
-  local proof; disposable PostgreSQL concurrency and production release/download/Print
-  evidence remain.
+  local proof; the disposable PostgreSQL same-key race is verified, while production
+  release/download/Print evidence remains.
 - TASK-204/205: correct GST/SST validity/posting mechanics and prove governed Vision
   provider-failure/configuration boundaries.
 
@@ -2029,8 +2029,8 @@ deterministic pack-key conflict convergence, actor-scoped history, retention-der
 Legal Hold/two-person purge/tombstone/key-reuse protection, Decimal-safe amount formatting,
 localized Unicode register/PDF rendering with an embedded Noto Sans CJK font and
 Company-calendar timezone presets. The repository and local authenticated browser proof
-are complete; disposable PostgreSQL concurrency and production release/download/Print UAT
-remain explicit EPIC-066 release-evidence gaps.
+are complete, and the disposable PostgreSQL same-key race is verified; production
+release/download/Print UAT remains an explicit EPIC-066 release-evidence gap.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
@@ -2084,7 +2084,7 @@ remain explicit EPIC-066 release-evidence gaps.
 
 ## Next implementation boundary
 
-The next boundary is TASK-202's Pack PostgreSQL/release evidence, TASK-204's tax-owner review, TASK-205's production Vision boundary
+The next boundary is TASK-202's production release evidence, TASK-204's tax-owner review, TASK-205's production Vision boundary
 and TASK-209's CI/deployment/release
 proof. TASK-195's
 RLS-compatible provisioning, TASK-196 Receipt Pack authorization and TASK-197 Company

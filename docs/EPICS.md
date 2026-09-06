@@ -2621,8 +2621,8 @@ Current truth:
 - Company Receipts now has capability-aware create/update/void UI, versioned detail and
   Missing Date correction, plus an employee-independent eligible-evidence picker. The
   governed My Receipts upload/capture path remains the explicit upstream Employee Self
-  Service boundary; Pack lifecycle/localization are implemented in the repository, while
-  PostgreSQL concurrency and production UAT remain open.
+  Service boundary; Pack lifecycle/localization are implemented in the repository, the
+  disposable PostgreSQL same-key race passes, and production UAT remains open.
 - Support Grant is not a tenant-data proxy, while exact-user Superadmin simulation does
   not require a grant/reason/ticket. Platform MFA/step-up is absent.
 - Public health/setup probes returned 502 and the exact deployed HEAD revision is not
@@ -2645,7 +2645,7 @@ Current truth:
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
-| TASK-202 | In progress | Receipt Pack repository lifecycle/timezone implementation is complete; PostgreSQL concurrency and production release evidence remain |
+| TASK-202 | In progress | Receipt Pack lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |

@@ -199,8 +199,8 @@ re-requires current visibility for Pack metadata/rendering, denies a company Pac
 downgrade to `read_own`, and audits the preview/export purpose. TASK-202 now has Pack
 conflict convergence/history, retention-derived Legal Hold/two-person purge/tombstone/key-
 reuse protection, Decimal-safe amount formatting, embedded Unicode PDF labels/content and
-Company-calendar timezone presets; disposable PostgreSQL concurrency and final
-browser/download/Print release evidence remain.
+Company-calendar timezone presets; disposable PostgreSQL same-key concurrency is verified,
+while final production browser/download/Print release evidence remains.
 
 ## Demo platform entitlement foundation
 

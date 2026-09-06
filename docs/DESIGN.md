@@ -565,8 +565,8 @@ decision. TASK-192 later deployed migrations through 0098 and reset production t
 first-run state; no authenticated Company Receipt UAT is claimed. TASK-202 now covers Pack
 conflict convergence/history, retention-derived Legal Hold/two-person purge/tombstone/key-
 reuse protection, localized Unicode PDF rendering, Decimal-safe amount display and
-Company-calendar timezone presets; disposable PostgreSQL concurrency and production
-artifact evidence remain. TASK-196 closed the Receipt Pack
+Company-calendar timezone presets; disposable PostgreSQL same-key concurrency is verified,
+while production artifact evidence remains. TASK-196 closed the Receipt Pack
 visibility and export-purpose security gap.
 
 ## 12. Platform Module Entitlement and tenant cutover

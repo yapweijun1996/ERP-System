@@ -119,8 +119,9 @@ UAT is claimed. TASK-196 closes the Pack authorization downgrade and export-purp
 audit gap; TASK-197 closes the correction/edit/void UX and eligible-evidence picker, while
 TASK-202 now has Pack conflict convergence, history, retention-derived Legal Hold/two-person
 purge/tombstone/key-reuse protection, localized Unicode PDF rendering, Decimal-safe amount
-display and Company-calendar timezone presets. Disposable PostgreSQL concurrency and
-production artifact/download/Print evidence remain as the open artifact-governance gaps.
+display and Company-calendar timezone presets. Disposable PostgreSQL same-key concurrency is
+verified; production artifact/download/Print evidence remains as the open artifact-governance
+gap.
 Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois remain future
 or optional phases and are not v1 exit criteria.

@@ -144,10 +144,10 @@ receipt UAT is claimed.
       unexpected console errors or page overflow.
 - [ ] Pack retention/legal-hold/purge/tombstone lifecycle and Company-calendar presets are
       implemented with local unit/API/Demo and authenticated browser boundary proof. The
-      remaining TASK-202 gate is disposable PostgreSQL concurrency plus production
-      download/Print/release evidence. Source-level localized Unicode PDF/fonts, conflict
-      convergence and Decimal-safe amount formatting are implemented and unit-tested, but do
-      not close this release gate alone.
+      disposable PostgreSQL 16 same-key race is verified in a fresh database; the remaining
+      TASK-202 gate is production download/Print/release and authenticated P0 UAT evidence.
+      Source-level localized Unicode PDF/fonts, conflict convergence and Decimal-safe amount
+      formatting are implemented and unit-tested, but do not close this release gate alone.
 - [ ] Authenticated production scanner/storage/receipt UAT is recorded separately from
       disposable fixtures and the reset checkpoint.
 

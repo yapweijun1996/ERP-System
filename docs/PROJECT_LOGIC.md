@@ -487,8 +487,8 @@ hold changes use optimistic versions and append-only events; purge requires a di
 reviewer, rechecks retention/hold/frozen hashes, leaves an immutable tombstone and blocks
 Pack-key reuse. Company IANA timezone defaults are returned through API/Demo company
 context and drive local calendar presets. Local unit/API/Demo/browser proof passes;
-disposable PostgreSQL same-key concurrency and production release/download/Print evidence
-remain open.
+disposable PostgreSQL same-key concurrency passes on a fresh PostgreSQL 16 database;
+production release/download/Print evidence remains open.
 The source/UI paths for Pack permission downgrade and Company Receipt correction/edit/void/date
 correction exist, but their authenticated browser/production UAT remains a P0 release evidence
 follow-up until the dated ERP excellence review is reconciled.

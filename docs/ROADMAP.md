@@ -1254,8 +1254,8 @@ more module breadth. The source-backed review is
    and scale/worker monitoring. TASK-202 source hardening now covers conflict convergence,
    actor-scoped history, localized Unicode PDF labels/content and Decimal-safe amounts;
    Pack retention/legal-hold/purge/tombstone, Company-calendar presets and local browser
-   boundaries are implemented; disposable PostgreSQL concurrency and production
-   concurrency/download/Print evidence remain.
+   boundaries are implemented; disposable PostgreSQL same-key concurrency is verified,
+   while production download/Print evidence remains.
 7. **Tax and governed AI correctness** (TASK-204/205): TASK-204 source hardening now
    unifies exclusive `valid_to`, dispatches SG GST/MY SST posting by governed
    classification and prohibits default recoverable MY input tax. Its production

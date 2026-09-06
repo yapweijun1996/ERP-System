@@ -125,7 +125,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
-| TASK-202 | In progress | Receipt Pack repository lifecycle/timezone implementation is complete; PostgreSQL concurrency and production release evidence remain |
+| TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
@@ -187,8 +187,8 @@ claimed. TASK-196 is now done: Pack reads/renders revalidate current visibility 
 the frozen snapshot, and Preview versus original-evidence export purpose is audited.
 TASK-202 now has Pack conflict convergence, actor-scoped history, retention-derived
 Legal Hold/two-person purge/tombstone/key-reuse protection, localized Unicode PDF rendering,
-Decimal-safe display and Company-calendar timezone presets. PostgreSQL concurrency and
-production artifact evidence remain open. TASK-197 is done with the upload/capture boundary
+Decimal-safe display and Company-calendar timezone presets. Disposable PostgreSQL same-key
+concurrency is verified; production artifact evidence remains open. TASK-197 is done with the upload/capture boundary
 explicitly retained in My Receipts.
 
 ## Latest implementation milestones

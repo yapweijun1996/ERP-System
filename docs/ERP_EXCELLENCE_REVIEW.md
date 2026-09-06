@@ -145,7 +145,7 @@ configuration and tax-owner release proof.
   presets (TASK-202). The 2026-09-07 repository slice now covers conflict convergence,
   actor-scoped history, Pack retention/governance/tombstones, configured timezone
   presets, embedded Unicode rendering and Decimal-safe display; disposable PostgreSQL
-  concurrency plus production artifact/release evidence remain.
+  same-key concurrency is verified; production artifact/release evidence remains.
 - Directly test Vision gateway/provider failures and make retry/manual/local fallback
   explicit; current encrypted connector support is not proof of a configured production
   provider, region or account (TASK-205).

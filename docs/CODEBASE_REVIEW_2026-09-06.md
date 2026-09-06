@@ -10,8 +10,8 @@ baseline.
 Addendum reviewed 2026-09-07: TASK-202 repository implementation now covers Pack conflict
 convergence, actor-scoped history, retention-derived governance, Legal Hold, two-person
 purge/tombstone/key-reuse protection, localized Unicode PDF rendering, Decimal-safe browser
-amounts and Company-calendar timezone presets. Disposable PostgreSQL concurrency and
-production release evidence remain open.
+amounts and Company-calendar timezone presets. The disposable PostgreSQL same-key race
+passes on a fresh PostgreSQL 16 database; production release evidence remains open.
 
 ## Current verified baseline
 
@@ -141,9 +141,10 @@ production release evidence remain open.
     retain an identity placeholder; retention derives from governed source documents;
     Legal Hold, two-person purge, immutable tombstone/key-reuse protection and Company
     timezone presets are implemented in shared domain/API/Demo runtime paths.
-  - **Remaining action:** run disposable PostgreSQL same-key concurrency and record
-    production release/download/Print/browser evidence. Local authenticated browser proof
-    now covers the Company-timezone boundary and Pack download/Print path.
+  - **Remaining action:** record production release/download/Print/browser evidence and
+    reconcile the authenticated P0 UAT boundary. Local authenticated browser proof and a
+    fresh PostgreSQL 16 same-key race now pass; the local browser flow covers the
+    Company-timezone boundary and Pack download/Print path.
 
 - **TASK-201 — Production operations lack measurable SLO/DR proof.**
   - **Action:** define availability/error/latency SLOs, RPO/RTO, backup retention and
