@@ -6,6 +6,10 @@ Code, migrations and tests are implementation truth. [STATUS.md](STATUS.md) owns
 current built/tested/deployed status; [SPEC.md](SPEC.md) owns binding requirements;
 [TASK.md](TASK.md) and [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl) own execution.
 
+This file preserves the 2026-08-12 baseline. The current follow-up and executable action
+backlog is [CODEBASE_REVIEW_2026-09-06.md](CODEBASE_REVIEW_2026-09-06.md), reviewed
+against HEAD `2339ad2` and the current working tree.
+
 ## 1. Current source baseline
 
 | Dimension | Current source/worktree truth | Evidence boundary |

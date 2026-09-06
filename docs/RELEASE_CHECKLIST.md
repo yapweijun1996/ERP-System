@@ -4,14 +4,18 @@ Two independent release paths from one repo — run the shared gate first, then 
 section for the path you are releasing. Deployment mechanics live in
 [DEPLOYMENT.md](DEPLOYMENT.md); this file is the go/no-go checklist.
 
+For the current source-backed action backlog and evidence boundaries, see
+[CODEBASE_REVIEW_2026-09-06.md](CODEBASE_REVIEW_2026-09-06.md).
+
 ## 0. Shared gate (every release, either path)
 
 - [ ] Working tree clean, on intended release commit, and latest CI actually executes
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [ ] `npm test` — current HEAD collects 170 files / 666 tests but TASK-194 did not run
-      the full collection. The 168-file/663-test result is a dated earlier checkpoint.
+- [x] `npm test` — current local Vitest run passes 170 files / 674 tests with one
+      intentional file/test skip. This is local evidence; PostgreSQL runtime, CI and
+      production deployment remain separate gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
       disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm run demo`,
       including cross-engine parity and the true-concurrency race. The preflight
@@ -30,13 +34,13 @@ section for the path you are releasing. Deployment mechanics live in
       dated 129-route evidence; install Chromium and rerun HEAD before release.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
-- [ ] `npm run audit:i18n` — static resources pass at 1,545 keys / 72 packs; rerun the
+- [ ] `npm run audit:i18n` — static resources pass at 1,546 keys / 72 packs; rerun the
       full 129 × 5 × 2 browser matrix for current HEAD.
 - [ ] `npm run check:permissions` and `npm run audit:access-matrix` — permission registry
-      passes at 314/116/62/5. Current source inventory is 59 routes × 13 active templates;
+      passes at 315/116/62/5. Current source inventory is 59 routes × 13 active templates;
       rerun the serial browser access audit before release.
-- [x] `tasks/tasks.jsonl` statuses current: 192 Done / 0 In progress / 10 Todo / 3
-      Blocked / 205 Total. Blockers are TASK-017, TASK-193 and TASK-203.
+- [x] `tasks/tasks.jsonl` statuses current: 197 Done / 1 In progress / 11 Todo / 4
+      Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs
       due account billing/spending; TASK-203 is not a green CI result.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
@@ -128,17 +132,23 @@ receipt UAT is claimed.
 
 ## 5. EPIC-065 Platform Bootstrap and reset gate
 
+The checked items below are the dated TASK-192 deployment/reset checkpoint. Current
+source is migration 0099; use TASK-195 and TASK-206–209 before treating this gate as a
+current release approval.
+
 - [x] Source/API focused proof: empty bootstrap, concurrent winner, setup status stages,
       independent platform cookies, Master/Company idempotency, Master Admin negative
       permissions and Company Owner MAC denial.
-- [x] Migration/generated-artifact proof: migration 0098, PGlite schema version 98,
+- [x] Dated TASK-192 migration/generated-artifact proof: migration 0098, PGlite schema
+      version 98,
       `check:demo-schema`, `check:drift`, permission registry, root/Web typecheck, lint
       and API/Demo builds pass.
 - [x] Push the scoped commits; source CI run `31570902479` passed all four Vitest shards.
       The docs-only push run `31573438483` was blocked before startup by GitHub Actions
       account billing, which is recorded rather than treated as a test pass.
-- [x] Apply 0098/RLS and verify existing data remains usable, health is 200 and public
-      bootstrap rejects non-empty data.
+- [x] Dated TASK-192 apply 0098/RLS checkpoint verified existing data remained usable,
+      health was 200 and public bootstrap rejected non-empty data; this is not current
+      migration-0099 deployment or public availability proof.
 - [x] Create UTC PostgreSQL custom dumps, validate `pg_restore --list`, perform an
       isolated restore rehearsal, archive document storage and retain the prior backup.
 - [x] Stop Compose, delete only `erp-system_pgdata` and `erp-system_document_storage`,

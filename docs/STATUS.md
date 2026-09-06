@@ -1,10 +1,18 @@
-# Project Status — reviewed 2026-09-05
+# Project Status — reviewed 2026-09-06
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
 an epic-level milestone lands.
 
+The current codebase action backlog is [CODEBASE_REVIEW_2026-09-06.md](CODEBASE_REVIEW_2026-09-06.md).
+The prior [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) remains a dated historical
+baseline rather than current release evidence.
+
 ## Source-of-truth synchronization
+
+Current HEAD is `2339ad2` (`test: cover setup wizard mobile layout`), which adds the
+setup-wizard layout E2E and the mobile decorative-header containment rule. The E2E passes
+at desktop, iPhone and small-mobile widths.
 
 The current worktree adds migration 0099: the Drizzle journal contains **100 migration
 entries**, generated canonical SQL contains **252 tables**, and the task registry contains
@@ -27,7 +35,7 @@ workspace UX. Focused Platform API/PGlite tests pass 3 files / 12 tests; isolate
 E2E enters both Admin and Employee modes and verifies the locked ordinary Company
 switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 129-screen
 desktop/mobile audit and 129-route × 5-language × 2-viewport audit pass. This is source
-evidence only. The final local full Vitest run passes 169 files / 672 tests with one
+evidence only. The final local full Vitest run passes 170 files / 674 tests with one
 intentional file/test skip. PostgreSQL/FORCE-RLS, executable CI and production release
 remain TASK-206–209 work.
 
@@ -35,11 +43,12 @@ The TASK-194 correction aligns deployment, security, architecture, role-permissi
 and UAT material to that boundary: current inventory is 129
 Canonical / 0 Preview routes, 128 API-mode metadata routes, 1,546 English keys/72 local
 packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v263.
-HEAD collects 170 files / 666 tests; collection is not a pass result. TASK-017 remains
+The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the current
+local full Vitest result is the 170-file / 674-test run recorded above. TASK-017 remains
 the physical-device blocker, TASK-193 is blocked by missing production SMTP/recovery,
 and TASK-203 is blocked because GitHub Actions billing prevents every job from starting.
-The current worktree includes the Platform Bootstrap & Tenant Provisioning implementation
-and migration 0098. On 2026-08-12 the existing Compose production database was released,
+The current source worktree includes the Platform Bootstrap & Tenant Provisioning implementation
+and migration 0099. On 2026-08-12 the existing Compose production database was released,
 backed up and verified, then the exact `erp-system_pgdata` and
 `erp-system_document_storage` volumes were reset without seed. The new database is empty
 while schema/RLS remain intact. That is dated TASK-192 production evidence, not current
@@ -72,7 +81,7 @@ and optional company, expire within 24 hours, default-deny sensitive fields, aud
 allow/deny/revoke events and never proxy customer data by themselves. Interactive
 Platform login and locked first-run bootstrap are implemented; other principal/SSO
 bootstrap remains operational. TASK-171 now adds
-an application-owned permission registry with 314 registered codes after EPIC-065,
+an application-owned permission registry with 315 registered codes after EPIC-065,
 explicit alias metadata, canonical projections for
 116 resources and 62 actions, tenant/platform-domain separation and a CI gate. Ordinary
 role checks fail closed for unknown permission candidates, while platform-domain keys
@@ -136,8 +145,9 @@ Focused
 central-authorization/API explanation/RBAC/assignment/resource/approval suites pass.
 That full Vitest run was green: 156 passed files plus 1 skipped file (635 passed, 1
 skipped tests). A later 2026-08-12 checkpoint was green at 168 passed files plus 1
-skipped file (663 passed, 1 skipped tests). Current HEAD instead collects 170 files / 666
-tests; it was not fully executed in TASK-194. The authenticated `account/*`
+skipped file (663 passed, 1 skipped tests). TASK-194 subsequently recorded a
+170-file / 666-test collection checkpoint without executing the full collection. The
+2026-09-06 current run passes 170 files / 674 tests with one skip. The authenticated `account/*`
 service prefix is explicitly
 non-module-gated while notification permissions remain enforced, and the 15-test
 targeted notification/matrix/module regression passes. HR Calendar fixtures now use
@@ -391,7 +401,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (249 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 99 ordered migrations through schema version 98; `drizzle/`, `src/data/schema/`; migration 0098 adds platform provisioning records and existing-Superadmin permission backfill |
+| Canonical schema (252 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 100 ordered migrations through schema version 99; `drizzle/`, `src/data/schema/`; migration 0099 adds the Platform tenant actor/elevated-session foundation |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
@@ -454,7 +464,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — current route checkpoint | ✅ 129 desktop/mobile routes | The 2026-08-13 `a5f1a3b` release gate rendered all 129 Canonical / 0 Preview routes at desktop and mobile without console/page, document-layout, active-tab, action-bar or shared-shell failures. The dedicated workspace audit also passed. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ⚠️ Broad dated evidence; focused HEAD proof | Earlier 2026-08-12 evidence passes 168 files/663 tests with one skip. HEAD collects 170/666 and TASK-194 passed 7 focused files/22 tests; the full current collection was not run. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Local full suite | Current local Vitest run passes 170 files / 674 tests with one intentional file/test skip. PostgreSQL runtime, CI execution and production deployment remain separate evidence boundaries. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
