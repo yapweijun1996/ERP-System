@@ -5,7 +5,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **204 Done / 1 In Progress / 4 Todo / 4 Blocked / 213 Total**.
+Current registry: **204 Done / 2 In Progress / 3 Todo / 4 Blocked / 213 Total**.
 
 ## Recommended order
 
@@ -16,7 +16,8 @@ Current registry: **204 Done / 1 In Progress / 4 Todo / 4 Blocked / 213 Total**.
 - **3. Close the Platform chain in dependency order:** TASK-209 remains the release proof
   after TASK-203/external deployment evidence. TASK-206's hidden actor/session foundation,
   TASK-207 authorization proof and TASK-208 browser/workspace proof are now done.
-- **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205).**
+- **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205); TASK-205 source
+  failure evidence is now in progress, with production gateway evidence still open.**
 - **5. Keep human-owned blockers separate:** TASK-017 needs a physical phone and TASK-193
   needs production SMTP/mail delivery.
 
@@ -133,12 +134,16 @@ Current registry: **204 Done / 1 In Progress / 4 Todo / 4 Blocked / 213 Total**.
     amounts, Company-calendar presets, HEIC/unsupported-original behavior and verified
     download/print semantics.
 
-- **TASK-205 — Todo — governed Vision failure and production boundaries**
+- **TASK-205 — In Progress — governed Vision failure and production boundaries**
   - Depends on: `TASK-119`, `TASK-194`.
-  - Test timeout, provider 4xx/5xx, malformed response, revoked credential, retry lease,
-    idempotency, dead-letter/manual-review and the explicitly chosen fallback policy.
-    Prove encrypted secret rotation/revocation without disclosure, while keeping source
-    capability separate from a configured production gateway/account/region/retention.
+  - Direct HTTP-driver tests now cover non-HTTP URL rejection, provider 4xx/5xx,
+    malformed/empty response and transport timeout without accepting unsafe output.
+  - Processing tests cover paused/revoked connector fail-closed behavior, one extraction
+    row reused across a gateway failure/retry lease, and the selected **manual retry/review**
+    policy. Vision failure never silently calls local OCR.
+  - Remaining action: add/verify operational dead-letter or bounded retry evidence, secret
+    rotation/revocation evidence and a configured production gateway/account/region/retention
+    check. Encrypted connector capability remains source evidence, not production proof.
 
 ## Human or external blockers
 

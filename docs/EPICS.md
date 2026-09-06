@@ -2630,8 +2630,9 @@ Current truth:
   `staff-calendar` exception with current route evidence.
 - TASK-204 source hardening now aligns `valid_to` to one exclusive interval and makes
   supplier/Expense posting fail closed on unclassified or regime-incompatible tax facts;
-  production tax-owner configuration review remains open. Governed Vision still has no
-  direct failing-provider proof or production gateway evidence.
+  production tax-owner configuration review remains open. TASK-205 now directly tests
+  Vision status/malformed/timeout failures, paused connectors, retry/manual-review and
+  the no-automatic-local-OCR boundary; production gateway/dead-letter evidence remains.
 
 | Task | Status | Scope |
 | --- | --- | --- |
@@ -2646,7 +2647,7 @@ Current truth:
 | TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
 | TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
-| TASK-205 | Todo | Prove Vision gateway/provider failure and production-configuration boundaries |
+| TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 
 Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, browser and operational

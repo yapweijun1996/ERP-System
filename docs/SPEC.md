@@ -626,6 +626,7 @@ requirements, not optional polish:
   classification. Malaysia SST cannot reuse Singapore GST recoverable-input-tax behavior
   by default; official-source configuration and tax-owner approval remain release evidence
   (TASK-204).
-- **Governed Vision:** direct gateway/provider failure, retry and selected manual/local
-  fallback semantics are tested; encrypted connector capability is never presented as
-  proof of a configured third-party production account or region (TASK-205).
+- **Governed Vision:** direct gateway/provider failure, retry and the selected manual
+  retry/review boundary are tested; automatic local-OCR fallback is not enabled, and
+  encrypted connector capability is never presented as proof of a configured third-party
+  production account or region (TASK-205).

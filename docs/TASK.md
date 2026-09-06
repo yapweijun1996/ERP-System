@@ -8,9 +8,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **202**
-- In progress: **1**
-- Todo: **6**
+- Done: **204**
+- In progress: **2**
+- Todo: **3**
 - Blocked: **4**
 - Total: **213**
 
@@ -39,7 +39,9 @@ against accidental policy-list omission. This is source/static coverage evidence
 least-privilege runtime-role and Platform provisioning proof is complete in TASK-195;
 TASK-206's PostgreSQL hidden-actor foundation, TASK-207's authorization/switching/
 break-glass proof and TASK-208's browser/accessibility/i18n proof are complete; the
-remaining Platform Admin chain is TASK-209.
+remaining Platform Admin chain is TASK-209. TASK-205 now has direct gateway failure,
+revoked-connector, retry-lease and no-local-fallback source evidence; production
+gateway/account/region/retention and dead-letter operations remain open.
 
 See [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md) for the
 bullet-level action plan for every non-Done task, including dependencies, evidence and
@@ -126,7 +128,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
 | TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
-| TASK-205 | Todo | Prove Vision provider failures and production-configuration boundaries |
+| TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 
 ## Platform tenant administration programme
@@ -138,7 +140,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, release, documentation and KB proof; blocked by TASK-203 and deployed/production evidence |
 
-The registry therefore has **204 Done / 1 In progress / 4 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **204 Done / 2 In progress / 3 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-203/deployed-production evidence). Dependencies and
 epic references are valid.

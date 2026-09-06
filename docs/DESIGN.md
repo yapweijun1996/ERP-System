@@ -637,8 +637,9 @@ trust as the next release boundary. The complete review and evidence matrix are 
 - **Operational quality:** after P0 isolation/privilege fixes, SLO/RPO/RTO, worker
   telemetry, scale budgets and Pack lifecycle/i18n become binding gates (TASK-201/202).
 - **Tax and AI evidence:** unify tax validity/posting behavior before MY SST may be
-  called compliant (TASK-204), and directly test Vision provider failure without
-  treating an encrypted connector as deployed provider proof (TASK-205).
+  called compliant (TASK-204), and directly test Vision provider failure with explicit
+  manual retry/review semantics without treating an encrypted connector as deployed
+  provider proof (TASK-205).
 
 EPIC-067 source adds an authenticated tenant-admin presentation using a hidden non-login
 bridge actor. Platform workspace exposes separate `Open as Platform Admin` and `Login as

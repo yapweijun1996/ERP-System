@@ -19,7 +19,7 @@ deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101: the Drizzle journal contains **102 migration
 entries**, generated canonical SQL contains **252 tables**, and the task registry contains
-**204 Done / 1 In Progress / 4 Todo / 4 Blocked / 213 Total**. TASK-200 now closes the
+**204 Done / 2 In Progress / 3 Todo / 4 Blocked / 213 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
@@ -51,7 +51,10 @@ executable CI and the remaining Platform release chain remain TASK-203 and
 TASK-209 work. The final local full Vitest run passes 171 files /
 683 tests with two intentional file/test skips. TASK-204 source-level tax interval,
 classification and posting hardening is now in progress; targeted tax/purchasing/Expense
-tests pass, while production tax-owner review remains open.
+tests pass, while production tax-owner review remains open. TASK-205 source hardening is
+also in progress: gateway status/malformed/timeout, paused-connector, retry-lease and
+no-local-fallback evidence pass; production Vision gateway/account/region/retention and
+dead-letter operations remain open.
 
 The TASK-194 correction aligns deployment, security, architecture, role-permission, Demo
 and UAT material to that boundary: current inventory is 129
@@ -2023,8 +2026,8 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
 - Done: 204 tasks
-- In progress: TASK-204 (1)
-- Todo: 4
+- In progress: TASK-204 and TASK-205 (2)
+- Todo: 3
 - Blocked: TASK-017, TASK-193, TASK-203 and TASK-209 (4)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 129 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
@@ -2055,7 +2058,8 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
   restore-tested backups and the authorized exact-volume reset. TASK-193 is blocked on
   missing production SMTP. EPIC-066 is in progress: TASK-194–198 are done;
   TASK-204 is in progress with source-level tax hardening and an open tax-owner review;
-  TASK-199–202 and TASK-205 are Todo; TASK-203 is blocked by CI
+  TASK-205 is in progress with direct provider-failure/retry/no-fallback evidence but
+  open production configuration; TASK-199–202 remain Todo; TASK-203 is blocked by CI
   billing. EPIC-067 source is present: TASK-206, TASK-207 and TASK-208 are done, and
   TASK-209 is blocked pending TASK-203 and deployed/production evidence.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
@@ -2071,7 +2075,8 @@ explicit EPIC-066 gaps, not hidden by the v1 Done status.
 
 ## Next implementation boundary
 
-The next boundary is TASK-204's tax-owner review and TASK-209's CI/deployment/release
+The next boundary is TASK-204's tax-owner review, TASK-205's production Vision boundary
+and TASK-209's CI/deployment/release
 proof. TASK-195's
 RLS-compatible provisioning, TASK-196 Receipt Pack authorization and TASK-197 Company
 Receipts workflow and TASK-206–208 platform administration source/evidence are now closed and gate no

@@ -436,8 +436,10 @@ document services; confirmed merchant, receipt/invoice number, transaction date,
 amount, currency, category, business purpose and notes belong to the Company Receipt.
 The confirmation context reads candidate value, normalized value, source, model,
 confidence, critical/review state and duplicate warnings without changing extraction
-facts. Clean evidence permits manual entry when extraction is failed, unavailable or
-not started; quarantined/void/stale evidence remains blocked.
+facts. A selected Vision gateway failure leaves extraction failed/unavailable for an
+explicit retry or human review; it never silently falls back to local OCR. Clean evidence
+permits manual entry when extraction is failed, unavailable or not started;
+quarantined/void/stale evidence remains blocked.
 The Company Receipts UI is an orchestration-only client: it can select only eligible
 uploader-owned document versions returned by `companyReceiptEvidence`, with bounded
 search/cursor paging, then delegates the clean/current/duplicate decision to

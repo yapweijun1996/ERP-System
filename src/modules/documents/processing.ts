@@ -126,6 +126,8 @@ function sha256Text(value: string): string {
 }
 
 function retryAt(now: Date, attempts: number): Date {
+  // Provider failures stay failed/unavailable for an explicit retry or human
+  // review. Local OCR is never an implicit fallback for a selected Vision policy.
   const delay = Math.min(60 * 60 * 1000, 2 ** Math.min(attempts, 10) * 1000);
   return new Date(now.getTime() + delay);
 }

@@ -1,7 +1,8 @@
 # ERP-System Codebase Review — 2026-09-06
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
-TASK-195–197 and TASK-206–208 follow-up plus the source-level TASK-204 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
+TASK-195–197 and TASK-206–208 follow-up plus the source-level TASK-204 and TASK-205
+hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
 [PROJECT_LOGIC.md](PROJECT_LOGIC.md) remain the binding domain references. The older
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
@@ -19,13 +20,18 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **204 Done / 1 In Progress / 4 Todo / 4
+- The task registry currently reports **204 Done / 2 In Progress / 3 Todo / 4
   Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
   classification/recoverability/source facts and the Expense snapshot; the generated
   Demo schema is version `101`. Its external tax-owner production review remains open.
+- TASK-205 source failure hardening is now in progress: direct HTTP-driver tests cover
+  provider status failures, malformed/empty output and transport timeout; processing
+  tests cover paused/revoked connector denial, retry lease reuse and the explicit manual
+  retry/review policy without automatic Vision-to-local-OCR fallback. Production gateway,
+  account, region, retention and dead-letter operations remain unverified.
 - The complete pending-task breakdown, including dependencies, next actions and evidence
   boundaries, is [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md).
 - During this review the user-owned PWA/setup-wizard changes were committed as
@@ -132,10 +138,15 @@ baseline.
     budgets. Deployment scripts and one disposable proof database are not substitutes
     for operational evidence.
 
-- **TASK-205 — Vision provider failure behavior is under-specified.**
-  - **Action:** test BYOK Vision gateway failure, retry/manual-review/fallback behavior,
-    configuration absence and audit boundaries. Do not imply a Vision-to-local-OCR
-    fallback until the code and user-facing state actually implement it.
+- **TASK-205 — In Progress 2026-09-07: Vision failure behavior is source-tested, but
+  production configuration remains open.**
+  - **Evidence:** `processingDrivers.test.ts` covers non-HTTP URLs, 4xx/5xx, malformed or
+    empty provider output and timeout propagation. `processing.test.ts` proves paused/
+    revoked connector denial and one extraction/version reused across explicit retry;
+    local OCR is not called after Vision failure.
+  - **Remaining action:** define bounded retry/dead-letter operations, verify secret
+    rotation/revocation and record a configured production gateway/account/region/
+    retention check. Do not claim a third-party provider or automatic local-OCR fallback.
 
 - **EPIC-067 / TASK-209 — Platform Admin release remains gated.**
   - **Action order:** TASK-206 authorization foundation, TASK-207 authorization/switching/
@@ -171,11 +182,12 @@ baseline.
   API integration tests (4), and PostgreSQL security tests (1) on disposable PostgreSQL
   16, including downgrade, revoked-read, active-tenant, cross-tenant, export-audit and
   no-store assertions.
-- The current full Vitest run completed with **171 passed files / 2 skipped files** and
+- The current full Vitest baseline completed with **171 passed files / 2 skipped files** and
   **683 passed tests / 2 skipped tests**. The additional file/tests cover tax
   classification and the exclusive Expense policy boundary. CI, current public health,
-  exact deployed revision, production tax-owner approval, physical-device behavior and
-  SMTP/Vision configuration remain unverified.
+  exact deployed revision, production tax-owner approval, physical-device behavior,
+  SMTP/Vision configuration and dead-letter operations remain unverified. The focused
+  TASK-205 run passes 2 files / 18 tests.
 - TASK-208 browser evidence passes the isolated PGlite Platform workspace E2E at
   desktop/tablet/mobile widths, the 59-route × 13-role access matrix and the full
   129-route × 5-language × 2-viewport i18n matrix. The focused Platform extension also

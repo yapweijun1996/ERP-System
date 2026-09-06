@@ -1256,8 +1256,9 @@ more module breadth. The source-backed review is
 7. **Tax and governed AI correctness** (TASK-204/205): TASK-204 source hardening now
    unifies exclusive `valid_to`, dispatches SG GST/MY SST posting by governed
    classification and prohibits default recoverable MY input tax. Its production
-   tax-owner configuration review remains a release gate; TASK-205 still owns Vision
-   gateway/provider failure behavior without overstating production configuration.
+   tax-owner configuration review remains a release gate. TASK-205 now has source-level
+   Vision gateway/provider failure, retry/manual-review and no-automatic-fallback proof;
+   production gateway/dead-letter configuration remains a release gate.
 
 Exit criteria: every P0 passes its PostgreSQL/API/browser/security proof; public health
 and revision evidence are current; CI actually executes; operational objectives are

@@ -264,6 +264,127 @@ describe('quarantined document processing', () => {
     }));
   });
 
+  it('does not call Vision or local OCR after a connector is revoked', async () => {
+    const { db, viewer } = await setup();
+    const encryptionKey = Buffer.alloc(32, 8);
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai',
+      visionRegion: 'sg',
+      visionRetentionDays: 0,
+      updatedByUserId: viewer.userId,
+    });
+    await db.update(integrationConnector).set({
+      status: 'paused',
+      health: 'error',
+      enabled: false,
+      credentialEnvelope: null,
+    }).where(eq(integrationConnector.connectorKey, 'document-vision'));
+    await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_vision_revoked_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const vision = vi.fn();
+    const localOcr = vi.fn();
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      vision: { extract: vision },
+      localOcr: { extract: localOcr },
+      credentialEncryptionKey: encryptionKey,
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({ clean: 1, extracted: 0, failed: 1 });
+    expect(vision).not.toHaveBeenCalled();
+    expect(localOcr).not.toHaveBeenCalled();
+    expect((await db.select().from(documentExtraction))[0]).toMatchObject({
+      provider: 'byok_vision',
+      status: 'unavailable',
+      rawText: null,
+    });
+  });
+
+  it('uses explicit retry/manual review after a gateway failure and never auto-falls back to local OCR', async () => {
+    const { db, viewer } = await setup();
+    const encryptionKey = Buffer.alloc(32, 9);
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai',
+      visionRegion: 'sg',
+      visionRetentionDays: 0,
+      updatedByUserId: viewer.userId,
+    });
+    await db.update(integrationConnector).set({
+      status: 'connected',
+      health: 'healthy',
+      endpointHost: 'api.example.invalid',
+      credentialEnvelope: encryptToken('vision-retry-secret', encryptionKey),
+      enabled: true,
+    }).where(eq(integrationConnector.connectorKey, 'document-vision'));
+    const stored = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_vision_retry_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const scan = vi.fn(async () => ({ status: 'clean' as const, scanner: 'clamav-test' }));
+    let attempts = 0;
+    const vision = vi.fn(async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error('Vision gateway timeout');
+      return { rawText: 'Vision retry response', model: 'vision-retry-test', safetyClear: false };
+    });
+    const localOcr = vi.fn(async () => ({ rawText: 'must not be used', model: 'local-fallback' }));
+
+    const first = await processDocumentJobBatch(db, {
+      scanner: { scan },
+      vision: { extract: vision },
+      localOcr: { extract: localOcr },
+      credentialEncryptionKey: encryptionKey,
+      workerId: 'vision-retry-worker',
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+    const [failedExtraction] = await db.select().from(documentExtraction);
+    expect(first).toMatchObject({ clean: 1, extracted: 0, failed: 1 });
+    expect(failedExtraction).toMatchObject({
+      versionId: stored.version.id,
+      status: 'failed',
+      attempts: 1,
+      rawText: null,
+    });
+    expect(localOcr).not.toHaveBeenCalled();
+
+    const second = await processDocumentJobBatch(db, {
+      scanner: { scan },
+      vision: { extract: vision },
+      localOcr: { extract: localOcr },
+      credentialEncryptionKey: encryptionKey,
+      workerId: 'vision-retry-worker-2',
+      now: new Date(failedExtraction.availableAt.getTime() + 1),
+    });
+    const [succeededExtraction] = await db.select().from(documentExtraction);
+    expect(second).toMatchObject({ scansClaimed: 0, extractionsClaimed: 1, extracted: 1, failed: 0 });
+    expect(succeededExtraction).toMatchObject({
+      id: failedExtraction.id,
+      versionId: stored.version.id,
+      status: 'succeeded',
+      rawText: 'Vision retry response',
+    });
+    expect(vision).toHaveBeenCalledTimes(2);
+    expect(localOcr).not.toHaveBeenCalled();
+    expect(await db.select().from(documentExtraction)).toHaveLength(1);
+    expect((await db.select().from(receiptInboxItem))[0]).toMatchObject({
+      versionId: stored.version.id,
+      status: 'review_required',
+    });
+  });
+
   it('auto-submits exactly once only with prior uploader authorization and every check clear', async () => {
     const { db, viewer } = await setup();
     await db.insert(documentProcessingPolicy).values({

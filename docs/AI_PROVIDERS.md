@@ -1,6 +1,6 @@
 # AI and Vision Provider Boundary
 
-Reviewed: **2026-08-12**. This document separates the implemented governed document
+Reviewed: **2026-09-07**. This document separates the implemented governed document
 Vision path from the still-unimplemented general ERP assistant.
 
 ## 1. Current implementation truth
@@ -40,16 +40,23 @@ The current contract is intentionally server/worker mediated:
   bounded timeouts and provider policy headers;
 - scan-clean state, immutable version/hash identity, extraction provenance and manual
   review remain authoritative even when a provider fails;
+- provider HTTP failures, malformed/empty responses and transport timeouts remain a
+  failed or unavailable extraction and are retried explicitly by the worker lease;
+- the selected fallback policy is **manual retry/review**. A Vision failure never silently
+  invokes local OCR, so a local OCR result cannot be mistaken for the requested provider's
+  provenance or policy boundary;
 - OpenAI-compatible may be configured without a credential for a deliberately local or
   otherwise credential-free endpoint. That does not make an HTTPS browser origin able
   to call a local HTTP service directly; the configured server/gateway topology owns the
   network path.
 
 Tests cover encrypted connector storage, credential non-disclosure, policy validation,
-credential-required and credential-free OpenAI-compatible paths, fail-closed scanner/OCR
-unavailability, retry and manual confirmation fallback. They do not directly prove a
-Vision-gateway/provider failure path, automatic Vision-to-local-OCR fallback, a
-particular third-party account, a region promise or a configured production gateway.
+credential-required and credential-free OpenAI-compatible paths, direct gateway 4xx/5xx,
+malformed/empty output and transport timeout, paused/revoked connector denial, and
+retry/manual-review behavior that preserves one document/version extraction without
+automatic local-OCR fallback. They do not prove a particular third-party account, a
+region promise, dead-letter operations or a configured production gateway. Those remain
+TASK-205 production-readiness evidence.
 
 ## 3. Secret and privacy rules
 

@@ -43,12 +43,16 @@ For the current source-backed action backlog and evidence boundaries, see
 - [x] `npm run test:e2e:platform-workspace-layout` — 2026-09-07 passed isolated PGlite
       desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
       overflow checks plus the focused five-language Platform workspace matrix.
+- [x] `npm test -- --run src/modules/documents/processing.test.ts src/modules/documents/processingDrivers.test.ts`
+      — 2026-09-07 passed 2 files / 18 tests for Vision gateway failures, revoked
+      connectors, retry/manual-review and the no-automatic-local-OCR fallback boundary.
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
       the permission registry at 315/116/62/5 and the serial 59-route × 13-template
       browser access audit. This is local evidence, not production authorization proof.
-- [x] `tasks/tasks.jsonl` statuses current: 204 Done / 1 In progress / 4 Todo / 4
+- [x] `tasks/tasks.jsonl` statuses current: 204 Done / 2 In progress / 3 Todo / 4
       Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209;
-      TASK-204 remains In progress until tax-owner production review.
+      TASK-204 remains In progress until tax-owner production review and TASK-205 remains
+      In progress until production Vision/dead-letter evidence is recorded.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs
       due account billing/spending; TASK-203 is not a green CI result.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
