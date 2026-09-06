@@ -478,7 +478,8 @@ explicit company scope without role-name authorization at request time.
 TASK-180 implements query-side merchant, receipt-number, notes and category search. Date range
 is inclusive on company-local `transaction_date`;
 missing-date records stay visible but are excluded whenever a date range is active. The
-badge only navigates to My Receipts and does not edit Company Receipt metadata.
+Missing Date badge opens the same versioned Company Receipt metadata editor used for normal
+correction, so the user can add a date without leaving the governed aggregate.
 
 Migration 0093 and `companyReceiptPack.ts` resolve every permission-visible Ready receipt
 with a non-null date in the selected inclusive range, independently of UI pagination
@@ -503,8 +504,9 @@ context and drive local calendar presets. Local unit/API/Demo/browser proof pass
 disposable PostgreSQL same-key concurrency passes on a fresh PostgreSQL 16 database;
 production release/download/Print evidence remains open.
 The source/UI paths for Pack permission downgrade and Company Receipt correction/edit/void/date
-correction exist, but their authenticated browser/production UAT remains a P0 release evidence
-follow-up until the dated ERP excellence review is reconciled.
+correction exist, and local unit/API/Demo/browser evidence covers them. Their authenticated
+browser/production UAT remains a P0 release-evidence follow-up until the dated ERP excellence
+review is reconciled; source completion must not be mistaken for live release proof.
 Rendering otherwise rechecks document-version/hash identity, scan-clean state, content
 integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4 landscape
 register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits

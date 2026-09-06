@@ -88,25 +88,39 @@ safe not-found responses, and audit preview versus original-evidence export whil
 keeping the PDF private/no-store. The paragraphs below preserve the dated 2026-08-12
 finding that motivated the task.
 
-Pack creation freezes `own | company` visibility. Later Pack metadata/PDF routes verify
-only that the creator still has any receipt-read permission, then the domain verifies
-tenant plus creator. A creator downgraded from `read_company` to `read_own` can therefore
-retain an old company-wide snapshot and other uploaders' original evidence. Current docs
-previously overstated that the same visibility was reapplied. TASK-196 owns the repair,
-cross-tenant/downgrade tests and export-audit decision.
+Historical 2026-08-12 finding (closed at source by TASK-196): Pack creation froze
+`own | company` visibility, while older metadata/PDF routes checked only whether the
+creator still had some receipt-read permission. A creator downgraded from `read_company`
+to `read_own` could therefore retain an old company-wide snapshot and other uploaders'
+original evidence. The current domain rechecks active tenant and current visibility,
+returns safe not-found responses, and has cross-tenant/downgrade and export-audit proof.
+Authenticated production/UAT reconciliation remains a separate TASK-202 release gate.
 
-### 4.3 Company Receipts workflow is backend-complete but UX-incomplete
+### 4.3 Company Receipts workflow — source/UI remediation complete; production UAT open
 
-- The Confirm button checks adapter function existence, not `.create` capability; a
-  read-only user sees an action that later fails at the API.
-- The Missing Date badge only navigates to My Receipts. It does not open a Company Receipt
-  editor or carry a receipt identifier.
-- Update and void APIs/adapters exist but have no Company Receipts detail/edit/void UI.
-- The evidence picker calls the bounded first 100 My Receipts records with no pagination
-  and indirectly requires Employee Self Service plus a linked Employee. Direct Company
-  Receipt commands do not require Employee, but the normal capture/picker flow does.
+The dated 2026-08-12 findings below motivated TASK-197. The current source/UI path now
+closes them: the Confirm action requires the registered create capability; the Missing
+Date badge opens the versioned Company Receipt metadata editor; detail UI exposes
+permission-aware edit and reasoned void actions; and the evidence picker uses bounded
+search/cursor pagination through the employee-independent Company Receipt evidence API.
+The direct Company Receipt commands still do not require an Employee record, while
+governed binary capture remains the explicit `/api/my/receipts` upstream boundary.
 
-TASK-197 owns the complete, permission-aware user workflow.
+Local Demo/API/browser proof covers these behaviors. Authenticated production browser
+UAT and release/download/Print evidence remain open under TASK-202.
+
+Historical findings (closed in source; retained for audit traceability):
+
+- The Confirm button previously checked adapter function existence rather than the
+  registered `.create` capability.
+- The Missing Date badge previously navigated only to My Receipts without opening a
+  Company Receipt editor or carrying a receipt identifier.
+- Update and void APIs/adapters previously had no Company Receipts detail/edit/void UI.
+- The evidence picker previously used a bounded first 100 My Receipts records without
+  cursor pagination and indirectly required Employee Self Service plus a linked Employee.
+
+TASK-197 owns the complete, permission-aware user workflow; TASK-202 owns the remaining
+production/UAT evidence boundary.
 
 ### 4.4 Platform privilege policy is internally contradictory
 
