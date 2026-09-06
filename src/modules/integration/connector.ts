@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { integrationConnector } from '../../data/schema';
 import { appendAudit } from '../../api/audit';
+import { isEncryptedToken, type EncryptedToken } from '../../auth/tokenCrypto';
 
 export interface ConnectorScope { masterFn: string; companyFn: string }
 export interface ConnectorActor { userId: number; requestId: string }
@@ -120,9 +121,15 @@ export async function configureConnectorWithin(
   scope: ConnectorScope,
   actor: ConnectorActor,
   id: number,
-  input: { credentialEnvelope: unknown; credentialLabel: string; endpointHost?: string | null },
+  input: { credentialEnvelope: EncryptedToken; credentialLabel: string; endpointHost?: string | null },
 ) {
   const row = await ownedConnector(exec, scope, id);
+  if (!isEncryptedToken(input.credentialEnvelope)) {
+    throw new ConnectorError(
+      'invalid_credential_envelope',
+      'Connector credentials must be supplied as an encrypted token envelope.',
+    );
+  }
   const label = input.credentialLabel.trim();
   if (!label || label.length > 80) {
     throw new ConnectorError('invalid_label', 'Credential label is required and must be at most 80 characters.');

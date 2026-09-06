@@ -33,8 +33,10 @@ The current contract is intentionally server/worker mediated:
 
 - `src/modules/documents/processingPolicy.ts` validates provider, region, retention,
   absolute credential-free base URL and model metadata;
-- the `document-vision` integration connector stores a credential only as an encrypted
-  envelope, requires server token-encryption configuration and never returns plaintext;
+- the `document-vision` integration connector accepts only a validated AES-GCM envelope,
+  requires server token-encryption configuration and never returns plaintext; configuring
+  it again replaces the prior envelope, while pausing it revokes worker use without
+  deleting the audit/history boundary;
 - `src/modules/documents/processing.ts` decrypts only inside the worker call boundary;
 - `src/modules/documents/processingDrivers.ts` calls the deployment-owned gateway with
   bounded timeouts and provider policy headers;
@@ -53,7 +55,8 @@ The current contract is intentionally server/worker mediated:
   to call a local HTTP service directly; the configured server/gateway topology owns the
   network path.
 
-Tests cover encrypted connector storage, credential non-disclosure, policy validation,
+Tests cover encrypted connector storage, credential non-disclosure, envelope validation,
+credential rotation and pause/revocation behavior, policy validation,
 credential-required and credential-free OpenAI-compatible paths, direct gateway 4xx/5xx,
 malformed/empty output and transport timeout, paused/revoked connector denial, and
 retry/manual-review behavior that preserves one document/version extraction without

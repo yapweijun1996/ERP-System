@@ -67,7 +67,7 @@ integration-event status. The focused outbox suite passes 3/3; production SMTP, 
 and operator recovery remain TASK-193/TASK-201 evidence rather than local claims.
 
 2026-09-07 full-regression addendum: after the auth outbox change, `npm test
--- --reporter=dot` passes 172 files / 699 tests with two intentional file/test skips.
+-- --reporter=dot` passes 172 files / 701 tests with two intentional file/test skips.
 The malformed-JSON, locale-503 and unsafe-markup stderr lines are expected assertions;
 they did not fail the suite. This updates the previous 697-test local baseline.
 
@@ -240,9 +240,14 @@ they did not fail the suite. This updates the previous 697-test local baseline.
     jobs plus the document signal, and provide `retryDocumentProcessing` for an explicit
     same-chain manual retry. Focused tests cover the terminal state and recovery without
     creating a second extraction row.
-  - Remaining action: verify operational alert/recovery behavior, secret rotation/revocation
-    and a configured production gateway/account/region/retention check. Encrypted connector
-    capability remains source evidence, not production proof.
+  - Source security action completed: the connector domain now accepts only a validated
+    AES-GCM envelope; reconfiguration replaces the old encrypted value, public/audit
+    payloads exclude both old and new secrets, and pause disables worker use while retaining
+    the append-only history boundary. Focused tests cover rotation and pause/revocation.
+  - Remaining action: verify operational alert/recovery behavior, production key rotation/
+    revocation operations and a configured production gateway/account/region/retention check.
+    Encrypted connector capability and local rotation tests remain source evidence, not
+    production proof.
 
 ## Human or external blockers
 

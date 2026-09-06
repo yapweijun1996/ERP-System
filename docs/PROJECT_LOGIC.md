@@ -529,6 +529,27 @@ Evidence/upload dependencies remain
 `src/auth/accessMatrix.ts` and both data adapters apply the same commercial
 `expenses_tax` Master-entitlement-plus-Company-allocation gate before route or API use.
 
+### 6.4 Governed document Vision boundary
+
+Document extraction is a separate governed worker boundary, not a general ERP assistant.
+The default policy is local OCR; a selected BYOK Vision policy requires an explicit
+provider, region and retention window. Credentialed Vision uses the Company-scoped
+`document-vision` integration connector, whose command boundary accepts only a validated
+AES-GCM envelope. Reconfiguring the connector replaces the previous encrypted value;
+public connector reads and audit before/after payloads never include either plaintext or
+encrypted credential material. Pausing the connector sets it to `paused`/disabled, so the
+worker refuses to decrypt or call the provider while retaining the append-only audit
+history.
+
+Provider failures remain failed/unavailable and are retried through the bounded worker
+lease; after five automatic attempts the job is `dead_letter` and only an explicit
+`retryDocumentProcessing` requeues the same document/version/extraction chain. The
+worker never silently falls back from a requested Vision provider to local OCR.
+
+Sources: `src/auth/tokenCrypto.ts`, `src/modules/integration/connector.ts`,
+`src/modules/documents/processing.ts`, `src/modules/documents/processingDrivers.ts` and
+`src/modules/integration/connector.test.ts` / `src/modules/documents/processing.test.ts`.
+
 ## 7. GST/SST effective-date and posting contract (TASK-204)
 
 `tax_rule` is an effective-dated Company fact. `getEffectiveTaxRate()` in

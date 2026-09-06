@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { auditLog, integrationConnector } from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
+import { decryptToken, encryptToken, type EncryptedToken } from '../../auth/tokenCrypto';
 import {
   checkConnectorHealthWithin,
   configureConnectorWithin,
@@ -53,12 +54,63 @@ describe('integration connector registry', () => {
       eq(integrationConnector.companyFn, 'C-SG'),
       eq(integrationConnector.connectorKey, 'warehouse-webhook'),
     ));
-    const envelope = { iv: 'opaque-iv', ciphertext: 'opaque-ciphertext', tag: 'opaque-tag' };
+    const key = Buffer.alloc(32, 4);
+    const envelope = encryptToken('opaque-secret', key);
     const publicRow = await configureConnectorWithin(db, scope, { userId: 1, requestId: 'configure-test' }, webhook.id, {
       credentialEnvelope: envelope, credentialLabel: 'Primary webhook', endpointHost: 'warehouse.example.test',
     });
-    expect(JSON.stringify(publicRow)).not.toContain('opaque-ciphertext');
+    expect(JSON.stringify(publicRow)).not.toContain('opaque-secret');
     const [stored] = await db.select().from(integrationConnector).where(eq(integrationConnector.id, webhook.id));
     expect(stored.credentialEnvelope).toEqual(envelope);
+    expect(decryptToken(stored.credentialEnvelope as EncryptedToken, key)).toBe('opaque-secret');
+  });
+
+  it('rotates encrypted credentials without exposing either value and pauses the connector for revocation', async () => {
+    const db = await freshDb(); await seedDemo(db);
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const actor = { userId: 1, requestId: 'connector-rotation-test' };
+    const key = Buffer.alloc(32, 5);
+    const [webhook] = await db.select().from(integrationConnector).where(and(
+      eq(integrationConnector.companyFn, 'C-SG'),
+      eq(integrationConnector.connectorKey, 'warehouse-webhook'),
+    ));
+    const oldSecret = 'old-connector-secret';
+    const newSecret = 'new-connector-secret';
+    await configureConnectorWithin(db, scope, actor, webhook.id, {
+      credentialEnvelope: encryptToken(oldSecret, key),
+      credentialLabel: 'Primary webhook',
+      endpointHost: 'warehouse.example.test',
+    });
+    const rotated = await configureConnectorWithin(db, scope, actor, webhook.id, {
+      credentialEnvelope: encryptToken(newSecret, key),
+      credentialLabel: 'Rotated webhook',
+      endpointHost: 'warehouse.example.test',
+    });
+    expect(JSON.stringify(rotated)).not.toContain(oldSecret);
+    expect(JSON.stringify(rotated)).not.toContain(newSecret);
+    const [stored] = await db.select().from(integrationConnector).where(eq(integrationConnector.id, webhook.id));
+    expect(decryptToken(stored.credentialEnvelope as EncryptedToken, key)).toBe(newSecret);
+    const auditRows = await db.select().from(auditLog).where(and(
+      eq(auditLog.entity, 'integration_connector'),
+      eq(auditLog.entityId, String(webhook.id)),
+    ));
+    expect(JSON.stringify(auditRows)).not.toContain(oldSecret);
+    expect(JSON.stringify(auditRows)).not.toContain(newSecret);
+
+    const paused = await setConnectorEnabledWithin(db, scope, actor, webhook.id, false);
+    expect(paused).toMatchObject({ enabled: false, status: 'paused' });
+  });
+
+  it('rejects a plaintext or malformed credential envelope at the domain boundary', async () => {
+    const db = await freshDb(); await seedDemo(db);
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const [webhook] = await db.select().from(integrationConnector).where(and(
+      eq(integrationConnector.companyFn, 'C-SG'),
+      eq(integrationConnector.connectorKey, 'warehouse-webhook'),
+    ));
+    await expect(configureConnectorWithin(db, scope, { userId: 1, requestId: 'connector-invalid-envelope' }, webhook.id, {
+      credentialEnvelope: { secret: 'plaintext' } as never,
+      credentialLabel: 'Invalid',
+    })).rejects.toMatchObject({ code: 'invalid_credential_envelope' } satisfies Partial<ConnectorError>);
   });
 });

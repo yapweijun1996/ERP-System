@@ -43,7 +43,7 @@ covers all 129, including `staff-calendar`. The current HEAD screen audit covers
 route at desktop and 375px; the five-language and authenticated API evidence are recorded
 as separate gates rather than inferred from the route registry.
 
-The current full Vitest run passes 172 files/699 tests with two intentional file/test
+The current full Vitest run passes 172 files/701 tests with two intentional file/test
 skips. Historical checkpoints remain dated in STATUS.
 
 ## 4. Next frontend priorities

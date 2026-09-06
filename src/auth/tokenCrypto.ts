@@ -13,6 +13,16 @@ export interface EncryptedToken {
   tag: string;
 }
 
+export function isEncryptedToken(value: unknown): value is EncryptedToken {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as Partial<EncryptedToken>;
+  return candidate.v === 1
+    && candidate.alg === 'A256GCM'
+    && typeof candidate.iv === 'string'
+    && typeof candidate.ciphertext === 'string'
+    && typeof candidate.tag === 'string';
+}
+
 export function newOpaqueToken(bytes = 32): string {
   return randomBytes(bytes).toString('base64url');
 }
