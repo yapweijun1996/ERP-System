@@ -2548,7 +2548,7 @@ endpoint: Demo/PGlite keeps its local setup compatibility, while production requ
 empty database to be claimed by exactly one Platform Superadmin before a Master or
 Company can exist.
 
-Current implementation boundary (2026-08-12): TASK-189–192 are complete. Migration 0098,
+Historical implementation boundary (2026-08-12): TASK-189–192 are complete. Migration 0098,
 production RLS and application release were verified against the old data, restore-tested
 backups were retained, and the authorized exact-volume reset was completed without seed.
 The reset checkpoint reported `requiresPlatformBootstrap:true` and all foundation counts
