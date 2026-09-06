@@ -37,6 +37,7 @@
   "test:e2e:leave-approval": "npm run build:demo && node tests/e2e/leave-approval-action.spec.mjs",
   "test:e2e:staff-calendar": "npm run build:demo && node tests/e2e/staff-calendar.spec.mjs",
     "test:e2e:i18n-live": "npm run build:demo && node tests/e2e/i18n-live-switch.spec.mjs",
+    "test:e2e:setup-wizard": "npm run build:demo && node tests/e2e/setup-wizard-layout.spec.mjs",
     "test:e2e:company-receipts-api": "npm run build && tsx tests/e2e/company-receipts-api.spec.ts",
     "test:e2e:company-receipts-postgres": "npm run build && test -n \"$TASK183_POSTGRES_URL\" && tsx tests/e2e/company-receipts-api.spec.ts",
     "test:e2e:platform-workspace-layout": "npm run build && tsx tests/e2e/platform-workspace-layout.spec.ts",

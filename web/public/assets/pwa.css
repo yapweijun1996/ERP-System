@@ -148,6 +148,9 @@ html,body{
     height:calc(100dvh - 40px - var(--safe-top) - var(--safe-bottom));
     min-height:calc(100dvh - 40px - var(--safe-top) - var(--safe-bottom));
   }
+  /* The wizard panel scrolls vertically on touch layouts. Keep its decorative
+     header shape inside the panel so it cannot create a horizontal swipe area. */
+  #setupWizardView .wizard-panel::before{left:0;width:100%;}
   .detail{
     padding-top:var(--safe-top);
   }
