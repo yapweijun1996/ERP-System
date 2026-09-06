@@ -558,7 +558,10 @@ migration `0103`, plus the generated Demo schema keep PostgreSQL and PGlite alig
 current Demo schema is version `103`.
 A qualified tax owner must still review production configuration against current IRAS and
 Royal Malaysian Customs/MOF sources before release; local evidence is not filing
-compliance evidence.
+compliance evidence. The 2026-09-07 review packet in
+`docs/TAX_OWNER_REVIEW_2026-09-07.md` records why a generic open-ended MY
+`sst_service` demo rule cannot stand in for category-specific production configuration,
+including current 6% exceptions and transitional rules.
 
 ## 8. Cross-cutting safety rules
 

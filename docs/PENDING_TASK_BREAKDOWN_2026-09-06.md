@@ -93,6 +93,10 @@ they did not fail the suite. This updates the previous 697-test local baseline.
 
 - **TASK-204 — In Progress — SG GST/MY SST validity and posting semantics**
   - Depends on: `TASK-123`, `TASK-194`.
+  - Review preparation: [`TAX_OWNER_REVIEW_2026-09-07.md`](TAX_OWNER_REVIEW_2026-09-07.md)
+    records the current seeded facts, official IRAS/MySST/MOF source observations and
+    the exact approval decisions still required. It does not substitute for qualified
+    tax-owner sign-off.
   - Source action completed in the current worktree: tax rules and expense policies use
     `[valid_from, valid_to)`; policy overlap and boundary selection are exclusive; tax
     rules carry explicit classification, recoverability and source/approval facts; PO,
