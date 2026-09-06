@@ -29,8 +29,8 @@ the dated ERP excellence review. This follow-up does not create a second registr
 
 2026-09-07 documentation gate addendum: the repository now includes the deterministic
 `npm run docs:check` gate for README and `docs/` Markdown relative links and invokes it in
-both the CI validation job and the Pages deploy workflow. It passes 38 Markdown files and
-173 local links; `npm run lint`, workflow YAML parsing and `git diff --check` also pass.
+both the CI validation job and the Pages deploy workflow. It passes 39 Markdown files and
+174 local links; `npm run lint`, workflow YAML parsing and `git diff --check` also pass.
 The application-only release now rejects an explicitly supplied revision that differs from
 the checkout HEAD. These local gates do not satisfy the still-pending remote CI, deployment,
 production or physical-device evidence boundaries.
@@ -63,7 +63,7 @@ flows; these remain disposable/local evidence, not production release proof.
 2026-09-07 outbox addendum: authentication invitation/password-reset delivery now has the
 same bounded-failure shape as document processing: five automatic attempts by default,
 `OUTBOX_MAX_ATTEMPTS` clamped to 1–20, terminal `dead_lettered_at`, and a sanitized
-integration-event status. The focused outbox suite passes 3/3; production SMTP, alerting
+integration-event status. The focused outbox suite passes 2 files / 5 tests; production SMTP, alerting
 and operator recovery remain TASK-193/TASK-201 evidence rather than local claims.
 
 2026-09-07 full-regression addendum: after the auth outbox change, `npm test
