@@ -50,6 +50,8 @@ For the current source-backed action backlog and evidence boundaries, see
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
       the permission registry at 315/116/62/5 and the serial 59-route × 13-template
       browser access audit. This is local evidence, not production authorization proof.
+- [x] `npm run docs:check` — validates all README/docs Markdown local links before release;
+      external URLs remain outside this deterministic gate.
 - [x] `tasks/tasks.jsonl` statuses current: 204 Done / 4 In progress / 2 Todo / 3
       Blocked / 213 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
