@@ -462,9 +462,10 @@ The current and future implementation must satisfy these binding requirements:
   download/Print in the access purpose and audit after-data, returns safe not-found for
   a frozen-visibility mismatch or wrong active tenant, and keeps the artifact private
   and no-store. TASK-196 and TASK-197 are done; TASK-202 now has source-level conflict
-  convergence, history, localized Unicode PDF rendering and Decimal-safe display. Pack
-  retention/legal-hold/purge/tombstone, Company-calendar timezone and production
-  download/Print/browser evidence remain.
+  convergence, history, retention-derived Legal Hold/two-person purge/tombstone/key-reuse
+  protection, localized Unicode PDF rendering, Decimal-safe display and Company-calendar
+  timezone presets. Disposable PostgreSQL concurrency and production download/Print/browser
+  evidence remain.
   Currencies are never summed together.
 - Demo/PGlite and PostgreSQL/API modes implement one contract. `expenses_tax` availability
   is platform-owned `Master enabled AND Company allocated`; missing or disabled state

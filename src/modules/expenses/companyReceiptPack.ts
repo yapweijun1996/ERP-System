@@ -18,6 +18,7 @@ import {
   appUser,
   companyReceipt,
   companyReceiptPack,
+  companyReceiptPackTombstone,
   documentVersion,
   managedDocument,
 } from '../../data/schema';
@@ -123,6 +124,9 @@ function sha256(value: string | Uint8Array): string {
 function packProjection(row: typeof companyReceiptPack.$inferSelect): CompanyReceiptPackFacts & {
   visibility: CompanyReceiptReadVisibility;
   createdByUserId: number;
+  retentionUntil: Date;
+  legalHold: boolean;
+  recordVersion: number;
 } {
   return {
     id: row.id,
@@ -135,6 +139,9 @@ function packProjection(row: typeof companyReceiptPack.$inferSelect): CompanyRec
     sourceSha256: row.sourceSha256,
     rowCount: row.rowCount,
     documentCount: row.documentCount,
+    retentionUntil: row.retentionUntil,
+    legalHold: row.legalHold,
+    recordVersion: row.recordVersion,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt,
   };
@@ -212,6 +219,21 @@ export async function createCompanyReceiptPackWithin(
   const packKey = safeKey(input.packKey);
   const filters = normalizeFilters(input);
   const locale = normalizedLocale(input.locale);
+  const [purgedKey] = await tx.select({ id: companyReceiptPackTombstone.id })
+    .from(companyReceiptPackTombstone)
+    .where(and(
+      eq(companyReceiptPackTombstone.masterFn, scope.masterFn),
+      eq(companyReceiptPackTombstone.companyFn, scope.companyFn),
+      eq(companyReceiptPackTombstone.packKeyHash, sha256(packKey)),
+    ))
+    .limit(1);
+  if (purgedKey) {
+    return fail(
+      'company_receipt_pack_key_purged',
+      'This Receipt Pack key was permanently purged and cannot be reused.',
+      410,
+    );
+  }
   const existing = await findCompanyReceiptPackWithin(tx, scope, packKey);
   if (existing) {
     return replayOrConflict(existing, actorUserId, visibility, locale, filters);
@@ -251,6 +273,7 @@ export async function createCompanyReceiptPackWithin(
     documentVersionId: companyReceipt.documentVersionId,
     documentSha256: companyReceipt.evidenceSha256,
     originalFileName: managedDocument.originalFileName,
+    retentionUntil: managedDocument.retentionUntil,
   }).from(companyReceipt)
     .innerJoin(appUser, and(
       eq(appUser.masterFn, companyReceipt.masterFn),
@@ -278,7 +301,24 @@ export async function createCompanyReceiptPackWithin(
       413,
     );
   }
-  const rows = selected as CompanyReceiptPackLineFacts[];
+  const rows = selected.map((row) => ({
+    receiptId: row.receiptId,
+    receiptVersion: row.receiptVersion,
+    transactionDate: row.transactionDate,
+    merchant: row.merchant,
+    receiptNumber: row.receiptNumber,
+    category: row.category,
+    businessPurpose: row.businessPurpose,
+    notes: row.notes,
+    amount: row.amount,
+    currency: row.currency,
+    uploaderUserId: row.uploaderUserId,
+    uploaderName: row.uploaderName,
+    documentId: row.documentId,
+    documentVersionId: row.documentVersionId,
+    documentSha256: row.documentSha256,
+    originalFileName: row.originalFileName,
+  })) as CompanyReceiptPackLineFacts[];
   const totalMap = new Map<string, { amount: Decimal; receiptCount: number }>();
   for (const row of rows) {
     const current = totalMap.get(row.currency) ?? { amount: new Decimal(0), receiptCount: 0 };
@@ -294,6 +334,9 @@ export async function createCompanyReceiptPackWithin(
       receiptCount: total.receiptCount,
     }));
   const sourceSha256 = sha256(JSON.stringify({ filters, visibility, rows, totals }));
+  const retentionUntil = selected.reduce((latest, row) => (
+    row.retentionUntil.getTime() > latest.getTime() ? row.retentionUntil : latest
+  ), new Date(0));
   const [created] = await tx.insert(companyReceiptPack).values({
     ...scope,
     packKey,
@@ -305,6 +348,7 @@ export async function createCompanyReceiptPackWithin(
     sourceSha256,
     rowCount: rows.length,
     documentCount: rows.length,
+    retentionUntil,
     createdByUserId: actorUserId,
     createdAt: now,
   }).onConflictDoNothing({

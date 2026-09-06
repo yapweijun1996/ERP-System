@@ -15,7 +15,7 @@ export function listCompanies(db: DB, masterFn: string) {
   return db
     .select({
       companyFn: company.companyFn, name: company.name, country: company.country,
-      currency: company.currency, taxRegime: company.taxRegime,
+      currency: company.currency, taxRegime: company.taxRegime, timeZone: company.timeZone,
     })
     .from(company)
     .where(eq(company.masterFn, masterFn))

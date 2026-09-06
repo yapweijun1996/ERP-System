@@ -53,8 +53,8 @@ export async function seedDemo(db: DB): Promise<void> {
   ]);
 
   await db.insert(company).values([
-    { companyFn: 'C-SG', masterFn: 'M1', name: 'Acme Singapore', country: 'SG', currency: 'SGD', taxRegime: 'GST', locale: 'en' },
-    { companyFn: 'C-MY', masterFn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', taxRegime: 'SST', locale: 'ms' },
+    { companyFn: 'C-SG', masterFn: 'M1', name: 'Acme Singapore', country: 'SG', currency: 'SGD', taxRegime: 'GST', locale: 'en', timeZone: 'Asia/Singapore' },
+    { companyFn: 'C-MY', masterFn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', taxRegime: 'SST', locale: 'ms', timeZone: 'Asia/Kuala_Lumpur' },
   ]);
 
   // Keep the compact regression fixture separate from the enterprise showcase pack.

@@ -97,6 +97,12 @@ import {
   updateCompanyReceiptWithin,
   voidCompanyReceiptWithin,
 } from '../../src/modules/expenses/companyReceipt';
+import {
+  executeCompanyReceiptPackPurge,
+  initiateCompanyReceiptPackPurgeWithin,
+  reviewCompanyReceiptPackPurgeWithin,
+  setCompanyReceiptPackLegalHoldWithin,
+} from '../../src/modules/expenses/companyReceiptPackGovernance';
 import type { EvidencePdfDocument } from '../../src/modules/documents/evidencePdf';
 import {
   accessReimbursementBankExportWithin,
@@ -578,6 +584,37 @@ export const erpDemoRuntime = Object.freeze({
       db: DemoOrm, scope: Scope, actorUserId: number, receiptId: number, expectedVersion: unknown, reason: unknown,
     ) {
       return voidCompanyReceiptWithin(asDomainDb(db), scope, actorUserId, receiptId, expectedVersion, reason);
+    },
+    setCompanyReceiptPackLegalHoldWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, packId: number, expectedVersion: number,
+      legalHold: boolean, reason: unknown,
+    ) {
+      return setCompanyReceiptPackLegalHoldWithin(
+        asDomainDb(db), scope, actorUserId, packId, expectedVersion, legalHold, reason,
+      );
+    },
+    initiateCompanyReceiptPackPurgeWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, packId: number, reason: unknown, now?: Date,
+    ) {
+      return initiateCompanyReceiptPackPurgeWithin(
+        asDomainDb(db), scope, actorUserId, packId, reason, now,
+      );
+    },
+    reviewCompanyReceiptPackPurgeWithin(
+      db: DemoOrm, scope: Scope, reviewerUserId: number, requestId: number, expectedVersion: number,
+      decision: 'approve' | 'reject', reason: unknown, now?: Date,
+    ) {
+      return reviewCompanyReceiptPackPurgeWithin(
+        asDomainDb(db), scope, reviewerUserId, requestId, expectedVersion, decision, reason, now,
+      );
+    },
+    executeCompanyReceiptPackPurge(
+      db: DemoOrm, scope: Scope, actorUserId: number, packId: number, requestId: number,
+      expectedVersion: number, now?: Date,
+    ) {
+      return executeCompanyReceiptPackPurge(
+        asDomainDb(db), scope, actorUserId, packId, requestId, expectedVersion, now,
+      );
     },
     hasPermissionWithin(
       db: DemoOrm,

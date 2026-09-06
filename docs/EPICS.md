@@ -2611,7 +2611,7 @@ Current truth:
   roles; TASK-195's disposable PostgreSQL 16 current-path proof passes cross-tenant
   denial. Target-host role verification and production revision evidence remain open.
 - The generic production overlay now includes `sales_enquiry_line`. `npm run
-  check:production-rls` verifies the generated 252-table schema has 222 policy tables
+  check:production-rls` verifies the generated 255-table schema has 225 policy tables
   plus 10 explicit security/control-plane exemptions; this is static coverage evidence,
   not runtime-role or Platform provisioning proof.
 - Receipt Pack read/render now compares current visibility with frozen visibility;
@@ -2621,7 +2621,8 @@ Current truth:
 - Company Receipts now has capability-aware create/update/void UI, versioned detail and
   Missing Date correction, plus an employee-independent eligible-evidence picker. The
   governed My Receipts upload/capture path remains the explicit upstream Employee Self
-  Service boundary; Pack lifecycle/localization and production UAT remain open.
+  Service boundary; Pack lifecycle/localization are implemented in the repository, while
+  PostgreSQL concurrency and production UAT remain open.
 - Support Grant is not a tenant-data proxy, while exact-user Superadmin simulation does
   not require a grant/reason/ticket. Platform MFA/step-up is absent.
 - Public health/setup probes returned 502 and the exact deployed HEAD revision is not
@@ -2644,7 +2645,7 @@ Current truth:
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
-| TASK-202 | In progress | Receipt Pack conflict convergence/history, localized Unicode PDF and Decimal-safe UI; lifecycle/timezone evidence remains |
+| TASK-202 | In progress | Receipt Pack repository lifecycle/timezone implementation is complete; PostgreSQL concurrency and production release evidence remain |
 | TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |

@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 101;
+  var DEMO_SCHEMA_VERSION = 102;
   var DEMO_PACK_VERSION = '15';
   var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 
@@ -469,7 +469,7 @@
 
     var master = (await rows("select master_fn, name from master order by master_fn limit 1"))[0];
     var companies = await rows(
-      "select company_fn, master_fn, name, country, currency, tax_regime, locale " +
+      "select company_fn, master_fn, name, country, currency, tax_regime, locale, time_zone " +
       "from company where " + w('company') + " order by company_fn");
     /* Password hashes stay inside the login query and are never copied into the
        screen payload. Account lifecycle flags are safe session metadata needed
@@ -646,8 +646,8 @@
     return {
       master: { master_fn: 'M1', name: 'Acme Group' },
       companies: [
-        { company_fn: 'C-SG', master_fn: 'M1', name: 'Acme Singapore', country: 'SG', currency: 'SGD', tax_regime: 'GST', locale: 'en' },
-        { company_fn: 'C-MY', master_fn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', tax_regime: 'SST', locale: 'ms' },
+        { company_fn: 'C-SG', master_fn: 'M1', name: 'Acme Singapore', country: 'SG', currency: 'SGD', tax_regime: 'GST', locale: 'en', time_zone: 'Asia/Singapore' },
+        { company_fn: 'C-MY', master_fn: 'M1', name: 'Acme Malaysia', country: 'MY', currency: 'MYR', tax_regime: 'SST', locale: 'ms', time_zone: 'Asia/Kuala_Lumpur' },
       ],
       users: [
         { user_id: 1, email: 'admin@acme.co', full_name: 'Admin', language: 'zh', is_superadmin: false, is_company_owner: true,
@@ -765,6 +765,7 @@
       branch: activeCompany.country === 'MY' ? 'Kuala Lumpur HQ' : 'Singapore HQ',
       currency: activeCompany.currency,
       taxRegime: activeCompany.tax_regime,
+      timeZone: activeCompany.time_zone || (activeCompany.country === 'MY' ? 'Asia/Kuala_Lumpur' : 'Asia/Singapore'),
       period: 'FY2026 · P06',
       periodLabel: 'June 2026',
       env: 'DEMO',
@@ -3690,6 +3691,11 @@
       if(!canReadOwn) throw new Error('You cannot create a Company Receipt Pack.');
       var visibility=canReadCompany?'company':'own';
       var filters={search:search,dateFrom:dateFrom,dateTo:dateTo};
+      var packKeyHash=await state.runtime.sha256Hex(packKey);
+      var purgedKey=(await tx.query(
+        'select id from company_receipt_pack_tombstone where master_fn=$1 and company_fn=$2 and pack_key_hash=$3 limit 1',
+        [SCOPE.masterFn,SCOPE.companyFn,packKeyHash])).rows[0];
+      if(purgedKey) throw new Error('This Receipt Pack key was permanently purged and cannot be reused.');
       var existing=(await tx.query(
         'select * from company_receipt_pack where master_fn=$1 and company_fn=$2 and pack_key=$3 limit 1',
         [SCOPE.masterFn,SCOPE.companyFn,packKey])).rows[0];
@@ -3705,7 +3711,8 @@
           locale:existing.locale,filters:existing.filters,rows:existing.rows,totals:existing.totals,
           sourceSha256:existing.source_sha256,rowCount:Number(existing.row_count),
           documentCount:Number(existing.document_count),createdByUserId:Number(existing.created_by_user_id),
-          createdAt:existing.created_at,
+          retentionUntil:existing.retention_until,legalHold:Boolean(existing.legal_hold),
+          recordVersion:Number(existing.record_version),createdAt:existing.created_at,
         },replayed:true},meta:{immutableSnapshot:true,completeResult:true,missingDatesExcluded:true,currencyTotalsSeparated:true}};
       }
       var params=[SCOPE.masterFn,SCOPE.companyFn,dateFrom,dateTo];
@@ -3716,7 +3723,7 @@
         `select r.id,r.version,r.transaction_date,r.merchant,r.receipt_number,r.category,
                 r.business_purpose,r.notes,r.amount,r.currency_code,r.uploader_user_id,
                 r.document_id,r.document_version_id,r.evidence_sha256,u.full_name as uploader_name,
-                d.original_file_name
+                d.original_file_name,d.retention_until
          from company_receipt r
          join app_user u on u.master_fn=r.master_fn and u.user_id=r.uploader_user_id
          join managed_document d on d.master_fn=r.master_fn and d.company_fn=r.company_fn and d.id=r.document_id
@@ -3735,12 +3742,16 @@
       rows.forEach(function(row){var current=totalMap.get(row.currency)||{amount:0n,receiptCount:0};current.amount+=scaledReceiptAmount(row.amount);current.receiptCount+=1;totalMap.set(row.currency,current);});
       var totals=Array.from(totalMap.entries()).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(entry){return {currency:entry[0],amount:receiptAmountText(entry[1].amount),receiptCount:entry[1].receiptCount};});
       var sourceSha256=await state.runtime.sha256Hex(JSON.stringify({filters:filters,visibility:visibility,rows:rows,totals:totals}));
+      var retentionUntil=result.rows.reduce(function(latest,row){
+        return new Date(row.retention_until).getTime()>new Date(latest).getTime()?row.retention_until:latest;
+      },'1970-01-01T00:00:00.000Z');
       var inserted=(await tx.query(
-        `insert into company_receipt_pack(master_fn,company_fn,pack_key,visibility,locale,filters,rows,totals,source_sha256,row_count,document_count,created_by_user_id)
-         values($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$10,$11) returning *`,
-        [SCOPE.masterFn,SCOPE.companyFn,packKey,visibility,locale,JSON.stringify(filters),JSON.stringify(rows),JSON.stringify(totals),sourceSha256,rows.length,actorId])).rows[0];
+        `insert into company_receipt_pack(master_fn,company_fn,pack_key,visibility,locale,filters,rows,totals,source_sha256,row_count,document_count,retention_until,created_by_user_id)
+         values($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$10,$11,$12) returning *`,
+        [SCOPE.masterFn,SCOPE.companyFn,packKey,visibility,locale,JSON.stringify(filters),JSON.stringify(rows),JSON.stringify(totals),sourceSha256,rows.length,retentionUntil,actorId])).rows[0];
       var pack={id:Number(inserted.id),packKey:packKey,visibility:visibility,locale:locale,filters:filters,
         rows:rows,totals:totals,sourceSha256:sourceSha256,rowCount:rows.length,documentCount:rows.length,
+        retentionUntil:inserted.retention_until,legalHold:Boolean(inserted.legal_hold),recordVersion:Number(inserted.record_version),
         createdByUserId:actorId,createdAt:inserted.created_at};
       return {data:{pack:pack,replayed:false},meta:{immutableSnapshot:true,completeResult:true,missingDatesExcluded:true,currencyTotalsSeparated:true}};
     });
@@ -3783,6 +3794,7 @@
         id:Number(row.id),packKey:row.pack_key,visibility:row.visibility,locale:row.locale,
         filters:row.filters,rows:row.rows,totals:row.totals,sourceSha256:row.source_sha256,
         rowCount:Number(row.row_count),documentCount:Number(row.document_count),
+        retentionUntil:row.retention_until,legalHold:Boolean(row.legal_hold),recordVersion:Number(row.record_version),
         createdByUserId:Number(row.created_by_user_id),createdAt:row.created_at,
       };});
       return {data:rows,meta:{
@@ -3792,6 +3804,60 @@
     });
     response.data=response.data.slice(0,limit);
     return response;
+  }
+  async function companyReceiptPackLegalHold(packId,payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    payload=payload||{};
+    var response=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var allowed=await state.runtime.commands.hasPermissionWithin(orm,SCOPE,actorId,'documents.governance.manage');
+      if(!allowed) throw new Error('Receipt Pack governance permission is required.');
+      return state.runtime.commands.setCompanyReceiptPackLegalHoldWithin(
+        orm,SCOPE,actorId,Number(packId),Number(payload.expectedVersion),payload.legalHold,payload.reason);
+    });
+    await recordDemoAudit('company_receipt_pack',Number(packId),payload.legalHold?'legal_hold_set':'legal_hold_released',null,response);
+    return {data:response,meta:{governed:true,appendOnly:true}};
+  }
+  async function companyReceiptPackInitiatePurge(packId,payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    payload=payload||{};
+    var response=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var allowed=await state.runtime.commands.hasPermissionWithin(orm,SCOPE,actorId,'documents.records.manage');
+      if(!allowed) throw new Error('Records-manager permission is required.');
+      return state.runtime.commands.initiateCompanyReceiptPackPurgeWithin(
+        orm,SCOPE,actorId,Number(packId),payload.reason);
+    });
+    await recordDemoAudit('company_receipt_pack',Number(packId),'purge_requested',null,response);
+    return {data:response,meta:{governed:true,twoPersonReview:true}};
+  }
+  async function companyReceiptPackReviewPurge(requestId,payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    payload=payload||{};
+    var response=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var allowed=await state.runtime.commands.hasPermissionWithin(orm,SCOPE,actorId,'documents.finance.review');
+      if(!allowed) throw new Error('Finance review permission is required.');
+      return state.runtime.commands.reviewCompanyReceiptPackPurgeWithin(
+        orm,SCOPE,actorId,Number(requestId),Number(payload.expectedVersion),payload.decision,payload.reason);
+    });
+    await recordDemoAudit('company_receipt_pack_purge_request',Number(requestId),payload.decision==='approve'?'purge_approved':'purge_rejected',null,response);
+    return {data:response,meta:{governed:true,twoPersonReview:true}};
+  }
+  async function companyReceiptPackExecutePurge(packId,payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    payload=payload||{};
+    var rootOrm=state.runtime.createOrm(requireDemoDb());
+    var actorId=myActorUserId();
+    var allowed=await requireDemoDb().transaction(async function(tx){
+      return state.runtime.commands.hasPermissionWithin(
+        state.runtime.createOrm(tx),SCOPE,actorId,'documents.records.manage');
+    });
+    if(!allowed) throw new Error('Records-manager permission is required.');
+    var response=await state.runtime.commands.executeCompanyReceiptPackPurge(
+      rootOrm,SCOPE,actorId,Number(packId),Number(payload.requestId),Number(payload.expectedVersion));
+    await recordDemoAudit('company_receipt_pack',Number(packId),'purge_executed',null,response);
+    return {data:response,meta:{governed:true,tombstone:true}};
   }
   async function companyReceiptPackPdf(packId,action){
     requireEffectiveModuleForResource('expenses/company-receipts');
@@ -3808,7 +3874,8 @@
       if(!stored) throw new Error('Receipt Pack is unavailable for the signed-in user and active Company.');
       var pack={id:Number(stored.id),packKey:stored.pack_key,locale:stored.locale,filters:stored.filters,
         rows:stored.rows,totals:stored.totals,sourceSha256:stored.source_sha256,rowCount:Number(stored.row_count),
-        documentCount:Number(stored.document_count),createdAt:stored.created_at};
+        documentCount:Number(stored.document_count),retentionUntil:stored.retention_until,
+        legalHold:Boolean(stored.legal_hold),recordVersion:Number(stored.record_version),createdAt:stored.created_at};
       var documents=[],totalSourceBytes=0,maxSourceBytes=250*1024*1024;
       for(var row of pack.rows){
         var version=(await tx.query(
@@ -4953,6 +5020,10 @@
     voidCompanyReceipt:voidCompanyReceipt,
     companyReceiptPack:companyReceiptPack,
     companyReceiptPacks:companyReceiptPacks,
+    companyReceiptPackLegalHold:companyReceiptPackLegalHold,
+    companyReceiptPackInitiatePurge:companyReceiptPackInitiatePurge,
+    companyReceiptPackReviewPurge:companyReceiptPackReviewPurge,
+    companyReceiptPackExecutePurge:companyReceiptPackExecutePurge,
     companyReceiptPackPdf:companyReceiptPackPdf,
     my:my,
     confirmOrder: confirmOrder,

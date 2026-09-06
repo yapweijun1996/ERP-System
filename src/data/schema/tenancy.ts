@@ -26,6 +26,8 @@ export const company = pgTable('company', {
   currency: text('currency').notNull().references(() => currency.code),
   taxRegime: text('tax_regime').notNull(),     // 'GST' | 'SST' | …
   locale: text('locale').notNull().default('en'),
+  /** IANA timezone used for Company-calendar date presets and local-day rules. */
+  timeZone: text('time_zone').notNull().default('UTC'),
   fiscalYearStart: date('fiscal_year_start'),
   /** Monotonic tenant authorization state version. Any role, scope, module or
    * policy mutation advances this value so capability/session consumers can
@@ -35,6 +37,8 @@ export const company = pgTable('company', {
 }, (t) => [
   index('idx_company_master').on(t.masterFn),
   uniqueIndex('uq_company_master_company').on(t.masterFn, t.companyFn),
+  check('ck_company_time_zone',
+    sql`char_length(${t.timeZone}) between 1 and 80 and ${t.timeZone} !~ '[[:space:]]'`),
 ]);
 
 /** A tenant identity belonging to exactly one Master. Human rows may log in;

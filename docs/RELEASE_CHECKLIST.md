@@ -14,7 +14,7 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current local Vitest run passes 172 files / 694 tests with two
+- [x] `npm test` — current local Vitest run passes 172 files / 696 tests with two
       intentional file/test skips. This is local evidence; PostgreSQL runtime, CI and
       production deployment remain separate gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
@@ -142,11 +142,12 @@ receipt UAT is claimed.
       output pass without losing the original.
 - [x] Five languages, 1440 × 900, 390 × 844 and canonical 375 px audits pass with zero
       unexpected console errors or page overflow.
-- [ ] Pack retention/legal-hold/purge/tombstone lifecycle, Company-calendar presets,
-      disposable PostgreSQL concurrency and authenticated browser/download/Print evidence
-      pass (TASK-202). Source-level localized Unicode PDF/fonts, conflict convergence and
-      Decimal-safe amount formatting are implemented and unit-tested, but do not close this
-      release gate alone.
+- [ ] Pack retention/legal-hold/purge/tombstone lifecycle and Company-calendar presets are
+      implemented with local unit/API/Demo and authenticated browser boundary proof. The
+      remaining TASK-202 gate is disposable PostgreSQL concurrency plus production
+      download/Print/release evidence. Source-level localized Unicode PDF/fonts, conflict
+      convergence and Decimal-safe amount formatting are implemented and unit-tested, but do
+      not close this release gate alone.
 - [ ] Authenticated production scanner/storage/receipt UAT is recorded separately from
       disposable fixtures and the reset checkpoint.
 

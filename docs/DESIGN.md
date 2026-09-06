@@ -61,7 +61,7 @@ Current source inventory on 2026-09-06 is **129 Canonical / 0 Preview** routes. 
 `/api/hr/calendar/staff` contract. The current `audit:screens` run covers all
 129 routes at desktop/mobile; API integration, authenticated API browser, access-matrix
 and i18n evidence remain separately recorded. The current HEAD full Vitest run passes
-172 files / 694 tests with two intentional file/test skips; the Staff Calendar API
+172 files / 696 tests with two intentional file/test skips; the Staff Calendar API
 integration passes 6/6 and its Demo E2E covers mixed events, create, filtering and list
 search.
 Business-record values are not treated as UI copy. Physical-device acceptance remains
@@ -562,10 +562,11 @@ Missing Date correction submit the shared versioned commands, and both adapters 
 bounded employee-independent eligible-evidence picker. Governed binary upload/capture
 continues through My Receipts and its Employee Self Service boundary by explicit v1
 decision. TASK-192 later deployed migrations through 0098 and reset production to
-first-run state; no authenticated Company Receipt UAT is claimed. TASK-202 now covers
-source-level Pack conflict convergence/history, localized Unicode PDF rendering and
-Decimal-safe amount display; retention/legal-hold/purge/tombstone, Company-calendar
-timezone and production artifact evidence remain. TASK-196 closed the Receipt Pack
+first-run state; no authenticated Company Receipt UAT is claimed. TASK-202 now covers Pack
+conflict convergence/history, retention-derived Legal Hold/two-person purge/tombstone/key-
+reuse protection, localized Unicode PDF rendering, Decimal-safe amount display and
+Company-calendar timezone presets; disposable PostgreSQL concurrency and production
+artifact evidence remain. TASK-196 closed the Receipt Pack
 visibility and export-purpose security gap.
 
 ## 12. Platform Module Entitlement and tenant cutover

@@ -482,8 +482,13 @@ As of 2026-09-07, TASK-202 source hardening makes the unique Pack key race conve
 deterministic replay or 409 conflict, exposes actor-scoped descending history with bounded
 cursor pagination, keeps browser receipt amounts as validated decimal strings, and renders
 localized register labels/content for en/ms/zh/ja/vi with an embedded Noto Sans CJK face.
-Retention expiry, legal-hold/purge/tombstone commands, Company-calendar timezone presets and
-production concurrency/download/Print evidence remain open.
+Pack retention is the maximum retention deadline of its governed source documents. Legal
+hold changes use optimistic versions and append-only events; purge requires a distinct
+reviewer, rechecks retention/hold/frozen hashes, leaves an immutable tombstone and blocks
+Pack-key reuse. Company IANA timezone defaults are returned through API/Demo company
+context and drive local calendar presets. Local unit/API/Demo/browser proof passes;
+disposable PostgreSQL same-key concurrency and production release/download/Print evidence
+remain open.
 The source/UI paths for Pack permission downgrade and Company Receipt correction/edit/void/date
 correction exist, but their authenticated browser/production UAT remains a P0 release evidence
 follow-up until the dated ERP excellence review is reconciled.
@@ -495,12 +500,14 @@ the same private no-store artifact and are audited without changing receipt stat
 The shared PDF primitive is technical reuse only: Tax Evidence still joins
 `expensePosting`, `expenseClaimLine` and `receiptInboxItem` and is not this business query.
 
-Current source: `src/data/schema/expenses.ts`, migration
+Current source: `src/data/schema/expenses.ts`, migrations
 `drizzle/0090_company_receipts.sql`, `drizzle/0091_sloppy_blackheart.sql`,
-`drizzle/0093_company_receipt_pack.sql`, `drizzle/0097_company_receipt_canonical_permissions.sql`,
-`src/modules/expenses/companyReceipt.ts`,
-`src/modules/expenses/companyReceiptPack.ts`, `src/modules/expenses/companyReceiptPackPdf.ts` and
-`src/api/routes/companyReceipts.ts`. Evidence/upload dependencies remain
+`drizzle/0093_company_receipt_pack.sql`, `drizzle/0097_company_receipt_canonical_permissions.sql`
+and `drizzle/0102_great_mongu.sql`,
+`src/modules/expenses/companyReceipt.ts`, `src/modules/expenses/companyReceiptPack.ts`,
+`src/modules/expenses/companyReceiptPackGovernance.ts`,
+`src/modules/expenses/companyReceiptPackPdf.ts` and `src/api/routes/companyReceipts.ts`.
+Evidence/upload dependencies remain
 `src/data/schema/documents.ts`, `src/modules/documents/upload.ts`,
 `src/modules/documents/processing.ts`, `src/modules/documents/evidencePdf.ts` and
 `src/api/routes/my.ts`. `src/api/moduleEntitlement.ts`,
@@ -530,9 +537,10 @@ Expense posting fails closed when an old or malformed snapshot attempts generic 
 Input Tax behavior.
 
 Source implementation is covered by `src/modules/localization/tax.test.ts`, the purchasing
-tax/GL tests, `src/modules/expenses/policy.test.ts` and `postings.test.ts`. Migrations
-`0100` and `0101` plus the generated Demo schema keep PostgreSQL and PGlite aligned. A
-qualified tax owner must still review production configuration against current IRAS and
+tax/GL tests, `src/modules/expenses/policy.test.ts` and `postings.test.ts`. Tax migrations
+`0100` and `0101` plus the generated Demo schema keep PostgreSQL and PGlite aligned. The
+current Demo schema is version `102` after the later Receipt Pack governance migration.
+A qualified tax owner must still review production configuration against current IRAS and
 Royal Malaysian Customs/MOF sources before release; local evidence is not filing
 compliance evidence.
 
@@ -561,7 +569,7 @@ compliance evidence.
 | Staff Calendar | `src/modules/hr/appointment.ts`, `calendarSync.ts`, `teamCalendar.ts`, `web/public/assets/screens-hr.js` | `src/modules/hr/appointment.test.ts`, `teamCalendar.test.ts`, `src/api/hrCalendar.integration.test.ts`, `tests/e2e/staff-calendar.spec.mjs` |
 | Expense Claim | `src/modules/expenses/claims.ts`, `controls.ts`, `postings.ts` | `src/modules/expenses/claims.test.ts`, `controls.test.ts`, `postings.test.ts` |
 | Company Receipt foundation | `src/data/schema/expenses.ts`, `src/modules/expenses/companyReceipt.ts`, `src/api/routes/companyReceipts.ts` | `src/modules/expenses/companyReceipt.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/api/postgresSecurity.integration.test.ts` |
-| Company Receipt Pack | `src/modules/expenses/companyReceiptPack.ts`, `companyReceiptPackPdf.ts`, `src/modules/documents/evidencePdf.ts` | `src/modules/expenses/companyReceiptPack.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/modules/expenses/taxEvidence.test.ts`, `tests/e2e/company-receipts.spec.mjs` |
+| Company Receipt Pack | `src/modules/expenses/companyReceiptPack.ts`, `companyReceiptPackGovernance.ts`, `companyReceiptPackPdf.ts`, `src/modules/documents/evidencePdf.ts` | `src/modules/expenses/companyReceiptPack.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/modules/expenses/taxEvidence.test.ts`, `tests/e2e/company-receipts.spec.mjs` |
 | Claim downstream | `src/modules/expenses/reimbursementBatches.ts`, `reimbursementPayments.ts` | matching module tests |
 | Project Progress Claim | `src/modules/project/progressClaim.ts` | project module/API tests where registered |
 

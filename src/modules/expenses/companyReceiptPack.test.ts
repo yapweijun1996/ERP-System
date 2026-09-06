@@ -6,6 +6,9 @@ import { seedDemo } from '../../data/seed';
 import {
   appUser,
   companyReceiptPack,
+  companyReceiptPackGovernanceEvent,
+  companyReceiptPackPurgeRequest,
+  companyReceiptPackTombstone,
   documentScanJob,
 } from '../../data/schema';
 import { withTenantTransaction } from '../../data/tenantTransaction';
@@ -18,6 +21,12 @@ import {
   readCompanyReceiptPackWithin,
   renderCompanyReceiptPackWithin,
 } from './companyReceiptPack';
+import {
+  executeCompanyReceiptPackPurge,
+  initiateCompanyReceiptPackPurgeWithin,
+  reviewCompanyReceiptPackPurgeWithin,
+  setCompanyReceiptPackLegalHoldWithin,
+} from './companyReceiptPackGovernance';
 
 const sg = { masterFn: 'M1', companyFn: 'C-SG' };
 
@@ -43,12 +52,14 @@ describe('Company Receipt Pack', () => {
     fileName: string,
     mimeType: 'image/png' | 'application/pdf',
     content: Uint8Array,
+    retentionUntil?: Date,
   ) {
     const uploaded = await uploadReceiptDocument(db, sg, { userId: actorUserId }, {
       clientDraftId: draftId,
       fileName,
       declaredMimeType: mimeType,
       content,
+      retentionUntil,
     });
     await withTenantTransaction(db, sg, (tx) => tx.update(documentScanJob).set({
       status: 'clean',
@@ -235,5 +246,108 @@ describe('Company Receipt Pack', () => {
     await expect(withTenantTransaction(db, sg, (tx) =>
       readCompanyReceiptPackWithin(tx, sg, adminId, 'company', 999_999)))
       .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
+  });
+
+  it('enforces Pack retention, legal hold, two-person purge and tombstone key reuse protection', async () => {
+    const png = Uint8Array.from(Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zsx8AAAAASUVORK5CYII=',
+      'base64',
+    ));
+    const expired = new Date('2025-01-01T00:00:00.000Z');
+    const now = new Date('2026-08-11T09:00:00.000Z');
+    const evidence = await cleanEvidence(
+      viewerId,
+      'receipt_pack_governance_001',
+      'governed-receipt.png',
+      'image/png',
+      png,
+      expired,
+    );
+    const receipt = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptWithin(tx, sg, viewerId, {
+        documentId: evidence.document.id,
+        documentVersionId: evidence.version.id,
+        transactionDate: '2025-01-01',
+        merchant: 'Governed Merchant',
+        amount: '10.0000',
+        currency: 'SGD',
+        category: 'Office supplies',
+        businessPurpose: 'Governance test',
+      }));
+    const created = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptPackWithin(tx, sg, adminId, 'company', {
+        packKey: 'company-receipt-pack:purge-0001',
+        dateFrom: '2025-01-01',
+        dateTo: '2025-01-01',
+      }, now));
+    expect(created.pack).toMatchObject({
+      rowCount: 1,
+      retentionUntil: expired,
+      legalHold: false,
+      recordVersion: 1,
+    });
+
+    const held = await withTenantTransaction(db, sg, (tx) =>
+      setCompanyReceiptPackLegalHoldWithin(
+        tx, sg, adminId, created.pack.id, 1, true, 'Litigation review is active.',
+      ));
+    await expect(withTenantTransaction(db, sg, (tx) =>
+      initiateCompanyReceiptPackPurgeWithin(
+        tx, sg, adminId, created.pack.id, 'Retention expired.', now,
+      ))).rejects.toMatchObject({ code: 'company_receipt_pack_legal_hold' });
+    const released = await withTenantTransaction(db, sg, (tx) =>
+      setCompanyReceiptPackLegalHoldWithin(
+        tx, sg, adminId, created.pack.id, held.recordVersion, false,
+        'Legal review is complete.',
+      ));
+    expect(released.recordVersion).toBe(3);
+    const request = await withTenantTransaction(db, sg, (tx) =>
+      initiateCompanyReceiptPackPurgeWithin(
+        tx, sg, adminId, created.pack.id, 'Retention expired and review is complete.', now,
+      ));
+    await expect(withTenantTransaction(db, sg, (tx) =>
+      reviewCompanyReceiptPackPurgeWithin(
+        tx, sg, adminId, request.id, request.version, 'approve',
+        'The initiator cannot approve the same purge.', now,
+      ))).rejects.toMatchObject({ code: 'company_receipt_pack_purge_two_person_required' });
+    const approved = await withTenantTransaction(db, sg, (tx) =>
+      reviewCompanyReceiptPackPurgeWithin(
+        tx, sg, viewerId, request.id, request.version, 'approve',
+        'Finance verified retention and the legal-hold state.', now,
+      ));
+    const purged = await executeCompanyReceiptPackPurge(
+      db, sg, adminId, created.pack.id, request.id, approved.version, now,
+    );
+    expect(purged.request).toMatchObject({
+      status: 'executed',
+      initiatedByUserId: adminId,
+      reviewedByUserId: viewerId,
+      executedByUserId: adminId,
+    });
+    expect(purged.tombstone).toMatchObject({
+      originalPackId: created.pack.id,
+      sourceSha256: created.pack.sourceSha256,
+      rowCount: 1,
+      documentCount: 1,
+    });
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(0);
+    expect(await db.select().from(companyReceiptPackTombstone)).toHaveLength(1);
+    expect(await db.select().from(companyReceiptPackGovernanceEvent)).toHaveLength(4);
+    expect(await db.select().from(companyReceiptPackPurgeRequest)).toEqual([
+      expect.objectContaining({ status: 'executed', version: 3 }),
+    ]);
+    await expect(withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptPackWithin(tx, sg, adminId, 'company', {
+        packKey: 'company-receipt-pack:purge-0001',
+        dateFrom: '2025-01-01',
+        dateTo: '2025-01-01',
+      }, now))).rejects.toMatchObject({
+      code: 'company_receipt_pack_key_purged',
+      status: 410,
+    });
+    await expect(db.delete(companyReceiptPackTombstone).where(
+      eq(companyReceiptPackTombstone.id, purged.tombstone.id),
+    )).rejects.toThrow();
+    expect(receipt.id).toBeGreaterThan(0);
   });
 });

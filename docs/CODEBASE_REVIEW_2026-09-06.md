@@ -7,15 +7,16 @@ hardening in progress. Source and tests are the implementation truth; [STATUS.md
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
 
-Addendum reviewed 2026-09-07: TASK-202 now has source-level Pack conflict convergence,
-actor-scoped history, localized Unicode PDF rendering and Decimal-safe browser amounts;
-its retention/legal-hold/purge/tombstone, Company-calendar and production evidence remain
-open.
+Addendum reviewed 2026-09-07: TASK-202 repository implementation now covers Pack conflict
+convergence, actor-scoped history, retention-derived governance, Legal Hold, two-person
+purge/tombstone/key-reuse protection, localized Unicode PDF rendering, Decimal-safe browser
+amounts and Company-calendar timezone presets. Disposable PostgreSQL concurrency and
+production release evidence remain open.
 
 ## Current verified baseline
 
-- The source contains **102 ordered migrations through schema version 101**, **252
-  generated tables**, **315 permission codes**, **222 production-RLS policy tables** and
+- The source contains **103 ordered migrations through schema version 102**, **255
+  generated tables**, **315 permission codes**, **225 production-RLS policy tables** and
   **10 explicit infrastructure/control-plane exemptions**.
 - The source inventory is **129 Canonical routes / 0 Preview routes**. All **129 routes
   declare API-mode metadata**, including `staff-calendar`, whose API adapter and
@@ -31,7 +32,8 @@ open.
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
   classification/recoverability/source facts and the Expense snapshot; the generated
-  Demo schema is version `101`. Its external tax-owner production review remains open.
+  Demo schema is now version `102` after the TASK-202 governance migration. Its external
+  tax-owner production review remains open.
 - TASK-205 source failure hardening is now in progress: direct HTTP-driver tests cover
   provider status failures, malformed/empty output and transport timeout; processing
   tests cover paused/revoked connector denial, retry lease reuse and the explicit manual
@@ -131,15 +133,17 @@ open.
     129 × 5 × 2 i18n browser matrix pass separately from the Demo route audit. The
     Staff Calendar API integration suite passes 6/6 tests.
 
-- **TASK-202 — Receipt Pack lifecycle is not yet a complete governed artifact.**
-  - **Source action completed 2026-09-07:** unique-key insert races now converge to
+- **TASK-202 — Receipt Pack repository implementation is complete; release evidence remains.**
+  - **Source action completed 2026-09-07:** unique-key insert races converge to
     deterministic replay/409 behavior; actor-scoped bounded history is available through
     API/Demo; receipt amount display avoids Number conversion; locale labels/content use
     en/ms/zh/ja/vi resources and an embedded Noto Sans CJK font; unsupported originals
-    retain an identity placeholder.
-  - **Remaining action:** define/test retention expiry, legal-hold/purge/tombstone behavior
-    and Company-calendar timezone presets, then run disposable PostgreSQL concurrency and
-    authenticated download/Print/browser evidence.
+    retain an identity placeholder; retention derives from governed source documents;
+    Legal Hold, two-person purge, immutable tombstone/key-reuse protection and Company
+    timezone presets are implemented in shared domain/API/Demo runtime paths.
+  - **Remaining action:** run disposable PostgreSQL same-key concurrency and record
+    production release/download/Print/browser evidence. Local authenticated browser proof
+    now covers the Company-timezone boundary and Pack download/Print path.
 
 - **TASK-201 — Production operations lack measurable SLO/DR proof.**
   - **Action:** define availability/error/latency SLOs, RPO/RTO, backup retention and
@@ -191,11 +195,12 @@ open.
   API integration tests (4), and PostgreSQL security tests (1) on disposable PostgreSQL
   16, including downgrade, revoked-read, active-tenant, cross-tenant, export-audit and
   no-store assertions.
-- TASK-202 focused source proof passes 2 Pack test cases, including localized Unicode font
-  embedding and actor-scoped history; root/Web typecheck, lint, `build:demo`, `demo` and
-  diff check pass.
+- TASK-202 focused source proof passes 3 Pack unit tests and 5 Company Receipt API tests,
+  including localized Unicode font embedding, governance/tombstone behavior and
+  actor-scoped history; root/Web typecheck, lint, `build:demo`, `demo`, schema/RLS drift
+  checks and the authenticated Company Receipts browser E2E pass.
 - The current full Vitest baseline completed with **172 passed files / 2 skipped files** and
-  **694 passed tests / 2 skipped tests**. The additional file/tests cover tax
+  **696 passed tests / 2 skipped tests**. The additional file/tests cover tax
   classification and the exclusive Expense policy boundary. CI, current public health,
   exact deployed revision, production tax-owner approval, physical-device behavior,
   SMTP/Vision configuration and dead-letter operations remain unverified. The focused

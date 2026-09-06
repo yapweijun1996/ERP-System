@@ -21,9 +21,10 @@ the dated ERP excellence review. This follow-up does not create a second registr
 - **3. Close the Platform chain in dependency order:** TASK-209 remains the release proof
   after TASK-203/external deployment evidence. TASK-206's hidden actor/session foundation,
   TASK-207 authorization proof and TASK-208 browser/workspace proof are now done.
-- **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205); TASK-202 now has
-  source-level concurrency/history/Unicode/Decimal hardening, while lifecycle/timezone and
-  production evidence remain open. TASK-205 source failure evidence is also in progress.**
+- **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205); TASK-202's
+  repository implementation is now complete through lifecycle/timezone/browser evidence,
+  while disposable PostgreSQL concurrency and release evidence remain open. TASK-205
+  source failure evidence is also in progress.**
 - **5. Keep human-owned blockers separate:** TASK-017 needs a physical phone and TASK-193
   needs production SMTP/mail delivery.
 
@@ -41,8 +42,8 @@ the dated ERP excellence review. This follow-up does not create a second registr
     cost; positive SST recovery requires explicit `sst_deductible` configuration.
   - Evidence added: Decimal resolver tests for standard/zero/exempt GST and SST service/
     deductible classifications, exclusive Expense policy boundary test, SG balanced GL,
-    MY SST balanced GL without an Input Tax leg, generated migrations `0100`/`0101` and
-    Demo schema version `101`.
+    MY SST balanced GL without an Input Tax leg, generated tax migrations `0100`/`0101`
+    and current Demo schema version `102`.
   - Remaining action: a qualified tax owner must review production configuration against
     the current IRAS and Royal Malaysian Customs/MOF sources, approve effective dates,
     exemptions, thresholds and transitional rules, and record the review evidence.
@@ -135,14 +136,18 @@ the dated ERP excellence review. This follow-up does not create a second registr
 
 - **TASK-202 — In Progress — Receipt Pack lifecycle, concurrency and localization**
   - Depends on: `TASK-196`, `TASK-197`.
-  - Source slice completed 2026-09-07: unique-key insert races converge to deterministic
-    replay/409 behavior; actor-scoped paginated history is available in API and Demo
-    adapters; receipt amount display avoids Number() conversion; localized register
-    labels/content cover en/ms/zh/ja/vi with an embedded Noto Sans CJK font; unsupported
-    originals keep an explicit identity placeholder.
-  - Remaining action: add Pack retention expiry, legal-hold/purge/tombstone commands and
-    tests; derive presets from the configured Company calendar/timezone; run disposable
-    PostgreSQL concurrency evidence and authenticated download/Print/browser checks.
+  - Repository implementation completed 2026-09-07: unique-key insert races converge to
+    deterministic replay/409 behavior; actor-scoped paginated history is available in API
+    and Demo adapters; receipt amount display avoids Number() conversion; localized
+    register labels/content cover en/ms/zh/ja/vi with an embedded Noto Sans CJK font;
+    unsupported originals keep an explicit identity placeholder; Pack retention is derived
+    from governed source evidence; legal-hold, two-person purge, immutable tombstone and
+    key-reuse protection are exposed through shared domain commands and API/Demo runtime;
+    Company IANA timezone defaults drive calendar-safe date presets.
+  - Local proof completed: Pack governance unit/API tests, schema drift and RLS checks,
+    Demo smoke, build/type/lint gates and the authenticated Company Receipts browser flow
+    including a Singapore local-day boundary. Remaining action: run disposable PostgreSQL
+    same-key concurrency plus authenticated production download/Print and release checks.
 
 - **TASK-205 — In Progress — governed Vision failure and production boundaries**
   - Depends on: `TASK-119`, `TASK-194`.

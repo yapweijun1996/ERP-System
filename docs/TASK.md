@@ -16,12 +16,12 @@ not a second task registry.
 
 ## Current release-quality note
 
-TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 102 migrations
-through 0101, schema v101/252 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
+TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 103 migrations
+through 0102, schema v102/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
 API mode, 1,725 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
 collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
-Vitest run at 172 files / 694 tests with two intentional skips. Current source
+Vitest run at 172 files / 696 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
 2 focused Platform files / 15 tests, 2 disposable PostgreSQL files / 2 tests, Staff Calendar API integration 6/6, Staff Calendar
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
@@ -125,7 +125,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
-| TASK-202 | In progress | Receipt Pack concurrency/history, localized Unicode PDF and Decimal-safe UI; lifecycle/timezone evidence remains |
+| TASK-202 | In progress | Receipt Pack repository lifecycle/timezone implementation is complete; PostgreSQL concurrency and production release evidence remain |
 | TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
@@ -185,10 +185,11 @@ dated TASK-183 evidence, not a HEAD rerun. TASK-192 later deployed migrations th
 0098 and reset the target to first-run state; no authenticated production receipt UAT is
 claimed. TASK-196 is now done: Pack reads/renders revalidate current visibility against
 the frozen snapshot, and Preview versus original-evidence export purpose is audited.
-TASK-202 now has source-level Pack conflict convergence, actor-scoped history, localized
-Unicode PDF rendering and Decimal-safe display; retention/legal-hold/purge/tombstone,
-Company-calendar timezone and production artifact evidence remain open. TASK-197 is done
-with the upload/capture boundary explicitly retained in My Receipts.
+TASK-202 now has Pack conflict convergence, actor-scoped history, retention-derived
+Legal Hold/two-person purge/tombstone/key-reuse protection, localized Unicode PDF rendering,
+Decimal-safe display and Company-calendar timezone presets. PostgreSQL concurrency and
+production artifact evidence remain open. TASK-197 is done with the upload/capture boundary
+explicitly retained in My Receipts.
 
 ## Latest implementation milestones
 

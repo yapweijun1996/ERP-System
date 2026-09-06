@@ -203,6 +203,7 @@ export async function completeProductionSetup(
       currency: defaults.currency,
       taxRegime: defaults.taxRegime,
       locale: language,
+      timeZone: country === 'MY' ? 'Asia/Kuala_Lumpur' : 'Asia/Singapore',
     });
     const [adminRole] = await tx.insert(role).values({
       masterFn,

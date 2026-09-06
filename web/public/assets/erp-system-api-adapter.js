@@ -678,6 +678,7 @@
       branch: active.country === 'MY' ? 'Kuala Lumpur HQ' : active.country === 'SG' ? 'Singapore HQ' : 'HQ',
       currency: active.currency,
       taxRegime: active.taxRegime,
+      timeZone: active.timeZone || (active.country === 'MY' ? 'Asia/Kuala_Lumpur' : 'Asia/Singapore'),
       period: 'Live',
       periodLabel: 'Live data',
       env: 'PRODUCTION',

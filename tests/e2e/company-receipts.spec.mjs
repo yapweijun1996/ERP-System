@@ -74,6 +74,7 @@ async function main(){
         companyReceipts:ErpSystemData.companyReceipts,
         companyReceiptEvidence:ErpSystemData.companyReceiptEvidence,
         companyReceiptConfirmation:ErpSystemData.companyReceiptConfirmation,
+        companyReceiptPack:ErpSystemData.companyReceiptPack,
         createCompanyReceipt:ErpSystemData.createCompanyReceipt,
         updateCompanyReceipt:ErpSystemData.updateCompanyReceipt,
         voidCompanyReceipt:ErpSystemData.voidCompanyReceipt,
@@ -213,6 +214,25 @@ async function main(){
     await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.dateFrom==='2026-08-11');
     assert(await page.evaluate(()=>window.__receiptQueries.at(-1).dateTo)==='2026-08-11',
       'same-day inclusive range must be sent query-side');
+    await page.evaluate(()=>{
+      window.__receiptOriginalDate=Date;
+      const OriginalDate=Date,fixed=OriginalDate.parse('2026-08-31T16:30:00.000Z');
+      window.Date=class extends OriginalDate{
+        constructor(...args){super(args.length?args[0]:fixed);}
+        static now(){return fixed;}
+      };
+      DB.company.timeZone='Asia/Singapore';
+    });
+    await page.locator('[data-receipt-preset]').selectOption('thisMonth');
+    assert(await page.locator('[data-receipt-from]').inputValue()==='2026-09-01'
+      &&await page.locator('[data-receipt-to]').inputValue()==='2026-09-30',
+    'Company Receipt presets must use the configured Company timezone at a local-day boundary');
+    await page.evaluate(()=>{window.Date=window.__receiptOriginalDate;DB.company.timeZone='UTC';});
+    await page.locator('[data-receipt-preset]').selectOption('custom');
+    await page.locator('[data-receipt-from]').fill('2026-08-11');
+    await page.locator('[data-receipt-to]').fill('2026-08-11');
+    await page.locator('[data-company-receipt-filters] button.primary').click();
+    await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.dateFrom==='2026-08-11');
     await page.locator('[data-receipt-pack-preview]').click();
     await page.waitForFunction(()=>window.__receiptPackPdfActions.at(-1)?.action==='view');
     assert(await page.locator('.company-receipt-pack-frame iframe').count()===1,
@@ -295,6 +315,14 @@ async function main(){
       .some(row=>row.textContent.includes('Actual Demo Merchant')),{timeout:TIMEOUT});
     assert(await page.locator('.dt-body').innerText().then(text=>text.includes('Actual Demo Merchant')),
       'Demo adapter must confirm clean captured evidence through the shared Company Receipt command');
+    const actualPack=await page.evaluate(async()=>{
+      const result=await window.__actualCompanyReceiptAdapter.companyReceiptPack({
+        packKey:'e2e-retention-0001',dateFrom:'2026-08-12',dateTo:'2026-08-12',locale:'en',
+      });
+      return result.data.pack;
+    });
+    assert(new Date(actualPack.retentionUntil).getTime()>new Date('2026-08-12T00:00:00.000Z').getTime(),
+      'Demo Receipt Pack retention must be derived from managed-document retention evidence');
     for(const language of ['en','zh','ms','vi','ja']){
       await page.evaluate(async value=>{setLang(value);await navigate('company-receipts');},language);
       await page.locator('[data-company-receipt-register="canonical"]').waitFor({timeout:TIMEOUT});

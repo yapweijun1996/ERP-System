@@ -281,6 +281,7 @@ export async function createCompanyWithin(
   await exec.insert(company).values({
     companyFn, masterFn, name, country, currency: defaults.currency,
     taxRegime: defaults.taxRegime, locale: language,
+    timeZone: country === 'MY' ? 'Asia/Kuala_Lumpur' : 'Asia/Singapore',
   });
   const ownerRoleId = await insertRole(
     exec, masterFn, companyFn, 'Company Owner', COMPANY_OWNER_ROLE_TEMPLATE_KEY,

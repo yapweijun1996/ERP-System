@@ -32,12 +32,27 @@
     const text=String(value||'—').replace(/_/g,' ');
     return text==='—'?text:text.charAt(0).toUpperCase()+text.slice(1);
   }
-  function iso(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
+  function companyTimeZone(){
+    const configured=DB&&DB.company&&DB.company.timeZone;
+    return configured||'UTC';
+  }
+  function companyTodayParts(now){
+    try{
+      const parts=new Intl.DateTimeFormat('en-CA',{timeZone:companyTimeZone(),year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now||new Date());
+      const values={};
+      parts.forEach(function(part){if(part.type==='year'||part.type==='month'||part.type==='day')values[part.type]=Number(part.value);});
+      if(values.year&&values.month&&values.day)return values;
+    }catch{}
+    const fallback=now||new Date();
+    return {year:fallback.getUTCFullYear(),month:fallback.getUTCMonth()+1,day:fallback.getUTCDate()};
+  }
+  function isoFromUtcDate(date){return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`;}
+  function companyDate(year,month,day){return isoFromUtcDate(new Date(Date.UTC(year,month-1,day)));}
   function presetRange(value){
-    const now=new Date(),year=now.getFullYear(),month=now.getMonth();
-    if(value==='thisMonth') return [iso(new Date(year,month,1)),iso(new Date(year,month+1,0))];
-    if(value==='lastMonth') return [iso(new Date(year,month-1,1)),iso(new Date(year,month,0))];
-    if(value==='thisQuarter'){const start=Math.floor(month/3)*3;return [iso(new Date(year,start,1)),iso(new Date(year,start+3,0))];}
+    const today=companyTodayParts(),year=today.year,month=today.month;
+    if(value==='thisMonth') return [companyDate(year,month,1),companyDate(year,month+1,0)];
+    if(value==='lastMonth') return [companyDate(year,month-1,1),companyDate(year,month,0)];
+    if(value==='thisQuarter'){const start=Math.floor((month-1)/3)*3+1;return [companyDate(year,start,1),companyDate(year,start+3,0)];}
     if(value==='thisYear') return [`${year}-01-01`,`${year}-12-31`];
     return [null,null];
   }

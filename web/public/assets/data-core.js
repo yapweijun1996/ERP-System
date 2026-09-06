@@ -12,7 +12,7 @@
    ============================================================ */
 const DB = {};
 
-DB.company = { name:'Northwind Manufacturing', branch:'Kuala Lumpur HQ', currency:'USD', period:'FY2026 · P06', periodLabel:'June 2026', env:'PRODUCTION' };
+DB.company = { name:'Northwind Manufacturing', branch:'Kuala Lumpur HQ', currency:'USD', timeZone:'UTC', period:'FY2026 · P06', periodLabel:'June 2026', env:'PRODUCTION' };
 /* fiscal-year configuration (drives the topbar period switcher + setup) */
 /* multiple fiscal years — users can switch the working FY and set up new ones */
 DB.fiscalYears = [

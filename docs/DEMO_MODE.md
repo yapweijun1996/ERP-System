@@ -196,10 +196,11 @@ the shared versioned commands, and `companyReceiptEvidence` lists only current c
 uploader-owned unbound evidence with bounded search/cursor paging. Binary upload/capture
 still belongs to the governed My Receipts Employee Self Service boundary. TASK-196 now
 re-requires current visibility for Pack metadata/rendering, denies a company Pack after
-downgrade to `read_own`, and audits the preview/export purpose. TASK-202 now has
-source-level conflict convergence/history, Decimal-safe amount formatting and embedded
-Unicode PDF labels/content; Pack lifecycle, Company-calendar timezone presets and final
-browser/download/Print evidence remain.
+downgrade to `read_own`, and audits the preview/export purpose. TASK-202 now has Pack
+conflict convergence/history, retention-derived Legal Hold/two-person purge/tombstone/key-
+reuse protection, Decimal-safe amount formatting, embedded Unicode PDF labels/content and
+Company-calendar timezone presets; disposable PostgreSQL concurrency and final
+browser/download/Print release evidence remain.
 
 ## Demo platform entitlement foundation
 

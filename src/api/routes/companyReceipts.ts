@@ -20,6 +20,13 @@ import {
   renderCompanyReceiptPackWithin,
   type CompanyReceiptPackAction,
 } from '../../modules/expenses/companyReceiptPack';
+import {
+  CompanyReceiptPackGovernanceError,
+  executeCompanyReceiptPackPurge,
+  initiateCompanyReceiptPackPurgeWithin,
+  reviewCompanyReceiptPackPurgeWithin,
+  setCompanyReceiptPackLegalHoldWithin,
+} from '../../modules/expenses/companyReceiptPackGovernance';
 import { DocumentQuarantineError } from '../../modules/documents/processing';
 import { DocumentStorageError } from '../../modules/documents/storage';
 import { appendAudit } from '../audit';
@@ -109,6 +116,10 @@ export function createCompanyReceiptsRouter(db: DB): Router {
       return;
     }
     if (error instanceof CompanyReceiptPackError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
+    if (error instanceof CompanyReceiptPackGovernanceError) {
       apiError(res, error.status, error.code, error.message);
       return;
     }
@@ -342,6 +353,178 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           currencyTotalsSeparated: true,
         },
       });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/packs/:packId/actions/legal-hold', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.documentsGovernanceManage)) {
+      apiError(res, 403, 'permission_denied', 'Receipt Pack governance permission is required.');
+      return;
+    }
+    const packId = positiveId(req.params.packId);
+    if (!packId || typeof req.body?.expectedVersion !== 'number'
+      || typeof req.body?.legalHold !== 'boolean') {
+      apiError(
+        res,
+        400,
+        'company_receipt_pack_governance_payload_invalid',
+        'packId, expectedVersion and legalHold are required.',
+      );
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const changed = await setCompanyReceiptPackLegalHoldWithin(
+          tx,
+          scope,
+          session.userId,
+          packId,
+          req.body.expectedVersion,
+          req.body.legalHold,
+          req.body.reason,
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'company_receipt_pack',
+          entityId: packId,
+          action: req.body.legalHold ? 'legal_hold_set' : 'legal_hold_released',
+          after: changed,
+        });
+        return changed;
+      });
+      res.json({ data, meta: { governed: true, appendOnly: true } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/packs/:packId/actions/initiate-purge', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.documentsRecordsManage)) {
+      apiError(res, 403, 'permission_denied', 'Records-manager permission is required.');
+      return;
+    }
+    const packId = positiveId(req.params.packId);
+    if (!packId) {
+      apiError(res, 400, 'company_receipt_pack_id_invalid', 'packId must be positive.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const request = await initiateCompanyReceiptPackPurgeWithin(
+          tx, scope, session.userId, packId, req.body?.reason,
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'company_receipt_pack',
+          entityId: packId,
+          action: 'purge_requested',
+          after: request,
+        });
+        return request;
+      });
+      res.status(201).json({ data, meta: { governed: true, twoPersonReview: true } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/packs/purge-requests/:requestId/actions/review', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.documentsFinanceReview)) {
+      apiError(res, 403, 'permission_denied', 'Finance review permission is required.');
+      return;
+    }
+    const requestId = positiveId(req.params.requestId);
+    if (!requestId || typeof req.body?.expectedVersion !== 'number'
+      || !['approve', 'reject'].includes(String(req.body?.decision))) {
+      apiError(
+        res,
+        400,
+        'company_receipt_pack_purge_review_invalid',
+        'requestId, expectedVersion and approve/reject decision are required.',
+      );
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        const reviewed = await reviewCompanyReceiptPackPurgeWithin(
+          tx,
+          scope,
+          session.userId,
+          requestId,
+          req.body.expectedVersion,
+          req.body.decision,
+          req.body.reason,
+        );
+        await appendAudit(tx, {
+          ...scope,
+          actorUserId: session.userId,
+          requestId: context(res).requestId,
+          entity: 'company_receipt_pack_purge_request',
+          entityId: requestId,
+          action: req.body.decision === 'approve' ? 'purge_approved' : 'purge_rejected',
+          after: reviewed,
+        });
+        return reviewed;
+      });
+      res.json({ data, meta: { governed: true, twoPersonReview: true } });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/packs/:packId/actions/execute-purge', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.documentsRecordsManage)) {
+      apiError(res, 403, 'permission_denied', 'Records-manager permission is required.');
+      return;
+    }
+    const packId = positiveId(req.params.packId);
+    const requestId = positiveId(req.body?.requestId);
+    if (!packId || !requestId || typeof req.body?.expectedVersion !== 'number') {
+      apiError(
+        res,
+        400,
+        'company_receipt_pack_purge_execution_invalid',
+        'packId, requestId and expectedVersion are required.',
+      );
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await executeCompanyReceiptPackPurge(
+        db,
+        scope,
+        session.userId,
+        packId,
+        requestId,
+        req.body.expectedVersion,
+      );
+      await withTenantTransaction(db, scope, (tx) => appendAudit(tx, {
+        ...scope,
+        actorUserId: session.userId,
+        requestId: context(res).requestId,
+        entity: 'company_receipt_pack',
+        entityId: packId,
+        action: 'purge_executed',
+        after: data,
+      }));
+      res.json({ data, meta: { governed: true, tombstone: true } });
     } catch (error) {
       handleError(res, error);
     }

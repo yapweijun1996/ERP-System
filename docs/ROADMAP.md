@@ -1229,10 +1229,10 @@ Goal: make the broad Canonical ERP safe, operable and evidentially current befor
 more module breadth. The source-backed review is
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
 
-1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 102
-   migrations/schema v101/252
+1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 103
+   migrations/schema v102/255
    tables, 129 Canonical routes with 129 API metadata routes, 1,725 i18n keys/72 packs,
-   315 permission codes and PWA v262. Historical test/deploy checkpoints remain dated.
+   315 permission codes and PWA v263. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the
    generated Company context before its first FORCE-RLS write, and a PostgreSQL 16
@@ -1253,7 +1253,8 @@ more module breadth. The source-backed review is
 6. **Operational/artifact quality** (TASK-201/202): establish SLO/RPO/RTO, timed restore
    and scale/worker monitoring. TASK-202 source hardening now covers conflict convergence,
    actor-scoped history, localized Unicode PDF labels/content and Decimal-safe amounts;
-   Pack retention/legal-hold/purge/tombstone, Company-calendar presets and production
+   Pack retention/legal-hold/purge/tombstone, Company-calendar presets and local browser
+   boundaries are implemented; disposable PostgreSQL concurrency and production
    concurrency/download/Print evidence remain.
 7. **Tax and governed AI correctness** (TASK-204/205): TASK-204 source hardening now
    unifies exclusive `valid_to`, dispatches SG GST/MY SST posting by governed

@@ -10,6 +10,8 @@ import {
   companyModule,
   companyReceipt,
   companyReceiptPack,
+  companyReceiptPackPurgeRequest,
+  companyReceiptPackTombstone,
   documentScanJob,
   employee,
   masterModule,
@@ -100,6 +102,7 @@ describe('Company Receipts API', () => {
     scope: { masterFn: string; companyFn: string },
     actorUserId: number,
     draftId: string,
+    retentionUntil?: Date,
   ) {
     const uploaded = await uploadReceiptDocument(db, scope, { userId: actorUserId }, {
       clientDraftId: draftId,
@@ -109,6 +112,7 @@ describe('Company Receipts API', () => {
         0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
         ...new TextEncoder().encode(draftId),
       ]),
+      retentionUntil,
     });
     await withTenantTransaction(db, scope, (tx) => tx.update(documentScanJob).set({
       status: 'clean',
@@ -591,6 +595,133 @@ describe('Company Receipts API', () => {
       method: 'POST', headers, body: JSON.stringify({}),
     });
     expect(voided.status).toBe(403);
+  });
+
+  it('exposes retention and two-person Pack purge actions with tenant-derived scope', async () => {
+    const sg = { masterFn: 'M1', companyFn: 'C-SG' };
+    const expired = new Date('2025-01-01T00:00:00.000Z');
+    const uploaded = await evidence(sg, adminId, 'receipt_api_pack_governance_0001', expired);
+    const receipt = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptWithin(tx, sg, adminId, {
+        documentId: uploaded.document.id,
+        documentVersionId: uploaded.version.id,
+        transactionDate: '2025-01-01',
+        merchant: 'Governed API Merchant',
+        amount: '9.0000',
+        currency: 'SGD',
+        category: 'Office supplies',
+        businessPurpose: 'API governance test',
+      }));
+    const adminAuth = await login('admin', 'demo1234');
+    const headers = {
+      cookie: adminAuth.cookie,
+      'x-csrf-token': adminAuth.csrf,
+      'content-type': 'application/json',
+    };
+    const packResponse = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        packKey: 'company-receipt-pack:api-governance',
+        dateFrom: '2025-01-01',
+        dateTo: '2025-01-01',
+      }),
+    });
+    expect(packResponse.status).toBe(201);
+    const pack = (await packResponse.json()).data.pack as {
+      id: number;
+      retentionUntil: string;
+      recordVersion: number;
+    };
+    expect(pack).toMatchObject({ recordVersion: 1 });
+    expect(new Date(pack.retentionUntil).toISOString()).toBe(expired.toISOString());
+
+    const held = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${pack.id}/actions/legal-hold`,
+      { method: 'POST', headers, body: JSON.stringify({
+        expectedVersion: 1,
+        legalHold: true,
+        reason: 'API legal review is active.',
+      }) },
+    );
+    expect(held.status).toBe(200);
+    expect((await held.json()).data.recordVersion).toBe(2);
+    const heldPurge = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${pack.id}/actions/initiate-purge`,
+      { method: 'POST', headers, body: JSON.stringify({ reason: 'Retention has expired.' }) },
+    );
+    expect(heldPurge.status).toBe(409);
+    expect((await heldPurge.json()).error.code).toBe('company_receipt_pack_legal_hold');
+    const released = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${pack.id}/actions/legal-hold`,
+      { method: 'POST', headers, body: JSON.stringify({
+        expectedVersion: 2,
+        legalHold: false,
+        reason: 'API legal review is complete.',
+      }) },
+    );
+    expect(released.status).toBe(200);
+    const requestResponse = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${pack.id}/actions/initiate-purge`,
+      { method: 'POST', headers, body: JSON.stringify({ reason: 'Retention expired and resolved.' }) },
+    );
+    expect(requestResponse.status).toBe(201);
+    const request = (await requestResponse.json()).data as { id: number; version: number };
+
+    const [employeeRole] = await db.select().from(role).where(and(
+      eq(role.masterFn, 'M1'),
+      eq(role.name, 'Employee'),
+    ));
+    await db.insert(rolePermission).values({
+      masterFn: 'M1', roleId: employeeRole.roleId, permissionKey: 'documents.finance.review',
+    }).onConflictDoNothing();
+    const viewerAuth = await login();
+    const reviewed = await fetch(
+      `${baseUrl}/api/company-receipts/packs/purge-requests/${request.id}/actions/review`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: viewerAuth.cookie,
+          'x-csrf-token': viewerAuth.csrf,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          expectedVersion: request.version,
+          decision: 'approve',
+          reason: 'Finance reviewed the API purge evidence.',
+        }),
+      },
+    );
+    expect(reviewed.status).toBe(200);
+    const approved = (await reviewed.json()).data as { version: number };
+    const executed = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${pack.id}/actions/execute-purge`,
+      { method: 'POST', headers, body: JSON.stringify({
+        requestId: request.id,
+        expectedVersion: approved.version,
+      }) },
+    );
+    expect(executed.status).toBe(200);
+    expect((await executed.json()).meta).toMatchObject({ governed: true, tombstone: true });
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(0);
+    expect(await db.select().from(companyReceiptPackPurgeRequest)).toMatchObject([
+      expect.objectContaining({ packId: pack.id, status: 'executed' }),
+    ]);
+    expect(await db.select().from(companyReceiptPackTombstone)).toMatchObject([
+      expect.objectContaining({ originalPackId: pack.id, sourceSha256: expect.any(String) }),
+    ]);
+    const reuse = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        packKey: 'company-receipt-pack:api-governance',
+        dateFrom: '2025-01-01',
+        dateTo: '2025-01-01',
+      }),
+    });
+    expect(reuse.status).toBe(410);
+    expect((await reuse.json()).error.code).toBe('company_receipt_pack_key_purged');
+    expect(receipt.id).toBeGreaterThan(0);
   });
 
   it('uses an explicit company-read grant for a custom Receipt Manager role', async () => {

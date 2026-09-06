@@ -165,6 +165,7 @@ export async function completeDemoSetupWithin(
     currency: defaults.currency,
     taxRegime: defaults.taxRegime,
     locale: language,
+    timeZone: input.country === 'MY' ? 'Asia/Kuala_Lumpur' : 'Asia/Singapore',
   });
   await createDefaultControlPlane(exec, { masterFn, companyFn }, input.country);
   await exec.insert(account).values([

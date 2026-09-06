@@ -110,6 +110,9 @@ export const companyReceiptPack = pgTable('company_receipt_pack', {
   sourceSha256: text('source_sha256').notNull(),
   rowCount: integer('row_count').notNull(),
   documentCount: integer('document_count').notNull(),
+  retentionUntil: timestamp('retention_until', { withTimezone: true }).notNull(),
+  legalHold: boolean('legal_hold').notNull().default(false),
+  recordVersion: integer('record_version').notNull().default(1),
   createdByUserId: bigint('created_by_user_id', { mode: 'number' }).notNull()
     .references(() => appUser.userId),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -130,6 +133,133 @@ export const companyReceiptPack = pgTable('company_receipt_pack', {
   check('ck_company_receipt_pack_counts',
     sql`${t.rowCount} between 1 and 5000
       and ${t.documentCount} between 1 and ${t.rowCount}`),
+  check('ck_company_receipt_pack_record_version', sql`${t.recordVersion} > 0`),
+]);
+
+/** Append-only legal-hold and two-person purge decision history for a Pack. */
+export const companyReceiptPackGovernanceEvent = pgTable('company_receipt_pack_governance_event', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  packId: bigint('pack_id', { mode: 'number' }).notNull(),
+  eventType: text('event_type').notNull(),
+  fromLegalHold: boolean('from_legal_hold'),
+  toLegalHold: boolean('to_legal_hold'),
+  reason: text('reason').notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  recordVersion: integer('record_version').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_company_receipt_pack_governance_event')
+    .on(t.masterFn, t.companyFn, t.packId, t.id),
+  check('ck_company_receipt_pack_governance_event_type',
+    sql`${t.eventType} in ('legal_hold_set','legal_hold_released',
+      'purge_requested','purge_approved','purge_rejected')`),
+  check('ck_company_receipt_pack_governance_event_hold',
+    sql`(${t.eventType} in ('legal_hold_set','legal_hold_released')
+      and ${t.fromLegalHold} is not null and ${t.toLegalHold} is not null)
+      or (${t.eventType} not in ('legal_hold_set','legal_hold_released')
+        and ${t.fromLegalHold} is null and ${t.toLegalHold} is null)`),
+  check('ck_company_receipt_pack_governance_event_reason',
+    sql`char_length(${t.reason}) between 3 and 1000`),
+  check('ck_company_receipt_pack_governance_event_version', sql`${t.recordVersion} > 0`),
+]);
+
+/** Two-person permanent-purge approval that survives Pack content deletion. */
+export const companyReceiptPackPurgeRequest = pgTable('company_receipt_pack_purge_request', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  packId: bigint('pack_id', { mode: 'number' }).notNull(),
+  packKeyHash: text('pack_key_hash').notNull(),
+  sourceSha256: text('source_sha256').notNull(),
+  retentionUntil: timestamp('retention_until', { withTimezone: true }).notNull(),
+  status: text('status').notNull().default('pending_finance'),
+  initiatedByUserId: bigint('initiated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  initiatedAt: timestamp('initiated_at', { withTimezone: true }).notNull().defaultNow(),
+  reviewedByUserId: bigint('reviewed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  reviewReason: text('review_reason'),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  executedByUserId: bigint('executed_by_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
+  executedAt: timestamp('executed_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  uniqueIndex('uq_company_receipt_pack_purge_request_pack')
+    .on(t.masterFn, t.companyFn, t.packId),
+  uniqueIndex('uq_company_receipt_pack_purge_request_key_hash')
+    .on(t.masterFn, t.companyFn, t.packKeyHash),
+  index('idx_company_receipt_pack_purge_request_status')
+    .on(t.masterFn, t.companyFn, t.status, t.id),
+  check('ck_company_receipt_pack_purge_request_hashes',
+    sql`char_length(${t.packKeyHash}) = 64
+      and ${t.packKeyHash} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.sourceSha256}) = 64
+      and ${t.sourceSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_company_receipt_pack_purge_request_status',
+    sql`${t.status} in ('pending_finance','approved','rejected','executed')`),
+  check('ck_company_receipt_pack_purge_request_review',
+    sql`(${t.status} = 'pending_finance'
+      and ${t.reviewedByUserId} is null
+      and ${t.reviewReason} is null
+      and ${t.reviewedAt} is null)
+      or (${t.status} in ('approved','rejected','executed')
+        and ${t.reviewedByUserId} is not null
+        and ${t.reviewedByUserId} <> ${t.initiatedByUserId}
+        and char_length(${t.reviewReason}) between 3 and 1000
+        and ${t.reviewedAt} is not null)`),
+  check('ck_company_receipt_pack_purge_request_execution',
+    sql`(${t.status} = 'executed'
+      and ${t.executedByUserId} is not null and ${t.executedAt} is not null)
+      or (${t.status} <> 'executed'
+        and ${t.executedByUserId} is null and ${t.executedAt} is null)`),
+  check('ck_company_receipt_pack_purge_request_version', sql`${t.version} > 0`),
+]);
+
+/** Permanent non-content proof retained after an authorized Pack purge. */
+export const companyReceiptPackTombstone = pgTable('company_receipt_pack_tombstone', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  purgeRequestId: bigint('purge_request_id', { mode: 'number' }).notNull()
+    .references(() => companyReceiptPackPurgeRequest.id),
+  originalPackId: bigint('original_pack_id', { mode: 'number' }).notNull(),
+  packKeyHash: text('pack_key_hash').notNull(),
+  createdByHash: text('created_by_hash').notNull(),
+  sourceSha256: text('source_sha256').notNull(),
+  visibility: text('visibility').notNull(),
+  locale: text('locale').notNull(),
+  rowCount: integer('row_count').notNull(),
+  documentCount: integer('document_count').notNull(),
+  retentionUntil: timestamp('retention_until', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  initiatedByUserId: bigint('initiated_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  reviewedByUserId: bigint('reviewed_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  executedByUserId: bigint('executed_by_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  purgedAt: timestamp('purged_at', { withTimezone: true }).notNull(),
+}, (t) => [
+  uniqueIndex('uq_company_receipt_pack_tombstone_request').on(t.purgeRequestId),
+  uniqueIndex('uq_company_receipt_pack_tombstone_key_hash')
+    .on(t.masterFn, t.companyFn, t.packKeyHash),
+  check('ck_company_receipt_pack_tombstone_hashes',
+    sql`char_length(${t.packKeyHash}) = 64
+      and ${t.packKeyHash} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.createdByHash}) = 64
+      and ${t.createdByHash} ~ '^[0-9a-f]{64}$'
+      and char_length(${t.sourceSha256}) = 64
+      and ${t.sourceSha256} ~ '^[0-9a-f]{64}$'`),
+  check('ck_company_receipt_pack_tombstone_visibility',
+    sql`${t.visibility} in ('own','company')`),
+  check('ck_company_receipt_pack_tombstone_locale',
+    sql`${t.locale} in ('en','ms','zh','ja','vi')`),
+  check('ck_company_receipt_pack_tombstone_counts',
+    sql`${t.rowCount} between 1 and 5000 and ${t.documentCount} between 1 and ${t.rowCount}`),
+  check('ck_company_receipt_pack_tombstone_two_person',
+    sql`${t.initiatedByUserId} <> ${t.reviewedByUserId}`),
 ]);
 
 export const expenseCategory = pgTable('expense_category', {
