@@ -165,7 +165,12 @@ function copyFor(locale: string): ReceiptPackCopy {
 }
 
 function singleLine(value: unknown): string {
-  return String(value ?? '').replace(/[\\u0000-\\u001f\\u007f]/g, ' ');
+  return [...String(value ?? '')]
+    .map((character) => {
+      const code = character.codePointAt(0) ?? 0;
+      return code < 32 || code === 127 ? ' ' : character;
+    })
+    .join('');
 }
 
 async function renderRegister(pack: CompanyReceiptPackFacts): Promise<Uint8Array> {
