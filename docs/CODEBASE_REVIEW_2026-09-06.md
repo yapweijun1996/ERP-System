@@ -11,15 +11,15 @@ baseline.
 - The source contains **102 ordered migrations through schema version 101**, **252
   generated tables**, **315 permission codes**, **222 production-RLS policy tables** and
   **10 explicit infrastructure/control-plane exemptions**.
-- The source inventory is **129 Canonical routes / 0 Preview routes**. **128 routes
-  declare API-mode metadata** because `staff-calendar` is currently omitted from
-  `API_SCREEN_ROUTES`; this is a decision gap, not proof that the API route is absent.
+- The source inventory is **129 Canonical routes / 0 Preview routes**. All **129 routes
+  declare API-mode metadata**, including `staff-calendar`, whose API adapter and
+  `/api/hr/calendar/staff` endpoint are now part of the parity contract.
 - Local static/generated checks pass: lint, root/Web typecheck, Demo schema, schema
   drift, permission registry, production-RLS coverage, i18n bootstrap/business checks
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **200 Done / 2 In Progress / 7 Todo / 4
+- The task registry currently reports **201 Done / 2 In Progress / 6 Todo / 4
   Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-206–209; the blocked items are external or operational, not silently
   treated as code failures.
@@ -105,14 +105,13 @@ baseline.
 
 ### P1 — close before the next broad release or operational scale claim
 
-- **TASK-200 — Canonical/API route parity is not explicitly resolved.**
-  - **Evidence:** `staff-calendar` is in `CANONICAL_SCREEN_ROUTES` but not
-    `API_SCREEN_ROUTES`; the access matrix and API implementation exist. This makes the
-    metadata say Demo-only while the source has an API boundary.
-  - **Action:** either add it to API metadata and rerun the authenticated route matrix,
-    or document the intentional exception and its support boundary. Regenerate current
-    route, permission, i18n and responsive evidence instead of reusing old 128/129 and
-    666-test checkpoints.
+- **TASK-200 — Done 2026-09-06: Canonical/API route parity closed.**
+  - `staff-calendar` is now included in `API_SCREEN_ROUTES`; the static audit rejects
+    future Canonical/API metadata gaps.
+  - Current `audit:screens` passes all 129 routes at desktop and mobile. API integration,
+    authenticated API browser, Staff Calendar Demo E2E, access-matrix and the full
+    129 × 5 × 2 i18n browser matrix pass separately from the Demo route audit. The
+    Staff Calendar API integration suite passes 6/6 tests.
 
 - **TASK-202 — Receipt Pack lifecycle is not yet a complete governed artifact.**
   - **Action:** after TASK-196, define concurrent idempotency behavior, list/history,

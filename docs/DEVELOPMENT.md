@@ -23,6 +23,7 @@ npm install
 | `npm run test:e2e:company-receipts-postgres` | Uses the same authenticated browser journey against an explicitly supplied `TASK183_POSTGRES_URL`. It rejects a non-empty database before migrations/seed; the 2026-08-12 proof passed against a new disposable local PostgreSQL 16 database. It does not deploy or use production data. |
 | `npm run test:e2e:platform-workspace-layout` | Builds API mode and checks Platform workspace desktop/mobile containment. |
 | `npm run test:e2e:platform-workspace-demo-autofill` | Builds the explicitly flagged hosted-Demo presentation and checks sample login/defaults, password controls, resume and new-Company safety. |
+| `node tests/e2e/staff-calendar.spec.mjs` | Uses the current Demo build to verify mixed leave/appointment rendering, create, filter and list search; the test waits for Demo/PGlite readiness before installing its adapter fixture. |
 | `npm run preview` | Serve the built `web/dist/` locally |
 | `npm run migrate` | Apply Drizzle migrations to PostgreSQL (production mode) |
 | `npm run generate` | Generate a Drizzle migration from schema changes |
@@ -32,14 +33,15 @@ npm install
 | `npm run check:drift` | **Schema drift check** — compares every ordered Drizzle migration with the generated `web/public/db/erp-system-schema.sql`; fails with a readable diff on any mismatch. Demo SQL is generated, not copied by hand. Runs in CI on every PR. |
 | `npm run smoke` | **Browser smoke test** — requires `npm run build:demo` first. Launches headless Chromium (Playwright) at desktop (1280×800) and mobile (375×812), bypasses the first-run wizard/login, asserts the dashboard renders with zero console/page errors, and executes the core Demo ESM transaction proof. That proof also opens the freshly-created goods receipt and supplier invoice and asserts their stock/GL traces. Runs in CI on every PR. |
 | `npm run audit:screens` | **Screen audit** — requires `npm run build:demo` first. Boots desktop/mobile, reads live `SCREENS`/`SCREEN_META`, applies detail fixtures and drives every registered route (129 at HEAD). It fails on console/page errors, maturity/contract errors, overflow and hidden active navigation. |
-| `npm test` | **Vitest unit/integration suite** — domain transactions, API/auth, migrations, PGlite parity and conditional PostgreSQL security coverage. Current HEAD collects 170 files/666 tests; collection is not a pass result. Most isolated tests use fresh PGlite state; the PostgreSQL suite requires its explicit URL/environment and otherwise records one conditional skip. |
+| `npm test` | **Vitest unit/integration suite** — domain transactions, API/auth, migrations, PGlite parity and conditional PostgreSQL security coverage. Current HEAD passes 171 files/683 tests with two intentional file/test skips. Most isolated tests use fresh PGlite state; the PostgreSQL suite requires its explicit URL/environment and otherwise records one conditional skip. |
 | `npm run lint` | ESLint over the current root/Web source set |
 
-Current source note (2026-08-12): 129 Canonical / 0 Preview routes exist; 128 declare API
-mode, with `staff-calendar` the sole exception. Static i18n passes 1,545 keys/72 packs.
-TASK-183 retains dated 129 × 5 × 2 browser evidence. TASK-194 did not rerun browser gates
-because Chromium is absent, so install the pinned browser before claiming current HEAD
-screen/i18n/smoke success.
+Current source note (2026-09-06): 129 Canonical / 0 Preview routes exist and all 129
+declare API mode, including `staff-calendar`. The current HEAD `audit:screens` passes
+all 129 routes at desktop and 375px; the full 129 × 5 × 2 i18n browser matrix, API Staff
+Calendar integration (6/6), Staff Calendar Demo E2E, authenticated API browser proof and
+access matrix pass as separate gates. Full local Vitest passes 171 files / 683 tests with
+two intentional file/test skips.
 
 ### Browser smoke test
 

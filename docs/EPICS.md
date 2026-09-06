@@ -47,11 +47,9 @@ Acceptance criteria:
 - [x] Every routed screen opened error-free under canonical data at the 2026-07-17
       TASK-018 baseline; leftover Northwind sample shapes were cleaned or labeled.
       The route boundary has since grown again to 129 Canonical / 0 Preview at HEAD;
-      API-screen metadata covers 128. The 2026-08-10 128-route render/maturity/layout
-      audit passed for desktop and mobile. The separate five-language i18n static audit
-      at that checkpoint passed 1,533 canonical keys / 69 local packs;
-      the changed calendar routes pass the targeted 3 routes × 5 languages × 2 viewports
-      matrix, with zero blocking findings.
+      API-screen metadata now covers all 129. The 2026-08-10 128-route render/maturity/
+      layout audit remains a dated checkpoint; the current 2026-09-06 screen and full
+      129-route × 5-language × 2-viewport i18n audits pass with zero blocking findings.
 
 ## EPIC-004 — Setup Wizard ✅
 
@@ -193,8 +191,8 @@ Acceptance criteria:
       runtime (demo adapter vs. api adapter), never both active at once.
 - [x] `VITE_DATA_MODE=api` renders current Canonical routes with real data once a
       server is reachable, including a working company switcher. Current HEAD registers
-      129 Canonical / 0 Preview routes and 128 API-screen metadata entries; resolving
-      the `staff-calendar` exception and rerunning the authenticated matrix is TASK-200.
+      129 Canonical / 0 Preview routes and all 129 API-screen metadata entries;
+      TASK-200 confirms `staff-calendar` parity and current route evidence.
 
 ## EPIC-008 — Purchasing Module ✅ (current Canonical purchasing; depth explicitly bounded)
 
@@ -2628,7 +2626,8 @@ Current truth:
   not require a grant/reason/ticket. Platform MFA/step-up is absent.
 - Public health/setup probes returned 502 and the exact deployed HEAD revision is not
   proven. Current CI is externally blocked by billing. Source inventory is 129 Canonical
-  routes but only 128 API-mode metadata routes.
+  routes and all 129 now declare API-mode metadata; TASK-200 closed the prior
+  `staff-calendar` exception with current route evidence.
 - TASK-204 source hardening now aligns `valid_to` to one exclusive interval and makes
   supplier/Expense posting fail closed on unclassified or regime-incompatible tax facts;
   production tax-owner configuration review remains open. Governed Vision still has no
@@ -2642,7 +2641,7 @@ Current truth:
 | TASK-197 | Done | Permission-aware Company Receipts detail/correction/void UX and employee-independent eligible-evidence picker; upload boundary explicitly remains My Receipts |
 | TASK-198 | Done | Narrow dual-mode exception, reason/ticket Admin access and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |
-| TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |
+| TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
 | TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
 | TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |

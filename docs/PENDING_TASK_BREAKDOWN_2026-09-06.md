@@ -5,7 +5,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **200 Done / 2 In Progress / 7 Todo / 4 Blocked / 213 Total**.
+Current registry: **201 Done / 2 In Progress / 6 Todo / 4 Blocked / 213 Total**.
 
 ## Recommended order
 
@@ -15,8 +15,7 @@ Current registry: **200 Done / 2 In Progress / 7 Todo / 4 Blocked / 213 Total**.
   public availability/deployment evidence and unblock GitHub Actions execution.
 - **3. Close the Platform chain in dependency order:** TASK-206 → TASK-207 → TASK-208,
   then release proof in TASK-209.
-- **4. Rerun current-head route evidence (TASK-200), then complete operational/artifact
-  depth (TASK-201/TASK-202/TASK-205).**
+- **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205).**
 - **5. Keep human-owned blockers separate:** TASK-017 needs a physical phone and TASK-193
   needs production SMTP/mail delivery.
 
@@ -97,15 +96,21 @@ Current registry: **200 Done / 2 In Progress / 7 Todo / 4 Blocked / 213 Total**.
     PostgreSQL adversarial proof, execute read-only production smoke, record exact
     revision, and synchronize STATUS, PROJECT_LOGIC, task registry and KB.
 
-## P1 work
+## Completed during this review
 
-- **TASK-200 — Todo — Canonical/API route parity and current-head evidence**
-  - Depends on: `TASK-194`.
-  - Decide whether `staff-calendar` belongs in `API_SCREEN_ROUTES`; implement the choice
-    or document the intentional exception. Then rerun all 129 route decisions, the
-    128/129 API boundary, permissions, i18n, responsive desktop/375px and authenticated
-    API-mode proof. Do not reuse the historical 666-test or 128-route checkpoint as
-    current-head evidence.
+- **TASK-200 — Done — Canonical/API route parity and current-head evidence**
+  - `staff-calendar` is implemented in both adapters and backed by `/api/hr/calendar/staff`;
+    it is now included in `API_SCREEN_ROUTES`, so all 129 Canonical routes declare both
+    Demo and API support.
+  - `npm run audit:screens` passes all 129 routes at desktop and 375px with no
+    console/page errors, overflow, active-tab or declared-layout failures. Its contract
+    now fails closed if any Canonical route lacks API metadata.
+  - Separate evidence passes: Staff Calendar API integration 6/6, Staff Calendar Demo
+    E2E, Company Receipts authenticated API browser flow, permission registry/access
+    matrix and the current 129 × 5 × 2 i18n browser matrix. TASK-017's physical-device
+    acceptance remains independent.
+
+## P1 work
 
 - **TASK-201 — Todo — production SLO, scale and disaster-recovery proof**
   - Depends on: `TASK-195`, `TASK-199`.

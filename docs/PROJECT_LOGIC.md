@@ -2,7 +2,7 @@
 
 > Main project knowledge base: `KBID: erp-system-project-logic`
 > KB UUID: `ef47bf4b-83e1-42b2-a412-66912d04ea24`
-> Source review: 2026-08-12
+> Source review: 2026-09-06
 > Scope: Platform bootstrap/provisioning, Module Entitlement, Employee, Leave Application, Staff Calendar and Claim Record behavior
 
 This document is the source-backed project-logic mirror for future agents and
@@ -253,7 +253,18 @@ Sources: `src/modules/hr/teamCalendar.ts`,
 `src/modules/hr/calendarSync.ts:1-235, 319-503`, and
 `src/data/schema/hr.ts` calendar/outbound tables.
 
-### 4.3 Working calendar is part of Leave calculation
+### 4.3 Demo/API route parity and verification
+
+`staff-calendar` is a Canonical route in both runtime modes. The API adapter calls
+`/api/hr/calendar/staff`; `API_SCREEN_ROUTES` includes the route, and the screen audit
+fails closed if a Canonical route loses API support metadata. `src/api/hrCalendar.integration.test.ts`
+passes the authenticated read/create/update/cancel and conflict contract, while
+`tests/e2e/staff-calendar.spec.mjs` proves mixed leave/appointment rendering, create,
+staff filtering and searchable list behavior in the Demo shell. These route/browser
+checks complement the domain projection tests; they do not claim production deployment
+or physical-device evidence.
+
+### 4.4 Working calendar is part of Leave calculation
 
 `workingCalendar` is a stable identity; its immutable versions carry effective dates,
 weekday patterns and `draft/confirmed/retired` status. Holidays are attached to a
@@ -536,7 +547,7 @@ compliance evidence.
 | Onboarding/account | `src/modules/hr/staffOnboarding.ts`, `src/modules/hr/employeeAccount.ts` | `src/modules/hr/staffOnboarding.test.ts`, `src/modules/hr/employeeAccount.test.ts`, `src/api/employeeAccount.integration.test.ts` |
 | Leave application | `src/modules/hr/leaveApplication.ts`, `leaveApproval.ts`, `leaveApprovalWorkflow.ts` | `src/modules/hr/leaveApplication.test.ts`, `leaveApproval.test.ts`, `leaveApprovalWorkflow.test.ts`, `src/api/leaveApplication.integration.test.ts` |
 | Leave balance/policy | `src/modules/hr/leaveBalance.ts`, `leavePolicy.ts` | `src/modules/hr/leaveBalance.test.ts`, `leavePolicy.test.ts` |
-| Staff Calendar | `src/modules/hr/appointment.ts`, `calendarSync.ts`, `teamCalendar.ts` | `src/modules/hr/appointment.test.ts`, `teamCalendar.test.ts`, `src/api/hrCalendar.integration.test.ts` |
+| Staff Calendar | `src/modules/hr/appointment.ts`, `calendarSync.ts`, `teamCalendar.ts`, `web/public/assets/screens-hr.js` | `src/modules/hr/appointment.test.ts`, `teamCalendar.test.ts`, `src/api/hrCalendar.integration.test.ts`, `tests/e2e/staff-calendar.spec.mjs` |
 | Expense Claim | `src/modules/expenses/claims.ts`, `controls.ts`, `postings.ts` | `src/modules/expenses/claims.test.ts`, `controls.test.ts`, `postings.test.ts` |
 | Company Receipt foundation | `src/data/schema/expenses.ts`, `src/modules/expenses/companyReceipt.ts`, `src/api/routes/companyReceipts.ts` | `src/modules/expenses/companyReceipt.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/api/postgresSecurity.integration.test.ts` |
 | Company Receipt Pack | `src/modules/expenses/companyReceiptPack.ts`, `companyReceiptPackPdf.ts`, `src/modules/documents/evidencePdf.ts` | `src/modules/expenses/companyReceiptPack.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/modules/expenses/taxEvidence.test.ts`, `tests/e2e/company-receipts.spec.mjs` |

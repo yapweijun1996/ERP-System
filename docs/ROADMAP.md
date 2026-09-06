@@ -196,8 +196,8 @@ Order of attack:
    the demo's own audit trail — see docs/STATUS.md) are both done. At this historical
    phase boundary, `master-control`, `sys-settings` and `module-activation-control`
    still remained Preview; later epics promoted every route. Current HEAD registers
-   129 Canonical / 0 Preview routes, with 128 entries in API-screen metadata and
-   `staff-calendar` as the sole open parity decision.
+   129 Canonical / 0 Preview routes, with all 129 entries in API-screen metadata.
+   TASK-200 closes the `staff-calendar` parity decision.
 6. **HR-lite: Employee Master & Leave Management** (EPIC-020 ✅, TASK-049/050,
    2026-07-19) — the original slice deliberately scoped itself to employee master +
    leave request/approval only. Payroll was later delivered by EPIC-026/TASK-061/062;
@@ -411,7 +411,7 @@ only through registered commands, and passes domain/API/browser/audit verificati
    moving that phase's route boundary from 70/44 to **72/42**. At this historical
    boundary, `pur-txn-view` remained Preview because it was shared by still-sample
    purchasing document types; later work promoted that checkpoint's route set to 128/0,
-   and current HEAD is 129/0 with 128 API-screen metadata entries.
+   and current HEAD is 129/0 with 129 API-screen metadata entries.
 
 Exit criteria: met when the domain/API/browser and 114-route gates below pass.
 
@@ -1229,9 +1229,9 @@ Goal: make the broad Canonical ERP safe, operable and evidentially current befor
 more module breadth. The source-backed review is
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
 
-1. **Truth sync** (TASK-194 done; EPIC-067 source newer): current inventory is 102
+1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 102
    migrations/schema v101/252
-   tables, 129 Canonical routes with 128 API metadata routes, 1,546 i18n keys/72 packs,
+   tables, 129 Canonical routes with 129 API metadata routes, 1,546 i18n keys/72 packs,
    315 permission codes and PWA v262. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the
@@ -1246,9 +1246,10 @@ more module breadth. The source-backed review is
    reason/ticket-bound Platform Admin tenant access from fixed-scope exact Employee
    simulation. The owner explicitly accepted password-only access with no MFA or recent
    step-up as a high-severity residual risk.
-5. **Current release proof** (TASK-199/200/203): restore public availability, identify
-   the exact deployed revision, resolve `staff-calendar` API metadata, rerun all 129
-   routes/current tests, and unblock zero-step GitHub Actions billing failure.
+5. **Current release proof** (TASK-199/203): restore public availability, identify the
+   exact deployed revision, and unblock the zero-step GitHub Actions billing failure.
+   TASK-200 is source-closed: all 129 Canonical routes declare API metadata and the
+   current screen, i18n, access-matrix and Staff Calendar/API evidence has been rerun.
 6. **Operational/artifact quality** (TASK-201/202): establish SLO/RPO/RTO, timed restore
    and scale/worker monitoring; then add Pack lifecycle, concurrency-safe idempotency,
    Unicode localization, Decimal-safe amounts and Company-calendar presets.

@@ -56,14 +56,14 @@ docs/                    This documentation suite
   5. Add five-language copy, set the route Canonical only after Demo/API parity, then
      run the type/test/schema/build/current-route gates and live desktop + 375 px checks.
 
-Current source inventory on 2026-08-12 is **129 Canonical / 0 Preview** routes. Exactly
-128 routes declare API support; `staff-calendar` is the single Canonical route omitted
-from `API_SCREEN_ROUTES`, and TASK-200 owns the decision/fix. Dated TASK-183 evidence
-records the 129-route desktop/mobile and five-language browser matrices, but this review
-reran only the static audit: **1,545 English keys across 72 local five-language packs**.
-The current HEAD collects 170 files / 666 tests; collection is not a pass result. The
-earlier 168-file/663-test execution remains a dated checkpoint, while this review passed
-7 focused Company Receipts/Platform files and 22 tests.
+Current source inventory on 2026-09-06 is **129 Canonical / 0 Preview** routes. All
+129 routes declare API support; `staff-calendar` uses the shared API adapter and
+`/api/hr/calendar/staff` contract. The current `audit:screens` run covers all
+129 routes at desktop/mobile; API integration, authenticated API browser, access-matrix
+and i18n evidence remain separately recorded. The current HEAD full Vitest run passes
+171 files / 683 tests with two intentional file/test skips; the Staff Calendar API
+integration passes 6/6 and its Demo E2E covers mixed events, create, filtering and list
+search.
 Business-record values are not treated as UI copy. Physical-device acceptance remains
 separate from the automated 375 px browser gate.
 

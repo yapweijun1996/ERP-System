@@ -26,7 +26,7 @@ in localStorage).
 | 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
 | 8 | Static demo bundle suitable for Pages or another public host | ✅ build verified; Pages workflow disabled for this private repo |
 | 9 | First-run **setup wizard** (language → company → country/tax → admin) | ✅ done (TASK-009, TASK-010) |
-| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ Dated browser gates cover the route set through 129 Canonical / 0 Preview; current static inventory is 129 and TASK-200 owns a fresh HEAD rerun/API metadata exception |
+| 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ Current HEAD screen audit covers 129 Canonical / 0 Preview routes; TASK-200 closes API metadata parity, while physical-device and production-release gates remain separate |
 | 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 (permanently blocked — needs a physical phone) |
 
 ### Explicitly OUT of MVP-1

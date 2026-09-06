@@ -31,16 +31,19 @@ For the current source-backed action backlog and evidence boundaries, see
       on the shared `web/dist` output and is not a source failure.
 - [x] `npm run smoke` — desktop and mobile pass on 2026-08-10. The navigation assertion
       checks visible semantic badges; hidden zero-count badges remain in the DOM.
-- [ ] `npm run audit:screens` — current source is 129 Canonical / 0 Preview. TASK-183 has
-      dated 129-route evidence; install Chromium and rerun HEAD before release.
+- [x] `npm run audit:screens` — 2026-09-06 current HEAD passed all 129 Canonical routes
+      at desktop and 375px with no console/page errors, overflow, active-tab or declared-
+      layout failures. Payment Voucher retry is bounded to the full-matrix cold-start
+      allowance.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
-- [ ] `npm run audit:i18n` — static resources pass at 1,546 keys / 72 packs; rerun the
-      full 129 × 5 × 2 browser matrix for current HEAD.
-- [ ] `npm run check:permissions` and `npm run audit:access-matrix` — permission registry
-      passes at 315/116/62/5. Current source inventory is 59 routes × 13 active templates;
-      rerun the serial browser access audit before release.
-- [x] `tasks/tasks.jsonl` statuses current: 200 Done / 2 In progress / 7 Todo / 4
+- [x] `npm run audit:i18n` — 2026-09-06 passed the full 129 × 5 language × 2 viewport
+      browser matrix with no blocking findings; static resources remain 1,546 keys / 72
+      packs.
+- [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
+      the permission registry at 315/116/62/5 and the serial 59-route × 13-template
+      browser access audit. This is local evidence, not production authorization proof.
+- [x] `tasks/tasks.jsonl` statuses current: 201 Done / 2 In progress / 6 Todo / 4
       Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209;
       TASK-204 remains In progress until tax-owner production review.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs

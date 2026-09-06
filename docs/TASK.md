@@ -8,23 +8,24 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **200**
+- Done: **201**
 - In progress: **2**
-- Todo: **7**
+- Todo: **6**
 - Blocked: **4**
 - Total: **213**
 
 ## Current release-quality note
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 102 migrations
-through 0101, schema v101/252 tables, 129 Canonical / 0 Preview routes, 128 routes declaring
-API mode, 1,546 English i18n keys/72 local packs, 315 permission codes and PWA v263. The sole
-Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
+through 0101, schema v101/252 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
+API mode, 1,546 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
+collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
 Vitest run at 171 files / 683 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
-3 focused files / 12 tests, Platform layout E2E with both tenant modes, Demo autofill
-E2E, the 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
+3 focused Platform files / 12 tests, Staff Calendar API integration 6/6, Staff Calendar
+Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
+59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
 5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
 recorded in TASK-195; executable CI and production release remain blockers, while public
 probes and older suite totals are historical evidence. TASK-211 is done:
@@ -118,7 +119,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-197 | Done | Capability-aware Company Receipts detail/correction/void and employee-independent eligible-evidence picker; governed My Receipts upload remains the explicit upstream capture boundary |
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
-| TASK-200 | Todo | Resolve 129/128 route parity and rerun current HEAD release evidence |
+| TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
 | TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
 | TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
@@ -135,7 +136,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-206–208 evidence |
 
-The registry therefore has **200 Done / 2 In progress / 7 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **201 Done / 2 In progress / 6 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-203/TASK-206–208). Dependencies and
 epic references are valid.
@@ -326,7 +327,7 @@ statuses above and keep each change independently testable:
 6. **RELEASE-I18N-001 — Done.**
    Missing local-pack keys and hardcoded/dynamic system-authored UI text were resolved;
    `node scripts/audit-i18n.mjs` passes 1,533 canonical keys / 69 local packs; the
-   full matrix now passes 128 routes × 5 languages × 2 viewports. This remains an
+   historical matrix passed 128 routes × 5 languages × 2 viewports. This remains an
    execution slice, not a new machine-readable task record, and is independent of
    TASK-173–175.
 7. **RELEASE-SMOKE-001 — Done.** `npm run smoke` passes at desktop and mobile after

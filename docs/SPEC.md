@@ -113,9 +113,9 @@ and [SCALABILITY.md](SCALABILITY.md).
 
 ### 4.3 Preview and deferred depth
 
-The current route baseline is **129 Canonical / 0 Preview**. Of those routes, 128
-declare API support; `staff-calendar` is the one current metadata exception tracked by
-TASK-200. The old Mock-screen
+The current route baseline is **129 Canonical / 0 Preview**. All 129 routes declare API
+support, including `staff-calendar`, which is backed by the authenticated
+`/api/hr/calendar/staff` contract. The old Mock-screen
 statement from the early MVP is historical and no longer describes the shipped route
 set: CRM, Manufacturing, Quality, HR, Payroll, Projects, Service, Fixed Assets, BI,
 Integration and Admin now use Canonical data/contracts at the route boundary. A future
@@ -123,11 +123,10 @@ incomplete feature may be introduced only as an explicitly labelled `Preview · 
 Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
 schema, resource/command, permission, tests and localization are complete.
 
-Current source inventory (2026-08-12) is 129/0 routes, 1,545 English keys and 72 local
-five-language packs. TASK-183 records the complete 129-route desktop/375px and
-five-language browser proof; this review reran static audits only because local
-Playwright Chromium is absent. Dated browser and current static evidence must not be
-collapsed into a fresh full-matrix claim.
+Current source inventory (2026-09-06) is 129/0 routes, 1,546 English keys and 72 local
+five-language packs. The current HEAD reran the complete 129-route desktop/375px and
+five-language browser matrix with no blocking findings; API-mode browser and physical-
+device evidence remain separate release gates.
 Business-record values remain outside system-authored UI copy.
 
 Module depth that is not yet represented by a route or command remains future scope;
@@ -253,9 +252,9 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. Current static inventory is 1,545
-  English keys / 72 local packs; TASK-183 retains the dated 129-route × 5-language ×
-  2-viewport browser evidence.
+  for compatibility and is not currently wired. Current inventory is 1,546 English
+  keys / 72 local packs; the current 129-route × 5-language × 2-viewport browser
+  matrix passes.
   Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))

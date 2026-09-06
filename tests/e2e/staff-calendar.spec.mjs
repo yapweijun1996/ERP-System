@@ -95,6 +95,14 @@ async function main() {
       timeout: 30000,
     });
     await page.waitForFunction(() => window.ErpSystemData && window.navigate, { timeout: TIMEOUT });
+    await page.evaluate(async () => {
+      // Wait for the demo bootstrap before replacing adapter methods so the
+      // async PGlite setup cannot overwrite the test fixture.
+      const runtimeReady = window.ErpDemoRuntimeReady;
+      if (runtimeReady && typeof runtimeReady.then === 'function') await runtimeReady;
+      const adapterReady = window.ErpSystemDataReady;
+      if (adapterReady && typeof adapterReady.then === 'function') await adapterReady;
+    });
 
     await page.evaluate(() => {
       const employee = {

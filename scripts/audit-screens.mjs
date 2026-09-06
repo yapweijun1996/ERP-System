@@ -571,11 +571,16 @@ async function auditRoutes(browser, viewport) {
   const screenMeta = await page.evaluate(() => JSON.parse(JSON.stringify(window.SCREEN_META || {})));
   const missingLayoutMeta = allRoutes.filter((route) => !screenMeta[route]?.layout);
   const invalidLayoutMeta = allRoutes.filter((route) => !VALID_LAYOUTS.has(screenMeta[route]?.layout));
+  const canonicalApiGaps = allRoutes.filter((route) => screenMeta[route]?.maturity === 'canonical'
+    && !screenMeta[route]?.supportedModes?.includes('api'));
   if (missingLayoutMeta.length || invalidLayoutMeta.length) {
     throw new Error([
       missingLayoutMeta.length ? `Routes without an explicit layout: ${missingLayoutMeta.join(', ')}` : '',
       invalidLayoutMeta.length ? `Routes with an invalid layout: ${invalidLayoutMeta.join(', ')}` : '',
     ].filter(Boolean).join(' | '));
+  }
+  if (canonicalApiGaps.length) {
+    throw new Error(`Canonical routes without API support metadata: ${canonicalApiGaps.join(', ')}`);
   }
   const routes = PAYROLL_RUN_ONLY
     ? allRoutes.filter((route) => route === 'payroll-run')
@@ -636,7 +641,7 @@ async function auditRoutes(browser, viewport) {
   if (missingAdapterMethods.length) {
     throw new Error(`ErpSystemData contract missing: ${missingAdapterMethods.join(', ')}`);
   }
-  console.log(`[${viewport.label}] Found ${routes.length} routes registered in SCREENS.`);
+  console.log(`[${viewport.label}] Found ${routes.length} routes registered in SCREENS; ${allRoutes.length - canonicalApiGaps.length} declare API support.`);
 
   const results = [];
 
@@ -4346,7 +4351,12 @@ async function auditRoutes(browser, viewport) {
         }
         adapter.list = originalList;
         errorRoot?.querySelector('[data-posting-retry]')?.click();
-        for (let attempt=0; attempt<20; attempt+=1) {
+        // A full 129-route desktop pass can leave the shared Demo adapter under
+        // considerably more PGlite/IndexedDB contention than an isolated route
+        // check.  Retry must remain bounded, but two seconds is shorter than
+        // the app's documented cold-start allowance and caused a false failure
+        // after the click had already initiated a valid navigation.
+        for (let attempt=0; attempt<100; attempt+=1) {
           await new Promise((resolve) => setTimeout(resolve,100));
           if (postingRoot()&&!postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) break;
         }

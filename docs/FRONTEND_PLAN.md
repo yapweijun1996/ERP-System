@@ -38,13 +38,13 @@ builds and is not deployment or security proof.
 
 ## 3. Current inventory and honest parity boundary
 
-Source registers 129 Canonical routes and no Preview routes. Static API-screen metadata
-covers 128; `staff-calendar` is the sole exception. The five-language static resource
-audit covers 1,545 keys and 72 local packs. Those are source/static facts at HEAD, not a
-fresh 129-route hosted browser result.
+Source registers 129 Canonical routes and no Preview routes. API-screen metadata now
+covers all 129, including `staff-calendar`. The current HEAD screen audit covers every
+route at desktop and 375px; the five-language and authenticated API evidence are recorded
+as separate gates rather than inferred from the route registry.
 
-The current full Vitest collection is 170 files/666 tests; that number is collection,
-not a pass claim. Historical browser and full-test results remain dated in STATUS.
+The current full Vitest run passes 171 files/683 tests with two intentional file/test
+skips. Historical checkpoints remain dated in STATUS.
 
 ## 4. Next frontend priorities
 
@@ -54,8 +54,10 @@ not a pass claim. Historical browser and full-test results remain dated in STATU
 2. **Finish the Company Receipt operator journey.** Add real detail/reopen,
    metadata/date correction and void actions; make the evidence picker eligible-only,
    searchable and paginated; decide how non-Employee finance users capture evidence.
-3. **Restore and prove route parity.** Decide the `staff-calendar` API metadata
-   contract and rerun all 129 routes in authenticated API mode at desktop/mobile.
+3. **Maintain route parity.** All 129 Canonical routes now declare API support,
+   including `staff-calendar`; `audit:screens` fails closed on future metadata gaps.
+   Keep the Demo screen audit, Staff Calendar API/Demo proofs and authenticated API
+   browser checks separate when changing route contracts.
 4. **Preserve financial and locale accuracy.** Keep Decimal values as strings/Decimal
    objects until formatting, use Company calendar/timezone presets and render exported
    PDFs with locale resources and Unicode fonts.

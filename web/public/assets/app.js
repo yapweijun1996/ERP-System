@@ -1006,7 +1006,7 @@ const API_SCREEN_ROUTES = new Set([
   'item-master','crm-customer',
   'asset-register','asset-detail','depreciation',
   'user-mgmt','audit-log','role-permission','company-onboarding',
-  'hr-directory','employee','new-employee','leave-approval','leave-workflow','hr-calendar','payroll-run','payslip',
+  'hr-directory','employee','new-employee','leave-approval','leave-workflow','hr-calendar','staff-calendar','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
   'integration-logs','data-import',
   'bank-rec',
